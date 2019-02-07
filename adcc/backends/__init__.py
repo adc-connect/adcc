@@ -43,6 +43,15 @@ def import_scf_results(res):
     except ImportError:
         pass
 
+    try:
+        from mpi4py import MPI
+        import veloxchem as vlx
+        from . import veloxchem as backend_veloxchem
+        if isinstance(res, vlx.scfrestdriver.ScfRestrictedDriver):
+            return backend_veloxchem.import_scf(res)
+    except ImportError:
+        pass
+
     from libadcc import HartreeFockSolution_i
     if isinstance(res, HartreeFockSolution_i):
         return res

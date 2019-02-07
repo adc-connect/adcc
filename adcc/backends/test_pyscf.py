@@ -108,6 +108,9 @@ class TestPyscf(unittest.TestCase):
         # orbcoeff_fb
         # Perhaps by transforming the fock matrix of the scfres object or so
 
+        # TODO Many more tests
+        #      Compare against reference data
+
         # test symmetry of the ERI tensor
         ii, jj, kk, ll = 0, 1, 2, 3
         allowed_permutations = [
