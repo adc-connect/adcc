@@ -1,0 +1,18 @@
+# Backup files and system temporaries
+*~
+.*.swp
+*.swo
+
+# compiled files
+*.pyc
+*.o
+.pytest_cache
+
+# our build directory
+build
+build-*
+build_*
+
+# adccore
+external/adccore/
+adccore
