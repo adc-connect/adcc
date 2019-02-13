@@ -1,0 +1,10 @@
+global-exclude test_*.py
+include README.md
+include AUTHORS.md
+include extension/*.cc
+include extension/*.hh
+include extension/adccore/adccore_config.json
+include extension/adccore/include/adcc/**
+include extension/adccore/include/ctx/**
+include extension/adccore/lib/libadccore.so.*
+exclude adcc/lib/*

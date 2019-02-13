@@ -5,7 +5,7 @@
 git clone https://path/to/adccore adccore
 ./adccore/build.sh -j 4 install
 
-TODO other steps to build adcc repo
+pip install .
 ```
 
 ## No access to adccore source code
@@ -15,6 +15,6 @@ wget " https://path/to/binary/adccore.tar.gz"
 tar xzf adccore.tar.gz
 cd ../..
 
-TODO other steps to build adcc repo
+pip install .
 ```
 
