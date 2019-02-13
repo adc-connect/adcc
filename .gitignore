@@ -14,5 +14,5 @@ build-*
 build_*
 
 # adccore
-extension/external/adccore/
+extension/adccore/
 adccore
