@@ -1,10 +1,17 @@
 global-exclude test_*.py
 include README.md
 include AUTHORS.md
+
+# Include the files to be compiled into an extension
 include extension/*.cc
 include extension/*.hh
+
+# Gather required data from adccore binary blob
+# (i.e. include files and compiled binary)
 include extension/adccore/adccore_config.json
-include extension/adccore/include/adcc/**
-include extension/adccore/include/ctx/**
 include extension/adccore/lib/libadccore.so.*
+recursive-include extension/adccore/include/adcc/ *.hh
+recursive-include extension/adccore/include/ctx/ *.hh
+
+# Ignore the symlinked library to avoid duplication
 exclude adcc/lib/*
