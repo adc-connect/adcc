@@ -64,8 +64,6 @@ def adccore_config():
     with open(cfg, "r") as fp:
         adccore = json.load(fp)
     adccore["prefix"] = os.path.dirname(cfg)
-    adccore["library_directory"] = join(adccore["prefix"], "lib")
-    adccore["include_directory"] = join(adccore["prefix"], "include")
     return adccore
 
 
@@ -170,61 +168,57 @@ ext_modules = [
             # Path to pybind11 headers
             GetPyBindInclude(),
             GetPyBindInclude(user=True),
-            adccore["include_directory"]
+            join(adccore["prefix"], "include")
         ],
         libraries=adccore["libraries"],
-        library_dirs=[adccore["library_directory"]],
+        library_dirs=[join(adccore["prefix"], "lib")],
         extra_link_args=extra_link_args,
         runtime_library_dirs=runtime_library_dirs,
         language='c++',
     ),
 ]
 
-try:
-    adcc_relative_libdir = os.path.relpath(adccore["library_directory"], "adcc")
-    os.symlink(adcc_relative_libdir, "adcc/lib")
-    setup(
-        name='adcc',
-        description='A python-based framework for running ADC calculations',
-        long_description='',
-        #
-        url='https://github.com/mfherbst/adcc',
-        author='adcc developers',
-        author_email='adcc+developers@michael-herbst.com',
-        maintainer='Michael F. Herbst',
-        maintainer_email='info@michael-herbst.com',
-        license="LGPL v3",
-        #
-        version=__version__,
-        classifiers=[
-            'Development Status :: 4 - Beta',
-            'License :: OSI Approved :: '
-            'GNU Lesser General Public License v3 (LGPLv3)',
-            'Intended Audience :: Science/Research',
-            "Topic :: Scientific/Engineering :: Chemistry",
-            "Topic :: Education",
-            'Programming Language :: Python :: 3.5',
-            'Programming Language :: Python :: 3.6',
-            'Operating System :: Unix',
-        ],
-        #
-        packages=find_packages(exclude=["*.test*", "test"]),
-        package_data={'adcc': ["lib/*.so.*", "lib/*.dylib.*"]},
-        ext_modules=ext_modules,
-        cmdclass={'build_ext': BuildExt},
-        zip_safe=False,
-        #
-        platforms=["Linux", "Mac OS-X", "Unix"],
-        python_requires='>=3.5',
-        install_requires=[
-            'pybind11 (>= 2.2)',
-            'numpy',
-            'scipy',
-        ],
-        tests_require=["pytest", "h5py"],
-        setup_requires=["pytest-runner"],
-        #
-        # TODO Proper unit test setup
-    )
-finally:
-    os.unlink("adcc/lib")
+setup(
+    name='adcc',
+    description='A python-based framework for running ADC calculations',
+    long_description='',
+    #
+    url='https://github.com/mfherbst/adcc',
+    author='adcc developers',
+    author_email='adcc+developers@michael-herbst.com',
+    maintainer='Michael F. Herbst',
+    maintainer_email='info@michael-herbst.com',
+    license="LGPL v3",
+    #
+    version=__version__,
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'License :: OSI Approved :: '
+        'GNU Lesser General Public License v3 (LGPLv3)',
+        'Intended Audience :: Science/Research',
+        "Topic :: Scientific/Engineering :: Chemistry",
+        "Topic :: Education",
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Operating System :: Unix',
+    ],
+    #
+    packages=find_packages(exclude=["*.test*", "test"]),
+    package_data={'adcc': ["lib/*.so.*", "lib/*.dylib.*"]},
+    ext_modules=ext_modules,
+    cmdclass={'build_ext': BuildExt},
+    zip_safe=False,
+    #
+    platforms=["Linux", "Mac OS-X", "Unix"],
+    python_requires='>=3.5',
+    install_requires=[
+        'pybind11 (>= 2.2)',
+        'numpy',
+        'scipy',
+    ],
+    tests_require=["pytest", "h5py"],
+    setup_requires=["pytest-runner"],
+    #
+    # TODO Proper unit test setup
+    # TODO Download unit test data
+)

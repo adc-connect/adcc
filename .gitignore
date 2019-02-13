@@ -3,16 +3,18 @@
 .*.swp
 *.swo
 
-# compiled files
+# compiled files and distribution files
 *.pyc
+/libadcc.*.so
+/libadcc.*.dylib
+/dist
+*.egg-info
 *.o
+/.eggs
+
+# Pytest
 .pytest_cache
 
-# our build directory
-build
-build-*
-build_*
-
 # adccore
-extension/adccore/
-adccore
+/extension/adccore/
+/adccore
