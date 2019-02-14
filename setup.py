@@ -39,6 +39,19 @@ __version__ = '0.6.0'
 
 
 #
+# Compile and install adccore library
+#
+def trigger_adccore_build():
+    """
+    Trigger a build of the adccore library, if it exists in source form.
+    """
+    if os.path.isfile("adccore/build.sh"):
+        # I.e. this user has access to adccore source code
+        import subprocess
+        subprocess.check_call("./adccore/build.sh")
+
+
+#
 # Find AdcCore
 #
 def path_adccore_config():
@@ -47,8 +60,7 @@ def path_adccore_config():
     Return None if no config is found
     """
     this_dir = os.path.dirname(__file__)
-    cfg = join(this_dir, "extension", "adccore", "adccore_config.json")
-    return cfg
+    return join(this_dir, "extension", "adccore", "adccore_config.json")
 
 
 def adccore_config():
@@ -119,6 +131,8 @@ def cpp_flag(compiler):
 class BuildExt(BuildCommand):
     """A custom build extension for adding compiler-specific options."""
     def build_extensions(self):
+        trigger_adccore_build()
+
         opts = []
         if sys.platform == "darwin":
             opts += ['-stdlib=libc++', '-mmacosx-version-min=10.7']
@@ -186,6 +200,10 @@ if not os.path.isfile("adcc/__init__.py"):
     raise RuntimeError("Running setup.py is only supported "
                        "from top level of repository as './setup.py <command>'")
 
+if not os.path.isfile(path_adccore_config()):
+    # Trigger a build of adccore if the source code can be found
+    trigger_adccore_build()
+
 adccore = adccore_config()
 if adccore["version"] != __version__:
     raise RuntimeError(
@@ -224,7 +242,7 @@ ext_modules = [
 setup(
     name='adcc',
     description='A python-based framework for running ADC calculations',
-    long_description='',
+    long_description='',  # TODO
     #
     url='https://github.com/mfherbst/adcc',
     author='adcc developers',
