@@ -34,7 +34,7 @@ from .memory_pool import memory_pool
 from .tmp_run_prelim import tmp_run_prelim
 from .run_adc import run_adc
 
-__version__ = "0.6.1"
+__version__ = "0.6.2"
 __licence__ = "LGPL v3"
 __authors__ = "Michael F. Herbst and Maximilian Scheurer"
 __email__ = "info@michael-herbst.com"
