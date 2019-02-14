@@ -59,7 +59,6 @@ class AdcCore:
         this_dir = os.path.dirname(__file__)
         self.config_path = join(this_dir, "extension", "adccore",
                                 "adccore_config.json")
-        self.prefix = os.path.dirname(self.config_path)
 
     @property
     def is_config_file_present(self):
@@ -239,10 +238,10 @@ ext_modules = [
             # Path to pybind11 headers
             GetPyBindInclude(),
             GetPyBindInclude(user=True),
-            join(adccore.prefix, "include")
+            "extension/adccore/include"
         ],
         libraries=adccore.libraries,
-        library_dirs=[join(adccore.prefix, "lib")],
+        library_dirs=["adcc/lib"],
         extra_link_args=extra_link_args,
         runtime_library_dirs=runtime_library_dirs,
         language='c++',
