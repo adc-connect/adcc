@@ -247,7 +247,7 @@ setup(
     ],
     #
     packages=find_packages(exclude=["*.test*", "test"]),
-    package_data={'adcc': ["lib/*.so.*", "lib/*.dylib.*"]},
+    package_data={'adcc': ["lib/*.so", "lib/*.dylib"]},
     ext_modules=ext_modules,
     zip_safe=False,
     #
