@@ -40,4 +40,6 @@ done
 if which sha256sum &> /dev/null; then
 	sha256sum -c SHA256SUMS || exit 1
 fi
+
+touch .last_update
 exit 0

@@ -5,14 +5,15 @@
 
 # compiled files and distribution files
 *.pyc
+/build
+*.o
 /libadcc.*.so
 /libadcc.*.dylib
 /dist
 *.egg-info
-*.o
 /.eggs
 
-# Pytest
+# Testing
 .pytest_cache
 
 # adccore

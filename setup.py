@@ -24,7 +24,8 @@
 """Setup for look4bas"""
 
 from os.path import join
-from setuptools.command.build_ext import build_ext
+from setuptools.command.build_ext import build_ext as BuildCommand
+from setuptools.command.test import test as TestCommand
 from setuptools import setup, Extension, find_packages
 import glob
 import json
@@ -115,7 +116,7 @@ def cpp_flag(compiler):
                            'is needed!')
 
 
-class BuildExt(build_ext):
+class BuildExt(BuildCommand):
     """A custom build extension for adding compiler-specific options."""
     def build_extensions(self):
         opts = []
@@ -137,12 +138,54 @@ class BuildExt(build_ext):
 
         for ext in self.extensions:
             ext.extra_compile_args = opts
-        build_ext.build_extensions(self)
+        BuildCommand.build_extensions(self)
+
+
+#
+# Pytest integration
+#
+class PyTest(TestCommand):
+    def initialize_options(self):
+        TestCommand.initialize_options(self)
+        self.pytest_args = ""
+
+    def update_testdata(self):
+        testdata_dir = "adcc/testdata"
+        if not os.path.isdir(testdata_dir):
+            raise RuntimeError("Can only test from git repository, "
+                               "not from installation tarball.")
+
+        timefile = testdata_dir + "/.last_update"
+        if not os.path.isfile(timefile):
+            needs_update = True
+        else:
+            import datetime
+            ts = datetime.datetime.fromtimestamp(os.path.getmtime(timefile))
+            age = datetime.datetime.utcnow() - ts
+            needs_update = age > datetime.timedelta(hours=2)
+
+        if needs_update:
+            import subprocess
+            subprocess.check_call(testdata_dir + "/0_download_testdata.sh")
+
+    def run_tests(self):
+        import shlex
+
+        # import here, cause outside the eggs aren't loaded
+        import pytest
+
+        self.update_testdata()
+        errno = pytest.main(shlex.split(self.pytest_args))
+        sys.exit(errno)
 
 
 #
 # Main setup code
 #
+if not os.path.isfile("adcc/__init__.py"):
+    raise RuntimeError("Running setup.py is only supported "
+                       "from top level of repository as './setup.py <command>'")
+
 adccore = adccore_config()
 if adccore["version"] != __version__:
     raise RuntimeError(
@@ -206,7 +249,6 @@ setup(
     packages=find_packages(exclude=["*.test*", "test"]),
     package_data={'adcc': ["lib/*.so.*", "lib/*.dylib.*"]},
     ext_modules=ext_modules,
-    cmdclass={'build_ext': BuildExt},
     zip_safe=False,
     #
     platforms=["Linux", "Mac OS-X", "Unix"],
@@ -217,8 +259,6 @@ setup(
         'scipy',
     ],
     tests_require=["pytest", "h5py"],
-    setup_requires=["pytest-runner"],
     #
-    # TODO Proper unit test setup
-    # TODO Download unit test data
+    cmdclass={'build_ext': BuildExt, "pytest": PyTest},
 )
