@@ -54,30 +54,37 @@ def trigger_adccore_build():
 #
 # Find AdcCore
 #
-def path_adccore_config():
-    """
-    Determine the path to the adccore config file.
-    Return None if no config is found
-    """
-    this_dir = os.path.dirname(__file__)
-    return join(this_dir, "extension", "adccore", "adccore_config.json")
+class AdcCore:
+    def __init__(self):
+        this_dir = os.path.dirname(__file__)
+        self.config_path = join(this_dir, "extension", "adccore",
+                                "adccore_config.json")
+        self.prefix = os.path.dirname(self.config_path)
 
+    @property
+    def is_config_file_present(self):
+        """
+        Is the config file present on disk
+        """
+        return os.path.isfile(self.config_path)
 
-def adccore_config():
-    cfg = path_adccore_config()
-    if not os.path.isfile(cfg):
-        # TODO Later one could do something more clever like downloading
-        #      the binary tarball or automatic checkout / compilation of adccore
-        raise RuntimeError(
-            "Did not find adccore_config.json file in the directory tree. " +
-            "Did you download or install adccore properly? See the adcc " +
-            "documentation for help."
-        )
+    @property
+    def config(self):
+        if not self.is_config_file_present:
+            raise RuntimeError(
+                "Did not find adccore_config.json file in the directory tree." +
+                " Did you download or install adccore properly? See the adcc " +
+                "documentation for help."
+            )
+        else:
+            with open(self.config_path, "r") as fp:
+                return json.load(fp)
 
-    with open(cfg, "r") as fp:
-        adccore = json.load(fp)
-    adccore["prefix"] = os.path.dirname(cfg)
-    return adccore
+    def __getattr__(self, key):
+        try:
+            return self.config[key]
+        except KeyError:
+            raise AttributeError
 
 
 #
@@ -200,16 +207,19 @@ if not os.path.isfile("adcc/__init__.py"):
     raise RuntimeError("Running setup.py is only supported "
                        "from top level of repository as './setup.py <command>'")
 
-if not os.path.isfile(path_adccore_config()):
+adccore = AdcCore()
+if not adccore.is_config_file_present:
     # Trigger a build of adccore if the source code can be found
     trigger_adccore_build()
+if adccore.version != __version__:
+    # Try to see if a simple adccore build solves this issue
+    trigger_adccore_build()
 
-adccore = adccore_config()
-if adccore["version"] != __version__:
-    raise RuntimeError(
-        "Version mismatch between adcc (== {}) and adccore (== {})"
-        "".format(__version__, adccore["version"])
-    )
+    if adccore.version != __version__:
+        raise RuntimeError(
+            "Version mismatch between adcc (== {}) and adccore (== {})"
+            "".format(__version__, adccore.version)
+        )
 
 # Setup RPATH on Linux and MacOS
 if sys.platform == "darwin":
@@ -229,10 +239,10 @@ ext_modules = [
             # Path to pybind11 headers
             GetPyBindInclude(),
             GetPyBindInclude(user=True),
-            join(adccore["prefix"], "include")
+            join(adccore.prefix, "include")
         ],
-        libraries=adccore["libraries"],
-        library_dirs=[join(adccore["prefix"], "lib")],
+        libraries=adccore.libraries,
+        library_dirs=[join(adccore.prefix, "lib")],
         extra_link_args=extra_link_args,
         runtime_library_dirs=runtime_library_dirs,
         language='c++',
