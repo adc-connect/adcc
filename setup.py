@@ -35,7 +35,7 @@ import sys
 
 
 # Version of the python bindings and adcc python package.
-__version__ = '0.6.0'
+__version__ = '0.6.1'
 
 
 #
