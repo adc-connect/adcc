@@ -20,11 +20,11 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
-from adcc.functions import ones_like, divide, empty_like
-from adcc.AmplitudeVector import AmplitudeVector
-from adcc.AdcMatrix import AdcMatrix
 import numpy as np
+
+from adcc.AdcMatrix import AdcMatrix
+from adcc.functions import divide, empty_like, ones_like
+from adcc.AmplitudeVector import AmplitudeVector
 
 
 class PreconditionerIdentity:
@@ -38,6 +38,8 @@ class PreconditionerIdentity:
         if outvecs is not None:
             invecs.copy_to(outvecs)
         return invecs
+
+    # __matvec__
 
 
 class JacobiPreconditioner:
@@ -107,3 +109,5 @@ class JacobiPreconditioner:
             return outvecs
         else:
             raise TypeError("Input type not understood: " + str(type(invecs)))
+
+    # __matvec__
