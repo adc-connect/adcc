@@ -21,18 +21,18 @@
 ##
 ## ---------------------------------------------------------------------
 
-"""Setup for look4bas"""
-
-from os.path import join
-from setuptools.command.build_ext import build_ext as BuildCommand
-from setuptools.command.test import test as TestCommand
-from setuptools import setup, Extension, find_packages
+"""Setup for adcc"""
+import os
+import sys
 import glob
 import json
-import os
 import setuptools
-import sys
 
+from os.path import join
+
+from setuptools import Extension, find_packages, setup
+from setuptools.command.test import test as TestCommand
+from setuptools.command.build_ext import build_ext as BuildCommand
 
 # Version of the python bindings and adcc python package.
 __version__ = '0.6.2'
@@ -48,6 +48,7 @@ def trigger_adccore_build():
     if os.path.isfile("adccore/build.sh"):
         # I.e. this user has access to adccore source code
         import subprocess
+
         subprocess.check_call("./adccore/build.sh")
 
 
@@ -101,6 +102,7 @@ class GetPyBindInclude:
 
     def __str__(self):
         import pybind11
+
         return pybind11.get_include(self.user)
 
 
@@ -111,6 +113,7 @@ def has_flag(compiler, flagname):
     the specified compiler.
     """
     import tempfile
+
     with tempfile.NamedTemporaryFile('w', suffix='.cpp') as f:
         f.write('int main (int argc, char **argv) { return 0; }')
         try:
@@ -180,12 +183,14 @@ class PyTest(TestCommand):
             needs_update = True
         else:
             import datetime
+
             ts = datetime.datetime.fromtimestamp(os.path.getmtime(timefile))
             age = datetime.datetime.utcnow() - ts
             needs_update = age > datetime.timedelta(hours=2)
 
         if needs_update:
             import subprocess
+
             subprocess.check_call(testdata_dir + "/0_download_testdata.sh")
 
     def run_tests(self):
@@ -222,7 +227,7 @@ if adccore.version != __version__:
 
 # Setup RPATH on Linux and MacOS
 if sys.platform == "darwin":
-    extra_link_args = ["$ORIGIN", "$ORIGIN/adcc/lib"]
+    extra_link_args = ["-rpath", ".", "-rpath", "@loader_path/adcc/lib"]
     runtime_library_dirs = []
 elif sys.platform == "linux":
     extra_link_args = []
