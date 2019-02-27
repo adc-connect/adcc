@@ -144,7 +144,7 @@ class BuildExt(BuildCommand):
 
         opts = []
         if sys.platform == "darwin":
-            opts += ['-stdlib=libc++', '-mmacosx-version-min=10.7']
+            opts += ['-mmacosx-version-min=10.7']
         if self.compiler.compiler_type == 'unix':
             opts.append(cpp_flag(self.compiler))
             potential_opts = [
@@ -227,7 +227,7 @@ if adccore.version != __version__:
 
 # Setup RPATH on Linux and MacOS
 if sys.platform == "darwin":
-    extra_link_args = ["-rpath", ".", "-rpath", "@loader_path/adcc/lib"]
+    extra_link_args = ["-Wl,-rpath,@loader_path/adcc/lib"]
     runtime_library_dirs = []
 elif sys.platform == "linux":
     extra_link_args = []
