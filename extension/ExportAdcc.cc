@@ -32,6 +32,7 @@ void export_AmplitudeVector(py::module& m);
 void export_CtxMap(py::module& m);
 void export_HartreeFockProvider(py::module& m);
 void export_HfData(py::module& m);
+void export_compute_modified_transition_moments(py::module& m);
 void export_LazyMp(py::module& m);
 void export_OneParticleDensityMatrix(py::module& m);
 void export_ReferenceState(py::module& m);
@@ -45,26 +46,27 @@ void export_tmp_run_prelim(py::module& m);
 }  // namespace adcc
 
 PYBIND11_MODULE(libadcc, m) {
-  namespace bpif = adcc::py_iface;
+  namespace pyif = adcc::py_iface;
 
-  bpif::export_CtxMap(m);
-  bpif::export_AdcMemory(m);
-  bpif::export_ThreadPool(m);
-  bpif::export_HartreeFockProvider(m);
-  bpif::export_HfData(m);
+  pyif::export_CtxMap(m);
+  pyif::export_AdcMemory(m);
+  pyif::export_ThreadPool(m);
+  pyif::export_HartreeFockProvider(m);
+  pyif::export_HfData(m);
 
-  bpif::export_Tensor(m);
-  bpif::export_ReferenceState(m);
-  bpif::export_OneParticleDensityMatrix(m);
-  bpif::export_LazyMp(m);
-  bpif::export_AdcIntermediates(m);
-  bpif::export_AmplitudeVector(m);
-  bpif::export_AdcMatrix(m);
-  bpif::export_amplitude_vector_enforce_spin_kind(m);
-  bpif::export_compute_one_particle_densities(m);
+  pyif::export_Tensor(m);
+  pyif::export_ReferenceState(m);
+  pyif::export_OneParticleDensityMatrix(m);
+  pyif::export_LazyMp(m);
+  pyif::export_AdcIntermediates(m);
+  pyif::export_AmplitudeVector(m);
+  pyif::export_AdcMatrix(m);
+  pyif::export_amplitude_vector_enforce_spin_kind(m);
+  pyif::export_compute_modified_transition_moments(m);
+  pyif::export_compute_one_particle_densities(m);
 
-  bpif::export_tmp_run_prelim(m);
-  bpif::export_solve_adcman_davidson(m);
+  pyif::export_tmp_run_prelim(m);
+  pyif::export_solve_adcman_davidson(m);
 
   // Set metadata about libadcc
   m.attr("__version__")    = adcc::version::version_string();

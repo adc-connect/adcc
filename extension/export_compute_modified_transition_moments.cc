@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2018 by the adcc authors
+// Copyright (C) 2019 by the adcc authors
 //
 // This file is part of adcc.
 //
@@ -17,7 +17,8 @@
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include <adcc/amplitude_vector_enforce_spin_kind.hh>
+#include "util.hh"
+#include <adcc/compute_modified_transition_moments.hh>
 #include <pybind11/pybind11.h>
 
 namespace adcc {
@@ -25,10 +26,10 @@ namespace py_iface {
 
 namespace py = pybind11;
 
-void export_amplitude_vector_enforce_spin_kind(py::module& m) {
-  m.def("amplitude_vector_enforce_spin_kind", &amplitude_vector_enforce_spin_kind,
-        "Apply the preconditioner tricks adcman uses to make the doubles part"
-        "consist of components for a singlet state only.");
+/** Exports adcc/compute_modified_transition_moments.hh to python */
+void export_compute_modified_transition_moments(py::module& m) {
+  m.def("compute_modified_transition_moments",
+        &adcc::compute_modified_transition_moments);
 }
 
 }  // namespace py_iface
