@@ -96,13 +96,13 @@ static std::shared_ptr<Tensor> Tensor_transpose_2(const Tensor& self, py::tuple 
 }
 
 static std::shared_ptr<Tensor> Tensor_add_linear_combination(
-      std::shared_ptr<Tensor> self, py::array_t<scalar_type> coefficients,
-      py::list tensors) {
+      std::shared_ptr<Tensor> self,
+      py::array_t<scalar_type, py::array::c_style> coefficients, py::list tensors) {
   if (coefficients.ndim() != 1) {
     throw invalid_argument("coefficients array needs to have exactly one dimension.");
   }
-  size_t in_size       = static_cast<size_t>(coefficients.shape(0));
-  scalar_type* in_data = coefficients.mutable_data();
+  size_t in_size             = static_cast<size_t>(coefficients.shape(0));
+  const scalar_type* in_data = coefficients.data();
   std::vector<scalar_type> scalars(in_size);
 
   std::copy(in_data, in_data + in_size, scalars.data());
