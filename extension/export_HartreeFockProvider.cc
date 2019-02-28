@@ -302,21 +302,21 @@ class PyHartreeFockProvider : public HartreeFockProvider {
 
 static py::array_t<scalar_type> HartreeFockSolution_i_orben_f(
       const HartreeFockSolution_i& self) {
-  py::array_t<scalar_type> ret(py::make_tuple(self.n_orbs()));
+  py::array_t<scalar_type> ret(self.n_orbs());
   self.orben_f(ret.mutable_data(), self.n_orbs());
   return ret;
 }
 
 static py::array_t<scalar_type> HartreeFockSolution_i_orbcoeff_fb(
       const HartreeFockSolution_i& self) {
-  py::array_t<scalar_type> ret(py::make_tuple(self.n_orbs(), self.n_bas()));
+  py::array_t<scalar_type> ret({self.n_orbs(), self.n_bas()});
   self.orbcoeff_fb(ret.mutable_data(), self.n_orbs() * self.n_bas());
   return ret;
 }
 
 static py::array_t<scalar_type> HartreeFockSolution_i_fock_ff(
       const HartreeFockSolution_i& self) {
-  py::array_t<scalar_type> ret(py::make_tuple(self.n_orbs(), self.n_orbs()));
+  py::array_t<scalar_type> ret({self.n_orbs(), self.n_orbs()});
   self.fock_ff(0, self.n_orbs(), 0, self.n_orbs(), ret.mutable_data(),
                self.n_orbs() * self.n_orbs());
   return ret;
