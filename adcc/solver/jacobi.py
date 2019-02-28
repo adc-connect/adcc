@@ -45,8 +45,6 @@ class JacobiState:
 
 def __jacobi_step(matrix, state, callback=None, debug_checks=False,
                   u2guess=None):
-    # for r in state.previous_results:
-    #     state.eigenvector -= (state.eigenvector @ r.eigenvector) * r.eigenvector / np.sqrt(r.eigenvector @ r.eigenvector)
     out = empty_like(state.eigenvector)
     u2 = empty_like(u2guess)
     matrix.compute_apply("ds", state.eigenvector['s'], u2)
@@ -59,6 +57,9 @@ def __jacobi_step(matrix, state, callback=None, debug_checks=False,
     matrix.compute_apply("sd", u2, tmp1)
     out['s'] += tmp1
 
+    for r in state.previous_results:
+        state.eigenvector -= (state.eigenvector @ r.eigenvector) * r.eigenvector
+
     vnorm2 = state.eigenvector @ state.eigenvector
     vnorm = np.sqrt(vnorm2)
     state.eigenvalue = (state.eigenvector @ out) / vnorm2
@@ -67,7 +68,7 @@ def __jacobi_step(matrix, state, callback=None, debug_checks=False,
     rnorm = np.sqrt(residual @ residual)
     state.residual = residual
     state.residual_norm = rnorm
-    # state.eigenvector['s'] = 1.0 / vnorm * (state.eigenvector['s'] - (residual['s'] / matrix.mp.df("o1v1")))
+    # state.eigenvector['s'] = 1.0 / vnorm * (state.eigenvector['s'] - (residual['s'] / matrix.ground_state.df("o1v1")))
     state.eigenvector['s'] = 1.0 / vnorm * (state.eigenvector['s'] - (residual['s'] / matrix.diagonal('s')))
     state.residual_norms = np.array([rnorm])
     state.n_applies += 1
@@ -75,8 +76,8 @@ def __jacobi_step(matrix, state, callback=None, debug_checks=False,
 
 
 def jacobi_solver(matrix, guesses, n_ep=None, max_subspace=None,
-         conv_tol=1e-12, max_iter=300,
-         callback=None, debug_checks=False):
+                  conv_tol=1e-12, max_iter=300,
+                  callback=None, debug_checks=False):
     """
     Davidson eigensolver for ADC problems
 
@@ -108,30 +109,25 @@ def jacobi_solver(matrix, guesses, n_ep=None, max_subspace=None,
         return state.converged
 
     results = []
-    # guess_energies = np.sort(np.unique(matrix.mp.df("o1v1").to_ndarray()))
-    # if guess_energies.size < len(guesses):
-    #     raise RuntimeError("Not enough guess energies found.")
     for guess in guesses:
         # Hack to take only singles guesses
         state = JacobiState(AmplitudeVector(guess['s']), results)
-        # bla = matrix.matvec(guess['s'])
-        # tmp1 = guess['s'].empty_like()
-        # matrix.compute_apply("ss", state.eigenvector['s'], tmp1)
         state.eigenvalue = guess @ (matrix @ guess)
-        diis_maxvec = 7
+        diis_maxvec = 8
         diis_vectors = []
         diis_residuals = []
         while not state.converged:
             state.n_iter += 1
             state = __jacobi_step(matrix, state,
                                   callback=callback,
-                                  debug_checks=debug_checks, u2guess=guess['d'].empty_like())
+                                  debug_checks=debug_checks,
+                                  u2guess=guess['d'].empty_like())
             diis_vectors.append(state.eigenvector)
             diis_residuals.append(state.residual)
             if len(diis_vectors) > diis_maxvec:
                 diis_vectors.pop(0)
                 diis_residuals.pop(0)
-            
+
             if len(diis_vectors) > 1:
                 diis_size = len(diis_vectors) + 1
                 bmat = np.zeros((diis_size, diis_size))
@@ -144,11 +140,7 @@ def jacobi_solver(matrix, guesses, n_ep=None, max_subspace=None,
                 rhs[0] = -1.0
                 l, U = np.linalg.eigh(bmat)
                 mask = np.where(np.abs(l) > 1e-14)[0]
-                # print(mask.size)
-                # print(bmat)
-                # weights = np.linalg.solve(bmat, rhs)[1:]
                 weights = ((U[:, mask] @ np.diag(1. / l[mask]) @ U[:, mask].T) @ rhs)[1:]
-                # print(weights)
                 new_vec = state.eigenvector.zeros_like()
                 for i in range(diis_size - 1):
                     new_vec += weights[i] * diis_vectors[i]
@@ -162,7 +154,4 @@ def jacobi_solver(matrix, guesses, n_ep=None, max_subspace=None,
                                      str(max_iter) + " reached in Jacobi "
                                      "procedure.")
                 break
-                # raise la.LinAlgError("Maximum number of iterations (== " +
-                #                      str(max_iter) + " reached in Jacobi "
-                #                      "procedure.")
     return results
