@@ -20,13 +20,14 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
-from .AdcMethod import AdcMethod
-from . import AmplitudeVector
-from .memory_pool import memory_pool, StdAllocatorWarning
-from .backends import import_scf_results
-import libadcc
 import warnings
+
+import libadcc
+
+from .backends import import_scf_results
+from .AdcMethod import AdcMethod
+from .memory_pool import StdAllocatorWarning, memory_pool
+from .AmplitudeVector import AmplitudeVector
 
 
 class TmpRunPrelimResult:

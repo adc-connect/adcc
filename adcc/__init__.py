@@ -20,19 +20,31 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
-from libadcc import Tensor, HartreeFockSolution_i, HartreeFockProvider
-from .functions import copy, empty_like, zeros_like, ones_like, nosym_like, dot
-from .functions import linear_combination, divide, add, subtract, multiply
-from .functions import contract, transpose
-from .state_densities import attach_state_densities
-from .AmplitudeVector import AmplitudeVector
 from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod
-from .thread_pool import thread_pool
+from .functions import (add, contract, copy, divide, dot, empty_like,
+                        linear_combination, multiply, nosym_like, ones_like,
+                        subtract, transpose, zeros_like)
 from .memory_pool import memory_pool
+from .thread_pool import thread_pool
 from .tmp_run_prelim import tmp_run_prelim
+from .AmplitudeVector import AmplitudeVector
+from .state_densities import attach_state_densities
+
+from libadcc import HartreeFockProvider, HartreeFockSolution_i, Tensor
+
+# This has to be the last import
 from .run_adc import run_adc
+
+__all__ = ["run_adc", "AdcMatrix", "AdcMethod",
+           "add", "contract", "copy", "divide", "dot", "empty_like",
+           "linear_combination", "multiply", "nosym_like", "ones_like",
+           "subtract", "transpose", "zeros_like",
+           "memory_pool", "thread_pool", "AmplitudeVector",
+           "attach_state_densities", "tmp_run_prelim",
+           "HartreeFockProvider", "HartreeFockSolution_i", "Tensor",
+           "adc0", "adc1", "adc2", "adc2x", "adc3",
+           "cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x"]
 
 __version__ = "0.6.3"
 __licence__ = "LGPL v3"
@@ -41,29 +53,51 @@ __email__ = "info@michael-herbst.com"
 # feel free to add your name above if you commit something
 
 
+def with_runadc_doc(func):
+    func.__doc__ = run_adc.__doc__
+    return func
+
+
+@with_runadc_doc
+def adc0(*args, **kwargs):
+    return run_adc("adc0", *args, **kwargs)
+
+
+@with_runadc_doc
+def adc1(*args, **kwargs):
+    return run_adc("adc1", *args, **kwargs)
+
+
+@with_runadc_doc
 def adc2(*args, **kwargs):
     return run_adc("adc2", *args, **kwargs)
 
 
+@with_runadc_doc
 def adc2x(*args, **kwargs):
     return run_adc("adc2x", *args, **kwargs)
 
 
+@with_runadc_doc
 def adc3(*args, **kwargs):
     return run_adc("adc3", *args, **kwargs)
 
 
+@with_runadc_doc
+def cvs_adc0(*args, **kwargs):
+    return run_adc("cvs-adc0", *args, **kwargs)
+
+
+@with_runadc_doc
+def cvs_adc1(*args, **kwargs):
+    return run_adc("cvs-adc1", *args, **kwargs)
+
+
+@with_runadc_doc
 def cvs_adc2(*args, **kwargs):
     return run_adc("cvs-adc2", *args, **kwargs)
 
 
+@with_runadc_doc
 def cvs_adc2x(*args, **kwargs):
     return run_adc("cvs-adc2x", *args, **kwargs)
-
-
-# Attach the same doc string as run_adc to other functions
-adc2.__doc__ = run_adc.__doc__
-adc2x.__doc__ = run_adc.__doc__
-adc3.__doc__ = run_adc.__doc__
-cvs_adc2.__doc__ = run_adc.__doc__
-cvs_adc2x.__doc__ = run_adc.__doc__
