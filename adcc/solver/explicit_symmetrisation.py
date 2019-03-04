@@ -39,9 +39,14 @@ class IndexSymmetrisation():
         """
         Symmetrise a set of new vectors to be added to the subspace.
 
-        a) No orthogonalisation is performed
-        b) Only new_vectors are operated upon, existing_subspace
-           is assumed to be properly symmetrised already.
+        new_vectors          Vectors to symmetrise
+        existing_subspace    Existing subspace to take as a template
+
+        It should be noted:
+          - No orthogonalisation is performed
+          - Only new_vectors are operated upon, existing_subspace
+            is assumed to be properly symmetrised already.
+          - Does not add new_vectors to the existing_subspace object
         """
         for vec in new_vectors:
             if not isinstance(vec, AmplitudeVector):
@@ -70,13 +75,6 @@ class IndexSpinSymmetrisation(IndexSymmetrisation):
         self.enforce_spin_kind = enforce_spin_kind
 
     def symmetrise(self, new_vectors, existing_subspace):
-        """
-        Symmetrise a set of new vectors to be added to the subspace.
-
-        a) No orthogonalisation is performed
-        b) Only new_vectors are operated upon, existing_subspace
-           is assumed to be properly symmetrised already.
-        """
         super().symmetrise(new_vectors, existing_subspace)
 
         # Enforce singlet (or other spin_kind) spin in the doubles block
@@ -89,3 +87,7 @@ class IndexSpinSymmetrisation(IndexSymmetrisation):
                                                 self.enforce_spin_kind)
              for b in vec.blocks if b in ["d"]
              ]
+
+
+IndexSpinSymmetrisation.symmetrise.__doc__ = \
+    IndexSymmetrisation.symmetrise.__doc__
