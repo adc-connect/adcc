@@ -20,8 +20,8 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+from adcc import AmplitudeVector, empty_like
 
-from adcc import empty_like, AmplitudeVector
 from libadcc import amplitude_vector_enforce_spin_kind
 
 
@@ -48,12 +48,19 @@ class IndexSymmetrisation():
             is assumed to be properly symmetrised already.
           - Does not add new_vectors to the existing_subspace object
         """
+        if not isinstance(existing_subspace[0], AmplitudeVector):
+            raise TypeError("existing_subspace has to be an "
+                            "iterable of AmplitudeVector")
+
         for vec in new_vectors:
             if not isinstance(vec, AmplitudeVector):
                 raise TypeError("new_vectors has to be an "
                                 "iterable of AmplitudeVector")
+            for b in vec.blocks:
+                if b not in self.sym_for_block:
+                    continue
+                index_symm_func = self.sym_for_block[b]
 
-            for b, index_symm_func in self.sym_for_block.items():
                 # Create an empty block from the subspace vectors
                 # since this has the appropriate symmetry set up
                 symmetrised = empty_like(existing_subspace[0][b])

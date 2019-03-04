@@ -20,15 +20,17 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import sys
+import numpy as np
+
+import scipy.linalg as la
+import scipy.sparse.linalg as sla
+
+from .preconditioner import JacobiPreconditioner
+from .SolverStateBase import SolverStateBase
+from .explicit_symmetrisation import IndexSymmetrisation
 
 from adcc import AdcMatrix, AmplitudeVector, linear_combination
-from .preconditioner import JacobiPreconditioner
-from .explicit_symmetrisation import IndexSymmetrisation
-from .SolverStateBase import SolverStateBase
-import numpy as np
-import scipy.sparse.linalg as sla
-import scipy.linalg as la
-import sys
 
 
 def select_eigenpairs(vectors, n_ep, which):

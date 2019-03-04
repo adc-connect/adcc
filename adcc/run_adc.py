@@ -20,17 +20,19 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import sys
 
+from . import solver
+from .backends import import_scf_results
 from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod
-from .backends import import_scf_results
-from . import solver
-from libadcc import HartreeFockSolution_i
-from .solver.davidson import jacobi_davidson
-from .solver.explicit_symmetrisation import IndexSpinSymmetrisation
-from .solver.explicit_symmetrisation import IndexSymmetrisation
 from .tmp_run_prelim import tmp_run_prelim
-import sys
+
+from .solver.davidson import jacobi_davidson
+from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
+                                             IndexSymmetrisation)
+
+from libadcc import HartreeFockSolution_i
 
 
 def __call_jacobi_davidson(matrix, guesses, kind, output, **kwargs):
@@ -208,6 +210,10 @@ def run_adc(method, hfdata, n_singlets=None, n_triplets=None,
         # requested as the number of guess vectors
         if n_guess_singles < n_max_states:
             n_guess_singles = n_max_states
+
+    if method.base_method in ["adc0", "adc1"] and n_guess_doubles > 0:
+        raise ValueError("n_guess_doubles > 0 is only sensible if the ADC "
+                         "method is not adc0 or adc1 or a variant thereof.")
 
     # Obtain guesses and preliminary data
     prelim = tmp_run_prelim(hfdata, method,
