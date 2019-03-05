@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import adcc
-import IPython
 
-from adcc import tmp_run_prelim
 from import_data import import_data
+
+import IPython
 
 # Gather precomputed data
 data = import_data()
