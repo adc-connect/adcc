@@ -39,3 +39,23 @@ def cached_property(f):
             return x
 
     return property(get)
+
+
+def expand_test_templates(arguments, template_prefix="template_"):
+    """
+    Expand the test templates of the class cls using the arguments
+    provided as a list of tuples to this function
+    """
+    def inner_decorator(cls):
+        for fctn in dir(cls):
+            if not fctn.startswith(template_prefix):
+                continue
+            basename = fctn[len(template_prefix):]
+            for args in arguments:
+                if not isinstance(args, tuple):
+                    args = (args, )
+                newname = "test_" + basename + "_" + str(args[0])
+                setattr(cls, newname,
+                        lambda self: getattr(cls, fctn)(self, *args))
+        return cls
+    return inner_decorator

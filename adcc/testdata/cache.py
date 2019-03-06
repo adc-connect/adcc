@@ -20,11 +20,12 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import os
 
 import adcc
-from adcc.misc import cached_property
+
 from adcc import hdf5io
-import os
+from adcc.misc import cached_property
 
 
 def compute_prelim(data, core_valence_separation=False):
@@ -59,10 +60,13 @@ def make_mock_adc_state(prelim, method, kind, reference):
     state.eigenvectors = [gv.empty_like() for gv in guesses[:n_full]]
 
     vec_singles = reference[method][kind]["eigenvectors_singles"]
-    vec_doubles = reference[method][kind]["eigenvectors_doubles"]
     for i, evec in enumerate(state.eigenvectors):
         evec["s"].set_from_ndarray(vec_singles[i])
-        evec["d"].set_from_ndarray(vec_doubles[i])
+
+    if "eigenvectors_doubles" in reference[method][kind]:
+        vec_doubles = reference[method][kind]["eigenvectors_doubles"]
+        for i, evec in enumerate(state.eigenvectors):
+            evec["d"].set_from_ndarray(vec_doubles[i])
     return state
 
 
