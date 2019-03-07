@@ -1,16 +1,35 @@
 # adcc
-A python-based framework for running ADC calculations.
+`adcc` is a python-based framework to connect to arbitrary host
+programs for running ADC calculations.
+
+## Quick overview
+Currently `adcc` supports all ADC(n) variants up to level 3,
+that is:
+- ADC(0)
+- ADC(1)
+- ADC(2)
+- ADC(2)-x
+- ADC(3)
+
+For all of these, excluding ADC(3), the core-valence approximation
+can be applied and for all variants one-particle
+transition density matrices and excited states density matrices
+are available. These can be used to compute properties such
+as the oscillator strength in user code.
+Both restricted as well as unrestricted references are supported.
+
 
 ## Installation
 Once we have figured out how to do it, it should be as simple as
 ```
 pip install adcc
 ```
-Right now, the package is not uploaded to pypi, however.
+Right now, the package is not
+uploaded to [pypi](https://pypi.org), however.
 
 
-## Development setup use cases
-### Access to adccore source code
+## Developer setup
+### Users with access to adccore source code
 Having cloned this `adcc` repository,
 proceed to clone `adccore` **into the `adcc` directory**,
 that is, run
@@ -18,14 +37,22 @@ that is, run
 git clone https://path/to/adccore adccore
 ```
 inside the directory, where this **README.md** file is found.
-
-Then build, test and (optionally) install `adcc`.
+You should now have the following folder structure:
+```
+adcc/README.md
+adcc/adcc/__init__.py
+...
+adcc/adccore/README.md
+adcc/adccore/CMakeLists.txt
+...
+```
+Afterwards build, test and (optionally) install `adcc`.
 ```
 ./setup.py test   # Builds and tests adcc
 pip install .     # Installs adcc (optional)
 ```
 
-### Without access to adccore source code
+### Users without access to adccore source code
 Download the tarball of the compiled `adccore` library
 into the `external/adccore` directory:
 ```
@@ -49,3 +76,35 @@ for development and worth knowing:
   This includes `adccore` in case you have the source code repository set up as
   described above.
 - `setup.py test`: Run the `adcc` unit tests via `pytest`. Implies `build_ext`.
+
+
+## `adcc` and `pyscf` example
+The following example runs an SCF in `pyscf` and an ADC(3) calculation on top:
+```python
+from pyscf import gto, scf
+import adcc
+
+# Run SCF in pyscf using a cc-pvtz basis
+mol = gto.M(
+    atom='O 0 0 0;'
+         'H 0 0 1.795239827225189;'
+         'H 1.693194615993441 0 -0.599043184453037',
+    basis='cc-pvdz',
+    unit="Bohr"
+)
+scfres = scf.RHF(mol)
+scfres.conv_tol = 1e-13
+scfres.kernel()
+
+# Initialise ADC memory (512 MiB)
+adcc.memory_pool.initialise(max_memory=512 * 1024 * 1024)
+
+# Run an adc3 calculation:
+state = adcc.adc3(scfres, n_singlets=3, n_triplets=3, conv_tol=1e-6)
+
+# Print the resulting states
+print(state[0].describe())
+print()
+print(state[1].describe())
+```
+More examples can be found in the `examples` folder.
