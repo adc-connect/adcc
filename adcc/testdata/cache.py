@@ -21,9 +21,10 @@
 ##
 ## ---------------------------------------------------------------------
 import os
+
 import adcc
 
-from adcc import hdf5io
+from adcc import AmplitudeVector, empty_like, hdf5io
 from adcc.misc import cached_property
 
 
@@ -56,15 +57,23 @@ def make_mock_adc_state(prelim, method, kind, reference):
     state.reference_state = prelim.reference
     state.kind = kind
     state.eigenvalues = reference[method][kind]["eigenvalues"][:n_full]
-    state.eigenvectors = [gv.empty_like() for gv in guesses[:n_full]]
+
+    # prelim.guesses is computed via ADC(2), hence this has
+    # a singles and a doubles part. For ADC(1), however, we only
+    # need a singles part
+    has_doubles = "eigenvectors_doubles" in reference[method][kind]
+
+    if has_doubles:
+        state.eigenvectors = [empty_like(gv) for gv in guesses[:n_full]]
+    else:
+        state.eigenvectors = [AmplitudeVector(empty_like(gv["s"]))
+                              for gv in guesses[:n_full]]
 
     vec_singles = reference[method][kind]["eigenvectors_singles"]
+    vec_doubles = reference[method][kind].get("eigenvectors_doubles", None)
     for i, evec in enumerate(state.eigenvectors):
         evec["s"].set_from_ndarray(vec_singles[i])
-
-    if "eigenvectors_doubles" in reference[method][kind]:
-        vec_doubles = reference[method][kind]["eigenvectors_doubles"]
-        for i, evec in enumerate(state.eigenvectors):
+        if has_doubles:
             evec["d"].set_from_ndarray(vec_doubles[i])
     return state
 
