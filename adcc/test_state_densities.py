@@ -20,67 +20,51 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
-import adcc
-from adcc.testdata.cache import cache
-from pytest import approx
 import unittest
 
+from .misc import expand_test_templates
 
+import adcc
+
+from pytest import approx
+from adcc.testdata.cache import cache
+
+# The methods to test
+basemethods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+methods = [m for bm in basemethods for m in [bm, "cvs_" + bm]]
+methods.remove("cvs_adc3")  # Not implemented yet
+
+
+@expand_test_templates(methods)
 class Runners():
     def base_test(self, *args, **kwargs):
         raise NotImplementedError
 
-    def test_h2o_adc2_singlet(self):
-        self.base_test("h2o_sto3g", "adc2", "singlet")
+    def template_h2o_singlet(self, method):
+        kwargs = {}
+        if method == "adc3":
+            kwargs = {"propmethod": "adc2"}
+        self.base_test("h2o_sto3g", method, "singlet", **kwargs)
 
-    def test_h2o_adc2_triplet(self):
-        self.base_test("h2o_sto3g", "adc2", "triplet")
+    def template_h2o_triplet(self, method):
+        kwargs = {}
+        if method == "adc3":
+            kwargs = {"propmethod": "adc2"}
+        self.base_test("h2o_sto3g", method, "triplet", **kwargs)
 
-    def test_cn_adc2(self):
-        self.base_test("cn_sto3g", "adc2", "state")
-
-    def test_h2o_adc2x_singlet(self):
-        self.base_test("h2o_sto3g", "adc2x", "singlet")
-
-    def test_h2o_adc2x_triplet(self):
-        self.base_test("h2o_sto3g", "adc2x", "triplet")
-
-    def test_cn_adc2x(self):
-        self.base_test("cn_sto3g", "adc2x", "state")
-
-    def test_h2o_adc3_singlet(self):
-        self.base_test("h2o_sto3g", "adc3", "singlet", propmethod="adc2")
-
-    def test_h2o_adc3_triplet(self):
-        self.base_test("h2o_sto3g", "adc3", "triplet", propmethod="adc2")
-
-    def test_cn_adc3(self):
-        self.base_test("cn_sto3g", "adc3", "state", propmethod="adc2")
-
-    def test_h2o_cvs_adc2_singlet(self):
-        self.base_test("h2o_sto3g", "cvs-adc2", "singlet")
-
-    def test_h2o_cvs_adc2_triplet(self):
-        self.base_test("h2o_sto3g", "cvs-adc2", "triplet")
-
-    def test_cn_cvs_adc2(self):
-        self.base_test("cn_sto3g", "cvs-adc2", "state")
-
-    def test_h2o_cvs_adc2x_singlet(self):
-        self.base_test("h2o_sto3g", "cvs-adc2x", "singlet")
-
-    def test_h2o_cvs_adc2x_triplet(self):
-        self.base_test("h2o_sto3g", "cvs-adc2x", "triplet")
-
-    def test_cn_cvs_adc2x(self):
-        self.base_test("cn_sto3g", "cvs-adc2x", "state")
+    def template_cn(self, method):
+        kwargs = {}
+        if method == "adc3":
+            kwargs = {"propmethod": "adc2"}
+        self.base_test("cn_sto3g", method, "state", **kwargs)
 
 
 class TestStateDiffDm(unittest.TestCase, Runners):
     def base_test(self, system, method, kind, propmethod=None):
         if propmethod is None:
             propmethod = method
+        method = method.replace("_", "-")
+        propmethod = propmethod.replace("_", "-")
 
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
@@ -110,6 +94,8 @@ class TestStateGroundToExcitedTdm(unittest.TestCase, Runners):
     def base_test(self, system, method, kind, propmethod=None):
         if propmethod is None:
             propmethod = method
+        method = method.replace("_", "-")
+        propmethod = propmethod.replace("_", "-")
 
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]

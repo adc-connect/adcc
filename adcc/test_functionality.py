@@ -29,7 +29,7 @@ import adcc
 from pytest import approx
 from adcc.testdata.cache import cache
 
-# The methods to test for
+# The methods to test
 methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 
 
