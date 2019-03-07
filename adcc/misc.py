@@ -54,7 +54,8 @@ def expand_test_templates(arguments, template_prefix="template_"):
             for args in arguments:
                 if not isinstance(args, tuple):
                     args = (args, )
-                newname = "test_" + basename + "_" + str(args[0])
+                newname = "test_" + basename + "_"
+                newname += "_".join(str(a) for a in args)
                 setattr(cls, newname,
                         lambda self: getattr(cls, fctn)(self, *args))
         return cls

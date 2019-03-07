@@ -21,7 +21,6 @@
 ##
 ## ---------------------------------------------------------------------
 import os
-
 import adcc
 
 from adcc import hdf5io
@@ -112,8 +111,8 @@ class TestdataCache():
 
     @cached_property
     def reference_data(self):
-        methods = ["cvs_adc2", "cvs_adc2x", "cvs_adc3",
-                   "adc2", "adc2x", "adc3"]
+        methods = ["cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x", "cvs_adc3",
+                   "adc0", "adc1", "adc2", "adc2x", "adc3"]
 
         ret = {}
         for k in self.testcases:
@@ -136,14 +135,14 @@ class TestdataCache():
         for case in self.testcases:
             available_kinds = self.reference_data[case]["available_kinds"]
             res_case = {}
-            for method in ["adc2", "adc2x", "adc3"]:
+            for method in ["adc0", "adc1", "adc2", "adc2x", "adc3"]:
                 res_case[method] = {
                     kind: make_mock_adc_state(self.prelim[case], method, kind,
                                               self.reference_data[case])
                     for kind in available_kinds
                 }
 
-            for cvs_method in ["cvs-adc2", "cvs-adc2x"]:
+            for cvs_method in ["cvs-adc0", "cvs-adc1", "cvs-adc2", "cvs-adc2x"]:
                 res_case[cvs_method] = {
                     kind: make_mock_adc_state(self.prelim_cvs[case], cvs_method,
                                               kind, self.reference_data[case])

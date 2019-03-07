@@ -20,13 +20,20 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
-from adcc.testdata.cache import cache
-from pytest import approx
-import adcc
 import unittest
 
+from .misc import expand_test_templates
 
+import adcc
+
+from pytest import approx
+from adcc.testdata.cache import cache
+
+# The methods to test for
+methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+
+
+@expand_test_templates(methods)
 class TestFunctionality(unittest.TestCase):
     def base_test(self, system, method, kind, **args):
         hf = cache.hfdata[system]
@@ -47,56 +54,41 @@ class TestFunctionality(unittest.TestCase):
     #
     # General
     #
-    def test_h2o_adc2_singlets(self):
-        self.base_test("h2o_sto3g", "adc2", "singlet", n_singlets=10)
+    def template_h2o_singlets(self, method):
+        self.base_test("h2o_sto3g", method, "singlet", n_singlets=10)
 
-    def test_h2o_adc2_triplets(self):
-        self.base_test("h2o_sto3g", "adc2", "triplet", n_triplets=10)
+    def template_h2o_triplets(self, method):
+        self.base_test("h2o_sto3g", method, "triplet", n_triplets=10)
 
-    def test_cn_adc2(self):
-        self.base_test("cn_sto3g", "adc2", "state", n_states=8)
-
-    def test_h2o_adc3_singlets(self):
-        self.base_test("h2o_sto3g", "adc3", "singlet", n_singlets=10)
-
-    def test_h2o_adc3_triplets(self):
-        self.base_test("h2o_sto3g", "adc3", "triplet", n_triplets=10)
-
-    def test_cn_adc3(self):
-        self.base_test("cn_sto3g", "adc3", "state", n_states=8)
-
-    def test_h2o_adc2x_singlets(self):
-        self.base_test("h2o_sto3g", "adc2x", "singlet", n_singlets=10)
-
-    def test_h2o_adc2x_triplets(self):
-        self.base_test("h2o_sto3g", "adc2x", "triplet", n_triplets=10)
-
-    def test_cn_adc2x(self):
-        self.base_test("cn_sto3g", "adc2x", "state", n_states=8)
+    def template_cn(self, method):
+        self.base_test("cn_sto3g", method, "state", n_states=8)
 
     #
     # CVS
     #
-    def test_h2o_cvs_adc2_singlets(self):
-        self.base_test("h2o_sto3g", "cvs-adc2", "singlet", n_singlets=3,
-                       n_core_orbitals=1)
+    def template_cvs_h2o_singlets(self, method):
+        if method in ["adc3"]:
+            return  # Not yet implemented
 
-    def test_h2o_cvs_adc2_triplets(self):
-        self.base_test("h2o_sto3g", "cvs-adc2", "triplet", n_triplets=3,
-                       n_core_orbitals=1)
+        n_singlets = 3
+        if method in ["adc0", "adc1"]:
+            n_singlets = 2
+        self.base_test("h2o_sto3g", "cvs-" + method, "singlet",
+                       n_singlets=n_singlets, n_core_orbitals=1)
 
-    def test_cn_cvs_adc2(self):
-        self.base_test("cn_sto3g", "cvs-adc2", "state", n_states=6,
-                       n_core_orbitals=1)
+    def template_cvs_h2o_triplets(self, method):
+        if method in ["adc3"]:
+            return  # Not yet implemented
 
-    def test_h2o_cvs_adc2x_singlets(self):
-        self.base_test("h2o_sto3g", "cvs-adc2x", "singlet", n_singlets=3,
-                       n_core_orbitals=1)
+        n_triplets = 3
+        if method in ["adc0", "adc1"]:
+            n_triplets = 2
+        self.base_test("h2o_sto3g", "cvs-" + method, "triplet",
+                       n_triplets=n_triplets, n_core_orbitals=1)
 
-    def test_h2o_cvs_adc2x_triplets(self):
-        self.base_test("h2o_sto3g", "cvs-adc2x", "triplet", n_triplets=3,
-                       n_core_orbitals=1)
+    def template_cvs_cn(self, method):
+        if method in ["adc3"]:
+            return  # Not yet implemented
 
-    def test_cn_cvs_adc2x(self):
-        self.base_test("cn_sto3g", "cvs-adc2x", "state", n_states=6,
-                       n_core_orbitals=1)
+        self.base_test("cn_sto3g", "cvs-" + method, "state",
+                       n_states=6, n_core_orbitals=1)
