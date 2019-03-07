@@ -20,9 +20,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import numpy as np
 
 import scipy.constants
-import numpy as np
 
 
 class SolverStateBase:
@@ -57,13 +57,17 @@ class SolverStateBase:
         text += head.format(self.method.name, kind + " ,  " + conv)
         text += "+" + 48 * "-" + "+\n"
 
+        # TODO Certain methods such as ADC(0), ADC(1) do not have
+        #      a doubles part and it does not really make sense to
+        #      display it here.
+
         # TODO Add dominant amplitudes
         body = "| {0:2d}{1:11.7g} {2:11.7g}  {3:8.4g}  {4:8.4g}  |\n"
         text += "|  #    excitation energy      |v1|^2    |v2|^2  |\n"
         text += "|        (au)        (eV)                        |\n"
         for i, vec in enumerate(self.eigenvectors):
             v1_norm = np.sum((vec["s"] * vec["s"]).to_ndarray())
-            # TODO It would be better to compute v1, but right now
+            # TODO It would be better to compute v2, but right now
             #      this requires we need to get the full doubles
             #      part into numpy, which is pretty slow ...
             # v2_norm = vec["d"] * vec["d"]

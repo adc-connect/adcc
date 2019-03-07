@@ -20,30 +20,39 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import os
+import numpy as np
+
+import adcc
+import adcc.solver.adcman as adcman
 
 from adcc import hdf5io
 from adcc.testdata.cache import cache
-import adcc
-import adcc.solver.adcman as adcman
-import numpy as np
-import os
 
 
-def dump_all_methods(key, kwargs_cvs, kwargs_general):
+def dump_all_methods(key, kwargs_cvs, kwargs_general, kwargs_overwrite={}):
     data = cache.hfdata[key]
 
-    for method in ["adc2", "adc2x", "adc3"]:
+    for method in ["adc0", "adc1", "adc2", "adc2x", "adc3"]:
         tmethod = method
         if method == "adc2":
             tmethod = "adc2s"
 
+        if method in kwargs_overwrite:
+            overwrite = kwargs_overwrite[method]
+            kw_general = overwrite.get("general", kwargs_general)
+            kw_cvs = overwrite.get("cvs", kwargs_cvs)
+        else:
+            kw_general = kwargs_general
+            kw_cvs = kwargs_cvs
+
         if method not in ["adc3"]:
-            # CVS
+            # do CVS
             dumpfile = "{}_reference_cvs_{}.hdf5".format(key, method)
             if not os.path.isfile(dumpfile):
-                res = run(data, method="cvs-" + method, **kwargs_cvs,
+                res = run(data, method="cvs-" + method, **kw_cvs,
                           core_valence_separation=True)
-                dictionary = build_dict(res,
+                dictionary = build_dict(res, mp_tree="mp_cvs",
                                         method_tree="adc_pp/cvs_" + tmethod,
                                         out_tree="cvs-" + method)
                 hdf5io.save(dumpfile, dictionary)
@@ -51,8 +60,9 @@ def dump_all_methods(key, kwargs_cvs, kwargs_general):
         # General
         dumpfile = "{}_reference_{}.hdf5".format(key, method)
         if not os.path.isfile(dumpfile):
-            res = run(data, method=method, **kwargs_general)
-            dictionary = build_dict(res, method_tree="adc_pp/" + tmethod,
+            res = run(data, method=method, **kw_general)
+            dictionary = build_dict(res, mp_tree="mp",
+                                    method_tree="adc_pp/" + tmethod,
                                     out_tree=method)
             hdf5io.save(dumpfile, dictionary)
 
@@ -83,19 +93,55 @@ def run(data, method, n_singlets=None, n_triplets=None,
     return states[0].ctx
 
 
-def build_dict(ctx, method_tree, out_tree, n_states_full=2):
+def build_dict(ctx, mp_tree, method_tree, out_tree, n_states_full=2):
     ret = {}
-    ret["mp1/t_o1o1v1v1"] = ctx.at_tensor("/mp1/t_o1o1v1v1").to_ndarray()
-    ret["mp1/df_o1v1"] = ctx.at_tensor("/mp1/df_o1v1").to_ndarray()
-    ret["mp2/td_o1o1v1v1"] = ctx.at_tensor("/mp2/td_o1o1v1v1").to_ndarray()
+
+    #
+    # MP
+    #
+    mp = mp_tree
+    if len(mp) > 0 and mp[-1] != "/":
+        mp = mp + "/"
+
+    if ctx.exists("/mp2/energy"):
+        ret[mp + "mp2/energy"] = ctx.at_scalar("/mp2/energy")
+    if ctx.exists("/mp3/energy"):
+        ret[mp + "mp3/energy"] = ctx.at_scalar("/mp3/energy")
+
+    if ctx.exists("/mp1/t_o1o1v1v1"):  # For generic
+        ret[mp + "mp1/t_o1o1v1v1"] = \
+            ctx.at_tensor("/mp1/t_o1o1v1v1").to_ndarray()
+    if ctx.exists("/mp1/t_o2o2v1v1"):  # For CVS
+        ret[mp + "mp1/t_o2o2v1v1"] = \
+            ctx.at_tensor("/mp1/t_o2o2v1v1").to_ndarray()
+        ret[mp + "mp1/t_o1o2v1v1"] = \
+            ctx.at_tensor("/mp1/t_o1o2v1v1").to_ndarray()
+
+    if ctx.exists("/mp1/df_o1v1"):  # For generic
+        ret[mp + "mp1/df_o1v1"] = ctx.at_tensor("/mp1/df_o1v1").to_ndarray()
+    if ctx.exists("/mp1/df_o2v1"):  # For CVS
+        ret[mp + "mp1/df_o2v1"] = ctx.at_tensor("/mp1/df_o2v1").to_ndarray()
+
+    if ctx.exists("/mp2/td_o1o1v1v1"):  # For generic
+        ret[mp + "mp2/td_o1o1v1v1"] = \
+            ctx.at_tensor("/mp2/td_o1o1v1v1").to_ndarray()
 
     mp_dm = "/mp2/opdm/"
-    ret["mp2/dm_o1o1"] = ctx.at_tensor(mp_dm + "dm_o1o1").to_ndarray()
-    ret["mp2/dm_o1v1"] = ctx.at_tensor(mp_dm + "dm_o1v1").to_ndarray()
-    ret["mp2/dm_v1v1"] = ctx.at_tensor(mp_dm + "dm_v1v1").to_ndarray()
-    ret["mp2/dm_bb_a"] = ctx.at_tensor(mp_dm + "dm_bb_a").to_ndarray()
-    ret["mp2/dm_bb_b"] = ctx.at_tensor(mp_dm + "dm_bb_b").to_ndarray()
+    if ctx.exists(mp_dm + "dm_o1o1"):  # For generic
+        ret[mp + "mp2/dm_o1o1"] = ctx.at_tensor(mp_dm + "dm_o1o1").to_ndarray()
+        ret[mp + "mp2/dm_o1v1"] = ctx.at_tensor(mp_dm + "dm_o1v1").to_ndarray()
+        ret[mp + "mp2/dm_v1v1"] = ctx.at_tensor(mp_dm + "dm_v1v1").to_ndarray()
+        ret[mp + "mp2/dm_bb_a"] = ctx.at_tensor(mp_dm + "dm_bb_a").to_ndarray()
+        ret[mp + "mp2/dm_bb_b"] = ctx.at_tensor(mp_dm + "dm_bb_b").to_ndarray()
 
+    if ctx.exists(mp_dm + "dm_o2o2"):  # For CVS
+        ret[mp + "mp2/dm_o2o1"] = ctx.at_tensor(mp_dm + "dm_o2o1").to_ndarray()
+        ret[mp + "mp2/dm_o2o2"] = ctx.at_tensor(mp_dm + "dm_o2o2").to_ndarray()
+        ret[mp + "mp2/dm_o2v1"] = ctx.at_tensor(mp_dm + "dm_o2v1").to_ndarray()
+
+    #
+    # ADC
+    #
     kind_trees = {
         "singlet": method_tree + "/rhf/singlets/0",
         "triplet": method_tree + "/rhf/triplets/0",
@@ -140,9 +186,12 @@ def build_dict(ctx, method_tree, out_tree, n_states_full=2):
             eigenvectors_singles.append(
                 ctx.at_tensor(state_tree + "/u1").to_ndarray()
             )
-            eigenvectors_doubles.append(
-                ctx.at_tensor(state_tree + "/u2").to_ndarray()
-            )
+            if ctx.exists(state_tree + "/u2"):
+                eigenvectors_doubles.append(
+                    ctx.at_tensor(state_tree + "/u2").to_ndarray()
+                )
+            else:
+                eigenvectors_doubles.clear()
 
         # from the others only the energy
         for i in range(n_states_full, n_states):
@@ -157,7 +206,10 @@ def build_dict(ctx, method_tree, out_tree, n_states_full=2):
         ret[pfx + "/ground_to_excited_tdm_bb_b"] = np.asarray(tdm_bb_b)
         ret[pfx + "/eigenvalues"] = np.array(eigenvalues)
         ret[pfx + "/eigenvectors_singles"] = np.asarray(eigenvectors_singles)
-        ret[pfx + "/eigenvectors_doubles"] = np.asarray(eigenvectors_doubles)
+
+        if eigenvectors_doubles:  # For ADC(0) and ADC(1) there are no doubles
+            ret[pfx + "/eigenvectors_doubles"] = \
+                np.asarray(eigenvectors_doubles)
     # for kind
 
     ret["available_kinds"] = available_kinds
@@ -170,7 +222,11 @@ def main():
     #
     kwargs_cvs = {"n_singlets": 3, "n_triplets": 3}
     kwargs_general = {"n_singlets": 10, "n_triplets": 10}
-    dump_all_methods("h2o_sto3g", kwargs_cvs, kwargs_general)
+    kwargs_overwrite = {
+        "adc0": {"cvs": {"n_singlets": 2, "n_triplets": 2}, },
+        "adc1": {"cvs": {"n_singlets": 2, "n_triplets": 2}, },
+    }
+    dump_all_methods("h2o_sto3g", kwargs_cvs, kwargs_general, kwargs_overwrite)
 
     #
     # CN unrestricted

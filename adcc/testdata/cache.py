@@ -20,11 +20,12 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import os
 
 import adcc
+
+from adcc import AmplitudeVector, empty_like, hdf5io
 from adcc.misc import cached_property
-from adcc import hdf5io
-import os
 
 
 def compute_prelim(data, core_valence_separation=False):
@@ -56,13 +57,24 @@ def make_mock_adc_state(prelim, method, kind, reference):
     state.reference_state = prelim.reference
     state.kind = kind
     state.eigenvalues = reference[method][kind]["eigenvalues"][:n_full]
-    state.eigenvectors = [gv.empty_like() for gv in guesses[:n_full]]
+
+    # prelim.guesses is computed via ADC(2), hence this has
+    # a singles and a doubles part. For ADC(1), however, we only
+    # need a singles part
+    has_doubles = "eigenvectors_doubles" in reference[method][kind]
+
+    if has_doubles:
+        state.eigenvectors = [empty_like(gv) for gv in guesses[:n_full]]
+    else:
+        state.eigenvectors = [AmplitudeVector(empty_like(gv["s"]))
+                              for gv in guesses[:n_full]]
 
     vec_singles = reference[method][kind]["eigenvectors_singles"]
-    vec_doubles = reference[method][kind]["eigenvectors_doubles"]
+    vec_doubles = reference[method][kind].get("eigenvectors_doubles", None)
     for i, evec in enumerate(state.eigenvectors):
         evec["s"].set_from_ndarray(vec_singles[i])
-        evec["d"].set_from_ndarray(vec_doubles[i])
+        if has_doubles:
+            evec["d"].set_from_ndarray(vec_doubles[i])
     return state
 
 
@@ -108,8 +120,8 @@ class TestdataCache():
 
     @cached_property
     def reference_data(self):
-        methods = ["cvs_adc2", "cvs_adc2x", "cvs_adc3",
-                   "adc2", "adc2x", "adc3"]
+        methods = ["cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x", "cvs_adc3",
+                   "adc0", "adc1", "adc2", "adc2x", "adc3"]
 
         ret = {}
         for k in self.testcases:
@@ -132,14 +144,14 @@ class TestdataCache():
         for case in self.testcases:
             available_kinds = self.reference_data[case]["available_kinds"]
             res_case = {}
-            for method in ["adc2", "adc2x", "adc3"]:
+            for method in ["adc0", "adc1", "adc2", "adc2x", "adc3"]:
                 res_case[method] = {
                     kind: make_mock_adc_state(self.prelim[case], method, kind,
                                               self.reference_data[case])
                     for kind in available_kinds
                 }
 
-            for cvs_method in ["cvs-adc2", "cvs-adc2x"]:
+            for cvs_method in ["cvs-adc0", "cvs-adc1", "cvs-adc2", "cvs-adc2x"]:
                 res_case[cvs_method] = {
                     kind: make_mock_adc_state(self.prelim_cvs[case], cvs_method,
                                               kind, self.reference_data[case])

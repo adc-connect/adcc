@@ -35,6 +35,8 @@ void export_LazyMp(py::module& m) {
              "Obtain the appropriate MP energy correction.")
         .def("df", &LazyMp::df, "Obtain the Delta Fock matrix.")
         .def("t2", &LazyMp::t2, "Obtain the T2 amplitudes.")
+        .def("set_t2", &LazyMp::set_t2,
+             "Set the T2 amplitudes (invalidates dependent data automatically.")
         .def("td2", &LazyMp::td2, "Obtain the T^D_2 term.")
         .def_property_readonly("mp2_diffdm", &LazyMp::mp2_diffdm_ptr,
                                "Obtain the MP2 difference density object.")

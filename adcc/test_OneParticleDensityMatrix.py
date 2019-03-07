@@ -20,10 +20,10 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
-from adcc.testdata.cache import cache
 import unittest
 import numpy as np
+
+from adcc.testdata.cache import cache
 
 
 class TestOneParticleDensityMatrix(unittest.TestCase):
@@ -37,6 +37,6 @@ class TestOneParticleDensityMatrix(unittest.TestCase):
         dm_o = np.hstack((dm_oo, dm_ov))
         dm_v = np.hstack((dm_ov.transpose(), dm_vv))
         dm_full = np.vstack((dm_o, dm_v))
-        
+
         np.testing.assert_almost_equal(dm_full, mp2diff.to_ndarray(),
                                        decimal=12)
