@@ -20,14 +20,13 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import adcc
 import unittest
 
-from .misc import expand_test_templates
-
-import adcc
-
-from pytest import approx
 from adcc.testdata.cache import cache
+
+from .misc import expand_test_templates
+from pytest import approx
 
 # The methods to test
 methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
