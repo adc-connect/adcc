@@ -61,15 +61,15 @@ class TestFunctionality(unittest.TestCase):
         self.base_test("h2o_sto3g", method, "triplet", n_triplets=10)
 
     def template_cn(self, method):
-        self.base_test("cn_sto3g", method, "state", n_states=8)
+        kwargs = {}
+        if method in ["adc0", "adc1"]:
+            kwargs["max_subspace"] = 42
+        self.base_test("cn_sto3g", method, "state", n_states=8, **kwargs)
 
     #
     # CVS
     #
     def template_cvs_h2o_singlets(self, method):
-        if method in ["adc3"]:
-            return  # Not yet implemented
-
         n_singlets = 3
         if method in ["adc0", "adc1"]:
             n_singlets = 2
@@ -77,9 +77,6 @@ class TestFunctionality(unittest.TestCase):
                        n_singlets=n_singlets, n_core_orbitals=1)
 
     def template_cvs_h2o_triplets(self, method):
-        if method in ["adc3"]:
-            return  # Not yet implemented
-
         n_triplets = 3
         if method in ["adc0", "adc1"]:
             n_triplets = 2
@@ -87,8 +84,11 @@ class TestFunctionality(unittest.TestCase):
                        n_triplets=n_triplets, n_core_orbitals=1)
 
     def template_cvs_cn(self, method):
-        if method in ["adc3"]:
-            return  # Not yet implemented
-
         self.base_test("cn_sto3g", "cvs-" + method, "state",
                        n_states=6, n_core_orbitals=1)
+
+
+# CVS-ADC(3) not supported
+delattr(TestFunctionality, "test_cvs_cn_adc3")
+delattr(TestFunctionality, "test_cvs_h2o_singlets_adc3")
+delattr(TestFunctionality, "test_cvs_h2o_triplets_adc3")

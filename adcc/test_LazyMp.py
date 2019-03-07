@@ -59,17 +59,17 @@ class TestLazyMp(unittest.TestCase):
     def template_df(self, case):
         refmp = cache.reference_data[case]["mp"]
         assert_allclose(self.mp[case].df("o1v1").to_ndarray(),
-                        refmp["mp1"]["df_o1v1"])
+                        refmp["mp1"]["df_o1v1"], atol=1e-12)
 
     def template_t2(self, case):
         refmp = cache.reference_data[case]["mp"]
         assert_allclose(self.mp[case].t2("o1o1v1v1").to_ndarray(),
-                        refmp["mp1"]["t_o1o1v1v1"])
+                        refmp["mp1"]["t_o1o1v1v1"], atol=1e-12)
 
     def template_td2(self, case):
         refmp = cache.reference_data[case]["mp"]
         assert_allclose(self.mp[case].td2("o1o1v1v1").to_ndarray(),
-                        refmp["mp2"]["td_o1o1v1v1"])
+                        refmp["mp2"]["td_o1o1v1v1"], atol=1e-12)
 
     def template_mp2_density_mo(self, case):
         refmp = cache.reference_data[case]["mp"]
@@ -78,7 +78,7 @@ class TestLazyMp(unittest.TestCase):
         assert mp2diff.is_symmetric
         for label in ["o1o1", "o1v1", "v1v1"]:
             assert_allclose(mp2diff[label].to_ndarray(),
-                            refmp["mp2"]["dm_" + label])
+                            refmp["mp2"]["dm_" + label], atol=1e-12)
 
     def template_mp2_density_ao(self, case):
         refmp = cache.reference_data[case]["mp"]
@@ -86,8 +86,8 @@ class TestLazyMp(unittest.TestCase):
         reference_state = self.mp[case].reference_state
 
         dm_α, dm_β = mp2diff.transform_to_ao_basis(reference_state)
-        assert_allclose(dm_α.to_ndarray(), refmp["mp2"]["dm_bb_a"])
-        assert_allclose(dm_β.to_ndarray(), refmp["mp2"]["dm_bb_b"])
+        assert_allclose(dm_α.to_ndarray(), refmp["mp2"]["dm_bb_a"], atol=1e-12)
+        assert_allclose(dm_β.to_ndarray(), refmp["mp2"]["dm_bb_b"], atol=1e-12)
 
     def template_set_t2(self, case):
         mp = LazyMp(cache.prelim[case].reference)
@@ -120,15 +120,15 @@ class TestLazyMp(unittest.TestCase):
     def template_cvs_df(self, case):
         refmpcvs = cache.reference_data[case]["mp_cvs"]
         assert_allclose(self.mp_cvs[case].df("o1v1").to_ndarray(),
-                        refmpcvs["mp1"]["df_o1v1"])
+                        refmpcvs["mp1"]["df_o1v1"], atol=1e-12)
         assert_allclose(self.mp_cvs[case].df("o2v1").to_ndarray(),
-                        refmpcvs["mp1"]["df_o2v1"])
+                        refmpcvs["mp1"]["df_o2v1"], atol=1e-12)
 
     def template_cvs_t2(self, case):
         refmpcvs = cache.reference_data[case]["mp_cvs"]
         for label in ["o1o1v1v1", "o1o2v1v1", "o2o2v1v1"]:
             assert_allclose(self.mp_cvs[case].t2(label).to_ndarray(),
-                            refmpcvs["mp1"]["t_" + label])
+                            refmpcvs["mp1"]["t_" + label], atol=1e-12)
 
     # T^D(2) not not tested, since not implemented
 
@@ -139,7 +139,7 @@ class TestLazyMp(unittest.TestCase):
         assert mp2diff.is_symmetric
         for label in ["o1o1", "o2o1", "o1v1", "o2o2", "o2v1", "v1v1"]:
             assert_allclose(mp2diff[label].to_ndarray(),
-                            refmpcvs["mp2"]["dm_" + label])
+                            refmpcvs["mp2"]["dm_" + label], atol=1e-12)
 
     def template_cvs_mp2_density_ao(self, case):
         refmpcvs = cache.reference_data[case]["mp_cvs"]
@@ -148,9 +148,11 @@ class TestLazyMp(unittest.TestCase):
         reference_state = self.mp_cvs[case].reference_state
 
         dm_α, dm_β = mp2diff.transform_to_ao_basis(reference_state)
-        assert_allclose(dm_α.to_ndarray(), refmpcvs["mp2"]["dm_bb_a"])
-        assert_allclose(dm_β.to_ndarray(), refmpcvs["mp2"]["dm_bb_b"])
+        assert_allclose(dm_α.to_ndarray(),
+                        refmpcvs["mp2"]["dm_bb_a"], atol=1e-12)
+        assert_allclose(dm_β.to_ndarray(),
+                        refmpcvs["mp2"]["dm_bb_b"], atol=1e-12)
 
         # CVS MP(2) densities in AOs should be equal to the non-CVS one
-        assert_allclose(dm_α.to_ndarray(), refmp["mp2"]["dm_bb_a"])
-        assert_allclose(dm_β.to_ndarray(), refmp["mp2"]["dm_bb_b"])
+        assert_allclose(dm_α.to_ndarray(), refmp["mp2"]["dm_bb_a"], atol=1e-12)
+        assert_allclose(dm_β.to_ndarray(), refmp["mp2"]["dm_bb_b"], atol=1e-12)
