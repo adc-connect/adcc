@@ -28,21 +28,22 @@ import numpy as np
 SpinBlockSlice = namedtuple('SpinBlockSlice', ['spins', 'slices'])
 
 # Helper class to contain a specific ERI permutation with the resp. sign
-EriPermutation = namedtuple('EriPermutation', ['sign', 'transposition'])
+EriPermutationSymm = namedtuple('EriPermutation', ['pref', 'transposition'])
 
 _valid_notations = ["chem", "phys", "phys_asym"]
 
 # ERIs in Chemists' notation
 # (ij|kl) = (kl|ij) = (ji|lk) = (lk|ji)
 # = (ji|kl) = (lk|ij) = (ij|lk) = (kl|ji)
-_chem_allowed = [EriPermutation(1, [0, 1, 2, 3]),  # (ij|kl)
-                 EriPermutation(1, [2, 3, 0, 1]),  # (kl|ij)
-                 EriPermutation(1, [1, 0, 3, 2]),  # (ji|lk)
-                 EriPermutation(1, [3, 2, 1, 0]),  # (lk|ji)
-                 EriPermutation(1, [1, 0, 2, 3]),  # (ji|kl)
-                 EriPermutation(1, [3, 2, 0, 1]),  # (lk|ij)
-                 EriPermutation(1, [0, 1, 3, 2]),  # (ij|lk)
-                 EriPermutation(1, [2, 3, 1, 0])]  # (kl|ji)
+ii, jj, kk, ll = 0, 1, 2, 3
+_chem_allowed = [EriPermutationSymm(1, [ii, jj, kk, ll]),  # (ij|kl)
+                 EriPermutationSymm(1, [kk, ll, ii, jj]),  # (kl|ij)
+                 EriPermutationSymm(1, [jj, ii, ll, kk]),  # (ji|lk)
+                 EriPermutationSymm(1, [ll, kk, jj, ii]),  # (lk|ji)
+                 EriPermutationSymm(1, [jj, ii, kk, ll]),  # (ji|kl)
+                 EriPermutationSymm(1, [ll, kk, ii, jj]),  # (lk|ij)
+                 EriPermutationSymm(1, [ii, jj, ll, kk]),  # (ij|lk)
+                 EriPermutationSymm(1, [kk, ll, jj, ii])]  # (kl|ji)
 
 
 class EriBlock:
