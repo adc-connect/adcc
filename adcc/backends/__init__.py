@@ -52,6 +52,14 @@ def import_scf_results(res):
     except ImportError:
         pass
 
+    try:
+        import psi4
+        from . import psi4 as backend_psi4
+        if isinstance(res, psi4.core.RHF):
+            return backend_psi4.import_scf(res)
+    except ImportError:
+        pass
+
     from libadcc import HartreeFockSolution_i
     if isinstance(res, HartreeFockSolution_i):
         return res

@@ -45,6 +45,17 @@ _chem_allowed = [EriPermutationSymm(1, [ii, jj, kk, ll]),  # (ij|kl)
                  EriPermutationSymm(1, [ii, jj, ll, kk]),  # (ij|lk)
                  EriPermutationSymm(1, [kk, ll, jj, ii])]  # (kl|ji)
 
+_spin_allowed_eri_phys_asymm = ["aaaa", "bbbb", "abab", "baba"]
+
+
+def is_spin_allowed(spin_block, notation="phys_asym"):
+    if notation != "phys_asym":
+        raise NotImplementedError("Only implemented for phys_asym")
+    if spin_block in _spin_allowed_eri_phys_asymm:
+        return True
+    else:
+        return False
+
 
 class EriBlock:
     """
