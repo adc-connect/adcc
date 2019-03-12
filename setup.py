@@ -58,8 +58,11 @@ def trigger_adccore_build():
 class AdcCore:
     def __init__(self):
         this_dir = os.path.dirname(__file__)
-        self.config_path = join(this_dir, "extension", "adccore",
-                                "adccore_config.json")
+        self.library_dir = join(this_dir, "adcc", "lib")
+
+        base_path = join(this_dir, "extension", "adccore")
+        self.include_dir = join(base_path, "include")
+        self.config_path = join(base_path, "adccore_config.json")
 
     @property
     def is_config_file_present(self):
@@ -85,6 +88,71 @@ class AdcCore:
             return self.config[key]
         except KeyError:
             raise AttributeError
+
+    @property
+    def libraries_full(self):
+        """Return the full path to all libraries"""
+        def get_full(lib):
+            for prefix in ["lib", ""]:
+                for ext in [".so", ".dylib"]:
+                    name = join(self.library_dir, prefix + lib + ext)
+                    if os.path.isfile(name):
+                        return name
+            raise RuntimeError("Could not find full path of library '" +
+                               lib + '"')
+        return [get_full(lib) for lib in self.libraries]
+
+    @property
+    def required_dynamic_libraries(self):
+        """
+        Return a list of all dynamically loaded shared libraries
+        the OS needs to provide to function with this package.
+        """
+        import subprocess
+
+        if sys.platform != "linux":
+            raise OSError("required_dynamic_libraries is not "
+                          "supported on this OS.")
+        needed = []
+        for lib in self.libraries_full:
+            try:
+                ret = subprocess.check_output(["objdump", "-p", lib],
+                                              universal_newlines=True)
+            except subprocess.CalledProcessError as cpe:
+                if cpe.returncode == 127:
+                    raise OSError("Could not find objdump binary")
+                else:
+                    raise RuntimeError("Could not determine required "
+                                       "dynamic libraries")
+
+            for line in ret.split("\n"):
+                line = line.split()
+                if line and line[0] == "NEEDED":
+                    needed.append(line[1])
+        return needed
+
+
+#
+# Poor-man's ld-like resolver for shared libraries
+#
+class LinkerDynamic:
+    def __init__(self):
+        self.library_paths = ["/usr/lib", "/lib"]
+
+        for conf in ["/etc/ld.so.conf"] + glob.glob("/etc/ld.so.conf.d/*.conf"):
+            with open(conf, "r") as fp:
+                for line in fp:
+                    line = line.strip()
+                    if line and not line.startswith("#") \
+                       and os.path.isdir(line):
+                        self.library_paths.append(line)
+
+    def find(self, library):
+        for path in self.library_paths:
+            name = join(path, library)
+            if os.path.isfile(name):
+                return name
+        return None
 
 
 #
@@ -227,6 +295,16 @@ if adccore.version != __version__:
             "".format(__version__, adccore.version)
         )
 
+# Check we have all dynamic library dependencies:
+if sys.platform == "linux":
+    ld = LinkerDynamic()
+    for lib in adccore.required_dynamic_libraries:
+        if not ld.find(lib):
+            raise RuntimeError("Required dynamic library '{}' not found "
+                               "on your system. Please install it first. "
+                               "Consult adcc documentation for further details."
+                               "".format(lib))
+
 # Setup RPATH on Linux and MacOS
 if sys.platform == "darwin":
     extra_link_args = ["-Wl,-rpath,@loader_path",
@@ -246,10 +324,10 @@ ext_modules = [
             # Path to pybind11 headers
             GetPyBindInclude(),
             GetPyBindInclude(user=True),
-            "extension/adccore/include"
+            adccore.include_dir
         ],
         libraries=adccore.libraries,
-        library_dirs=["adcc/lib"],
+        library_dirs=[adccore.library_dir],
         extra_link_args=extra_link_args,
         runtime_library_dirs=runtime_library_dirs,
         language='c++',
@@ -289,6 +367,7 @@ setup(
         "Topic :: Education",
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Operating System :: Unix',
     ],
     #
