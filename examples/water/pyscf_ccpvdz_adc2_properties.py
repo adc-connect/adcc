@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
+import adcc
 import numpy as np
 
 from matplotlib import pyplot as plt
-
-import adcc
 
 from scipy import constants
 
@@ -107,7 +106,7 @@ for ks in state:
 
         # Print findings
         fmt = "{0:2d}  {1:12.8g} {2:9.3g}   [{3:9.3g}, {4:9.3g}, {5:9.3g}]"
-        fmt += "   [{3:9.3g}, {4:9.3g}, {5:9.3g}]"
+        fmt += "   [{6:9.3g}, {7:9.3g}, {8:9.3g}]"
         print(ks.kind[0], fmt.format(i, ks.eigenvalues[i], osc, *tdip, *sdip))
 
         if dump_cube:
