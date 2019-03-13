@@ -96,9 +96,12 @@ class Psi4HFProvider(HartreeFockProvider):
         block = can_block
         coeffs_transform = tuple(co if x == "O" else cv for x in block)
         can_block_integrals = np.asarray(self.mints.mo_eri(*coeffs_transform))
+
+        eri_phys = can_block_integrals.transpose(0, 2, 1, 3)
         # (ik|jl) - (il|jk)
-        # TODO: broken, complete brainf***....
-        eris = can_block_integrals.transpose(0, 2, 1, 3)
+        chem_asym = tuple(coeffs_transform[i] for i in [0, 3, 2, 1])
+        asymm = np.asarray(self.mints.mo_eri(*chem_asym)).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
+        eris = eri_phys - asymm
         return eris
 
     def get_block_names_from_slices(self, slices):
@@ -183,18 +186,20 @@ class Psi4HFProvider(HartreeFockProvider):
     def fill_eri_phys_asym_ffff(self, slices, out):
         mo_spaces, spin_block = self.get_block_names_from_slices(slices)
         mo_spaces_chem = "".join(np.take(np.array(mo_spaces), [0, 2, 1, 3]))
-        print(mo_spaces, mo_spaces_chem, spin_block)
-        if is_spin_allowed("".join(spin_block)):
-            print("allowed: ", spin_block)
+        spin_block_str = "".join(spin_block)
+        print(mo_spaces, mo_spaces_chem, spin_block_str)
+        pref = is_spin_allowed(spin_block_str)
+        if pref != 0:
+            print("allowed: ", spin_block_str)
             eri = self.build_eri_phys_asym_block(can_block=mo_spaces_chem)
             assert eri.shape == out.shape
-            # out[:] = eri
+            out[:] = pref * eri
         else:
-            out[:] = np.zeros_like(out)
+            out[:] = 0
 
     def has_eri_phys_asym_ffff(self):
         # TODO: set to True to enable fill_eri_phys_asym_ffff
-        return False
+        return True
 
     def get_energy_term_keys(self):
         # TODO: implement full set of keys
