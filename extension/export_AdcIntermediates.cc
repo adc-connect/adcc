@@ -41,6 +41,8 @@ void export_AdcIntermediates(py::module& m) {
         .def_property_readonly("adc2_i1", &AdcIntermediates::cache_adc2_i1)
         .def_property_readonly("adc2_i2", &AdcIntermediates::cache_adc2_i2)
         .def_property_readonly("adc3_m11", &AdcIntermediates::cache_adc3_m11)
+        .def_property_readonly("adc3_pia", &AdcIntermediates::cache_adc3_pia)
+        .def_property_readonly("adc3_pib", &AdcIntermediates::cache_adc3_pib)
         .def_property_readonly("cv_p_oo", &AdcIntermediates::cache_cv_p_oo)
         .def_property_readonly("cv_p_ov", &AdcIntermediates::cache_cv_p_ov)
         .def_property_readonly("cv_p_vv", &AdcIntermediates::cache_cv_p_vv)

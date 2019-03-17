@@ -38,6 +38,8 @@ void export_LazyMp(py::module& m) {
         .def("set_t2", &LazyMp::set_t2,
              "Set the T2 amplitudes (invalidates dependent data automatically.")
         .def("td2", &LazyMp::td2, "Obtain the T^D_2 term.")
+        .def("t2eri", &LazyMp::t2eri,
+             "Obtain a cached T2 tensor with ERI tensor contraction.")
         .def_property_readonly("mp2_diffdm", &LazyMp::mp2_diffdm_ptr,
                                "Obtain the MP2 difference density object.")
         .def_property_readonly("reference_state", &LazyMp::reference_state_ptr)
