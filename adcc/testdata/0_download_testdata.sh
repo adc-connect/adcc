@@ -3,15 +3,23 @@
 SOURCE="https://get.michael-herbst.com/adcc/testdata/0.2.0/"
 DATAFILES=(
 	cn_sto3g_hfdata.hdf5
+	cn_sto3g_reference_adc0.hdf5
+	cn_sto3g_reference_adc1.hdf5
 	cn_sto3g_reference_adc2.hdf5
 	cn_sto3g_reference_adc2x.hdf5
 	cn_sto3g_reference_adc3.hdf5
+	cn_sto3g_reference_cvs_adc0.hdf5
+	cn_sto3g_reference_cvs_adc1.hdf5
 	cn_sto3g_reference_cvs_adc2.hdf5
 	cn_sto3g_reference_cvs_adc2x.hdf5
 	h2o_sto3g_hfdata.hdf5
+	h2o_sto3g_reference_adc0.hdf5
+	h2o_sto3g_reference_adc1.hdf5
 	h2o_sto3g_reference_adc2.hdf5
 	h2o_sto3g_reference_adc2x.hdf5
 	h2o_sto3g_reference_adc3.hdf5
+	h2o_sto3g_reference_cvs_adc0.hdf5
+	h2o_sto3g_reference_cvs_adc1.hdf5
 	h2o_sto3g_reference_cvs_adc2.hdf5
 	h2o_sto3g_reference_cvs_adc2x.hdf5
 )
