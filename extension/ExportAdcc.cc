@@ -28,19 +28,20 @@ namespace py_iface {
 void export_AdcIntermediates(py::module& m);
 void export_AdcMatrix(py::module& m);
 void export_AdcMemory(py::module& m);
+void export_amplitude_vector_enforce_spin_kind(py::module& m);
 void export_AmplitudeVector(py::module& m);
+void export_CachingPolicy(py::module& m);
+void export_compute_modified_transition_moments(py::module& m);
+void export_compute_one_particle_densities(py::module& m);
 void export_CtxMap(py::module& m);
 void export_HartreeFockProvider(py::module& m);
 void export_HfData(py::module& m);
-void export_compute_modified_transition_moments(py::module& m);
 void export_LazyMp(py::module& m);
 void export_OneParticleDensityMatrix(py::module& m);
 void export_ReferenceState(py::module& m);
+void export_solve_adcman_davidson(py::module& m);
 void export_Tensor(py::module& m);
 void export_ThreadPool(py::module& m);
-void export_amplitude_vector_enforce_spin_kind(py::module& m);
-void export_compute_one_particle_densities(py::module& m);
-void export_solve_adcman_davidson(py::module& m);
 void export_tmp_run_prelim(py::module& m);
 }  // namespace py_iface
 }  // namespace adcc
@@ -53,6 +54,7 @@ PYBIND11_MODULE(libadcc, m) {
   pyif::export_ThreadPool(m);
   pyif::export_HartreeFockProvider(m);
   pyif::export_HfData(m);
+  pyif::export_CachingPolicy(m);
 
   pyif::export_Tensor(m);
   pyif::export_ReferenceState(m);

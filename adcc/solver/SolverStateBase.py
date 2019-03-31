@@ -78,12 +78,10 @@ class SolverStateBase:
         return text
 
     def _repr_pretty_(self, pp, cycle):
-        if self.eigenvalues is None:
-            n_states = 0
-        else:
-            n_states = len(self.eigenvalues)
-
         if cycle:
+            n_states = 0
+            if self.eigenvalues is not None:
+                n_states = len(self.eigenvalues)
             pp.text("SolverState(" + self.method.name + ", n_states=" +
                     str(n_states) + ")")
         else:

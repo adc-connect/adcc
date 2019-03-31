@@ -27,16 +27,21 @@ import libadcc
 from .backends import import_scf_results
 from .AdcMethod import AdcMethod
 from .memory_pool import StdAllocatorWarning, memory_pool
+from .caching_policy import DefaultCachingPolicy
 from .AmplitudeVector import AmplitudeVector
 
 
 class TmpRunPrelimResult:
-    def __init__(self, method, cpp_return):
+    def __init__(self, method, cpp_return, caching_policy):
         self.method = method
         self.reference = cpp_return.reference
         self.ground_state = cpp_return.mp
         self.intermediates = cpp_return.intermediates
         self.ctx = cpp_return.ctx
+
+        self.caching_policy = caching_policy
+        self.reference.caching_policy = caching_policy
+        self.ground_state.caching_policy = caching_policy
 
         if cpp_return.have_singlet_and_triplet:
             self.guesses_singlet = [
@@ -58,7 +63,9 @@ class TmpRunPrelimResult:
 
 def tmp_run_prelim(hfdata, adcmethod, n_guess_singles=0,
                    n_guess_doubles=0, print_level=0,
-                   n_core_orbitals=None):
+                   n_core_orbitals=None,
+                   caching_policy=DefaultCachingPolicy,
+                   copy_caches=True):
     """
     Temporary function to generate all the required data for an actional
     ADC calculation (MP2, guesses, intermediates).
@@ -75,12 +82,19 @@ def tmp_run_prelim(hfdata, adcmethod, n_guess_singles=0,
                      Notice that this number denotes spatial orbitals.
                      Thus a value of 1
                      will put 1 alpha and 1 beta electron into the core region.
+    copy_caches      Should caches be copied from the preliminary ADC run (True)
+                     or recomputed (False)
     """
     if not isinstance(hfdata, libadcc.HartreeFockSolution_i):
         hfdata = import_scf_results(hfdata)
 
     if not isinstance(adcmethod, AdcMethod):
         adcmethod = AdcMethod(adcmethod)
+
+    if isinstance(caching_policy, type):
+        caching_policy = caching_policy()
+    if not isinstance(caching_policy, libadcc.CachingPolicy_i):
+        raise TypeError("caching_policy needs to be a CachingPolicy_i")
 
     if n_core_orbitals is None:
         n_core_orbitals = 0
@@ -100,5 +114,6 @@ def tmp_run_prelim(hfdata, adcmethod, n_guess_singles=0,
 
     cpp_return = libadcc.tmp_run_prelim(hfdata, adcmethod.name, memory_pool,
                                         print_level, n_guess_singles,
-                                        n_guess_doubles, n_core_orbitals)
-    return TmpRunPrelimResult(adcmethod, cpp_return)
+                                        n_guess_doubles, n_core_orbitals,
+                                        caching_policy, copy_caches)
+    return TmpRunPrelimResult(adcmethod, cpp_return, caching_policy)

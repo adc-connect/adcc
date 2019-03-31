@@ -26,8 +26,8 @@ from . import solver
 from .backends import import_scf_results
 from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod
+from .caching_policy import DefaultCachingPolicy, GatherStatisticsPolicy
 from .tmp_run_prelim import tmp_run_prelim
-
 from .solver.davidson import jacobi_davidson
 from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
@@ -54,7 +54,8 @@ def __call_jacobi_davidson(matrix, guesses, kind, output, **kwargs):
 def run_adc(method, hfdata, n_singlets=None, n_triplets=None,
             n_states=None, solver_method=None,
             n_guess_singles=0, n_guess_doubles=0, output=sys.stdout,
-            n_core_orbitals=None, **solverargs):
+            n_core_orbitals=None, caching_policy=DefaultCachingPolicy,
+            **solverargs):
     """
     Run an ADC calculation on top of Hartree-Fock data.
 
@@ -97,6 +98,10 @@ def run_adc(method, hfdata, n_singlets=None, n_triplets=None,
     Number of (spatial) core orbitals. Required if apply_core-valence
     separation is applied. Notice that this number denotes spatial orbitals.
     Thus a value of 1 will put 1 alpha and 1 beta electron into the core region.
+
+    @param caching_policy
+    The policy to use for caching intermediate Tensors. Altering this value
+    influences the balance between memory footprint and runtime.
 
     Solver keyword arguments
     ------------------------
@@ -215,11 +220,19 @@ def run_adc(method, hfdata, n_singlets=None, n_triplets=None,
         raise ValueError("n_guess_doubles > 0 is only sensible if the ADC "
                          "method is not adc0 or adc1 or a variant thereof.")
 
+    # Do not copy caches if we want to make some statistics
+    copy_caches = True
+    if caching_policy == GatherStatisticsPolicy or \
+       isinstance(caching_policy, GatherStatisticsPolicy):
+        copy_caches = False
+
     # Obtain guesses and preliminary data
     prelim = tmp_run_prelim(hfdata, method,
                             n_guess_singles=n_guess_singles,
                             n_guess_doubles=n_guess_doubles,
-                            n_core_orbitals=n_core_orbitals)
+                            n_core_orbitals=n_core_orbitals,
+                            caching_policy=caching_policy,
+                            copy_caches=copy_caches)
 
     # Setup ADC problem matrix
     matrix = AdcMatrix(method, prelim.ground_state)
