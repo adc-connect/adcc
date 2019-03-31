@@ -137,7 +137,9 @@ class AdcCore:
 #
 class LinkerDynamic:
     def __init__(self):
-        self.library_paths = ["/usr/lib", "/lib"]
+        # Initialise by environment and add default search locations:
+        self.library_paths = os.environ.get("LD_LIBRARY_PATH", "").split(":")
+        self.library_paths += ["/usr/lib", "/lib"]
 
         for conf in ["/etc/ld.so.conf"] + glob.glob("/etc/ld.so.conf.d/*.conf"):
             with open(conf, "r") as fp:
