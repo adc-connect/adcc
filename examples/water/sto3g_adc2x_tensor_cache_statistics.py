@@ -16,7 +16,7 @@ adcc.memory_pool.initialise(max_memory=256 * 1024 * 1024)
 statistics_policy = GatherStatisticsPolicy()
 
 # Run an adc2 calculation:
-state = adcc.adc2x(data, n_singlets=2, n_triplets=2,
+state = adcc.adc2x(data, n_singlets=5, n_triplets=5,
                    caching_policy=statistics_policy)
 
 # Attach state densities
