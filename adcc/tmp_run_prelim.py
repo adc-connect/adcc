@@ -20,6 +20,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import os
 import warnings
 
 import libadcc
@@ -111,6 +112,11 @@ def tmp_run_prelim(hfdata, adcmethod, n_guess_singles=0,
             "adcc.memory_pool.initialise before "
             "doing any computations."
         ))
+
+    if "ADCC_DISABLE_COPY_CACHES" in os.environ:
+        if copy_caches:
+            warnings.warn("Disabled copy_caches due to OS environment")
+        copy_caches = False
 
     cpp_return = libadcc.tmp_run_prelim(hfdata, adcmethod.name, memory_pool,
                                         print_level, n_guess_singles,
