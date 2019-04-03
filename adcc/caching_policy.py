@@ -78,13 +78,13 @@ class GatherStatisticsPolicy(CachingPolicy_i):
         maxcon = max(maxcon, 12)
 
         fmt = (
-            "| {:" + str(maxlal + maxsp + 1) + "}" +
+            "| {:" + str(maxlal) + "} {:" + str(maxsp) + "}" +
             "    {:" + str(maxcon) + "}  {:6d} |\n"
         )
         maxbody = 0
         body = ""
         for k, v in self.call_count.items():
-            txt = fmt.format(k[0] + " " + k[1], k[2], v)
+            txt = fmt.format(k[0], k[1], k[2], v)
             body += txt
             maxbody = max(maxbody, len(txt))
 
