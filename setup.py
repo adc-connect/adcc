@@ -346,7 +346,7 @@ is not computed inside adcc, much rather external packages should be used
 for this purpose. Interfaces to seamlessly interact with pyscf, VeloxChem
 or molsturm are available, but other SCF codes or even statically computed
 data can be easily used as well.
-""".strip()  # TODO
+""".strip()  # TODO extend
 setup(
     name='adcc',
     description='A python-based framework for running ADC calculations',
