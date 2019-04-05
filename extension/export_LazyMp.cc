@@ -29,7 +29,8 @@ namespace py_iface {
 void export_LazyMp(py::module& m) {
   py::class_<LazyMp, std::shared_ptr<LazyMp>>(
         m, "LazyMp",
-        "Class representing information about the Mo/ller-Plesset results from ADCman.")
+        "Class representing information about the Mo/ller-Plesset results from ADCman.",
+        py::dynamic_attr())
         .def(py::init<std::shared_ptr<const ReferenceState>>())
         .def("energy_correction", &LazyMp::energy_correction,
              "Obtain the appropriate MP energy correction.")
@@ -38,6 +39,8 @@ void export_LazyMp(py::module& m) {
         .def("set_t2", &LazyMp::set_t2,
              "Set the T2 amplitudes (invalidates dependent data automatically.")
         .def("td2", &LazyMp::td2, "Obtain the T^D_2 term.")
+        .def("t2eri", &LazyMp::t2eri,
+             "Obtain a cached T2 tensor with ERI tensor contraction.")
         .def_property_readonly("mp2_diffdm", &LazyMp::mp2_diffdm_ptr,
                                "Obtain the MP2 difference density object.")
         .def_property_readonly("reference_state", &LazyMp::reference_state_ptr)

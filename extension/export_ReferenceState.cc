@@ -29,7 +29,8 @@ namespace py_iface {
 void export_ReferenceState(py::module& m) {
   py::class_<ReferenceState, std::shared_ptr<ReferenceState>>(
         m, "ReferenceState",
-        "Class representing information about the reference state for ADCman.")
+        "Class representing information about the reference state for ADCman.",
+        py::dynamic_attr())
         .def("eri", &ReferenceState::eri)
         .def("fock", &ReferenceState::fock)
         .def("n_orbs", &ReferenceState::n_orbs)
