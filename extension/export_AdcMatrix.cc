@@ -55,6 +55,7 @@ void export_AdcMatrix(py::module& m) {
         .def("diagonal", &AdcMatrix::diagonal)
         .def("has_block", &AdcMatrix::has_block)
         .def_property_readonly("shape", &AdcMatrix_shape)
+        .def("block_spaces", &AdcMatrix::block_spaces)
         .def("__len__", &AdcMatrix__len__)
         .def_property_readonly("blocks", &AdcMatrix_blocks)
         .def("compute_matvec", &AdcMatrix::compute_matvec)
