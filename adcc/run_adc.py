@@ -23,11 +23,14 @@
 import sys
 
 from . import solver
+from .guess import (guesses_any, guesses_singlet, guesses_spin_flip,
+                    guesses_triplet)
 from .backends import import_scf_results
 from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod
 from .caching_policy import DefaultCachingPolicy, GatherStatisticsPolicy
 from .tmp_run_prelim import tmp_run_prelim
+
 from .solver.davidson import jacobi_davidson
 from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
@@ -49,6 +52,17 @@ def __call_jacobi_davidson(matrix, guesses, kind, output, **kwargs):
         print("Starting " + matrix.method.name + " " + kind + space +
               "Jacobi-Davidson ...", file=output)
     return jacobi_davidson(matrix, guesses, callback=jd_callback, **kwargs)
+
+
+def __call_guesses_functions(guessfctn, matrix, n_guess_singles,
+                             n_guess_doubles):
+    # later n_guesses, n_guesses_doubles
+    singles_guesses = guessfctn(matrix, n_guess_singles, block="s")
+    n_guess_doubles += n_guess_singles - len(singles_guesses)
+    if n_guess_doubles <= 0:
+        return singles_guesses
+    doubles_guesses = guessfctn(matrix, n_guess_doubles, block="d")
+    return singles_guesses + doubles_guesses
 
 
 def run_adc(method, hfdata, n_singlets=None, n_triplets=None,
@@ -237,6 +251,22 @@ def run_adc(method, hfdata, n_singlets=None, n_triplets=None,
     # Setup ADC problem matrix
     matrix = AdcMatrix(method, prelim.ground_state)
     matrix.intermediates = prelim.intermediates
+
+    if n_states > 0:
+        prelim.guesses_state = __call_guesses_functions(guesses_any, matrix,
+                                                        n_guess_singles,
+                                                        n_guess_doubles)
+    if n_singlets > 0:
+        prelim.guesses_singlet = __call_guesses_functions(guesses_singlet,
+                                                          matrix,
+                                                          n_guess_singles,
+                                                          n_guess_doubles)
+    if n_triplets > 0:
+        prelim.guesses_triplet = __call_guesses_functions(guesses_triplet,
+                                                          matrix,
+                                                          n_guess_singles,
+                                                          n_guess_doubles)
+    # TODO spin-flip
 
     # Solve for each spin kind:
     ret = []

@@ -33,7 +33,9 @@ from .state_densities import attach_state_densities
 
 from libadcc import HartreeFockProvider, HartreeFockSolution_i, Tensor
 
-# This has to be the last import
+# This has to be the last set of import
+from .guess import (guesses_any, guesses_singlet, guesses_spin_flip,
+                    guesses_triplet)
 from .run_adc import run_adc
 
 __all__ = ["run_adc", "AdcMatrix", "AdcMethod",
@@ -43,6 +45,8 @@ __all__ = ["run_adc", "AdcMatrix", "AdcMethod",
            "memory_pool", "thread_pool", "AmplitudeVector",
            "attach_state_densities", "tmp_run_prelim",
            "HartreeFockProvider", "HartreeFockSolution_i", "Tensor",
+           "guesses_singlet", "guesses_triplet", "guesses_any",
+           "guesses_spin_flip",
            "adc0", "adc1", "adc2", "adc2x", "adc3",
            "cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x"]
 
