@@ -30,7 +30,6 @@ from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod
 from .caching_policy import DefaultCachingPolicy, GatherStatisticsPolicy
 from .tmp_run_prelim import tmp_run_prelim
-
 from .solver.davidson import jacobi_davidson
 from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
@@ -267,6 +266,8 @@ def run_adc(method, hfdata, n_singlets=None, n_triplets=None,
                                                           n_guess_singles,
                                                           n_guess_doubles)
     # TODO spin-flip
+    # TODO Allow to pass guesses to run_adc function directly
+    #      from the outside.
 
     # Solve for each spin kind:
     ret = []
