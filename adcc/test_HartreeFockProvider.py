@@ -20,19 +20,19 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import unittest
 
+import adcc
 
+from pytest import approx
 from libadcc import HartreeFockProvider
 from adcc.testdata.cache import cache
-from pytest import approx
-import adcc
-import unittest
 
 
 class DummyData(HartreeFockProvider):
     def __init__(self, data):
         # Do not forget the next line,
-        # otherwise weid errors result
+        # otherwise weird errors result
         super().__init__()
         self.data = data
 
