@@ -250,17 +250,171 @@ class TestGuess(unittest.TestCase):
     def test_doubles_h2o_cvs_adc2(self):
         self.base_test("h2o_sto3g", "cvs-adc2", "d", max_guesses=5)
 
+    #
+    # Tests against reference values
+    #
+    def base_reference(self, matrix, ref):
+        symmetrisations = ["none"]
+        if matrix.reference_state.restricted:
+            symmetrisations = ["symmetric", "antisymmetric"]
+
+        for block in ["s", "d"]:
+            for symm in symmetrisations:
+                ref_sb = ref[(block, symm)]
+                guesses = adcc.guess.guesses_from_diagonal(
+                    matrix, len(ref_sb), block, spin_change=0,
+                    spin_block_symmetrisation=symm
+                )
+                assert len(guesses) == len(ref_sb)
+                for gs in guesses:
+                    self.assert_symmetry_no_spin_change(matrix, gs, block, symm)
+                self.assert_orthonormal(guesses)
+
+                for (i, guess) in enumerate(guesses):
+                    guess_b = guess[block].to_ndarray()
+                    nonzeros = np.dstack(np.where(guess_b != 0))
+                    assert nonzeros.shape[0] == 1
+                    nonzeros = [tuple(nzitem) for nzitem in nonzeros[0]]
+                    values = guess_b[guess_b != 0]
+                    assert nonzeros == ref_sb[i][0]
+                    assert_array_equal(values, np.array(ref_sb[i][1]))
+
     def test_reference_h2o_adc2x(self):
-        pass  # TODO Compare against hard-coded reference singles and doubles guess vectors
+        prelim = cache.prelim["h2o_sto3g"]
+        matrix = adcc.AdcMatrix("adc2x", prelim.ground_state)
+        self.base_reference(matrix, self.get_ref_h2o())
 
     def test_reference_h2o_adc3(self):
-        pass  # TODO Compare against hard-coded reference singles and doubles guess vectors
+        prelim = cache.prelim["h2o_sto3g"]
+        matrix = adcc.AdcMatrix("adc3", prelim.ground_state)
+        self.base_reference(matrix, self.get_ref_h2o())
 
     def test_reference_cn_adc2x(self):
-        pass  # TODO Compare against hard-coded reference singles and doubles guess vectors
+        prelim = cache.prelim["cn_sto3g"]
+        matrix = adcc.AdcMatrix("adc2x", prelim.ground_state)
+        self.base_reference(matrix, self.get_ref_cn())
 
     def test_reference_cn_adc3(self):
-        pass  # TODO Compare against hard-coded reference singles and doubles guess vectors
+        prelim = cache.prelim["cn_sto3g"]
+        matrix = adcc.AdcMatrix("adc3", prelim.ground_state)
+        self.base_reference(matrix, self.get_ref_cn())
+
+    def get_ref_h2o(self):
+        sq8 = 1 / np.sqrt(8)
+        sq12 = 1 / np.sqrt(12)
+        sq48 = 1 / np.sqrt(48)
+        symm = [1 / np.sqrt(2), 1 / np.sqrt(2)]
+        asymm = [1 / np.sqrt(2), -1 / np.sqrt(2)]
+        return {
+            ("s", "symmetric"): [
+                ([(4, 0), (9, 2)], symm), ([(4, 1), (9, 3)], symm),
+                ([(3, 0), (8, 2)], symm), ([(3, 1), (8, 3)], symm),
+                ([(2, 0), (7, 2)], symm), ([(2, 1), (7, 3)], symm),
+                ([(1, 0), (6, 2)], symm), ([(1, 1), (6, 3)], symm),
+            ],
+            ("s", "antisymmetric"): [
+                # nonzeros          values
+                ([(4, 0), (9, 2)], asymm), ([(4, 1), (9, 3)], asymm),
+                ([(3, 0), (8, 2)], asymm), ([(3, 1), (8, 3)], asymm),
+                ([(2, 0), (7, 2)], asymm), ([(2, 1), (7, 3)], asymm),
+                ([(1, 0), (6, 2)], asymm), ([(1, 1), (6, 3)], asymm),
+            ],
+            ("d", "symmetric"): [
+                ([(4, 9, 0, 2), (4, 9, 2, 0), (9, 4, 0, 2), (9, 4, 2, 0)],
+                 [0.5, -0.5, -0.5, 0.5]),
+                ([(3, 9, 0, 2), (3, 9, 2, 0), (4, 8, 0, 2), (4, 8, 2, 0),
+                  (8, 4, 0, 2), (8, 4, 2, 0), (9, 3, 0, 2), (9, 3, 2, 0)],
+                 [sq8, -sq8, sq8, -sq8, -sq8, sq8, -sq8, sq8]),
+                ([(3, 8, 0, 2), (3, 8, 2, 0), (8, 3, 0, 2), (8, 3, 2, 0)],
+                 [0.5, -0.5, -0.5, 0.5]),
+                ([(4, 9, 0, 3), (4, 9, 1, 2), (4, 9, 2, 1), (4, 9, 3, 0),
+                  (9, 4, 0, 3), (9, 4, 1, 2), (9, 4, 2, 1), (9, 4, 3, 0)],
+                 [sq8, sq8, -sq8, -sq8, -sq8, -sq8, sq8, sq8]),
+                ([(3, 4, 0, 1), (3, 4, 1, 0), (3, 9, 0, 3), (3, 9, 1, 2),
+                  (3, 9, 2, 1), (3, 9, 3, 0), (4, 3, 0, 1), (4, 3, 1, 0),
+                  (4, 8, 0, 3), (4, 8, 1, 2), (4, 8, 2, 1), (4, 8, 3, 0),
+                  (8, 4, 0, 3), (8, 4, 1, 2), (8, 4, 2, 1), (8, 4, 3, 0),
+                  (8, 9, 2, 3), (8, 9, 3, 2), (9, 3, 0, 3), (9, 3, 1, 2),
+                  (9, 3, 2, 1), (9, 3, 3, 0), (9, 8, 2, 3), (9, 8, 3, 2)],
+                 [sq12, -sq12, sq48, -sq48, sq48, -sq48, -sq12, sq12,
+                  -sq48, sq48, -sq48, sq48, sq48, -sq48,  sq48, -sq48,
+                  sq12, -sq12, -sq48, sq48, -sq48, sq48, -sq12, sq12]),
+                ([(3, 9, 0, 3), (3, 9, 1, 2), (3, 9, 2, 1), (3, 9, 3, 0),
+                  (4, 8, 0, 3), (4, 8, 1, 2), (4, 8, 2, 1), (4, 8, 3, 0),
+                  (8, 4, 0, 3), (8, 4, 1, 2), (8, 4, 2, 1), (8, 4, 3, 0),
+                  (9, 3, 0, 3), (9, 3, 1, 2), (9, 3, 2, 1), (9, 3, 3, 0)],
+                 [0.25, 0.25, -0.25, -0.25, 0.25, 0.25, -0.25, -0.25,
+                  -0.25, -0.25, 0.25, 0.25, -0.25, -0.25, 0.25, 0.25]),
+                ([(3, 8, 0, 3), (3, 8, 1, 2), (3, 8, 2, 1), (3, 8, 3, 0),
+                  (8, 3, 0, 3), (8, 3, 1, 2), (8, 3, 2, 1), (8, 3, 3, 0)],
+                 [sq8, sq8, -sq8, -sq8, -sq8, -sq8, sq8, sq8]),
+                ([(4, 9, 1, 3), (4, 9, 3, 1), (9, 4, 1, 3), (9, 4, 3, 1)],
+                 [0.5, -0.5, -0.5, 0.5]),
+            ],
+            ("d", "antisymmetric"): [
+                ([(3, 9, 0, 2), (3, 9, 2, 0), (4, 8, 0, 2), (4, 8, 2, 0),
+                  (8, 4, 0, 2), (8, 4, 2, 0), (9, 3, 0, 2), (9, 3, 2, 0)],
+                 [sq8, -sq8, -sq8, sq8, sq8, -sq8, -sq8, sq8]),
+                ([(4, 9, 0, 3), (4, 9, 1, 2), (4, 9, 2, 1), (4, 9, 3, 0),
+                  (9, 4, 0, 3), (9, 4, 1, 2), (9, 4, 2, 1), (9, 4, 3, 0)],
+                 [sq8, -sq8, sq8, -sq8, -sq8, sq8, -sq8, sq8]),
+                ([(3, 4, 0, 1), (3, 4, 1, 0), (4, 3, 0, 1), (4, 3, 1, 0),
+                  (8, 9, 2, 3), (8, 9, 3, 2), (9, 8, 2, 3), (9, 8, 3, 2)],
+                 [sq8, -sq8, -sq8, sq8, -sq8, sq8, sq8, -sq8]),
+                ([(3, 9, 0, 3), (3, 9, 1, 2), (3, 9, 2, 1), (3, 9, 3, 0),
+                  (4, 8, 0, 3), (4, 8, 1, 2), (4, 8, 2, 1), (4, 8, 3, 0),
+                  (8, 4, 0, 3), (8, 4, 1, 2), (8, 4, 2, 1), (8, 4, 3, 0),
+                  (9, 3, 0, 3), (9, 3, 1, 2), (9, 3, 2, 1), (9, 3, 3, 0)],
+                 [0.25, 0.25, -0.25, -0.25, -0.25, -0.25, 0.25, 0.25,
+                  0.25, 0.25, -0.25, -0.25, -0.25, -0.25, 0.25, 0.25]),
+                ([(3, 9, 0, 3), (3, 9, 1, 2), (3, 9, 2, 1), (3, 9, 3, 0),
+                  (4, 8, 0, 3), (4, 8, 1, 2), (4, 8, 2, 1), (4, 8, 3, 0),
+                  (8, 4, 0, 3), (8, 4, 1, 2), (8, 4, 2, 1), (8, 4, 3, 0),
+                  (9, 3, 0, 3), (9, 3, 1, 2), (9, 3, 2, 1), (9, 3, 3, 0)],
+                 [0.25, -0.25, 0.25, -0.25, 0.25, -0.25, 0.25, -0.25,
+                  -0.25, 0.25, -0.25, 0.25, -0.25, 0.25, -0.25, 0.25]),
+                ([(2, 9, 0, 2), (2, 9, 2, 0), (4, 7, 0, 2), (4, 7, 2, 0),
+                  (7, 4, 0, 2), (7, 4, 2, 0), (9, 2, 0, 2), (9, 2, 2, 0)],
+                 [sq8, -sq8, -sq8, sq8, sq8, -sq8, -sq8, sq8]),
+                ([(3, 8, 0, 3), (3, 8, 1, 2), (3, 8, 2, 1), (3, 8, 3, 0),
+                  (8, 3, 0, 3), (8, 3, 1, 2), (8, 3, 2, 1), (8, 3, 3, 0)],
+                 [sq8, -sq8, sq8, -sq8, -sq8,  sq8, -sq8, sq8]),
+                ([(2, 8, 0, 2), (2, 8, 2, 0), (3, 7, 0, 2), (3, 7, 2, 0),
+                  (7, 3, 0, 2), (7, 3, 2, 0), (8, 2, 0, 2), (8, 2, 2, 0)],
+                 [sq8, -sq8, -sq8, sq8, sq8, -sq8, -sq8, sq8]),
+            ],
+        }
+
+    def get_ref_cn(self):
+        sq8 = 1 / np.sqrt(8)
+        return {
+            ("s", "none"): [
+                ([(11, 3)], [1.]), ([(12, 3)], [1.]),
+                ([( 6, 0)], [1.]), ([( 6, 1)], [1.]),  # noqa: E201
+                ([(10, 3)], [1.]), ([( 5, 0)], [1.]),  # noqa: E201
+                ([( 4, 1)], [1.]), ([(11, 5)], [1.]),  # noqa: E201
+            ],
+            ("d", "none"): [
+                ([(6, 11, 0, 3), (6, 11, 3, 0), (11, 6, 0, 3), (11, 6, 3, 0)],
+                 [-0.5, 0.5, 0.5, -0.5]),
+                ([(6, 12, 0, 3), (6, 12, 3, 0), (12, 6, 0, 3), (12, 6, 3, 0)],
+                 [-0.5,  0.5, 0.5, -0.5]),
+                ([(6, 11, 1, 3), (6, 11, 3, 1), (11, 6, 1, 3), (11, 6, 3, 1)],
+                 [0.5, -0.5, -0.5, 0.5]),
+                ([(6, 12, 1, 3), (6, 12, 3, 1), (12, 6, 1, 3), (12, 6, 3, 1)],
+                 [0.5, -0.5, -0.5, 0.5]),
+                ([(4, 11, 0, 3), (4, 11, 3, 0), (11, 4, 0, 3), (11, 4, 3, 0)],
+                 [0.5, -0.5, -0.5, 0.5]),
+                ([(4, 12, 0, 3), (4, 12, 3, 0), (5, 11, 0, 3), (5, 11, 3, 0),
+                  (11, 5, 0, 3), (11, 5, 3, 0), (12, 4, 0, 3), (12, 4, 3, 0)],
+                 [sq8, -sq8, -sq8,  sq8,  sq8, -sq8, -sq8,  sq8]),
+                ([(4, 12, 0, 3), (4, 12, 3, 0), (5, 11, 0, 3), (5, 11, 3, 0),
+                  (11, 5, 0, 3), (11, 5, 3, 0), (12, 4, 0, 3), (12, 4, 3, 0)],
+                 [sq8, -sq8,  sq8, -sq8, -sq8,  sq8, -sq8,  sq8]),
+                ([(5, 12, 0, 3), (5, 12, 3, 0), (12, 5, 0, 3), (12, 5, 3, 0)],
+                 [0.5, -0.5, -0.5, 0.5]),
+            ],
+        }
 
     # TODO
     # Test spin-flip guesses
