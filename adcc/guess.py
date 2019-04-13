@@ -59,10 +59,14 @@ def guess_zero(matrix, irrep="A", spin_change=0,
         raise ValueError("spin_block_symmetrisation != none is only valid for "
                          "ADC calculations on top of restricted reference "
                          "states.")
+    if int(spin_change / 2) * 2 != spin_change:
+        raise ValueError("Only integer or half-integer spin_change is allowed. "
+                         "You passed {}".format(spin_change))
     if irrep != "A":
         raise NotImplementedError("Currently only irrep == 'A' is implemented.")
 
-    gkind = libadcc.AdcGuessKind(irrep, spin_change, spin_block_symmetrisation)
+    gkind = libadcc.AdcGuessKind(irrep, float(spin_change),
+                                 spin_block_symmetrisation)
     return AmplitudeVector(*libadcc.guess_zero(matrix, gkind).to_tuple())
 
 
@@ -110,13 +114,18 @@ def guesses_from_diagonal(matrix, n_guesses, block="s",
         raise ValueError("spin_block_symmetrisation != none is only valid for "
                          "ADC calculations on top of restricted reference "
                          "states.")
+    if int(spin_change / 2) * 2 != spin_change:
+        raise ValueError("Only integer or half-integer spin_change is allowed. "
+                         "You passed {}".format(spin_change))
+
     if not matrix.has_block(block):
         raise ValueError("The passed ADC matrix does not have the block '{}.'"
                          "".format(block))
     if irrep != "A":
         raise NotImplementedError("Currently only irrep == 'A' is implemented.")
 
-    gkind = libadcc.AdcGuessKind(irrep, spin_change, spin_block_symmetrisation)
+    gkind = libadcc.AdcGuessKind(irrep, float(spin_change),
+                                 spin_block_symmetrisation)
     guesses = libadcc.guesses_from_diagonal(matrix, gkind, block, n_guesses,
                                             proximity, degeneracy_tolerance)
     return [AmplitudeVector(*gv.to_tuple()) for gv in guesses]

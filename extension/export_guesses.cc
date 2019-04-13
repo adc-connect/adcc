@@ -34,14 +34,16 @@ void export_guesses(py::module& m) {
         "Class which collects information about the kind of guess vectors to be "
         "constructed.")
         .def(py::init<>(), "Construct default AdcGuessKind.")
-        .def(py::init<std::string, int, std::string>(),
+        .def(py::init<std::string, float, std::string>(),
              "Construct from irrep, spin_change and spin_block_symmetrisation.")
-        .def_readwrite("irrep", &AdcGuessKind::irrep,
-                       " String describing the irreducible representation to consider")
-        .def_readwrite(
+        .def_readonly("irrep", &AdcGuessKind::irrep,
+                      " String describing the irreducible representation to consider")
+        .def_readonly(
               "spin_change", &AdcGuessKind::spin_change,
               "The spin change to enforce in an excitation. Typical values are 0 and -1.")
-        .def_readwrite(
+        .def_readonly("spin_change_twice", &AdcGuessKind::spin_change_twice,
+                      "Twice the change of spin_change.")
+        .def_readonly(
               "spin_block_symmetrisation", &AdcGuessKind::spin_block_symmetrisation,
               "Symmetrisation to enforce between equivalent spin blocks, which all yield "
               "\n"
