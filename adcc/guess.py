@@ -124,6 +124,9 @@ def guesses_from_diagonal(matrix, n_guesses, block="s",
     if irrep != "A":
         raise NotImplementedError("Currently only irrep == 'A' is implemented.")
 
+    if n_guesses == 0:
+        return []
+
     gkind = libadcc.AdcGuessKind(irrep, float(spin_change),
                                  spin_block_symmetrisation)
     guesses = libadcc.guesses_from_diagonal(matrix, gkind, block, n_guesses,

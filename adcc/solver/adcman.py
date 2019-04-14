@@ -20,16 +20,18 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import numpy as np
+
+from .SolverStateBase import SolverStateBase
 
 import libadcc
-import numpy as np
+
 from adcc import AdcMatrix, AmplitudeVector
-from .SolverStateBase import SolverStateBase
 
 
 class AdcmanSolverState(SolverStateBase):
-    def __init__(self, method, ground_state, cppstate):
-        super().__init__(method, ground_state)
+    def __init__(self, matrix, cppstate):
+        super().__init__(matrix)
         self.eigenvalues = cppstate.eigenvalues
         self.converged = np.all(cppstate.residuals_converged)
         self.eigenvectors = [AmplitudeVector(st, dt)
@@ -115,8 +117,7 @@ def eigh(matrix, n_singlets=None, n_triplets=None, n_states=None,
                                         print_level, residual_min_norm,
                                         n_guess_singles, n_guess_doubles)
 
-    return [AdcmanSolverState(matrix.method, matrix.ground_state, state)
-            for state in res]
+    return [AdcmanSolverState(matrix, state) for state in res]
 
 
 jacobi_davidson = eigh

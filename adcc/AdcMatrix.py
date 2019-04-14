@@ -20,11 +20,11 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+from .AdcMethod import AdcMethod
+from .functions import empty_like
+from .AmplitudeVector import AmplitudeVector
 
 import libadcc
-from .AmplitudeVector import AmplitudeVector
-from .functions import empty_like
-from .AdcMethod import AdcMethod
 
 
 class AdcMatrix(libadcc.AdcMatrix):

@@ -23,10 +23,11 @@
 import unittest
 
 from .misc import expand_test_templates
+from .LazyMp import LazyMp
+
 from numpy.testing import assert_allclose
 
 from pytest import approx
-from libadcc import LazyMp
 from adcc.testdata.cache import cache
 
 # All test cases to deal with here

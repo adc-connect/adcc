@@ -26,11 +26,9 @@ import libadcc
 
 from .backends import import_scf_results
 from .memory_pool import StdAllocatorWarning, memory_pool
-from .caching_policy import DefaultCachingPolicy
 
 
-def tmp_build_reference_state(hfdata, n_core_orbitals=None,
-                              caching_policy=DefaultCachingPolicy):
+def tmp_build_reference_state(hfdata, n_core_orbitals=None):
     """
     Temporary function to import HF data into the libtensor infrastructure
     and to return a ReferenceState object for further use inside adcc.
@@ -42,15 +40,9 @@ def tmp_build_reference_state(hfdata, n_core_orbitals=None,
                      Notice that this number denotes spatial orbitals.
                      Thus a value of 1
                      will put 1 alpha and 1 beta electron into the core region.
-    caching_policy   Policy to use for caching LazyMp and ADC intermediates.
     """
     if not isinstance(hfdata, libadcc.HartreeFockSolution_i):
         hfdata = import_scf_results(hfdata)
-
-    if isinstance(caching_policy, type):
-        caching_policy = caching_policy()
-    if not isinstance(caching_policy, libadcc.CachingPolicy_i):
-        raise TypeError("caching_policy needs to be a CachingPolicy_i")
 
     if n_core_orbitals is None:
         n_core_orbitals = 0
@@ -65,8 +57,5 @@ def tmp_build_reference_state(hfdata, n_core_orbitals=None,
             "doing any computations."
         ))
 
-    reference = libadcc.tmp_build_reference_state(hfdata, memory_pool,
-                                                  n_core_orbitals,
-                                                  caching_policy)
-    reference.caching_policy = caching_policy
-    return reference
+    return libadcc.tmp_build_reference_state(hfdata, memory_pool,
+                                             n_core_orbitals)

@@ -21,87 +21,86 @@
 ##
 ## ---------------------------------------------------------------------
 import sys
+import warnings
 
 from . import solver
 from .guess import (guesses_any, guesses_singlet, guesses_spin_flip,
                     guesses_triplet)
-from .backends import import_scf_results
 from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod
-from .caching_policy import DefaultCachingPolicy, GatherStatisticsPolicy
-from .tmp_run_prelim import tmp_run_prelim
+from .caching_policy import DefaultCachingPolicy
+from .tmp_build_reference_state import tmp_build_reference_state
+
 from .solver.davidson import jacobi_davidson
 from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
 
-from libadcc import HartreeFockSolution_i
+from libadcc import LazyMp, ReferenceState
+
+__all__ = ["run_adc"]
 
 
-def __call_jacobi_davidson(matrix, guesses, kind, output, **kwargs):
+def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
+            solver_method=None, guesses=None, n_guesses=None,
+            n_guesses_doubles=None, output=sys.stdout, n_core_orbitals=None,
+            method=None, n_singlets=None, n_triplets=None, **solverargs):
     """
-    Internal function to kick off a Jacobi-Davidson sove from run_adc.
-    """
-
-    # Output callback for jacobi_davidson
-    jd_callback = None
-    if output:
-        def jd_callback(state, identifier):
-            solver.davidson.default_print(state, identifier, output)
-        space = " " if kind else ""
-        print("Starting " + matrix.method.name + " " + kind + space +
-              "Jacobi-Davidson ...", file=output)
-    return jacobi_davidson(matrix, guesses, callback=jd_callback, **kwargs)
-
-
-def __call_guesses_functions(guessfctn, matrix, n_guess_singles,
-                             n_guess_doubles):
-    # later n_guesses, n_guesses_doubles
-    singles_guesses = guessfctn(matrix, n_guess_singles, block="s")
-    n_guess_doubles += n_guess_singles - len(singles_guesses)
-    if n_guess_doubles <= 0:
-        return singles_guesses
-    doubles_guesses = guessfctn(matrix, n_guess_doubles, block="d")
-    return singles_guesses + doubles_guesses
-
-
-def run_adc(method, hfdata, n_singlets=None, n_triplets=None,
-            n_states=None, solver_method=None,
-            n_guess_singles=0, n_guess_doubles=0, output=sys.stdout,
-            n_core_orbitals=None, caching_policy=DefaultCachingPolicy,
-            **solverargs):
-    """
-    Run an ADC calculation on top of Hartree-Fock data.
+    Run an ADC calculation on top of Hartree-Fock data, a ReferenceState,
+    a LazyMp object or an AdcMatrix.
 
     Required Parameters
     -------------------
-    @param hfdata
-    Data with the SCF reference to use. adcc is pretty flexible here.
-    Can be e.g. a molsturm scf State, a pyscf SCF object, a class implementing
-    the adcc.HartreeFockProvider interface or a pointer to any C++ object
-    derived derived off adcc::HartreeFockSolution_i.
+    @param data_or_matrix
+    The data to build the ADC calculation on. adcc is pretty flexible here.
+    Possible options include:
+        a) Hartree-Fock data from a host program, e.g. a molsturm scf state,
+           a pyscf SCF object or any class implementing the
+           adcc.HartreeFockProvider interface or in fact any python object
+           representing a pointer to a C++ object derived off the
+           adcc::HartreeFockSolution_i. All objects mentioned below will
+           be implicitly created.
+        b) An adcc.ReferenceState object
+        c) An adcc.LazyMp object
+        d) An adcc.AdcMatrix object
 
+    @param n_states
+    @param kind
     @param n_singlets
     @param n_triplets
-    @param n_states
-    Specify the number and kind of states to compute. For unrestricted
+    Specify the number and kind of states to be computed. For unrestricted
     references clamping spin-pure singlets/triplets is currently not
-    possible and n_states has to be used to specify the number of states.
-    For restricted references n_states cannot be used at the moment.
+    possible and kind has to remain as "any". For restricted references
+    kind="singlets" or kind="triplets" may be employed to enforce a
+    particular exicited states manifold.
+    Specifying n_singlets is equivalent to setting kind="singlet" and
+    n_states=5. Similarly for n_triplets.
 
     Optional parameters
     -------------------
+    @param conv_tol
+    Convergence tolerance to employ in the iterative solver for obtaining
+    the ADC vectors (default: 1e-6 or SCF tolerance / 100, whatever is smaller)
+
     @param solver_method
     The eigensolver algorithm to use.
 
-    @param n_guess_singles
-    Number of singles block guesses. If this plus n_guess_doubles is less
-    than then the number of states to be computed, then
-    n_guess_singles = min(6,2 * number of excited states to compute)
+    @param n_guesses
+    Total number of guesses to compute. By default only guesses derived from
+    the singles block of the ADC matrix are employed. See n_guesses_doubles
+    for alternatives. If no number is given here
+    n_guesses = min(4, 2 * number of excited states to compute)
+    or a smaller number if the number of excitation is estimated to be less
+    than the outcome of above formula.
 
     @param n_guess doubles
-    Number of doubles block guesses. If this plus n_guess_singles is less
-    than then the number of states to be computed, then
-    n_guess_singles = number of excited states to compute
+    Number of guesses to derive from the doubles block. By default none
+    unless n_guesses as explicitly given or automatically determined is larger
+    than the number of singles guesses, which can be possibly found.
+
+    @param guesses
+    Provide the guess vectors to be employed for the ADC run. Takes preference
+    over n_guesses and n_guesses_doubles, such that these parameters are
+    ignored.
 
     @param output
     Python stream to which output will be written. If None all output
@@ -109,186 +108,236 @@ def run_adc(method, hfdata, n_singlets=None, n_triplets=None,
 
     @param n_core_orbitals
     Number of (spatial) core orbitals. Required if apply_core-valence
-    separation is applied. Notice that this number denotes spatial orbitals.
-    Thus a value of 1 will put 1 alpha and 1 beta electron into the core region.
-
-    @param caching_policy
-    The policy to use for caching intermediate Tensors. Altering this value
-    influences the balance between memory footprint and runtime.
+    separation is applied and input data is given as data from the host
+    program (i.e. option (a) in data_or_matrix above). Notice that this number
+    denotes spatial orbitals. Thus a value of 1 will put 1 alpha and 1 beta
+    electron into the core region.
 
     Solver keyword arguments
     ------------------------
     Other keyword arguments for the solver can be passed as well. An important
     selection of such arguments includes
-       conv_tol       Convergence tolerance
        max_subspace   Maximal subspace size
        max_iter       Maximal numer of iterations
     """
-    if not isinstance(hfdata, HartreeFockSolution_i):
-        hfdata = import_scf_results(hfdata)
-
-    if not isinstance(method, AdcMethod):
-        method = AdcMethod(method)
-
+    #
+    # Input argument sanitisation
+    #
     if solver_method is None:
         solver_method = "jacobi_davidson"
 
-    if method.is_core_valence_separated and n_core_orbitals is None:
-        raise ValueError("If core-valence separation approximation is applied "
-                         "then the number of core orbitals needs to be "
-                         "specified via the parameter n_core_orbitals.")
+    # Step 1: Construct at least ReferenceState
+    # TODO The flexibility coded here, should be put directly into the
+    #      python-side construction of the ReferenceState object once
+    #      tmp_build_reference_state is gone.
+    if not isinstance(data_or_matrix, AdcMatrix) and method is None:
+        raise ValueError("method needs to be explicitly provided unless "
+                         "data_or_matrix is an AdcMatrix.")
+    if method is not None and not isinstance(method, AdcMethod):
+        method = AdcMethod(method)
+
+    if not isinstance(data_or_matrix, (ReferenceState, AdcMatrix, LazyMp)):
+        if method.is_core_valence_separated and n_core_orbitals is None:
+            raise ValueError("If core-valence separation approximation is "
+                             "applied then the number of core orbitals needs "
+                             "to be specified via the parameter "
+                             "n_core_orbitals.")
+        refstate = tmp_build_reference_state(
+            data_or_matrix, n_core_orbitals=n_core_orbitals,
+        )
+        data_or_matrix = refstate
+    elif n_core_orbitals is not None:
+        refstate = data_or_matrix.reference_state
+        warnings.warn("Ignored n_core_orbitals parameter because data_or_matrix"
+                      " is a ReferenceState, a LazyMp or an AdcMatrix object "
+                      " (which has a value of n_core_orbitals={})."
+                      "".format(refstate.n_orbs_alpha("o2")))
+
+    # Step2: Make AdcMatrix
+    if isinstance(data_or_matrix, ReferenceState):
+        refstate = data_or_matrix
+        data_or_matrix = LazyMp(refstate, DefaultCachingPolicy())
+    else:
+        refstate = data_or_matrix.reference_state
+
+    if isinstance(data_or_matrix, LazyMp):
+        data_or_matrix = AdcMatrix(method, data_or_matrix)
+    elif method is not None and method != data_or_matrix.method:
+        print(method, data_or_matrix.method)
+        warnings.warn("Ignored method parameter because data_or_matrix is an"
+                      " AdcMatrix, which implicitly already defines the method")
+    if isinstance(data_or_matrix, AdcMatrix):
+        matrix = data_or_matrix
 
     if solver_method != "jacobi_davidson":
         raise NotImplementedError("Only the jacobi_davidson solver_method "
                                   "is implemented.")
 
-    # Parse state argument and bring the data into a common framework
-    # of various lists, such that the remainder of the code works
-    # for both restricted and unrestricted ground states.
-    if not hfdata.restricted or hfdata.spin_multiplicity == 0:
-        if n_singlets is not None:
-            raise ValueError("The key \"n_singlets\" may only be used in "
-                             "combination with an restricted ground state "
-                             "reference of singlet spin to provide the number "
-                             "of excited states to compute. Use \"n_states\" "
-                             "for an UHF reference.")
-        if n_triplets is not None:
-            raise ValueError("The key \"n_triplets\" may only be used in "
-                             "combination with an restricted ground state "
-                             "reference of singlet spin to provide the number "
-                             "of excited states to compute. Use \"n_states\" "
-                             "for an UHF reference.")
-        n_singlets = 0
-        n_triplets = 0
+    # Determine default ADC convergence tolerance
+    if conv_tol is None:
+        conv_tol = max(refstate.conv_tol / 100, 1e-6)
+    if refstate.conv_tol >= conv_tol:
+        raise ValueError("Convergence tolerance of SCF results (== {}) needs to"
+                         " be lower than ADC convergence tolerance parameter "
+                         "conv_tol (== {}).".format(refstate.conv_tol,
+                                                    conv_tol))
 
-        if n_states is None or n_states == 0:
-            raise ValueError("No excited states to compute.")
+    # Normalise guess parameters
+    if n_singlets is not None:
+        if not refstate.restricted:
+            raise ValueError("The n_singlets parameter may only be employed "
+                             "for restricted references")
+        if n_states is not None or n_triplets is not None:
+            raise ValueError("One May only specify one out of n_states, "
+                             "n_singlets and n_triplets.")
+        kind = "singlet"
+        n_states = n_singlets
+    if n_triplets is not None:
+        if not refstate.restricted:
+            raise ValueError("The n_triplets parameter may only be employed "
+                             "for restricted references")
+        if n_states is not None or n_singlets is not None:
+            raise ValueError("One May only specify one out of n_states, "
+                             "n_singlets and n_triplets.")
+        kind = "triplet"
+        n_states = n_triplets
 
-        # Solve for a number of states of unspeciffied spin
-        state_kinds = [""]
-        n_kinds = [n_states]
-        guess_keys = ["guesses_state"]  # Guess key for getting guesses
-        #                                 from tmp_run_prelim
+    # Check if there are states to be computed
+    if n_states is None or n_states == 0:
+        raise ValueError("No excited states to be computed. Specify at least "
+                         "one of n_states, n_singlets or n_triplets")
+    if n_states < 0:
+        raise ValueError("n_states needs to be positive")
+
+    # Check value for kind
+    if kind not in ["any", "singlet", "triplet"]:
+        raise ValueError("The kind parameter may only take the values 'any', "
+                         "'singlet' or 'triplet'")
+    if kind in ["singlet", "triplet"] and not refstate.restricted:
+        raise ValueError("kind==singlet and kind==triplet are only valid for "
+                         "ADC calculations in combination with a restricted "
+                         "ground state.")
+
+    explicit_symmetrisation = IndexSymmetrisation
+    if kind in ["singlet", "triplet"]:
+        explicit_symmetrisation = IndexSpinSymmetrisation(
+            matrix, enforce_spin_kind=kind
+        )
+
+    # Guess parameters
+    if n_guesses_doubles is not None and n_guesses_doubles > 0 \
+       and "d" not in matrix.blocks:
+        raise ValueError("n_guesses_doubles > 0 is only sensible if the ADC "
+                         "method has a doubles block (i.e. it is *not* ADC(0), "
+                         "ADC(1) or a variant thereof.")
+
+    #
+    # Obtain guesses
+    #
+    if guesses is not None:
+        if len(guesses) < n_states:
+            raise ValueError("Less guesses provided via guesses (== {}) "
+                             "than states to be computed (== {})"
+                             "".format(len(guesses), n_states))
+        if n_guesses is not None:
+            warnings.warn("Ignoring n_guesses parameter, since guesses are "
+                          "explicitly provided")
     else:
-        if n_states is not None:
-            raise ValueError("The key \"n_states\" may only be used in "
-                             "combination with an unrestricted ground state "
-                             "or a non-singlet ground state to provide the "
-                             "number of excited states to compute. Use "
-                             "\"n_singlets\" and \"n_triplets\".")
-        n_states = 0
+        if n_guesses is None:
+            n_guesses = estimate_n_guesses(matrix, n_states)
 
-        state_kinds = []
-        n_kinds = []
-        guess_keys = []
-        if n_singlets is None or n_singlets == 0:
-            n_singlets = 0
-        else:
-            state_kinds.append("singlet")
-            n_kinds.append(n_singlets)
-            guess_keys.append("guesses_singlet")
+        guess_function = {"any": guesses_any, "singlet": guesses_singlet,
+                          "triplet": guesses_triplet}
+        guesses = find_guesses(guess_function[kind], matrix, n_guesses,
+                               n_guesses_doubles=n_guesses_doubles)
 
-        if n_triplets is None or n_triplets == 0:
-            n_triplets = 0
-        else:
-            state_kinds.append("triplet")
-            n_kinds.append(n_triplets)
-            guess_keys.append("guesses_triplet")
+    # TODO  spin-flip
 
-        if n_singlets + n_triplets == 0:
-            raise ValueError("No excited states to compute.")
+    #
+    # Run solver
+    #
+    jd_callback = None
+    if output:
+        def jd_callback(state, identifier):
+            solver.davidson.default_print(state, identifier, output)
+        kstr = " " if kind == "any" else " " + kind + " "
+        print("Starting " + matrix.method.name + " " + kstr +
+              "Jacobi-Davidson ...", file=output)
 
-    if n_guess_singles + n_guess_doubles == 0:
-        # The maximum over all state parameters
-        n_max_states = max(n_singlets, n_triplets, n_states)
+    jdres = jacobi_davidson(matrix, guesses, n_ep=n_states,
+                            conv_tol=conv_tol, callback=jd_callback,
+                            explicit_symmetrisation=explicit_symmetrisation,
+                            **solverargs)
+    jdres.kind = kind
+    return jdres
 
-        # Try to use at least 4 or twice the number of singlets or
-        # triplets to be computed as guesses
-        n_guess_singles = max(4, 2 * n_max_states)
 
+def estimate_n_guesses(matrix, n_states, singles_only=True):
+    """
+    Implementation of a basic heuristic to find a good number of guess
+    vectors to be searched for using the find_guesses function.
+    Internal function called from run_adc.
+
+    matrix             ADC matrix
+    n_states           Number of states to be computed
+    singles_only       Try to stay withing the singles excitation space
+                       with the number of guess vectors.
+    """
+
+    # Try to use at least 4 or twice the number of states
+    # to be computed as guesses
+    n_guesses = max(4, 2 * n_states)
+
+    if singles_only:
         # Compute the maximal number of sensible singles block guesses.
         # This is roughly the number of occupied alpha orbitals
         # times the number of virtual alpha orbitals
         #
         # If the system is core valence separated, then only the
         # core electrons count as "occupied".
-        n_virt_a = hfdata.n_orbs_alpha - hfdata.n_alpha
-        if method.is_core_valence_separated:
-            n_occ_a = n_core_orbitals
-        else:
-            n_occ_a = hfdata.n_alpha
-        n_guess_singles_max = n_occ_a * n_virt_a
+        refstate = matrix.reference_state
+        sp_occ = "o2" if refstate.has_core_valence_separation else "o1"
+        n_virt_a = refstate.n_orbs_alpha("v1")
+        n_occ_a = refstate.n_orbs_alpha(sp_occ)
+        n_guesses = min(n_guesses, n_occ_a * n_virt_a)
 
-        # Adjust if we overshoot the maximal number of sensible
-        # singles block guesses
-        if n_guess_singles >= n_guess_singles_max:
-            n_guess_singles = n_guess_singles_max
+    # Adjust if we overshoot the maximal number of sensible singles block
+    # guesses, but make sure we get at least n_states guesses
+    return max(n_states, n_guesses)
 
-        # Make sure at least the number of requested states is also
-        # requested as the number of guess vectors
-        if n_guess_singles < n_max_states:
-            n_guess_singles = n_max_states
 
-    if method.base_method in ["adc0", "adc1"] and n_guess_doubles > 0:
-        raise ValueError("n_guess_doubles > 0 is only sensible if the ADC "
-                         "method is not adc0 or adc1 or a variant thereof.")
+def find_guesses(guessfctn, matrix, n_guesses, n_guesses_doubles=None):
+    """
+    Use the provided guess function to find a particular number of guesses
+    in the passed ADC matrix. If n_guesses_doubles is not None, this is
+    number is always adhered to. Otherwise the number of doubles guesses
+    is adjusted to fill up whatever the singles guesses cannot provide
+    to reach n_guesses.
+    Internal function called from run_adc.
+    """
+    if n_guesses_doubles is not None and n_guesses_doubles > 0 \
+       and "d" not in matrix.blocks:
+        raise ValueError("n_guesses_doubles > 0 is only sensible if the ADC "
+                         "method has a doubles block (i.e. it is *not* ADC(0), "
+                         "ADC(1) or a variant thereof.")
 
-    # Do not copy caches if we want to make some statistics
-    copy_caches = True
-    if caching_policy == GatherStatisticsPolicy or \
-       isinstance(caching_policy, GatherStatisticsPolicy):
-        copy_caches = False
+    # Determine number of singles guesses to request
+    n_guess_singles = n_guesses
+    if n_guesses_doubles is not None:
+        n_guess_singles = n_guesses - n_guesses_doubles
+    singles_guesses = guessfctn(matrix, n_guess_singles, block="s")
 
-    # Obtain guesses and preliminary data
-    prelim = tmp_run_prelim(hfdata, method,
-                            n_guess_singles=n_guess_singles,
-                            n_guess_doubles=n_guess_doubles,
-                            n_core_orbitals=n_core_orbitals,
-                            caching_policy=caching_policy,
-                            copy_caches=copy_caches)
+    if "d" in matrix.blocks:
+        # Determine number of doubles guesses to request if not
+        # explicitly specified
+        if n_guesses_doubles is None:
+            n_guesses_doubles = n_guesses - len(singles_guesses)
+        doubles_guesses = guessfctn(matrix, n_guesses_doubles, block="d")
+    else:
+        doubles_guesses = []
 
-    # Setup ADC problem matrix
-    matrix = AdcMatrix(method, prelim.ground_state)
-    matrix.intermediates = prelim.intermediates
-
-    if n_states > 0:
-        prelim.guesses_state = __call_guesses_functions(guesses_any, matrix,
-                                                        n_guess_singles,
-                                                        n_guess_doubles)
-    if n_singlets > 0:
-        prelim.guesses_singlet = __call_guesses_functions(guesses_singlet,
-                                                          matrix,
-                                                          n_guess_singles,
-                                                          n_guess_doubles)
-    if n_triplets > 0:
-        prelim.guesses_triplet = __call_guesses_functions(guesses_triplet,
-                                                          matrix,
-                                                          n_guess_singles,
-                                                          n_guess_doubles)
-    # TODO spin-flip
-    # TODO Allow to pass guesses to run_adc function directly
-    #      from the outside.
-
-    # Solve for each spin kind:
-    ret = []
-    for kind, guess_key, n_kind in zip(state_kinds, guess_keys, n_kinds):
-        # Get guesses
-        guesses = getattr(prelim, guess_key)
-
-        # Setup index and spin symmetrisation for obtaining spin-pure
-        # singlet and triplet states in case of a restricted ground state
-        explicit_symmetrisation = IndexSymmetrisation
-        if hfdata.restricted:
-            explicit_symmetrisation = IndexSpinSymmetrisation(
-                matrix, enforce_spin_kind=kind
-            )
-
-        # Call solver
-        res = __call_jacobi_davidson(
-            matrix, guesses, kind, n_ep=n_kind, output=output,
-            explicit_symmetrisation=explicit_symmetrisation, **solverargs
-        )
-
-        res.kind = kind
-        ret.append(res)
-    return ret
+    total_guesses = singles_guesses + doubles_guesses
+    if len(total_guesses) < n_guesses:
+        raise RuntimeError("Less guesses found than requested: {} found, "
+                           "{} requested".format(len(total_guesses), n_guesses))
+    return total_guesses

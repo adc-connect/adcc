@@ -26,12 +26,13 @@ import scipy.constants
 
 
 class SolverStateBase:
-    def __init__(self, method, ground_state):
-        self.method = method              # The adc method which was used to
+    def __init__(self, matrix):
+        self.method = matrix.method       # The adc method which was used to
         #                                   obtain these states
-        self.ground_state = ground_state  # The (MP) ground state upon which
-        #                                   this solver state is based
-        self.reference_state = ground_state.reference_state
+        self.ground_state = matrix.ground_state  # The (MP) ground state upon
+        #                                   which this solver state is based
+        self.reference_state = matrix.ground_state.reference_state
+        self.matrix = matrix
         self.eigenvalues = None           # Current eigenvalues
         self.eigenvectors = None          # Current eigenvectors
         self.converged = False            # Flag whether iteration is converged

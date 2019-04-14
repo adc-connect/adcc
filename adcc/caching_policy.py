@@ -25,7 +25,7 @@ from libadcc import CachingPolicy_i
 
 class DefaultCachingPolicy(CachingPolicy_i):
     def __init__(self):
-        super().__init__()
+        CachingPolicy_i.__init__(self)
 
     def should_cache(self, tensor_label, tensor_space,
                      leading_order_contraction):
@@ -58,7 +58,7 @@ class GatherStatisticsPolicy(CachingPolicy_i):
     cachings.
     """
     def __init__(self):
-        super().__init__()
+        CachingPolicy_i.__init__(self)
         self.call_count = {}
 
     def should_cache(self, label, space, contraction):
