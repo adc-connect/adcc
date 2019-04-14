@@ -20,9 +20,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import adcc
 
 from pyscf import gto, scf
-import adcc
 
 # Run SCF in pyscf
 mol = gto.M(
@@ -40,8 +40,9 @@ scfres.kernel()
 adcc.memory_pool.initialise(max_memory=512 * 1024 * 1024)
 
 # Run an adc3 calculation:
-state = adcc.adc3(scfres, n_singlets=3, n_triplets=3, conv_tol=1e-6)
+singlets = adcc.adc3(scfres, n_singlets=3)
+triplets = adcc.adc3(singlets.matrix, n_triplets=3)
 
-print(state[0].describe())
+print(singlets.describe())
 print()
-print(state[1].describe())
+print(triplets.describe())
