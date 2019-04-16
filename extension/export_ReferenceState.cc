@@ -46,6 +46,7 @@ void export_ReferenceState(py::module& m) {
         .def("orbital_coefficients_beta", &ReferenceState::orbital_coefficients_beta)
         .def_property_readonly("has_core_valence_separation",
                                &ReferenceState::has_core_valence_separation)
+        .def_property_readonly("conv_tol", &ReferenceState::conv_tol)
         .def_property_readonly("restricted", &ReferenceState::restricted,
                                "Return whether the reference state is from a restricted"
                                " calculation or not.")

@@ -17,6 +17,7 @@
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include "caching_policy_hack.hh"
 #include <adcc/CachingPolicy.hh>
 #include <memory>
 #include <pybind11/pybind11.h>
