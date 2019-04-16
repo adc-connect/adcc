@@ -24,51 +24,46 @@ import os
 
 import adcc
 
-from adcc import AmplitudeVector, empty_like, hdf5io
+from adcc import AdcMatrix, LazyMp, guess_zero, hdf5io
 from adcc.misc import cached_property
-
-
-def compute_prelim(data, core_valence_separation=False):
-    method = "adc2"
-    n_core_orbitals = None
-    if core_valence_separation:
-        method = "cvs-adc2"
-        n_core_orbitals = data["n_core_orbitals"]
-
-    # Run preliminary ADC(2) or CVS-ADC(2) calculation
-    return adcc.tmp_run_prelim(data, method, n_guess_singles=10,
-                               n_core_orbitals=n_core_orbitals)
+from adcc.caching_policy import CacheAllPolicy
 
 
 class AdcMockState():
     pass
 
 
-def make_mock_adc_state(prelim, method, kind, reference):
-    matrix = adcc.AdcMatrix(method, prelim.ground_state)
-    guesses = getattr(prelim, "guesses_" + kind)
+def make_mock_adc_state(refstate, method, kind, reference):
+    ground_state = LazyMp(refstate, CacheAllPolicy())
+    matrix = AdcMatrix(method, ground_state)
 
     # Number of full state results
     n_full = len(reference[method][kind]["eigenvectors_singles"])
 
     state = AdcMockState()
     state.method = matrix.method
-    state.ground_state = prelim.ground_state
-    state.reference_state = prelim.reference
+    state.ground_state = ground_state
+    state.reference_state = refstate
     state.kind = kind
     state.eigenvalues = reference[method][kind]["eigenvalues"][:n_full]
 
-    # prelim.guesses is computed via ADC(2), hence this has
-    # a singles and a doubles part. For ADC(1), however, we only
-    # need a singles part
-    has_doubles = "eigenvectors_doubles" in reference[method][kind]
-
-    if has_doubles:
-        state.eigenvectors = [empty_like(gv) for gv in guesses[:n_full]]
+    spin_change = 0
+    if refstate.restricted and kind == "singlet":
+        symm = "symmetric"
+    elif refstate.restricted and kind == "triplet":
+        symm = "antisymmetric"
+    elif kind == "state":
+        symm = "none"
     else:
-        state.eigenvectors = [AmplitudeVector(empty_like(gv["s"]))
-                              for gv in guesses[:n_full]]
+        raise ValueError("Unknown kind: {}")
 
+    state.eigenvectors = [
+        guess_zero(matrix, irrep="A", spin_change=spin_change,
+                   spin_block_symmetrisation=symm)
+        for i in range(n_full)
+    ]
+
+    has_doubles = "eigenvectors_doubles" in reference[method][kind]
     vec_singles = reference[method][kind]["eigenvectors_singles"]
     vec_doubles = reference[method][kind].get("eigenvectors_doubles", None)
     for i, evec in enumerate(state.eigenvectors):
@@ -110,12 +105,14 @@ class TestdataCache():
         return ret
 
     @cached_property
-    def prelim(self):
-        return {k: compute_prelim(self.hfdata[k]) for k in self.testcases}
+    def refstate(self):
+        return {k: adcc.tmp_build_reference_state(self.hfdata[k])
+                for k in self.testcases}
 
     @cached_property
-    def prelim_cvs(self):
-        return {k: compute_prelim(self.hfdata[k], core_valence_separation=True)
+    def refstate_cvs(self):
+        return {k: adcc.tmp_build_reference_state(
+                self.hfdata[k], self.hfdata[k]["n_core_orbitals"])
                 for k in self.testcases}
 
     @cached_property
@@ -146,15 +143,16 @@ class TestdataCache():
             res_case = {}
             for method in ["adc0", "adc1", "adc2", "adc2x", "adc3"]:
                 res_case[method] = {
-                    kind: make_mock_adc_state(self.prelim[case], method, kind,
+                    kind: make_mock_adc_state(self.refstate[case], method, kind,
                                               self.reference_data[case])
                     for kind in available_kinds
                 }
 
             for cvs_method in ["cvs-adc0", "cvs-adc1", "cvs-adc2", "cvs-adc2x"]:
                 res_case[cvs_method] = {
-                    kind: make_mock_adc_state(self.prelim_cvs[case], cvs_method,
-                                              kind, self.reference_data[case])
+                    kind: make_mock_adc_state(self.refstate_cvs[case],
+                                              cvs_method, kind,
+                                              self.reference_data[case])
                     for kind in available_kinds
                 }
 

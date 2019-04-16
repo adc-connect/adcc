@@ -35,8 +35,8 @@ from .tmp_build_reference_state import tmp_build_reference_state
 from libadcc import HartreeFockProvider, HartreeFockSolution_i, LazyMp, Tensor
 
 # This has to be the last set of import
-from .guess import (guesses_any, guesses_singlet, guesses_spin_flip,
-                    guesses_triplet)
+from .guess import (guess_zero, guesses_any, guesses_singlet,
+                    guesses_spin_flip, guesses_triplet)
 from .run_adc import run_adc
 
 __all__ = ["run_adc", "AdcMatrix", "AdcMethod",
@@ -47,7 +47,7 @@ __all__ = ["run_adc", "AdcMatrix", "AdcMethod",
            "attach_state_densities", "tmp_build_reference_state",
            "HartreeFockProvider", "HartreeFockSolution_i", "Tensor",
            "guesses_singlet", "guesses_triplet", "guesses_any",
-           "guesses_spin_flip", "DefaultCachingPolicy",
+           "guesses_spin_flip", "guess_zero", "DefaultCachingPolicy",
            "GatherStatisticsPolicy", "LazyMp",
            "adc0", "adc1", "adc2", "adc2x", "adc3",
            "cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x"]
@@ -56,7 +56,7 @@ __version__ = "0.8.0"
 __licence__ = "LGPL v3"
 __authors__ = "Michael F. Herbst and Maximilian Scheurer"
 __email__ = "info@michael-herbst.com"
-# feel free to add your name above if you commit something
+# feel free to add your name above
 
 
 def with_runadc_doc(func):

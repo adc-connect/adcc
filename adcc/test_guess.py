@@ -23,15 +23,14 @@
 import unittest
 import itertools
 import numpy as np
-
-from .misc import expand_test_templates
-from numpy.testing import assert_array_equal
-
 import adcc
 import adcc.guess
 
-from pytest import approx
+from numpy.testing import assert_array_equal
 from adcc.testdata.cache import cache
+
+from .misc import expand_test_templates
+from pytest import approx
 
 # The methods to test
 methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
@@ -197,10 +196,10 @@ class TestGuess(unittest.TestCase):
 
     def base_test(self, case, method, block, max_guesses=10):
         if adcc.AdcMethod(method).is_core_valence_separated:
-            prelim = cache.prelim_cvs[case]
+            ground_state = adcc.LazyMp(cache.refstate_cvs[case])
         else:
-            prelim = cache.prelim[case]
-        matrix = adcc.AdcMatrix(method, prelim.ground_state)
+            ground_state = adcc.LazyMp(cache.refstate[case])
+        matrix = adcc.AdcMatrix(method, ground_state)
 
         symmetrisations = ["none"]
         if matrix.reference_state.restricted:
@@ -280,23 +279,23 @@ class TestGuess(unittest.TestCase):
                     assert_array_equal(values, np.array(ref_sb[i][1]))
 
     def test_reference_h2o_adc2x(self):
-        prelim = cache.prelim["h2o_sto3g"]
-        matrix = adcc.AdcMatrix("adc2x", prelim.ground_state)
+        ground_state = adcc.LazyMp(cache.refstate["h2o_sto3g"])
+        matrix = adcc.AdcMatrix("adc2x", ground_state)
         self.base_reference(matrix, self.get_ref_h2o())
 
     def test_reference_h2o_adc3(self):
-        prelim = cache.prelim["h2o_sto3g"]
-        matrix = adcc.AdcMatrix("adc3", prelim.ground_state)
+        ground_state = adcc.LazyMp(cache.refstate["h2o_sto3g"])
+        matrix = adcc.AdcMatrix("adc3", ground_state)
         self.base_reference(matrix, self.get_ref_h2o())
 
     def test_reference_cn_adc2x(self):
-        prelim = cache.prelim["cn_sto3g"]
-        matrix = adcc.AdcMatrix("adc2x", prelim.ground_state)
+        ground_state = adcc.LazyMp(cache.refstate["cn_sto3g"])
+        matrix = adcc.AdcMatrix("adc2x", ground_state)
         self.base_reference(matrix, self.get_ref_cn())
 
     def test_reference_cn_adc3(self):
-        prelim = cache.prelim["cn_sto3g"]
-        matrix = adcc.AdcMatrix("adc3", prelim.ground_state)
+        ground_state = adcc.LazyMp(cache.refstate["cn_sto3g"])
+        matrix = adcc.AdcMatrix("adc3", ground_state)
         self.base_reference(matrix, self.get_ref_cn())
 
     def get_ref_h2o(self):

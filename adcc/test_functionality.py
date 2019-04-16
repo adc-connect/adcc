@@ -24,6 +24,7 @@ import adcc
 import unittest
 
 from adcc.testdata.cache import cache
+from adcc.solver.SolverStateBase import SolverStateBase
 
 from .misc import expand_test_templates
 from pytest import approx
@@ -38,10 +39,9 @@ class TestFunctionality(unittest.TestCase):
         hf = cache.hfdata[system]
         refdata = cache.reference_data[system]
 
+        args["conv_tol"] = 1e-7
         res = getattr(adcc, method.replace("-", "_"))(hf, **args)
-        assert type(res) == list
-        assert len(res) == 1
-        res = res[0]  # Extract the first (and only state)
+        assert isinstance(res, SolverStateBase)
 
         ref = refdata[method][kind]["eigenvalues"]
         assert res.converged
