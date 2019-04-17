@@ -21,7 +21,6 @@
 ##
 ## ---------------------------------------------------------------------
 import os
-
 import adcc
 
 from adcc import AdcMatrix, LazyMp, guess_zero, hdf5io
@@ -52,10 +51,10 @@ def make_mock_adc_state(refstate, method, kind, reference):
         symm = "symmetric"
     elif refstate.restricted and kind == "triplet":
         symm = "antisymmetric"
-    elif kind == "state":
+    elif kind in ["state", "spin_flip"]:
         symm = "none"
     else:
-        raise ValueError("Unknown kind: {}")
+        raise ValueError("Unknown kind: {}".format(kind))
 
     state.eigenvectors = [
         guess_zero(matrix, irrep="A", spin_change=spin_change,
@@ -80,7 +79,7 @@ def fullfile(fn):
     elif os.path.isfile(fn):
         return fn
     else:
-        return None
+        return ""
 
 
 class TestdataCache():
@@ -89,7 +88,7 @@ class TestdataCache():
         """
         The definition of the test cases: Data generator and reference file
         """
-        cases = ["h2o_sto3g", "cn_sto3g"]
+        cases = ["h2o_sto3g", "cn_sto3g", "hf3_631g"]
         return [k for k in cases
                 if os.path.isfile(fullfile(k + "_hfdata.hdf5"))]
 
@@ -113,7 +112,8 @@ class TestdataCache():
     def refstate_cvs(self):
         return {k: adcc.tmp_build_reference_state(
                 self.hfdata[k], self.hfdata[k]["n_core_orbitals"])
-                for k in self.testcases}
+                for k in self.testcases
+                if "n_core_orbitals" in self.hfdata[k]}
 
     @cached_property
     def reference_data(self):
@@ -142,13 +142,18 @@ class TestdataCache():
             available_kinds = self.reference_data[case]["available_kinds"]
             res_case = {}
             for method in ["adc0", "adc1", "adc2", "adc2x", "adc3"]:
+                if method not in self.reference_data[case]:
+                    continue
                 res_case[method] = {
                     kind: make_mock_adc_state(self.refstate[case], method, kind,
                                               self.reference_data[case])
                     for kind in available_kinds
                 }
 
-            for cvs_method in ["cvs-adc0", "cvs-adc1", "cvs-adc2", "cvs-adc2x"]:
+            for cvs_method in ["cvs-adc0", "cvs-adc1", "cvs-adc2",
+                               "cvs-adc2x", "cvs-adc3"]:
+                if cvs_method not in self.reference_data[case]:
+                    continue
                 res_case[cvs_method] = {
                     kind: make_mock_adc_state(self.refstate_cvs[case],
                                               cvs_method, kind,

@@ -22,6 +22,12 @@ DATAFILES=(
 	h2o_sto3g_reference_cvs_adc1.hdf5
 	h2o_sto3g_reference_cvs_adc2.hdf5
 	h2o_sto3g_reference_cvs_adc2x.hdf5
+	hf3_631g_hfdata.hdf5
+	hf3_631g_reference_adc0.hdf5
+	hf3_631g_reference_adc1.hdf5
+	hf3_631g_reference_adc2.hdf5
+	hf3_631g_reference_adc2x.hdf5
+	hf3_631g_reference_adc3.hdf5
 )
 
 #

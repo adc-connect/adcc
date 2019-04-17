@@ -20,10 +20,10 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
-from libadcc import HfData
-from pyscf import ao2mo, scf
 import numpy as np
+
+from pyscf import ao2mo, scf
+from libadcc import HfData
 
 
 def convert_scf_to_dict(scfres):
@@ -80,7 +80,7 @@ def convert_scf_to_dict(scfres):
         raise ValueError("Fractional occupation numbers are not supported "
                          "in adcc.")
 
-    # conv_tol is energy convergence, grad_conv_tol is gradient convergence
+    # conv_tol is energy convergence, conv_tol_grad is gradient convergence
     if scfres.conv_tol_grad is None:
         conv_tol_grad = np.sqrt(scfres.conv_tol)
     else:

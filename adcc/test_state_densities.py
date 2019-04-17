@@ -58,6 +58,23 @@ class Runners():
             kwargs = {"propmethod": "adc2"}
         self.base_test("cn_sto3g", method, "state", **kwargs)
 
+    def template_hf3_spin_flip(self, method):
+        kwargs = {}
+        if method == "adc3":
+            kwargs = {"propmethod": "adc2"}
+        self.base_test("hf3_631g", method, "spin_flip", **kwargs)
+
+
+# Return combinations not tested so far:
+#     The rationale is that cvs-spin-flip as a method does not make
+#     that much sense and probably the routines are anyway covered
+#     by the other testing we do.
+delattr(Runners, "test_hf3_spin_flip_cvs_adc0")
+delattr(Runners, "test_hf3_spin_flip_cvs_adc1")
+delattr(Runners, "test_hf3_spin_flip_cvs_adc2")
+delattr(Runners, "test_hf3_spin_flip_cvs_adc2x")
+# delattr(Runners, "test_hf3_spin_flip_cvs_adc3")
+
 
 class TestStateDiffDm(unittest.TestCase, Runners):
     def base_test(self, system, method, kind, propmethod=None):
