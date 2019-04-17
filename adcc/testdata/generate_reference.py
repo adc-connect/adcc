@@ -73,17 +73,10 @@ def run(data, method, n_singlets=None, n_triplets=None,
     if core_valence_separation:
         n_core_orbitals = data["n_core_orbitals"]
 
-    if n_singlets and n_triplets:
-        n_guesses = max(n_singlets, n_triplets)
-    else:
-        n_guesses = n_states
-
-    # Run preliminary calculation
-    res = adcc.tmp_run_prelim(data, method, n_guess_singles=n_guesses,
-                              n_core_orbitals=n_core_orbitals)
-
     # Setup the matrix and run adcman solver
-    matrix = adcc.AdcMatrix(res.method, res.ground_state)
+    refstate = adcc.tmp_build_reference_state(data,
+                                              n_core_orbitals=n_core_orbitals)
+    matrix = adcc.AdcMatrix(method, adcc.LazyMp(refstate))
     states = adcman.jacobi_davidson(matrix, print_level=100,
                                     n_singlets=n_singlets,
                                     n_triplets=n_triplets,

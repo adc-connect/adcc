@@ -43,7 +43,6 @@ void export_ReferenceState(py::module& m);
 void export_solve_adcman_davidson(py::module& m);
 void export_Tensor(py::module& m);
 void export_ThreadPool(py::module& m);
-void export_tmp_run_prelim(py::module& m);
 }  // namespace py_iface
 }  // namespace adcc
 
@@ -69,7 +68,6 @@ PYBIND11_MODULE(libadcc, m) {
   pyif::export_compute_modified_transition_moments(m);
   pyif::export_compute_one_particle_densities(m);
 
-  pyif::export_tmp_run_prelim(m);
   pyif::export_solve_adcman_davidson(m);
 
   // Set metadata about libadcc
@@ -81,6 +79,8 @@ PYBIND11_MODULE(libadcc, m) {
       if (p) std::rethrow_exception(p);
     } catch (const adcc::not_implemented_error& ex) {
       PyErr_SetString(PyExc_NotImplementedError, ex.what());
+    } catch (const adcc::invalid_argument& ex) {
+      PyErr_SetString(PyExc_ValueError, ex.what());
     }
   });
 }
