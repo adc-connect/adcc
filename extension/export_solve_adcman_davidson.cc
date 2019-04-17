@@ -21,24 +21,12 @@
 #include <adcc/solve_adcman_davidson.hh>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 namespace adcc {
 namespace py_iface {
 
 namespace py = pybind11;
-
-static py::list adcc_solve_adcman_davidson(
-      const std::shared_ptr<AdcMatrix>& matrix, size_t n_singlets, size_t n_triplets,
-      double conv_tol, size_t max_iter, size_t max_subspace, size_t print_level,
-      double residual_threshold, size_t n_guess_singles, size_t n_guess_doubles) {
-  std::vector<AdcmanDavidsonState> ret = adcc::solve_adcman_davidson(
-        matrix, n_singlets, n_triplets, conv_tol, max_iter, max_subspace, print_level,
-        residual_threshold, n_guess_singles, n_guess_doubles);
-
-  py::list res;
-  for (auto& state : ret) res.append(state);
-  return res;
-}
 
 py::array AdcmanDavidsonState__eigenvalues(const py::object& obj) {
   const AdcmanDavidsonState& self = obj.cast<const AdcmanDavidsonState&>();
@@ -88,7 +76,7 @@ void export_solve_adcman_davidson(py::module& m) {
         //
         ;
 
-  m.def("solve_adcman_davidson", &adcc_solve_adcman_davidson,
+  m.def("solve_adcman_davidson", &solve_adcman_davidson,
         "Run the davidson solver in adcman and print the results.");
 }
 
