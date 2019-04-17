@@ -20,9 +20,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import libadcc
-
 from adcc import AdcMatrix, AmplitudeVector
+
+import libadcc
 
 __all__ = ["guess_zero", "guesses_from_diagonal",
            "guesses_singlet", "guesses_triplet", "guesses_any",
@@ -114,7 +114,7 @@ def guesses_from_diagonal(matrix, n_guesses, block="s",
         raise ValueError("spin_block_symmetrisation != none is only valid for "
                          "ADC calculations on top of restricted reference "
                          "states.")
-    if int(spin_change / 2) * 2 != spin_change:
+    if int(spin_change * 2) / 2 != spin_change:
         raise ValueError("Only integer or half-integer spin_change is allowed. "
                          "You passed {}".format(spin_change))
 
