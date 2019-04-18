@@ -23,14 +23,15 @@
 import unittest
 import itertools
 import numpy as np
+
+from .misc import expand_test_templates
+from numpy.testing import assert_array_equal
+
 import adcc
 import adcc.guess
 
-from numpy.testing import assert_array_equal
-from adcc.testdata.cache import cache
-
-from .misc import expand_test_templates
 from pytest import approx
+from adcc.testdata.cache import cache
 
 # The methods to test
 methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
@@ -54,7 +55,7 @@ class TestGuess(unittest.TestCase):
             nCa = refstate.n_orbs_alpha("o2")
             nCb = refstate.n_orbs_beta("o2")
 
-        fac = 0
+        fac = 1
         if spin_block_symmetrisation == "symmetric":
             fac = 1
         if spin_block_symmetrisation == "antisymmetric":
@@ -122,18 +123,74 @@ class TestGuess(unittest.TestCase):
             assert has_aaaa or has_abab or has_abba or \
                 has_bbbb or has_baba or has_baab
 
+    def assert_symmetry_spin_flip(self, matrix, guess, block):
+        """
+        Assert a guess vector has the correct symmetry if we have a
+        spin-change of -1 (i.e. spin-flip)
+        """
+        refstate = matrix.reference_state
+        assert not refstate.has_core_valence_separation
+        refstate = matrix.reference_state
+        nCa = noa = refstate.n_orbs_alpha("o1")
+        nCb = nob = refstate.n_orbs_beta("o1")
+        nva = refstate.n_orbs_alpha("v1")
+        nvb = refstate.n_orbs_beta("v1")
+
+        # Singles
+        gts = guess["s"].to_ndarray()
+        assert gts.shape == (nCa + nCb, nva + nvb)
+        assert np.max(np.abs(gts[:nCa, :nva])) == 0  # a->a
+        assert np.max(np.abs(gts[nCa:, :nva])) == 0  # b->a
+        assert np.max(np.abs(gts[nCa:, nva:])) == 0  # b->b
+
+        # Doubles
+        if "d" not in matrix.blocks:
+            return
+
+        gtd = guess["d"].to_ndarray()
+        assert gtd.shape == (noa + nob, nCa + nCb, nva + nvb, nva + nvb)
+        assert np.max(np.abs(gtd[:noa, :nCa, :nva, :nva])) == 0  # aa->aa
+        assert np.max(np.abs(gtd[:noa, :nCa, nva:, nva:])) == 0  # aa->bb
+        assert np.max(np.abs(gtd[:noa, nCa:, :nva, :nva])) == 0  # ab->aa
+        assert np.max(np.abs(gtd[:noa, nCa:, :nva, nva:])) == 0  # ab->ab
+        assert np.max(np.abs(gtd[:noa, nCa:, nva:, :nva])) == 0  # ab->ba
+        assert np.max(np.abs(gtd[noa:, :nCa, :nva, :nva])) == 0  # ba->aa
+        assert np.max(np.abs(gtd[noa:, :nCa, :nva, nva:])) == 0  # ba->ab
+        assert np.max(np.abs(gtd[noa:, :nCa, nva:, :nva])) == 0  # ba->ba
+        assert np.max(np.abs(gtd[noa:, nCa:, :nva, :nva])) == 0  # bb->aa
+        assert np.max(np.abs(gtd[noa:, nCa:, :nva, nva:])) == 0  # bb->ab
+        assert np.max(np.abs(gtd[noa:, nCa:, nva:, :nva])) == 0  # bb->ba
+        assert np.max(np.abs(gtd[noa:, nCa:, nva:, nva:])) == 0  # bb->bb
+
+        assert_array_equal(gtd.transpose((0, 1, 3, 2)), -gtd)
+        if not refstate.has_core_valence_separation:
+            assert_array_equal(gtd.transpose((1, 0, 2, 3)), -gtd)
+
+        if block == "s":
+            assert np.max(np.abs(gtd[:noa, :nCa, :nva, nva:])) == 0  # aa->ab
+            assert np.max(np.abs(gtd[:noa, :nCa, nva:, :nva])) == 0  # aa->ba
+            assert np.max(np.abs(gtd[:noa, nCa:, nva:, nva:])) == 0  # ab->bb
+            assert np.max(np.abs(gtd[noa:, :nCa, nva:, nva:])) == 0  # ba->bb
+            assert np.max(np.abs(gts[:nCa, nva:])) > 0
+        elif block == "d":
+            assert np.max(np.abs(gts[:nCa, nva:])) == 0
+            has_aaab = np.max(np.abs(gtd[:noa, :nCa, :nva, nva:])) > 0
+            has_aaba = np.max(np.abs(gtd[:noa, :nCa, nva:, :nva])) > 0
+            has_abbb = np.max(np.abs(gtd[:noa, nCa:, nva:, nva:])) > 0
+            has_babb = np.max(np.abs(gtd[noa:, :nCa, nva:, nva:])) > 0
+            assert has_aaab or has_aaba or has_abbb or has_babb
+
     def assert_orthonormal(self, guesses):
         for (i, gi) in enumerate(guesses):
             for (j, gj) in enumerate(guesses):
                 ref = 1 if i == j else 0
                 assert adcc.dot(gi, gj) == approx(ref)
 
-    def assert_guess_values(self, matrix, block, guesses):
+    def assert_guess_values(self, matrix, block, guesses, spin_flip=False):
         """
         Assert that the guesses correspond to the smallest
         diagonal values.
         """
-
         # Extract useful quantities
         refstate = matrix.reference_state
         nCa = noa = refstate.n_orbs_alpha("o1")
@@ -151,11 +208,15 @@ class TestGuess(unittest.TestCase):
             sidcs = np.dstack(np.unravel_index(np.argsort(diagonal.ravel()),
                                                diagonal.shape))
             assert sidcs.shape[0] == 1
-            sidcs = [
-                idx for idx in sidcs[0]
-                if any((idx[0] >= nCa and idx[1] >= nva,
-                        idx[0]  < nCa and idx[1]  < nva))  # noqa: E221
-            ]
+            if spin_flip:
+                sidcs = [idx for idx in sidcs[0]
+                         if idx[0] < nCa and idx[1] >= nva]
+            else:
+                sidcs = [
+                    idx for idx in sidcs[0]
+                    if any((idx[0] >= nCa and idx[1] >= nva,
+                            idx[0]  < nCa and idx[1]  < nva))  # noqa: E221
+                ]
         elif block == "d":
             diagonal = matrix.diagonal("d").to_ndarray()
 
@@ -164,15 +225,24 @@ class TestGuess(unittest.TestCase):
                                                diagonal.shape))
 
             assert sidcs.shape[0] == 1
-            sidcs = [
-                idx for idx in sidcs[0]
-                if any((idx[0]  < noa and idx[1]  < nCa and idx[2]  < nva and idx[3]  < nva,   # noqa: E221,E501
-                        idx[0] >= noa and idx[1] >= nCa and idx[2] >= nva and idx[3] >= nva,   # noqa: E221,E501
-                        idx[0]  < noa and idx[1] >= nCa and idx[2]  < nva and idx[3] >= nva,   # noqa: E221,E501
-                        idx[0] >= noa and idx[1]  < nCa and idx[2] >= nva and idx[3]  < nva,   # noqa: E221,E501
-                        idx[0]  < noa and idx[1] >= nCa and idx[2] >= nva and idx[3]  < nva,   # noqa: E221,E501
-                        idx[0] >= noa and idx[1]  < nCa and idx[2]  < nva and idx[3] >= nva))  # noqa: E221,E501
-            ]
+            if spin_flip:
+                sidcs = [
+                    idx for idx in sidcs[0]
+                    if any((idx[0]  < noa and idx[1]  < nCa and idx[2]  < nva and idx[3] >= nva,   # noqa: E221,E501
+                            idx[0]  < noa and idx[1]  < nCa and idx[2] >= nva and idx[3]  < nva,   # noqa: E221,E501
+                            idx[0]  < noa and idx[1] >= nCa and idx[2] >= nva and idx[3] >= nva,   # noqa: E221,E501
+                            idx[0] >= noa and idx[1]  < nCa and idx[2] >= nva and idx[3] >= nva))  # noqa: E221,E501
+                ]
+            else:
+                sidcs = [
+                    idx for idx in sidcs[0]
+                    if any((idx[0]  < noa and idx[1]  < nCa and idx[2]  < nva and idx[3]  < nva,   # noqa: E221,E501
+                            idx[0] >= noa and idx[1] >= nCa and idx[2] >= nva and idx[3] >= nva,   # noqa: E221,E501
+                            idx[0]  < noa and idx[1] >= nCa and idx[2]  < nva and idx[3] >= nva,   # noqa: E221,E501
+                            idx[0] >= noa and idx[1]  < nCa and idx[2] >= nva and idx[3]  < nva,   # noqa: E221,E501
+                            idx[0]  < noa and idx[1] >= nCa and idx[2] >= nva and idx[3]  < nva,   # noqa: E221,E501
+                            idx[0] >= noa and idx[1]  < nCa and idx[2]  < nva and idx[3] >= nva))  # noqa: E221,E501
+                ]
             sidcs = [idx for idx in sidcs if idx[2] != idx[3]]
             if not refstate.has_core_valence_separation:
                 sidcs = [idx for idx in sidcs if idx[0] != idx[1]]
@@ -194,7 +264,7 @@ class TestGuess(unittest.TestCase):
             for nz in nonzeros:
                 assert nz in gidcs[igroup]
 
-    def base_test(self, case, method, block, max_guesses=10):
+    def base_test_no_spin_change(self, case, method, block, max_guesses=10):
         if adcc.AdcMethod(method).is_core_valence_separated:
             ground_state = adcc.LazyMp(cache.refstate_cvs[case])
         else:
@@ -217,37 +287,64 @@ class TestGuess(unittest.TestCase):
                 self.assert_orthonormal(guesses)
                 self.assert_guess_values(matrix, block, guesses)
 
+    def base_test_spin_flip(self, case, method, block, max_guesses=10):
+        ground_state = adcc.LazyMp(cache.refstate[case])
+        matrix = adcc.AdcMatrix(method, ground_state)
+        for n_guesses in range(1, max_guesses + 1):
+            guesses = adcc.guess.guesses_from_diagonal(
+                matrix, n_guesses, block=block, spin_change=-1,
+                spin_block_symmetrisation="none"
+            )
+            assert len(guesses) == n_guesses
+            for gs in guesses:
+                self.assert_symmetry_spin_flip(matrix, gs, block)
+            self.assert_orthonormal(guesses)
+            self.assert_guess_values(matrix, block, guesses, spin_flip=True)
+
     def template_singles_h2o(self, method):
-        self.base_test("h2o_sto3g", method, "s")
+        self.base_test_no_spin_change("h2o_sto3g", method, "s")
 
     def template_singles_h2o_cvs(self, method):
-        self.base_test("h2o_sto3g", "cvs-" + method, "s", max_guesses=2)
+        self.base_test_no_spin_change("h2o_sto3g", "cvs-" + method, "s",
+                                      max_guesses=2)
 
     def template_singles_cn(self, method):
-        self.base_test("cn_sto3g", method, "s")
+        self.base_test_no_spin_change("cn_sto3g", method, "s")
 
     def template_singles_cn_cvs(self, method):
-        self.base_test("cn_sto3g", "cvs-" + method, "s", max_guesses=7)
+        self.base_test_no_spin_change("cn_sto3g", "cvs-" + method, "s",
+                                      max_guesses=7)
+
+    def template_singles_hf3(self, method):
+        self.base_test_spin_flip("hf3_631g", method, "s")
 
     # TODO These tests fails because of adcman, because some delta-Fock-based
     #      approximation is used for the diagonal instead of the actual
     #      doubles diagonal which would be employed for ADC(2) and ADC(3)
     # def test_doubles_h2o_adc2(self):
-    #     self.base_test("h2o_sto3g", "adc2", "d", max_guesses=3)
+    #     self.base_test_no_spin_change("h2o_sto3g", "adc2", "d", max_guesses=3)
     #
     # def test_doubles_h2o_adc3(self):
-    #     self.base_test("h2o_sto3g", "adc3", "d", max_guesses=3)
+    #     self.base_test_no_spin_change("h2o_sto3g", "adc3", "d", max_guesses=3)
     #
     # def test_doubles_cn_adc2(self):
-    #     self.base_test("cn_sto3g", "adc2", "d")
+    #     self.base_test_no_spin_change("cn_sto3g", "adc2", "d")
     #
     # def test_doubles_cn_adc3(self):
-    #    self.base_test("cn_sto3g", "adc3", "d")
+    #    self.base_test_no_spin_change("cn_sto3g", "adc3", "d")
     #
     # TODO Perhaps could be templatified as well one the issues are resolved
 
     def test_doubles_h2o_cvs_adc2(self):
-        self.base_test("h2o_sto3g", "cvs-adc2", "d", max_guesses=5)
+        self.base_test_no_spin_change("h2o_sto3g", "cvs-adc2", "d",
+                                      max_guesses=5)
+
+    def test_doubles_hf3_adc2(self):
+        self.base_test_spin_flip("hf3_631g", "adc2", "d")
+
+    # TODO See above
+    # def test_doubles_hf3_adc3(self):
+    #     self.base_test_spin_flip("hf3_631g", "adc3", "d")
 
     #
     # Tests against reference values
@@ -414,9 +511,6 @@ class TestGuess(unittest.TestCase):
                  [0.5, -0.5, -0.5, 0.5]),
             ],
         }
-
-    # TODO
-    # Test spin-flip guesses
 
 
 delattr(TestGuess, "test_singles_cn_cvs_adc3")
