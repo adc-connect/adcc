@@ -22,10 +22,9 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
-from adcc import AdcMatrix, AmplitudeVector
-
 import libadcc
 
+from adcc import AdcMatrix, AmplitudeVector
 from .SolverStateBase import SolverStateBase
 
 
@@ -44,7 +43,7 @@ class AdcmanSolverState(SolverStateBase):
         if spin_change == 0:
             self.kind = cppstate.kind
         else:
-            self.kind = "spin flip"
+            self.kind = "spin_flip"
             self.spin_change = spin_change
 
 

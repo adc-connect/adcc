@@ -43,13 +43,15 @@ class SolverStateBase:
         text = ""
         toeV = scipy.constants.value("Hartree energy in eV")
 
-        if hasattr(self, "kind") and self.kind:
-            kind = self.kind
+        if hasattr(self, "kind") and self.kind \
+           and self.kind not in [" ", ""]:
+            kind = self.kind + " "
         else:
             kind = ""
 
-        if hasattr(self, "spin_change") and self.spin_change:
-            spin_change = " (ΔS={:+2d})".format(self.spin_change)
+        if kind == "spin_flip" and hasattr(self, "spin_change") \
+           and self.spin_change and self.spin_change != -1:
+            spin_change = "(ΔMS={:+2d})".format(self.spin_change)
         else:
             spin_change = ""
 
@@ -60,7 +62,7 @@ class SolverStateBase:
 
         text += "+" + 53 * "-" + "+\n"
         head = "| {0:15s}  {1:>34s} |\n"
-        delim = " ,  " if kind else ""
+        delim = ",  " if kind else ""
         text += head.format(self.method.name,
                             kind + spin_change + delim + conv)
         text += "+" + 53 * "-" + "+\n"

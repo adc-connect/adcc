@@ -43,7 +43,8 @@ __all__ = ["run_adc"]
 def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
             solver_method=None, guesses=None, n_guesses=None,
             n_guesses_doubles=None, output=sys.stdout, n_core_orbitals=None,
-            method=None, n_singlets=None, n_triplets=None, **solverargs):
+            method=None, n_singlets=None, n_triplets=None, n_spin_flip=None,
+            **solverargs):
     """
     Run an ADC calculation on top of Hartree-Fock data, a ReferenceState,
     a LazyMp object or an AdcMatrix.
@@ -67,13 +68,16 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     @param kind
     @param n_singlets
     @param n_triplets
-    Specify the number and kind of states to be computed. For unrestricted
-    references clamping spin-pure singlets/triplets is currently not
-    possible and kind has to remain as "any". For restricted references
-    kind="singlets" or kind="triplets" may be employed to enforce a
-    particular exicited states manifold.
+    @param n_spin_flip
+    Specify the number and kind of states to be computed. Possible values
+    for kind are "singlet", "triplet", "spin_flip" and "any", which is
+    the default. For unrestricted references clamping spin-pure
+    singlets/triplets is currently not possible and kind has to remain as "any".
+    For restricted references kind="singlets" or kind="triplets" may be
+    employed to enforce a particular exicited states manifold.
     Specifying n_singlets is equivalent to setting kind="singlet" and
-    n_states=5. Similarly for n_triplets.
+    n_states=5. Similarly for n_triplets and n_spin_flip. n_spin_flip
+    is only valid for unrestricted references.
 
     Optional parameters
     -------------------
@@ -183,24 +187,29 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
                                                     conv_tol))
 
     # Normalise guess parameters
+    if sum(nst is not None for nst in [n_states, n_singlets,
+                                       n_triplets, n_spin_flip]) > 1:
+        raise ValueError("One May only specify one out of n_states, "
+                         "n_singlets, n_triplets and n_spin_flip")
+
     if n_singlets is not None:
         if not refstate.restricted:
             raise ValueError("The n_singlets parameter may only be employed "
                              "for restricted references")
-        if n_states is not None or n_triplets is not None:
-            raise ValueError("One May only specify one out of n_states, "
-                             "n_singlets and n_triplets.")
         kind = "singlet"
         n_states = n_singlets
     if n_triplets is not None:
         if not refstate.restricted:
             raise ValueError("The n_triplets parameter may only be employed "
                              "for restricted references")
-        if n_states is not None or n_singlets is not None:
-            raise ValueError("One May only specify one out of n_states, "
-                             "n_singlets and n_triplets.")
         kind = "triplet"
         n_states = n_triplets
+    if n_spin_flip is not None:
+        if refstate.restricted:
+            raise ValueError("The n_spin_flip parameter may only be employed "
+                             "for unrestricted references")
+        kind = "spin_flip"
+        n_states = n_spin_flip
 
     # Check if there are states to be computed
     if n_states is None or n_states == 0:
@@ -209,13 +218,16 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     if n_states < 0:
         raise ValueError("n_states needs to be positive")
 
-    # Check value for kind
-    if kind not in ["any", "singlet", "triplet"]:
+    if kind not in ["any", "spin_flip", "singlet", "triplet"]:
         raise ValueError("The kind parameter may only take the values 'any', "
                          "'singlet' or 'triplet'")
     if kind in ["singlet", "triplet"] and not refstate.restricted:
         raise ValueError("kind==singlet and kind==triplet are only valid for "
                          "ADC calculations in combination with a restricted "
+                         "ground state.")
+    if kind in ["spin_flip"] and refstate.restricted:
+        raise ValueError("kind==spin_flip is only valid for "
+                         "ADC calculations in combination with an unrestricted "
                          "ground state.")
 
     explicit_symmetrisation = IndexSymmetrisation
@@ -234,6 +246,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     #
     # Obtain guesses
     #
+    spin_change = None
     if guesses is not None:
         if len(guesses) < n_states:
             raise ValueError("Less guesses provided via guesses (== {}) "
@@ -245,13 +258,14 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     else:
         if n_guesses is None:
             n_guesses = estimate_n_guesses(matrix, n_states)
+        if kind == "spin_flip":
+            spin_change = -1
 
         guess_function = {"any": guesses_any, "singlet": guesses_singlet,
-                          "triplet": guesses_triplet}
+                          "triplet": guesses_triplet,
+                          "spin_flip": guesses_spin_flip}
         guesses = find_guesses(guess_function[kind], matrix, n_guesses,
                                n_guesses_doubles=n_guesses_doubles)
-
-    # TODO  spin-flip
 
     #
     # Run solver
@@ -269,6 +283,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
                             explicit_symmetrisation=explicit_symmetrisation,
                             **solverargs)
     jdres.kind = kind
+    jdres.spin_change = spin_change
     return jdres
 
 
