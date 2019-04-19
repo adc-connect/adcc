@@ -20,14 +20,16 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
 import unittest
+
+from .misc import expand_test_templates
+
+import adcc
+
+from pytest import approx
 
 from adcc.testdata.cache import cache
 from adcc.solver.SolverStateBase import SolverStateBase
-
-from .misc import expand_test_templates
-from pytest import approx
 
 # The methods to test
 methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
@@ -49,6 +51,13 @@ class TestFunctionality(unittest.TestCase):
 
         # TODO Compare transition dipole moment
         # TODO Compare excited state dipole moment
+
+        # Test we do not use too many iterations
+        n_iter_bound = {
+            "adc0": 1, "adc1": 4, "adc2": 6, "adc2x": 11, "adc3": 11,
+            "cvs-adc0": 1, "cvs-adc1": 4, "cvs-adc2": 5, "cvs-adc2x": 11
+        }
+        assert res.n_iter <= n_iter_bound[method]
 
     #
     # General
