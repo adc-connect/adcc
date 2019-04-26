@@ -131,6 +131,10 @@ class AdcCore:
                     needed.append(line[1])
         return needed
 
+    @property
+    def feature_macros(self):
+        return [("ADCC_WITH_" + feat.upper(), 1) for feat in self.features]
+
 
 #
 # Poor-man's ld-like resolver for shared libraries
@@ -322,6 +326,7 @@ else:
 ext_modules = [
     Extension(
         'libadcc', glob.glob("extension/*.cc"),
+        define_macros=adccore.feature_macros,
         include_dirs=[
             # Path to pybind11 headers
             GetPyBindInclude(),

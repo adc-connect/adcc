@@ -28,6 +28,7 @@ namespace py_iface {
 
 namespace py = pybind11;
 
+#ifdef ADCC_WITH_ADCMAN
 py::array AdcmanDavidsonState__eigenvalues(const py::object& obj) {
   const AdcmanDavidsonState& self = obj.cast<const AdcmanDavidsonState&>();
   return make_array(self.eigenvalues.data(), {self.eigenvalues.size()}, obj);
@@ -79,6 +80,7 @@ void export_solve_adcman_davidson(py::module& m) {
   m.def("solve_adcman_davidson", &solve_adcman_davidson,
         "Run the davidson solver in adcman and print the results.");
 }
+#endif  // ADCC_WITH_ADCMAN
 
 }  // namespace py_iface
 }  // namespace adcc

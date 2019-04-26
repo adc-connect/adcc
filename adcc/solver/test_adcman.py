@@ -24,6 +24,8 @@ import unittest
 import numpy as np
 
 import adcc
+import pytest
+import libadcc
 
 from pytest import approx
 
@@ -32,6 +34,8 @@ from adcc.solver.adcman import jacobi_davidson
 from adcc.testdata.cache import cache
 
 
+@pytest.mark.skipif("adcman" not in libadcc.__features__,
+                    reason="adcc -> adcman interface not enabled.")
 class TestSolverAdcman(unittest.TestCase):
     def test_adc2s(self):
         refdata = cache.reference_data["h2o_sto3g"]

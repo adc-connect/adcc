@@ -84,6 +84,14 @@ def eigh(matrix, n_singlets=None, n_triplets=None, n_states=None,
                              computed, then n_guess_singles = number of
                              excited states to compute
     """
+    if "adcman" not in libadcc.__features__:
+        raise RuntimeError(
+            "The adcman solver methods are only available if the adcc to "
+            "adcman interface is enabled.\n"
+            "To enable this interface, recompile adccore with the option "
+            "ADCC_WITH_ADCMAN enabled. Notice, that this, however, requires "
+            "access to the adcman source code.")
+
     if not isinstance(matrix, AdcMatrix):
         raise TypeError("matrix is not of type AdcMatrix")
 

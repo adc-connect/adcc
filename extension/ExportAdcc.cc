@@ -40,9 +40,12 @@ void export_HfData(py::module& m);
 void export_LazyMp(py::module& m);
 void export_OneParticleDensityMatrix(py::module& m);
 void export_ReferenceState(py::module& m);
-void export_solve_adcman_davidson(py::module& m);
 void export_Tensor(py::module& m);
 void export_ThreadPool(py::module& m);
+
+#ifdef ADCC_WITH_ADCMAN
+void export_solve_adcman_davidson(py::module& m);
+#endif
 }  // namespace py_iface
 }  // namespace adcc
 
@@ -68,11 +71,20 @@ PYBIND11_MODULE(libadcc, m) {
   pyif::export_compute_modified_transition_moments(m);
   pyif::export_compute_one_particle_densities(m);
 
+#ifdef ADCC_WITH_ADCMAN
   pyif::export_solve_adcman_davidson(m);
+#endif
 
   // Set metadata about libadcc
   m.attr("__version__")    = adcc::version::version_string();
   m.attr("__build_type__") = adcc::version::is_debug() ? "Debug" : "Release";
+
+  // Set libadcc feature list
+  py::list features;
+#ifdef ADCC_WITH_ADCMAN
+  features.append("adcman");
+#endif
+  m.attr("__features__") = features;
 
   py::register_exception_translator([](std::exception_ptr p) {
     try {
