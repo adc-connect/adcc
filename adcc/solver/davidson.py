@@ -155,7 +155,9 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         if Ass.shape == (n_block, n_block):
             rvals, rvecs = la.eigh(Ass)  # Do a full diagonalisation
         else:
-            v0 = None  # Maybe use previous vectors somehow
+            # TODO Maybe play with precision a little here
+            # TODO Maybe use previous vectors somehow
+            v0 = None
             rvals, rvecs = sla.eigsh(Ass, k=n_block, which=which, v0=v0)
 
         # Transform new vectors to the full basis (form ritz vectors)

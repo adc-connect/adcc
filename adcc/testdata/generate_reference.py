@@ -22,6 +22,7 @@
 ## ---------------------------------------------------------------------
 import os
 import numpy as np
+
 import adcc
 import adcc.solver.adcman as adcman
 
@@ -74,8 +75,7 @@ def run(data, method, n_singlets=None, n_triplets=None,
         n_core_orbitals = data["n_core_orbitals"]
 
     # Setup the matrix and run adcman solver
-    refstate = adcc.tmp_build_reference_state(data,
-                                              n_core_orbitals=n_core_orbitals)
+    refstate = adcc.ReferenceState(data, core_orbitals=n_core_orbitals)
     matrix = adcc.AdcMatrix(method, adcc.LazyMp(refstate))
     states = adcman.jacobi_davidson(matrix, print_level=100,
                                     n_singlets=n_singlets,

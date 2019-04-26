@@ -105,13 +105,21 @@ class TestdataCache():
 
     @cached_property
     def refstate(self):
-        return {k: adcc.tmp_build_reference_state(self.hfdata[k])
+        def cache_eri(refstate):
+            refstate.import_all()
+            return refstate
+
+        return {k: cache_eri(adcc.ReferenceState(self.hfdata[k]))
                 for k in self.testcases}
 
     @cached_property
     def refstate_cvs(self):
-        return {k: adcc.tmp_build_reference_state(
-                self.hfdata[k], self.hfdata[k]["n_core_orbitals"])
+        def cache_eri(refstate):
+            refstate.import_all()
+            return refstate
+
+        return {k: cache_eri(adcc.ReferenceState(
+                self.hfdata[k], self.hfdata[k]["n_core_orbitals"]))
                 for k in self.testcases
                 if "n_core_orbitals" in self.hfdata[k]}
 

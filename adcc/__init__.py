@@ -35,7 +35,6 @@ from .ReferenceState import ReferenceState
 from .caching_policy import DefaultCachingPolicy, GatherStatisticsPolicy
 from .AmplitudeVector import AmplitudeVector
 from .state_densities import attach_state_densities
-from .tmp_build_reference_state import tmp_build_reference_state
 
 from libadcc import HartreeFockProvider, HartreeFockSolution_i, LazyMp
 
@@ -49,8 +48,8 @@ __all__ = ["run_adc", "AdcMatrix", "AdcMethod", "Symmetry", "ReferenceState",
            "linear_combination", "multiply", "nosym_like", "ones_like",
            "subtract", "transpose", "zeros_like",
            "memory_pool", "thread_pool", "AmplitudeVector",
-           "attach_state_densities", "tmp_build_reference_state",
-           "HartreeFockProvider", "HartreeFockSolution_i", "Tensor",
+           "attach_state_densities", "HartreeFockProvider",
+           "HartreeFockSolution_i", "Tensor",
            "guesses_singlet", "guesses_triplet", "guesses_any",
            "guesses_spin_flip", "guess_zero", "DefaultCachingPolicy",
            "GatherStatisticsPolicy", "LazyMp",

@@ -46,8 +46,9 @@ void export_LazyMp(py::module& m) {
         .def_property_readonly("mp2_diffdm", &LazyMp::mp2_diffdm_ptr,
                                "Obtain the MP2 difference density object.")
         .def_property_readonly("reference_state", &LazyMp::reference_state_ptr)
-        .def_property_readonly("has_core_valence_separation",
-                               &LazyMp::has_core_valence_separation)
+        .def_property_readonly("mospaces", &LazyMp::mospaces_ptr)
+        .def_property_readonly("has_core_occupied_space",
+                               &LazyMp::has_core_occupied_space)
         .def("set_caching_policy", &LazyMp::set_caching_policy)
         //
         ;

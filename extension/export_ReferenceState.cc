@@ -18,8 +18,8 @@
 //
 
 #include <adcc/ReferenceState.hh>
-#include <adcc/tmp_build_reference_state.hh>
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 namespace py = pybind11;
 
@@ -28,36 +28,124 @@ namespace py_iface {
 
 /** Exports adcc/ReferenceState.hh to python */
 void export_ReferenceState(py::module& m) {
-  // Temporary explicit import function
-  m.def("tmp_build_reference_state", &tmp_build_reference_state,
-        "Import a HFData into a ReferenceState object.");
 
   py::class_<ReferenceState, std::shared_ptr<ReferenceState>>(
         m, "ReferenceState",
-        "Class representing information about the reference state for ADCman.",
-        py::dynamic_attr())
-        .def("eri", &ReferenceState::eri)
-        .def("fock", &ReferenceState::fock)
-        .def("n_orbs", &ReferenceState::n_orbs)
-        .def("n_orbs_alpha", &ReferenceState::n_orbs_alpha)
-        .def("n_orbs_beta", &ReferenceState::n_orbs_beta)
-        .def("orbital_coefficients", &ReferenceState::orbital_coefficients)
-        .def("orbital_coefficients_alpha", &ReferenceState::orbital_coefficients_alpha)
-        .def("orbital_coefficients_beta", &ReferenceState::orbital_coefficients_beta)
-        .def_property_readonly("has_core_valence_separation",
-                               &ReferenceState::has_core_valence_separation)
-        .def_property_readonly("conv_tol", &ReferenceState::conv_tol)
+        "Class representing information about the reference state for adcc.")
+        .def(py::init<std::shared_ptr<const HartreeFockSolution_i>,
+                      std::shared_ptr<const AdcMemory>, std::vector<size_t>,
+                      std::vector<size_t>, std::vector<size_t>, bool>(),
+             "Setup a ReferenceStateject using lists for orbitals spaces\n"
+             "\n"
+             "hfsoln_ptr        Pointer to the Interface to the host program,\n"
+             "                  providing the HartreeFockSolution data, which\n"
+             "                  will be provided by this object.\n"
+             "adcmem_ptr        Pointer to the adc memory management object.\n"
+             "core_orbitals     List of orbitals indices (in the full fock space, "
+             "original\n"
+             "                  ordering of the hf object), which defines the orbitals "
+             "to\n"
+             "                  be put into the core space, if any. The same number\n"
+             "                  of alpha and beta orbitals should be selected. These "
+             "will\n"
+             "                  be forcibly occupied.\n"
+             "frozen_core_orbitals\n"
+             "                  List of orbital indices, which define the frozen core,\n"
+             "                  i.e. those occupied orbitals, which do not take part in\n"
+             "                  the ADC calculation. The same number of alpha and beta\n"
+             "                  orbitals has to be selected.\n"
+             "frozen_virtuals   List of orbital indices, which the frozen virtuals,\n"
+             "                  i.e. those virtual orbitals, which do not take part\n"
+             "                  in the ADC calculation. The same number of alpha and "
+             "beta\n"
+             "                  orbitals has to be selected.\n"
+             "symmetry_check_on_import\n"
+             "                  Should symmetry of the imported objects be checked\n"
+             "                  explicitly during the import process. This massively "
+             "slows\n"
+             "                  down the import process and has a dramatic impact on "
+             "memory\n"
+             "                  usage and should thus only be used for debugging import "
+             "routines\n"
+             "                  from the host programs. Do not enable this unless you "
+             "know\n"
+             "                  that you really want to.\n")
+        //
         .def_property_readonly("restricted", &ReferenceState::restricted,
-                               "Return whether the reference state is from a restricted"
-                               " calculation or not.")
+                               "Return whether the reference is restricted or not.")
         .def_property_readonly(
               "spin_multiplicity", &ReferenceState::spin_multiplicity,
               "Return the spin multiplicity of the reference state. 0 indicates "
               "that the spin cannot be determined or is not integer (e.g. UHF)")
+        .def_property_readonly("core_occupied_space",
+                               &ReferenceState::has_core_occupied_space,
+                               "Is a core occupied space setup, such that a core-valence "
+                               "separation can be applied.")
+        .def_property_readonly("irreducible_representation",
+                               &ReferenceState::irreducible_representation,
+                               "Reference state irreducible representation")
+        .def_property_readonly("mospaces", &ReferenceState::mospaces_ptr,
+                               "The MoSpaces object supplied on initialisation")
+        .def_property_readonly("n_orbs", &ReferenceState::n_orbs,
+                               "Number of molecular orbitals")
+        .def_property_readonly("n_orbs_alpha", &ReferenceState::n_orbs_alpha,
+                               "Number of alpha orbitals")
+        .def_property_readonly("n_orbs_beta", &ReferenceState::n_orbs_beta,
+                               "Number of beta orbitals")
+        .def_property_readonly("n_alpha", &ReferenceState::n_alpha,
+                               "Number of alpha electrons")
+        .def_property_readonly("n_beta", &ReferenceState::n_beta,
+                               "Number of beta electrons")
+        .def_property_readonly("conv_tol", &ReferenceState::conv_tol,
+                               "SCF convergence tolererance")
+        .def_property_readonly("energy_scf", &ReferenceState::energy_scf,
+                               "Final total SCF energy")
+        //
+        .def("orbital_energies", &ReferenceState::orbital_energies,
+             "Return the orbital energies corresponding to the provided space")
+        .def("orbital_coefficients", &ReferenceState::orbital_coefficients,
+             "Return the molecular orbital coefficients corresponding to the provided "
+             "space (alpha and beta coefficients are returned)")
+        .def("orbital_coefficients_alpha", &ReferenceState::orbital_coefficients_alpha,
+             "Return the alpha molecular orbital coefficients corresponding to the "
+             "provided space")
+        .def("orbital_coefficients_beta", &ReferenceState::orbital_coefficients_beta,
+             "Return the beta molecular orbital coefficients corresponding to the "
+             "provided space")
+        .def("fock", &ReferenceState::fock,
+             "Return the Fock matrix block corresponding to the provided space.")
+        .def("eri", &ReferenceState::eri,
+             "Return the ERI (electron-repulsion integrals) tensor block corresponding "
+             "to the provided space.")
+        //
+        .def("import_all", &ReferenceState::import_all,
+             "Normally the class only imports the Fock matrix blocks and "
+             "electron-repulsion integrals of a particular space combination when this "
+             "is requested by a call to above fock() or eri() functions. This function "
+             "call, however, instructs the class to immediately import *all* such "
+             "blocks. Typically you do not want to do this.")
+        .def_property("cached_fock_blocks", &ReferenceState::cached_fock_blocks,
+                      &ReferenceState::set_cached_fock_blocks,
+                      "Get or set the list of momentarily cached Fock matrix blocks\n"
+                      "\n"
+                      "Setting this property allows to drop fock matrix blocks if they "
+                      "are no longer needed to save memory.")
+        .def_property("cached_eri_blocks", &ReferenceState::cached_eri_blocks,
+                      &ReferenceState::set_cached_eri_blocks,
+                      "Get or set the list of momentarily cached ERI tensor blocks\n"
+                      "\n"
+                      "Setting this property allows to drop ERI tensor blocks if they "
+                      "are no longer needed to save memory.")
+        .def("flush_hf_cache", &ReferenceState::flush_hf_cache,
+             "Tell the contained HartreeFockSolution_i object (which was passed upon "
+             "construction), that a larger amount of import operations is done and that "
+             "the next request for further imports will most likely take some time, such "
+             "that intermediate caches can now be flushed to save some memory or other "
+             "resources.")
+        //
+        .def("to_ctx", &ReferenceState::to_ctx)
         //
         ;
-
-  // TODO Expose hf_ctx_ptr
 }
 
 }  // namespace py_iface

@@ -44,6 +44,8 @@ static py::list AdcMatrix_blocks(const AdcMatrix& self) {
 
 /** Exports adcc/AdcMatrix.hh to python */
 void export_AdcMatrix(py::module& m) {
+  // Notice: The method property is deliberately not exported,
+  //         because the python version is much more powerful
   py::class_<AdcMatrix, std::shared_ptr<AdcMatrix>>(
         m, "AdcMatrix", "Class representing the AdcMatrix in various variants.")
         .def(py::init<std::string, std::shared_ptr<LazyMp>>())
@@ -51,6 +53,9 @@ void export_AdcMatrix(py::module& m) {
                       &AdcMatrix::set_intermediates_ptr)
         .def_property_readonly("reference_state", &AdcMatrix::reference_state_ptr)
         .def_property_readonly("ground_state", &AdcMatrix::ground_state_ptr)
+        .def_property_readonly("mospaces", &AdcMatrix::mospaces_ptr)
+        .def_property_readonly("is_core_valence_separated",
+                               &AdcMatrix::is_core_valence_separated)
         .def("compute_apply", &AdcMatrix::compute_apply)
         .def("diagonal", &AdcMatrix::diagonal)
         .def("has_block", &AdcMatrix::has_block)

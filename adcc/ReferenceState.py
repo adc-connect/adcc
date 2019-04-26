@@ -29,7 +29,7 @@ from .memory_pool import memory_pool
 __all__ = ["ReferenceState"]
 
 
-class ReferenceState(libadcc.ReferenceStateNew):
+class ReferenceState(libadcc.ReferenceState):
     def __init__(self, hfdata, core_orbitals=None, frozen_core=None,
                  frozen_virtual=None, symmetry_check_on_import=False,
                  import_all_below_n_orbs=0):
@@ -84,6 +84,10 @@ class ReferenceState(libadcc.ReferenceStateNew):
         """
         if not isinstance(hfdata, libadcc.HartreeFockSolution_i):
             hfdata = import_scf_results(hfdata)
+            # TODO This is needed right now to keep the hfdata object alive.
+            #      One can probarly drop this if the other hacky
+            #      keepalive-workaround for pybind11 is implemented
+            self._hfdata = hfdata
 
         if frozen_core is None:
             frozen_core = []
@@ -106,5 +110,6 @@ class ReferenceState(libadcc.ReferenceStateNew):
         if import_all_below_n_orbs is not None and \
            hfdata.n_orbs < import_all_below_n_orbs:
             super().import_all()
+
 
 # TODO some nice describe method

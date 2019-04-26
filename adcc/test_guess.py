@@ -23,15 +23,14 @@
 import unittest
 import itertools
 import numpy as np
-
-from .misc import expand_test_templates
-from numpy.testing import assert_array_equal
-
 import adcc
 import adcc.guess
 
-from pytest import approx
+from numpy.testing import assert_array_equal
 from adcc.testdata.cache import cache
+
+from .misc import expand_test_templates
+from pytest import approx
 
 # The methods to test
 methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
@@ -46,14 +45,14 @@ class TestGuess(unittest.TestCase):
         occurs during the excitation (i.e. no spin-flip)
         """
         # Extract useful quantities
-        refstate = matrix.reference_state
-        nCa = noa = refstate.n_orbs_alpha("o1")
-        nCb = nob = refstate.n_orbs_beta("o1")
-        nva = refstate.n_orbs_alpha("v1")
-        nvb = refstate.n_orbs_beta("v1")
-        if refstate.has_core_valence_separation:
-            nCa = refstate.n_orbs_alpha("o2")
-            nCb = refstate.n_orbs_beta("o2")
+        mospaces = matrix.mospaces
+        nCa = noa = mospaces.n_orbs_alpha("o1")
+        nCb = nob = mospaces.n_orbs_beta("o1")
+        nva = mospaces.n_orbs_alpha("v1")
+        nvb = mospaces.n_orbs_beta("v1")
+        if mospaces.has_core_occupied_space:
+            nCa = mospaces.n_orbs_alpha("o2")
+            nCb = mospaces.n_orbs_beta("o2")
 
         fac = 1
         if spin_block_symmetrisation == "symmetric":
@@ -67,7 +66,7 @@ class TestGuess(unittest.TestCase):
         assert np.max(np.abs(gts[nCa:, :nva])) == 0
         assert np.max(np.abs(gts[:nCa, nva:])) == 0
 
-        if refstate.restricted:
+        if matrix.reference_state.restricted:
             assert_array_equal(gts[:nCa, :nva],
                                fac * gts[nCa:, nva:])
 
@@ -89,7 +88,7 @@ class TestGuess(unittest.TestCase):
         assert np.max(np.abs(gtd[noa:, :nCa, nva:, nva:])) == 0  # ba->bb
         assert np.max(np.abs(gtd[:noa, nCa:, nva:, nva:])) == 0  # ab->bb
 
-        if refstate.restricted:
+        if matrix.reference_state.restricted:
             assert_array_equal(gtd[:noa, :nCa, :nva, :nva],        # aa->aa
                                fac * gtd[noa:, nCa:, nva:, nva:])  # bb->bb
             assert_array_equal(gtd[:noa, nCa:, :nva, nva:],        # ab->ab
@@ -98,7 +97,7 @@ class TestGuess(unittest.TestCase):
                                fac * gtd[noa:, :nCa, :nva, nva:])  # ba->ab
 
         assert_array_equal(gtd.transpose((0, 1, 3, 2)), -gtd)
-        if not refstate.has_core_valence_separation:
+        if not matrix.is_core_valence_separated:
             assert_array_equal(gtd.transpose((1, 0, 2, 3)), -gtd)
 
         if block == "s":
@@ -128,13 +127,12 @@ class TestGuess(unittest.TestCase):
         Assert a guess vector has the correct symmetry if we have a
         spin-change of -1 (i.e. spin-flip)
         """
-        refstate = matrix.reference_state
-        assert not refstate.has_core_valence_separation
-        refstate = matrix.reference_state
-        nCa = noa = refstate.n_orbs_alpha("o1")
-        nCb = nob = refstate.n_orbs_beta("o1")
-        nva = refstate.n_orbs_alpha("v1")
-        nvb = refstate.n_orbs_beta("v1")
+        assert not matrix.is_core_valence_separated
+        mospaces = matrix.mospaces
+        nCa = noa = mospaces.n_orbs_alpha("o1")
+        nCb = nob = mospaces.n_orbs_beta("o1")
+        nva = mospaces.n_orbs_alpha("v1")
+        nvb = mospaces.n_orbs_beta("v1")
 
         # Singles
         gts = guess["s"].to_ndarray()
@@ -163,7 +161,7 @@ class TestGuess(unittest.TestCase):
         assert np.max(np.abs(gtd[noa:, nCa:, nva:, nva:])) == 0  # bb->bb
 
         assert_array_equal(gtd.transpose((0, 1, 3, 2)), -gtd)
-        if not refstate.has_core_valence_separation:
+        if not matrix.is_core_valence_separated:
             assert_array_equal(gtd.transpose((1, 0, 2, 3)), -gtd)
 
         if block == "s":
@@ -192,11 +190,11 @@ class TestGuess(unittest.TestCase):
         diagonal values.
         """
         # Extract useful quantities
-        refstate = matrix.reference_state
-        nCa = noa = refstate.n_orbs_alpha("o1")
-        nva = refstate.n_orbs_alpha("v1")
-        if refstate.has_core_valence_separation:
-            nCa = refstate.n_orbs_alpha("o2")
+        mospaces = matrix.mospaces
+        nCa = noa = mospaces.n_orbs_alpha("o1")
+        nva = mospaces.n_orbs_alpha("v1")
+        if mospaces.has_core_occupied_space:
+            nCa = mospaces.n_orbs_alpha("o2")
 
         # Make a list of diagonal indices, ordered by the corresponding
         # diagonal values
@@ -244,7 +242,7 @@ class TestGuess(unittest.TestCase):
                             idx[0] >= noa and idx[1]  < nCa and idx[2]  < nva and idx[3] >= nva))  # noqa: E221,E501
                 ]
             sidcs = [idx for idx in sidcs if idx[2] != idx[3]]
-            if not refstate.has_core_valence_separation:
+            if not matrix.is_core_valence_separated:
                 sidcs = [idx for idx in sidcs if idx[0] != idx[1]]
 
         # Group the indices by corresponding diagonal value
