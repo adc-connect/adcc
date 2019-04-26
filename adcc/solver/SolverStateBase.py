@@ -26,12 +26,13 @@ import scipy.constants
 
 
 class SolverStateBase:
-    def __init__(self, method, ground_state):
-        self.method = method              # The adc method which was used to
+    def __init__(self, matrix):
+        self.method = matrix.method       # The adc method which was used to
         #                                   obtain these states
-        self.ground_state = ground_state  # The (MP) ground state upon which
-        #                                   this solver state is based
-        self.reference_state = ground_state.reference_state
+        self.ground_state = matrix.ground_state  # The (MP) ground state upon
+        #                                   which this solver state is based
+        self.reference_state = matrix.ground_state.reference_state
+        self.matrix = matrix
         self.eigenvalues = None           # Current eigenvalues
         self.eigenvectors = None          # Current eigenvectors
         self.converged = False            # Flag whether iteration is converged
@@ -42,29 +43,38 @@ class SolverStateBase:
         text = ""
         toeV = scipy.constants.value("Hartree energy in eV")
 
-        if hasattr(self, "kind") and self.kind:
-            kind = self.kind
+        if hasattr(self, "kind") and self.kind \
+           and self.kind not in [" ", ""]:
+            kind = self.kind + " "
         else:
             kind = ""
+
+        if kind == "spin_flip" and hasattr(self, "spin_change") \
+           and self.spin_change and self.spin_change != -1:
+            spin_change = "(ΔMS={:+2d})".format(self.spin_change)
+        else:
+            spin_change = ""
 
         if self.converged:
             conv = "converged"
         else:
             conv = "NOT CONVERGED"
 
-        text += "+" + 48 * "-" + "+\n"
-        head = "| {0:15s}  {1:>29s} |\n"
-        text += head.format(self.method.name, kind + " ,  " + conv)
-        text += "+" + 48 * "-" + "+\n"
+        text += "+" + 53 * "-" + "+\n"
+        head = "| {0:15s}  {1:>34s} |\n"
+        delim = ",  " if kind else ""
+        text += head.format(self.method.name,
+                            kind + spin_change + delim + conv)
+        text += "+" + 53 * "-" + "+\n"
 
         # TODO Certain methods such as ADC(0), ADC(1) do not have
         #      a doubles part and it does not really make sense to
         #      display it here.
 
         # TODO Add dominant amplitudes
-        body = "| {0:2d}{1:11.7g} {2:11.7g}  {3:8.4g}  {4:8.4g}  |\n"
-        text += "|  #    excitation energy      |v1|^2    |v2|^2  |\n"
-        text += "|        (au)        (eV)                        |\n"
+        body = "| {0:2d} {1:13.7g} {2:13.7g} {3:9.4g} {4:9.4g}  |\n"
+        text += "|  #        excitation energy       |v1|^2    |v2|^2  |\n"
+        text += "|          (au)           (eV)                        |\n"
         for i, vec in enumerate(self.eigenvectors):
             v1_norm = np.sum((vec["s"] * vec["s"]).to_ndarray())
             # TODO It would be better to compute v2, but right now
@@ -74,7 +84,7 @@ class SolverStateBase:
             text += body.format(i, self.eigenvalues[i],
                                 self.eigenvalues[i] * toeV,
                                 v1_norm, 1 - v1_norm)
-        text += "+" + 48 * "-" + "+"
+        text += "+" + 53 * "-" + "+"
         return text
 
     def _repr_pretty_(self, pp, cycle):

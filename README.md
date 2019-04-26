@@ -10,13 +10,18 @@ that is:
 - ADC(2)
 - ADC(2)-x
 - ADC(3)
-
-For all of these, excluding ADC(3), the core-valence approximation
-can be applied and for all variants one-particle
-transition density matrices and excited states density matrices
-are available. These can be used to compute properties such
-as the oscillator strength in user code.
-Both restricted as well as unrestricted references are supported.
+- Core-valence variants:
+	- For all ADC(n) methods excluding ADC(3), the core-valence approximation
+	  can be applied
+- Spin-flip variants:
+	- For a black-box computation of low-multiplicity multi-reference problems
+	  spin-flip ADC variants can be employed.
+- Properties:
+	- One-particle transition density matrices and one-particle excited
+	  states density matrices can be computed for all implemented methods.
+	- These matrices can be used to compute properties such
+	  as the oscillator strength in user code.
+- Both restricted as well as unrestricted references are supported.
 
 
 ## Installation

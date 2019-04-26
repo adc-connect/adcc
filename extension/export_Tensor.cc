@@ -39,7 +39,49 @@ static std::vector<std::vector<size_t>> parse_permutations(const py::list& permu
     vec_perms.push_back(perms);
   }
   return vec_perms;
-}  // namespace py_iface
+}
+
+static std::vector<size_t> convert_index_tuple(const std::shared_ptr<Tensor>& self,
+                                               py::tuple idcs) {
+  if (idcs.size() != self->ndim()) {
+    throw py::value_error(
+          "Number of elements passed in index tuple (== " + std::to_string(idcs.size()) +
+          ") and dimensionality of tensor (== " + std::to_string(self->ndim()) +
+          ") do not agree. Note, that at the moment any kind of slicing operation "
+          "(including partial slicing) are not yet implemented.");
+  }
+  const std::vector<size_t> shape = self->shape();
+  std::vector<size_t> ret(idcs.size());
+  for (size_t i = 0; i < idcs.size(); ++i) {
+    ptrdiff_t idx;
+
+    try {
+      idx = idcs[i].cast<ptrdiff_t>();
+    } catch (const py::cast_error& c) {
+      throw py::cast_error(
+            "Right now only integer indices are supported. Any kind of slicing operation "
+            "(including partial slicing) are not yet implemented.");
+    }
+    if (idx < 0) {
+      auto si = static_cast<size_t>(-idx);
+      if (si > shape[i]) {
+        throw py::index_error("index " + std::to_string(idx) +
+                              " is out of bounds for axis " + std::to_string(i) +
+                              " with size " + std::to_string(shape[i]));
+      }
+      ret[i] = shape[i] - si;
+    } else {
+      auto si = static_cast<size_t>(idx);
+      if (si > shape[i]) {
+        throw py::index_error("index " + std::to_string(idx) +
+                              " is out of bounds for axis " + std::to_string(i) +
+                              " with size " + std::to_string(shape[i]));
+      }
+      ret[i] = si;
+    }
+  }
+  return ret;
+}
 
 //
 // Extra defs
@@ -156,6 +198,54 @@ static std::shared_ptr<Tensor> contract_to(std::string contraction,
                                            std::shared_ptr<Tensor> out) {
   a->contract_to(contraction, b, out);
   return out;
+}
+
+//
+// Element access
+//
+
+static py::list Tensor_select_n_min(const std::shared_ptr<Tensor>& self, size_t n) {
+  std::vector<std::pair<TensorIndex, scalar_type>> ret = self->select_n_min(n);
+  py::list li;
+  for (auto p : ret) li.append(py::make_tuple(self->tidx_to_full(p.first), p.second));
+  return li;
+}
+
+static py::list Tensor_select_n_max(const std::shared_ptr<Tensor>& self, size_t n) {
+  std::vector<std::pair<TensorIndex, scalar_type>> ret = self->select_n_max(n);
+  py::list li;
+  for (auto p : ret) li.append(py::make_tuple(self->tidx_to_full(p.first), p.second));
+  return li;
+}
+
+static py::list Tensor_select_n_absmin(const std::shared_ptr<Tensor>& self, size_t n) {
+  std::vector<std::pair<TensorIndex, scalar_type>> ret = self->select_n_absmin(n);
+  py::list li;
+  for (auto p : ret) li.append(py::make_tuple(self->tidx_to_full(p.first), p.second));
+  return li;
+}
+
+static py::list Tensor_select_n_absmax(const std::shared_ptr<Tensor>& self, size_t n) {
+  std::vector<std::pair<TensorIndex, scalar_type>> ret = self->select_n_absmax(n);
+  py::list li;
+  for (auto p : ret) li.append(py::make_tuple(self->tidx_to_full(p.first), p.second));
+  return li;
+}
+
+static bool Tensor_is_allowed(const std::shared_ptr<Tensor>& self, py::tuple idcs) {
+  return self->is_element_allowed(self->full_to_tidx(convert_index_tuple(self, idcs)));
+}
+
+static scalar_type Tensor__getitem__(const std::shared_ptr<Tensor>& self,
+                                     py::tuple idcs) {
+  return self->get_element(self->full_to_tidx(convert_index_tuple(self, idcs)));
+}
+
+static scalar_type Tensor__setitem__(const std::shared_ptr<Tensor>& self, py::tuple idcs,
+                                     scalar_type value) {
+  const TensorIndex tidx = self->full_to_tidx(convert_index_tuple(self, idcs));
+  self->set_element(tidx, value);
+  return value;
 }
 
 //
@@ -295,14 +385,29 @@ void export_Tensor(py::module& m) {
         .def("set_from_ndarray", &Tensor_from_ndarray,
              "Set all tensor elements from a standard np::ndarray by making a copy. "
              "Provide an optional tolerance argument to increase the tolerance for the "
-             "chekc for symmetry consistency.")
+             "check for symmetry consistency.")
         .def("set_from_ndarray", &Tensor_from_ndarray_tol,
              "Set all tensor elements from a standard np::ndarray by making a copy. "
              "Provide an optional tolerance argument to increase the tolerance for the "
-             "chekc for symmetry consistency.")
+             "check for symmetry consistency.")
         .def("describe_symmetry", &Tensor::describe_symmetry,
              "Return a string providing a hopefully discriptive rerpesentation of the "
              "symmetry information stored inside the tensor.")
+        //
+        .def("__getitem__", &Tensor__getitem__,
+             "Get a tensor element or a slice of tensor elements.")
+        .def("__setitem__", &Tensor__setitem__,
+             "Set a tensor element or a slice of tensor elements. The operation will "
+             "adhere symmetry, i.e. alter all elements equivalent by symmetry at once.")
+        .def("is_allowed", &Tensor_is_allowed,
+             " Is a particular index allowed by symmetry")
+        .def("select_n_absmax", &Tensor_select_n_absmax,
+             "Select the n absolute maximal elements.")
+        .def("select_n_absmin", &Tensor_select_n_absmin,
+             "Select the n absolute minimal elements.")
+        .def("select_n_max", &Tensor_select_n_max, "Select the n maximal elements.")
+        .def("select_n_min", &Tensor_select_n_min, "Select the n minimal elements.")
+        //
         .def("__len__", &Tensor___len__)
         .def("__repr__", &Tensor___repr__)
         .def("__str__", &Tensor___str__)

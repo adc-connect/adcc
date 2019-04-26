@@ -23,28 +23,25 @@
 from libadcc import CachingPolicy_i
 
 
-class DefaultCachingPolicy(CachingPolicy_i):
+class CacheAllPolicy(CachingPolicy_i):
+    """
+    Policy which caches everything. Useful for testing to
+    speed things up.
+    """
     def __init__(self):
-        super().__init__()
+        CachingPolicy_i.__init__(self)
 
     def should_cache(self, tensor_label, tensor_space,
                      leading_order_contraction):
         return True
 
-    def other(self):
-        """
-        Should a tensor be stored i.e. cached in memory according to this
-        policy object (true) or not (false).
 
-        tensor_label  Label of the tensor object (e.g. t2, t2eri, ...)
-        tensor_space  The spaces string of the tensor to estimate memory
-                      requirement (e.g. "o1o1v1v1" for "t2_o1o1v1v1")
-        leading_order_contraction   The spaces involved in the most expensive
-                                    contraction to compute this tensor to
-                                    estimate computational scaling for
-                                    computing the tensor.
-                                    (e.g. "o1o1v1v1" for "t2_o1o1v1v1")
-        """
+class DefaultCachingPolicy(CachingPolicy_i):
+    def __init__(self):
+        CachingPolicy_i.__init__(self)
+
+    def should_cache(self, tensor_label, tensor_space,
+                     leading_order_contraction):
         # For now be stupid and store everything by default
         return True
 
@@ -58,7 +55,7 @@ class GatherStatisticsPolicy(CachingPolicy_i):
     cachings.
     """
     def __init__(self):
-        super().__init__()
+        CachingPolicy_i.__init__(self)
         self.call_count = {}
 
     def should_cache(self, label, space, contraction):

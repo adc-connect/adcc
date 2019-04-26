@@ -26,7 +26,8 @@ from .misc import expand_test_templates
 from numpy.testing import assert_allclose
 
 from pytest import approx
-from libadcc import LazyMp
+
+from adcc import LazyMp
 from adcc.testdata.cache import cache
 
 # All test cases to deal with here
@@ -40,8 +41,8 @@ class TestLazyMp(unittest.TestCase):
         cls.mp = {}
         cls.mp_cvs = {}
         for case in testcases:
-            cls.mp[case] = LazyMp(cache.prelim[case].reference)
-            cls.mp_cvs[case] = LazyMp(cache.prelim_cvs[case].reference)
+            cls.mp[case] = LazyMp(cache.refstate[case])
+            cls.mp_cvs[case] = LazyMp(cache.refstate_cvs[case])
 
     #
     # Generic
@@ -90,7 +91,7 @@ class TestLazyMp(unittest.TestCase):
         assert_allclose(dm_β.to_ndarray(), refmp["mp2"]["dm_bb_b"], atol=1e-12)
 
     def template_set_t2(self, case):
-        mp = LazyMp(cache.prelim[case].reference)
+        mp = LazyMp(cache.refstate[case])
         t2orig = mp.t2("o1o1v1v1")
         mp2orig = mp.energy_correction(2)
 

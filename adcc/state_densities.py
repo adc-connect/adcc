@@ -20,11 +20,12 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+from .AdcMethod import AdcMethod
+from .AmplitudeVector import AmplitudeVector
+
+from copy import copy
 
 import libadcc
-from .AmplitudeVector import AmplitudeVector
-from .AdcMethod import AdcMethod
-from copy import copy
 
 
 def compute_state_diffdm(method, ground_state, amplitude, intermediates=None):

@@ -22,7 +22,6 @@
 ## ---------------------------------------------------------------------
 import os
 import numpy as np
-
 import adcc
 import adcc.solver.adcman as adcman
 
@@ -46,13 +45,13 @@ def dump_all_methods(key, kwargs_cvs, kwargs_general, kwargs_overwrite={}):
             kw_general = kwargs_general
             kw_cvs = kwargs_cvs
 
-        if method not in ["adc3"]:
+        if method not in ["adc3"] and kwargs_cvs is not None:
             # do CVS
             dumpfile = "{}_reference_cvs_{}.hdf5".format(key, method)
             if not os.path.isfile(dumpfile):
                 res = run(data, method="cvs-" + method, **kw_cvs,
                           core_valence_separation=True)
-                dictionary = build_dict(res, mp_tree="mp_cvs",
+                dictionary = build_dict(kw_cvs, res, mp_tree="mp_cvs",
                                         method_tree="adc_pp/cvs_" + tmethod,
                                         out_tree="cvs-" + method)
                 hdf5io.save(dumpfile, dictionary)
@@ -61,39 +60,39 @@ def dump_all_methods(key, kwargs_cvs, kwargs_general, kwargs_overwrite={}):
         dumpfile = "{}_reference_{}.hdf5".format(key, method)
         if not os.path.isfile(dumpfile):
             res = run(data, method=method, **kw_general)
-            dictionary = build_dict(res, mp_tree="mp",
+            dictionary = build_dict(kw_general, res, mp_tree="mp",
                                     method_tree="adc_pp/" + tmethod,
                                     out_tree=method)
             hdf5io.save(dumpfile, dictionary)
 
 
 def run(data, method, n_singlets=None, n_triplets=None,
-        n_states=None, core_valence_separation=False):
+        n_states=None, n_spin_flip=None,
+        core_valence_separation=False):
     n_core_orbitals = None
     if core_valence_separation:
         n_core_orbitals = data["n_core_orbitals"]
 
-    if n_singlets and n_triplets:
-        n_guesses = max(n_singlets, n_triplets)
-    else:
-        n_guesses = n_states
-
-    # Run preliminary calculation
-    res = adcc.tmp_run_prelim(data, method, n_guess_singles=n_guesses,
-                              n_core_orbitals=n_core_orbitals)
-
     # Setup the matrix and run adcman solver
-    matrix = adcc.AdcMatrix(res.method, res.ground_state)
+    refstate = adcc.tmp_build_reference_state(data,
+                                              n_core_orbitals=n_core_orbitals)
+    matrix = adcc.AdcMatrix(method, adcc.LazyMp(refstate))
     states = adcman.jacobi_davidson(matrix, print_level=100,
                                     n_singlets=n_singlets,
                                     n_triplets=n_triplets,
-                                    n_states=n_states, conv_tol=1e-9)
+                                    n_spin_flip=n_spin_flip,
+                                    n_states=n_states, conv_tol=1e-9,
+                                    max_iter=100)
 
     # return the full adcman context
     return states[0].ctx
 
 
-def build_dict(ctx, mp_tree, method_tree, out_tree, n_states_full=2):
+def build_dict(kwrun, ctx, mp_tree, method_tree, out_tree, n_states_full=2):
+    """
+    kwrun     Kwargs passed on the adcman run
+    ctx       Context produced from the adcman run
+    """
     ret = {}
 
     #
@@ -146,7 +145,12 @@ def build_dict(ctx, mp_tree, method_tree, out_tree, n_states_full=2):
         "singlet": method_tree + "/rhf/singlets/0",
         "triplet": method_tree + "/rhf/triplets/0",
         "state": method_tree + "/uhf/0",
+        "spin_flip": method_tree + "/uhf/0",
     }
+    if "n_spin_flip" not in kwrun:
+        del kind_trees["spin_flip"]
+    if "n_states" not in kwrun:
+        del kind_trees["state"]
 
     available_kinds = []
     for kind, tree in kind_trees.items():
@@ -234,6 +238,13 @@ def main():
     kwargs_cvs = {"n_states": 6}
     kwargs_general = {"n_states": 8}
     dump_all_methods("cn_sto3g", kwargs_cvs, kwargs_general)
+
+    #
+    # HF triplet unrestricted (for spin-flip)
+    #
+    kwargs_cvs = None
+    kwargs_general = {"n_spin_flip": 9}
+    dump_all_methods("hf3_631g", kwargs_cvs, kwargs_general)
 
 
 if __name__ == "__main__":

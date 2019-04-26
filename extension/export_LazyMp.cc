@@ -17,6 +17,7 @@
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include "caching_policy_hack.hh"
 #include <adcc/LazyMp.hh>
 #include <adcc/ReferenceState.hh>
 #include <pybind11/pybind11.h>
@@ -29,9 +30,10 @@ namespace py_iface {
 void export_LazyMp(py::module& m) {
   py::class_<LazyMp, std::shared_ptr<LazyMp>>(
         m, "LazyMp",
-        "Class representing information about the Mo/ller-Plesset results from ADCman.",
-        py::dynamic_attr())
+        "Class representing information about the Mo/ller-Plesset results from ADCman.")
         .def(py::init<std::shared_ptr<const ReferenceState>>())
+        .def(py::init<std::shared_ptr<const ReferenceState>,
+                      std::shared_ptr<CachingPolicy_i>>())
         .def("energy_correction", &LazyMp::energy_correction,
              "Obtain the appropriate MP energy correction.")
         .def("df", &LazyMp::df, "Obtain the Delta Fock matrix.")
@@ -46,6 +48,7 @@ void export_LazyMp(py::module& m) {
         .def_property_readonly("reference_state", &LazyMp::reference_state_ptr)
         .def_property_readonly("has_core_valence_separation",
                                &LazyMp::has_core_valence_separation)
+        .def("set_caching_policy", &LazyMp::set_caching_policy)
         //
         ;
 }

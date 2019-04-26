@@ -20,13 +20,16 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
 import unittest
 
-from adcc.testdata.cache import cache
-
 from .misc import expand_test_templates
+
+import adcc
+
 from pytest import approx
+
+from adcc.testdata.cache import cache
+from adcc.solver.SolverStateBase import SolverStateBase
 
 # The methods to test
 methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
@@ -38,17 +41,23 @@ class TestFunctionality(unittest.TestCase):
         hf = cache.hfdata[system]
         refdata = cache.reference_data[system]
 
+        args["conv_tol"] = 5e-8
         res = getattr(adcc, method.replace("-", "_"))(hf, **args)
-        assert type(res) == list
-        assert len(res) == 1
-        res = res[0]  # Extract the first (and only state)
+        assert isinstance(res, SolverStateBase)
 
         ref = refdata[method][kind]["eigenvalues"]
         assert res.converged
-        assert res.eigenvalues == approx(ref)
+        assert res.eigenvalues == approx(ref, abs=1e-7)
 
         # TODO Compare transition dipole moment
         # TODO Compare excited state dipole moment
+
+        # Test we do not use too many iterations
+        n_iter_bound = {
+            "adc0": 1, "adc1": 4, "adc2": 6, "adc2x": 11, "adc3": 11,
+            "cvs-adc0": 1, "cvs-adc1": 4, "cvs-adc2": 5, "cvs-adc2x": 11
+        }
+        assert res.n_iter <= n_iter_bound[method]
 
     #
     # General
@@ -85,6 +94,12 @@ class TestFunctionality(unittest.TestCase):
     def template_cvs_cn(self, method):
         self.base_test("cn_sto3g", "cvs-" + method, "state",
                        n_states=6, n_core_orbitals=1)
+
+    #
+    # Spin-flip
+    #
+    def template_hf3_spin_flip(self, method):
+        self.base_test("hf3_631g", method, "spin_flip", n_spin_flip=9)
 
 
 # CVS-ADC(3) not supported

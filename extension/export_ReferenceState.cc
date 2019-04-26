@@ -18,6 +18,7 @@
 //
 
 #include <adcc/ReferenceState.hh>
+#include <adcc/tmp_build_reference_state.hh>
 #include <pybind11/pybind11.h>
 
 namespace py = pybind11;
@@ -27,6 +28,10 @@ namespace py_iface {
 
 /** Exports adcc/ReferenceState.hh to python */
 void export_ReferenceState(py::module& m) {
+  // Temporary explicit import function
+  m.def("tmp_build_reference_state", &tmp_build_reference_state,
+        "Import a HFData into a ReferenceState object.");
+
   py::class_<ReferenceState, std::shared_ptr<ReferenceState>>(
         m, "ReferenceState",
         "Class representing information about the reference state for ADCman.",
@@ -41,9 +46,10 @@ void export_ReferenceState(py::module& m) {
         .def("orbital_coefficients_beta", &ReferenceState::orbital_coefficients_beta)
         .def_property_readonly("has_core_valence_separation",
                                &ReferenceState::has_core_valence_separation)
+        .def_property_readonly("conv_tol", &ReferenceState::conv_tol)
         .def_property_readonly("restricted", &ReferenceState::restricted,
-                               "Return whether the reference state is from a restricted "
-                               "calculation or not.")
+                               "Return whether the reference state is from a restricted"
+                               " calculation or not.")
         .def_property_readonly(
               "spin_multiplicity", &ReferenceState::spin_multiplicity,
               "Return the spin multiplicity of the reference state. 0 indicates "

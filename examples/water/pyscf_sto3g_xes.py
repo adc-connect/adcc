@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
-
-from pyscf import gto, scf
 import adcc
 import copy
 import numpy as np
+
+from pyscf import gto, scf
 
 mol = gto.M(
     atom='O 0 0 0;'
@@ -21,8 +21,8 @@ with mol.with_common_orig((0, 0, 0)):
 
 # Run normal SCF in pyscf
 mf = scf.UHF(mol)
-mf.conv_tol = 1e-14
-mf.grad_conv_tol = 1e-10
+mf.conv_tol = 1e-15
+mf.grad_conv_tol = 1e-12
 mf.kernel()
 print("Water SCF energy", mf.energy_tot())
 
@@ -33,8 +33,8 @@ occ0[0][0] = 0.0  # alpha core hole
 dm = mf.make_rdm1(mo0, occ0)
 
 mf_core = scf.UHF(mol)
-mf_core.conv_tol = 1e-14
-mf_core.grad_conv_tol = 1e-10
+mf_core.conv_tol = 1e-15
+mf_core.grad_conv_tol = 1e-12
 scf.addons.mom_occ(mf_core, mo0, occ0)
 mf_core.kernel(dm)
 del dm
@@ -44,7 +44,7 @@ print("Water core hole energy", mf_core.energy_tot())
 adcc.memory_pool.initialise(max_memory=256 * 1024 * 1024)
 
 # Run an adc2 calculation:
-state = adcc.adc2(mf_core, n_states=4)[0]
+state = adcc.adc2(mf_core, n_states=4, conv_tol=5e-8)
 
 # Attach state densities
 state = adcc.attach_state_densities(state, state_diffdm=False)

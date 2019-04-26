@@ -20,29 +20,28 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
+import adcc.backends.pyscf
+
+from adcc import hdf5io
 
 from pyscf import gto, scf
 
-# Run SCF in pyscf
+# Run SCF in pyscf and converge super-tight using an EDIIS
 mol = gto.M(
-    atom='O 0 0 0;'
-         'H 0 0 1.795239827225189;'
-         'H 1.693194615993441 0 -0.599043184453037',
-    basis='cc-pvdz',
-    unit="Bohr"
+    atom='H 0 0 0;'
+         'F 0 0 2.5',
+    basis='6-31G',
+    unit="Bohr",
+    spin=2,  # =2S, ergo triplet
+    verbose=4
 )
-scfres = scf.RHF(mol)
-scfres.conv_tol = 1e-13
-scfres.kernel()
+mf = scf.UHF(mol)
+mf.diis = scf.EDIIS()
+mf.conv_tol = 1e-14
+mf.conv_tol_grad = 1e-12
+mf.diis_space = 3
+mf.max_cycle = 500
+mf.kernel()
 
-# Initialise ADC memory (512 MiB)
-adcc.memory_pool.initialise(max_memory=512 * 1024 * 1024)
-
-# Run an adc3 calculation:
-singlets = adcc.adc3(scfres, n_singlets=3)
-triplets = adcc.adc3(singlets.matrix, n_triplets=3)
-
-print(singlets.describe())
-print()
-print(triplets.describe())
+hfdict = adcc.backends.pyscf.convert_scf_to_dict(mf)
+hdf5io.save("hf3_631g_hfdata.hdf5", hfdict)

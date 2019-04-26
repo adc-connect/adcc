@@ -48,7 +48,7 @@ scfres.kernel()
 adcc.memory_pool.initialise(max_memory=256 * 1024 * 1024)
 
 # Run an adc1 calculation:
-state = adcc.adc1(scfres, n_singlets=5)[0]
+state = adcc.adc1(scfres, n_singlets=5)
 
 # Attach state densities
 state = adcc.attach_state_densities(state, state_diffdm=False)

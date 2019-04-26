@@ -34,15 +34,18 @@ void export_CachingPolicy(py::module& m);
 void export_compute_modified_transition_moments(py::module& m);
 void export_compute_one_particle_densities(py::module& m);
 void export_CtxMap(py::module& m);
+void export_guesses(py::module& m);
 void export_HartreeFockProvider(py::module& m);
 void export_HfData(py::module& m);
 void export_LazyMp(py::module& m);
 void export_OneParticleDensityMatrix(py::module& m);
 void export_ReferenceState(py::module& m);
-void export_solve_adcman_davidson(py::module& m);
 void export_Tensor(py::module& m);
 void export_ThreadPool(py::module& m);
-void export_tmp_run_prelim(py::module& m);
+
+#ifdef ADCC_WITH_ADCMAN
+void export_solve_adcman_davidson(py::module& m);
+#endif
 }  // namespace py_iface
 }  // namespace adcc
 
@@ -63,22 +66,33 @@ PYBIND11_MODULE(libadcc, m) {
   pyif::export_AdcIntermediates(m);
   pyif::export_AmplitudeVector(m);
   pyif::export_AdcMatrix(m);
+  pyif::export_guesses(m);
   pyif::export_amplitude_vector_enforce_spin_kind(m);
   pyif::export_compute_modified_transition_moments(m);
   pyif::export_compute_one_particle_densities(m);
 
-  pyif::export_tmp_run_prelim(m);
+#ifdef ADCC_WITH_ADCMAN
   pyif::export_solve_adcman_davidson(m);
+#endif
 
   // Set metadata about libadcc
   m.attr("__version__")    = adcc::version::version_string();
   m.attr("__build_type__") = adcc::version::is_debug() ? "Debug" : "Release";
+
+  // Set libadcc feature list
+  py::list features;
+#ifdef ADCC_WITH_ADCMAN
+  features.append("adcman");
+#endif
+  m.attr("__features__") = features;
 
   py::register_exception_translator([](std::exception_ptr p) {
     try {
       if (p) std::rethrow_exception(p);
     } catch (const adcc::not_implemented_error& ex) {
       PyErr_SetString(PyExc_NotImplementedError, ex.what());
+    } catch (const adcc::invalid_argument& ex) {
+      PyErr_SetString(PyExc_ValueError, ex.what());
     }
   });
 }

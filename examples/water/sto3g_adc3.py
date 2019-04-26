@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-
+## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 import adcc
+
 from import_data import import_data
-import IPython
 
 # Gather precomputed data
 data = import_data()
@@ -11,10 +11,12 @@ data = import_data()
 adcc.memory_pool.initialise(max_memory=256 * 1024 * 1024)
 
 # Run an adc3 calculation:
-state = adcc.adc3(data, n_singlets=3, n_triplets=3)
+singlets = adcc.adc3(data, n_singlets=3, conv_tol=1e-8)
+triplets = adcc.adc3(singlets.matrix, n_triplets=4, conv_tol=1e-8)
 
 # Attach state densities
-state = [adcc.attach_state_densities(kstate, method="adc2")
-         for kstate in state]
+singlets = adcc.attach_state_densities(singlets, method="adc2")
+triplets = adcc.attach_state_densities(triplets, method="adc2")
 
-IPython.embed()
+print(singlets.describe())
+print(triplets.describe())

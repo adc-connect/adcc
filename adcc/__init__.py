@@ -27,13 +27,16 @@ from .functions import (add, contract, copy, divide, dot, empty_like,
                         subtract, transpose, zeros_like)
 from .memory_pool import memory_pool
 from .thread_pool import thread_pool
-from .tmp_run_prelim import tmp_run_prelim
+from .caching_policy import DefaultCachingPolicy, GatherStatisticsPolicy
 from .AmplitudeVector import AmplitudeVector
 from .state_densities import attach_state_densities
+from .tmp_build_reference_state import tmp_build_reference_state
 
-from libadcc import HartreeFockProvider, HartreeFockSolution_i, Tensor
+from libadcc import HartreeFockProvider, HartreeFockSolution_i, LazyMp, Tensor
 
-# This has to be the last import
+# This has to be the last set of import
+from .guess import (guess_zero, guesses_any, guesses_singlet,
+                    guesses_spin_flip, guesses_triplet)
 from .run_adc import run_adc
 
 __all__ = ["run_adc", "AdcMatrix", "AdcMethod",
@@ -41,8 +44,11 @@ __all__ = ["run_adc", "AdcMatrix", "AdcMethod",
            "linear_combination", "multiply", "nosym_like", "ones_like",
            "subtract", "transpose", "zeros_like",
            "memory_pool", "thread_pool", "AmplitudeVector",
-           "attach_state_densities", "tmp_run_prelim",
+           "attach_state_densities", "tmp_build_reference_state",
            "HartreeFockProvider", "HartreeFockSolution_i", "Tensor",
+           "guesses_singlet", "guesses_triplet", "guesses_any",
+           "guesses_spin_flip", "guess_zero", "DefaultCachingPolicy",
+           "GatherStatisticsPolicy", "LazyMp",
            "adc0", "adc1", "adc2", "adc2x", "adc3",
            "cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x"]
 
@@ -50,7 +56,7 @@ __version__ = "0.8.0"
 __licence__ = "LGPL v3"
 __authors__ = "Michael F. Herbst and Maximilian Scheurer"
 __email__ = "info@michael-herbst.com"
-# feel free to add your name above if you commit something
+# feel free to add your name above
 
 
 def with_runadc_doc(func):
@@ -60,44 +66,44 @@ def with_runadc_doc(func):
 
 @with_runadc_doc
 def adc0(*args, **kwargs):
-    return run_adc("adc0", *args, **kwargs)
+    return run_adc(*args, **kwargs, method="adc0")
 
 
 @with_runadc_doc
 def adc1(*args, **kwargs):
-    return run_adc("adc1", *args, **kwargs)
+    return run_adc(*args, **kwargs, method="adc1")
 
 
 @with_runadc_doc
 def adc2(*args, **kwargs):
-    return run_adc("adc2", *args, **kwargs)
+    return run_adc(*args, **kwargs, method="adc2")
 
 
 @with_runadc_doc
 def adc2x(*args, **kwargs):
-    return run_adc("adc2x", *args, **kwargs)
+    return run_adc(*args, **kwargs, method="adc2x")
 
 
 @with_runadc_doc
 def adc3(*args, **kwargs):
-    return run_adc("adc3", *args, **kwargs)
+    return run_adc(*args, **kwargs, method="adc3")
 
 
 @with_runadc_doc
 def cvs_adc0(*args, **kwargs):
-    return run_adc("cvs-adc0", *args, **kwargs)
+    return run_adc(*args, **kwargs, method="cvs-adc0")
 
 
 @with_runadc_doc
 def cvs_adc1(*args, **kwargs):
-    return run_adc("cvs-adc1", *args, **kwargs)
+    return run_adc(*args, **kwargs, method="cvs-adc1")
 
 
 @with_runadc_doc
 def cvs_adc2(*args, **kwargs):
-    return run_adc("cvs-adc2", *args, **kwargs)
+    return run_adc(*args, **kwargs, method="cvs-adc2")
 
 
 @with_runadc_doc
 def cvs_adc2x(*args, **kwargs):
-    return run_adc("cvs-adc2x", *args, **kwargs)
+    return run_adc(*args, **kwargs, method="cvs-adc2x")

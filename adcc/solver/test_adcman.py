@@ -20,21 +20,28 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
-from adcc.solver.adcman import jacobi_davidson
-from pytest import approx
-from adcc.testdata.cache import cache
-import adcc
-import numpy as np
 import unittest
+import numpy as np
+
+import adcc
+import pytest
+import libadcc
+
+from pytest import approx
+
+from adcc import LazyMp
+from adcc.solver.adcman import jacobi_davidson
+from adcc.testdata.cache import cache
 
 
+@pytest.mark.skipif("adcman" not in libadcc.__features__,
+                    reason="adcc -> adcman interface not enabled.")
 class TestSolverAdcman(unittest.TestCase):
     def test_adc2s(self):
         refdata = cache.reference_data["h2o_sto3g"]
 
         # Setup the matrix
-        matrix = adcc.AdcMatrix("adc2", cache.prelim["h2o_sto3g"].ground_state)
+        matrix = adcc.AdcMatrix("adc2", LazyMp(cache.refstate["h2o_sto3g"]))
 
         # Solve for singlets and triplets
         res = jacobi_davidson(matrix, n_singlets=10, n_triplets=10)

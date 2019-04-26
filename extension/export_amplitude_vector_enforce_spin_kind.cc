@@ -27,8 +27,8 @@ namespace py = pybind11;
 
 void export_amplitude_vector_enforce_spin_kind(py::module& m) {
   m.def("amplitude_vector_enforce_spin_kind", &amplitude_vector_enforce_spin_kind,
-        "Apply the preconditioner tricks adcman uses to make the doubles part"
-        "consist of components for a singlet state only.");
+        "Apply the spin symmetrisation required to make the doubles and higher parts of "
+        "an amplitude vector consist of components for a particular spin kind only.");
 }
 
 }  // namespace py_iface

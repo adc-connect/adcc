@@ -20,16 +20,17 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import numpy as np
 
 import libadcc
-import numpy as np
+
 from adcc import AdcMatrix, AmplitudeVector
 from .SolverStateBase import SolverStateBase
 
 
 class AdcmanSolverState(SolverStateBase):
-    def __init__(self, method, ground_state, cppstate):
-        super().__init__(method, ground_state)
+    def __init__(self, matrix, cppstate, spin_change):
+        super().__init__(matrix)
         self.eigenvalues = cppstate.eigenvalues
         self.converged = np.all(cppstate.residuals_converged)
         self.eigenvectors = [AmplitudeVector(st, dt)
@@ -37,12 +38,17 @@ class AdcmanSolverState(SolverStateBase):
                                                cppstate.doubles_block)]
         self.residual_norms = cppstate.residual_norms
         self.residuals_converged = cppstate.residuals_converged
-        self.kind = cppstate.kind
         self.ctx = cppstate.ctx
+
+        if spin_change == 0:
+            self.kind = cppstate.kind
+        else:
+            self.kind = "spin_flip"
+            self.spin_change = spin_change
 
 
 def eigh(matrix, n_singlets=None, n_triplets=None, n_states=None,
-         max_subspace=0, conv_tol=1e-6, max_iter=60,
+         n_spin_flip=None, max_subspace=0, conv_tol=1e-6, max_iter=60,
          print_level=1, residual_min_norm=1e-12,
          n_guess_singles=0, n_guess_doubles=0):
     """
@@ -54,6 +60,8 @@ def eigh(matrix, n_singlets=None, n_triplets=None, n_states=None,
     @param n_triplets    Number of triplets to solve for
                          (has to be None for UHF reference)
     @param n_states      Number of states to solve for
+                         (has to be None for RHF reference)
+    @param n_spin_flip   Number of spin-flip states to be computed
                          (has to be None for RHF reference)
     @param max_subspace  Maximal subspace size
                          (0 means choose automatically depending
@@ -76,6 +84,14 @@ def eigh(matrix, n_singlets=None, n_triplets=None, n_states=None,
                              computed, then n_guess_singles = number of
                              excited states to compute
     """
+    if "adcman" not in libadcc.__features__:
+        raise RuntimeError(
+            "The adcman solver methods are only available if the adcc to "
+            "adcman interface is enabled.\n"
+            "To enable this interface, recompile adccore with the option "
+            "ADCC_WITH_ADCMAN enabled. Notice, that this, however, requires "
+            "access to the adcman source code.")
+
     if not isinstance(matrix, AdcMatrix):
         raise TypeError("matrix is not of type AdcMatrix")
 
@@ -93,8 +109,21 @@ def eigh(matrix, n_singlets=None, n_triplets=None, n_states=None,
                              "reference of singlet spin to provide the number "
                              "of excited states to compute. Use \"n_states\" "
                              "for an UHF reference.")
-        n_triplets = 0
-        n_singlets = n_states
+
+        if n_states is not None and n_states > 0 and \
+           n_spin_flip is not None and n_spin_flip > 0:
+            raise ValueError("Can only use one of n_states or n_spin_flip "
+                             "simultaneously.")
+
+        if n_spin_flip is not None:
+            spin_change = -1
+            n_singlets = 0
+            n_triplets = 0
+        else:
+            spin_change = 0
+            n_spin_flip = 0
+            n_singlets = n_states
+            n_triplets = 0
     else:
         if n_states is not None:
             raise ValueError("The key \"n_states\" may only be used in "
@@ -102,21 +131,27 @@ def eigh(matrix, n_singlets=None, n_triplets=None, n_states=None,
                              "or a non-singlet ground state to provide the "
                              "number of excited states to compute. Use "
                              "\"n_singlets\" and \"n_triplets\".")
+        if n_spin_flip is not None:
+            raise ValueError("The key \"n_spin_flip\" may only be used in "
+                             "combination with an unrestricted ground state.")
+
+        n_spin_flip = 0
+        spin_change = 0
         if n_triplets is None:
             n_triplets = 0
         if n_singlets is None:
             n_singlets = 0
 
-    if n_singlets + n_triplets == 0:
+    if n_singlets + n_triplets + n_spin_flip == 0:
         raise ValueError("No excited states to compute.")
 
     res = libadcc.solve_adcman_davidson(matrix, n_singlets, n_triplets,
-                                        conv_tol, max_iter, max_subspace,
-                                        print_level, residual_min_norm,
-                                        n_guess_singles, n_guess_doubles)
+                                        n_spin_flip, conv_tol, max_iter,
+                                        max_subspace, print_level,
+                                        residual_min_norm, n_guess_singles,
+                                        n_guess_doubles)
 
-    return [AdcmanSolverState(matrix.method, matrix.ground_state, state)
-            for state in res]
+    return [AdcmanSolverState(matrix, state, spin_change) for state in res]
 
 
 jacobi_davidson = eigh

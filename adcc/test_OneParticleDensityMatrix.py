@@ -23,12 +23,14 @@
 import unittest
 import numpy as np
 
+import adcc
+
 from adcc.testdata.cache import cache
 
 
 class TestOneParticleDensityMatrix(unittest.TestCase):
     def test_to_ndarray(self):
-        mp2diff = cache.prelim["h2o_sto3g"].ground_state.mp2_diffdm
+        mp2diff = adcc.LazyMp(cache.refstate["h2o_sto3g"]).mp2_diffdm
 
         dm_oo = mp2diff["o1o1"].to_ndarray()
         dm_ov = mp2diff["o1v1"].to_ndarray()

@@ -20,19 +20,20 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
-
-from libadcc import HartreeFockProvider
-from adcc.testdata.cache import cache
-from pytest import approx
 import adcc
 import unittest
+
+from adcc.testdata.cache import cache
+from adcc.solver.SolverStateBase import SolverStateBase
+
+from pytest import approx
+from libadcc import HartreeFockProvider
 
 
 class DummyData(HartreeFockProvider):
     def __init__(self, data):
         # Do not forget the next line,
-        # otherwise weid errors result
+        # otherwise weird errors result
         super().__init__()
         self.data = data
 
@@ -88,9 +89,7 @@ class TestHartreeFockProvider(unittest.TestCase):
         refdata = cache.reference_data[system]
 
         res = adcc.adc2(hf, n_singlets=10, **args)
-        assert type(res) == list
-        assert len(res) == 1
-        res = res[0]  # Extract the first (and only state)
+        assert isinstance(res, SolverStateBase)
 
         ref = refdata["adc2"]["singlet"]["eigenvalues"]
         assert res.converged

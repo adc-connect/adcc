@@ -23,12 +23,12 @@
 import sys
 import numpy as np
 
-import scipy.linalg as la
-import scipy.sparse.linalg as sla
-
 from .preconditioner import JacobiPreconditioner
 from .SolverStateBase import SolverStateBase
 from .explicit_symmetrisation import IndexSymmetrisation
+
+import scipy.linalg as la
+import scipy.sparse.linalg as sla
 
 from adcc import AdcMatrix, AmplitudeVector, linear_combination
 
@@ -44,8 +44,8 @@ def select_eigenpairs(vectors, n_ep, which):
 
 
 class DavidsonState(SolverStateBase):
-    def __init__(self, method, ground_state, guesses):
-        super().__init__(method, ground_state)
+    def __init__(self, matrix, guesses):
+        super().__init__(matrix)
         self.residuals = None                   # Current residuals
         self.residual_norms = None              # Current residual norms
         self.subspace_vectors = guesses.copy()  # Current subspace vectors
@@ -304,7 +304,7 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
         state.converged = np.all(state.residuals_converged)
         return state.converged
 
-    state = DavidsonState(matrix.method, matrix.ground_state, guesses)
+    state = DavidsonState(matrix, guesses)
     davidson_iterations(matrix, state, max_subspace, max_iter,
                         n_ep=n_ep, is_converged=convergence_test,
                         callback=callback, which=which,
