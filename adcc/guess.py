@@ -73,7 +73,7 @@ def guess_zero(matrix, irrep="A", spin_change=0,
 def guesses_from_diagonal(matrix, n_guesses, block="s",
                           irrep="A", spin_change=0,
                           spin_block_symmetrisation="none",
-                          proximity=0.0, degeneracy_tolerance=1e-14):
+                          degeneracy_tolerance=1e-14):
     """
     Obtain guesses by inspecting a block of the diagonal of the passed ADC
     matrix. The symmetry of the returned vectors is already set-up properly.
@@ -97,9 +97,6 @@ def guesses_from_diagonal(matrix, n_guesses, block="s",
                  between the a-a and b-b blocks. Valid values are "none",
                  "symmetric" and "antisymmetric", where "none" enforces
                  no particular symmetry.
-    proximity    The value on the diagonal to target (typically one wants to
-                 pass 0.0, i.e. to obtain the guess vectors corresponding to
-                 the "smallest" diagonal entries).
     degeneracy_tolerance
                  Tolerance for two entries of the diagonal to be considered
                  degenerate, i.e. identical.
@@ -130,7 +127,7 @@ def guesses_from_diagonal(matrix, n_guesses, block="s",
     gkind = libadcc.AdcGuessKind(irrep, float(spin_change),
                                  spin_block_symmetrisation)
     guesses = libadcc.guesses_from_diagonal(matrix, gkind, block, n_guesses,
-                                            proximity, degeneracy_tolerance)
+                                            degeneracy_tolerance)
     return [AmplitudeVector(*gv.to_tuple()) for gv in guesses]
 
 

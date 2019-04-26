@@ -75,10 +75,6 @@ void export_guesses(py::module& m) {
         "block      The block of the diagonal to investigate. May be 's' (singles) or\n"
         "           'd' (doubles).\n"
         "n_guesses  The number of guesses to look for.\n"
-        "proximity  The value on the diagonal to target (typically one wants to pass\n"
-        "           0.0, i.e. to obtain the guess vectors corresponding to the "
-        "'smallest'\n"
-        "           diagonal entries).\n"
         "degeneracy_tolerance  Tolerance for two entries of the diagonal to be "
         "considered\n"
         "                      degenerate, i.e. identical.");
