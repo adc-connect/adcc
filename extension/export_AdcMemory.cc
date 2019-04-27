@@ -53,6 +53,8 @@ void export_AdcMemory(py::module& m) {
         .def_property_readonly("pagefile_directory", &AdcMemory::pagefile_directory)
         .def_property_readonly("tbs_param", &AdcMemory::tbs_param)
         .def_property_readonly("use_std_allocator", &AdcMemory::use_std_allocator)
+        .def_property("contraction_batch_size", &AdcMemory::contraction_batch_size,
+                      &AdcMemory::set_contraction_batch_size)
         .def("initialise", &AdcMemory::initialise,
              "Initialise the AdcMemory memory management. The parameters are "
              "pagefile_directory, "
