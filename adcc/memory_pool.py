@@ -85,6 +85,10 @@ class MemoryPool(libadcc.AdcMemory):
         """
         return sum(os.path.getsize(f) for f in self.page_files)
 
+    def diagnostic_info(self):
+        # TODO Also some nice stuff for cases where this is empty
+        return super().diagnostic_info()
+
 
 # The actual memory object to use
 memory_pool = MemoryPool()
