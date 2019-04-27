@@ -20,25 +20,20 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
-import atexit
-import glob
-import libadcc
 import os
+import glob
+import atexit
 import shutil
 import tempfile
 
-
-class StdAllocatorWarning(Warning):
-    pass
+import libadcc
 
 
 class MemoryPool(libadcc.AdcMemory):
     def initialise(self, max_memory, tensor_block_size=16,
-                   pagefile_directory=None):
+                   pagefile_directory=None, allocator="default"):
         """
-        Initialise the adcc virtual memory management. Calling this function
-        will direclty allocate all storage of max_memory.
+        Initialise the adcc memory management.
 
         @param   max_memory   Estimate for the maximally employed memory
         @param tensor_block_size   This parameter roughly has the meaning
@@ -47,10 +42,19 @@ class MemoryPool(libadcc.AdcMemory):
                                    nowaday CPU cachelines.
         @param pagefile_prefix     Directory prefix for storing temporary
                                    cache files.
+        @param allocator   The allocator to be used. Valid values are "libxm",
+                           "libvmm", "standard" and "default", where "default"
+                           uses a default chosen from the first three.
         """
+        if allocator not in ["standard", "default"]:
+            if allocator == "adcman" or allocator not in libadcc.__features__:
+                raise ValueError("Allocator {} is unknown or not compiled into "
+                                 "this version of adcc.".format(allocator))
+
         if not pagefile_directory:
             pagefile_directory = tempfile.mkdtemp(prefix="adcc_", dir="/tmp")
-        super().initialise(pagefile_directory, max_memory, tensor_block_size)
+        super().initialise(pagefile_directory, max_memory, tensor_block_size,
+                           allocator)
         atexit.register(MemoryPool.cleanup, self)
 
     def cleanup(self):
