@@ -3,9 +3,8 @@
 import adcc
 import numpy as np
 
-from matplotlib import pyplot as plt
-
 from scipy import constants
+from matplotlib import pyplot as plt
 
 from pyscf import gto, scf
 from pyscf.tools import cubegen
@@ -49,9 +48,6 @@ scfres = scf.RHF(mol)
 scfres.conv_tol = 1e-14
 scfres.conv_tol_grad = 1e-10
 scfres.kernel()
-
-# Initialise ADC memory (512 MiB)
-adcc.memory_pool.initialise(max_memory=512 * 1024 * 1024)
 
 # Run an adc2 calculation:
 state = adcc.adc2(scfres, n_singlets=7, conv_tol=1e-8)

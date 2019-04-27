@@ -22,9 +22,6 @@ scfres.conv_tol = 1e-14
 scfres.conv_tol_grad = 1e-10
 scfres.kernel()
 
-# Initialise ADC memory (256 MiB)
-adcc.memory_pool.initialise(max_memory=256 * 1024 * 1024)
-
 # Run an adc2 calculation:
 singlets = adcc.adc2(scfres, n_singlets=5)
 triplets = adcc.adc2(singlets.matrix, n_triplets=3)

@@ -40,10 +40,10 @@ scfres.kernel()
 # Some more advanced memory tampering options
 #
 # Initialise ADC memory (512 MiB)
-# Use a tensor block size parameter of 32 and
+# Use a tensor block size parameter of 16 and
 # a specific allocator (in this case std::allocator)
 adcc.memory_pool.initialise(max_memory=512 * 1024 * 1024,
-                            tensor_block_size=32, allocator="standard")
+                            tensor_block_size=16, allocator="standard")
 # Adjust the contraction_batch_size to a slightly larger value
 adcc.memory_pool.contraction_batch_size = 8 * 1024
 

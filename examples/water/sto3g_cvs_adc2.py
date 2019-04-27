@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
-import adcc
-
 from import_data import import_data
+
+import adcc
 
 # Gather preliminary data
 data = import_data()
-
-# Initialise the memory (256 MiB)
-adcc.memory_pool.initialise(max_memory=256 * 1024 * 1024)
 
 # Run an cvs-adc2 calculation:
 singlets = adcc.cvs_adc2(data, n_core_orbitals=1, n_singlets=1, conv_tol=1e-8)

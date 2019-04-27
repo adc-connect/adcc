@@ -22,7 +22,7 @@ with mol.with_common_orig((0, 0, 0)):
 # Run normal SCF in pyscf
 mf = scf.UHF(mol)
 mf.conv_tol = 1e-15
-mf.grad_conv_tol = 1e-12
+mf.conv_tol_grad = 1e-10
 mf.kernel()
 print("Water SCF energy", mf.energy_tot())
 
@@ -34,14 +34,11 @@ dm = mf.make_rdm1(mo0, occ0)
 
 mf_core = scf.UHF(mol)
 mf_core.conv_tol = 1e-15
-mf_core.grad_conv_tol = 1e-12
+mf_core.conv_tol_grad = 1e-10
 scf.addons.mom_occ(mf_core, mo0, occ0)
 mf_core.kernel(dm)
 del dm
 print("Water core hole energy", mf_core.energy_tot())
-
-# Initialise ADC memory (256 MiB)
-adcc.memory_pool.initialise(max_memory=256 * 1024 * 1024)
 
 # Run an adc2 calculation:
 state = adcc.adc2(mf_core, n_states=4, conv_tol=5e-8)
