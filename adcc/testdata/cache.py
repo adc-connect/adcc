@@ -165,6 +165,5 @@ class TestdataCache():
         return res
 
 
-# Setup memory and cache object
-adcc.memory_pool.initialise(max_memory=512 * 1024 * 1024)  # 512 MiB
+# Setup cache object
 cache = TestdataCache()
