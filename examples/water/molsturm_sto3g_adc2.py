@@ -15,9 +15,6 @@ hfres = molsturm.hartree_fock(system, basis_type="gaussian",
                               basis_set_name="sto-3g",
                               conv_tol=1e-12, print_iterations=True)
 
-# Initialise ADC memory (256 MiB)
-adcc.memory_pool.initialise(max_memory=256 * 1024 * 1024)
-
 # Run an adc2 calculation:
 singlets = adcc.adc2(hfres, n_singlets=5, conv_tol=1e-9)
 triplets = adcc.adc2(singlets.matrix, n_triplets=3, conv_tol=1e-9)

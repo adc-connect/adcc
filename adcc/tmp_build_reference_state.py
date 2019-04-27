@@ -20,12 +20,10 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import warnings
-
 import libadcc
 
 from .backends import import_scf_results
-from .memory_pool import StdAllocatorWarning, memory_pool
+from .memory_pool import memory_pool
 
 
 def tmp_build_reference_state(hfdata, n_core_orbitals=None):
@@ -46,16 +44,5 @@ def tmp_build_reference_state(hfdata, n_core_orbitals=None):
 
     if n_core_orbitals is None:
         n_core_orbitals = 0
-
-    if memory_pool.use_std_allocator:
-        warnings.warn(StdAllocatorWarning(
-            "Standard allocator will be used for "
-            "computations. Results might be off, "
-            "since this is not well-tested. "
-            "Try initialising the memory_pool using "
-            "adcc.memory_pool.initialise(<memory in bytes>) before "
-            "doing any computations."
-        ))
-
     return libadcc.tmp_build_reference_state(hfdata, memory_pool,
                                              n_core_orbitals)

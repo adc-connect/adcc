@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
+from import_data import import_data
+
 import adcc
 
-from import_data import import_data
 from adcc.caching_policy import GatherStatisticsPolicy
 
 # Gather precomputed data
 data = import_data()
-
-# Initialise the memory (256 MiB)
-adcc.memory_pool.initialise(max_memory=256 * 1024 * 1024)
 
 # Initialise the caching policy:
 statistics_policy = GatherStatisticsPolicy()

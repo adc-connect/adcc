@@ -20,8 +20,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
 import numpy as np
+
+import adcc
 
 from pyscf import gto, scf
 
@@ -41,11 +42,8 @@ with mol.with_common_orig((0, 0, 0)):
 # Run RHF SCF
 scfres = scf.RHF(mol)
 scfres.conv_tol = 1e-14
-scfres.grad_conv_tol = 1e-10
+scfres.conv_tol_grad = 1e-10
 scfres.kernel()
-
-# Initialise ADC memory (256 MiB)
-adcc.memory_pool.initialise(max_memory=256 * 1024 * 1024)
 
 # Run an adc1 calculation:
 state = adcc.adc1(scfres, n_singlets=5)

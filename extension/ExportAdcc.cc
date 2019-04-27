@@ -84,6 +84,13 @@ PYBIND11_MODULE(libadcc, m) {
 #ifdef ADCC_WITH_ADCMAN
   features.append("adcman");
 #endif
+#ifdef ADCC_WITH_LIBXM
+  features.append("libxm");
+#endif
+#ifdef ADCC_WITH_LIBVMM
+  features.append("libvmm");
+#endif
+
   m.attr("__features__") = features;
 
   py::register_exception_translator([](std::exception_ptr p) {
