@@ -17,8 +17,9 @@
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include <adcc/components.hh>
 #include <adcc/exceptions.hh>
-#include <adcc/version.hh>
+#include <adcc/metadata.hh>
 #include <pybind11/pybind11.h>
 
 namespace py = pybind11;
@@ -78,20 +79,25 @@ PYBIND11_MODULE(libadcc, m) {
   // Set metadata about libadcc
   m.attr("__version__")    = adcc::version::version_string();
   m.attr("__build_type__") = adcc::version::is_debug() ? "Debug" : "Release";
+  m.attr("__authors__")    = adcc::__authors__();
+  m.attr("__email__")      = adcc::__email__();
 
   // Set libadcc feature list
   py::list features;
-#ifdef ADCC_WITH_ADCMAN
-  features.append("adcman");
-#endif
-#ifdef ADCC_WITH_LIBXM
-  features.append("libxm");
-#endif
-#ifdef ADCC_WITH_LIBVMM
-  features.append("libvmm");
-#endif
-
+  for (auto& feature : adcc::__features__()) features.append(feature);
   m.attr("__features__") = features;
+
+  // Set libadcc components list
+  py::list components;
+  for (const adcc::Component& comp : adcc::__components__()) {
+    py::dict d;
+    d["name"]        = comp.name;
+    d["version"]     = comp.version;
+    d["description"] = comp.description;
+    d["authors"]     = comp.authors;
+    components.append(d);
+  }
+  m.attr("__components__") = components;
 
   py::register_exception_translator([](std::exception_ptr p) {
     try {
