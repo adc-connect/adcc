@@ -52,7 +52,7 @@ __all__ = ["run_adc", "AdcMatrix", "AdcMethod",
            "adc0", "adc1", "adc2", "adc2x", "adc3",
            "cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x"]
 
-__version__ = "0.9.0"
+__version__ = "0.9.1"
 __licence__ = "LGPL v3"
 __authors__ = "Michael F. Herbst and Maximilian Scheurer"
 __email__ = "info@michael-herbst.com"
