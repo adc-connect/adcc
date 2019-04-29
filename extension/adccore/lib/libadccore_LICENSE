@@ -1,0 +1,5 @@
+The file libadccore.so in this folder is *NOT* released under
+the terms of the GNU Lesser General Public License Version 3 (LGPLv3).
+Instead a different licensing applies. See the file `LICENSE_adccore`
+in the top directory of the adcc python package or the adcc source
+code tarball for details.

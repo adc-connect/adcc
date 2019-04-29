@@ -351,10 +351,16 @@ is not computed inside adcc, much rather external packages should be used
 for this purpose. Interfaces to seamlessly interact with pyscf, VeloxChem
 or molsturm are available, but other SCF codes or even statically computed
 data can be easily used as well.
+
+Notice, that only the adcc python and C++ source code are released under the
+terms of the GNU Lesser General Public License v3 (LGPLv3) license. This
+license does not apply to the libadccore.so binary file contained inside
+the directory '/adcc/lib/' of the distributed tarball. For further details
+see the file LICENSE_adccore.
 """.strip()  # TODO extend
 setup(
     name='adcc',
-    description='A python-based framework for running ADC calculations',
+    description='adcc:  Seamlessly connect your host program to ADC',
     long_description=long_description,
     #
     url='https://github.com/mfherbst/adcc',
@@ -369,6 +375,7 @@ setup(
         'Development Status :: 4 - Beta',
         'License :: OSI Approved :: '
         'GNU Lesser General Public License v3 (LGPLv3)',
+        'License :: Free For Educational Use',
         'Intended Audience :: Science/Research',
         "Topic :: Scientific/Engineering :: Chemistry",
         "Topic :: Education",
@@ -379,7 +386,10 @@ setup(
     ],
     #
     packages=find_packages(exclude=["*.test*", "test"]),
-    package_data={'adcc': ["lib/*.so", "lib/*.dylib"]},
+    package_data={'adcc': ["lib/*.so", "lib/*.dylib",
+                           "lib/libadccore_LICENSE",
+                           "lib/libadccore_thirdparty/ctx/*"],
+                  '': ["LICENSE*"]},
     ext_modules=ext_modules,
     zip_safe=False,
     #

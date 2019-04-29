@@ -1,5 +1,6 @@
 global-exclude test_*.py
 include README.md
+include LICENSE*
 
 # Include the files to be compiled into an extension
 include extension/*.cc
@@ -12,3 +13,5 @@ recursive-include extension/adccore/include/adcc/ *.hh
 recursive-include extension/adccore/include/ctx/ *.hh
 include adcc/lib/libadccore.so
 include adcc/lib/libadccore.dylib
+include adcc/lib/libadccore_LICENSE
+recursive-include adcc/lib/libadccore_thirdparty/ctx/ *

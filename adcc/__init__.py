@@ -172,7 +172,10 @@ def banner(colour=True):
     string += "+" + 78 * "-" + "+\n"
     string += string_component("adcc", __version__, __authors__,
                                email=__email__) + empty
-    string += string_component("adccore", adccore.__version__,
+    bt = ""
+    if adccore.__build_type__ not in ["Release"]:
+        bt = "  " + adccore.__build_type__
+    string += string_component("adccore", adccore.__version__ + bt,
                                adccore.__authors__) + empty
 
     string += "| Interfaced and integrated components: " + 39 * " " + "|\n"

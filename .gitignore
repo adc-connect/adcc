@@ -17,5 +17,4 @@
 .pytest_cache
 
 # adccore
-/extension/adccore/
 /adccore

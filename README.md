@@ -29,7 +29,7 @@ Once we have figured out how to do it, it should be as simple as
 ```
 # Install pybind first to suppress error messages during
 # installation of adcc.
-pip install pybind 11
+pip install pybind11
 pip install adcc
 ```
 Right now, the package is not
@@ -116,3 +116,11 @@ print()
 print(state[1].describe())
 ```
 More examples can be found in the `examples` folder.
+
+## Source code and binary license
+The `adcc` source code contained in this repository is released
+under the [GNU Lesser General Public License v3 (LGPLv3)](LICENSE).
+This license does, however, not apply to the binary
+`adccore.so` file distributed inside the folder `/adcc/lib/` of
+the release tarball. For its licensing terms,
+see [LICENSE_adccore](LICENSE_adccore).
