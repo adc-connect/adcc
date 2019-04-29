@@ -193,7 +193,7 @@ class Psi4HFProvider(HartreeFockProvider):
             print("allowed: ", spin_block_str)
             eri = self.build_eri_phys_asym_block(can_block=mo_spaces_chem)
             assert eri.shape == out.shape
-            out[:] = pref * eri
+            out[:] = eri
         else:
             out[:] = 0
 

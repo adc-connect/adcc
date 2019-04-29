@@ -49,17 +49,18 @@ class TestPyscfVsPsi4(unittest.TestCase):
     def run_pyscf_hf(self, mol):
         mf = scf.HF(mol)
         mf.conv_tol = 1e-12
+        mf.conv_tol_grad = 1e-7
         mf.kernel()
         return mf
 
     def base_test(self, psi4_res=None, pyscf_res=None):
-        state_psi4 = adcc.adc2(psi4_res, n_singlets=3, n_triplets=3)
-        state_pyscf = adcc.adc2(pyscf_res, n_singlets=3, n_triplets=3)
+        psi4_res = adcc.backends.import_scf_results(psi4_res)
+        state_psi4 = adcc.adc2(psi4_res, n_singlets=3)
+        state_pyscf = adcc.adc2(pyscf_res, n_singlets=3)
 
-        for psi4_adc_res, pyscf_adc_res in zip(state_psi4, state_pyscf):
-            for a, b in zip(psi4_adc_res.eigenvalues,
-                            pyscf_adc_res.eigenvalues):
-                np.testing.assert_allclose(a, b)
+        for a, b in zip(state_psi4.eigenvalues,
+                        state_pyscf.eigenvalues):
+            np.testing.assert_allclose(a, b)
 
     def test_water_sto3g_rhf(self):
         water_xyz = """

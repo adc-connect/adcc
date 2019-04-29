@@ -27,7 +27,7 @@ import unittest
 import adcc.backends
 import numpy as np
 
-from adcc.tmp_run_prelim import tmp_run_prelim
+from adcc.tmp_build_reference_state import tmp_build_reference_state
 
 from .eri_build_helper import _eri_phys_asymm_spin_allowed
 
@@ -122,7 +122,9 @@ class TestPsi4(unittest.TestCase):
         hfdata = adcc.backends.import_scf_results(scfres)
         assert hfdata.backend == "psi4"
 
-        prelim = tmp_run_prelim(hfdata, "adc2", n_guess_singles=1)
+        refstate = tmp_build_reference_state(
+            hfdata
+        )
 
         eri_chem = np.empty((hfdata.n_orbs, hfdata.n_orbs,
                              hfdata.n_orbs, hfdata.n_orbs))
@@ -130,12 +132,12 @@ class TestPsi4(unittest.TestCase):
         hfdata.fill_eri_ffff((sfull, sfull, sfull, sfull), eri_chem)
         eri_phys = eri_chem.transpose(0, 2, 1, 3)
         eri_asymm = eri_phys - eri_phys.transpose(1, 0, 2, 3)
-        
+
         n_orbs = hfdata.n_orbs
         n_alpha = hfdata.n_alpha
         n_beta = hfdata.n_beta
         n_orbs_alpha = hfdata.n_orbs_alpha
-        
+
         aro = slice(0, n_alpha, 1)
         bro = slice(n_orbs_alpha, n_orbs_alpha + n_beta, 1)
         arv = slice(n_alpha, n_orbs_alpha, 1)
@@ -172,7 +174,7 @@ class TestPsi4(unittest.TestCase):
             }
         }
         for s in space_names:
-            imported_asymm = prelim.reference.eri(s).to_ndarray()
+            imported_asymm = refstate.eri(s).to_ndarray()
             s_clean = s.replace("1", "")
             print(imported_asymm.shape)
             for allowed_spin in _eri_phys_asymm_spin_allowed:
