@@ -27,6 +27,9 @@ that is:
 ## Installation
 Once we have figured out how to do it, it should be as simple as
 ```
+# Install pybind first to suppress error messages during
+# installation of adcc.
+pip install pybind 11
 pip install adcc
 ```
 Right now, the package is not
