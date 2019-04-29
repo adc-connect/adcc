@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
-import adcc
 import numpy as np
 
 from scipy import constants
 from matplotlib import pyplot as plt
+
+import adcc
 
 from pyscf import gto, scf
 from pyscf.tools import cubegen
@@ -48,6 +49,8 @@ scfres = scf.RHF(mol)
 scfres.conv_tol = 1e-14
 scfres.conv_tol_grad = 1e-10
 scfres.kernel()
+
+print(adcc.banner())
 
 # Run an adc2 calculation:
 state = adcc.adc2(scfres, n_singlets=7, conv_tol=1e-8)
