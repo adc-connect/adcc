@@ -30,6 +30,9 @@ SpinBlockSlice = namedtuple('SpinBlockSlice', ['spins', 'slices'])
 # Helper class to contain a specific ERI permutation with the resp. sign
 EriPermutationSymm = namedtuple('EriPermutation', ['pref', 'transposition'])
 
+EriPermutationSpinAntiSymm = namedtuple('EriPermutationSpinAntiSymm',
+                                        ['pref1', 'pref2', 'transposition'])
+
 _valid_notations = ["chem", "phys", "phys_asym"]
 
 # ERIs in Chemists' notation
@@ -45,14 +48,14 @@ _chem_allowed = [EriPermutationSymm(1, [ii, jj, kk, ll]),  # (ij|kl)
                  EriPermutationSymm(1, [ii, jj, ll, kk]),  # (ij|lk)
                  EriPermutationSymm(1, [kk, ll, jj, ii])]  # (kl|ji)
 
-_spin_allowed_eri_phys_asymm = ["aaaa", "bbbb", "abab", "baba"]
+_spin_allowed_eri_phys_asymm = ["aaaa", "bbbb", "abab", "baba", "baab", "abba"]
 
-_eri_phys_asymm_spin_allowed = [EriPermutationSymm(1, "aaaa"),
-                                EriPermutationSymm(1, "bbbb"),
-                                EriPermutationSymm(1, "abab"),
-                                EriPermutationSymm(1, "baba"),
-                                EriPermutationSymm(1, "baab"),
-                                EriPermutationSymm(1, "abba"),
+_eri_phys_asymm_spin_allowed = [EriPermutationSpinAntiSymm(1, 1, "aaaa"),
+                                EriPermutationSpinAntiSymm(1, 1, "bbbb"),
+                                EriPermutationSpinAntiSymm(1, 0, "abab"),
+                                EriPermutationSpinAntiSymm(1, 0, "baba"),
+                                EriPermutationSpinAntiSymm(0, 1, "baab"),
+                                EriPermutationSpinAntiSymm(0, 1, "abba"),
                                 ]
 
 
@@ -61,8 +64,8 @@ def is_spin_allowed(spin_block, notation="phys_asym"):
         raise NotImplementedError("Only implemented for phys_asym")
     for symm in _eri_phys_asymm_spin_allowed:
         if spin_block == symm.transposition:
-            return True
-    return False
+            return True, symm
+    return False, 0.0
 
 
 class EriBlock:

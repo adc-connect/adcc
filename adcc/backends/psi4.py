@@ -90,7 +90,8 @@ class Psi4HFProvider(HartreeFockProvider):
                     eri[transposed_spin_slices] = sym_block_eri
         return eri
         
-    def build_eri_phys_asym_block(self, can_block=None, spin_block=None):
+    def build_eri_phys_asym_block(self, can_block=None, spin_block=None,
+                                  spin_symm=None):
         co = self.wfn.Ca_subset("AO", "OCC")
         cv = self.wfn.Ca_subset("AO", "VIR")
         block = can_block
@@ -101,7 +102,7 @@ class Psi4HFProvider(HartreeFockProvider):
         # (ik|jl) - (il|jk)
         chem_asym = tuple(coeffs_transform[i] for i in [0, 3, 2, 1])
         asymm = np.asarray(self.mints.mo_eri(*chem_asym)).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
-        eris = eri_phys - asymm
+        eris = spin_symm.pref1 * eri_phys - spin_symm.pref2 * asymm
         return eris
 
     def get_block_names_from_slices(self, slices):
@@ -173,11 +174,11 @@ class Psi4HFProvider(HartreeFockProvider):
         out[:] = np.hstack((orben_a, orben_a))
 
     def fill_fock_ff(self, slices, out):
-        # TODO: get Fock matrix from Veloxchem properly
         diagonal = np.empty(self.n_orbs)
         self.fill_orben_f(diagonal)
         out[:] = np.diag(diagonal)[slices]
 
+    # TODO: obsolete code, just used for testing
     def fill_eri_ffff(self, slices, out):
         if self.eri_ffff is None:
             self.eri_ffff = self.build_full_eri_ffff()
@@ -187,11 +188,12 @@ class Psi4HFProvider(HartreeFockProvider):
         mo_spaces, spin_block = self.get_block_names_from_slices(slices)
         mo_spaces_chem = "".join(np.take(np.array(mo_spaces), [0, 2, 1, 3]))
         spin_block_str = "".join(spin_block)
-        print(mo_spaces, mo_spaces_chem, spin_block_str)
-        pref = is_spin_allowed(spin_block_str)
-        if pref != 0:
-            print("allowed: ", spin_block_str)
-            eri = self.build_eri_phys_asym_block(can_block=mo_spaces_chem)
+        # print(mo_spaces, mo_spaces_chem, spin_block_str)
+        allowed, spin_symm = is_spin_allowed(spin_block_str)
+        if allowed:
+            # print("allowed: ", spin_block_str)
+            eri = self.build_eri_phys_asym_block(can_block=mo_spaces_chem,
+                                                 spin_symm=spin_symm)
             assert eri.shape == out.shape
             out[:] = eri
         else:

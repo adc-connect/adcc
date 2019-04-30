@@ -53,36 +53,36 @@ class TestPsi4(unittest.TestCase):
         hfdata = adcc.backends.import_scf_results(scfres)
         assert hfdata.backend == "psi4"
 
-        n_orbs_alpha = hfdata.n_orbs_alpha
+        # n_orbs_alpha = hfdata.n_orbs_alpha
         assert hfdata.restricted
         # TODO: implement
         # if hfdata.restricted:
         #     assert hfdata.spin_multiplicity != 0
         #     assert hfdata.n_alpha >= hfdata.n_beta
-        # 
+        #
         #     # Check SCF type fits
         #     # assert isinstance(scfres, (scf.rhf.RHF, scf.rohf.ROHF))
         #     # assert not isinstance(scfres, scf.uhf.UHF)
-        # 
+        #
         #     assert hfdata.n_orbs_alpha == hfdata.n_orbs_beta
         #     assert np.all(hfdata.orben_f[:n_orbs_alpha] ==
         #                   hfdata.orben_f[n_orbs_alpha:])
-        # 
+        #
         #     mo_occ = (scfres.mo_occ, scfres.mo_occ)
         #     mo_energy = (scfres.mo_energy, scfres.mo_energy)
         # else:
         #     assert hfdata.spin_multiplicity == 0
-        # 
+        #
         #     # Check SCF type fits
         #     # assert isinstance(scfres, scf.uhf.UHF)
-        # 
+        #
         #     mo_occ = scfres.mo_occ
         #     mo_energy = scfres.mo_energy
-        # 
+        #
         # # Check n_alpha and n_beta
         # assert hfdata.n_alpha == np.sum(mo_occ[0] > 0)
         # assert hfdata.n_beta == np.sum(mo_occ[1] > 0)
-        # 
+        #
         # # Check the lowest n_alpha / n_beta orbitals are occupied
         # occ_a = [mo_occ[0][mo_energy[0] == ene]
         #          for ene in hfdata.orben_f[:hfdata.n_alpha]]
@@ -173,22 +173,22 @@ class TestPsi4(unittest.TestCase):
                            n_orbs - (n_alpha + n_beta), 1),
             }
         }
+
         for s in space_names:
             imported_asymm = refstate.eri(s).to_ndarray()
             s_clean = s.replace("1", "")
-            print(imported_asymm.shape)
             for allowed_spin in _eri_phys_asymm_spin_allowed:
                 sl = [lookuptable[x] for x in list(s_clean)]
                 sl = [sl[x][y] for x, y in enumerate(list(allowed_spin.transposition))]
-                
                 sl2 = [lookuptable_prelim[x] for x in list(s_clean)]
                 sl2 = [sl2[x][y] for x, y in enumerate(list(allowed_spin.transposition))]
-                
                 sl = tuple(sl)
                 sl2 = tuple(sl2)
                 np.testing.assert_almost_equal(eri_asymm[sl],
                                                imported_asymm[sl2],
-                                               err_msg="ERIs wrong in space {} and spin block {}".format(s, allowed_spin))
+                                               err_msg="""ERIs wrong in """
+                                               """space {} and spin """
+                                               """block {}""".format(s, allowed_spin))
 
     def test_water_sto3g_rhf(self):
         mol = psi4.geometry("""
@@ -199,5 +199,5 @@ class TestPsi4(unittest.TestCase):
             units au
             """)
         wfn = self.run_hf(mol, basis="sto-3g")
+        self.base_test(wfn)
         self.eri_asymm_construction_test(wfn)
-        # self.base_test(wfn)
