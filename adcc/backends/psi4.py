@@ -25,9 +25,11 @@ from libadcc import HartreeFockProvider
 import numpy as np
 import psi4
 
+from .. import memory_pool
 from .eri_build_helper import (SpinBlockSlice,
                                get_symmetry_equivalent_transpositions_for_block,
-                               is_spin_allowed)
+                               split_space, is_spin_allowed,
+                               BlockSliceMappingHelper)
 
 
 class Psi4HFProvider(HartreeFockProvider):
@@ -45,6 +47,11 @@ class Psi4HFProvider(HartreeFockProvider):
         }
         self.mints = psi4.core.MintsHelper(self.wfn.basisset())
         self.eri_ffff = None
+        self.eri_ffff_asymm = None
+        self.block_slice_mapping = None
+
+        # TODO: do this in a clever way
+        self.eri_cache = {}
 
     def build_full_eri_ffff(self):
         n_orbs = self.n_orbs
@@ -89,23 +96,42 @@ class Psi4HFProvider(HartreeFockProvider):
                     transposed_spin_slices = tuple(non_zero_spin_block.slices[i] for i in tsym_block)
                     eri[transposed_spin_slices] = sym_block_eri
         return eri
-        
+
+    def compute_mo_eri(self, block, coeffs):
+        if block in self.eri_cache:
+            return self.eri_cache[block]
+        eri = np.asarray(self.mints.mo_eri(*coeffs))
+        self.eri_cache[block] = eri
+        return eri
+
     def build_eri_phys_asym_block(self, can_block=None, spin_block=None,
                                   spin_symm=None):
         co = self.wfn.Ca_subset("AO", "OCC")
         cv = self.wfn.Ca_subset("AO", "VIR")
         block = can_block
+        asym_block = "".join([block[i] for i in [0, 3, 2, 1]])
         coeffs_transform = tuple(co if x == "O" else cv for x in block)
-        can_block_integrals = np.asarray(self.mints.mo_eri(*coeffs_transform))
-
-        eri_phys = can_block_integrals.transpose(0, 2, 1, 3)
-        # (ik|jl) - (il|jk)
-        chem_asym = tuple(coeffs_transform[i] for i in [0, 3, 2, 1])
-        asymm = np.asarray(self.mints.mo_eri(*chem_asym)).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
-        eris = spin_symm.pref1 * eri_phys - spin_symm.pref2 * asymm
+        # TODO: cleanup a bit
+        if spin_symm.pref1 != 0 and spin_symm.pref2 != 0:
+            can_block_integrals = self.compute_mo_eri(block, coeffs_transform)
+            eri_phys = can_block_integrals.transpose(0, 2, 1, 3)
+            # (ik|jl) - (il|jk)
+            chem_asym = tuple(coeffs_transform[i] for i in [0, 3, 2, 1])
+            asymm = self.compute_mo_eri(asym_block,
+                                        chem_asym).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
+            eris = spin_symm.pref1 * eri_phys - spin_symm.pref2 * asymm
+        elif spin_symm.pref1 != 0 and spin_symm.pref2 == 0:
+            can_block_integrals = self.compute_mo_eri(block, coeffs_transform)
+            eris = spin_symm.pref1 * can_block_integrals.transpose(0, 2, 1, 3)
+        elif spin_symm.pref1 == 0 and spin_symm.pref2 != 0:
+            chem_asym = tuple(coeffs_transform[i] for i in [0, 3, 2, 1])
+            asymm = self.compute_mo_eri(asym_block,
+                                        chem_asym).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
+            eris = - spin_symm.pref2 * asymm
         return eris
 
-    def get_block_names_from_slices(self, slices):
+    def prepare_block_slice_mapping(self):
+        blksz = memory_pool.tensor_block_size
         n_orbs = self.n_orbs
         n_alpha = self.n_alpha
         n_beta = self.n_beta
@@ -115,20 +141,8 @@ class Psi4HFProvider(HartreeFockProvider):
         bro = slice(n_orbs_alpha, n_orbs_alpha + n_beta, 1)
         arv = slice(n_alpha, n_orbs_alpha, 1)
         brv = slice(n_orbs_alpha + n_beta, n_orbs, 1)
-        block2slice = {
-            "oa": aro,
-            "ob": bro,
-            "va": arv,
-            "vb": brv,
-        }
-        requested_block = []
-        for s in slices:
-            for k in block2slice:
-                if s == block2slice[k]:
-                    requested_block.append(k)
-        mo_spaces = [i[0].upper() for i in requested_block]
-        spin_blocks = [i[1] for i in requested_block]
-        return (mo_spaces, spin_blocks)
+        self.block_slice_mapping = BlockSliceMappingHelper(blksz, aro, bro,
+                                                           arv, brv)
 
     def get_n_alpha(self):
         return self.wfn.nalpha()
@@ -185,17 +199,36 @@ class Psi4HFProvider(HartreeFockProvider):
         out[:] = self.eri_ffff[slices]
 
     def fill_eri_phys_asym_ffff(self, slices, out):
-        mo_spaces, spin_block = self.get_block_names_from_slices(slices)
+        if not self.block_slice_mapping:
+            self.prepare_block_slice_mapping()
+        requested_blocks, requested_slices_idx = self.block_slice_mapping.slices_to_block_info(slices)
+
+        mo_spaces = [i.block_name[0].upper() for i in requested_blocks]
+        spin_block = [i.block_name[1] for i in requested_blocks]
+
+        # get the correct slices for the COMPUTED blocks
+        comp_block_slices = []
+        for blk, sl_idx in zip(requested_blocks, requested_slices_idx):
+            start = blk.cum_slice_size(sl_idx)
+            stop = start + blk.slice_size(sl_idx)
+            comp_block_slices.append(slice(start, stop, 1))
+        comp_block_slices = tuple(comp_block_slices)
+
+        if len(mo_spaces) != 4:
+            raise RuntimeError("Could not assign MO spaces from slice"
+                               " {},"
+                               " found {} and spin {}".format(slices,
+                                                              mo_spaces,
+                                                              spin_block))
         mo_spaces_chem = "".join(np.take(np.array(mo_spaces), [0, 2, 1, 3]))
         spin_block_str = "".join(spin_block)
         # print(mo_spaces, mo_spaces_chem, spin_block_str)
         allowed, spin_symm = is_spin_allowed(spin_block_str)
         if allowed:
-            # print("allowed: ", spin_block_str)
+            # TODO: cache ERIs nicely
             eri = self.build_eri_phys_asym_block(can_block=mo_spaces_chem,
                                                  spin_symm=spin_symm)
-            assert eri.shape == out.shape
-            out[:] = eri
+            out[:] = eri[comp_block_slices]
         else:
             out[:] = 0
 
@@ -209,6 +242,7 @@ class Psi4HFProvider(HartreeFockProvider):
 
     def flush_cache(self):
         self.eri_ffff = None
+        self.eri_cache = None
 
 
 def import_scf(scfdrv):

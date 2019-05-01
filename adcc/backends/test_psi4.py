@@ -29,7 +29,7 @@ import numpy as np
 
 from adcc.tmp_build_reference_state import tmp_build_reference_state
 
-from .eri_build_helper import _eri_phys_asymm_spin_allowed
+from .eri_build_helper import _eri_phys_asymm_spin_allowed_prefactors
 
 try:
     import psi4
@@ -119,6 +119,8 @@ class TestPsi4(unittest.TestCase):
             np.testing.assert_almost_equal(eri_perm, eri)
 
     def eri_asymm_construction_test(self, scfres):
+        adcc.memory_pool.initialise(max_memory=4024 * 1024 * 1024,
+                                    tensor_block_size=16, allocator="standard")
         hfdata = adcc.backends.import_scf_results(scfres)
         assert hfdata.backend == "psi4"
 
@@ -175,9 +177,10 @@ class TestPsi4(unittest.TestCase):
         }
 
         for s in space_names:
+            print(s)
             imported_asymm = refstate.eri(s).to_ndarray()
             s_clean = s.replace("1", "")
-            for allowed_spin in _eri_phys_asymm_spin_allowed:
+            for allowed_spin in _eri_phys_asymm_spin_allowed_prefactors:
                 sl = [lookuptable[x] for x in list(s_clean)]
                 sl = [sl[x][y] for x, y in enumerate(list(allowed_spin.transposition))]
                 sl2 = [lookuptable_prelim[x] for x in list(s_clean)]
@@ -198,6 +201,6 @@ class TestPsi4(unittest.TestCase):
             symmetry c1
             units au
             """)
-        wfn = self.run_hf(mol, basis="sto-3g")
-        self.base_test(wfn)
+        wfn = self.run_hf(mol, basis="cc-pvdz")
+        # self.base_test(wfn)
         self.eri_asymm_construction_test(wfn)

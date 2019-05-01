@@ -45,4 +45,4 @@ adcc.memory_pool.initialise(max_memory=256 * 1024 * 1024)
 
 # Run an adc2 calculation:
 psi4_result = adcc.backends.import_scf_results(wfn)
-state = adcc.adc2(psi4_result, n_singlets=5)
+state = adcc.cvs_adc2(psi4_result, n_singlets=5, n_core_orbitals=1)

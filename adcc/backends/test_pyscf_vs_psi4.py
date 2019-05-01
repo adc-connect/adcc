@@ -75,12 +75,12 @@ class TestPyscfVsPsi4(unittest.TestCase):
             symmetry c1
             units au
             """.format(water_xyz))
-        wfn = self.run_psi_hf(mol, basis="sto-3g")
+        wfn = self.run_psi_hf(mol, basis="cc-pvdz")
 
         # run pyscf
         mol = gto.M(
             atom=water_xyz,
-            basis='sto-3g',
+            basis='cc-pvdz',
             unit="Bohr"
         )
         mf = self.run_pyscf_hf(mol)
