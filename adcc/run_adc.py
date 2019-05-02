@@ -30,7 +30,6 @@ from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod
 from .caching_policy import DefaultCachingPolicy
 from .tmp_build_reference_state import tmp_build_reference_state
-
 from .solver.davidson import jacobi_davidson
 from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
@@ -96,7 +95,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     or a smaller number if the number of excitation is estimated to be less
     than the outcome of above formula.
 
-    @param n_guess doubles
+    @param n_guesses_doubles
     Number of guesses to derive from the doubles block. By default none
     unless n_guesses as explicitly given or automatically determined is larger
     than the number of singles guesses, which can be possibly found.
