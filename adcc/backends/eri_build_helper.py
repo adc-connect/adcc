@@ -121,105 +121,34 @@ def get_symmetry_equivalent_transpositions_for_block(block, notation="chem"):
     return trans
 
 
-class BlockInfo:
-    def __init__(self, block_name):
-        self._block_name = block_name
-        self.slices = []
-
-    @property
-    def nslices(self):
-        return len(self.slices)
-
-    def slice_size(self, i):
-        return self.slices[i].stop - self.slices[i].start
-
-    def cum_slice_size(self, i):
-        return sum(self.slice_size(j) for j in range(i))
-
-    @property
-    def block_name(self):
-        return self._block_name
-
-    def __repr__(self):
-        return self.block_name
-
-
 class BlockSliceMappingHelper:
     """
-    Helper class to manage split up blocks of MO spaces (
-    originating from the bispace splitting based on the tensor_block_size
-    )
-    This class will translate an incoming slice to the respective blocks
-    and the respective 'sub-slice'.
-
-    Example (Water, cc-pvdz, block_size=16):
-    When the ooov block is requested, we will receive the slices
-        ((0,5,1), (0,5,1), (0,5,1), (5,15,1))
-    and in a separate request
-        ((0,5,1), (0,5,1), (0,5,1), (15,24,1))
-    The virtual space is split up into two parts here as the number of
-    virtual MOs exceeds the block sice. The BlockSliceMappingHelper
-    will then tell you in each call that the ooov block was requested, and
-    the respective 'sub-slice'.
     """
-    def __init__(self, block_size, aro, bro, arv, brv):
+    def __init__(self, aro, bro,
+                 arv, brv):
         self.block2slice = {
             "oa": aro,
             "ob": bro,
             "va": arv,
             "vb": brv,
         }
-        self.blocks = []
-        for block in self.block2slice:
-            blck_info = BlockInfo(block)
-            split_slices = split_space(blocksize=block_size,
-                                       space_slice=self.block2slice[block])
-            if isinstance(split_slices, list):
-                    blck_info.slices = split_slices
-            else:
-                blck_info.slices = [split_slices]
-            self.blocks.append(blck_info)
 
-    def slices_to_block_info(self, slices):
+    def map_slices_to_blocks_and_spins(self, slices):
         requested_blocks = []
-        requested_slices_idx = []
+        requested_spins = []
+        comp_block_slices = []
         for s in slices:
-            for blk in self.blocks:
-                for idx, k in enumerate(blk.slices):
-                    if s == k:
-                        requested_blocks.append(blk)
-                        requested_slices_idx.append(idx)
-        return requested_blocks, requested_slices_idx
-
-
-def split_space(blocksize, space_slice):
-    norbs = space_slice.stop - space_slice.start
-    nopb = blocksize
-
-    if nopb > 1 and nopb % 2:
-        nopb -= 1
-
-    nblks = norbs / nopb + 1 if norbs % nopb else norbs / nopb
-    nblks = int(nblks)
-
-    if nblks == 1:
-        return space_slice
-
-    pos = space_slice.start
-    last_pos = pos
-    remaining = norbs
-    split_space_slices = []
-    for i in range(0, nblks - 1):
-        sz = int(remaining / (nblks - i))
-        if sz > 1 and sz % 2 and nblks - i > 1:
-            if sz < nopb:
-                sz += 1
-            else:
-                sz -= 1
-        remaining -= sz
-        pos += sz
-        split_space_slices.append(slice(last_pos, pos, 1))
-        last_pos = pos
-
-    split_space_slices.append(slice(pos, space_slice.stop, 1))
-    return split_space_slices
+            slice_range = range(s.start, s.stop, 1)
+            for block in self.block2slice:
+                test_slice = self.block2slice[block]
+                test_slice_range = range(test_slice.start,
+                                         test_slice.stop, 1)
+                if all(i in test_slice_range for i in slice_range):
+                    requested_blocks.append(block[0].upper())
+                    requested_spins.append(block[1])
+                    start_offset = s.start - test_slice.start
+                    comp_block_slice = slice(start_offset,
+                                             s.stop - s.start + start_offset,
+                                             1)
+                    comp_block_slices.append(comp_block_slice)
+        return requested_blocks, requested_spins, tuple(comp_block_slices)

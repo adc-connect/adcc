@@ -27,7 +27,9 @@ from mpi4py import MPI
 import veloxchem as vlx
 
 from .eri_build_helper import (SpinBlockSlice,
-                               get_symmetry_equivalent_transpositions_for_block)
+                               get_symmetry_equivalent_transpositions_for_block,
+                               is_spin_allowed,
+                               BlockSliceMappingHelper)
 
 
 class VeloxChemHFProvider(HartreeFockProvider):
@@ -50,11 +52,77 @@ class VeloxChemHFProvider(HartreeFockProvider):
         }
         self.moints_drv = vlx.MOIntegralsDriver()
         self.eri_ffff = None
+        self.block_slice_mapping = None
 
-    def compute_eri_block(self, block):
+        # TODO: do caching in a clever way
+        self.eri_cache = {}
+
+    def compute_eri_block_vlx(self, block):
         return self.moints_drv.compute(self.molecule, self.ao_basis,
                                        self.mol_orbs, block,
                                        self.mpi_comm, self.ostream)
+
+    def compute_mo_eri(self, block):
+        # if block in self.eri_cache:
+        #     return self.eri_cache[block]
+        n_alpha = self.n_alpha
+        n_orbs_alpha = self.n_orbs_alpha
+
+        blck = self.moints_drv.compute(self.molecule, self.ao_basis,
+                                       self.mol_orbs, block,
+                                       self.mpi_comm, self.ostream)
+        indices = [n_alpha if x == "O" else n_orbs_alpha - n_alpha
+                   for x in block]
+        if block != "OOVV":
+            indices = [indices[i] for i in [0, 2, 1, 3]]
+
+        # make canonical integral block
+        can_block_integrals = np.zeros((indices[0], indices[1],
+                                        indices[2], indices[3]))
+        # offset to retrieve integrals
+        ioffset = n_alpha if block == "VVVV" else 0
+        joffset = n_alpha if (block == "OVVV" or block == "VVVV") else 0
+        # fill canonical block
+        for i in range(ioffset, indices[0] + ioffset):
+            for j in range(joffset, indices[1] + joffset):
+                ij = blck.to_numpy(vlx.TwoIndexes(i, j))
+                can_block_integrals[i - ioffset,
+                                    j - joffset, :, :] = ij[:, :]
+        self.eri_cache[block] = can_block_integrals
+        return can_block_integrals
+
+    def build_eri_phys_asym_block(self, can_block=None, spin_block=None,
+                                  spin_symm=None):
+        block = can_block
+        asym_block = "".join([block[i] for i in [0, 3, 2, 1]])
+        print(block, asym_block)
+        # TODO: cleanup a bit
+        if spin_symm.pref1 != 0 and spin_symm.pref2 != 0:
+            can_block_integrals = self.compute_mo_eri(block)
+            eri_phys = can_block_integrals.transpose(0, 2, 1, 3)
+            # (ik|jl) - (il|jk)
+            asymm = self.compute_mo_eri(asym_block).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
+            eris = spin_symm.pref1 * eri_phys - spin_symm.pref2 * asymm
+        elif spin_symm.pref1 != 0 and spin_symm.pref2 == 0:
+            can_block_integrals = self.compute_mo_eri(block)
+            eris = spin_symm.pref1 * can_block_integrals.transpose(0, 2, 1, 3)
+        elif spin_symm.pref1 == 0 and spin_symm.pref2 != 0:
+            asymm = self.compute_mo_eri(asym_block).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
+            eris = - spin_symm.pref2 * asymm
+        return eris
+
+    def prepare_block_slice_mapping(self):
+        n_orbs = self.n_orbs
+        n_alpha = self.n_alpha
+        n_beta = self.n_beta
+        n_orbs_alpha = self.n_orbs_alpha
+
+        aro = slice(0, n_alpha, 1)
+        bro = slice(n_orbs_alpha, n_orbs_alpha + n_beta, 1)
+        arv = slice(n_alpha, n_orbs_alpha, 1)
+        brv = slice(n_orbs_alpha + n_beta, n_orbs, 1)
+        self.block_slice_mapping = BlockSliceMappingHelper(aro, bro,
+                                                           arv, brv)
 
     def build_full_eri_ffff(self):
         n_orbs = self.n_orbs
@@ -70,7 +138,7 @@ class VeloxChemHFProvider(HartreeFockProvider):
 
         blocks = ["OOVV", "OVOV", "OOOV", "OOOO", "OVVV", "VVVV"]
         for b in blocks:
-            blck = self.compute_eri_block(b)
+            blck = self.compute_eri_block_vlx(b)
             indices = [n_alpha if x == "O" else n_orbs_alpha - n_alpha
                        for x in b]
             slices_alpha = [aro if x == "O" else arv for x in b]
@@ -143,13 +211,13 @@ class VeloxChemHFProvider(HartreeFockProvider):
         return self.molecule.get_multiplicity()
 
     def get_n_orbs_alpha(self):
-        return self.mol_orbs.get_number_mos()
+        return self.mol_orbs.number_mos()
 
     def get_n_orbs_beta(self):
-        return self.mol_orbs.get_number_mos()
+        return self.mol_orbs.number_mos()
 
     def get_n_bas(self):
-        return self.mol_orbs.get_number_aos()
+        return self.mol_orbs.number_aos()
 
     def fill_orbcoeff_fb(self, out):
         mo_coeff_a = self.mol_orbs.alpha_to_numpy()
@@ -173,7 +241,34 @@ class VeloxChemHFProvider(HartreeFockProvider):
             self.eri_ffff = self.build_full_eri_ffff()
         out[:] = self.eri_ffff[slices]
 
+    def fill_eri_phys_asym_ffff(self, slices, out):
+        if not self.block_slice_mapping:
+            self.prepare_block_slice_mapping()
+        mo_spaces, \
+            spin_block, \
+            comp_block_slices \
+            = self.block_slice_mapping.map_slices_to_blocks_and_spins(slices)
+        if len(mo_spaces) != 4:
+            raise RuntimeError("Could not assign MO spaces from slice"
+                               " {},"
+                               " found {} and spin {}".format(slices,
+                                                              mo_spaces,
+                                                              spin_block))
+        mo_spaces_chem = "".join(np.take(np.array(mo_spaces), [0, 2, 1, 3]))
+        spin_block_str = "".join(spin_block)
+        print(mo_spaces, mo_spaces_chem, spin_block_str)
+        allowed, spin_symm = is_spin_allowed(spin_block_str)
+        if allowed:
+            # TODO: cache ERIs nicely
+            eri = self.build_eri_phys_asym_block(can_block=mo_spaces_chem,
+                                                 spin_symm=spin_symm)
+            out[:] = eri[comp_block_slices]
+        else:
+            out[:] = 0
+
     # TODO: overload eri_asym_ffff, has_eri_asym_ffff
+    def has_eri_phys_asym_ffff(self):
+        return True
 
     def get_energy_term_keys(self):
         # TODO: implement full set of keys

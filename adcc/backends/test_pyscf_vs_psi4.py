@@ -56,6 +56,7 @@ class TestPyscfVsPsi4(unittest.TestCase):
     def base_test(self, psi4_res=None, pyscf_res=None):
         psi4_res = adcc.backends.import_scf_results(psi4_res)
         state_psi4 = adcc.adc2(psi4_res, n_singlets=3)
+        pyscf_res = adcc.backends.import_scf_results(pyscf_res)
         state_pyscf = adcc.adc2(pyscf_res, n_singlets=3)
 
         for a, b in zip(state_psi4.eigenvalues,
