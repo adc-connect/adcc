@@ -95,6 +95,9 @@ PYBIND11_MODULE(libadcc, m) {
     d["version"]     = comp.version;
     d["description"] = comp.description;
     d["authors"]     = comp.authors;
+    d["doi"]         = comp.doi;
+    d["website"]     = comp.website;
+    d["licence"]     = comp.licence;
     components.append(d);
   }
   m.attr("__components__") = components;

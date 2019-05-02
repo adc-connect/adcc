@@ -20,6 +20,8 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import sys
+
 from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod
 from .functions import (add, contract, copy, divide, dot, empty_like,
@@ -54,7 +56,7 @@ __all__ = ["run_adc", "AdcMatrix", "AdcMethod",
            "banner"]
 
 __version__ = "0.9.2"
-__licence__ = "LGPL v3"
+__license__ = "LGPL v3"
 __authors__ = "Michael F. Herbst and Maximilian Scheurer"
 __email__ = "info@michael-herbst.com"
 # feel free to add your name above
@@ -110,7 +112,7 @@ def cvs_adc2x(*args, **kwargs):
     return run_adc(*args, **kwargs, method="cvs-adc2x")
 
 
-def banner(colour=True):
+def banner(colour=sys.stdout.isatty(), show_doi=True, show_website=True):
     """
     Return a string, which is a descriptive banner for this
     adcc version, its components and the respective authors.
@@ -121,25 +123,29 @@ def banner(colour=True):
         yellow = '\033[93m'
         green = '\033[92m'
         cyan = '\033[96m'
+        grey = '\033[38;5;248m'
         white = '\033[0m'
     else:
         yellow = ''
         green = ''
         cyan = ''
+        grey = ''
         white = ''
 
     empty = "|" + 78 * " " + "|\n"
     maxlen = max(7, max(len(comp["name"]) for comp in adccore.__components__))
 
     def string_component(name, version, authors=None, description=None,
-                         email=None):
-        fmt = "|    " + green + "{0:<" + str(maxlen) + "s}" + white
-        fmt += "  {1:7s}  " + yellow + "{2:<" + str(62 - maxlen) + "}"
+                         email=None, doi=None, website=None, licence=None):
+        fmt = "|   " + green + "{0:<" + str(maxlen) + "s}" + white
+        fmt += "  {1:8s}  " + yellow + "{2:<" + str(62 - maxlen) + "}"
         fmt += white + " |"
-        fmt_author = "|      " + maxlen * " " + "{0:7s}  {1:<"
-        fmt_author += str(62 - maxlen) + "} |"
-        fmt_email = "|      " + maxlen * " " + "{0:7s}  " + cyan
+        fmt_email = "|     " + maxlen * " " + "{0:8s}  " + cyan
         fmt_email += "{1:<" + str(62 - maxlen) + "}" + white + " |"
+        fmt_cite = "|     " + maxlen * " " + "{0:8s}  " + grey
+        fmt_cite += "{1:<" + str(62 - maxlen) + "}" + white + " |"
+        fmt_other = "|     " + maxlen * " " + "{0:8s}  {1:<"
+        fmt_other += str(62 - maxlen) + "} |"
 
         string = fmt.format(name, "version", version) + "\n"
         if authors:
@@ -160,7 +166,11 @@ def banner(colour=True):
                 joined = ", ".join(buf)
                 if i != len(groups) - 1:
                     joined += ","
-                string += fmt_author.format(authors, joined) + "\n"
+                string += fmt_other.format(authors, joined) + "\n"
+        if doi and show_doi:
+            string += fmt_cite.format("citation", "DOI " + doi) + "\n"
+        if website and show_website:
+            string += fmt_other.format("website", website) + "\n"
         if email:
             string += fmt_email.format("email", email) + "\n"
         return string
@@ -170,16 +180,21 @@ def banner(colour=True):
         "adcc:  Seamlessly connect your host program to ADC"
     )
     string += "+" + 78 * "-" + "+\n"
+    string += empty
     string += string_component("adcc", __version__, __authors__,
-                               email=__email__) + empty
+                               email=__email__, licence=__license__)
+    string += empty
     bt = ""
     if adccore.__build_type__ not in ["Release"]:
         bt = "  " + adccore.__build_type__
     string += string_component("adccore", adccore.__version__ + bt,
-                               adccore.__authors__) + empty
+                               adccore.__authors__, licence=__license__)
+    string += empty
 
-    string += "| Interfaced and integrated components: " + 39 * " " + "|\n"
+    string += "+{:-^78s}+\n".format("  Integrated third-party components  ")
     for comp in adccore.__components__:
+        if show_doi or show_website:
+            string += empty
         string += string_component(**comp)
 
     string += "+" + 78 * "-" + "+"
