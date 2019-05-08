@@ -1,0 +1,131 @@
+//
+// Copyright (C) 2019 by the adcc authors
+//
+// This file is part of adcc.
+//
+// adcc is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// adcc is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with adcc. If not, see <http://www.gnu.org/licenses/>.
+//
+
+#include <adcc/Symmetry.hh>
+#include <adcc/make_symmetry.hh>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+
+namespace adcc {
+namespace py_iface {
+
+namespace py = pybind11;
+
+void export_Symmetry(py::module& m) {
+
+  py::class_<Symmetry, std::shared_ptr<Symmetry>>(
+        m, "Symmetry", "Container for Tensor symmetry information")
+        .def(py::init<std::shared_ptr<const MoSpaces>, const std::string&>(),
+             "Construct a Symmetry class from an MoSpaces object and the identifier for "
+             "the space (e.g. o1o1, v1o1, o3v2o1v1, ...)")
+        //
+        .def_property_readonly("mospaces", &Symmetry::mospaces_ptr,
+                               "Return the MoSpaces object supplied on initialisation")
+        .def_property_readonly("space", &Symmetry::space,
+                               "Return the space supplied on initialisation.")
+        .def_property_readonly("ndim", &Symmetry::ndim,
+                               "Return the number of dimensions.")
+        .def_property_readonly(
+              "shape", &Symmetry::shape,
+              "Return the shape of tensors constructed from this symmetry.")
+        .def_property_readonly("empty", &Symmetry::empty,
+                               "Is the symmetry empty (i.e. noy symmetry setup)")
+        .def("clear", &Symmetry::clear, "Clear the symmetry.")
+        .def("describe", &Symmetry::describe, "Return a descriptive string.")
+        //
+        .def_property("irreps_allowed", &Symmetry::irreps_allowed,
+                      &Symmetry::set_irreps_allowed,
+                      "The list of irreducible representations, for which the tensor "
+                      "shall be non-zero. If this is *not* set, i.e. an empty list, all "
+                      "irreps will be allowed.")
+        .def_property(
+              "permutations", &Symmetry::equivalent_permutations,
+              &Symmetry::set_equivalent_permutations,
+              "The list of index permutations, which do not change the tensor.\n"
+              "A minus may be used to indicate anti-symmetric\n"
+              "permutations with respect to the first (reference) permutation.\n"
+              "\n"
+              "For example the list [\"ij\", \"ji\"] defines a symmetric matrix\n"
+              "and [\"ijkl\", \"-jikl\", \"-ijlk\", \"klij\"] the symmetry of the ERI\n"
+              "tensor. Not all permutations need to be given to fully describe\n"
+              "the symmetry. Beware that the check for errors and conflicts\n"
+              "is only rudimentary at the moment.")
+        .def_property("spin_block_maps", &Symmetry::equivalent_spin_blocks,
+                      &Symmetry::set_equivalent_spin_blocks,
+                      "A list of tuples of the form (\"aaaa\", \"bbbb\", -1.0), i.e.\n"
+                      "two spin blocks followed by a factor. This maps the second onto "
+                      "the first\n"
+                      "with a factor of -1.0 between them.")
+        .def_property("spin_blocks_forbidden", &Symmetry::forbidden_spin_blocks,
+                      &Symmetry::set_forbidden_spin_blocks,
+                      "List of spin-blocks, which are marked forbidden (i.e. enforce "
+                      "them to stay zero).\n"
+                      "Blocks are given as a string in the letters 'a' and 'b', e.g. "
+                      "[\"aaba\", \"abba\"]")
+        //
+        ;
+
+  //
+  // Factories for common cases
+  //
+  m.def("make_symmetry_orbital_energies", &make_symmetry_orbital_energies,
+        "Return the Symmetry object like it would be set up for the passed subspace \n"
+        "of the orbital energies tensor.\n"
+        "\n"
+        "  mospaces    MoSpaces object\n"
+        "  space       space string (e.g. o1)");
+
+  m.def("make_symmetry_orbital_coefficients", &make_symmetry_orbital_coefficients,
+        "Return the Symmetry object like it would be set up for the passed subspace \n"
+        "of the orbital coefficients tensor.\n"
+        "\n"
+        "  mospaces    MoSpaces object\n"
+        "  space       Space string (e.g. o1b)\n"
+        "  n_bas       Number of basis functions\n"
+        "  blocks      Spin blocks to include. Valid are \"ab\", \"a\" and \"b\".");
+
+  m.def("make_symmetry_eri", &make_symmetry_eri,
+        "Return the Symmetry object like it would be set up for the passed subspace \n"
+        "of the electron-repulsion tensor.\n"
+        "\n"
+        "  mospaces    MoSpaces object\n"
+        "  space       Space string (e.g. o1v1o1v1)\n");
+
+  m.def("make_symmetry_operator", &make_symmetry_operator,
+        "Return the Symmetry object for an orbital subspace block of a one-particle "
+        "operator\n"
+        "\n"
+        "  mospaces    MoSpaces object\n"
+        "  space       Space string (e.g. o1v1)\n"
+        "  symmetric   Is the tensor symmetric (only in effect if both subspaces\n"
+        "              of the space string are identical)\n"
+        "  cartesian_transformation\n"
+        "              The cartesian function according to which the operator "
+        "transforms.\n"
+        "\n"
+        "Valid cartesian_transformation values include:\n"
+        "     \"1\"                   Totally symmetric (default)\n"
+        "     \"x\", \"y\", \"z\"         Coordinate axis\n"
+        "     \"xx\", \"xy\", \"yz\" ...  Products of two coordinate axis\n"
+        "     \"Rx\", \"Ry\", \"Rz\"      Rotations about the coordinate axis\n");
+}
+
+}  // namespace py_iface
+}  // namespace adcc
+

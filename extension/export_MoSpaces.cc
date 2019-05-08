@@ -31,12 +31,13 @@ void export_MoSpaces(py::module& m) {
         m, "MoSpaces",
         "Class setting up the molecular orbital index spaces and subspaces and exposing "
         "information about them.")
-        .def(py::init<const HartreeFockSolution_i&, size_t, std::vector<size_t>,
-                      std::vector<size_t>, std::vector<size_t>>(),
-             "Construct an MoSpaces object from a HartreeFockSolution_i and a maximal "
-             "block\n"
-             "size to be used for the tensors and three list parameters:\n"
+        .def(py::init<const HartreeFockSolution_i&, std::shared_ptr<const AdcMemory>,
+                      std::vector<size_t>, std::vector<size_t>, std::vector<size_t>>(),
+             "Construct an MoSpaces object from a HartreeFockSolution_i, a pointer to\n"
+             "an AdcMemory object.\n"
              "\n"
+             "adcmem_ptr        ADC memory keep-alive object to be used in all Tensors\n"
+             "                  constructed using this MoSpaces object.\n"
              "core_orbitals     List of orbitals indices (in the full fock space, "
              "original\n"
              "                  ordering of the hf object), which defines the orbitals "
@@ -69,12 +70,21 @@ void export_MoSpaces(py::module& m) {
         .def_readonly("irreps", &MoSpaces::irreps,
                       "The irreducible representations in the point group to "
                       "which this class has been set up.")
+        .def_readonly("restricted", &MoSpaces::restricted,
+                      "Are the orbitals resulting from a restricted SCF calculation, "
+                      "such that alpha and beta electron share the same spatial part.")
         .def_readonly("subspaces", &MoSpaces::subspaces,
                       "The list of all orbital subspaces known to this object.")
         .def_readonly("subspaces_occupied", &MoSpaces::subspaces_occupied,
                       "The list of occupied orbital subspaces known to this object.")
         .def_readonly("subspaces_virtual", &MoSpaces::subspaces_virtual,
                       "The list of virtual orbital subspaces known to this object.")
+        .def_property_readonly("has_core_occupied_space",
+                               &MoSpaces::has_core_occupied_space,
+                               "Does this object have a core-occupied space (i.e. is it "
+                               "ready for core-valence separation)?")
+        .def_property_readonly("irrep_totsym", &MoSpaces::irrep_totsym,
+                               "Return the totally symmetric irreducible representation.")
         //
         .def_readonly(
               "map_index_host_program", &MoSpaces::map_index_host_program,
