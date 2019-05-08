@@ -41,7 +41,8 @@ del dm
 print("Water core hole energy", mf_core.energy_tot())
 
 # Run an adc2 calculation:
-state = adcc.adc2(mf_core, n_states=4, conv_tol=5e-8)
+pyscf_result_core = adcc.backends.import_scf_results(mf_core)
+state = adcc.adc2(pyscf_result_core, n_states=4, conv_tol=5e-8)
 
 # Attach state densities
 state = adcc.attach_state_densities(state, state_diffdm=False)

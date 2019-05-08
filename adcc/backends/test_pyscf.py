@@ -130,8 +130,6 @@ class TestPyscf(unittest.TestCase):
             np.testing.assert_almost_equal(eri_perm, eri)
 
     def eri_asymm_construction_test(self, scfres):
-        adcc.memory_pool.initialise(max_memory=4024 * 1024 * 1024,
-                                    tensor_block_size=16, allocator="standard")
         hfdata = adcc.backends.import_scf_results(scfres)
         assert hfdata.backend == "pyscf"
 
@@ -186,7 +184,6 @@ class TestPyscf(unittest.TestCase):
                            n_orbs - (n_alpha + n_beta), 1),
             }
         }
-
         for s in space_names:
             print(s)
             imported_asymm = refstate.eri(s).to_ndarray()
@@ -209,7 +206,7 @@ class TestPyscf(unittest.TestCase):
             atom='O 0 0 0;'
                  'H 0 0 1.795239827225189;'
                  'H 1.693194615993441 0 -0.599043184453037',
-            basis='sto-3g',
+            basis='cc-pvdz',
             unit="Bohr"
         )
         mf = self.run_hf(mol)

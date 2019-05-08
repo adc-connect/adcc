@@ -48,7 +48,8 @@ adcc.memory_pool.initialise(max_memory=512 * 1024 * 1024,
 adcc.memory_pool.contraction_batch_size = 8 * 1024
 
 # Run an adc3 calculation:
-singlets = adcc.adc3(scfres, n_singlets=3)
+pyscf_result = adcc.backends.import_scf_results(scfres)
+singlets = adcc.adc3(pyscf_result, n_singlets=3)
 triplets = adcc.adc3(singlets.matrix, n_triplets=3)
 
 print(singlets.describe())

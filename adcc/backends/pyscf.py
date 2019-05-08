@@ -51,6 +51,10 @@ class PySCFHFProvider(HartreeFockProvider):
 
         # TODO: do caching in a clever way
         self.eri_cache = {}
+        self.eri_asymm_cache = {}
+        self.transform_on_the_fly = False
+        self.c_all = None
+        self.last_block = None
 
     def build_full_eri_ffff(self):
         n_orbs = self.n_orbs
@@ -105,19 +109,34 @@ class PySCFHFProvider(HartreeFockProvider):
         if block in self.eri_cache:
             return self.eri_cache[block]
         sizes = [i.shape[1] for i in coeffs]
+        print("Computing block ", block)
         eri = ao2mo.general(self.scfres.mol, coeffs,
                             compact=False).reshape(sizes[0], sizes[1],
                                                    sizes[2], sizes[3])
         self.eri_cache[block] = eri
         return eri
 
-    def build_eri_phys_asym_block(self, can_block=None, spin_block=None,
-                                  spin_symm=None):
+    def compute_mo_eri_slice(self, coeffs):
+        sizes = [i.shape[1] for i in coeffs]
+        return ao2mo.general(self.scfres.mol, coeffs,
+                             compact=False).reshape(sizes[0], sizes[1],
+                                                    sizes[2], sizes[3])
+
+    def build_eri_phys_asym_block(self, can_block=None, spin_symm=None):
         nocc = self.n_alpha
         co = self.scfres.mo_coeff[:, :nocc]
         cv = self.scfres.mo_coeff[:, nocc:]
         block = can_block
         asym_block = "".join([block[i] for i in [0, 3, 2, 1]])
+
+        both_blocks = "{}-{}-{}-{}".format(block, asym_block,
+                                        str(spin_symm.pref1),
+                                        str(spin_symm.pref2))
+
+        if both_blocks in self.eri_asymm_cache.keys():
+            # print("Retrieving block:", both_blocks)
+            return self.eri_asymm_cache[both_blocks]
+
         coeffs_transform = tuple(co if x == "O" else cv for x in block)
         # TODO: cleanup a bit
         if spin_symm.pref1 != 0 and spin_symm.pref2 != 0:
@@ -135,6 +154,32 @@ class PySCFHFProvider(HartreeFockProvider):
             chem_asym = tuple(coeffs_transform[i] for i in [0, 3, 2, 1])
             asymm = self.compute_mo_eri(asym_block,
                                         chem_asym).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
+            eris = - spin_symm.pref2 * asymm
+
+        self.eri_asymm_cache[both_blocks] = eris
+        print("Cached ERI asymm: {:.2f} Gb".format(sum(self.eri_asymm_cache[f].nbytes * 1e-9 for f in self.eri_asymm_cache)))
+        print("Cached ERI chem: {:.2f} Gb".format(sum(self.eri_cache[f].nbytes * 1e-9 for f in self.eri_cache)))
+        return eris
+
+    def transform_block_from_slices(self, slices, blocks, spin_symm):
+        coeffs_transform = []
+        for slice in slices:
+            coeffs_transform.append(self.c_all[:, slice])
+        coeffs_transform = tuple(coeffs_transform[i] for i in [0, 2, 1, 3])
+        # TODO: cleanup a bit
+        if spin_symm.pref1 != 0 and spin_symm.pref2 != 0:
+            can_block_integrals = self.compute_mo_eri_slice(coeffs_transform)
+            eri_phys = can_block_integrals.transpose(0, 2, 1, 3)
+            # (ik|jl) - (il|jk)
+            chem_asym = tuple(coeffs_transform[i] for i in [0, 3, 2, 1])
+            asymm = self.compute_mo_eri_slice(chem_asym).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
+            eris = spin_symm.pref1 * eri_phys - spin_symm.pref2 * asymm
+        elif spin_symm.pref1 != 0 and spin_symm.pref2 == 0:
+            can_block_integrals = self.compute_mo_eri_slice(coeffs_transform)
+            eris = spin_symm.pref1 * can_block_integrals.transpose(0, 2, 1, 3)
+        elif spin_symm.pref1 == 0 and spin_symm.pref2 != 0:
+            chem_asym = tuple(coeffs_transform[i] for i in [0, 3, 2, 1])
+            asymm = self.compute_mo_eri_slice(chem_asym).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
             eris = - spin_symm.pref2 * asymm
         return eris
 
@@ -192,7 +237,7 @@ class PySCFHFProvider(HartreeFockProvider):
         mo_coeff_a = self.scfres.mo_coeff
         mo_coeff = (mo_coeff_a, mo_coeff_a)
         out[:] = np.transpose(
-            np.hstack((mo_coeff[0].T, mo_coeff[1].T))
+            np.hstack((mo_coeff[0], mo_coeff[1]))
         )
 
     def fill_orben_f(self, out):
@@ -213,6 +258,8 @@ class PySCFHFProvider(HartreeFockProvider):
     def fill_eri_phys_asym_ffff(self, slices, out):
         if not self.block_slice_mapping:
             self.prepare_block_slice_mapping()
+        if self.c_all is None and self.transform_on_the_fly:
+            self.c_all = np.hstack((self.scfres.mo_coeff, self.scfres.mo_coeff))
         mo_spaces, \
             spin_block, \
             comp_block_slices \
@@ -223,15 +270,24 @@ class PySCFHFProvider(HartreeFockProvider):
                                " found {} and spin {}".format(slices,
                                                               mo_spaces,
                                                               spin_block))
+        if mo_spaces != self.last_block:
+            self.last_block = mo_spaces
+            self.flush_cache()
         mo_spaces_chem = "".join(np.take(np.array(mo_spaces), [0, 2, 1, 3]))
         spin_block_str = "".join(spin_block)
         print(mo_spaces, mo_spaces_chem, spin_block_str)
         allowed, spin_symm = is_spin_allowed(spin_block_str)
         if allowed:
-            # TODO: cache ERIs nicely
-            eri = self.build_eri_phys_asym_block(can_block=mo_spaces_chem,
-                                                 spin_symm=spin_symm)
-            out[:] = eri[comp_block_slices]
+            if self.transform_on_the_fly:
+                print("OTF transformation")
+                out[:] = self.transform_block_from_slices(slices=slices,
+                                                          blocks=mo_spaces_chem,
+                                                          spin_symm=spin_symm)
+            else:
+                # TODO: cache ERIs nicely
+                eri = self.build_eri_phys_asym_block(can_block=mo_spaces_chem,
+                                                     spin_symm=spin_symm)
+                out[:] = eri[comp_block_slices]
         else:
             out[:] = 0
 
@@ -244,7 +300,8 @@ class PySCFHFProvider(HartreeFockProvider):
 
     def flush_cache(self):
         self.eri_ffff = None
-        self.eri_cache = None
+        self.eri_asymm_cache = {}
+        self.eri_cache = {}
         self.c_all = None
 
 

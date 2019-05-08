@@ -53,7 +53,8 @@ scfres.kernel()
 print(adcc.banner())
 
 # Run an adc2 calculation:
-state = adcc.adc2(scfres, n_singlets=7, conv_tol=1e-8)
+pyscf_result = adcc.backends.import_scf_results(scfres)
+state = adcc.adc2(pyscf_result, n_singlets=7, conv_tol=1e-8)
 state = adcc.attach_state_densities(state)
 
 #
