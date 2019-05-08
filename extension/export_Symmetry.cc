@@ -55,8 +55,7 @@ void export_Symmetry(py::module& m) {
                       "shall be non-zero. If this is *not* set, i.e. an empty list, all "
                       "irreps will be allowed.")
         .def_property(
-              "permutations", &Symmetry::equivalent_permutations,
-              &Symmetry::set_equivalent_permutations,
+              "permutations", &Symmetry::permutations, &Symmetry::set_permutations,
               "The list of index permutations, which do not change the tensor.\n"
               "A minus may be used to indicate anti-symmetric\n"
               "permutations with respect to the first (reference) permutation.\n"
@@ -66,14 +65,14 @@ void export_Symmetry(py::module& m) {
               "tensor. Not all permutations need to be given to fully describe\n"
               "the symmetry. Beware that the check for errors and conflicts\n"
               "is only rudimentary at the moment.")
-        .def_property("spin_block_maps", &Symmetry::equivalent_spin_blocks,
-                      &Symmetry::set_equivalent_spin_blocks,
+        .def_property("spin_block_maps", &Symmetry::spin_block_maps,
+                      &Symmetry::set_spin_block_maps,
                       "A list of tuples of the form (\"aaaa\", \"bbbb\", -1.0), i.e.\n"
                       "two spin blocks followed by a factor. This maps the second onto "
                       "the first\n"
                       "with a factor of -1.0 between them.")
-        .def_property("spin_blocks_forbidden", &Symmetry::forbidden_spin_blocks,
-                      &Symmetry::set_forbidden_spin_blocks,
+        .def_property("spin_blocks_forbidden", &Symmetry::spin_blocks_forbidden,
+                      &Symmetry::set_spin_blocks_forbidden,
                       "List of spin-blocks, which are marked forbidden (i.e. enforce "
                       "them to stay zero).\n"
                       "Blocks are given as a string in the letters 'a' and 'b', e.g. "
@@ -114,7 +113,8 @@ void export_Symmetry(py::module& m) {
         "  mospaces    MoSpaces object\n"
         "  space       Space string (e.g. o1v1)\n"
         "  symmetric   Is the tensor symmetric (only in effect if both subspaces\n"
-        "              of the space string are identical)\n"
+        "              of the space string are identical). False disables\n"
+        "              a setup of permutational symmetry.\n"
         "  cartesian_transformation\n"
         "              The cartesian function according to which the operator "
         "transforms.\n"
