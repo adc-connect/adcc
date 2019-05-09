@@ -22,6 +22,7 @@
 ## ---------------------------------------------------------------------
 import sys
 
+from .Tensor import Tensor
 from .MoSpaces import MoSpaces
 from .Symmetry import Symmetry
 from .AdcMatrix import AdcMatrix
@@ -36,7 +37,7 @@ from .AmplitudeVector import AmplitudeVector
 from .state_densities import attach_state_densities
 from .tmp_build_reference_state import tmp_build_reference_state
 
-from libadcc import HartreeFockProvider, HartreeFockSolution_i, LazyMp, Tensor
+from libadcc import HartreeFockProvider, HartreeFockSolution_i, LazyMp
 
 # This has to be the last set of import
 from .guess import (guess_zero, guesses_any, guesses_singlet,

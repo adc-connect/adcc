@@ -24,12 +24,6 @@ import libadcc
 
 from .MoSpaces import MoSpaces
 
-# TODO
-# Along with it a constructor for the Tensor object, which takes
-# an mospaces, a space string and the 4 properties of Symmetry,
-# which completely allow to setup a tensor and its symmetry in one
-# constructor call.
-
 
 class Symmetry(libadcc.Symmetry):
     def __init__(self, mospaces, space, irreps_allowed=None, permutations=None,
