@@ -20,10 +20,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import libadcc
-
-from .MoSpaces import MoSpaces
 from .Symmetry import Symmetry
+
+import libadcc
 
 # TODO
 # Along with it a constructor for the Tensor object, which takes
@@ -51,7 +50,7 @@ class Tensor(libadcc.Tensor):
         For the last four symmetry-related arguments see the documentation
         of the Symmetry object for details.
         """
-        if not isinstance(sym_or_mo, (MoSpaces, Symmetry)):
+        if not isinstance(sym_or_mo, (libadcc.MoSpaces, Symmetry)):
             raise TypeError("The first argument needs to be a Symmetry or an "
                             "MoSpaces object.")
         if not isinstance(sym_or_mo, Symmetry):

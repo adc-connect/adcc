@@ -23,7 +23,6 @@
 import sys
 
 from .Tensor import Tensor
-from .MoSpaces import MoSpaces
 from .Symmetry import Symmetry
 from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod
@@ -44,7 +43,7 @@ from .guess import (guess_zero, guesses_any, guesses_singlet,
                     guesses_spin_flip, guesses_triplet)
 from .run_adc import run_adc
 
-__all__ = ["run_adc", "AdcMatrix", "AdcMethod", "Symmetry", "MoSpaces",
+__all__ = ["run_adc", "AdcMatrix", "AdcMethod", "Symmetry",
            "add", "contract", "copy", "divide", "dot", "empty_like",
            "linear_combination", "multiply", "nosym_like", "ones_like",
            "subtract", "transpose", "zeros_like",

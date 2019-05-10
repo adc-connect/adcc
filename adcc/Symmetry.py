@@ -22,13 +22,11 @@
 ## ---------------------------------------------------------------------
 import libadcc
 
-from .MoSpaces import MoSpaces
-
 
 class Symmetry(libadcc.Symmetry):
     def __init__(self, mospaces, space, irreps_allowed=None, permutations=None,
                  spin_block_maps=None, spin_blocks_forbidden=None):
-        if not isinstance(mospaces, MoSpaces):
+        if not isinstance(mospaces, libadcc.MoSpaces):
             raise TypeError("mospaces needs to be an MoSpaces instance.")
 
         super().__init__(mospaces, space)
