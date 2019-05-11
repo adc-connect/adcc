@@ -99,7 +99,14 @@ class PySCFHFProvider(HartreeFockProvider):
         return threshold
 
     def get_restricted(self):
-        return True
+        if isinstance(self.scfres.mo_occ, list):
+            restricted = len(self.scfres.mo_occ) < 2
+        elif isinstance(self.scfres.mo_occ, np.ndarray):
+            restricted = self.scfres.mo_occ.ndim < 2
+        else:
+            raise ValueError("Unusual pyscf SCF class encountered. Could not "
+                             "determine restricted / unrestricted.")
+        return restricted
 
     def get_energy_term(self, term):
         return self.energy_terms[term]
@@ -113,24 +120,37 @@ class PySCFHFProvider(HartreeFockProvider):
         return int(self.scfres.mol.spin) + 1
 
     def get_n_orbs_alpha(self):
-        return self.scfres.mo_coeff.shape[1]
+        if self.restricted:
+            return self.scfres.mo_coeff.shape[1]
+        else:
+            return self.scfres.mo_coeff[0].shape[1]
 
     def get_n_orbs_beta(self):
-        return self.get_n_orbs_alpha()
+        if self.restricted:
+            return self.get_n_orbs_alpha()
+        else:
+            return self.scfres.mo_coeff[1].shape[1]
 
     def get_n_bas(self):
         return int(self.scfres.mol.nao_nr())
 
     def fill_orbcoeff_fb(self, out):
-        mo_coeff_a = self.scfres.mo_coeff
-        mo_coeff = (mo_coeff_a, mo_coeff_a)
+        if self.restricted:
+            mo_coeff = (self.scfres.mo_coeff,
+                        self.scfres.mo_coeff)
+        else:
+            mo_coeff = self.scfres.mo_coeff
         out[:] = np.transpose(
             np.hstack((mo_coeff[0], mo_coeff[1]))
         )
 
     def fill_orben_f(self, out):
-        orben_a = self.scfres.mo_energy
-        out[:] = np.hstack((orben_a, orben_a))
+        if self.restricted:
+            out[:] = np.hstack((self.scfres.mo_energy,
+                                self.scfres.mo_energy))
+        else:
+            out[:] = np.hstack((self.scfres.mo_energy[0],
+                                self.scfres.mo_energy[1]))
 
     def fill_fock_ff(self, slices, out):
         diagonal = np.empty(self.n_orbs)

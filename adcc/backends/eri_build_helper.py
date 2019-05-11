@@ -171,8 +171,28 @@ class EriBuilder:
         self.block_slice_mapping = BlockSliceMappingHelper(aro, bro,
                                                            arv, brv)
 
+    @property
+    def coeffs_occ_alpha(self):
+        raise NotImplementedError("Implement coeffs_occ_alpha")
+
+    @property
+    def coeffs_virt_alpha(self):
+        raise NotImplementedError("Implement coeffs_virt_alpha")
+
+    @property
+    def coeffs_occ_beta(self):
+        raise NotImplementedError("Implement coeffs_occ_beta")
+
+    @property
+    def coeffs_virt_beta(self):
+        raise NotImplementedError("Implement coeffs_virt_beta")
+
+    @property
+    def coeffs_all(self):
+        raise NotImplementedError("Implement coeffs_all")
+
     def compute_mo_eri(self, block, coeffs, use_cache=True):
-        raise NotImplemented("Implement compute_mo_eri")
+        raise NotImplementedError("Implement compute_mo_eri")
 
     def compute_mo_eri_slice(self, coeffs):
         return self.compute_mo_eri(None, coeffs, use_cache=False)
@@ -216,27 +236,14 @@ class EriBuilder:
         else:
             out[:] = 0
 
-    @property
-    def coeffs_occ_alpha(self):
-        raise NotImplemented("Implement coeffs_occ_alpha")
-
-    @property
-    def coeffs_virt_alpha(self):
-        raise NotImplemented("Implement coeffs_virt_alpha")
-
-    @property
-    def coeffs_occ_beta(self):
-        raise NotImplemented("EriBuilder only implemented for"
-                             "restricted reference state.")
-
     def build_eri_phys_asym_block(self, can_block=None, spin_symm=None):
         co = self.coeffs_occ_alpha
         cv = self.coeffs_virt_alpha
         block = can_block
         asym_block = "".join([block[i] for i in [0, 3, 2, 1]])
         both_blocks = "{}-{}-{}-{}".format(block, asym_block,
-                                        str(spin_symm.pref1),
-                                        str(spin_symm.pref2))
+                                           str(spin_symm.pref1),
+                                           str(spin_symm.pref2))
         if both_blocks in self.eri_asymm_cache.keys():
             # print("Retrieving block:", both_blocks)
             return self.eri_asymm_cache[both_blocks]
@@ -298,9 +305,8 @@ class EriBuilder:
         co = self.coeffs_occ_alpha
         cv = self.coeffs_virt_alpha
         blocks = ["OOVV", "OVOV", "OOOV", "OOOO", "OVVV", "VVVV"]
+        # TODO: needs to be refactored to support UHF
         for b in blocks:
-            indices = [n_alpha if x == "O" else n_orbs_alpha - n_alpha
-                       for x in b]
             slices_alpha = [aro if x == "O" else arv for x in b]
             slices_beta = [bro if x == "O" else brv for x in b]
             coeffs_transform = tuple(co if x == "O" else cv for x in b)

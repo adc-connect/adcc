@@ -41,7 +41,7 @@ except ImportError:
 @pytest.mark.skipif(not _pyscf, reason="pyscf not found.")
 class TestPyscfOnly(unittest.TestCase):
     def run_hf(self, mol):
-        mf = scf.HF(mol)
+        mf = scf.RHF(mol)
         mf.conv_tol = 1e-12
         mf.kernel()
         return mf
