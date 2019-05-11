@@ -65,9 +65,10 @@ class TestVeloxchem(unittest.TestCase):
                 fp.write("\n".join(lines))
             task = vlx.MpiTask([infile, outfile], MPI.COMM_WORLD)
 
-            scfdrv = vlx.ScfRestrictedDriver()
-            scfdrv.conv_thresh = 1e-14
-            scfdrv.compute_task(task)
+            scfdrv = vlx.ScfRestrictedDriver(task.mpi_comm, task.ostream)
+            # elec. gradient norm
+            scfdrv.conv_thresh = 1e-8
+            scfdrv.compute(task.molecule, task.ao_basis, task.min_basis)
             scfdrv.task = task
         return scfdrv
 
@@ -209,6 +210,6 @@ class TestVeloxchem(unittest.TestCase):
         scfdrv = self.run_hf(xyz='O 0 0 0;'
                              'H 0 0 1.795239827225189;'
                              'H 1.693194615993441 0 -0.599043184453037',
-                             basis="sto-3g")
+                             basis="cc-pvdz")
         self.eri_asymm_construction_test(scfdrv)
         # self.base_test(scfdrv)

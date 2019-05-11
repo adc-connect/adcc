@@ -32,7 +32,7 @@ from .eri_build_helper import (EriBuilder, SpinBlockSlice,
                                BlockSliceMappingHelper)
 
 
-class PySCFERIBuilder(EriBuilder):
+class PySCFEriBuilder(EriBuilder):
     def __init__(self, scfres, n_orbs, n_orbs_alpha, n_alpha, n_beta):
         self.scfres = scfres
         super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta)
@@ -141,7 +141,7 @@ class PySCFHFProvider(HartreeFockProvider):
     def fill_eri_ffff(self, slices, out):
         if self.eri_ffff is None:
             if not self.eri_builder:
-                self.eri_builder = PySCFERIBuilder(self.scfres,
+                self.eri_builder = PySCFEriBuilder(self.scfres,
                                                    self.n_orbs,
                                                    self.n_orbs_alpha,
                                                    self.n_alpha,
@@ -151,7 +151,7 @@ class PySCFHFProvider(HartreeFockProvider):
 
     def fill_eri_phys_asym_ffff(self, slices, out):
         if not self.eri_builder:
-            self.eri_builder = PySCFERIBuilder(self.scfres,
+            self.eri_builder = PySCFEriBuilder(self.scfres,
                                                self.n_orbs,
                                                self.n_orbs_alpha,
                                                self.n_alpha,

@@ -134,6 +134,7 @@ class TestPsi4(unittest.TestCase):
         hfdata.fill_eri_ffff((sfull, sfull, sfull, sfull), eri_chem)
         eri_phys = eri_chem.transpose(0, 2, 1, 3)
         eri_asymm = eri_phys - eri_phys.transpose(1, 0, 2, 3)
+        hfdata.flush_cache()
 
         n_orbs = hfdata.n_orbs
         n_alpha = hfdata.n_alpha

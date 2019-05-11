@@ -25,13 +25,10 @@ from libadcc import HartreeFockProvider
 import numpy as np
 import psi4
 
-from .eri_build_helper import (EriBuilder, SpinBlockSlice,
-                               get_symmetry_equivalent_transpositions_for_block,
-                               is_spin_allowed,
-                               BlockSliceMappingHelper)
+from .eri_build_helper import EriBuilder
 
 
-class Psi4ERIBuilder(EriBuilder):
+class Psi4EriBuilder(EriBuilder):
     def __init__(self, wfn, n_orbs, n_orbs_alpha, n_alpha, n_beta):
         self.wfn = wfn
         self.mints = psi4.core.MintsHelper(self.wfn.basisset())
@@ -139,7 +136,7 @@ class Psi4HFProvider(HartreeFockProvider):
     def fill_eri_ffff(self, slices, out):
         if self.eri_ffff is None:
             if not self.eri_builder:
-                self.eri_builder = Psi4ERIBuilder(self.wfn,
+                self.eri_builder = Psi4EriBuilder(self.wfn,
                                                   self.n_orbs,
                                                   self.n_orbs_alpha,
                                                   self.n_alpha,
@@ -149,7 +146,7 @@ class Psi4HFProvider(HartreeFockProvider):
 
     def fill_eri_phys_asym_ffff(self, slices, out):
         if not self.eri_builder:
-            self.eri_builder = Psi4ERIBuilder(self.wfn,
+            self.eri_builder = Psi4EriBuilder(self.wfn,
                                               self.n_orbs,
                                               self.n_orbs_alpha,
                                               self.n_alpha,

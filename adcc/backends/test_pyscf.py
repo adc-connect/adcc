@@ -39,7 +39,7 @@ except ImportError:
 
 
 @pytest.mark.skipif(not _pyscf, reason="pyscf not found.")
-class TestPyscf(unittest.TestCase):
+class TestPyscfOnly(unittest.TestCase):
     def run_hf(self, mol):
         mf = scf.HF(mol)
         mf.conv_tol = 1e-12
@@ -143,6 +143,7 @@ class TestPyscf(unittest.TestCase):
         hfdata.fill_eri_ffff((sfull, sfull, sfull, sfull), eri_chem)
         eri_phys = eri_chem.transpose(0, 2, 1, 3)
         eri_asymm = eri_phys - eri_phys.transpose(1, 0, 2, 3)
+        hfdata.flush_cache()
 
         n_orbs = hfdata.n_orbs
         n_alpha = hfdata.n_alpha
@@ -213,13 +214,13 @@ class TestPyscf(unittest.TestCase):
         self.eri_asymm_construction_test(scfres=mf)
         # self.base_test(mf)
 
-    def test_water_sto3g_core_hole(self):
-        mol = gto.M(
-            atom='O 0 0 0;'
-                 'H 0 0 1.795239827225189;'
-                 'H 1.693194615993441 0 -0.599043184453037',
-            basis='sto-3g',
-            unit="Bohr"
-        )
-        mf = self.run_core_hole(mol)
-        self.base_test(mf)
+    # def test_water_sto3g_core_hole(self):
+    #     mol = gto.M(
+    #         atom='O 0 0 0;'
+    #              'H 0 0 1.795239827225189;'
+    #              'H 1.693194615993441 0 -0.599043184453037',
+    #         basis='sto-3g',
+    #         unit="Bohr"
+    #     )
+    #     mf = self.run_core_hole(mol)
+    #     self.base_test(mf)

@@ -120,7 +120,31 @@ def get_symmetry_equivalent_transpositions_for_block(block, notation="chem"):
     perms, trans = blck.build_permutations()
     return trans
 
+
 class EriBuilder:
+    """
+    Parent class for building ERIs with different backends
+    Note: Currently, only RHF references are available
+
+    Implementation of the following functions in a derived class
+    is necessary:
+        coeffs_occ_alpha: provide occupied alpha coefficients
+            (return np.ndarray)
+        coeffs_virt_alpha: provide virtual alpha coefficients
+            (return np.ndarray)
+        compute_mo_eri: compute a block of integrals (Chemists')
+            using the provided coefficients and retrieve block from
+            cache if possible
+
+    Depending on the host program, other functions like
+        build_eri_phys_asym_block also need to be re-implemented.
+
+    For On-The-Fly transformation:
+        coeffs_all: all coefficients
+            (return np.ndarray)
+        coeffs_transform_on_the_fly: gives the sliced coefficients for
+            transformation
+    """
     def __init__(self, n_orbs, n_orbs_alpha, n_alpha, n_beta):
         self.block_slice_mapping = None
         self.n_orbs = n_orbs
@@ -153,7 +177,13 @@ class EriBuilder:
     def compute_mo_eri_slice(self, coeffs):
         return self.compute_mo_eri(None, coeffs, use_cache=False)
 
+    def compute_mo_asymm_eri(self, block):
+        raise NotImplementedError("Implement compute_mo_asymm_eri")
+
     def fill_slice(self, slices, out):
+        # TODO: if a host program allows to compute anti-symmetrized
+        # integrals directly, check if this feature was enabled and
+        # subsequently use compute_mo_asymm_eri
         if self.c_all is None and self.transform_on_the_fly:
             self.c_all = self.coeffs_all
         mo_spaces, \
@@ -304,6 +334,9 @@ class EriBuilder:
 
 class BlockSliceMappingHelper:
     """
+    BlockSliceMappingHelper can map the slices coming from libtensor
+    to the respective orbital and spin space, such that
+    EriBuilder knows which block needs to be computed and provided
     """
     def __init__(self, aro, bro,
                  arv, brv):
