@@ -87,7 +87,7 @@ void export_MoSpaces(py::module& m) {
                                "Return the totally symmetric irreducible representation.")
         //
         .def_readonly(
-              "map_index_host_program", &MoSpaces::map_index_host_program,
+              "map_index_hf_provider", &MoSpaces::map_index_hf_provider,
               "Contains for each orbital space (e.g. f, o1) a mapping from the indices "
               "used inside\nthe respective space to the molecular orbital index "
               "convention used in the host\nprogram, i.e. to the ordering in which the "

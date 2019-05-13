@@ -17,6 +17,7 @@
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include "util.hh"
 #include <adcc/Symmetry.hh>
 #include <adcc/make_symmetry.hh>
 #include <pybind11/pybind11.h>
@@ -42,7 +43,8 @@ void export_Symmetry(py::module& m) {
         .def_property_readonly("ndim", &Symmetry::ndim,
                                "Return the number of dimensions.")
         .def_property_readonly(
-              "shape", &Symmetry::shape,
+              "shape",
+              [](std::shared_ptr<Symmetry> self) { return shape_tuple(self->shape()); },
               "Return the shape of tensors constructed from this symmetry.")
         .def_property_readonly("empty", &Symmetry::empty,
                                "Is the symmetry empty (i.e. noy symmetry setup)")
