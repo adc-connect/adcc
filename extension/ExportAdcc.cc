@@ -43,6 +43,7 @@ void export_MoIndexTranslation(py::module& m);
 void export_MoSpaces(py::module& m);
 void export_OneParticleDensityMatrix(py::module& m);
 void export_ReferenceState(py::module& m);
+void export_ReferenceStateNew(py::module& m);
 void export_Symmetry(py::module& m);
 void export_Tensor(py::module& m);
 void export_ThreadPool(py::module& m);
@@ -68,6 +69,7 @@ PYBIND11_MODULE(libadcc, m) {
   pyif::export_MoIndexTranslation(m);
   pyif::export_Tensor(m);
   pyif::export_ReferenceState(m);
+  pyif::export_ReferenceStateNew(m);
 
   pyif::export_OneParticleDensityMatrix(m);
   pyif::export_LazyMp(m);

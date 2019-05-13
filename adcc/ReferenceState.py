@@ -20,55 +20,23 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import libadcc
+
+from .MoSpaces import auto_core, auto_frozen_core, auto_frozen_virtual
 from .backends import import_scf_results
 from .memory_pool import memory_pool
 
-import libadcc
-
-__all__ = ["MoSpaces"]
+__all__ = ["ReferenceState"]
 
 
-def auto_core(hfdata, core_orbitals, frozen_core):
-    if not frozen_core:
-        frozen_core = 0
-
-    if isinstance(frozen_core, list):
-        raise NotImplementedError
-
-    ret = []
-    for i in range(frozen_core, frozen_core + core_orbitals):
-        ret.append(i)
-        ret.append(i + hfdata.n_orbs_alpha)
-    return sorted(ret)
-
-
-def auto_frozen_core(hfdata, core_orbitals, frozen_core):
-    if not core_orbitals:
-        core_orbitals = 0
-
-    if isinstance(core_orbitals, list):
-        raise NotImplementedError
-
-    ret = []
-    for i in range(frozen_core):
-        ret.append(i)
-        ret.append(i + hfdata.n_orbs_alpha)
-    return sorted(ret)
-
-
-def auto_frozen_virtual(hfdata, frozen_virtual):
-    ret = []
-    for i in range(frozen_virtual):
-        ret.append(hfdata.n_orbs_alpha - i - 1)
-        ret.append(hfdata.n_orbs - i - 1)
-    return sorted(ret)
-
-
-class MoSpaces(libadcc.MoSpaces):
+class ReferenceState(libadcc.ReferenceStateNew):
     def __init__(self, hfdata, core_orbitals=None, frozen_core=None,
-                 frozen_virtual=None):
+                 frozen_virtual=None, symmetry_check_on_import=False,
+                 import_all_below_n_orbs=0):
         """
-        Construct an MoSpaces object.
+        Construct a ReferenceState object. The object is lazy and will only
+        import orbital energies and coefficients. Fock matrix blocks and
+        electron-repulsion integral blocks are imported as needed.
 
         @param hfdata
         Object with Hartree-Fock data (e.g. a molsturm scf state, a pyscf SCF
@@ -99,6 +67,20 @@ class MoSpaces(libadcc.MoSpaces):
         (b) Explicit list of orbital indices to put into the frozen virtual
         orbital subspace. The same number of alpha and beta orbitals have to be
         selected. These will be forcibly unoccupied.
+
+        @param symmetry_check_on_import
+        Should symmetry of the imported objects be checked explicitly during the
+        import process. This massively slows down the import and has a dramatic
+        impact on memory usage. Thus one should enable this only for debugging
+        (e.g. for testing import routines from the host programs). Do not enable
+        this unless you know what you are doing.
+
+        @import_all_below_n_orbs
+        For small problem sizes lazy make less sense, since the memory
+        requirement for storing the ERI tensor is neglibile and thus the
+        flexiblity gained by having the full tensor in memory is advantageous.
+        Below the number of orbitals specified by this parameter, the class
+        will thus automatically import all ERI tensor and fock matrix blocks.
         """
         if not isinstance(hfdata, libadcc.HartreeFockSolution_i):
             hfdata = import_scf_results(hfdata)
@@ -119,8 +101,10 @@ class MoSpaces(libadcc.MoSpaces):
             frozen_virtual = auto_frozen_virtual(hfdata, frozen_virtual)
 
         super().__init__(hfdata, memory_pool, core_orbitals, frozen_core,
-                         frozen_virtual)
+                         frozen_virtual, symmetry_check_on_import)
 
+        if import_all_below_n_orbs is not None and \
+           hfdata.n_orbs < import_all_below_n_orbs:
+            super().import_all()
 
 # TODO some nice describe method
-#      (should return the core_orbitals, frozen_core, ...)
