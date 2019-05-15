@@ -356,7 +356,7 @@ void export_Tensor(py::module& m) {
   py::class_<Tensor, std::shared_ptr<Tensor>>(
         m, "Tensor",
         "Class representing the Tensor objects used for computations in adcman")
-        .def(py::init(&adcc::make_tensor_empty),
+        .def(py::init(&adcc::make_tensor_zero),
              "Construct a Tensor object using a Symmetry object describing its symmetry "
              "properties.\n"
              "The returned object is not guaranteed to contain initialised memory.")
