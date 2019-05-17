@@ -45,11 +45,16 @@ def trigger_adccore_build():
     """
     Trigger a build of the adccore library, if it exists in source form.
     """
-    if os.path.isfile("adccore/build.sh"):
-        # I.e. this user has access to adccore source code
-        import subprocess
+    if os.path.isfile("adccore/build_adccore.py"):
+        abspath = os.path.abspath("adccore")
+        if abspath not in sys.path:
+            sys.path.insert(0, abspath)
 
-        subprocess.check_call("./adccore/build.sh")
+        import build_adccore
+
+        build_dir = "adccore/build"
+        install_dir = "extension/adccore"
+        build_adccore.build_install(build_dir, install_dir)
 
 
 #
