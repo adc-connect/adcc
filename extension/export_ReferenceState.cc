@@ -77,7 +77,7 @@ void export_ReferenceState(py::module& m) {
               "spin_multiplicity", &ReferenceState::spin_multiplicity,
               "Return the spin multiplicity of the reference state. 0 indicates "
               "that the spin cannot be determined or is not integer (e.g. UHF)")
-        .def_property_readonly("core_occupied_space",
+        .def_property_readonly("has_core_occupied_space",
                                &ReferenceState::has_core_occupied_space,
                                "Is a core occupied space setup, such that a core-valence "
                                "separation can be applied.")
