@@ -28,14 +28,14 @@ from numpy.testing import assert_array_equal
 import adcc
 
 from libadcc import HartreeFockProvider
-from adcc.tmp_build_reference_state import tmp_build_reference_state
 
-"""
-This class provides valid dummy data for any set of parameters
-given upon construction. This data can be imported and verified
-easily afterwards. All data is based on pain indices.
-"""
+
 class HfCounterData(HartreeFockProvider):
+    """
+    This class provides valid dummy data for any set of parameters
+    given upon construction. This data can be imported and verified
+    easily afterwards. All data is based on pain indices.
+    """
     def __init__(self, n_alpha, n_beta, n_bas, n_orbs_alpha, restricted):
         if n_alpha != n_beta and restricted:
             raise ValueError("ROHF should not be tested")
@@ -142,7 +142,10 @@ class HfCounterData(HartreeFockProvider):
         return True
 
     def fold_eri(self, range1, range2, range3, range4):
-        # Notice: This function does not yet work!
+        # Notice: This function does not yet work fully
+        #         and is super slow, too.
+        # The idea is to generate a nice ERI tensor. The symmetry-checked
+        # import does not yet complain, but the resulting data does not agree
 
         na1 = len(range1[0])  # Number of alphas for first axis
         na2 = len(range2[0])  # Number of alphas for second axis
@@ -225,8 +228,7 @@ class HfCounterData(HartreeFockProvider):
         out[:] = full[slices]
 
 
-class TestReferenceState(unittest.TestCase):
-
+class TestReferenceStateCounterData(unittest.TestCase):
     def base_test(self, n_alpha, n_beta, n_bas, n_orbs_alpha, restricted,
                   check_symmetry=False, core_orbitals=[]):
         data = HfCounterData(n_alpha, n_beta, n_bas, n_orbs_alpha, restricted)
@@ -292,6 +294,16 @@ class TestReferenceState(unittest.TestCase):
                 assert_array_equal(refstate.fock(ss1 + ss2).to_ndarray(),
                                    data.fold_fock(ref_axis[ss1], ref_axis[ss2]))
 
+        #
+        # TODO The eri test is not yet working ... but I (mfh) have really spend
+        #      enough time on it already ... also the current version is
+        #      terribly slow due to the many python loops. I guess the fock
+        #      test should catch most fuckups and so should do the reference
+        #      tests in test_ReferenceState_refdata.py.
+        #      For this reason I will comment it out and leave it for another
+        #      time / person to pick it up --- against my usual habit of never
+        #      commiting big chunks of commented code to master.
+        #
         # # Eri
         # for ss1 in subspaces:
         #     for ss2 in subspaces:
@@ -299,7 +311,8 @@ class TestReferenceState(unittest.TestCase):
         #             for ss4 in subspaces:
         #                 print("---------------------------")
         #                 print()
-        #                 print(refstate.eri(ss1 + ss2 + ss3 + ss4).to_ndarray())
+        #                 print(refstate.eri(ss1 + ss2
+        #                                    + ss3 + ss4).to_ndarray())
         #                 print()
         #                 print("---------------------------")
         #                 print()
@@ -320,12 +333,10 @@ class TestReferenceState(unittest.TestCase):
         #                 )
 
     def test_small_restricted(self):
-        self.base_test(n_alpha=2, n_beta=2, n_bas=3, n_orbs_alpha=3,
+        self.base_test(n_alpha=3, n_beta=3, n_bas=8, n_orbs_alpha=8,
                        restricted=True, check_symmetry=False)
-        # self.base_test(n_alpha=3, n_beta=3, n_bas=8, n_orbs_alpha=8,
-        #                restricted=True, check_symmetry=False)
-                        # check_symmetry=True fails because non-contiguous
-                        # fock import is not yet implemented.
+        #              # check_symmetry=True fails because non-contiguous
+        #              # fock import is not yet implemented.
 
     def test_medium_restricted(self):
         self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
@@ -354,9 +365,3 @@ class TestReferenceState(unittest.TestCase):
     def test_large_cvs_restricted(self):
         self.base_test(n_alpha=15, n_beta=15, n_bas=60, n_orbs_alpha=60,
                        restricted=True, core_orbitals=[0, 1, 2, 60, 61, 62])
-
-
-
-
-
-# cc-pvdz water problem

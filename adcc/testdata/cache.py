@@ -21,7 +21,9 @@
 ##
 ## ---------------------------------------------------------------------
 import os
+
 import adcc
+import pytest
 
 from adcc import AdcMatrix, LazyMp, guess_zero, hdf5io
 from adcc.misc import cached_property
@@ -89,6 +91,8 @@ class TestdataCache():
         The definition of the test cases: Data generator and reference file
         """
         cases = ["h2o_sto3g", "cn_sto3g", "hf3_631g"]
+        if not hasattr(pytest, "config") or pytest.config.option.mode == "full":
+            cases += ["cn_ccpvdz", "h2o_def2tzvp"]
         return [k for k in cases
                 if os.path.isfile(fullfile(k + "_hfdata.hdf5"))]
 
@@ -122,6 +126,15 @@ class TestdataCache():
                 self.hfdata[k], self.hfdata[k]["n_core_orbitals"]))
                 for k in self.testcases
                 if "n_core_orbitals" in self.hfdata[k]}
+
+    @cached_property
+    def hfimport(self):
+        ret = {}
+        for k in self.testcases:
+            datafile = fullfile(k + "_hfimport.hdf5")
+            if os.path.isfile(datafile):
+                ret[k] = hdf5io.load(datafile)
+        return ret
 
     @cached_property
     def reference_data(self):

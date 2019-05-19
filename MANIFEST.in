@@ -1,4 +1,7 @@
+# Exclude test stuff
 global-exclude test_*.py
+exclude adcc/conftest.py
+
 include README.md
 include LICENSE*
 

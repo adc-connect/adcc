@@ -3,6 +3,7 @@
 SOURCE="https://get.michael-herbst.com/adcc/testdata/0.2.0/"
 DATAFILES=(
 	cn_sto3g_hfdata.hdf5
+	cn_sto3g_hfimport.hdf5
 	cn_sto3g_reference_adc0.hdf5
 	cn_sto3g_reference_adc1.hdf5
 	cn_sto3g_reference_adc2.hdf5
@@ -13,6 +14,7 @@ DATAFILES=(
 	cn_sto3g_reference_cvs_adc2.hdf5
 	cn_sto3g_reference_cvs_adc2x.hdf5
 	h2o_sto3g_hfdata.hdf5
+	h2o_sto3g_hfimport.hdf5
 	h2o_sto3g_reference_adc0.hdf5
 	h2o_sto3g_reference_adc1.hdf5
 	h2o_sto3g_reference_adc2.hdf5
@@ -29,6 +31,16 @@ DATAFILES=(
 	hf3_631g_reference_adc2x.hdf5
 	hf3_631g_reference_adc3.hdf5
 )
+DATAFILES_FULL=(
+	cn_ccpvdz_hfdata.hdf5
+	cn_ccpvdz_hfimport.hdf5
+	h2o_def2tzvp_hfdata.hdf5
+	h2o_def2tzvp_hfimport.hdf5
+)
+
+if [ "$1" == "--full" ]; then
+	DATAFILES=("${DATAFILES[@]}" "${DATAFILES_FULL[@]}")
+fi
 
 #
 # -----
@@ -52,8 +64,7 @@ for file in ${DATAFILES[@]}; do
 done
 
 if which sha256sum &> /dev/null; then
-	sha256sum -c SHA256SUMS || exit 1
+	sha256sum --ignore-missing -c SHA256SUMS || exit 1
 fi
 
-touch .last_update
 exit 0

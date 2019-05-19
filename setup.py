@@ -249,30 +249,21 @@ class BuildExt(BuildCommand):
 # Pytest integration
 #
 class PyTest(TestCommand):
+    user_options = [
+        ('mode=', 'm', 'Mode for the testsuite (fast or full)'),
+        ('skip-update', 's', 'Skip updating testdata'),
+        ("pytest-args=", "a", "Arguments to pass to pytest"),
+    ]
+
     def initialize_options(self):
         TestCommand.initialize_options(self)
         self.pytest_args = ""
+        self.mode = "fast"
+        self.skip_update = False
 
-    def update_testdata(self):
-        testdata_dir = "adcc/testdata"
-        if not os.path.isdir(testdata_dir):
-            raise RuntimeError("Can only test from git repository, "
-                               "not from installation tarball.")
-
-        timefile = testdata_dir + "/.last_update"
-        if not os.path.isfile(timefile):
-            needs_update = True
-        else:
-            import datetime
-
-            ts = datetime.datetime.fromtimestamp(os.path.getmtime(timefile))
-            age = datetime.datetime.utcnow() - ts
-            needs_update = age > datetime.timedelta(hours=2)
-
-        if needs_update:
-            import subprocess
-
-            subprocess.check_call(testdata_dir + "/0_download_testdata.sh")
+    def finalize_options(self):
+        if self.mode not in ["fast", "full"]:
+            raise Exception("Only test modes 'fast' and 'full' are supported")
 
     def run_tests(self):
         import shlex
@@ -280,8 +271,15 @@ class PyTest(TestCommand):
         # import here, cause outside the eggs aren't loaded
         import pytest
 
-        self.update_testdata()
-        errno = pytest.main(shlex.split(self.pytest_args))
+        if not os.path.isdir("adcc/testdata"):
+            raise RuntimeError("Can only test from git repository, "
+                               "not from installation tarball.")
+
+        args = ["adcc"] + shlex.split(self.pytest_args)
+        args += ["--mode", self.mode]
+        if self.skip_update:
+            args += ["--skip-update"]
+        errno = pytest.main(args)
         sys.exit(errno)
 
 
