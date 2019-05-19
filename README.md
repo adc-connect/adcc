@@ -84,6 +84,9 @@ for development and worth knowing:
   This includes `adccore` in case you have the source code repository set up as
   described above.
 - `setup.py test`: Run the `adcc` unit tests via `pytest`. Implies `build_ext`.
+  This command has a few useful options:
+    - `-m full`: Run the full test suite not only the fast tests
+    - `-s`: Skip updating the testdata
 
 
 ## `adcc` and `pyscf` example
