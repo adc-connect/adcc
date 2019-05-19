@@ -34,8 +34,26 @@ DATAFILES=(
 DATAFILES_FULL=(
 	cn_ccpvdz_hfdata.hdf5
 	cn_ccpvdz_hfimport.hdf5
+	cn_ccpvdz_reference_adc0.hdf5
+	cn_ccpvdz_reference_adc1.hdf5
+	cn_ccpvdz_reference_adc2.hdf5
+	cn_ccpvdz_reference_adc2x.hdf5
+	cn_ccpvdz_reference_adc3.hdf5
+	cn_ccpvdz_reference_cvs_adc0.hdf5
+	cn_ccpvdz_reference_cvs_adc1.hdf5
+	cn_ccpvdz_reference_cvs_adc2.hdf5
+	cn_ccpvdz_reference_cvs_adc2x.hdf5
 	h2o_def2tzvp_hfdata.hdf5
 	h2o_def2tzvp_hfimport.hdf5
+	h2o_def2tzvp_reference_adc0.hdf5
+	h2o_def2tzvp_reference_adc1.hdf5
+	h2o_def2tzvp_reference_adc2.hdf5
+	h2o_def2tzvp_reference_adc2x.hdf5
+	h2o_def2tzvp_reference_adc3.hdf5
+	h2o_def2tzvp_reference_cvs_adc0.hdf5
+	h2o_def2tzvp_reference_cvs_adc1.hdf5
+	h2o_def2tzvp_reference_cvs_adc2.hdf5
+	h2o_def2tzvp_reference_cvs_adc2x.hdf5
 )
 
 if [ "$1" == "--full" ]; then

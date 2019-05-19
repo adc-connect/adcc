@@ -28,7 +28,6 @@ import pytest
 def update_testdata():
     import subprocess
 
-    print("Updating testdata ... please wait.")
     testdata_dir = os.path.join(os.path.dirname(__file__), "testdata")
     cmd = [testdata_dir + "/0_download_testdata.sh"]
     if pytest.config.option.mode == "full":
@@ -48,12 +47,13 @@ def pytest_addoption(parser):
 
 
 def pytest_collection_modifyitems(config, items):
-    if config.getoption("--mode") == "full":
-        return  # Do not skip any tests
-    skip_slow = pytest.mark.skip(reason="need '--mode full' option to run")
-    for item in items:
-        if "slow" in item.keywords:
-            item.add_marker(skip_slow)
+    slowcases = ["h2o_def2tzvp", "cn_ccpvdz"]
+
+    if config.getoption("mode") == "fast":
+        skip_slow = pytest.mark.skip(reason="need '--mode full' option to run.")
+        for item in items:
+            if any(name in kw for kw in item.keywords for name in slowcases):
+                item.add_marker(skip_slow)
 
 
 def pytest_runtestloop(session):

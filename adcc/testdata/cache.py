@@ -70,7 +70,7 @@ def make_mock_adc_state(refstate, method, kind, reference):
     for i, evec in enumerate(state.eigenvectors):
         evec["s"].set_from_ndarray(vec_singles[i])
         if has_doubles:
-            evec["d"].set_from_ndarray(vec_doubles[i])
+            evec["d"].set_from_ndarray(vec_doubles[i], 1e-14)
     return state
 
 
@@ -112,7 +112,6 @@ class TestdataCache():
         def cache_eri(refstate):
             refstate.import_all()
             return refstate
-
         return {k: cache_eri(adcc.ReferenceState(self.hfdata[k]))
                 for k in self.testcases}
 
