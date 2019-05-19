@@ -234,7 +234,6 @@ class TestReferenceStateCounterData(unittest.TestCase):
         data = HfCounterData(n_alpha, n_beta, n_bas, n_orbs_alpha, restricted)
         refstate = adcc.ReferenceState(data, core_orbitals,
                                        symmetry_check_on_import=check_symmetry)
-        # refstate = tmp_build_reference_state(data, len(core_orbitals) // 2)
 
         # Setup spaces and refstate axis
         subspaces = ["o1", "v1"]

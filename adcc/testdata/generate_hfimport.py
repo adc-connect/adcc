@@ -21,17 +21,15 @@
 ##
 ## ---------------------------------------------------------------------
 import os
+import adcc
 import numpy as np
 
 from adcc import hdf5io
-from adcc.tmp_build_reference_state import tmp_build_reference_state
 from adcc.testdata.cache import cache
 
 
 def build_dict(refstate):
-    subspaces = ["o1", "v1"]
-    if refstate.has_core_valence_separation:
-        subspaces = ["o1", "o2", "v1"]
+    subspaces = refstate.mospaces.subspaces
 
     ret = {"subspaces": np.array(subspaces, dtype="S")}
     for ss in subspaces:
@@ -65,10 +63,10 @@ def dump_imported(key, dump_cvs=True):
     print("Caching data for {} ...".format(key))
     data = cache.hfdata[key]
     dictionary = {}
-    cases = {"gen": {}, "cvs": {"n_core_orbitals": data["n_core_orbitals"]}}
+    cases = {"gen": {}, "cvs": {"core_orbitals": data["n_core_orbitals"]}}
     for name, args in cases.items():
         print("Working on {} {} ...".format(key, name))
-        refstate = tmp_build_reference_state(data, **args)
+        refstate = adcc.ReferenceState(data, **args)
         for k, v in build_dict(refstate).items():
             dictionary[name + "/" + k] = v
     print("Writing data for {} ...".format(key))
