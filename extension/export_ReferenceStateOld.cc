@@ -41,6 +41,7 @@ void export_ReferenceStateOld(py::module& m) {
         .def("n_orbs", &ReferenceStateOld::n_orbs)
         .def("n_orbs_alpha", &ReferenceStateOld::n_orbs_alpha)
         .def("n_orbs_beta", &ReferenceStateOld::n_orbs_beta)
+        .def("orbital_energies", &ReferenceStateOld::orbital_energies)
         .def("orbital_coefficients", &ReferenceStateOld::orbital_coefficients)
         .def("orbital_coefficients_alpha", &ReferenceStateOld::orbital_coefficients_alpha)
         .def("orbital_coefficients_beta", &ReferenceStateOld::orbital_coefficients_beta)
