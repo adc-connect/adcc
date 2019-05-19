@@ -131,8 +131,8 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
 
     # Step 1: Construct at least ReferenceState
     # TODO The flexibility coded here, should be put directly into the
-    #      python-side construction of the ReferenceState object now that
-    #      tmp_build_reference_state is gone.
+    #      python-side construction of the ReferenceState object
+    #      (or the AdcMatrix??) now that tmp_build_reference_state is gone.
     if not isinstance(data_or_matrix, AdcMatrix) and method is None:
         raise ValueError("method needs to be explicitly provided unless "
                          "data_or_matrix is an AdcMatrix.")
