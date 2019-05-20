@@ -35,7 +35,7 @@ from setuptools.command.test import test as TestCommand
 from setuptools.command.build_ext import build_ext as BuildCommand
 
 # Version of the python bindings and adcc python package.
-__version__ = '0.9.2'
+__version__ = '0.10.0'
 
 
 #
