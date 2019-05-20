@@ -84,10 +84,6 @@ class ReferenceState(libadcc.ReferenceState):
         """
         if not isinstance(hfdata, libadcc.HartreeFockSolution_i):
             hfdata = import_scf_results(hfdata)
-            # TODO This is needed right now to keep the hfdata object alive.
-            #      One can probarly drop this if the other hacky
-            #      keepalive-workaround for pybind11 is implemented
-            self._hfdata = hfdata
 
         if frozen_core is None:
             frozen_core = []

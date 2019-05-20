@@ -17,6 +17,7 @@
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include "hartree_fock_solution_hack.hh"
 #include "util.hh"
 #include <adcc/HartreeFockSolution_i.hh>
 #include <adcc/exceptions.hh>
