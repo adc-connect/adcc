@@ -21,8 +21,6 @@
 ##
 ## ---------------------------------------------------------------------
 
-import os
-import tempfile
 import pytest
 import adcc
 import unittest
@@ -32,8 +30,8 @@ import numpy as np
 try:
     import psi4
     from pyscf import scf, gto
-    from mpi4py import MPI
     import veloxchem as vlx
+    from . import utils
     _psi4_pyscf_vlx = True
 except ImportError:
     _psi4_pyscf_vlx = False
@@ -42,48 +40,6 @@ except ImportError:
 @pytest.mark.skipif(not _psi4_pyscf_vlx, reason="psi4 or pyscf or vlx "
                     "not found.")
 class TestBackendsFunctionality(unittest.TestCase):
-    def run_psi4_hf(self, mol, basis=None):
-        psi4.core.be_quiet()
-        psi4.set_options({'basis': basis,
-                          'scf_type': 'pk',
-                          'e_convergence': 1e-12,
-                          'd_convergence': 1e-8})
-        scf_e, wfn = psi4.energy('SCF', return_wfn=True)
-        return wfn
-
-    def run_pyscf_hf(self, mol):
-        mf = scf.HF(mol)
-        mf.conv_tol = 1e-12
-        mf.conv_tol_grad = 1e-8
-        mf.kernel()
-        return mf
-
-    def run_vlx_hf(self, xyz, basis, charge=0, multiplicity=1):
-        basis_dir = os.path.abspath(os.path.join(vlx.__path__[-1],
-                                                 "..", "..", "..", "basis"))
-        with tempfile.TemporaryDirectory() as tmpdir:
-            infile = os.path.join(tmpdir, "vlx.in")
-            outfile = os.path.join(tmpdir, "vlx.out")
-            with open(infile, "w") as fp:
-                lines = ["@jobs", "task: hf", "@end", ""]
-                lines += ["@method settings",
-                          "basis: {}".format(basis),
-                          "basis path: {}".format(basis_dir), "@end", ""]
-                lines += ["@molecule",
-                          "charge: {}".format(charge),
-                          "multiplicity: {}".format(multiplicity),
-                          "units: bohr",
-                          "xyz:\n{}".format("\n".join(xyz.split(";"))),
-                          "@end"]
-                fp.write("\n".join(lines))
-            task = vlx.MpiTask([infile, outfile], MPI.COMM_WORLD)
-
-            scfdrv = vlx.ScfRestrictedDriver(task.mpi_comm, task.ostream)
-            # elec. gradient norm
-            scfdrv.conv_thresh = 1e-8
-            scfdrv.compute(task.molecule, task.ao_basis, task.min_basis)
-            scfdrv.task = task
-        return scfdrv
 
     def base_test(self, psi4_res=None, pyscf_res=None, vlx_res=None):
         state_psi4 = adcc.adc2(psi4_res, n_singlets=10)
@@ -103,22 +59,11 @@ class TestBackendsFunctionality(unittest.TestCase):
         """
 
         # run psi4
-        mol = psi4.geometry("""
-            {}
-            symmetry c1
-            units au
-            """.format(water_xyz))
-        wfn = self.run_psi4_hf(mol, basis="aug-cc-pvdz")
+        wfn = utils.run_psi4_hf(water_xyz, basis="aug-cc-pvdz")
 
         # run pyscf
-        mol = gto.M(
-            atom=water_xyz,
-            basis='aug-cc-pvdz',
-            unit="Bohr"
-        )
-        mf = self.run_pyscf_hf(mol)
+        mf = utils.run_pyscf_hf(water_xyz, basis="aug-cc-pvdz")
 
         # cc-pvtz is wrong in VeloxChem
-        scfdrv = self.run_vlx_hf(water_xyz, "aug-cc-pvdz")
-
+        scfdrv = utils.run_vlx_hf(water_xyz, basis="aug-cc-pvdz")
         self.base_test(psi4_res=wfn, pyscf_res=mf, vlx_res=scfdrv)

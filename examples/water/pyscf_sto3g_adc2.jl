@@ -23,8 +23,7 @@ scfres.conv_tol_grad = 1e-10
 scfres.kernel()
 
 # Run an adc2 calculation:
-pyscf_result = adcc.backends.import_scf_results(scfres)
-singlets = adcc.adc2(pyscf_result, n_singlets=5)
+singlets = adcc.adc2(scfres, n_singlets=5)
 triplets = adcc.adc2(singlets.matrix, n_triplets=3)
 
 # Attach state densities

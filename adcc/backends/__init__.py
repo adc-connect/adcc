@@ -44,7 +44,6 @@ def import_scf_results(res):
         pass
 
     try:
-        from mpi4py import MPI
         import veloxchem as vlx
         from . import veloxchem as backend_veloxchem
         if isinstance(res, vlx.scfrestdriver.ScfRestrictedDriver):
@@ -55,7 +54,7 @@ def import_scf_results(res):
     try:
         import psi4
         from . import psi4 as backend_psi4
-        if isinstance(res, psi4.core.RHF):
+        if isinstance(res, psi4.core.HF):
             return backend_psi4.import_scf(res)
     except ImportError:
         pass

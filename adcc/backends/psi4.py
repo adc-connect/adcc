@@ -82,7 +82,9 @@ class Psi4HFProvider(HartreeFockProvider):
         }
 
         self.eri_ffff = None
-        self.eri_builder = None
+        self.eri_builder = Psi4EriBuilder(
+            self.wfn, self.n_orbs, self.n_orbs_alpha, self.n_alpha, self.n_beta
+        )
 
     def get_n_alpha(self):
         return self.wfn.nalpha()
@@ -120,12 +122,13 @@ class Psi4HFProvider(HartreeFockProvider):
         mo_coeff_a = np.asarray(self.wfn.Ca())
         mo_coeff = (mo_coeff_a, mo_coeff_a)
         out[:] = np.transpose(
-            np.hstack((mo_coeff[0].T, mo_coeff[1].T))
+            np.hstack((mo_coeff[0], mo_coeff[1]))
         )
 
     def fill_orben_f(self, out):
         orben_a = np.asarray(self.wfn.epsilon_a())
-        out[:] = np.hstack((orben_a, orben_a))
+        orben_b = np.asarray(self.wfn.epsilon_b())
+        out[:] = np.hstack((orben_a, orben_b))
 
     def fill_fock_ff(self, slices, out):
         diagonal = np.empty(self.n_orbs)
@@ -135,22 +138,10 @@ class Psi4HFProvider(HartreeFockProvider):
     # TODO: obsolete code, just used for testing
     def fill_eri_ffff(self, slices, out):
         if self.eri_ffff is None:
-            if not self.eri_builder:
-                self.eri_builder = Psi4EriBuilder(self.wfn,
-                                                  self.n_orbs,
-                                                  self.n_orbs_alpha,
-                                                  self.n_alpha,
-                                                  self.n_beta)
             self.eri_ffff = self.eri_builder.build_full_eri_ffff()
         out[:] = self.eri_ffff[slices]
 
     def fill_eri_phys_asym_ffff(self, slices, out):
-        if not self.eri_builder:
-            self.eri_builder = Psi4EriBuilder(self.wfn,
-                                              self.n_orbs,
-                                              self.n_orbs_alpha,
-                                              self.n_alpha,
-                                              self.n_beta)
         self.eri_builder.fill_slice(slices, out)
 
     def has_eri_phys_asym_ffff(self):
@@ -166,10 +157,13 @@ class Psi4HFProvider(HartreeFockProvider):
 
 
 def import_scf(scfdrv):
-    if not isinstance(scfdrv, psi4.core.RHF):
+    if not isinstance(scfdrv, psi4.core.HF):
         raise TypeError("Unsupported type for backends.psi4.import_scf.")
 
-    # TODO
+    if not isinstance(scfdrv, psi4.core.RHF):
+        raise TypeError("Only restricted references (RHF) are supported.")
+
+    # TODO: Psi4 throws an exception if SCF is not converged
     # if not scfdrv.is_converged:
     #     raise ValueError("Cannot start an adc calculation on top of an SCF, "
     #                      "which is not converged.")

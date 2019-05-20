@@ -23,30 +23,27 @@
 
 from libadcc import HartreeFockProvider
 import numpy as np
-from mpi4py import MPI
 import veloxchem as vlx
 
 from .eri_build_helper import (EriBuilder, SpinBlockSlice,
-                               get_symmetry_equivalent_transpositions_for_block,
-                               is_spin_allowed,
-                               BlockSliceMappingHelper)
+                               get_symmetry_equivalent_transpositions_for_block)
 
 
 # VeloxChem is a special case... not using coefficients at all
 # so we need this boilerplate code to make it work...
 class VeloxChemEriBuilder(EriBuilder):
-    def __init__(self, task, molecule, ao_basis, mol_orbs, mpi_comm,
-                 ostream,
+    def __init__(self, task, mol_orbs,
                  n_orbs, n_orbs_alpha, n_alpha, n_beta):
         self.task = task
-        self.molecule = molecule
-        self.ao_basis = ao_basis
+        self.molecule = self.task.molecule
+        self.ao_basis = self.task.ao_basis
+        self.mpi_comm = self.task.mpi_comm
+        self.ostream = self.task.ostream
         self.mol_orbs = mol_orbs
-        self.mpi_comm = mpi_comm
-        self.ostream = ostream
         self.moints_drv = vlx.MOIntegralsDriver(self.mpi_comm, self.ostream)
         super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta)
         self.transform_on_the_fly = False
+        self.blck_cache = {}
 
     def compute_eri_block_vlx(self, block):
         grps = [p for p in range(self.task.mpi_size)]
@@ -54,69 +51,78 @@ class VeloxChemEriBuilder(EriBuilder):
                                        self.mol_orbs, block,
                                        grps)
 
-    def compute_mo_eri(self, block):
-        if block in self.eri_cache:
-            return self.eri_cache[block]
+    # TODO: cleanup
+    def compute_mo_asym_eri(self, asym_block, spin_block):
+        cache_key = asym_block + spin_block
+        if cache_key in self.eri_asymm_cache:
+            return self.eri_asymm_cache[cache_key]
+
         n_alpha = self.n_alpha
         n_orbs_alpha = self.n_orbs_alpha
 
-        grps = [p for p in range(self.task.mpi_size)]
-        blck = self.moints_drv.compute(self.molecule, self.ao_basis,
-                                       self.mol_orbs, block,
-                                       grps)
         indices = [n_alpha if x == "O" else n_orbs_alpha - n_alpha
-                   for x in block]
-        if block != "OOVV":
-            indices = [indices[i] for i in [0, 2, 1, 3]]
+                   for x in asym_block]
+        eris = np.zeros((indices[0], indices[1],
+                         indices[2], indices[3]))
 
-        # make canonical integral block
-        can_block_integrals = np.zeros((indices[0], indices[1],
-                                        indices[2], indices[3]))
-        # offset to retrieve integrals
-        ioffset = n_alpha if block == "VVVV" else 0
-        joffset = n_alpha if (block == "OVVV" or block == "VVVV") else 0
-        # fill canonical block
-        for i in range(ioffset, indices[0] + ioffset):
-            for j in range(joffset, indices[1] + joffset):
-                ij = blck.to_numpy(vlx.TwoIndexes(i, j))
-                can_block_integrals[i - ioffset,
-                                    j - joffset, :, :] = ij[:, :]
-        self.eri_cache[block] = can_block_integrals
-        return can_block_integrals
+        grps = [p for p in range(self.task.mpi_size)]
+        vlx_block = "ASYM_" + asym_block.upper()
+        if vlx_block in self.blck_cache.keys():
+            blck = self.blck_cache[vlx_block]
+        else:
+            import time
+            start = time.time()
+            print("computing block", vlx_block)
+            blck = self.moints_drv.compute(self.molecule, self.ao_basis,
+                                           self.mol_orbs, vlx_block,
+                                           grps)
+            self.blck_cache[vlx_block] = blck
+            stop = time.time()
+            print("Time: ", stop - start)
 
-    # FIXME: this code is only working for some of the blocks,
-    # waiting for a solution from the VeloxChem developers to compute
-    # all anti-symmetrized blocks of integrals
-    def build_eri_phys_asym_block(self, can_block=None, spin_block=None,
-                                  spin_symm=None):
-        block = can_block
-        asym_block = "".join([block[i] for i in [0, 3, 2, 1]])
-        print(block, asym_block)
+        ioffset = n_alpha if asym_block == "VVVV" else 0
+        joffset = n_alpha if (asym_block == "OVVV" or asym_block == "OVOV"
+                              or asym_block == "VVVV") else 0
 
-        both_blocks = "{}-{}-{}-{}".format(block, asym_block,
-                                        str(spin_symm.pref1),
-                                        str(spin_symm.pref2))
-        if both_blocks in self.eri_asymm_cache.keys():
-            print("Retrieving block:", both_blocks)
-            return self.eri_asymm_cache[both_blocks]
-        # TODO: cleanup a bit
-        if spin_symm.pref1 != 0 and spin_symm.pref2 != 0:
-            can_block_integrals = self.compute_mo_eri(block)
-            eri_phys = can_block_integrals.transpose(0, 2, 1, 3)
-            # (ik|jl) - (il|jk)
-            asymm = self.compute_mo_eri(asym_block).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
-            eris = spin_symm.pref1 * eri_phys - spin_symm.pref2 * asymm
-        elif spin_symm.pref1 != 0 and spin_symm.pref2 == 0:
-            can_block_integrals = self.compute_mo_eri(block)
-            eris = spin_symm.pref1 * can_block_integrals.transpose(0, 2, 1, 3)
-        elif spin_symm.pref1 == 0 and spin_symm.pref2 != 0:
-            asymm = self.compute_mo_eri(asym_block).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
-            eris = - spin_symm.pref2 * asymm
-
-        self.eri_asymm_cache[both_blocks] = eris
-        print("Cached ERI asymm: {:.2f} Gb".format(sum(self.eri_asymm_cache[f].nbytes * 1e-9 for f in self.eri_asymm_cache)))
-        print("Cached ERI chem: {:.2f} Gb".format(sum(self.eri_cache[f].nbytes * 1e-9 for f in self.eri_cache)))
+        if asym_block != "OVOV" and asym_block != "OVVV":
+            for idx, pair in enumerate(blck.get_gen_pairs()):
+                i = pair.first()
+                j = pair.second()
+                fxy = blck.xy_to_numpy(idx)
+                fyx = blck.yx_to_numpy(idx)
+                if spin_block == "aaaa":
+                    eris[i - ioffset, j - joffset, :, :] = fxy - fyx.T
+                    eris[j - joffset, i - ioffset, :, :] = - eris[i - ioffset,
+                                                                  j - joffset,
+                                                                  :, :]
+                elif spin_block == "abab":
+                    eris[i - ioffset, j - joffset, :, :] = fxy
+                    eris[j - joffset, i - ioffset, :, :] = fyx.T
+        else:
+            for idx, pair in enumerate(blck.get_gen_pairs()):
+                i = pair.first()
+                j = pair.second()
+                if spin_block == "aaaa":
+                    fxy = blck.xy_to_numpy(idx)
+                    fyx = blck.yx_to_numpy(idx)
+                    eris[i - ioffset, j - joffset, :, :] = fxy - fyx.T
+                elif spin_block == "abab":
+                    fxy = blck.xy_to_numpy(idx)
+                    eris[i - ioffset, j - joffset, :, :] = fxy
+                elif spin_block == "abba":
+                    fyx = blck.yx_to_numpy(idx)
+                    eris[i - ioffset, j - joffset, :, :] = -fyx.T
+        self.eri_asymm_cache[cache_key] = eris
         return eris
+
+    @property
+    def has_mo_asym_eri(self):
+        return True
+
+    def flush_cache(self):
+        self.eri_asymm_cache = {}
+        self.eri_cache = {}
+        self.blck_cache = {}
 
     def build_full_eri_ffff(self):
         n_orbs = self.n_orbs
@@ -203,7 +209,10 @@ class VeloxChemHFProvider(HartreeFockProvider):
             "nuclear_repulsion": self.molecule.nuclear_repulsion_energy()
         }
         self.eri_ffff = None
-        self.eri_builder = None
+        self.eri_builder = VeloxChemEriBuilder(
+            self.scfdrv.task, self.mol_orbs, self.n_orbs, self.n_orbs_alpha,
+            self.n_alpha, self.n_beta
+        )
 
     def get_n_alpha(self):
         return self.molecule.number_of_alpha_electrons()
@@ -254,31 +263,10 @@ class VeloxChemHFProvider(HartreeFockProvider):
 
     def fill_eri_ffff(self, slices, out):
         if self.eri_ffff is None:
-            if not self.eri_builder:
-                self.eri_builder = VeloxChemEriBuilder(self.scfdrv.task,
-                                                       self.molecule,
-                                                       self.ao_basis,
-                                                       self.mol_orbs,
-                                                       self.mpi_comm,
-                                                       self.ostream,
-                                                       self.n_orbs,
-                                                       self.n_orbs_alpha,
-                                                       self.n_alpha,
-                                                       self.n_beta)
             self.eri_ffff = self.eri_builder.build_full_eri_ffff()
         out[:] = self.eri_ffff[slices]
 
     def fill_eri_phys_asym_ffff(self, slices, out):
-        if not self.eri_builder:
-            self.eri_builder = VeloxChemEriBuilder(self.scfdrv.task, self.molecule,
-                                                   self.ao_basis,
-                                                   self.mol_orbs,
-                                                   self.mpi_comm,
-                                                   self.ostream,
-                                                   self.n_orbs,
-                                                   self.n_orbs_alpha,
-                                                   self.n_alpha,
-                                                   self.n_beta)
         self.eri_builder.fill_slice(slices, out)
 
     def has_eri_phys_asym_ffff(self):
@@ -300,10 +288,9 @@ def import_scf(scfdrv):
         raise TypeError("Please attach the VeloxChem task to "
                         "the VeloxChem SCF driver")
 
-    # TODO
-    # if not scfdrv.is_converged:
-    #     raise ValueError("Cannot start an adc calculation on top of an SCF, "
-    #                      "which is not converged.")
+    if not scfdrv.is_converged:
+        raise ValueError("Cannot start an adc calculation on top of an SCF, "
+                         "which is not converged.")
 
     provider = VeloxChemHFProvider(scfdrv)
     return provider

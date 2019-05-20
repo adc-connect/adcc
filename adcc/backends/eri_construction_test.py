@@ -29,16 +29,15 @@ from .eri_build_helper import _eri_phys_asymm_spin_allowed_prefactors
 
 def eri_asymm_construction_test(scfres):
     hfdata = adcc.backends.import_scf_results(scfres)
-
-    print(hfdata.get_n_bas())
-
     refstate = adcc.ReferenceState(hfdata)
 
+    # build the full ERI tensor
     eri_chem = np.empty((hfdata.n_orbs, hfdata.n_orbs,
                          hfdata.n_orbs, hfdata.n_orbs))
     sfull = slice(hfdata.n_orbs)
     hfdata.fill_eri_ffff((sfull, sfull, sfull, sfull), eri_chem)
     eri_phys = eri_chem.transpose(0, 2, 1, 3)
+    # full anti-symmetrized ERI tensor
     eri_asymm = eri_phys - eri_phys.transpose(1, 0, 2, 3)
 
     n_orbs = hfdata.n_orbs
@@ -70,29 +69,32 @@ def eri_asymm_construction_test(scfres):
         }
     }
 
+    n_elec = n_alpha + n_beta
+    n_virt_a = n_orbs_alpha - n_alpha
     lookuptable_prelim = {
         "o": {
-            "a": slice(0, n_alpha, 1),
-            "b": slice(n_alpha, n_alpha + n_beta, 1),
+            "a": slice(0, n_alpha, 1), "b": slice(n_alpha, n_elec, 1)
         },
         "v": {
-            "a": slice(0, n_orbs_alpha - n_alpha, 1),
-            "b": slice(n_orbs_alpha - n_alpha,
-                       n_orbs - (n_alpha + n_beta), 1),
+            "a": slice(0, n_virt_a, 1), "b": slice(n_virt_a, n_orbs - n_elec, 1)
         }
     }
+    # loop over all spaces and compare imported
+    # tensor to full tensor
     for s in space_names:
         imported_asymm = refstate.eri(s).to_ndarray()
         s_clean = s.replace("1", "")
         for allowed_spin in _eri_phys_asymm_spin_allowed_prefactors:
             sl = [lookuptable[x] for x in list(s_clean)]
-            sl = [sl[x][y] for x, y in enumerate(list(allowed_spin.transposition))]
+            sl = [sl[x][y] for x, y in
+                  enumerate(list(allowed_spin.transposition))]
             sl2 = [lookuptable_prelim[x] for x in list(s_clean)]
-            sl2 = [sl2[x][y] for x, y in enumerate(list(allowed_spin.transposition))]
+            sl2 = [sl2[x][y] for x, y in
+                   enumerate(list(allowed_spin.transposition))]
             sl = tuple(sl)
             sl2 = tuple(sl2)
-            np.testing.assert_almost_equal(eri_asymm[sl],
-                                           imported_asymm[sl2],
-                                           err_msg="""ERIs wrong in """
-                                           """space {} and spin """
-                                           """block {}""".format(s, allowed_spin))
+            np.testing.assert_almost_equal(
+                eri_asymm[sl], imported_asymm[sl2],
+                err_msg="""ERIs wrong in space {} """
+                        """and spin block {}""".format(s, allowed_spin)
+            )

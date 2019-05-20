@@ -90,7 +90,6 @@ class EriBlock:
         bsp = np.array(tuple(self.block_name))
         allowed_permutations_strings = []
         allowed_transpositions = []
-        # TODO: take care of sign when phys_asym is implemented
         for permutation in _chem_allowed:
             t = np.take(bsp, permutation.transposition)
             tstring = "".join(t.tolist())
@@ -197,13 +196,14 @@ class EriBuilder:
     def compute_mo_eri_slice(self, coeffs):
         return self.compute_mo_eri(None, coeffs, use_cache=False)
 
-    def compute_mo_asymm_eri(self, block):
-        raise NotImplementedError("Implement compute_mo_asymm_eri")
+    def compute_mo_asym_eri(self, asym_block, spin_block):
+        raise NotImplementedError("Implement compute_mo_asym_eri")
+
+    @property
+    def has_mo_asym_eri(self):
+        return False
 
     def fill_slice(self, slices, out):
-        # TODO: if a host program allows to compute anti-symmetrized
-        # integrals directly, check if this feature was enabled and
-        # subsequently use compute_mo_asymm_eri
         if self.c_all is None and self.transform_on_the_fly:
             self.c_all = self.coeffs_all
         mo_spaces, \
@@ -219,34 +219,51 @@ class EriBuilder:
         if mo_spaces != self.last_block:
             self.last_block = mo_spaces
             self.flush_cache()
-        mo_spaces_chem = "".join(np.take(np.array(mo_spaces), [0, 2, 1, 3]))
-        spin_block_str = "".join(spin_block)
-        print(mo_spaces, mo_spaces_chem, spin_block_str)
-        allowed, spin_symm = is_spin_allowed(spin_block_str)
-        if allowed:
-            if self.transform_on_the_fly:
-                print("OTF transformation")
-                out[:] = self.transform_block_from_slices(slices=slices,
-                                                          blocks=mo_spaces_chem,
-                                                          spin_symm=spin_symm)
-            else:
-                eri = self.build_eri_phys_asym_block(can_block=mo_spaces_chem,
-                                                     spin_symm=spin_symm)
-                out[:] = eri[comp_block_slices]
+        # if a host program allows to compute anti-symmetrized
+        # integrals directly, check if this feature was enabled and
+        # subsequently use compute_mo_asym_eri
+        if self.has_mo_asym_eri:
+            mo_spaces = "".join(mo_spaces)
+            spin_block = "".join(spin_block)
+            print("<{}||{}>, {}".format(mo_spaces[:2], mo_spaces[2:],
+                                        spin_block))
+            out[:] = self.compute_mo_asym_eri(mo_spaces,
+                                              spin_block)[comp_block_slices]
         else:
-            out[:] = 0
+            mo_spaces_chem = "".join(
+                np.take(np.array(mo_spaces), [0, 2, 1, 3])
+            )
+            spin_block_str = "".join(spin_block)
+            print(mo_spaces, mo_spaces_chem, spin_block_str)
+            allowed, spin_symm = is_spin_allowed(spin_block_str)
+            if allowed:
+                if self.transform_on_the_fly:
+                    print("OTF transformation")
+                    out[:] = self.transform_block_from_slices(
+                        slices=slices, blocks=mo_spaces_chem,
+                        spin_symm=spin_symm
+                    )
+                else:
+                    eri = self.build_eri_phys_asym_block(
+                        can_block=mo_spaces_chem, spin_symm=spin_symm
+                    )
+                    out[:] = eri[comp_block_slices]
+            else:
+                out[:] = 0
 
     def build_eri_phys_asym_block(self, can_block=None, spin_symm=None):
         co = self.coeffs_occ_alpha
         cv = self.coeffs_virt_alpha
         block = can_block
         asym_block = "".join([block[i] for i in [0, 3, 2, 1]])
-        both_blocks = "{}-{}-{}-{}".format(block, asym_block,
-                                           str(spin_symm.pref1),
-                                           str(spin_symm.pref2))
+        both_blocks = "{}-{}-{}-{}".format(
+            block, asym_block, str(spin_symm.pref1), str(spin_symm.pref2)
+        )
         if both_blocks in self.eri_asymm_cache.keys():
-            # print("Retrieving block:", both_blocks)
             return self.eri_asymm_cache[both_blocks]
+
+        # TODO: avoid caching of (VV|VV)
+        # because we don't need it anymore -> <VV||VV> is cached anyways
 
         coeffs_transform = tuple(co if x == "O" else cv for x in block)
         if spin_symm.pref1 != 0 and spin_symm.pref2 != 0:
@@ -254,22 +271,34 @@ class EriBuilder:
             eri_phys = can_block_integrals.transpose(0, 2, 1, 3)
             # (ik|jl) - (il|jk)
             chem_asym = tuple(coeffs_transform[i] for i in [0, 3, 2, 1])
-            asymm = self.compute_mo_eri(asym_block,
-                                        chem_asym).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
+            asymm = self.compute_mo_eri(
+                asym_block, chem_asym
+            ).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
             eris = spin_symm.pref1 * eri_phys - spin_symm.pref2 * asymm
         elif spin_symm.pref1 != 0 and spin_symm.pref2 == 0:
             can_block_integrals = self.compute_mo_eri(block, coeffs_transform)
             eris = spin_symm.pref1 * can_block_integrals.transpose(0, 2, 1, 3)
         elif spin_symm.pref1 == 0 and spin_symm.pref2 != 0:
             chem_asym = tuple(coeffs_transform[i] for i in [0, 3, 2, 1])
-            asymm = self.compute_mo_eri(asym_block,
-                                        chem_asym).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
+            asymm = self.compute_mo_eri(
+                asym_block, chem_asym
+            ).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
             eris = - spin_symm.pref2 * asymm
 
         self.eri_asymm_cache[both_blocks] = eris
-        print("Cached ERI asymm: {:.2f} Gb".format(sum(self.eri_asymm_cache[f].nbytes * 1e-9 for f in self.eri_asymm_cache)))
-        print("Cached ERI chem: {:.2f} Gb".format(sum(self.eri_cache[f].nbytes * 1e-9 for f in self.eri_cache)))
+        self.print_cache_memory()
         return eris
+
+    def print_cache_memory(self):
+        def cache_memory_gb(dict):
+            return sum(dict[f].nbytes * 1e-9 for f in dict)
+
+        print("Cached ERI asymm: {:.2f} Gb".format(
+              cache_memory_gb(self.eri_asymm_cache)
+              ))
+        print("Cached ERI chem: {:.2f} Gb".format(
+              cache_memory_gb(self.eri_cache)
+              ))
 
     def transform_block_from_slices(self, slices, blocks, spin_symm):
         coeffs_transform = self.coeffs_transform_on_the_fly(slices)
@@ -279,14 +308,18 @@ class EriBuilder:
             eri_phys = can_block_integrals.transpose(0, 2, 1, 3)
             # (ik|jl) - (il|jk)
             chem_asym = tuple(coeffs_transform[i] for i in [0, 3, 2, 1])
-            asymm = self.compute_mo_eri_slice(chem_asym).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
+            asymm = self.compute_mo_eri_slice(
+                chem_asym
+            ).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
             eris = spin_symm.pref1 * eri_phys - spin_symm.pref2 * asymm
         elif spin_symm.pref1 != 0 and spin_symm.pref2 == 0:
             can_block_integrals = self.compute_mo_eri_slice(coeffs_transform)
             eris = spin_symm.pref1 * can_block_integrals.transpose(0, 2, 1, 3)
         elif spin_symm.pref1 == 0 and spin_symm.pref2 != 0:
             chem_asym = tuple(coeffs_transform[i] for i in [0, 3, 2, 1])
-            asymm = self.compute_mo_eri_slice(chem_asym).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
+            asymm = self.compute_mo_eri_slice(
+                chem_asym
+            ).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
             eris = - spin_symm.pref2 * asymm
         return eris
 

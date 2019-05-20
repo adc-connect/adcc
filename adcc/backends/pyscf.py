@@ -20,6 +20,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+
+import warnings
+
 import numpy as np
 
 from pyscf import ao2mo, scf
@@ -27,9 +30,7 @@ from pyscf import ao2mo, scf
 from libadcc import HfData, HartreeFockProvider
 
 from .eri_build_helper import (EriBuilder, SpinBlockSlice,
-                               get_symmetry_equivalent_transpositions_for_block,
-                               is_spin_allowed,
-                               BlockSliceMappingHelper)
+                               get_symmetry_equivalent_transpositions_for_block)
 
 
 class PySCFEriBuilder(EriBuilder):
@@ -82,7 +83,10 @@ class PySCFHFProvider(HartreeFockProvider):
             "nuclear_repulsion": self.scfres.mol.energy_nuc()
         }
         self.eri_ffff = None
-        self.eri_builder = None
+        self.eri_builder = PySCFEriBuilder(
+            self.scfres, self.n_orbs, self.n_orbs_alpha,
+            self.n_alpha, self.n_beta
+        )
 
     def get_n_alpha(self):
         return np.sum(self.scfres.mo_occ > 0)
@@ -157,25 +161,12 @@ class PySCFHFProvider(HartreeFockProvider):
         self.fill_orben_f(diagonal)
         out[:] = np.diag(diagonal)[slices]
 
-    # TODO: obsolete code, just used for testing
     def fill_eri_ffff(self, slices, out):
         if self.eri_ffff is None:
-            if not self.eri_builder:
-                self.eri_builder = PySCFEriBuilder(self.scfres,
-                                                   self.n_orbs,
-                                                   self.n_orbs_alpha,
-                                                   self.n_alpha,
-                                                   self.n_beta)
             self.eri_ffff = self.eri_builder.build_full_eri_ffff()
         out[:] = self.eri_ffff[slices]
 
     def fill_eri_phys_asym_ffff(self, slices, out):
-        if not self.eri_builder:
-            self.eri_builder = PySCFEriBuilder(self.scfres,
-                                               self.n_orbs,
-                                               self.n_orbs_alpha,
-                                               self.n_alpha,
-                                               self.n_beta)
         self.eri_builder.fill_slice(slices, out)
 
     def has_eri_phys_asym_ffff(self):
@@ -341,33 +332,45 @@ def convert_scf_to_dict(scfres):
             slices_beta = [bro if x == "O" else brv for x in b]
             coeffs_transform = tuple(co if x == "O" else cv for x in b)
             # make canonical integral block
-            can_block_integrals = ao2mo.general(eri_ao, coeffs_transform,
-                                                compact=False).reshape(indices[0],
-                                                                       indices[1],
-                                                                       indices[2],
-                                                                       indices[3])
+            can_block_integrals = ao2mo.general(
+                eri_ao, coeffs_transform, compact=False
+            )
+            can_block_integrals.reshape(
+                indices[0], indices[1], indices[2], indices[3]
+            )
             # automatically set ERI tensor's symmetry-equivalent blocks
             trans_sym_blocks = get_symmetry_equivalent_transpositions_for_block(b)
 
             # Slices for the spin-allowed blocks
-            aaaa = SpinBlockSlice("aaaa", (slices_alpha[0], slices_alpha[1],
-                                           slices_alpha[2], slices_alpha[3]))
-            bbbb = SpinBlockSlice("bbbb", (slices_beta[0], slices_beta[1],
-                                           slices_beta[2], slices_beta[3]))
-            aabb = SpinBlockSlice("aabb", (slices_alpha[0], slices_alpha[1],
-                                           slices_beta[2], slices_beta[3]))
-            bbaa = SpinBlockSlice("bbaa", (slices_beta[0], slices_beta[1],
-                                           slices_alpha[2], slices_alpha[3]))
+            aaaa = SpinBlockSlice(
+                "aaaa", (slices_alpha[0], slices_alpha[1],
+                         slices_alpha[2], slices_alpha[3])
+            )
+            bbbb = SpinBlockSlice(
+                "bbbb", (slices_beta[0], slices_beta[1],
+                         slices_beta[2], slices_beta[3])
+            )
+            aabb = SpinBlockSlice(
+                "aabb", (slices_alpha[0], slices_alpha[1],
+                         slices_beta[2], slices_beta[3])
+            )
+            bbaa = SpinBlockSlice(
+                "bbaa", (slices_beta[0], slices_beta[1],
+                         slices_alpha[2], slices_alpha[3])
+            )
             non_zero_spin_block_slice_list = [aaaa, bbbb, aabb, bbaa]
             for tsym_block in trans_sym_blocks:
                 sym_block_eri = can_block_integrals.transpose(tsym_block)
                 for non_zero_spin_block in non_zero_spin_block_slice_list:
-                    transposed_spin_slices = tuple(non_zero_spin_block.slices[i] for i in tsym_block)
+                    transposed_spin_slices = tuple(
+                        non_zero_spin_block.slices[i] for i in tsym_block
+                    )
                     eri[transposed_spin_slices] = sym_block_eri
     else:
         # compute full ERI tensor (with really everything)
-        eri = ao2mo.general(eri_ao,
-                            (cf_bf, cf_bf, cf_bf, cf_bf), compact=False)
+        eri = ao2mo.general(
+            eri_ao, (cf_bf, cf_bf, cf_bf, cf_bf), compact=False
+        )
         eri = eri.reshape(n_orbs, n_orbs, n_orbs, n_orbs)
         del eri_ao
 
@@ -420,7 +423,7 @@ def import_scf(scfres):
         return provider
     else:
         # fallback
-        print("WARNING: falling back to slow import for UHF result.")
+        warnings.warn("Falling back to slow import for UHF result.")
 
         data = convert_scf_to_dict(scfres)
         ret = HfData.from_dict(data)

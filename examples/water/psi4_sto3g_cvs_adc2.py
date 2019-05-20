@@ -32,7 +32,9 @@ mol = psi4.geometry("""
     units au
     """)
 
-psi4.set_num_threads(4)
+# set the number of cores equal to the auto-determined value from
+# the adcc ThreadPool
+psi4.set_num_threads(adcc.thread_pool.n_cores)
 psi4.core.be_quiet()
 psi4.set_options({'basis': "sto-3g",
                   'scf_type': 'pk',
@@ -44,5 +46,4 @@ scf_e, wfn = psi4.energy('SCF', return_wfn=True)
 adcc.memory_pool.initialise(max_memory=256 * 1024 * 1024)
 
 # Run an adc2 calculation:
-psi4_result = adcc.backends.import_scf_results(wfn)
-state = adcc.cvs_adc2(psi4_result, n_singlets=5, n_core_orbitals=1)
+state = adcc.cvs_adc2(wfn, n_singlets=5, n_core_orbitals=1)

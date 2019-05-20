@@ -42,7 +42,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
                  @end
 
                  @method settings
-                 basis: sto-3g
+                 basis: cc-pvdz
                  basis path: {}
                  @end
 
@@ -57,18 +57,15 @@ with tempfile.TemporaryDirectory() as tmpdir:
                  @end
                  """.format(basis_dir))
     task = vlx.MpiTask([infile, outfile], MPI.COMM_WORLD)
-    scfdrv = vlx.ScfRestrictedDriver()
-    scfdrv.conv_thresh = 1e-14
-    scfdrv.compute_task(task)
+    scfdrv = vlx.ScfRestrictedDriver(task.mpi_comm, task.ostream)
+    scfdrv.conv_thresh = 1e-8
+    scfdrv.compute(task.molecule, task.ao_basis, task.min_basis)
     scfdrv.task = task
 
-# Initialise ADC memory (256 MiB)
-adcc.memory_pool.initialise(max_memory=256 * 1024 * 1024)
-
 # Run an adc2 calculation:
-state = adcc.adc2(scfdrv, n_singlets=5, n_triplets=3)
+state = adcc.adc2(scfdrv, n_singlets=5)
 
 # Attach state densities
-state = [adcc.attach_state_densities(kstate) for kstate in state]
+state = adcc.attach_state_densities(state)
 
 IPython.embed()

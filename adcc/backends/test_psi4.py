@@ -27,12 +27,11 @@ import unittest
 import adcc.backends
 import numpy as np
 
-from adcc.tmp_build_reference_state import tmp_build_reference_state
-
-from .eri_build_helper import _eri_phys_asymm_spin_allowed_prefactors
+from .eri_construction_test import eri_asymm_construction_test
 
 try:
     import psi4
+    from .utils import run_psi4_hf
     _psi4 = True
 except ImportError:
     _psi4 = False
@@ -40,63 +39,59 @@ except ImportError:
 
 @pytest.mark.skipif(not _psi4, reason="psi4 not found.")
 class TestPsi4(unittest.TestCase):
-    def run_hf(self, mol, basis=None):
-        psi4.core.be_quiet()
-        psi4.set_options({'basis': basis,
-                          'scf_type': 'pk',
-                          'e_convergence': 1e-12,
-                          'd_convergence': 1e-8})
-        scf_e, wfn = psi4.energy('SCF', return_wfn=True)
-        return wfn
 
-    def base_test(self, scfres):
-        hfdata = adcc.backends.import_scf_results(scfres)
+    def base_test(self, wfn):
+        hfdata = adcc.backends.import_scf_results(wfn)
         assert hfdata.backend == "psi4"
 
-        # n_orbs_alpha = hfdata.n_orbs_alpha
+        # only RHF support until now
         assert hfdata.restricted
-        # TODO: implement
-        # if hfdata.restricted:
-        #     assert hfdata.spin_multiplicity != 0
-        #     assert hfdata.n_alpha >= hfdata.n_beta
-        #
-        #     # Check SCF type fits
-        #     # assert isinstance(scfres, (scf.rhf.RHF, scf.rohf.ROHF))
-        #     # assert not isinstance(scfres, scf.uhf.UHF)
-        #
-        #     assert hfdata.n_orbs_alpha == hfdata.n_orbs_beta
-        #     assert np.all(hfdata.orben_f[:n_orbs_alpha] ==
-        #                   hfdata.orben_f[n_orbs_alpha:])
-        #
-        #     mo_occ = (scfres.mo_occ, scfres.mo_occ)
-        #     mo_energy = (scfres.mo_energy, scfres.mo_energy)
-        # else:
-        #     assert hfdata.spin_multiplicity == 0
-        #
-        #     # Check SCF type fits
-        #     # assert isinstance(scfres, scf.uhf.UHF)
-        #
-        #     mo_occ = scfres.mo_occ
-        #     mo_energy = scfres.mo_energy
-        #
-        # # Check n_alpha and n_beta
-        # assert hfdata.n_alpha == np.sum(mo_occ[0] > 0)
-        # assert hfdata.n_beta == np.sum(mo_occ[1] > 0)
-        #
-        # # Check the lowest n_alpha / n_beta orbitals are occupied
-        # occ_a = [mo_occ[0][mo_energy[0] == ene]
-        #          for ene in hfdata.orben_f[:hfdata.n_alpha]]
-        # occ_b = [mo_occ[1][mo_energy[1] == ene]
-        #          for ene in hfdata.orben_f[n_orbs_alpha:
-        #                                    n_orbs_alpha + hfdata.n_beta]]
-        # assert np.all(np.asarray(occ_a) > 0)
-        # assert np.all(np.asarray(occ_b) > 0)
 
-        # TODO checks for values of
+        n_orbs = 2 * wfn.nmo()
+
+        assert hfdata.spin_multiplicity != 0
+        assert hfdata.n_alpha == hfdata.n_beta
+
+        assert hfdata.n_orbs_alpha == hfdata.n_orbs_beta
+        assert np.all(hfdata.orben_f[:hfdata.n_orbs_alpha]
+                      == hfdata.orben_f[hfdata.n_orbs_alpha:])
+
+        # Check n_alpha and n_beta
+        assert hfdata.n_alpha == wfn.nalpha()
+        assert hfdata.n_beta == wfn.nbeta()
+
+        nuc_rep_ref = wfn.molecule().nuclear_repulsion_energy()
+        assert hfdata.energy_terms["nuclear_repulsion"] == nuc_rep_ref
+        assert hfdata.energy_scf == wfn.energy()
+        assert hfdata.spin_multiplicity == wfn.molecule().multiplicity()
+
         # orben_f
-        # fock_ff
+        np.testing.assert_almost_equal(
+            hfdata.orben_f, np.hstack((wfn.epsilon_a(), wfn.epsilon_b()))
+        )
         # orbcoeff_fb
-        # Perhaps by transforming the fock matrix of the scfres object or so
+        np.testing.assert_almost_equal(
+            hfdata.orbcoeff_fb, np.transpose(
+                np.hstack((np.asarray(wfn.Ca()),
+                           np.asarray(wfn.Cb()))
+                          ))
+        )
+
+        # Fock matrix fock_ff
+        fock_alpha_bb = np.asarray(wfn.Fa())
+        fock_beta_bb = np.asarray(wfn.Fb())
+        np.testing.assert_almost_equal(fock_alpha_bb, fock_beta_bb)
+
+        fock_ff = np.zeros((n_orbs, n_orbs))
+        fock_alpha = np.einsum('ui,vj,uv', np.asarray(wfn.Ca()),
+                               np.asarray(wfn.Ca()), fock_alpha_bb)
+        fock_ff[:hfdata.n_orbs_alpha, :hfdata.n_orbs_alpha] = fock_alpha
+        fock_beta = np.einsum('ui,vj,uv', np.asarray(wfn.Cb()),
+                              np.asarray(wfn.Cb()), fock_beta_bb)
+        fock_ff[hfdata.n_orbs_alpha:, hfdata.n_orbs_alpha:] = fock_beta
+        np.testing.assert_almost_equal(
+            fock_ff, hfdata.fock_ff
+        )
 
         # TODO Many more tests
         #      Compare against reference data
@@ -118,90 +113,12 @@ class TestPsi4(unittest.TestCase):
             eri_perm = np.transpose(eri, perm)
             np.testing.assert_almost_equal(eri_perm, eri)
 
-    def eri_asymm_construction_test(self, scfres):
-        adcc.memory_pool.initialise(max_memory=4024 * 1024 * 1024,
-                                    tensor_block_size=16, allocator="standard")
-        hfdata = adcc.backends.import_scf_results(scfres)
-        assert hfdata.backend == "psi4"
-
-        refstate = tmp_build_reference_state(
-            hfdata
-        )
-
-        eri_chem = np.empty((hfdata.n_orbs, hfdata.n_orbs,
-                             hfdata.n_orbs, hfdata.n_orbs))
-        sfull = slice(hfdata.n_orbs)
-        hfdata.fill_eri_ffff((sfull, sfull, sfull, sfull), eri_chem)
-        eri_phys = eri_chem.transpose(0, 2, 1, 3)
-        eri_asymm = eri_phys - eri_phys.transpose(1, 0, 2, 3)
-        hfdata.flush_cache()
-
-        n_orbs = hfdata.n_orbs
-        n_alpha = hfdata.n_alpha
-        n_beta = hfdata.n_beta
-        n_orbs_alpha = hfdata.n_orbs_alpha
-
-        aro = slice(0, n_alpha, 1)
-        bro = slice(n_orbs_alpha, n_orbs_alpha + n_beta, 1)
-        arv = slice(n_alpha, n_orbs_alpha, 1)
-        brv = slice(n_orbs_alpha + n_beta, n_orbs, 1)
-
-        space_names = [
-            "o1o1o1o1",
-            "o1o1o1v1",
-            "o1o1v1v1",
-            "o1v1o1v1",
-            "o1v1v1v1",
-            "v1v1v1v1",
-        ]
-        lookuptable = {
-            "o": {
-                "a": aro,
-                "b": bro,
-            },
-            "v": {
-                "a": arv,
-                "b": brv,
-            }
-        }
-
-        lookuptable_prelim = {
-            "o": {
-                "a": slice(0, n_alpha, 1),
-                "b": slice(n_alpha, n_alpha + n_beta, 1),
-            },
-            "v": {
-                "a": slice(0, n_orbs_alpha - n_alpha, 1),
-                "b": slice(n_orbs_alpha - n_alpha,
-                           n_orbs - (n_alpha + n_beta), 1),
-            }
-        }
-
-        for s in space_names:
-            print(s)
-            imported_asymm = refstate.eri(s).to_ndarray()
-            s_clean = s.replace("1", "")
-            for allowed_spin in _eri_phys_asymm_spin_allowed_prefactors:
-                sl = [lookuptable[x] for x in list(s_clean)]
-                sl = [sl[x][y] for x, y in enumerate(list(allowed_spin.transposition))]
-                sl2 = [lookuptable_prelim[x] for x in list(s_clean)]
-                sl2 = [sl2[x][y] for x, y in enumerate(list(allowed_spin.transposition))]
-                sl = tuple(sl)
-                sl2 = tuple(sl2)
-                np.testing.assert_almost_equal(eri_asymm[sl],
-                                               imported_asymm[sl2],
-                                               err_msg="""ERIs wrong in """
-                                               """space {} and spin """
-                                               """block {}""".format(s, allowed_spin))
-
     def test_water_sto3g_rhf(self):
-        mol = psi4.geometry("""
-            O 0 0 0
-            H 0 0 1.795239827225189
-            H 1.693194615993441 0 -0.599043184453037
-            symmetry c1
-            units au
-            """)
-        wfn = self.run_hf(mol, basis="cc-pvdz")
-        # self.base_test(wfn)
-        self.eri_asymm_construction_test(wfn)
+        water_xyz = """
+        O 0 0 0
+        H 0 0 1.795239827225189
+        H 1.693194615993441 0 -0.599043184453037
+        """
+        wfn = run_psi4_hf(water_xyz, basis="cc-pvdz")
+        self.base_test(wfn)
+        eri_asymm_construction_test(wfn)
