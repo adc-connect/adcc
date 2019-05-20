@@ -55,18 +55,23 @@ def default_print(state, identifier, file=sys.stdout):
     """
     A default print function for the davidson callback
     """
+    from adcc.timings import strtime, strtime_short
+
     if identifier == "start" and state.n_iter == 0:
-        print("Niter n_ss  max_residual    current ritz values",
+        print("Niter n_ss  max_residual  time  Ritz values",
               file=file)
     elif identifier == "next_iter":
-        fmt = "{n_iter:3d}  {ss_size:4d}  {residual:12.5g}  "
-        print(fmt.format(n_iter=state.n_iter,
+        time_iter = state.timer.current("davidson/iteration")
+        fmt = "{n_iter:3d}  {ss_size:4d}  {residual:12.5g}  {tstr:5s}"
+        print(fmt.format(n_iter=state.n_iter, tstr=strtime_short(time_iter),
                          ss_size=len(state.subspace_vectors),
                          residual=np.max(state.residual_norms)),
-              " ", state.eigenvalues[:7], file=file)
+              "", state.eigenvalues[:7], file=file)
     elif identifier == "is_converged":
+        runtime = state.timer.current("davidson/total")
         print("=== Converged ===", file=file)
-        print("    Number of ADC matrix applies:   ", state.n_applies)
+        print("    Number of matrix applies:   ", state.n_applies)
+        print("    Total runtime:              ", strtime(runtime))
     elif identifier == "restart":
         print("=== Restart ===", file=file)
 
@@ -131,6 +136,8 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         residual_min_norm = 2 * n_problem * np.finfo(float).eps
 
     callback(state, "start")
+    state.timer.restart("davidson/total")
+    state.timer.restart("davidson/iteration")
     while state.n_iter < max_iter:
         state.n_iter += 1
 
@@ -177,14 +184,16 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         state.residual_norms = np.array([res @ res for res in state.residuals])
 
         callback(state, "next_iter")
+        state.timer.restart("davidson/iteration")
         if is_converged(state):
             state.converged = True
             callback(state, "is_converged")
+            state.timer.stop("davidson/total")
             return state
 
         if state.n_iter == max_iter:
-            raise la.LinAlgError("Maximum number of iterations (== " +
-                                 str(max_iter) + " reached in davidson "
+            raise la.LinAlgError("Maximum number of iterations (== "
+                                 + str(max_iter) + " reached in davidson "
                                  "procedure.")
 
         if n_ss_vec + n_block > max_subspace:
