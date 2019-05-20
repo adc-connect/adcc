@@ -28,8 +28,8 @@ from .guess import (guesses_any, guesses_singlet, guesses_spin_flip,
                     guesses_triplet)
 from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod
+from .ReferenceState import ReferenceState as adcc_ReferenceState
 from .caching_policy import DefaultCachingPolicy
-from .tmp_build_reference_state import tmp_build_reference_state
 from .solver.davidson import jacobi_davidson
 from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
@@ -131,8 +131,8 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
 
     # Step 1: Construct at least ReferenceState
     # TODO The flexibility coded here, should be put directly into the
-    #      python-side construction of the ReferenceState object once
-    #      tmp_build_reference_state is gone.
+    #      python-side construction of the ReferenceState object
+    #      (or the AdcMatrix??) now that tmp_build_reference_state is gone.
     if not isinstance(data_or_matrix, AdcMatrix) and method is None:
         raise ValueError("method needs to be explicitly provided unless "
                          "data_or_matrix is an AdcMatrix.")
@@ -145,9 +145,10 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
                              "applied then the number of core orbitals needs "
                              "to be specified via the parameter "
                              "n_core_orbitals.")
-        refstate = tmp_build_reference_state(
-            data_or_matrix, n_core_orbitals=n_core_orbitals,
-        )
+        # TODO Generalise run_adc input parameters to access full flexibility
+        #      of ReferenceState setup
+        refstate = adcc_ReferenceState(data_or_matrix,
+                                       core_orbitals=n_core_orbitals)
         data_or_matrix = refstate
     elif n_core_orbitals is not None:
         refstate = data_or_matrix.reference_state
@@ -309,10 +310,10 @@ def estimate_n_guesses(matrix, n_states, singles_only=True):
         #
         # If the system is core valence separated, then only the
         # core electrons count as "occupied".
-        refstate = matrix.reference_state
-        sp_occ = "o2" if refstate.has_core_valence_separation else "o1"
-        n_virt_a = refstate.n_orbs_alpha("v1")
-        n_occ_a = refstate.n_orbs_alpha(sp_occ)
+        mospaces = matrix.mospaces
+        sp_occ = "o2" if matrix.is_core_valence_separated else "o1"
+        n_virt_a = mospaces.n_orbs_alpha("v1")
+        n_occ_a = mospaces.n_orbs_alpha(sp_occ)
         n_guesses = min(n_guesses, n_occ_a * n_virt_a)
 
     # Adjust if we overshoot the maximal number of sensible singles block

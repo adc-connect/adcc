@@ -39,8 +39,11 @@ void export_guesses(py::module& m);
 void export_HartreeFockProvider(py::module& m);
 void export_HfData(py::module& m);
 void export_LazyMp(py::module& m);
+void export_MoIndexTranslation(py::module& m);
+void export_MoSpaces(py::module& m);
 void export_OneParticleDensityMatrix(py::module& m);
 void export_ReferenceState(py::module& m);
+void export_Symmetry(py::module& m);
 void export_Tensor(py::module& m);
 void export_ThreadPool(py::module& m);
 
@@ -56,12 +59,16 @@ PYBIND11_MODULE(libadcc, m) {
   pyif::export_CtxMap(m);
   pyif::export_AdcMemory(m);
   pyif::export_ThreadPool(m);
-  pyif::export_HartreeFockProvider(m);
-  pyif::export_HfData(m);
   pyif::export_CachingPolicy(m);
 
+  pyif::export_HartreeFockProvider(m);
+  pyif::export_HfData(m);
+  pyif::export_MoSpaces(m);
+  pyif::export_Symmetry(m);
+  pyif::export_MoIndexTranslation(m);
   pyif::export_Tensor(m);
   pyif::export_ReferenceState(m);
+
   pyif::export_OneParticleDensityMatrix(m);
   pyif::export_LazyMp(m);
   pyif::export_AdcIntermediates(m);

@@ -68,21 +68,22 @@ def dump_all_methods(key, kwargs_cvs, kwargs_general, kwargs_overwrite={}):
 
 def run(data, method, n_singlets=None, n_triplets=None,
         n_states=None, n_spin_flip=None,
-        core_valence_separation=False):
+        core_valence_separation=False, n_guess_singles=0,
+        max_subspace=0):
     n_core_orbitals = None
     if core_valence_separation:
         n_core_orbitals = data["n_core_orbitals"]
 
     # Setup the matrix and run adcman solver
-    refstate = adcc.tmp_build_reference_state(data,
-                                              n_core_orbitals=n_core_orbitals)
+    refstate = adcc.ReferenceState(data, core_orbitals=n_core_orbitals)
     matrix = adcc.AdcMatrix(method, adcc.LazyMp(refstate))
     states = adcman.jacobi_davidson(matrix, print_level=100,
                                     n_singlets=n_singlets,
                                     n_triplets=n_triplets,
                                     n_spin_flip=n_spin_flip,
                                     n_states=n_states, conv_tol=1e-9,
-                                    max_iter=100)
+                                    n_guess_singles=n_guess_singles,
+                                    max_iter=100, max_subspace=max_subspace)
 
     # return the full adcman context
     return states[0].ctx
@@ -233,11 +234,30 @@ def main():
     dump_all_methods("h2o_sto3g", kwargs_cvs, kwargs_general, kwargs_overwrite)
 
     #
+    # H2O restricted (TZVP)
+    #
+    kwargs_cvs = {"n_singlets": 3, "n_triplets": 3, "n_guess_singles": 6,
+                  "max_subspace": 24}
+    kwargs_general = {"n_singlets": 3, "n_triplets": 3, "n_guess_singles": 6,
+                      "max_subspace": 24}
+    dump_all_methods("h2o_def2tzvp", kwargs_cvs, kwargs_general)
+
+    #
     # CN unrestricted
     #
     kwargs_cvs = {"n_states": 6}
     kwargs_general = {"n_states": 8}
     dump_all_methods("cn_sto3g", kwargs_cvs, kwargs_general)
+
+    #
+    # CN unrestricted (cc-pVDZ)
+    #
+    kwargs_cvs = {"n_states": 5, "n_guess_singles": 7}
+    kwargs_general = {"n_states": 5, "n_guess_singles": 7}
+    kwargs_overwrite = {
+        "adc1": {"general": {"n_states": 4, "n_guess_singles": 8}, },
+    }
+    dump_all_methods("cn_ccpvdz", kwargs_cvs, kwargs_general, kwargs_overwrite)
 
     #
     # HF triplet unrestricted (for spin-flip)

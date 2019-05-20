@@ -59,7 +59,7 @@ def guess_zero(matrix, irrep="A", spin_change=0,
         raise ValueError("spin_block_symmetrisation != none is only valid for "
                          "ADC calculations on top of restricted reference "
                          "states.")
-    if int(spin_change / 2) * 2 != spin_change:
+    if int(spin_change * 2) / 2 != spin_change:
         raise ValueError("Only integer or half-integer spin_change is allowed. "
                          "You passed {}".format(spin_change))
     if irrep != "A":

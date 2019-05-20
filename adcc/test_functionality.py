@@ -20,16 +20,14 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import unittest
-
-from .misc import expand_test_templates
-
 import adcc
-
-from pytest import approx
+import unittest
 
 from adcc.testdata.cache import cache
 from adcc.solver.SolverStateBase import SolverStateBase
+
+from .misc import expand_test_templates
+from pytest import approx
 
 # The methods to test
 methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
@@ -53,47 +51,84 @@ class TestFunctionality(unittest.TestCase):
         # TODO Compare excited state dipole moment
 
         # Test we do not use too many iterations
-        n_iter_bound = {
-            "adc0": 1, "adc1": 4, "adc2": 6, "adc2x": 11, "adc3": 11,
-            "cvs-adc0": 1, "cvs-adc1": 4, "cvs-adc2": 5, "cvs-adc2x": 11
-        }
+        if "sto3g" in system or "631g" in system:
+            n_iter_bound = {
+                "adc0": 1, "adc1": 4, "adc2": 6, "adc2x": 11, "adc3": 11,
+                "cvs-adc0": 1, "cvs-adc1": 4, "cvs-adc2": 5, "cvs-adc2x": 11
+            }
+        else:
+            n_iter_bound = {
+                "adc0": 1, "adc1": 8, "adc2": 14, "adc2x": 14, "adc3": 14,
+                "cvs-adc0": 1, "cvs-adc1": 6, "cvs-adc2": 14, "cvs-adc2x": 16
+            }
+
         assert res.n_iter <= n_iter_bound[method]
 
     #
     # General
     #
-    def template_h2o_singlets(self, method):
+    def template_h2o_sto3g_singlets(self, method):
         self.base_test("h2o_sto3g", method, "singlet", n_singlets=10)
 
-    def template_h2o_triplets(self, method):
+    def template_h2o_def2tzvp_singlets(self, method):
+        self.base_test("h2o_def2tzvp", method, "singlet", n_singlets=3)
+
+    def template_h2o_sto3g_triplets(self, method):
         self.base_test("h2o_sto3g", method, "triplet", n_triplets=10)
 
-    def template_cn(self, method):
+    def template_h2o_def2tzvp_triplets(self, method):
+        self.base_test("h2o_def2tzvp", method, "triplet", n_triplets=3)
+
+    def template_cn_sto3g(self, method):
         kwargs = {}
         if method in ["adc0", "adc1"]:
             kwargs["max_subspace"] = 42
         self.base_test("cn_sto3g", method, "state", n_states=8, **kwargs)
 
+    def template_cn_ccpvdz(self, method):
+        kwargs = {}
+        n_states = 5
+        if method == "adc1":
+            kwargs["max_subspace"] = 42
+            n_states = 4
+        self.base_test("cn_ccpvdz", method, "state",
+                       n_states=n_states, **kwargs)
+
     #
     # CVS
     #
-    def template_cvs_h2o_singlets(self, method):
+    def template_cvs_h2o_sto3g_singlets(self, method):
         n_singlets = 3
         if method in ["adc0", "adc1"]:
             n_singlets = 2
         self.base_test("h2o_sto3g", "cvs-" + method, "singlet",
                        n_singlets=n_singlets, n_core_orbitals=1)
 
-    def template_cvs_h2o_triplets(self, method):
+    def template_cvs_h2o_def2tzvp_singlets(self, method):
+        self.base_test("h2o_def2tzvp", "cvs-" + method, "singlet", n_singlets=3,
+                       n_core_orbitals=1)
+
+    def template_cvs_h2o_sto3g_triplets(self, method):
         n_triplets = 3
         if method in ["adc0", "adc1"]:
             n_triplets = 2
         self.base_test("h2o_sto3g", "cvs-" + method, "triplet",
                        n_triplets=n_triplets, n_core_orbitals=1)
 
-    def template_cvs_cn(self, method):
+    def template_cvs_h2o_def2tzvp_triplets(self, method):
+        self.base_test("h2o_def2tzvp", "cvs-" + method, "triplet", n_triplets=3,
+                       n_core_orbitals=1)
+
+    def template_cvs_cn_sto3g(self, method):
         self.base_test("cn_sto3g", "cvs-" + method, "state",
                        n_states=6, n_core_orbitals=1)
+
+    def template_cvs_cn_ccpvdz(self, method):
+        kwargs = {}
+        if method in ["adc0", "adc1"]:
+            kwargs["max_subspace"] = 28
+        self.base_test("cn_ccpvdz", "cvs-" + method, "state", n_states=5,
+                       n_core_orbitals=1, **kwargs)
 
     #
     # Spin-flip
@@ -103,6 +138,9 @@ class TestFunctionality(unittest.TestCase):
 
 
 # CVS-ADC(3) not supported
-delattr(TestFunctionality, "test_cvs_cn_adc3")
-delattr(TestFunctionality, "test_cvs_h2o_singlets_adc3")
-delattr(TestFunctionality, "test_cvs_h2o_triplets_adc3")
+delattr(TestFunctionality, "test_cvs_cn_sto3g_adc3")
+delattr(TestFunctionality, "test_cvs_cn_ccpvdz_adc3")
+delattr(TestFunctionality, "test_cvs_h2o_sto3g_singlets_adc3")
+delattr(TestFunctionality, "test_cvs_h2o_sto3g_triplets_adc3")
+delattr(TestFunctionality, "test_cvs_h2o_def2tzvp_singlets_adc3")
+delattr(TestFunctionality, "test_cvs_h2o_def2tzvp_triplets_adc3")

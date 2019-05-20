@@ -21,6 +21,7 @@
 #include <adcc/config.hh>
 #include <ctx/CtxMap.hh>
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 namespace adcc {
 namespace py_iface {
@@ -45,6 +46,15 @@ static scalar_type CtxMap__at_scalar(const ctx::CtxMap& self, std::string key) {
 static scalar_type CtxMap__at_scalar_def(const ctx::CtxMap& self, std::string key,
                                          scalar_type def) {
   return self.at<scalar_type>(key, def);
+}
+
+static std::string CtxMap__at_string(const ctx::CtxMap& self, std::string key) {
+  return self.at<std::string>(key);
+}
+
+static std::string CtxMap__at_string_def(const ctx::CtxMap& self, std::string key,
+                                         std::string def) {
+  return self.at<std::string>(key, def);
 }
 
 static bool CtxMap__at_bool(const ctx::CtxMap& self, std::string key) {
@@ -73,6 +83,15 @@ static unsigned int CtxMap__at_unsigned_int(const ctx::CtxMap& self, std::string
   return self.at<unsigned int>(key);
 }
 
+static std::vector<unsigned long> CtxMap__at_unsigned_long_list(const ctx::CtxMap& self,
+                                                                std::string key) {
+  return self.at<std::vector<unsigned long>>(key);
+}
+
+static std::vector<bool> CtxMap__at_bool_list(const ctx::CtxMap& self, std::string key) {
+  return self.at<std::vector<bool>>(key);
+}
+
 static py::list CtxMap__keys(const ctx::CtxMap& self) {
   py::list keys;
   for (auto& kv : self) {
@@ -88,6 +107,7 @@ void export_CtxMap(py::module& m) {
         m, "CtxMap", "Class holding a CtxMap context map object.")
         .def("keys", &CtxMap__keys)
         .def("exists", &CtxMap::exists)
+        //
         .def("at_tensor", &CtxMap__at_tensor)
         .def("at_tensor", &CtxMap__at_tensor_def)
         .def("at_scalar", &CtxMap__at_scalar)
@@ -98,6 +118,11 @@ void export_CtxMap(py::module& m) {
         .def("at_unsigned_long", &CtxMap__at_unsigned_long_def)
         .def("at_unsigned_int", &CtxMap__at_unsigned_int)
         .def("at_unsigned_int", &CtxMap__at_unsigned_int_def)
+        .def("at_string", &CtxMap__at_string)
+        .def("at_string", &CtxMap__at_string_def)
+        //
+        .def("at_bool_list", &CtxMap__at_bool_list)
+        .def("at_unsigned_long_list", &CtxMap__at_unsigned_long_list)
         //
         ;
 }
