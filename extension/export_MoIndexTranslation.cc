@@ -100,6 +100,9 @@ void export_MoIndexTranslation(py::module& m) {
              "Construct a MoIndexTranslation class from an MoSpaces object and the "
              "identifier for "
              "the space (e.g. o1o1, v1o1, o3v2o1v1, ...)")
+        .def(py::init<std::shared_ptr<const MoSpaces>, const std::vector<std::string>&>(),
+             "Construct a MoIndexTranslation class from an MoSpaces object and the "
+             "list of identifiers for the space (e.g. [\"o1\", \"o1\"] ...)")
         .def_property_readonly("mospaces", &MoIndexTranslation::mospaces_ptr,
                                "Return the MoSpaces object supplied on initialisation")
         .def_property_readonly("space", &MoIndexTranslation::space,
