@@ -70,16 +70,14 @@ echo "Updating testdata ... please wait."
 
 download() {
 	if which wget &> /dev/null; then
-		wget -qN --show-progress $1
+		wget -w 1 -qN --show-progress $@
 	else
 		echo "wget not installed" >&2
 		exit 1
 	fi
 }
 
-for file in ${DATAFILES[@]}; do
-	download $SOURCE/$file
-done
+download $(for file in ${DATAFILES[@]}; do echo $SOURCE/$file; done)
 
 if which sha256sum &> /dev/null; then
 	sha256sum --ignore-missing -c SHA256SUMS || exit 1
