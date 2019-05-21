@@ -70,6 +70,7 @@ class TestPyscfOnly(unittest.TestCase):
         assert hfdata.backend == "pyscf"
 
         n_orbs_alpha = hfdata.n_orbs_alpha
+        fock_bb = scfres.get_fock()
         if hfdata.restricted:
             assert hfdata.spin_multiplicity != 0
             assert hfdata.n_alpha >= hfdata.n_beta
@@ -84,6 +85,9 @@ class TestPyscfOnly(unittest.TestCase):
 
             mo_occ = (scfres.mo_occ, scfres.mo_occ)
             mo_energy = (scfres.mo_energy, scfres.mo_energy)
+            mo_coeff = (scfres.mo_coeff,
+                        scfres.mo_coeff)
+            fock_bb = (fock_bb, fock_bb)
         else:
             assert hfdata.spin_multiplicity == 0
 
@@ -92,6 +96,7 @@ class TestPyscfOnly(unittest.TestCase):
 
             mo_occ = scfres.mo_occ
             mo_energy = scfres.mo_energy
+            mo_coeff = scfres.mo_coeff
 
         # Check n_alpha and n_beta
         assert hfdata.n_alpha == np.sum(mo_occ[0] > 0)
@@ -106,28 +111,43 @@ class TestPyscfOnly(unittest.TestCase):
         assert np.all(np.asarray(occ_a) > 0)
         assert np.all(np.asarray(occ_b) > 0)
 
-        # TODO checks for values of
         # orben_f
-        # fock_ff
+        np.testing.assert_almost_equal(
+            hfdata.orben_f, np.hstack((mo_energy[0], mo_energy[1]))
+        )
+
         # orbcoeff_fb
-        # Perhaps by transforming the fock matrix of the scfres object or so
+        np.testing.assert_almost_equal(
+            hfdata.orbcoeff_fb, np.transpose(
+                np.hstack((mo_coeff[0], mo_coeff[1]))
+            )
+        )
+
+        # fock_ff
+        fock = tuple(mo_coeff[i].transpose().conj() @ fock_bb[i] @ mo_coeff[i]
+                     for i in range(2))
+        fullfock_ff = np.zeros((hfdata.n_orbs, hfdata.n_orbs))
+        fullfock_ff[:n_orbs_alpha, :n_orbs_alpha] = fock[0]
+        fullfock_ff[n_orbs_alpha:, n_orbs_alpha:] = fock[1]
+        np.testing.assert_almost_equal(
+            hfdata.fock_ff, fullfock_ff
+        )
 
         # TODO Many more tests
         #      Compare against reference data
 
         # test symmetry of the ERI tensor
-        ii, jj, kk, ll = 0, 1, 2, 3
-        allowed_permutations = [
-            (kk, ll, ii, jj),
-            (jj, ii, ll, kk),
-            (ll, kk, jj, ii),
-            (jj, ii, kk, ll),
-            (jj, ii, ll, kk),
-        ]
-        eri = hfdata._original_dict["eri_ffff"]
-        for perm in allowed_permutations:
-            eri_perm = np.transpose(eri, perm)
-            np.testing.assert_almost_equal(eri_perm, eri)
+        # ii, jj, kk, ll = 0, 1, 2, 3
+        # allowed_permutations = [
+        #     (kk, ll, ii, jj),
+        #     (jj, ii, ll, kk),
+        #     (ll, kk, jj, ii),
+        #     (jj, ii, kk, ll),
+        #     (jj, ii, ll, kk),
+        # ]
+        # for perm in allowed_permutations:
+        #     eri_perm = np.transpose(eri, perm)
+        #     np.testing.assert_almost_equal(eri_perm, eri)
 
     def test_water_sto3g_rhf(self):
         water_xyz = """
@@ -136,8 +156,8 @@ class TestPyscfOnly(unittest.TestCase):
         H 1.693194615993441 0 -0.599043184453037
         """
         mf = run_pyscf_hf(water_xyz, basis="cc-pvdz")
+        self.base_test(mf)
         eri_asymm_construction_test(scfres=mf)
-        # self.base_test(mf)
 
     # def test_water_sto3g_core_hole(self):
     #     mol = gto.M(
