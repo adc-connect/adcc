@@ -25,19 +25,13 @@ import pytest
 import adcc
 import unittest
 import adcc.backends
+from adcc.backends import have_backend
 import numpy as np
 
 from .eri_construction_test import eri_asymm_construction_test
 
-try:
-    import psi4
-    from .utils import run_psi4_hf
-    _psi4 = True
-except ImportError:
-    _psi4 = False
 
-
-@pytest.mark.skipif(not _psi4, reason="psi4 not found.")
+@pytest.mark.skipif(not have_backend("psi4"), reason="psi4 not found.")
 class TestPsi4(unittest.TestCase):
 
     def base_test(self, wfn):
@@ -119,6 +113,7 @@ class TestPsi4(unittest.TestCase):
         H 0 0 1.795239827225189
         H 1.693194615993441 0 -0.599043184453037
         """
-        wfn = run_psi4_hf(water_xyz, basis="cc-pvdz")
+        wfn = adcc.backends.run_hf("psi4", xyz=water_xyz, basis="cc-pvdz")
         self.base_test(wfn)
         eri_asymm_construction_test(wfn)
+        eri_asymm_construction_test(wfn, core_orbitals=1)

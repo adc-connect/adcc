@@ -25,7 +25,7 @@ import warnings
 
 import numpy as np
 
-from pyscf import ao2mo, scf
+from pyscf import ao2mo, scf, gto
 
 from libadcc import HfData, HartreeFockProvider
 
@@ -37,7 +37,6 @@ class PySCFEriBuilder(EriBuilder):
     def __init__(self, scfres, n_orbs, n_orbs_alpha, n_alpha, n_beta):
         self.scfres = scfres
         super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta)
-        self.transform_on_the_fly = False
 
     @property
     def coeffs_occ_alpha(self):
@@ -46,16 +45,6 @@ class PySCFEriBuilder(EriBuilder):
     @property
     def coeffs_virt_alpha(self):
         return self.scfres.mo_coeff[:, self.n_alpha:]
-
-    @property
-    def coeffs_all(self):
-        return np.hstack((self.scfres.mo_coeff, self.scfres.mo_coeff))
-
-    def coeffs_transform_on_the_fly(self, slices):
-        coeffs_transform = []
-        for slice in slices:
-            coeffs_transform.append(self.c_all[:, slice])
-        return coeffs_transform
 
     def compute_mo_eri(self, block, coeffs, use_cache=True):
         if block in self.eri_cache and use_cache:
@@ -434,3 +423,21 @@ def import_scf(scfres):
         #      your code.
         ret._original_dict = data
         return ret
+
+
+def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
+           conv_tol_grad=1e-8, max_iter=150):
+    mol = gto.M(
+        atom=xyz,
+        basis=basis,
+        unit="Bohr"
+    )
+    mol.charge = charge
+    # spin in the pyscf world is 2S
+    mol.spin = multiplicity - 1
+    mf = scf.HF(mol)
+    mf.conv_tol = conv_tol
+    mf.conv_tol_grad = conv_tol_grad
+    mf.max_cycle = max_iter
+    mf.kernel()
+    return mf

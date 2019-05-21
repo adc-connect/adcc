@@ -21,43 +21,38 @@
 ##
 ## ---------------------------------------------------------------------
 
+from .available_backends import have_backend
+
 
 def import_scf_results(res):
     """
     Import an scf_result from an SCF program. Tries to be smart
     and guess what the host program was and how to import it.
     """
-    try:
+
+    if have_backend("pyscf"):
         from pyscf import scf
         from . import pyscf as backend_pyscf
         if isinstance(res, scf.hf.SCF):
             return backend_pyscf.import_scf(res)
-    except ImportError:
-        pass
 
-    try:
+    if have_backend("molsturm"):
         from molsturm.State import State
         from . import molsturm as backend_molsturm
         if isinstance(res, State):
             return backend_molsturm.import_scf(res)
-    except ImportError:
-        pass
 
-    try:
+    if have_backend("veloxchem"):
         import veloxchem as vlx
         from . import veloxchem as backend_veloxchem
         if isinstance(res, vlx.scfrestdriver.ScfRestrictedDriver):
             return backend_veloxchem.import_scf(res)
-    except ImportError:
-        pass
 
-    try:
+    if have_backend("psi4"):
         import psi4
         from . import psi4 as backend_psi4
         if isinstance(res, psi4.core.HF):
             return backend_psi4.import_scf(res)
-    except ImportError:
-        pass
 
     from libadcc import HartreeFockSolution_i
     if isinstance(res, HartreeFockSolution_i):
@@ -71,3 +66,24 @@ def import_scf_results(res):
 
     raise NotImplementedError("No means to import an SCF result of "
                               "type " + str(type(res)) + " implemented.")
+
+
+def run_hf(backend, **kwargs):
+    if not have_backend(backend):
+        raise ValueError("Backend {} not found.".format(backend))
+    # TODO: refactor...
+    if backend == "psi4":
+        from . import psi4 as backend_psi4
+        return backend_psi4.run_hf(**kwargs)
+    elif backend == "pyscf":
+        from . import pyscf as backend_pyscf
+        return backend_pyscf.run_hf(**kwargs)
+    elif backend == "veloxchem":
+        from . import veloxchem as backend_vlx
+        if "conv_tol" in kwargs:
+            kwargs.pop("conv_tol")
+        return backend_vlx.run_hf(**kwargs)
+    else:
+        raise NotImplementedError(
+            "No run_hf function implemented for backend {}.".format(backend)
+        )

@@ -23,7 +23,10 @@
 
 from libadcc import HartreeFockProvider
 import numpy as np
+from mpi4py import MPI
 import veloxchem as vlx
+import tempfile
+import os
 
 from .eri_build_helper import (EriBuilder, SpinBlockSlice,
                                get_symmetry_equivalent_transpositions_for_block)
@@ -42,7 +45,6 @@ class VeloxChemEriBuilder(EriBuilder):
         self.mol_orbs = mol_orbs
         self.moints_drv = vlx.MOIntegralsDriver(self.mpi_comm, self.ostream)
         super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta)
-        self.transform_on_the_fly = False
         self.blck_cache = {}
 
     def compute_eri_block_vlx(self, block):
@@ -72,13 +74,13 @@ class VeloxChemEriBuilder(EriBuilder):
         else:
             import time
             start = time.time()
-            print("computing block", vlx_block)
+            # print("computing block", vlx_block)
             blck = self.moints_drv.compute(self.molecule, self.ao_basis,
                                            self.mol_orbs, vlx_block,
                                            grps)
             self.blck_cache[vlx_block] = blck
             stop = time.time()
-            print("Time: ", stop - start)
+            # print("Time: ", stop - start)
 
         ioffset = n_alpha if asym_block == "VVVV" else 0
         joffset = n_alpha if (asym_block == "OVVV" or asym_block == "OVOV"
@@ -90,23 +92,28 @@ class VeloxChemEriBuilder(EriBuilder):
                 j = pair.second()
                 fxy = blck.xy_to_numpy(idx)
                 fyx = blck.yx_to_numpy(idx)
-                if spin_block == "aaaa":
+                if spin_block == "aaaa" or spin_block == "bbbb":
                     eris[i - ioffset, j - joffset, :, :] = fxy - fyx.T
                     eris[j - joffset, i - ioffset, :, :] = - eris[i - ioffset,
                                                                   j - joffset,
                                                                   :, :]
-                elif spin_block == "abab":
+                elif spin_block == "abab" or spin_block == "baba":
                     eris[i - ioffset, j - joffset, :, :] = fxy
                     eris[j - joffset, i - ioffset, :, :] = fyx.T
+                elif spin_block == "abba" or spin_block == "baab":
+                    fxy = blck.xy_to_numpy(idx)
+                    fyx = blck.yx_to_numpy(idx)
+                    eris[i - ioffset, j - joffset, :, :] = -fyx.T
+                    eris[j - joffset, i - ioffset, :, :] = -fxy
         else:
             for idx, pair in enumerate(blck.get_gen_pairs()):
                 i = pair.first()
                 j = pair.second()
-                if spin_block == "aaaa":
+                if spin_block == "aaaa" or spin_block == "bbbb":
                     fxy = blck.xy_to_numpy(idx)
                     fyx = blck.yx_to_numpy(idx)
                     eris[i - ioffset, j - joffset, :, :] = fxy - fyx.T
-                elif spin_block == "abab":
+                elif spin_block == "abab" or spin_block == "baba":
                     fxy = blck.xy_to_numpy(idx)
                     eris[i - ioffset, j - joffset, :, :] = fxy
                 elif spin_block == "abba":
@@ -294,3 +301,31 @@ def import_scf(scfdrv):
 
     provider = VeloxChemHFProvider(scfdrv)
     return provider
+
+
+def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol_grad=1e-8,
+           max_iter=150):
+    with tempfile.TemporaryDirectory() as tmpdir:
+        infile = os.path.join(tmpdir, "vlx.in")
+        outfile = os.path.join(tmpdir, "vlx.out")
+        with open(infile, "w") as fp:
+            lines = ["@jobs", "task: hf", "@end", ""]
+            lines += ["@method settings",
+                      "basis: {}".format(basis),
+                      "@end"]
+            lines += ["@molecule",
+                      "charge: {}".format(charge),
+                      "multiplicity: {}".format(multiplicity),
+                      "units: bohr",
+                      "xyz:\n{}".format("\n".join(xyz.split(";"))),
+                      "@end"]
+            fp.write("\n".join(lines))
+        task = vlx.MpiTask([infile, outfile], MPI.COMM_WORLD)
+
+        scfdrv = vlx.ScfRestrictedDriver(task.mpi_comm, task.ostream)
+        # elec. gradient norm
+        scfdrv.conv_thresh = conv_tol_grad
+        scfdrv.max_iter = max_iter
+        scfdrv.compute(task.molecule, task.ao_basis, task.min_basis)
+        scfdrv.task = task
+    return scfdrv

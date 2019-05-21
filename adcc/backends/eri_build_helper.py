@@ -138,11 +138,6 @@ class EriBuilder:
     Depending on the host program, other functions like
         build_eri_phys_asym_block also need to be re-implemented.
 
-    For On-The-Fly transformation:
-        coeffs_all: all coefficients
-            (return np.ndarray)
-        coeffs_transform_on_the_fly: gives the sliced coefficients for
-            transformation
     """
     def __init__(self, n_orbs, n_orbs_alpha, n_alpha, n_beta):
         self.block_slice_mapping = None
@@ -153,13 +148,7 @@ class EriBuilder:
         self.prepare_block_slice_mapping()
 
         self.eri_cache = {}
-        self.transform_on_the_fly = False
-        self.last_block = None
-
-        self.eri_cache = {}
         self.eri_asymm_cache = {}
-        self.transform_on_the_fly = False
-        self.c_all = None
         self.last_block = None
 
     def prepare_block_slice_mapping(self):
@@ -186,10 +175,6 @@ class EriBuilder:
     def coeffs_virt_beta(self):
         raise NotImplementedError("Implement coeffs_virt_beta")
 
-    @property
-    def coeffs_all(self):
-        raise NotImplementedError("Implement coeffs_all")
-
     def compute_mo_eri(self, block, coeffs, use_cache=True):
         raise NotImplementedError("Implement compute_mo_eri")
 
@@ -204,8 +189,6 @@ class EriBuilder:
         return False
 
     def fill_slice(self, slices, out):
-        if self.c_all is None and self.transform_on_the_fly:
-            self.c_all = self.coeffs_all
         mo_spaces, \
             spin_block, \
             comp_block_slices \
@@ -237,17 +220,10 @@ class EriBuilder:
             print(mo_spaces, mo_spaces_chem, spin_block_str)
             allowed, spin_symm = is_spin_allowed(spin_block_str)
             if allowed:
-                if self.transform_on_the_fly:
-                    print("OTF transformation")
-                    out[:] = self.transform_block_from_slices(
-                        slices=slices, blocks=mo_spaces_chem,
-                        spin_symm=spin_symm
-                    )
-                else:
-                    eri = self.build_eri_phys_asym_block(
-                        can_block=mo_spaces_chem, spin_symm=spin_symm
-                    )
-                    out[:] = eri[comp_block_slices]
+                eri = self.build_eri_phys_asym_block(
+                    can_block=mo_spaces_chem, spin_symm=spin_symm
+                )
+                out[:] = eri[comp_block_slices]
             else:
                 out[:] = 0
 
@@ -299,29 +275,6 @@ class EriBuilder:
         print("Cached ERI chem: {:.2f} Gb".format(
               cache_memory_gb(self.eri_cache)
               ))
-
-    def transform_block_from_slices(self, slices, blocks, spin_symm):
-        coeffs_transform = self.coeffs_transform_on_the_fly(slices)
-        coeffs_transform = tuple(coeffs_transform[i] for i in [0, 2, 1, 3])
-        if spin_symm.pref1 != 0 and spin_symm.pref2 != 0:
-            can_block_integrals = self.compute_mo_eri_slice(coeffs_transform)
-            eri_phys = can_block_integrals.transpose(0, 2, 1, 3)
-            # (ik|jl) - (il|jk)
-            chem_asym = tuple(coeffs_transform[i] for i in [0, 3, 2, 1])
-            asymm = self.compute_mo_eri_slice(
-                chem_asym
-            ).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
-            eris = spin_symm.pref1 * eri_phys - spin_symm.pref2 * asymm
-        elif spin_symm.pref1 != 0 and spin_symm.pref2 == 0:
-            can_block_integrals = self.compute_mo_eri_slice(coeffs_transform)
-            eris = spin_symm.pref1 * can_block_integrals.transpose(0, 2, 1, 3)
-        elif spin_symm.pref1 == 0 and spin_symm.pref2 != 0:
-            chem_asym = tuple(coeffs_transform[i] for i in [0, 3, 2, 1])
-            asymm = self.compute_mo_eri_slice(
-                chem_asym
-            ).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
-            eris = - spin_symm.pref2 * asymm
-        return eris
 
     def build_full_eri_ffff(self):
         n_orbs = self.n_orbs

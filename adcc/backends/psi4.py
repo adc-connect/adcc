@@ -33,7 +33,6 @@ class Psi4EriBuilder(EriBuilder):
         self.wfn = wfn
         self.mints = psi4.core.MintsHelper(self.wfn.basisset())
         super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta)
-        self.transform_on_the_fly = False
 
     @property
     def coeffs_occ_alpha(self):
@@ -42,21 +41,6 @@ class Psi4EriBuilder(EriBuilder):
     @property
     def coeffs_virt_alpha(self):
         return self.wfn.Ca_subset("AO", "VIR")
-
-    @property
-    def coeffs_all(self):
-        co_a = self.wfn.Ca_subset("AO", "OCC")
-        co_b = self.wfn.Cb_subset("AO", "OCC")
-        cv_a = self.wfn.Ca_subset("AO", "VIR")
-        cv_b = self.wfn.Cb_subset("AO", "VIR")
-        return np.hstack((co_a, cv_a, co_b, cv_b))
-
-    def coeffs_transform_on_the_fly(self, slices):
-        coeffs_transform = []
-        for slice in slices:
-            p4mat_coeff = psi4.core.Matrix.from_array(self.c_all[:, slice])
-            coeffs_transform.append(p4mat_coeff)
-        return coeffs_transform
 
     def compute_mo_eri(self, block, coeffs, use_cache=True):
         if block in self.eri_cache and use_cache:
@@ -170,3 +154,25 @@ def import_scf(scfdrv):
 
     provider = Psi4HFProvider(scfdrv)
     return provider
+
+
+def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
+           conv_tol_grad=1e-8, max_iter=150):
+    mol = psi4.geometry("""
+        {xyz}
+        symmetry c1
+        units au
+        {charge} {multiplicity}
+        """.format(xyz=xyz, charge=charge, multiplicity=multiplicity))
+    psi4.core.be_quiet()
+    reference = "RHF"
+    if multiplicity != 1:
+        reference = "UHF"
+    psi4.set_options({'basis': basis,
+                      'scf_type': 'pk',
+                      'e_convergence': conv_tol,
+                      'd_convergence': conv_tol_grad,
+                      'maxiter': max_iter,
+                      'reference': reference})
+    _, wfn = psi4.energy('SCF', return_wfn=True, molecule=mol)
+    return wfn

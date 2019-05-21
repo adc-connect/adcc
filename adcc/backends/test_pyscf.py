@@ -25,20 +25,17 @@ import pytest
 import adcc
 import unittest
 import adcc.backends
+from adcc.backends import have_backend
 import numpy as np
 
 from .eri_build_helper import _eri_phys_asymm_spin_allowed_prefactors
 from .eri_construction_test import eri_asymm_construction_test
 
-try:
-    from pyscf import gto, scf
-    from .utils import run_pyscf_hf
-    _pyscf = True
-except ImportError:
-    _pyscf = False
+if have_backend("pyscf"):
+    from pyscf import scf
 
 
-@pytest.mark.skipif(not _pyscf, reason="pyscf not found.")
+@pytest.mark.skipif(not have_backend("pyscf"), reason="pyscf not found.")
 class TestPyscfOnly(unittest.TestCase):
     def run_hf(self, mol):
         mf = scf.RHF(mol)
@@ -155,9 +152,10 @@ class TestPyscfOnly(unittest.TestCase):
         H 0 0 1.795239827225189
         H 1.693194615993441 0 -0.599043184453037
         """
-        mf = run_pyscf_hf(water_xyz, basis="cc-pvdz")
+        mf = adcc.backends.run_hf("pyscf", xyz=water_xyz, basis="cc-pvdz")
         self.base_test(mf)
         eri_asymm_construction_test(scfres=mf)
+        eri_asymm_construction_test(scfres=mf, core_orbitals=1)
 
     # def test_water_sto3g_core_hole(self):
     #     mol = gto.M(

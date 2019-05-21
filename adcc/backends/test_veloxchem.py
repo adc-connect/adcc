@@ -26,20 +26,19 @@ import pytest
 import adcc
 import unittest
 import adcc.backends
+from adcc.backends import have_backend
 import numpy as np
 from numpy.testing import assert_array_equal
 
 from .eri_construction_test import eri_asymm_construction_test
 
-try:
+if have_backend("veloxchem"):
     import veloxchem as vlx
-    from . import utils
-    _vlx = True
-except ImportError:
-    _vlx = False
 
 
-@pytest.mark.skipif(not _vlx, reason="Veloxchem not found.")
+@pytest.mark.skipif(
+    not have_backend("veloxchem"), reason="Veloxchem not found."
+)
 class TestVeloxchem(unittest.TestCase):
     def base_test(self, scfdrv):
         hfdata = adcc.backends.import_scf_results(scfdrv)
@@ -106,7 +105,9 @@ class TestVeloxchem(unittest.TestCase):
         H 0 0 1.795239827225189
         H 1.693194615993441 0 -0.599043184453037
         """
-        scfdrv = utils.run_vlx_hf(xyz=water_xyz,
-                                  basis="cc-pvdz")
+        scfdrv = adcc.backends.run_hf(
+            "veloxchem", xyz=water_xyz, basis="cc-pvdz"
+        )
         eri_asymm_construction_test(scfdrv)
+        eri_asymm_construction_test(scfdrv, core_orbitals=1)
         # self.base_test(scfdrv)
