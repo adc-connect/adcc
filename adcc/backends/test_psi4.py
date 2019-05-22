@@ -87,9 +87,6 @@ class TestPsi4(unittest.TestCase):
             hfdata.fock_ff, fock_ff
         )
 
-        # TODO Many more tests
-        #      Compare against reference data
-
         # test symmetry of the ERI tensor
         # ii, jj, kk, ll = 0, 1, 2, 3
         # allowed_permutations = [

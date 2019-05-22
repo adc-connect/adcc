@@ -45,7 +45,6 @@ class VeloxChemEriBuilder(EriBuilder):
         self.mol_orbs = mol_orbs
         self.moints_drv = vlx.MOIntegralsDriver(self.mpi_comm, self.ostream)
         super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta)
-        self.blck_cache = {}
 
     def compute_eri_block_vlx(self, block):
         grps = [p for p in range(self.task.mpi_size)]
@@ -69,18 +68,19 @@ class VeloxChemEriBuilder(EriBuilder):
 
         grps = [p for p in range(self.task.mpi_size)]
         vlx_block = "ASYM_" + asym_block.upper()
-        if vlx_block in self.blck_cache.keys():
-            blck = self.blck_cache[vlx_block]
+        if vlx_block in self.eri_cache.keys():
+            blck = self.eri_cache[vlx_block]
         else:
             import time
             start = time.time()
-            # print("computing block", vlx_block)
+            # TODO: remove later once timings for ERI import are available
+            print("--- Computing block", vlx_block)
             blck = self.moints_drv.compute(self.molecule, self.ao_basis,
                                            self.mol_orbs, vlx_block,
                                            grps)
-            self.blck_cache[vlx_block] = blck
+            self.eri_cache[vlx_block] = blck
             stop = time.time()
-            # print("Time: ", stop - start)
+            print("--- Time:", stop - start)
 
         ioffset = n_alpha if asym_block == "VVVV" else 0
         joffset = n_alpha if (asym_block == "OVVV" or asym_block == "OVOV"
@@ -101,8 +101,6 @@ class VeloxChemEriBuilder(EriBuilder):
                     eris[i - ioffset, j - joffset, :, :] = fxy
                     eris[j - joffset, i - ioffset, :, :] = fyx.T
                 elif spin_block == "abba" or spin_block == "baab":
-                    fxy = blck.xy_to_numpy(idx)
-                    fyx = blck.yx_to_numpy(idx)
                     eris[i - ioffset, j - joffset, :, :] = -fyx.T
                     eris[j - joffset, i - ioffset, :, :] = -fxy
         else:
@@ -120,7 +118,16 @@ class VeloxChemEriBuilder(EriBuilder):
                     fyx = blck.yx_to_numpy(idx)
                     eris[i - ioffset, j - joffset, :, :] = -fyx.T
         self.eri_asymm_cache[cache_key] = eris
+        self.print_cache_memory()
         return eris
+
+    def print_cache_memory(self):
+        def cache_memory_gb(dict):
+            return sum(dict[f].nbytes * 1e-9 for f in dict)
+
+        print("Cached ERI asymm: {:.2f} Gb".format(
+              cache_memory_gb(self.eri_asymm_cache)
+              ))
 
     @property
     def has_mo_asym_eri(self):
@@ -129,7 +136,6 @@ class VeloxChemEriBuilder(EriBuilder):
     def flush_cache(self):
         self.eri_asymm_cache = {}
         self.eri_cache = {}
-        self.blck_cache = {}
 
     def build_full_eri_ffff(self):
         n_orbs = self.n_orbs
@@ -255,7 +261,7 @@ class VeloxChemHFProvider(HartreeFockProvider):
         mo_coeff_a = self.mol_orbs.alpha_to_numpy()
         mo_coeff = (mo_coeff_a, mo_coeff_a)
         out[:] = np.transpose(
-            np.hstack((mo_coeff[0].T, mo_coeff[1].T))
+            np.hstack((mo_coeff[0], mo_coeff[1]))
         )
 
     def fill_orben_f(self, out):
@@ -263,10 +269,16 @@ class VeloxChemHFProvider(HartreeFockProvider):
         out[:] = np.hstack((orben_a, orben_a))
 
     def fill_fock_ff(self, slices, out):
-        # TODO: get Fock matrix from Veloxchem properly
-        diagonal = np.empty(self.n_orbs)
-        self.fill_orben_f(diagonal)
-        out[:] = np.diag(diagonal)[slices]
+        mo_coeff_a = self.mol_orbs.alpha_to_numpy()
+        mo_coeff = (mo_coeff_a, mo_coeff_a)
+        fock_bb = self.scfdrv.scf_tensors['F']
+
+        fock = tuple(mo_coeff[i].transpose().conj() @ fock_bb[i] @ mo_coeff[i]
+                     for i in range(2))
+        fullfock_ff = np.zeros((self.n_orbs, self.n_orbs))
+        fullfock_ff[:self.n_orbs_alpha, :self.n_orbs_alpha] = fock[0]
+        fullfock_ff[self.n_orbs_alpha:, self.n_orbs_alpha:] = fock[1]
+        out[:] = fullfock_ff[slices]
 
     def fill_eri_ffff(self, slices, out):
         if self.eri_ffff is None:
@@ -284,6 +296,7 @@ class VeloxChemHFProvider(HartreeFockProvider):
         return ["nuclear_repulsion"]
 
     def flush_cache(self):
+        self.eri_builder.flush_cache()
         self.eri_ffff = None
 
 

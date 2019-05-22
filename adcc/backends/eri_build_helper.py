@@ -30,8 +30,6 @@ SpinBlockSlice = namedtuple('SpinBlockSlice', ['spins', 'slices'])
 # Helper class to contain a specific ERI permutation with the resp. sign
 EriPermutationSymm = namedtuple('EriPermutation', ['pref', 'transposition'])
 
-_valid_notations = ["chem", "phys", "phys_asym"]
-
 # ERIs in Chemists' notation
 # (ij|kl) = (kl|ij) = (ji|lk) = (lk|ji)
 # = (ji|kl) = (lk|ij) = (ij|lk) = (kl|ji)
@@ -49,7 +47,6 @@ _chem_allowed = [EriPermutationSymm(1, [ii, jj, kk, ll]),  # (ij|kl)
 # provide allowed spin block transposition
 # together with the prefactors that are needed to form the
 # antisymmetrized integral from Chemists' notation ERIs.
-# TODO: further documentation
 #   Example: Consider the <ab||ab> block in Physicists' notation
 #   <ab||ab> = <ab|ab> - <ab|ba> = (aa|bb) - (ab|ba)
 #   Here, the last term vanished, so this must be respected when
@@ -68,18 +65,21 @@ _eri_phys_asymm_spin_allowed_prefactors = [
 ]
 
 
+# TODO: Use Symmetry object feature in the future
 def is_spin_allowed(spin_block, notation="phys_asym"):
     if notation != "phys_asym":
         raise NotImplementedError("Only implemented for phys_asym")
     for symm in _eri_phys_asymm_spin_allowed_prefactors:
         if spin_block == symm.transposition:
             return True, symm
-    return False, 0.0
+    return False, None
 
 
 class EriBlock:
     """
     Helper class for ERI Blocks and their permutational symmetries
+    Note: This class is only used to build the FULL ERI tensor
+            for test purposes
     """
     def __init__(self, block_name, notation="chem"):
         self.block_name = block_name
@@ -108,11 +108,6 @@ def get_symmetry_equivalent_transpositions_for_block(block, notation="chem"):
     """
     if not isinstance(block, str):
         raise ValueError("Please specify the block as string!")
-    if notation not in _valid_notations:
-        raise ValueError("""Invalid notation type {}.
-                         Valid notations are:
-                         {}""".format(notation, ",".join(_valid_notations)))
-
     if notation != "chem":
         raise NotImplementedError("Only Chemists' notation is implemented")
     blck = EriBlock(block, notation=notation)
@@ -120,6 +115,9 @@ def get_symmetry_equivalent_transpositions_for_block(block, notation="chem"):
     return trans
 
 
+# TODO: This class could be simplified by
+# a) Symmetry/MoIndexTranslation
+# b) doing the anti-symmetrization in libtensor
 class EriBuilder:
     """
     Parent class for building ERIs with different backends
@@ -145,19 +143,16 @@ class EriBuilder:
         self.n_orbs_alpha = n_orbs_alpha
         self.n_alpha = n_alpha
         self.n_beta = n_beta
-        self.prepare_block_slice_mapping()
 
         self.eri_cache = {}
         self.eri_asymm_cache = {}
         self.last_block = None
 
-    def prepare_block_slice_mapping(self):
         aro = slice(0, self.n_alpha, 1)
         bro = slice(self.n_orbs_alpha, self.n_orbs_alpha + self.n_beta, 1)
         arv = slice(self.n_alpha, self.n_orbs_alpha, 1)
         brv = slice(self.n_orbs_alpha + self.n_beta, self.n_orbs, 1)
-        self.block_slice_mapping = BlockSliceMappingHelper(aro, bro,
-                                                           arv, brv)
+        self.block_slice_mapping = BlockSliceMappingHelper(aro, bro, arv, brv)
 
     @property
     def coeffs_occ_alpha(self):
@@ -189,6 +184,10 @@ class EriBuilder:
         return False
 
     def fill_slice(self, slices, out):
+        """
+        slices  requested slice of ERIs from libtensor
+        out     view to libtensor memory
+        """
         mo_spaces, \
             spin_block, \
             comp_block_slices \
@@ -208,8 +207,8 @@ class EriBuilder:
         if self.has_mo_asym_eri:
             mo_spaces = "".join(mo_spaces)
             spin_block = "".join(spin_block)
-            print("<{}||{}>, {}".format(mo_spaces[:2], mo_spaces[2:],
-                                        spin_block))
+            # print("<{}||{}>, {}".format(mo_spaces[:2], mo_spaces[2:],
+            #                             spin_block))
             out[:] = self.compute_mo_asym_eri(mo_spaces,
                                               spin_block)[comp_block_slices]
         else:
@@ -217,7 +216,9 @@ class EriBuilder:
                 np.take(np.array(mo_spaces), [0, 2, 1, 3])
             )
             spin_block_str = "".join(spin_block)
-            print(mo_spaces, mo_spaces_chem, spin_block_str)
+            # print(mo_spaces, mo_spaces_chem, spin_block_str)
+            # TODO: probably not needed in the future
+            # since libtensor will only ask for canonical blocks
             allowed, spin_symm = is_spin_allowed(spin_block_str)
             if allowed:
                 eri = self.build_eri_phys_asym_block(

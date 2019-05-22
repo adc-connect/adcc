@@ -29,8 +29,6 @@ import os
 import tempfile
 
 # Run SCF in pyscf
-basis_dir = os.path.abspath(os.path.join(vlx.__path__[-1],
-                                         "..", "..", "..", "basis"))
 with tempfile.TemporaryDirectory() as tmpdir:
     infile = os.path.join(tmpdir, "vlx.in")
     outfile = os.path.join(tmpdir, "/dev/null")
@@ -42,8 +40,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
                  @end
 
                  @method settings
-                 basis: cc-pvdz
-                 basis path: {}
+                 basis: sto-3g
                  @end
 
                  @molecule
@@ -55,7 +52,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
                  H 0 0 1.795239827225189
                  H 1.693194615993441 0 -0.599043184453037
                  @end
-                 """.format(basis_dir))
+                 """)
     task = vlx.MpiTask([infile, outfile], MPI.COMM_WORLD)
     scfdrv = vlx.ScfRestrictedDriver(task.mpi_comm, task.ostream)
     scfdrv.conv_thresh = 1e-8

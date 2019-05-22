@@ -73,31 +73,50 @@ class TestVeloxchem(unittest.TestCase):
         assert_array_equal(np.sort(mo_energy[0]), mo_energy[0])
         assert_array_equal(np.sort(mo_energy[1]), mo_energy[1])
 
-        # test symmetry of the ERI tensor
-        ii, jj, kk, ll = 0, 1, 2, 3
-        allowed_permutations = [
-            (kk, ll, ii, jj),
-            (jj, ii, ll, kk),
-            (ll, kk, jj, ii),
-            (jj, ii, kk, ll),
-            (jj, ii, ll, kk),
-        ]
-        eri = np.empty((hfdata.n_orbs, hfdata.n_orbs,
-                        hfdata.n_orbs, hfdata.n_orbs))
-        sfull = slice(hfdata.n_orbs)
-        hfdata.fill_eri_ffff((sfull, sfull, sfull, sfull), eri)
-        for perm in allowed_permutations:
-            eri_perm = np.transpose(eri, perm)
-            np.testing.assert_almost_equal(eri_perm, eri)
+        mo_coeff_a = scfdrv.mol_orbs.alpha_to_numpy()
+        mo_coeff = (mo_coeff_a, mo_coeff_a)
 
-        # TODO Many more tests
-        #      Compare against reference data
-
-        # TODO checks for values of
         # orben_f
-        # fock_ff
+        np.testing.assert_almost_equal(
+            hfdata.orben_f, np.hstack((mo_energy[0], mo_energy[1]))
+        )
+
         # orbcoeff_fb
-        # Perhaps by transforming the fock matrix of the scfdrv object or so
+        np.testing.assert_almost_equal(
+            hfdata.orbcoeff_fb, np.transpose(
+                np.hstack((mo_coeff[0], mo_coeff[1]))
+            )
+        )
+
+        # fock_ff
+        fock_bb = scfdrv.scf_tensors['F']
+
+        fock = tuple(mo_coeff[i].transpose().conj() @ fock_bb[i] @ mo_coeff[i]
+                     for i in range(2))
+        fullfock_ff = np.zeros((hfdata.n_orbs, hfdata.n_orbs))
+        fullfock_ff[:n_orbs_alpha, :n_orbs_alpha] = fock[0]
+        fullfock_ff[n_orbs_alpha:, n_orbs_alpha:] = fock[1]
+
+        np.testing.assert_almost_equal(
+            hfdata.fock_ff, fullfock_ff
+        )
+
+        # test symmetry of the ERI tensor
+        # ii, jj, kk, ll = 0, 1, 2, 3
+        # allowed_permutations = [
+        #     (kk, ll, ii, jj),
+        #     (jj, ii, ll, kk),
+        #     (ll, kk, jj, ii),
+        #     (jj, ii, kk, ll),
+        #     (jj, ii, ll, kk),
+        # ]
+        # eri = np.empty((hfdata.n_orbs, hfdata.n_orbs,
+        #                 hfdata.n_orbs, hfdata.n_orbs))
+        # sfull = slice(hfdata.n_orbs)
+        # hfdata.fill_eri_ffff((sfull, sfull, sfull, sfull), eri)
+        # for perm in allowed_permutations:
+        #     eri_perm = np.transpose(eri, perm)
+        #     np.testing.assert_almost_equal(eri_perm, eri)
 
     def test_water_sto3g_rhf(self):
         water_xyz = """
@@ -108,6 +127,6 @@ class TestVeloxchem(unittest.TestCase):
         scfdrv = adcc.backends.run_hf(
             "veloxchem", xyz=water_xyz, basis="cc-pvdz"
         )
+        self.base_test(scfdrv)
         eri_asymm_construction_test(scfdrv)
         eri_asymm_construction_test(scfdrv, core_orbitals=1)
-        # self.base_test(scfdrv)

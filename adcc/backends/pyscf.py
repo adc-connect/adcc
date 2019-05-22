@@ -50,7 +50,7 @@ class PySCFEriBuilder(EriBuilder):
         if block in self.eri_cache and use_cache:
             return self.eri_cache[block]
         sizes = [i.shape[1] for i in coeffs]
-        print("Computing block ", block)
+        # print("Computing block ", block)
         eri = ao2mo.general(self.scfres.mol, coeffs,
                             compact=False).reshape(sizes[0], sizes[1],
                                                    sizes[2], sizes[3])

@@ -7,15 +7,14 @@ from matplotlib import pyplot as plt
 
 import adcc
 
-from pyscf import gto, scf
-from pyscf.tools import cubegen
+from mpi4py import MPI
+import veloxchem as vlx
+import os
+import tempfile
+
 
 # Hartree to eV
 eV = constants.value("Hartree energy in eV")
-
-
-# Dump cube files
-dump_cube = False
 
 
 def plot_spectrum(energies, strengths, width=0.045):
@@ -35,39 +34,59 @@ def plot_spectrum(energies, strengths, width=0.045):
     plt.plot(xval, yval)
 
 
-#
-# Run SCF in pyscf
-#
-mol = gto.M(
-    atom='O 0 0 0;'
-         'H 0 0 1.795239827225189;'
-         'H 1.693194615993441 0 -0.599043184453037',
-    basis='cc-pvdz',
-    unit="Bohr"
-)
-scfres = scf.RHF(mol)
-scfres.conv_tol = 1e-12
-scfres.conv_tol_grad = 1e-9
-scfres.kernel()
+# Run SCF in VeloxChem
+with tempfile.TemporaryDirectory() as tmpdir:
+    infile = os.path.join(tmpdir, "vlx.in")
+    outfile = os.path.join(tmpdir, "/dev/null")
+
+    with open(infile, "w") as fp:
+        fp.write("""
+                 @jobs
+                 task: hf
+                 @end
+
+                 @method settings
+                 basis: cc-pvdz
+                 @end
+
+                 @molecule
+                 charge: 0
+                 multiplicity: 1
+                 units: bohr
+                 xyz:
+                 O 0 0 0
+                 H 0 0 1.795239827225189
+                 H 1.693194615993441 0 -0.599043184453037
+                 @end
+                 """)
+    task = vlx.MpiTask([infile, outfile], MPI.COMM_WORLD)
+    scfdrv = vlx.ScfRestrictedDriver(task.mpi_comm, task.ostream)
+    scfdrv.conv_thresh = 1e-9
+    scfdrv.compute(task.molecule, task.ao_basis, task.min_basis)
+    scfdrv.task = task
 
 print(adcc.banner())
 
 # Run an adc2 calculation:
-state = adcc.adc2(scfres, n_singlets=7, conv_tol=1e-8)
+state = adcc.adc2(scfdrv, n_singlets=7, conv_tol=1e-8)
 state = adcc.attach_state_densities(state)
 
 #
 # Get HF density matrix and nuclear dipole
 #
-ρ_hf_tot = scfres.make_rdm1()
+ρ_hf_tot = np.add(*[dm for dm in scfdrv.scf_tensors['D']])
 
 # Compute dipole integrals
-dip_ao = mol.intor_symmetric('int1e_r', comp=3)
+dip_ao = np.array(scfdrv.scf_tensors['Mu'])
+mol = scfdrv.task.molecule
+nuc_charges = mol.elem_ids_to_numpy()
+coords = np.vstack((mol.x_to_numpy(), mol.y_to_numpy(), mol.z_to_numpy())).T
+dip_nucl = np.einsum('i,ix->x', nuc_charges, coords)
 
 # compute nuclear dipole
-charges = mol.atom_charges()
-coords = mol.atom_coords()
-dip_nucl = np.einsum('i,ix->x', charges, coords)
+# charges = mol.atom_charges()
+# coords = mol.atom_coords()
+# dip_nucl = np.einsum('i,ix->x', charges, coords)
 
 #
 # MP2 density correction
@@ -107,15 +126,6 @@ for i, ampl in enumerate(state.eigenvectors):
     fmt += "   [{6:9.3g}, {7:9.3g}, {8:9.3g}]"
     print(state.kind[0], fmt.format(i, state.eigenvalues[i], osc, *tdip, *sdip))
 
-    if dump_cube:
-        # Dump LUNTO and HONTO
-        u, s, v = np.linalg.svd(ρ_tdm_tot)
-        # LUNTOs
-        cubegen.orbital(mol=mol, coeff=u.T[0],
-                        outfile="nto_{}_LUNTO.cube".format(i))
-        # HONTOs
-        cubegen.orbital(mol=mol, coeff=v[0],
-                        outfile="nto_{}_HONTO.cube".format(i))
 
     # Save oscillator strength and excitation energies
     osc_strengths.append(osc)

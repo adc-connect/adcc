@@ -45,7 +45,7 @@ class Psi4EriBuilder(EriBuilder):
     def compute_mo_eri(self, block, coeffs, use_cache=True):
         if block in self.eri_cache and use_cache:
             return self.eri_cache[block]
-        print("Computing block ", block)
+        # print("Computing block ", block)
         eri = np.asarray(self.mints.mo_eri(*coeffs))
         self.eri_cache[block] = eri
         return eri
@@ -175,4 +175,5 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
                       'maxiter': max_iter,
                       'reference': reference})
     _, wfn = psi4.energy('SCF', return_wfn=True, molecule=mol)
+    psi4.core.clean()
     return wfn

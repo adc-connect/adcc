@@ -28,15 +28,14 @@ import adcc.backends
 from adcc.backends import have_backend
 import numpy as np
 
-from .eri_build_helper import _eri_phys_asymm_spin_allowed_prefactors
 from .eri_construction_test import eri_asymm_construction_test
 
 if have_backend("pyscf"):
-    from pyscf import scf
+    from pyscf import scf, gto
 
 
 @pytest.mark.skipif(not have_backend("pyscf"), reason="pyscf not found.")
-class TestPyscfOnly(unittest.TestCase):
+class TestPyscf(unittest.TestCase):
     def run_hf(self, mol):
         mf = scf.RHF(mol)
         mf.conv_tol = 1e-12
@@ -108,6 +107,11 @@ class TestPyscfOnly(unittest.TestCase):
         assert np.all(np.asarray(occ_a) > 0)
         assert np.all(np.asarray(occ_b) > 0)
 
+        # TODO: Implement full tests for UHF once the modern interface
+        # is extended
+        if not hfdata.restricted:
+            return
+
         # orben_f
         np.testing.assert_almost_equal(
             hfdata.orben_f, np.hstack((mo_energy[0], mo_energy[1]))
@@ -129,9 +133,6 @@ class TestPyscfOnly(unittest.TestCase):
         np.testing.assert_almost_equal(
             hfdata.fock_ff, fullfock_ff
         )
-
-        # TODO Many more tests
-        #      Compare against reference data
 
         # test symmetry of the ERI tensor
         # ii, jj, kk, ll = 0, 1, 2, 3
@@ -157,13 +158,13 @@ class TestPyscfOnly(unittest.TestCase):
         eri_asymm_construction_test(scfres=mf)
         eri_asymm_construction_test(scfres=mf, core_orbitals=1)
 
-    # def test_water_sto3g_core_hole(self):
-    #     mol = gto.M(
-    #         atom='O 0 0 0;'
-    #              'H 0 0 1.795239827225189;'
-    #              'H 1.693194615993441 0 -0.599043184453037',
-    #         basis='sto-3g',
-    #         unit="Bohr"
-    #     )
-    #     mf = self.run_core_hole(mol)
-    #     self.base_test(mf)
+    def test_water_sto3g_core_hole(self):
+        mol = gto.M(
+            atom='O 0 0 0;'
+                 'H 0 0 1.795239827225189;'
+                 'H 1.693194615993441 0 -0.599043184453037',
+            basis='sto-3g',
+            unit="Bohr"
+        )
+        mf = self.run_core_hole(mol)
+        self.base_test(mf)
