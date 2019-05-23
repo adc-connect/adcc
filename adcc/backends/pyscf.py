@@ -29,8 +29,7 @@ from pyscf import ao2mo, scf, gto
 
 from libadcc import HfData, HartreeFockProvider
 
-from .eri_build_helper import (EriBuilder, SpinBlockSlice,
-                               get_symmetry_equivalent_transpositions_for_block)
+from .eri_build_helper import EriBuilder
 
 
 class PySCFEriBuilder(EriBuilder):
@@ -50,7 +49,6 @@ class PySCFEriBuilder(EriBuilder):
         if block in self.eri_cache and use_cache:
             return self.eri_cache[block]
         sizes = [i.shape[1] for i in coeffs]
-        # print("Computing block ", block)
         eri = ao2mo.general(self.scfres.mol, coeffs,
                             compact=False).reshape(sizes[0], sizes[1],
                                                    sizes[2], sizes[3])
@@ -307,82 +305,34 @@ def convert_scf_to_dict(scfres):
     bro = slice(n_orbs_alpha, n_orbs_alpha + n_beta)
     arv = slice(n_alpha, n_orbs_alpha)
     brv = slice(n_orbs_alpha + n_beta, n_orbs)
-    # TODO: new integral import also for UHF!
-    if restricted:
-        eri = np.zeros((n_orbs, n_orbs, n_orbs, n_orbs))
-        nocc = n_alpha
-        co = scfres.mo_coeff[:, :nocc]
-        cv = scfres.mo_coeff[:, nocc:]
-        blocks = ["OOVV", "OVOV", "OOOV", "OOOO", "OVVV", "VVVV"]
-        for b in blocks:
-            indices = [n_alpha if x == "O" else n_orbs_alpha - n_alpha
-                       for x in b]
-            slices_alpha = [aro if x == "O" else arv for x in b]
-            slices_beta = [bro if x == "O" else brv for x in b]
-            coeffs_transform = tuple(co if x == "O" else cv for x in b)
-            # make canonical integral block
-            can_block_integrals = ao2mo.general(
-                eri_ao, coeffs_transform, compact=False
-            )
-            can_block_integrals.reshape(
-                indices[0], indices[1], indices[2], indices[3]
-            )
-            # automatically set ERI tensor's symmetry-equivalent blocks
-            trans_sym_blocks = get_symmetry_equivalent_transpositions_for_block(b)
 
-            # Slices for the spin-allowed blocks
-            aaaa = SpinBlockSlice(
-                "aaaa", (slices_alpha[0], slices_alpha[1],
-                         slices_alpha[2], slices_alpha[3])
-            )
-            bbbb = SpinBlockSlice(
-                "bbbb", (slices_beta[0], slices_beta[1],
-                         slices_beta[2], slices_beta[3])
-            )
-            aabb = SpinBlockSlice(
-                "aabb", (slices_alpha[0], slices_alpha[1],
-                         slices_beta[2], slices_beta[3])
-            )
-            bbaa = SpinBlockSlice(
-                "bbaa", (slices_beta[0], slices_beta[1],
-                         slices_alpha[2], slices_alpha[3])
-            )
-            non_zero_spin_block_slice_list = [aaaa, bbbb, aabb, bbaa]
-            for tsym_block in trans_sym_blocks:
-                sym_block_eri = can_block_integrals.transpose(tsym_block)
-                for non_zero_spin_block in non_zero_spin_block_slice_list:
-                    transposed_spin_slices = tuple(
-                        non_zero_spin_block.slices[i] for i in tsym_block
-                    )
-                    eri[transposed_spin_slices] = sym_block_eri
-    else:
-        # compute full ERI tensor (with really everything)
-        eri = ao2mo.general(
-            eri_ao, (cf_bf, cf_bf, cf_bf, cf_bf), compact=False
-        )
-        eri = eri.reshape(n_orbs, n_orbs, n_orbs, n_orbs)
-        del eri_ao
+    # compute full ERI tensor (with really everything)
+    eri = ao2mo.general(
+        eri_ao, (cf_bf, cf_bf, cf_bf, cf_bf), compact=False
+    )
+    eri = eri.reshape(n_orbs, n_orbs, n_orbs, n_orbs)
+    del eri_ao
 
-        # Adjust spin-forbidden blocks to be exactly zero
-        eri[aro, bro, :, :] = 0
-        eri[aro, brv, :, :] = 0
-        eri[arv, bro, :, :] = 0
-        eri[arv, brv, :, :] = 0
+    # Adjust spin-forbidden blocks to be exactly zero
+    eri[aro, bro, :, :] = 0
+    eri[aro, brv, :, :] = 0
+    eri[arv, bro, :, :] = 0
+    eri[arv, brv, :, :] = 0
 
-        eri[bro, aro, :, :] = 0
-        eri[bro, arv, :, :] = 0
-        eri[brv, aro, :, :] = 0
-        eri[brv, arv, :, :] = 0
+    eri[bro, aro, :, :] = 0
+    eri[bro, arv, :, :] = 0
+    eri[brv, aro, :, :] = 0
+    eri[brv, arv, :, :] = 0
 
-        eri[:, :, aro, bro] = 0
-        eri[:, :, aro, brv] = 0
-        eri[:, :, arv, bro] = 0
-        eri[:, :, arv, brv] = 0
+    eri[:, :, aro, bro] = 0
+    eri[:, :, aro, brv] = 0
+    eri[:, :, arv, bro] = 0
+    eri[:, :, arv, brv] = 0
 
-        eri[:, :, bro, aro] = 0
-        eri[:, :, bro, arv] = 0
-        eri[:, :, brv, aro] = 0
-        eri[:, :, brv, arv] = 0
+    eri[:, :, bro, aro] = 0
+    eri[:, :, bro, arv] = 0
+    eri[:, :, brv, aro] = 0
+    eri[:, :, brv, arv] = 0
 
     data["eri_ffff"] = eri
     return data

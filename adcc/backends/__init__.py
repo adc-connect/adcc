@@ -71,7 +71,6 @@ def import_scf_results(res):
 def run_hf(backend, **kwargs):
     if not have_backend(backend):
         raise ValueError("Backend {} not found.".format(backend))
-    # TODO: refactor...
     if backend == "psi4":
         from . import psi4 as backend_psi4
         return backend_psi4.run_hf(**kwargs)

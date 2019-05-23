@@ -88,21 +88,21 @@ class TestPsi4(unittest.TestCase):
         )
 
         # test symmetry of the ERI tensor
-        # ii, jj, kk, ll = 0, 1, 2, 3
-        # allowed_permutations = [
-        #     (kk, ll, ii, jj),
-        #     (jj, ii, ll, kk),
-        #     (ll, kk, jj, ii),
-        #     (jj, ii, kk, ll),
-        #     (jj, ii, ll, kk),
-        # ]
-        # eri = np.empty((hfdata.n_orbs, hfdata.n_orbs,
-        #                 hfdata.n_orbs, hfdata.n_orbs))
-        # sfull = slice(hfdata.n_orbs)
-        # hfdata.fill_eri_ffff((sfull, sfull, sfull, sfull), eri)
-        # for perm in allowed_permutations:
-        #     eri_perm = np.transpose(eri, perm)
-        #     np.testing.assert_almost_equal(eri_perm, eri)
+        ii, jj, kk, ll = 0, 1, 2, 3
+        allowed_permutations = [
+            (kk, ll, ii, jj),
+            (jj, ii, ll, kk),
+            (ll, kk, jj, ii),
+            (jj, ii, kk, ll),
+            (jj, ii, ll, kk),
+        ]
+        eri = np.empty((hfdata.n_orbs, hfdata.n_orbs,
+                        hfdata.n_orbs, hfdata.n_orbs))
+        sfull = slice(hfdata.n_orbs)
+        hfdata.fill_eri_ffff((sfull, sfull, sfull, sfull), eri)
+        for perm in allowed_permutations:
+            eri_perm = np.transpose(eri, perm)
+            np.testing.assert_almost_equal(eri_perm, eri)
 
     def test_water_sto3g_rhf(self):
         water_xyz = """

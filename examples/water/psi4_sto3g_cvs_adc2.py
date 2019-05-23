@@ -42,8 +42,5 @@ psi4.set_options({'basis': "sto-3g",
                   'd_convergence': 1e-8})
 scf_e, wfn = psi4.energy('SCF', return_wfn=True)
 
-# Initialise ADC memory (256 MiB)
-adcc.memory_pool.initialise(max_memory=256 * 1024 * 1024)
-
 # Run an adc2 calculation:
 state = adcc.cvs_adc2(wfn, n_singlets=5, n_core_orbitals=1)

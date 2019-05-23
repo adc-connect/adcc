@@ -67,13 +67,22 @@ class VeloxChemEriBuilder(EriBuilder):
                          indices[2], indices[3]))
 
         grps = [p for p in range(self.task.mpi_size)]
+
         vlx_block = "ASYM_" + asym_block.upper()
+        # VeloxChem cannot compute this block, but it might be
+        # needed in some CVS cases
+        if asym_block == "OVOO":
+            vlx_block = "ASYM_OOOV"
+            eris = eris.transpose(2, 3, 0, 1)
+
         if vlx_block in self.eri_cache.keys():
             blck = self.eri_cache[vlx_block]
         else:
             import time
             start = time.time()
             # TODO: remove later once timings for ERI import are available
+            # I want to keep this here for now to see VeloxChem timings
+            # for the integrals...
             print("--- Computing block", vlx_block)
             blck = self.moints_drv.compute(self.molecule, self.ao_basis,
                                            self.mol_orbs, vlx_block,
@@ -94,9 +103,8 @@ class VeloxChemEriBuilder(EriBuilder):
                 fyx = blck.yx_to_numpy(idx)
                 if spin_block == "aaaa" or spin_block == "bbbb":
                     eris[i - ioffset, j - joffset, :, :] = fxy - fyx.T
-                    eris[j - joffset, i - ioffset, :, :] = - eris[i - ioffset,
-                                                                  j - joffset,
-                                                                  :, :]
+                    eri_ij = eris[i - ioffset, j - joffset, :, :]
+                    eris[j - joffset, i - ioffset, :, :] = - eri_ij
                 elif spin_block == "abab" or spin_block == "baba":
                     eris[i - ioffset, j - joffset, :, :] = fxy
                     eris[j - joffset, i - ioffset, :, :] = fyx.T
@@ -117,17 +125,10 @@ class VeloxChemEriBuilder(EriBuilder):
                 elif spin_block == "abba":
                     fyx = blck.yx_to_numpy(idx)
                     eris[i - ioffset, j - joffset, :, :] = -fyx.T
+        if asym_block == "OVOO":
+            eris = eris.transpose(2, 3, 0, 1)
         self.eri_asymm_cache[cache_key] = eris
-        self.print_cache_memory()
         return eris
-
-    def print_cache_memory(self):
-        def cache_memory_gb(dict):
-            return sum(dict[f].nbytes * 1e-9 for f in dict)
-
-        print("Cached ERI asymm: {:.2f} Gb".format(
-              cache_memory_gb(self.eri_asymm_cache)
-              ))
 
     @property
     def has_mo_asym_eri(self):
@@ -211,6 +212,12 @@ class VeloxChemHFProvider(HartreeFockProvider):
         # Do not forget the next line,
         # otherwise weird errors result
         super().__init__()
+
+        if not isinstance(scfdrv, vlx.scfrestdriver.ScfRestrictedDriver):
+            raise TypeError(
+                "Only restricted references (RHF) are supported."
+            )
+
         self.backend = "veloxchem"
         self.scfdrv = scfdrv
         self.mol_orbs = self.scfdrv.mol_orbs

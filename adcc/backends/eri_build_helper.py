@@ -188,16 +188,15 @@ class EriBuilder:
         slices  requested slice of ERIs from libtensor
         out     view to libtensor memory
         """
-        mo_spaces, \
-            spin_block, \
-            comp_block_slices \
-            = self.block_slice_mapping.map_slices_to_blocks_and_spins(slices)
+        mapping = self.block_slice_mapping.map_slices_to_blocks_and_spins(
+            slices
+        )
+        mo_spaces, spin_block, comp_block_slices = mapping
         if len(mo_spaces) != 4:
-            raise RuntimeError("Could not assign MO spaces from slice"
-                               " {},"
-                               " found {} and spin {}".format(slices,
-                                                              mo_spaces,
-                                                              spin_block))
+            raise RuntimeError(
+                "Could not assign MO spaces from slice {},"
+                " found {} and spin {}".format(slices, mo_spaces, spin_block)
+            )
         if mo_spaces != self.last_block:
             self.last_block = mo_spaces
             self.flush_cache()
@@ -263,19 +262,7 @@ class EriBuilder:
             eris = - spin_symm.pref2 * asymm
 
         self.eri_asymm_cache[both_blocks] = eris
-        self.print_cache_memory()
         return eris
-
-    def print_cache_memory(self):
-        def cache_memory_gb(dict):
-            return sum(dict[f].nbytes * 1e-9 for f in dict)
-
-        print("Cached ERI asymm: {:.2f} Gb".format(
-              cache_memory_gb(self.eri_asymm_cache)
-              ))
-        print("Cached ERI chem: {:.2f} Gb".format(
-              cache_memory_gb(self.eri_cache)
-              ))
 
     def build_full_eri_ffff(self):
         n_orbs = self.n_orbs
@@ -334,10 +321,7 @@ class BlockSliceMappingHelper:
     def __init__(self, aro, bro,
                  arv, brv):
         self.block2slice = {
-            "oa": aro,
-            "ob": bro,
-            "va": arv,
-            "vb": brv,
+            "oa": aro, "ob": bro, "va": arv, "vb": brv,
         }
 
     def map_slices_to_blocks_and_spins(self, slices):
@@ -354,8 +338,8 @@ class BlockSliceMappingHelper:
                     requested_blocks.append(block[0].upper())
                     requested_spins.append(block[1])
                     start_offset = s.start - test_slice.start
-                    comp_block_slice = slice(start_offset,
-                                             s.stop - s.start + start_offset,
-                                             1)
+                    comp_block_slice = slice(
+                        start_offset, s.stop - s.start + start_offset, 1
+                    )
                     comp_block_slices.append(comp_block_slice)
         return requested_blocks, requested_spins, tuple(comp_block_slices)

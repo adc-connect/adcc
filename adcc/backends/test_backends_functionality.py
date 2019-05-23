@@ -96,7 +96,7 @@ methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 # looks like the def2-tzvp basis file is wrong in VeloxChem
 backends = ["pyscf", "psi4", "veloxchem"]
 
-# for VeloxChem, because it only accepts with hypen
+# for VeloxChem, because it only accepts with hyphen
 basis_dict = {
     "sto3g": "sto-3g",
     "def2tzvp": "def2-tzvp"
@@ -113,6 +113,7 @@ class TestBackendsFunctionality(unittest.TestCase):
            backend == "veloxchem" and \
            system.startswith("h2o"):
             pytest.skip("VeloxChem does not support f-functions.")
+
         hfres = adcc.backends.run_hf(
             backend, xyz=water_xyz, basis=basis, conv_tol=1e-14,
             conv_tol_grad=1e-12

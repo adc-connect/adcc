@@ -45,7 +45,6 @@ class Psi4EriBuilder(EriBuilder):
     def compute_mo_eri(self, block, coeffs, use_cache=True):
         if block in self.eri_cache and use_cache:
             return self.eri_cache[block]
-        # print("Computing block ", block)
         eri = np.asarray(self.mints.mo_eri(*coeffs))
         self.eri_cache[block] = eri
         return eri
@@ -59,6 +58,10 @@ class Psi4HFProvider(HartreeFockProvider):
         # Do not forget the next line,
         # otherwise weird errors result
         super().__init__()
+
+        if not isinstance(wfn, psi4.core.RHF):
+            raise TypeError("Only restricted references (RHF) are supported.")
+
         self.backend = "psi4"
         self.wfn = wfn
         self.energy_terms = {
@@ -77,9 +80,11 @@ class Psi4HFProvider(HartreeFockProvider):
         return self.get_n_alpha()
 
     def get_threshold(self):
-        # psi4.core.get_option("SCF", "E_CONVERGENCE")
+        conv_tol = psi4.core.get_option("SCF", "E_CONVERGENCE")
         # RMS value of the orbital gradient
-        return psi4.core.get_option("SCF", "D_CONVERGENCE")
+        conv_tol_grad = psi4.core.get_option("SCF", "D_CONVERGENCE")
+        threshold = max(10 * conv_tol, conv_tol_grad)
+        return threshold
 
     def get_restricted(self):
         return True
@@ -148,6 +153,8 @@ def import_scf(scfdrv):
         raise TypeError("Only restricted references (RHF) are supported.")
 
     # TODO: Psi4 throws an exception if SCF is not converged
+    # and there is, to the best of my knowledge, no `is_converged` property
+    # of the psi4 wavefunction
     # if not scfdrv.is_converged:
     #     raise ValueError("Cannot start an adc calculation on top of an SCF, "
     #                      "which is not converged.")
