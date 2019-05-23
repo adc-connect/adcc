@@ -141,12 +141,6 @@ in the folder adcc/lib/libadccore_thirdparty/ctx
                    Matthias Schneider and Jan Wenzel
 - **Publication:** http://doi.org/10.1080/00268976.2013.859313
 
-#
-# libmo
-#
-- **Description:** Utility library to setup libtensor for molecular
-                   electronic structure theory.
-- **Copyright:**   Copyright (c) 2012 Evgeny Epifanovsky
 
 #
 # libtensor
