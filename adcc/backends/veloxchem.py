@@ -78,18 +78,10 @@ class VeloxChemEriBuilder(EriBuilder):
         if vlx_block in self.eri_cache.keys():
             blck = self.eri_cache[vlx_block]
         else:
-            import time
-            start = time.time()
-            # TODO: remove later once timings for ERI import are available
-            # I want to keep this here for now to see VeloxChem timings
-            # for the integrals...
-            print("--- Computing block", vlx_block)
             blck = self.moints_drv.compute(self.molecule, self.ao_basis,
                                            self.mol_orbs, vlx_block,
                                            grps)
             self.eri_cache[vlx_block] = blck
-            stop = time.time()
-            print("--- Time:", stop - start)
 
         ioffset = n_alpha if asym_block == "VVVV" else 0
         joffset = n_alpha if (asym_block == "OVVV" or asym_block == "OVOV"
@@ -199,7 +191,9 @@ class VeloxChemEriBuilder(EriBuilder):
             for tsym_block in trans_sym_blocks:
                 sym_block_eri = can_block_integrals.transpose(tsym_block)
                 for non_zero_spin_block in non_zero_spin_block_slice_list:
-                    transposed_spin_slices = tuple(non_zero_spin_block.slices[i] for i in tsym_block)
+                    transposed_spin_slices = tuple(
+                        non_zero_spin_block.slices[i] for i in tsym_block
+                    )
                     eri[transposed_spin_slices] = sym_block_eri
         return eri
 
@@ -323,6 +317,13 @@ def import_scf(scfdrv):
     return provider
 
 
+basissets = {
+    "sto3g": "sto-3g",
+    "def2tzvp": "def2-tzvp",
+    "ccpvdz": "cc-pvdz",
+}
+
+
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol_grad=1e-8,
            max_iter=150):
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -331,7 +332,7 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol_grad=1e-8,
         with open(infile, "w") as fp:
             lines = ["@jobs", "task: hf", "@end", ""]
             lines += ["@method settings",
-                      "basis: {}".format(basis),
+                      "basis: {}".format(basissets.get(basis, basis)),
                       "@end"]
             lines += ["@molecule",
                       "charge: {}".format(charge),

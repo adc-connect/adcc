@@ -163,6 +163,13 @@ def import_scf(scfdrv):
     return provider
 
 
+basissets = {
+    "sto3g": "sto-3g",
+    "def2tzvp": "def2-tzvp",
+    "ccpvdz": "cc-pvdz",
+}
+
+
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
            conv_tol_grad=1e-8, max_iter=150):
     mol = psi4.geometry("""
@@ -175,7 +182,7 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
     reference = "RHF"
     if multiplicity != 1:
         reference = "UHF"
-    psi4.set_options({'basis': basis,
+    psi4.set_options({'basis': basissets.get(basis, basis),
                       'scf_type': 'pk',
                       'e_convergence': conv_tol,
                       'd_convergence': conv_tol_grad,

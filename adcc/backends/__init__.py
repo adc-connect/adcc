@@ -21,7 +21,9 @@
 ##
 ## ---------------------------------------------------------------------
 
-from .available_backends import have_backend
+import warnings
+
+from .available_backends import have_backend, first_available
 
 
 def import_scf_results(res):
@@ -68,20 +70,46 @@ def import_scf_results(res):
                               "type " + str(type(res)) + " implemented.")
 
 
-def run_hf(backend, **kwargs):
+def run_hf(backend=None, xyz=None, basis="sto-3g", charge=0, multiplicity=1,
+           conv_tol=1e-12, conv_tol_grad=1e-8, max_iter=150):
+    """
+        Run a HF calculation with a specified backend, molecule, and SCF
+        parameters
+
+        backend:        name of the backend (pyscf, psi4, or veloxchem)
+        xyz:            string with coordinates in Bohr
+        basis:          basis set name
+        charge:         charge of the molecule
+        multiplicity:   spin multiplicity 2S + 1
+        conv_tol:       energy convergence tolerance
+        conv_tol_grad:  convergence tolerance of the electronic gradient
+        max_iter:       maximum number of SCF iterations
+    """
+
+    if not backend:
+        backend = first_available()
+        warnings.warn("No backend specified. Using {}.".format(backend))
+
     if not have_backend(backend):
         raise ValueError("Backend {} not found.".format(backend))
     if backend == "psi4":
         from . import psi4 as backend_psi4
-        return backend_psi4.run_hf(**kwargs)
+        return backend_psi4.run_hf(
+            xyz, basis, charge, multiplicity, conv_tol,
+            conv_tol_grad, max_iter
+        )
     elif backend == "pyscf":
         from . import pyscf as backend_pyscf
-        return backend_pyscf.run_hf(**kwargs)
+        return backend_pyscf.run_hf(
+            xyz, basis, charge, multiplicity, conv_tol,
+            conv_tol_grad, max_iter
+        )
     elif backend == "veloxchem":
         from . import veloxchem as backend_vlx
-        if "conv_tol" in kwargs:
-            kwargs.pop("conv_tol")
-        return backend_vlx.run_hf(**kwargs)
+        return backend_vlx.run_hf(
+            xyz, basis, charge, multiplicity,
+            conv_tol_grad, max_iter
+        )
     else:
         raise NotImplementedError(
             "No run_hf function implemented for backend {}.".format(backend)

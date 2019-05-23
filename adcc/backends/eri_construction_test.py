@@ -64,23 +64,6 @@ def eri_asymm_construction_test(scfres, core_orbitals=0):
     arv = slice(n_alpha, n_orbs_alpha, 1)
     brv = slice(n_orbs_alpha + n_beta, n_orbs, 1)
 
-    space_names = [
-        "o1o1o1o2",
-        "o1o1o2o2",
-        "o1o1o2v1",
-        "o1o2o1o2",
-        "o1o2o1v1", "o1o2o2o2",
-        "o1o2o2v1", "o1o2v1v1",
-        "o1v1o2v1", "o2o2o2o2",
-        "o2o2o2v1", "o2o2v1v1",
-        "o2v1o2v1", "o2v1v1v1",
-        "o1o1o1o1",
-        "o1o1o1v1",
-        "o1o1v1v1",
-        "o1v1o1v1",
-        "o1v1v1v1",
-        "v1v1v1v1",
-    ]
     lookuptable = {
         "o1": {"a": aro1, "b": bro1, },
         "o2": {"a": aro2, "b": bro2, },

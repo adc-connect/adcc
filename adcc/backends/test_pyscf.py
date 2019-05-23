@@ -22,18 +22,25 @@
 ## ---------------------------------------------------------------------
 
 import pytest
-import adcc
 import unittest
-import adcc.backends
-from adcc.backends import have_backend
+
 import numpy as np
 
+import adcc
+import adcc.backends
+from adcc.backends import have_backend
+from adcc.testdata import geometry
+
+from ..misc import expand_test_templates
 from .eri_construction_test import eri_asymm_construction_test
 
 if have_backend("pyscf"):
     from pyscf import scf, gto
 
+basissets = ["sto3g", "ccpvdz"]
 
+
+@expand_test_templates(basissets)
 @pytest.mark.skipif(not have_backend("pyscf"), reason="pyscf not found.")
 class TestPyscf(unittest.TestCase):
     def run_hf(self, mol):
@@ -142,26 +149,25 @@ class TestPyscf(unittest.TestCase):
             (jj, ii, kk, ll),
             (jj, ii, ll, kk),
         ]
+        eri = np.empty((hfdata.n_orbs, hfdata.n_orbs,
+                        hfdata.n_orbs, hfdata.n_orbs))
+        sfull = slice(hfdata.n_orbs)
+        hfdata.fill_eri_ffff((sfull, sfull, sfull, sfull), eri)
         for perm in allowed_permutations:
             eri_perm = np.transpose(eri, perm)
             np.testing.assert_almost_equal(eri_perm, eri)
 
-    def test_water_sto3g_rhf(self):
-        water_xyz = """
-        O 0 0 0
-        H 0 0 1.795239827225189
-        H 1.693194615993441 0 -0.599043184453037
-        """
-        mf = adcc.backends.run_hf("pyscf", xyz=water_xyz, basis="cc-pvdz")
+    def template_rhf_h2o(self, basis):
+        mf = adcc.backends.run_hf(
+            "pyscf", xyz=geometry.xyz["h2o"], basis=basis
+        )
         self.base_test(mf)
         eri_asymm_construction_test(scfres=mf)
         eri_asymm_construction_test(scfres=mf, core_orbitals=1)
 
-    def test_water_sto3g_core_hole(self):
+    def test_h2o_sto3g_core_hole(self):
         mol = gto.M(
-            atom='O 0 0 0;'
-                 'H 0 0 1.795239827225189;'
-                 'H 1.693194615993441 0 -0.599043184453037',
+            atom=geometry.xyz["h2o"],
             basis='sto-3g',
             unit="Bohr"
         )

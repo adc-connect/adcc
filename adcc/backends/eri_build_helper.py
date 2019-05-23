@@ -303,7 +303,9 @@ class EriBuilder:
             for tsym_block in trans_sym_blocks:
                 sym_block_eri = can_block_integrals.transpose(tsym_block)
                 for non_zero_spin_block in non_zero_spin_block_slice_list:
-                    transposed_spin_slices = tuple(non_zero_spin_block.slices[i] for i in tsym_block)
+                    transposed_spin_slices = tuple(
+                        non_zero_spin_block.slices[i] for i in tsym_block
+                    )
                     eri[transposed_spin_slices] = sym_block_eri
         return eri
 

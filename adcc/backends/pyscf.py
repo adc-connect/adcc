@@ -380,11 +380,11 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
     mol = gto.M(
         atom=xyz,
         basis=basis,
-        unit="Bohr"
+        unit="Bohr",
+        # spin in the pyscf world is 2S
+        spin=multiplicity - 1,
+        charge=charge,
     )
-    mol.charge = charge
-    # spin in the pyscf world is 2S
-    mol.spin = multiplicity - 1
     mf = scf.HF(mol)
     mf.conv_tol = conv_tol
     mf.conv_tol_grad = conv_tol_grad

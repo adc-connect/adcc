@@ -22,52 +22,16 @@
 ## ---------------------------------------------------------------------
 
 
-def is_pyscf_available():
-    try:
-        from pyscf import scf
-        return True
-    except ImportError:
-        return False
-
-
-def is_psi4_available():
-    try:
-        import psi4
-        return True
-    except ImportError:
-        return False
-
-
-def is_molsturm_available():
-    try:
-        import molsturm
-        return True
-    except ImportError:
-        return False
-
-
-def is_veloxchem_available():
-    try:
-        import veloxchem
-        return True
-    except ImportError:
-        return False
-
-
-_backend_availability = {
-    "pyscf": is_pyscf_available(),
-    "psi4": is_psi4_available(),
-    "veloxchem": is_veloxchem_available(),
-    "molsturm": is_molsturm_available(),
+# all coordinates in Bohr
+xyz = {
+    "h2o": """
+            O 0 0 0
+            H 0 0 1.795239827225189
+            H 1.693194615993441 0 -0.599043184453037
+    """,
+    #
+    "cn": """
+    C 0 0 0
+    N 0 0 2.2143810738114829
+    """
 }
-
-
-def first_available():
-    for b in _backend_availability.keys():
-        if _backend_availability[b]:
-            return b
-    raise RuntimeError("No backend available.")
-
-
-def have_backend(backend):
-    return _backend_availability.get(backend, False)
