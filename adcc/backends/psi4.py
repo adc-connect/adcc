@@ -27,6 +27,22 @@ from libadcc import HartreeFockProvider
 from .eri_build_helper import EriBuilder
 
 
+class Psi4OperatorIntegralProvider:
+    def __init__(self, wfn):
+        self.wfn = wfn
+        self.backend = "psi4"
+        self.mints = psi4.core.MintsHelper(self.wfn.basisset())
+
+    def electric_dipole(self, component="x"):
+        # TODO avoid re-computation
+        ao_dip = [np.asarray(comp) for comp in self.mints.ao_dipole()]
+        ao_dip = {k: ao_dip[i] for i, k in enumerate(['x', 'y', 'z'])}
+        return ao_dip[component]
+
+    def fock(self):
+        return np.asarray(self.wfn.Fa())
+
+
 class Psi4EriBuilder(EriBuilder):
     def __init__(self, wfn, n_orbs, n_orbs_alpha, n_alpha, n_beta):
         self.wfn = wfn
@@ -66,6 +82,7 @@ class Psi4HFProvider(HartreeFockProvider):
         self.eri_builder = Psi4EriBuilder(
             self.wfn, self.n_orbs, self.n_orbs_alpha, self.n_alpha, self.n_beta
         )
+        self.operator_integral_provider = Psi4OperatorIntegralProvider(self.wfn)
 
     def get_backend(self):
         return "psi4"

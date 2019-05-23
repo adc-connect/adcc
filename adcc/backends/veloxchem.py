@@ -31,6 +31,22 @@ from .eri_build_helper import (EriBuilder, SpinBlockSlice,
 
 from libadcc import HartreeFockProvider
 
+
+class VeloxChemOperatorIntegralProvider:
+    def __init__(self, scfdrv):
+        self.scfdrv = scfdrv
+        self.backend = "veloxchem"
+
+    def electric_dipole(self, component="x"):
+        # TODO avoid re-computation
+        ao_dip = self.scfdrv.scf_tensors['Mu']
+        ao_dip = {k: ao_dip[i] for i, k in enumerate(['x', 'y', 'z'])}
+        return ao_dip[component]
+
+    def fock(self):
+        return self.scfdrv.scf_tensors['F'][0]
+
+
 # VeloxChem is a special case... not using coefficients at all
 # so we need this boilerplate code to make it work...
 class VeloxChemEriBuilder(EriBuilder):
@@ -221,6 +237,10 @@ class VeloxChemHFProvider(HartreeFockProvider):
         self.eri_builder = VeloxChemEriBuilder(
             self.scfdrv.task, self.mol_orbs, self.n_orbs, self.n_orbs_alpha,
             self.n_alpha, self.n_beta
+        )
+
+        self.operator_integral_provider = VeloxChemOperatorIntegralProvider(
+            self.scfdrv
         )
 
     def get_backend(self):

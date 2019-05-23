@@ -30,6 +30,23 @@ from libadcc import HartreeFockProvider
 from .eri_build_helper import EriBuilder
 
 
+class PyScfOperatorIntegralProvider:
+    def __init__(self, scfres):
+        self.scfres = scfres
+        self.backend = "pyscf"
+
+    def electric_dipole(self, component="x"):
+        # TODO avoid re-computation
+        ao_dip = self.scfres.mol.intor_symmetric('int1e_r', comp=3)
+        ao_dip = {k: ao_dip[i] for i, k in enumerate(['x', 'y', 'z'])}
+        return ao_dip[component]
+
+    def fock(self):
+        return self.scfres.get_fock()
+
+
+# TODO: refactor ERI builder to be more general
+# IntegralBuilder would be good
 class PyScfEriBuilder(EriBuilder):
     def __init__(self, scfres, n_orbs, n_orbs_alpha, n_alpha, n_beta):
         self.scfres = scfres
@@ -67,6 +84,10 @@ class PyScfHFProvider(HartreeFockProvider):
         self.eri_builder = PyScfEriBuilder(
             self.scfres, self.n_orbs, self.n_orbs_alpha,
             self.n_alpha, self.n_beta
+        )
+
+        self.operator_integral_provider = PyScfOperatorIntegralProvider(
+            self.scfres
         )
 
     def get_backend(self):

@@ -25,6 +25,7 @@ import numpy as np
 
 from ..misc import expand_test_templates
 from .eri_construction_test import eri_asymm_construction_test
+from .operator_import_test import operator_import_test
 
 from numpy.testing import assert_almost_equal
 
@@ -34,6 +35,9 @@ import adcc.backends
 
 from adcc.backends import have_backend
 from adcc.testdata import geometry
+
+if have_backend("psi4"):
+    import psi4
 
 basissets = ["sto3g", "ccpvdz"]
 
@@ -110,8 +114,15 @@ class TestPsi4(unittest.TestCase):
             eri_perm = np.transpose(eri, perm)
             assert_almost_equal(eri_perm, eri)
 
+    def dipole_operator_import_test(self, wfn):
+        mints = psi4.core.MintsHelper(wfn.basisset())
+        ao_dip = mints.ao_dipole()
+        ao_dip = {k: np.array(ao_dip[i]) for i, k in enumerate(['x', 'y', 'z'])}
+        operator_import_test(wfn, ao_dip)
+
     def template_rhf_h2o(self, basis):
         wfn = adcc.backends.run_hf("psi4", geometry.xyz["h2o"], basis)
         self.base_test(wfn)
         eri_asymm_construction_test(wfn)
         eri_asymm_construction_test(wfn, core_orbitals=1)
+        self.dipole_operator_import_test(wfn)

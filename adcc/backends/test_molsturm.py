@@ -40,7 +40,7 @@ basissets = ["sto3g"]
 
 @expand_test_templates(basissets)
 @pytest.mark.skipif(not have_backend("molsturm"), reason="molsturm not found.")
-class TestPyscf(unittest.TestCase):
+class TestMolsturm(unittest.TestCase):
     def base_test(self, scfres):
         hfdata = adcc.backends.import_scf_results(scfres)
         assert hfdata.backend == "molsturm"

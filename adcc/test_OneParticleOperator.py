@@ -28,7 +28,7 @@ import adcc
 from adcc.testdata.cache import cache
 
 
-class TestOneParticleDensityMatrix(unittest.TestCase):
+class TestOneParticleOperator(unittest.TestCase):
     def test_to_ndarray(self):
         mp2diff = adcc.LazyMp(cache.refstate["h2o_sto3g"]).mp2_diffdm
 

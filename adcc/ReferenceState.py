@@ -23,6 +23,7 @@
 import libadcc
 
 from .backends import import_scf_results
+from .OperatorIntegrals import OperatorIntegrals
 from .memory_pool import memory_pool
 
 __all__ = ["ReferenceState"]
@@ -115,6 +116,11 @@ class ReferenceState(libadcc.ReferenceState):
         if import_all_below_n_orbs is not None and \
            hfdata.n_orbs < import_all_below_n_orbs:
             super().import_all()
+
+        self.operator_integrals = OperatorIntegrals(
+            hfdata.operator_integral_provider, self.mospaces,
+            self.orbital_coefficients, self.conv_tol
+        )
 
 
 # TODO some nice describe method

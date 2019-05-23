@@ -54,7 +54,10 @@ print(adcc.banner())
 
 # Run an adc2 calculation:
 state = adcc.adc2(scfres, n_singlets=7, conv_tol=1e-8)
-state = adcc.attach_state_densities(state)
+print(state.describe())
+# state = adcc.attach_state_densities(state)
+state = adcc.attach_properties(state, method='adc2')
+print(state.describe())
 
 #
 # Get HF density matrix and nuclear dipole
@@ -76,6 +79,8 @@ mp2dm_mo = state.ground_state.mp2_diffdm
 dm_mp2_ao = mp2dm_mo.transform_to_ao_basis(state.reference_state)
 ρ_mp2_tot = (dm_mp2_ao[0] + dm_mp2_ao[1]).to_ndarray() + ρ_hf_tot
 
+# dipole moment operator function from backend
+dips = state.reference_state.operator_integrals.electric_dipole
 #
 # Compute properties
 #
@@ -102,9 +107,19 @@ for i, ampl in enumerate(state.eigenvectors):
     sdip_el = np.einsum('xij,ij->x', dip_ao, ρdiff_opdm_ao + ρ_mp2_tot)
     sdip = sdip_el - dip_nucl
 
+    # properties directly from adcc
+    tdip_new = state.transition_dipole_moments[i]
+    sdip_new = state.state_dipole_moments[i]
+    osc_new = state.oscillator_strengths[i]
+
+    np.testing.assert_allclose(tdip, tdip_new, atol=1e-8)
+    np.testing.assert_allclose(sdip, sdip_new - dip_nucl, atol=1e-8)
+    np.testing.assert_allclose(osc, osc_new, atol=1e-8)
+
     # Print findings
     fmt = "{0:2d}  {1:12.8g} {2:9.3g}   [{3:9.3g}, {4:9.3g}, {5:9.3g}]"
     fmt += "   [{6:9.3g}, {7:9.3g}, {8:9.3g}]"
+    # fmt += "   [{9:9.3g}, {10:9.3g}, {11:9.3g}]"
     print(state.kind[0], fmt.format(i, state.eigenvalues[i], osc, *tdip, *sdip))
 
     if dump_cube:
@@ -127,3 +142,7 @@ osc_strengths = np.array(osc_strengths)
 plot_spectrum(exc_energies * eV, osc_strengths)
 plt.xlabel("Excitation energy in eV")
 plt.savefig("spectrum.pdf")
+
+# Timings summary:
+print(state.timer.describe())
+print(state.reference_state.timer.describe())

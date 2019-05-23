@@ -27,6 +27,10 @@ from warnings import warn
 from libadcc import HartreeFockProvider
 
 
+class DummyOperatorIntegralProvider:
+    pass
+
+
 class DictHfProvider(HartreeFockProvider):
     """
     Very simple implementation of the HartreeFockProvider
@@ -41,6 +45,7 @@ class DictHfProvider(HartreeFockProvider):
         # otherwise weird errors result
         super().__init__()
         self.data = data
+        self.operator_integral_provider = DummyOperatorIntegralProvider()
 
     def get_backend(self):
         return self.data.get("backend", "dict")

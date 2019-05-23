@@ -55,8 +55,6 @@ def compare_adc_results(adc_results, atol):
                 v1np = v1[block].to_ndarray()
                 v2np = v2[block].to_ndarray()
                 nonz_count1 = np.count_nonzero(np.abs(v1np) >= atol)
-                nonz_count2 = np.count_nonzero(np.abs(v2np) >= atol)
-                assert nonz_count1 == nonz_count2
                 if nonz_count1 == 0:
                     # Only zero elements in block.
                     continue
