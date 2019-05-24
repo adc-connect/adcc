@@ -50,10 +50,10 @@ class Tensor(libadcc.Tensor):
         For the last four symmetry-related arguments see the documentation
         of the Symmetry object for details.
         """
-        if not isinstance(sym_or_mo, (libadcc.MoSpaces, Symmetry)):
+        if not isinstance(sym_or_mo, (libadcc.MoSpaces, libadcc.Symmetry)):
             raise TypeError("The first argument needs to be a Symmetry or an "
                             "MoSpaces object.")
-        if not isinstance(sym_or_mo, Symmetry):
+        if not isinstance(sym_or_mo, libadcc.Symmetry):
             if space is None:
                 raise ValueError("If the first argument to Tensor is no "
                                  "Symmetry object, the second argument (spaces)"
