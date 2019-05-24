@@ -20,11 +20,12 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import libadcc
+
+from .LazyMp import LazyMp
 from .AdcMethod import AdcMethod
 from .functions import empty_like
 from .AmplitudeVector import AmplitudeVector
-
-import libadcc
 
 
 class AdcMatrix(libadcc.AdcMatrix):
@@ -35,6 +36,14 @@ class AdcMatrix(libadcc.AdcMatrix):
         """
         if not isinstance(method, AdcMethod):
             method = AdcMethod(method)
+        if isinstance(mp_results, (libadcc.ReferenceState,
+                                   libadcc.HartreeFockSolution_i)):
+            mp_results = LazyMp(mp_results)
+        if not isinstance(mp_results, libadcc.LazyMp):
+            raise TypeError("mp_results is not a valid object. It needs to be "
+                            "either a LazyMp, a ReferenceState or a "
+                            "HartreeFockSolution_i.")
+
         self.method = method
         super().__init__(method.name, mp_results)
 

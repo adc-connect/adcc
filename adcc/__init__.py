@@ -22,6 +22,7 @@
 ## ---------------------------------------------------------------------
 import sys
 
+from .LazyMp import LazyMp
 from .Tensor import Tensor
 from .Symmetry import Symmetry
 from .AdcMatrix import AdcMatrix
@@ -36,7 +37,7 @@ from .caching_policy import DefaultCachingPolicy, GatherStatisticsPolicy
 from .AmplitudeVector import AmplitudeVector
 from .state_densities import attach_state_densities
 
-from libadcc import HartreeFockProvider, HartreeFockSolution_i, LazyMp
+from libadcc import HartreeFockProvider, HartreeFockSolution_i
 
 # This has to be the last set of import
 from .guess import (guess_zero, guesses_any, guesses_singlet,

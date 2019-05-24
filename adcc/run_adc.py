@@ -29,7 +29,6 @@ from .guess import (guesses_any, guesses_singlet, guesses_spin_flip,
 from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod
 from .ReferenceState import ReferenceState as adcc_ReferenceState
-from .caching_policy import DefaultCachingPolicy
 from .solver.davidson import jacobi_davidson
 from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
@@ -158,20 +157,15 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
                       "".format(refstate.n_orbs_alpha("o2")))
 
     # Step2: Make AdcMatrix
-    if isinstance(data_or_matrix, ReferenceState):
-        refstate = data_or_matrix
-        data_or_matrix = LazyMp(refstate, DefaultCachingPolicy())
-    else:
-        refstate = data_or_matrix.reference_state
-
-    if isinstance(data_or_matrix, LazyMp):
-        data_or_matrix = AdcMatrix(method, data_or_matrix)
+    if isinstance(data_or_matrix, (ReferenceState, LazyMp)):
+        matrix = AdcMatrix(method, data_or_matrix)
     elif method is not None and method != data_or_matrix.method:
         print(method, data_or_matrix.method)
         warnings.warn("Ignored method parameter because data_or_matrix is an"
                       " AdcMatrix, which implicitly already defines the method")
     if isinstance(data_or_matrix, AdcMatrix):
         matrix = data_or_matrix
+    refstate = matrix.reference_state
 
     if solver_method != "jacobi_davidson":
         raise NotImplementedError("Only the jacobi_davidson solver_method "
@@ -275,8 +269,8 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         def jd_callback(state, identifier):
             solver.davidson.default_print(state, identifier, output)
         kstr = " " if kind == "any" else " " + kind + " "
-        print("Starting " + matrix.method.name + " " + kstr +
-              "Jacobi-Davidson ...", file=output)
+        print("Starting " + matrix.method.name + " " + kstr
+              + "Jacobi-Davidson ...", file=output)
 
     jdres = jacobi_davidson(matrix, guesses, n_ep=n_states,
                             conv_tol=conv_tol, callback=jd_callback,
