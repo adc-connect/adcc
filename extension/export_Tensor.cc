@@ -205,46 +205,45 @@ static std::shared_ptr<Tensor> contract_to(std::string contraction,
 //
 
 static py::list Tensor_select_n_min(const std::shared_ptr<Tensor>& self, size_t n) {
-  std::vector<std::pair<TensorIndex, scalar_type>> ret = self->select_n_min(n);
+  std::vector<std::pair<std::vector<size_t>, scalar_type>> ret = self->select_n_min(n);
   py::list li;
-  for (auto p : ret) li.append(py::make_tuple(self->tidx_to_full(p.first), p.second));
+  for (auto p : ret) li.append(py::make_tuple(p.first, p.second));
   return li;
 }
 
 static py::list Tensor_select_n_max(const std::shared_ptr<Tensor>& self, size_t n) {
-  std::vector<std::pair<TensorIndex, scalar_type>> ret = self->select_n_max(n);
+  std::vector<std::pair<std::vector<size_t>, scalar_type>> ret = self->select_n_max(n);
   py::list li;
-  for (auto p : ret) li.append(py::make_tuple(self->tidx_to_full(p.first), p.second));
+  for (auto p : ret) li.append(py::make_tuple(p.first, p.second));
   return li;
 }
 
 static py::list Tensor_select_n_absmin(const std::shared_ptr<Tensor>& self, size_t n) {
-  std::vector<std::pair<TensorIndex, scalar_type>> ret = self->select_n_absmin(n);
+  std::vector<std::pair<std::vector<size_t>, scalar_type>> ret = self->select_n_absmin(n);
   py::list li;
-  for (auto p : ret) li.append(py::make_tuple(self->tidx_to_full(p.first), p.second));
+  for (auto p : ret) li.append(py::make_tuple(p.first, p.second));
   return li;
 }
 
 static py::list Tensor_select_n_absmax(const std::shared_ptr<Tensor>& self, size_t n) {
-  std::vector<std::pair<TensorIndex, scalar_type>> ret = self->select_n_absmax(n);
+  std::vector<std::pair<std::vector<size_t>, scalar_type>> ret = self->select_n_absmax(n);
   py::list li;
-  for (auto p : ret) li.append(py::make_tuple(self->tidx_to_full(p.first), p.second));
+  for (auto p : ret) li.append(py::make_tuple(p.first, p.second));
   return li;
 }
 
 static bool Tensor_is_allowed(const std::shared_ptr<Tensor>& self, py::tuple idcs) {
-  return self->is_element_allowed(self->full_to_tidx(convert_index_tuple(self, idcs)));
+  return self->is_element_allowed(convert_index_tuple(self, idcs));
 }
 
 static scalar_type Tensor__getitem__(const std::shared_ptr<Tensor>& self,
                                      py::tuple idcs) {
-  return self->get_element(self->full_to_tidx(convert_index_tuple(self, idcs)));
+  return self->get_element(convert_index_tuple(self, idcs));
 }
 
 static scalar_type Tensor__setitem__(const std::shared_ptr<Tensor>& self, py::tuple idcs,
                                      scalar_type value) {
-  const TensorIndex tidx = self->full_to_tidx(convert_index_tuple(self, idcs));
-  self->set_element(tidx, value);
+  self->set_element(convert_index_tuple(self, idcs), value);
   return value;
 }
 
