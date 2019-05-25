@@ -20,22 +20,21 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
-import pytest
 import unittest
-
 import numpy as np
-
-import adcc
-import adcc.backends
-from adcc.backends import have_backend
-from adcc.testdata import geometry
 
 from ..misc import expand_test_templates
 from .eri_construction_test import eri_asymm_construction_test
 
+import pytest
+import adcc
+import adcc.backends
+
+from adcc.backends import have_backend
+from adcc.testdata import geometry
+
 if have_backend("pyscf"):
-    from pyscf import scf, gto
+    from pyscf import gto, scf
 
 basissets = ["sto3g", "ccpvdz"]
 
@@ -169,7 +168,9 @@ class TestPyscf(unittest.TestCase):
         mol = gto.M(
             atom=geometry.xyz["h2o"],
             basis='sto-3g',
-            unit="Bohr"
+            unit="Bohr",
+            # needed to disable commandline argument parsing in pyscf
+            parse_arg=False,
         )
         mf = self.run_core_hole(mol)
         self.base_test(mf)

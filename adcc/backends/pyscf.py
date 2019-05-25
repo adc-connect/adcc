@@ -20,16 +20,13 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
 import warnings
-
 import numpy as np
 
-from pyscf import ao2mo, scf, gto
-
-from libadcc import HfData, HartreeFockProvider
-
+from pyscf import ao2mo, gto, scf
 from .eri_build_helper import EriBuilder
+
+from libadcc import HartreeFockProvider, HfData
 
 
 class PyScfEriBuilder(EriBuilder):
@@ -384,6 +381,8 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
         # spin in the pyscf world is 2S
         spin=multiplicity - 1,
         charge=charge,
+        # Disable commandline argument parsing in pyscf
+        parse_arg=False,
     )
     mf = scf.HF(mol)
     mf.conv_tol = conv_tol
