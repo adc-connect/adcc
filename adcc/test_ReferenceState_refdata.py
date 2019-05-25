@@ -21,8 +21,6 @@
 ##
 ## ---------------------------------------------------------------------
 import unittest
-import pytest
-import itertools
 
 from .misc import expand_test_templates
 import numpy as np
@@ -31,12 +29,9 @@ from numpy.testing import assert_allclose, assert_almost_equal
 import adcc
 
 from adcc.testdata.cache import cache
-from adcc.testdata import geometry
 
 # The methods to test
 testcases = cache.hfimport.keys()
-
-backends = ["pyscf", "psi4", "veloxchem"]
 
 
 def compare_refstate_with_reference(
@@ -93,41 +88,6 @@ def compare_refstate_with_reference(
         for ss in reference["eri"].keys():
             assert_allclose(refstate.eri(ss).to_ndarray(),
                             reference["eri"][ss], atol=atol)
-
-
-@expand_test_templates(list(itertools.product(testcases, backends)))
-class TestBackendsHfImport(unittest.TestCase):
-    def base_test(self, system, backend, case):
-        data = cache.hfdata[system]
-        reference = cache.hfimport[system][case]
-
-        if not data["restricted"]:
-            pytest.skip("Unrestricted calculations not supported.")
-        if not adcc.backends.have_backend(backend):
-            pytest.skip("Backend {} not available.".format(backend))
-
-        basis = system.split("_")[-1]
-        molecule = system.split("_")[0]
-
-        if basis == "def2-tzvp" and \
-           backend == "veloxchem" and molecule == "h2o":
-            pytest.skip("VeloxChem does not support f-functions.")
-
-        hfres = adcc.backends.run_hf(
-            backend, xyz=geometry.xyz[molecule],
-            basis=basis, conv_tol=1e-14, conv_tol_grad=1e-12,
-        )
-        scfres = adcc.backends.import_scf_results(hfres)
-        compare_refstate_with_reference(
-            data, reference, case, scfres, compare_orbcoeff=False,
-            compare_eri_almost_abs=True
-        )
-
-    def template_generic(self, case, backend):
-        self.base_test(case, backend, "gen")
-
-    def template_cvs(self, case, backend):
-        self.base_test(case, backend, "cvs")
 
 
 @expand_test_templates(testcases)

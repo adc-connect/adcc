@@ -32,7 +32,7 @@ from libadcc import HfData, HartreeFockProvider
 from .eri_build_helper import EriBuilder
 
 
-class PySCFEriBuilder(EriBuilder):
+class PyScfEriBuilder(EriBuilder):
     def __init__(self, scfres, n_orbs, n_orbs_alpha, n_alpha, n_beta):
         self.scfres = scfres
         super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta)
@@ -70,7 +70,7 @@ class PySCFHFProvider(HartreeFockProvider):
             "nuclear_repulsion": self.scfres.mol.energy_nuc()
         }
         self.eri_ffff = None
-        self.eri_builder = PySCFEriBuilder(
+        self.eri_builder = PyScfEriBuilder(
             self.scfres, self.n_orbs, self.n_orbs_alpha,
             self.n_alpha, self.n_beta
         )

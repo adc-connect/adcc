@@ -113,7 +113,7 @@ class TestPsi4(unittest.TestCase):
 
     def template_rhf_h2o(self, basis):
         wfn = adcc.backends.run_hf(
-            "psi4", xyz=geometry.xyz["h2o"], basis=basisset.name[basis]
+            "psi4", xyz=geometry.xyz["h2o"], basis=basis
         )
         self.base_test(wfn)
         eri_asymm_construction_test(wfn)

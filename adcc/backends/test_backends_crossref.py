@@ -105,7 +105,7 @@ class TestCrossReferenceBackends(unittest.TestCase):
         cvs_results = {}
         for b in backends:
             scfres = adcc.backends.run_hf(
-                b, xyz=h2o, basis=basis, conv_tol_grad=1e-12
+                b, xyz=h2o, basis=basis, conv_tol_grad=1e-11
             )
             adc_res = self.run_adc(scfres, conv_tol=atol)
             adc_results[b] = adc_res
