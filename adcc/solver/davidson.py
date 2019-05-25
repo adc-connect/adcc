@@ -23,12 +23,12 @@
 import sys
 import numpy as np
 
+import scipy.linalg as la
+import scipy.sparse.linalg as sla
+
 from .preconditioner import JacobiPreconditioner
 from .SolverStateBase import SolverStateBase
 from .explicit_symmetrisation import IndexSymmetrisation
-
-import scipy.linalg as la
-import scipy.sparse.linalg as sla
 
 from adcc import AdcMatrix, AmplitudeVector, linear_combination
 
@@ -68,10 +68,10 @@ def default_print(state, identifier, file=sys.stdout):
                          residual=np.max(state.residual_norms)),
               "", state.eigenvalues[:7], file=file)
     elif identifier == "is_converged":
-        runtime = state.timer.current("davidson/total")
+        soltime = state.timer.current("davidson/total")
         print("=== Converged ===", file=file)
         print("    Number of matrix applies:   ", state.n_applies)
-        print("    Total runtime:              ", strtime(runtime))
+        print("    Total solver time:          ", strtime(soltime))
     elif identifier == "restart":
         print("=== Restart ===", file=file)
 

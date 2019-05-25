@@ -29,6 +29,8 @@ def strtime_short(span):
     """
     if span < 1:
         return "{:3d}ms".format(int(span * 1000))
+    if span < 60:
+        return "{:4.1f}s".format(span)
     if span < 120:
         return "{:4d}s".format(int(span))
     if span < 3600:
