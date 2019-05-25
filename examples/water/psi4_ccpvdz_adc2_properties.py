@@ -7,15 +7,10 @@ from matplotlib import pyplot as plt
 
 import adcc
 
-from pyscf import gto, scf
-from pyscf.tools import cubegen
+import psi4
 
 # Hartree to eV
 eV = constants.value("Hartree energy in eV")
-
-
-# Dump cube files
-dump_cube = False
 
 
 def plot_spectrum(energies, strengths, width=0.045):
@@ -36,38 +31,47 @@ def plot_spectrum(energies, strengths, width=0.045):
 
 
 #
-# Run SCF in pyscf
+# Run SCF in psi4
 #
-mol = gto.M(
-    atom='O 0 0 0;'
-         'H 0 0 1.795239827225189;'
-         'H 1.693194615993441 0 -0.599043184453037',
-    basis='cc-pvdz',
-    unit="Bohr"
-)
-scfres = scf.RHF(mol)
-scfres.conv_tol = 1e-12
-scfres.conv_tol_grad = 1e-9
-scfres.kernel()
+mol = psi4.geometry("""
+    O 0 0 0
+    H 0 0 1.795239827225189
+    H 1.693194615993441 0 -0.599043184453037
+    symmetry c1
+    units au
+    no_reorient
+    no_com
+    """)
+
+# set the number of cores equal to the auto-determined value from
+# the adcc ThreadPool
+psi4.set_num_threads(adcc.thread_pool.n_cores)
+psi4.core.be_quiet()
+psi4.set_options({'basis': "cc-pvdz",
+                  'scf_type': 'pk',
+                  'e_convergence': 1e-14,
+                  'd_convergence': 1e-9})
+scf_e, wfn = psi4.energy('SCF', return_wfn=True)
+
+# Compute dipole integrals
+mints = psi4.core.MintsHelper(wfn.basisset())
+dip_ao = np.array([np.asarray(comp) for comp in mints.ao_dipole()])
 
 print(adcc.banner())
 
 # Run an adc2 calculation:
-state = adcc.adc2(scfres, n_singlets=7, conv_tol=1e-8)
+state = adcc.adc2(wfn, n_singlets=7, conv_tol=1e-8)
 state = adcc.attach_state_densities(state)
 
 #
 # Get HF density matrix and nuclear dipole
 #
-ρ_hf_tot = scfres.make_rdm1()
-
-# Compute dipole integrals
-dip_ao = mol.intor_symmetric('int1e_r', comp=3)
+ρ_hf_tot = np.asarray(wfn.Da()) + np.asarray(wfn.Db())
 
 # compute nuclear dipole
-charges = mol.atom_charges()
-coords = mol.atom_coords()
-dip_nucl = np.einsum('i,ix->x', charges, coords)
+# there is no conversion from psi4.core.Vector3 to numpy...
+dip_nuclear = mol.nuclear_dipole()
+dip_nuclear = np.array([dip_nuclear[0], dip_nuclear[1], dip_nuclear[2]])
 
 #
 # MP2 density correction
@@ -100,22 +104,12 @@ for i, ampl in enumerate(state.eigenvectors):
     opdm_ao = opdm_mo.transform_to_ao_basis(state.reference_state)
     ρdiff_opdm_ao = (opdm_ao[0] + opdm_ao[1]).to_ndarray()
     sdip_el = np.einsum('xij,ij->x', dip_ao, ρdiff_opdm_ao + ρ_mp2_tot)
-    sdip = sdip_el - dip_nucl
+    sdip = -sdip_el - dip_nuclear
 
     # Print findings
     fmt = "{0:2d}  {1:12.8g} {2:9.3g}   [{3:9.3g}, {4:9.3g}, {5:9.3g}]"
     fmt += "   [{6:9.3g}, {7:9.3g}, {8:9.3g}]"
     print(state.kind[0], fmt.format(i, state.eigenvalues[i], osc, *tdip, *sdip))
-
-    if dump_cube:
-        # Dump LUNTO and HONTO
-        u, s, v = np.linalg.svd(ρ_tdm_tot)
-        # LUNTOs
-        cubegen.orbital(mol=mol, coeff=u.T[0],
-                        outfile="nto_{}_LUNTO.cube".format(i))
-        # HONTOs
-        cubegen.orbital(mol=mol, coeff=v[0],
-                        outfile="nto_{}_HONTO.cube".format(i))
 
     # Save oscillator strength and excitation energies
     osc_strengths.append(osc)

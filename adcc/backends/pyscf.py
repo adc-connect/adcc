@@ -20,10 +20,148 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import warnings
 import numpy as np
 
-from pyscf import ao2mo, scf
-from libadcc import HfData
+from pyscf import ao2mo, gto, scf
+from libadcc import HartreeFockProvider, HfData
+from .eri_build_helper import EriBuilder
+
+
+class PyScfEriBuilder(EriBuilder):
+    def __init__(self, scfres, n_orbs, n_orbs_alpha, n_alpha, n_beta):
+        self.scfres = scfres
+        super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta)
+
+    @property
+    def coeffs_occ_alpha(self):
+        return self.scfres.mo_coeff[:, :self.n_alpha]
+
+    @property
+    def coeffs_virt_alpha(self):
+        return self.scfres.mo_coeff[:, self.n_alpha:]
+
+    def compute_mo_eri(self, block, coeffs, use_cache=True):
+        if block in self.eri_cache and use_cache:
+            return self.eri_cache[block]
+        sizes = [i.shape[1] for i in coeffs]
+        eri = ao2mo.general(self.scfres.mol, coeffs,
+                            compact=False).reshape(sizes[0], sizes[1],
+                                                   sizes[2], sizes[3])
+        self.eri_cache[block] = eri
+        return eri
+
+
+class PyScfHFProvider(HartreeFockProvider):
+    """
+        This implementation is only valid for RHF
+    """
+    def __init__(self, scfres):
+        # Do not forget the next line,
+        # otherwise weird errors result
+        super().__init__()
+        self.backend = "pyscf"
+        self.scfres = scfres
+        self.energy_terms = {
+            "nuclear_repulsion": self.scfres.mol.energy_nuc()
+        }
+        self.eri_ffff = None
+        self.eri_builder = PyScfEriBuilder(
+            self.scfres, self.n_orbs, self.n_orbs_alpha,
+            self.n_alpha, self.n_beta
+        )
+
+    def get_n_alpha(self):
+        return np.sum(self.scfres.mo_occ > 0)
+
+    def get_n_beta(self):
+        return self.get_n_alpha()
+
+    def get_threshold(self):
+        if self.scfres.conv_tol_grad is None:
+            conv_tol_grad = np.sqrt(self.scfres.conv_tol)
+        else:
+            conv_tol_grad = self.scfres.conv_tol_grad
+        threshold = max(10 * self.scfres.conv_tol, conv_tol_grad)
+        return threshold
+
+    def get_restricted(self):
+        if isinstance(self.scfres.mo_occ, list):
+            restricted = len(self.scfres.mo_occ) < 2
+        elif isinstance(self.scfres.mo_occ, np.ndarray):
+            restricted = self.scfres.mo_occ.ndim < 2
+        else:
+            raise ValueError("Unusual pyscf SCF class encountered. Could not "
+                             "determine restricted / unrestricted.")
+        return restricted
+
+    def get_energy_term(self, term):
+        return self.energy_terms[term]
+
+    def get_energy_scf(self):
+        return float(self.scfres.e_tot)
+
+    def get_spin_multiplicity(self):
+        # Note: In the pyscf world spin is 2S, so the multiplicity
+        #       is spin + 1
+        return int(self.scfres.mol.spin) + 1
+
+    def get_n_orbs_alpha(self):
+        if self.restricted:
+            return self.scfres.mo_coeff.shape[1]
+        else:
+            return self.scfres.mo_coeff[0].shape[1]
+
+    def get_n_orbs_beta(self):
+        if self.restricted:
+            return self.get_n_orbs_alpha()
+        else:
+            return self.scfres.mo_coeff[1].shape[1]
+
+    def get_n_bas(self):
+        return int(self.scfres.mol.nao_nr())
+
+    def fill_orbcoeff_fb(self, out):
+        if self.restricted:
+            mo_coeff = (self.scfres.mo_coeff,
+                        self.scfres.mo_coeff)
+        else:
+            mo_coeff = self.scfres.mo_coeff
+        out[:] = np.transpose(
+            np.hstack((mo_coeff[0], mo_coeff[1]))
+        )
+
+    def fill_orben_f(self, out):
+        if self.restricted:
+            out[:] = np.hstack((self.scfres.mo_energy,
+                                self.scfres.mo_energy))
+        else:
+            out[:] = np.hstack((self.scfres.mo_energy[0],
+                                self.scfres.mo_energy[1]))
+
+    def fill_fock_ff(self, slices, out):
+        diagonal = np.empty(self.n_orbs)
+        self.fill_orben_f(diagonal)
+        out[:] = np.diag(diagonal)[slices]
+
+    def fill_eri_ffff(self, slices, out):
+        if self.eri_ffff is None:
+            self.eri_ffff = self.eri_builder.build_full_eri_ffff()
+        out[:] = self.eri_ffff[slices]
+
+    def fill_eri_phys_asym_ffff(self, slices, out):
+        self.eri_builder.fill_slice(slices, out)
+
+    def has_eri_phys_asym_ffff(self):
+        return True
+
+    def get_energy_term_keys(self):
+        # TODO: implement full set of keys
+        return ["nuclear_repulsion"]
+
+    def flush_cache(self):
+        self.eri_builder.flush_cache()
+        self.eri_ffff = None
 
 
 def convert_scf_to_dict(scfres):
@@ -159,17 +297,19 @@ def convert_scf_to_dict(scfres):
         # eri is not stored ... generate it now.
         eri_ao = scfres.mol.intor('int2e', aosym='s8')
 
-    eri = ao2mo.general(eri_ao,
-                        (cf_bf, cf_bf, cf_bf, cf_bf), compact=False)
-    eri = eri.reshape(n_orbs, n_orbs, n_orbs, n_orbs)
-    del eri_ao
-
-    # Adjust spin-forbidden blocks to be exactly zero
     aro = slice(0, n_alpha)
     bro = slice(n_orbs_alpha, n_orbs_alpha + n_beta)
     arv = slice(n_alpha, n_orbs_alpha)
     brv = slice(n_orbs_alpha + n_beta, n_orbs)
 
+    # compute full ERI tensor (with really everything)
+    eri = ao2mo.general(
+        eri_ao, (cf_bf, cf_bf, cf_bf, cf_bf), compact=False
+    )
+    eri = eri.reshape(n_orbs, n_orbs, n_orbs, n_orbs)
+    del eri_ao
+
+    # Adjust spin-forbidden blocks to be exactly zero
     eri[aro, bro, :, :] = 0
     eri[aro, brv, :, :] = 0
     eri[arv, bro, :, :] = 0
@@ -195,12 +335,57 @@ def convert_scf_to_dict(scfres):
 
 
 def import_scf(scfres):
-    data = convert_scf_to_dict(scfres)
-    ret = HfData.from_dict(data)
-    ret.backend = "pyscf"
+    if not isinstance(scfres, scf.hf.SCF):
+        raise TypeError("Unsupported type for backends.pyscf.import_scf.")
 
-    # TODO temporary hack to make sure the data dict lives longer
-    #      than the Hfdata object. Don't rely on this object for
-    #      your code.
-    ret._original_dict = data
-    return ret
+    if not scfres.converged:
+        raise ValueError("Cannot start an adc calculation on top of an SCF, "
+                         "which is not yet converged. Did you forget to run "
+                         "the kernel() or the scf() function of the pyscf scf "
+                         "object?")
+
+    # Try to determine whether we are restricted
+    if isinstance(scfres.mo_occ, list):
+        restricted = len(scfres.mo_occ) < 2
+    elif isinstance(scfres.mo_occ, np.ndarray):
+        restricted = scfres.mo_occ.ndim < 2
+    else:
+        raise ValueError("Unusual pyscf SCF class encountered. Could not "
+                         "determine restricted / unrestricted.")
+
+    if restricted:
+        provider = PyScfHFProvider(scfres)
+        return provider
+    else:
+        # fallback
+        warnings.warn("Falling back to slow import for UHF result.")
+
+        data = convert_scf_to_dict(scfres)
+        ret = HfData.from_dict(data)
+        ret.backend = "pyscf"
+
+        # TODO temporary hack to make sure the data dict lives longer
+        #      than the Hfdata object. Don't rely on this object for
+        #      your code.
+        ret._original_dict = data
+        return ret
+
+
+def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
+           conv_tol_grad=1e-8, max_iter=150):
+    mol = gto.M(
+        atom=xyz,
+        basis=basis,
+        unit="Bohr",
+        # spin in the pyscf world is 2S
+        spin=multiplicity - 1,
+        charge=charge,
+        # Disable commandline argument parsing in pyscf
+        parse_arg=False,
+    )
+    mf = scf.HF(mol)
+    mf.conv_tol = conv_tol
+    mf.conv_tol_grad = conv_tol_grad
+    mf.max_cycle = max_iter
+    mf.kernel()
+    return mf

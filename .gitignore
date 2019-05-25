@@ -18,3 +18,7 @@
 
 # adccore
 /adccore
+
+# psi4
+timer.dat
+*.clean
