@@ -58,7 +58,7 @@ __all__ = ["run_adc", "AdcMatrix", "AdcMethod", "Symmetry", "ReferenceState",
            "cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x",
            "banner"]
 
-__version__ = "0.10.1"
+__version__ = "0.10.2"
 __license__ = "LGPL v3"
 __authors__ = "Michael F. Herbst and Maximilian Scheurer"
 __email__ = "info@michael-herbst.com"
