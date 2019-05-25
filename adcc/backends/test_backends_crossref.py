@@ -38,7 +38,7 @@ from ..misc import expand_test_templates
 backends = ["pyscf", "psi4", "veloxchem"]
 
 
-def compare_adc_results(adc_results, atol=1e-10):
+def compare_adc_results(adc_results, atol):
     for comb in list(itertools.combinations(adc_results, r=2)):
         state1 = adc_results[comb[0]]
         state2 = adc_results[comb[1]]
@@ -72,7 +72,7 @@ def compare_adc_results(adc_results, atol=1e-10):
                 # if sgn1 != sgn2:
                 #     v2np *= -1.0
                 assert_allclose(
-                    np.abs(v1np), np.abs(v2np), atol=atol,
+                    np.abs(v1np), np.abs(v2np), atol=10 * atol,
                     err_msg="ADC vectors are not equal"
                             "in block {}".format(block)
                 )
@@ -100,7 +100,6 @@ class TestCrossReferenceBackends(unittest.TestCase):
                 "Need at least 2."
             )
         h2o = geometry.xyz["h2o"]
-        atol = 1e-10
 
         adc_results = {}
         cvs_results = {}
@@ -108,10 +107,10 @@ class TestCrossReferenceBackends(unittest.TestCase):
             scfres = adcc.backends.run_hf(
                 b, xyz=h2o, basis=basis, conv_tol_grad=1e-11
             )
-            adc_res = self.run_adc(scfres, conv_tol=atol)
+            adc_res = self.run_adc(scfres, conv_tol=1e-10)
             adc_results[b] = adc_res
-            cvs_res = self.run_cvs_adc(scfres, conv_tol=atol)
+            cvs_res = self.run_cvs_adc(scfres, conv_tol=1e-10)
             cvs_results[b] = cvs_res
 
-        compare_adc_results(adc_results, atol)
-        compare_adc_results(cvs_results, atol)
+        compare_adc_results(adc_results, 5e-9)
+        compare_adc_results(cvs_results, 5e-9)
