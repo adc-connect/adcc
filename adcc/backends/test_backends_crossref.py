@@ -20,18 +20,19 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
 import unittest
-import pytest
 import itertools
-
 import numpy as np
-from numpy.testing import assert_allclose
-
 import adcc
 import adcc.backends
+
+from numpy.testing import assert_allclose
+
 from adcc.backends import have_backend
 from adcc.testdata import geometry
+
+import pytest
+
 from ..misc import expand_test_templates
 
 backends = ["pyscf", "psi4", "veloxchem"]
@@ -92,8 +93,8 @@ class TestCrossReferenceBackends(unittest.TestCase):
         )
 
     def template_rhf_h2o(self, basis):
-        n_backends = sum(have_backend(b) for b in backends)
-        if n_backends < 2:
+        backend_avail = [b for b in backends if have_backend(b)]
+        if len(backend_avail) < 2:
             pytest.skip(
                 "Not enough backends available for cross reference test."
                 "Need at least 2."
@@ -103,7 +104,7 @@ class TestCrossReferenceBackends(unittest.TestCase):
 
         adc_results = {}
         cvs_results = {}
-        for b in backends:
+        for b in backend_avail:
             scfres = adcc.backends.run_hf(
                 b, xyz=h2o, basis=basis, conv_tol_grad=1e-11
             )
