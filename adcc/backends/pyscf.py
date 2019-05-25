@@ -24,9 +24,8 @@ import warnings
 import numpy as np
 
 from pyscf import ao2mo, gto, scf
-from .eri_build_helper import EriBuilder
-
 from libadcc import HartreeFockProvider, HfData
+from .eri_build_helper import EriBuilder
 
 
 class PyScfEriBuilder(EriBuilder):
@@ -53,7 +52,7 @@ class PyScfEriBuilder(EriBuilder):
         return eri
 
 
-class PySCFHFProvider(HartreeFockProvider):
+class PyScfHFProvider(HartreeFockProvider):
     """
         This implementation is only valid for RHF
     """
@@ -355,7 +354,7 @@ def import_scf(scfres):
                          "determine restricted / unrestricted.")
 
     if restricted:
-        provider = PySCFHFProvider(scfres)
+        provider = PyScfHFProvider(scfres)
         return provider
     else:
         # fallback
