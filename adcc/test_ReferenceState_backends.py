@@ -20,21 +20,21 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import adcc
 import unittest
-import pytest
 import itertools
 
-from .misc import expand_test_templates
-
-import adcc
-
-from adcc.testdata.cache import cache
 from adcc.testdata import geometry
+from adcc.testdata.cache import cache
 
+import pytest
+
+from .misc import expand_test_templates
 from .test_ReferenceState_refdata import compare_refstate_with_reference
 
-# The methods to test
-testcases = cache.hfimport.keys()
+# The methods to test (currently only restricted is supported in this test)
+testcases = [case for case in cache.hfimport.keys()
+             if cache.hfdata[case]["restricted"]]
 
 backends = ["pyscf", "psi4", "veloxchem"]
 
@@ -45,8 +45,6 @@ class TestBackendsImportReferenceData(unittest.TestCase):
         data = cache.hfdata[system]
         reference = cache.hfimport[system][case]
 
-        if not data["restricted"]:
-            pytest.skip("Unrestricted calculations not supported.")
         if not adcc.backends.have_backend(backend):
             pytest.skip("Backend {} not available.".format(backend))
 
