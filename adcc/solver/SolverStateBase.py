@@ -24,6 +24,8 @@ import numpy as np
 
 import scipy.constants
 
+from adcc.timings import Timer
+
 
 class SolverStateBase:
     def __init__(self, matrix):
@@ -38,6 +40,7 @@ class SolverStateBase:
         self.converged = False            # Flag whether iteration is converged
         self.n_iter = 0                   # Number of iterations
         self.n_applies = 0                # Number of applies
+        self.timer = Timer()              # Construct a new timer
 
     def describe(self):
         text = ""
