@@ -37,31 +37,32 @@ class HartreeFockProvider : public HartreeFockSolution_i {
   //
   // Implementation of the C++ interface
   //
+  std::string backend() const override { return get_backend(); }
   size_t n_alpha() const override { return get_n_alpha(); }
   size_t n_beta() const override { return get_n_beta(); }
   size_t n_orbs_alpha() const override { return get_n_orbs_alpha(); }
   size_t n_orbs_beta() const override { return get_n_orbs_beta(); }
   size_t n_bas() const override { return get_n_bas(); }
-  real_type threshold() const override { return get_threshold(); }
+  real_type conv_tol() const override { return get_conv_tol(); }
   bool restricted() const override { return get_restricted(); }
   size_t spin_multiplicity() const override { return get_spin_multiplicity(); }
   real_type energy_scf() const override { return get_energy_scf(); }
-  real_type energy_term(const std::string& term) const override {
-    return get_energy_term(term);
-  }
-
-  std::vector<std::string> energy_term_keys() const override {
-    std::vector<std::string> ret;
-    const auto keys = get_energy_term_keys();
-    for (auto& k : keys) {
-      ret.push_back(k.cast<std::string>());
-    }
-    return ret;
-  }
 
   //
   // Translate C++-like interface to python-like interface
   //
+  void occupation_f(scalar_type* buffer, size_t size) const override {
+    const ssize_t ssize  = static_cast<ssize_t>(size);
+    const ssize_t n_orbs = static_cast<ssize_t>(this->n_orbs());
+    if (ssize != n_orbs) {
+      throw dimension_mismatch("Buffer size (==" + std::to_string(ssize) +
+                               ") does not agree with n_orbs (" + std::to_string(n_orbs) +
+                               ").");
+    }
+    py::memoryview memview(py::buffer_info(buffer, n_orbs));
+    fill_occupation_f(py::array({n_orbs}, buffer, memview));
+  }
+
   void orben_f(scalar_type* buffer, size_t size) const override {
     const ssize_t ssize  = static_cast<ssize_t>(size);
     const ssize_t n_orbs = static_cast<ssize_t>(this->n_orbs());
@@ -88,7 +89,8 @@ class HartreeFockProvider : public HartreeFockSolution_i {
   }
 
   void fock_ff(size_t d1_start, size_t d1_end, size_t d2_start, size_t d2_end,
-               scalar_type* buffer, size_t size) const override {
+               size_t d1_stride, size_t d2_stride, scalar_type* buffer,
+               size_t size) const override {
     const ssize_t ssize = static_cast<ssize_t>(size);
     if (d1_end > n_orbs()) {
       throw out_of_range("End of first dimension (d1_end, == " + std::to_string(d1_end) +
@@ -108,14 +110,17 @@ class HartreeFockProvider : public HartreeFockSolution_i {
 
     if (size == 0) return;
     py::memoryview memview(py::buffer_info(buffer, d1_length * d2_length));
+    std::vector<ssize_t> strides{static_cast<ssize_t>(sizeof(scalar_type) * d1_stride),
+                                 static_cast<ssize_t>(sizeof(scalar_type) * d2_stride)};
     py::tuple slices = py::make_tuple(
           py::slice(static_cast<ssize_t>(d1_start), static_cast<ssize_t>(d1_end), 1),
           py::slice(static_cast<ssize_t>(d2_start), static_cast<ssize_t>(d2_end), 1));
-    fill_fock_ff(slices, py::array({d1_length, d2_length}, buffer, memview));
+    fill_fock_ff(slices, py::array({d1_length, d2_length}, strides, buffer, memview));
   }
 
   void eri_ffff(size_t d1_start, size_t d1_end, size_t d2_start, size_t d2_end,
                 size_t d3_start, size_t d3_end, size_t d4_start, size_t d4_end,
+                size_t d1_stride, size_t d2_stride, size_t d3_stride, size_t d4_stride,
                 scalar_type* buffer, size_t size) const override {
     const ssize_t ssize = static_cast<ssize_t>(size);
 
@@ -150,23 +155,28 @@ class HartreeFockProvider : public HartreeFockSolution_i {
     if (size == 0) return;
     py::memoryview memview(
           py::buffer_info(buffer, d1_length * d2_length * d3_length * d4_length));
+    std::vector<ssize_t> strides{static_cast<ssize_t>(sizeof(scalar_type) * d1_stride),
+                                 static_cast<ssize_t>(sizeof(scalar_type) * d2_stride),
+                                 static_cast<ssize_t>(sizeof(scalar_type) * d3_stride),
+                                 static_cast<ssize_t>(sizeof(scalar_type) * d4_stride)};
     py::tuple slices = py::make_tuple(
           py::slice(static_cast<ssize_t>(d1_start), static_cast<ssize_t>(d1_end), 1),
           py::slice(static_cast<ssize_t>(d2_start), static_cast<ssize_t>(d2_end), 1),
           py::slice(static_cast<ssize_t>(d3_start), static_cast<ssize_t>(d3_end), 1),
           py::slice(static_cast<ssize_t>(d4_start), static_cast<ssize_t>(d4_end), 1));
-    fill_eri_ffff(slices, py::array({d1_length, d2_length, d3_length, d4_length}, buffer,
-                                    memview));
+    fill_eri_ffff(slices, py::array({d1_length, d2_length, d3_length, d4_length}, strides,
+                                    buffer, memview));
   }
+
+  // TODO We always have a dummy ipmlementation for now.
+  bool has_eri_phys_asym_ffff() const override { return true; }
+  virtual bool has_eri_phys_asym_ffff_inner() const { return false; }
 
   void eri_phys_asym_ffff(size_t d1_start, size_t d1_end, size_t d2_start, size_t d2_end,
                           size_t d3_start, size_t d3_end, size_t d4_start, size_t d4_end,
-                          scalar_type* buffer, size_t size) const override {
-    if (not this->has_eri_phys_asym_ffff()) {
-      return HartreeFockSolution_i::eri_phys_asym_ffff(d1_start, d1_end, d2_start, d2_end,
-                                                       d3_start, d3_end, d4_start, d4_end,
-                                                       buffer, size);
-    }
+                          size_t d1_stride, size_t d2_stride, size_t d3_stride,
+                          size_t d4_stride, scalar_type* buffer,
+                          size_t size) const override {
     const ssize_t ssize = static_cast<ssize_t>(size);
 
     if (d1_end > n_orbs()) {
@@ -197,36 +207,103 @@ class HartreeFockProvider : public HartreeFockSolution_i {
             ") does not agree with buffer size (== " + std::to_string(ssize) + ").");
     }
 
+    // Skip empty ranges
     if (size == 0) return;
-    py::memoryview memview(
-          py::buffer_info(buffer, d1_length * d2_length * d3_length * d4_length));
-    py::tuple slices = py::make_tuple(
-          py::slice(static_cast<ssize_t>(d1_start), static_cast<ssize_t>(d1_end), 1),
-          py::slice(static_cast<ssize_t>(d2_start), static_cast<ssize_t>(d2_end), 1),
-          py::slice(static_cast<ssize_t>(d3_start), static_cast<ssize_t>(d3_end), 1),
-          py::slice(static_cast<ssize_t>(d4_start), static_cast<ssize_t>(d4_end), 1));
-    fill_eri_phys_asym_ffff(
-          slices,
-          py::array({d1_length, d2_length, d3_length, d4_length}, buffer, memview));
+
+    if (!has_eri_phys_asym_ffff_inner()) {
+      // Dummy anti-symmetrisation to get going ... should go once symmetric
+      // import is available inside ReferenceState
+      //
+      // Note:
+      //   <ij||kl> = <ij|kl> - <ij|lk>
+      //            = (ik|jl) - (il|jk)
+      //            = (ik|jl) - (jk|il)
+      //            = eri_ikjl - eri_jkil
+
+      // Check no funny strides for now
+      if (static_cast<ssize_t>(d1_stride) != d2_length * d3_length * d4_length) {
+        throw not_implemented_error("Only row-major d1_stride implemented.");
+      }
+      if (static_cast<ssize_t>(d2_stride) != d3_length * d4_length) {
+        throw not_implemented_error("Only row-major d2_stride implemented.");
+      }
+      if (static_cast<ssize_t>(d3_stride) != d4_length) {
+        throw not_implemented_error("Only row-major d3_stride implemented.");
+      }
+      if (d4_stride != 1) {
+        throw not_implemented_error("Only row-major d4_stride implemented.");
+      }
+
+      scalar_type* out = buffer;
+      for (size_t i = d1_start; i < d1_end; ++i) {
+        for (size_t j = d2_start; j < d2_end; ++j) {
+          if (out >= buffer + size) {
+            throw runtime_error("Internal consistency check failed: Overrun buffer");
+          }
+          const size_t k_start  = d3_start;
+          const size_t k_end    = d3_end;
+          const size_t l_start  = d4_start;
+          const size_t l_end    = d4_end;
+          const size_t l_length = l_end - l_start;
+          const size_t k_length = k_end - k_start;
+          std::vector<size_t> strides{k_length * 1 * l_length, 1 * l_length, l_length, 1};
+
+          // Compute eri_ikjl
+          std::vector<scalar_type> eri_ikjl(k_length * l_length);
+          eri_ffff(i, i + 1, k_start, k_end, j, j + 1, l_start, l_end, strides[0],
+                   strides[1], strides[2], strides[3], eri_ikjl.data(), eri_ikjl.size());
+
+          // Compute eri_jkil
+          std::vector<scalar_type> eri_jkil(k_length * l_length);
+          eri_ffff(j, j + 1, k_start, k_end, i, i + 1, l_start, l_end, strides[0],
+                   strides[1], strides[2], strides[3], eri_jkil.data(), eri_jkil.size());
+
+          // Compute <ij||kl>
+          //    => since i and j are fixed, this is just elementwise subtraction.
+          std::transform(std::begin(eri_ikjl), std::end(eri_ikjl), std::begin(eri_jkil),
+                         out, std::minus<scalar_type>());
+
+          // Increment output iterator:
+          out += static_cast<ptrdiff_t>(d3_length * d4_length);
+        }  // j
+      }    // i
+      if (out != buffer + size) {
+        throw runtime_error(
+              "Internal consistency check failed: Buffer not completely filled.");
+      }
+    } else {
+      py::memoryview memview(
+            py::buffer_info(buffer, d1_length * d2_length * d3_length * d4_length));
+      std::vector<ssize_t> strides{static_cast<ssize_t>(sizeof(scalar_type) * d1_stride),
+                                   static_cast<ssize_t>(sizeof(scalar_type) * d2_stride),
+                                   static_cast<ssize_t>(sizeof(scalar_type) * d3_stride),
+                                   static_cast<ssize_t>(sizeof(scalar_type) * d4_stride)};
+      py::tuple slices = py::make_tuple(
+            py::slice(static_cast<ssize_t>(d1_start), static_cast<ssize_t>(d1_end), 1),
+            py::slice(static_cast<ssize_t>(d2_start), static_cast<ssize_t>(d2_end), 1),
+            py::slice(static_cast<ssize_t>(d3_start), static_cast<ssize_t>(d3_end), 1),
+            py::slice(static_cast<ssize_t>(d4_start), static_cast<ssize_t>(d4_end), 1));
+      fill_eri_phys_asym_ffff(
+            slices, py::array({d1_length, d2_length, d3_length, d4_length}, strides,
+                              buffer, memview));
+    }
   }
 
   //
   // Interface for the python world
   //
-  virtual size_t get_n_alpha() const                               = 0;
-  virtual size_t get_n_beta() const                                = 0;
-  virtual size_t get_n_orbs_alpha() const                          = 0;
-  virtual size_t get_n_orbs_beta() const                           = 0;
-  virtual size_t get_n_bas() const                                 = 0;
-  virtual real_type get_threshold() const                          = 0;
-  virtual bool get_restricted() const                              = 0;
-  virtual size_t get_spin_multiplicity() const                     = 0;
-  virtual real_type get_energy_scf() const                         = 0;
-  virtual real_type get_energy_term(const std::string& term) const = 0;
+  virtual size_t get_n_alpha() const           = 0;
+  virtual size_t get_n_beta() const            = 0;
+  virtual size_t get_n_orbs_alpha() const      = 0;
+  virtual size_t get_n_orbs_beta() const       = 0;
+  virtual size_t get_n_bas() const             = 0;
+  virtual real_type get_conv_tol() const       = 0;
+  virtual bool get_restricted() const          = 0;
+  virtual size_t get_spin_multiplicity() const = 0;
+  virtual real_type get_energy_scf() const     = 0;
+  virtual std::string get_backend() const      = 0;
 
-  virtual py::list get_energy_term_keys() const = 0;
-
-  virtual bool has_eri_phys_asym_ffff() const { return false; }
+  virtual void fill_occupation_f(py::array out) const                         = 0;
   virtual void fill_orben_f(py::array out) const                              = 0;
   virtual void fill_orbcoeff_fb(py::array out) const                          = 0;
   virtual void fill_fock_ff(py::tuple, py::array out) const                   = 0;
@@ -256,8 +333,8 @@ class PyHartreeFockProvider : public HartreeFockProvider {
   size_t get_n_bas() const override {
     PYBIND11_OVERLOAD_PURE(size_t, HartreeFockProvider, get_n_bas, );
   }
-  real_type get_threshold() const override {
-    PYBIND11_OVERLOAD_PURE(real_type, HartreeFockProvider, get_threshold, );
+  real_type get_conv_tol() const override {
+    PYBIND11_OVERLOAD_PURE(real_type, HartreeFockProvider, get_conv_tol, );
   }
   bool get_restricted() const override {
     PYBIND11_OVERLOAD_PURE(bool, HartreeFockProvider, get_restricted, );
@@ -268,14 +345,9 @@ class PyHartreeFockProvider : public HartreeFockProvider {
   real_type get_energy_scf() const override {
     PYBIND11_OVERLOAD_PURE(real_type, HartreeFockProvider, get_energy_scf, );
   }
-  real_type get_energy_term(const std::string& term) const override {
-    PYBIND11_OVERLOAD_PURE(real_type, HartreeFockProvider, get_energy_term, term);
+  void fill_occupation_f(py::array out) const override {
+    PYBIND11_OVERLOAD_PURE(void, HartreeFockProvider, fill_occupation_f, out);
   }
-
-  py::list get_energy_term_keys() const override {
-    PYBIND11_OVERLOAD_PURE(py::list, HartreeFockProvider, get_energy_term_keys, );
-  }
-
   void fill_orben_f(py::array out) const override {
     PYBIND11_OVERLOAD_PURE(void, HartreeFockProvider, fill_orben_f, out);
   }
@@ -292,14 +364,23 @@ class PyHartreeFockProvider : public HartreeFockProvider {
     PYBIND11_OVERLOAD_PURE(void, HartreeFockProvider, fill_eri_phys_asym_ffff, slices,
                            out);
   }
-  bool has_eri_phys_asym_ffff() const {
-    PYBIND11_OVERLOAD(bool, HartreeFockProvider, has_eri_phys_asym_ffff, );
+  bool has_eri_phys_asym_ffff_inner() const override {
+    PYBIND11_OVERLOAD(bool, HartreeFockProvider, has_eri_phys_asym_ffff_inner, );
   }
-
+  std::string get_backend() const override {
+    PYBIND11_OVERLOAD_PURE(std::string, HartreeFockProvider, get_backend, );
+  }
   void flush_cache() const override {
     PYBIND11_OVERLOAD(void, HartreeFockProvider, flush_cache, );
   }
 };
+
+static py::array_t<scalar_type> HartreeFockSolution_i_occupation_f(
+      const HartreeFockSolution_i& self) {
+  py::array_t<scalar_type> ret(self.n_orbs());
+  self.occupation_f(ret.mutable_data(), self.n_orbs());
+  return ret;
+}
 
 static py::array_t<scalar_type> HartreeFockSolution_i_orben_f(
       const HartreeFockSolution_i& self) {
@@ -318,8 +399,10 @@ static py::array_t<scalar_type> HartreeFockSolution_i_orbcoeff_fb(
 static py::array_t<scalar_type> HartreeFockSolution_i_fock_ff(
       const HartreeFockSolution_i& self) {
   py::array_t<scalar_type> ret({self.n_orbs(), self.n_orbs()});
-  self.fock_ff(0, self.n_orbs(), 0, self.n_orbs(), ret.mutable_data(),
-               self.n_orbs() * self.n_orbs());
+  self.fock_ff(0, self.n_orbs(), 0, self.n_orbs(),
+               static_cast<size_t>(ret.strides(0)) / sizeof(scalar_type),
+               static_cast<size_t>(ret.strides(1)) / sizeof(scalar_type),
+               ret.mutable_data(), self.n_orbs() * self.n_orbs());
   return ret;
 }
 
@@ -331,7 +414,7 @@ void export_HartreeFockProvider(py::module& m) {
                  "interfacing HF / SCF program.");
   hfdata_i.def_property_readonly("n_alpha", &HartreeFockSolution_i::n_alpha)
         .def_property_readonly("n_beta", &HartreeFockSolution_i::n_beta)
-        .def_property_readonly("threshold", &HartreeFockSolution_i::threshold)
+        .def_property_readonly("conv_tol", &HartreeFockSolution_i::conv_tol)
         .def_property_readonly("restricted", &HartreeFockSolution_i::restricted)
         .def_property_readonly("energy_scf", &HartreeFockSolution_i::energy_scf)
         .def_property_readonly("spin_multiplicity",
@@ -340,8 +423,10 @@ void export_HartreeFockProvider(py::module& m) {
         .def_property_readonly("n_orbs_beta", &HartreeFockSolution_i::n_orbs_beta)
         .def_property_readonly("n_orbs", &HartreeFockSolution_i::n_orbs)
         .def_property_readonly("n_bas", &HartreeFockSolution_i::n_bas)
+        .def_property_readonly("backend", &HartreeFockSolution_i::backend)
         //
         .def_property_readonly("orben_f", &HartreeFockSolution_i_orben_f)
+        .def_property_readonly("occupation_f", &HartreeFockSolution_i_occupation_f)
         .def_property_readonly("orbcoeff_fb", &HartreeFockSolution_i_orbcoeff_fb)
         .def_property_readonly("fock_ff", &HartreeFockSolution_i_fock_ff)
         //
@@ -357,15 +442,13 @@ void export_HartreeFockProvider(py::module& m) {
              "Overwrite in python to return the number of alpha electrons.")
         .def("get_n_beta", &HartreeFockProvider::get_n_beta,
              "Overwrite in python to return the number fo beta electrons.")
-        .def("get_threshold", &HartreeFockProvider::get_threshold,
+        .def("get_conv_tol", &HartreeFockProvider::get_conv_tol,
              "Overwrite in python to return the scf threshold.")
         .def("get_restricted", &HartreeFockProvider::get_restricted,
              "Overwrite in python to return whether the calculation is restricted (true) "
              "or unrestricted(false)")
         .def("get_energy_scf", &HartreeFockProvider::get_energy_scf,
              "Overwrite to return the final SCF energy")
-        .def("get_energy_term", &HartreeFockProvider::get_energy_term,
-             "Overwrite to return a particular energy term")
         .def("get_spin_multiplicity", &HartreeFockProvider::get_spin_multiplicity,
              "Overwrite to return the spin multiplicity of the calculation")
         .def("get_n_orbs_alpha", &HartreeFockProvider::get_n_orbs_alpha,
@@ -375,6 +458,8 @@ void export_HartreeFockProvider(py::module& m) {
         .def("get_n_bas", &HartreeFockProvider::get_n_bas,
              "Overwrite to return the number of basis functions")
         //
+        .def("fill_occupation_f", &HartreeFockProvider::fill_orben_f,
+             "Overwrite to fill the passed numpy array with the occupation numbers")
         .def("fill_orben_f", &HartreeFockProvider::fill_orben_f,
              "Overwrite to fill the passed numpy array with the orbital energies")
         .def("fill_orbcoeff_fb", &HartreeFockProvider::fill_orbcoeff_fb,

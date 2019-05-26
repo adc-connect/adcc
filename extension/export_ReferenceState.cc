@@ -87,6 +87,9 @@ void export_ReferenceState(py::module& m) {
                                "Reference state irreducible representation")
         .def_property_readonly("mospaces", &ReferenceState::mospaces_ptr,
                                "The MoSpaces object supplied on initialisation")
+        .def_property_readonly(
+              "backend", &ReferenceState::backend,
+              "The identifier of the back end used for the SCF calculation.")
         .def_property_readonly("n_orbs", &ReferenceState::n_orbs,
                                "Number of molecular orbitals")
         .def_property_readonly("n_orbs_alpha", &ReferenceState::n_orbs_alpha,

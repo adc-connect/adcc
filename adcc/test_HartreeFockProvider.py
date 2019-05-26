@@ -20,72 +20,20 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
 import unittest
 
-from adcc.testdata.cache import cache
-from adcc.solver.SolverStateBase import SolverStateBase
+import adcc
 
 from pytest import approx
-from libadcc import HartreeFockProvider
 
-
-class DummyData(HartreeFockProvider):
-    def __init__(self, data):
-        # Do not forget the next line,
-        # otherwise weird errors result
-        super().__init__()
-        self.data = data
-
-    def get_n_alpha(self):
-        return self.data["n_alpha"]
-
-    def get_n_beta(self):
-        return self.data["n_beta"]
-
-    def get_threshold(self):
-        return self.data["threshold"]
-
-    def get_restricted(self):
-        return self.data["restricted"]
-
-    def get_energy_term(self, term):
-        return self.data["energy_" + term]
-
-    def get_energy_scf(self):
-        return self.data["energy_scf"]
-
-    def get_spin_multiplicity(self):
-        return self.data["spin_multiplicity"]
-
-    def get_n_orbs_alpha(self):
-        return self.data["n_orbs_alpha"]
-
-    def get_n_orbs_beta(self):
-        return self.data["n_orbs_beta"]
-
-    def get_n_bas(self):
-        return self.data["n_bas"]
-
-    def fill_orbcoeff_fb(self, out):
-        out[:] = self.data["orbcoeff_fb"]
-
-    def fill_orben_f(self, out):
-        out[:] = self.data["orben_f"]
-
-    def fill_fock_ff(self, slices, out):
-        out[:] = self.data["fock_ff"][slices]
-
-    def fill_eri_ffff(self, slices, out):
-        out[:] = self.data["eri_ffff"][slices]
-
-    def get_energy_term_keys(self):
-        return ["nuclear_repulsion"]
+from adcc.DictHfProvider import DictHfProvider
+from adcc.testdata.cache import cache
+from adcc.solver.SolverStateBase import SolverStateBase
 
 
 class TestHartreeFockProvider(unittest.TestCase):
     def base_test(self, system, **args):
-        hf = DummyData(cache.hfdata[system])
+        hf = DictHfProvider(cache.hfdata[system])
         refdata = cache.reference_data[system]
 
         res = adcc.adc2(hf, n_singlets=10, **args)

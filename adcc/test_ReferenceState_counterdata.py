@@ -20,12 +20,11 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import adcc
 import unittest
 import numpy as np
 
 from numpy.testing import assert_array_equal
-
-import adcc
 
 from libadcc import HartreeFockProvider
 
@@ -54,24 +53,20 @@ class HfCounterData(HartreeFockProvider):
     def mul(self, n):
         return np.power(self.__mul, n)
 
+    def get_backend(self):
+        return "counterdata"
+
     def get_n_alpha(self):
         return self.__n_alpha
 
     def get_n_beta(self):
         return self.__n_beta
 
-    def get_threshold(self):
+    def get_conv_tol(self):
         return 1e-10
 
     def get_restricted(self):
         return self.__restricted
-
-    def get_energy_term(self, term):
-        return 0
-        raise NotImplementedError("Energy term")
-
-    def get_energy_term_keys(self):
-        return ["nuclear_repulsion"]
 
     def get_energy_scf(self):
         return -1.0
@@ -128,6 +123,12 @@ class HfCounterData(HartreeFockProvider):
     def fill_orbcoeff_fb(self, out):
         out[:] = (np.hstack(self.get_f_range())[:, None] * self.mul(1)
                   + self.get_b_range()[None, :])
+
+    def fill_occupation_f(self, out):
+        n_oa = self.__n_orbs_alpha
+        out[:] = np.zeros(2 * n_oa)
+        out[:self.__n_alpha] = 1.
+        out[n_oa:n_oa + self.__n_beta] = 1.
 
     def fill_orben_f(self, out):
         out[:] = np.hstack(self.get_f_range())

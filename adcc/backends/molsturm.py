@@ -20,9 +20,11 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import numpy as np
 
-from libadcc import HfData
 from molsturm.State import State
+
+from adcc.DictHfProvider import DictHfProvider
 
 
 def convert_scf_to_dict(scfres):
@@ -38,8 +40,6 @@ def convert_scf_to_dict(scfres):
         "n_alpha", "n_beta", "n_orbs_alpha", "n_orbs_beta",
         "n_bas", "restricted",
         "orben_f", "eri_ffff", "fock_ff",
-        "energy_nuclear_repulsion", "energy_nuclear_attraction",
-        "energy_coulomb", "energy_exchange", "energy_kinetic",
     ]
     for k in verbatim_keys:
         data[k] = scfres[k]
@@ -49,19 +49,47 @@ def convert_scf_to_dict(scfres):
     else:
         data["spin_multiplicity"] = 0
 
+    n_oa = data["n_orbs_alpha"]
+    data["occupation_f"] = np.zeros(data["n_orbs_alpha"] + data["n_orbs_beta"])
+    data["occupation_f"][:n_alpha] = 1.
+    data["occupation_f"][n_oa:n_oa + n_beta] = 1.
+
     data["energy_scf"] = scfres["energy_ground_state"]
-    data["threshold"] = 10 * scfres["final_error_norm"]
+    data["conv_tol"] = 10 * scfres["final_error_norm"]
     data["orbcoeff_fb"] = scfres["orbcoeff_bf"].transpose().copy()
+    data["backend"] = "molsturm"
     return data
 
 
 def import_scf(scfres):
-    data = convert_scf_to_dict(scfres)
-    ret = HfData.from_dict(data)
-    ret.backend = "molsturm"
+    return DictHfProvider(convert_scf_to_dict(scfres))
 
-    # TODO temporary hack to make sure the data dict lives longer
-    #      than the Hfdata object. Don't rely on this object for
-    #      your code.
-    ret._original_dict = data
-    return ret
+
+basis_remap = {
+    "sto3g": "sto-3g",
+    "def2tzvp": "def2-tzvp",
+    "ccpvdz": "cc-pvdz",
+}
+
+
+def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
+           conv_tol_grad=1e-8, max_iter=150):
+
+    import molsturm
+
+    # Quick-and-dirty xyz parser:
+    geom = xyz.split()
+    n_atom = len(geom) // 4
+    assert n_atom * 4 == len(geom)
+    atoms = [geom[i * 4] for i in range(n_atom)]
+    coords = [[float(geom[i * 4 + 1]),
+               float(geom[i * 4 + 2]),
+               float(geom[i * 4 + 3])] for i in range(n_atom)]
+
+    mol = molsturm.System(atoms, coords)
+    mol.charge = charge
+    mol.multiplicity = multiplicity
+
+    return molsturm.hartree_fock(mol, basis_type="gaussian",
+                                 basis_set_name=basis_remap.get(basis, basis),
+                                 conv_tol=conv_tol_grad, max_iter=max_iter)

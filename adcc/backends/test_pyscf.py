@@ -22,16 +22,18 @@
 ## ---------------------------------------------------------------------
 import unittest
 import numpy as np
-
-from ..misc import expand_test_templates
-from .eri_construction_test import eri_asymm_construction_test
-
-import pytest
 import adcc
 import adcc.backends
 
+from numpy.testing import assert_almost_equal
+
 from adcc.backends import have_backend
 from adcc.testdata import geometry
+
+import pytest
+
+from ..misc import expand_test_templates
+from .eri_construction_test import eri_asymm_construction_test
 
 if have_backend("pyscf"):
     from pyscf import gto, scf
@@ -42,12 +44,6 @@ basissets = ["sto3g", "ccpvdz"]
 @expand_test_templates(basissets)
 @pytest.mark.skipif(not have_backend("pyscf"), reason="pyscf not found.")
 class TestPyscf(unittest.TestCase):
-    def run_hf(self, mol):
-        mf = scf.RHF(mol)
-        mf.conv_tol = 1e-12
-        mf.kernel()
-        return mf
-
     def run_core_hole(self, mol):
         # First normal run
         mf = scf.UHF(mol)
@@ -85,7 +81,7 @@ class TestPyscf(unittest.TestCase):
             assert np.all(hfdata.orben_f[:n_orbs_alpha]
                           == hfdata.orben_f[n_orbs_alpha:])
 
-            mo_occ = (scfres.mo_occ, scfres.mo_occ)
+            mo_occ = (scfres.mo_occ / 2, scfres.mo_occ / 2)
             mo_energy = (scfres.mo_energy, scfres.mo_energy)
             mo_coeff = (scfres.mo_coeff, scfres.mo_coeff)
             fock_bb = (fock_bb, fock_bb)
@@ -117,17 +113,18 @@ class TestPyscf(unittest.TestCase):
         if not hfdata.restricted:
             return
 
+        # occupation_f
+        assert_almost_equal(hfdata.occupation_f,
+                            np.hstack((mo_occ[0], mo_occ[1])))
+
         # orben_f
-        np.testing.assert_almost_equal(
-            hfdata.orben_f, np.hstack((mo_energy[0], mo_energy[1]))
-        )
+        assert_almost_equal(hfdata.orben_f,
+                            np.hstack((mo_energy[0], mo_energy[1])))
 
         # orbcoeff_fb
-        np.testing.assert_almost_equal(
-            hfdata.orbcoeff_fb, np.transpose(
-                np.hstack((mo_coeff[0], mo_coeff[1]))
-            )
-        )
+        assert_almost_equal(hfdata.orbcoeff_fb, np.transpose(np.hstack((
+            mo_coeff[0], mo_coeff[1]
+        ))))
 
         # fock_ff
         fock = tuple(mo_coeff[i].transpose().conj() @ fock_bb[i] @ mo_coeff[i]
@@ -135,9 +132,7 @@ class TestPyscf(unittest.TestCase):
         fullfock_ff = np.zeros((hfdata.n_orbs, hfdata.n_orbs))
         fullfock_ff[:n_orbs_alpha, :n_orbs_alpha] = fock[0]
         fullfock_ff[n_orbs_alpha:, n_orbs_alpha:] = fock[1]
-        np.testing.assert_almost_equal(
-            hfdata.fock_ff, fullfock_ff
-        )
+        assert_almost_equal(hfdata.fock_ff, fullfock_ff)
 
         # test symmetry of the ERI tensor
         ii, jj, kk, ll = 0, 1, 2, 3
@@ -154,15 +149,13 @@ class TestPyscf(unittest.TestCase):
         hfdata.fill_eri_ffff((sfull, sfull, sfull, sfull), eri)
         for perm in allowed_permutations:
             eri_perm = np.transpose(eri, perm)
-            np.testing.assert_almost_equal(eri_perm, eri)
+            assert_almost_equal(eri_perm, eri)
 
     def template_rhf_h2o(self, basis):
-        mf = adcc.backends.run_hf(
-            "pyscf", xyz=geometry.xyz["h2o"], basis=basis
-        )
+        mf = adcc.backends.run_hf("pyscf", geometry.xyz["h2o"], basis)
         self.base_test(mf)
-        eri_asymm_construction_test(scfres=mf)
-        eri_asymm_construction_test(scfres=mf, core_orbitals=1)
+        eri_asymm_construction_test(mf)
+        eri_asymm_construction_test(mf, core_orbitals=1)
 
     def test_h2o_sto3g_core_hole(self):
         mol = gto.M(
