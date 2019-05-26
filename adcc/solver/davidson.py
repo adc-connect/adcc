@@ -23,12 +23,12 @@
 import sys
 import numpy as np
 
-import scipy.linalg as la
-import scipy.sparse.linalg as sla
-
 from .preconditioner import JacobiPreconditioner
 from .SolverStateBase import SolverStateBase
 from .explicit_symmetrisation import IndexSymmetrisation
+
+import scipy.linalg as la
+import scipy.sparse.linalg as sla
 
 from adcc import AdcMatrix, AmplitudeVector, linear_combination
 
@@ -56,6 +56,8 @@ def default_print(state, identifier, file=sys.stdout):
     A default print function for the davidson callback
     """
     from adcc.timings import strtime, strtime_short
+
+    # TODO Use colour!
 
     if identifier == "start" and state.n_iter == 0:
         print("Niter n_ss  max_residual  time  Ritz values",
