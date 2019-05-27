@@ -70,14 +70,14 @@ class Timer:
     # It should be made usable as a context manager
     #
     def __init__(self):
-        self.time_construction = time.clock()
+        self.time_construction = time.perf_counter()
         self.intervals = {}
         self.start_times = {}
 
     def stop(self, task, now=None):
         """Stop a task and return runtime of it."""
         if now is None:
-            now = time.clock()
+            now = time.perf_counter()
         if task in self.start_times:
             start = self.start_times.pop(task)
             if task in self.intervals:
@@ -92,7 +92,7 @@ class Timer:
         Start a task if it is currently not running
         or stop and restart otherwise.
         """
-        now = time.clock()
+        now = time.perf_counter()
         if self.is_running(task):
             self.stop(task, now)
         self.start_times[task] = now
@@ -103,7 +103,7 @@ class Timer:
     @property
     def lifetime(self):
         """Get total time since this class has been constructed"""
-        return self.time_construction - time.clock()
+        return time.perf_counter() - self.time_construction
 
     def total(self, task):
         """Get total runtime on a task in seconds"""
@@ -115,5 +115,5 @@ class Timer:
     def current(self, task):
         """Get current time on a task without stopping it"""
         if self.is_running(task):
-            return time.clock() - self.start_times[task]
+            return time.perf_counter() - self.start_times[task]
         return 0
