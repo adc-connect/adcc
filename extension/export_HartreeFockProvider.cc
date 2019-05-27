@@ -168,10 +168,6 @@ class HartreeFockProvider : public HartreeFockSolution_i {
                                     buffer, memview));
   }
 
-  // TODO We always have a dummy ipmlementation for now.
-  bool has_eri_phys_asym_ffff() const override { return true; }
-  virtual bool has_eri_phys_asym_ffff_inner() const { return false; }
-
   void eri_phys_asym_ffff(size_t d1_start, size_t d1_end, size_t d2_start, size_t d2_end,
                           size_t d3_start, size_t d3_end, size_t d4_start, size_t d4_end,
                           size_t d1_stride, size_t d2_stride, size_t d3_stride,
@@ -209,84 +205,20 @@ class HartreeFockProvider : public HartreeFockSolution_i {
 
     // Skip empty ranges
     if (size == 0) return;
-
-    if (!has_eri_phys_asym_ffff_inner()) {
-      // Dummy anti-symmetrisation to get going ... should go once symmetric
-      // import is available inside ReferenceState
-      //
-      // Note:
-      //   <ij||kl> = <ij|kl> - <ij|lk>
-      //            = (ik|jl) - (il|jk)
-      //            = (ik|jl) - (jk|il)
-      //            = eri_ikjl - eri_jkil
-
-      // Check no funny strides for now
-      if (static_cast<ssize_t>(d1_stride) != d2_length * d3_length * d4_length) {
-        throw not_implemented_error("Only row-major d1_stride implemented.");
-      }
-      if (static_cast<ssize_t>(d2_stride) != d3_length * d4_length) {
-        throw not_implemented_error("Only row-major d2_stride implemented.");
-      }
-      if (static_cast<ssize_t>(d3_stride) != d4_length) {
-        throw not_implemented_error("Only row-major d3_stride implemented.");
-      }
-      if (d4_stride != 1) {
-        throw not_implemented_error("Only row-major d4_stride implemented.");
-      }
-
-      scalar_type* out = buffer;
-      for (size_t i = d1_start; i < d1_end; ++i) {
-        for (size_t j = d2_start; j < d2_end; ++j) {
-          if (out >= buffer + size) {
-            throw runtime_error("Internal consistency check failed: Overrun buffer");
-          }
-          const size_t k_start  = d3_start;
-          const size_t k_end    = d3_end;
-          const size_t l_start  = d4_start;
-          const size_t l_end    = d4_end;
-          const size_t l_length = l_end - l_start;
-          const size_t k_length = k_end - k_start;
-          std::vector<size_t> strides{k_length * 1 * l_length, 1 * l_length, l_length, 1};
-
-          // Compute eri_ikjl
-          std::vector<scalar_type> eri_ikjl(k_length * l_length);
-          eri_ffff(i, i + 1, k_start, k_end, j, j + 1, l_start, l_end, strides[0],
-                   strides[1], strides[2], strides[3], eri_ikjl.data(), eri_ikjl.size());
-
-          // Compute eri_jkil
-          std::vector<scalar_type> eri_jkil(k_length * l_length);
-          eri_ffff(j, j + 1, k_start, k_end, i, i + 1, l_start, l_end, strides[0],
-                   strides[1], strides[2], strides[3], eri_jkil.data(), eri_jkil.size());
-
-          // Compute <ij||kl>
-          //    => since i and j are fixed, this is just elementwise subtraction.
-          std::transform(std::begin(eri_ikjl), std::end(eri_ikjl), std::begin(eri_jkil),
-                         out, std::minus<scalar_type>());
-
-          // Increment output iterator:
-          out += static_cast<ptrdiff_t>(d3_length * d4_length);
-        }  // j
-      }    // i
-      if (out != buffer + size) {
-        throw runtime_error(
-              "Internal consistency check failed: Buffer not completely filled.");
-      }
-    } else {
-      py::memoryview memview(
-            py::buffer_info(buffer, d1_length * d2_length * d3_length * d4_length));
-      std::vector<ssize_t> strides{static_cast<ssize_t>(sizeof(scalar_type) * d1_stride),
-                                   static_cast<ssize_t>(sizeof(scalar_type) * d2_stride),
-                                   static_cast<ssize_t>(sizeof(scalar_type) * d3_stride),
-                                   static_cast<ssize_t>(sizeof(scalar_type) * d4_stride)};
-      py::tuple slices = py::make_tuple(
-            py::slice(static_cast<ssize_t>(d1_start), static_cast<ssize_t>(d1_end), 1),
-            py::slice(static_cast<ssize_t>(d2_start), static_cast<ssize_t>(d2_end), 1),
-            py::slice(static_cast<ssize_t>(d3_start), static_cast<ssize_t>(d3_end), 1),
-            py::slice(static_cast<ssize_t>(d4_start), static_cast<ssize_t>(d4_end), 1));
-      fill_eri_phys_asym_ffff(
-            slices, py::array({d1_length, d2_length, d3_length, d4_length}, strides,
-                              buffer, memview));
-    }
+    py::memoryview memview(
+          py::buffer_info(buffer, d1_length * d2_length * d3_length * d4_length));
+    std::vector<ssize_t> strides{static_cast<ssize_t>(sizeof(scalar_type) * d1_stride),
+                                 static_cast<ssize_t>(sizeof(scalar_type) * d2_stride),
+                                 static_cast<ssize_t>(sizeof(scalar_type) * d3_stride),
+                                 static_cast<ssize_t>(sizeof(scalar_type) * d4_stride)};
+    py::tuple slices = py::make_tuple(
+          py::slice(static_cast<ssize_t>(d1_start), static_cast<ssize_t>(d1_end), 1),
+          py::slice(static_cast<ssize_t>(d2_start), static_cast<ssize_t>(d2_end), 1),
+          py::slice(static_cast<ssize_t>(d3_start), static_cast<ssize_t>(d3_end), 1),
+          py::slice(static_cast<ssize_t>(d4_start), static_cast<ssize_t>(d4_end), 1));
+    fill_eri_phys_asym_ffff(
+          slices, py::array({d1_length, d2_length, d3_length, d4_length}, strides, buffer,
+                            memview));
   }
 
   //
@@ -364,8 +296,8 @@ class PyHartreeFockProvider : public HartreeFockProvider {
     PYBIND11_OVERLOAD_PURE(void, HartreeFockProvider, fill_eri_phys_asym_ffff, slices,
                            out);
   }
-  bool has_eri_phys_asym_ffff_inner() const override {
-    PYBIND11_OVERLOAD(bool, HartreeFockProvider, has_eri_phys_asym_ffff_inner, );
+  bool has_eri_phys_asym_ffff() const override {
+    PYBIND11_OVERLOAD(bool, HartreeFockProvider, has_eri_phys_asym_ffff, );
   }
   std::string get_backend() const override {
     PYBIND11_OVERLOAD_PURE(std::string, HartreeFockProvider, get_backend, );
