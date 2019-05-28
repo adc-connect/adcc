@@ -20,9 +20,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
-from data import orben_data, coeff_data, eri_data
 import numpy as np
+
+from data import coeff_data, eri_data, orben_data
 
 
 def import_data():
@@ -41,6 +41,7 @@ def import_data():
     }
     n_orbs = data["n_orbs_alpha"] + data["n_orbs_beta"]
 
+    data["occupation_f"] = np.array(5 * [1] + [0, 0] + 5 * [1] + [0, 0.])
     data["orbcoeff_fb"] = np.array(coeff_data).reshape((n_orbs, n_bas))
     data["orben_f"] = np.array(orben_data).reshape((n_orbs))
     data["eri_ffff"] = np.array(eri_data).reshape((n_orbs, n_orbs,
