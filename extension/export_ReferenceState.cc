@@ -101,6 +101,12 @@ void export_ReferenceState(py::module& m) {
              "                  from the host programs. Do not enable this unless you "
              "know\n"
              "                  that you really want to.\n")
+        .def(py::init<std::shared_ptr<const HartreeFockSolution_i>&,
+                      std::shared_ptr<const AdcMemory>, size_t, size_t, size_t, bool>(),
+             "Construct an MoSpaces object, determining the indices of the special "
+             "spaces automatically from the upper or lower end of the energy range "
+             "respectively. Notice that e.g. core_orbitals=1 will put 1 alpha and 1 beta "
+             "orbitals into the respective core occupied space.")
         //
         .def_property_readonly("restricted", &ReferenceState::restricted,
                                "Return whether the reference is restricted or not.")
