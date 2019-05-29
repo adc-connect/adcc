@@ -126,6 +126,20 @@ void export_Symmetry(py::module& m) {
         "     \"x\", \"y\", \"z\"         Coordinate axis\n"
         "     \"xx\", \"xy\", \"yz\" ...  Products of two coordinate axis\n"
         "     \"Rx\", \"Ry\", \"Rz\"      Rotations about the coordinate axis\n");
+
+  m.def("make_symmetry_operator_basis", &make_symmetry_operator_basis,
+        "Return the symmetry object for an operator in the AO basis. The object will\n"
+        "represent a block-diagonal matrix of the form\n"
+        "    ( M 0 )\n"
+        "    ( 0 M ).\n"
+        "where M is an n_bas x n_bas block and is indentical in upper-left\n"
+        "and lower-right.\n"
+        "\n"
+        "mospaces_ptr     MoSpaces pointer\n"
+        "n_bas            Number of AO basis functions\n"
+        "symmetric        Is the tensor symmetric (only in effect if both space\n"
+        "                 axes identical). false disables a setup of permutational\n"
+        "                 symmetry.\n");
 }
 
 }  // namespace py_iface
