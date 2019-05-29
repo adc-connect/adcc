@@ -32,12 +32,13 @@ from .functions import (add, contract, copy, divide, dot, empty_like,
                         subtract, transpose, zeros_like)
 from .memory_pool import memory_pool
 from .thread_pool import thread_pool
+from .DictHfProvider import DictHfProvider
 from .ReferenceState import ReferenceState
 from .caching_policy import DefaultCachingPolicy, GatherStatisticsPolicy
 from .AmplitudeVector import AmplitudeVector
 from .state_densities import attach_state_densities
 
-from libadcc import HartreeFockProvider, HartreeFockSolution_i
+from libadcc import HartreeFockProvider
 
 # This has to be the last set of import
 from .guess import (guess_zero, guesses_any, guesses_singlet,
@@ -50,7 +51,7 @@ __all__ = ["run_adc", "AdcMatrix", "AdcMethod", "Symmetry", "ReferenceState",
            "subtract", "transpose", "zeros_like",
            "memory_pool", "thread_pool", "AmplitudeVector",
            "attach_state_densities", "HartreeFockProvider",
-           "HartreeFockSolution_i", "Tensor",
+           "Tensor", "DictHfProvider",
            "guesses_singlet", "guesses_triplet", "guesses_any",
            "guesses_spin_flip", "guess_zero", "DefaultCachingPolicy",
            "GatherStatisticsPolicy", "LazyMp",

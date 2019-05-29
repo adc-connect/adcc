@@ -63,21 +63,19 @@ def strtime(span):
 
 
 class Timer:
-    # TODO
-    # The functionality can be improved by having a tree
-    # structure where tree times can be totaled or something like that
-    #
-    # It should be made usable as a context manager
-    #
+    # TODO More flexible: Time on a subtree
+    # TODO Merge function to merge subtrees
+    # TODO Describe function to print a nice table
+    # TODO Allow to use class (or a related construct) as context manager
     def __init__(self):
-        self.time_construction = time.clock()
+        self.time_construction = time.perf_counter()
         self.intervals = {}
         self.start_times = {}
 
     def stop(self, task, now=None):
         """Stop a task and return runtime of it."""
         if now is None:
-            now = time.clock()
+            now = time.perf_counter()
         if task in self.start_times:
             start = self.start_times.pop(task)
             if task in self.intervals:
@@ -92,7 +90,7 @@ class Timer:
         Start a task if it is currently not running
         or stop and restart otherwise.
         """
-        now = time.clock()
+        now = time.perf_counter()
         if self.is_running(task):
             self.stop(task, now)
         self.start_times[task] = now
@@ -101,19 +99,54 @@ class Timer:
         return task in self.start_times
 
     @property
+    def tasks(self):
+        """The list of all tasks known to this object"""
+        all_tasks = set(self.start_times.keys())
+        all_tasks.update(set(self.intervals.keys()))
+        return sorted(list(all_tasks))
+
+    @property
     def lifetime(self):
         """Get total time since this class has been constructed"""
-        return self.time_construction - time.clock()
+        return time.perf_counter() - self.time_construction
 
     def total(self, task):
         """Get total runtime on a task in seconds"""
         if task not in self.intervals:
+            if task not in self.start_times:
+                raise ValueError("Unknown task: " + task)
             return self.current(task)
-        return self.current(task) + sum(end - start
-                                        for start, end in self.intervals[task])
+        else:
+            cur = 0
+            if task in self.start_times:
+                cur = time.perf_counter() - self.start_times[task]
+            cumul = sum(end - start for start, end in self.intervals[task])
+            return cur + cumul
 
     def current(self, task):
         """Get current time on a task without stopping it"""
         if self.is_running(task):
-            return time.clock() - self.start_times[task]
-        return 0
+            return time.perf_counter() - self.start_times[task]
+        else:
+            raise ValueError("Task not currently running: " + task)
+
+    def describe(self):
+        maxlen = max(len(key) for key in self.tasks)
+
+        # This is very dummy ... in the future we would like to have
+        # a nice little table, which also respects the key hierachy
+        # and displays cumulative sums for each level and which
+        # tasks care of duplicated time intervals (e.g. if two tasks
+        # run at the same time)
+        # Colour: Use one for each level
+        text = "Timer " + strtime_short(self.lifetime) + " lifetime:\n"
+        for key in self.tasks:
+            fmt = "  {:<" + str(maxlen) + "s} {:>20s}\n"
+            text += fmt.format(key, strtime(self.total(key)))
+        return text
+
+    def _repr_pretty_(self, pp, cycle):
+        if cycle:
+            pp.text("Timer()")
+        else:
+            pp.text(self.describe())

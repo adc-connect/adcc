@@ -22,7 +22,6 @@
 ## ---------------------------------------------------------------------
 import libadcc
 
-from .MoSpaces import auto_core, auto_frozen_core, auto_frozen_virtual
 from .backends import import_scf_results
 from .memory_pool import memory_pool
 
@@ -85,20 +84,30 @@ class ReferenceState(libadcc.ReferenceState):
         if not isinstance(hfdata, libadcc.HartreeFockSolution_i):
             hfdata = import_scf_results(hfdata)
 
-        if frozen_core is None:
-            frozen_core = []
-        elif isinstance(frozen_core, int):
-            frozen_core = auto_frozen_core(hfdata, core_orbitals, frozen_core)
+        if not isinstance(frozen_core, (list, int)) and frozen_core is not None:
+            raise TypeError("frozen_core should be an int or a list")
+        if not isinstance(core_orbitals, (list, int)) \
+           and core_orbitals is not None:
+            raise TypeError("core_orbitals should be an int or a list")
+        if not isinstance(frozen_virtual, (list, int)) \
+           and frozen_virtual is not None:
+            raise TypeError("frozen_virtual should be an int or a list")
 
-        if core_orbitals is None:
-            core_orbitals = []
-        elif isinstance(core_orbitals, int):
-            core_orbitals = auto_core(hfdata, core_orbitals, frozen_core)
-
-        if frozen_virtual is None:
-            frozen_virtual = []
-        elif isinstance(frozen_virtual, int):
-            frozen_virtual = auto_frozen_virtual(hfdata, frozen_virtual)
+        if any(isinstance(k, int) for k in [frozen_core, core_orbitals,
+                                            frozen_virtual]):
+            if frozen_core is None:
+                frozen_core = 0
+            if core_orbitals is None:
+                core_orbitals = 0
+            if frozen_virtual is None:
+                frozen_virtual = 0
+        else:
+            if frozen_core is None:
+                frozen_core = []
+            if core_orbitals is None:
+                core_orbitals = []
+            if frozen_virtual is None:
+                frozen_virtual = []
 
         super().__init__(hfdata, memory_pool, core_orbitals, frozen_core,
                          frozen_virtual, symmetry_check_on_import)

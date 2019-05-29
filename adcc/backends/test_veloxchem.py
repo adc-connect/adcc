@@ -20,20 +20,20 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
-import pytest
 import unittest
-
 import numpy as np
-from numpy.testing import assert_array_equal
-
-import adcc
-import adcc.backends
-from adcc.backends import have_backend
-from adcc.testdata import geometry
 
 from ..misc import expand_test_templates
 from .eri_construction_test import eri_asymm_construction_test
+
+from numpy.testing import assert_almost_equal, assert_array_equal
+
+import pytest
+import adcc
+import adcc.backends
+
+from adcc.backends import have_backend
+from adcc.testdata import geometry
 
 if have_backend("veloxchem"):
     import veloxchem as vlx
@@ -82,17 +82,19 @@ class TestVeloxchem(unittest.TestCase):
         mo_coeff_a = scfdrv.mol_orbs.alpha_to_numpy()
         mo_coeff = (mo_coeff_a, mo_coeff_a)
 
+        # occupation_f
+        occu = np.zeros(2 * n_orbs_alpha)
+        occu[:n_alpha] = occu[n_orbs_alpha:n_orbs_alpha + n_beta] = 1.
+        assert_almost_equal(hfdata.occupation_f, occu)
+
         # orben_f
-        np.testing.assert_almost_equal(
-            hfdata.orben_f, np.hstack((mo_energy[0], mo_energy[1]))
-        )
+        assert_almost_equal(hfdata.orben_f,
+                            np.hstack((mo_energy[0], mo_energy[1])))
 
         # orbcoeff_fb
-        np.testing.assert_almost_equal(
-            hfdata.orbcoeff_fb, np.transpose(
-                np.hstack((mo_coeff[0], mo_coeff[1]))
-            )
-        )
+        assert_almost_equal(hfdata.orbcoeff_fb, np.transpose(np.hstack((
+            mo_coeff[0], mo_coeff[1])
+        )))
 
         # fock_ff
         fock_bb = scfdrv.scf_tensors['F']
@@ -102,10 +104,7 @@ class TestVeloxchem(unittest.TestCase):
         fullfock_ff = np.zeros((hfdata.n_orbs, hfdata.n_orbs))
         fullfock_ff[:n_orbs_alpha, :n_orbs_alpha] = fock[0]
         fullfock_ff[n_orbs_alpha:, n_orbs_alpha:] = fock[1]
-
-        np.testing.assert_almost_equal(
-            hfdata.fock_ff, fullfock_ff
-        )
+        assert_almost_equal(hfdata.fock_ff, fullfock_ff)
 
         # test symmetry of the ERI tensor
         ii, jj, kk, ll = 0, 1, 2, 3
@@ -122,12 +121,10 @@ class TestVeloxchem(unittest.TestCase):
         hfdata.fill_eri_ffff((sfull, sfull, sfull, sfull), eri)
         for perm in allowed_permutations:
             eri_perm = np.transpose(eri, perm)
-            np.testing.assert_almost_equal(eri_perm, eri)
+            assert_almost_equal(eri_perm, eri)
 
     def template_rhf_h2o(self, basis):
-        scfdrv = adcc.backends.run_hf(
-            "veloxchem", xyz=geometry.xyz["h2o"], basis=basis
-        )
+        scfdrv = adcc.backends.run_hf("veloxchem", geometry.xyz["h2o"], basis)
         self.base_test(scfdrv)
         eri_asymm_construction_test(scfdrv)
         eri_asymm_construction_test(scfdrv, core_orbitals=1)

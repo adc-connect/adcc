@@ -20,17 +20,16 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
-from libadcc import HartreeFockProvider
-import numpy as np
-from mpi4py import MPI
-import veloxchem as vlx
-import tempfile
 import os
+import tempfile
+import numpy as np
+import veloxchem as vlx
 
+from mpi4py import MPI
 from .eri_build_helper import (EriBuilder, SpinBlockSlice,
                                get_symmetry_equivalent_transpositions_for_block)
 
+from libadcc import HartreeFockProvider
 
 # VeloxChem is a special case... not using coefficients at all
 # so we need this boilerplate code to make it work...
@@ -212,21 +211,20 @@ class VeloxChemHFProvider(HartreeFockProvider):
                 "Only restricted references (RHF) are supported."
             )
 
-        self.backend = "veloxchem"
         self.scfdrv = scfdrv
         self.mol_orbs = self.scfdrv.mol_orbs
         self.molecule = self.scfdrv.task.molecule
         self.ao_basis = self.scfdrv.task.ao_basis
         self.mpi_comm = self.scfdrv.task.mpi_comm
         self.ostream = self.scfdrv.task.ostream
-        self.energy_terms = {
-            "nuclear_repulsion": self.molecule.nuclear_repulsion_energy()
-        }
         self.eri_ffff = None
         self.eri_builder = VeloxChemEriBuilder(
             self.scfdrv.task, self.mol_orbs, self.n_orbs, self.n_orbs_alpha,
             self.n_alpha, self.n_beta
         )
+
+    def get_backend(self):
+        return "veloxchem"
 
     def get_n_alpha(self):
         return self.molecule.number_of_alpha_electrons()
@@ -234,14 +232,11 @@ class VeloxChemHFProvider(HartreeFockProvider):
     def get_n_beta(self):
         return self.get_n_alpha()
 
-    def get_threshold(self):
+    def get_conv_tol(self):
         return self.scfdrv.conv_thresh
 
     def get_restricted(self):
-        return True
-
-    def get_energy_term(self, term):
-        return self.energy_terms[term]
+        return True  # The only one supported for now
 
     def get_energy_scf(self):
         return self.scfdrv.get_scf_energy()
@@ -260,14 +255,22 @@ class VeloxChemHFProvider(HartreeFockProvider):
 
     def fill_orbcoeff_fb(self, out):
         mo_coeff_a = self.mol_orbs.alpha_to_numpy()
-        mo_coeff = (mo_coeff_a, mo_coeff_a)
+        mo_coeff_b = self.mol_orbs.beta_to_numpy()
         out[:] = np.transpose(
-            np.hstack((mo_coeff[0], mo_coeff[1]))
+            np.hstack((mo_coeff_a, mo_coeff_b))
         )
 
     def fill_orben_f(self, out):
         orben_a = self.mol_orbs.ea_to_numpy()
-        out[:] = np.hstack((orben_a, orben_a))
+        orben_b = self.mol_orbs.ea_to_numpy()
+        out[:] = np.hstack((orben_a, orben_b))
+
+    def fill_occupation_f(self, out):
+        # TODO I (mfh) have no better idea than the fallback implementation
+        n_oa = self.mol_orbs.number_mos()
+        out[:] = np.zeros(2 * n_oa)
+        out[:self.get_n_alpha()] = 1.
+        out[n_oa:n_oa + self.get_n_beta()] = 1.
 
     def fill_fock_ff(self, slices, out):
         mo_coeff_a = self.mol_orbs.alpha_to_numpy()
@@ -292,10 +295,6 @@ class VeloxChemHFProvider(HartreeFockProvider):
     def has_eri_phys_asym_ffff(self):
         return True
 
-    def get_energy_term_keys(self):
-        # TODO: implement full set of keys
-        return ["nuclear_repulsion"]
-
     def flush_cache(self):
         self.eri_builder.flush_cache()
         self.eri_ffff = None
@@ -317,22 +316,22 @@ def import_scf(scfdrv):
     return provider
 
 
-basissets = {
+basis_remap = {
     "sto3g": "sto-3g",
     "def2tzvp": "def2-tzvp",
     "ccpvdz": "cc-pvdz",
 }
 
 
-def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol_grad=1e-8,
-           max_iter=150):
+def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=None,
+           conv_tol_grad=1e-8, max_iter=150):
     with tempfile.TemporaryDirectory() as tmpdir:
         infile = os.path.join(tmpdir, "vlx.in")
         outfile = os.path.join(tmpdir, "vlx.out")
         with open(infile, "w") as fp:
             lines = ["@jobs", "task: hf", "@end", ""]
             lines += ["@method settings",
-                      "basis: {}".format(basissets.get(basis, basis)),
+                      "basis: {}".format(basis_remap.get(basis, basis)),
                       "@end"]
             lines += ["@molecule",
                       "charge: {}".format(charge),

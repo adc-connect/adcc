@@ -37,7 +37,6 @@ void export_compute_one_particle_densities(py::module& m);
 void export_CtxMap(py::module& m);
 void export_guesses(py::module& m);
 void export_HartreeFockProvider(py::module& m);
-void export_HfData(py::module& m);
 void export_LazyMp(py::module& m);
 void export_MoIndexTranslation(py::module& m);
 void export_MoSpaces(py::module& m);
@@ -62,7 +61,6 @@ PYBIND11_MODULE(libadcc, m) {
   pyif::export_CachingPolicy(m);
 
   pyif::export_HartreeFockProvider(m);
-  pyif::export_HfData(m);
   pyif::export_MoSpaces(m);
   pyif::export_Symmetry(m);
   pyif::export_MoIndexTranslation(m);

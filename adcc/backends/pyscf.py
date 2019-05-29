@@ -23,8 +23,10 @@
 import warnings
 import numpy as np
 
+from adcc.DictHfProvider import DictHfProvider
+
 from pyscf import ao2mo, gto, scf
-from libadcc import HartreeFockProvider, HfData
+from libadcc import HartreeFockProvider
 from .eri_build_helper import EriBuilder
 
 
@@ -60,16 +62,15 @@ class PyScfHFProvider(HartreeFockProvider):
         # Do not forget the next line,
         # otherwise weird errors result
         super().__init__()
-        self.backend = "pyscf"
         self.scfres = scfres
-        self.energy_terms = {
-            "nuclear_repulsion": self.scfres.mol.energy_nuc()
-        }
         self.eri_ffff = None
         self.eri_builder = PyScfEriBuilder(
             self.scfres, self.n_orbs, self.n_orbs_alpha,
             self.n_alpha, self.n_beta
         )
+
+    def get_backend(self):
+        return "pyscf"
 
     def get_n_alpha(self):
         return np.sum(self.scfres.mo_occ > 0)
@@ -77,13 +78,13 @@ class PyScfHFProvider(HartreeFockProvider):
     def get_n_beta(self):
         return self.get_n_alpha()
 
-    def get_threshold(self):
+    def get_conv_tol(self):
         if self.scfres.conv_tol_grad is None:
             conv_tol_grad = np.sqrt(self.scfres.conv_tol)
         else:
             conv_tol_grad = self.scfres.conv_tol_grad
-        threshold = max(10 * self.scfres.conv_tol, conv_tol_grad)
-        return threshold
+        conv_tol = max(10 * self.scfres.conv_tol, conv_tol_grad)
+        return conv_tol
 
     def get_restricted(self):
         if isinstance(self.scfres.mo_occ, list):
@@ -94,9 +95,6 @@ class PyScfHFProvider(HartreeFockProvider):
             raise ValueError("Unusual pyscf SCF class encountered. Could not "
                              "determine restricted / unrestricted.")
         return restricted
-
-    def get_energy_term(self, term):
-        return self.energy_terms[term]
 
     def get_energy_scf(self):
         return float(self.scfres.e_tot)
@@ -120,6 +118,14 @@ class PyScfHFProvider(HartreeFockProvider):
 
     def get_n_bas(self):
         return int(self.scfres.mol.nao_nr())
+
+    def fill_occupation_f(self, out):
+        if self.restricted:
+            out[:] = np.hstack((self.scfres.mo_occ / 2,
+                                self.scfres.mo_occ / 2))
+        else:
+            out[:] = np.hstack((self.scfres.mo_occ[0],
+                                self.scfres.mo_occ[1]))
 
     def fill_orbcoeff_fb(self, out):
         if self.restricted:
@@ -154,10 +160,6 @@ class PyScfHFProvider(HartreeFockProvider):
 
     def has_eri_phys_asym_ffff(self):
         return True
-
-    def get_energy_term_keys(self):
-        # TODO: implement full set of keys
-        return ["nuclear_repulsion"]
 
     def flush_cache(self):
         self.eri_builder.flush_cache()
@@ -273,6 +275,7 @@ def convert_scf_to_dict(scfres):
     #
     # SCF orbitals and SCF results
     #
+    data["occupation_f"] = np.hstack((mo_occ[0], mo_occ[1]))
     data["orben_f"] = np.hstack((mo_energy[0], mo_energy[1]))
     fullfock_ff = np.zeros((n_orbs, n_orbs))
     fullfock_ff[:n_orbs_alpha, :n_orbs_alpha] = fock[0]
@@ -331,6 +334,7 @@ def convert_scf_to_dict(scfres):
     eri[:, :, brv, arv] = 0
 
     data["eri_ffff"] = eri
+    data["backend"] = "pyscf"
     return data
 
 
@@ -354,21 +358,10 @@ def import_scf(scfres):
                          "determine restricted / unrestricted.")
 
     if restricted:
-        provider = PyScfHFProvider(scfres)
-        return provider
+        return PyScfHFProvider(scfres)
     else:
-        # fallback
         warnings.warn("Falling back to slow import for UHF result.")
-
-        data = convert_scf_to_dict(scfres)
-        ret = HfData.from_dict(data)
-        ret.backend = "pyscf"
-
-        # TODO temporary hack to make sure the data dict lives longer
-        #      than the Hfdata object. Don't rely on this object for
-        #      your code.
-        ret._original_dict = data
-        return ret
+        return DictHfProvider(convert_scf_to_dict(scfres))
 
 
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,

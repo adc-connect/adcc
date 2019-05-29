@@ -80,9 +80,9 @@ class AdcCore:
     def config(self):
         if not self.is_config_file_present:
             raise RuntimeError(
-                "Did not find adccore_config.json file in the directory tree." +
-                " Did you download or install adccore properly? See the adcc " +
-                "documentation for help."
+                "Did not find adccore_config.json file in the directory tree."
+                + " Did you download or install adccore properly? See the adcc "
+                + "documentation for help."
             )
         else:
             with open(self.config_path, "r") as fp:
@@ -103,8 +103,8 @@ class AdcCore:
                     name = join(self.library_dir, prefix + lib + ext)
                     if os.path.isfile(name):
                         return name
-            raise RuntimeError("Could not find full path of library '" +
-                               lib + '"')
+            raise RuntimeError("Could not find full path of library '"
+                               + lib + '"')
         return [get_full(lib) for lib in self.libraries]
 
     @property
@@ -275,10 +275,11 @@ class PyTest(TestCommand):
             raise RuntimeError("Can only test from git repository, "
                                "not from installation tarball.")
 
-        args = ["adcc"] + shlex.split(self.pytest_args)
+        args = ["adcc"]
         args += ["--mode", self.mode]
         if self.skip_update:
             args += ["--skip-update"]
+        args += shlex.split(self.pytest_args)
         errno = pytest.main(args)
         sys.exit(errno)
 

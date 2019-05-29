@@ -57,6 +57,8 @@ def default_print(state, identifier, file=sys.stdout):
     """
     from adcc.timings import strtime, strtime_short
 
+    # TODO Use colour!
+
     if identifier == "start" and state.n_iter == 0:
         print("Niter n_ss  max_residual  time  Ritz values",
               file=file)
@@ -68,7 +70,7 @@ def default_print(state, identifier, file=sys.stdout):
                          residual=np.max(state.residual_norms)),
               "", state.eigenvalues[:7], file=file)
     elif identifier == "is_converged":
-        soltime = state.timer.current("davidson/total")
+        soltime = state.timer.total("davidson/iteration")
         print("=== Converged ===", file=file)
         print("    Number of matrix applies:   ", state.n_applies)
         print("    Total solver time:          ", strtime(soltime))
@@ -136,7 +138,6 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         residual_min_norm = 2 * n_problem * np.finfo(float).eps
 
     callback(state, "start")
-    state.timer.restart("davidson/total")
     state.timer.restart("davidson/iteration")
     while state.n_iter < max_iter:
         state.n_iter += 1
@@ -188,7 +189,7 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         if is_converged(state):
             state.converged = True
             callback(state, "is_converged")
-            state.timer.stop("davidson/total")
+            state.timer.stop("davidson/iteration")
             return state
 
         if state.n_iter == max_iter:

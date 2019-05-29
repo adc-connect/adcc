@@ -27,6 +27,36 @@ namespace py = pybind11;
 namespace adcc {
 namespace py_iface {
 
+// TODO When the Timer functionality is used more wide-spread
+//      (i.e. in different classes) it probably makes sense to integrate
+//      this into the pybind11 automatic type conversion mechanism.
+static py::object convert_timer(const Timer& timer) {
+  // Determine the shift between the C++ and the python clocks
+  py::object pynow         = py::module::import("time").attr("perf_counter");
+  const double clock_shift = pynow().cast<double>() - Timer::now();
+
+  // Shift the data and convert to python
+  py::dict shifted_intervals;
+  for (const auto& kv : timer.intervals) {
+    py::list intlist;
+    for (const auto& p : kv.second) {
+      intlist.append(py::make_tuple(clock_shift + p.first, clock_shift + p.second));
+    }
+    shifted_intervals[py::cast(kv.first)] = intlist;
+  }
+  py::dict shifted_start_times;
+  for (const auto& kv : timer.start_times) {
+    shifted_start_times[py::cast(kv.first)] = kv.second + clock_shift;
+  }
+
+  py::object pyTimer            = py::module::import("adcc.timings").attr("Timer");
+  py::object ret                = pyTimer();
+  ret.attr("intervals")         = shifted_intervals;
+  ret.attr("start_times")       = shifted_start_times;
+  ret.attr("time_construction") = timer.time_construction + clock_shift;
+  return ret;
+}
+
 /** Exports adcc/ReferenceState.hh to python */
 void export_ReferenceState(py::module& m) {
 
@@ -71,6 +101,12 @@ void export_ReferenceState(py::module& m) {
              "                  from the host programs. Do not enable this unless you "
              "know\n"
              "                  that you really want to.\n")
+        .def(py::init<std::shared_ptr<const HartreeFockSolution_i>&,
+                      std::shared_ptr<const AdcMemory>, size_t, size_t, size_t, bool>(),
+             "Construct an MoSpaces object, determining the indices of the special "
+             "spaces automatically from the upper or lower end of the energy range "
+             "respectively. Notice that e.g. core_orbitals=1 will put 1 alpha and 1 beta "
+             "orbitals into the respective core occupied space.")
         //
         .def_property_readonly("restricted", &ReferenceState::restricted,
                                "Return whether the reference is restricted or not.")
@@ -87,6 +123,9 @@ void export_ReferenceState(py::module& m) {
                                "Reference state irreducible representation")
         .def_property_readonly("mospaces", &ReferenceState::mospaces_ptr,
                                "The MoSpaces object supplied on initialisation")
+        .def_property_readonly(
+              "backend", &ReferenceState::backend,
+              "The identifier of the back end used for the SCF calculation.")
         .def_property_readonly("n_orbs", &ReferenceState::n_orbs,
                                "Number of molecular orbitals")
         .def_property_readonly("n_orbs_alpha", &ReferenceState::n_orbs_alpha,
@@ -143,6 +182,11 @@ void export_ReferenceState(py::module& m) {
              "the next request for further imports will most likely take some time, such "
              "that intermediate caches can now be flushed to save some memory or other "
              "resources.")
+        .def_property_readonly("timer",
+                               [](const ReferenceState& refstate) {
+                                 return convert_timer(refstate.timer());
+                               },
+                               "Obtain the timer object of this class.")
         //
         .def("to_ctx", &ReferenceState::to_ctx)
         //

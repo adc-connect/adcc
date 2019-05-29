@@ -49,12 +49,13 @@ def is_molsturm_available():
 def is_veloxchem_available():
     try:
         import veloxchem
+
         return True
     except ImportError:
         return False
 
 
-_backend_availability = {
+status = {
     "pyscf": is_pyscf_available(),
     "psi4": is_psi4_available(),
     "veloxchem": is_veloxchem_available(),
@@ -62,12 +63,19 @@ _backend_availability = {
 }
 
 
+available = sorted([b for b in status if status[b]])
+
+
 def first_available():
-    for b in _backend_availability.keys():
-        if _backend_availability[b]:
-            return b
-    raise RuntimeError("No backend available.")
+    if len(available) == 0:
+        raise RuntimeError("No backend available.")
+    else:
+        return available[0]
+
+
+def available():
+    return sorted([b for b in status if status[b]])
 
 
 def have_backend(backend):
-    return _backend_availability.get(backend, False)
+    return status.get(backend, False)

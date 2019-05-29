@@ -20,11 +20,10 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import psi4
+import numpy as np
 
 from libadcc import HartreeFockProvider
-import numpy as np
-import psi4
-
 from .eri_build_helper import EriBuilder
 
 
@@ -62,16 +61,14 @@ class Psi4HFProvider(HartreeFockProvider):
         if not isinstance(wfn, psi4.core.RHF):
             raise TypeError("Only restricted references (RHF) are supported.")
 
-        self.backend = "psi4"
         self.wfn = wfn
-        self.energy_terms = {
-            "nuclear_repulsion": self.wfn.molecule().nuclear_repulsion_energy()
-        }
-
         self.eri_ffff = None
         self.eri_builder = Psi4EriBuilder(
             self.wfn, self.n_orbs, self.n_orbs_alpha, self.n_alpha, self.n_beta
         )
+
+    def get_backend(self):
+        return "psi4"
 
     def get_n_alpha(self):
         return self.wfn.nalpha()
@@ -79,7 +76,7 @@ class Psi4HFProvider(HartreeFockProvider):
     def get_n_beta(self):
         return self.get_n_alpha()
 
-    def get_threshold(self):
+    def get_conv_tol(self):
         conv_tol = psi4.core.get_option("SCF", "E_CONVERGENCE")
         # RMS value of the orbital gradient
         conv_tol_grad = psi4.core.get_option("SCF", "D_CONVERGENCE")
@@ -87,10 +84,7 @@ class Psi4HFProvider(HartreeFockProvider):
         return threshold
 
     def get_restricted(self):
-        return True
-
-    def get_energy_term(self, term):
-        return self.energy_terms[term]
+        return True  # TODO Hard-coded for now.
 
     def get_energy_scf(self):
         return self.wfn.energy()
@@ -114,6 +108,12 @@ class Psi4HFProvider(HartreeFockProvider):
             np.hstack((mo_coeff[0], mo_coeff[1]))
         )
 
+    def fill_occupation_f(self, out):
+        out[:] = np.hstack((
+            np.asarray(self.wfn.occupation_a()),
+            np.asarray(self.wfn.occupation_b())
+        ))
+
     def fill_orben_f(self, out):
         orben_a = np.asarray(self.wfn.epsilon_a())
         orben_b = np.asarray(self.wfn.epsilon_b())
@@ -135,10 +135,6 @@ class Psi4HFProvider(HartreeFockProvider):
 
     def has_eri_phys_asym_ffff(self):
         return True
-
-    def get_energy_term_keys(self):
-        # TODO: implement full set of keys
-        return ["nuclear_repulsion"]
 
     def flush_cache(self):
         self.eri_ffff = None
