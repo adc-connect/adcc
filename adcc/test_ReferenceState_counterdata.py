@@ -282,10 +282,17 @@ class TestReferenceStateCounterData(unittest.TestCase):
 
         # Orbcoeff
         for ss in subspaces:
-            assert_array_equal(
-                refstate.orbital_coefficients(ss + "b").to_ndarray(),
-                np.hstack(ref_axis[ss])[:, None] * data.mul(1)
+            coeff_a = ref_axis[ss][0][:, None] * data.mul(1) \
                 + data.get_b_range()[None, :]
+            coeff_b = ref_axis[ss][1][:, None] * data.mul(1) \
+                + data.get_b_range()[None, :]
+            nfa, nb = coeff_a.shape
+            nfb, nb = coeff_b.shape
+            coeff_full = np.zeros((nfa + nfb, 2 * nb))
+            coeff_full[:nfa, :nb] = coeff_a
+            coeff_full[nfa:, nb:] = coeff_b
+            assert_array_equal(
+                refstate.orbital_coefficients(ss + "b").to_ndarray(), coeff_full
             )
 
         # Fock
