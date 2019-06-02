@@ -40,7 +40,15 @@ class ReferenceState(libadcc.ReferenceState):
                  import_all_below_n_orbs=10):
         """
         Construct a ReferenceState object. The object is lazy and will only
-        import orbital energies and coefficients. Fock matrix blocks and
+
+        import and
+        import Fock
+        import blocks
+        import matrix
+        import orbital
+        import energies
+        import coefficients.
+
         electron-repulsion integral blocks are imported as needed.
 
         @param hfdata
@@ -90,6 +98,14 @@ class ReferenceState(libadcc.ReferenceState):
         if not isinstance(hfdata, libadcc.HartreeFockSolution_i):
             hfdata = import_scf_results(hfdata)
 
+        if isinstance(frozen_core, bool) and frozen_core:
+            # Determine number of frozen core electrons automatically
+            # TODO The idea is to look at the energy gap in the HF orbital
+            #      energies and exclude the ones, which are very far from the
+            #      HOMO-LUMO gap.
+            raise NotImplementedError("Automatic determination of frozen-core "
+                                      "electrons not implemented.")
+
         if not isinstance(frozen_core, (list, int)) and frozen_core is not None:
             raise TypeError("frozen_core should be an int or a list")
         if not isinstance(core_orbitals, (list, int)) \
@@ -98,6 +114,14 @@ class ReferenceState(libadcc.ReferenceState):
         if not isinstance(frozen_virtual, (list, int)) \
            and frozen_virtual is not None:
             raise TypeError("frozen_virtual should be an int or a list")
+
+        if isinstance(frozen_core, list):
+            raise NotImplementedError("Arbitrary frozen-core not tested.")
+        if isinstance(core_orbitals, list):
+            raise NotImplementedError("Arbitrary CVS not tested.")
+        if isinstance(frozen_virtual, list):
+            raise NotImplementedError("Arbitrary frozen-virtual not "
+                                      "tested.")
 
         if any(isinstance(k, int) for k in [frozen_core, core_orbitals,
                                             frozen_virtual]):

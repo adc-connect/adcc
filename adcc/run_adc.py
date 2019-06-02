@@ -41,8 +41,10 @@ __all__ = ["run_adc"]
 
 def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
             solver_method=None, guesses=None, n_guesses=None,
-            n_guesses_doubles=None, output=sys.stdout, n_core_orbitals=None,
-            method=None, n_singlets=None, n_triplets=None, n_spin_flip=None,
+            n_guesses_doubles=None, output=sys.stdout, core_orbitals=None,
+            frozen_core=None, frozen_virtual=None, method=None,
+            n_singlets=None, n_triplets=None, n_spin_flip=None,
+            n_core_orbitals=None,
             **solverargs):
     """Run an ADC calculation.
 
@@ -108,12 +110,20 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         Python stream to which output will be written. If `None` all output
         is disabled.
 
-    n_core_orbitals : int, optional
+    core_orbitals : int, optional
         Number of (spatial) core orbitals. Required if core-valence
         separation is applied in the and input data is given as data from the
         host program (i.e. option (a) in `data_or_matrix` above).
         Notice that this number denotes spatial orbitals. Thus a value of `1`
         will put 1 alpha and 1 beta electron into the core region.
+
+    frozen_core : int, optional
+        Number of orbitals to put into the frozen core.A
+        TODO Docme Valid are number of electrons or True
+
+    frozen_virtual : int, optional
+        TODO Docme Valid are number of electrons or a fraction
+        of the homo-lumo gap
 
     Other parameters
     ----------------
@@ -147,6 +157,10 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     short-hands (see e.g. :py:func:`adcc.adc2`, :py:func:`adcc.cvs_adc2x`):
 
     >>> state = adcc.adc2(mf, n_singlets=3)
+
+
+
+
     """
     #
     # Input argument sanitisation
@@ -155,35 +169,46 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         solver_method = "jacobi_davidson"
 
     # Step 1: Construct at least ReferenceState
-    # TODO The flexibility coded here, should be put directly into the
-    #      python-side construction of the ReferenceState object
-    #      (or the AdcMatrix??) now that tmp_build_reference_state is gone.
     if not isinstance(data_or_matrix, AdcMatrix) and method is None:
         raise ValueError("method needs to be explicitly provided unless "
                          "data_or_matrix is an AdcMatrix.")
     if method is not None and not isinstance(method, AdcMethod):
         method = AdcMethod(method)
 
+    if n_core_orbitals is not None:
+        warnings.warn(DeprecationWarning("n_core_orbitals is a deprecated "
+                                         "option. Use core_orbitals instead."))
+        core_orbitals = n_core_orbitals
+
     if not isinstance(data_or_matrix, (ReferenceState, AdcMatrix, LazyMp)):
-        if method.is_core_valence_separated and n_core_orbitals is None:
+        if method.is_core_valence_separated and core_orbitals is None:
             raise ValueError("If core-valence separation approximation is "
                              "applied then the number of core orbitals needs "
                              "to be specified via the parameter "
-                             "n_core_orbitals.")
-        # TODO Generalise run_adc input parameters to access full flexibility
-        #      of ReferenceState setup
+                             "core_orbitals.")
         refstate = adcc_ReferenceState(data_or_matrix,
-                                       core_orbitals=n_core_orbitals)
+                                       core_orbitals=core_orbitals,
+                                       frozen_core=frozen_core,
+                                       frozen_virtual=frozen_virtual)
         data_or_matrix = refstate
-    elif n_core_orbitals is not None:
-        if isinstance(data_or_matrix, ReferenceState):
-            refstate = data_or_matrix
-        else:
-            refstate = data_or_matrix.reference_state
-        warnings.warn("Ignored n_core_orbitals parameter because data_or_matrix"
+    elif core_orbitals is not None:
+        mospaces = data_or_matrix.mospaces
+        warnings.warn("Ignored core_orbitals parameter because data_or_matrix"
                       " is a ReferenceState, a LazyMp or an AdcMatrix object "
-                      " (which has a value of n_core_orbitals={})."
-                      "".format(refstate.mospaces.n_orbs_alpha("o2")))
+                      " (which has a value of core_orbitals={})."
+                      "".format(mospaces.n_orbs_alpha("o2")))
+    elif frozen_core is not None:
+        mospaces = data_or_matrix.mospaces
+        warnings.warn("Ignored frozen_core parameter because data_or_matrix"
+                      " is a ReferenceState, a LazyMp or an AdcMatrix object "
+                      " (which has a value of frozen_core={})."
+                      "".format(mospaces.n_orbs_alpha("o3")))
+    elif frozen_virtual is not None:
+        mospaces = data_or_matrix.mospaces
+        warnings.warn("Ignored frozen_virtual parameter because data_or_matrix"
+                      " is a ReferenceState, a LazyMp or an AdcMatrix object "
+                      " (which has a value of frozen_virtual={})."
+                      "".format(mospaces.n_orbs_alpha("v2")))
 
     # Step2: Make AdcMatrix
     if isinstance(data_or_matrix, (ReferenceState, LazyMp)):
