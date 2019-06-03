@@ -22,7 +22,6 @@
 ## ---------------------------------------------------------------------
 
 import adcc
-import libadcc
 
 import numpy as np
 
@@ -48,12 +47,6 @@ def operator_import_test(scfres, ao_dict):
 
         dip_imported = refstate.operator_integrals.electric_dipole(k)
         for b in dip_imported.blocks:
-            symmetry_ref = libadcc.make_symmetry_operator(
-                refstate.mospaces, b, True, k
-            )
-            ref = symmetry_ref.describe()
-            imported_sym = dip_imported[b].describe_symmetry()
-            assert ref == imported_sym
             np.testing.assert_allclose(
                 dip_mock[b], dip_imported[b].to_ndarray(),
                 atol=refstate.conv_tol

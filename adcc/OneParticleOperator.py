@@ -52,46 +52,6 @@ class OneParticleOperator(libadcc.OneParticleOperator):
             raise TypeError("Cannot add OneParticleOperator"
                             " and {}".format(type(other)))
 
-    def expectation_value(self, dm):
-        non_zero_blocks = [b for b in dm.blocks if not dm.is_zero_block(b)]
-        if self.is_symmetric and dm.is_symmetric:
-            ret = 0
-            assert self.blocks == dm.blocks
-            for b in non_zero_blocks:
-                # transposed block string
-                tb = b[2:] + b[:2]
-                if b == tb:
-                    ret += self[b].dot(dm[b])
-                else:
-                    ret += 2.0 * self[b].dot(dm[b])
-            return ret
-        elif self.is_symmetric and not dm.is_symmetric:
-            ret = 0
-            for b in non_zero_blocks:
-                # transposed block string
-                tb = b[2:] + b[:2]
-                if b in self.blocks:
-                    ret += self[b].dot(dm[b])
-                elif tb in self.blocks:
-                    ret += self[tb].transpose().dot(dm[b])
-            return ret
-        elif not self.is_symmetric and dm.is_symmetric:
-            ret = 0
-            for b in self.blocks:
-                # transposed block string
-                tb = b[2:] + b[:2]
-                if b in dm.blocks and not dm.is_zero_block(b):
-                    ret += self[b].dot(dm[b])
-                elif tb in dm.blocks and not dm.is_zero_block(tb):
-                    ret += self[b].dot(dm[tb].transpose())
-            return ret
-        else:
-            ret = 0
-            assert self.blocks == dm.blocks
-            for b in non_zero_blocks:
-                ret += self[b].dot(dm[b])
-            return ret
-
 
 class HfDensityMatrix(OneParticleOperator):
     def __init__(self, mospaces):
@@ -106,3 +66,52 @@ class HfDensityMatrix(OneParticleOperator):
         if self.has_block("o2o2"):
             diag = np.eye(self["o2o2"].shape[0])
             self["o2o2"].set_from_ndarray(diag)
+
+
+def product_trace(op1, op2):
+    all_blocks = list(set(op1.blocks + op2.blocks))
+    if op1.is_symmetric and op2.is_symmetric:
+        ret = 0
+        assert op1.blocks == op2.blocks
+        for b in all_blocks:
+            if op1.is_zero_block(b) or op2.is_zero_block(b):
+                continue
+            # transposed block string
+            tb = b[2:] + b[:2]
+            if b == tb:
+                ret += op1[b].dot(op2[b])
+            else:
+                ret += 2.0 * op1[b].dot(op2[b])
+        return ret
+    elif op1.is_symmetric and not op2.is_symmetric:
+        ret = 0
+        for b in all_blocks:
+            if op1.is_zero_block(b) or op2.is_zero_block(b):
+                continue
+            # transposed block string
+            tb = b[2:] + b[:2]
+            if b in op1.blocks:
+                ret += op1[b].dot(op2[b])
+            elif tb in op1.blocks:
+                ret += op1[tb].transpose().dot(op2[b])
+        return ret
+    elif not op1.is_symmetric and op2.is_symmetric:
+        ret = 0
+        for b in all_blocks:
+            if op1.is_zero_block(b) or op2.is_zero_block(b):
+                continue
+            # transposed block string
+            tb = b[2:] + b[:2]
+            if b in op2.blocks:
+                ret += op2[b].dot(op1[b])
+            elif tb in op2.blocks and not op2.is_zero_block(tb):
+                ret += op2[tb].transpose().dot(op1[b])
+        return ret
+    else:
+        ret = 0
+        assert op1.blocks == op2.blocks
+        for b in all_blocks:
+            if op1.is_zero_block(b) or op2.is_zero_block(b):
+                continue
+            ret += op1[b].dot(op2[b])
+        return ret
