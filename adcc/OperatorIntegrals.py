@@ -58,7 +58,12 @@ class OperatorIntegrals:
             make_block_diagonal_tensor(op_backend), self.conv_tol
         )
         for b in op_adcc.blocks:
-            op_adcc.set_block(b, self.transform_bb_to_ff(b, tensor_bb))
+            # TODO: once the permutational symmetry is correct:
+            # op_adcc.set_block(b, self.transform_bb_to_ff(b, tensor_bb))
+            # for now:
+            op_adcc[b].set_from_ndarray(
+                self.transform_bb_to_ff(b, tensor_bb).to_ndarray()
+            )
 
     def electric_dipole(self, component="x"):
         if not hasattr(self.provider, "electric_dipole"):
