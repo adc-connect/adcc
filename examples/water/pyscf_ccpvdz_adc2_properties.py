@@ -113,7 +113,7 @@ for i, ampl in enumerate(state.eigenvectors):
     osc_new = state.oscillator_strengths[i]
 
     np.testing.assert_allclose(tdip, tdip_new, atol=1e-8)
-    np.testing.assert_allclose(sdip, sdip_new - dip_nucl, atol=1e-8)
+    np.testing.assert_allclose(sdip, sdip_new, atol=1e-8)
     np.testing.assert_allclose(osc, osc_new, atol=1e-8)
 
     # Print findings

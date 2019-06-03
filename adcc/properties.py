@@ -94,7 +94,8 @@ def compute_state_dipole_moments(state):
         [dips(k).expectation_value(ddm) for k in comps]
         for ddm in state.state_diffdms
     ])
-    state_dip_moments += gs_dip_moment
+    nuc_dip = state.reference_state.operator_integrals.nuclear_dipole()
+    state_dip_moments += gs_dip_moment - nuc_dip
     return state_dip_moments
 
 

@@ -43,6 +43,14 @@ class VeloxChemOperatorIntegralProvider:
         ao_dip = {k: ao_dip[i] for i, k in enumerate(['x', 'y', 'z'])}
         return ao_dip[component]
 
+    def nuclear_dipole(self):
+        mol = self.scfdrv.task.molecule
+        nuc_charges = mol.elem_ids_to_numpy()
+        coords = np.vstack(
+            (mol.x_to_numpy(), mol.y_to_numpy(), mol.z_to_numpy())
+        ).T
+        return np.einsum('i,ix->x', nuc_charges, coords)
+
     def fock(self):
         return self.scfdrv.scf_tensors['F'][0]
 

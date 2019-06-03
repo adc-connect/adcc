@@ -62,7 +62,8 @@ class OperatorIntegrals:
             # op_adcc.set_block(b, self.transform_bb_to_ff(b, tensor_bb))
             # for now:
             op_adcc[b].set_from_ndarray(
-                self.transform_bb_to_ff(b, tensor_bb).to_ndarray()
+                self.transform_bb_to_ff(b, tensor_bb).to_ndarray(),
+                self.conv_tol
             )
 
     def electric_dipole(self, component="x"):
@@ -84,3 +85,11 @@ class OperatorIntegrals:
         ao_fock = self.provider.fock()
         self.transform_backend_to_adcc(ao_fock, fock, is_symmetric=True)
         return fock
+
+    # TODO: probably not the best place to put this, but it works...
+    # other suggestions welcome...
+    def nuclear_dipole(self):
+        if not hasattr(self.provider, "nuclear_dipole"):
+            raise NotImplementedError("Nuclear dipole moment not implemented"
+                                      " in {}.".format(self.provider.backend))
+        return self.provider.nuclear_dipole()

@@ -35,9 +35,13 @@ class Psi4OperatorIntegralProvider:
 
     def electric_dipole(self, component="x"):
         # TODO avoid re-computation
-        ao_dip = [np.asarray(comp) for comp in self.mints.ao_dipole()]
+        ao_dip = [-1.0 * np.asarray(comp) for comp in self.mints.ao_dipole()]
         ao_dip = {k: ao_dip[i] for i, k in enumerate(['x', 'y', 'z'])}
         return ao_dip[component]
+
+    def nuclear_dipole(self):
+        dip_nuclear = self.wfn.molecule().nuclear_dipole()
+        return np.array([dip_nuclear[0], dip_nuclear[1], dip_nuclear[2]])
 
     def fock(self):
         return np.asarray(self.wfn.Fa())

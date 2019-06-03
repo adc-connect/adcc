@@ -41,6 +41,12 @@ class PyScfOperatorIntegralProvider:
         ao_dip = {k: ao_dip[i] for i, k in enumerate(['x', 'y', 'z'])}
         return ao_dip[component]
 
+    def nuclear_dipole(self):
+        # compute nuclear dipole
+        charges = self.scfres.mol.atom_charges()
+        coords = self.scfres.mol.atom_coords()
+        return np.einsum('i,ix->x', charges, coords)
+
     def fock(self):
         return self.scfres.get_fock()
 
