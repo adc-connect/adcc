@@ -105,6 +105,7 @@ void export_CtxMap(py::module& m) {
 
   py::class_<ctx::CtxMap, std::shared_ptr<ctx::CtxMap>>(
         m, "CtxMap", "Class holding a CtxMap context map object.")
+        .def(py::init<>())
         .def("keys", &CtxMap__keys)
         .def("exists", &CtxMap::exists)
         //
@@ -123,6 +124,23 @@ void export_CtxMap(py::module& m) {
         //
         .def("at_bool_list", &CtxMap__at_bool_list)
         .def("at_unsigned_long_list", &CtxMap__at_unsigned_long_list)
+        //
+        .def("update_tensor", [](ctx::CtxMap& self, std::string key,
+                                 std::shared_ptr<Tensor> val) { self.update(key, val); })
+        .def("update_scalar", [](ctx::CtxMap& self, std::string key,
+                                 scalar_type val) { self.update(key, val); })
+        .def("update_bool",
+             [](ctx::CtxMap& self, std::string key, bool val) { self.update(key, val); })
+        .def("update_unsigned_long", [](ctx::CtxMap& self, std::string key,
+                                        unsigned long val) { self.update(key, val); })
+        .def("update_unsigned_int", [](ctx::CtxMap& self, std::string key,
+                                       unsigned int val) { self.update(key, val); })
+        .def("update_string", [](ctx::CtxMap& self, std::string key,
+                                 std::string val) { self.update(key, val); })
+        .def("update_scalar_list",
+             [](ctx::CtxMap& self, std::string key, std::vector<scalar_type> val) {
+               self.update_copy(key, val);
+             })
         //
         ;
 }

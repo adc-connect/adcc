@@ -50,7 +50,8 @@ class AdcmanSolverState(SolverStateBase):
 def eigh(matrix, n_singlets=None, n_triplets=None, n_states=None,
          n_spin_flip=None, max_subspace=0, conv_tol=1e-6, max_iter=60,
          print_level=1, residual_min_norm=1e-12,
-         n_guess_singles=0, n_guess_doubles=0):
+         n_guess_singles=0, n_guess_doubles=0, extra_ctx=None,
+         extra_params=None):
     """
     Davidson eigensolver for ADC problems
 
@@ -83,6 +84,8 @@ def eigh(matrix, n_singlets=None, n_triplets=None, n_states=None,
                              than then the number of states to be
                              computed, then n_guess_singles = number of
                              excited states to compute
+    @param extra_ctx         Supply extra input context data to adcman
+    @param extra_params      Supply extra input parameters to adcman
     """
     if "adcman" not in libadcc.__features__:
         raise RuntimeError(
@@ -145,11 +148,18 @@ def eigh(matrix, n_singlets=None, n_triplets=None, n_states=None,
     if n_singlets + n_triplets + n_spin_flip == 0:
         raise ValueError("No excited states to compute.")
 
+    if extra_ctx is None:
+        extra_ctx = libadcc.CtxMap()
+
+    if extra_params is None:
+        extra_params = libadcc.CtxMap()
+
     res = libadcc.solve_adcman_davidson(matrix, n_singlets, n_triplets,
                                         n_spin_flip, conv_tol, max_iter,
                                         max_subspace, print_level,
                                         residual_min_norm, n_guess_singles,
-                                        n_guess_doubles)
+                                        n_guess_doubles, extra_ctx,
+                                        extra_params)
 
     return [AdcmanSolverState(matrix, state, spin_change) for state in res]
 
