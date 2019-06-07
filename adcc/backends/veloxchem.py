@@ -41,21 +41,7 @@ class VeloxChemOperatorIntegralProvider:
 
     @cached_property
     def electric_dipole(self, component="x"):
-        # TODO avoid re-computation
-        ao_dip = self.scfdrv.scf_tensors['Mu']
-        return {k: ao_dip[i] for i, k in enumerate(['x', 'y', 'z'])}
-
-    @property
-    def nuclear_dipole(self):
-        mol = self.scfdrv.task.molecule
-        nuc_charges = mol.elem_ids_to_numpy()
-        coords = np.vstack(
-            (mol.x_to_numpy(), mol.y_to_numpy(), mol.z_to_numpy())
-        ).T
-        return np.einsum('i,ix->x', nuc_charges, coords)
-
-    def fock(self):
-        return self.scfdrv.scf_tensors['F'][0]
+        return list(self.scfdrv.scf_tensors['Mu'])
 
 
 # VeloxChem is a special case... not using coefficients at all
@@ -283,6 +269,20 @@ class VeloxChemHFProvider(HartreeFockProvider):
 
     def get_n_bas(self):
         return self.mol_orbs.number_aos()
+
+    def get_nuclear_multipole(self, order):
+        mol = self.scfdrv.task.molecule
+        nuc_charges = mol.elem_ids_to_numpy()
+        if order == 0:
+            # The function interface needs to be a np.array on return
+            return np.array([np.sum(nuc_charges)])
+        elif order == 1:
+            coords = np.vstack(
+                (mol.x_to_numpy(), mol.y_to_numpy(), mol.z_to_numpy())
+            ).transpose()
+            return np.einsum('i,ix->x', nuc_charges, coords)
+        else:
+            raise NotImplementedError("get_nuclear_multipole with order > 1")
 
     def fill_orbcoeff_fb(self, out):
         mo_coeff_a = self.mol_orbs.alpha_to_numpy()

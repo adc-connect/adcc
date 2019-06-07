@@ -57,6 +57,9 @@ def convert_scf_to_dict(scfres):
     data["energy_scf"] = scfres["energy_ground_state"]
     data["conv_tol"] = 10 * scfres["final_error_norm"]
     data["orbcoeff_fb"] = scfres["orbcoeff_bf"].transpose().copy()
+
+    # TODO nuclear charge and nuclear dipole moments
+
     data["backend"] = "molsturm"
     return data
 

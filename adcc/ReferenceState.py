@@ -20,11 +20,11 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import libadcc
-
 from .backends import import_scf_results
-from .OperatorIntegrals import OperatorIntegrals
 from .memory_pool import memory_pool
+from .OperatorIntegrals import OperatorIntegrals
+
+import libadcc
 
 __all__ = ["ReferenceState"]
 

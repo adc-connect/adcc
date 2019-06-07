@@ -22,10 +22,13 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
+from .AdcMethod import AdcMethod
 from .state_densities import attach_state_densities
 from .OneParticleOperator import HfDensityMatrix, product_trace
 
 from copy import copy
+
+__all__ = ["attach_properties"]
 
 
 def transition_dipole_moments(state):
@@ -39,10 +42,9 @@ def transition_dipole_moments(state):
     if not hasattr(state.reference_state.operator_integrals, "electric_dipole"):
         raise ValueError("Reference state cannot provide electric dipole"
                          " integrals.")
-    comps = ['x', 'y', 'z']
-    dips = state.reference_state.operator_integrals.electric_dipole
+    dipole_integrals = state.reference_state.operator_integrals.electric_dipole
     tdip_moments = np.array([
-        [product_trace(dips(k), tdm) for k in comps]
+        [product_trace(comp, tdm) for comp in dipole_integrals]
         for tdm in state.ground_to_excited_tdms
     ])
     return tdip_moments
@@ -65,7 +67,7 @@ def oscillator_strengths(transition_dipole_moments, energies):
     return oscs
 
 
-def dipole_moments(state):
+def state_dipole_moments(state, method=None):
     """
     Compute the dipole moment of each excited state
     from a solver state (in a.u.), including contributions from
@@ -77,25 +79,58 @@ def dipole_moments(state):
     if not hasattr(state.reference_state.operator_integrals, "electric_dipole"):
         raise ValueError("Reference state cannot provide electric dipole"
                          " integrals.")
-    comps = ['x', 'y', 'z']
-    dips = state.reference_state.operator_integrals.electric_dipole
-    # TODO: what about ADC(1)?
+    if method is None:
+        method = state.method
+    if not isinstance(method, AdcMethod):
+        method = AdcMethod(method)
+
+    dipole_integrals = state.reference_state.operator_integrals.electric_dipole
+
+    # TODO: What about ADC(0) and ADC(1)
+    #       mfh: I think adcman also uses MP(2) density corrections,
+    #            which feels wrong. Until we understand this, we better bail out
+    if method.property_method in ["adc0", "adc1"]:
+        raise NotImplementedError("ADC(0) and ADC(1) state dipole moments not "
+                                  "yet implemented.")
+
+    # Compute ground-state dipole moment (TODO Put this into LazyMp?),
+    # noting that the nuclear contribution carries the opposite sign
+    # as the electronic contribution (due to the opposite
+    # charge of the nuclei)
+    hf_dm = HfDensityMatrix(state.reference_state)
     mp2_diffdm = state.ground_state.mp2_diffdm
-    hf_dm = HfDensityMatrix(mospaces=state.reference_state.mospaces)
-    hf_dip_moment = np.array([
-        product_trace(dips(k), hf_dm) for k in comps
-    ])
-    mp_dip_moment = np.array([
-        product_trace(dips(k), mp2_diffdm) for k in comps
-    ])
-    gs_dip_moment = hf_dip_moment + mp_dip_moment
-    state_dip_moments = np.array([
-        [product_trace(dips(k), ddm) for k in comps]
+    gs_dip_moment = np.array([
+        product_trace(comp, hf_dm) + product_trace(comp, mp2_diffdm)
+        for comp in dipole_integrals
+    ]) - state.reference_state.nuclear_dipole
+
+    return gs_dip_moment + np.array([
+        [product_trace(comp, ddm) for comp in dipole_integrals]
         for ddm in state.state_diffdms
     ])
-    nuc_dip = state.reference_state.operator_integrals.nuclear_dipole()
-    state_dip_moments += gs_dip_moment - nuc_dip
-    return state_dip_moments
+
+
+def attach_state_properties(solver_state, method=None):
+    if not hasattr(solver_state, "state_diffdms"):
+        solver_state = attach_state_densities(solver_state, state_diffdm=True,
+                                              ground_to_excited_tdm=False,
+                                              state_to_state_tdm=False,
+                                              method=method)
+    solver_state.state_dipole_moments = state_dipole_moments(solver_state,
+                                                             method=method)
+    return solver_state
+
+
+def attach_transition_properties(state, method=None):
+    if not hasattr(state, "ground_to_excited_tdms"):
+        state = attach_state_densities(state, state_diffdm=False,
+                                       ground_to_excited_tdm=True,
+                                       state_to_state_tdm=False, method=method)
+    state.transition_dipole_moments = transition_dipole_moments(state)
+    state.oscillator_strengths = oscillator_strengths(
+        state.transition_dipole_moments, state.eigenvalues
+    )
+    return state
 
 
 def attach_properties(solver_state, transition_properties=True,
@@ -105,32 +140,13 @@ def attach_properties(solver_state, transition_properties=True,
     state and attach them to the state
 
     @param solver_state     The solver state to work on.
-
     @transition_properties  Compute transition properties
-
     @state_properties       Compute properties of the excited states
+    @method                 The method to use for property calculations
     """
     solver_state = copy(solver_state)
     if state_properties:
-        if not hasattr(solver_state, "state_diffdms"):
-            solver_state = attach_state_densities(
-                solver_state, state_diffdm=True, ground_to_excited_tdm=False,
-                method=method
-            )
-        solver_state.state_dipole_moments = dipole_moments(
-            solver_state
-        )
-
+        solver_state = attach_state_properties(solver_state, method)
     if transition_properties:
-        if not hasattr(solver_state, "ground_to_excited_tdms"):
-            solver_state = attach_state_densities(
-                solver_state, state_diffdm=False, ground_to_excited_tdm=True,
-                method=method
-            )
-        solver_state.transition_dipole_moments = transition_dipole_moments(
-            solver_state
-        )
-        solver_state.oscillator_strengths = oscillator_strengths(
-            solver_state.transition_dipole_moments, solver_state.eigenvalues
-        )
+        solver_state = attach_transition_properties(solver_state, method)
     return solver_state

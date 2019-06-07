@@ -34,13 +34,9 @@ class DictOperatorIntegralProvider:
 
         if "multipoles" in data:
             mmp = data["multipoles"]
-            if "nuclear_1" in mmp:
-                self.nuclear_dipole = mmp["nuclear_1"]
             if "elec_1" in mmp:
-                self.electric_dipole = {
-                    k: mmp["elec_1"][i, :, :]
-                    for i, k in enumerate(["x", "y", "z"])
-                }
+                assert mmp["elec_1"].shape[0] == 3
+                self.electric_dipole = list(mmp["elec_1"])
 
 
 class DictHfProvider(HartreeFockProvider):
@@ -53,18 +49,10 @@ class DictHfProvider(HartreeFockProvider):
     """
 
     def __init__(self, data):
-        # Do not forget the next line,
-        # otherwise weird errors result
+        # Do not forget the next line, otherwise weird errors result
         super().__init__()
         self.data = data
         self.operator_integral_provider = DictOperatorIntegralProvider(data)
-
-        if "multipoles" in self.data:
-            mmp = self.data["multipoles"]
-            if "nuclear_0" in mmp:
-                self.nuclear_total_charge = mmp["nuclear_0"]
-            if "nuclear_1" in mmp:
-                self.nuclear_dipole = mmp["nuclear_1"]
 
     def get_backend(self):
         return self.data.get("backend", "dict")
@@ -97,6 +85,15 @@ class DictHfProvider(HartreeFockProvider):
 
     def get_n_bas(self):
         return self.data["n_bas"]
+
+    def get_nuclear_multipole(self, order):
+        if order == 0:
+            # The function interface needs to be a np.array on return
+            return np.array([self.data["multipoles"]["nuclear_0"]])
+        elif order == 1:
+            return np.array(self.data["multipoles"]["nuclear_1"])
+        else:
+            raise NotImplementedError("get_nuclear_multipole with order > 1")
 
     def fill_occupation_f(self, out):
         if "occupation_f" in self.data:

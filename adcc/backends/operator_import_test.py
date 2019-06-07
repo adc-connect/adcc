@@ -20,10 +20,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import numpy as np
 
 import adcc
-
-import numpy as np
 
 
 def operator_import_test(scfres, ao_dict):
@@ -33,21 +32,22 @@ def operator_import_test(scfres, ao_dict):
     virta = refstate.orbital_coefficients_alpha("v1b").to_ndarray()
     virtb = refstate.orbital_coefficients_beta("v1b").to_ndarray()
 
-    for k in ao_dict:
-        dip_oo = np.einsum('ib,ba,ja->ij', occa, ao_dict[k], occa)
-        dip_oo += np.einsum('ib,ba,ja->ij', occb, ao_dict[k], occb)
+    for i, ao_component in enumerate(ao_dict):
+        dip_oo = np.einsum('ib,ba,ja->ij', occa, ao_component, occa)
+        dip_oo += np.einsum('ib,ba,ja->ij', occb, ao_component, occb)
 
-        dip_ov = np.einsum('ib,ba,ja->ij', occa, ao_dict[k], virta)
-        dip_ov += np.einsum('ib,ba,ja->ij', occb, ao_dict[k], virtb)
+        dip_ov = np.einsum('ib,ba,ja->ij', occa, ao_component, virta)
+        dip_ov += np.einsum('ib,ba,ja->ij', occb, ao_component, virtb)
 
-        dip_vv = np.einsum('ib,ba,ja->ij', virta, ao_dict[k], virta)
-        dip_vv += np.einsum('ib,ba,ja->ij', virtb, ao_dict[k], virtb)
+        dip_vv = np.einsum('ib,ba,ja->ij', virta, ao_component, virta)
+        dip_vv += np.einsum('ib,ba,ja->ij', virtb, ao_component, virtb)
 
         dip_mock = {"o1o1": dip_oo, "o1v1": dip_ov, "v1v1": dip_vv}
 
-        dip_imported = refstate.operator_integrals.electric_dipole(k)
+        dip_imported = refstate.operator_integrals.electric_dipole[i]
         for b in dip_imported.blocks:
+            sign = np.sign(dip_mock[b][0, 0]) * np.sign(dip_imported[b][0, 0])
             np.testing.assert_allclose(
-                dip_mock[b], dip_imported[b].to_ndarray(),
+                sign * dip_mock[b], dip_imported[b].to_ndarray(),
                 atol=refstate.conv_tol
             )

@@ -38,6 +38,10 @@ def import_data():
         "restricted": True,
         "threshold": 1e-12,
         "spin_multiplicity": 1,
+        "multipoles": {
+            "nuclear_0": 10,
+            "nuclear_1": np.array([1.693194615993441, 0.0, 1.196196642772152]),
+        },
     }
     n_orbs = data["n_orbs_alpha"] + data["n_orbs_beta"]
 

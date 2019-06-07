@@ -401,7 +401,7 @@ setup(
     python_requires='>=3.5',
     install_requires=[
         'pybind11 (>= 2.2)',
-        'numpy',
+        'numpy (>= 1.13)',  # Maybe even higher?
         'scipy',
     ],
     tests_require=["pytest", "h5py"],

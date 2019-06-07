@@ -24,8 +24,8 @@ import unittest
 import numpy as np
 
 from ..misc import expand_test_templates
-from .eri_construction_test import eri_asymm_construction_test
 from .operator_import_test import operator_import_test
+from .eri_construction_test import eri_asymm_construction_test
 
 from numpy.testing import assert_almost_equal, assert_array_equal
 
@@ -126,7 +126,6 @@ class TestVeloxchem(unittest.TestCase):
 
     def dipole_operator_import_test(self, scfdrv):
         ao_dip = scfdrv.scf_tensors['Mu']
-        ao_dip = {k: ao_dip[i] for i, k in enumerate(['x', 'y', 'z'])}
         operator_import_test(scfdrv, ao_dip)
 
     def template_rhf_h2o(self, basis):

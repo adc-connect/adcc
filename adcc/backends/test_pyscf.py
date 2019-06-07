@@ -22,19 +22,19 @@
 ## ---------------------------------------------------------------------
 import unittest
 import numpy as np
-import adcc
-import adcc.backends
+
+from ..misc import expand_test_templates
+from .operator_import_test import operator_import_test
+from .eri_construction_test import eri_asymm_construction_test
 
 from numpy.testing import assert_almost_equal
 
+import pytest
+import adcc
+import adcc.backends
+
 from adcc.backends import have_backend
 from adcc.testdata import geometry
-
-import pytest
-
-from ..misc import expand_test_templates
-from .eri_construction_test import eri_asymm_construction_test
-from .operator_import_test import operator_import_test
 
 if have_backend("pyscf"):
     from pyscf import gto, scf
@@ -154,8 +154,7 @@ class TestPyscf(unittest.TestCase):
 
     def dipole_operator_import_test(self, mf):
         ao_dip = mf.mol.intor_symmetric('int1e_r', comp=3)
-        ao_dip = {k: ao_dip[i] for i, k in enumerate(['x', 'y', 'z'])}
-        operator_import_test(mf, ao_dip)
+        operator_import_test(mf, list(ao_dip))
 
     def template_rhf_h2o(self, basis):
         mf = adcc.backends.run_hf("pyscf", geometry.xyz["h2o"], basis)

@@ -28,73 +28,53 @@ from .OneParticleOperator import OneParticleOperator
 import libadcc
 
 
-def make_block_diagonal_tensor(tensor):
-    return np.vstack((
-        np.hstack((tensor, np.zeros_like(tensor))),
-        np.hstack((np.zeros_like(tensor), tensor))
-    ))
-
-
 class OperatorIntegrals:
-    def __init__(self, provider, mospaces, coefficients,
-                 conv_tol):
+    def __init__(self, provider, mospaces, coefficients, conv_tol):
         self.provider = provider
         self.mospaces = mospaces
         self.coefficients = coefficients
         self.conv_tol = conv_tol
 
-    def transform_bb_to_ff(self, block, tensor_bb):
-        c1 = self.coefficients(block[:2] + "b")
-        c2 = self.coefficients(block[2:] + "b")
-        return c1 @ tensor_bb @ c2.transpose()
-
-    def transform_backend_to_adcc(self, op_backend, op_adcc, is_symmetric=True):
+    def transform_backend_to_adcc(self, op_backend, op_adcc):
+        """
+        Transform an operator from the backend (given in the atomic
+        orbital basis) to the molecular orbital basis used in adcc.
+        """
         sym = libadcc.make_symmetry_operator_basis(
-            self.mospaces, op_backend.shape[0], is_symmetric
+            self.mospaces, op_backend.shape[0], op_adcc.is_symmetric
         )
         tensor_bb = Tensor(sym)
-        tensor_bb.set_from_ndarray(
-            make_block_diagonal_tensor(op_backend), self.conv_tol
-        )
-        for b in op_adcc.blocks:
-            # TODO: once the permutational symmetry is correct:
-            # op_adcc.set_block(b, self.transform_bb_to_ff(b, tensor_bb))
-            # for now:
-            op_adcc[b].set_from_ndarray(
-                self.transform_bb_to_ff(b, tensor_bb).to_ndarray(),
-                self.conv_tol
-            )
 
-    def electric_dipole(self, component="x"):
+        A = op_backend
+        Z = np.zeros_like(A)
+        tensor_bb.set_from_ndarray(np.block([
+            [A, Z],
+            [Z, A],
+        ]), self.conv_tol)
+
+        for blk in op_adcc.blocks:
+            assert len(blk) == 4
+            cleft = self.coefficients(blk[:2] + "b")
+            cright = self.coefficients(blk[2:] + "b")
+            tensor_ff = cleft @ tensor_bb @ cright.transpose()
+
+            # TODO: once the permutational symmetry is correct:
+            # op_adcc.set_block(blk, tensor_ff)
+            op_adcc[blk].set_from_ndarray(tensor_ff.to_ndarray(), self.conv_tol)
+
+    @property
+    def electric_dipole(self):
         if not hasattr(self.provider, "electric_dipole"):
             raise NotImplementedError(
                 "Electric dipole operator not implemented in "
                 "{} backend.".format(self.provider.backend)
             )
-        elec_dip = OneParticleOperator(self.mospaces, is_symmetric=True,
-                                       cartesian_transform=component)
-        ao_dip = self.provider.electric_dipole[component]
-        self.transform_backend_to_adcc(ao_dip, elec_dip, is_symmetric=True)
-        return elec_dip
 
-    def fock(self):
-        if not hasattr(self.provider, "fock"):
-            raise NotImplementedError(
-                "Fock operator not implemented in "
-                "{} backend.".format(self.provider.backend)
-            )
-        fock = OneParticleOperator(self.mospaces, is_symmetric=True,
-                                   cartesian_transform="1")
-        ao_fock = self.provider.fock()
-        self.transform_backend_to_adcc(ao_fock, fock, is_symmetric=True)
-        return fock
-
-    # TODO: probably not the best place to put this, but it works...
-    # other suggestions welcome...
-    def nuclear_dipole(self):
-        if not hasattr(self.provider, "nuclear_dipole"):
-            raise NotImplementedError(
-                "Nuclear dipole moment not implemented in "
-                "{} backend.".format(self.provider.backend)
-            )
-        return self.provider.nuclear_dipole
+        dipoles = []
+        for i, component in enumerate(["x", "y", "z"]):
+            dip = OneParticleOperator(self.mospaces, is_symmetric=True,
+                                      cartesian_transform=component)
+            dip_backend = self.provider.electric_dipole[i]
+            self.transform_backend_to_adcc(dip_backend, dip)
+            dipoles.append(dip)
+        return dipoles

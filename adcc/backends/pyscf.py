@@ -39,18 +39,7 @@ class PyScfOperatorIntegralProvider:
 
     @cached_property
     def electric_dipole(self):
-        ao_dip = self.scfres.mol.intor_symmetric('int1e_r', comp=3)
-        return {k: ao_dip[i, :, :] for i, k in enumerate(['x', 'y', 'z'])}
-
-    @property
-    def nuclear_dipole(self):
-        # compute nuclear dipole
-        charges = self.scfres.mol.atom_charges()
-        coords = self.scfres.mol.atom_coords()
-        return np.einsum('i,ix->x', charges, coords)
-
-    def fock(self):
-        return self.scfres.get_fock()
+        return list(self.scfres.mol.intor_symmetric('int1e_r', comp=3))
 
 
 # TODO: refactor ERI builder to be more general
@@ -147,6 +136,17 @@ class PyScfHFProvider(HartreeFockProvider):
 
     def get_n_bas(self):
         return int(self.scfres.mol.nao_nr())
+
+    def get_nuclear_multipole(self, order):
+        charges = self.scfres.mol.atom_charges()
+        if order == 0:
+            # The function interface needs to be a np.array on return
+            return np.array([np.sum(charges)])
+        elif order == 1:
+            coords = self.scfres.mol.atom_coords()
+            return np.einsum('i,ix->x', charges, coords)
+        else:
+            raise NotImplementedError("get_nuclear_multipole with order > 1")
 
     def fill_occupation_f(self, out):
         if self.restricted:

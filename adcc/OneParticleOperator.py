@@ -20,13 +20,10 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
-import numpy as np
-
-import libadcc
-
 from .Tensor import Tensor
 from .functions import empty_like
+
+import libadcc
 
 
 class OneParticleOperator(libadcc.OneParticleOperator):
@@ -54,18 +51,15 @@ class OneParticleOperator(libadcc.OneParticleOperator):
 
 
 class HfDensityMatrix(OneParticleOperator):
-    def __init__(self, mospaces):
-        super().__init__(mospaces, True)
+    def __init__(self, reference_state):
+        super().__init__(reference_state.mospaces, is_symmetric=True)
         for b in self.blocks:
             sym = libadcc.make_symmetry_operator(
-                mospaces, b, True, "1"
+                reference_state.mospaces, b, True, "1"
             )
             self.set_block(b, Tensor(sym))
-        diag = np.eye(self["o1o1"].shape[0])
-        self["o1o1"].set_from_ndarray(diag)
-        if self.has_block("o2o2"):
-            diag = np.eye(self["o2o2"].shape[0])
-            self["o2o2"].set_from_ndarray(diag)
+        for ss in reference_state.mospaces.subspaces_occupied:
+            self[ss + ss].set_mask("ii", 1)
 
 
 def product_trace(op1, op2):

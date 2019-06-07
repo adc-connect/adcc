@@ -36,16 +36,7 @@ class Psi4OperatorIntegralProvider:
 
     @cached_property
     def electric_dipole(self):
-        ao_dip = [-1.0 * np.asarray(comp) for comp in self.mints.ao_dipole()]
-        return {k: ao_dip[i] for i, k in enumerate(['x', 'y', 'z'])}
-
-    @property
-    def nuclear_dipole(self):
-        dip_nuclear = self.wfn.molecule().nuclear_dipole()
-        return np.array([dip_nuclear[0], dip_nuclear[1], dip_nuclear[2]])
-
-    def fock(self):
-        return np.asarray(self.wfn.Fa())
+        return [np.asarray(comp) for comp in self.mints.ao_dipole()]
 
 
 class Psi4EriBuilder(EriBuilder):
@@ -122,6 +113,18 @@ class Psi4HFProvider(HartreeFockProvider):
 
     def get_n_bas(self):
         return self.wfn.basisset().nbf()
+
+    def get_nuclear_multipole(self, order):
+        molecule = self.wfn.molecule()
+        if order == 0:
+            # The function interface needs to be a np.array on return
+            return np.array([sum(molecule.charge(i)
+                                 for i in range(molecule.natom()))])
+        elif order == 1:
+            dip_nuclear = molecule.nuclear_dipole()
+            return np.array([dip_nuclear[0], dip_nuclear[1], dip_nuclear[2]])
+        else:
+            raise NotImplementedError("get_nuclear_multipole with order > 1")
 
     def fill_orbcoeff_fb(self, out):
         mo_coeff_a = np.asarray(self.wfn.Ca())

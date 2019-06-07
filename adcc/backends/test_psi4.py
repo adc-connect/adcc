@@ -24,8 +24,8 @@ import unittest
 import numpy as np
 
 from ..misc import expand_test_templates
-from .eri_construction_test import eri_asymm_construction_test
 from .operator_import_test import operator_import_test
+from .eri_construction_test import eri_asymm_construction_test
 
 from numpy.testing import assert_almost_equal
 
@@ -116,8 +116,7 @@ class TestPsi4(unittest.TestCase):
 
     def dipole_operator_import_test(self, wfn):
         mints = psi4.core.MintsHelper(wfn.basisset())
-        ao_dip = mints.ao_dipole()
-        ao_dip = {k: np.array(ao_dip[i]) for i, k in enumerate(['x', 'y', 'z'])}
+        ao_dip = [np.array(comp) for comp in mints.ao_dipole()]
         operator_import_test(wfn, ao_dip)
 
     def template_rhf_h2o(self, basis):
