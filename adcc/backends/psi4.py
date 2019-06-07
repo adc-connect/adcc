@@ -25,6 +25,7 @@ import numpy as np
 
 from libadcc import HartreeFockProvider
 from .eri_build_helper import EriBuilder
+from adcc.misc import cached_property
 
 
 class Psi4OperatorIntegralProvider:
@@ -33,12 +34,12 @@ class Psi4OperatorIntegralProvider:
         self.backend = "psi4"
         self.mints = psi4.core.MintsHelper(self.wfn.basisset())
 
-    def electric_dipole(self, component="x"):
-        # TODO avoid re-computation
+    @cached_property
+    def electric_dipole(self):
         ao_dip = [-1.0 * np.asarray(comp) for comp in self.mints.ao_dipole()]
-        ao_dip = {k: ao_dip[i] for i, k in enumerate(['x', 'y', 'z'])}
-        return ao_dip[component]
+        return {k: ao_dip[i] for i, k in enumerate(['x', 'y', 'z'])}
 
+    @property
     def nuclear_dipole(self):
         dip_nuclear = self.wfn.molecule().nuclear_dipole()
         return np.array([dip_nuclear[0], dip_nuclear[1], dip_nuclear[2]])

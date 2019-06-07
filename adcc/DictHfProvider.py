@@ -27,8 +27,20 @@ from warnings import warn
 from libadcc import HartreeFockProvider
 
 
-class DummyOperatorIntegralProvider:
-    pass
+class DictOperatorIntegralProvider:
+    def __init__(self, data={}):
+        self.data = data
+        self.backend = data.get("backend", "dict")
+
+        if "multipoles" in data:
+            mmp = data["multipoles"]
+            if "nuclear_1" in mmp:
+                self.nuclear_dipole = mmp["nuclear_1"]
+            if "elec_1" in mmp:
+                self.electric_dipole = {
+                    k: mmp["elec_1"][i, :, :]
+                    for i, k in enumerate(["x", "y", "z"])
+                }
 
 
 class DictHfProvider(HartreeFockProvider):
@@ -45,7 +57,14 @@ class DictHfProvider(HartreeFockProvider):
         # otherwise weird errors result
         super().__init__()
         self.data = data
-        self.operator_integral_provider = DummyOperatorIntegralProvider()
+        self.operator_integral_provider = DictOperatorIntegralProvider(data)
+
+        if "multipoles" in self.data:
+            mmp = self.data["multipoles"]
+            if "nuclear_0" in mmp:
+                self.nuclear_total_charge = mmp["nuclear_0"]
+            if "nuclear_1" in mmp:
+                self.nuclear_dipole = mmp["nuclear_1"]
 
     def get_backend(self):
         return self.data.get("backend", "dict")

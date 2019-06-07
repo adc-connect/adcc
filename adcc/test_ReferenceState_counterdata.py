@@ -26,8 +26,8 @@ import numpy as np
 
 from numpy.testing import assert_array_equal
 
-from .DictHfProvider import DummyOperatorIntegralProvider
 from libadcc import HartreeFockProvider
+from .DictHfProvider import DictOperatorIntegralProvider
 
 
 class HfCounterData(HartreeFockProvider):
@@ -46,7 +46,7 @@ class HfCounterData(HartreeFockProvider):
         self.__n_orbs_alpha = n_orbs_alpha
         self.__restricted = restricted
         self.__mul = 10
-        self.operator_integral_provider = DummyOperatorIntegralProvider()
+        self.operator_integral_provider = DictOperatorIntegralProvider()
 
         # Do not forget the next line,
         # otherwise weird errors result

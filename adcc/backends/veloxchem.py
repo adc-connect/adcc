@@ -23,13 +23,15 @@
 import os
 import tempfile
 import numpy as np
-import veloxchem as vlx
 
 from mpi4py import MPI
-from .eri_build_helper import (EriBuilder, SpinBlockSlice,
-                               get_symmetry_equivalent_transpositions_for_block)
+
+import veloxchem as vlx
 
 from libadcc import HartreeFockProvider
+from .eri_build_helper import (EriBuilder, SpinBlockSlice,
+                               get_symmetry_equivalent_transpositions_for_block)
+from adcc.misc import cached_property
 
 
 class VeloxChemOperatorIntegralProvider:
@@ -37,12 +39,13 @@ class VeloxChemOperatorIntegralProvider:
         self.scfdrv = scfdrv
         self.backend = "veloxchem"
 
+    @cached_property
     def electric_dipole(self, component="x"):
         # TODO avoid re-computation
         ao_dip = self.scfdrv.scf_tensors['Mu']
-        ao_dip = {k: ao_dip[i] for i, k in enumerate(['x', 'y', 'z'])}
-        return ao_dip[component]
+        return {k: ao_dip[i] for i, k in enumerate(['x', 'y', 'z'])}
 
+    @property
     def nuclear_dipole(self):
         mol = self.scfdrv.task.molecule
         nuc_charges = mol.elem_ids_to_numpy()

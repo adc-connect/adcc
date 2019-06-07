@@ -23,11 +23,13 @@
 import warnings
 import numpy as np
 
-from adcc.DictHfProvider import DictHfProvider
-
 from pyscf import ao2mo, gto, scf
+
 from libadcc import HartreeFockProvider
 from .eri_build_helper import EriBuilder
+
+from adcc.misc import cached_property
+from adcc.DictHfProvider import DictHfProvider
 
 
 class PyScfOperatorIntegralProvider:
@@ -35,12 +37,12 @@ class PyScfOperatorIntegralProvider:
         self.scfres = scfres
         self.backend = "pyscf"
 
-    def electric_dipole(self, component="x"):
-        # TODO avoid re-computation
+    @cached_property
+    def electric_dipole(self):
         ao_dip = self.scfres.mol.intor_symmetric('int1e_r', comp=3)
-        ao_dip = {k: ao_dip[i] for i, k in enumerate(['x', 'y', 'z'])}
-        return ao_dip[component]
+        return {k: ao_dip[i, :, :] for i, k in enumerate(['x', 'y', 'z'])}
 
+    @property
     def nuclear_dipole(self):
         # compute nuclear dipole
         charges = self.scfres.mol.atom_charges()

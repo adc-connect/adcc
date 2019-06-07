@@ -20,13 +20,12 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
 import numpy as np
 
-import libadcc
-
-from .OneParticleOperator import OneParticleOperator
 from .Tensor import Tensor
+from .OneParticleOperator import OneParticleOperator
+
+import libadcc
 
 
 def make_block_diagonal_tensor(tensor):
@@ -68,18 +67,22 @@ class OperatorIntegrals:
 
     def electric_dipole(self, component="x"):
         if not hasattr(self.provider, "electric_dipole"):
-            raise NotImplementedError("Electric dipole operator not implemented"
-                                      " in {}.".format(self.provider.backend))
+            raise NotImplementedError(
+                "Electric dipole operator not implemented in "
+                "{} backend.".format(self.provider.backend)
+            )
         elec_dip = OneParticleOperator(self.mospaces, is_symmetric=True,
                                        cartesian_transform=component)
-        ao_dip = self.provider.electric_dipole(component)
+        ao_dip = self.provider.electric_dipole[component]
         self.transform_backend_to_adcc(ao_dip, elec_dip, is_symmetric=True)
         return elec_dip
 
     def fock(self):
         if not hasattr(self.provider, "fock"):
-            raise NotImplementedError("Fock operator not implemented"
-                                      " in {}.".format(self.provider.backend))
+            raise NotImplementedError(
+                "Fock operator not implemented in "
+                "{} backend.".format(self.provider.backend)
+            )
         fock = OneParticleOperator(self.mospaces, is_symmetric=True,
                                    cartesian_transform="1")
         ao_fock = self.provider.fock()
@@ -90,6 +93,8 @@ class OperatorIntegrals:
     # other suggestions welcome...
     def nuclear_dipole(self):
         if not hasattr(self.provider, "nuclear_dipole"):
-            raise NotImplementedError("Nuclear dipole moment not implemented"
-                                      " in {}.".format(self.provider.backend))
-        return self.provider.nuclear_dipole()
+            raise NotImplementedError(
+                "Nuclear dipole moment not implemented in "
+                "{} backend.".format(self.provider.backend)
+            )
+        return self.provider.nuclear_dipole
