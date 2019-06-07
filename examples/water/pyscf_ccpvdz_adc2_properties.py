@@ -56,7 +56,7 @@ print(adcc.banner())
 state = adcc.adc2(scfres, n_singlets=7, conv_tol=1e-8)
 print(state.describe())
 # state = adcc.attach_state_densities(state)
-state = adcc.attach_properties(state, method='adc2')
+state = adcc.attach_properties(state)
 print(state.describe())
 
 #
