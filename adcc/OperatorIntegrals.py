@@ -28,53 +28,84 @@ from .OneParticleOperator import OneParticleOperator
 import libadcc
 
 
+def transform_operator_ao2mo(tensor_bb, tensor_ff, coefficients,
+                             conv_tol=1e-14):
+    """
+    Take a block-diagonal tensor in the atomic orbital basis
+    and transform it into the molecular orbital basis in the
+    convention used by adcc.
+
+    @param tensor_bb  Block-diagonal tensor in the atomic orbital basis
+    @param tensor_ff  Output tensor with the symmetry set-up to contain
+                      the operator in the molecular orbital representation
+    @param coefficients    Function providing coefficient blocks
+    @param conv_tol   SCF convergence tolerance
+    """
+    for blk in tensor_ff.blocks:
+        assert len(blk) == 4
+        cleft = coefficients(blk[:2] + "b")
+        cright = coefficients(blk[2:] + "b")
+        temp = cleft @ tensor_bb @ cright.transpose()
+
+        # TODO: once the permutational symmetry is correct:
+        # tensor_ff.set_block(blk, tensor_ff)
+        tensor_ff[blk].set_from_ndarray(temp.to_ndarray(), conv_tol)
+
+
+def replicate_ao_block(mospaces, tensor, is_symmetric=True):
+    """
+    transform_operator_ao2mo requires the operator in AO to be
+    replicated in a block-diagonal fashion (i.e. like [A 0
+                                                       0 A].
+    This is achieved using this function.
+    """
+    sym = libadcc.make_symmetry_operator_basis(
+        mospaces, tensor.shape[0], is_symmetric
+    )
+    result = Tensor(sym)
+
+    zerobk = np.zeros_like(tensor)
+    result.set_from_ndarray(np.block([
+        [tensor, zerobk],
+        [zerobk, tensor],
+    ]))
+    return result
+
+
 class OperatorIntegrals:
     def __init__(self, provider, mospaces, coefficients, conv_tol):
-        self.provider = provider
+        self.__provider_ao = provider
         self.mospaces = mospaces
-        self.coefficients = coefficients
-        self.conv_tol = conv_tol
+        self.__coefficients = coefficients
+        self.__conv_tol = conv_tol
 
-    def transform_backend_to_adcc(self, op_backend, op_adcc):
+    @property
+    def provider_ao(self):
         """
-        Transform an operator from the backend (given in the atomic
-        orbital basis) to the molecular orbital basis used in adcc.
+        The data structure which provides the integral data in the
+        atomic orbital basis from the backend.
         """
-        sym = libadcc.make_symmetry_operator_basis(
-            self.mospaces, op_backend.shape[0], op_adcc.is_symmetric
-        )
-        tensor_bb = Tensor(sym)
-
-        A = op_backend
-        Z = np.zeros_like(A)
-        tensor_bb.set_from_ndarray(np.block([
-            [A, Z],
-            [Z, A],
-        ]), self.conv_tol)
-
-        for blk in op_adcc.blocks:
-            assert len(blk) == 4
-            cleft = self.coefficients(blk[:2] + "b")
-            cright = self.coefficients(blk[2:] + "b")
-            tensor_ff = cleft @ tensor_bb @ cright.transpose()
-
-            # TODO: once the permutational symmetry is correct:
-            # op_adcc.set_block(blk, tensor_ff)
-            op_adcc[blk].set_from_ndarray(tensor_ff.to_ndarray(), self.conv_tol)
+        return self.__provider_ao
 
     @property
     def electric_dipole(self):
-        if not hasattr(self.provider, "electric_dipole"):
+        """
+        Return the electric dipole integrals in the molecular orbital basis.
+        """
+        if not hasattr(self.provider_ao, "electric_dipole"):
             raise NotImplementedError(
                 "Electric dipole operator not implemented in "
-                "{} backend.".format(self.provider.backend)
+                "{} backend.".format(self.provider_ao.backend)
             )
 
         dipoles = []
         for i, component in enumerate(["x", "y", "z"]):
-            dip = OneParticleOperator(self.mospaces, is_symmetric=True,
-                                      cartesian_transform=component)
-            dip_backend = self.provider.electric_dipole[i]
-            self.transform_backend_to_adcc(dip_backend, dip)
-            dipoles.append(dip)
+            dip_backend = self.provider_ao.electric_dipole[i]
+            dip_bb = replicate_ao_block(self.mospaces, dip_backend,
+                                        is_symmetric=True)
+            dip_ff = OneParticleOperator(self.mospaces, is_symmetric=True,
+                                         cartesian_transform=component)
+            transform_operator_ao2mo(dip_bb, dip_ff, self.__coefficients,
+                                     self.__conv_tol)
+            dipoles.append(dip_ff)
         return dipoles

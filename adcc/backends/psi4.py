@@ -36,7 +36,7 @@ class Psi4OperatorIntegralProvider:
 
     @cached_property
     def electric_dipole(self):
-        return [np.asarray(comp) for comp in self.mints.ao_dipole()]
+        return [-np.asarray(comp) for comp in self.mints.ao_dipole()]
 
 
 class Psi4EriBuilder(EriBuilder):
