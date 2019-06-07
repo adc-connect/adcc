@@ -32,7 +32,7 @@ __all__ = ["ReferenceState"]
 class ReferenceState(libadcc.ReferenceState):
     def __init__(self, hfdata, core_orbitals=None, frozen_core=None,
                  frozen_virtual=None, symmetry_check_on_import=False,
-                 import_all_below_n_orbs=0):
+                 import_all_below_n_orbs=30):
         """
         Construct a ReferenceState object. The object is lazy and will only
         import orbital energies and coefficients. Fock matrix blocks and
