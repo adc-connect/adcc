@@ -27,6 +27,7 @@ from pyscf import ao2mo, gto, scf
 
 from libadcc import HartreeFockProvider
 from .eri_build_helper import EriBuilder
+from adcc.DictHfProvider import DictHfProvider
 
 from adcc.misc import cached_property
 from adcc.DictHfProvider import DictHfProvider
@@ -363,6 +364,17 @@ def convert_scf_to_dict(scfres):
     eri[:, :, brv, arv] = 0
 
     data["eri_ffff"] = eri
+
+    # Compute electric and nuclear multipole moments
+    charges = scfres.mol.atom_charges()
+    coords = scfres.mol.atom_coords()
+    data["multipoles"] = {
+        "nuclear_0": int(np.sum(charges)),
+        "nuclear_1": np.einsum('i,ix->x', charges, coords),
+        "elec_0": -int(n_alpha + n_beta),
+        "elec_1": scfres.mol.intor_symmetric('int1e_r', comp=3),
+    }
+
     data["backend"] = "pyscf"
     return data
 
