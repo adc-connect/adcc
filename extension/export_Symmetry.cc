@@ -35,6 +35,14 @@ void export_Symmetry(py::module& m) {
         .def(py::init<std::shared_ptr<const MoSpaces>, const std::string&>(),
              "Construct a Symmetry class from an MoSpaces object and the identifier for "
              "the space (e.g. o1o1, v1o1, o3v2o1v1, ...)")
+        .def(py::init<std::shared_ptr<const MoSpaces>, const std::string&,
+                      std::map<std::string, std::pair<size_t, size_t>>>(),
+             "Construct a Symmetry class from an MoSpaces object, a space string and a "
+             "map to supply the number of orbitals for some additional axes.\nFor the "
+             "additional axis the pair contains either two numbers (for the number of "
+             "alpha and beta orbitals in this axis) or only one number and a zero (for "
+             "an axis, which as only one spin kind, alpha or beta).\n\nThis is an "
+             "advanced constructor. Use only if you know what you do.")
         //
         .def_property_readonly("mospaces", &Symmetry::mospaces_ptr,
                                "Return the MoSpaces object supplied on initialisation")
