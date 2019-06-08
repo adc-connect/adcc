@@ -110,15 +110,14 @@ def state_dipole_moments(state, method=None):
     ])
 
 
-def attach_state_properties(solver_state, method=None):
-    if not hasattr(solver_state, "state_diffdms"):
-        solver_state = attach_state_densities(solver_state, state_diffdm=True,
-                                              ground_to_excited_tdm=False,
-                                              state_to_state_tdm=False,
-                                              method=method)
-    solver_state.state_dipole_moments = state_dipole_moments(solver_state,
-                                                             method=method)
-    return solver_state
+def attach_state_properties(state, method=None):
+    if not hasattr(state, "state_diffdms"):
+        state = attach_state_densities(state, state_diffdm=True,
+                                       ground_to_excited_tdm=False,
+                                       state_to_state_tdm=False,
+                                       method=method)
+    state.state_dipole_moments = state_dipole_moments(state, method=method)
+    return state
 
 
 def attach_transition_properties(state, method=None):
@@ -133,20 +132,20 @@ def attach_transition_properties(state, method=None):
     return state
 
 
-def attach_properties(solver_state, transition_properties=True,
+def attach_properties(state, transition_properties=True,
                       state_properties=True, method=None):
     """
     Compute state and transition properties from a solver
     state and attach them to the state
 
-    @param solver_state     The solver state to work on.
+    @param state     The solver state to work on.
     @transition_properties  Compute transition properties
     @state_properties       Compute properties of the excited states
     @method                 The method to use for property calculations
     """
-    solver_state = copy(solver_state)
+    state = copy(state)
     if state_properties:
-        solver_state = attach_state_properties(solver_state, method)
+        state = attach_state_properties(state, method)
     if transition_properties:
-        solver_state = attach_transition_properties(solver_state, method)
-    return solver_state
+        state = attach_transition_properties(state, method)
+    return state
