@@ -28,69 +28,44 @@ namespace py_iface {
 
 namespace py = pybind11;
 
-static std::shared_ptr<Tensor> CtxMap__at_tensor(std::shared_ptr<ctx::CtxMap> self,
-                                                 std::string key) {
-  return self->at_ptr<Tensor>(key);
+#define IF_AT_TYPE_RETURN(TYPE)                                                      \
+  if (self->at_raw_value(key).type_name_raw() == typeid(TYPE).name()) {              \
+    return py::cast(self->at<TYPE>(key));                                            \
+  }                                                                                  \
+  if (self->at_raw_value(key).type_name_raw() == typeid(std::vector<TYPE>).name()) { \
+    return py::cast(self->at<std::vector<TYPE>>(key));                               \
+  }
+
+#define IF_ATPTR_TYPE_RETURN(TYPE)                                      \
+  if (self->at_raw_value(key).type_name_raw() == typeid(TYPE).name()) { \
+    return py::cast(self->at_ptr<TYPE>(key));                           \
+  }
+
+static py::object CtxMap__at(std::shared_ptr<ctx::CtxMap> self, std::string key) {
+  IF_AT_TYPE_RETURN(bool)
+  IF_AT_TYPE_RETURN(int)
+  IF_AT_TYPE_RETURN(long)
+  IF_AT_TYPE_RETURN(unsigned long)
+  IF_AT_TYPE_RETURN(unsigned int)
+  IF_AT_TYPE_RETURN(std::string)
+  IF_AT_TYPE_RETURN(scalar_type)
+  IF_ATPTR_TYPE_RETURN(Tensor)
+
+  throw not_implemented_error("Generic at() not implemented for type " +
+                              self->at_raw_value(key).type_name() + ".");
 }
 
-static std::shared_ptr<Tensor> CtxMap__at_tensor_def(std::shared_ptr<ctx::CtxMap> self,
-                                                     std::string key,
-                                                     std::shared_ptr<Tensor> def) {
-  return self->at_ptr<Tensor>(key, def);
+static py::object CtxMap__at_def(std::shared_ptr<ctx::CtxMap> self, std::string key,
+                                 py::object def) {
+  if (self->exists(key)) {
+    return CtxMap__at(self, key);
+  } else {
+    return def;
+  }
 }
 
-static scalar_type CtxMap__at_scalar(const ctx::CtxMap& self, std::string key) {
-  return self.at<scalar_type>(key);
-}
-
-static scalar_type CtxMap__at_scalar_def(const ctx::CtxMap& self, std::string key,
-                                         scalar_type def) {
-  return self.at<scalar_type>(key, def);
-}
-
-static std::string CtxMap__at_string(const ctx::CtxMap& self, std::string key) {
-  return self.at<std::string>(key);
-}
-
-static std::string CtxMap__at_string_def(const ctx::CtxMap& self, std::string key,
-                                         std::string def) {
-  return self.at<std::string>(key, def);
-}
-
-static bool CtxMap__at_bool(const ctx::CtxMap& self, std::string key) {
-  return self.at<bool>(key);
-}
-
-static bool CtxMap__at_bool_def(const ctx::CtxMap& self, std::string key, bool def) {
-  return self.at<bool>(key, def);
-}
-
-static unsigned long CtxMap__at_unsigned_long(const ctx::CtxMap& self, std::string key) {
-  return self.at<unsigned long>(key);
-}
-
-static unsigned long CtxMap__at_unsigned_long_def(const ctx::CtxMap& self,
-                                                  std::string key, unsigned long def) {
-  return self.at<unsigned long>(key, def);
-}
-
-static unsigned int CtxMap__at_unsigned_int_def(const ctx::CtxMap& self, std::string key,
-                                                unsigned int def) {
-  return self.at<unsigned int>(key, def);
-}
-
-static unsigned int CtxMap__at_unsigned_int(const ctx::CtxMap& self, std::string key) {
-  return self.at<unsigned int>(key);
-}
-
-static std::vector<unsigned long> CtxMap__at_unsigned_long_list(const ctx::CtxMap& self,
-                                                                std::string key) {
-  return self.at<std::vector<unsigned long>>(key);
-}
-
-static std::vector<bool> CtxMap__at_bool_list(const ctx::CtxMap& self, std::string key) {
-  return self.at<std::vector<bool>>(key);
-}
+#undef IF_AT_TYPE_RETURN
+#undef IF_ATPTR_TYPE_RETURN
 
 static py::list CtxMap__keys(const ctx::CtxMap& self) {
   py::list keys;
@@ -109,21 +84,15 @@ void export_CtxMap(py::module& m) {
         .def("keys", &CtxMap__keys)
         .def("exists", &CtxMap::exists)
         //
-        .def("at_tensor", &CtxMap__at_tensor)
-        .def("at_tensor", &CtxMap__at_tensor_def)
-        .def("at_scalar", &CtxMap__at_scalar)
-        .def("at_scalar", &CtxMap__at_scalar_def)
-        .def("at_bool", &CtxMap__at_bool)
-        .def("at_bool", &CtxMap__at_bool_def)
-        .def("at_unsigned_long", &CtxMap__at_unsigned_long)
-        .def("at_unsigned_long", &CtxMap__at_unsigned_long_def)
-        .def("at_unsigned_int", &CtxMap__at_unsigned_int)
-        .def("at_unsigned_int", &CtxMap__at_unsigned_int_def)
-        .def("at_string", &CtxMap__at_string)
-        .def("at_string", &CtxMap__at_string_def)
-        //
-        .def("at_bool_list", &CtxMap__at_bool_list)
-        .def("at_unsigned_long_list", &CtxMap__at_unsigned_long_list)
+        .def("at", &CtxMap__at)
+        .def("at", &CtxMap__at_def)
+        .def("__getitem__", &CtxMap__at)
+        .def("describe",
+             [](ctx::CtxMap& self) {
+               std::stringstream ss;
+               ss << self << std::endl;
+               return ss.str();
+             })
         //
         .def("update_tensor", [](ctx::CtxMap& self, std::string key,
                                  std::shared_ptr<Tensor> val) { self.update(key, val); })
