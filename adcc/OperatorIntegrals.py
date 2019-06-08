@@ -22,6 +22,7 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
+from .misc import cached_property
 from .Tensor import Tensor
 from .OneParticleOperator import OneParticleOperator
 
@@ -87,12 +88,23 @@ class OperatorIntegrals:
         """
         return self.__provider_ao
 
+    @cached_property
+    def available(self):
+        """
+        Which integrals are available in the underlying backend
+        """
+        ret = []
+        for integral in ["electric_dipole"]:
+            if hasattr(self.provider_ao, integral):
+                ret.append(integral)
+        return ret
+
     @property
     def electric_dipole(self):
         """
         Return the electric dipole integrals in the molecular orbital basis.
         """
-        if not hasattr(self.provider_ao, "electric_dipole"):
+        if "electric_dipole" not in self.available:
             raise NotImplementedError(
                 "Electric dipole operator not implemented in "
                 "{} backend.".format(self.provider_ao.backend)
