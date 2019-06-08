@@ -20,11 +20,12 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
 import numpy as np
 
-import adcc
+from ..misc import assert_allclose_signfix
 from .eri_build_helper import _eri_phys_asymm_spin_allowed_prefactors
+
+import adcc
 
 
 def eri_asymm_construction_test(scfres, core_orbitals=0):
@@ -110,3 +111,30 @@ def eri_asymm_construction_test(scfres, core_orbitals=0):
                     err_msg="""ERIs wrong in space {} """
                             """and spin block {}""".format(s, allowed_spin)
                 )
+
+
+def operator_import_test(scfres, ao_dict):
+    refstate = adcc.ReferenceState(scfres)
+    occa = refstate.orbital_coefficients_alpha("o1b").to_ndarray()
+    occb = refstate.orbital_coefficients_beta("o1b").to_ndarray()
+    virta = refstate.orbital_coefficients_alpha("v1b").to_ndarray()
+    virtb = refstate.orbital_coefficients_beta("v1b").to_ndarray()
+
+    for i, ao_component in enumerate(ao_dict):
+        dip_oo = np.einsum('ib,ba,ja->ij', occa, ao_component, occa)
+        dip_oo += np.einsum('ib,ba,ja->ij', occb, ao_component, occb)
+
+        dip_ov = np.einsum('ib,ba,ja->ij', occa, ao_component, virta)
+        dip_ov += np.einsum('ib,ba,ja->ij', occb, ao_component, virtb)
+
+        dip_vv = np.einsum('ib,ba,ja->ij', virta, ao_component, virta)
+        dip_vv += np.einsum('ib,ba,ja->ij', virtb, ao_component, virtb)
+
+        dip_mock = {"o1o1": dip_oo, "o1v1": dip_ov, "v1v1": dip_vv}
+
+        dip_imported = refstate.operator_integrals.electric_dipole[i]
+        for b in dip_imported.blocks:
+            assert_allclose_signfix(
+                dip_mock[b], dip_imported[b].to_ndarray(),
+                atol=refstate.conv_tol
+            )

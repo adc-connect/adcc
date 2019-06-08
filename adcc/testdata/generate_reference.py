@@ -291,6 +291,7 @@ def main():
     kwargs_overwrite = {
         "adc0": {"cvs": {"n_singlets": 2, "n_triplets": 2}, },
         "adc1": {"cvs": {"n_singlets": 2, "n_triplets": 2}, },
+        "adc2": {"general": {"n_singlets": 9, "n_triplets": 10, }, }
     }
     dump_all_methods("h2o_sto3g", kwargs_cvs, kwargs_general, kwargs_overwrite)
 

@@ -24,8 +24,7 @@ import unittest
 import numpy as np
 
 from ..misc import expand_test_templates
-from .operator_import_test import operator_import_test
-from .eri_construction_test import eri_asymm_construction_test
+from .testing import eri_asymm_construction_test, operator_import_test
 
 from numpy.testing import assert_almost_equal
 
@@ -152,16 +151,17 @@ class TestPyscf(unittest.TestCase):
             eri_perm = np.transpose(eri, perm)
             assert_almost_equal(eri_perm, eri)
 
-    def dipole_operator_import_test(self, mf):
-        ao_dip = mf.mol.intor_symmetric('int1e_r', comp=3)
-        operator_import_test(mf, list(ao_dip))
-
     def template_rhf_h2o(self, basis):
         mf = adcc.backends.run_hf("pyscf", geometry.xyz["h2o"], basis)
         self.base_test(mf)
+
+        # Test ERI
         eri_asymm_construction_test(mf)
         eri_asymm_construction_test(mf, core_orbitals=1)
-        self.dipole_operator_import_test(mf)
+
+        # Test dipole
+        ao_dip = mf.mol.intor_symmetric('int1e_r', comp=3)
+        operator_import_test(mf, list(ao_dip))
 
     def test_h2o_sto3g_core_hole(self):
         mol = gto.M(

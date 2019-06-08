@@ -44,8 +44,9 @@ class TestFunctionality(unittest.TestCase):
         assert isinstance(res, SolverStateBase)
 
         ref = refdata[method][kind]["eigenvalues"]
+        n_ref = len(ref)
         assert res.converged
-        assert res.eigenvalues == approx(ref, abs=1e-7)
+        assert res.eigenvalues[:n_ref] == approx(ref, abs=1e-7)
 
         # TODO Compare transition dipole moment
         # TODO Compare excited state dipole moment
@@ -53,8 +54,8 @@ class TestFunctionality(unittest.TestCase):
         # Test we do not use too many iterations
         if "sto3g" in system or "631g" in system:
             n_iter_bound = {
-                "adc0": 1, "adc1": 4, "adc2": 6, "adc2x": 11, "adc3": 11,
-                "cvs-adc0": 1, "cvs-adc1": 4, "cvs-adc2": 5, "cvs-adc2x": 11
+                "adc0": 1, "adc1": 4, "adc2": 6, "adc2x": 12, "adc3": 12,
+                "cvs-adc0": 1, "cvs-adc1": 4, "cvs-adc2": 5, "cvs-adc2x": 12
             }
         else:
             n_iter_bound = {

@@ -22,18 +22,18 @@
 ## ---------------------------------------------------------------------
 import unittest
 import numpy as np
-
-from ..misc import expand_test_templates
-from .eri_construction_test import eri_asymm_construction_test
-
-from numpy.testing import assert_almost_equal
-
-import pytest
 import adcc
 import adcc.backends
 
+from numpy.testing import assert_almost_equal
+
 from adcc.backends import have_backend
 from adcc.testdata import geometry
+
+import pytest
+
+from ..misc import expand_test_templates
+from .testing import eri_asymm_construction_test
 
 basissets = ["sto3g"]
 
