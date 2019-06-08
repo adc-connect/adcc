@@ -23,14 +23,12 @@
 import adcc.backends.pyscf
 
 from adcc import hdf5io
-
 from pyscf import gto, scf
+from geometry import xyz
 
 # Run SCF in pyscf and converge super-tight using an EDIIS
 mol = gto.M(
-    atom='O 0 0 0;'
-         'H 0 0 1.795239827225189;'
-         'H 1.693194615993441 0 -0.599043184453037',
+    atom=xyz["h2o"],
     basis='def2-tzvp',
     unit="Bohr"
 )
