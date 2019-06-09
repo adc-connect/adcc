@@ -23,11 +23,11 @@
 import warnings
 import numpy as np
 
-from copy import copy
-
 from .AdcMethod import AdcMethod
 from .state_densities import attach_state_densities
-from .OneParticleOperator import HfDensityMatrix, product_trace
+from .OneParticleOperator import product_trace
+
+from copy import copy
 
 __all__ = ["attach_properties"]
 
@@ -98,18 +98,14 @@ def state_dipole_moments(state, method=None):
     dipole_integrals = state.reference_state.operator_integrals.electric_dipole
 
     # TODO Have a total density up to MP level 2 function in LazyMp
-    # Compute ground-state dipole moment (TODO Put this into LazyMp?),
-    # noting that the nuclear contribution carries the opposite sign
-    # as the electronic contribution (due to the opposite
-    # charge of the nuclei)
-    gsdm = HfDensityMatrix(state.reference_state)
+    #      and a dipole_moment function as well
+    # Compute ground-state dipole moment
+    gs_dip_moment = state.reference_state.dipole_moment
     if method.level > 1:
-        gsdm += state.ground_state.mp2_diffdm
-    # end changes implied by TODO
+        mp2dm = state.ground_state.mp2_diffdm
+        gs_dip_moment -= np.array([product_trace(comp, mp2dm)
+                                   for comp in dipole_integrals])
 
-    gs_dip_moment = state.reference_state.nuclear_dipole - np.array([
-        product_trace(comp, gsdm) for comp in dipole_integrals
-    ])
     return gs_dip_moment - np.array([
         [product_trace(comp, ddm) for comp in dipole_integrals]
         for ddm in state.state_diffdms

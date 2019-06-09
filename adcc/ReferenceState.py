@@ -20,9 +20,13 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import numpy as np
+
+from .Tensor import Tensor
 from .backends import import_scf_results
 from .memory_pool import memory_pool
 from .OperatorIntegrals import OperatorIntegrals
+from .OneParticleOperator import OneParticleOperator, product_trace
 
 import libadcc
 
@@ -122,5 +126,28 @@ class ReferenceState(libadcc.ReferenceState):
             self.orbital_coefficients, self.conv_tol
         )
 
+    @property
+    def density(self):
+        """
+        Return the Hartree-Fock density in the MO basis
+        """
+        density = OneParticleOperator(self.mospaces, is_symmetric=True)
+        for b in density.blocks:
+            sym = libadcc.make_symmetry_operator(self.mospaces, b, True, "1")
+            density.set_block(b, Tensor(sym))
+        for ss in self.mospaces.subspaces_occupied:
+            density[ss + ss].set_mask("ii", 1)
+        return density
+
+    @property
+    def dipole_moment(self):
+        """
+        Return the HF dipole moment of the reference state (that is the sum of
+        the electronic and the nuclear contribution."
+        """
+        dipole_integrals = self.operator_integrals.electric_dipole
+        # Notice the negative sign due to the negative charge of the electrons
+        return self.nuclear_dipole - np.array([product_trace(comp, self.density)
+                                               for comp in dipole_integrals])
 
 # TODO some nice describe method

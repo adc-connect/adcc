@@ -53,18 +53,6 @@ class OneParticleOperator(libadcc.OneParticleOperator):
                             " and {}".format(type(other)))
 
 
-class HfDensityMatrix(OneParticleOperator):
-    def __init__(self, reference_state):
-        super().__init__(reference_state.mospaces, is_symmetric=True)
-        for b in self.blocks:
-            sym = libadcc.make_symmetry_operator(
-                reference_state.mospaces, b, True, "1"
-            )
-            self.set_block(b, Tensor(sym))
-        for ss in reference_state.mospaces.subspaces_occupied:
-            self[ss + ss].set_mask("ii", 1)
-
-
 def product_trace(op1, op2):
     all_blocks = list(set(op1.blocks + op2.blocks))
 
