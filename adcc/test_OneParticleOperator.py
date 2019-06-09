@@ -25,6 +25,10 @@ import numpy as np
 
 import adcc
 
+from pytest import approx
+
+from adcc import OneParticleOperator, zeros_like
+from adcc.OneParticleOperator import product_trace
 from adcc.testdata.cache import cache
 
 
@@ -42,3 +46,108 @@ class TestOneParticleOperator(unittest.TestCase):
 
         np.testing.assert_almost_equal(dm_full, mp2diff.to_ndarray(),
                                        decimal=12)
+
+    def test_product_trace_symmetric(self):
+        ref = cache.refstate["h2o_sto3g"]
+        dipx_mo = ref.operator_integrals.electric_dipole[0]
+        mp2diff_mo = adcc.LazyMp(ref).mp2_diffdm
+        mp2diff_ao = mp2diff_mo.transform_to_ao_basis(ref)
+
+        mp2a = mp2diff_ao[0].to_ndarray()
+        mp2b = mp2diff_ao[1].to_ndarray()
+        dipx_ao = ref.operator_integrals.provider_ao.electric_dipole[0]
+        dipx_ref = np.sum(mp2a * dipx_ao) + np.sum(mp2b * dipx_ao)
+
+        oo = np.sum(
+            mp2diff_mo["o1o1"].to_ndarray() * dipx_mo["o1o1"].to_ndarray()
+        )
+        ov = 2.0 * np.sum(
+            mp2diff_mo["o1v1"].to_ndarray() * dipx_mo["o1v1"].to_ndarray()
+        )
+        vv = np.sum(
+            mp2diff_mo["v1v1"].to_ndarray() * dipx_mo["v1v1"].to_ndarray()
+        )
+        dipx_np = oo + ov + vv
+
+        assert dipx_np == approx(dipx_ref)
+        assert product_trace(mp2diff_mo, dipx_mo) == approx(dipx_ref)
+        assert product_trace(dipx_mo, mp2diff_mo) == approx(dipx_ref)
+
+    def test_product_trace_nonsymmetric(self):
+        ref = cache.refstate["cn_sto3g"]
+        dipx_mo = ref.operator_integrals.electric_dipole[0]
+        mp2diff_mo = adcc.LazyMp(ref).mp2_diffdm
+        mp2diff_nosym = OneParticleOperator(ref.mospaces, is_symmetric=False)
+        mp2diff_nosym.set_block("o1o1", mp2diff_mo["o1o1"])
+        mp2diff_nosym.set_block("o1v1", mp2diff_mo["o1v1"])
+        mp2diff_nosym.set_block("v1v1", mp2diff_mo["v1v1"])
+        mp2diff_nosym.set_block("v1o1",
+                                zeros_like(mp2diff_mo["o1v1"].transpose()))
+        mp2diff_ao = mp2diff_nosym.transform_to_ao_basis(ref)
+
+        mp2a = mp2diff_ao[0].to_ndarray()
+        mp2b = mp2diff_ao[1].to_ndarray()
+        dipx_ao = ref.operator_integrals.provider_ao.electric_dipole[0]
+        dipx_ref = np.sum(mp2a * dipx_ao) + np.sum(mp2b * dipx_ao)
+
+        oo = np.sum(
+            mp2diff_nosym["o1o1"].to_ndarray() * dipx_mo["o1o1"].to_ndarray()
+        )
+        ov = np.sum(
+            mp2diff_nosym["o1v1"].to_ndarray() * dipx_mo["o1v1"].to_ndarray()
+        )
+        vo = np.sum(
+            mp2diff_nosym["v1o1"].to_ndarray() * dipx_mo["o1v1"].to_ndarray().T
+        )
+        vv = np.sum(
+            mp2diff_nosym["v1v1"].to_ndarray() * dipx_mo["v1v1"].to_ndarray()
+        )
+        dipx_np = oo + ov + vo + vv
+
+        assert dipx_np == approx(dipx_ref)
+        assert product_trace(mp2diff_nosym, dipx_mo) == approx(dipx_ref)
+        assert product_trace(dipx_mo, mp2diff_nosym) == approx(dipx_ref)
+
+    def test_product_trace_both_nonsymmetric(self):
+        ref = cache.refstate["cn_sto3g"]
+        dipx_mo = ref.operator_integrals.electric_dipole[0]
+        mp2diff_mo = adcc.LazyMp(ref).mp2_diffdm
+        mp2diff_nosym = OneParticleOperator(ref.mospaces, is_symmetric=False)
+        dipx_nosym = OneParticleOperator(ref.mospaces, is_symmetric=False)
+
+        mp2diff_nosym.set_block("o1o1", mp2diff_mo["o1o1"])
+        mp2diff_nosym.set_block("o1v1", mp2diff_mo["o1v1"])
+        mp2diff_nosym.set_block("v1v1", mp2diff_mo["v1v1"])
+        mp2diff_nosym.set_block("v1o1",
+                                zeros_like(mp2diff_mo["o1v1"].transpose()))
+        mp2diff_ao = mp2diff_nosym.transform_to_ao_basis(ref)
+
+        dipx_nosym.set_block("o1o1", dipx_mo["o1o1"])
+        dipx_nosym.set_block("o1v1", dipx_mo["o1v1"])
+        dipx_nosym.set_block("v1v1", dipx_mo["v1v1"])
+        dipx_nosym.set_block("v1o1", zeros_like(dipx_mo["o1v1"].transpose()))
+        dipx_ao = dipx_nosym.transform_to_ao_basis(ref)
+
+        mp2a = mp2diff_ao[0].to_ndarray()
+        mp2b = mp2diff_ao[1].to_ndarray()
+        dipxa = dipx_ao[0].to_ndarray()
+        dipxb = dipx_ao[1].to_ndarray()
+        dipx_ref = np.sum(mp2a * dipxa) + np.sum(mp2b * dipxb)
+
+        oo = np.sum(
+            mp2diff_nosym["o1o1"].to_ndarray() * dipx_nosym["o1o1"].to_ndarray()
+        )
+        ov = np.sum(
+            mp2diff_nosym["o1v1"].to_ndarray() * dipx_nosym["o1v1"].to_ndarray()
+        )
+        vo = np.sum(
+            mp2diff_nosym["v1o1"].to_ndarray() * dipx_nosym["v1o1"].to_ndarray()
+        )
+        vv = np.sum(
+            mp2diff_nosym["v1v1"].to_ndarray() * dipx_nosym["v1v1"].to_ndarray()
+        )
+        dipx_np = oo + ov + vo + vv
+
+        assert dipx_np == approx(dipx_ref)
+        assert product_trace(mp2diff_nosym, dipx_nosym) == approx(dipx_ref)
+        assert product_trace(dipx_nosym, mp2diff_nosym) == approx(dipx_ref)

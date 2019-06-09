@@ -69,7 +69,7 @@ def replicate_ao_block(mospaces, tensor, is_symmetric=True):
     result.set_from_ndarray(np.block([
         [tensor, zerobk],
         [zerobk, tensor],
-    ]))
+    ]), 1e-14)
     return result
 
 

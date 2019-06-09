@@ -125,7 +125,31 @@ def dump_qc_h2o(basename, method, basis, n_core_orbitals=0):
         )
         # only works with my (ms) fork of cclib
         # github.com/maxscheurer/cclib
-        os.system("qchem {} {}".format(infile, outfile))
+        os.system("qchem -nt 4 {} {}".format(infile, outfile))
+        res = QChem(outfile).parse()
+        ret["oscillator_strengths"] = res.etoscs
+        ret["exc_dipole_moments [D]"] = res.etdipmoms
+        hdf5io.save(fname="{}_qc.hdf5".format(basename),
+                    dictionary=ret)
+        bla = hdf5io.load(fname="{}_qc.hdf5".format(basename))
+        print(bla)
+
+
+def dump_qc_cn(basename, method, basis, n_core_orbitals=0):
+    with tempfile.TemporaryDirectory() as tmpdir:
+        infile = os.path.join(tmpdir, basename + ".in")
+        outfile = os.path.join(tmpdir, basename + ".out")
+        ret = {
+            "method": method,
+            "basis": basis,
+        }
+        generate_qchem_input_file(
+            infile, method, basis, xyz["cn"].strip(), conv_tol=10,
+            n_core_orbitals=n_core_orbitals, multiplicity=2
+        )
+        # only works with my (ms) fork of cclib
+        # github.com/maxscheurer/cclib
+        os.system("qchem -nt 4 {} {}".format(infile, outfile))
         res = QChem(outfile).parse()
         ret["oscillator_strengths"] = res.etoscs
         ret["exc_dipole_moments [D]"] = res.etdipmoms
@@ -136,11 +160,22 @@ def dump_qc_h2o(basename, method, basis, n_core_orbitals=0):
 
 
 def main():
+    # for basis in ["def2tzvp", "sto3g", "ccpvdz"]:
+    #     for method in ['adc1', 'adc2', 'adc2x', 'adc3']:
+    #         basename = "h2o_{}_{}".format(basis, method)
+    #         dump_qc_h2o(basename, method, basis)
+    #         basename = "h2o_{}_cvs_{}".format(basis, method)
+    #         dump_qc_h2o(
+    #             basename, "cvs-{}".format(method), basis, n_core_orbitals=1
+    #         )
     for basis in ["sto3g", "ccpvdz"]:
-        basename = "h2o_{}_adc2".format(basis)
-        dump_qc_h2o(basename, "adc2", basis)
-        basename = "h2o_{}_cvs_adc2".format(basis)
-        dump_qc_h2o(basename, "cvs-adc2", basis, n_core_orbitals=1)
+        for method in ['adc1', 'adc2', 'adc2x', 'adc3']:
+            basename = "cn_{}_{}".format(basis, method)
+            dump_qc_cn(basename, method, basis)
+            basename = "cn_{}_cvs_{}".format(basis, method)
+            dump_qc_cn(
+                basename, "cvs-{}".format(method), basis, n_core_orbitals=1
+            )
 
 
 if __name__ == "__main__":

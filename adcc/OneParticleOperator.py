@@ -39,12 +39,15 @@ class OneParticleOperator(libadcc.OneParticleOperator):
             self.set_block(b, Tensor(sym))
 
     def __add__(self, other):
+        ret = empty_like(self)
+        return ret.__iadd__(other)
+
+    def __iadd__(self, other):
         if isinstance(other, libadcc.OneParticleOperator):
             assert self.blocks == other.blocks
-            ret = empty_like(self)
-            for b in ret.blocks:
-                ret.set_block(b, self[b] + other[b])
-            return ret
+            for b in self.blocks:
+                self.set_block(b, self[b] + other[b])
+            return self
         else:
             raise TypeError("Cannot add OneParticleOperator"
                             " and {}".format(type(other)))
@@ -64,14 +67,14 @@ class HfDensityMatrix(OneParticleOperator):
 
 def product_trace(op1, op2):
     all_blocks = list(set(op1.blocks + op2.blocks))
+
     if op1.is_symmetric and op2.is_symmetric:
         ret = 0
         assert op1.blocks == op2.blocks
         for b in all_blocks:
             if op1.is_zero_block(b) or op2.is_zero_block(b):
                 continue
-            # transposed block string
-            tb = b[2:] + b[:2]
+            tb = b[2:] + b[:2]  # transposed block string
             if b == tb:
                 ret += op1[b].dot(op2[b])
             else:
@@ -82,25 +85,14 @@ def product_trace(op1, op2):
         for b in all_blocks:
             if op1.is_zero_block(b) or op2.is_zero_block(b):
                 continue
-            # transposed block string
-            tb = b[2:] + b[:2]
+            tb = b[2:] + b[:2]  # transposed block string
             if b in op1.blocks:
                 ret += op1[b].dot(op2[b])
             elif tb in op1.blocks:
                 ret += op1[tb].transpose().dot(op2[b])
         return ret
     elif not op1.is_symmetric and op2.is_symmetric:
-        ret = 0
-        for b in all_blocks:
-            if op1.is_zero_block(b) or op2.is_zero_block(b):
-                continue
-            # transposed block string
-            tb = b[2:] + b[:2]
-            if b in op2.blocks:
-                ret += op2[b].dot(op1[b])
-            elif tb in op2.blocks and not op2.is_zero_block(tb):
-                ret += op2[tb].transpose().dot(op1[b])
-        return ret
+        return product_trace(op2, op1)
     else:
         ret = 0
         assert op1.blocks == op2.blocks
