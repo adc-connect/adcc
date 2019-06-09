@@ -20,6 +20,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import numpy as np
 
 
 def cached_property(f):
@@ -71,3 +72,28 @@ def expand_test_templates(arguments, template_prefix="template_"):
                 setattr(cls, newname, caller)
         return cls
     return inner_decorator
+
+
+def assert_allclose_signfix(actual, desired, atol=0, **kwargs):
+    """
+    Call assert_allclose, but beforehand normalise the sign
+    of the involved arrays (i.e. the two arrays may differ
+    up to a sign factor of -1)
+    """
+    actual, desired = normalise_sign(actual, desired, atol=atol)
+    np.testing.assert_allclose(actual, desired, atol=atol, **kwargs)
+
+
+def normalise_sign(*items, atol=0):
+    """
+    Normalise the sign of a list of numpy arrays
+    """
+    def sign(item):
+        flat = np.ravel(item)
+        flat = flat[np.abs(flat) > atol]
+        if flat.size == 0:
+            return 1
+        else:
+            return np.sign(flat[0])
+    desired_sign = sign(items[0])
+    return tuple(desired_sign / sign(item) * item for item in items)
