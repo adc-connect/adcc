@@ -20,18 +20,19 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import warnings
 import numpy as np
+
+from copy import copy
 
 from .AdcMethod import AdcMethod
 from .state_densities import attach_state_densities
 from .OneParticleOperator import HfDensityMatrix, product_trace
 
-from copy import copy
-
 __all__ = ["attach_properties"]
 
 
-def transition_dipole_moments(state):
+def transition_dipole_moments(state, method=None):
     """
     Compute the ground to excited state transition dipole moments
     from a solver state (in a.u.)
@@ -40,8 +41,17 @@ def transition_dipole_moments(state):
         raise ValueError("Cannot compute transition dipole moment without"
                          " transition densities.")
     if not hasattr(state.reference_state.operator_integrals, "electric_dipole"):
-        raise ValueError("Reference state cannot provide electric dipole"
-                         " integrals.")
+        raise ValueError("Reference state for backend "
+                         + state.reference_state.backend + "cannot provide "
+                         "electric dipole integrals.")
+    if method is None:
+        method = state.method
+    if not isinstance(method, AdcMethod):
+        method = AdcMethod(method)
+    if method.level == 0:
+        warnings.warn("ADC(0) transition dipole moments are known to be faulty "
+                      "in some cases.")
+
     dipole_integrals = state.reference_state.operator_integrals.electric_dipole
     tdip_moments = np.array([
         [product_trace(comp, tdm) for comp in dipole_integrals]
@@ -77,8 +87,9 @@ def state_dipole_moments(state, method=None):
         raise ValueError("Cannot compute transition dipole moment without"
                          " state densities.")
     if not hasattr(state.reference_state.operator_integrals, "electric_dipole"):
-        raise ValueError("Reference state cannot provide electric dipole"
-                         " integrals.")
+        raise ValueError("Reference state for backend "
+                         + state.reference_state.backend + "cannot provide "
+                         "electric dipole integrals.")
     if method is None:
         method = state.method
     if not isinstance(method, AdcMethod):
@@ -86,25 +97,20 @@ def state_dipole_moments(state, method=None):
 
     dipole_integrals = state.reference_state.operator_integrals.electric_dipole
 
-    # TODO: What about ADC(0) and ADC(1)
-    #       mfh: I think adcman also uses MP(2) density corrections,
-    #            which feels wrong. Until we understand this, we better bail out
-    if method.property_method in ["adc0", "adc1"]:
-        raise NotImplementedError("ADC(0) and ADC(1) state dipole moments not "
-                                  "yet implemented.")
-
+    # TODO Have a total density up to MP level 2 function in LazyMp
     # Compute ground-state dipole moment (TODO Put this into LazyMp?),
     # noting that the nuclear contribution carries the opposite sign
     # as the electronic contribution (due to the opposite
     # charge of the nuclei)
-    hf_dm = HfDensityMatrix(state.reference_state)
-    mp2_diffdm = state.ground_state.mp2_diffdm
-    gs_dip_moment = np.array([
-        product_trace(comp, hf_dm) + product_trace(comp, mp2_diffdm)
-        for comp in dipole_integrals
-    ]) - state.reference_state.nuclear_dipole
+    gsdm = HfDensityMatrix(state.reference_state)
+    if method.level > 1:
+        gsdm += state.ground_state.mp2_diffdm
+    # end changes implied by TODO
 
-    return gs_dip_moment + np.array([
+    gs_dip_moment = state.reference_state.nuclear_dipole - np.array([
+        product_trace(comp, gsdm) for comp in dipole_integrals
+    ])
+    return gs_dip_moment - np.array([
         [product_trace(comp, ddm) for comp in dipole_integrals]
         for ddm in state.state_diffdms
     ])
@@ -125,7 +131,7 @@ def attach_transition_properties(state, method=None):
         state = attach_state_densities(state, state_diffdm=False,
                                        ground_to_excited_tdm=True,
                                        state_to_state_tdm=False, method=method)
-    state.transition_dipole_moments = transition_dipole_moments(state)
+    state.transition_dipole_moments = transition_dipole_moments(state, method)
     state.oscillator_strengths = oscillator_strengths(
         state.transition_dipole_moments, state.eigenvalues
     )
