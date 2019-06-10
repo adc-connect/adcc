@@ -35,8 +35,7 @@ from .test_ReferenceState_refdata import compare_refstate_with_reference
 # The methods to test (currently only restricted is supported in this test)
 testcases = [case for case in cache.hfimport.keys()
              if cache.hfdata[case]["restricted"]]
-
-backends = ["pyscf", "psi4", "veloxchem"]
+backends = [b for b in adcc.backends.available if b != "molsturm"]
 
 
 @expand_test_templates(list(itertools.product(testcases, backends)))
@@ -56,7 +55,6 @@ class TestBackendsImportReferenceData(unittest.TestCase):
             pytest.skip("VeloxChem does not support f-functions.")
 
         scfres = cached_backend_hf(backend, molecule, basis)
-
         compare_refstate_with_reference(
             data, reference, case, scfres, compare_orbcoeff=False,
             compare_eri_almost_abs=True

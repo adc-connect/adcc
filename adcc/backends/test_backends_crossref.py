@@ -23,36 +23,36 @@
 import unittest
 import itertools
 import numpy as np
-
-from ..misc import expand_test_templates
-from .testing import cached_backend_hf
+import adcc
+import adcc.backends
 
 from numpy.testing import assert_allclose
 
 import pytest
-import adcc
-import adcc.backends
 
+from ..misc import expand_test_templates
+from .testing import cached_backend_hf
+
+# molsturm is super slow
+backends = [b for b in adcc.backends.available if b != "molsturm"]
 basissets = ["sto3g", "sto3g", "ccpvdz"]
-backends_selection = [b for b in adcc.backends.available
-                      if b != "molsturm"]  # molsturm is super slow
 
 
-@pytest.mark.skipif(len(backends_selection) < 2,
+@pytest.mark.skipif(len(backends) < 2,
                     reason="Need at least two available backends for cross "
                     "reference test.")
 @expand_test_templates(basissets)
 class TestCrossReferenceBackends(unittest.TestCase):
     def template_adc2_h2o(self, basis):
         results = {}
-        for b in backends_selection:
+        for b in backends:
             scfres = cached_backend_hf(b, "h2o", basis)
             results[b] = adcc.adc2(scfres, n_singlets=5, conv_tol=1e-10)
         compare_adc_results(results, 5e-9)
 
     def template_cvs_adc2_h2o(self, basis):
         results = {}
-        for b in backends_selection:
+        for b in backends:
             scfres = cached_backend_hf(b, "h2o", basis)
             results[b] = adcc.cvs_adc2(scfres, n_singlets=5, n_core_orbitals=1,
                                        conv_tol=1e-10)
@@ -60,7 +60,7 @@ class TestCrossReferenceBackends(unittest.TestCase):
 
     def template_hf_properties_h2o(self, basis):
         results = {}
-        for b in backends_selection:
+        for b in backends:
             results[b] = adcc.ReferenceState(cached_backend_hf(b, "h2o", basis))
         compare_hf_properties(results, 5e-9)
 
