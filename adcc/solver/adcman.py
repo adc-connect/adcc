@@ -25,12 +25,13 @@ import numpy as np
 import libadcc
 
 from adcc import AdcMatrix, AmplitudeVector
-from .SolverStateBase import SolverStateBase
+from .SolverStateBase import EigenSolverStateBase
 
 
-class AdcmanSolverState(SolverStateBase):
+class AdcmanSolverState(EigenSolverStateBase):
     def __init__(self, matrix, cppstate, spin_change):
         super().__init__(matrix)
+        self.algorithm = "adcman"
         self.eigenvalues = cppstate.eigenvalues
         self.converged = np.all(cppstate.residuals_converged)
         self.eigenvectors = [AmplitudeVector(st, dt)

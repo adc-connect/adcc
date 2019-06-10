@@ -23,14 +23,15 @@
 import sys
 import warnings
 import numpy as np
+
 import scipy.linalg as la
 import scipy.sparse.linalg as sla
 
-from adcc import AdcMatrix, AmplitudeVector, linear_combination
-
 from .preconditioner import JacobiPreconditioner
-from .SolverStateBase import SolverStateBase
+from .SolverStateBase import EigenSolverStateBase
 from .explicit_symmetrisation import IndexSymmetrisation
+
+from adcc import AdcMatrix, AmplitudeVector, linear_combination
 
 
 def select_eigenpairs(vectors, n_ep, which):
@@ -43,12 +44,12 @@ def select_eigenpairs(vectors, n_ep, which):
                          "are understood.")
 
 
-class DavidsonState(SolverStateBase):
+class DavidsonState(EigenSolverStateBase):
     def __init__(self, matrix, guesses):
         super().__init__(matrix)
         self.residuals = None                   # Current residuals
-        self.residual_norms = None              # Current residual norms
         self.subspace_vectors = guesses.copy()  # Current subspace vectors
+        self.algorithm = "davidson"
 
 
 def default_print(state, identifier, file=sys.stdout):
