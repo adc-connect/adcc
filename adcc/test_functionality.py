@@ -20,19 +20,19 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import adcc
 import unittest
 import numpy as np
 
-from .misc import assert_allclose_signfix, expand_test_templates
 from numpy.testing import assert_allclose
-
-import adcc
-import pytest
-
-from pytest import approx
 
 from adcc.testdata.cache import cache
 from adcc.solver.SolverStateBase import SolverStateBase
+
+import pytest
+
+from .misc import assert_allclose_signfix, expand_test_templates
+from pytest import approx
 
 # The methods to test
 methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
@@ -46,7 +46,6 @@ class TestFunctionality(unittest.TestCase):
         ref = refdata[method][kind]
 
         n_ref = len(ref["eigenvalues"])
-        absdiff = np.abs(np.diff(ref["eigenvalues"]))
         smallsystem = ("sto3g" in system or "631g" in system)
 
         # Run ADC and properties
@@ -66,6 +65,7 @@ class TestFunctionality(unittest.TestCase):
             # TODO Investigate this
             pytest.xfail("CN adc0 transition properties currently fail for "
                          "unknown reasons and are thus not explicitly tested.")
+
         for i in range(n_ref):
             # Computing the dipole moment implies a lot of cancelling in the
             # contraction, which has quite an impact on the accuracy.
@@ -79,17 +79,12 @@ class TestFunctionality(unittest.TestCase):
 
             # If the eigenpair is degenerate, then some rotation
             # in the eigenspace is possible, which reflects as a
-            # unitary rotation inside the dipole moments. For simplicity
-            # we thus only compare the norm in such cases and skip
-            # the test for the exact values. Since this is hard to determine
-            # if we are at the end of the range of reference values
-            # (i == n_ref - 1), we bail out of this check under these
-            # circumstances as well.
-            degenerate = absdiff[max(0, i - 1)] < 1e-12 or \
-                absdiff[min(i, n_ref - 2)] < 1e-12
-            if not degenerate and i != n_ref - 1:
-                atol = 1e-5 if smallsystem else 5e-5
-                assert_allclose_signfix(res_tdm, ref_tdm, atol=atol)
+            # rotation inside the dipole moments. This is the case
+            # for example for the CN test system. For simplicity,
+            # we only compare the norm of the transition dipole moment
+            # in such cases and skip the test for the exact values.
+            if "cn" not in system:
+                assert_allclose_signfix(res_tdm, ref_tdm, atol=1e-5)
 
         # Computing the dipole moment implies a lot of cancelling in the
         # contraction, which has quite an impact on the accuracy.
