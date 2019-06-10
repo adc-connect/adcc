@@ -24,8 +24,8 @@ import adcc
 import unittest
 import itertools
 
-from adcc.testdata import geometry
 from adcc.testdata.cache import cache
+from adcc.backends.testing import cached_backend_hf
 
 import pytest
 
@@ -55,11 +55,7 @@ class TestBackendsImportReferenceData(unittest.TestCase):
            backend == "veloxchem" and molecule == "h2o":
             pytest.skip("VeloxChem does not support f-functions.")
 
-        hfres = adcc.backends.run_hf(
-            backend, xyz=geometry.xyz[molecule],
-            basis=basis, conv_tol=1e-14, conv_tol_grad=1e-12,
-        )
-        scfres = adcc.backends.import_scf_results(hfres)
+        scfres = cached_backend_hf(backend, molecule, basis)
 
         compare_refstate_with_reference(
             data, reference, case, scfres, compare_orbcoeff=False,
