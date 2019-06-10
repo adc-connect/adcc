@@ -28,6 +28,7 @@ import pytest
 from adcc import AdcMatrix, LazyMp, guess_zero, hdf5io
 from adcc.misc import cached_property
 from adcc.caching_policy import CacheAllPolicy
+from .geometry import xyz
 
 
 class AdcMockState():

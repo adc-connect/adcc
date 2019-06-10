@@ -21,16 +21,17 @@
 ##
 ## ---------------------------------------------------------------------
 import numpy as np
+
+from pyscf import gto, scf
+from geometry import xyz
+
 import adcc.backends.pyscf
 
 from adcc import hdf5io
 
-from pyscf import gto, scf
-
 # Run SCF in pyscf and converge super-tight using an EDIIS
 mol = gto.M(
-    atom='C 0 0 0;'
-         'N 0 0 2.2143810738114829',
+    atom=xyz["cn"],
     basis='cc-pvdz',
     unit="Bohr",
     spin=1,

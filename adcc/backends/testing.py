@@ -20,10 +20,10 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
+import adcc
 import numpy as np
 
-import adcc
+from ..misc import assert_allclose_signfix
 from .eri_build_helper import _eri_phys_asymm_spin_allowed_prefactors
 
 
@@ -110,3 +110,64 @@ def eri_asymm_construction_test(scfres, core_orbitals=0):
                     err_msg="""ERIs wrong in space {} """
                             """and spin block {}""".format(s, allowed_spin)
                 )
+
+
+def operator_import_test(scfres, ao_dict):
+    refstate = adcc.ReferenceState(scfres)
+    occa = refstate.orbital_coefficients_alpha("o1b").to_ndarray()
+    occb = refstate.orbital_coefficients_beta("o1b").to_ndarray()
+    virta = refstate.orbital_coefficients_alpha("v1b").to_ndarray()
+    virtb = refstate.orbital_coefficients_beta("v1b").to_ndarray()
+
+    for i, ao_component in enumerate(ao_dict):
+        dip_oo = np.einsum('ib,ba,ja->ij', occa, ao_component, occa)
+        dip_oo += np.einsum('ib,ba,ja->ij', occb, ao_component, occb)
+
+        dip_ov = np.einsum('ib,ba,ja->ij', occa, ao_component, virta)
+        dip_ov += np.einsum('ib,ba,ja->ij', occb, ao_component, virtb)
+
+        dip_vv = np.einsum('ib,ba,ja->ij', virta, ao_component, virta)
+        dip_vv += np.einsum('ib,ba,ja->ij', virtb, ao_component, virtb)
+
+        dip_mock = {"o1o1": dip_oo, "o1v1": dip_ov, "v1v1": dip_vv}
+
+        dip_imported = refstate.operators.electric_dipole[i]
+        for b in dip_imported.blocks:
+            assert_allclose_signfix(
+                dip_mock[b], dip_imported[b].to_ndarray(),
+                atol=refstate.conv_tol
+            )
+
+
+def cached_backend_hf(backend, molecule, basis):
+    """
+    Run the SCF for a backend and a particular test case (if not done)
+    and return the result.
+    """
+    import adcc.backends
+
+    from adcc.testdata import geometry
+
+    global __cache_cached_backend_hf
+
+    def payload():
+        hfres = adcc.backends.run_hf(backend, xyz=geometry.xyz[molecule],
+                                     basis=basis, conv_tol=1e-13,
+                                     conv_tol_grad=1e-12)
+        return adcc.backends.import_scf_results(hfres)
+
+    # For reasons not clear to me (mfh), caching does not work
+    # with pyscf
+    if backend == "pyscf":
+        return payload()
+
+    key = (backend, molecule, basis)
+    try:
+        return __cache_cached_backend_hf[key]
+    except NameError:
+        __cache_cached_backend_hf = {}
+        __cache_cached_backend_hf[key] = payload()
+        return __cache_cached_backend_hf[key]
+    except KeyError:
+        __cache_cached_backend_hf[key] = payload()
+        return __cache_cached_backend_hf[key]

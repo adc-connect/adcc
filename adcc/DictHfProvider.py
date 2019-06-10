@@ -27,6 +27,18 @@ from warnings import warn
 from libadcc import HartreeFockProvider
 
 
+class DictOperatorIntegralProvider:
+    def __init__(self, data={}):
+        self.data = data
+        self.backend = data.get("backend", "dict")
+
+        if "multipoles" in data:
+            mmp = data["multipoles"]
+            if "elec_1" in mmp:
+                assert mmp["elec_1"].shape[0] == 3
+                self.electric_dipole = list(mmp["elec_1"])
+
+
 class DictHfProvider(HartreeFockProvider):
     """
     Very simple implementation of the HartreeFockProvider
@@ -37,10 +49,10 @@ class DictHfProvider(HartreeFockProvider):
     """
 
     def __init__(self, data):
-        # Do not forget the next line,
-        # otherwise weird errors result
+        # Do not forget the next line, otherwise weird errors result
         super().__init__()
         self.data = data
+        self.operator_integral_provider = DictOperatorIntegralProvider(data)
 
     def get_backend(self):
         return self.data.get("backend", "dict")
@@ -73,6 +85,15 @@ class DictHfProvider(HartreeFockProvider):
 
     def get_n_bas(self):
         return self.data["n_bas"]
+
+    def get_nuclear_multipole(self, order):
+        if order == 0:
+            # The function interface needs to be a np.array on return
+            return np.array([self.data["multipoles"]["nuclear_0"]])
+        elif order == 1:
+            return np.array(self.data["multipoles"]["nuclear_1"])
+        else:
+            raise NotImplementedError("get_nuclear_multipole with order > 1")
 
     def fill_occupation_f(self, out):
         if "occupation_f" in self.data:

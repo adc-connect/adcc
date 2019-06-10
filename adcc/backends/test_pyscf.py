@@ -22,18 +22,18 @@
 ## ---------------------------------------------------------------------
 import unittest
 import numpy as np
-import adcc
-import adcc.backends
+
+from ..misc import expand_test_templates
+from .testing import eri_asymm_construction_test, operator_import_test
 
 from numpy.testing import assert_almost_equal
 
+import pytest
+import adcc
+import adcc.backends
+
 from adcc.backends import have_backend
 from adcc.testdata import geometry
-
-import pytest
-
-from ..misc import expand_test_templates
-from .eri_construction_test import eri_asymm_construction_test
 
 if have_backend("pyscf"):
     from pyscf import gto, scf
@@ -154,8 +154,14 @@ class TestPyscf(unittest.TestCase):
     def template_rhf_h2o(self, basis):
         mf = adcc.backends.run_hf("pyscf", geometry.xyz["h2o"], basis)
         self.base_test(mf)
+
+        # Test ERI
         eri_asymm_construction_test(mf)
         eri_asymm_construction_test(mf, core_orbitals=1)
+
+        # Test dipole
+        ao_dip = mf.mol.intor_symmetric('int1e_r', comp=3)
+        operator_import_test(mf, list(ao_dip))
 
     def test_h2o_sto3g_core_hole(self):
         mol = gto.M(

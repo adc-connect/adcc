@@ -22,9 +22,9 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
-from molsturm.State import State
-
 from adcc.DictHfProvider import DictHfProvider
+
+from molsturm.State import State
 
 
 def convert_scf_to_dict(scfres):
@@ -57,6 +57,25 @@ def convert_scf_to_dict(scfres):
     data["energy_scf"] = scfres["energy_ground_state"]
     data["conv_tol"] = 10 * scfres["final_error_norm"]
     data["orbcoeff_fb"] = scfres["orbcoeff_bf"].transpose().copy()
+
+    # Compute electric and nuclear multipole moments
+    data["multipoles"] = {"elec_0": -int(n_alpha + n_beta), }
+    if "input_parameters" in scfres:
+        params = scfres["input_parameters"]
+        coords = np.asarray(params["system"]["coords"])
+        charges = np.asarray(params["system"]["atom_numbers"])
+        data["multipoles"]["nuclear_0"] = int(np.sum(charges)),
+        data["multipoles"]["nuclear_1"] = np.einsum('i,ix->x', charges, coords)
+    else:
+        import warnings
+
+        # We have no information about this, so we can just provide dummies
+        data["multipoles"]["nuclear_0"] = -1
+        data["multipoles"]["nuclear_1"] = np.zeros(3)
+        warnings.warn("The passed molsturm scfres has no information about "
+                      "nuclear multipoles, such that dummy data are used. "
+                      "Results involving nuclear multipoles could be wrong.")
+
     data["backend"] = "molsturm"
     return data
 

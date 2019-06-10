@@ -27,6 +27,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 
 from libadcc import HartreeFockProvider
+from .DictHfProvider import DictOperatorIntegralProvider
 
 
 class HfCounterData(HartreeFockProvider):
@@ -45,6 +46,7 @@ class HfCounterData(HartreeFockProvider):
         self.__n_orbs_alpha = n_orbs_alpha
         self.__restricted = restricted
         self.__mul = 10
+        self.operator_integral_provider = DictOperatorIntegralProvider()
 
         # Do not forget the next line,
         # otherwise weird errors result
@@ -234,7 +236,8 @@ class TestReferenceStateCounterData(unittest.TestCase):
                   check_symmetry=False, core_orbitals=[]):
         data = HfCounterData(n_alpha, n_beta, n_bas, n_orbs_alpha, restricted)
         refstate = adcc.ReferenceState(data, core_orbitals,
-                                       symmetry_check_on_import=check_symmetry)
+                                       symmetry_check_on_import=check_symmetry,
+                                       import_all_below_n_orbs=None)
 
         # Setup spaces and refstate axis
         subspaces = ["o1", "v1"]

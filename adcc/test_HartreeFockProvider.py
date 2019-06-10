@@ -20,15 +20,14 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import unittest
-
 import adcc
-
-from pytest import approx
+import unittest
 
 from adcc.DictHfProvider import DictHfProvider
 from adcc.testdata.cache import cache
 from adcc.solver.SolverStateBase import SolverStateBase
+
+from pytest import approx
 
 
 class TestHartreeFockProvider(unittest.TestCase):
@@ -36,7 +35,7 @@ class TestHartreeFockProvider(unittest.TestCase):
         hf = DictHfProvider(cache.hfdata[system])
         refdata = cache.reference_data[system]
 
-        res = adcc.adc2(hf, n_singlets=10, **args)
+        res = adcc.adc2(hf, n_singlets=9, **args)
         assert isinstance(res, SolverStateBase)
 
         ref = refdata["adc2"]["singlet"]["eigenvalues"]

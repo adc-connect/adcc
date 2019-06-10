@@ -21,10 +21,10 @@
 ##
 ## ---------------------------------------------------------------------
 import numpy as np
-
 import scipy.constants
 
 from adcc.timings import Timer
+from adcc import hdf5io
 
 
 class SolverStateBase:
@@ -79,14 +79,14 @@ class SolverStateBase:
         text += "|  #        excitation energy       |v1|^2    |v2|^2  |\n"
         text += "|          (au)           (eV)                        |\n"
         for i, vec in enumerate(self.eigenvectors):
-            v1_norm = np.sum((vec["s"] * vec["s"]).to_ndarray())
-            # TODO It would be better to compute v2, but right now
-            #      this requires we need to get the full doubles
-            #      part into numpy, which is pretty slow ...
-            # v2_norm = vec["d"] * vec["d"]
+            v1_norm = vec["s"].dot(vec["s"])
+            if "d" in vec.blocks:
+                v2_norm = vec["d"].dot(vec["d"])
+            else:
+                v2_norm = 0
             text += body.format(i, self.eigenvalues[i],
                                 self.eigenvalues[i] * toeV,
-                                v1_norm, 1 - v1_norm)
+                                v1_norm, v2_norm)
         text += "+" + 53 * "-" + "+"
         return text
 

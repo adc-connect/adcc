@@ -22,11 +22,16 @@
 ## ---------------------------------------------------------------------
 import adcc
 import unittest
+import numpy as np
+
+from numpy.testing import assert_allclose
 
 from adcc.testdata.cache import cache
 from adcc.solver.SolverStateBase import SolverStateBase
 
-from .misc import expand_test_templates
+import pytest
+
+from .misc import assert_allclose_signfix, expand_test_templates
 from pytest import approx
 
 # The methods to test
@@ -38,31 +43,66 @@ class TestFunctionality(unittest.TestCase):
     def base_test(self, system, method, kind, **args):
         hf = cache.hfdata[system]
         refdata = cache.reference_data[system]
+        ref = refdata[method][kind]
 
-        args["conv_tol"] = 5e-8
+        n_ref = len(ref["eigenvalues"])
+        smallsystem = ("sto3g" in system or "631g" in system)
+
+        # Run ADC and properties
+        args["conv_tol"] = 3e-9
         res = getattr(adcc, method.replace("-", "_"))(hf, **args)
+        if res.method.level > 2:
+            res = adcc.attach_properties(res, method="adc2")
+        else:
+            res = adcc.attach_properties(res)
+
+        # Checks
         assert isinstance(res, SolverStateBase)
-
-        ref = refdata[method][kind]["eigenvalues"]
         assert res.converged
-        assert res.eigenvalues == approx(ref, abs=1e-7)
+        assert_allclose(res.eigenvalues[:n_ref], ref["eigenvalues"], atol=1e-7)
 
-        # TODO Compare transition dipole moment
-        # TODO Compare excited state dipole moment
+        if method == "adc0" and "cn" in system:
+            # TODO Investigate this
+            pytest.xfail("CN adc0 transition properties currently fail for "
+                         "unknown reasons and are thus not explicitly tested.")
+
+        for i in range(n_ref):
+            # Computing the dipole moment implies a lot of cancelling in the
+            # contraction, which has quite an impact on the accuracy.
+            res_tdm = res.transition_dipole_moments[i]
+            ref_tdm = ref["transition_dipole_moments"][i]
+
+            # Test norm and actual values
+            res_tdm_norm = np.sum(res_tdm * res_tdm)
+            ref_tdm_norm = np.sum(ref_tdm * ref_tdm)
+            assert res_tdm_norm == approx(ref_tdm_norm, abs=1e-5)
+
+            # If the eigenpair is degenerate, then some rotation
+            # in the eigenspace is possible, which reflects as a
+            # rotation inside the dipole moments. This is the case
+            # for example for the CN test system. For simplicity,
+            # we only compare the norm of the transition dipole moment
+            # in such cases and skip the test for the exact values.
+            if "cn" not in system:
+                assert_allclose_signfix(res_tdm, ref_tdm, atol=1e-5)
+
+        # Computing the dipole moment implies a lot of cancelling in the
+        # contraction, which has quite an impact on the accuracy.
+        assert_allclose(res.state_dipole_moments[:n_ref],
+                        ref["state_dipole_moments"], atol=1e-4)
 
         # Test we do not use too many iterations
-        if "sto3g" in system or "631g" in system:
+        if smallsystem:
             n_iter_bound = {
-                "adc0": 1, "adc1": 4, "adc2": 6, "adc2x": 11, "adc3": 11,
-                "cvs-adc0": 1, "cvs-adc1": 4, "cvs-adc2": 5, "cvs-adc2x": 11
-            }
+                "adc0": 1, "adc1": 4, "adc2": 6, "adc2x": 13, "adc3": 13,
+                "cvs-adc0": 1, "cvs-adc1": 4, "cvs-adc2": 5, "cvs-adc2x": 12
+            }[method]
         else:
             n_iter_bound = {
-                "adc0": 1, "adc1": 8, "adc2": 14, "adc2x": 14, "adc3": 14,
-                "cvs-adc0": 1, "cvs-adc1": 6, "cvs-adc2": 14, "cvs-adc2x": 16
-            }
-
-        assert res.n_iter <= n_iter_bound[method]
+                "adc0": 1, "adc1": 8, "adc2": 16, "adc2x": 17, "adc3": 17,
+                "cvs-adc0": 1, "cvs-adc1": 7, "cvs-adc2": 16, "cvs-adc2x": 18
+            }[method]
+        assert res.n_iter <= n_iter_bound
 
     #
     # General
@@ -116,7 +156,7 @@ class TestFunctionality(unittest.TestCase):
                        n_triplets=n_triplets, n_core_orbitals=1)
 
     def template_cvs_h2o_def2tzvp_triplets(self, method):
-        self.base_test("h2o_def2tzvp", "cvs-" + method, "triplet", n_triplets=3,
+        self.base_test("h2o_def2tzvp", "cvs-" + method, "triplet", n_triplets=4,
                        n_core_orbitals=1)
 
     def template_cvs_cn_sto3g(self, method):

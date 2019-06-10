@@ -23,13 +23,27 @@
 import warnings
 import numpy as np
 
+from pyscf import ao2mo, gto, scf
+
+from adcc.misc import cached_property
 from adcc.DictHfProvider import DictHfProvider
 
-from pyscf import ao2mo, gto, scf
 from libadcc import HartreeFockProvider
 from .eri_build_helper import EriBuilder
 
 
+class PyScfOperatorIntegralProvider:
+    def __init__(self, scfres):
+        self.scfres = scfres
+        self.backend = "pyscf"
+
+    @cached_property
+    def electric_dipole(self):
+        return list(self.scfres.mol.intor_symmetric('int1e_r', comp=3))
+
+
+# TODO: refactor ERI builder to be more general
+# IntegralBuilder would be good
 class PyScfEriBuilder(EriBuilder):
     def __init__(self, scfres, n_orbs, n_orbs_alpha, n_alpha, n_beta):
         self.scfres = scfres
@@ -67,6 +81,10 @@ class PyScfHFProvider(HartreeFockProvider):
         self.eri_builder = PyScfEriBuilder(
             self.scfres, self.n_orbs, self.n_orbs_alpha,
             self.n_alpha, self.n_beta
+        )
+
+        self.operator_integral_provider = PyScfOperatorIntegralProvider(
+            self.scfres
         )
 
     def get_backend(self):
@@ -118,6 +136,17 @@ class PyScfHFProvider(HartreeFockProvider):
 
     def get_n_bas(self):
         return int(self.scfres.mol.nao_nr())
+
+    def get_nuclear_multipole(self, order):
+        charges = self.scfres.mol.atom_charges()
+        if order == 0:
+            # The function interface needs to be a np.array on return
+            return np.array([np.sum(charges)])
+        elif order == 1:
+            coords = self.scfres.mol.atom_coords()
+            return np.einsum('i,ix->x', charges, coords)
+        else:
+            raise NotImplementedError("get_nuclear_multipole with order > 1")
 
     def fill_occupation_f(self, out):
         if self.restricted:
@@ -334,6 +363,17 @@ def convert_scf_to_dict(scfres):
     eri[:, :, brv, arv] = 0
 
     data["eri_ffff"] = eri
+
+    # Compute electric and nuclear multipole moments
+    charges = scfres.mol.atom_charges()
+    coords = scfres.mol.atom_coords()
+    data["multipoles"] = {
+        "nuclear_0": int(np.sum(charges)),
+        "nuclear_1": np.einsum('i,ix->x', charges, coords),
+        "elec_0": -int(n_alpha + n_beta),
+        "elec_1": scfres.mol.intor_symmetric('int1e_r', comp=3),
+    }
+
     data["backend"] = "pyscf"
     return data
 
@@ -375,6 +415,8 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
         charge=charge,
         # Disable commandline argument parsing in pyscf
         parse_arg=False,
+        dump_input=False,
+        verbose=0,
     )
     mf = scf.HF(mol)
     mf.conv_tol = conv_tol

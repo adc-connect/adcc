@@ -37,6 +37,8 @@ from .ReferenceState import ReferenceState
 from .caching_policy import DefaultCachingPolicy, GatherStatisticsPolicy
 from .AmplitudeVector import AmplitudeVector
 from .state_densities import attach_state_densities
+from .properties import attach_properties
+from .OneParticleOperator import OneParticleOperator
 
 from libadcc import HartreeFockProvider
 
@@ -49,9 +51,9 @@ __all__ = ["run_adc", "AdcMatrix", "AdcMethod", "Symmetry", "ReferenceState",
            "add", "contract", "copy", "divide", "dot", "empty_like",
            "linear_combination", "multiply", "nosym_like", "ones_like",
            "subtract", "transpose", "zeros_like",
-           "memory_pool", "thread_pool", "AmplitudeVector",
+           "memory_pool", "thread_pool", "AmplitudeVector", "attach_properties",
            "attach_state_densities", "HartreeFockProvider",
-           "Tensor", "DictHfProvider",
+           "Tensor", "DictHfProvider", "OneParticleOperator",
            "guesses_singlet", "guesses_triplet", "guesses_any",
            "guesses_spin_flip", "guess_zero", "DefaultCachingPolicy",
            "GatherStatisticsPolicy", "LazyMp",

@@ -25,6 +25,18 @@ import numpy as np
 
 from libadcc import HartreeFockProvider
 from .eri_build_helper import EriBuilder
+from adcc.misc import cached_property
+
+
+class Psi4OperatorIntegralProvider:
+    def __init__(self, wfn):
+        self.wfn = wfn
+        self.backend = "psi4"
+        self.mints = psi4.core.MintsHelper(self.wfn.basisset())
+
+    @cached_property
+    def electric_dipole(self):
+        return [-np.asarray(comp) for comp in self.mints.ao_dipole()]
 
 
 class Psi4EriBuilder(EriBuilder):
@@ -66,6 +78,7 @@ class Psi4HFProvider(HartreeFockProvider):
         self.eri_builder = Psi4EriBuilder(
             self.wfn, self.n_orbs, self.n_orbs_alpha, self.n_alpha, self.n_beta
         )
+        self.operator_integral_provider = Psi4OperatorIntegralProvider(self.wfn)
 
     def get_backend(self):
         return "psi4"
@@ -100,6 +113,18 @@ class Psi4HFProvider(HartreeFockProvider):
 
     def get_n_bas(self):
         return self.wfn.basisset().nbf()
+
+    def get_nuclear_multipole(self, order):
+        molecule = self.wfn.molecule()
+        if order == 0:
+            # The function interface needs to be a np.array on return
+            return np.array([sum(molecule.charge(i)
+                                 for i in range(molecule.natom()))])
+        elif order == 1:
+            dip_nuclear = molecule.nuclear_dipole()
+            return np.array([dip_nuclear[0], dip_nuclear[1], dip_nuclear[2]])
+        else:
+            raise NotImplementedError("get_nuclear_multipole with order > 1")
 
     def fill_orbcoeff_fb(self, out):
         mo_coeff_a = np.asarray(self.wfn.Ca())
@@ -169,10 +194,12 @@ basissets = {
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
            conv_tol_grad=1e-8, max_iter=150):
     mol = psi4.geometry("""
+        {charge} {multiplicity}
         {xyz}
         symmetry c1
         units au
-        {charge} {multiplicity}
+        no_reorient
+        no_com
         """.format(xyz=xyz, charge=charge, multiplicity=multiplicity))
     psi4.core.be_quiet()
     reference = "RHF"

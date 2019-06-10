@@ -23,13 +23,26 @@
 import os
 import tempfile
 import numpy as np
-import veloxchem as vlx
 
 from mpi4py import MPI
-from .eri_build_helper import (EriBuilder, SpinBlockSlice,
-                               get_symmetry_equivalent_transpositions_for_block)
+
+import veloxchem as vlx
 
 from libadcc import HartreeFockProvider
+from .eri_build_helper import (EriBuilder, SpinBlockSlice,
+                               get_symmetry_equivalent_transpositions_for_block)
+from adcc.misc import cached_property
+
+
+class VeloxChemOperatorIntegralProvider:
+    def __init__(self, scfdrv):
+        self.scfdrv = scfdrv
+        self.backend = "veloxchem"
+
+    @cached_property
+    def electric_dipole(self, component="x"):
+        return list(self.scfdrv.scf_tensors['Mu'])
+
 
 # VeloxChem is a special case... not using coefficients at all
 # so we need this boilerplate code to make it work...
@@ -223,6 +236,10 @@ class VeloxChemHFProvider(HartreeFockProvider):
             self.n_alpha, self.n_beta
         )
 
+        self.operator_integral_provider = VeloxChemOperatorIntegralProvider(
+            self.scfdrv
+        )
+
     def get_backend(self):
         return "veloxchem"
 
@@ -252,6 +269,20 @@ class VeloxChemHFProvider(HartreeFockProvider):
 
     def get_n_bas(self):
         return self.mol_orbs.number_aos()
+
+    def get_nuclear_multipole(self, order):
+        mol = self.scfdrv.task.molecule
+        nuc_charges = mol.elem_ids_to_numpy()
+        if order == 0:
+            # The function interface needs to be a np.array on return
+            return np.array([np.sum(nuc_charges)])
+        elif order == 1:
+            coords = np.vstack(
+                (mol.x_to_numpy(), mol.y_to_numpy(), mol.z_to_numpy())
+            ).transpose()
+            return np.einsum('i,ix->x', nuc_charges, coords)
+        else:
+            raise NotImplementedError("get_nuclear_multipole with order > 1")
 
     def fill_orbcoeff_fb(self, out):
         mo_coeff_a = self.mol_orbs.alpha_to_numpy()

@@ -24,6 +24,7 @@ import sys
 import warnings
 
 from . import solver
+
 from .guess import (guesses_any, guesses_singlet, guesses_spin_flip,
                     guesses_triplet)
 from .AdcMatrix import AdcMatrix
@@ -150,11 +151,14 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
                                        core_orbitals=n_core_orbitals)
         data_or_matrix = refstate
     elif n_core_orbitals is not None:
-        refstate = data_or_matrix.reference_state
+        if isinstance(data_or_matrix, ReferenceState):
+            refstate = data_or_matrix
+        else:
+            refstate = data_or_matrix.reference_state
         warnings.warn("Ignored n_core_orbitals parameter because data_or_matrix"
                       " is a ReferenceState, a LazyMp or an AdcMatrix object "
                       " (which has a value of n_core_orbitals={})."
-                      "".format(refstate.n_orbs_alpha("o2")))
+                      "".format(refstate.mospaces.n_orbs_alpha("o2")))
 
     # Step2: Make AdcMatrix
     if isinstance(data_or_matrix, (ReferenceState, LazyMp)):

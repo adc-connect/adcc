@@ -29,7 +29,7 @@ namespace py_iface {
 namespace py = pybind11;
 
 static std::shared_ptr<OneParticleDensityMatrix> compute_state_diffdm(
-      std::string method, std::shared_ptr<LazyMp> ground_state_ptr,
+      std::string method, std::shared_ptr<const LazyMp> ground_state_ptr,
       const AmplitudeVector& excitation_amplitude,
       std::shared_ptr<AdcIntermediates> intermediates_ptr) {
   return adcc::compute_state_diffdm(method, ground_state_ptr, excitation_amplitude,
@@ -37,7 +37,7 @@ static std::shared_ptr<OneParticleDensityMatrix> compute_state_diffdm(
 }
 
 static std::shared_ptr<OneParticleDensityMatrix> compute_gs2state_optdm(
-      std::string method, std::shared_ptr<LazyMp> ground_state_ptr,
+      std::string method, std::shared_ptr<const LazyMp> ground_state_ptr,
       const AmplitudeVector& excitation_amplitude,
       std::shared_ptr<AdcIntermediates> intermediates_ptr) {
   return adcc::compute_gs2state_optdm(method, ground_state_ptr, excitation_amplitude,
@@ -45,7 +45,7 @@ static std::shared_ptr<OneParticleDensityMatrix> compute_gs2state_optdm(
 }
 
 static std::shared_ptr<OneParticleDensityMatrix> compute_state2state_optdm(
-      std::string method, std::shared_ptr<LazyMp> ground_state_ptr,
+      std::string method, std::shared_ptr<const LazyMp> ground_state_ptr,
       const AmplitudeVector& excitation_amplitude_from,
       const AmplitudeVector& excitation_amplitude_to,
       std::shared_ptr<AdcIntermediates> intermediates_ptr) {

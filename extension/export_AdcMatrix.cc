@@ -48,11 +48,16 @@ void export_AdcMatrix(py::module& m) {
   //         because the python version is much more powerful
   py::class_<AdcMatrix, std::shared_ptr<AdcMatrix>>(
         m, "AdcMatrix", "Class representing the AdcMatrix in various variants.")
-        .def(py::init<std::string, std::shared_ptr<LazyMp>>())
+        .def(py::init<std::string, std::shared_ptr<const LazyMp>>())
         .def_property("intermediates", &AdcMatrix::get_intermediates_ptr,
                       &AdcMatrix::set_intermediates_ptr)
         .def_property_readonly("reference_state", &AdcMatrix::reference_state_ptr)
-        .def_property_readonly("ground_state", &AdcMatrix::ground_state_ptr)
+        .def_property_readonly("ground_state",
+                               [](const AdcMatrix& self) {
+                                 py::object pyLazyMp =
+                                       py::module::import("adcc.LazyMp").attr("LazyMp");
+                                 return pyLazyMp(self.ground_state_ptr());
+                               })
         .def_property_readonly("mospaces", &AdcMatrix::mospaces_ptr)
         .def_property_readonly("is_core_valence_separated",
                                &AdcMatrix::is_core_valence_separated)

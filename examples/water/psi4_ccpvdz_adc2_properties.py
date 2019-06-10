@@ -53,71 +53,30 @@ psi4.set_options({'basis': "cc-pvdz",
                   'd_convergence': 1e-9})
 scf_e, wfn = psi4.energy('SCF', return_wfn=True)
 
-# Compute dipole integrals
-mints = psi4.core.MintsHelper(wfn.basisset())
-dip_ao = np.array([np.asarray(comp) for comp in mints.ao_dipole()])
-
 print(adcc.banner())
 
 # Run an adc2 calculation:
 state = adcc.adc2(wfn, n_singlets=7, conv_tol=1e-8)
-state = adcc.attach_state_densities(state)
-
-#
-# Get HF density matrix and nuclear dipole
-#
-ρ_hf_tot = np.asarray(wfn.Da()) + np.asarray(wfn.Db())
-
-# compute nuclear dipole
-# there is no conversion from psi4.core.Vector3 to numpy...
-dip_nuclear = mol.nuclear_dipole()
-dip_nuclear = np.array([dip_nuclear[0], dip_nuclear[1], dip_nuclear[2]])
-
-#
-# MP2 density correction
-#
-mp2dm_mo = state.ground_state.mp2_diffdm
-dm_mp2_ao = mp2dm_mo.transform_to_ao_basis(state.reference_state)
-ρ_mp2_tot = (dm_mp2_ao[0] + dm_mp2_ao[1]).to_ndarray() + ρ_hf_tot
-
-#
-# Compute properties
-#
-exc_energies = []    # Excitation energies
-osc_strengths = []    # Oscillator strength
+state = adcc.attach_properties(state)
 
 print()
 print("  st  ex.ene. (au)         f     transition dipole moment (au)"
       "        state dip (au)")
 for i, ampl in enumerate(state.eigenvectors):
-    # Compute transition density matrix
-    tdm_mo = state.ground_to_excited_tdms[i]
-    tdm_ao = tdm_mo.transform_to_ao_basis(state.reference_state)
-    ρ_tdm_tot = (tdm_ao[0] + tdm_ao[1]).to_ndarray()
-
-    # Compute transition dipole moment
-    tdip = np.einsum('xij,ij->x', dip_ao, ρ_tdm_tot)
-    osc = 2. / 3. * np.linalg.norm(tdip)**2 * np.abs(state.eigenvalues[i])
-
-    # Compute excited states density matrix and excited state dipole moment
-    opdm_mo = state.state_diffdms[i]
-    opdm_ao = opdm_mo.transform_to_ao_basis(state.reference_state)
-    ρdiff_opdm_ao = (opdm_ao[0] + opdm_ao[1]).to_ndarray()
-    sdip_el = np.einsum('xij,ij->x', dip_ao, ρdiff_opdm_ao + ρ_mp2_tot)
-    sdip = -sdip_el - dip_nuclear
-
+    osc = state.oscillator_strengths[i]
+    tdip = state.transition_dipole_moments[i]
+    sdip = state.state_dipole_moments[i]
     # Print findings
     fmt = "{0:2d}  {1:12.8g} {2:9.3g}   [{3:9.3g}, {4:9.3g}, {5:9.3g}]"
     fmt += "   [{6:9.3g}, {7:9.3g}, {8:9.3g}]"
+    # fmt += "   [{9:9.3g}, {10:9.3g}, {11:9.3g}]"
     print(state.kind[0], fmt.format(i, state.eigenvalues[i], osc, *tdip, *sdip))
 
-    # Save oscillator strength and excitation energies
-    osc_strengths.append(osc)
-    exc_energies.append(state.eigenvalues[i])
-exc_energies = np.array(exc_energies)
-osc_strengths = np.array(osc_strengths)
-
 # Plot a spectrum
-plot_spectrum(exc_energies * eV, osc_strengths)
+plot_spectrum(state.eigenvalues * eV, state.oscillator_strengths)
 plt.xlabel("Excitation energy in eV")
 plt.savefig("spectrum.pdf")
+
+# Timings summary:
+print(state.timer.describe())
+print(state.reference_state.timer.describe())

@@ -19,6 +19,7 @@
 
 #include "hartree_fock_solution_hack.hh"
 #include <adcc/ReferenceState.hh>
+#include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -136,6 +137,16 @@ void export_ReferenceState(py::module& m) {
                                "Number of alpha electrons")
         .def_property_readonly("n_beta", &ReferenceState::n_beta,
                                "Number of beta electrons")
+        .def_property_readonly(
+              "nuclear_total_charge",
+              [](const ReferenceState& ref) { return ref.nuclear_multipole(0)[0]; })
+        .def_property_readonly("nuclear_dipole",
+                               [](const ReferenceState& ref) {
+                                 py::array_t<scalar_type> ret({3});
+                                 auto res = ref.nuclear_multipole(1);
+                                 std::copy(res.begin(), res.end(), ret.mutable_data());
+                                 return res;
+                               })
         .def_property_readonly("conv_tol", &ReferenceState::conv_tol,
                                "SCF convergence tolererance")
         .def_property_readonly("energy_scf", &ReferenceState::energy_scf,

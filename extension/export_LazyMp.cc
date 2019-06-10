@@ -34,6 +34,7 @@ void export_LazyMp(py::module& m) {
         .def(py::init<std::shared_ptr<const ReferenceState>>())
         .def(py::init<std::shared_ptr<const ReferenceState>,
                       std::shared_ptr<CachingPolicy_i>>())
+        .def(py::init<const LazyMp&>())
         .def("energy_correction", &LazyMp::energy_correction,
              "Obtain the appropriate MP energy correction.")
         .def("df", &LazyMp::df, "Obtain the Delta Fock matrix.")

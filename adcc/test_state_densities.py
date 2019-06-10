@@ -83,7 +83,7 @@ class Runners():
 
 
 # Return combinations not tested so far:
-#     The rationale is that cvs-spin-flip as a method does not make
+#     The rationale is that cvs-spin-flip as a method do not make
 #     that much sense and probably the routines are anyway covered
 #     by the other testing we do.
 delattr(Runners, "test_hf3_631g_spin_flip_cvs_adc0")

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SOURCE="https://get.michael-herbst.com/adcc/testdata/0.2.0/"
+SOURCE="https://get.michael-herbst.com/adcc/testdata/0.3.0/"
 DATAFILES=(
 	cn_sto3g_hfdata.hdf5
 	cn_sto3g_hfimport.hdf5

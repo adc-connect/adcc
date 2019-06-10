@@ -25,6 +25,7 @@
 def is_pyscf_available():
     try:
         from pyscf import scf
+
         return True
     except ImportError:
         return False
@@ -33,6 +34,7 @@ def is_pyscf_available():
 def is_psi4_available():
     try:
         import psi4
+
         return True
     except ImportError:
         return False
@@ -41,6 +43,7 @@ def is_psi4_available():
 def is_molsturm_available():
     try:
         import molsturm
+
         return True
     except ImportError:
         return False
@@ -71,10 +74,6 @@ def first_available():
         raise RuntimeError("No backend available.")
     else:
         return available[0]
-
-
-def available():
-    return sorted([b for b in status if status[b]])
 
 
 def have_backend(backend):

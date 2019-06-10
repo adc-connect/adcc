@@ -23,14 +23,14 @@
 import unittest
 import numpy as np
 
-from ..misc import expand_test_templates
-from .eri_construction_test import eri_asymm_construction_test
-
 from numpy.testing import assert_almost_equal
 
 import pytest
 import adcc
 import adcc.backends
+
+from ..misc import expand_test_templates
+from .testing import eri_asymm_construction_test
 
 from adcc.backends import have_backend
 from adcc.testdata import geometry
@@ -40,7 +40,7 @@ basissets = ["sto3g"]
 
 @expand_test_templates(basissets)
 @pytest.mark.skipif(not have_backend("molsturm"), reason="molsturm not found.")
-class TestPyscf(unittest.TestCase):
+class TestMolsturm(unittest.TestCase):
     def base_test(self, scfres):
         hfdata = adcc.backends.import_scf_results(scfres)
         assert hfdata.backend == "molsturm"
@@ -51,6 +51,13 @@ class TestPyscf(unittest.TestCase):
         assert hfdata.n_alpha == scfres["n_alpha"]
         assert hfdata.n_beta == scfres["n_beta"]
         assert hfdata.energy_scf == scfres["energy_ground_state"]
+
+        params = scfres["input_parameters"]
+        coords = np.asarray(params["system"]["coords"])
+        charges = np.asarray(params["system"]["atom_numbers"])
+        assert hfdata.get_nuclear_multipole(0)[0] == int(np.sum(charges))
+        assert_almost_equal(hfdata.get_nuclear_multipole(1),
+                            np.einsum('i,ix->x', charges, coords))
 
         if scfres["restricted"]:
             assert hfdata.restricted

@@ -20,15 +20,14 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import adcc
 import unittest
+import numpy as np
+
+from numpy.testing import assert_allclose, assert_almost_equal
+from adcc.testdata.cache import cache
 
 from .misc import expand_test_templates
-import numpy as np
-from numpy.testing import assert_allclose, assert_almost_equal
-
-import adcc
-
-from adcc.testdata.cache import cache
 
 # The methods to test
 testcases = cache.hfimport.keys()
@@ -65,6 +64,18 @@ def compare_refstate_with_reference(
     assert refstate.conv_tol == data["threshold"]
     assert_allclose(refstate.energy_scf, data["energy_scf"], atol=atol)
     assert refstate.mospaces.subspaces == subspaces
+
+    multipoles = data['multipoles']
+    assert_allclose(refstate.nuclear_total_charge,
+                    multipoles["nuclear_0"], atol=atol)
+    assert_allclose(refstate.nuclear_dipole,
+                    multipoles["nuclear_1"], atol=atol)
+
+    if "electric_dipole" in refstate.operators.available and \
+       "elec_1" in multipoles:
+        refstate2 = adcc.ReferenceState(data)
+        assert_allclose(refstate.dipole_moment,
+                        refstate2.dipole_moment, atol=atol)
 
     for ss in subspaces:
         assert_allclose(refstate.orbital_energies(ss).to_ndarray(),

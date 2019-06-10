@@ -22,7 +22,7 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
-from data import coeff_data, eri_data, orben_data
+from data import coeff_data, dip_data, eri_data, orben_data
 
 
 def import_data():
@@ -38,8 +38,16 @@ def import_data():
         "restricted": True,
         "threshold": 1e-12,
         "spin_multiplicity": 1,
+        "multipoles": {
+            "elec_0": -10,
+            "nuclear_0": 10,
+        },
     }
     n_orbs = data["n_orbs_alpha"] + data["n_orbs_beta"]
+
+    data["multipoles"]["nuclear_1"] = np.array([1.693194615993441, 0.,
+                                                1.196196642772152])
+    data["multipoles"]["elec_1"] = np.array(dip_data).reshape(3, n_bas, n_bas)
 
     data["occupation_f"] = np.array(5 * [1] + [0, 0] + 5 * [1] + [0, 0.])
     data["orbcoeff_fb"] = np.array(coeff_data).reshape((n_orbs, n_bas))

@@ -20,16 +20,16 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+from pyscf import gto, scf
+from geometry import xyz
+
 import adcc.backends.pyscf
 
 from adcc import hdf5io
 
-from pyscf import gto, scf
-
 # Run SCF in pyscf and converge super-tight using an EDIIS
 mol = gto.M(
-    atom='H 0 0 0;'
-         'F 0 0 2.5',
+    atom=xyz["hf"],
     basis='6-31G',
     unit="Bohr",
     spin=2,  # =2S, ergo triplet
