@@ -28,6 +28,7 @@ import pytest
 from adcc import AdcMatrix, LazyMp, guess_zero, hdf5io
 from adcc.misc import cached_property
 from adcc.caching_policy import CacheAllPolicy
+from .geometry import xyz
 
 
 class AdcMockState():
@@ -182,6 +183,30 @@ class TestdataCache():
                 }
 
             res[case] = res_case
+        return res
+
+    @cached_property
+    def scfres_backends(self):
+        backends = ["pyscf", "psi4", "veloxchem"]
+        testcases = [case for case in self.hfimport.keys()
+                     if self.hfdata[case]["restricted"]]
+        # backend/molecule/basis
+        res = {}
+        for backend in backends:
+            backend_ret = {}
+            if not adcc.backends.have_backend(backend):
+                continue
+            for case in testcases:
+                molecule, basis = case.split("_")
+                if basis == "def2tzvp" and \
+                   backend == "veloxchem" and molecule == "h2o":
+                    continue
+                hfres = adcc.backends.run_hf(
+                    backend, xyz=xyz[molecule],
+                    basis=basis, conv_tol=1e-14, conv_tol_grad=1e-12,
+                )
+                backend_ret[case] = adcc.backends.import_scf_results(hfres)
+            res[backend] = backend_ret
         return res
 
 

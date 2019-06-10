@@ -20,12 +20,11 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import adcc
 import numpy as np
 
 from ..misc import assert_allclose_signfix
 from .eri_build_helper import _eri_phys_asymm_spin_allowed_prefactors
-
-import adcc
 
 
 def eri_asymm_construction_test(scfres, core_orbitals=0):
@@ -138,3 +137,37 @@ def operator_import_test(scfres, ao_dict):
                 dip_mock[b], dip_imported[b].to_ndarray(),
                 atol=refstate.conv_tol
             )
+
+
+def cached_backend_hf(backend, molecule, basis):
+    """
+    Run the SCF for a backend and a particular test case (if not done)
+    and return the result.
+    """
+    import adcc.backends
+
+    from adcc.testdata import geometry
+
+    global __cache_cached_backend_hf
+
+    def payload():
+        hfres = adcc.backends.run_hf(backend, xyz=geometry.xyz[molecule],
+                                     basis=basis, conv_tol=1e-13,
+                                     conv_tol_grad=1e-12)
+        return adcc.backends.import_scf_results(hfres)
+
+    # For reasons not clear to me (mfh), caching does not work
+    # with pyscf
+    if backend == "pyscf":
+        return payload()
+
+    key = (backend, molecule, basis)
+    try:
+        return __cache_cached_backend_hf[key]
+    except NameError:
+        __cache_cached_backend_hf = {}
+        __cache_cached_backend_hf[key] = payload()
+        return __cache_cached_backend_hf[key]
+    except KeyError:
+        __cache_cached_backend_hf[key] = payload()
+        return __cache_cached_backend_hf[key]

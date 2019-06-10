@@ -32,6 +32,9 @@ from adcc.DictHfProvider import DictHfProvider
 from adcc.misc import cached_property
 from adcc.DictHfProvider import DictHfProvider
 
+from adcc.misc import cached_property
+from adcc.DictHfProvider import DictHfProvider
+
 
 class PyScfOperatorIntegralProvider:
     def __init__(self, scfres):
@@ -416,6 +419,8 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
         charge=charge,
         # Disable commandline argument parsing in pyscf
         parse_arg=False,
+        dump_input=False,
+        verbose=0,
     )
     mf = scf.HF(mol)
     mf.conv_tol = conv_tol

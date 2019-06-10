@@ -55,11 +55,16 @@ class TestBackendsImportReferenceData(unittest.TestCase):
            backend == "veloxchem" and molecule == "h2o":
             pytest.skip("VeloxChem does not support f-functions.")
 
+        # TODO: currently broken, hangs on l. 47
+        # in compare_refstate_with_reference
+        # scfres = cache.scfres_backends[backend][system]
+
         hfres = adcc.backends.run_hf(
             backend, xyz=geometry.xyz[molecule],
             basis=basis, conv_tol=1e-14, conv_tol_grad=1e-12,
         )
         scfres = adcc.backends.import_scf_results(hfres)
+
         compare_refstate_with_reference(
             data, reference, case, scfres, compare_orbcoeff=False,
             compare_eri_almost_abs=True

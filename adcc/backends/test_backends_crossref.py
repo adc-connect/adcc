@@ -23,19 +23,53 @@
 import unittest
 import itertools
 import numpy as np
-import adcc
-import adcc.backends
+
+from ..misc import expand_test_templates
+from .testing import cached_backend_hf
 
 from numpy.testing import assert_allclose
 
-from adcc.backends import have_backend
-from adcc.testdata import geometry
-
 import pytest
+import adcc
+import adcc.backends
 
-from ..misc import expand_test_templates
+from adcc.backends import have_backend
 
 backends = ["pyscf", "psi4", "veloxchem"]
+basissets = ["sto3g", "ccpvdz"]
+
+
+@expand_test_templates(basissets)
+class TestCrossReferenceBackends(unittest.TestCase):
+    def run_adc(self, scfres, conv_tol):
+        return adcc.adc2(scfres, n_singlets=5, conv_tol=conv_tol)
+
+    def run_cvs_adc(self, scfres, conv_tol, n_core_orbitals=1):
+        return adcc.cvs_adc2(
+            scfres, n_singlets=5, n_core_orbitals=n_core_orbitals,
+            conv_tol=conv_tol
+        )
+
+    def template_rhf_h2o(self, basis):
+        backend_avail = [b for b in backends if have_backend(b)]
+        if len(backend_avail) < 2:
+            pytest.skip(
+                "Not enough backends available for cross reference test."
+                "Need at least 2."
+            )
+
+        adc_results = {}
+        cvs_results = {}
+        intproviders = {}
+        for b in backend_avail:
+            scfres = cached_backend_hf(b, "h2o", basis)
+            adc_results[b] = self.run_adc(scfres, conv_tol=1e-10)
+            cvs_results[b] = self.run_cvs_adc(scfres, conv_tol=1e-10)
+            intproviders[b] = scfres.operator_integral_provider
+
+        # compare_ao_integrals(intproviders, 5e-9)
+        compare_adc_results(adc_results, 5e-9)
+        compare_adc_results(cvs_results, 5e-9)
 
 
 def compare_adc_results(adc_results, atol):
@@ -83,41 +117,3 @@ def compare_adc_results(adc_results, atol):
         np.testing.assert_allclose(
             state1.state_dipole_moments, state2.state_dipole_moments, atol=atol
         )
-
-
-basissets = ["sto3g", "ccpvdz"]
-
-
-@expand_test_templates(basissets)
-class TestCrossReferenceBackends(unittest.TestCase):
-    def run_adc(self, scfres, conv_tol):
-        return adcc.adc2(scfres, n_singlets=5, conv_tol=conv_tol)
-
-    def run_cvs_adc(self, scfres, conv_tol, n_core_orbitals=1):
-        return adcc.cvs_adc2(
-            scfres, n_singlets=5, n_core_orbitals=n_core_orbitals,
-            conv_tol=conv_tol
-        )
-
-    def template_rhf_h2o(self, basis):
-        backend_avail = [b for b in backends if have_backend(b)]
-        if len(backend_avail) < 2:
-            pytest.skip(
-                "Not enough backends available for cross reference test."
-                "Need at least 2."
-            )
-        h2o = geometry.xyz["h2o"]
-
-        adc_results = {}
-        cvs_results = {}
-        for b in backend_avail:
-            scfres = adcc.backends.run_hf(
-                b, xyz=h2o, basis=basis, conv_tol_grad=1e-11
-            )
-            adc_res = self.run_adc(scfres, conv_tol=1e-10)
-            adc_results[b] = adc_res
-            cvs_res = self.run_cvs_adc(scfres, conv_tol=1e-10)
-            cvs_results[b] = cvs_res
-
-        compare_adc_results(adc_results, 5e-9)
-        compare_adc_results(cvs_results, 5e-9)
