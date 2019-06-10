@@ -69,7 +69,7 @@ class TestOneParticleOperator(unittest.TestCase):
         )
         dipx_np = oo + ov + vv
 
-        assert dipx_np == approx(dipx_ref)
+        assert dipx_np == approx(product_trace(mp2diff_mo, dipx_mo))
         assert product_trace(mp2diff_mo, dipx_mo) == approx(dipx_ref)
         assert product_trace(dipx_mo, mp2diff_mo) == approx(dipx_ref)
 
@@ -104,7 +104,7 @@ class TestOneParticleOperator(unittest.TestCase):
         )
         dipx_np = oo + ov + vo + vv
 
-        assert dipx_np == approx(dipx_ref)
+        assert dipx_np == approx(product_trace(mp2diff_nosym, dipx_mo))
         assert product_trace(mp2diff_nosym, dipx_mo) == approx(dipx_ref)
         assert product_trace(dipx_mo, mp2diff_nosym) == approx(dipx_ref)
 
@@ -148,6 +148,6 @@ class TestOneParticleOperator(unittest.TestCase):
         )
         dipx_np = oo + ov + vo + vv
 
-        assert dipx_np == approx(dipx_ref)
+        assert dipx_np == approx(product_trace(mp2diff_nosym, dipx_nosym))
         assert product_trace(mp2diff_nosym, dipx_nosym) == approx(dipx_ref)
         assert product_trace(dipx_nosym, mp2diff_nosym) == approx(dipx_ref)
