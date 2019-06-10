@@ -62,8 +62,8 @@ def convert_scf_to_dict(scfres):
     data["multipoles"] = {"elec_0": -int(n_alpha + n_beta), }
     if "input_parameters" in scfres:
         params = scfres["input_parameters"]
-        coords = np.asarray(params["coords"])
-        charges = np.asarray(params["atom_numbers"])
+        coords = np.asarray(params["system"]["coords"])
+        charges = np.asarray(params["system"]["atom_numbers"])
         data["multipoles"]["nuclear_0"] = int(np.sum(charges)),
         data["multipoles"]["nuclear_1"] = np.einsum('i,ix->x', charges, coords)
     else:

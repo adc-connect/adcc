@@ -25,15 +25,11 @@ import numpy as np
 
 from pyscf import ao2mo, gto, scf
 
+from adcc.misc import cached_property
+from adcc.DictHfProvider import DictHfProvider
+
 from libadcc import HartreeFockProvider
 from .eri_build_helper import EriBuilder
-from adcc.DictHfProvider import DictHfProvider
-
-from adcc.misc import cached_property
-from adcc.DictHfProvider import DictHfProvider
-
-from adcc.misc import cached_property
-from adcc.DictHfProvider import DictHfProvider
 
 
 class PyScfOperatorIntegralProvider:
