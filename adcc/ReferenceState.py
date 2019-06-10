@@ -22,13 +22,13 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
+import libadcc
+
 from .Tensor import Tensor
 from .backends import import_scf_results
 from .memory_pool import memory_pool
 from .OperatorIntegrals import OperatorIntegrals
 from .OneParticleOperator import OneParticleOperator, product_trace
-
-import libadcc
 
 __all__ = ["ReferenceState"]
 
@@ -121,10 +121,11 @@ class ReferenceState(libadcc.ReferenceState):
            hfdata.n_orbs < import_all_below_n_orbs:
             super().import_all()
 
-        self.operator_integrals = OperatorIntegrals(
+        self.operators = OperatorIntegrals(
             hfdata.operator_integral_provider, self.mospaces,
             self.orbital_coefficients, self.conv_tol
         )
+        self.operator_integrals = self.operators  # The long form
 
     @property
     def density(self):
