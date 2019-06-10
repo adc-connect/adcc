@@ -30,11 +30,9 @@ from numpy.testing import assert_allclose
 
 from adcc.backends import have_backend
 from adcc.testdata import geometry
-from adcc.testdata.tmp_property_cache import property_cache
 
 import pytest
 
-from scipy import constants
 from ..misc import expand_test_templates
 
 backends = ["pyscf", "psi4", "veloxchem"]
@@ -76,36 +74,15 @@ def compare_adc_results(adc_results, atol):
                     err_msg="ADC vectors are not equal"
                             "in block {}".format(block)
                 )
-
-
-# TODO: temporary
-def tmp_test_properties_qchem(state, basis):
-    qc_res = property_cache.qchem_results
-    state = adcc.attach_properties(
-        state, transition_properties=True, state_properties=True
-    )
-    if state.ground_state.has_core_occupied_space:
-        res = qc_res["h2o_" + basis + "_cvs_adc2"]
-    else:
-        res = qc_res["h2o_" + basis + "_adc2"]
-
-    # Q-Chem only prints 6 digits and sometimes has some weird
-    # rounding behavior
-    # test oscillator strengths
-    np.testing.assert_allclose(
-        res["oscillator_strengths"],
-        state.oscillator_strengths, atol=5e-6
-    )
-    au_to_debye = 2.541746473
-    # convert to Debye
-    exc_dip_moms_debye = [
-        au_to_debye * np.linalg.norm(i) for i in state.state_dipole_moments
-    ]
-    # test excited state dipole moments
-    np.testing.assert_allclose(
-        res["exc_dipole_moments [D]"],
-        exc_dip_moms_debye, atol=5e-6
-    )
+        # test properties
+        state1 = adcc.attach_properties(state1)
+        state2 = adcc.attach_properties(state2)
+        np.testing.assert_allclose(
+            state1.oscillator_strengths, state2.oscillator_strengths, atol=atol
+        )
+        np.testing.assert_allclose(
+            state1.state_dipole_moments, state2.state_dipole_moments, atol=atol
+        )
 
 
 basissets = ["sto3g", "ccpvdz"]
@@ -138,11 +115,9 @@ class TestCrossReferenceBackends(unittest.TestCase):
                 b, xyz=h2o, basis=basis, conv_tol_grad=1e-11
             )
             adc_res = self.run_adc(scfres, conv_tol=1e-10)
-            tmp_test_properties_qchem(adc_res, basis)
             adc_results[b] = adc_res
             cvs_res = self.run_cvs_adc(scfres, conv_tol=1e-10)
             cvs_results[b] = cvs_res
-            tmp_test_properties_qchem(cvs_res, basis)
 
         compare_adc_results(adc_results, 5e-9)
         compare_adc_results(cvs_results, 5e-9)

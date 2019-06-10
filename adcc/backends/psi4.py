@@ -194,10 +194,12 @@ basissets = {
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
            conv_tol_grad=1e-8, max_iter=150):
     mol = psi4.geometry("""
+        {charge} {multiplicity}
         {xyz}
         symmetry c1
         units au
-        {charge} {multiplicity}
+        no_reorient
+        no_com
         """.format(xyz=xyz, charge=charge, multiplicity=multiplicity))
     psi4.core.be_quiet()
     reference = "RHF"
