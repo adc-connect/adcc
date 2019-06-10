@@ -22,16 +22,15 @@
 ## ---------------------------------------------------------------------
 import adcc
 import unittest
-import pytest
-
 import numpy as np
 
+from numpy.testing import assert_allclose
 from adcc.testdata.cache import cache
 
 from .misc import assert_allclose_signfix
-from pytest import approx
-from numpy.testing import assert_allclose
 from .test_state_densities import Runners
+
+from pytest import approx
 
 # The methods to test
 basemethods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
@@ -53,7 +52,8 @@ class TestTransitionDipoleMoments(unittest.TestCase, Runners):
                                             ground_to_excited_tdm=True,
                                             state_to_state_tdm=False)
 
-        res_tdms = adcc.properties.transition_dipole_moments(state)
+        res_tdms = adcc.properties.transition_dipole_moments(state,
+                                                             method=propmethod)
         ref_tdms = refdata[method][kind]["transition_dipole_moments"]
         refevals = refdata[method][kind]["eigenvalues"]
         n_ref = len(refevals)
@@ -107,7 +107,8 @@ class TestStateDipoleMoments(unittest.TestCase, Runners):
                                             ground_to_excited_tdm=False,
                                             state_to_state_tdm=False)
 
-        res_dms = adcc.properties.state_dipole_moments(state)
+        res_dms = adcc.properties.state_dipole_moments(state,
+                                                       method=propmethod)
         ref = refdata[method][kind]
         n_ref = len(ref["eigenvalues"])
         assert_allclose(res_dms[:n_ref],

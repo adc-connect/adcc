@@ -20,10 +20,10 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import libadcc
+
 from .Tensor import Tensor
 from .functions import empty_like
-
-import libadcc
 
 
 class OneParticleOperator(libadcc.OneParticleOperator):
@@ -39,8 +39,13 @@ class OneParticleOperator(libadcc.OneParticleOperator):
             self.set_block(b, Tensor(sym))
 
     def __add__(self, other):
-        ret = empty_like(self)
-        return ret.__iadd__(other)
+        if isinstance(other, libadcc.OneParticleOperator):
+            ret = empty_like(self)
+            for b in self.blocks:
+                ret.set_block(b, self[b] + other[b])
+            return ret
+        else:
+            return NotImplemented
 
     def __iadd__(self, other):
         if isinstance(other, libadcc.OneParticleOperator):
@@ -49,8 +54,7 @@ class OneParticleOperator(libadcc.OneParticleOperator):
                 self.set_block(b, self[b] + other[b])
             return self
         else:
-            raise TypeError("Cannot add OneParticleOperator"
-                            " and {}".format(type(other)))
+            return NotImplemented
 
 
 def product_trace(op1, op2):

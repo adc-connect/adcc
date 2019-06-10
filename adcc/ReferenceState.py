@@ -24,6 +24,7 @@ import numpy as np
 
 import libadcc
 
+from .misc import cached_property
 from .Tensor import Tensor
 from .backends import import_scf_results
 from .memory_pool import memory_pool
@@ -139,11 +140,11 @@ class ReferenceState(libadcc.ReferenceState):
             density[ss + ss].set_mask("ii", 1)
         return density
 
-    @property
+    @cached_property
     def dipole_moment(self):
         """
         Return the HF dipole moment of the reference state (that is the sum of
-        the electronic and the nuclear contribution."
+        the electronic and the nuclear contribution.)
         """
         dipole_integrals = self.operators.electric_dipole
         # Notice the negative sign due to the negative charge of the electrons

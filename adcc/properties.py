@@ -95,17 +95,12 @@ def state_dipole_moments(state, method=None):
     if not isinstance(method, AdcMethod):
         method = AdcMethod(method)
 
+    if method.level == 0:
+        gs_dip_moment = state.reference_state.dipole_moment
+    else:
+        gs_dip_moment = state.ground_state.dipole_moment(method.level)
+
     dipole_integrals = state.reference_state.operators.electric_dipole
-
-    # TODO Have a total density up to MP level 2 function in LazyMp
-    #      and a dipole_moment function as well
-    # Compute ground-state dipole moment
-    gs_dip_moment = state.reference_state.dipole_moment
-    if method.level > 1:
-        mp2dm = state.ground_state.mp2_diffdm
-        gs_dip_moment -= np.array([product_trace(comp, mp2dm)
-                                   for comp in dipole_integrals])
-
     return gs_dip_moment - np.array([
         [product_trace(comp, ddm) for comp in dipole_integrals]
         for ddm in state.state_diffdms

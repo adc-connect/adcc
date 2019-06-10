@@ -37,7 +37,7 @@ void export_AdcIntermediates(py::module& m) {
 
   py::class_<AdcIntermediates, std::shared_ptr<AdcIntermediates>>(
         m, "AdcIntermediates", "Class holding the computed ADC intermediates.")
-        .def(py::init<std::shared_ptr<LazyMp>>())
+        .def(py::init<std::shared_ptr<const LazyMp>>())
         .def_property_readonly("adc2_i1", &AdcIntermediates::compute_adc2_i1)
         .def_property_readonly("adc2_i2", &AdcIntermediates::compute_adc2_i2)
         .def_property_readonly("adc3_m11", &AdcIntermediates::compute_adc3_m11)
