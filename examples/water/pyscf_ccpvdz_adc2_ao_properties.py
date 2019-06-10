@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
+import adcc
 import numpy as np
 
 from scipy import constants
 from matplotlib import pyplot as plt
-
-import adcc
 
 from pyscf import gto, scf
 from pyscf.tools import cubegen
@@ -77,7 +76,7 @@ dm_mp2_ao = mp2dm_mo.transform_to_ao_basis(state.reference_state)
 ρ_mp2_tot = (dm_mp2_ao[0] + dm_mp2_ao[1]).to_ndarray() + ρ_hf_tot
 
 # dipole moment operator function from backend
-dips = state.reference_state.operator_integrals.electric_dipole
+dips = state.reference_state.operators.electric_dipole
 #
 # Compute properties
 #

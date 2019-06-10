@@ -131,7 +131,7 @@ def operator_import_test(scfres, ao_dict):
 
         dip_mock = {"o1o1": dip_oo, "o1v1": dip_ov, "v1v1": dip_vv}
 
-        dip_imported = refstate.operator_integrals.electric_dipole[i]
+        dip_imported = refstate.operators.electric_dipole[i]
         for b in dip_imported.blocks:
             assert_allclose_signfix(
                 dip_mock[b], dip_imported[b].to_ndarray(),

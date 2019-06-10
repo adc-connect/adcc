@@ -20,16 +20,15 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import adcc
 import unittest
 import numpy as np
-
-import adcc
-
-from pytest import approx
 
 from adcc import OneParticleOperator, zeros_like
 from adcc.OneParticleOperator import product_trace
 from adcc.testdata.cache import cache
+
+from pytest import approx
 
 
 class TestOneParticleOperator(unittest.TestCase):
@@ -49,13 +48,13 @@ class TestOneParticleOperator(unittest.TestCase):
 
     def test_product_trace_symmetric(self):
         ref = cache.refstate["h2o_sto3g"]
-        dipx_mo = ref.operator_integrals.electric_dipole[0]
+        dipx_mo = ref.operators.electric_dipole[0]
         mp2diff_mo = adcc.LazyMp(ref).mp2_diffdm
         mp2diff_ao = mp2diff_mo.transform_to_ao_basis(ref)
 
         mp2a = mp2diff_ao[0].to_ndarray()
         mp2b = mp2diff_ao[1].to_ndarray()
-        dipx_ao = ref.operator_integrals.provider_ao.electric_dipole[0]
+        dipx_ao = ref.operators.provider_ao.electric_dipole[0]
         dipx_ref = np.sum(mp2a * dipx_ao) + np.sum(mp2b * dipx_ao)
 
         oo = np.sum(
@@ -75,7 +74,7 @@ class TestOneParticleOperator(unittest.TestCase):
 
     def test_product_trace_nonsymmetric(self):
         ref = cache.refstate["cn_sto3g"]
-        dipx_mo = ref.operator_integrals.electric_dipole[0]
+        dipx_mo = ref.operators.electric_dipole[0]
         mp2diff_mo = adcc.LazyMp(ref).mp2_diffdm
         mp2diff_nosym = OneParticleOperator(ref.mospaces, is_symmetric=False)
         mp2diff_nosym.set_block("o1o1", mp2diff_mo["o1o1"])
@@ -87,7 +86,7 @@ class TestOneParticleOperator(unittest.TestCase):
 
         mp2a = mp2diff_ao[0].to_ndarray()
         mp2b = mp2diff_ao[1].to_ndarray()
-        dipx_ao = ref.operator_integrals.provider_ao.electric_dipole[0]
+        dipx_ao = ref.operators.provider_ao.electric_dipole[0]
         dipx_ref = np.sum(mp2a * dipx_ao) + np.sum(mp2b * dipx_ao)
 
         oo = np.sum(
@@ -110,7 +109,7 @@ class TestOneParticleOperator(unittest.TestCase):
 
     def test_product_trace_both_nonsymmetric(self):
         ref = cache.refstate["cn_sto3g"]
-        dipx_mo = ref.operator_integrals.electric_dipole[0]
+        dipx_mo = ref.operators.electric_dipole[0]
         mp2diff_mo = adcc.LazyMp(ref).mp2_diffdm
         mp2diff_nosym = OneParticleOperator(ref.mospaces, is_symmetric=False)
         dipx_nosym = OneParticleOperator(ref.mospaces, is_symmetric=False)

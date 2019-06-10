@@ -125,7 +125,6 @@ class ReferenceState(libadcc.ReferenceState):
             hfdata.operator_integral_provider, self.mospaces,
             self.orbital_coefficients, self.conv_tol
         )
-        self.operator_integrals = self.operators  # The long form
 
     @property
     def density(self):
@@ -146,7 +145,7 @@ class ReferenceState(libadcc.ReferenceState):
         Return the HF dipole moment of the reference state (that is the sum of
         the electronic and the nuclear contribution."
         """
-        dipole_integrals = self.operator_integrals.electric_dipole
+        dipole_integrals = self.operators.electric_dipole
         # Notice the negative sign due to the negative charge of the electrons
         return self.nuclear_dipole - np.array([product_trace(comp, self.density)
                                                for comp in dipole_integrals])

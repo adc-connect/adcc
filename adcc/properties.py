@@ -23,11 +23,11 @@
 import warnings
 import numpy as np
 
+from copy import copy
+
 from .AdcMethod import AdcMethod
 from .state_densities import attach_state_densities
 from .OneParticleOperator import product_trace
-
-from copy import copy
 
 __all__ = ["attach_properties"]
 
@@ -40,7 +40,7 @@ def transition_dipole_moments(state, method=None):
     if not hasattr(state, "ground_to_excited_tdms"):
         raise ValueError("Cannot compute transition dipole moment without"
                          " transition densities.")
-    if not hasattr(state.reference_state.operator_integrals, "electric_dipole"):
+    if "electric_dipole" not in state.reference_state.operators.available:
         raise ValueError("Reference state for backend "
                          + state.reference_state.backend + "cannot provide "
                          "electric dipole integrals.")
@@ -52,7 +52,7 @@ def transition_dipole_moments(state, method=None):
         warnings.warn("ADC(0) transition dipole moments are known to be faulty "
                       "in some cases.")
 
-    dipole_integrals = state.reference_state.operator_integrals.electric_dipole
+    dipole_integrals = state.reference_state.operators.electric_dipole
     tdip_moments = np.array([
         [product_trace(comp, tdm) for comp in dipole_integrals]
         for tdm in state.ground_to_excited_tdms
@@ -86,7 +86,7 @@ def state_dipole_moments(state, method=None):
     if not hasattr(state, "state_diffdms"):
         raise ValueError("Cannot compute transition dipole moment without"
                          " state densities.")
-    if not hasattr(state.reference_state.operator_integrals, "electric_dipole"):
+    if "electric_dipole" not in state.reference_state.operators.available:
         raise ValueError("Reference state for backend "
                          + state.reference_state.backend + "cannot provide "
                          "electric dipole integrals.")
@@ -95,7 +95,7 @@ def state_dipole_moments(state, method=None):
     if not isinstance(method, AdcMethod):
         method = AdcMethod(method)
 
-    dipole_integrals = state.reference_state.operator_integrals.electric_dipole
+    dipole_integrals = state.reference_state.operators.electric_dipole
 
     # TODO Have a total density up to MP level 2 function in LazyMp
     #      and a dipole_moment function as well

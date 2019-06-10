@@ -114,7 +114,7 @@ def build_ctx(refstate):
     ctx.update_scalar_list("ao/nucmm", nucmm)
 
     # AO integrals for properties
-    integrals_ao = refstate.operator_integrals.provider_ao
+    integrals_ao = refstate.operators.provider_ao
     if hasattr(integrals_ao, "electric_dipole"):
         for i, comp in enumerate(["x", "y", "z"]):
             dip_bb = as_tensor_bb(refstate.mospaces,
