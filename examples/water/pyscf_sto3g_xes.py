@@ -15,10 +15,6 @@ mol = gto.M(
     verbose=0,
 )
 
-# Compute dipole moment integrals
-with mol.with_common_orig((0, 0, 0)):
-    dip_ao = mol.intor_symmetric('int1e_r', comp=3)
-
 # Run normal SCF in pyscf
 mf = scf.UHF(mol)
 mf.conv_tol = 1e-15
@@ -43,20 +39,19 @@ print("Water core hole energy", mf_core.energy_tot())
 # Run an adc2 calculation:
 state = adcc.adc2(mf_core, n_states=4, conv_tol=5e-8)
 
-# Attach state densities
-state = adcc.attach_state_densities(state, state_diffdm=False)
+# Attach properties
+state = adcc.attach_properties(state)
 
 # Print results in a nice way
 print()
-print("st   ex.ene. (au)         f  transition dipole moment (au)")
+print("  st  ex.ene. (au)         f     transition dipole moment (au)"
+      "        state dip (au)")
 for i, ampl in enumerate(state.eigenvectors):
-    tdm = state.ground_to_excited_tdms[i]
-    tdm_a, tdm_b = tdm.transform_to_ao_basis(state.reference_state)
-    tdm_ao = (tdm_a + tdm_b).to_ndarray()
-
-    # Compute transition dipole moment
-    tdip = np.einsum('xij,ij->x', dip_ao, tdm_ao)
-    osc = 2. / 3. * np.linalg.norm(tdip)**2 * np.abs(state.eigenvalues[i])
-
-    fmt = "{0:2d}   {1:12.8g} {2:9.3g}  [{3:9.3g}, {4:9.3g}, {5:9.3g}]"
-    print(fmt.format(i, state.eigenvalues[i], osc, *tdip))
+    osc = state.oscillator_strengths[i]
+    tdip = state.transition_dipole_moments[i]
+    sdip = state.state_dipole_moments[i]
+    # Print findings
+    fmt = "{0:2d}  {1:12.8g} {2:9.3g}   [{3:9.3g}, {4:9.3g}, {5:9.3g}]"
+    fmt += "   [{6:9.3g}, {7:9.3g}, {8:9.3g}]"
+    # fmt += "   [{9:9.3g}, {10:9.3g}, {11:9.3g}]"
+    print(state.kind[0], fmt.format(i, state.eigenvalues[i], osc, *tdip, *sdip))
