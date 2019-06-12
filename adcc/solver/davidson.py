@@ -21,6 +21,7 @@
 ##
 ## ---------------------------------------------------------------------
 import sys
+import warnings
 import numpy as np
 
 import scipy.linalg as la
@@ -242,11 +243,11 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             orth = np.array([[SS[i] @ SS[j] for i in range(n_ss_vec)]
                              for j in range(n_ss_vec)])
             orth -= np.eye(n_ss_vec)
-            if np.max(np.abs(orth)) > 1e-14:
-                raise la.LinAlgWarning(
+            if np.max(np.abs(orth)) > n_problem * np.finfo(float).eps:
+                warnings.warn(la.LinAlgWarning(
                     "Subspace in davidson has lost orthogonality. "
                     "Expect inaccurate results."
-                )
+                ))
 
         if n_ss_added == 0:
             state.converged = False
@@ -315,6 +316,14 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
         state.residuals_converged = state.residual_norms < conv_tol
         state.converged = np.all(state.residuals_converged)
         return state.converged
+
+    if conv_tol < matrix.shape[1] * np.finfo(float).eps:
+        warnings.warn(la.LinAlgWarning(
+            "Convergence tolerance (== {:5.2g}) lower than "
+            "estimated maximal numerical accuracy (== {:5.2g}). "
+            "Convergence might be hard to achieve."
+            "".format(conv_tol, matrix.shape[1] * np.finfo(float).eps)
+        ))
 
     state = DavidsonState(matrix, guesses)
     davidson_iterations(matrix, state, max_subspace, max_iter,
