@@ -24,14 +24,14 @@ import sys
 import warnings
 import numpy as np
 
+from adcc import AdcMatrix, AmplitudeVector, linear_combination
+
 import scipy.linalg as la
 import scipy.sparse.linalg as sla
 
 from .preconditioner import JacobiPreconditioner
 from .SolverStateBase import SolverStateBase
 from .explicit_symmetrisation import IndexSymmetrisation
-
-from adcc import AdcMatrix, AmplitudeVector, linear_combination
 
 
 def select_eigenpairs(vectors, n_ep, which):
@@ -70,6 +70,9 @@ def default_print(state, identifier, file=sys.stdout):
                          ss_size=len(state.subspace_vectors),
                          residual=np.max(state.residual_norms)),
               "", state.eigenvalues[:7], file=file)
+        if hasattr(state, "subspace_orthogonality"):
+            print(33 * " " + "nonorth: {:5.3g}"
+                  "".format(state.subspace_orthogonality))
     elif identifier == "is_converged":
         soltime = state.timer.total("davidson/iteration")
         print("=== Converged ===", file=file)
@@ -243,7 +246,8 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             orth = np.array([[SS[i] @ SS[j] for i in range(n_ss_vec)]
                              for j in range(n_ss_vec)])
             orth -= np.eye(n_ss_vec)
-            if np.max(np.abs(orth)) > n_problem * np.finfo(float).eps:
+            state.subspace_orthogonality = np.max(np.abs(orth))
+            if state.subspace_orthogonality > n_problem * np.finfo(float).eps:
                 warnings.warn(la.LinAlgWarning(
                     "Subspace in davidson has lost orthogonality. "
                     "Expect inaccurate results."
