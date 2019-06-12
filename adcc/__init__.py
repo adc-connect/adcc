@@ -63,9 +63,9 @@ __all__ = ["run_adc", "AdcMatrix", "AdcMethod", "Symmetry", "ReferenceState",
 
 __version__ = "0.11.0"
 __license__ = "LGPL v3"
-__authors__ = "Michael F. Herbst and Maximilian Scheurer"
-__email__ = "info@michael-herbst.com"
-# feel free to add your name above
+__authors__ = ["Michael F. Herbst", "Maximilian Scheurer"]
+__email__ = "adcc+developers@michael-herbst.com"
+__contributors__ = []
 
 
 def with_runadc_doc(func):
@@ -155,7 +155,8 @@ def banner(colour=sys.stdout.isatty(), show_doi=True, show_website=True):
 
         string = fmt.format(name, "version", version) + "\n"
         if authors:
-            authors = authors.replace(" and ", ", ").split(", ")
+            if isinstance(authors, str):
+                authors = authors.replace(" and ", ", ").split(", ")
 
             groups = []
             cbuffer = []

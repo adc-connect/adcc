@@ -368,10 +368,8 @@ setup(
     long_description=long_description,
     #
     url='https://github.com/mfherbst/adcc',
-    author='adcc developers',
+    author='Michael F. Herbst, Maximilian Scheurer',
     author_email='adcc+developers@michael-herbst.com',
-    maintainer='Michael F. Herbst',
-    maintainer_email='info@michael-herbst.com',
     license="LGPL v3",
     #
     version=__version__,

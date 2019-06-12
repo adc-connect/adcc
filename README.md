@@ -122,3 +122,10 @@ This license does, however, not apply to the binary
 `adccore.so` file distributed inside the folder `/adcc/lib/` of
 the release tarball. For its licensing terms,
 see [LICENSE_adccore](LICENSE_adccore).
+
+## About
+The `adcc` project was initiated in 2016 at Heidelberg University, where most
+initial development took place. The first working code version was heavily
+inspired by the [`adcman`](http://doi.org/10.1080/00268976.2013.859313) package
+by Michael Wormit *et. al.*, also developed in Heidelberg.
+Thus far `adcc`'s internal structure has been completely rewritten.
