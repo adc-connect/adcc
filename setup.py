@@ -34,6 +34,20 @@ from setuptools import Extension, find_packages, setup
 from setuptools.command.test import test as TestCommand
 from setuptools.command.build_ext import build_ext as BuildCommand
 
+try:
+    from sphinx.setup_command import BuildDoc as BuildSphinxDoc
+except ImportError:
+    # No sphinx found -> make a dummy class
+    class BuildSphinxDoc(setuptools.Command):
+        user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+
 # Version of the python bindings and adcc python package.
 __version__ = '0.11.0'
 
@@ -245,6 +259,32 @@ class BuildExt(BuildCommand):
         BuildCommand.build_extensions(self)
 
 
+class BuildDocs(BuildSphinxDoc):
+    def run(self):
+        this_dir = os.path.dirname(__file__)
+        if not os.path.isfile(join(this_dir, "adccore/build_adccore.py")):
+            raise SystemExit("Can only build documentation if adccore is"
+                             "available.")
+        else:
+            abspath = os.path.abspath("adccore")
+            if abspath not in sys.path:
+                sys.path.insert(0, abspath)
+
+        import build_adccore
+
+        coredoc_dir = join(this_dir, "docs/adccore")
+        build_adccore.build_documentation(coredoc_dir, latex=False,
+                                          html=False, xml=True)
+        try:
+            import sphinx  # noqa F401
+            import breathe  # noqa F401
+            import recommonmark  # noqa F401
+        except ImportError:
+            raise SystemExit("Sphinx or or one of its required plugins not "
+                             "found.\nTry 'pip install -U adcc[build_docs]")
+        super().run()
+
+
 #
 # Pytest integration
 #
@@ -352,9 +392,9 @@ based upon the algebraic-diagrammatic construction (ADC) approach.
 As of now PP-ADC and CVS-PP-ADC methods are available to compute excited
 states on top of an MP2 ground state. The underlying Hartree-Fock reference
 is not computed inside adcc, much rather external packages should be used
-for this purpose. Interfaces to seamlessly interact with pyscf, VeloxChem
-or molsturm are available, but other SCF codes or even statically computed
-data can be easily used as well.
+for this purpose. Interfaces to seamlessly interact with pyscf, psifour,
+VeloxChem or molsturm are available, but other SCF codes or even statically
+computed data can be easily used as well.
 
 Notice, that only the adcc python and C++ source code are released under the
 terms of the GNU Lesser General Public License v3 (LGPLv3) license. This
@@ -362,13 +402,14 @@ license does not apply to the libadccore.so binary file contained inside
 the directory '/adcc/lib/' of the distributed tarball. For further details
 see the file LICENSE_adccore.
 """.strip()  # TODO extend
+authors = ['Michael F. Herbst', 'Maximilian Scheurer']
 setup(
     name='adcc',
     description='adcc:  Seamlessly connect your host program to ADC',
     long_description=long_description,
     #
-    url='https://github.com/mfherbst/adcc',
-    author='Michael F. Herbst, Maximilian Scheurer',
+    url='https://adc-connect.org',
+    author=", ".join(authors),
     author_email='adcc+developers@michael-herbst.com',
     license="LGPL v3",
     #
@@ -403,6 +444,10 @@ setup(
         'scipy',
     ],
     tests_require=["pytest", "h5py"],
+    extras_require={
+        "build_docs": ["sphinx>=2", "recommonmark>=0.5.0", "breathe"],
+    },
     #
-    cmdclass={'build_ext': BuildExt, "pytest": PyTest},
+    cmdclass={'build_ext': BuildExt, "pytest": PyTest,
+              "build_docs": BuildDocs},
 )

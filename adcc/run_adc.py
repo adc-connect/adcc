@@ -24,12 +24,12 @@ import sys
 import warnings
 
 from . import solver
-
 from .guess import (guesses_any, guesses_singlet, guesses_spin_flip,
                     guesses_triplet)
 from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod
 from .ReferenceState import ReferenceState as adcc_ReferenceState
+
 from .solver.davidson import jacobi_davidson
 from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
@@ -44,84 +44,108 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
             n_guesses_doubles=None, output=sys.stdout, n_core_orbitals=None,
             method=None, n_singlets=None, n_triplets=None, n_spin_flip=None,
             **solverargs):
-    """
-    Run an ADC calculation on top of Hartree-Fock data, a ReferenceState,
-    a LazyMp object or an AdcMatrix.
+    """Run an ADC calculation.
 
-    Required Parameters
-    -------------------
-    @param data_or_matrix
-    The data to build the ADC calculation on. adcc is pretty flexible here.
-    Possible options include:
-        a) Hartree-Fock data from a host program, e.g. a molsturm scf state,
-           a pyscf SCF object or any class implementing the
-           adcc.HartreeFockProvider interface or in fact any python object
-           representing a pointer to a C++ object derived off the
-           adcc::HartreeFockSolution_i. All objects mentioned below will
-           be implicitly created.
-        b) An adcc.ReferenceState object
-        c) An adcc.LazyMp object
-        d) An adcc.AdcMatrix object
+    Main entry point to run an ADC calculation. The reference to build the ADC
+    calculation upon is supplied using the `data_or_matrix` argument.
+    `adcc` is pretty flexible here. Possible options include:
 
-    @param n_states
-    @param kind
-    @param n_singlets
-    @param n_triplets
-    @param n_spin_flip
-    Specify the number and kind of states to be computed. Possible values
-    for kind are "singlet", "triplet", "spin_flip" and "any", which is
-    the default. For unrestricted references clamping spin-pure
-    singlets/triplets is currently not possible and kind has to remain as "any".
-    For restricted references kind="singlets" or kind="triplets" may be
-    employed to enforce a particular exicited states manifold.
-    Specifying n_singlets is equivalent to setting kind="singlet" and
-    n_states=5. Similarly for n_triplets and n_spin_flip. n_spin_flip
-    is only valid for unrestricted references.
+        a. Hartree-Fock data from a host program, e.g. a molsturm SCF
+           state, a pyscf SCF object or any class implementing the
+           `adcc.HartreeFockProvider` interface. From this data all object
+           mentioned in b to d will be implicitly created and will become
+           available in the returned state.
+        b. An `adcc.ReferenceState` object
+        c. An `adcc.LazyMp` object
+        d. An `adcc.AdcMatrix` object
 
-    Optional parameters
-    -------------------
-    @param conv_tol
-    Convergence tolerance to employ in the iterative solver for obtaining
-    the ADC vectors (default: 1e-6 or SCF tolerance / 100, whatever is smaller)
+    Parameters
+    ----------
+    data_or_matrix
+        Data containing the SCF reference
+    n_states : int, optional
+    kind : str, optional
+    n_singlets : int, optional
+    n_triplets : int, optional
+    n_spin_flip : int, optional
+        Specify the number and kind of states to be computed. Possible values
+        for kind are "singlet", "triplet", "spin_flip" and "any", which is
+        the default. For unrestricted references clamping spin-pure
+        singlets/triplets is currently not possible and kind has to remain as
+        "any". For restricted references `kind="singlets"` or `kind="triplets"`
+        may be employed to enforce a particular excited states manifold.
+        Specifying `n_singlets` is equivalent to setting `kind="singlet"` and
+        `n_states=5`. Similarly for `n_triplets` and `n_spin_flip`.
+        `n_spin_flip` is only valid for unrestricted references.
 
-    @param solver_method
-    The eigensolver algorithm to use.
+    conv_tol : float, optional
+        Convergence tolerance to employ in the iterative solver for obtaining
+        the ADC vectors (default: `1e-6` or SCF tolerance / 100,
+        whatever is larger)
 
-    @param n_guesses
-    Total number of guesses to compute. By default only guesses derived from
-    the singles block of the ADC matrix are employed. See n_guesses_doubles
-    for alternatives. If no number is given here
-    n_guesses = min(4, 2 * number of excited states to compute)
-    or a smaller number if the number of excitation is estimated to be less
-    than the outcome of above formula.
+    solver_method : str, optional
+        The eigensolver algorithm to use.
 
-    @param n_guesses_doubles
-    Number of guesses to derive from the doubles block. By default none
-    unless n_guesses as explicitly given or automatically determined is larger
-    than the number of singles guesses, which can be possibly found.
+    n_guesses : int, optional
+        Total number of guesses to compute. By default only guesses derived from
+        the singles block of the ADC matrix are employed. See
+        `n_guesses_doubles` for alternatives. If no number is given here
+        `n_guesses = min(4, 2 * number of excited states to compute)`
+        or a smaller number if the number of excitation is estimated to be less
+        than the outcome of above formula.
 
-    @param guesses
-    Provide the guess vectors to be employed for the ADC run. Takes preference
-    over n_guesses and n_guesses_doubles, such that these parameters are
-    ignored.
+    n_guesses_doubles : int, optional
+        Number of guesses to derive from the doubles block. By default none
+        unless n_guesses as explicitly given or automatically determined is
+        larger than the number of singles guesses, which can be possibly found.
 
-    @param output
-    Python stream to which output will be written. If None all output
-    is disabled.
+    guesses : list, optional
+        Provide the guess vectors to be employed for the ADC run. Takes
+        preference over `n_guesses` and `n_guesses_doubles`, such that these
+        parameters are ignored.
 
-    @param n_core_orbitals
-    Number of (spatial) core orbitals. Required if apply_core-valence
-    separation is applied and input data is given as data from the host
-    program (i.e. option (a) in data_or_matrix above). Notice that this number
-    denotes spatial orbitals. Thus a value of 1 will put 1 alpha and 1 beta
-    electron into the core region.
+    output : stream, optional
+        Python stream to which output will be written. If `None` all output
+        is disabled.
 
-    Solver keyword arguments
-    ------------------------
-    Other keyword arguments for the solver can be passed as well. An important
-    selection of such arguments includes
-       max_subspace   Maximal subspace size
-       max_iter       Maximal numer of iterations
+    n_core_orbitals : int, optional
+        Number of (spatial) core orbitals. Required if core-valence
+        separation is applied in the and input data is given as data from the
+        host program (i.e. option (a) in `data_or_matrix` above).
+        Notice that this number denotes spatial orbitals. Thus a value of `1`
+        will put 1 alpha and 1 beta electron into the core region.
+
+    Other parameters
+    ----------------
+    max_subspace : int, optional
+        Maximal subspace size
+    max_iter : int, optional
+        Maximal number of iterations
+
+    Returns
+    -------
+    SolverState
+        Object containing the `AdcMatrix`, the `LazyMp` ground state and
+        the `ReferenceState` as well as computed eigenpairs.
+
+    Examples
+    --------
+
+    Run an ADC(2) calculation on top of a `pyscf` RHF reference of
+    hydrogen flouride.
+
+    >>> from pyscf import gto, scf
+    ... mol = gto.mole.M(atom="H 0 0 0; F 0 0 1.1", basis="sto-3g")
+    ... mf = scf.RHF(mol)
+    ... mf.conv_tol_grad = 1e-8
+    ... mf.kernel()
+    ...
+    ... state = adcc.run_adc(mf, method="adc2", n_singlets=3)
+
+    The same thing can also be achieved using the `adcc.adcN` family of
+    short-hands (see e.g. :py:func:`adcc.adc2`, :py:func:`adcc.cvs_adc2x`):
+
+    >>> state = adcc.adc2(mf, n_singlets=3)
     """
     #
     # Input argument sanitisation

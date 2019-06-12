@@ -30,14 +30,13 @@ from .AdcMethod import AdcMethod
 from .functions import (add, contract, copy, divide, dot, empty_like,
                         linear_combination, multiply, nosym_like, ones_like,
                         subtract, transpose, zeros_like)
+from .properties import attach_properties
 from .memory_pool import memory_pool
 from .thread_pool import thread_pool
 from .DictHfProvider import DictHfProvider
 from .ReferenceState import ReferenceState
 from .caching_policy import DefaultCachingPolicy, GatherStatisticsPolicy
 from .AmplitudeVector import AmplitudeVector
-from .state_densities import attach_state_densities
-from .properties import attach_properties
 from .OneParticleOperator import OneParticleOperator
 
 from libadcc import HartreeFockProvider
@@ -52,7 +51,7 @@ __all__ = ["run_adc", "AdcMatrix", "AdcMethod", "Symmetry", "ReferenceState",
            "linear_combination", "multiply", "nosym_like", "ones_like",
            "subtract", "transpose", "zeros_like",
            "memory_pool", "thread_pool", "AmplitudeVector", "attach_properties",
-           "attach_state_densities", "HartreeFockProvider",
+           "HartreeFockProvider",
            "Tensor", "DictHfProvider", "OneParticleOperator",
            "guesses_singlet", "guesses_triplet", "guesses_any",
            "guesses_spin_flip", "guess_zero", "DefaultCachingPolicy",
@@ -63,6 +62,7 @@ __all__ = ["run_adc", "AdcMatrix", "AdcMethod", "Symmetry", "ReferenceState",
 
 __version__ = "0.11.0"
 __license__ = "LGPL v3"
+__url__ = "https://adc-connect.org"
 __authors__ = ["Michael F. Herbst", "Maximilian Scheurer"]
 __email__ = "adcc+developers@michael-herbst.com"
 __contributors__ = []
@@ -119,9 +119,20 @@ def cvs_adc2x(*args, **kwargs):
 
 
 def banner(colour=sys.stdout.isatty(), show_doi=True, show_website=True):
-    """
-    Return a string, which is a descriptive banner for this
-    adcc version, its components and the respective authors.
+    """Return a nice banner describing adcc and its components
+
+    The returned string contains version information, maintainer emails
+    and references.
+
+    Parameters
+    ----------
+    colour : bool
+        Should colour be used in the print out
+    show_doi : bool
+        Should DOI and publication information be printed.
+    show_website : bool
+        Should a website for each project be printed.
+
     """
     import libadcc as adccore
 
@@ -189,7 +200,8 @@ def banner(colour=sys.stdout.isatty(), show_doi=True, show_website=True):
     string += "+" + 78 * "-" + "+\n"
     string += empty
     string += string_component("adcc", __version__, __authors__,
-                               email=__email__, licence=__license__)
+                               email=__email__, licence=__license__,
+                               website=__url__)
     string += empty
     bt = ""
     if adccore.__build_type__ not in ["Release"]:
