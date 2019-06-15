@@ -20,17 +20,20 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
 import unittest
 import numpy as np
-
-from numpy.testing import assert_allclose
-from adcc.testdata.cache import cache
 
 from .misc import assert_allclose_signfix
 from .test_state_densities import Runners
 
+from numpy.testing import assert_allclose
+
+import adcc
+
 from pytest import approx
+
+from adcc.state_densities import attach_state_densities
+from adcc.testdata.cache import cache
 
 # The methods to test
 basemethods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
@@ -47,10 +50,10 @@ class TestTransitionDipoleMoments(unittest.TestCase, Runners):
 
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
-        state = adcc.attach_state_densities(state, method=propmethod,
-                                            state_diffdm=False,
-                                            ground_to_excited_tdm=True,
-                                            state_to_state_tdm=False)
+        state = attach_state_densities(state, method=propmethod,
+                                       state_diffdm=False,
+                                       ground_to_excited_tdm=True,
+                                       state_to_state_tdm=False)
 
         res_tdms = adcc.properties.transition_dipole_moments(state,
                                                              method=propmethod)
@@ -76,10 +79,10 @@ class TestOscillatorStrengths(unittest.TestCase, Runners):
 
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
-        state = adcc.attach_state_densities(state, method=propmethod,
-                                            state_diffdm=False,
-                                            ground_to_excited_tdm=True,
-                                            state_to_state_tdm=False)
+        state = attach_state_densities(state, method=propmethod,
+                                       state_diffdm=False,
+                                       ground_to_excited_tdm=True,
+                                       state_to_state_tdm=False)
 
         res_oscs = adcc.properties.oscillator_strengths(
             adcc.properties.transition_dipole_moments(state), state.eigenvalues
@@ -102,10 +105,10 @@ class TestStateDipoleMoments(unittest.TestCase, Runners):
 
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
-        state = adcc.attach_state_densities(state, method=propmethod,
-                                            state_diffdm=True,
-                                            ground_to_excited_tdm=False,
-                                            state_to_state_tdm=False)
+        state = attach_state_densities(state, method=propmethod,
+                                       state_diffdm=True,
+                                       ground_to_excited_tdm=False,
+                                       state_to_state_tdm=False)
 
         res_dms = adcc.properties.state_dipole_moments(state,
                                                        method=propmethod)
