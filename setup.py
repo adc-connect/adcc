@@ -392,7 +392,7 @@ based upon the algebraic-diagrammatic construction (ADC) approach.
 As of now PP-ADC and CVS-PP-ADC methods are available to compute excited
 states on top of an MP2 ground state. The underlying Hartree-Fock reference
 is not computed inside adcc, much rather external packages should be used
-for this purpose. Interfaces to seamlessly interact with pyscf, psifour,
+for this purpose. Interfaces to seamlessly interact with pyscf, psi4,
 VeloxChem or molsturm are available, but other SCF codes or even statically
 computed data can be easily used as well.
 
