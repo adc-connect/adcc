@@ -20,35 +20,61 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from .Symmetry import Symmetry
-
 import libadcc
 
-# TODO
-# Along with it a constructor for the Tensor object, which takes
-# an mospaces, a space string and the 4 properties of Symmetry,
-# which completely allow to setup a tensor and its symmetry in one
-# constructor call.
+from .Symmetry import Symmetry
 
 
 class Tensor(libadcc.Tensor):
     def __init__(self, sym_or_mo, space=None, irreps_allowed=None,
                  permutations=None, spin_block_maps=None,
                  spin_blocks_forbidden=None):
-        """
-        Construct an uninitialised tensor from an MoSpaces or a Symmetry object
+        """Construct an uninitialised Tensor from an :class:`MoSpaces` or
+        a :class:`Symmetry` object.
 
-        sym_or_mo    Symmetry or Mospaces object
-        space        Space of the tensor, can be None if first argument is
-                     a Symmetry object.
-        irreps_allowed   List of allowed irreducible representations,
-        permutations     List of permutational symmetries of the Tensor,
-        spin_block_maps  List of mappings between spin blocks
-        spin_blocks_forbidden   List of forbidden (i.e. forced-to-zero)
-                                spin blocks.
+        More information about the last four, symmetry-related parameters
+        see the documentation of the :class:`Symmetry` object.
 
-        For the last four symmetry-related arguments see the documentation
-        of the Symmetry object for details.
+        Parameters
+        ----------
+        sym_or_mo
+            Symmetry or MoSpaces object
+        spaces : str, optional
+            Space of the tensor, can be None if the first argument is
+            a :class:`Symmetry` object.
+        irreps_allowed : list, optional
+            List of allowed irreducible representations.
+        permutations : list, optional
+            List of permutational symmetries of the Tensor.
+        spin_block_maps : list, optional
+            List of mappings between spin blocks
+        spin_blocks_forbidden : list, optional
+            List of forbidden (i.e. forced-to-zero) spin blocks.
+
+        Notes
+        -----
+        An :class:`MoSpaces` object is contained in many datastructures
+        of adcc, including the :class:`AdcMatrix`, the :class:`LazyMp`,
+        the :class:`ReferenceState` and any solver or ADC results state.
+
+        Examples
+        --------
+        Construct a symmetric tensor in the "o1o1" (occupied-occupied) spaces:
+
+        >>> Tensor(mospaces, "o1o1", permutations=["ij", "ji"])
+
+        Construct an anti-symmetric tensor in the "v1v1" spaces:
+
+        >>> Tensor(mospaces, "v1v1", permutations=["ab", "-ba"])
+
+        Construct a tensor in "o1v1", which transforms like the irrep
+        "A", which maps the alpha-alpha block anti-symmetrically
+        to the beta-beta block and which has the other spin blocks set to zero:
+
+        >>> Tensor(mospaces, "o1v1", irreps_allowed=["A"],
+        ...        spin_block_maps=[("aa", "bb", -1)],
+        ...        spin_blocks_forbidden=["ab", "ba"])
+
         """
         if not isinstance(sym_or_mo, (libadcc.MoSpaces, libadcc.Symmetry)):
             raise TypeError("The first argument needs to be a Symmetry or an "

@@ -20,13 +20,13 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
 from libadcc import ThreadPool
 
 try:
     import multiprocessing
+
     n_cpus = multiprocessing.cpu_count()
 except ImportError:
     n_cpus = 1
 
-thread_pool = ThreadPool(n_cpus)
+thread_pool = ThreadPool(n_cpus, 2 * n_cpus - 1)

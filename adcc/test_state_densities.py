@@ -20,13 +20,14 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
 import unittest
 
-from adcc.testdata.cache import cache
-
 from .misc import expand_test_templates
+
 from pytest import approx
+
+from adcc.state_densities import attach_state_densities
+from adcc.testdata.cache import cache
 
 # The methods to test
 basemethods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
@@ -102,10 +103,10 @@ class TestStateDiffDm(unittest.TestCase, Runners):
 
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
-        state = adcc.attach_state_densities(state, method=propmethod,
-                                            state_diffdm=True,
-                                            ground_to_excited_tdm=False,
-                                            state_to_state_tdm=False)
+        state = attach_state_densities(state, method=propmethod,
+                                       state_diffdm=True,
+                                       ground_to_excited_tdm=False,
+                                       state_to_state_tdm=False)
 
         refdens_a = refdata[method][kind]["state_diffdm_bb_a"]
         refdens_b = refdata[method][kind]["state_diffdm_bb_b"]
@@ -133,10 +134,10 @@ class TestStateGroundToExcitedTdm(unittest.TestCase, Runners):
 
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
-        state = adcc.attach_state_densities(state, method=propmethod,
-                                            state_diffdm=False,
-                                            ground_to_excited_tdm=True,
-                                            state_to_state_tdm=False)
+        state = attach_state_densities(state, method=propmethod,
+                                       state_diffdm=False,
+                                       ground_to_excited_tdm=True,
+                                       state_to_state_tdm=False)
 
         refdens_a = refdata[method][kind]["ground_to_excited_tdm_bb_a"]
         refdens_b = refdata[method][kind]["ground_to_excited_tdm_bb_b"]
