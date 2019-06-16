@@ -1,5 +1,10 @@
 # Full adcc reference
 
+```note::  Work in progress. Many function do not yet follow
+           the numpy standard in their documentation!
+
+```
+
 This page contains a structured overview of the
 `python` API of `adcc`.
 See also the [full index](genindex).

@@ -4,9 +4,8 @@ import os
 import adcc
 import numpy as np
 
-from matplotlib import pyplot as plt
-
 from pyscf import gto, scf
+from matplotlib import pyplot as plt
 
 
 def run_spin_flip(distance):
@@ -32,7 +31,7 @@ def run_spin_flip(distance):
 
 def run_progression(outfile="631g_adc2_dissociation.nptxt"):
     if os.path.isfile(outfile):
-        return np.loadtext(outfile)
+        return np.loadtxt(outfile)
 
     # Initialise the memory (256 MiB)
     adcc.memory_pool.initialise(max_memory=256 * 1024 * 1024)

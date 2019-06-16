@@ -402,14 +402,13 @@ license does not apply to the libadccore.so binary file contained inside
 the directory '/adcc/lib/' of the distributed tarball. For further details
 see the file LICENSE_adccore.
 """.strip()  # TODO extend
-authors = ['Michael F. Herbst', 'Maximilian Scheurer']
 setup(
     name='adcc',
     description='adcc:  Seamlessly connect your host program to ADC',
     long_description=long_description,
     #
     url='https://adc-connect.org',
-    author=", ".join(authors),
+    author="Michael F. Herbst, Maximilian Scheurer",
     author_email='adcc+developers@michael-herbst.com',
     license="LGPL v3",
     #

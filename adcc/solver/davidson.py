@@ -23,11 +23,10 @@
 import sys
 import warnings
 import numpy as np
-
-from adcc import AdcMatrix, AmplitudeVector, linear_combination
-
 import scipy.linalg as la
 import scipy.sparse.linalg as sla
+
+from adcc import AdcMatrix, AmplitudeVector, linear_combination
 
 from .preconditioner import JacobiPreconditioner
 from .SolverStateBase import SolverStateBase
@@ -262,7 +261,7 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
 
 
 def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
-          conv_tol=1e-9, which="SA", max_iter=100,
+          conv_tol=1e-9, which="SA", max_iter=70,
           callback=None, preconditioner=None,
           preconditioning_method="Davidson", debug_checks=False,
           residual_min_norm=None, explicit_symmetrisation=IndexSymmetrisation):

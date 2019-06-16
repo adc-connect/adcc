@@ -104,7 +104,7 @@ but has a few additional commands and features worth knowing:
 - `setup.py build_docs`: Build the documentation locally using
   Doxygen and Sphinx. See the section below for details.
 
-## Building the documentation
+## Documentation, documentation, documentation
 This very document is created with [Sphinx](http://sphinx-doc.org) and
 [Doxygen](http://doxygen.nl/) extracting parts of the content
 directly from the source code documentation.
@@ -119,7 +119,7 @@ This can be achieved using
 pip install adcc[build_docs]
 ```
 
-``` important:: This does not work yet.
+``` important:: The above does not work yet.
 
 ```
 On the `python`-side we follow the [numpy docstring standard][npdoc].

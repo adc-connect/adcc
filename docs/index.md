@@ -1,7 +1,6 @@
 # adcc:  Seamlessly connect your program to ADC
 
 ```note::  This documentation page is still under construction.
-           Data may be wrong or missing.
 
 ```
 
@@ -44,7 +43,7 @@ scfres.conv_tol = 1e-13
 scfres.kernel()
 
 # Run an ADC(3) calculation, solving for 3 singlets
-state = adcc.adc3(scfres, n_singlets=3, conv_tol=1e-6)
+state = adcc.adc3(scfres, n_singlets=3)
 
 # Print the resulting states
 print(state.describe())
