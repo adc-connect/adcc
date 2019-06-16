@@ -35,26 +35,15 @@ static std::string ThreadPool___repr__(const ThreadPool& self) {
 }
 
 void export_ThreadPool(py::module& m) {
-  // Once we switch to C++14, this can be handled by the py::overload_cast
-  // function
-  void (ThreadPool::*reinit_1)(size_t)         = &ThreadPool::reinit;
-  void (ThreadPool::*reinit_2)(size_t, size_t) = &ThreadPool::reinit;
-
   py::class_<ThreadPool, std::shared_ptr<ThreadPool>>(
         m, "ThreadPool",
         "Class providing access to the thread pool and the adcc parallelisation.")
         .def(py::init<>())
-        .def(py::init<size_t>(),
-             "Initialise the parallelisation by providing the number of cores to use.")
         .def(py::init<size_t, size_t>(),
              "Initialise the parallelisation by providing the number of cores and the "
              "number of threads to use.")
-        .def("reinit", reinit_1,
-             "Reinitialise the parallelisation by providing the number of cores to use. "
-             "Default number of threads is 2 * "
-             "n_cores - 1.")
-        .def("reinit", reinit_2,
-             "Reinitialise the parallelisation by providing the number of cores and "
+        .def("reinit", &ThreadPool::reinit,
+             "Reinitialise the parallelisation by providing the number of cores and the "
              "number of threads to use.")
         .def_property_readonly("n_cores", &ThreadPool::n_cores)
         .def_property_readonly("n_threads", &ThreadPool::n_threads)

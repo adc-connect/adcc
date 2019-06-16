@@ -32,7 +32,7 @@ pip install pyscf
 Congratulations! With these packages installed you are all set
 to run ADC calculations.
 Feel free to take a look at the
-[Performing ADC calculations with `adcc`](calculations.md) section
+[Performing ADC calculations with adcc](calculations.md) section
 for learning how to use `adcc` in practice.
 
 Finally, if you are interested in developing or contributing

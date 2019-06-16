@@ -20,15 +20,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from .Symmetry import Symmetry
-
 import libadcc
 
-# TODO
-# Along with it a constructor for the Tensor object, which takes
-# an mospaces, a space string and the 4 properties of Symmetry,
-# which completely allow to setup a tensor and its symmetry in one
-# constructor call.
+from .Symmetry import Symmetry
 
 
 class Tensor(libadcc.Tensor):

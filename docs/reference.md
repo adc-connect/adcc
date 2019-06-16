@@ -1,4 +1,4 @@
-# Functionality reference
+# Full adcc reference
 
 This page contains a structured overview of the
 `python` API of `adcc`.

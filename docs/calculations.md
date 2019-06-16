@@ -1,4 +1,4 @@
-# Performing calculations with `adcc`
+# Performing calculations with adcc
 
 Manual for ADC methods and `adcc` features and how to invoke them.
 This is about the high-level user perspective.

@@ -17,7 +17,6 @@
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include <adcc/components.hh>
 #include <adcc/exceptions.hh>
 #include <adcc/metadata.hh>
 #include <pybind11/pybind11.h>
