@@ -49,7 +49,7 @@ except ImportError:
 
 
 # Version of the python bindings and adcc python package.
-__version__ = '0.11.0'
+__version__ = '0.11.1'
 
 
 #

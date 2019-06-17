@@ -60,7 +60,7 @@ __all__ = ["run_adc", "AdcMatrix", "AdcMethod", "Symmetry", "ReferenceState",
            "cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x",
            "banner"]
 
-__version__ = "0.11.0"
+__version__ = "0.11.1"
 __license__ = "LGPL v3"
 __url__ = "https://adc-connect.org"
 __authors__ = ["Michael F. Herbst", "Maximilian Scheurer"]
