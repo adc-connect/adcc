@@ -52,12 +52,12 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
 
         a. Hartree-Fock data from a host program, e.g. a molsturm SCF
            state, a pyscf SCF object or any class implementing the
-           `adcc.HartreeFockProvider` interface. From this data all object
-           mentioned in b to d will be implicitly created and will become
-           available in the returned state.
-        b. An `adcc.ReferenceState` object
-        c. An `adcc.LazyMp` object
-        d. An `adcc.AdcMatrix` object
+           :py:class:`adcc.HartreeFockProvider` interface. From this data all
+           objects mentioned in (b) to (d) will be implicitly created and will
+           become available in the returned state.
+        b. A :py:class:`adcc.ReferenceState` object
+        c. A :py:class:`adcc.LazyMp` object
+        d. A :py:class:`adcc.AdcMatrix` object
 
     Parameters
     ----------
