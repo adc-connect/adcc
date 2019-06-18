@@ -25,28 +25,31 @@ import numpy as np
 
 from .misc import cached_property
 from .AdcMethod import AdcMethod
+from .visualisation import ExcitationSpectrum
 from .state_densities import compute_gs2state_optdm, compute_state_diffdm
 from .OneParticleOperator import product_trace
 
 import scipy.constants
 
+from scipy import constants
 from .solver.SolverStateBase import EigenSolverStateBase
 
 
+# TODO This class needs docstrings (also for some of the attributes -> make them properties)
 class ExcitedStates:
-    def __init__(self, solver_state, method=None, property_method=None):
-        # property_method=None auto-selects
+    def __init__(self, data, method=None, property_method=None):
+        # property_method=None auto-selects (ADC(2) for ADC(3))
 
-        self.matrix = solver_state.matrix
-        self.timer = solver_state.timer
+        self.matrix = data.matrix
+        self._solver_timer = data.timer
         self.ground_state = self.matrix.ground_state
         self.reference_state = self.matrix.ground_state.reference_state
-        self.__operators = self.reference_state.operators
+        self.operators = self.reference_state.operators
 
         # Copy some optional attributes
         for optattr in ["converged", "spin_change", "kind"]:
-            if hasattr(solver_state, optattr):
-                setattr(self, optattr, getattr(solver_state, optattr))
+            if hasattr(data, optattr):
+                setattr(self, optattr, getattr(data, optattr))
 
         if method is None:
             self.method = self.matrix.method
@@ -63,14 +66,84 @@ class ExcitedStates:
         self.__property_method = property_method
 
         # Special stuff for special solvers
-        if isinstance(solver_state, EigenSolverStateBase):
-            self.excitation_vectors = solver_state.eigenvectors
-            self.excitation_energies = solver_state.eigenvalues
+        if isinstance(data, EigenSolverStateBase):
+            self.excitation_vectors = data.eigenvectors
+            self.excitation_energies = data.eigenvalues
+
+    @property
+    def timer(self):
+        # Collect all timer data we have from all the classes
+        # right here and return it.
+        return self._solver_timer
 
     @property
     def property_method(self):
         """The method used to evaluate ADC properties"""
         return self.__property_method
+
+    @cached_property
+    def transition_dms(self):
+        return [compute_gs2state_optdm(self.property_method, self.ground_state,
+                                       evec, self.matrix.intermediates)
+                for evec in self.excitation_vectors]
+
+    @cached_property
+    def transition_dipole_moments(self):
+        if self.property_method.level == 0:
+            warnings.warn("ADC(0) transition dipole moments are known to be "
+                          "faulty in some cases.")
+        dipole_integrals = self.operators.electric_dipole
+        return np.array([
+            [product_trace(comp, tdm) for comp in dipole_integrals]
+            for tdm in self.transition_dms
+        ])
+
+    @cached_property
+    def oscillator_strengths(self):
+        return 2. / 3. * np.array([
+            np.linalg.norm(tdm)**2 * np.abs(ev)
+            for tdm, ev in zip(self.transition_dipole_moments,
+                               self.excitation_energies)
+        ])
+
+    @cached_property
+    def state_diffdms(self):
+        return [compute_state_diffdm(self.property_method, self.ground_state,
+                                     evec, self.matrix.intermediates)
+                for evec in self.excitation_vectors]
+
+    @property
+    def state_dms(self):
+        mp_density = self.ground_state.density(self.property_method.level)
+        return [mp_density + diffdm for diffdm in self.state_diffdms]
+
+    @cached_property
+    def state_dipole_moments(self):
+        pmethod = self.property_method
+        if pmethod.level == 0:
+            gs_dip_moment = self.reference_state.dipole_moment
+        else:
+            gs_dip_moment = self.ground_state.dipole_moment(pmethod.level)
+
+        dipole_integrals = self.operators.electric_dipole
+        return gs_dip_moment - np.array([
+            [product_trace(comp, ddm) for comp in dipole_integrals]
+            for ddm in self.state_diffdms
+        ])
+
+    def plot_spectrum(self, broadening="lorentzian", **kwargs):
+        """
+        broadening=None disables
+        """
+        eV = constants.value("Hartree energy in eV")
+        sp = ExcitationSpectrum(self.excitation_energies * eV,
+                                self.oscillator_strengths)
+        plots = sp.plot("x", **kwargs)
+        if broadening:
+            sp_broad = sp.broaden_lines(shape=broadening)
+            plots.extend(sp_broad.plot("-", color=plots[0].get_color(),
+                                       **kwargs))
+        return plots
 
     def describe(self):
         text = ""
@@ -125,53 +198,3 @@ class ExcitedStates:
             pp.text("ExcitedStates(...)")
         else:
             pp.text(self.describe())
-
-    @cached_property
-    def transition_dms(self):
-        return [compute_gs2state_optdm(self.property_method, self.ground_state,
-                                       evec, self.matrix.intermediates)
-                for evec in self.excitation_vectors]
-
-    @cached_property
-    def transition_dipole_moments(self):
-        if self.property_method.level == 0:
-            warnings.warn("ADC(0) transition dipole moments are known to be "
-                          "faulty in some cases.")
-        dipole_integrals = self.__operators.electric_dipole
-        return np.array([
-            [product_trace(comp, tdm) for comp in dipole_integrals]
-            for tdm in self.transition_dms
-        ])
-
-    @cached_property
-    def oscillator_strengths(self):
-        return 2. / 3. * np.array([
-            np.linalg.norm(tdm)**2 * np.abs(ev)
-            for tdm, ev in zip(self.transition_dipole_moments,
-                               self.excitation_energies)
-        ])
-
-    @cached_property
-    def state_diffdms(self):
-        return [compute_state_diffdm(self.property_method, self.ground_state,
-                                     evec, self.matrix.intermediates)
-                for evec in self.excitation_vectors]
-
-    @property
-    def state_dms(self):
-        mp_density = self.ground_state.density(self.property_method.level)
-        return [mp_density + diffdm for diffdm in self.state_diffdms]
-
-    @cached_property
-    def state_dipole_moments(self):
-        pmethod = self.property_method
-        if pmethod.level == 0:
-            gs_dip_moment = self.reference_state.dipole_moment
-        else:
-            gs_dip_moment = self.ground_state.dipole_moment(pmethod.level)
-
-        dipole_integrals = self.__operators.electric_dipole
-        return gs_dip_moment - np.array([
-            [product_trace(comp, ddm) for comp in dipole_integrals]
-            for ddm in self.state_diffdms
-        ])

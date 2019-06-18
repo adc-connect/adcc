@@ -277,6 +277,7 @@ class BuildDocs(BuildSphinxDoc):
                                           html=False, xml=True)
         try:
             import sphinx  # noqa F401
+
             import breathe  # noqa F401
             import recommonmark  # noqa F401
         except ImportError:
@@ -440,7 +441,8 @@ setup(
     install_requires=[
         'pybind11 (>= 2.2)',
         'numpy (>= 1.13)',  # Maybe even higher?
-        'scipy',
+        'scipy',       # Not sure which version
+        'matplotlib'   # Not sure which version
     ],
     tests_require=["pytest", "h5py"],
     extras_require={

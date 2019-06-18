@@ -49,6 +49,17 @@ See also the [full index](genindex).
 
     Run an CVS-ADC(2)-x calculation. For more details see :py:func:`adcc.run_adc`.
 
+.. autoclass:: adcc.ExcitedStates
+    :members:
+```
+
+## Visualisation
+```eval_rst
+.. autoclass:: adcc.visualisation.Spectrum
+    :members:
+
+.. autoclass:: adcc.ExcitationSpectrum
+    :members:
 ```
 
 
@@ -105,6 +116,9 @@ See also the [full index](genindex).
 .. autofunction:: adcc.zeros_like
 
 ```
+
+## Solvers
+TODO
 
 ## Properties
 TODO
