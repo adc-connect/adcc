@@ -22,6 +22,9 @@
 ## ---------------------------------------------------------------------
 import time
 
+from contextlib import contextmanager
+from os.path import join
+
 
 def strtime_short(span):
     """
@@ -64,13 +67,28 @@ def strtime(span):
 
 class Timer:
     # TODO More flexible: Time on a subtree
-    # TODO Merge function to merge subtrees
     # TODO Describe function to print a nice table
-    # TODO Allow to use class (or a related construct) as context manager
     def __init__(self):
         self.time_construction = time.perf_counter()
         self.intervals = {}
         self.start_times = {}
+
+    def attach(self, other, subtree=""):
+        """
+        Attach the timing results from another timer,
+        i.e. merge both timers together.
+        """
+        for k, v in other.intervals.items():
+            kfull = join(subtree, k)
+            if kfull not in self.intervals:
+                self.intervals[kfull] = []
+            self.intervals[kfull].extend(v)
+
+        for k, v in other.start_times.items():
+            kfull = join(subtree, k)
+            if kfull not in self.start_times:
+                self.start_times[kfull] = []
+            self.start_times[kfull].extend(v)
 
     def stop(self, task, now=None):
         """Stop a task and return runtime of it."""
@@ -150,3 +168,26 @@ class Timer:
             pp.text("Timer()")
         else:
             pp.text(self.describe())
+
+
+Timer.start = Timer.restart
+
+
+@contextmanager
+def record_time(timer, task):
+    """
+    Context manager to automatically start and stop a time
+    recording as long as it is active
+
+    Parameters
+    ----------
+    timer : Timer
+        The timer to book the time interval into
+    task : str
+        The string describing the task
+    """
+    timer.start(task)
+    try:
+        yield timer
+    finally:
+        timer.stop(task)
