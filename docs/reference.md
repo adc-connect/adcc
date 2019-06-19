@@ -55,11 +55,10 @@ See also the [full index](genindex).
 
 ## Visualisation
 ```eval_rst
-.. autoclass:: adcc.visualisation.Spectrum
+.. automodule:: adcc.visualisation
     :members:
+    :inherited-members:
 
-.. autoclass:: adcc.ExcitationSpectrum
-    :members:
 ```
 
 
