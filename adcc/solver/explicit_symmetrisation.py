@@ -20,9 +20,10 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from adcc import AmplitudeVector, empty_like
-
 from libadcc import amplitude_vector_enforce_spin_kind
+
+from adcc import empty_like
+from adcc.AmplitudeVector import AmplitudeVector
 
 
 class IndexSymmetrisation():

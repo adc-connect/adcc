@@ -31,7 +31,8 @@ from .preconditioner import JacobiPreconditioner
 from .SolverStateBase import EigenSolverStateBase
 from .explicit_symmetrisation import IndexSymmetrisation
 
-from adcc import AdcMatrix, AmplitudeVector, linear_combination
+from adcc import AdcMatrix, linear_combination
+from adcc.AmplitudeVector import AmplitudeVector
 
 
 def select_eigenpairs(vectors, n_ep, which):

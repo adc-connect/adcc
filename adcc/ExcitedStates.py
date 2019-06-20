@@ -23,16 +23,17 @@
 import warnings
 import numpy as np
 
+from adcc import dot
+
 from .misc import cached_property
 from .timings import Timer
 from .AdcMethod import AdcMethod
 from .visualisation import ExcitationSpectrum
 from .state_densities import compute_gs2state_optdm, compute_state_diffdm
 from .OneParticleOperator import product_trace
-
-from adcc import dot
-from scipy import constants
 from .solver.SolverStateBase import EigenSolverStateBase
+
+from scipy import constants
 
 
 class ExcitedStates:
@@ -96,7 +97,7 @@ class ExcitedStates:
         ret = Timer()
         ret.attach(self._solver_timer)
         ret.attach(self.reference_state.timer)
-        ret.time_construction = self.reference_state.time_construction
+        ret.time_construction = self.reference_state.timer.time_construction
         return ret
 
     @property

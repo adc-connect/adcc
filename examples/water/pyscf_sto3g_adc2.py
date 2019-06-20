@@ -27,10 +27,6 @@ adcc.memory_pool.initialise(max_memory=256 * 1024 * 1024)
 singlets = adcc.adc2(scfres, n_singlets=5)
 triplets = adcc.adc2(singlets.matrix, n_triplets=3)
 
-# Attach state densities
-singlets = adcc.attach_state_densities(singlets)
-triplets = adcc.attach_state_densities(triplets)
-
 print(singlets.describe())
 print()
 print(triplets.describe())
