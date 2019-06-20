@@ -20,19 +20,19 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
 import unittest
 import numpy as np
 
+from .misc import assert_allclose_signfix, expand_test_templates
 from numpy.testing import assert_allclose
 
-from adcc.testdata.cache import cache
-from adcc.solver.SolverStateBase import SolverStateBase
-
+import adcc
 import pytest
 
-from .misc import assert_allclose_signfix, expand_test_templates
 from pytest import approx
+
+from adcc import ExcitedStates
+from adcc.testdata.cache import cache
 
 # The methods to test
 methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
@@ -51,15 +51,12 @@ class TestFunctionality(unittest.TestCase):
         # Run ADC and properties
         args["conv_tol"] = 3e-9
         res = getattr(adcc, method.replace("-", "_"))(hf, **args)
-        if res.method.level > 2:
-            res = adcc.attach_properties(res, method="adc2")
-        else:
-            res = adcc.attach_properties(res)
 
         # Checks
-        assert isinstance(res, SolverStateBase)
+        assert isinstance(res, ExcitedStates)
         assert res.converged
-        assert_allclose(res.eigenvalues[:n_ref], ref["eigenvalues"], atol=1e-7)
+        assert_allclose(res.excitation_energies[:n_ref],
+                        ref["eigenvalues"], atol=1e-7)
 
         if method == "adc0" and "cn" in system:
             # TODO Investigate this

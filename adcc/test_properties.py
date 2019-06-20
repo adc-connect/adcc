@@ -28,11 +28,7 @@ from .test_state_densities import Runners
 
 from numpy.testing import assert_allclose
 
-import adcc
-
 from pytest import approx
-
-from adcc.state_densities import attach_state_densities
 from adcc.testdata.cache import cache
 
 # The methods to test
@@ -50,20 +46,15 @@ class TestTransitionDipoleMoments(unittest.TestCase, Runners):
 
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
-        state = attach_state_densities(state, method=propmethod,
-                                       state_diffdm=False,
-                                       ground_to_excited_tdm=True,
-                                       state_to_state_tdm=False)
 
-        res_tdms = adcc.properties.transition_dipole_moments(state,
-                                                             method=propmethod)
+        res_tdms = state.transition_dipole_moments
         ref_tdms = refdata[method][kind]["transition_dipole_moments"]
         refevals = refdata[method][kind]["eigenvalues"]
         n_ref = len(refevals)
         for i in range(n_ref):
             res_tdm = res_tdms[i]
             ref_tdm = ref_tdms[i]
-            assert state.eigenvalues[i] == refevals[i]
+            assert state.excitation_energies[i] == refevals[i]
             res_tdm_norm = np.sum(res_tdm * res_tdm)
             ref_tdm_norm = np.sum(ref_tdm * ref_tdm)
             assert res_tdm_norm == approx(ref_tdm_norm, abs=1e-5)
@@ -79,19 +70,13 @@ class TestOscillatorStrengths(unittest.TestCase, Runners):
 
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
-        state = attach_state_densities(state, method=propmethod,
-                                       state_diffdm=False,
-                                       ground_to_excited_tdm=True,
-                                       state_to_state_tdm=False)
 
-        res_oscs = adcc.properties.oscillator_strengths(
-            adcc.properties.transition_dipole_moments(state), state.eigenvalues
-        )
+        res_oscs = state.oscillator_strengths
         ref_tdms = refdata[method][kind]["transition_dipole_moments"]
         refevals = refdata[method][kind]["eigenvalues"]
         n_ref = len(refevals)
         for i in range(n_ref):
-            assert state.eigenvalues[i] == refevals[i]
+            assert state.excitation_energies[i] == refevals[i]
             ref_tdm_norm = np.sum(ref_tdms[i] * ref_tdms[i])
             assert res_oscs[i] == approx(2. / 3. * ref_tdm_norm * refevals[i])
 
@@ -105,13 +90,8 @@ class TestStateDipoleMoments(unittest.TestCase, Runners):
 
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
-        state = attach_state_densities(state, method=propmethod,
-                                       state_diffdm=True,
-                                       ground_to_excited_tdm=False,
-                                       state_to_state_tdm=False)
 
-        res_dms = adcc.properties.state_dipole_moments(state,
-                                                       method=propmethod)
+        res_dms = state.state_dipole_moments
         ref = refdata[method][kind]
         n_ref = len(ref["eigenvalues"])
         assert_allclose(res_dms[:n_ref],

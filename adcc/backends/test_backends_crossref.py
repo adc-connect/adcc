@@ -86,14 +86,14 @@ def compare_adc_results(adc_results, atol):
         state1 = adc_results[comb[0]]
         state2 = adc_results[comb[1]]
         assert_allclose(
-            state1.eigenvalues, state2.eigenvalues
+            state1.excitation_energies, state2.excitation_energies
         )
         assert state1.n_iter == state2.n_iter
 
-        blocks1 = state1.eigenvectors[0].blocks
-        blocks2 = state2.eigenvectors[0].blocks
+        blocks1 = state1.excitation_vectors[0].blocks
+        blocks2 = state2.excitation_vectors[0].blocks
         assert blocks1 == blocks2
-        for v1, v2 in zip(state1.eigenvectors, state2.eigenvectors):
+        for v1, v2 in zip(state1.excitation_vectors, state2.excitation_vectors):
             for block in blocks1:
                 v1np = v1[block].to_ndarray()
                 v2np = v2[block].to_ndarray()
@@ -109,8 +109,6 @@ def compare_adc_results(adc_results, atol):
                 )
 
         # test properties
-        state1 = adcc.attach_properties(state1)
-        state2 = adcc.attach_properties(state2)
         assert_allclose(state1.oscillator_strengths,
                         state2.oscillator_strengths, atol=atol)
         assert_allclose(state1.state_dipole_moments,

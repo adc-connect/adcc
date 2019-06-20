@@ -62,13 +62,17 @@ class ExcitedStates:
             override the automatic selection.
         """
         self.matrix = data.matrix
-        self._solver_timer = data.timer
         self.ground_state = self.matrix.ground_state
         self.reference_state = self.matrix.ground_state.reference_state
         self.operators = self.reference_state.operators
 
+        if not hasattr(data, "timer"):
+            self._solver_timer = Timer()
+        else:
+            self._solver_timer = data.timer
+
         # Copy some optional attributes
-        for optattr in ["converged", "spin_change", "kind"]:
+        for optattr in ["converged", "spin_change", "kind", "n_iter"]:
             if hasattr(data, optattr):
                 setattr(self, optattr, getattr(data, optattr))
 
@@ -232,13 +236,18 @@ class ExcitedStates:
         if self.converged:
             conv = "converged"
 
+        propname = ""
+        if self.property_method != self.method:
+            propname = " (" + self.property_method.name + ")"
+
         text = ""
         separator = "+" + 33 * "-" + len(opt_thead) * "-" + "+"
         text += separator + "\n"
-        head = "| {0:15s}  {1:>" + str(14 + len(opt_thead)) + "s} |\n"
+        head = "| {0:18s}  {1:>" + str(11 + len(opt_thead)) + "s} |\n"
         delim = ",  " if kind else ""
-        text += head.format(self.method.name,
+        text += head.format(self.method.name + propname,
                             kind + spin_change + delim + conv)
+        # TODO Print property method if it differs!
         text += separator + "\n"
 
         # Body of the table
