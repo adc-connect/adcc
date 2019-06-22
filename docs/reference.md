@@ -1,3 +1,7 @@
+```eval_rst
+.. _full-reference:
+
+```
 # Full adcc reference
 
 ```note::  Work in progress. Many function do not yet follow
@@ -9,7 +13,12 @@ This page contains a structured overview of the
 `python` API of `adcc`.
 See also the [full index](genindex).
 
-## `run_adc` functions
+```eval_rst
+.. _adcn-methods:
+
+```
+
+## The adcc.adcN family of methods
 ```eval_rst
 .. autofunction:: adcc.run_adc
 

@@ -179,7 +179,9 @@ class ExcitedStates:
         ----------
         broadening : str or None or callable, optional
             The broadening type to used for the computed excitations.
-            A value of None disables broadening.
+            A value of None disables broadening any other value is passed
+            straight to
+            :func:`adcc.visualisation.ExcitationSpectrum.broaden_lines`.
         xaxis : str
             Energy unit to be used on the x-Axis. Options:
             ["eV", "au", "nm", "cm-1"]
