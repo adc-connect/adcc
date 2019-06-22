@@ -24,12 +24,12 @@ import sys
 import warnings
 import numpy as np
 
-import scipy.linalg as la
-import scipy.sparse.linalg as sla
-
 from .preconditioner import JacobiPreconditioner
 from .SolverStateBase import EigenSolverStateBase
 from .explicit_symmetrisation import IndexSymmetrisation
+
+import scipy.linalg as la
+import scipy.sparse.linalg as sla
 
 from adcc import AdcMatrix, linear_combination
 from adcc.AmplitudeVector import AmplitudeVector
@@ -178,6 +178,8 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         assert len(fvecs) == n_block
 
         # Form residuals
+        # TODO The application of A can be avoided here if A*x is stored,
+        #      since matrix @ fvecs == matrix @ SS @ v == Ax @ v
         Afvecs = [matrix @ fvecs[i] for i in range(len(fvecs))]
         state.n_applies += n_block
         residuals = [Afvecs[i] - rvals[i] * fvecs[i]

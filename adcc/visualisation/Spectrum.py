@@ -1,15 +1,29 @@
+#!/usr/bin/env python3
+## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
+## ---------------------------------------------------------------------
+##
+## Copyright (C) 2019 by the adcc authors
+##
+## This file is part of adcc.
+##
+## adcc is free software: you can redistribute it and/or modify
+## it under the terms of the GNU Lesser General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+##
+## adcc is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU Lesser General Public License for more details.
+##
+## You should have received a copy of the GNU Lesser General Public License
+## along with adcc. If not, see <http://www.gnu.org/licenses/>.
+##
+## ---------------------------------------------------------------------
 import numpy as np
 
+from . import shapefctns
 from matplotlib import pyplot as plt
-
-
-def shape_gaussian(x, mean, stddev):
-    fac = 1 / np.sqrt(2 * np.pi * stddev**2)
-    return fac * np.exp(-(x - mean)**2 / (2 * stddev**2))
-
-
-def shape_lorentzian(x, center, gamma):
-    return gamma / ((x - center)**2 + gamma**2) / np.pi
 
 
 class Spectrum:
@@ -55,40 +69,41 @@ class Spectrum:
         self._args = args
         self._kwargs = kwargs
 
-    def broaden_lines(self, shape="lorentzian", width=None):
+    def broaden_lines(self, width=None, shape="lorentzian"):
         """Apply broadening to the current spectral data and
         return the broadened spectrum.
 
         Parameters
         ----------
-        shape : str, optional
+        shape : str or callable, optional
             The shape of the broadening to use (lorentzian or gaussian),
-            by default lorentzian broadening is used
+            by default lorentzian broadening is used. This can be a callable
+            to directly specify the function with which each line of the
+            spectrum is convoluted.
         width : float, optional
-            The width to use for the broadening, by default a sensible
-            value is chosen.
+            The width to use for the broadening (stddev for the gaussian,
+            gamma parameter for the lorentzian).
+            Optional if shape is a callable.
         """
-        if shape == "gaussian":
-            if width is None:
-                width = 0.35
+        if not callable(shape) and width is None:
+            raise ValueError("If shape is not a callable, the width parameter "
+                             "is required")
 
-            def gauss(x, mean):
-                return shape_gaussian(x, mean, width)
-            return self.broaden_lines(shape=gauss)
-        elif shape == "lorentzian":
-            if width is None:
-                width = 0.3
+        if not callable(shape):
+            if not hasattr(shapefctns, shape):
+                raise ValueError("Unknown broadening function: " + shape)
+            shapefctn = getattr(shapefctns, shape)
 
-            def lorentzian(x, center):
-                return shape_lorentzian(x, center, width)
-            return self.broaden_lines(shape=lorentzian)
-        elif isinstance(shape, str):
-            raise ValueError("Unknown broadening type: " + shape)
+            def shape(x, x0):
+                # Empirical scaling factor to make the envelope look nice
+                scale = width / 0.272
+                return scale * shapefctn(x, x0, width)
 
         xmin = np.min(self.x)
         xmax = np.max(self.x)
         xextra = (xmax - xmin) / 10
-        x = np.linspace(xmin - xextra, xmax + xextra, int(100 * (xmax - xmin)))
+        n_points = min(5000, max(500, int(200 * (xmax - xmin))))
+        x = np.linspace(xmin - xextra, xmax + xextra, n_points)
 
         y = 0
         for center, value in zip(self.x, self.y):
@@ -119,9 +134,9 @@ class Spectrum:
             "continuous". By default no special style is chosen.
         """
         if style == "discrete":
-            plt.vlines(self.x, 0, self.y, linestyle="dashed", color="grey",
-                       linewidth=1)
             p = plt.plot(self.x, self.y, "x", *args, **kwargs)
+            plt.vlines(self.x, 0, self.y, linestyle="dashed",
+                       color=p[0].get_color(), linewidth=1)
         elif style == "continuous":
             p = plt.plot(self.x, self.y, "-", *args, **kwargs)
         elif style is None:
