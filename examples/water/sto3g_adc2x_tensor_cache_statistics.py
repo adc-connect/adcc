@@ -16,11 +16,6 @@ mp = adcc.LazyMp(adcc.ReferenceState(data), statistics_policy)
 # Run an adc2 calculation:
 singlets = adcc.adc2x(mp, n_singlets=5, conv_tol=1e-8)
 triplets = adcc.adc2x(mp, n_triplets=5, conv_tol=1e-8)
-
-# Attach state densities
-singlets = adcc.attach_state_densities(singlets)
-triplets = adcc.attach_state_densities(triplets)
-
 print(singlets.describe())
 print(triplets.describe())
 

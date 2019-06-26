@@ -4,29 +4,35 @@
 
 ```
 
-**ADC connect** -- or `adcc` in short -- is a `python`-based framework to
+**ADC connect** -- or adcc in short -- is a `python`-based framework to
 connect to arbitrary programs and perform calculations based on the
 algebraic-diagrammatic construction
 approach (ADC) on top of their existing self-consistent field (SCF) procedures.
-Four SCF codes can be used with `adcc` out of the box, namely
+Four SCF codes can be used with adcc out of the box, namely
 [molsturm](https://molsturm.org),
 [psi4](https://github.com/psi4/psi4),
-[pyscf](https://github.com/pyscf/pyscf)
+[PySCF](https://github.com/pyscf/pyscf)
 and veloxchem.
 
 The range of supported algebraic-diagrammatic construction (ADC)
 methods includes the ADC(n) family **up to level 3**,
 including spin-flip and core-valence separation variants.
 For all methods transition and excited state **properties are available**.
-See the [Performing ADC calculations with `adcc`](calculations.md)
+See the [Performing ADC calculations with adcc](calculations.md)
 for more details.
 
+```eval_rst
+.. _index-example:
+
+```
+## A simple example
 The next code snippet should give you an idea,
-how `adcc` works in practice.
+how adcc works in practice.
 It shows how an ADC(3) calculation for 3 singlet excited states
 of water can be performed on top of a restricted Hartree-Fock reference
-computed using `pyscf`.
+computed using PySCF.
 ```python
+from matplotlib import pyplot as plt
 from pyscf import gto, scf
 import adcc
 
@@ -45,11 +51,12 @@ scfres.kernel()
 # Run an ADC(3) calculation, solving for 3 singlets
 state = adcc.adc3(scfres, n_singlets=3)
 
-# Print the resulting states
-print(state.describe())
+# Broaden the peaks and plot the resulting spectrum
+state.plot_spectrum(broadening='lorentzian')
+plt.show()
 ```
 Sounds interesting? See [Getting started](getting_started.md)
-and [Performing calculations with `adcc`](calculations.md)
+and [Performing calculations with adcc](calculations.md)
 for installation instructions and some more information to get going.
 
 ## Contents

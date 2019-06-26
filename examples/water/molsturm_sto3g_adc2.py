@@ -19,9 +19,5 @@ hfres = molsturm.hartree_fock(system, basis_type="gaussian",
 singlets = adcc.adc2(hfres, n_singlets=5, conv_tol=1e-9)
 triplets = adcc.adc2(singlets.matrix, n_triplets=3, conv_tol=1e-9)
 
-# Attach state densities
-singlets = adcc.attach_state_densities(singlets)
-triplets = adcc.attach_state_densities(triplets)
-
 print(singlets.describe())
 print(triplets.describe())

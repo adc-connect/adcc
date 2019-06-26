@@ -1,3 +1,4 @@
 # psi4
 timer.dat
 *.clean
+*_spectrum.pdf

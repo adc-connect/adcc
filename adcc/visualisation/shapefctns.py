@@ -20,27 +20,13 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
-import unittest
-
-from adcc import ExcitedStates
-from adcc.DictHfProvider import DictHfProvider
-from adcc.testdata.cache import cache
-
-from pytest import approx
+import numpy as np
 
 
-class TestHartreeFockProvider(unittest.TestCase):
-    def base_test(self, system, **args):
-        hf = DictHfProvider(cache.hfdata[system])
-        refdata = cache.reference_data[system]
+def gaussian(x, x0, stddev):
+    fac = 1 / np.sqrt(2 * np.pi * stddev**2)
+    return fac * np.exp(-(x - x0)**2 / (2 * stddev**2))
 
-        res = adcc.adc2(hf, n_singlets=9, **args)
-        assert isinstance(res, ExcitedStates)
 
-        ref = refdata["adc2"]["singlet"]["eigenvalues"]
-        assert res.converged
-        assert res.excitation_energies == approx(ref)
-
-    def test_h2o(self):
-        self.base_test("h2o_sto3g")
+def lorentzian(x, x0, gamma):
+    return gamma / ((x - x0)**2 + gamma**2) / np.pi

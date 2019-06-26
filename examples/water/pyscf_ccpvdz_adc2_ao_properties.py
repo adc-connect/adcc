@@ -3,11 +3,13 @@
 import adcc
 import numpy as np
 
-from scipy import constants
 from matplotlib import pyplot as plt
+from adcc.visualisation import ExcitationSpectrum
 
 from pyscf import gto, scf
 from pyscf.tools import cubegen
+
+from scipy import constants
 
 # Hartree to eV
 eV = constants.value("Hartree energy in eV")
@@ -53,7 +55,6 @@ print(adcc.banner())
 
 # Run an adc2 calculation:
 state = adcc.adc2(scfres, n_singlets=7, conv_tol=1e-8)
-state = adcc.attach_state_densities(state)
 
 #
 # Get HF density matrix and nuclear dipole
@@ -86,15 +87,16 @@ osc_strengths = []    # Oscillator strength
 print()
 print("  st  ex.ene. (au)         f     transition dipole moment (au)"
       "        state dip (au)")
-for i, ampl in enumerate(state.eigenvectors):
+for i, ampl in enumerate(state.excitation_vectors):
     # Compute transition density matrix
-    tdm_mo = state.ground_to_excited_tdms[i]
+    tdm_mo = state.transition_dms[i]
     tdm_ao = tdm_mo.transform_to_ao_basis(state.reference_state)
     ρ_tdm_tot = (tdm_ao[0] + tdm_ao[1]).to_ndarray()
 
     # Compute transition dipole moment
+    exci = state.excitation_energies[i]
     tdip = np.einsum('xij,ij->x', dip_ao, ρ_tdm_tot)
-    osc = 2. / 3. * np.linalg.norm(tdip)**2 * np.abs(state.eigenvalues[i])
+    osc = 2. / 3. * np.linalg.norm(tdip)**2 * np.abs(exci)
 
     # Compute excited states density matrix and excited state dipole moment
     opdm_mo = state.state_diffdms[i]
@@ -107,7 +109,7 @@ for i, ampl in enumerate(state.eigenvectors):
     fmt = "{0:2d}  {1:12.8g} {2:9.3g}   [{3:9.3g}, {4:9.3g}, {5:9.3g}]"
     fmt += "   [{6:9.3g}, {7:9.3g}, {8:9.3g}]"
     # fmt += "   [{9:9.3g}, {10:9.3g}, {11:9.3g}]"
-    print(state.kind[0], fmt.format(i, state.eigenvalues[i], osc, *tdip, *sdip))
+    print(state.kind[0], fmt.format(i, exci, osc, *tdip, *sdip))
 
     if dump_cube:
         # Dump LUNTO and HONTO
@@ -121,15 +123,14 @@ for i, ampl in enumerate(state.eigenvectors):
 
     # Save oscillator strength and excitation energies
     osc_strengths.append(osc)
-    exc_energies.append(state.eigenvalues[i])
-exc_energies = np.array(exc_energies)
+    exc_energies.append(state.excitation_energies[i])
+exc_energies = np.array(exc_energies) * eV
 osc_strengths = np.array(osc_strengths)
 
-# Plot a spectrum
-plot_spectrum(exc_energies * eV, osc_strengths)
-plt.xlabel("Excitation energy in eV")
-plt.savefig("spectrum.pdf")
+sp = ExcitationSpectrum(exc_energies, osc_strengths)
+sp.xlabel = "Energy (eV)"
+sp.plot(style="discrete", color="r")
+sp_broad = sp.broaden_lines(shape="lorentzian")
+sp_broad.plot(color="b", style="continuous")
 
-# Timings summary:
-print(state.timer.describe())
-print(state.reference_state.timer.describe())
+plt.show()

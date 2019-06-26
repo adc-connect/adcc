@@ -2,7 +2,7 @@
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2018 by the adcc authors
+## Copyright (C) 2019 by the adcc authors
 ##
 ## This file is part of adcc.
 ##
@@ -20,27 +20,20 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+from .Spectrum import Spectrum
 
-import psi4
-import adcc
 
-mol = psi4.geometry("""
-    O 0 0 0
-    H 0 0 1.795239827225189
-    H 1.693194615993441 0 -0.599043184453037
-    symmetry c1
-    units au
-    """)
+class ExcitationSpectrum(Spectrum):
+    def __init__(self, energy, intensity):
+        """Construct an ExcitationSpectrum object
 
-# set the number of cores equal to the auto-determined value from
-# the adcc ThreadPool
-psi4.set_num_threads(adcc.thread_pool.n_cores)
-psi4.core.be_quiet()
-psi4.set_options({'basis': "sto-3g",
-                  'scf_type': 'pk',
-                  'e_convergence': 1e-12,
-                  'd_convergence': 1e-8})
-scf_e, wfn = psi4.energy('SCF', return_wfn=True)
-
-# Run an adc2 calculation:
-state = adcc.cvs_adc2(wfn, n_singlets=5, n_core_orbitals=1)
+        Parameters
+        ----------
+        energy
+            Energies for plotting the spectrum
+        intensity
+            Intensities for plotting the spectrum
+        """
+        super().__init__(energy, intensity)
+        self.xlabel = "Energy"
+        self.ylabel = "Intensity"

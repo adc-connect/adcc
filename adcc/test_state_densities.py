@@ -25,8 +25,6 @@ import unittest
 from .misc import expand_test_templates
 
 from pytest import approx
-
-from adcc.state_densities import attach_state_densities
 from adcc.testdata.cache import cache
 
 # The methods to test
@@ -103,18 +101,14 @@ class TestStateDiffDm(unittest.TestCase, Runners):
 
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
-        state = attach_state_densities(state, method=propmethod,
-                                       state_diffdm=True,
-                                       ground_to_excited_tdm=False,
-                                       state_to_state_tdm=False)
 
         refdens_a = refdata[method][kind]["state_diffdm_bb_a"]
         refdens_b = refdata[method][kind]["state_diffdm_bb_b"]
         refevals = refdata[method][kind]["eigenvalues"]
-        for i in range(len(state.eigenvectors)):
+        for i in range(len(state.excitation_vectors)):
             # Check that we are talking about the same state when
             # comparing reference and computed
-            assert state.eigenvalues[i] == refevals[i]
+            assert state.excitation_energies[i] == refevals[i]
 
             dm_ao_a, dm_ao_b = state.state_diffdms[i].transform_to_ao_basis(
                 state.reference_state
@@ -134,20 +128,16 @@ class TestStateGroundToExcitedTdm(unittest.TestCase, Runners):
 
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
-        state = attach_state_densities(state, method=propmethod,
-                                       state_diffdm=False,
-                                       ground_to_excited_tdm=True,
-                                       state_to_state_tdm=False)
 
         refdens_a = refdata[method][kind]["ground_to_excited_tdm_bb_a"]
         refdens_b = refdata[method][kind]["ground_to_excited_tdm_bb_b"]
         refevals = refdata[method][kind]["eigenvalues"]
-        for i in range(len(state.eigenvectors)):
+        for i in range(len(state.excitation_vectors)):
             # Check that we are talking about the same state when
             # comparing reference and computed
-            assert state.eigenvalues[i] == refevals[i]
+            assert state.excitation_energies[i] == refevals[i]
 
-            tdms = state.ground_to_excited_tdms[i].transform_to_ao_basis(
+            tdms = state.transition_dms[i].transform_to_ao_basis(
                 state.ground_state.reference_state
             )
             dm_ao_a, dm_ao_b = tdms

@@ -33,9 +33,6 @@ def run_progression(outfile="631g_adc2_dissociation.nptxt"):
     if os.path.isfile(outfile):
         return np.loadtxt(outfile)
 
-    # Initialise the memory (256 MiB)
-    adcc.memory_pool.initialise(max_memory=256 * 1024 * 1024)
-
     dists = np.linspace(1.0, 5.0, 30)
     enes = [run_spin_flip(d) for d in dists]
 

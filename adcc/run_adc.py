@@ -28,8 +28,8 @@ from .guess import (guesses_any, guesses_singlet, guesses_spin_flip,
                     guesses_triplet)
 from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod
+from .ExcitedStates import ExcitedStates
 from .ReferenceState import ReferenceState as adcc_ReferenceState
-
 from .solver.davidson import jacobi_davidson
 from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
@@ -124,9 +124,10 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
 
     Returns
     -------
-    SolverState
-        Object containing the `AdcMatrix`, the `LazyMp` ground state and
-        the `ReferenceState` as well as computed eigenpairs.
+    ExcitedStates
+        An :class:`adcc.ExcitedStates` object containing the
+        :class:`adcc.AdcMatrix`, the :class:`adcc.LazyMp` ground state and the
+        :class:`adcc.ReferenceState` as well as computed eigenpairs.
 
     Examples
     --------
@@ -304,9 +305,10 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
                             conv_tol=conv_tol, callback=jd_callback,
                             explicit_symmetrisation=explicit_symmetrisation,
                             **solverargs)
-    jdres.kind = kind
-    jdres.spin_change = spin_change
-    return jdres
+    exstates = ExcitedStates(jdres)
+    exstates.kind = kind
+    exstates.spin_change = spin_change
+    return exstates
 
 
 def estimate_n_guesses(matrix, n_states, singles_only=True):

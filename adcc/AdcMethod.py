@@ -52,6 +52,16 @@ class AdcMethod:
         except ValueError:
             raise ValueError("Not a valid base method: " + self.base_method)
 
+    def at_level(self, newlevel):
+        """
+        Return an equivalent method, where only the level is changed
+        (e.g. calling this on a CVS method returns a CVS method)
+        """
+        if self.is_core_valence_separated:
+            return AdcMethod("cvs-adc" + str(newlevel))
+        else:
+            return AdcMethod("adc" + str(newlevel))
+
     @property
     def name(self):
         if self.is_core_valence_separated:
@@ -63,7 +73,7 @@ class AdcMethod:
     def property_method(self):
         """
         The name of the canonical method to use for computing properties
-        for this ADC method. This only differs from the name propery
+        for this ADC method. This only differs from the name property
         for the ADC(2)-x family of methods.
         """
         if self.base_method == "adc2x":
