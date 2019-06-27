@@ -22,14 +22,14 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
-import libadcc
-
 from .misc import cached_property
 from .Tensor import Tensor
 from .backends import import_scf_results
 from .memory_pool import memory_pool
 from .OperatorIntegrals import OperatorIntegrals
 from .OneParticleOperator import OneParticleOperator, product_trace
+
+import libadcc
 
 __all__ = ["ReferenceState"]
 
@@ -40,15 +40,7 @@ class ReferenceState(libadcc.ReferenceState):
                  import_all_below_n_orbs=10):
         """
         Construct a ReferenceState object. The object is lazy and will only
-
-        import and
-        import Fock
-        import blocks
-        import matrix
-        import orbital
-        import energies
-        import coefficients.
-
+        import orbital energies and coefficients. Fock matrix blocks and
         electron-repulsion integral blocks are imported as needed.
 
         @param hfdata
@@ -115,13 +107,26 @@ class ReferenceState(libadcc.ReferenceState):
            and frozen_virtual is not None:
             raise TypeError("frozen_virtual should be an int or a list")
 
-        if isinstance(frozen_core, list):
-            raise NotImplementedError("Arbitrary frozen-core not tested.")
-        if isinstance(core_orbitals, list):
-            raise NotImplementedError("Arbitrary CVS not tested.")
-        if isinstance(frozen_virtual, list):
-            raise NotImplementedError("Arbitrary frozen-virtual not "
-                                      "tested.")
+        # TODO The arbitrary space stuff is not exactly convenient at the moment,
+        #      since the + n_mo stuff to get to the beta orbitals depends
+        #      on the basis used and is not intuitive.
+        #      One should have a wrapper around this here, which makes it more
+        #      convenient to use.
+        #
+        #      Allow to pass a list, which is interpreted as both
+        #      alpha and beta indices (added + n_orbs_alpha automatically)
+        #      or two lists one for alpha, one for beta
+        #
+        #      e.g. core_orbitals=[0,1] would be equivalent to core_orbitals=2
+        #           and core_orbitals=([0,1], [0,1]) and core_orbitals=range(2)
+
+        # if isinstance(frozen_core, list):
+        #     raise NotImplementedError("Arbitrary frozen-core not tested.")
+        # if isinstance(core_orbitals, list):
+        #     raise NotImplementedError("Arbitrary CVS not tested.")
+        # if isinstance(frozen_virtual, list):
+        #     raise NotImplementedError("Arbitrary frozen-virtual not "
+        #                               "tested.")
 
         if any(isinstance(k, int) for k in [frozen_core, core_orbitals,
                                             frozen_virtual]):

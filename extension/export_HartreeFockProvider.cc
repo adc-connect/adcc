@@ -112,13 +112,16 @@ class HartreeFockProvider : public HartreeFockSolution_i {
     }
     const ssize_t d1_length = static_cast<ssize_t>(d1_end - d1_start);
     const ssize_t d2_length = static_cast<ssize_t>(d2_end - d2_start);
-    if (ssize != d1_length * d2_length) {
-      throw dimension_mismatch(
-            "Expected length from range (== " + std::to_string(d1_length * d2_length) +
-            ") does not agree with buffer size (== " + std::to_string(ssize) + ").");
-    }
+    if (d1_length == 0 || d2_length == 0) return;
 
-    if (size == 0) return;
+    const ssize_t sd1_stride = static_cast<ssize_t>(d1_stride);
+    const ssize_t sd2_stride = static_cast<ssize_t>(d2_stride);
+    const ssize_t slength = (d1_length - 1) * sd1_stride + (d2_length - 1) * sd2_stride;
+    if (ssize < slength) {
+      throw dimension_mismatch(
+            "Expected length from range and strides (== " + std::to_string(slength) +
+            ") overshoots buffer size (== " + std::to_string(ssize) + ").");
+    }
     py::memoryview memview(py::buffer_info(buffer, d1_length * d2_length));
     std::vector<ssize_t> strides{static_cast<ssize_t>(sizeof(scalar_type) * d1_stride),
                                  static_cast<ssize_t>(sizeof(scalar_type) * d2_stride)};
@@ -155,14 +158,20 @@ class HartreeFockProvider : public HartreeFockSolution_i {
     const ssize_t d2_length = static_cast<ssize_t>(d2_end - d2_start);
     const ssize_t d3_length = static_cast<ssize_t>(d3_end - d3_start);
     const ssize_t d4_length = static_cast<ssize_t>(d4_end - d4_start);
-    if (ssize != d1_length * d2_length * d3_length * d4_length) {
+    if (d1_length == 0 || d2_length == 0 || d3_length == 0 || d4_length == 0) return;
+
+    const ssize_t sd1_stride = static_cast<ssize_t>(d1_stride);
+    const ssize_t sd2_stride = static_cast<ssize_t>(d2_stride);
+    const ssize_t sd3_stride = static_cast<ssize_t>(d3_stride);
+    const ssize_t sd4_stride = static_cast<ssize_t>(d4_stride);
+    const ssize_t slength = (d1_length - 1) * sd1_stride + (d2_length - 1) * sd2_stride +
+                            (d3_length - 1) * sd3_stride + (d4_length - 1) * sd4_stride;
+    if (ssize < slength) {
       throw dimension_mismatch(
-            "Expected length from range (== " +
-            std::to_string(d1_length * d2_length * d3_length * d4_length) +
-            ") does not agree with buffer size (== " + std::to_string(ssize) + ").");
+            "Expected length from range and strides (== " + std::to_string(slength) +
+            ") overshoots buffer size (== " + std::to_string(ssize) + ").");
     }
 
-    if (size == 0) return;
     py::memoryview memview(
           py::buffer_info(buffer, d1_length * d2_length * d3_length * d4_length));
     std::vector<ssize_t> strides{static_cast<ssize_t>(sizeof(scalar_type) * d1_stride),
@@ -206,15 +215,20 @@ class HartreeFockProvider : public HartreeFockSolution_i {
     const ssize_t d2_length = static_cast<ssize_t>(d2_end - d2_start);
     const ssize_t d3_length = static_cast<ssize_t>(d3_end - d3_start);
     const ssize_t d4_length = static_cast<ssize_t>(d4_end - d4_start);
-    if (ssize != d1_length * d2_length * d3_length * d4_length) {
+    if (d1_length == 0 || d2_length == 0 || d3_length == 0 || d4_length == 0) return;
+
+    const ssize_t sd1_stride = static_cast<ssize_t>(d1_stride);
+    const ssize_t sd2_stride = static_cast<ssize_t>(d2_stride);
+    const ssize_t sd3_stride = static_cast<ssize_t>(d3_stride);
+    const ssize_t sd4_stride = static_cast<ssize_t>(d4_stride);
+    const ssize_t slength = (d1_length - 1) * sd1_stride + (d2_length - 1) * sd2_stride +
+                            (d3_length - 1) * sd3_stride + (d4_length - 1) * sd4_stride;
+    if (ssize < slength) {
       throw dimension_mismatch(
-            "Expected length from range (== " +
-            std::to_string(d1_length * d2_length * d3_length * d4_length) +
-            ") does not agree with buffer size (== " + std::to_string(ssize) + ").");
+            "Expected length from range and strides (== " + std::to_string(slength) +
+            ") overshoots buffer size (== " + std::to_string(ssize) + ").");
     }
 
-    // Skip empty ranges
-    if (size == 0) return;
     py::memoryview memview(
           py::buffer_info(buffer, d1_length * d2_length * d3_length * d4_length));
     std::vector<ssize_t> strides{static_cast<ssize_t>(sizeof(scalar_type) * d1_stride),
