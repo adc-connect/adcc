@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
+import sys
 import numpy as np
+
+import scipy.linalg as la
 
 from ..functions import dot
 from .preconditioner import PreconditionerIdentity
 from .explicit_symmetrisation import IndexSymmetrisation
-
-import scipy.linalg as la
 
 
 class State:
@@ -16,6 +17,18 @@ class State:
         self.converged = False           # Flag whether iteration is converged
         self.n_iter = 0                  # Number of iterations
         self.n_applies = 0               # Number of applies
+
+
+def default_print(state, identifier, file=sys.stdout):
+    if identifier == "start" and state.n_iter == 0:
+        print("Niter residual_norm", file=file)
+    elif identifier == "next_iter":
+        fmt = "{n_iter:3d}  {residual:12.5g}"
+        print(fmt.format(n_iter=state.n_iter,
+                         residual=np.max(state.residual_norm)), file=file)
+    elif identifier == "is_converged":
+        print("=== Converged ===", file=file)
+        print("    Number of matrix applies:   ", state.n_applies)
 
 
 def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
@@ -36,7 +49,6 @@ def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
     Pinv             Preconditioner to A, typically an estimate for A^{-1}
     cg_type          Select between polak_ribiere and fletcher_reeves
     """
-    raise NotImplementedError("Not yet properly implemented")
 
     if callback is None:
         def callback(state, identifier):
@@ -68,8 +80,6 @@ def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
     state.residual_norm = np.sqrt(state.residual @ state.residual)
     pk = zk = Pinv @ state.residual
 
-    # TODO Index symmetrisation
-
     callback(state, "start")
     while state.n_iter < max_iter:
         state.n_iter += 1
@@ -78,6 +88,7 @@ def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
         # TODO This needs to be modified for general optimisations,
         #      i.e. where A is non-linear
         Apk = matrix @ pk
+        state.n_applies += 1
         res_dot_zk = dot(state.residual, zk)
         ak = float(res_dot_zk / dot(pk, Apk))
         state.solution += ak * pk
@@ -93,15 +104,17 @@ def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
             return state
 
         if state.n_iter == max_iter:
-            raise la.LinAlgError("Maximum number of iterations (== " +
-                                 str(max_iter) + " reached in davidson "
-                                 "procedure.")
+            raise la.LinAlgError("Maximum number of iterations (== "
+                                 + str(max_iter) + " reached in conjugate "
+                                 "gradient procedure.")
 
         zk = Pinv @ state.residual
+
+        # TODO Not sure this is the right spot
+        zk = explicit_symmetrisation.symmetrise([zk], [pk])[0]
+
         if cg_type == "fletcher_reeves":
             bk = float(dot(zk, state.residual) / res_dot_zk)
         elif cg_type == "polak_ribiere":
             bk = float(dot(zk, (state.residual - residual_old)) / res_dot_zk)
         pk = zk + bk * pk
-
-        # TODO Index symmetrisation

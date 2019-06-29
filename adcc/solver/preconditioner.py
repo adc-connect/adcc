@@ -49,7 +49,7 @@ class JacobiPreconditioner:
     Represents the application of (D - σ I)^{-1}, where
     D is the diagonal of the adcmatrix.
     """
-    def __init__(self, adcmatrix):
+    def __init__(self, adcmatrix, shifts=0.0):
         if not isinstance(adcmatrix, AdcMatrix):
             raise TypeError("Only an AdcMatrix may be used with this "
                             "preconditioner for now.")
@@ -57,7 +57,7 @@ class JacobiPreconditioner:
         self.diagonal = AmplitudeVector(*tuple(
             adcmatrix.diagonal(block) for block in adcmatrix.blocks
         ))
-        self.shift_values = None
+        self.shifts = shifts
 
     def update_shifts(self, shifts):
         """
@@ -78,8 +78,8 @@ class JacobiPreconditioner:
         #             approaches the actual diagonal values (which are the
         #             eigenvalues for the ADC(2) doubles part if the coupling
         #             block are absent)
-        shifted_diagonal = (self.diagonal -
-                            (shift - eps) * ones_like(self.diagonal))
+        shifted_diagonal = (self.diagonal
+                            - (shift - eps) * ones_like(self.diagonal))
         divide(invec, shifted_diagonal, outvec)
         return outvec
 
@@ -88,9 +88,9 @@ class JacobiPreconditioner:
             if outvecs is None:
                 outvecs = empty_like(invecs)
 
-            if not isinstance(self.shift_values, (float, np.number)):
+            if not isinstance(self.shifts, (float, np.number)):
                 raise TypeError("Can only apply JacobiPreconditioner "
-                                "to a single vector if shift_values is "
+                                "to a single vector if shifts is "
                                 "only a single number.")
             return self.__compute_single_matvec(self.shifts, invecs, outvecs)
         elif isinstance(invecs, list):
@@ -109,5 +109,8 @@ class JacobiPreconditioner:
             return outvecs
         else:
             raise TypeError("Input type not understood: " + str(type(invecs)))
+
+    def __matmul__(self, invecs):
+        return self.apply(invecs)
 
     # __matvec__

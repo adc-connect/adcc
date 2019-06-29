@@ -23,18 +23,18 @@
 import warnings
 import numpy as np
 
+from adcc import dot
+from matplotlib import pyplot as plt
+
 from .misc import cached_property
 from .timings import Timer
 from .AdcMethod import AdcMethod
 from .visualisation import ExcitationSpectrum
 from .state_densities import compute_gs2state_optdm, compute_state_diffdm
 from .OneParticleOperator import product_trace
-
-from matplotlib import pyplot as plt
-
-from adcc import dot
-from scipy import constants
 from .solver.SolverStateBase import EigenSolverStateBase
+
+from scipy import constants
 
 
 class ExcitedStates:
@@ -95,6 +95,11 @@ class ExcitedStates:
         if isinstance(data, EigenSolverStateBase):
             self.excitation_vectors = data.eigenvectors
             self.excitation_energies = data.eigenvalues
+        else:
+            if hasattr(data, "eigenvalues"):
+                self.excitation_energies = data.eigenvalues
+            if hasattr(data, "eigenvectors"):
+                self.excitation_vectors = data.eigenvectors
 
     @property
     def timer(self):
@@ -285,9 +290,11 @@ class ExcitedStates:
            and self.spin_change and self.spin_change != -1:
             spin_change = "(ΔMS={:+2d})".format(self.spin_change)
 
-        conv = "NOT CONVERGED"
-        if self.converged:
-            conv = "converged"
+        conv = ""
+        if hasattr(self, "converged"):
+            conv = "NOT CONVERGED"
+            if self.converged:
+                conv = "converged"
 
         propname = ""
         if self.property_method != self.method:
