@@ -31,6 +31,8 @@ import adcc
 from pytest import approx
 
 from adcc.testdata.cache import cache
+from .misc import assert_allclose_signfix
+
 from .modified_transition_moments import compute_modified_transition_moments
 
 # The methods to test
@@ -50,7 +52,7 @@ class TestModifiedTransitionMoments(unittest.TestCase):
         groundstate = adcc.LazyMp(refstate)
 
         mtms = [compute_modified_transition_moments(
-            groundstate, "adc2", refstate.operators.electric_dipole[i]
+            groundstate, refstate.operators.electric_dipole[i], "adc2"
         ) for i in range(3)]
 
         for i in range(n_ref):
@@ -58,7 +60,7 @@ class TestModifiedTransitionMoments(unittest.TestCase):
             ref_d = ref["eigenvectors_doubles"][i]
             mtm_np_s = [mtms[i]['s'].to_ndarray() for i in range(3)]
             mtm_np_d = [mtms[i]['d'].to_ndarray() for i in range(3)]
-            res_tdm = np.array([
+            res_tdm = -1.0 * np.array([
                 np.sum(ref_s * sm) + np.sum(ref_d * dm)
                 for sm, dm in zip(mtm_np_s, mtm_np_d)
             ])
@@ -68,6 +70,8 @@ class TestModifiedTransitionMoments(unittest.TestCase):
             res_tdm_norm = np.sum(res_tdm * res_tdm)
             ref_tdm_norm = np.sum(ref_tdm * ref_tdm)
             assert res_tdm_norm == approx(ref_tdm_norm, abs=1e-8)
+            # assert_allclose_signfix(res_tdm, ref_tdm, atol=1e-8)
+            np.testing.assert_allclose(res_tdm, ref_tdm, atol=1e-8)
 
     #
     # General
