@@ -129,7 +129,10 @@ See also the [full index](genindex).
 TODO
 
 ## Properties
-TODO
+```eval_rst
+.. autofunction:: adcc.modified_transition_moments.compute_modified_transition_moments
+
+```
 
 ## Analysis
 TODO
