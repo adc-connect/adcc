@@ -31,48 +31,45 @@ from libadcc import LazyMp
 
 def compute_modified_transition_moments(gs_or_matrix, dipole_operator,
                                         method=None):
-    """
-    Compute the modified transition moments (MTM) for the provided
+    """Compute the modified transition moments (MTM) for the provided
     ADC method with reference to the passed ground state and
     the appropriate dipole integrals in the MO basis.
 
-    The MTM are returned as an AmplitudeVector.
+    Parameters
+    ----------
+    gs_or_matrix
+        The MP ground state or ADC matrix for which level of theory
+        the modified transition moments are to be computed
 
-    @param gs_or_matrix
-    The MP ground state or ADC matrix for which level of theory
-    the modified transition moments are to be computed
+    dipole_operator: OneParticleOperator
+        Electric dipole operator
 
-    @dipole_operator
-    OneParticleOperator representing the electric dipole operator
+    method: optional
+        Provide an explicit method to override the automatic selection.
+        Only required if LazyMp is provided as gs_or_matrix
 
-    @method
-    ADC method (string or AdcMethod object)
-    Required if LazyMp is provided as gs_or_matrix
+    Returns
+    -------
+    AmplitudeVector
     """
     if isinstance(gs_or_matrix, AdcMatrix):
         ground_state = gs_or_matrix.ground_state
         if method is None:
             method = gs_or_matrix.method
-        else:
-            if not isinstance(method, AdcMethod):
-                method = AdcMethod(method)
+        elif not isinstance(method, AdcMethod):
+            method = AdcMethod(method)
     elif isinstance(gs_or_matrix, LazyMp):
         ground_state = gs_or_matrix
         if method is None:
             raise ValueError("A method must be provided if only LazyMp object"
                              " is supplied.")
-        else:
-            if not isinstance(method, AdcMethod):
-                method = AdcMethod(method)
+        elif not isinstance(method, AdcMethod):
+            method = AdcMethod(method)
     else:
-        raise TypeError("ground_state should be a LazyMp or AdcMatrix object.")
+        raise TypeError("gs_or_matrix should be a LazyMp or AdcMatrix object.")
     if not isinstance(dipole_operator, libadcc.OneParticleOperator):
         raise TypeError("dipole_operator should be "
                         "libadcc.OneParticleOperator.")
-
-    if method.level != 2:
-        raise NotImplementedError("compute_modified_transition_moments "
-                                  "only implemented for ADC(2).")
 
     if method.is_core_valence_separated:
         raise NotImplementedError("compute_modified_transition_moments "

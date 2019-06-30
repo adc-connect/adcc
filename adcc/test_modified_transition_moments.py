@@ -45,7 +45,6 @@ class TestModifiedTransitionMoments(unittest.TestCase):
         hf = cache.hfdata[system]
         refdata = cache.reference_data[system]
         ref = refdata[method][kind]
-
         n_ref = len(ref["eigenvalues"])
 
         refstate = adcc.ReferenceState(hf)
@@ -60,9 +59,12 @@ class TestModifiedTransitionMoments(unittest.TestCase):
             ref_d = ref["eigenvectors_doubles"][i]
             mtm_np_s = [mtms[i]['s'].to_ndarray() for i in range(3)]
             mtm_np_d = [mtms[i]['d'].to_ndarray() for i in range(3)]
+            # computing the scalar product of the eigenvector
+            # and the modified transition moments yields
+            # the transition dipole moment (doi.org/10.1063/1.1752875)
             res_tdm = -1.0 * np.array([
-                np.sum(ref_s * sm) + np.sum(ref_d * dm)
-                for sm, dm in zip(mtm_np_s, mtm_np_d)
+                np.sum(ref_s * mtm_s) + np.sum(ref_d * mtm_d)
+                for mtm_s, mtm_d in zip(mtm_np_s, mtm_np_d)
             ])
             ref_tdm = ref["transition_dipole_moments"][i]
 
@@ -70,7 +72,6 @@ class TestModifiedTransitionMoments(unittest.TestCase):
             res_tdm_norm = np.sum(res_tdm * res_tdm)
             ref_tdm_norm = np.sum(ref_tdm * ref_tdm)
             assert res_tdm_norm == approx(ref_tdm_norm, abs=1e-8)
-            # assert_allclose_signfix(res_tdm, ref_tdm, atol=1e-8)
             np.testing.assert_allclose(res_tdm, ref_tdm, atol=1e-8)
 
     #
