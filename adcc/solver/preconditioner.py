@@ -68,9 +68,10 @@ class JacobiPreconditioner:
         of the passed vectors.
         """
         self.shifts = shifts
-        if isinstance(shifts, (float, np.number)):
-            raise NotImplementedError("Using only a single common shift is "
-                                      "not implemented at the moment.")
+        # TODO: this seems to be implemented?
+        # if isinstance(shifts, (float, np.number)):
+        #     raise NotImplementedError("Using only a single common shift is "
+        #                               "not implemented at the moment.")
 
     def __compute_single_matvec(self, shift, invec, outvec):
         eps = 1e-6  # Epsilon factor to make sure that 1 / (shift - diagonal)
