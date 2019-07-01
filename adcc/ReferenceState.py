@@ -29,10 +29,26 @@ from .memory_pool import memory_pool
 from .OperatorIntegrals import OperatorIntegrals
 from .OneParticleOperator import OneParticleOperator, product_trace
 
+from collections.abc import Iterable
+
 import libadcc
 
 __all__ = ["ReferenceState"]
 
+
+# TODO Documentation
+# TODO The arbitrary space stuff is not exactly convenient at the moment,
+#      since the + n_mo stuff to get to the beta orbitals depends
+#      on the basis used and is not intuitive.
+#      One should have a wrapper around this here, which makes it more
+#      convenient to use.
+#
+#      Allow to pass a list, which is interpreted as both
+#      alpha and beta indices (added + n_orbs_alpha automatically)
+#      or two lists one for alpha, one for beta
+#
+#      e.g. core_orbitals=[0,1] would be equivalent to core_orbitals=2
+#           and core_orbitals=([0,1], [0,1]) and core_orbitals=range(2)
 
 class ReferenceState(libadcc.ReferenceState):
     def __init__(self, hfdata, core_orbitals=None, frozen_core=None,
@@ -98,54 +114,64 @@ class ReferenceState(libadcc.ReferenceState):
             raise NotImplementedError("Automatic determination of frozen-core "
                                       "electrons not implemented.")
 
-        if not isinstance(frozen_core, (list, int)) and frozen_core is not None:
-            raise TypeError("frozen_core should be an int or a list")
-        if not isinstance(core_orbitals, (list, int)) \
-           and core_orbitals is not None:
-            raise TypeError("core_orbitals should be an int or a list")
-        if not isinstance(frozen_virtual, (list, int)) \
-           and frozen_virtual is not None:
-            raise TypeError("frozen_virtual should be an int or a list")
-
-        # TODO The arbitrary space stuff is not exactly convenient at the moment,
-        #      since the + n_mo stuff to get to the beta orbitals depends
-        #      on the basis used and is not intuitive.
-        #      One should have a wrapper around this here, which makes it more
-        #      convenient to use.
         #
-        #      Allow to pass a list, which is interpreted as both
-        #      alpha and beta indices (added + n_orbs_alpha automatically)
-        #      or two lists one for alpha, one for beta
+        # Normalise and deal with space arguments
         #
-        #      e.g. core_orbitals=[0,1] would be equivalent to core_orbitals=2
-        #           and core_orbitals=([0,1], [0,1]) and core_orbitals=range(2)
+        spaceargs = {"frozen_core": frozen_core, "core_orbitals": core_orbitals,
+                     "frozen_virtual": frozen_virtual}
 
-        # if isinstance(frozen_core, list):
-        #     raise NotImplementedError("Arbitrary frozen-core not tested.")
-        # if isinstance(core_orbitals, list):
-        #     raise NotImplementedError("Arbitrary CVS not tested.")
-        # if isinstance(frozen_virtual, list):
-        #     raise NotImplementedError("Arbitrary frozen-virtual not "
-        #                               "tested.")
+        def expand_to_list(space, entry, from_min=None, from_max=None):
+            if from_min is None and from_max is None:
+                raise ValueError("Both from_min and from_max is None")
+            if entry is None:
+                return np.array([])
+            elif isinstance(entry, int):
+                if from_min is not None:
+                    return from_min + np.arange(entry)
+                return np.arange(from_max - entry, from_max)
+            elif isinstance(entry, Iterable):
+                return np.array(entry)
+            else:
+                raise TypeError("Unsupported type {} passed to argument {}"
+                                "".format(type(entry), space))
 
-        if any(isinstance(k, int) for k in [frozen_core, core_orbitals,
-                                            frozen_virtual]):
-            if frozen_core is None:
-                frozen_core = 0
-            if core_orbitals is None:
-                core_orbitals = 0
-            if frozen_virtual is None:
-                frozen_virtual = 0
-        else:
-            if frozen_core is None:
-                frozen_core = []
-            if core_orbitals is None:
-                core_orbitals = []
-            if frozen_virtual is None:
-                frozen_virtual = []
+        for key in spaceargs:
+            if not isinstance(spaceargs[key], tuple):
+                spaceargs[key] = (spaceargs[key], spaceargs[key])
 
-        super().__init__(hfdata, memory_pool, core_orbitals, frozen_core,
-                         frozen_virtual, symmetry_check_on_import)
+        any_iterable = False
+        for key in spaceargs:
+            for spin in [0, 1]:
+                if isinstance(spaceargs[key][spin], Iterable):
+                    any_iterable = True
+                elif spaceargs[key][spin] is not None:
+                    if any_iterable:
+                        raise ValueError("If one of the values of frozen_core, "
+                                         "core_orbitals, frozen_virtual is an "
+                                         "iterable, all must be.")
+
+        n_orbs = [0, 0]
+        for key in ["frozen_core", "core_orbitals"]:
+            noa = hfdata.n_orbs_alpha
+            list_alpha = expand_to_list(key, spaceargs[key][0],
+                                        from_min=n_orbs[0])
+            list_beta = noa + expand_to_list(key, spaceargs[key][1],
+                                             from_min=n_orbs[1])
+            spaceargs[key] = np.concatenate((list_alpha, list_beta)).tolist()
+            n_orbs[0] += len(list_alpha)
+            n_orbs[1] += len(list_beta)
+
+        key = "frozen_virtual"
+        spaceargs[key] = np.concatenate((
+            expand_to_list(key, spaceargs[key][0],
+                           from_max=hfdata.n_orbs_alpha),
+            noa + expand_to_list(key, spaceargs[key][1],
+                                 from_max=hfdata.n_orbs_beta)
+        )).tolist()
+
+        super().__init__(hfdata, memory_pool, spaceargs["core_orbitals"],
+                         spaceargs["frozen_core"], spaceargs["frozen_virtual"],
+                         symmetry_check_on_import)
 
         if import_all_below_n_orbs is not None and \
            hfdata.n_orbs < import_all_below_n_orbs:
