@@ -36,72 +36,108 @@ import libadcc
 __all__ = ["ReferenceState"]
 
 
-# TODO Documentation
-# TODO The arbitrary space stuff is not exactly convenient at the moment,
-#      since the + n_mo stuff to get to the beta orbitals depends
-#      on the basis used and is not intuitive.
-#      One should have a wrapper around this here, which makes it more
-#      convenient to use.
-#
-#      Allow to pass a list, which is interpreted as both
-#      alpha and beta indices (added + n_orbs_alpha automatically)
-#      or two lists one for alpha, one for beta
-#
-#      e.g. core_orbitals=[0,1] would be equivalent to core_orbitals=2
-#           and core_orbitals=([0,1], [0,1]) and core_orbitals=range(2)
-
 class ReferenceState(libadcc.ReferenceState):
     def __init__(self, hfdata, core_orbitals=None, frozen_core=None,
                  frozen_virtual=None, symmetry_check_on_import=False,
                  import_all_below_n_orbs=10):
-        """
-        Construct a ReferenceState object. The object is lazy and will only
-        import orbital energies and coefficients. Fock matrix blocks and
+        """Construct a ReferenceState holding information about the employed
+        SCF reference.
+
+        The constructed object is lazy and will at construction only setup
+        orbital energies and coefficients. Fock matrix blocks and
         electron-repulsion integral blocks are imported as needed.
 
-        @param hfdata
-        Object with Hartree-Fock data (e.g. a molsturm scf state, a pyscf SCF
-        object or any class implementing the adcc.HartreeFockProvider interface
-        or in fact any python object representing a pointer to a C++ object
-        derived off the adcc::HartreeFockSolution_i.
+        Orbital subspace selection: In order to specify `frozen_core`,
+        `core_orbitals` and `frozen_virtual`, adcc allows a range of
+        specifications including
 
-        @param core_orbitals
-        (a) The number of alpha and beta core orbitals to use. The first
-        orbitals (in the original ordering of the hfdata object), which are not
-        part of the frozen_core will be selected.
-        (b) Explicit list of orbital indices (in the ordering of the hfdata
-        object) to put into the core-occupied orbital space. The same number of
-        alpha and beta orbitals have to be selected. These will be forcibly
-        occupied.
+           a. A number: Just put this number of alpha orbitals and this
+              number of beta orbitals into the respective space. For frozen
+              core and core orbitals these are counted from below, for
+              frozen virtual orbitals, these are counted from above. If both
+              frozen core and core orbitals are specified like this, the
+              lowest-energy, occupied orbitals will be put into frozen core.
+           b. A range: The orbital indices given by this range will be put
+              into the orbital subspace.
+           c. An explicit list of orbital indices to be placed into the
+              subspace.
+           d. A pair of (a) to (c): If the orbital selection for alpha and
+              beta orbitals should differ, a pair of ranges, or a pair of
+              index lists or a pair of numbers can be specified.
 
-        @param frozen_core
-        (a) The number of alpha and beta frozen core orbitals to use. The first
-        orbitals (in the original ordering of the hfdata object) will be
-        selected.
-        (b) Explicit list of orbital indices (in the ordering of the hfdata
-        object) to put into the fropen core. The same number of alpha and beta
-        orbitals have to be selected. These will be forcibly occupied.
+        Parameters
+        ----------
+        hfdata
+            Object with Hartree-Fock data (e.g. a molsturm scf state, a pyscf
+            SCF object or any class implementing the adcc.HartreeFockProvider
+            interface or in fact any python object representing a pointer to a
+            C++ object derived off the adcc::HartreeFockSolution_i.
 
-        @param frozen_virtuals
-        (a) The number of alpha and beta frozen virtual orbitals to use. The
-        last orbitals will be selected.
-        (b) Explicit list of orbital indices to put into the frozen virtual
-        orbital subspace. The same number of alpha and beta orbitals have to be
-        selected. These will be forcibly unoccupied.
+        core_orbitals : int or list or tuple, optional
+            The orbitals to be put into the core-occupied space. For ways to
+            define the core orbitals see the description above.
 
-        @param symmetry_check_on_import
-        Should symmetry of the imported objects be checked explicitly during the
-        import process. This massively slows down the import and has a dramatic
-        impact on memory usage. Thus one should enable this only for debugging
-        (e.g. for testing import routines from the host programs). Do not enable
-        this unless you know what you are doing.
+        frozen_core : int or list or tuple or bool, optional
+            The orbitals to be put into the frozen core space. For ways to
+            define the core orbitals see the description above. For an automatic
+            selection of the frozen core space one may also specify
+            frozen_core=True.
 
-        @import_all_below_n_orbs
-        For small problem sizes lazy make less sense, since the memory
-        requirement for storing the ERI tensor is neglibile and thus the
-        flexiblity gained by having the full tensor in memory is advantageous.
-        Below the number of orbitals specified by this parameter, the class
-        will thus automatically import all ERI tensor and fock matrix blocks.
+        frozen_virtuals : int or list or tuple, optional
+            The orbitals to be put into the frozen virtual space. For ways to
+            define the core orbitals see the description above.
+
+        symmetry_check_on_import : bool, optional
+            Should symmetry of the imported objects be checked explicitly during
+            the import process. This massively slows down the import and has a
+            dramatic impact on memory usage. Thus one should enable this only
+            for debugging (e.g. for testing import routines from the host
+            programs). Do not enable this unless you know what you are doing.
+
+        import_all_below_n_orbs : int, optional
+            For small problem sizes lazy make less sense, since the memory
+            requirement for storing the ERI tensor is neglibile and thus the
+            flexiblity gained by having the full tensor in memory is
+            advantageous. Below the number of orbitals specified by this
+            parameter, the class will thus automatically import all ERI tensor
+            and Fock matrix blocks.
+
+        Examples
+        --------
+        To start a calculation with the 2 lowest alpha and beta orbitals
+        in the core occupied space, construct the class as
+
+        >>> ReferenceState(hfdata, core_orbitals=2)
+
+        or
+
+        >>> ReferenceState(hfdata, core_orbitals=range(2))
+
+        or
+
+        >>> ReferenceState(hfdata, core_orbitals=[0, 1])
+
+        or
+
+        >>> ReferenceState(hfdata, core_orbitals=([0, 1], [0, 1]))
+
+        There is no restriction to choose the core occupied orbitals
+        from the bottom end of the occupied orbitals. For example
+        to select the 2nd and 3rd orbital setup the class as
+
+        >>> ReferenceState(hfdata, core_orbitals=range(1, 3))
+
+        or
+
+        >>> ReferenceState(hfdata, core_orbitals=[1, 2])
+
+        If different orbitals should be placed in the alpha and
+        beta orbitals, this can be achievd like so
+
+        >>> ReferenceState(hfdata, core_orbitals=([1, 2], [0, 1]))
+
+        which would place the 2nd and 3rd alpha and the 1st and second
+        beta orbital into the core space.
         """
         if not isinstance(hfdata, libadcc.HartreeFockSolution_i):
             hfdata = import_scf_results(hfdata)
