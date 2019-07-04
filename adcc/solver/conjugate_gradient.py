@@ -79,6 +79,7 @@ def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
     state.n_applies += 1
     state.residual_norm = np.sqrt(state.residual @ state.residual)
     pk = zk = Pinv @ state.residual
+    pk = explicit_symmetrisation.symmetrise([pk], [x0])[0]
 
     callback(state, "start")
     while state.n_iter < max_iter:
@@ -87,6 +88,7 @@ def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
         # Update ak and iterated solution
         # TODO This needs to be modified for general optimisations,
         #      i.e. where A is non-linear
+        # https://en.wikipedia.org/wiki/Nonlinear_conjugate_gradient_method
         Apk = matrix @ pk
         state.n_applies += 1
         res_dot_zk = dot(state.residual, zk)
