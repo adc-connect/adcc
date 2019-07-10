@@ -126,7 +126,17 @@ See also the [full index](genindex).
 ```
 
 ## Solvers
-TODO
+```eval_rst
+.. automodule:: adcc.solver.conjugate_gradient
+    :members:
+
+.. automodule:: adcc.solver.davidson
+    :members:
+
+.. automodule:: adcc.solver.power_method
+    :members:
+
+```
 
 ## Properties
 ```eval_rst
@@ -134,7 +144,7 @@ TODO
 
 ```
 
-## Analysis
+## State analysis
 TODO
 
 ## Other stuff and utilities
