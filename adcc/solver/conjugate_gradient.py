@@ -1,12 +1,45 @@
 #!/usr/bin/env python3
 import sys
 import numpy as np
-
 import scipy.linalg as la
 
 from ..functions import dot
 from .preconditioner import PreconditionerIdentity
 from .explicit_symmetrisation import IndexSymmetrisation
+
+from adcc import copy
+
+
+class IterativeInverse:
+    def __init__(self, matrix, **kwargs):
+        """Initialise an iterative inverse
+
+        This object mimics to be the inverse of a passed matrix
+        by solving linear system's of equations each time the `@`
+        operator is used in conjunction with this matrix.
+
+        Parameters
+        ----------
+        matrix
+            Matrix object
+        """
+        self.matrix = matrix
+        self.kwargs = kwargs
+        self.cgstate = None
+
+    def construct_guess(self, rhs):
+        """
+        Construct a guess for the next CG solver.
+        """
+        if self.cgstate is None:
+            return rhs
+        else:
+            return self.cgstate.solution
+
+    def __matmul__(self, x):
+        guess = self.construct_guess(x)
+        self.cgstate = conjugate_gradient(self.matrix, x, guess, **self.kwargs)
+        return self.cgstate.solution
 
 
 class State:
@@ -34,25 +67,44 @@ def default_print(state, identifier, file=sys.stdout):
 def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
                        callback=None, Pinv=None, cg_type="polak_ribiere",
                        explicit_symmetrisation=IndexSymmetrisation):
+    """An implementation of the conjugate gradient algorithm.
+
+    This algorithm implements the "flexible" conjugate gradient using the
+    Polak-Ribière formula, but allows to employ the "traditional"
+    Fletcher-Reeves formula as well.
+    It solves `matrix @ x = rhs` for `x` by minimising the residual
+    `matrix @ x - rhs`.
+
+    Parameters
+    ----------
+    matrix
+        Matrix object. Should be an ADC matrix.
+    rhs
+        Right-hand side, source.
+    x0
+        Initial guess
+    conv_tol : float
+        Convergence tolerance on the l2 norm of residuals to consider
+        them converged.
+    max_iter : int
+        Maximum number of iterations
+    callback
+        Callback to call after each iteration
+    Pinv
+        Preconditioner to A, typically an estimate for A^{-1}
+    cg_type : string
+        Identifier to select between polak_ribiere and fletcher_reeves
+    explicit_symmetrisation
+        Explicit symmetrisation to perform during iteration to ensure
+        obtaining an eigenvector with matching symmetry criteria.
     """
-    Implements the "flexible" conjugate gradient using the Polak-Ribière
-    formula, but allows to employ the "traditional" Fletcher-Reeves
-    formula as well.
-
-    Solves matrix @ x = rhs for x by minimising the residual matrix @ x - rhs
-
-    matrix           system matrix
-    rhs              right-hand side, source
-    x0               initial guess, random if not specified
-    conv_tol         Convergence tolerance (l2-norm of the residual)
-    max_iter         Maximum number of iterations used
-    Pinv             Preconditioner to A, typically an estimate for A^{-1}
-    cg_type          Select between polak_ribiere and fletcher_reeves
-    """
-
     if callback is None:
         def callback(state, identifier):
             pass
+
+    if explicit_symmetrisation is not None and \
+            isinstance(explicit_symmetrisation, type):
+        explicit_symmetrisation = explicit_symmetrisation(matrix)
 
     # The problem size
     n_problem = matrix.shape[1]
@@ -61,6 +113,8 @@ def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
         # Start with random guess
         raise NotImplementedError("Random guess is not yet implemented.")
         x0 = np.random.rand((n_problem))
+    else:
+        x0 = copy(x0)
 
     if Pinv is None:
         Pinv = PreconditionerIdentity()
@@ -79,7 +133,10 @@ def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
     state.n_applies += 1
     state.residual_norm = np.sqrt(state.residual @ state.residual)
     pk = zk = Pinv @ state.residual
-    pk = explicit_symmetrisation.symmetrise([pk], [x0])[0]
+
+    if explicit_symmetrisation:
+        # TODO Not sure this is the right spot ... also this syntax is ugly
+        pk = explicit_symmetrisation.symmetrise([pk], [x0])[0]
 
     callback(state, "start")
     while state.n_iter < max_iter:
@@ -112,8 +169,9 @@ def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
 
         zk = Pinv @ state.residual
 
-        # TODO Not sure this is the right spot
-        zk = explicit_symmetrisation.symmetrise([zk], [pk])[0]
+        if explicit_symmetrisation:
+            # TODO Not sure this is the right spot ... also this syntax is ugly
+            zk = explicit_symmetrisation.symmetrise([zk], [pk])[0]
 
         if cg_type == "fletcher_reeves":
             bk = float(dot(zk, state.residual) / res_dot_zk)

@@ -26,6 +26,7 @@ import numpy as np
 import scipy.linalg as la
 
 from .SolverStateBase import EigenSolverStateBase
+from .explicit_symmetrisation import IndexSymmetrisation
 
 
 class PowerMethodState(EigenSolverStateBase):
@@ -56,7 +57,8 @@ def default_print(state, identifier, file=sys.stdout):
         print("    Total solver time:          ", strtime(soltime))
 
 
-def power_method(A, guess, conv_tol=1e-9, max_iter=70, callback=None):
+def power_method(A, guess, conv_tol=1e-9, max_iter=70, callback=None,
+                 explicit_symmetrisation=IndexSymmetrisation):
     """Use the power iteration to solve for the largest eigenpair of A.
 
     The power method is a very simple diagonalisation method, which solves
@@ -75,10 +77,17 @@ def power_method(A, guess, conv_tol=1e-9, max_iter=70, callback=None):
         Maximal numer of iterations
     callback
         Callback function called after each iteration
+    explicit_symmetrisation
+        Explicit symmetrisation to perform during iteration to ensure
+        obtaining an eigenvector with matching symmetry criteria.
     """
     if callback is None:
         def callback(state, identifier):
             pass
+
+    if explicit_symmetrisation is not None and \
+            isinstance(explicit_symmetrisation, type):
+        explicit_symmetrisation = explicit_symmetrisation(A)
 
     x = guess / np.sqrt(guess @ guess)
     state = PowerMethodState(A)
@@ -107,9 +116,12 @@ def power_method(A, guess, conv_tol=1e-9, max_iter=70, callback=None):
             callback(state, "is_converged")
             state.timer.stop("power_method/iteration")
             return state
+
+        if explicit_symmetrisation:
+            x = explicit_symmetrisation.symmetrise([Ax], [guess])[0]
         else:
             x = Ax
-            x = x / np.sqrt(x @ x)
+        x = x / np.sqrt(x @ x)
 
     warnings.warn(la.LinAlgWarning(
         "Power method not converged. Returning intermediate results."))
