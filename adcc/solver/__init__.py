@@ -1,5 +1,4 @@
 from . import davidson
-
 from .SolverStateBase import EigenSolverStateBase
 from .explicit_symmetrisation import (IndexSpinSymmetrisation,
                                       IndexSymmetrisation)

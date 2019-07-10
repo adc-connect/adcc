@@ -23,16 +23,15 @@
 import sys
 import warnings
 import numpy as np
-
-from adcc import AdcMatrix, linear_combination
-from adcc.AmplitudeVector import AmplitudeVector
-
 import scipy.linalg as la
 import scipy.sparse.linalg as sla
 
 from .preconditioner import JacobiPreconditioner
 from .SolverStateBase import EigenSolverStateBase
 from .explicit_symmetrisation import IndexSymmetrisation
+
+from adcc import AdcMatrix, linear_combination
+from adcc.AmplitudeVector import AmplitudeVector
 
 
 def select_eigenpairs(vectors, n_ep, which):

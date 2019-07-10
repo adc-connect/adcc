@@ -39,7 +39,8 @@ class PreconditionerIdentity:
             invecs.copy_to(outvecs)
         return invecs
 
-    # __matvec__
+    def __matmul__(self, x):
+        return x
 
 
 class JacobiPreconditioner:
