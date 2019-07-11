@@ -20,12 +20,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import adcc
 import unittest
 import numpy as np
-
-import adcc
-
-from pytest import approx
 
 from adcc.solver import IndexSpinSymmetrisation
 from adcc.solver.power_method import default_print as powprint, power_method
@@ -35,14 +32,16 @@ from adcc.solver.conjugate_gradient import (IterativeInverse,
                                             default_print as cgprint)
 from adcc.testdata.cache import cache
 
+from pytest import approx
+
 
 class TestConjugateGradient(unittest.TestCase):
-    def base_adc2(self, kind, guessfctn):
+    def base_adc2(self, kind, guess_function):
         refdata = cache.reference_data["h2o_sto3g"]
         matrix = adcc.AdcMatrix("adc2", cache.refstate["h2o_sto3g"])
 
         conv_tol = 1e-6
-        guesses = guessfctn(matrix, n_guesses=1)
+        guesses = guess_function(matrix, n_guesses=1)
         symm = IndexSpinSymmetrisation(matrix, enforce_spin_kind=kind)
         inverse = IterativeInverse(matrix, Pinv=JacobiPreconditioner,
                                    conv_tol=conv_tol / 10,
