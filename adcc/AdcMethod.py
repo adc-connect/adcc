@@ -36,7 +36,7 @@ class AdcMethod:
 
     def __init__(self, method):
         if method not in self.available_methods:
-            raise ValueError("Invalid method " + method + ". Only " +
+            raise ValueError("Invalid method " + str(method) + ". Only " +
                              ",".join(self.available_methods) + " are known.")
 
         split = method.split("-")

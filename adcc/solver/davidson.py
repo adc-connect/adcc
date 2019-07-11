@@ -23,13 +23,12 @@
 import sys
 import warnings
 import numpy as np
+import scipy.linalg as la
+import scipy.sparse.linalg as sla
 
 from .preconditioner import JacobiPreconditioner
 from .SolverStateBase import EigenSolverStateBase
 from .explicit_symmetrisation import IndexSymmetrisation
-
-import scipy.linalg as la
-import scipy.sparse.linalg as sla
 
 from adcc import AdcMatrix, linear_combination
 from adcc.AmplitudeVector import AmplitudeVector
@@ -97,8 +96,8 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
     @param is_converged  Function to test for convergence
     @param callback      Callback to run after each iteration
     @param which         Which eigenvectors to converge to.
-                         Needs to be chosen such that it agrees with
-                         the selected preconditioner.
+                         Needs to be compatible with the selected
+                         preconditioner.
     @param preconditioner           Preconditioner (type or instance)
     @param preconditioning_method   Precondititoning method. Valid values are
                                     "Davidson" or "Sleijpen-van-der-Vorst"

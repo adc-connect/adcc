@@ -393,6 +393,9 @@ void export_Tensor(py::module& m) {
              "Set all tensor elements from a standard np::ndarray by making a copy. "
              "Provide an optional tolerance argument to increase the tolerance for the "
              "check for symmetry consistency.")
+        .def("set_random", &adcc::Tensor::set_random,
+             "Set all tensor elements to random data, adhering to the internal "
+             "symmetry.")
         .def("describe_symmetry", &Tensor::describe_symmetry,
              "Return a string providing a hopefully discriptive rerpesentation of the "
              "symmetry information stored inside the tensor.")
