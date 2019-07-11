@@ -59,6 +59,10 @@ void export_guesses(py::module& m) {
         //
         ;
 
+  m.def("guess_symmetries", &guess_symmetries,
+        "Return a list of symmetry objects in order to construct the singles / doubles "
+        "part of the AmplitudeVector.");
+
   m.def("guess_zero", &guess_zero,
         "Return an AmplitudeVector object filled with zeros, but where the symmetry has "
         "been properly set up to meet the requirements of the AdcGuessKind object");
