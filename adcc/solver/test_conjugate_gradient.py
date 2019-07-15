@@ -47,7 +47,8 @@ class TestConjugateGradient(unittest.TestCase):
                                    conv_tol=conv_tol / 10,
                                    explicit_symmetrisation=symm)
         res = power_method(inverse, guesses[0], conv_tol=conv_tol,
-                           explicit_symmetrisation=symm, callback=powprint)
+                           explicit_symmetrisation=symm, callback=powprint,
+                           max_iter=100)
 
         ref_singlets = refdata["adc2"][kind]["eigenvalues"]
         assert res.converged

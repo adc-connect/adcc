@@ -46,7 +46,8 @@ class TestPowerMethod(unittest.TestCase):
         start[0] += 0.001
         res = power_method(aslinearoperator(np.diag(ev)), start,
                            conv_tol=conv_tol, callback=default_print,
-                           explicit_symmetrisation=None)
+                           explicit_symmetrisation=None,
+                           max_iter=100)
 
         ones = np.zeros(size)
         ones[0] = 1 * np.sign(res.eigenvectors[0][0])
