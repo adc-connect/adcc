@@ -42,7 +42,7 @@ from .OneParticleOperator import OneParticleOperator
 from libadcc import HartreeFockProvider
 
 # This has to be the last set of import
-from .guess import (guess_zero, guesses_any, guesses_singlet,
+from .guess import (guess_symmetries, guess_zero, guesses_any, guesses_singlet,
                     guesses_spin_flip, guesses_triplet)
 from .run_adc import run_adc
 
@@ -54,8 +54,8 @@ __all__ = ["run_adc", "AdcMatrix", "AdcMethod", "Symmetry", "ReferenceState",
            "HartreeFockProvider", "ExcitedStates",
            "Tensor", "DictHfProvider", "OneParticleOperator",
            "guesses_singlet", "guesses_triplet", "guesses_any",
-           "guesses_spin_flip", "guess_zero", "DefaultCachingPolicy",
-           "GatherStatisticsPolicy", "LazyMp",
+           "guess_symmetries", "guesses_spin_flip", "guess_zero",
+           "DefaultCachingPolicy", "GatherStatisticsPolicy", "LazyMp",
            "adc0", "adc1", "adc2", "adc2x", "adc3",
            "cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x",
            "banner"]
