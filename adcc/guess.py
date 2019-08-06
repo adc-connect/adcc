@@ -20,7 +20,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from adcc import AdcMatrix, AmplitudeVector
+from adcc import AdcMatrix, AmplitudeVector, Tensor
 
 import libadcc
 
@@ -34,6 +34,34 @@ def guess_zero(matrix, irrep="A", spin_change=0,
     """
     Return an AmplitudeVector object filled with zeros, but where the symmetry
     has been properly set up to meet the specified requirements on the guesses.
+
+    matrix       The matrix for which guesses are to be constructed
+    irrep        String describing the irreducable representation to consider.
+    spin_change  The spin change to enforce in an excitation.
+                 Typical values are 0 (singlet/triplet/any) and -1 (spin-flip).
+    spin_block_symmetrisation
+                 Symmetrisation to enforce between equivalent spin blocks, which
+                 all yield the desired spin_change. E.g. if spin_change == 0,
+                 then both the alpha->alpha and beta->beta blocks of the singles
+                 part of the excitation vector achieve a spin change of 0.
+                 The symmetry specified with this parameter will then be imposed
+                 between the a-a and b-b blocks. Valid values are "none",
+                 "symmetric" and "antisymmetric", where "none" enforces
+                 no particular symmetry.
+    """
+    return AmplitudeVector(*tuple(
+        Tensor(sym) for sym in guess_symmetries(
+            matrix, irrep=irrep, spin_change=spin_change,
+            spin_block_symmetrisation=spin_block_symmetrisation
+        )
+    ))
+
+
+def guess_symmetries(matrix, irrep="A", spin_change=0,
+                     spin_block_symmetrisation="none"):
+    """
+    Return guess symmetry objects (one for each AmplitudeVector block) such
+    that the specified requirements on the guesses are satisfied.
 
     matrix       The matrix for which guesses are to be constructed
     irrep        String describing the irreducable representation to consider.
@@ -67,7 +95,7 @@ def guess_zero(matrix, irrep="A", spin_change=0,
 
     gkind = libadcc.AdcGuessKind(irrep, float(spin_change),
                                  spin_block_symmetrisation)
-    return AmplitudeVector(*libadcc.guess_zero(matrix, gkind).to_tuple())
+    return libadcc.guess_symmetries(matrix, gkind)
 
 
 def guesses_from_diagonal(matrix, n_guesses, block="s",
