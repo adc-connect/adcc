@@ -17,6 +17,7 @@
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include "convert_timer.hh"
 #include "hartree_fock_solution_hack.hh"
 #include <adcc/ReferenceState.hh>
 #include <pybind11/numpy.h>
@@ -27,36 +28,6 @@ namespace py = pybind11;
 
 namespace adcc {
 namespace py_iface {
-
-// TODO When the Timer functionality is used more wide-spread
-//      (i.e. in different classes) it probably makes sense to integrate
-//      this into the pybind11 automatic type conversion mechanism.
-static py::object convert_timer(const Timer& timer) {
-  // Determine the shift between the C++ and the python clocks
-  py::object pynow         = py::module::import("time").attr("perf_counter");
-  const double clock_shift = pynow().cast<double>() - Timer::now();
-
-  // Shift the data and convert to python
-  py::dict shifted_intervals;
-  for (const auto& kv : timer.intervals) {
-    py::list intlist;
-    for (const auto& p : kv.second) {
-      intlist.append(py::make_tuple(clock_shift + p.first, clock_shift + p.second));
-    }
-    shifted_intervals[py::cast(kv.first)] = intlist;
-  }
-  py::dict shifted_start_times;
-  for (const auto& kv : timer.start_times) {
-    shifted_start_times[py::cast(kv.first)] = kv.second + clock_shift;
-  }
-
-  py::object pyTimer            = py::module::import("adcc.timings").attr("Timer");
-  py::object ret                = pyTimer();
-  ret.attr("intervals")         = shifted_intervals;
-  ret.attr("start_times")       = shifted_start_times;
-  ret.attr("time_construction") = timer.time_construction + clock_shift;
-  return ret;
-}
 
 /** Exports adcc/ReferenceState.hh to python */
 void export_ReferenceState(py::module& m) {
@@ -193,11 +164,10 @@ void export_ReferenceState(py::module& m) {
              "the next request for further imports will most likely take some time, such "
              "that intermediate caches can now be flushed to save some memory or other "
              "resources.")
-        .def_property_readonly("timer",
-                               [](const ReferenceState& refstate) {
-                                 return convert_timer(refstate.timer());
-                               },
-                               "Obtain the timer object of this class.")
+        .def_property_readonly(
+              "timer",
+              [](const ReferenceState& self) { return convert_timer(self.timer()); },
+              "Obtain the timer object of this class.")
         //
         .def("to_ctx", &ReferenceState::to_ctx)
         //

@@ -67,11 +67,14 @@ class ExcitedStates:
         self.reference_state = self.matrix.ground_state.reference_state
         self.operators = self.reference_state.operators
 
-        # List of all the timers (do not yet collect them, since new times
-        # might be added by calling their functions in the future)
-        self._timers = [("", self.reference_state.timer)]
-        if not hasattr(data, "timer"):
-            self._timers.append((data.algorithm, data.timer))
+        # List of all the objects which have timers (do not yet collect
+        # timers, since new times might be added implicitly at a later point)
+        self._timed_objects = [("", self.reference_state),
+                               ("adcmatrix", self.matrix),
+                               ("mp", self.ground_state),
+                               ("intermediates", self.matrix.intermediates)]
+        if hasattr(data, "timer"):
+            self._timed_objects.append((data.algorithm, data))
 
         # Copy some optional attributes
         for optattr in ["converged", "spin_change", "kind", "n_iter"]:
@@ -106,8 +109,8 @@ class ExcitedStates:
     def timer(self):
         """Return a cumulative timer collecting timings from the calculation"""
         ret = Timer()
-        for key, timer in self._timers:
-            ret.attach(timer, subtree=key)
+        for key, obj in self._timed_objects:
+            ret.attach(obj.timer, subtree=key)
         ret.time_construction = self.reference_state.timer.time_construction
         return ret
 
