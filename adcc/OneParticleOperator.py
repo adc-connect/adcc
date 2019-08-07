@@ -22,21 +22,12 @@
 ## ---------------------------------------------------------------------
 import libadcc
 
-from .Tensor import Tensor
 from .functions import empty_like
 
 
 class OneParticleOperator(libadcc.OneParticleOperator):
     def __init__(self, mospaces, is_symmetric=True, cartesian_transform="1"):
-        n_occ_ss = len(mospaces.subspaces_occupied)
-        n_virt_ss = len(mospaces.subspaces_virtual)
-        super().__init__(n_occ_ss, n_virt_ss, is_symmetric)
-        # set all blocks to zero with correct symmetry
-        for b in self.blocks:
-            sym = libadcc.make_symmetry_operator(
-                mospaces, b, is_symmetric, cartesian_transform
-            )
-            self.set_block(b, Tensor(sym))
+        super().__init__(mospaces, is_symmetric, cartesian_transform)
 
     def __add__(self, other):
         if isinstance(other, libadcc.OneParticleOperator):
@@ -68,9 +59,9 @@ def product_trace(op1, op2):
                 continue
             tb = b[2:] + b[:2]  # transposed block string
             if b == tb:
-                ret += op1[b].dot(op2[b])
+                ret += op1.block(b).dot(op2.block(b))
             else:
-                ret += 2.0 * op1[b].dot(op2[b])
+                ret += 2.0 * op1.block(b).dot(op2.block(b))
         return ret
     elif op1.is_symmetric and not op2.is_symmetric:
         ret = 0
@@ -79,9 +70,9 @@ def product_trace(op1, op2):
                 continue
             tb = b[2:] + b[:2]  # transposed block string
             if b in op1.blocks:
-                ret += op1[b].dot(op2[b])
+                ret += op1.block(b).dot(op2.block(b))
             elif tb in op1.blocks:
-                ret += op1[tb].transpose().dot(op2[b])
+                ret += op1.block(tb).transpose().dot(op2.block(b))
         return ret
     elif not op1.is_symmetric and op2.is_symmetric:
         return product_trace(op2, op1)
@@ -91,5 +82,5 @@ def product_trace(op1, op2):
         for b in all_blocks:
             if op1.is_zero_block(b) or op2.is_zero_block(b):
                 continue
-            ret += op1[b].dot(op2[b])
+            ret += op1.block(b).dot(op2.block(b))
         return ret

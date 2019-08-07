@@ -60,16 +60,6 @@ static py::array OneParticleOperator__to_ndarray(const OneParticleOperator& self
   return res;
 }
 
-std::shared_ptr<Tensor> OneParticleOperator___getitem__(const OneParticleOperator& self,
-                                                        std::string block) {
-  return self.block(block);
-}
-
-std::shared_ptr<Tensor> OneParticleOperator__block(const OneParticleOperator& self,
-                                                   std::string block) {
-  return self.block(block);
-}
-
 py::list OneParticleOperator__blocks(const OneParticleOperator& self) {
   py::list ret;
   for (auto& b : self.blocks()) {
@@ -113,18 +103,23 @@ void export_OneParticleOperator(py::module& m) {
         m, "OneParticleOperator",
         "Class representing a one-particle operator. Also used for one-particle"
         " (transition) density matrices")
-        .def(py::init<size_t, size_t, bool>(),
+        .def(py::init<std::shared_ptr<const MoSpaces>, bool, std::string>(),
              "Construct OneParticleOperator object\n"
              "\n"
-             "n_occ_ss        Number of occupied orbital subspaces\n"
-             "n_virt_ss       Number of occupied orbital subspaces\n"
-             "is_symmetric    Is the operator symmetric\n")
+             "mospaces       MoSpaces object\n"
+             "is_symmetric    Is the operator symmetric\n"
+             "cartesian transform    Symbol for cartesian transformation (see "
+             "make_symmetry for details\n.")
         //
         .def_property_readonly("ndim", &OneParticleOperator::ndim)
         .def_property_readonly("shape", &OneParticleOperator_shape)
         .def_property_readonly("size", &OneParticleOperator::size)
-        .def("block", &OneParticleOperator__block,
-             "Obtain a block from the matrix (e.g. o1o1, o1v1)")
+        .def("block",
+             [](const OneParticleOperator& self, std::string block) {
+               return self.block(block);
+             },
+             "Obtain a non-zero block from the matrix (e.g. o1o1, o1v1). If the block is "
+             "a zero block, the function throws an ArgumentError.")
         .def("set_block", &OneParticleOperator::set_block,
              "Set a block of the matrix (e.g. o1o1, o1v1)")
         .def("set_zero_block", set_zero_block_1,
@@ -140,7 +135,8 @@ void export_OneParticleOperator(py::module& m) {
         .def("transform_to_ao_basis", &OneParticleOperator__transform_to_ao_basis_coeff)
         .def("to_ndarray", &OneParticleOperator__to_ndarray,
              "Return the operator in MOs as a full, non-sparse numpy array.")
-        .def("__getitem__", &OneParticleOperator___getitem__)
+        .def("__getitem__",
+             [](OneParticleOperator& self, std::string block) { return self[block]; })
         .def("__repr__", &OneParticleOperator___repr__)
         .def("__len__", &OneParticleOperator___len__)
         //
