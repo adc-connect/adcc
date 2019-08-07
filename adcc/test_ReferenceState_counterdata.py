@@ -248,10 +248,14 @@ class TestReferenceStateCounterData(unittest.TestCase):
             ref_axis["o1"] = ((axis_fa[:n_alpha], axis_fb[:n_beta]))
             ref_axis["v1"] = ((axis_fa[n_alpha:], axis_fb[n_beta:]))
         else:
+            if not isinstance(core_orbitals, tuple):
+                raise NotImplementedError("Only core_orbitals as tuple "
+                                          "implemented.")
+
             subspaces += ["o2"]
-            n_core = len(core_orbitals) // 2
-            core_a = np.array(core_orbitals[:n_core]) + 1
-            core_b = np.array(core_orbitals[n_core:]) + 1
+            n_core = len(core_orbitals[0])
+            core_a = np.array(core_orbitals[0]) + 1
+            core_b = np.array(core_orbitals[1]) + 1 + n_orbs_alpha
             if restricted:
                 core_b -= n_orbs_alpha
             ref_axis["o2"] = ((core_a, core_b))
@@ -370,8 +374,8 @@ class TestReferenceStateCounterData(unittest.TestCase):
 
     def test_medium_cvs_restricted(self):
         self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
-                       restricted=True, core_orbitals=[0, 1, 20, 21])
+                       restricted=True, core_orbitals=([0, 1], [0, 1]))
 
     def test_large_cvs_restricted(self):
         self.base_test(n_alpha=15, n_beta=15, n_bas=60, n_orbs_alpha=60,
-                       restricted=True, core_orbitals=[0, 1, 2, 60, 61, 62])
+                       restricted=True, core_orbitals=([0, 1, 2], [0, 1, 2]))
