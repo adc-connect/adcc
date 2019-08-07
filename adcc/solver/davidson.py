@@ -210,6 +210,7 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
                                  "procedure.")
 
         if n_ss_vec + n_block > max_subspace:
+            callback(state, "restart")
             # The addition of the preconditioned vectors
             # would go beyond the max_subspace size => collapse first
             state.subspace_vectors = SS = fvecs
@@ -220,7 +221,6 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
                 Ass = Ass_cont[:n_ss_vec, :n_ss_vec]
                 for i in range(n_ss_vec):
                     Ass[:, i] = Afvecs[i] @ SS
-            callback(state, "restart")
             # continue to add residuals to space
         del Afvecs
 
