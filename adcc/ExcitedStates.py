@@ -75,7 +75,8 @@ class ExcitedStates:
                                ("mp", self.ground_state),
                                ("intermediates", self.matrix.intermediates)]
         if hasattr(data, "timer"):
-            self._timed_objects.append((data.algorithm, data))
+            datakey = getattr(data, "algorithm", data.__class__.__name__)
+            self._timed_objects.append((datakey, data))
 
         # Copy some optional attributes
         for optattr in ["converged", "spin_change", "kind", "n_iter"]:
@@ -130,6 +131,7 @@ class ExcitedStates:
                 for evec in self.excitation_vectors]
 
     @cached_property
+    @timed_member_call(timer="_property_timer")
     def transition_dipole_moments(self):
         """List of transition dipole moments of all computed states"""
         if self.property_method.level == 0:
@@ -165,6 +167,7 @@ class ExcitedStates:
         return [mp_density + diffdm for diffdm in self.state_diffdms]
 
     @cached_property
+    @timed_member_call(timer="_property_timer")
     def state_dipole_moments(self):
         """List of state dipole moments"""
         pmethod = self.property_method
