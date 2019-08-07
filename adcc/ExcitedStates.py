@@ -27,7 +27,7 @@ from adcc import dot
 from matplotlib import pyplot as plt
 
 from .misc import cached_property
-from .timings import Timer
+from .timings import Timer, timed_member_call
 from .AdcMethod import AdcMethod
 from .visualisation import ExcitationSpectrum
 from .state_densities import compute_gs2state_optdm, compute_state_diffdm
@@ -69,6 +69,7 @@ class ExcitedStates:
 
         # List of all the objects which have timers (do not yet collect
         # timers, since new times might be added implicitly at a later point)
+        self._property_timer = Timer()
         self._timed_objects = [("", self.reference_state),
                                ("adcmatrix", self.matrix),
                                ("mp", self.ground_state),
@@ -111,6 +112,7 @@ class ExcitedStates:
         ret = Timer()
         for key, obj in self._timed_objects:
             ret.attach(obj.timer, subtree=key)
+        ret.attach(self._property_timer, subtree="properties")
         ret.time_construction = self.reference_state.timer.time_construction
         return ret
 
@@ -120,6 +122,7 @@ class ExcitedStates:
         return self.__property_method
 
     @cached_property
+    @timed_member_call(timer="_property_timer")
     def transition_dms(self):
         """List of transition density matrices of all computed states"""
         return [compute_gs2state_optdm(self.property_method, self.ground_state,
@@ -148,6 +151,7 @@ class ExcitedStates:
         ])
 
     @cached_property
+    @timed_member_call(timer="_property_timer")
     def state_diffdms(self):
         """List of difference density matrices of all computed states"""
         return [compute_state_diffdm(self.property_method, self.ground_state,

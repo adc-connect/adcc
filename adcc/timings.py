@@ -188,3 +188,34 @@ class Timer:
 
 
 Timer.start = Timer.restart
+
+
+def timed_call(f):
+    """
+    Decorator to automatically time function calls.
+    The timer object is available under the function attribute _timer
+    """
+    def decorated(*args, **kwargs):
+        if not hasattr(decorated, "_timer"):
+            setattr(decorated, "_timer", Timer())
+        with getattr(decorated, "_timer").record(f.__name__):
+            return f(*args, **kwargs)
+    decorated.__doc__ = f.__doc__
+    return decorated
+
+
+def timed_member_call(timer):
+    """
+    Decorator to automatically time calls to instance member functions.
+    The name of the instance attribute where timings are stored is the
+    timer argument to this function.
+    """
+    def decorator(f):
+        def wrapped(self, *args, **kwargs):
+            if not hasattr(self, timer):
+                setattr(self, timer, Timer())
+            with getattr(self, timer).record(f.__name__):
+                return f(self, *args, **kwargs)
+        wrapped.__doc__ = f.__doc__
+        return wrapped
+    return decorator
