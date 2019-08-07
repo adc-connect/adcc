@@ -113,6 +113,23 @@ class Timer:
             self.stop(task, now)
         self.start_times[task] = now
 
+    @contextmanager
+    def record(self, task):
+        """
+        Context manager to automatically start and stop a time
+        recording as long as context is active.
+
+        Parameters
+        ----------
+        task : str
+            The string describing the task
+        """
+        self.restart(task)
+        try:
+            yield self
+        finally:
+            self.stop(task)
+
     def is_running(self, task):
         return task in self.start_times
 
@@ -171,23 +188,3 @@ class Timer:
 
 
 Timer.start = Timer.restart
-
-
-@contextmanager
-def record_time(timer, task):
-    """
-    Context manager to automatically start and stop a time
-    recording as long as it is active
-
-    Parameters
-    ----------
-    timer : Timer
-        The timer to book the time interval into
-    task : str
-        The string describing the task
-    """
-    timer.start(task)
-    try:
-        yield timer
-    finally:
-        timer.stop(task)
