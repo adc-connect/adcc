@@ -80,6 +80,7 @@ class OperatorIntegrals:
         self.mospaces = mospaces
         self.__coefficients = coefficients
         self.__conv_tol = conv_tol
+        self._import_timer = Timer()
 
     @property
     def provider_ao(self):
