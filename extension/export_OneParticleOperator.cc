@@ -68,14 +68,6 @@ py::list OneParticleOperator__blocks(const OneParticleOperator& self) {
   return ret;
 }
 
-py::list OneParticleOperator__orbital_subspaces(const OneParticleOperator& self) {
-  py::list ret;
-  for (auto& b : self.orbital_subspaces()) {
-    ret.append(b);
-  }
-  return ret;
-}
-
 py::tuple OneParticleOperator__transform_to_ao_basis_ref(
       const OneParticleOperator& self, std::shared_ptr<ReferenceState> ref_ptr) {
   auto ret = self.transform_to_ao_basis(ref_ptr);
@@ -128,8 +120,7 @@ void export_OneParticleOperator(py::module& m) {
         .def("empty_like", &OneParticleOperator::empty_like)
         .def_property_readonly("is_symmetric", &OneParticleOperator::is_symmetric)
         .def_property_readonly("blocks", &OneParticleOperator__blocks)
-        .def_property_readonly("orbital_subspaces",
-                               &OneParticleOperator__orbital_subspaces)
+        .def_property_readonly("mospaces", &OneParticleOperator::mospaces_ptr)
         .def("has_block", &OneParticleOperator::has_block)
         .def("transform_to_ao_basis", &OneParticleOperator__transform_to_ao_basis_ref)
         .def("transform_to_ao_basis", &OneParticleOperator__transform_to_ao_basis_coeff)
