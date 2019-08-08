@@ -23,15 +23,16 @@
 import sys
 import warnings
 import numpy as np
+
+from adcc import AdcMatrix, linear_combination
+from adcc.AmplitudeVector import AmplitudeVector
+
 import scipy.linalg as la
 import scipy.sparse.linalg as sla
 
 from .preconditioner import JacobiPreconditioner
 from .SolverStateBase import EigenSolverStateBase
 from .explicit_symmetrisation import IndexSymmetrisation
-
-from adcc import AdcMatrix, linear_combination
-from adcc.AmplitudeVector import AmplitudeVector
 
 
 def select_eigenpairs(vectors, n_ep, which):
@@ -64,7 +65,7 @@ def default_print(state, identifier, file=sys.stdout):
         print("Niter n_ss  max_residual  time  Ritz values",
               file=file)
     elif identifier == "next_iter":
-        time_iter = state.timer.current("davidson/iteration")
+        time_iter = state.timer.current("iteration")
         fmt = "{n_iter:3d}  {ss_size:4d}  {residual:12.5g}  {tstr:5s}"
         print(fmt.format(n_iter=state.n_iter, tstr=strtime_short(time_iter),
                          ss_size=len(state.subspace_vectors),
@@ -74,7 +75,7 @@ def default_print(state, identifier, file=sys.stdout):
             print(33 * " " + "nonorth: {:5.3g}"
                   "".format(state.subspace_orthogonality))
     elif identifier == "is_converged":
-        soltime = state.timer.total("davidson/iteration")
+        soltime = state.timer.total("iteration")
         print("=== Converged ===", file=file)
         print("    Number of matrix applies:   ", state.n_applies)
         print("    Total solver time:          ", strtime(soltime))
@@ -138,11 +139,12 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
     # Ass[:n_ss_vec, :n_ss_vec] contains valid data.
     Ass_cont = np.empty((max_subspace, max_subspace))
 
+    eps = np.finfo(float).eps
     if residual_min_norm is None:
-        residual_min_norm = 2 * n_problem * np.finfo(float).eps
+        residual_min_norm = 2 * n_problem * eps
 
     callback(state, "start")
-    state.timer.restart("davidson/iteration")
+    state.timer.restart("iteration")
     while state.n_iter < max_iter:
         state.n_iter += 1
 
@@ -152,50 +154,54 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         # Project A onto the subspace, keeping in mind
         # that the values Ass[:-n_block, :-n_block] are already valid,
         # since they have been computed in the previous iterations already.
-        state.n_applies += n_block
-        AsBlock = matrix @ SS[-n_block:]
+        with state.timer.record("projection"):
+            state.n_applies += n_block
+            AsBlock = matrix @ SS[-n_block:]
 
-        # Increase the view we work with and set the extra column and rows
-        Ass = Ass_cont[:n_ss_vec, :n_ss_vec]
-        for i in range(n_block):
-            Ass[:, -n_block + i] = AsBlock[i] @ SS
-        Ass[-n_block:, :] = np.transpose(Ass[:, -n_block:])
-        del AsBlock
+            # Increase the view we work with and set the extra column and rows
+            Ass = Ass_cont[:n_ss_vec, :n_ss_vec]
+            for i in range(n_block):
+                Ass[:, -n_block + i] = AsBlock[i] @ SS
+            Ass[-n_block:, :] = np.transpose(Ass[:, -n_block:])
+            del AsBlock
 
         # Compute the which(== largest, smallest, ...) eigenpair of Ass
         # and the associated ritz vector as well as residual
-        if Ass.shape == (n_block, n_block):
-            rvals, rvecs = la.eigh(Ass)  # Do a full diagonalisation
-        else:
-            # TODO Maybe play with precision a little here
-            # TODO Maybe use previous vectors somehow
-            v0 = None
-            rvals, rvecs = sla.eigsh(Ass, k=n_block, which=which, v0=v0)
+        with state.timer.record("rayleigh_ritz"):
+            if Ass.shape == (n_block, n_block):
+                rvals, rvecs = la.eigh(Ass)  # Do a full diagonalisation
+            else:
+                # TODO Maybe play with precision a little here
+                # TODO Maybe use previous vectors somehow
+                v0 = None
+                rvals, rvecs = sla.eigsh(Ass, k=n_block, which=which, v0=v0)
 
-        # Transform new vectors to the full basis (form ritz vectors)
-        fvecs = [linear_combination(v, SS) for v in np.transpose(rvecs)]
-        assert len(fvecs) == n_block
+        with state.timer.record("residuals"):
+            # Transform new vectors to the full basis (form ritz vectors)
+            fvecs = [linear_combination(v, SS) for v in np.transpose(rvecs)]
+            assert len(fvecs) == n_block
 
-        # Form residuals
-        # TODO The application of A can be avoided here if A*x is stored,
-        #      since matrix @ fvecs == matrix @ SS @ v == Ax @ v
-        Afvecs = [matrix @ fvecs[i] for i in range(len(fvecs))]
-        state.n_applies += n_block
-        residuals = [Afvecs[i] - rvals[i] * fvecs[i]
-                     for i in range(len(fvecs))]
+            # Form residuals
+            # TODO The application of A can be avoided here if A*x is stored,
+            #      since matrix @ fvecs == matrix @ SS @ v == Ax @ v
+            Afvecs = [matrix @ fvecs[i] for i in range(len(fvecs))]
+            state.n_applies += n_block
 
-        # Update te state's eigenpairs and residuals
-        state.eigenvalues = select_eigenpairs(rvals, n_ep, which)
-        state.eigenvectors = select_eigenpairs(fvecs, n_ep, which)
-        state.residuals = select_eigenpairs(residuals, n_ep, which)
-        state.residual_norms = np.array([res @ res for res in state.residuals])
+            residuals = [Afvecs[i] - rvals[i] * fvecs[i]
+                         for i in range(len(fvecs))]
+
+            # Update te state's eigenpairs and residuals
+            state.eigenvalues = select_eigenpairs(rvals, n_ep, which)
+            state.eigenvectors = select_eigenpairs(fvecs, n_ep, which)
+            state.residuals = select_eigenpairs(residuals, n_ep, which)
+            state.residual_norms = np.array([r @ r for r in state.residuals])
 
         callback(state, "next_iter")
-        state.timer.restart("davidson/iteration")
+        state.timer.restart("iteration")
         if is_converged(state):
             state.converged = True
             callback(state, "is_converged")
-            state.timer.stop("davidson/iteration")
+            state.timer.stop("iteration")
             return state
 
         if state.n_iter == max_iter:
@@ -204,56 +210,58 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
                                  "procedure.")
 
         if n_ss_vec + n_block > max_subspace:
+            callback(state, "restart")
             # The addition of the preconditioned vectors
             # would go beyond the max_subspace size => collapse first
             state.subspace_vectors = SS = fvecs
             n_ss_vec = len(SS)
 
-            # Update projection of ADC matrix A onto subspace
-            Ass = Ass_cont[:n_ss_vec, :n_ss_vec]
-            for i in range(n_ss_vec):
-                Ass[:, i] = Afvecs[i] @ SS
-            callback(state, "restart")
+            with state.timer.record("projection"):
+                # Update projection of ADC matrix A onto subspace
+                Ass = Ass_cont[:n_ss_vec, :n_ss_vec]
+                for i in range(n_ss_vec):
+                    Ass[:, i] = Afvecs[i] @ SS
             # continue to add residuals to space
         del Afvecs
 
-        # Apply a preconditioner to the residuals.
-        if preconditioner:
-            if hasattr(preconditioner, "update_shifts"):
-                preconditioner.update_shifts(rvals)
-            preconds = preconditioner.apply(residuals)
-        else:
-            preconds = residuals
+        with state.timer.record("preconditioner"):
+            if preconditioner:
+                if hasattr(preconditioner, "update_shifts"):
+                    preconditioner.update_shifts(rvals)
+                preconds = preconditioner.apply(residuals)
+            else:
+                preconds = residuals
 
-        # Explicitly symmetries the new vectors if requested
-        if explicit_symmetrisation:
-            explicit_symmetrisation.symmetrise(preconds, SS)
+            # Explicitly symmetrise the new vectors if requested
+            if explicit_symmetrisation:
+                explicit_symmetrisation.symmetrise(preconds, SS)
 
         # Project the components of the preconditioned vectors away
         # which are already contained in the subspace.
         # Then add those, which have a significant norm to the subspace.
-        n_ss_added = 0
-        for i in range(n_block):
-            pvec = preconds[i]
-            # Project out the components of the current subspace
-            pvec = pvec - linear_combination(pvec @ SS, SS)
-            pnorm = np.sqrt(pvec @ pvec)
-            if pnorm > residual_min_norm:
-                # Extend the subspace
-                SS.append(pvec / pnorm)
-                n_ss_added += 1
-                n_ss_vec = len(SS)
+        with state.timer.record("orthogonalisation"):
+            n_ss_added = 0
+            for i in range(n_block):
+                pvec = preconds[i]
+                # Project out the components of the current subspace
+                pvec = pvec - linear_combination(pvec @ SS, SS)
+                pnorm = np.sqrt(pvec @ pvec)
+                if pnorm > residual_min_norm:
+                    # Extend the subspace
+                    SS.append(pvec / pnorm)
+                    n_ss_added += 1
+                    n_ss_vec = len(SS)
 
-        if debug_checks:
-            orth = np.array([[SS[i] @ SS[j] for i in range(n_ss_vec)]
-                             for j in range(n_ss_vec)])
-            orth -= np.eye(n_ss_vec)
-            state.subspace_orthogonality = np.max(np.abs(orth))
-            if state.subspace_orthogonality > n_problem * np.finfo(float).eps:
-                warnings.warn(la.LinAlgWarning(
-                    "Subspace in davidson has lost orthogonality. "
-                    "Expect inaccurate results."
-                ))
+            if debug_checks:
+                orth = np.array([[SS[i] @ SS[j] for i in range(n_ss_vec)]
+                                 for j in range(n_ss_vec)])
+                orth -= np.eye(n_ss_vec)
+                state.subspace_orthogonality = np.max(np.abs(orth))
+                if state.subspace_orthogonality > n_problem * eps:
+                    warnings.warn(la.LinAlgWarning(
+                        "Subspace in davidson has lost orthogonality. "
+                        "Expect inaccurate results."
+                    ))
 
         if n_ss_added == 0:
             state.converged = False

@@ -17,6 +17,7 @@
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include "convert_timer.hh"
 #include <adcc/AdcIntermediates.hh>
 #include <memory>
 #include <pybind11/pybind11.h>
@@ -47,6 +48,11 @@ void export_AdcIntermediates(py::module& m) {
         .def_property_readonly("cv_p_ov", &AdcIntermediates::compute_cv_p_ov)
         .def_property_readonly("cv_p_vv", &AdcIntermediates::compute_cv_p_vv)
         .def("__repr__", &AdcIntermediates__repr__)
+        .def_property_readonly(
+              "timer",
+              [](const AdcIntermediates& self) { return convert_timer(self.timer()); },
+              "Obtain the timer object of this class.")
+        //
         //
         ;
 }

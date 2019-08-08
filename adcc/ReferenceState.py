@@ -128,6 +128,12 @@ class ReferenceState(libadcc.ReferenceState):
         )
 
     @property
+    def timer(self):
+        ret = super().timer
+        ret.attach(self.operators.timer)
+        return ret
+
+    @property
     def density(self):
         """
         Return the Hartree-Fock density in the MO basis

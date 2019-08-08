@@ -18,6 +18,7 @@
 //
 
 #include "caching_policy_hack.hh"
+#include "convert_timer.hh"
 #include <adcc/LazyMp.hh>
 #include <adcc/ReferenceState.hh>
 #include <pybind11/pybind11.h>
@@ -51,6 +52,9 @@ void export_LazyMp(py::module& m) {
         .def_property_readonly("has_core_occupied_space",
                                &LazyMp::has_core_occupied_space)
         .def("set_caching_policy", &LazyMp::set_caching_policy)
+        .def_property_readonly(
+              "timer", [](const LazyMp& self) { return convert_timer(self.timer()); },
+              "Obtain the timer object of this class.")
         //
         ;
 }

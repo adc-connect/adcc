@@ -22,11 +22,12 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
+import libadcc
+
 from .misc import cached_property
 from .Tensor import Tensor
+from .timings import Timer, timed_member_call
 from .OneParticleOperator import OneParticleOperator
-
-import libadcc
 
 
 def transform_operator_ao2mo(tensor_bb, tensor_ff, coefficients,
@@ -100,6 +101,7 @@ class OperatorIntegrals:
         return ret
 
     @property
+    @timed_member_call("_import_timer")
     def electric_dipole(self):
         """
         Return the electric dipole integrals in the molecular orbital basis.
@@ -121,3 +123,9 @@ class OperatorIntegrals:
                                      self.__conv_tol)
             dipoles.append(dip_ff)
         return dipoles
+
+    @property
+    def timer(self):
+        ret = Timer()
+        ret.attach(self._import_timer, subtree="import")
+        return ret

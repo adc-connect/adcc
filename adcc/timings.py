@@ -113,6 +113,23 @@ class Timer:
             self.stop(task, now)
         self.start_times[task] = now
 
+    @contextmanager
+    def record(self, task):
+        """
+        Context manager to automatically start and stop a time
+        recording as long as context is active.
+
+        Parameters
+        ----------
+        task : str
+            The string describing the task
+        """
+        self.restart(task)
+        try:
+            yield self
+        finally:
+            self.stop(task)
+
     def is_running(self, task):
         return task in self.start_times
 
@@ -173,21 +190,32 @@ class Timer:
 Timer.start = Timer.restart
 
 
-@contextmanager
-def record_time(timer, task):
+def timed_call(f):
     """
-    Context manager to automatically start and stop a time
-    recording as long as it is active
+    Decorator to automatically time function calls.
+    The timer object is available under the function attribute _timer
+    """
+    def decorated(*args, **kwargs):
+        if not hasattr(decorated, "_timer"):
+            setattr(decorated, "_timer", Timer())
+        with getattr(decorated, "_timer").record(f.__name__):
+            return f(*args, **kwargs)
+    decorated.__doc__ = f.__doc__
+    return decorated
 
-    Parameters
-    ----------
-    timer : Timer
-        The timer to book the time interval into
-    task : str
-        The string describing the task
+
+def timed_member_call(timer):
     """
-    timer.start(task)
-    try:
-        yield timer
-    finally:
-        timer.stop(task)
+    Decorator to automatically time calls to instance member functions.
+    The name of the instance attribute where timings are stored is the
+    timer argument to this function.
+    """
+    def decorator(f):
+        def wrapped(self, *args, **kwargs):
+            if not hasattr(self, timer):
+                setattr(self, timer, Timer())
+            with getattr(self, timer).record(f.__name__):
+                return f(self, *args, **kwargs)
+        wrapped.__doc__ = f.__doc__
+        return wrapped
+    return decorator

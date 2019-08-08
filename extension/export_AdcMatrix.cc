@@ -17,6 +17,7 @@
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include "convert_timer.hh"
 #include "util.hh"
 #include <adcc/AdcMatrix.hh>
 #include <memory>
@@ -69,6 +70,9 @@ void export_AdcMatrix(py::module& m) {
         .def("__len__", &AdcMatrix__len__)
         .def_property_readonly("blocks", &AdcMatrix_blocks)
         .def("compute_matvec", &AdcMatrix::compute_matvec)
+        .def_property_readonly(
+              "timer", [](const AdcMatrix& self) { return convert_timer(self.timer()); },
+              "Obtain the timer object of this class.")
         //
         ;
 }
