@@ -47,6 +47,7 @@ void export_AdcIntermediates(py::module& m) {
         .def_property_readonly("cv_p_oo", &AdcIntermediates::compute_cv_p_oo)
         .def_property_readonly("cv_p_ov", &AdcIntermediates::compute_cv_p_ov)
         .def_property_readonly("cv_p_vv", &AdcIntermediates::compute_cv_p_vv)
+        .def_property_readonly("cvs_adc3_m11", &AdcIntermediates::compute_cvs_adc3_m11)
         .def("__repr__", &AdcIntermediates__repr__)
         .def_property_readonly(
               "timer",
