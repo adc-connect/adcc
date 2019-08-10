@@ -24,15 +24,15 @@ import sys
 import warnings
 import numpy as np
 
-from adcc import AdcMatrix, linear_combination
-from adcc.AmplitudeVector import AmplitudeVector
+from .preconditioner import JacobiPreconditioner
+from .SolverStateBase import EigenSolverStateBase
+from .explicit_symmetrisation import IndexSymmetrisation
 
 import scipy.linalg as la
 import scipy.sparse.linalg as sla
 
-from .preconditioner import JacobiPreconditioner
-from .SolverStateBase import EigenSolverStateBase
-from .explicit_symmetrisation import IndexSymmetrisation
+from adcc import AdcMatrix, linear_combination
+from adcc.AmplitudeVector import AmplitudeVector
 
 
 def select_eigenpairs(vectors, n_ep, which):
@@ -145,6 +145,12 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
 
     callback(state, "start")
     state.timer.restart("iteration")
+
+    with state.timer.record("projection"):
+        # Initial application of A to the subspace
+        Ax = matrix @ SS
+        state.n_applies += n_ss_vec
+
     while state.n_iter < max_iter:
         state.n_iter += 1
 
@@ -155,15 +161,10 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         # that the values Ass[:-n_block, :-n_block] are already valid,
         # since they have been computed in the previous iterations already.
         with state.timer.record("projection"):
-            state.n_applies += n_block
-            AsBlock = matrix @ SS[-n_block:]
-
-            # Increase the view we work with and set the extra column and rows
-            Ass = Ass_cont[:n_ss_vec, :n_ss_vec]
+            Ass = Ass_cont[:n_ss_vec, :n_ss_vec]  # Increase the work view size
             for i in range(n_block):
-                Ass[:, -n_block + i] = AsBlock[i] @ SS
+                Ass[:, -n_block + i] = Ax[-n_block + i] @ SS
             Ass[-n_block:, :] = np.transpose(Ass[:, -n_block:])
-            del AsBlock
 
         # Compute the which(== largest, smallest, ...) eigenpair of Ass
         # and the associated ritz vector as well as residual
@@ -177,28 +178,41 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
                 rvals, rvecs = sla.eigsh(Ass, k=n_block, which=which, v0=v0)
 
         with state.timer.record("residuals"):
-            # Transform new vectors to the full basis (form ritz vectors)
-            fvecs = [linear_combination(v, SS) for v in np.transpose(rvecs)]
-            assert len(fvecs) == n_block
+            # Form residuals, A * SS * v - λ * SS * v = Ax * v + SS * (-λ*v)
+            def form_residual(rval, rvec):
+                Axv = linear_combination(rvec, Ax)
+                Axv.add_linear_combination(-rval * rvec, SS)
+                return Axv
+            residuals = [form_residual(rvals[i], v)
+                         for i, v in enumerate(np.transpose(rvecs))]
+            assert len(residuals) == n_block
 
-            # Form residuals
-            # TODO The application of A can be avoided here if A*x is stored,
-            #      since matrix @ fvecs == matrix @ SS @ v == Ax @ v
-            Afvecs = [matrix @ fvecs[i] for i in range(len(fvecs))]
-            state.n_applies += n_block
-
-            residuals = [Afvecs[i] - rvals[i] * fvecs[i]
-                         for i in range(len(fvecs))]
-
-            # Update te state's eigenpairs and residuals
+            # Update the state's eigenpairs and residuals
             state.eigenvalues = select_eigenpairs(rvals, n_ep, which)
-            state.eigenvectors = select_eigenpairs(fvecs, n_ep, which)
             state.residuals = select_eigenpairs(residuals, n_ep, which)
             state.residual_norms = np.array([r @ r for r in state.residuals])
+            # TODO This is misleading ... actually residual_norms contains
+            #      the norms squared. That's also the used e.g. in adcman to
+            #      check for convergence, so using the norm squared is fine,
+            #      in theory ... it should just be consistent. I think it is
+            #      better to go for the actual norm (no squared) inside the code
+
+            # TODO
+            # The select_eigenpairs is not that great ... better one makes a
+            # function which returns a mask. In that way one can have one
+            # form_residual function, which also returns the formed Ritz vectors
+            # (i.e. our approximations to the eigenpairs) and one which only
+            # forms the residuals ... this would save some duplicate work
+            # in the is_converged section *and* would allow the callback to do
+            # some stuff with the eigenpairs if desired.
 
         callback(state, "next_iter")
         state.timer.restart("iteration")
         if is_converged(state):
+            # Build the eigenvectors we desire from the subspace vectors:
+            selected = select_eigenpairs(np.transpose(rvecs), n_ep, which)
+            state.eigenvectors = [linear_combination(v, SS) for v in selected]
+
             state.converged = True
             callback(state, "is_converged")
             state.timer.stop("iteration")
@@ -211,18 +225,20 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
 
         if n_ss_vec + n_block > max_subspace:
             callback(state, "restart")
-            # The addition of the preconditioned vectors
-            # would go beyond the max_subspace size => collapse first
-            state.subspace_vectors = SS = fvecs
-            n_ss_vec = len(SS)
-
             with state.timer.record("projection"):
+                # The addition of the preconditioned vectors goes beyond max.
+                # subspace size => Collapse first, ie keep current Ritz vectors
+                # as new subspace
+                SS = [linear_combination(v, SS) for v in np.transpose(rvecs)]
+                state.subspace_vectors = SS
+                Ax = [linear_combination(v, Ax) for v in np.transpose(rvecs)]
+                n_ss_vec = len(SS)
+
                 # Update projection of ADC matrix A onto subspace
                 Ass = Ass_cont[:n_ss_vec, :n_ss_vec]
                 for i in range(n_ss_vec):
-                    Ass[:, i] = Afvecs[i] @ SS
+                    Ass[:, i] = Ax[i] @ SS
             # continue to add residuals to space
-        del Afvecs
 
         with state.timer.record("preconditioner"):
             if preconditioner:
@@ -269,6 +285,10 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
                 "Davidson procedure could not generate any further vectors for "
                 "the subpace. Iteration cannot be continued like this and will "
                 "be aborted without convergence. Try a different guess.")
+
+        with state.timer.record("projection"):
+            Ax.extend(matrix @ SS[-n_ss_added:])
+            state.n_applies += n_ss_added
 
 
 def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
@@ -348,9 +368,6 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
                         debug_checks=debug_checks,
                         residual_min_norm=residual_min_norm,
                         explicit_symmetrisation=explicit_symmetrisation)
-
-    # Free memory occupied by subspace_vectors and return
-    state.subspace_vectors = None
     return state
 
 
