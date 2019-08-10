@@ -36,6 +36,12 @@ namespace py = pybind11;
     return py::cast(self->at<std::vector<TYPE>>(key));                               \
   }
 
+#define IF_AT_MAP_TYPE_RETURN(TYPE1, TYPE2)                 \
+  if (self->at_raw_value(key).type_name_raw() ==            \
+      typeid(std::map<TYPE1, TYPE2>).name()) {              \
+    return py::cast(self->at<std::map<TYPE1, TYPE2>>(key)); \
+  }
+
 #define IF_ATPTR_TYPE_RETURN(TYPE)                                      \
   if (self->at_raw_value(key).type_name_raw() == typeid(TYPE).name()) { \
     return py::cast(self->at_ptr<TYPE>(key));                           \
@@ -50,6 +56,7 @@ static py::object CtxMap__at(std::shared_ptr<ctx::CtxMap> self, std::string key)
   IF_AT_TYPE_RETURN(std::string)
   IF_AT_TYPE_RETURN(scalar_type)
   IF_ATPTR_TYPE_RETURN(Tensor)
+  IF_AT_MAP_TYPE_RETURN(std::string, std::string);
 
   throw not_implemented_error("Generic at() not implemented for type " +
                               self->at_raw_value(key).type_name() + ".");
@@ -66,6 +73,7 @@ static py::object CtxMap__at_def(std::shared_ptr<ctx::CtxMap> self, std::string 
 
 #undef IF_AT_TYPE_RETURN
 #undef IF_ATPTR_TYPE_RETURN
+#undef IF_AT_MAP_TYPE_RETURN
 
 static py::list CtxMap__keys(const ctx::CtxMap& self) {
   py::list keys;
