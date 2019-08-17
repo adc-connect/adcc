@@ -21,13 +21,11 @@
 ##
 ## ---------------------------------------------------------------------
 import numpy as np
-
-from pyscf import gto, scf
-from geometry import xyz
-
 import adcc.backends.pyscf
 
 from adcc import hdf5io
+from pyscf import gto, scf
+from geometry import xyz
 
 # Run SCF in pyscf and converge super-tight using an EDIIS
 mol = gto.M(
@@ -45,9 +43,14 @@ mf.diis_space = 3
 mf.max_cycle = 600
 mf = scf.addons.frac_occ(mf)
 mf.kernel()
-
 hfdict = adcc.backends.pyscf.convert_scf_to_dict(mf)
-hfdict["n_core_orbitals"] = 1
+
+hfdict["reference_cases"] = {
+    "gen":    {},
+    "cvs":    {"core_orbitals":  1},
+    "fc":     {"frozen_core":    1},
+    "fv":     {"frozen_virtual": 3},
+}
 
 # Since CN has some symmetry some energy levels are degenerate,
 # which can lead to all sort of inconsistencies. This code

@@ -39,7 +39,11 @@ mf.diis = scf.EDIIS()
 mf.diis_space = 3
 mf.max_cycle = 500
 mf.kernel()
-
 hfdict = adcc.backends.pyscf.convert_scf_to_dict(mf)
-hfdict["n_core_orbitals"] = 1
+
+hfdict["reference_cases"] = {
+    "gen":    {},
+    "cvs":    {"core_orbitals":  1},
+}
+
 hdf5io.save("h2o_def2tzvp_hfdata.hdf5", hfdict)

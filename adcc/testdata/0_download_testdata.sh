@@ -14,6 +14,10 @@ DATAFILES=(
 	cn_sto3g_reference_cvs_adc2.hdf5
 	cn_sto3g_reference_cvs_adc2x.hdf5
 	cn_sto3g_reference_cvs_adc3.hdf5
+	cn_sto3g_reference_fc_adc2.hdf5
+	cn_sto3g_reference_fc_fv_adc2.hdf5
+	cn_sto3g_reference_fv_adc2x.hdf5
+	cn_sto3g_reference_fv_cvs_adc2x.hdf5
 	h2o_sto3g_hfdata.hdf5
 	h2o_sto3g_hfimport.hdf5
 	h2o_sto3g_reference_adc0.hdf5
@@ -26,6 +30,13 @@ DATAFILES=(
 	h2o_sto3g_reference_cvs_adc2.hdf5
 	h2o_sto3g_reference_cvs_adc2x.hdf5
 	h2o_sto3g_reference_cvs_adc3.hdf5
+	h2o_sto3g_reference_fc_adc2.hdf5
+	h2o_sto3g_reference_fc_fv_adc2.hdf5
+	h2o_sto3g_reference_fv_adc2x.hdf5
+	h2o_sto3g_reference_fv_cvs_adc2x.hdf5
+	h2s_sto3g_hfdata.hdf5
+	h2s_sto3g_reference_fc_cvs_adc2.hdf5
+	h2s_sto3g_reference_fc_fv_cvs_adc2x.hdf5
 	hf3_631g_hfdata.hdf5
 	hf3_631g_reference_adc0.hdf5
 	hf3_631g_reference_adc1.hdf5
@@ -58,6 +69,15 @@ DATAFILES_FULL=(
 	h2o_def2tzvp_reference_cvs_adc2.hdf5
 	h2o_def2tzvp_reference_cvs_adc2x.hdf5
 	h2o_def2tzvp_reference_cvs_adc3.hdf5
+	h2s_6311g_hfdata.hdf5
+	h2s_6311g_reference_adc2.hdf5
+	h2s_6311g_reference_cvs_adc2x.hdf5
+	h2s_6311g_reference_fc_adc2.hdf5
+	h2s_6311g_reference_fc_cvs_adc2x.hdf5
+	h2s_6311g_reference_fc_fv_adc2.hdf5
+	h2s_6311g_reference_fc_fv_cvs_adc2x.hdf5
+	h2s_6311g_reference_fv_adc2.hdf5
+	h2s_6311g_reference_fv_cvs_adc2x.hdf5
 )
 
 if [ "$1" == "--full" ]; then

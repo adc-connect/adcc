@@ -21,9 +21,7 @@
 ##
 ## ---------------------------------------------------------------------
 import os
-
 import adcc
-import pytest
 
 from .geometry import xyz
 
@@ -31,6 +29,8 @@ from adcc import AdcMatrix, ExcitedStates, LazyMp, guess_zero, hdf5io
 from adcc.misc import cached_property
 from adcc.solver import EigenSolverStateBase
 from adcc.caching_policy import CacheAllPolicy
+
+import pytest
 
 
 class AdcMockState(EigenSolverStateBase):
@@ -94,9 +94,9 @@ class TestdataCache():
         """
         The definition of the test cases: Data generator and reference file
         """
-        cases = ["h2o_sto3g", "cn_sto3g", "hf3_631g"]
+        cases = ["h2o_sto3g", "cn_sto3g", "hf3_631g", "h2s_sto3g"]
         if not hasattr(pytest, "config") or pytest.config.option.mode == "full":
-            cases += ["cn_ccpvdz", "h2o_def2tzvp"]
+            cases += ["cn_ccpvdz", "h2o_def2tzvp", "h2s_6311g"]
         return [k for k in cases
                 if os.path.isfile(fullfile(k + "_hfdata.hdf5"))]
 
@@ -121,14 +121,18 @@ class TestdataCache():
 
     @cached_property
     def refstate_cvs(self):
-        def cache_eri(refstate):
-            refstate.import_all()
-            return refstate
+        ret = {}
+        for key in self.testcases:
+            refcases = self.hfdata[key]["reference_cases"]
+            if "cvs" not in refcases:
+                continue
+            ret[key] = adcc.ReferenceState(self.hfdata[key], **refcases["cvs"])
+            ret[key].import_all()
+        return ret
 
-        return {k: cache_eri(adcc.ReferenceState(
-                self.hfdata[k], self.hfdata[k]["n_core_orbitals"]))
-                for k in self.testcases
-                if "n_core_orbitals" in self.hfdata[k]}
+    def refstate_nocache(self, key, case):
+        refcases = self.hfdata[key]["reference_cases"]
+        return adcc.ReferenceState(self.hfdata[key], **refcases[case])
 
     @cached_property
     def hfimport(self):
@@ -141,8 +145,11 @@ class TestdataCache():
 
     @cached_property
     def reference_data(self):
-        methods = ["cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x", "cvs_adc3",
-                   "adc0", "adc1", "adc2", "adc2x", "adc3"]
+        prefixes = ["", "cvs", "fc", "fv", "fc_cvs",
+                    "fv_cvs", "fc_fv", "fc_fv_cvs"]
+        raws = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+        methods = raws + ["_".join([p, r]) for p in prefixes
+                          for r in raws if p != ""]
 
         ret = {}
         for k in self.testcases:
@@ -163,6 +170,8 @@ class TestdataCache():
         """
         res = {}
         for case in self.testcases:
+            if case not in self.reference_data:
+                continue
             available_kinds = self.reference_data[case]["available_kinds"]
             res_case = {}
             for method in ["adc0", "adc1", "adc2", "adc2x", "adc3"]:

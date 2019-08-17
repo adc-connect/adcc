@@ -32,46 +32,71 @@ from adcc import hdf5io
 from adcc.testdata.cache import cache
 
 
-def dump_all_methods(key, kwargs_cvs, kwargs_general, kwargs_overwrite={}):
-    data = cache.hfdata[key]
-
+def dump_all(case, kwargs, kwargs_overwrite={}, spec="gen"):
+    assert spec in ["gen", "cvs"]
     for method in ["adc0", "adc1", "adc2", "adc2x", "adc3"]:
-        tmethod = method
-        if method == "adc2":
-            tmethod = "adc2s"
-
-        if method in kwargs_overwrite:
-            overwrite = kwargs_overwrite[method]
-            kw_general = overwrite.get("general", kwargs_general)
-            kw_cvs = overwrite.get("cvs", kwargs_cvs)
+        kw = kwargs_overwrite.get(method, kwargs)
+        if spec == "gen":
+            dump_general(case, method, kw, spec=spec)
         else:
-            kw_general = kwargs_general
-            kw_cvs = kwargs_cvs
+            dump_cvs(case, method, kw, spec=spec)
 
-        if kwargs_cvs is not None:  # Do CVS
-            dumpfile = "{}_reference_cvs_{}.hdf5".format(key, method)
-            if not os.path.isfile(dumpfile):
-                method_tree = "adc_pp/cvs_" + tmethod
-                res = run(data, method="cvs-" + method, method_tree=method_tree,
-                          **kw_cvs, core_valence_separation=True)
-                if method == "adc3":
-                    # For CVS-ADC(3) the MP3 energy in adcman is wrong
-                    del res["/mp3/energy"]
-                dictionary = build_dict(kw_cvs, res, mp_tree="mp_cvs",
-                                        method_tree=method_tree,
-                                        out_tree="cvs-" + method)
-                hdf5io.save(dumpfile, dictionary)
 
-        # Always do general
-        dumpfile = "{}_reference_{}.hdf5".format(key, method)
-        if not os.path.isfile(dumpfile):
-            method_tree = "adc_pp/" + tmethod
-            res = run(data, method=method, method_tree=method_tree,
-                      **kw_general)
-            dictionary = build_dict(kw_general, res, mp_tree="mp",
-                                    method_tree=method_tree,
-                                    out_tree=method)
-            hdf5io.save(dumpfile, dictionary)
+def dump_general(case, method, kwargs, spec="gen"):
+    data = cache.hfdata[case]
+    kwargs = dict(kwargs)
+    kwargs.update(data["reference_cases"][spec])
+
+    method_tree = "adc_pp/" + method
+    if method == "adc2":
+        method_tree = "adc_pp/adc2s"
+
+    prefix = spec.replace("-", "_") + "_"
+    if spec == "gen":
+        prefix = ""
+    out_tree = prefix.replace("_", "-") + method
+    dumpfile = "{}_reference_{}{}.hdf5".format(case, prefix, method)
+
+    if spec == "gen":
+        mp_tree = "mp"
+    else:
+        mp_tree = prefix + "mp"
+
+    if not os.path.isfile(dumpfile):
+        res = run(data, method=method, method_tree=method_tree, **kwargs)
+        dictionary = build_dict(kwargs, res, mp_tree=mp_tree, out_tree=out_tree,
+                                method_tree=method_tree)
+        hdf5io.save(dumpfile, dictionary)
+
+
+def dump_cvs(case, method, kwargs, spec="cvs"):
+    data = cache.hfdata[case]
+    kwargs = dict(kwargs)
+    kwargs.update(data["reference_cases"][spec])
+
+    method_tree = "adc_pp/cvs_" + method
+    if method == "adc2":
+        method_tree = "adc_pp/cvs_adc2s"
+
+    assert spec != "gen"
+    prefix = spec.replace("-", "_") + "_"
+    out_tree = prefix.replace("_", "-") + method
+    dumpfile = "{}_reference_{}{}.hdf5".format(case, prefix, method)
+
+    if spec == "cvs":
+        mp_tree = "mp_cvs"
+    else:
+        mp_tree = prefix + "mp"
+
+    if not os.path.isfile(dumpfile):
+        res = run(data, method="cvs-" + method, **kwargs,
+                  method_tree=method_tree)
+        if method == "adc3":
+            # For CVS-ADC(3) the MP3 energy in adcman is wrong
+            del res["/mp3/energy"]
+        dictionary = build_dict(kwargs, res, mp_tree=mp_tree,
+                                method_tree=method_tree, out_tree=out_tree)
+        hdf5io.save(dumpfile, dictionary)
 
 
 def build_params(refstate, method_tree):
@@ -129,13 +154,18 @@ def build_ctx(refstate):
 
 
 def run(data, method, method_tree, n_singlets=None, n_triplets=None,
-        n_states=None, n_spin_flip=None,
-        core_valence_separation=False, n_guess_singles=0,
-        max_subspace=0):
-    n_core_orbitals = None
-    if core_valence_separation:
-        n_core_orbitals = data["n_core_orbitals"]
-    refstate = adcc.ReferenceState(data, core_orbitals=n_core_orbitals)
+        n_states=None, n_spin_flip=None, n_guess_singles=0,
+        max_subspace=0, core_orbitals=None, frozen_core=None,
+        frozen_virtual=None):
+    print("#")
+    print("#-- {}    n_singlets={} n_triplets={} n_states={} n_sf={}".format(
+        method, n_singlets, n_triplets, n_states, n_spin_flip))
+    print("#--          core_orbitals={} frozen_core={} frozen_virtual={}"
+          "".format(core_orbitals, frozen_core, frozen_virtual))
+    print("#")
+    refstate = adcc.ReferenceState(data, core_orbitals=core_orbitals,
+                                   frozen_virtual=frozen_virtual,
+                                   frozen_core=frozen_core)
 
     # Gather extra parameters
     extra_params = build_params(refstate, method_tree)
@@ -285,51 +315,85 @@ def build_dict(kwrun, ctx, mp_tree, method_tree, out_tree, n_states_full=2):
     return ret
 
 
+def dump_h2o_sto3g():  # H2O restricted
+    # All methods for general and CVS
+    kwargs = {"n_singlets": 10, "n_triplets": 10}
+    overwrite = {"adc2": {"n_singlets": 9, "n_triplets": 10}, }
+    dump_all("h2o_sto3g", kwargs, overwrite, spec="gen")
+
+    kwargs = {"n_singlets": 3, "n_triplets": 3}
+    overwrite = {
+        "adc0": {"n_singlets": 2, "n_triplets": 2},
+        "adc1": {"n_singlets": 2, "n_triplets": 2},
+    }
+    dump_all("h2o_sto3g", kwargs, overwrite, spec="cvs")
+
+    case = "h2o_sto3g"  # Just ADC(2) and ADC(2)-x
+    kwargs = {"n_singlets": 3, "n_triplets": 3}
+    dump_general(case, "adc2", kwargs, spec="fc")
+    dump_general(case, "adc2", kwargs, spec="fc-fv")
+    dump_general(case, "adc2x", kwargs, spec="fv")
+    dump_cvs(case, "adc2x", kwargs, spec="fv-cvs")
+
+
+def dump_h2o_def2tzvp():  # H2O restricted
+    kwargs = {"n_singlets": 3, "n_triplets": 3, "n_guess_singles": 6,
+              "max_subspace": 24}
+    dump_all("h2o_def2tzvp", kwargs, spec="gen")
+    dump_all("h2o_def2tzvp", kwargs, spec="cvs")
+
+
+def dump_cn_sto3g():  # CN unrestricted
+    dump_all("cn_sto3g", {"n_states": 8}, spec="gen")
+    dump_all("cn_sto3g", {"n_states": 6}, spec="cvs")
+
+    # Just ADC(2) and ADC(2)-x for the other methods
+    case = "cn_sto3g"
+    dump_general(case, "adc2", {"n_states": 4}, spec="fc")
+    dump_general(case, "adc2", {"n_states": 4, "n_guess_singles": 8},
+                 spec="fc-fv")
+    dump_general(case, "adc2x", {"n_states": 4}, spec="fv")
+    dump_cvs(case, "adc2x", {"n_states": 4}, spec="fv-cvs")
+
+
+def dump_cn_ccpvdz():  # CN unrestricted
+    kwargs = {"n_states": 5, "n_guess_singles": 7}
+    overwrite = {"adc1": {"n_states": 4, "n_guess_singles": 8}, }
+    dump_all("cn_ccpvdz", kwargs, overwrite, spec="gen")
+    dump_all("cn_ccpvdz", kwargs, spec="cvs")
+
+
+def dump_hf3_631g():  # HF triplet unrestricted (spin-flip)
+    dump_all("hf3_631g", {"n_spin_flip": 9}, spec="gen")
+
+
+def dump_h2s_sto3g():
+    case = "h2s_sto3g"
+    kwargs = {"n_singlets": 3, "n_triplets": 3}
+    dump_cvs(case, "adc2", kwargs, spec="fc-cvs")
+    dump_cvs(case, "adc2x", kwargs, spec="fc-fv-cvs")
+
+
+def dump_h2s_6311g():
+    case = "h2s_6311g"
+    kwargs = {"n_singlets": 3, "n_triplets": 3}
+    for spec in ["gen", "fc", "fv", "fc-fv"]:
+        dump_general(case, "adc2", kwargs, spec=spec)
+
+    kwargs = {"n_singlets": 3, "n_triplets": 3, "n_guess_singles": 6,
+              "max_subspace": 60}
+    for spec in ["cvs", "fv-cvs", "fc-cvs", "fc-fv-cvs"]:
+        dump_cvs(case, "adc2x", kwargs, spec=spec)
+
+
 def main():
-    #
-    # H2O restricted
-    #
-    kwargs_cvs = {"n_singlets": 3, "n_triplets": 3}
-    kwargs_general = {"n_singlets": 10, "n_triplets": 10}
-    kwargs_overwrite = {
-        "adc0": {"cvs": {"n_singlets": 2, "n_triplets": 2}, },
-        "adc1": {"cvs": {"n_singlets": 2, "n_triplets": 2}, },
-        "adc2": {"general": {"n_singlets": 9, "n_triplets": 10, }, }
-    }
-    dump_all_methods("h2o_sto3g", kwargs_cvs, kwargs_general, kwargs_overwrite)
-
-    #
-    # H2O restricted (TZVP)
-    #
-    kwargs_cvs = {"n_singlets": 3, "n_triplets": 3, "n_guess_singles": 6,
-                  "max_subspace": 24}
-    kwargs_general = {"n_singlets": 3, "n_triplets": 3, "n_guess_singles": 6,
-                      "max_subspace": 24}
-    dump_all_methods("h2o_def2tzvp", kwargs_cvs, kwargs_general)
-
-    #
-    # CN unrestricted
-    #
-    kwargs_cvs = {"n_states": 6}
-    kwargs_general = {"n_states": 8}
-    dump_all_methods("cn_sto3g", kwargs_cvs, kwargs_general)
-
-    #
-    # CN unrestricted (cc-pVDZ)
-    #
-    kwargs_cvs = {"n_states": 5, "n_guess_singles": 7}
-    kwargs_general = {"n_states": 5, "n_guess_singles": 7}
-    kwargs_overwrite = {
-        "adc1": {"general": {"n_states": 4, "n_guess_singles": 8}, },
-    }
-    dump_all_methods("cn_ccpvdz", kwargs_cvs, kwargs_general, kwargs_overwrite)
-
-    #
-    # HF triplet unrestricted (for spin-flip)
-    #
-    kwargs_cvs = None
-    kwargs_general = {"n_spin_flip": 9}
-    dump_all_methods("hf3_631g", kwargs_cvs, kwargs_general)
+    dump_h2o_sto3g()
+    dump_h2o_def2tzvp()
+    dump_cn_sto3g()
+    dump_cn_ccpvdz()
+    dump_hf3_631g()
+    dump_h2s_sto3g()
+    dump_h2s_6311g()
 
 
 if __name__ == "__main__":
