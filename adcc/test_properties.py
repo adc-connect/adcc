@@ -34,7 +34,6 @@ from adcc.testdata.cache import cache
 # The methods to test
 basemethods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 methods = [m for bm in basemethods for m in [bm, "cvs_" + bm]]
-methods.remove("cvs_adc3")  # Not implemented yet
 
 
 class TestTransitionDipoleMoments(unittest.TestCase, Runners):

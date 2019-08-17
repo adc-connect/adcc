@@ -22,13 +22,14 @@
 ## ---------------------------------------------------------------------
 import os
 import numpy as np
+
 import adcc
 import adcc.solver.adcman as adcman
 
+from libadcc import CtxMap, Symmetry
+
 from adcc import hdf5io
 from adcc.testdata.cache import cache
-
-from libadcc import CtxMap, Symmetry
 
 
 def dump_all_methods(key, kwargs_cvs, kwargs_general, kwargs_overwrite={}):
@@ -47,19 +48,21 @@ def dump_all_methods(key, kwargs_cvs, kwargs_general, kwargs_overwrite={}):
             kw_general = kwargs_general
             kw_cvs = kwargs_cvs
 
-        if method not in ["adc3"] and kwargs_cvs is not None:
-            # do CVS
+        if kwargs_cvs is not None:  # Do CVS
             dumpfile = "{}_reference_cvs_{}.hdf5".format(key, method)
             if not os.path.isfile(dumpfile):
                 method_tree = "adc_pp/cvs_" + tmethod
                 res = run(data, method="cvs-" + method, method_tree=method_tree,
                           **kw_cvs, core_valence_separation=True)
+                if method == "adc3":
+                    # For CVS-ADC(3) the MP3 energy in adcman is wrong
+                    del res["/mp3/energy"]
                 dictionary = build_dict(kw_cvs, res, mp_tree="mp_cvs",
                                         method_tree=method_tree,
                                         out_tree="cvs-" + method)
                 hdf5io.save(dumpfile, dictionary)
 
-        # General
+        # Always do general
         dumpfile = "{}_reference_{}.hdf5".format(key, method)
         if not os.path.isfile(dumpfile):
             method_tree = "adc_pp/" + tmethod
@@ -225,7 +228,7 @@ def build_dict(kwrun, ctx, mp_tree, method_tree, out_tree, n_states_full=2):
         eigenvalues = []
         eigenvectors_singles = []
         eigenvectors_doubles = []
-        n_states = ctx.at(tree + "/nstates", 0)
+        n_states = ctx.get(tree + "/nstates", 0)
         if n_states == 0:
             continue
         available_kinds.append(kind)
@@ -244,13 +247,13 @@ def build_dict(kwrun, ctx, mp_tree, method_tree, out_tree, n_states_full=2):
             state_dipoles.append(ctx[state_tree + "/prop/dipole"])
             transition_dipoles.append(ctx[state_tree + "/tprop/dipole"])
 
-            eigenvalues.append(ctx.at(state_tree + "/energy"))
+            eigenvalues.append(ctx[state_tree + "/energy"])
             eigenvectors_singles.append(
-                ctx.at(state_tree + "/u1").to_ndarray()
+                ctx[state_tree + "/u1"].to_ndarray()
             )
             if ctx.exists(state_tree + "/u2"):
                 eigenvectors_doubles.append(
-                    ctx.at(state_tree + "/u2").to_ndarray()
+                    ctx[state_tree + "/u2"].to_ndarray()
                 )
             else:
                 eigenvectors_doubles.clear()
@@ -260,7 +263,7 @@ def build_dict(kwrun, ctx, mp_tree, method_tree, out_tree, n_states_full=2):
             state_tree = tree + "/es" + str(i)
             state_dipoles.append(ctx[state_tree + "/prop/dipole"])
             transition_dipoles.append(ctx[state_tree + "/tprop/dipole"])
-            eigenvalues.append(ctx.at(state_tree + "/energy"))
+            eigenvalues.append(ctx[state_tree + "/energy"])
 
         # Transform to numpy array
         pfx = out_tree + "/" + kind

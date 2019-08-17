@@ -30,7 +30,6 @@ from adcc.testdata.cache import cache
 # The methods to test
 basemethods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 methods = [m for bm in basemethods for m in [bm, "cvs_" + bm]]
-methods.remove("cvs_adc3")  # Not implemented yet
 
 
 @expand_test_templates(methods)
@@ -89,7 +88,7 @@ delattr(Runners, "test_hf3_631g_spin_flip_cvs_adc0")
 delattr(Runners, "test_hf3_631g_spin_flip_cvs_adc1")
 delattr(Runners, "test_hf3_631g_spin_flip_cvs_adc2")
 delattr(Runners, "test_hf3_631g_spin_flip_cvs_adc2x")
-# delattr(Runners, "test_hf3_631g_spin_flip_cvs_adc3")
+delattr(Runners, "test_hf3_631g_spin_flip_cvs_adc3")
 
 
 class TestStateDiffDm(unittest.TestCase, Runners):

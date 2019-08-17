@@ -23,14 +23,15 @@
 import unittest
 import itertools
 import numpy as np
+
+from .misc import expand_test_templates
+from numpy.testing import assert_array_equal
+
 import adcc
 import adcc.guess
 
-from numpy.testing import assert_array_equal
-from adcc.testdata.cache import cache
-
-from .misc import expand_test_templates
 from pytest import approx
+from adcc.testdata.cache import cache
 
 # The methods to test
 methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
@@ -509,7 +510,3 @@ class TestGuess(unittest.TestCase):
                  [0.5, -0.5, -0.5, 0.5]),
             ],
         }
-
-
-delattr(TestGuess, "test_singles_cn_cvs_adc3")
-delattr(TestGuess, "test_singles_h2o_cvs_adc3")

@@ -75,6 +75,15 @@ static py::list CtxMap__keys(const ctx::CtxMap& self) {
   return keys;
 }
 
+static void CtxMap__erase(ctx::CtxMap& ctx, const std::string& path,
+                          bool recursive = false) {
+  if (recursive) {
+    ctx.erase_recursive(path);
+  } else {
+    ctx.erase(path);
+  }
+}
+
 void export_CtxMap(py::module& m) {
   using namespace ctx;
 
@@ -84,9 +93,12 @@ void export_CtxMap(py::module& m) {
         .def("keys", &CtxMap__keys)
         .def("exists", &CtxMap::exists)
         //
-        .def("at", &CtxMap__at)
-        .def("at", &CtxMap__at_def)
+        .def("get", &CtxMap__at)
+        .def("get", &CtxMap__at_def)
         .def("__getitem__", &CtxMap__at)
+        .def("__delitem__",
+             [](ctx::CtxMap& ctx, const std::string& key) { ctx.erase(key); })
+        .def("erase", &CtxMap__erase)
         .def("describe",
              [](ctx::CtxMap& self) {
                std::stringstream ss;
