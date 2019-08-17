@@ -57,7 +57,7 @@ __all__ = ["run_adc", "AdcMatrix", "AdcMethod", "Symmetry", "ReferenceState",
            "guess_symmetries", "guesses_spin_flip", "guess_zero",
            "DefaultCachingPolicy", "GatherStatisticsPolicy", "LazyMp",
            "adc0", "adc1", "adc2", "adc2x", "adc3",
-           "cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x",
+           "cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x", "cvs_adc3"
            "banner"]
 
 __version__ = "0.11.4"
@@ -116,6 +116,11 @@ def cvs_adc2(*args, **kwargs):
 @with_runadc_doc
 def cvs_adc2x(*args, **kwargs):
     return run_adc(*args, **kwargs, method="cvs-adc2x")
+
+
+@with_runadc_doc
+def cvs_adc3(*args, **kwargs):
+    return run_adc(*args, **kwargs, method="cvs-adc3")
 
 
 def banner(colour=sys.stdout.isatty(), show_doi=True, show_website=True):

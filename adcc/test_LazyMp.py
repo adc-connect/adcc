@@ -116,11 +116,18 @@ class TestLazyMp(unittest.TestCase):
             approx(refmpcvs["mp2"]["energy"])
 
         # CVS MP(2) energy should be equal to the non-CVS one
-        refmp = cache.reference_data[case]["mp_cvs"]
+        refmp = cache.reference_data[case]["mp"]
         assert self.mp_cvs[case].energy_correction(2) == \
             approx(refmp["mp2"]["energy"])
 
-    # MP(3) energy not tested, since not implemented
+    def template_cvs_mp3_energy(self, case):
+        # Note: CVS-MP(3) energies in adcman are wrong, so they
+        #       are not used for testing here.
+        # CVS MP(3) energy should be equal to the non-CVS one
+        pytest.xfail("MP3 energies not yet available for CVS")
+        refmp = cache.reference_data[case]["mp"]
+        assert self.mp_cvs[case].energy_correction(3) == \
+            approx(refmp["mp3"]["energy"])
 
     def template_cvs_df(self, case):
         refmpcvs = cache.reference_data[case]["mp_cvs"]
@@ -135,7 +142,12 @@ class TestLazyMp(unittest.TestCase):
             assert_allclose(self.mp_cvs[case].t2(label).to_ndarray(),
                             refmpcvs["mp1"]["t_" + label], atol=1e-12)
 
-    # T^D(2) not not tested, since not implemented
+    def template_cvs_td2(self, case):
+        refmpcvs = cache.reference_data[case]["mp_cvs"]
+        for label in ["o1o1v1v1", "o1o2v1v1", "o2o2v1v1"]:
+            if "td_" + label in refmpcvs["mp2"]:
+                assert_allclose(self.mp_cvs[case].td2(label).to_ndarray(),
+                                refmpcvs["mp2"]["td_" + label], atol=1e-12)
 
     def template_cvs_mp2_density_mo(self, case):
         refmpcvs = cache.reference_data[case]["mp_cvs"]

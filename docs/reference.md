@@ -58,6 +58,10 @@ See also the [full index](genindex).
 
     Run an CVS-ADC(2)-x calculation. For more details see :py:func:`adcc.run_adc`.
 
+.. py:function:: adcc.cvs_adc3(data_or_matrix, **kwargs)
+
+    Run an CVS-ADC(3) calculation. For more details see :py:func:`adcc.run_adc`.
+
 .. autoclass:: adcc.ExcitedStates
     :members:
 ```

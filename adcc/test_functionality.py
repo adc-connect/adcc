@@ -43,6 +43,7 @@ class TestFunctionality(unittest.TestCase):
     def base_test(self, system, method, kind, **args):
         hf = cache.hfdata[system]
         refdata = cache.reference_data[system]
+        refmp = refdata["mp"]
         ref = refdata[method][kind]
 
         n_ref = len(ref["eigenvalues"])
@@ -57,6 +58,15 @@ class TestFunctionality(unittest.TestCase):
         assert res.converged
         assert_allclose(res.excitation_energies[:n_ref],
                         ref["eigenvalues"], atol=1e-7)
+
+        if res.method.level >= 2:
+            assert res.ground_state.energy_correction(2) == \
+                approx(refmp["mp2"]["energy"])
+        if res.method.level >= 3 and not res.method.is_core_valence_separated:
+            # TODO The latter check can be removed once CVS-MP3 energies
+            #      are implemented
+            assert res.ground_state.energy_correction(3) == \
+                approx(refmp["mp3"]["energy"])
 
         if method == "adc0" and "cn" in system:
             # TODO Investigate this
@@ -92,12 +102,14 @@ class TestFunctionality(unittest.TestCase):
         if smallsystem:
             n_iter_bound = {
                 "adc0": 1, "adc1": 4, "adc2": 6, "adc2x": 13, "adc3": 13,
-                "cvs-adc0": 1, "cvs-adc1": 4, "cvs-adc2": 5, "cvs-adc2x": 12
+                "cvs-adc0": 1, "cvs-adc1": 4, "cvs-adc2": 5, "cvs-adc2x": 12,
+                "cvs-adc3": 13,
             }[method]
         else:
             n_iter_bound = {
                 "adc0": 1, "adc1": 8, "adc2": 16, "adc2x": 17, "adc3": 17,
-                "cvs-adc0": 1, "cvs-adc1": 7, "cvs-adc2": 16, "cvs-adc2x": 18
+                "cvs-adc0": 1, "cvs-adc1": 7, "cvs-adc2": 16, "cvs-adc2x": 18,
+                "cvs-adc3": 17,
             }[method]
         assert res.n_iter <= n_iter_bound
 
@@ -172,12 +184,3 @@ class TestFunctionality(unittest.TestCase):
     #
     def template_hf3_spin_flip(self, method):
         self.base_test("hf3_631g", method, "spin_flip", n_spin_flip=9)
-
-
-# CVS-ADC(3) not supported
-delattr(TestFunctionality, "test_cvs_cn_sto3g_adc3")
-delattr(TestFunctionality, "test_cvs_cn_ccpvdz_adc3")
-delattr(TestFunctionality, "test_cvs_h2o_sto3g_singlets_adc3")
-delattr(TestFunctionality, "test_cvs_h2o_sto3g_triplets_adc3")
-delattr(TestFunctionality, "test_cvs_h2o_def2tzvp_singlets_adc3")
-delattr(TestFunctionality, "test_cvs_h2o_def2tzvp_triplets_adc3")
