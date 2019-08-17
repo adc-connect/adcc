@@ -12,7 +12,7 @@ Four SCF codes can be used with adcc out of the box, namely
 [molsturm](https://molsturm.org),
 [psi4](https://github.com/psi4/psi4),
 [PySCF](https://github.com/pyscf/pyscf)
-and veloxchem.
+and [veloxchem](https://veloxchem.org).
 
 The range of supported algebraic-diagrammatic construction (ADC)
 methods includes the ADC(n) family **up to level 3**,
