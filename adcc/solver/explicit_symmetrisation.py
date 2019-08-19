@@ -25,6 +25,15 @@ from libadcc import amplitude_vector_enforce_spin_kind
 from adcc import empty_like
 from adcc.AmplitudeVector import AmplitudeVector
 
+# TODO
+#    This interface is not that great and leads to duplicate information
+#    (e.g. once for setting up the guesses and once for setting up the
+#     explicit symmetrisation)
+#    Maybe one could pass the guesses to these classes or construct
+#    these classes along with the guesses or allow to do the guess symmetry
+#    setup first and then use this symmetry setup for setting up both the
+#    guesses and these classes (which is probably the best case)
+
 
 class IndexSymmetrisation():
     """
