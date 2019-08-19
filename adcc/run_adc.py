@@ -347,7 +347,6 @@ def estimate_n_guesses(matrix, n_states, singles_only=True):
     singles_only       Try to stay withing the singles excitation space
                        with the number of guess vectors.
     """
-
     # Try to use at least 4 or twice the number of states
     # to be computed as guesses
     n_guesses = max(4, 2 * n_states)

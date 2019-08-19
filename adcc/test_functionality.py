@@ -38,14 +38,13 @@ from adcc.testdata.cache import cache
 methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 
 
-@expand_test_templates(methods)
-class TestFunctionality(unittest.TestCase):
-    def base_test(self, system, method, kind, **args):
+class TestFunctionalityBase(unittest.TestCase):
+    def base_test(self, system, method, kind, prefix="", test_mp=True, **args):
+        if prefix:
+            prefix = prefix.replace("-", "_") + "_"
         hf = cache.hfdata[system]
         refdata = cache.reference_data[system]
-        refmp = refdata["mp"]
-        ref = refdata[method][kind]
-
+        ref = refdata[prefix.replace("_", "-") + method][kind]
         n_ref = len(ref["eigenvalues"])
         smallsystem = ("sto3g" in system or "631g" in system)
 
@@ -59,14 +58,17 @@ class TestFunctionality(unittest.TestCase):
         assert_allclose(res.excitation_energies[:n_ref],
                         ref["eigenvalues"], atol=1e-7)
 
-        if res.method.level >= 2:
-            assert res.ground_state.energy_correction(2) == \
-                approx(refmp["mp2"]["energy"])
-        if res.method.level >= 3 and not res.method.is_core_valence_separated:
-            # TODO The latter check can be removed once CVS-MP3 energies
-            #      are implemented
-            assert res.ground_state.energy_correction(3) == \
-                approx(refmp["mp3"]["energy"])
+        if test_mp:
+            refmp = refdata[prefix + "mp"]
+            if res.method.level >= 2:
+                assert res.ground_state.energy_correction(2) == \
+                    approx(refmp["mp2"]["energy"])
+            if res.method.level >= 3:
+                if not res.method.is_core_valence_separated:
+                    # TODO The latter check can be removed once CVS-MP3 energies
+                    #      are implemented
+                    assert res.ground_state.energy_correction(3) == \
+                        approx(refmp["mp3"]["energy"])
 
         if method == "adc0" and "cn" in system:
             # TODO Investigate this
@@ -101,7 +103,7 @@ class TestFunctionality(unittest.TestCase):
         # Test we do not use too many iterations
         if smallsystem:
             n_iter_bound = {
-                "adc0": 1, "adc1": 4, "adc2": 6, "adc2x": 13, "adc3": 13,
+                "adc0": 1, "adc1": 4, "adc2": 9, "adc2x": 14, "adc3": 13,
                 "cvs-adc0": 1, "cvs-adc1": 4, "cvs-adc2": 5, "cvs-adc2x": 12,
                 "cvs-adc3": 13,
             }[method]
@@ -113,9 +115,9 @@ class TestFunctionality(unittest.TestCase):
             }[method]
         assert res.n_iter <= n_iter_bound
 
-    #
-    # General
-    #
+
+@expand_test_templates(methods)
+class TestFunctionalityGeneral(TestFunctionalityBase):
     def template_h2o_sto3g_singlets(self, method):
         self.base_test("h2o_sto3g", method, "singlet", n_singlets=10)
 
@@ -143,9 +145,9 @@ class TestFunctionality(unittest.TestCase):
         self.base_test("cn_ccpvdz", method, "state",
                        n_states=n_states, **kwargs)
 
-    #
-    # CVS
-    #
+
+@expand_test_templates(methods)
+class TestFunctionalityCvs(TestFunctionalityBase):
     def template_cvs_h2o_sto3g_singlets(self, method):
         n_singlets = 3
         if method in ["adc0", "adc1"]:
@@ -179,8 +181,155 @@ class TestFunctionality(unittest.TestCase):
         self.base_test("cn_ccpvdz", "cvs-" + method, "state", n_states=5,
                        n_core_orbitals=1, **kwargs)
 
-    #
-    # Spin-flip
-    #
+
+@expand_test_templates(methods)
+class TestFunctionalitySpinFlip(TestFunctionalityBase):
     def template_hf3_spin_flip(self, method):
         self.base_test("hf3_631g", method, "spin_flip", n_spin_flip=9)
+
+
+class TestFunctionalitySpaces(TestFunctionalityBase):
+    #
+    # H2O STO-3G
+    #
+    def base_test_h2o_sto3g(self, prefix, method, kind):
+        kw_prefix = {"fc": {"frozen_core": 1},
+                     "fv": {"frozen_virtual": 1}, }
+        kw_kind = {"singlet": {"n_singlets": 3},
+                   "triplet": {"n_triplets": 3}, }
+
+        kw_extra = kw_kind[kind]
+        for pfx in prefix.split("-"):
+            kw_extra.update(kw_prefix[pfx])
+        if "cvs" in method:
+            kw_extra["core_orbitals"] = 1
+        self.base_test("h2o_sto3g", method, kind, prefix=prefix, **kw_extra)
+
+    def test_h2o_sto3g_fc_adc2_singlets(self):
+        self.base_test_h2o_sto3g("fc", "adc2", "singlet")
+
+    def test_h2o_sto3g_fc_adc2_triplets(self):
+        self.base_test_h2o_sto3g("fc", "adc2", "triplet")
+
+    def test_h2o_sto3g_fc_fv_adc2_singlets(self):
+        self.base_test_h2o_sto3g("fc-fv", "adc2", "singlet")
+
+    def test_h2o_sto3g_fc_fv_adc2_triplets(self):
+        self.base_test_h2o_sto3g("fc-fv", "adc2", "triplet")
+
+    def test_h2o_sto3g_fv_adc2x_singlets(self):
+        self.base_test_h2o_sto3g("fv", "adc2x", "singlet")
+
+    def test_h2o_sto3g_fv_adc2x_triplets(self):
+        self.base_test_h2o_sto3g("fv", "adc2x", "triplet")
+
+    def test_h2o_sto3g_fv_cvs_adc2x_singlets(self):
+        self.base_test_h2o_sto3g("fv", "cvs-adc2x", "singlet")
+
+    def test_h2o_sto3g_fv_cvs_adc2x_triplets(self):
+        self.base_test_h2o_sto3g("fv", "cvs-adc2x", "triplet")
+
+    #
+    # CN STO-3G
+    #
+    def base_test_cn_sto3g(self, prefix, method):
+        kw_prefix = {"fc": {"frozen_core": 1},
+                     "fv": {"frozen_virtual": 1}, }
+        kw_extra = {"n_states": 4, }
+        for pfx in prefix.split("-"):
+            kw_extra.update(kw_prefix[pfx])
+        if "cvs" in method:
+            kw_extra["core_orbitals"] = 1
+        self.base_test("cn_sto3g", method, "state", prefix=prefix, **kw_extra)
+
+    def test_cn_sto3g_fc_adc2(self):
+        self.base_test_cn_sto3g("fc", "adc2")
+
+    def test_cn_sto3g_fc_fv_adc2(self):
+        self.base_test_cn_sto3g("fc-fv", "adc2")
+
+    def test_cn_sto3g_fv_adc2x(self):
+        self.base_test_cn_sto3g("fv", "adc2x")
+
+    def test_cn_sto3g_fv_cvs_adc2x(self):
+        self.base_test_cn_sto3g("fv", "cvs-adc2x")
+
+    #
+    # H2S STO-3G
+    #
+    def base_test_h2s_sto3g(self, prefix, method, kind):
+        kw_prefix = {"fc": {"frozen_core": 1},
+                     "fv": {"frozen_virtual": 1}, }
+        kw_kind = {"singlet": {"n_singlets": 3},
+                   "triplet": {"n_triplets": 3}, }
+        kw_extra = kw_kind[kind]
+        for pfx in prefix.split("-"):
+            kw_extra.update(kw_prefix[pfx])
+        if "cvs" in method:
+            kw_extra["core_orbitals"] = 1
+        self.base_test("h2s_sto3g", method, kind, prefix=prefix, test_mp=False,
+                       **kw_extra)
+
+    def test_h2s_sto3g_fc_cvs_adc2_singlets(self):
+        self.base_test_h2s_sto3g("fc", "cvs-adc2", "singlet")
+
+    def test_h2s_sto3g_fc_cvs_adc2_triplets(self):
+        self.base_test_h2s_sto3g("fc", "cvs-adc2", "triplet")
+
+    def test_h2s_sto3g_fc_fv_cvs_adc2x_singlets(self):
+        self.base_test_h2s_sto3g("fc-fv", "cvs-adc2x", "singlet")
+
+    def test_h2s_sto3g_fc_fv_cvs_adc2x_triplets(self):
+        self.base_test_h2s_sto3g("fc-fv", "cvs-adc2x", "triplet")
+
+    #
+    # H2S 6311+G**
+    #
+    def base_test_h2s_6311g(self, prefix, method, kind):
+        kw_prefix = {"fc": {"frozen_core": 1},
+                     "fv": {"frozen_virtual": 3}, }
+        kw_kind = {"singlet": {"n_singlets": 3},
+                   "triplet": {"n_triplets": 3}, }
+
+        kw_extra = kw_kind[kind]
+        for pfx in prefix.split("-"):
+            kw_extra.update(kw_prefix[pfx])
+        if "cvs" in method:
+            kw_extra["core_orbitals"] = 1
+        self.base_test("h2s_6311g", method, kind, prefix=prefix, **kw_extra)
+
+    def test_h2s_6311g_fc_adc2_singlets(self):
+        self.base_test_h2s_6311g("fc", "adc2", "singlet")
+
+    def test_h2s_6311g_fc_adc2_triplets(self):
+        self.base_test_h2s_6311g("fc", "adc2", "triplet")
+
+    def test_h2s_6311g_fv_adc2_singlets(self):
+        self.base_test_h2s_6311g("fv", "adc2", "singlet")
+
+    def test_h2s_6311g_fv_adc2_triplets(self):
+        self.base_test_h2s_6311g("fv", "adc2", "triplet")
+
+    def test_h2s_6311g_fc_fv_adc2_singlets(self):
+        self.base_test_h2s_6311g("fc-fv", "adc2", "singlet")
+
+    def test_h2s_6311g_fc_fv_adc2_triplets(self):
+        self.base_test_h2s_6311g("fc-fv", "adc2", "triplet")
+
+    def test_h2s_6311g_fc_cvs_adc2x_singlets(self):
+        self.base_test_h2s_6311g("fc", "cvs-adc2x", "singlet")
+
+    def test_h2s_6311g_fc_cvs_adc2x_triplets(self):
+        self.base_test_h2s_6311g("fc", "cvs-adc2x", "triplet")
+
+    def test_h2s_6311g_fv_cvs_adc2x_singlets(self):
+        self.base_test_h2s_6311g("fv", "cvs-adc2x", "singlet")
+
+    def test_h2s_6311g_fv_cvs_adc2x_triplets(self):
+        self.base_test_h2s_6311g("fv", "cvs-adc2x", "triplet")
+
+    def test_h2s_6311g_fc_fv_cvs_adc2x_singlets(self):
+        self.base_test_h2s_6311g("fc-fv", "cvs-adc2x", "singlet")
+
+    def test_h2s_6311g_fc_fv_cvs_adc2x_triplets(self):
+        self.base_test_h2s_6311g("fc-fv", "cvs-adc2x", "triplet")
