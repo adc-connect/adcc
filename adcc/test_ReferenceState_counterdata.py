@@ -20,14 +20,17 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
 import unittest
 import numpy as np
 
+from .misc import expand_test_templates
+from .DictHfProvider import DictOperatorIntegralProvider
+
 from numpy.testing import assert_array_equal
 
+import adcc
+
 from libadcc import HartreeFockProvider
-from .DictHfProvider import DictOperatorIntegralProvider
 
 
 class HfCounterData(HartreeFockProvider):
@@ -231,43 +234,54 @@ class HfCounterData(HartreeFockProvider):
         out[:] = full[slices]
 
 
+@expand_test_templates(["restricted", "unrestricted"])
 class TestReferenceStateCounterData(unittest.TestCase):
     def base_test(self, n_alpha, n_beta, n_bas, n_orbs_alpha, restricted,
-                  check_symmetry=False, core_orbitals=[]):
+                  check_symmetry=False, core_orbitals=[], frozen_core=[],
+                  frozen_virtual=[]):
+        if not isinstance(restricted, bool):
+            restricted = (restricted == "restricted")
         data = HfCounterData(n_alpha, n_beta, n_bas, n_orbs_alpha, restricted)
-        refstate = adcc.ReferenceState(data, core_orbitals,
+        refstate = adcc.ReferenceState(data, core_orbitals, frozen_core,
+                                       frozen_virtual,
                                        symmetry_check_on_import=check_symmetry,
                                        import_all_below_n_orbs=None)
 
         # Setup spaces and refstate axis
         subspaces = ["o1", "v1"]
         ref_axis = {"b": np.arange(1, n_bas + 1)}
-        axis_fa = data.get_fa_range()
-        axis_fb = data.get_fb_range()
-        if not core_orbitals:
-            ref_axis["o1"] = ((axis_fa[:n_alpha], axis_fb[:n_beta]))
-            ref_axis["v1"] = ((axis_fa[n_alpha:], axis_fb[n_beta:]))
-        else:
-            if not isinstance(core_orbitals, tuple):
-                raise NotImplementedError("Only core_orbitals as tuple "
-                                          "implemented.")
+        done_a = []  # Orbitals which are done (occ or virt)
+        done_b = []
+        na_rest = n_alpha  # Remaining alpha and beta orbitals to distribute
+        nb_rest = n_beta
 
-            subspaces += ["o2"]
-            n_core = len(core_orbitals[0])
-            core_a = np.array(core_orbitals[0]) + 1
-            core_b = np.array(core_orbitals[1]) + 1 + n_orbs_alpha
+        def add_subspace(orbitals, sid):  # Add a new subspace
+            subspaces.append(sid)
+            orbs_a = np.array(orbitals[0]) + 1
+            orbs_b = np.array(orbitals[1]) + 1 + n_orbs_alpha
             if restricted:
-                core_b -= n_orbs_alpha
-            ref_axis["o2"] = ((core_a, core_b))
+                orbs_b -= n_orbs_alpha
+            ref_axis[sid] = ((orbs_a, orbs_b))
+            done_a.extend(orbs_a)
+            done_b.extend(orbs_b)
 
-            na_rest = n_alpha - n_core
-            nb_rest = n_beta - n_core
-            notcore_a = np.array([o for o in axis_fa
-                                  if not np.any(np.abs(core_a - o) < 1e-12)])
-            notcore_b = np.array([o for o in axis_fb
-                                  if not np.any(np.abs(core_b - o) < 1e-12)])
-            ref_axis["o1"] = ((notcore_a[:na_rest], notcore_b[:nb_rest]))
-            ref_axis["v1"] = ((notcore_a[na_rest:], notcore_b[nb_rest:]))
+        if core_orbitals:
+            add_subspace(core_orbitals, "o2")
+            na_rest -= len(core_orbitals[0])
+            nb_rest -= len(core_orbitals[1])
+        if frozen_core:
+            add_subspace(frozen_core, "o3")
+            na_rest -= len(frozen_core[0])
+            nb_rest -= len(frozen_core[1])
+        if frozen_virtual:
+            add_subspace(frozen_virtual, "v2")
+
+        notdone_a = np.array([o for o in data.get_fa_range()
+                              if not np.any(np.abs(done_a - o) < 1e-12)])
+        notdone_b = np.array([o for o in data.get_fb_range()
+                              if not np.any(np.abs(done_b - o) < 1e-12)])
+        ref_axis["o1"] = ((notdone_a[:na_rest], notdone_b[:nb_rest]))
+        ref_axis["v1"] = ((notdone_a[na_rest:], notdone_b[nb_rest:]))
 
         # General properties
         assert refstate.restricted == restricted
@@ -316,7 +330,7 @@ class TestReferenceStateCounterData(unittest.TestCase):
         #      tests in test_ReferenceState_refdata.py.
         #      For this reason I will comment it out and leave it for another
         #      time / person to pick it up --- against my usual habit of never
-        #      commiting big chunks of commented code to master.
+        #      committing big chunks of commented code to master.
         #
         # # Eri
         # for ss1 in subspaces:
@@ -346,36 +360,98 @@ class TestReferenceStateCounterData(unittest.TestCase):
         #                                   ref_axis[ss3], ref_axis[ss4])
         #                 )
 
-    def test_small_restricted(self):
+    #
+    # Gen & CVS
+    #
+    def template_0gen_small(self, restricted):
         self.base_test(n_alpha=3, n_beta=3, n_bas=8, n_orbs_alpha=8,
-                       restricted=True, check_symmetry=False)
-        #              # check_symmetry=True fails because non-contiguous
-        #              # fock import is not yet implemented.
+                       restricted=restricted, check_symmetry=False)
+        #              # XXX check_symmetry=True fails because a
+        #                write buffer overflow
 
-    def test_medium_restricted(self):
+    def template_0gen_medium(self, restricted):
         self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
-                       restricted=True)
+                       restricted=restricted)
 
-    def test_large_restricted(self):
+    def template_0gen_large(self, restricted):
         self.base_test(n_alpha=21, n_beta=21, n_bas=60, n_orbs_alpha=60,
-                       restricted=True)
+                       restricted=restricted)
 
-    def test_small(self):
-        self.base_test(n_alpha=3, n_beta=3, n_bas=8, n_orbs_alpha=8,
-                       restricted=False)
-
-    def test_medium(self):
+    def template_cvs_medium(self, restricted):
         self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
-                       restricted=False)
+                       restricted=restricted, core_orbitals=([0, 1], [0, 1]))
 
-    def test_large(self):
-        self.base_test(n_alpha=21, n_beta=21, n_bas=60, n_orbs_alpha=60,
-                       restricted=False)
-
-    def test_medium_cvs_restricted(self):
-        self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
-                       restricted=True, core_orbitals=([0, 1], [0, 1]))
-
-    def test_large_cvs_restricted(self):
+    def test_cvs_large_restricted(self):
         self.base_test(n_alpha=15, n_beta=15, n_bas=60, n_orbs_alpha=60,
                        restricted=True, core_orbitals=([0, 1, 2], [0, 1, 2]))
+
+    #
+    # frozen-core
+    #
+    def template_fc_medium(self, restricted):
+        self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
+                       restricted=restricted, frozen_core=([0, 1], [0, 1]))
+
+    def test_fc_large_restricted(self):
+        self.base_test(n_alpha=15, n_beta=15, n_bas=60, n_orbs_alpha=60,
+                       restricted=True, frozen_core=([0, 1, 2], [0, 1, 2]))
+
+    def template_fc_cvs_medium(self, restricted):
+        self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
+                       restricted=restricted, frozen_core=([0], [0]),
+                       core_orbitals=([1], [1]))
+
+    def test_fc_cvs_large_restricted(self):
+        self.base_test(n_alpha=15, n_beta=15, n_bas=60, n_orbs_alpha=60,
+                       restricted=True, frozen_core=([0], [0]),
+                       core_orbitals=([1, 2], [1, 2]))
+
+    #
+    # frozen-virtual
+    #
+    def template_fv_medium(self, restricted):
+        self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
+                       restricted=restricted,
+                       frozen_virtual=([18, 19], [18, 19]))
+
+    def test_fv_large_restricted(self):
+        self.base_test(n_alpha=15, n_beta=15, n_bas=60, n_orbs_alpha=60,
+                       restricted=True,
+                       frozen_virtual=([57, 58, 59], [57, 58, 59]))
+
+    def template_fv_cvs_medium(self, restricted):
+        self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
+                       restricted=restricted,
+                       frozen_virtual=([18, 19], [18, 19]),
+                       core_orbitals=([0, 1], [0, 1]))
+
+    def test_fv_cvs_large_restricted(self):
+        self.base_test(n_alpha=15, n_beta=15, n_bas=60, n_orbs_alpha=60,
+                       restricted=True,
+                       frozen_virtual=([57, 58, 59], [57, 58, 59]),
+                       core_orbitals=([0, 1, 2], [0, 1, 2]))
+
+    #
+    # frozen-core, frozen-virtual
+    #
+    def template_fc_fv_medium(self, restricted):
+        self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
+                       restricted=restricted, frozen_core=([0, 1], [0, 1]),
+                       frozen_virtual=([18, 19], [18, 19]))
+
+    def test_fc_fv_large_restricted(self):
+        self.base_test(n_alpha=15, n_beta=15, n_bas=60, n_orbs_alpha=60,
+                       restricted=True, frozen_core=([0, 1, 2], [0, 1, 2]),
+                       frozen_virtual=([57, 58, 59], [57, 58, 59]))
+
+    def template_fc_fv_cvs_medium(self, restricted):
+        self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
+                       restricted=restricted,
+                       frozen_virtual=([18, 19], [18, 19]),
+                       frozen_core=([0], [0]), core_orbitals=([1], [1]))
+
+    def test_fc_fv_cvs_large_restricted(self):
+        self.base_test(n_alpha=15, n_beta=15, n_bas=60, n_orbs_alpha=60,
+                       restricted=True,
+                       frozen_virtual=([57, 58, 59], [57, 58, 59]),
+                       frozen_core=([0], [0]), core_orbitals=([1, 2], [1, 2]))
