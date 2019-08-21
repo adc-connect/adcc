@@ -36,6 +36,75 @@ import libadcc
 __all__ = ["ReferenceState"]
 
 
+def expand_spaceargs(hfdata, **spaceargs):
+    if isinstance(spaceargs.get("frozen_core", None), bool) \
+       and spaceargs.get("frozen_core", None):
+        # Determine number of frozen core electrons automatically
+        # TODO The idea is to look at the energy gap in the HF orbital
+        #      energies and exclude the ones, which are very far from the
+        #      HOMO-LUMO gap.
+        raise NotImplementedError("Automatic determination of frozen-core "
+                                  "electrons not implemented.")
+        #
+        # TODO One could also adopt the idea in the paper by Andreas and Chong
+        #      how to automatically select the frozen_virtual orbitals in a
+        #      clever way.
+        #
+
+    def expand_to_list(space, entry, from_min=None, from_max=None):
+        if from_min is None and from_max is None:
+            raise ValueError("Both from_min and from_max is None")
+        if entry is None:
+            return np.array([])
+        elif isinstance(entry, int):
+            if from_min is not None:
+                return from_min + np.arange(entry)
+            return np.arange(from_max - entry, from_max)
+        elif isinstance(entry, Iterable):
+            return np.array(entry)
+        else:
+            raise TypeError("Unsupported type {} passed to argument {}"
+                            "".format(type(entry), space))
+
+    for key in spaceargs:
+        if not isinstance(spaceargs[key], tuple):
+            spaceargs[key] = (spaceargs[key], spaceargs[key])
+
+    any_iterable = False
+    for key in spaceargs:
+        for spin in [0, 1]:
+            if isinstance(spaceargs[key][spin], Iterable):
+                any_iterable = True
+            elif spaceargs[key][spin] is not None:
+                if any_iterable:
+                    raise ValueError("If one of the values of frozen_core, "
+                                     "core_orbitals, frozen_virtual is an "
+                                     "iterable, all must be.")
+
+    noa = hfdata.n_orbs_alpha
+    n_orbs = [0, 0]
+    for key in ["frozen_core", "core_orbitals"]:
+        if key not in spaceargs:
+            continue
+        list_alpha = expand_to_list(key, spaceargs[key][0],
+                                    from_min=n_orbs[0])
+        list_beta = noa + expand_to_list(key, spaceargs[key][1],
+                                         from_min=n_orbs[1])
+        spaceargs[key] = np.concatenate((list_alpha, list_beta)).tolist()
+        n_orbs[0] += len(list_alpha)
+        n_orbs[1] += len(list_beta)
+
+    key = "frozen_virtual"
+    if key in spaceargs:
+        spaceargs[key] = np.concatenate((
+            expand_to_list(key, spaceargs[key][0],
+                           from_max=hfdata.n_orbs_alpha),
+            noa + expand_to_list(key, spaceargs[key][1],
+                                 from_max=hfdata.n_orbs_beta)
+        )).tolist()
+    return spaceargs
+
+
 class ReferenceState(libadcc.ReferenceState):
     def __init__(self, hfdata, core_orbitals=None, frozen_core=None,
                  frozen_virtual=None, symmetry_check_on_import=False,
@@ -142,69 +211,9 @@ class ReferenceState(libadcc.ReferenceState):
         if not isinstance(hfdata, libadcc.HartreeFockSolution_i):
             hfdata = import_scf_results(hfdata)
 
-        if isinstance(frozen_core, bool) and frozen_core:
-            # Determine number of frozen core electrons automatically
-            # TODO The idea is to look at the energy gap in the HF orbital
-            #      energies and exclude the ones, which are very far from the
-            #      HOMO-LUMO gap.
-            raise NotImplementedError("Automatic determination of frozen-core "
-                                      "electrons not implemented.")
-
-        #
-        # Normalise and deal with space arguments
-        #
-        spaceargs = {"frozen_core": frozen_core, "core_orbitals": core_orbitals,
-                     "frozen_virtual": frozen_virtual}
-
-        def expand_to_list(space, entry, from_min=None, from_max=None):
-            if from_min is None and from_max is None:
-                raise ValueError("Both from_min and from_max is None")
-            if entry is None:
-                return np.array([])
-            elif isinstance(entry, int):
-                if from_min is not None:
-                    return from_min + np.arange(entry)
-                return np.arange(from_max - entry, from_max)
-            elif isinstance(entry, Iterable):
-                return np.array(entry)
-            else:
-                raise TypeError("Unsupported type {} passed to argument {}"
-                                "".format(type(entry), space))
-
-        for key in spaceargs:
-            if not isinstance(spaceargs[key], tuple):
-                spaceargs[key] = (spaceargs[key], spaceargs[key])
-
-        any_iterable = False
-        for key in spaceargs:
-            for spin in [0, 1]:
-                if isinstance(spaceargs[key][spin], Iterable):
-                    any_iterable = True
-                elif spaceargs[key][spin] is not None:
-                    if any_iterable:
-                        raise ValueError("If one of the values of frozen_core, "
-                                         "core_orbitals, frozen_virtual is an "
-                                         "iterable, all must be.")
-
-        n_orbs = [0, 0]
-        for key in ["frozen_core", "core_orbitals"]:
-            noa = hfdata.n_orbs_alpha
-            list_alpha = expand_to_list(key, spaceargs[key][0],
-                                        from_min=n_orbs[0])
-            list_beta = noa + expand_to_list(key, spaceargs[key][1],
-                                             from_min=n_orbs[1])
-            spaceargs[key] = np.concatenate((list_alpha, list_beta)).tolist()
-            n_orbs[0] += len(list_alpha)
-            n_orbs[1] += len(list_beta)
-
-        key = "frozen_virtual"
-        spaceargs[key] = np.concatenate((
-            expand_to_list(key, spaceargs[key][0],
-                           from_max=hfdata.n_orbs_alpha),
-            noa + expand_to_list(key, spaceargs[key][1],
-                                 from_max=hfdata.n_orbs_beta)
-        )).tolist()
-
+        spaceargs = expand_spaceargs(hfdata, frozen_core=frozen_core,
+                                     frozen_virtual=frozen_virtual,
+                                     core_orbitals=core_orbitals)
         super().__init__(hfdata, memory_pool, spaceargs["core_orbitals"],
                          spaceargs["frozen_core"], spaceargs["frozen_virtual"],
                          symmetry_check_on_import)
