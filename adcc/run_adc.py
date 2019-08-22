@@ -122,7 +122,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         orbitals for both the MP and ADC methods performed). For ways to define
         these see the description in :py:class:`adcc.ReferenceState`.
 
-    frozen_virtual : int, optional
+    frozen_virtual : int or list or tuple, optional
         The orbitals to select as frozen virtual orbitals (i.e. inactive
         virtuals for both the MP and ADC methods performed). For ways to define
         these see the description in :py:class:`adcc.ReferenceState`.
@@ -160,9 +160,15 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
 
     >>> state = adcc.adc2(mf, n_singlets=3)
 
+    Run a CVS-ADC(3) calculation of O2 with one core-occupied orbital
 
-
-
+    >>> from pyscf import gto, scf
+    ... mol = gto.mole.M(atom="O 0 0 0; O 0 0 1.2", basis="sto-3g")
+    ... mf = scf.RHF(mol)
+    ... mf.conv_tol_grad = 1e-8
+    ... mf.kernel()
+    ...
+    ... state = adcc.cvs_adc3(mf, core_orbitals=1, n_singlets=3)
     """
     #
     # Input argument sanitisation
