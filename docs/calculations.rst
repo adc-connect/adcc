@@ -1,3 +1,5 @@
+.. _performing-calculations:
+
 Performing calculations with adcc
 =================================
 
@@ -14,10 +16,14 @@ that is **ADC(0)**, **ADC(1)**, **ADC(2)**, **ADC(2)-x** and **ADC(3)**.
 For each of these methods, basic state properties and transition properties
 such as the state dipole moments or the oscillator strengths are available.
 More complicated analysis can be performed in user code by requesting
-the full state and transition density matrices as NumPy arrays.
+the full state and transition density matrices e.g. as NumPy arrays.
+
 The code supports the **spin-flip** variant of all aforementioned methods
-and furthermore allows the **core-valence separation** to be applied
-for all methods (except ADC(3)).
+and furthermore allows the **core-valence separation** (CVS),
+**frozen-core** (FC) and **frozen-virtual** (FV) approximations
+to be applied. Arbitrary combinations of these variants,
+e.g. applying **both** CVS and FC approximations are supported as well.
+See :ref:`frozen-spaces` for details.
 
 General ADC(n) calculations
 ---------------------------
@@ -476,6 +482,15 @@ we need to run the code (now using Psi4)
    
    # Run CVS-ADC(2) solving for 4 singlet excitations of the oxygen 1s
    states = adcc.cvs_adc2(wfn, n_singlets=4, n_core_orbitals=1)
+
+.. _frozen-spaces:
+
+Restricting active orbitals: Frozen core and frozen virtuals
+------------------------------------------------------------
+
+.. note::
+   Write this section
+
 
 Further examples and details
 ----------------------------
