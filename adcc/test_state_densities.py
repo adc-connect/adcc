@@ -22,10 +22,10 @@
 ## ---------------------------------------------------------------------
 import unittest
 
-from .misc import expand_test_templates
-
-from pytest import approx
 from adcc.testdata.cache import cache
+
+from .misc import expand_test_templates
+from pytest import approx
 
 # The methods to test
 basemethods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
@@ -38,46 +38,58 @@ class Runners():
         raise NotImplementedError
 
     def template_h2o_sto3g_singlet(self, method):
-        kwargs = {}
-        if method == "adc3":
-            kwargs = {"propmethod": "adc2"}
-        self.base_test("h2o_sto3g", method, "singlet", **kwargs)
+        self.base_test("h2o_sto3g", method, "singlet")
 
     def template_h2o_def2tzvp_singlet(self, method):
-        kwargs = {}
-        if method == "adc3":
-            kwargs = {"propmethod": "adc2"}
-        self.base_test("h2o_def2tzvp", method, "singlet", **kwargs)
+        self.base_test("h2o_def2tzvp", method, "singlet")
 
     def template_h2o_sto3g_triplet(self, method):
-        kwargs = {}
-        if method == "adc3":
-            kwargs = {"propmethod": "adc2"}
-        self.base_test("h2o_sto3g", method, "triplet", **kwargs)
+        self.base_test("h2o_sto3g", method, "triplet")
 
     def template_h2o_def2tzvp_triplet(self, method):
-        kwargs = {}
-        if method == "adc3":
-            kwargs = {"propmethod": "adc2"}
-        self.base_test("h2o_def2tzvp", method, "triplet", **kwargs)
+        self.base_test("h2o_def2tzvp", method, "triplet")
 
     def template_cn_sto3g(self, method):
-        kwargs = {}
-        if method == "adc3":
-            kwargs = {"propmethod": "adc2"}
-        self.base_test("cn_sto3g", method, "state", **kwargs)
+        self.base_test("cn_sto3g", method, "state")
 
     def template_cn_ccpvdz(self, method):
-        kwargs = {}
-        if method == "adc3":
-            kwargs = {"propmethod": "adc2"}
-        self.base_test("cn_ccpvdz", method, "state", **kwargs)
+        self.base_test("cn_ccpvdz", method, "state")
 
     def template_hf3_631g_spin_flip(self, method):
-        kwargs = {}
-        if method == "adc3":
-            kwargs = {"propmethod": "adc2"}
-        self.base_test("hf3_631g", method, "spin_flip", **kwargs)
+        self.base_test("hf3_631g", method, "spin_flip")
+
+    #
+    # Other runners (to test that FC and FV work as they should)
+    #
+    def test_h2o_sto3g_fc_adc2_singlets(self):
+        self.base_test("h2o_sto3g", "fc_adc2", "singlet")
+
+    def test_h2o_sto3g_fv_adc2x_singlets(self):
+        self.base_test("h2o_sto3g", "fv_adc2x", "singlet")
+
+    def test_cn_sto3g_fc_adc2_states(self):
+        self.base_test("cn_sto3g", "fc_adc2", "state")
+
+    def test_cn_sto3g_fv_adc2x_states(self):
+        self.base_test("cn_sto3g", "fv_adc2x", "state")
+
+    def test_cn_sto3g_fv_cvs_adc2x_states(self):
+        self.base_test("cn_sto3g", "fv_cvs_adc2x", "state")
+
+    def test_h2s_sto3g_fc_cvs_adc2_singlets(self):
+        self.base_test("h2s_sto3g", "fc_cvs_adc2", "singlet")
+
+    def test_h2s_6311g_fc_adc2_singlets(self):
+        self.base_test("h2s_6311g", "fc_adc2", "singlet")
+
+    def test_h2s_6311g_fv_adc2_singlets(self):
+        self.base_test("h2s_6311g", "fv_adc2", "singlet")
+
+    def test_h2s_6311g_fc_cvs_adc2x_singlets(self):
+        self.base_test("h2s_6311g", "fc_cvs_adc2x", "singlet")
+
+    def test_h2s_6311g_fv_cvs_adc2x_singlets(self):
+        self.base_test("h2s_6311g", "fv_cvs_adc2x", "singlet")
 
 
 # Return combinations not tested so far:
@@ -92,11 +104,8 @@ delattr(Runners, "test_hf3_631g_spin_flip_cvs_adc3")
 
 
 class TestStateDiffDm(unittest.TestCase, Runners):
-    def base_test(self, system, method, kind, propmethod=None):
-        if propmethod is None:
-            propmethod = method
+    def base_test(self, system, method, kind):
         method = method.replace("_", "-")
-        propmethod = propmethod.replace("_", "-")
 
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
@@ -119,11 +128,8 @@ class TestStateDiffDm(unittest.TestCase, Runners):
 
 
 class TestStateGroundToExcitedTdm(unittest.TestCase, Runners):
-    def base_test(self, system, method, kind, propmethod=None):
-        if propmethod is None:
-            propmethod = method
+    def base_test(self, system, method, kind):
         method = method.replace("_", "-")
-        propmethod = propmethod.replace("_", "-")
 
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]

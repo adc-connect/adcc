@@ -21,7 +21,9 @@
 ##
 ## ---------------------------------------------------------------------
 import os
+
 import adcc
+import pytest
 
 from .geometry import xyz
 
@@ -30,27 +32,25 @@ from adcc.misc import cached_property
 from adcc.solver import EigenSolverStateBase
 from adcc.caching_policy import CacheAllPolicy
 
-import pytest
-
 
 class AdcMockState(EigenSolverStateBase):
     def __init__(self, matrix):
         super().__init__(matrix)
 
 
-def make_mock_adc_state(refstate, method, kind, reference):
+def make_mock_adc_state(refstate, matmethod, kind, reference):
     ground_state = LazyMp(refstate, CacheAllPolicy())
-    matrix = AdcMatrix(method, ground_state)
+    matrix = AdcMatrix(matmethod, ground_state)
 
     # Number of full state results
-    n_full = len(reference[method][kind]["eigenvectors_singles"])
+    n_full = len(reference[kind]["eigenvectors_singles"])
 
     state = AdcMockState(matrix)
     state.method = matrix.method
     state.ground_state = ground_state
     state.reference_state = refstate
     state.kind = kind
-    state.eigenvalues = reference[method][kind]["eigenvalues"][:n_full]
+    state.eigenvalues = reference[kind]["eigenvalues"][:n_full]
 
     spin_change = 0
     if refstate.restricted and kind == "singlet":
@@ -68,9 +68,9 @@ def make_mock_adc_state(refstate, method, kind, reference):
         for i in range(n_full)
     ]
 
-    has_doubles = "eigenvectors_doubles" in reference[method][kind]
-    vec_singles = reference[method][kind]["eigenvectors_singles"]
-    vec_doubles = reference[method][kind].get("eigenvectors_doubles", None)
+    has_doubles = "eigenvectors_doubles" in reference[kind]
+    vec_singles = reference[kind]["eigenvectors_singles"]
+    vec_doubles = reference[kind].get("eigenvectors_doubles", None)
     for i, evec in enumerate(state.eigenvectors):
         evec["s"].set_from_ndarray(vec_singles[i])
         if has_doubles:
@@ -122,17 +122,17 @@ class TestdataCache():
     @cached_property
     def refstate_cvs(self):
         ret = {}
-        for key in self.testcases:
-            refcases = self.hfdata[key]["reference_cases"]
+        for case in self.testcases:
+            refcases = self.hfdata[case]["reference_cases"]
             if "cvs" not in refcases:
                 continue
-            ret[key] = adcc.ReferenceState(self.hfdata[key], **refcases["cvs"])
-            ret[key].import_all()
+            ret[case] = adcc.ReferenceState(self.hfdata[case], **refcases["cvs"])
+            ret[case].import_all()
         return ret
 
-    def refstate_nocache(self, key, case):
-        refcases = self.hfdata[key]["reference_cases"]
-        return adcc.ReferenceState(self.hfdata[key], **refcases[case])
+    def refstate_nocache(self, case, spec):
+        refcases = self.hfdata[case]["reference_cases"]
+        return adcc.ReferenceState(self.hfdata[case], **refcases[spec])
 
     @cached_property
     def hfimport(self):
@@ -179,18 +179,40 @@ class TestdataCache():
                     continue
                 res_case[method] = {
                     kind: make_mock_adc_state(self.refstate[case], method, kind,
-                                              self.reference_data[case])
+                                              self.reference_data[case][method])
                     for kind in available_kinds
                 }
 
-            for cvs_method in ["cvs-adc0", "cvs-adc1", "cvs-adc2",
-                               "cvs-adc2x", "cvs-adc3"]:
-                if cvs_method not in self.reference_data[case]:
+            for method in ["cvs-adc0", "cvs-adc1", "cvs-adc2",
+                           "cvs-adc2x", "cvs-adc3"]:
+                if method not in self.reference_data[case]:
                     continue
-                res_case[cvs_method] = {
+                res_case[method] = {
                     kind: make_mock_adc_state(self.refstate_cvs[case],
-                                              cvs_method, kind,
-                                              self.reference_data[case])
+                                              method, kind,
+                                              self.reference_data[case][method])
+                    for kind in available_kinds
+                }
+
+            other_methods = [(spec, cvs, basemethod) for spec in ["fc", "fv"]
+                             for cvs in ["", "cvs"]
+                             for basemethod in ["adc2", "adc2x"]]
+            for spec, cvs, basemethod in other_methods:
+                # Find the method to put into the ADC matrix class
+                if cvs:
+                    matmethod = cvs + "-" + basemethod
+                    fspec = spec + "-" + cvs
+                else:
+                    matmethod = basemethod
+                    fspec = spec
+                # The full method (including "spec" like "fc")
+                method = spec + "-" + matmethod
+                if method not in self.reference_data[case]:
+                    continue
+                res_case[method] = {
+                    kind: make_mock_adc_state(
+                        self.refstate_nocache(case, fspec), matmethod, kind,
+                        self.reference_data[case][method])
                     for kind in available_kinds
                 }
 
