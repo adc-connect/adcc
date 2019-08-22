@@ -20,21 +20,19 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
 import unittest
 import numpy as np
 
-from numpy.testing import assert_allclose, assert_almost_equal
-from adcc.testdata.cache import cache
-
 from .misc import expand_test_templates
+from numpy.testing import assert_allclose, assert_almost_equal
 
-# The methods to test
-testcases = cache.hfimport.keys()
+import adcc
+
+from adcc.testdata.cache import cache
 
 
 def compare_refstate_with_reference(
-    data, reference, case, scfres=None, compare_orbcoeff=True,
+    data, reference, spec, scfres=None, compare_orbcoeff=True,
     compare_eri_almost_abs=False
 ):
     atol = data["threshold"]
@@ -42,14 +40,13 @@ def compare_refstate_with_reference(
     if scfres:
         import_data = scfres
 
-    if case == "cvs":
-        refstate = adcc.ReferenceState(
-            import_data, core_orbitals=data["n_core_orbitals"]
-        )
-        subspaces = ["o1", "o2", "v1"]
-    else:
-        refstate = adcc.ReferenceState(import_data)
-        subspaces = ["o1", "v1"]
+    refstate = adcc.ReferenceState(import_data, **data["reference_cases"][spec])
+    subspaces = {
+        "gen": ["o1", "v1"], "cvs": ["o1", "o2", "v1"],
+        "fc": ["o1", "o3", "v1"], "fv": ["o1", "v1", "v2"],
+        "fc-fv": ["o1", "o3", "v1", "v2"], "fv-cvs": ["o1", "o2", "v1", "v2"]
+    }[spec]
+
     assert subspaces == [e.decode() for e in reference["subspaces"]]
     # General properties
     assert refstate.restricted == data["restricted"]
@@ -101,15 +98,18 @@ def compare_refstate_with_reference(
                             reference["eri"][ss], atol=atol)
 
 
+# The methods to test
+all_cases = cache.hfimport.keys()
+testcases = []
+for spec in ["gen", "cvs", "fc", "fv", "fc_fv", "fv_cvs"]:
+    testcases.extend([(spec, case) for case in all_cases
+                      if spec.replace("_", "-") in cache.hfimport[case]])
+
+
 @expand_test_templates(testcases)
 class TestReferenceStateReferenceData(unittest.TestCase):
-    def base_test(self, system, case):
-        data = cache.hfdata[system]
-        reference = cache.hfimport[system][case]
-        compare_refstate_with_reference(data, reference, case)
-
-    def template_generic(self, case):
-        self.base_test(case, "gen")
-
-    def template_cvs(self, case):
-        self.base_test(case, "cvs")
+    def template_hfimport(self, spec, case):
+        spec = spec.replace("_", "-")
+        data = cache.hfdata[case]
+        reference = cache.hfimport[case][spec]
+        compare_refstate_with_reference(data, reference, spec)

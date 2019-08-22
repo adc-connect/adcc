@@ -37,11 +37,8 @@ methods = [m for bm in basemethods for m in [bm, "cvs_" + bm]]
 
 
 class TestTransitionDipoleMoments(unittest.TestCase, Runners):
-    def base_test(self, system, method, kind, propmethod=None):
-        if propmethod is None:
-            propmethod = method
+    def base_test(self, system, method, kind):
         method = method.replace("_", "-")
-        propmethod = propmethod.replace("_", "-")
 
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
@@ -61,11 +58,8 @@ class TestTransitionDipoleMoments(unittest.TestCase, Runners):
 
 
 class TestOscillatorStrengths(unittest.TestCase, Runners):
-    def base_test(self, system, method, kind, propmethod=None):
-        if propmethod is None:
-            propmethod = method
+    def base_test(self, system, method, kind):
         method = method.replace("_", "-")
-        propmethod = propmethod.replace("_", "-")
 
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
@@ -81,11 +75,8 @@ class TestOscillatorStrengths(unittest.TestCase, Runners):
 
 
 class TestStateDipoleMoments(unittest.TestCase, Runners):
-    def base_test(self, system, method, kind, propmethod=None):
-        if propmethod is None:
-            propmethod = method
+    def base_test(self, system, method, kind):
         method = method.replace("_", "-")
-        propmethod = propmethod.replace("_", "-")
 
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]

@@ -1,3 +1,7 @@
+```eval_rst
+.. _getting-started:
+
+```
 # Getting Started
 
 ``` important:: This is the anticipated installation process,

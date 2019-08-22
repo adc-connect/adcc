@@ -20,17 +20,17 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
 import unittest
 import itertools
 
-from adcc.testdata.cache import cache
-from adcc.backends.testing import cached_backend_hf
-
-import pytest
-
 from .misc import expand_test_templates
 from .test_ReferenceState_refdata import compare_refstate_with_reference
+
+import adcc
+import pytest
+
+from adcc.testdata.cache import cache
+from adcc.backends.testing import cached_backend_hf
 
 # The methods to test (currently only restricted is supported in this test)
 testcases = [case for case in cache.hfimport.keys()
@@ -65,3 +65,5 @@ class TestBackendsImportReferenceData(unittest.TestCase):
 
     def template_cvs(self, case, backend):
         self.base_test(case, backend, "cvs")
+
+    # TODO Could test FC / FV and other imports as well

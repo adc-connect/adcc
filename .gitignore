@@ -16,6 +16,9 @@
 # Testing
 .pytest_cache
 
+# Jupyter
+.ipynb_checkpoints/
+
 # adccore
 /adccore
 

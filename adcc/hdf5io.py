@@ -20,10 +20,11 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import numpy as np
+
+from os.path import basename
 
 import h5py
-import numpy as np
-from os.path import basename
 
 
 def __emplace_ndarray(keyval, group, typ, **kwargs):
@@ -86,8 +87,8 @@ def __emplace_scalar(keyval, group, typ, compression=None, **kwargs):
             dtype = t[1]
             break
     if dtype is None:
-        raise TypeError("Encountered unknown data type '" +
-                        str(type(keyval[1])) + "'")
+        raise TypeError("Encountered unknown data type '"
+                        + str(type(keyval[1])) + "'")
 
     dset = group.create_dataset(keyval[0], data=keyval[1],
                                 dtype=dtype, **kwargs)
@@ -102,7 +103,7 @@ def __extract_scalar(dataset):
             break
 
     if dataset.shape == ():  # i.e. HDF5 scalar
-        ret = dataset.value
+        ret = dataset[()]
     else:
         ret = dataset[0]
 

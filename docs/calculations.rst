@@ -1,3 +1,5 @@
+.. _performing-calculations:
+
 Performing calculations with adcc
 =================================
 
@@ -14,10 +16,14 @@ that is **ADC(0)**, **ADC(1)**, **ADC(2)**, **ADC(2)-x** and **ADC(3)**.
 For each of these methods, basic state properties and transition properties
 such as the state dipole moments or the oscillator strengths are available.
 More complicated analysis can be performed in user code by requesting
-the full state and transition density matrices as NumPy arrays.
+the full state and transition density matrices e.g. as NumPy arrays.
+
 The code supports the **spin-flip** variant of all aforementioned methods
-and furthermore allows the **core-valence separation** to be applied
-for all methods (except ADC(3)).
+and furthermore allows the **core-valence separation** (CVS),
+**frozen-core** (FC) and **frozen-virtual** (FV) approximations
+to be applied. Arbitrary combinations of these variants,
+e.g. applying **both** CVS and FC approximations are supported as well.
+See :ref:`frozen-spaces` for details.
 
 General ADC(n) calculations
 ---------------------------
@@ -448,11 +454,13 @@ In other words, running a CVS-ADC(2)-x calculation can be achieved
 using :func:`adcc.cvs_adc2x`, a CVS-ADC(1) calculation
 using :func:`adcc.cvs_adc1`.
 Such a calculation requires one additional parameter,
-namely ``n_core_orbitals``, which determines the number of **spatial** orbitals
-to put into the core space. This is to say, that ``n_core_orbitals=1`` will
+namely ``core_orbitals``, which determines the number of **spatial** orbitals
+to put into the core space. This is to say, that ``core_orbitals=1`` will
 not just place one orbital into the core space,
-much rather one alpha and one beta orbital. Similarly ``n_core_orbitals=2``
+much rather one alpha and one beta orbital. Similarly ``core_orbitals=2``
 places two alphas and two betas into the core space and so on.
+By default the lowest-energy occupied orbitals are selected to be part of
+the core space.
 
 For example, in order to perform a CVS-ADC(2) calculation of water,
 which places the oxygen 1s core electrons into the core space,
@@ -475,7 +483,117 @@ we need to run the code (now using Psi4)
    scf_e, wfn = psi4.energy('SCF', return_wfn=True)
    
    # Run CVS-ADC(2) solving for 4 singlet excitations of the oxygen 1s
-   states = adcc.cvs_adc2(wfn, n_singlets=4, n_core_orbitals=1)
+   states = adcc.cvs_adc2(wfn, n_singlets=4, core_orbitals=1)
+
+.. _frozen-spaces:
+
+Restricting active orbitals: Frozen core and frozen virtuals
+------------------------------------------------------------
+
+In most cases the occupied orbitals in the core
+region of an atom are hardly involved in the valence to valence
+electronic transitions. Similarly the high-enery unoccupied
+molecular orbitals typically are discretised continuum states
+or other discretisation artifacts and thus are rarely important
+for properly describing valence-region electronic spectra.
+One technique common to all Post-HF excited-states methods
+is thus to ignore such orbitals in the Post-HF treatment
+to lower the computational burden.
+This is commonly referred to as **frozen core**
+or **frozen virtual** (or restricted virtual) approximation.
+Albeit clearly an approximative treatment,
+these techniques are simple to apply and the loss of accuracy
+is usually small, unless core-like, continuum-like or Rydberg-like
+excitations are to be modelled.
+
+In adcc the frozen core and frozen virtual approximations
+are disabled by default. They can be enabled
+in conjunction with any of :ref:`adcn-methods` via 
+two optional parameters, namely ``frozen_virtual``
+and ``frozen_core``. Similar to ``core_orbitals``,
+these arguments allow to specify the number of *spatial* orbitals
+to be placed in the respective spaces, thus
+the number of alpha and beta orbitals to deactivate in the ADC treatment.
+By default the *lowest-energy occupied* orbitals are selected
+with ``frozen_core`` to make up the frozen core space and the
+*highest-energy virtual* orbitals are selected with
+``frozen_virtual`` to give the frozen virtual space.
+
+For example the code
+
+.. code-block:: python
+
+   import psi4
+   
+   # Run SCF in Psi4
+   mol = psi4.geometry("""
+       O 0 0 0
+       H 0 0 1.795239827225189
+       H 1.693194615993441 0 -0.599043184453037
+       symmetry c1
+       units au
+   """)
+   psi4.core.be_quiet()
+   psi4.set_options({'basis': "cc-pvtz", 'e_convergence': 1e-13, 'd_convergence': 1e-7})
+   scf_e, wfn = psi4.energy('SCF', return_wfn=True)
+   
+   # Run FC-ADC(2) for 4 singlets with the O 1s in the frozen core space
+   states_fc = adcc.adc2(wfn, n_singlets=4, frozen_core=1)
+
+   # Run FV-ADC(2) for 4 singlets with 5 highest-energy orbitals
+   # in the frozen virtual space
+   states_fv = adcc.adc2(wfn, n_singlets=4, frozen_virtual=5)
+
+runs two ADC(2) calulationos for 4 singlets. In the first
+the oxygen 1s is flagged as inactive by placing it into the frozen core space.
+In the second the 5 highest-energy virtual orbitials are frozen (deactivated)
+instead.
+
+Frozen-core and frozen-virtual methods may be combined with
+CVS calulations. When specifying both ``frozen_core``
+and ``core_orbitals`` keep in mind that the frozen core orbitals
+are determined first, followed by the core-occupied orbitals.
+In this way one may deactivate part of lower-energy occupied orbitals
+and target a core excitation from a higher-energy core orbital.
+
+For example to target the 2s core excitations of hydrogen sulfide one may run:
+
+.. code-block:: python
+
+   from pyscf import gto, scf
+   import adcc
+
+   mol = gto.M(
+       atom='S  -0.38539679062   0 -0.27282082253;'
+            'H  -0.0074283962687 0  2.2149138578;'
+            'H   2.0860198029    0 -0.74589639249',
+       basis='cc-pvtz',
+       unit="Bohr"
+   )
+   scfres = scf.RHF(mol)
+   scfres.conv_tol = 1e-13
+   scfres.kernel()
+
+   # Run an FC-CVS-ADC(3) calculation: 1s frozen, 2s core-occupied
+   states = adcc.cvs_adc3(scfres, core_orbitals=1, frozen_core=1, n_singlets=3)
+   print(states.describe())
+
+which places the sulfur 1s orbitals into the frozen core space
+and the sulfur 2s orbitals into the core-occupied space.
+This yields a FC-CVS-ADC(2)-x treatment of this class of excitations.
+Notice that this is just an example. A much more accurate treatment
+of these excitations at full CVS-ADC(2)-x level can be achieved
+as well, namely by running
+
+.. code-block:: python
+
+   states = adcc.cvs_adc3(scfres, core_orbitals=2, n_singlets=3)
+
+Notice, that any other combination of CVS, FC and FV is possible
+as well.
+In fact all three may be combined jointly with any available ADC method,
+if desired.
+
 
 Further examples and details
 ----------------------------

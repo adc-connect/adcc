@@ -1,25 +1,20 @@
-```eval_rst
 .. _full-reference:
 
-```
-# Full adcc reference
+Full adcc reference
+===================
 
-```note::  Work in progress. Many function do not yet follow
-           the numpy standard in their documentation!
+.. note::
+   Work in progress. Many function do not yet follow
+   the numpy standard in their documentation!
 
-```
+This page contains a structured overview of the python API of adcc.
+See also the :ref:`genindex`.
 
-This page contains a structured overview of the
-`python` API of `adcc`.
-See also the [full index](genindex).
-
-```eval_rst
 .. _adcn-methods:
 
-```
+The adcc.adcN family of methods
+-------------------------------
 
-## The adcc.adcN family of methods
-```eval_rst
 .. autofunction:: adcc.run_adc
 
 .. py:function:: adcc.adc0(data_or_matrix, **kwargs)
@@ -64,19 +59,18 @@ See also the [full index](genindex).
 
 .. autoclass:: adcc.ExcitedStates
     :members:
-```
 
-## Visualisation
-```eval_rst
+Visualisation
+-------------
+
 .. automodule:: adcc.visualisation
     :members:
     :inherited-members:
 
-```
 
+Adc Middle layer
+----------------
 
-## Adc Middle layer
-```eval_rst
 .. autoclass:: adcc.AdcMatrix
     :members:
     :inherited-members:
@@ -96,10 +90,10 @@ See also the [full index](genindex).
     :inherited-members:
     :undoc-members:
 
-```
 
-## Tensor and symmetry interface
-```eval_rst
+Tensor and symmetry interface
+-----------------------------
+
 .. autoclass:: adcc.Tensor
     :members:
     :inherited-members:
@@ -127,10 +121,9 @@ See also the [full index](genindex).
 .. autofunction:: adcc.transpose
 .. autofunction:: adcc.zeros_like
 
-```
+Solvers
+-------
 
-## Solvers
-```eval_rst
 .. automodule:: adcc.solver.conjugate_gradient
     :members:
 
@@ -140,19 +133,19 @@ See also the [full index](genindex).
 .. automodule:: adcc.solver.power_method
     :members:
 
-```
+Properties
+----------
 
-## Properties
-```eval_rst
 .. autofunction:: adcc.modified_transition_moments.compute_modified_transition_moments
 
-```
 
-## State analysis
+State analysis
+--------------
+
 TODO
 
-## Other stuff and utilities
-```eval_rst
-.. autofunction:: adcc.banner
 
-```
+Other stuff and utilities
+-------------------------
+
+.. autofunction:: adcc.banner
