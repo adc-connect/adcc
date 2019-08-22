@@ -20,15 +20,14 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import adcc
 import unittest
 import numpy as np
 
-from .misc import expand_test_templates
-from .HfCounterData import HfCounterData
-
 from numpy.testing import assert_array_equal
 
-import adcc
+from .misc import expand_test_templates
+from .HfCounterData import HfCounterData
 
 
 @expand_test_templates(["restricted", "unrestricted"])
@@ -160,17 +159,17 @@ class TestReferenceStateCounterData(unittest.TestCase):
     #
     # Gen & CVS
     #
-    def template_0gen_small(self, restricted):
+    def template_generic_small(self, restricted):
         self.base_test(n_alpha=3, n_beta=3, n_bas=8, n_orbs_alpha=8,
                        restricted=restricted, check_symmetry=False)
         #              # XXX check_symmetry=True fails because a
         #                write buffer overflow
 
-    def template_0gen_medium(self, restricted):
+    def template_generic_medium(self, restricted):
         self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
                        restricted=restricted)
 
-    def template_0gen_large(self, restricted):
+    def template_generic_large(self, restricted):
         self.base_test(n_alpha=21, n_beta=21, n_bas=60, n_orbs_alpha=60,
                        restricted=restricted)
 
