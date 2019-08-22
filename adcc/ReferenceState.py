@@ -22,16 +22,16 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
+from collections.abc import Iterable
+
+import libadcc
+
 from .misc import cached_property
 from .Tensor import Tensor
 from .backends import import_scf_results
 from .memory_pool import memory_pool
 from .OperatorIntegrals import OperatorIntegrals
 from .OneParticleOperator import OneParticleOperator, product_trace
-
-from collections.abc import Iterable
-
-import libadcc
 
 __all__ = ["ReferenceState"]
 
@@ -146,7 +146,7 @@ class ReferenceState(libadcc.ReferenceState):
             The orbitals to be put into the core-occupied space. For ways to
             define the core orbitals see the description above.
 
-        frozen_core : int or list or tuple or bool, optional
+        frozen_core : int or list or tuple, optional
             The orbitals to be put into the frozen core space. For ways to
             define the core orbitals see the description above. For an automatic
             selection of the frozen core space one may also specify

@@ -110,20 +110,22 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         Python stream to which output will be written. If `None` all output
         is disabled.
 
-    core_orbitals : int, optional
-        Number of (spatial) core orbitals. Required if core-valence
-        separation is applied in the and input data is given as data from the
-        host program (i.e. option (a) in `data_or_matrix` above).
-        Notice that this number denotes spatial orbitals. Thus a value of `1`
-        will put 1 alpha and 1 beta electron into the core region.
+    core_orbitals : int or list or tuple, optional
+        The orbitals to be put into the core-occupied space. For ways to
+        define the core orbitals see the description in
+        :py:class:`adcc.ReferenceState`.
+        Required if core-valence separation is applied and the input data is
+        given as data from the host program (i.e. option (a) discussed above)
 
-    frozen_core : int, optional
-        Number of orbitals to put into the frozen core.A
-        TODO Docme Valid are number of electrons or True
+    frozen_core : int or list or tuple, optional
+        The orbitals to select as frozen core orbitals (i.e. inactive occupied
+        orbitals for both the MP and ADC methods performed). For ways to define
+        these see the description in :py:class:`adcc.ReferenceState`.
 
     frozen_virtual : int, optional
-        TODO Docme Valid are number of electrons or a fraction
-        of the homo-lumo gap
+        The orbitals to select as frozen virtual orbitals (i.e. inactive
+        virtuals for both the MP and ADC methods performed). For ways to define
+        these see the description in :py:class:`adcc.ReferenceState`.
 
     Other parameters
     ----------------
