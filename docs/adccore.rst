@@ -1,18 +1,18 @@
-# The adccore C++ layer
+The adccore C++ layer
+=====================
 
 This page contains a reference of the *adccore* C++ library
 and its classes and functions generated automatically
 from the *adccore* source code.
 
-## Hartree-Fock interface
-```eval_rst
+Hartree-Fock interface
+----------------------
 .. doxygenclass:: adcc::HartreeFockSolution_i
    :members:
 
-```
 
-## Reference state
-```eval_rst
+Reference state
+---------------
 This category lists the *adccore* functionality,
 which imports the data from the :cpp:class:`adcc::HartreeFockSolution_i`
 interface into the :cpp:class:`adcc::ReferenceState`
@@ -27,10 +27,9 @@ and the one used by the SCF program.
    :members:
    :content-only:
 
-```
 
-## Perturbation theory
-```eval_rst
+Perturbation theory
+-------------------
 :cpp:class:`adcc::LazyMp` lazily computes second-order and third-order
 Møller-Plesset perturbation theory on top of the reference
 held by a :cpp:class:`adcc::ReferenceState`.
@@ -39,10 +38,9 @@ held by a :cpp:class:`adcc::ReferenceState`.
    :members:
    :content-only:
 
-```
 
-## AdcMatrix and matrix cores
-```eval_rst
+AdcMatrix and matrix cores
+--------------------------
 :cpp:class:`adcc::AdcMatrix` sets up a representation of the ADC
 matrix for a particular method. My the means of matrix cores,
 which actually do the work, this allows to perform matrix-vector products
@@ -52,26 +50,23 @@ or access the diagonal of such a matrix under a common interface.
    :members:
    :content-only:
 
-```
 
-## ADC guess setup
-```eval_rst
+ADC guess setup
+---------------
 .. doxygengroup:: AdcGuess
    :members:
    :content-only:
 
-```
 
-## ISR and one-particle densities
-```eval_rst
+ISR and one-particle densities
+------------------------------
 .. doxygengroup:: Properties
    :members:
    :content-only:
 
-```
 
-## Tensor interface
-```eval_rst
+Tensor interface
+----------------
 The generalised :cpp:class:`adcc::Tensor` interface
 used by adcc and adccore to perform tensor operations.
 
@@ -79,28 +74,25 @@ used by adcc and adccore to perform tensor operations.
    :members:
    :content-only:
 
-```
 
-## Utilities
-```eval_rst
+Utilities
+---------
 .. doxygengroup:: Utilities
    :members:
    :content-only:
 
-```
 
-## Metadata access
+Metadata access
+---------------
 These classes and functions provide access to metadate about *adccore*.
 
-```eval_rst
 .. doxygengroup:: Metadata
    :members:
    :content-only:
 
-```
 
-## Tensor implementation using libtensor
-```eval_rst
+Tensor implementation using libtensor
+-------------------------------------
 This section describes the implementation of the
 Tensor functionality of :cpp:class:`adcc::Tensor`
 using the libtensor tensor library.
@@ -109,12 +101,9 @@ using the libtensor tensor library.
    :members:
    :content-only:
 
-```
 
-## adcman Davidson interface
-```eval_rst
+adcman Davidson interface
+-------------------------
 .. doxygengroup:: AdcmanInterface
    :members:
    :content-only:
-
-```
