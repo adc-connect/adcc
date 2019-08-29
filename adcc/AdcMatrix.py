@@ -20,12 +20,15 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import libadcc
+import numpy as np
 
 from .LazyMp import LazyMp
 from .AdcMethod import AdcMethod
 from .functions import empty_like
 from .AmplitudeVector import AmplitudeVector
+
+import tqdm
+import libadcc
 
 
 class AdcMatrix(libadcc.AdcMatrix):
@@ -115,4 +118,107 @@ class AdcMatrix(libadcc.AdcMatrix):
                 # doubles part is symmetric wrt. (i,j,a,b) <-> (j,i,b,a)
                 scratch.symmetrise_to(outvec, [(0, 1), (2, 3)])
             ret["d"] = symmetrise_generic_adc_doubles
+        return ret
+
+    def dense_basis(self, blocks=None):
+        """
+        Return the list of indices and their values
+        of the dense basis representation
+        """
+        ret = []
+        if blocks is None:
+            blocks = self.blocks
+
+        if "s" in blocks:
+            sp_s = self.block_spaces("s")
+            n_orbs_s = [self.mospaces.n_orbs(sp) for sp in sp_s]
+            for i in range(n_orbs_s[0]):
+                for a in range(n_orbs_s[1]):
+                    ret.append([((i, a), 1)])
+
+        if "d" in blocks:
+            sp_d = self.block_spaces("d")
+            assert sp_d[0] == sp_d[1] and sp_d[2] == sp_d[3]
+            # TODO CVS and other more general cases!
+
+            ns1 = self.mospaces.n_orbs(sp_d[0])
+            ns2 = self.mospaces.n_orbs(sp_d[2])
+            for i in range(ns1):
+                for j in range(i):
+                    for a in range(ns2):
+                        for b in range(a):
+                            ret.append([
+                                ((i, j, a, b), +1 / 2),
+                                ((j, i, a, b), -1 / 2),
+                                ((i, j, b, a), -1 / 2),
+                                ((j, i, b, a), +1 / 2),
+                            ])
+
+        if any(b not in "sd" for b in self.blocks):
+            raise NotImplementedError("Blocks other than s and d "
+                                      "not implemented")
+        return ret
+
+    def to_dense_matrix(self):
+        """
+        Return the ADC matrix object as a dense numpy array. Converts the sparse
+        internal representation of the ADC matrix to a dense matrix and return
+        as a numpy array.
+
+        This method is only intended to be used for debugging and
+        visualisation purposes as it involves computing a large amount of
+        matrix-vector products and the returned array consumes a considerable
+        amount of memory.
+        """
+        from adcc import guess_zero
+
+        # Get zero amplitude of the appropriate symmetry
+        # (TODO: Only true for C1, where there is only a single irrep)
+        ampl_zero = guess_zero(self)
+        assert self.mospaces.point_group == "C1"
+
+        # Build the shape of the returned array
+        # Since the basis of the doubles block is not the unit vectors
+        # this *not* equal to the shape of the AdcMatrix object
+        basis = {b: self.dense_basis(b) for b in self.blocks}
+        mat_len = sum(len(basis[b]) for b in basis)
+        ret = np.zeros((mat_len, mat_len))
+
+        # Check for the cases actually implemented
+        if any(b not in "sd" for b in self.blocks):
+            raise NotImplementedError("Blocks other than s and d "
+                                      "not implemented")
+        if "s" not in self.blocks:
+            raise NotImplementedError("Block 's' needs to be present")
+
+        # Extract singles-singles block (contiguous)
+        assert "s" in self.blocks
+        n_orbs_s = [self.mospaces.n_orbs(sp) for sp in self.block_spaces("s")]
+        n_s = np.prod(n_orbs_s)
+        assert len(basis["s"]) == n_s
+        view_ss = ret[:n_s, :n_s].reshape(*n_orbs_s, *n_orbs_s)
+        for i in range(n_orbs_s[0]):
+            for a in range(n_orbs_s[1]):
+                ampl = ampl_zero.copy()
+                ampl["s"][i, a] = 1
+                view_ss[:, :, i, a] = (self @ ampl)["s"].to_ndarray()
+
+        # Extract singles-doubles and doubles-doubles block
+        if "d" in self.blocks:
+            assert self.blocks == ["s", "d"]
+            view_sd = ret[:n_s, n_s:].reshape(*n_orbs_s, len(basis["d"]))
+            view_dd = ret[n_s:, n_s:]
+            for j, bas1 in tqdm.tqdm(enumerate(basis["d"]),
+                                     total=len(basis["d"])):
+                ampl = ampl_zero.copy()
+                for idx, val in bas1:
+                    ampl["d"][idx] = val
+                ret_ampl = self @ ampl
+                view_sd[:, :, j] = ret_ampl["s"].to_ndarray()
+
+                for i, bas2 in enumerate(basis["d"]):
+                    view_dd[i, j] = sum(val * ret_ampl["d"][idx]
+                                        for idx, val in bas2)
+
+            ret[n_s:, :n_s] = np.transpose(ret[:n_s, n_s:])
         return ret
