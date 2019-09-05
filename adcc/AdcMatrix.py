@@ -159,7 +159,7 @@ class AdcMatrix(libadcc.AdcMatrix):
                                       "not implemented")
         return ret
 
-    def to_dense_matrix(self):
+    def to_dense_matrix(self, out=None):
         """
         Return the ADC matrix object as a dense numpy array. Converts the sparse
         internal representation of the ADC matrix to a dense matrix and return
@@ -182,7 +182,15 @@ class AdcMatrix(libadcc.AdcMatrix):
         # this *not* equal to the shape of the AdcMatrix object
         basis = {b: self.dense_basis(b) for b in self.blocks}
         mat_len = sum(len(basis[b]) for b in basis)
-        ret = np.zeros((mat_len, mat_len))
+
+        if out is None:
+            out = np.zeros((mat_len, mat_len))
+        else:
+            if out.shape != (mat_len, mat_len):
+                raise ValueError("Output array has shape ({0:}, {1:}), but "
+                                 "shape ({2:}, {2:}) is required."
+                                 "".format(*out.shape, mat_len))
+            out[:] = 0  # Zero all data in out.
 
         # Check for the cases actually implemented
         if any(b not in "sd" for b in self.blocks):
@@ -196,7 +204,7 @@ class AdcMatrix(libadcc.AdcMatrix):
         n_orbs_s = [self.mospaces.n_orbs(sp) for sp in self.block_spaces("s")]
         n_s = np.prod(n_orbs_s)
         assert len(basis["s"]) == n_s
-        view_ss = ret[:n_s, :n_s].reshape(*n_orbs_s, *n_orbs_s)
+        view_ss = out[:n_s, :n_s].reshape(*n_orbs_s, *n_orbs_s)
         for i in range(n_orbs_s[0]):
             for a in range(n_orbs_s[1]):
                 ampl = ampl_zero.copy()
@@ -206,8 +214,8 @@ class AdcMatrix(libadcc.AdcMatrix):
         # Extract singles-doubles and doubles-doubles block
         if "d" in self.blocks:
             assert self.blocks == ["s", "d"]
-            view_sd = ret[:n_s, n_s:].reshape(*n_orbs_s, len(basis["d"]))
-            view_dd = ret[n_s:, n_s:]
+            view_sd = out[:n_s, n_s:].reshape(*n_orbs_s, len(basis["d"]))
+            view_dd = out[n_s:, n_s:]
             for j, bas1 in tqdm.tqdm(enumerate(basis["d"]),
                                      total=len(basis["d"])):
                 ampl = ampl_zero.copy()
@@ -220,5 +228,5 @@ class AdcMatrix(libadcc.AdcMatrix):
                     view_dd[i, j] = sum(val * ret_ampl["d"][idx]
                                         for idx, val in bas2)
 
-            ret[n_s:, :n_s] = np.transpose(ret[:n_s, n_s:])
-        return ret
+            out[n_s:, :n_s] = np.transpose(out[:n_s, n_s:])
+        return out
