@@ -244,6 +244,7 @@ class ReferenceState(libadcc.ReferenceState):
             density.set_block(b, Tensor(sym))
         for ss in self.mospaces.subspaces_occupied:
             density[ss + ss].set_mask("ii", 1)
+        density.reference_state = self
         return density
 
     @cached_property
