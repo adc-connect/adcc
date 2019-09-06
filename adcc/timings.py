@@ -20,6 +20,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import sys
 import time
 
 from contextlib import contextmanager
@@ -44,25 +45,39 @@ def strtime_short(span):
         return "{:4.1f}d".format(span / 3600 / 24)
 
 
-def strtime(span):
+def strtime(span, colour=False):
     """
     Return a moderately long string, providing a human-interpretable
     representation of the provided timespan
     """
+    if colour:
+        cms = "\033[0m"
+        cs = "\033[38;5;246m"
+        cm = "\033[38;5;239m"
+        ch = "\033[38;5;250m"
+        cd = "\033[38;5;242m"
+        cr = "\033[0m"
+    else:
+        cr = cd = ch = cm = cs = cms = ""
+
     if span < 1:
-        return "{:6.3f}ms".format(span * 1000)
+        return cms + "{:6.3f}ms".format(span * 1000) + cr
     if span < 120:
         full = int(span)
-        return "{:3d}s {:3d}ms".format(full, int((span - full) * 1000))
+        return (cs + "{:3d}s ".format(full) + cms
+                + "{:3d}ms".format(int((span - full) * 1000)) + cr)
     if span < 3600:
         full = int(span / 60)
-        return "{:2d}m {:2d}s".format(full, int(span - full * 60))
+        return (cm + "{:2d}m ".format(full) + cs
+                + "{:2d}s".format(int(span - full * 60)) + cr)
     if span < 86400:
         full = int(span / 3600)
-        return "{:2d}h {:2d}m".format(full, int(span / 60 - full * 60))
+        return (ch + "{:2d}h ".format(full) + cm
+                + "{:2d}m".format(full, int(span / 60 - full * 60)) + cr)
     else:
         full = int(span / 86400)
-        return "{:3d}d {:2d}h".format(full, int(span / 3600 - full * 24))
+        return (cd + "{:3d}d ".format(full) + ch
+                + "{:2d}h".format(int(span / 3600 - full * 24)) + cr)
 
 
 class Timer:
@@ -165,7 +180,7 @@ class Timer:
         else:
             raise ValueError("Task not currently running: " + task)
 
-    def describe(self):
+    def describe(self, colour=sys.stdout.isatty()):
         maxlen = max(len(key) for key in self.tasks)
 
         # This is very dummy ... in the future we would like to have
@@ -177,7 +192,7 @@ class Timer:
         text = "Timer " + strtime_short(self.lifetime) + " lifetime:\n"
         for key in self.tasks:
             fmt = "  {:<" + str(maxlen) + "s} {:>20s}\n"
-            text += fmt.format(key, strtime(self.total(key)))
+            text += fmt.format(key, strtime(self.total(key), colour=colour))
         return text
 
     def _repr_pretty_(self, pp, cycle):
