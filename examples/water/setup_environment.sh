@@ -1,3 +1,3 @@
 THISDIR=$(dirname "${BASH_SOURCE[0]}")
-export PYTHONPATH="$PYTHONPATH:$THISDIR/../.."
+export PYTHONPATH="$THISDIR/../..:$PYTHONPATH"
 unset THISDIR
