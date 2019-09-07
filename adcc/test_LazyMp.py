@@ -22,15 +22,15 @@
 ## ---------------------------------------------------------------------
 import unittest
 
-from .misc import expand_test_templates
 from numpy.testing import assert_allclose
-
-import pytest
-
-from pytest import approx
 
 from adcc import LazyMp
 from adcc.testdata.cache import cache
+
+import pytest
+
+from .misc import expand_test_templates
+from pytest import approx
 
 # All test cases to deal with here
 testcases = ["h2o_sto3g", "cn_sto3g"]
@@ -90,7 +90,7 @@ class TestLazyMp(unittest.TestCase):
         mp2diff = self.mp[case].mp2_diffdm
         reference_state = self.mp[case].reference_state
 
-        dm_α, dm_β = mp2diff.transform_to_ao_basis(reference_state)
+        dm_α, dm_β = mp2diff.to_ao_basis(reference_state)
         assert_allclose(dm_α.to_ndarray(), refmp["mp2"]["dm_bb_a"], atol=1e-12)
         assert_allclose(dm_β.to_ndarray(), refmp["mp2"]["dm_bb_b"], atol=1e-12)
 
@@ -164,7 +164,7 @@ class TestLazyMp(unittest.TestCase):
         mp2diff = self.mp_cvs[case].mp2_diffdm
         reference_state = self.mp_cvs[case].reference_state
 
-        dm_α, dm_β = mp2diff.transform_to_ao_basis(reference_state)
+        dm_α, dm_β = mp2diff.to_ao_basis(reference_state)
         assert_allclose(dm_α.to_ndarray(),
                         refmpcvs["mp2"]["dm_bb_a"], atol=1e-12)
         assert_allclose(dm_β.to_ndarray(),

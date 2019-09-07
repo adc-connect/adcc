@@ -118,9 +118,7 @@ class TestStateDiffDm(unittest.TestCase, Runners):
             # comparing reference and computed
             assert state.excitation_energies[i] == refevals[i]
 
-            dm_ao_a, dm_ao_b = state.state_diffdms[i].transform_to_ao_basis(
-                state.reference_state
-            )
+            dm_ao_a, dm_ao_b = state.state_diffdms[i].to_ao_basis()
             dm_ao_a = dm_ao_a.to_ndarray()
             dm_ao_b = dm_ao_b.to_ndarray()
             assert dm_ao_a == approx(refdens_a[i])
@@ -142,9 +140,7 @@ class TestStateGroundToExcitedTdm(unittest.TestCase, Runners):
             # comparing reference and computed
             assert state.excitation_energies[i] == refevals[i]
 
-            tdms = state.transition_dms[i].transform_to_ao_basis(
-                state.ground_state.reference_state
-            )
+            tdms = state.transition_dms[i].to_ao_basis()
             dm_ao_a, dm_ao_b = tdms
             dm_ao_a = dm_ao_a.to_ndarray()
             dm_ao_b = dm_ao_b.to_ndarray()

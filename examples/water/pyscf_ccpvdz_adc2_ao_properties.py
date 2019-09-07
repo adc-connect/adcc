@@ -3,42 +3,24 @@
 import adcc
 import numpy as np
 
+from scipy import constants
 from matplotlib import pyplot as plt
 from adcc.visualisation import ExcitationSpectrum
 
 from pyscf import gto, scf
 from pyscf.tools import cubegen
 
-from scipy import constants
-
-# Hartree to eV
-eV = constants.value("Hartree energy in eV")
-
-
-# Dump cube files
-dump_cube = False
-
-
-def plot_spectrum(energies, strengths, width=0.045):
-    energies = np.array(energies).flatten()
-    strengths = np.array(strengths).flatten()
-
-    def ngauss(en, osc, x, w):
-        """A normalised Gaussian"""
-        fac = osc / np.sqrt(2 * np.pi * w**2)
-        return fac * np.exp(-(x - en)**2 / (2 * w**2))
-
-    xval = np.arange(np.min(np.min(energies) - 1, 0),
-                     np.max(energies) + 1, 0.01)
-    yval = np.zeros(xval.size)
-    for en, osc in zip(energies, strengths):
-        yval += ngauss(en, osc, xval, width)
-    plt.plot(xval, yval)
-
+eV = constants.value("Hartree energy in eV")  # Hartree to eV
 
 #
+# This script shows a more low-level approach to property calculations
+# showcasing how state and transition density matrices can be obtained
+# and worked with. An example showing the recommended way to plot spectra
+# can be found in pyscf_ccpvdz_adc2_spectrum.py
+#
+
+
 # Run SCF in pyscf
-#
 mol = gto.M(
     atom='O 0 0 0;'
          'H 0 0 1.795239827225189;'
@@ -56,12 +38,7 @@ print(adcc.banner())
 # Run an adc2 calculation:
 state = adcc.adc2(scfres, n_singlets=7, conv_tol=1e-8)
 
-#
-# Get HF density matrix and nuclear dipole
-#
-ρ_hf_tot = scfres.make_rdm1()
-
-# Compute dipole integrals
+# Get dipole integrals from pyscf
 dip_ao = mol.intor_symmetric('int1e_r', comp=3)
 
 # compute nuclear dipole
@@ -69,15 +46,6 @@ charges = mol.atom_charges()
 coords = mol.atom_coords()
 dip_nucl = np.einsum('i,ix->x', charges, coords)
 
-#
-# MP2 density correction
-#
-mp2dm_mo = state.ground_state.mp2_diffdm
-dm_mp2_ao = mp2dm_mo.transform_to_ao_basis(state.reference_state)
-ρ_mp2_tot = (dm_mp2_ao[0] + dm_mp2_ao[1]).to_ndarray() + ρ_hf_tot
-
-# dipole moment operator function from backend
-dips = state.reference_state.operators.electric_dipole
 #
 # Compute properties
 #
@@ -87,22 +55,19 @@ osc_strengths = []    # Oscillator strength
 print()
 print("  st  ex.ene. (au)         f     transition dipole moment (au)"
       "        state dip (au)")
-for i, ampl in enumerate(state.excitation_vectors):
+for i, exci in enumerate(state.excitation_energies):
     # Compute transition density matrix
-    tdm_mo = state.transition_dms[i]
-    tdm_ao = tdm_mo.transform_to_ao_basis(state.reference_state)
+    tdm_ao = state.transition_dms[i].to_ao_basis()
     ρ_tdm_tot = (tdm_ao[0] + tdm_ao[1]).to_ndarray()
 
     # Compute transition dipole moment
-    exci = state.excitation_energies[i]
     tdip = np.einsum('xij,ij->x', dip_ao, ρ_tdm_tot)
     osc = 2. / 3. * np.linalg.norm(tdip)**2 * np.abs(exci)
 
     # Compute excited states density matrix and excited state dipole moment
-    opdm_mo = state.state_diffdms[i]
-    opdm_ao = opdm_mo.transform_to_ao_basis(state.reference_state)
-    ρdiff_opdm_ao = (opdm_ao[0] + opdm_ao[1]).to_ndarray()
-    sdip_el = np.einsum('xij,ij->x', dip_ao, ρdiff_opdm_ao + ρ_mp2_tot)
+    opdm_ao = state.state_dms[i].to_ao_basis()
+    ρ_opdm_tot = (opdm_ao[0] + opdm_ao[1]).to_ndarray()
+    sdip_el = np.einsum('xij,ij->x', dip_ao, ρ_opdm_tot)
     sdip = sdip_el - dip_nucl
 
     # Print findings
@@ -111,15 +76,14 @@ for i, ampl in enumerate(state.excitation_vectors):
     # fmt += "   [{9:9.3g}, {10:9.3g}, {11:9.3g}]"
     print(state.kind[0], fmt.format(i, exci, osc, *tdip, *sdip))
 
-    if dump_cube:
-        # Dump LUNTO and HONTO
-        u, s, v = np.linalg.svd(ρ_tdm_tot)
-        # LUNTOs
-        cubegen.orbital(mol=mol, coeff=u.T[0],
-                        outfile="nto_{}_LUNTO.cube".format(i))
-        # HONTOs
-        cubegen.orbital(mol=mol, coeff=v[0],
-                        outfile="nto_{}_HONTO.cube".format(i))
+    # Build LUNTO and HONTO by SVD
+    u, s, v = np.linalg.svd(ρ_tdm_tot)
+    # LUNTOs
+    cubegen.orbital(mol=mol, coeff=u.T[0],
+                    outfile="nto_{}_LUNTO.cube".format(i))
+    # HONTOs
+    cubegen.orbital(mol=mol, coeff=v[0],
+                    outfile="nto_{}_HONTO.cube".format(i))
 
     # Save oscillator strength and excitation energies
     osc_strengths.append(osc)
@@ -130,7 +94,7 @@ osc_strengths = np.array(osc_strengths)
 sp = ExcitationSpectrum(exc_energies, osc_strengths)
 sp.xlabel = "Energy (eV)"
 sp.plot(style="discrete", color="r")
-sp_broad = sp.broaden_lines(shape="lorentzian")
+sp_broad = sp.broaden_lines(shape="lorentzian", width=0.08)
 sp_broad.plot(color="b", style="continuous")
 
 plt.show()
