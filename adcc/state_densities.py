@@ -20,10 +20,11 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import libadcc
+
 from .AdcMethod import AdcMethod
 from .AmplitudeVector import AmplitudeVector
-
-import libadcc
+from .OneParticleOperator import OneParticleOperator
 
 
 def compute_state_diffdm(method, ground_state, amplitude, intermediates=None):
@@ -44,8 +45,12 @@ def compute_state_diffdm(method, ground_state, amplitude, intermediates=None):
         raise TypeError("amplitude should be an AmplitudeVector object.")
     if intermediates is None:
         intermediates = libadcc.AdcIntermediates(ground_state)
-    return libadcc.compute_state_diffdm(method.property_method, ground_state,
-                                        amplitude.to_cpp(), intermediates)
+
+    ret = OneParticleOperator.from_cpp(libadcc.compute_state_diffdm(
+        method.property_method, ground_state, amplitude.to_cpp(), intermediates
+    ))
+    ret.reference_state = ground_state.reference_state
+    return ret
 
 
 def compute_gs2state_optdm(method, ground_state, amplitude, intermediates=None):
@@ -66,8 +71,12 @@ def compute_gs2state_optdm(method, ground_state, amplitude, intermediates=None):
         raise TypeError("amplitude should be an AmplitudeVector object.")
     if intermediates is None:
         intermediates = libadcc.AdcIntermediates(ground_state)
-    return libadcc.compute_gs2state_optdm(method.property_method, ground_state,
-                                          amplitude.to_cpp(), intermediates)
+
+    ret = OneParticleOperator.from_cpp(libadcc.compute_gs2state_optdm(
+        method.property_method, ground_state, amplitude.to_cpp(), intermediates
+    ))
+    ret.reference_state = ground_state.reference_state
+    return ret
 
 
 def compute_state2state_optdm(method, ground_state, amplitude_from,
@@ -92,8 +101,10 @@ def compute_state2state_optdm(method, ground_state, amplitude_from,
         raise TypeError("amplitude_to should be an AmplitudeVector object.")
     if intermediates is None:
         intermediates = libadcc.AdcIntermediates(ground_state)
-    return libadcc.compute_state2state_optdm(method.property_method,
-                                             ground_state,
-                                             amplitude_from.to_cpp(),
-                                             amplitude_to.to_cpp(),
-                                             intermediates)
+
+    ret = OneParticleOperator.from_cpp(libadcc.compute_state2state_optdm(
+        method.property_method, ground_state, amplitude_from.to_cpp(),
+        amplitude_to.to_cpp(), intermediates
+    ))
+    ret.reference_state = ground_state.reference_state
+    return ret

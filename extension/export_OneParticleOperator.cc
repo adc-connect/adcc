@@ -60,29 +60,20 @@ static py::array OneParticleOperator__to_ndarray(const OneParticleOperator& self
   return res;
 }
 
-py::list OneParticleOperator__blocks(const OneParticleOperator& self) {
-  py::list ret;
-  for (auto& b : self.blocks()) {
-    ret.append(b);
-  }
-  return ret;
-}
-
-py::tuple OneParticleOperator__transform_to_ao_basis_ref(
-      const OneParticleOperator& self, std::shared_ptr<ReferenceState> ref_ptr) {
-  auto ret = self.transform_to_ao_basis(ref_ptr);
+py::tuple OneParticleOperator__to_ao_basis_ref(const OneParticleOperator& self,
+                                               std::shared_ptr<ReferenceState> ref_ptr) {
+  auto ret = self.to_ao_basis(ref_ptr);
   return py::make_tuple(ret.first, ret.second);
 }
 
-py::tuple OneParticleOperator__transform_to_ao_basis_coeff(
-      const OneParticleOperator& self, py::dict coeff_ptrs) {
-
+py::tuple OneParticleOperator__to_ao_basis_coeff(const OneParticleOperator& self,
+                                                 py::dict coeff_ptrs) {
   std::map<std::string, std::shared_ptr<Tensor>> coefficient_ptrs;
   for (auto pair : coeff_ptrs) {
     const std::string key = pair.first.cast<std::string>();
     coefficient_ptrs[key] = pair.second.cast<std::shared_ptr<Tensor>>();
   }
-  auto ret = self.transform_to_ao_basis(coefficient_ptrs);
+  auto ret = self.to_ao_basis(coefficient_ptrs);
   return py::make_tuple(ret.first, ret.second);
 }
 
@@ -96,7 +87,8 @@ void export_OneParticleOperator(py::module& m) {
         "Class representing a one-particle operator. Also used for one-particle"
         " (transition) density matrices")
         .def(py::init<std::shared_ptr<const MoSpaces>, bool, std::string>(),
-             "Construct OneParticleOperator object\n"
+             "Construct OneParticleOperator object. All blocks are "
+             "initialised as zero blocks.\n"
              "\n"
              "mospaces       MoSpaces object\n"
              "is_symmetric    Is the operator symmetric\n"
@@ -117,13 +109,16 @@ void export_OneParticleOperator(py::module& m) {
         .def("set_zero_block", set_zero_block_1,
              "Set a block of the matrix (e.g. o1o1, o1v1) to be explicitly zero.")
         .def("is_zero_block", &OneParticleOperator::is_zero_block)
-        .def("empty_like", &OneParticleOperator::empty_like)
+        .def("copy", &OneParticleOperator::copy)
         .def_property_readonly("is_symmetric", &OneParticleOperator::is_symmetric)
-        .def_property_readonly("blocks", &OneParticleOperator__blocks)
+        .def_property_readonly("cartesian_transform",
+                               &OneParticleOperator::cartesian_transform)
+        .def_property_readonly("blocks", &OneParticleOperator::blocks)
+        .def_property_readonly("blocks_nonzero", &OneParticleOperator::blocks_nonzero)
         .def_property_readonly("mospaces", &OneParticleOperator::mospaces_ptr)
         .def("has_block", &OneParticleOperator::has_block)
-        .def("transform_to_ao_basis", &OneParticleOperator__transform_to_ao_basis_ref)
-        .def("transform_to_ao_basis", &OneParticleOperator__transform_to_ao_basis_coeff)
+        .def("to_ao_basis", &OneParticleOperator__to_ao_basis_ref)
+        .def("to_ao_basis", &OneParticleOperator__to_ao_basis_coeff)
         .def("to_ndarray", &OneParticleOperator__to_ndarray,
              "Return the operator in MOs as a full, non-sparse numpy array.")
         .def("__getitem__",

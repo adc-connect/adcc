@@ -27,7 +27,7 @@ import libadcc
 from .misc import cached_property
 from .ReferenceState import ReferenceState
 from .caching_policy import DefaultCachingPolicy
-from .OneParticleOperator import product_trace
+from .OneParticleOperator import OneParticleOperator, product_trace
 
 
 class LazyMp(libadcc.LazyMp):
@@ -45,6 +45,15 @@ class LazyMp(libadcc.LazyMp):
             raise TypeError("hf needs to be a ReferenceState "
                             "or a HartreeFockSolution_i")
         super().__init__(hf, caching_policy)
+
+    @property
+    def mp2_diffdm(self):
+        """
+        Return the MP2 differensce density in the MO basis.
+        """
+        ret = OneParticleOperator.from_cpp(super().mp2_diffdm)
+        ret.reference_state = self.reference_state
+        return ret
 
     def density(self, level=2):
         """
