@@ -25,13 +25,13 @@ import tempfile
 import numpy as np
 
 from mpi4py import MPI
+from adcc.misc import cached_property
 
 import veloxchem as vlx
 
 from libadcc import HartreeFockProvider
 from .eri_build_helper import (EriBuilder, SpinBlockSlice,
-                               get_symmetry_equivalent_transpositions_for_block)
-from adcc.misc import cached_property
+                               get_symm_equivalent_transpositions_for_block)
 
 
 class VeloxChemOperatorIntegralProvider:
@@ -41,7 +41,15 @@ class VeloxChemOperatorIntegralProvider:
 
     @cached_property
     def electric_dipole(self, component="x"):
-        return list(self.scfdrv.scf_tensors['Mu'])
+        dipole_drv = vlx.ElectricDipoleIntegralsDriver(
+            self.scfdrv.task.mpi_comm
+        )
+        dipole_mats = dipole_drv.compute(
+            self.scfdrv.task.molecule, self.scfdrv.task.ao_basis
+        )
+        integrals = (dipole_mats.x_to_numpy(), dipole_mats.y_to_numpy(),
+                     dipole_mats.z_to_numpy())
+        return list(integrals)
 
 
 # VeloxChem is a special case... not using coefficients at all
@@ -58,89 +66,57 @@ class VeloxChemEriBuilder(EriBuilder):
         self.moints_drv = vlx.MOIntegralsDriver(self.mpi_comm, self.ostream)
         super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta)
 
-    def compute_eri_block_vlx(self, block):
-        grps = [p for p in range(self.task.mpi_size)]
-        return self.moints_drv.compute(self.molecule, self.ao_basis,
-                                       self.mol_orbs, block,
-                                       grps)
+    def compute_mo_eri(self, block, coeffs=None, use_cache=True):
+        # compute_in_mem return Physicists' integrals
+        if isinstance(block, list):
+            block = "".join(block)
+        if block in self.eri_cache and use_cache:
+            return self.eri_cache[block]
+        eri = self.moints_drv.compute_in_mem(
+            self.molecule, self.ao_basis, self.mol_orbs, block
+        )
+        self.eri_cache[block] = eri
+        return eri
 
-    # TODO: cleanup
-    def compute_mo_asym_eri(self, asym_block, spin_block):
-        cache_key = asym_block + spin_block
-        if cache_key in self.eri_asymm_cache:
-            return self.eri_asymm_cache[cache_key]
-
-        n_alpha = self.n_alpha
-        n_orbs_alpha = self.n_orbs_alpha
-
-        indices = [n_alpha if x == "O" else n_orbs_alpha - n_alpha
-                   for x in asym_block]
-        eris = np.zeros((indices[0], indices[1],
-                         indices[2], indices[3]))
-
-        grps = [p for p in range(self.task.mpi_size)]
-
-        vlx_block = "ASYM_" + asym_block.upper()
-        # VeloxChem cannot compute this block, but it might be
-        # needed in some CVS cases
-        if asym_block == "OVOO":
-            vlx_block = "ASYM_OOOV"
-            eris = eris.transpose(2, 3, 0, 1)
-
-        if vlx_block in self.eri_cache.keys():
-            blck = self.eri_cache[vlx_block]
-        else:
-            blck = self.moints_drv.compute(self.molecule, self.ao_basis,
-                                           self.mol_orbs, vlx_block,
-                                           grps)
-            self.eri_cache[vlx_block] = blck
-
-        ioffset = n_alpha if asym_block == "VVVV" else 0
-        joffset = n_alpha if (asym_block == "OVVV" or asym_block == "OVOV"
-                              or asym_block == "VVVV") else 0
-
-        if asym_block != "OVOV" and asym_block != "OVVV":
-            for idx, pair in enumerate(blck.get_gen_pairs()):
-                i = pair.first()
-                j = pair.second()
-                fxy = blck.xy_to_numpy(idx)
-                fyx = blck.yx_to_numpy(idx)
-                if spin_block == "aaaa" or spin_block == "bbbb":
-                    eris[i - ioffset, j - joffset, :, :] = fxy - fyx.T
-                    eri_ij = eris[i - ioffset, j - joffset, :, :]
-                    eris[j - joffset, i - ioffset, :, :] = - eri_ij
-                elif spin_block == "abab" or spin_block == "baba":
-                    eris[i - ioffset, j - joffset, :, :] = fxy
-                    eris[j - joffset, i - ioffset, :, :] = fyx.T
-                elif spin_block == "abba" or spin_block == "baab":
-                    eris[i - ioffset, j - joffset, :, :] = -fyx.T
-                    eris[j - joffset, i - ioffset, :, :] = -fxy
-        else:
-            for idx, pair in enumerate(blck.get_gen_pairs()):
-                i = pair.first()
-                j = pair.second()
-                if spin_block == "aaaa" or spin_block == "bbbb":
-                    fxy = blck.xy_to_numpy(idx)
-                    fyx = blck.yx_to_numpy(idx)
-                    eris[i - ioffset, j - joffset, :, :] = fxy - fyx.T
-                elif spin_block == "abab" or spin_block == "baba":
-                    fxy = blck.xy_to_numpy(idx)
-                    eris[i - ioffset, j - joffset, :, :] = fxy
-                elif spin_block == "abba":
-                    fyx = blck.yx_to_numpy(idx)
-                    eris[i - ioffset, j - joffset, :, :] = -fyx.T
-        if asym_block == "OVOO":
-            eris = eris.transpose(2, 3, 0, 1)
-        self.eri_asymm_cache[cache_key] = eris
-        return eris
+    @property
+    def eri_notation(self):
+        return "phys"
 
     @property
     def has_mo_asym_eri(self):
-        return True
+        return False
 
     def flush_cache(self):
         self.eri_asymm_cache = {}
         self.eri_cache = {}
+
+    def build_eri_phys_asym_block(self, can_block=None, spin_symm=None):
+        block = can_block
+        asym_block = "".join([block[i] for i in [0, 1, 3, 2]])
+        both_blocks = "{}-{}-{}-{}".format(
+            block, asym_block, str(spin_symm.pref1), str(spin_symm.pref2)
+        )
+        if both_blocks in self.eri_asymm_cache.keys():
+            return self.eri_asymm_cache[both_blocks]
+
+        if spin_symm.pref1 != 0 and spin_symm.pref2 != 0:
+            eri_phys = self.compute_mo_eri(block)
+            # <ij|kl> - <ij|lk>
+            asymm = self.compute_mo_eri(
+                asym_block
+            ).transpose(0, 1, 3, 2)
+            eris = spin_symm.pref1 * eri_phys - spin_symm.pref2 * asymm
+        elif spin_symm.pref1 != 0 and spin_symm.pref2 == 0:
+            eri_phys = self.compute_mo_eri(block)
+            eris = spin_symm.pref1 * eri_phys
+        elif spin_symm.pref1 == 0 and spin_symm.pref2 != 0:
+            asymm = self.compute_mo_eri(
+                asym_block
+            ).transpose(0, 1, 3, 2)
+            eris = - spin_symm.pref2 * asymm
+
+        self.eri_asymm_cache[both_blocks] = eris
+        return eris
 
     def build_full_eri_ffff(self):
         n_orbs = self.n_orbs
@@ -155,40 +131,18 @@ class VeloxChemEriBuilder(EriBuilder):
         eri = np.zeros((n_orbs, n_orbs, n_orbs, n_orbs))
 
         blocks = ["OOVV", "OVOV", "OOOV", "OOOO", "OVVV", "VVVV"]
-        for b in blocks:
-            blck = self.compute_eri_block_vlx(b)
-            indices = [n_alpha if x == "O" else n_orbs_alpha - n_alpha
-                       for x in b]
+        for bl in blocks:
+            # compute_in_mem return Physicists' integrals
+            # we convert to Chemists' notation because we're building the
+            # full ERI tensor for adcc, which requires Chemists' integrals
+            can_block_integrals = self.compute_mo_eri(bl)
+            b = bl[0] + bl[2] + bl[1] + bl[3]
+            can_block_integrals = can_block_integrals.transpose(0, 2, 1, 3)
             slices_alpha = [aro if x == "O" else arv for x in b]
             slices_beta = [bro if x == "O" else brv for x in b]
 
-            # TODO: improve this, very annoying code
-            slices_alpha = [slices_alpha[i] for i in [0, 2, 1, 3]]
-            slices_beta = [slices_beta[i] for i in [0, 2, 1, 3]]
-            if b != "OOVV":
-                indices = [indices[i] for i in [0, 2, 1, 3]]
-
-            # make canonical integral block
-            can_block_integrals = np.zeros((indices[0], indices[1],
-                                            indices[2], indices[3]))
-            # offset to retrieve integrals
-            ioffset = n_alpha if b == "VVVV" else 0
-            joffset = n_alpha if (b == "OVVV" or b == "VVVV") else 0
-            # fill canonical block
-            for i in range(ioffset, indices[0] + ioffset):
-                for j in range(joffset, indices[1] + joffset):
-                    ij = blck.to_numpy(vlx.TwoIndexes(i, j))
-                    can_block_integrals[i - ioffset,
-                                        j - joffset, :, :] = ij[:, :]
-            # the only block where we get stuff in physicists' notation from vlx
-            # convert to chemists' notation and rename block
-            if b == "OOVV":
-                can_block_integrals = can_block_integrals.swapaxes(1, 2)
-                b = "OVOV"
-            else:
-                b = "".join([b[i] for i in [0, 2, 1, 3]])
             # automatically set ERI tensor's symmetry-equivalent blocks
-            trans_sym_blocks = get_symmetry_equivalent_transpositions_for_block(b)
+            trans_sym_blocks = get_symm_equivalent_transpositions_for_block(b, notation="chem")
 
             # Slices for the spin-allowed blocks
             aaaa = SpinBlockSlice("aaaa", (slices_alpha[0], slices_alpha[1],

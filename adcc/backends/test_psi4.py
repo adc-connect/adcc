@@ -25,6 +25,7 @@ import numpy as np
 
 from ..misc import expand_test_templates
 from .testing import eri_asymm_construction_test, operator_import_test
+from .eri_build_helper import eri_permutations
 
 from numpy.testing import assert_almost_equal
 
@@ -97,13 +98,8 @@ class TestPsi4(unittest.TestCase):
         assert_almost_equal(hfdata.fock_ff, fock_ff)
 
         # test symmetry of the ERI tensor
-        ii, jj, kk, ll = 0, 1, 2, 3
         allowed_permutations = [
-            (kk, ll, ii, jj),
-            (jj, ii, ll, kk),
-            (ll, kk, jj, ii),
-            (jj, ii, kk, ll),
-            (jj, ii, ll, kk),
+            p.transposition for p in eri_permutations["chem"]
         ]
         eri = np.empty((hfdata.n_orbs, hfdata.n_orbs,
                         hfdata.n_orbs, hfdata.n_orbs))

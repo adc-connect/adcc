@@ -94,7 +94,6 @@ def eri_asymm_construction_test(scfres, core_orbitals=0):
             s = p1 + p2
             n = 2
             s_clean = [s[i:i + n] for i in range(0, len(s), n)]
-            print("Checking", s)
             imported_asymm = refstate.eri(s).to_ndarray()
             for allowed_spin in _eri_phys_asymm_spin_allowed_prefactors:
                 sl = [lookuptable[x] for x in s_clean]
