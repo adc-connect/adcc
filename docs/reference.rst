@@ -149,3 +149,10 @@ Other stuff and utilities
 -------------------------
 
 .. autofunction:: adcc.banner
+
+
+Supplying SCF data
+------------------
+
+.. autoclass:: adcc.DictHfProvider
+    :members:

@@ -22,8 +22,6 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
-from warnings import warn
-
 from libadcc import HartreeFockProvider
 
 
@@ -40,71 +38,109 @@ class DictOperatorIntegralProvider:
 
 
 class DictHfProvider(HartreeFockProvider):
-    """
-    Very simple implementation of the HartreeFockProvider
-    interface, which extracts the relevant data from
-    a dictionary, which contains scalars and numpy
-    arrays. See the implemntation for details about
-    the expected keys.
-    """
-
     def __init__(self, data):
+        """
+        Initialise the DictHfProvider class with the `data` containing the
+        dictionary of data. Let `nf` denote the number of Fock spin orbitals
+        (i.e. the sum of both the alpha and the beta orbitals) and `nb`
+        the number of basis functions. The following keys are required in the
+        dictionary:
+
+        1. `restricted` (`bool`): `True` for a restricted SCF calculation,
+           `False` otherwise
+        2. `conv_tol` (`float`): Tolerance value used for SCF convergence,
+           should be roughly equivalent to l2 norm of the Pulay error.
+        3. orbcoeff_fb` (`np.array` with dtype `float`, size `(nf, nb)`):
+           SCF orbital coefficients, i.e. the uniform transform from the basis
+           to the molecular orbitals.
+        4. `occupation_f` (`np.array` with dtype `float`, size `(nf, )`:
+           Occupation number for each SCF orbitals (i.e. diagonal of the HF
+           density matrix in the SCF orbital basis).
+        5. `orben_f` (`np.array` with dtype `float`, size `(nf, )`:
+           SCF orbital energies
+        6. `fock_ff` (`np.array` with dtype `float`, size `(nf, nf)`:
+           Fock matrix in SCF orbital basis. Notice, the full matrix is expected
+           also for restricted calculations.
+        7. `eri_phys_asym_ffff` (`np.array` with dtype `float`,
+           size `(nf, nf, nf, nf)`: Antisymmetrised electron-repulsion integral
+           tensor in the SCF orbital basis, using the Physicists' indexing
+           covention, i.e. that the index tuple `(i,j,k,l)` refers to
+           the integral
+           `<ij||kl>`. TODO Equation for integral
+           The full tensor (including zero blocks) is expected.
+
+        As an alternative to `eri_phys_asym_ffff`, the user may provide
+
+        8. `eri_ffff` (`np.array` with dtype `float`, size `(nf, nf, nf, nf)`:
+           Electron-repulsion integral tensor in chemists' notation.
+           The index tuple `(i,j,k,l)` thus refers to the integral `(ij|kl)`.
+           Notice, that no antisymmetrisation has been applied in this tensor.
+
+        The above keys define the least set of quantities to start a calculation
+        in `adcc`. In order to have access to properties such as dipole moments
+        or to get the correct state energies, further keys are highly
+        recommended to be provided as well.
+
+        9.  `backend` (`str`): Descriptive string for the backend of which data
+            is contained in here (default: `dict`).
+        10. `energy_scf` (`float`): Final total SCF energy of both electronic
+            and nuclear energy terms. (default: `0.0`)
+        11. `multipoles` (`dict`): Dictionary containing electric and nuclear
+            multipole moments:
+
+              - `elec_1` (`np.array`, size `(nb, nb)`): Electric dipole moment
+                integrals in the atomic orbital basis (i.e. the discretisation
+                basis with `nb` elements).
+              - `nuc_0` (`float`): Total nuclear charge
+              - `nuc_1` (`np.array` size `(3, )`: Nuclear dipole moment
+
+            The defaults for all entries are all-zero multipoles.
+        12. `spin_multiplicity` (`int`): The spin mulitplicity of the HF
+            ground state described by the data. A value of `0` (for unknown)
+            should be supplied for unrestricted calculations.
+            (default: 1 for restricted and 0 for unrestricted calculations)
+
+        Parameters
+        ----------
+        data : dict
+            Dictionary containing the HartreeFock data to use. For the required
+            keys see details above.
+        """
         # Do not forget the next line, otherwise weird errors result
         super().__init__()
         self.data = data
         self.operator_integral_provider = DictOperatorIntegralProvider(data)
 
-    def get_backend(self):
-        return self.data.get("backend", "dict")
+        if data["orbcoeff_fb"].shape[0] % 2 != 0:
+            raise ValueError("orbcoeff_fb first axis should have even length")
+        nb = self.get_n_bas()
+        nf = 2 * self.get_n_orbs_alpha()
 
-    def get_n_alpha(self):
-        return self.data["n_alpha"]
+        checks = [("orbcoeff_fb", (nf, nb)), ("occupation_f", (nf, )),
+                  ("orben_f", (nf, )), ("fock_ff", (nf, nf)),
+                  ("eri_ffff", (nf, nf, nf, nf)),
+                  ("eri_phys_asym_ffff", (nf, nf, nf, nf)), ]
+        for key, exshape in checks:
+            if key not in data:
+                continue
+            if data[key].shape != exshape:
+                raise ValueError("Shape mismatch for key {}: Expected {}, but "
+                                 "got {}.".format(key, exshape,
+                                                  data[key].shape))
 
-    def get_n_beta(self):
-        return self.data["n_beta"]
+    #
+    # Required keys
+    #
+    def get_restricted(self):
+        return self.data["restricted"]
 
     def get_conv_tol(self):
         if "conv_tol" in self.data:
             return self.data["conv_tol"]
-        return self.data["threshold"]
-
-    def get_restricted(self):
-        return self.data["restricted"]
-
-    def get_energy_scf(self):
-        return self.data["energy_scf"]
-
-    def get_spin_multiplicity(self):
-        return self.data["spin_multiplicity"]
-
-    def get_n_orbs_alpha(self):
-        return self.data["n_orbs_alpha"]
-
-    def get_n_orbs_beta(self):
-        return self.data["n_orbs_beta"]
-
-    def get_n_bas(self):
-        return self.data["n_bas"]
-
-    def get_nuclear_multipole(self, order):
-        if order == 0:
-            # The function interface needs to be a np.array on return
-            return np.array([self.data["multipoles"]["nuclear_0"]])
-        elif order == 1:
-            return np.array(self.data["multipoles"]["nuclear_1"])
-        else:
-            raise NotImplementedError("get_nuclear_multipole with order > 1")
+        return self.data["threshold"]  # The old name was "threshold"
 
     def fill_occupation_f(self, out):
-        if "occupation_f" in self.data:
-            out[:] = self.data["occupation_f"]
-        else:
-            warn("Using dummy occupation wrapper in DictProvider")
-            n_oa = self.get_n_orbs_alpha()
-            n_ob = self.get_n_orbs_beta()
-            out[:] = np.zeros(n_oa + n_ob)
-            out[:self.get_n_alpha()] = 1.
-            out[n_oa:n_oa + self.get_n_beta()] = 1.
+        out[:] = self.data["occupation_f"]
 
     def fill_orbcoeff_fb(self, out):
         out[:] = self.data["orbcoeff_fb"]
@@ -123,3 +159,48 @@ class DictHfProvider(HartreeFockProvider):
 
     def has_eri_phys_asym_ffff_inner(self):
         return "eri_phys_asym_ffff" in self.data
+
+    #
+    # Recommended keys
+    #
+    def get_backend(self):
+        return self.data.get("backend", "dict")
+
+    def get_energy_scf(self):
+        return self.data.get("energy_scf", 0.0)
+
+    def get_nuclear_multipole(self, order):
+        if order == 0:
+            # The function interface needs to be a np.array on return
+            nuc_0 = self.data.get("multipoles", {}).get("nuclear_0", 0.0)
+            return np.array([nuc_0])
+        elif order == 1:
+            nuc_1 = self.data.get("multipoles", {}).get("nuclear_1", [0., 0, 0])
+            return np.array(nuc_1)
+        else:
+            raise NotImplementedError("get_nuclear_multipole with order > 1")
+
+    def get_spin_multiplicity(self):
+        if "spin_multiplicity" in self.data:
+            return self.data["spin_multiplicity"]
+        elif not self.get_restricted():
+            return 0
+        else:
+            return self.get_n_alpha() - self.get_n_beta() + 1
+
+    #
+    # Deduced keys
+    #
+    def get_n_alpha(self):
+        na = self.get_n_orbs_alpha()
+        return int(np.sum(self.data["occupation_f"][:na]))
+
+    def get_n_beta(self):
+        na = self.get_n_orbs_alpha()
+        return int(np.sum(self.data["occupation_f"][na:]))
+
+    def get_n_orbs_alpha(self):
+        return self.data["orbcoeff_fb"].shape[0] // 2
+
+    def get_n_bas(self):
+        return self.data["orbcoeff_fb"].shape[1]
