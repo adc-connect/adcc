@@ -41,7 +41,6 @@ class HartreeFockProvider : public HartreeFockSolution_i {
   size_t n_alpha() const override { return get_n_alpha(); }
   size_t n_beta() const override { return get_n_beta(); }
   size_t n_orbs_alpha() const override { return get_n_orbs_alpha(); }
-  size_t n_orbs_beta() const override { return get_n_orbs_beta(); }
   size_t n_bas() const override { return get_n_bas(); }
   real_type conv_tol() const override { return get_conv_tol(); }
   bool restricted() const override { return get_restricted(); }
@@ -251,7 +250,6 @@ class HartreeFockProvider : public HartreeFockSolution_i {
   virtual size_t get_n_alpha() const                                         = 0;
   virtual size_t get_n_beta() const                                          = 0;
   virtual size_t get_n_orbs_alpha() const                                    = 0;
-  virtual size_t get_n_orbs_beta() const                                     = 0;
   virtual size_t get_n_bas() const                                           = 0;
   virtual py::array_t<scalar_type> get_nuclear_multipole(size_t order) const = 0;
   virtual real_type get_conv_tol() const                                     = 0;
@@ -283,9 +281,6 @@ class PyHartreeFockProvider : public HartreeFockProvider {
   }
   size_t get_n_orbs_alpha() const override {
     PYBIND11_OVERLOAD_PURE(size_t, HartreeFockProvider, get_n_orbs_alpha, );
-  }
-  size_t get_n_orbs_beta() const override {
-    PYBIND11_OVERLOAD_PURE(size_t, HartreeFockProvider, get_n_orbs_beta, );
   }
   size_t get_n_bas() const override {
     PYBIND11_OVERLOAD_PURE(size_t, HartreeFockProvider, get_n_bas, );
@@ -381,7 +376,7 @@ void export_HartreeFockProvider(py::module& m) {
         .def_property_readonly("spin_multiplicity",
                                &HartreeFockSolution_i::spin_multiplicity)
         .def_property_readonly("n_orbs_alpha", &HartreeFockSolution_i::n_orbs_alpha)
-        .def_property_readonly("n_orbs_beta", &HartreeFockSolution_i::n_orbs_beta)
+        .def_property_readonly("n_orbs_beta", &HartreeFockSolution_i::n_orbs_alpha)
         .def_property_readonly("n_orbs", &HartreeFockSolution_i::n_orbs)
         .def_property_readonly("n_bas", &HartreeFockSolution_i::n_bas)
         .def_property_readonly("backend", &HartreeFockSolution_i::backend)
@@ -414,8 +409,6 @@ void export_HartreeFockProvider(py::module& m) {
              "Overwrite to return the spin multiplicity of the calculation")
         .def("get_n_orbs_alpha", &HartreeFockProvider::get_n_orbs_alpha,
              "Overwrite to return the number of alpha orbitals")
-        .def("get_n_orbs_beta", &HartreeFockProvider::get_n_orbs_beta,
-             "Overwrite to return the number of beta orbitals")
         .def("get_n_bas", &HartreeFockProvider::get_n_bas,
              "Overwrite to return the number of basis functions")
         .def("get_nuclear_multipole", &HartreeFockProvider::get_nuclear_multipole,
