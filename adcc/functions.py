@@ -20,10 +20,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+from .AmplitudeVector import AmplitudeVector
 
 import libadcc
-from .AmplitudeVector import AmplitudeVector
-import warnings
 
 
 def dot(a, b):
@@ -94,9 +93,10 @@ def contract(contraction, a, b, out=None):
     tensor a and be to form out via a contraction defined
     by the first argument string, e.g. "ab,bc->ac"
     or "abc,bcd->ad".
+
+    Note: The contract function is experimental. Its interface can change
+          and the function may disappear in the future.
     """
-    warnings.warn("The contract function is in an early stage and not tested "
-                  "well. Do not rely on it.")
     if out is None:
         return libadcc.contract(contraction, a, b)
     else:
