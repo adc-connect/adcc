@@ -20,19 +20,19 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import adcc
 import unittest
 import numpy as np
 
 from .misc import assert_allclose_signfix, expand_test_templates
 from numpy.testing import assert_allclose
 
-import adcc
+from adcc import ExcitedStates
+from adcc.testdata.cache import cache
+
 import pytest
 
 from pytest import approx
-
-from adcc import ExcitedStates
-from adcc.testdata.cache import cache
 
 # The methods to test
 methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
@@ -153,33 +153,33 @@ class TestFunctionalityCvs(TestFunctionalityBase):
         if method in ["adc0", "adc1"]:
             n_singlets = 2
         self.base_test("h2o_sto3g", "cvs-" + method, "singlet",
-                       n_singlets=n_singlets, n_core_orbitals=1)
+                       n_singlets=n_singlets, core_orbitals=1)
 
     def template_cvs_h2o_def2tzvp_singlets(self, method):
         self.base_test("h2o_def2tzvp", "cvs-" + method, "singlet", n_singlets=3,
-                       n_core_orbitals=1)
+                       core_orbitals=1)
 
     def template_cvs_h2o_sto3g_triplets(self, method):
         n_triplets = 3
         if method in ["adc0", "adc1"]:
             n_triplets = 2
         self.base_test("h2o_sto3g", "cvs-" + method, "triplet",
-                       n_triplets=n_triplets, n_core_orbitals=1)
+                       n_triplets=n_triplets, core_orbitals=1)
 
     def template_cvs_h2o_def2tzvp_triplets(self, method):
         self.base_test("h2o_def2tzvp", "cvs-" + method, "triplet", n_triplets=4,
-                       n_core_orbitals=1)
+                       core_orbitals=1)
 
     def template_cvs_cn_sto3g(self, method):
         self.base_test("cn_sto3g", "cvs-" + method, "state",
-                       n_states=6, n_core_orbitals=1)
+                       n_states=6, core_orbitals=1)
 
     def template_cvs_cn_ccpvdz(self, method):
         kwargs = {}
         if method in ["adc0", "adc1"]:
             kwargs["max_subspace"] = 28
         self.base_test("cn_ccpvdz", "cvs-" + method, "state", n_states=5,
-                       n_core_orbitals=1, **kwargs)
+                       core_orbitals=1, **kwargs)
 
 
 @expand_test_templates(methods)

@@ -54,7 +54,7 @@ class TestCrossReferenceBackends(unittest.TestCase):
         results = {}
         for b in backends:
             scfres = cached_backend_hf(b, "h2o", basis)
-            results[b] = adcc.cvs_adc2(scfres, n_singlets=5, n_core_orbitals=1,
+            results[b] = adcc.cvs_adc2(scfres, n_singlets=5, core_orbitals=1,
                                        conv_tol=1e-10)
         compare_adc_results(results, 5e-9)
 
