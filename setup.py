@@ -25,7 +25,6 @@
 import os
 import sys
 import glob
-import json
 import setuptools
 
 from os.path import join
@@ -52,113 +51,29 @@ except ImportError:
 __version__ = '0.12.0'
 
 
-#
-# Compile and install adccore library
-#
-def trigger_adccore_build():
-    """
-    Trigger a build of the adccore library, if it exists in source form.
-    """
-    if os.path.isfile("adccore/build_adccore.py"):
-        abspath = os.path.abspath("adccore")
-        if abspath not in sys.path:
-            sys.path.insert(0, abspath)
+def get_adccore_data():
+    """Get a class providing info about the adccore library"""
+    abspath = os.path.abspath("extension")
+    if abspath not in sys.path:
+        sys.path.insert(0, abspath)
 
-        import build_adccore
+    from AdcCore import AdcCore
 
-        build_dir = "adccore/build"
-        install_dir = "extension/adccore"
-        build_adccore.build_install(build_dir, install_dir)
+    adccore = AdcCore()
+    if not adccore.is_config_file_present or adccore.version != __version__:
+        # Get this version by building it or downloading it
+        adccore.obtain(__version__)
 
-
-#
-# Find AdcCore
-#
-class AdcCore:
-    def __init__(self):
-        this_dir = os.path.dirname(__file__)
-        self.library_dir = join(this_dir, "adcc", "lib")
-
-        base_path = join(this_dir, "extension", "adccore")
-        self.include_dir = join(base_path, "include")
-        self.config_path = join(base_path, "adccore_config.json")
-
-    @property
-    def is_config_file_present(self):
-        """
-        Is the config file present on disk
-        """
-        return os.path.isfile(self.config_path)
-
-    @property
-    def config(self):
-        if not self.is_config_file_present:
-            raise RuntimeError(
-                "Did not find adccore_config.json file in the directory tree."
-                + " Did you download or install adccore properly? See the adcc "
-                + "documentation for help."
-            )
-        else:
-            with open(self.config_path, "r") as fp:
-                return json.load(fp)
-
-    def __getattr__(self, key):
-        try:
-            return self.config[key]
-        except KeyError:
-            raise AttributeError
-
-    @property
-    def libraries_full(self):
-        """Return the full path to all libraries"""
-        def get_full(lib):
-            for prefix in ["lib", ""]:
-                for ext in [".so", ".dylib"]:
-                    name = join(self.library_dir, prefix + lib + ext)
-                    if os.path.isfile(name):
-                        return name
-            raise RuntimeError("Could not find full path of library '"
-                               + lib + '"')
-        return [get_full(lib) for lib in self.libraries]
-
-    @property
-    def required_dynamic_libraries(self):
-        """
-        Return a list of all dynamically loaded shared libraries
-        the OS needs to provide to function with this package.
-        """
-        import subprocess
-
-        if sys.platform != "linux":
-            raise OSError("required_dynamic_libraries is not "
-                          "supported on this OS.")
-        needed = []
-        for lib in self.libraries_full:
-            try:
-                ret = subprocess.check_output(["objdump", "-p", lib],
-                                              universal_newlines=True)
-            except subprocess.CalledProcessError as cpe:
-                if cpe.returncode == 127:
-                    raise OSError("Could not find objdump binary")
-                else:
-                    raise RuntimeError("Could not determine required "
-                                       "dynamic libraries")
-
-            for line in ret.split("\n"):
-                line = line.split()
-                if line and line[0] == "NEEDED":
-                    needed.append(line[1])
-        return needed
-
-    @property
-    def feature_macros(self):
-        return [("ADCC_WITH_" + feat.upper(), 1) for feat in self.features]
+    if adccore.version != __version__:
+        raise RuntimeError(
+            "Version mismatch between adcc (== {}) and adccore (== {})"
+            "".format(__version__, adccore.version)
+        )
+    return adccore
 
 
-#
-# Poor-man's ld-like resolver for shared libraries
-#
 class LinkerDynamic:
+    """A poor-man's ld-like resolver for shared libraries"""
     def __init__(self):
         # Initialise by environment and add default search locations:
         self.library_paths = os.environ.get("LD_LIBRARY_PATH", "").split(":")
@@ -233,7 +148,9 @@ def cpp_flag(compiler):
 class BuildExt(BuildCommand):
     """A custom build extension for adding compiler-specific options."""
     def build_extensions(self):
-        trigger_adccore_build()
+        adccore = get_adccore_data()
+        if adccore.has_source:
+            adccore.build()  # Update adccore if required
 
         opts = []
         if sys.platform == "darwin":
@@ -261,25 +178,17 @@ class BuildExt(BuildCommand):
 
 class BuildDocs(BuildSphinxDoc):
     def run(self):
-        this_dir = os.path.dirname(__file__)
-        if not os.path.isfile(join(this_dir, "adccore/build_adccore.py")):
-            raise SystemExit("Can only build documentation if adccore is"
-                             "available.")
-        else:
-            abspath = os.path.abspath("adccore")
-            if abspath not in sys.path:
-                sys.path.insert(0, abspath)
+        adccore = get_adccore_data()
+        if adccore.has_source:
+            adccore.build_documentation()
+        elif not adccore.is_documentation_present:
+            raise SystemExit("adccore documentation could not be found and "
+                             "could not be installed.")
 
-        import build_adccore
-
-        coredoc_dir = join(this_dir, "docs/adccore")
-        build_adccore.build_documentation(coredoc_dir, latex=False,
-                                          html=False, xml=True)
         try:
             import sphinx  # noqa F401
 
             import breathe  # noqa F401
-            import recommonmark  # noqa F401
         except ImportError:
             raise SystemExit("Sphinx or or one of its required plugins not "
                              "found.\nTry 'pip install -U adcc[build_docs]")
@@ -332,20 +241,7 @@ if not os.path.isfile("adcc/__init__.py"):
     raise RuntimeError("Running setup.py is only supported "
                        "from top level of repository as './setup.py <command>'")
 
-adccore = AdcCore()
-if not adccore.is_config_file_present:
-    # Trigger a build of adccore if the source code can be found
-    trigger_adccore_build()
-if adccore.version != __version__:
-    # Try to see if a simple adccore build solves this issue
-    trigger_adccore_build()
-
-    if adccore.version != __version__:
-        raise RuntimeError(
-            "Version mismatch between adcc (== {}) and adccore (== {})"
-            "".format(__version__, adccore.version)
-        )
-
+adccore = get_adccore_data()
 # Check we have all dynamic library dependencies:
 if sys.platform == "linux":
     ld = LinkerDynamic()
