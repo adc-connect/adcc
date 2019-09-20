@@ -82,7 +82,7 @@ class DataHfProvider(HartreeFockProvider):
            `False` otherwise
         2. **conv_tol** (`float`): Tolerance value used for SCF convergence,
            should be roughly equivalent to l2 norm of the Pulay error.
-        3. orbcoeff_fb** (`.array` with dtype `float`, size `(nf, nb)`):
+        3. **orbcoeff_fb** (`.array` with dtype `float`, size `(nf, nb)`):
            SCF orbital coefficients, i.e. the uniform transform from the basis
            to the molecular orbitals.
         4. **occupation_f** (`array` with dtype `float`, size `(nf, )`:
@@ -97,17 +97,31 @@ class DataHfProvider(HartreeFockProvider):
            size `(nf, nf, nf, nf)`: Antisymmetrised electron-repulsion integral
            tensor in the SCF orbital basis, using the Physicists' indexing
            convention, i.e. that the index tuple `(i,j,k,l)` refers to
-           the integral
-           `<ij||kl>`. TODO Equation for integral
+           the integral :math:`\\langle ij || kl \\rangle`, i.e.
+
+           .. math::
+              \\int_\\Omega \\int_\\Omega d r_1 d r_2 \\frac{
+              \\phi_i(r_1) \\phi_j(r_2)
+              \\phi_k(r_1) \\phi_l(r_2)}{|r_1 - r_2|}
+              - \\int_\\Omega \\int_\\Omega d r_1 d r_2 \\frac{
+              \\phi_i(r_1) \\phi_j(r_2)
+              \\phi_l(r_1) \\phi_k(r_2)}{|r_1 - r_2|}
+
            The full tensor (including zero blocks) is expected.
 
         As an alternative to `eri_phys_asym_ffff`, the user may provide
 
         8. **eri_ffff** (`array` with dtype `float`, size `(nf, nf, nf, nf)`:
            Electron-repulsion integral tensor in chemists' notation.
-           The index tuple `(i,j,k,l)` thus refers to the integral `(ij|kl)`.
+           The index tuple `(i,j,k,l)` thus refers to the integral
+           :math:`(ij|kl)`, which is
+
+           .. math::
+              \\int_\\Omega \\int_\\Omega d r_1 d r_2
+              \\frac{\\phi_i(r_1) \\phi_j(r_1)
+              \\phi_k(r_2) \\phi_l(r_2)}{|r_1 - r_2|}
+
            Notice, that no antisymmetrisation has been applied in this tensor.
-           TODO equation
 
         The above keys define the least set of quantities to start a calculation
         in `adcc`. In order to have access to properties such as dipole moments
@@ -144,11 +158,6 @@ class DataHfProvider(HartreeFockProvider):
         data : dict or h5py.File
             Dictionary containing the HartreeFock data to use. For the required
             keys see details above.
-
-        Examples
-        --------
-
-        TODO (see also equations above)
         """
 
         # Do not forget the next line, otherwise weird errors result

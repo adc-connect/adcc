@@ -9,6 +9,8 @@ Full adcc reference
 
 This page contains a structured overview of the python API of adcc.
 See also the :ref:`genindex`.
+For documentation how to connect host programs to adcc,
+see :ref:`hostprograms`.
 
 .. _adcn-methods:
 
@@ -149,22 +151,3 @@ Other stuff and utilities
 -------------------------
 
 .. autofunction:: adcc.banner
-
-
-.. _passing-scf-data:
-
-Passing Hartree-Fock data to adcc
----------------------------------
-
-From python via a dictionary or an HDF5 file:
-
-.. autoclass:: adcc.DataHfProvider
-    :members:
-
-The interface to be implemented in general is:
-
-.. autoclass:: adcc.HartreeFockProvider
-    :members:
-
-For details how to pass data to adcc directly from C++,
-see :cpp:class:`adcc::HartreeFockSolution_i`

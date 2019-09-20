@@ -5,22 +5,14 @@ This page contains a reference of the *adccore* C++ library
 and its classes and functions generated automatically
 from the *adccore* source code.
 
-
-Hartree-Fock interface
-----------------------
-For directly passing data to *adccore* on the C++ level,
-the following interface needs to be implemented:
-
-.. doxygenclass:: adcc::HartreeFockSolution_i
-   :members:
-
-
 Reference state
 ---------------
 This category lists the *adccore* functionality,
 which imports the data from the :cpp:class:`adcc::HartreeFockSolution_i`
 interface into the :cpp:class:`adcc::ReferenceState`
 for internal use by the library.
+See :ref:`hostprograms` for details how to connect
+host programs to adcc.
 Important classes in the process are :cpp:class:`adcc::MoSpaces`,
 which collects information about the occupied and virtual
 orbital spaces, and :cpp:class:`adcc::MoIndexTranslation`,
