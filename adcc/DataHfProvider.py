@@ -224,10 +224,8 @@ class DataHfProvider(HartreeFockProvider):
         out[:] = self.data["eri_ffff"][slices]
 
     def fill_eri_phys_asym_ffff(self, slices, out):
+        # Only required if eri_ffff not provided
         out[:] = self.data["eri_phys_asym_ffff"][slices]
-
-    def has_eri_phys_asym_ffff_inner(self):
-        return "eri_phys_asym_ffff" in self.data
 
     #
     # Recommended keys
@@ -272,6 +270,9 @@ class DataHfProvider(HartreeFockProvider):
 
     def get_n_bas(self):
         return self.data["orbcoeff_fb"].shape[1]
+
+    def has_eri_phys_asym_ffff_inner(self):
+        return "eri_phys_asym_ffff" in self.data
 
 
 class DictHfProvider(DataHfProvider):
