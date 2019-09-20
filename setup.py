@@ -338,9 +338,10 @@ setup(
         'pybind11 (>= 2.2)',
         'numpy (>= 1.13)',  # Maybe even higher?
         'scipy',       # Not sure which version
-        'matplotlib'   # Not sure which version
+        'matplotlib',  # Not sure which version
+        'H5py',        # Not sure which version
     ],
-    tests_require=["pytest", "h5py"],
+    tests_require=["pytest"],
     extras_require={
         "build_docs": ["sphinx>=2", "recommonmark>=0.5.0", "breathe"],
     },

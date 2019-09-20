@@ -22,7 +22,7 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
-from .DictHfProvider import DictOperatorIntegralProvider
+from .DataHfProvider import DataOperatorIntegralProvider
 
 from libadcc import HartreeFockProvider
 
@@ -43,7 +43,7 @@ class HfCounterData(HartreeFockProvider):
         self.__n_orbs_alpha = n_orbs_alpha
         self.__restricted = restricted
         self.__mul = 10
-        self.operator_integral_provider = DictOperatorIntegralProvider()
+        self.operator_integral_provider = DataOperatorIntegralProvider()
 
         # Do not forget the next line,
         # otherwise weird errors result

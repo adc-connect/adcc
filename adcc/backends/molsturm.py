@@ -22,7 +22,7 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
-from adcc.DictHfProvider import DictHfProvider
+from adcc.DataHfProvider import DataHfProvider
 
 from molsturm.State import State
 
@@ -81,7 +81,7 @@ def convert_scf_to_dict(scfres):
 
 
 def import_scf(scfres):
-    return DictHfProvider(convert_scf_to_dict(scfres))
+    return DataHfProvider(convert_scf_to_dict(scfres))
 
 
 basis_remap = {

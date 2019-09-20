@@ -24,7 +24,7 @@ import adcc
 import unittest
 
 from adcc import ExcitedStates
-from adcc.DictHfProvider import DictHfProvider
+from adcc.DataHfProvider import DataHfProvider
 from adcc.testdata.cache import cache
 
 from pytest import approx
@@ -32,7 +32,7 @@ from pytest import approx
 
 class TestHartreeFockProvider(unittest.TestCase):
     def base_test(self, system, **args):
-        hf = DictHfProvider(cache.hfdata[system])
+        hf = DataHfProvider(cache.hfdata[system])
         refdata = cache.reference_data[system]
 
         res = adcc.adc2(hf, n_singlets=9, **args)

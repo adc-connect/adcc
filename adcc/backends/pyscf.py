@@ -26,7 +26,7 @@ import numpy as np
 from pyscf import ao2mo, gto, scf
 
 from adcc.misc import cached_property
-from adcc.DictHfProvider import DictHfProvider
+from adcc.DataHfProvider import DataHfProvider
 
 from libadcc import HartreeFockProvider
 from .eri_build_helper import EriBuilder
@@ -397,7 +397,7 @@ def import_scf(scfres):
         return PyScfHFProvider(scfres)
     else:
         warnings.warn("Falling back to slow import for UHF result.")
-        return DictHfProvider(convert_scf_to_dict(scfres))
+        return DataHfProvider(convert_scf_to_dict(scfres))
 
 
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,

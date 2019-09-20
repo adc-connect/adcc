@@ -151,8 +151,20 @@ Other stuff and utilities
 .. autofunction:: adcc.banner
 
 
-Supplying SCF data
-------------------
+.. _passing-scf-data:
 
-.. autoclass:: adcc.DictHfProvider
+Passing Hartree-Fock data to adcc
+---------------------------------
+
+From python via a dictionary or an HDF5 file:
+
+.. autoclass:: adcc.DataHfProvider
     :members:
+
+The interface to be implemented in general is:
+
+.. autoclass:: adcc.HartreeFockProvider
+    :members:
+
+For details how to pass data to adcc directly from C++,
+see :cpp:class:`adcc::HartreeFockSolution_i`
