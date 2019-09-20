@@ -20,14 +20,12 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import adcc
 import unittest
 import numpy as np
 
 from .misc import expand_test_templates
 from numpy.testing import assert_allclose, assert_almost_equal
-
-import adcc
-
 from adcc.testdata.cache import cache
 
 
@@ -35,7 +33,10 @@ def compare_refstate_with_reference(
     data, reference, spec, scfres=None, compare_orbcoeff=True,
     compare_eri_almost_abs=False
 ):
-    atol = data["threshold"]
+    if "threshold" in data:
+        atol = data["threshold"]
+    else:
+        atol = data["conv_tol"]
     import_data = data
     if scfres:
         import_data = scfres

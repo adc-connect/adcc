@@ -203,6 +203,9 @@ napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = True
 
 # Breathe settings
-adccore_doc_dir = os.path.abspath(os.path.dirname(__file__)) + "/adccore/xml"
+adccore_doc_dir = (
+    os.path.abspath(os.path.dirname(__file__))
+    + "/../extension/adccore/share/adccore/docs/xml"
+)
 breathe_projects = {"adccore": adccore_doc_dir, }
 breathe_default_project = "adccore"

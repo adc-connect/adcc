@@ -6,29 +6,23 @@ from data import coeff_data, dip_data, eri_data, orben_data
 
 
 def import_data():
-    n_bas = 7
+    n_orbs_alpha = n_bas = 7
+    n_orbs = 2 * n_orbs_alpha
     data = {
-        "n_alpha": 5,
-        "n_beta": 5,
-        "n_orbs_alpha": 7,
-        "n_orbs_beta": 7,
+        "n_orbs_alpha": n_orbs_alpha,
         "n_bas": n_bas,
         "energy_scf": -7.4959319286025718e+01,
-        "energy_nuclear_repulsion": 9.251479269240862,
         "restricted": True,
         "threshold": 1e-12,
         "spin_multiplicity": 1,
         "multipoles": {
             "elec_0": -10,
             "nuclear_0": 10,
+            "nuclear_1": np.array([1.693194615993441, 0.,
+                                   1.196196642772152]),
+            "elec_1": np.array(dip_data).reshape(3, n_bas, n_bas)
         },
     }
-    n_orbs = data["n_orbs_alpha"] + data["n_orbs_beta"]
-
-    data["multipoles"]["nuclear_1"] = np.array([1.693194615993441, 0.,
-                                                1.196196642772152])
-    data["multipoles"]["elec_1"] = np.array(dip_data).reshape(3, n_bas, n_bas)
-
     data["occupation_f"] = np.array(5 * [1] + [0, 0] + 5 * [1] + [0, 0.])
     data["orbcoeff_fb"] = np.array(coeff_data).reshape((n_orbs, n_bas))
     data["orben_f"] = np.array(orben_data).reshape((n_orbs))

@@ -20,7 +20,10 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import os
 import warnings
+
+import h5py
 
 from .available_backends import available, first_available, have_backend
 
@@ -61,13 +64,20 @@ def import_scf_results(res):
             return backend_psi4.import_scf(res)
 
     from libadcc import HartreeFockSolution_i
-    from adcc.DictHfProvider import DictHfProvider
-
     if isinstance(res, HartreeFockSolution_i):
         return res
 
-    if isinstance(res, dict):
-        return DictHfProvider(res)
+    if isinstance(res, (dict, h5py.File)):
+        from adcc.DataHfProvider import DataHfProvider
+        return DataHfProvider(res)
+
+    if isinstance(res, str):
+        if os.path.isfile(res) and (res.endswith(".h5")
+                                    or res.endswith(".hdf5")):
+            return import_scf_results(h5py.File(res, "r"))
+        else:
+            raise ValueError("Unrecognised path or file extension: {}"
+                             "".format(res))
 
     # Note: Add more backends here
 

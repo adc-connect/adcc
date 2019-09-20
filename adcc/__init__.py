@@ -33,7 +33,7 @@ from .functions import (add, contract, copy, divide, dot, empty_like,
 from .memory_pool import memory_pool
 from .thread_pool import thread_pool
 from .ExcitedStates import ExcitedStates
-from .DictHfProvider import DictHfProvider
+from .DataHfProvider import DataHfProvider, DictHfProvider
 from .ReferenceState import ReferenceState
 from .caching_policy import DefaultCachingPolicy, GatherStatisticsPolicy
 from .AmplitudeVector import AmplitudeVector
@@ -52,7 +52,7 @@ __all__ = ["run_adc", "AdcMatrix", "AdcMethod", "Symmetry", "ReferenceState",
            "subtract", "transpose", "zeros_like",
            "memory_pool", "thread_pool", "AmplitudeVector",
            "HartreeFockProvider", "ExcitedStates",
-           "Tensor", "DictHfProvider", "OneParticleOperator",
+           "Tensor", "DictHfProvider", "DataHfProvider", "OneParticleOperator",
            "guesses_singlet", "guesses_triplet", "guesses_any",
            "guess_symmetries", "guesses_spin_flip", "guess_zero",
            "DefaultCachingPolicy", "GatherStatisticsPolicy", "LazyMp",

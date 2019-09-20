@@ -26,7 +26,7 @@ import numpy as np
 from pyscf import ao2mo, gto, scf
 
 from adcc.misc import cached_property
-from adcc.DictHfProvider import DictHfProvider
+from adcc.DataHfProvider import DataHfProvider
 
 from libadcc import HartreeFockProvider
 from .eri_build_helper import EriBuilder
@@ -260,13 +260,8 @@ def convert_scf_to_dict(scfres):
     # Put basic data into a dictionary
     #
     data = {
-        "n_alpha": int(n_alpha),
-        "n_beta": int(n_beta),
         "n_orbs_alpha": int(n_orbs_alpha),
-        "n_orbs_beta": int(n_orbs_beta),
-        "n_bas": int(scfres.mol.nao_nr()),
         "energy_scf": float(scfres.e_tot),
-        "energy_nuclear_repulsion": float(scfres.mol.energy_nuc()),
         "restricted": restricted,
         "threshold": float(threshold),
         "spin_multiplicity": 0,
@@ -279,6 +274,7 @@ def convert_scf_to_dict(scfres):
     #
     # Orbital reordering
     #
+    # TODO This should not be needed any more
     # adcc assumes that the occupied orbitals are specified first,
     # followed by the virtual orbitals. Pyscf does this by means of the
     # mo_occ numpy arrays, so we need to reorder in order to agree
@@ -401,7 +397,7 @@ def import_scf(scfres):
         return PyScfHFProvider(scfres)
     else:
         warnings.warn("Falling back to slow import for UHF result.")
-        return DictHfProvider(convert_scf_to_dict(scfres))
+        return DataHfProvider(convert_scf_to_dict(scfres))
 
 
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,

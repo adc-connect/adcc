@@ -9,6 +9,8 @@ Full adcc reference
 
 This page contains a structured overview of the python API of adcc.
 See also the :ref:`genindex`.
+For documentation how to connect host programs to adcc,
+see :ref:`hostprograms`.
 
 .. _adcn-methods:
 

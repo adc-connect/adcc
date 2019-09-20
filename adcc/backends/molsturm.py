@@ -22,7 +22,7 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
-from adcc.DictHfProvider import DictHfProvider
+from adcc.DataHfProvider import DataHfProvider
 
 from molsturm.State import State
 
@@ -34,12 +34,12 @@ def convert_scf_to_dict(scfres):
     n_alpha = scfres["n_alpha"]
     n_beta = scfres["n_beta"]
     data = {}
+    if scfres["n_orbs_alpha"] != scfres["n_orbs_beta"]:
+        raise ValueError("n_orbs_alpha != n_orbs_beta not supported.")
 
     # Keys to include verbatim from the hf res dictionary to the adcc input
     verbatim_keys = [
-        "n_alpha", "n_beta", "n_orbs_alpha", "n_orbs_beta",
-        "n_bas", "restricted",
-        "orben_f", "eri_ffff", "fock_ff",
+        "n_orbs_alpha", "restricted", "orben_f", "eri_ffff", "fock_ff",
     ]
     for k in verbatim_keys:
         data[k] = scfres[k]
@@ -50,7 +50,7 @@ def convert_scf_to_dict(scfres):
         data["spin_multiplicity"] = 0
 
     n_oa = data["n_orbs_alpha"]
-    data["occupation_f"] = np.zeros(data["n_orbs_alpha"] + data["n_orbs_beta"])
+    data["occupation_f"] = np.zeros(2 * n_oa)
     data["occupation_f"][:n_alpha] = 1.
     data["occupation_f"][n_oa:n_oa + n_beta] = 1.
 
@@ -81,7 +81,7 @@ def convert_scf_to_dict(scfres):
 
 
 def import_scf(scfres):
-    return DictHfProvider(convert_scf_to_dict(scfres))
+    return DataHfProvider(convert_scf_to_dict(scfres))
 
 
 basis_remap = {
