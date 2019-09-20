@@ -48,7 +48,7 @@ except ImportError:
 
 
 # Version of the python bindings and adcc python package.
-__version__ = '0.12.0'
+__version__ = '0.12.1'
 
 
 def get_adccore_data():
