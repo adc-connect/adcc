@@ -321,7 +321,8 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
-        'Operating System :: Unix',
+        'Operating System :: MacOS :: MacOS X',
+        'Operating System :: POSIX :: Linux',
     ],
     #
     packages=find_packages(exclude=["*.test*", "test"]),
@@ -332,7 +333,7 @@ setup(
     ext_modules=ext_modules,
     zip_safe=False,
     #
-    platforms=["Linux", "Mac OS-X", "Unix"],
+    platforms=["Linux", "Mac OS-X"],
     python_requires='>=3.5',
     install_requires=[
         'pybind11 (>= 2.2)',
