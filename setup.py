@@ -327,6 +327,7 @@ setup(
     #
     packages=find_packages(exclude=["*.test*", "test"]),
     package_data={'adcc': ["lib/*.so", "lib/*.dylib",
+                           "lib/*.so.*",
                            "lib/libadccore_LICENSE",
                            "lib/libadccore_thirdparty/ctx/*"],
                   '': ["LICENSE*"]},
