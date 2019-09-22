@@ -23,9 +23,10 @@
 import psi4
 import numpy as np
 
-from libadcc import HartreeFockProvider
 from .eri_build_helper import EriBuilder
 from adcc.misc import cached_property
+
+from libadcc import HartreeFockProvider
 
 
 class Psi4OperatorIntegralProvider:
@@ -82,12 +83,6 @@ class Psi4HFProvider(HartreeFockProvider):
 
     def get_backend(self):
         return "psi4"
-
-    def get_n_alpha(self):
-        return self.wfn.nalpha()
-
-    def get_n_beta(self):
-        return self.get_n_alpha()
 
     def get_conv_tol(self):
         conv_tol = psi4.core.get_option("SCF", "E_CONVERGENCE")

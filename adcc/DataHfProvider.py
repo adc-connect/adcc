@@ -261,19 +261,14 @@ class DataHfProvider(HartreeFockProvider):
         elif not self.get_restricted():
             return 0
         else:
-            return self.get_n_alpha() - self.get_n_beta() + 1
+            noa = self.get_n_orbs_alpha()
+            na = int(np.sum(self.data["occupation_f"][:noa]))
+            nb = int(np.sum(self.data["occupation_f"][noa:]))
+            return na - nb + 1
 
     #
     # Deduced keys
     #
-    def get_n_alpha(self):
-        na = self.get_n_orbs_alpha()
-        return int(np.sum(self.data["occupation_f"][:na]))
-
-    def get_n_beta(self):
-        na = self.get_n_orbs_alpha()
-        return int(np.sum(self.data["occupation_f"][na:]))
-
     def get_n_orbs_alpha(self):
         return self.data["orbcoeff_fb"].shape[0] // 2
 

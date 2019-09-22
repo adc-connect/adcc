@@ -38,8 +38,6 @@ class HartreeFockProvider : public HartreeFockSolution_i {
   // Implementation of the C++ interface
   //
   std::string backend() const override { return get_backend(); }
-  size_t n_alpha() const override { return get_n_alpha(); }
-  size_t n_beta() const override { return get_n_beta(); }
   size_t n_orbs_alpha() const override { return get_n_orbs_alpha(); }
   size_t n_bas() const override { return get_n_bas(); }
   real_type conv_tol() const override { return get_conv_tol(); }
@@ -247,8 +245,6 @@ class HartreeFockProvider : public HartreeFockSolution_i {
   //
   // Interface for the python world
   //
-  virtual size_t get_n_alpha() const                                         = 0;
-  virtual size_t get_n_beta() const                                          = 0;
   virtual size_t get_n_orbs_alpha() const                                    = 0;
   virtual size_t get_n_bas() const                                           = 0;
   virtual py::array_t<scalar_type> get_nuclear_multipole(size_t order) const = 0;
@@ -273,12 +269,6 @@ class PyHartreeFockProvider : public HartreeFockProvider {
   using HartreeFockProvider::HartreeFockProvider;
   virtual ~PyHartreeFockProvider() = default;
 
-  size_t get_n_alpha() const override {
-    PYBIND11_OVERLOAD_PURE(size_t, HartreeFockProvider, get_n_alpha, );
-  }
-  size_t get_n_beta() const override {
-    PYBIND11_OVERLOAD_PURE(size_t, HartreeFockProvider, get_n_beta, );
-  }
   size_t get_n_orbs_alpha() const override {
     PYBIND11_OVERLOAD_PURE(size_t, HartreeFockProvider, get_n_orbs_alpha, );
   }
@@ -338,6 +328,24 @@ static py::array_t<scalar_type> HartreeFockSolution_i_occupation_f(
   return ret;
 }
 
+static size_t count_electrons(const HartreeFockSolution_i& self, bool count_beta) {
+  const py::array_t<scalar_type> occupation = HartreeFockSolution_i_occupation_f(self);
+  const size_t first                        = count_beta ? self.n_orbs_alpha() : 0;
+  const size_t last = count_beta ? self.n_orbs() : self.n_orbs_alpha();
+
+  size_t ret = 0;
+  for (size_t i = first; i < last; ++i) {
+    if (std::fabs(occupation.at(i) - 1.0) < 1e-12) {
+      ret += 1;
+    } else if (std::fabs(occupation.at(i)) > 1e-12) {
+      throw invalid_argument("Occupation value " + std::to_string(occupation.at(i)) +
+                             "for orbital " + std::to_string(i) +
+                             " is invalid, since neither zero nor one.");
+    }
+  }
+  return ret;
+}
+
 static py::array_t<scalar_type> HartreeFockSolution_i_orben_f(
       const HartreeFockSolution_i& self) {
   py::array_t<scalar_type> ret(self.n_orbs());
@@ -368,8 +376,15 @@ void export_HartreeFockProvider(py::module& m) {
         hfdata_i(m, "HartreeFockSolution_i",
                  "Interface class representing the data expected in adcc from an "
                  "interfacing HF / SCF program.");
-  hfdata_i.def_property_readonly("n_alpha", &HartreeFockSolution_i::n_alpha)
-        .def_property_readonly("n_beta", &HartreeFockSolution_i::n_beta)
+  hfdata_i
+        .def_property_readonly("n_alpha",
+                               [](const adcc::HartreeFockSolution_i& self) {
+                                 return count_electrons(self, /* count_beta = */ false);
+                               })
+        .def_property_readonly("n_beta",
+                               [](const adcc::HartreeFockSolution_i& self) {
+                                 return count_electrons(self, /* count_beta = */ true);
+                               })
         .def_property_readonly("conv_tol", &HartreeFockSolution_i::conv_tol)
         .def_property_readonly("restricted", &HartreeFockSolution_i::restricted)
         .def_property_readonly("energy_scf", &HartreeFockSolution_i::energy_scf)
@@ -388,8 +403,6 @@ void export_HartreeFockProvider(py::module& m) {
         //
         ;
 
-  // TODO Remove n_alpha and n_beta since this could be supplied
-  //      by occupation_f completely
   py::class_<HartreeFockProvider, std::shared_ptr<HartreeFockProvider>,
              PyHartreeFockProvider>(
         m, "HartreeFockProvider", hfdata_i,
@@ -399,11 +412,7 @@ void export_HartreeFockProvider(py::module& m) {
         "by `get_n_orbs_alpha()` and with `nb` the value returned by "
         "`get_nbas()`.")
         .def(py::init<>())
-        // Getter functions to be overwritten
-        .def("get_n_alpha", &HartreeFockProvider::get_n_alpha,
-             "Returns the number of alpha electrons.")
-        .def("get_n_beta", &HartreeFockProvider::get_n_beta,
-             "Returns the number of beta electrons.")
+        //
         .def("get_conv_tol", &HartreeFockProvider::get_conv_tol,
              "Returns the tolerance value used for SCF convergence. Should be roughly "
              "equivalent to the l2 norm of the Pulay error.")

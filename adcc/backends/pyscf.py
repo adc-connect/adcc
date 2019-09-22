@@ -24,12 +24,12 @@ import warnings
 import numpy as np
 
 from pyscf import ao2mo, gto, scf
+from .eri_build_helper import EriBuilder
 
 from adcc.misc import cached_property
 from adcc.DataHfProvider import DataHfProvider
 
 from libadcc import HartreeFockProvider
-from .eri_build_helper import EriBuilder
 
 
 class PyScfOperatorIntegralProvider:
@@ -89,12 +89,6 @@ class PyScfHFProvider(HartreeFockProvider):
 
     def get_backend(self):
         return "pyscf"
-
-    def get_n_alpha(self):
-        return np.sum(self.scfres.mo_occ > 0)
-
-    def get_n_beta(self):
-        return self.get_n_alpha()
 
     def get_conv_tol(self):
         if self.scfres.conv_tol_grad is None:

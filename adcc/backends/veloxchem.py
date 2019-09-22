@@ -23,15 +23,14 @@
 import os
 import tempfile
 import numpy as np
-
-from mpi4py import MPI
-from adcc.misc import cached_property
-
 import veloxchem as vlx
 
-from libadcc import HartreeFockProvider
+from mpi4py import MPI
 from .eri_build_helper import (EriBuilder, SpinBlockSlice,
                                get_symm_equivalent_transpositions_for_block)
+from adcc.misc import cached_property
+
+from libadcc import HartreeFockProvider
 
 
 class VeloxChemOperatorIntegralProvider:
@@ -197,12 +196,6 @@ class VeloxChemHFProvider(HartreeFockProvider):
     def get_backend(self):
         return "veloxchem"
 
-    def get_n_alpha(self):
-        return self.molecule.number_of_alpha_electrons()
-
-    def get_n_beta(self):
-        return self.get_n_alpha()
-
     def get_conv_tol(self):
         return self.scfdrv.conv_thresh
 
@@ -252,10 +245,11 @@ class VeloxChemHFProvider(HartreeFockProvider):
 
     def fill_occupation_f(self, out):
         # TODO I (mfh) have no better idea than the fallback implementation
-        n_oa = self.mol_orbs.number_mos()
-        out[:] = np.zeros(2 * n_oa)
-        out[:self.get_n_alpha()] = 1.
-        out[n_oa:n_oa + self.get_n_beta()] = 1.
+        noa = self.mol_orbs.number_mos()
+        na = self.molecule.number_of_alpha_electrons()
+        nb = self.molecule.number_of_beta_electrons()
+        out[:] = np.zeros(2 * noa)
+        out[noa:noa + nb] = out[:na] = 1.
 
     def fill_fock_ff(self, slices, out):
         mo_coeff_a = self.mol_orbs.alpha_to_numpy()
