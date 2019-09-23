@@ -467,7 +467,7 @@ void export_HartreeFockProvider(py::module& m) {
         .def("fill_eri_phys_asym_ffff", &HartreeFockProvider::fill_eri_phys_asym_ffff,
              "Fill the passed numpy array `arg1` with a part of the **antisymmetrised** "
              "electron-repulsion integral tensor in the molecular orbital basis. "
-             "The indexing convention is the chemist's notation, i.e. the index tuple "
+             "The indexing convention is the physicist's notation, i.e. the index tuple "
              "`(i,j,k,l)` refers to the integral :math:`\\langle ij||kl \\rangle`. "
              "The block to store is specified by the provided "
              "tuple of ranges `arg0`, which gives the range of indices to place into the "
