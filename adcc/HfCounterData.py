@@ -55,12 +55,6 @@ class HfCounterData(HartreeFockProvider):
     def get_backend(self):
         return "counterdata"
 
-    def get_n_alpha(self):
-        return self.__n_alpha
-
-    def get_n_beta(self):
-        return self.__n_beta
-
     def get_conv_tol(self):
         return 1e-10
 
@@ -74,9 +68,6 @@ class HfCounterData(HartreeFockProvider):
         return 1
 
     def get_n_orbs_alpha(self):
-        return self.__n_orbs_alpha
-
-    def get_n_orbs_beta(self):
         return self.__n_orbs_alpha
 
     def get_n_bas(self):

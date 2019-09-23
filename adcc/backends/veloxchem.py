@@ -185,9 +185,11 @@ class VeloxChemHFProvider(HartreeFockProvider):
         self.mpi_comm = self.scfdrv.task.mpi_comm
         self.ostream = self.scfdrv.task.ostream
         self.eri_ffff = None
+        n_alpha = self.molecule.number_of_alpha_electrons()
+        n_beta = self.molecule.number_of_beta_electrons()
         self.eri_builder = VeloxChemEriBuilder(
             self.scfdrv.task, self.mol_orbs, self.n_orbs, self.n_orbs_alpha,
-            self.n_alpha, self.n_beta
+            n_alpha, n_beta
         )
 
         self.operator_integral_provider = VeloxChemOperatorIntegralProvider(
@@ -196,12 +198,6 @@ class VeloxChemHFProvider(HartreeFockProvider):
 
     def get_backend(self):
         return "veloxchem"
-
-    def get_n_alpha(self):
-        return self.molecule.number_of_alpha_electrons()
-
-    def get_n_beta(self):
-        return self.get_n_alpha()
 
     def get_conv_tol(self):
         return self.scfdrv.conv_thresh
@@ -216,9 +212,6 @@ class VeloxChemHFProvider(HartreeFockProvider):
         return self.molecule.get_multiplicity()
 
     def get_n_orbs_alpha(self):
-        return self.mol_orbs.number_mos()
-
-    def get_n_orbs_beta(self):
         return self.mol_orbs.number_mos()
 
     def get_n_bas(self):
@@ -252,10 +245,11 @@ class VeloxChemHFProvider(HartreeFockProvider):
 
     def fill_occupation_f(self, out):
         # TODO I (mfh) have no better idea than the fallback implementation
-        n_oa = self.mol_orbs.number_mos()
-        out[:] = np.zeros(2 * n_oa)
-        out[:self.get_n_alpha()] = 1.
-        out[n_oa:n_oa + self.get_n_beta()] = 1.
+        noa = self.mol_orbs.number_mos()
+        na = self.molecule.number_of_alpha_electrons()
+        nb = self.molecule.number_of_beta_electrons()
+        out[:] = np.zeros(2 * noa)
+        out[noa:noa + nb] = out[:na] = 1.
 
     def fill_fock_ff(self, slices, out):
         mo_coeff_a = self.mol_orbs.alpha_to_numpy()

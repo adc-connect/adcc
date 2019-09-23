@@ -23,9 +23,10 @@
 import psi4
 import numpy as np
 
+from adcc.misc import cached_property
+
 from libadcc import HartreeFockProvider
 from .eri_build_helper import EriBuilder
-from adcc.misc import cached_property
 
 
 class Psi4OperatorIntegralProvider:
@@ -75,19 +76,12 @@ class Psi4HFProvider(HartreeFockProvider):
 
         self.wfn = wfn
         self.eri_ffff = None
-        self.eri_builder = Psi4EriBuilder(
-            self.wfn, self.n_orbs, self.n_orbs_alpha, self.n_alpha, self.n_beta
-        )
+        self.eri_builder = Psi4EriBuilder(self.wfn, self.n_orbs, self.wfn.nmo(),
+                                          wfn.nalpha(), wfn.nbeta())
         self.operator_integral_provider = Psi4OperatorIntegralProvider(self.wfn)
 
     def get_backend(self):
         return "psi4"
-
-    def get_n_alpha(self):
-        return self.wfn.nalpha()
-
-    def get_n_beta(self):
-        return self.get_n_alpha()
 
     def get_conv_tol(self):
         conv_tol = psi4.core.get_option("SCF", "E_CONVERGENCE")
@@ -107,9 +101,6 @@ class Psi4HFProvider(HartreeFockProvider):
 
     def get_n_orbs_alpha(self):
         return self.wfn.nmo()
-
-    def get_n_orbs_beta(self):
-        return self.get_n_orbs_alpha()
 
     def get_n_bas(self):
         return self.wfn.basisset().nbf()

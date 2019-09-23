@@ -78,23 +78,19 @@ class PyScfHFProvider(HartreeFockProvider):
         super().__init__()
         self.scfres = scfres
         self.eri_ffff = None
-        self.eri_builder = PyScfEriBuilder(
-            self.scfres, self.n_orbs, self.n_orbs_alpha,
-            self.n_alpha, self.n_beta
-        )
-
+        n_alpha, n_beta = scfres.mol.nelec
+        self.eri_builder = PyScfEriBuilder(self.scfres, self.n_orbs,
+                                           self.n_orbs_alpha, n_alpha, n_beta)
         self.operator_integral_provider = PyScfOperatorIntegralProvider(
             self.scfres
         )
 
+        if not self.restricted:
+            assert self.scfres.mo_coeff[0].shape[1] == \
+                self.scfres.mo_coeff[1].shape[1]
+
     def get_backend(self):
         return "pyscf"
-
-    def get_n_alpha(self):
-        return np.sum(self.scfres.mo_occ > 0)
-
-    def get_n_beta(self):
-        return self.get_n_alpha()
 
     def get_conv_tol(self):
         if self.scfres.conv_tol_grad is None:
@@ -127,12 +123,6 @@ class PyScfHFProvider(HartreeFockProvider):
             return self.scfres.mo_coeff.shape[1]
         else:
             return self.scfres.mo_coeff[0].shape[1]
-
-    def get_n_orbs_beta(self):
-        if self.restricted:
-            return self.get_n_orbs_alpha()
-        else:
-            return self.scfres.mo_coeff[1].shape[1]
 
     def get_n_bas(self):
         return int(self.scfres.mol.nao_nr())

@@ -19,13 +19,19 @@ Python dictionary or HDF5 file
 Host-program specific interface
 -------------------------------
 
-The interface to be implemented in general is:
+For implementing a host-program specific interface
+to adcc, taking advantage of all features of the host program,
+a derived class of the :class:`adcc.HartreeFockProvider` has to be implemented.
+The interface for this is:
 
 .. autoclass:: adcc.HartreeFockProvider
     :members:
 
 .. note::
-   Point at examples in adcc source code
+   TODO Explain the OperatorIntegralProvider and its mechanism.
+
+.. note::
+   TODO Point at examples in adcc source code
 
 C++ interface
 -------------
