@@ -28,7 +28,10 @@ The interface for this is:
     :members:
 
 .. note::
-   Point at examples in adcc source code
+   TODO Explain the OperatorIntegralProvider and its mechanism.
+
+.. note::
+   TODO Point at examples in adcc source code
 
 C++ interface
 -------------
