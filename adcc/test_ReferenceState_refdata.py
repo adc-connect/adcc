@@ -24,9 +24,10 @@ import adcc
 import unittest
 import numpy as np
 
-from .misc import expand_test_templates
 from numpy.testing import assert_allclose, assert_almost_equal
 from adcc.testdata.cache import cache
+
+from .misc import expand_test_templates
 
 
 def compare_refstate_with_reference(
@@ -54,9 +55,9 @@ def compare_refstate_with_reference(
     assert refstate.spin_multiplicity == (1 if data["restricted"] else 0)
     assert refstate.has_core_occupied_space == ("o2" in subspaces)
     assert refstate.irreducible_representation == "A"
-    assert refstate.n_orbs == data["n_orbs_alpha"] + data["n_orbs_beta"]
+    assert refstate.n_orbs == 2 * data["n_orbs_alpha"]
     assert refstate.n_orbs_alpha == data["n_orbs_alpha"]
-    assert refstate.n_orbs_beta == data["n_orbs_beta"]
+    assert refstate.n_orbs_beta == data["n_orbs_alpha"]
     assert refstate.n_alpha == data["n_alpha"]
     assert refstate.n_beta == data["n_beta"]
     assert refstate.conv_tol == data["threshold"]

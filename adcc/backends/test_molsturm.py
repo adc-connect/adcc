@@ -22,18 +22,18 @@
 ## ---------------------------------------------------------------------
 import unittest
 import numpy as np
-
-from numpy.testing import assert_almost_equal
-
-import pytest
 import adcc
 import adcc.backends
 
-from ..misc import expand_test_templates
-from .testing import eri_asymm_construction_test
+from numpy.testing import assert_almost_equal
 
 from adcc.backends import have_backend
 from adcc.testdata import geometry
+
+import pytest
+
+from ..misc import expand_test_templates
+from .testing import eri_asymm_construction_test
 
 basissets = ["sto3g"]
 
@@ -45,12 +45,11 @@ class TestMolsturm(unittest.TestCase):
         hfdata = adcc.backends.import_scf_results(scfres)
         assert hfdata.backend == "molsturm"
 
-        n_orbs_alpha = hfdata.n_orbs_alpha
-        n_alpha = hfdata.n_alpha
-        n_beta = hfdata.n_beta
-        assert hfdata.n_alpha == scfres["n_alpha"]
-        assert hfdata.n_beta == scfres["n_beta"]
+        n_orbs_alpha = scfres["n_orbs_alpha"]
+        n_alpha = scfres["n_alpha"]
+        n_beta = scfres["n_beta"]
         assert hfdata.energy_scf == scfres["energy_ground_state"]
+        assert scfres["n_orbs_alpha"] == scfres["n_orbs_beta"]
 
         params = scfres["input_parameters"]
         coords = np.asarray(params["system"]["coords"])
@@ -62,15 +61,13 @@ class TestMolsturm(unittest.TestCase):
         if scfres["restricted"]:
             assert hfdata.restricted
             assert hfdata.spin_multiplicity == 2 * (n_alpha - n_beta) + 1
-            assert hfdata.n_alpha >= hfdata.n_beta
-            assert hfdata.n_orbs_alpha == hfdata.n_orbs_beta
             assert np.all(hfdata.orben_f[:n_orbs_alpha]
                           == hfdata.orben_f[n_orbs_alpha:])
         else:
             assert hfdata.spin_multiplicity == 0
             assert not hfdata.restricted
 
-        occu = np.zeros(scfres["n_orbs_alpha"] + scfres["n_orbs_beta"])
+        occu = np.zeros(2 * scfres["n_orbs_alpha"])
         occu[:n_alpha] = occu[n_orbs_alpha:n_orbs_alpha + n_beta] = 1.
         assert_almost_equal(hfdata.occupation_f, occu)
 

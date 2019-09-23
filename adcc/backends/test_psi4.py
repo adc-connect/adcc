@@ -22,19 +22,19 @@
 ## ---------------------------------------------------------------------
 import unittest
 import numpy as np
+import adcc
+import adcc.backends
+
+from numpy.testing import assert_almost_equal
+
+from adcc.backends import have_backend
+from adcc.testdata import geometry
+
+import pytest
 
 from ..misc import expand_test_templates
 from .testing import eri_asymm_construction_test, operator_import_test
 from .eri_build_helper import eri_permutations
-
-from numpy.testing import assert_almost_equal
-
-import pytest
-import adcc
-import adcc.backends
-
-from adcc.backends import have_backend
-from adcc.testdata import geometry
 
 if have_backend("psi4"):
     import psi4
@@ -56,15 +56,10 @@ class TestPsi4(unittest.TestCase):
         n_orbs = 2 * wfn.nmo()
 
         assert hfdata.spin_multiplicity != 0
-        assert hfdata.n_alpha == hfdata.n_beta
 
         assert hfdata.n_orbs_alpha == hfdata.n_orbs_beta
         assert np.all(hfdata.orben_f[:hfdata.n_orbs_alpha]
                       == hfdata.orben_f[hfdata.n_orbs_alpha:])
-
-        # Check n_alpha and n_beta
-        assert hfdata.n_alpha == wfn.nalpha()
-        assert hfdata.n_beta == wfn.nbeta()
 
         assert hfdata.energy_scf == wfn.energy()
         assert hfdata.spin_multiplicity == wfn.molecule().multiplicity()

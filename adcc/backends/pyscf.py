@@ -24,12 +24,12 @@ import warnings
 import numpy as np
 
 from pyscf import ao2mo, gto, scf
-from .eri_build_helper import EriBuilder
 
 from adcc.misc import cached_property
 from adcc.DataHfProvider import DataHfProvider
 
 from libadcc import HartreeFockProvider
+from .eri_build_helper import EriBuilder
 
 
 class PyScfOperatorIntegralProvider:
@@ -78,14 +78,16 @@ class PyScfHFProvider(HartreeFockProvider):
         super().__init__()
         self.scfres = scfres
         self.eri_ffff = None
-        self.eri_builder = PyScfEriBuilder(
-            self.scfres, self.n_orbs, self.n_orbs_alpha,
-            self.n_alpha, self.n_beta
-        )
-
+        n_alpha, n_beta = scfres.mol.nelec
+        self.eri_builder = PyScfEriBuilder(self.scfres, self.n_orbs,
+                                           self.n_orbs_alpha, n_alpha, n_beta)
         self.operator_integral_provider = PyScfOperatorIntegralProvider(
             self.scfres
         )
+
+        if not self.restricted:
+            assert self.scfres.mo_coeff[0].shape[1] == \
+                self.scfres.mo_coeff[1].shape[1]
 
     def get_backend(self):
         return "pyscf"
@@ -121,12 +123,6 @@ class PyScfHFProvider(HartreeFockProvider):
             return self.scfres.mo_coeff.shape[1]
         else:
             return self.scfres.mo_coeff[0].shape[1]
-
-    def get_n_orbs_beta(self):
-        if self.restricted:
-            return self.get_n_orbs_alpha()
-        else:
-            return self.scfres.mo_coeff[1].shape[1]
 
     def get_n_bas(self):
         return int(self.scfres.mol.nao_nr())

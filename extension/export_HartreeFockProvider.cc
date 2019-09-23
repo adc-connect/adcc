@@ -377,6 +377,8 @@ void export_HartreeFockProvider(py::module& m) {
                  "Interface class representing the data expected in adcc from an "
                  "interfacing HF / SCF program.");
   hfdata_i
+        // TODO n_alpha and n_beta are kind of expensive like this
+        //      and maybe should be removed for this reason
         .def_property_readonly("n_alpha",
                                [](const adcc::HartreeFockSolution_i& self) {
                                  return count_electrons(self, /* count_beta = */ false);

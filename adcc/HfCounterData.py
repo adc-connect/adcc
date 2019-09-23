@@ -70,9 +70,6 @@ class HfCounterData(HartreeFockProvider):
     def get_n_orbs_alpha(self):
         return self.__n_orbs_alpha
 
-    def get_n_orbs_beta(self):
-        return self.__n_orbs_alpha
-
     def get_n_bas(self):
         return self.__n_bas
 

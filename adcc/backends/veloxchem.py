@@ -23,14 +23,15 @@
 import os
 import tempfile
 import numpy as np
-import veloxchem as vlx
 
 from mpi4py import MPI
-from .eri_build_helper import (EriBuilder, SpinBlockSlice,
-                               get_symm_equivalent_transpositions_for_block)
 from adcc.misc import cached_property
 
+import veloxchem as vlx
+
 from libadcc import HartreeFockProvider
+from .eri_build_helper import (EriBuilder, SpinBlockSlice,
+                               get_symm_equivalent_transpositions_for_block)
 
 
 class VeloxChemOperatorIntegralProvider:
@@ -184,9 +185,11 @@ class VeloxChemHFProvider(HartreeFockProvider):
         self.mpi_comm = self.scfdrv.task.mpi_comm
         self.ostream = self.scfdrv.task.ostream
         self.eri_ffff = None
+        n_alpha = self.molecule.number_of_alpha_electrons()
+        n_beta = self.molecule.number_of_beta_electrons()
         self.eri_builder = VeloxChemEriBuilder(
             self.scfdrv.task, self.mol_orbs, self.n_orbs, self.n_orbs_alpha,
-            self.n_alpha, self.n_beta
+            n_alpha, n_beta
         )
 
         self.operator_integral_provider = VeloxChemOperatorIntegralProvider(
@@ -209,9 +212,6 @@ class VeloxChemHFProvider(HartreeFockProvider):
         return self.molecule.get_multiplicity()
 
     def get_n_orbs_alpha(self):
-        return self.mol_orbs.number_mos()
-
-    def get_n_orbs_beta(self):
         return self.mol_orbs.number_mos()
 
     def get_n_bas(self):
