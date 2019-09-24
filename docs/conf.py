@@ -82,11 +82,20 @@ pygments_style = None
 #
 html_theme = 'sphinx_rtd_theme'
 
+# A nice logo. Should not exceed 200px
+html_logo = None
+
+# The canonical HTML url
+html_baseurl = "https://adc-connect.org/"
+
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    "canonical_url": html_baseurl,
+    # "github_url": "https://github.com/adc-connect.org/adcc/docs/",
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
