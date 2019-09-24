@@ -84,6 +84,10 @@ class Spectrum:
             The width to use for the broadening (stddev for the gaussian,
             gamma parameter for the lorentzian).
             Optional if shape is a callable.
+        xmin : float, optional
+            Explicitly set the minimum value of the x-axis for broadening
+        xmax : float, optional
+            Explicitly set the maximum value of the x-axis for broadening
         """
         if not callable(shape) and width is None:
             raise ValueError("If shape is not a callable, the width parameter "
