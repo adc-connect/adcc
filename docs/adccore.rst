@@ -1,3 +1,5 @@
+.. _adccore-layer:
+
 The adccore C++ layer
 =====================
 

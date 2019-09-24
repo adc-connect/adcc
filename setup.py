@@ -345,7 +345,7 @@ setup(
     ],
     tests_require=["pytest"],
     extras_require={
-        "build_docs": ["sphinx>=2", "recommonmark>=0.5.0", "breathe"],
+        "build_docs": ["sphinx>=2", "breathe"],
     },
     #
     cmdclass={'build_ext': BuildExt, "pytest": PyTest,

@@ -16,8 +16,6 @@ import os
 import sys
 import time
 
-from recommonmark.transform import AutoStructify
-
 sys.path.insert(0, os.path.abspath('..'))
 
 import adcc  # noqa: E402
@@ -47,7 +45,6 @@ extensions = [
     # 'sphinx.ext.doctest',
     # 'sphinx.ext.todo',
     # 'sphinx.ext.coverage',
-    'recommonmark',
     'breathe'
 ]
 
@@ -57,7 +54,7 @@ templates_path = ['_templates']
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
-source_suffix = ['.rst', '.md']
+source_suffix = ['.rst']
 
 # The master toctree document.
 master_doc = 'index'
@@ -137,8 +134,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'adcc.tex', 'adcc Documentation',
-     'Michael F. Herbst, Maximilian Scheurer', 'manual'),
+    (master_doc, 'adcc.tex', 'adcc Documentation', author, 'manual'),
 ]
 
 
@@ -183,19 +179,6 @@ epub_exclude_files = ['search.html']
 
 
 # -- Extension configuration -------------------------------------------------
-
-# recommonmark settings
-# github_doc_root = 'https://github.com/rtfd/recommonmark/tree/master/doc/'
-def setup(app):
-    app.add_config_value('recommonmark_config', {
-        # 'url_resolver': lambda url: github_doc_root + url,
-        'auto_toc_tree_section': 'Contents',
-        'enable_eval_rst': True,
-        'enable_inline_math': True,
-        'enable_math': True,
-    }, True)
-    app.add_transform(AutoStructify)
-
 
 # Napoleon settings
 napoleon_google_docstring = False
