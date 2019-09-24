@@ -108,7 +108,7 @@ class Spectrum:
         if xmax is None:
             xmax = np.max(self.x)
         xextra = (xmax - xmin) / 10
-        n_points = min(5000, max(500, int(200 * (xmax - xmin))))
+        n_points = min(5000, max(500, int(1000 * (xmax - xmin))))
         x = np.linspace(xmin - xextra, xmax + xextra, n_points)
 
         y = 0
