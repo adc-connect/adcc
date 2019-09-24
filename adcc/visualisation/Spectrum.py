@@ -69,7 +69,7 @@ class Spectrum:
         self._args = args
         self._kwargs = kwargs
 
-    def broaden_lines(self, width=None, shape="lorentzian"):
+    def broaden_lines(self, width=None, shape="lorentzian", xmin=None, xmax=None):
         """Apply broadening to the current spectral data and
         return the broadened spectrum.
 
@@ -99,8 +99,11 @@ class Spectrum:
                 scale = width / 0.272
                 return scale * shapefctn(x, x0, width)
 
-        xmin = np.min(self.x)
-        xmax = np.max(self.x)
+        if xmin is None:
+            xmin = np.min(self.x)
+        if xmax is None:
+            xmax = np.max(self.x)
+        print(xmin, xmax)
         xextra = (xmax - xmin) / 10
         n_points = min(5000, max(500, int(200 * (xmax - xmin))))
         x = np.linspace(xmin - xextra, xmax + xextra, n_points)
