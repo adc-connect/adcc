@@ -338,10 +338,10 @@ setup(
     python_requires='>=3.5',
     install_requires=[
         'pybind11 (>= 2.2)',
-        'numpy (>= 1.13)',  # Maybe even higher?
-        'scipy',       # Not sure which version
-        'matplotlib',  # Not sure which version
-        'H5py',        # Not sure which version
+        'numpy (>= 1.13)',      # Maybe even higher?
+        'scipy (>= 1.2)',       # Maybe also lower?
+        'matplotlib (>= 3.0)',  # Maybe also lower?
+        'h5py (>= 2.9)',        # Maybe also lower?
     ],
     tests_require=["pytest"],
     extras_require={
