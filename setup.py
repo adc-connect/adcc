@@ -306,7 +306,7 @@ setup(
     #
     url='https://adc-connect.org',
     author="Michael F. Herbst, Maximilian Scheurer",
-    author_email='adcc+developers@michael-herbst.com',
+    author_email='developers@adc-connect.org',
     license="LGPL v3",
     #
     version=__version__,
