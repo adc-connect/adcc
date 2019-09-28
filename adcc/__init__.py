@@ -64,7 +64,7 @@ __version__ = "0.12.2"
 __license__ = "LGPL v3"
 __url__ = "https://adc-connect.org"
 __authors__ = ["Michael F. Herbst", "Maximilian Scheurer"]
-__email__ = "adcc+developers@michael-herbst.com"
+__email__ = "developers@adc-connect.org"
 __contributors__ = []
 
 
