@@ -4,6 +4,12 @@ adcc: Seamlessly connect your program to ADC
 .. note::
    This documentation page is still under construction.
 
+.. image:: logo/logo.png
+   :width: 200px
+   :align: left
+   :alt: adcc logo
+   :target: .
+
 **ADC connect** -- or adcc in short -- is a Python-based framework to
 connect to arbitrary programs and perform calculations based on the
 algebraic-diagrammatic construction

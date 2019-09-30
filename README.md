@@ -1,3 +1,5 @@
+<img src="https://adc-connect.org/_images/logo.png" alt="adcc logo" height="50px" />
+
 # adcc: Seamlessly connect your program to ADC
 [![Documentation](https://img.shields.io/badge/doc-latest-blue.svg)](https://adc-connect.org)
 
