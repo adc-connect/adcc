@@ -20,12 +20,16 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import sys
 import numpy as np
-import adcc.backends.pyscf
 
-from adcc import hdf5io
 from pyscf import gto, scf
 from geometry import xyz
+from os.path import dirname, join
+
+sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
+
+import adcctestdata as atd  # noqa: E402
 
 # Run SCF in pyscf and converge super-tight using an EDIIS
 mol = gto.M(
@@ -43,22 +47,20 @@ mf.diis_space = 3
 mf.max_cycle = 600
 mf = scf.addons.frac_occ(mf)
 mf.kernel()
-hfdict = adcc.backends.pyscf.convert_scf_to_dict(mf)
+h5f = atd.dump_pyscf(mf, "cn_ccpvdz_hfdata.hdf5")
 
-hfdict["reference_cases"] = {
+h5f["reference_cases"] = str({
     "gen":    {},
     "cvs":    {"core_orbitals":  1},
     "fc":     {"frozen_core":    1},
     "fv":     {"frozen_virtual": 3},
-}
+})
 
 # Since CN has some symmetry some energy levels are degenerate,
 # which can lead to all sort of inconsistencies. This code
 # adds a fudge value of 1e-14 to make them numerically distinguishable
-orben_f = hfdict["orben_f"]
+orben_f = h5f["orben_f"]
 for i in range(1, len(orben_f)):
     if np.abs(orben_f[i - 1] - orben_f[i]) < 1e-14:
         orben_f[i - 1] -= 1e-14
         orben_f[i] += 1e-14
-
-hdf5io.save("cn_ccpvdz_hfdata.hdf5", hfdict)

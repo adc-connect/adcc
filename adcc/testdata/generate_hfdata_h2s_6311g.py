@@ -20,12 +20,15 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import sys
+
 from pyscf import gto, scf
 from geometry import xyz
+from os.path import dirname, join
 
-import adcc.backends.pyscf
+sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
 
-from adcc import hdf5io
+import adcctestdata as atd  # noqa: E402
 
 # Run SCF in pyscf and converge super-tight using an EDIIS
 mol = gto.M(
@@ -41,12 +44,12 @@ mf.diis = scf.EDIIS()
 mf.diis_space = 3
 mf.max_cycle = 100
 mf.kernel()
-hfdict = adcc.backends.pyscf.convert_scf_to_dict(mf)
+h5f = atd.dump_pyscf(mf, "h2s_6311g_hfdata.hdf5")
 
 core = "core_orbitals"
 fc = "frozen_core"
 fv = "frozen_virtual"
-hfdict["reference_cases"] = {
+h5f["reference_cases"] = str({
     "gen":       {                     },  # noqa: E201, E202
     "cvs":       {core: 1,             },  # noqa: E201, E202
     "fc":        {         fc: 1,      },  # noqa: E201, E202
@@ -55,5 +58,4 @@ hfdict["reference_cases"] = {
     "fv-cvs":    {core: 1,        fv: 3},  # noqa: E201, E202
     "fc-fv":     {         fc: 1, fv: 3},  # noqa: E201, E202
     "fc-fv-cvs": {core: 1, fc: 1, fv: 3},  # noqa: E201, E202
-}
-hdf5io.save("h2s_6311g_hfdata.hdf5", hfdict)
+})

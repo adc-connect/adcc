@@ -20,6 +20,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import ast
 import adcc
 import unittest
 import numpy as np
@@ -34,15 +35,15 @@ def compare_refstate_with_reference(
     data, reference, spec, scfres=None, compare_orbcoeff=True,
     compare_eri_almost_abs=False
 ):
-    if "threshold" in data:
-        atol = data["threshold"]
-    else:
-        atol = data["conv_tol"]
+    atol = data["conv_tol"]
     import_data = data
     if scfres:
         import_data = scfres
 
-    refstate = adcc.ReferenceState(import_data, **data["reference_cases"][spec])
+    # TODO once hfdata is an HDF5 file
+    # refcases = ast.literal_eval(data["reference_cases"][()])
+    refcases = ast.literal_eval(data["reference_cases"])
+    refstate = adcc.ReferenceState(import_data, **refcases[spec])
     subspaces = {
         "gen": ["o1", "v1"], "cvs": ["o1", "o2", "v1"],
         "fc": ["o1", "o3", "v1"], "fv": ["o1", "v1", "v2"],
@@ -58,9 +59,9 @@ def compare_refstate_with_reference(
     assert refstate.n_orbs == 2 * data["n_orbs_alpha"]
     assert refstate.n_orbs_alpha == data["n_orbs_alpha"]
     assert refstate.n_orbs_beta == data["n_orbs_alpha"]
-    assert refstate.n_alpha == data["n_alpha"]
-    assert refstate.n_beta == data["n_beta"]
-    assert refstate.conv_tol == data["threshold"]
+    assert refstate.n_alpha == sum(data["occupation_f"][:refstate.n_orbs_alpha])
+    assert refstate.n_beta == sum(data["occupation_f"][refstate.n_orbs_alpha:])
+    assert refstate.conv_tol == data["conv_tol"]
     assert_allclose(refstate.energy_scf, data["energy_scf"], atol=atol)
     assert refstate.mospaces.subspaces == subspaces
 

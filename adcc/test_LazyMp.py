@@ -111,7 +111,7 @@ class TestLazyMp(unittest.TestCase):
     # CVS
     #
     def template_cvs_mp2_energy(self, case):
-        refmpcvs = cache.reference_data[case]["mp_cvs"]
+        refmpcvs = cache.reference_data[case]["cvs-mp"]
         assert self.mp_cvs[case].energy_correction(2) == \
             approx(refmpcvs["mp2"]["energy"])
 
@@ -130,27 +130,27 @@ class TestLazyMp(unittest.TestCase):
             approx(refmp["mp3"]["energy"])
 
     def template_cvs_df(self, case):
-        refmpcvs = cache.reference_data[case]["mp_cvs"]
+        refmpcvs = cache.reference_data[case]["cvs-mp"]
         assert_allclose(self.mp_cvs[case].df("o1v1").to_ndarray(),
                         refmpcvs["mp1"]["df_o1v1"], atol=1e-12)
         assert_allclose(self.mp_cvs[case].df("o2v1").to_ndarray(),
                         refmpcvs["mp1"]["df_o2v1"], atol=1e-12)
 
     def template_cvs_t2(self, case):
-        refmpcvs = cache.reference_data[case]["mp_cvs"]
+        refmpcvs = cache.reference_data[case]["cvs-mp"]
         for label in ["o1o1v1v1", "o1o2v1v1", "o2o2v1v1"]:
             assert_allclose(self.mp_cvs[case].t2(label).to_ndarray(),
                             refmpcvs["mp1"]["t_" + label], atol=1e-12)
 
     def template_cvs_td2(self, case):
-        refmpcvs = cache.reference_data[case]["mp_cvs"]
+        refmpcvs = cache.reference_data[case]["cvs-mp"]
         for label in ["o1o1v1v1", "o1o2v1v1", "o2o2v1v1"]:
             if "td_" + label in refmpcvs["mp2"]:
                 assert_allclose(self.mp_cvs[case].td2(label).to_ndarray(),
                                 refmpcvs["mp2"]["td_" + label], atol=1e-12)
 
     def template_cvs_mp2_density_mo(self, case):
-        refmpcvs = cache.reference_data[case]["mp_cvs"]
+        refmpcvs = cache.reference_data[case]["cvs-mp"]
         mp2diff = self.mp_cvs[case].mp2_diffdm
 
         assert mp2diff.is_symmetric
@@ -159,7 +159,7 @@ class TestLazyMp(unittest.TestCase):
                             refmpcvs["mp2"]["dm_" + label], atol=1e-12)
 
     def template_cvs_mp2_density_ao(self, case):
-        refmpcvs = cache.reference_data[case]["mp_cvs"]
+        refmpcvs = cache.reference_data[case]["cvs-mp"]
         refmp = cache.reference_data[case]["mp"]
         mp2diff = self.mp_cvs[case].mp2_diffdm
         reference_state = self.mp_cvs[case].reference_state

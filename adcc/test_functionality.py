@@ -24,7 +24,6 @@ import adcc
 import unittest
 import numpy as np
 
-from .misc import assert_allclose_signfix, expand_test_templates
 from numpy.testing import assert_allclose
 
 from adcc import ExcitedStates
@@ -32,6 +31,7 @@ from adcc.testdata.cache import cache
 
 import pytest
 
+from .misc import assert_allclose_signfix, expand_test_templates
 from pytest import approx
 
 # The methods to test
@@ -41,7 +41,7 @@ methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 class TestFunctionalityBase(unittest.TestCase):
     def base_test(self, system, method, kind, prefix="", test_mp=True, **args):
         if prefix:
-            prefix = prefix.replace("-", "_") + "_"
+            prefix += "-"
         hf = cache.hfdata[system]
         refdata = cache.reference_data[system]
         ref = refdata[prefix.replace("_", "-") + method][kind]
