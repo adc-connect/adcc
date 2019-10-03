@@ -44,10 +44,6 @@ void export_ReferenceState(py::module& m);
 void export_Symmetry(py::module& m);
 void export_Tensor(py::module& m);
 void export_ThreadPool(py::module& m);
-
-#ifdef ADCC_WITH_ADCMAN
-void export_solve_adcman_davidson(py::module& m);
-#endif
 }  // namespace py_iface
 }  // namespace adcc
 
@@ -75,10 +71,6 @@ PYBIND11_MODULE(libadcc, m) {
   pyif::export_amplitude_vector_enforce_spin_kind(m);
   pyif::export_compute_modified_transition_moments(m);
   pyif::export_compute_one_particle_densities(m);
-
-#ifdef ADCC_WITH_ADCMAN
-  pyif::export_solve_adcman_davidson(m);
-#endif
 
   // Set metadata about libadcc
   m.attr("__version__")    = adcc::version::version_string();

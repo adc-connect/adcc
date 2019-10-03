@@ -157,7 +157,3 @@ class AdcCore:
                 if line and line[0] == "NEEDED":
                     needed.append(line[1])
         return needed
-
-    @property
-    def feature_macros(self):
-        return [("ADCC_WITH_" + feat.upper(), 1) for feat in self.features]

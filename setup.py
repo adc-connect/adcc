@@ -267,7 +267,6 @@ else:
 ext_modules = [
     Extension(
         'libadcc', glob.glob("extension/*.cc"),
-        define_macros=adccore.feature_macros,
         include_dirs=[
             # Path to pybind11 headers
             GetPyBindInclude(),

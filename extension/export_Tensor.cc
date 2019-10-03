@@ -354,7 +354,7 @@ static std::shared_ptr<Tensor> Tensor__matmul__(const std::shared_ptr<Tensor>& s
 void export_Tensor(py::module& m) {
   py::class_<Tensor, std::shared_ptr<Tensor>>(
         m, "Tensor",
-        "Class representing the Tensor objects used for computations in adcman")
+        "Class representing the Tensor objects used for computations in adcc")
         .def(py::init(&adcc::make_tensor_zero),
              "Construct a Tensor object using a Symmetry object describing its symmetry "
              "properties.\n"

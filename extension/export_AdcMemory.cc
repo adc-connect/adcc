@@ -63,8 +63,6 @@ void export_AdcMemory(py::module& m) {
                       &AdcMemory::set_contraction_batch_size,
                       "Get or set the batch size for contraction, i.e. the number of "
                       "blocks handled simultaneously in a tensor contraction.")
-        .def("diagonistic_info", &AdcMemory::diagnostic_info,
-             "Get some diagnostic information about the allocator.")
         .def("initialise", &AdcMemory::initialise,
              "Initialise the adcc memory management.\n\n"
              "@param   max_memory   Estimate for the maximally employed memory\n"
