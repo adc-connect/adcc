@@ -236,7 +236,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     # Determine default ADC convergence tolerance
     if conv_tol is None:
         conv_tol = max(refstate.conv_tol / 100, 1e-6)
-    if refstate.conv_tol >= conv_tol:
+    if refstate.conv_tol > conv_tol:
         raise ValueError("Convergence tolerance of SCF results (== {}) needs to"
                          " be lower than ADC convergence tolerance parameter "
                          "conv_tol (== {}).".format(refstate.conv_tol,

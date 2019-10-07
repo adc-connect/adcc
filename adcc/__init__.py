@@ -221,5 +221,6 @@ def banner(colour=sys.stdout.isatty(), show_doi=True, show_website=True):
             string += empty
         string += string_component(**comp)
 
+    string += empty
     string += "+" + 78 * "-" + "+"
     return string
