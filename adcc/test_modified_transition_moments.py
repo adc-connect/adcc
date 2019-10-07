@@ -20,20 +20,16 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
+import adcc
 import unittest
 import numpy as np
 
-from .misc import expand_test_templates
+from adcc.testdata.cache import cache
 
-import adcc
+from .misc import expand_test_templates
+from .modified_transition_moments import compute_modified_transition_moments
 
 from pytest import approx
-
-from adcc.testdata.cache import cache
-from .misc import assert_allclose_signfix
-
-from .modified_transition_moments import compute_modified_transition_moments
 
 # The methods to test
 methods = ["adc2"]
@@ -45,7 +41,7 @@ class TestModifiedTransitionMoments(unittest.TestCase):
         hf = cache.hfdata[system]
         refdata = cache.reference_data[system]
         ref = refdata[method][kind]
-        n_ref = len(ref["eigenvalues"])
+        n_ref = len(ref["eigenvectors_singles"])
 
         refstate = adcc.ReferenceState(hf)
         groundstate = adcc.LazyMp(refstate)

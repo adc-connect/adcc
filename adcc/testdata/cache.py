@@ -21,9 +21,8 @@
 ##
 ## ---------------------------------------------------------------------
 import os
-
+import ast
 import adcc
-import pytest
 
 from .geometry import xyz
 
@@ -31,6 +30,8 @@ from adcc import AdcMatrix, ExcitedStates, LazyMp, guess_zero, hdf5io
 from adcc.misc import cached_property
 from adcc.solver import EigenSolverStateBase
 from adcc.caching_policy import CacheAllPolicy
+
+import pytest
 
 
 class AdcMockState(EigenSolverStateBase):
@@ -108,6 +109,7 @@ class TestdataCache():
         ret = {}
         for k in self.testcases:
             datafile = fullfile(k + "_hfdata.hdf5")
+            # TODO This could be made a plain HDF5.File
             ret[k] = hdf5io.load(datafile)
         return ret
 
@@ -123,7 +125,9 @@ class TestdataCache():
     def refstate_cvs(self):
         ret = {}
         for case in self.testcases:
-            refcases = self.hfdata[case]["reference_cases"]
+            # TODO once hfdata is an HDF5 file
+            # refcases = ast.literal_eval(self.hfdata[case]["reference_cases"][()])
+            refcases = ast.literal_eval(self.hfdata[case]["reference_cases"])
             if "cvs" not in refcases:
                 continue
             ret[case] = adcc.ReferenceState(self.hfdata[case], **refcases["cvs"])
@@ -131,7 +135,9 @@ class TestdataCache():
         return ret
 
     def refstate_nocache(self, case, spec):
-        refcases = self.hfdata[case]["reference_cases"]
+        # TODO once hfdata is an HDF5 file
+        # refcases = ast.literal_eval(self.hfdata[case]["reference_cases"][()])
+        refcases = ast.literal_eval(self.hfdata[case]["reference_cases"])
         return adcc.ReferenceState(self.hfdata[case], **refcases[spec])
 
     @cached_property

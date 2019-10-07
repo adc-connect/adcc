@@ -20,11 +20,15 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc.backends.pyscf
+import sys
 
-from adcc import hdf5io
 from pyscf import gto, scf
 from geometry import xyz
+from os.path import dirname, join
+
+sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
+
+import adcctestdata as atd  # noqa: E402
 
 # Run SCF in pyscf and converge super-tight using an EDIIS
 mol = gto.M(
@@ -39,11 +43,11 @@ mf.diis = scf.EDIIS()
 mf.diis_space = 3
 mf.max_cycle = 500
 mf.kernel()
-hfdict = adcc.backends.pyscf.convert_scf_to_dict(mf)
+h5f = atd.dump_pyscf(mf, "h2o_def2tzvp_hfdata.hdf5")
 
-hfdict["reference_cases"] = {
+# Store configuration parameters for interesting cases to generate
+# reference data for. The data is stored as a stringified dict.
+h5f["reference_cases"] = str({
     "gen":    {},
     "cvs":    {"core_orbitals":  1},
-}
-
-hdf5io.save("h2o_def2tzvp_hfdata.hdf5", hfdict)
+})

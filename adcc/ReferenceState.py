@@ -84,7 +84,7 @@ def expand_spaceargs(hfdata, **spaceargs):
     noa = hfdata.n_orbs_alpha
     n_orbs = [0, 0]
     for key in ["frozen_core", "core_orbitals"]:
-        if key not in spaceargs:
+        if key not in spaceargs or not spaceargs[key]:
             continue
         list_alpha = expand_to_list(key, spaceargs[key][0],
                                     from_min=n_orbs[0])
@@ -95,12 +95,10 @@ def expand_spaceargs(hfdata, **spaceargs):
         n_orbs[1] += len(list_beta)
 
     key = "frozen_virtual"
-    if key in spaceargs:
+    if key in spaceargs and spaceargs[key]:
         spaceargs[key] = np.concatenate((
-            expand_to_list(key, spaceargs[key][0],
-                           from_max=hfdata.n_orbs_alpha),
-            noa + expand_to_list(key, spaceargs[key][1],
-                                 from_max=hfdata.n_orbs_beta)
+            expand_to_list(key, spaceargs[key][0], from_max=noa),
+            expand_to_list(key, spaceargs[key][1], from_max=noa) + noa
         )).tolist()
     return spaceargs
 

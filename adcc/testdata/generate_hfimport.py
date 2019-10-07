@@ -21,6 +21,7 @@
 ##
 ## ---------------------------------------------------------------------
 import os
+import ast
 import adcc
 import numpy as np
 
@@ -63,7 +64,8 @@ def dump_imported(key, dump_cvs=True):
     print("Caching data for {} ...".format(key))
     data = cache.hfdata[key]
     dictionary = {}
-    for name, args in data["reference_cases"].items():
+    refcases = ast.literal_eval(data["reference_cases"][()])
+    for name, args in refcases.items():
         print("Working on {} {} ...".format(key, name))
         refstate = adcc.ReferenceState(data, **args)
         for k, v in build_dict(refstate).items():
@@ -80,6 +82,7 @@ def main():
     # CN unrestricted
     dump_imported("cn_sto3g")
     dump_imported("cn_ccpvdz")
+
 
 if __name__ == "__main__":
     main()

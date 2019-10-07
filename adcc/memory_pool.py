@@ -32,22 +32,26 @@ import libadcc
 class MemoryPool(libadcc.AdcMemory):
     def initialise(self, max_memory, tensor_block_size=16,
                    pagefile_directory=None, allocator="default"):
-        """
-        Initialise the adcc memory management.
+        """Initialise the adcc memory management.
 
-        @param   max_memory   Estimate for the maximally employed memory
-        @param tensor_block_size   This parameter roughly has the meaning
-                                   of how many indices are handled together
-                                   on operations. A good value is 16 for most
-                                   nowaday CPU cachelines.
-        @param pagefile_prefix     Directory prefix for storing temporary
-                                   cache files.
-        @param allocator   The allocator to be used. Valid values are "libxm",
-                           "libvmm", "standard" and "default", where "default"
-                           uses a default chosen from the first three.
+        Parameters
+        ----------
+        max_memory : int
+            Estimate for the maximally employed memory
+
+        tensor_block_size : int, optional
+            This parameter roughly has the meaning of how many indices are handled
+            together on operations. A good value is 16 for most nowaday CPU cachelines.
+
+        pagefile_prefix : str, optional
+            Directory prefix for storing temporary cache files.
+
+        allocator : str, optional
+            The allocator to be used. Valid values are "libxm", "standard" (libstc++
+            allocator) and "default", where "default" uses the best-available default.
         """
         if allocator not in ["standard", "default"]:
-            if allocator == "adcman" or allocator not in libadcc.__features__:
+            if allocator not in libadcc.__features__:
                 raise ValueError("Allocator {} is unknown or not compiled into "
                                  "this version of adcc.".format(allocator))
 
@@ -73,21 +77,13 @@ class MemoryPool(libadcc.AdcMemory):
 
     @property
     def page_files(self):
-        """
-        The list of all page files.
-        """
+        """The list of all page files."""
         return glob.glob(os.path.join(self.pagefile_directory, "pagefile.*"))
 
     @property
     def total_size_page_files(self):
-        """
-        The total size of all page files
-        """
+        """The total size of all page files."""
         return sum(os.path.getsize(f) for f in self.page_files)
-
-    def diagnostic_info(self):
-        # TODO Also some nice stuff for cases where this is empty
-        return super().diagnostic_info()
 
 
 # The actual memory object to use

@@ -23,13 +23,13 @@
 import unittest
 import numpy as np
 
+from numpy.testing import assert_allclose
+from adcc.testdata.cache import cache
+
 from .misc import assert_allclose_signfix
 from .test_state_densities import Runners
 
-from numpy.testing import assert_allclose
-
 from pytest import approx
-from adcc.testdata.cache import cache
 
 # The methods to test
 basemethods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
@@ -46,7 +46,7 @@ class TestTransitionDipoleMoments(unittest.TestCase, Runners):
         res_tdms = state.transition_dipole_moments
         ref_tdms = refdata[method][kind]["transition_dipole_moments"]
         refevals = refdata[method][kind]["eigenvalues"]
-        n_ref = len(refevals)
+        n_ref = len(state.excitation_vectors)
         for i in range(n_ref):
             res_tdm = res_tdms[i]
             ref_tdm = ref_tdms[i]
@@ -67,7 +67,7 @@ class TestOscillatorStrengths(unittest.TestCase, Runners):
         res_oscs = state.oscillator_strengths
         ref_tdms = refdata[method][kind]["transition_dipole_moments"]
         refevals = refdata[method][kind]["eigenvalues"]
-        n_ref = len(refevals)
+        n_ref = len(state.excitation_vectors)
         for i in range(n_ref):
             assert state.excitation_energies[i] == refevals[i]
             ref_tdm_norm = np.sum(ref_tdms[i] * ref_tdms[i])
@@ -83,6 +83,5 @@ class TestStateDipoleMoments(unittest.TestCase, Runners):
 
         res_dms = state.state_dipole_moments
         ref = refdata[method][kind]
-        n_ref = len(ref["eigenvalues"])
-        assert_allclose(res_dms[:n_ref],
-                        ref["state_dipole_moments"], atol=1e-4)
+        n_ref = len(state.excitation_vectors)
+        assert_allclose(res_dms, ref["state_dipole_moments"][:n_ref], atol=1e-4)
