@@ -138,21 +138,32 @@ class AdcMatrix(libadcc.AdcMatrix):
 
         if "d" in blocks:
             sp_d = self.block_spaces("d")
-            assert sp_d[0] == sp_d[1] and sp_d[2] == sp_d[3]
-            # TODO CVS and other more general cases!
 
-            ns1 = self.mospaces.n_orbs(sp_d[0])
-            ns2 = self.mospaces.n_orbs(sp_d[2])
-            for i in range(ns1):
-                for j in range(i):
-                    for a in range(ns2):
-                        for b in range(a):
-                            ret.append([
-                                ((i, j, a, b), +1 / 2),
-                                ((j, i, a, b), -1 / 2),
-                                ((i, j, b, a), -1 / 2),
-                                ((j, i, b, a), +1 / 2),
-                            ])
+            if sp_d[0] == sp_d[1] and sp_d[2] == sp_d[3]:
+                nso = self.mospaces.n_orbs(sp_d[0])
+                nsv = self.mospaces.n_orbs(sp_d[2])
+                ret.extend([[((i, j, a, b), +1 / 2),
+                             ((j, i, a, b), -1 / 2),
+                             ((i, j, b, a), -1 / 2),
+                             ((j, i, b, a), +1 / 2)]
+                            for i in range(nso) for j in range(i)
+                            for a in range(nsv) for b in range(a)])
+            elif sp_d[2] == sp_d[3]:
+                nso = self.mospaces.n_orbs(sp_d[0])
+                nsc = self.mospaces.n_orbs(sp_d[1])
+                nsv = self.mospaces.n_orbs(sp_d[2])
+                ret.extend([[((i, j, a, b), +1 / np.sqrt(2)),
+                             ((i, j, b, a), -1 / np.sqrt(2))]
+                            for i in range(nso) for j in range(nsc)
+                            for a in range(nsv) for b in range(a)])
+            else:
+                nso = self.mospaces.n_orbs(sp_d[0])
+                nsc = self.mospaces.n_orbs(sp_d[1])
+                nsv = self.mospaces.n_orbs(sp_d[2])
+                nsw = self.mospaces.n_orbs(sp_d[3])
+                ret.append([((i, j, b, a), 1)
+                            for i in range(nso) for j in range(nsc)
+                            for a in range(nsv) for b in range(nsw)])
 
         if any(b not in "sd" for b in self.blocks):
             raise NotImplementedError("Blocks other than s and d "

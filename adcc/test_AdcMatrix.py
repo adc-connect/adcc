@@ -30,12 +30,19 @@ import numpy as np
 
 import import_data
 
+cvs = True
 refstate = adcc.ReferenceState(import_data.import_data())
-adc1 = adcc.AdcMatrix("adc1", refstate)
+refstate2 = adcc.ReferenceState(import_data.import_data(), core_orbitals=1)
 
 print("#\n#-- ADC(1)\n#")
-n_states = 10
-state1 = adcc.adc1(refstate, n_states=n_states)
+if cvs:
+    n_states = 2
+    adc1 = adcc.AdcMatrix("cvs-adc1", refstate2)
+    state1 = adcc.cvs_adc1(refstate2, n_states=n_states)
+else:
+    n_states = 10
+    adc1 = adcc.AdcMatrix("adc1", refstate)
+    state1 = adcc.adc1(refstate, n_states=n_states)
 dense1 = adc1.to_dense_matrix()
 np.testing.assert_almost_equal(dense1, dense1.T)
 spectrum1 = np.linalg.eigvalsh(dense1)
@@ -55,8 +62,12 @@ print()
 
 print("#\n#-- ADC(2)\n#")
 n_states = 3  # TODO Test for a few more ...
-adc2 = adcc.AdcMatrix("adc2", refstate)
-state2 = adcc.adc2(refstate, n_states=n_states)
+if cvs:
+    adc2 = adcc.AdcMatrix("cvs-adc2", refstate2)
+    state2 = adcc.cvs_adc2(refstate2, n_states=n_states)
+else:
+    adc2 = adcc.AdcMatrix("adc2", refstate)
+    state2 = adcc.adc2(refstate, n_states=n_states)
 dense2 = adc2.to_dense_matrix()
 np.testing.assert_almost_equal(dense2, dense2.T)
 spectrum2 = np.linalg.eigvalsh(dense2)
@@ -76,8 +87,12 @@ print()
 
 print("#\n#-- ADC(2)-x\n#")
 n_states = 3  # TODO Test for a few more ...
-adc2x = adcc.AdcMatrix("adc2x", refstate)
-state2x = adcc.adc2x(refstate, n_states=n_states)
+if cvs:
+    adc2x = adcc.AdcMatrix("cvs-adc2x", refstate2)
+    state2x = adcc.cvs_adc2x(refstate2, n_states=n_states)
+else:
+    adc2x = adcc.AdcMatrix("adc2x", refstate)
+    state2x = adcc.adc2x(refstate, n_states=n_states)
 dense2x = adc2x.to_dense_matrix()
 np.testing.assert_almost_equal(dense2x, dense2x.T)
 spectrum2x = np.linalg.eigvalsh(dense2x)
@@ -97,8 +112,12 @@ print()
 
 print("#\n#-- ADC(3)\n#")
 n_states = 3  # TODO Test for a few more ...
-adc3 = adcc.AdcMatrix("adc3", refstate)
-state3 = adcc.adc3(refstate, n_states=n_states)
+if cvs:
+    adc3 = adcc.AdcMatrix("cvs-adc3", refstate2)
+    state3 = adcc.cvs_adc3(refstate2, n_states=n_states)
+else:
+    adc3 = adcc.AdcMatrix("adc3", refstate)
+    state3 = adcc.adc3(refstate, n_states=n_states)
 dense3 = adc3.to_dense_matrix()
 np.testing.assert_almost_equal(dense3, dense3.T)
 spectrum3 = np.linalg.eigvalsh(dense3)
