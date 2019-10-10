@@ -98,10 +98,3 @@ using the libtensor tensor library.
 .. doxygengroup:: TensorLibtensor
    :members:
    :content-only:
-
-
-adcman Davidson interface
--------------------------
-.. doxygengroup:: AdcmanInterface
-   :members:
-   :content-only:
