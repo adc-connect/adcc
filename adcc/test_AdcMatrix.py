@@ -20,113 +20,48 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import sys
-
-sys.path.insert(0, "../examples/water/")
-sys.path.insert(0, "..")
-
 import adcc
+import unittest
 import numpy as np
 
-import import_data
+from .misc import expand_test_templates
+from numpy.testing import assert_allclose
+from adcc.testdata.cache import cache
 
-cvs = True
-refstate = adcc.ReferenceState(import_data.import_data())
-refstate2 = adcc.ReferenceState(import_data.import_data(), core_orbitals=1)
+methods = ["adc1", "adc2", "adc2x", "adc3"]
+methods += ["cvs-" + m for m in methods]
 
-print("#\n#-- ADC(1)\n#")
-if cvs:
-    n_states = 2
-    adc1 = adcc.AdcMatrix("cvs-adc1", refstate2)
-    state1 = adcc.cvs_adc1(refstate2, n_states=n_states)
-else:
-    n_states = 10
-    adc1 = adcc.AdcMatrix("adc1", refstate)
-    state1 = adcc.adc1(refstate, n_states=n_states)
-dense1 = adc1.to_dense_matrix()
-np.testing.assert_almost_equal(dense1, dense1.T)
-spectrum1 = np.linalg.eigvalsh(dense1)
 
-n_decimals = 10
-atol = 1e-6
-ref = np.round(state1.excitation_energies, n_decimals)
-test = np.unique(np.round(spectrum1, n_decimals))[:n_states]
-np.testing.assert_allclose(ref, test, atol=atol)
-del state1
-del dense1
-del spectrum1
+@expand_test_templates(methods)
+class TestAdcMatrixDenseExport(unittest.TestCase):
+    def base_test(self, case, method, conv_tol=1e-8, **kwargs):
+        kwargs.setdefault("n_states", 10)
+        n_states = kwargs["n_states"]
+        if "cvs" in method:
+            refstate = cache.refstate_cvs[case]
+        else:
+            refstate = cache.refstate[case]
 
-print()
-print()
-print()
+        matrix = adcc.AdcMatrix(method, refstate)
+        state = adcc.run_adc(matrix, method=method, conv_tol=conv_tol, **kwargs)
 
-print("#\n#-- ADC(2)\n#")
-n_states = 3  # TODO Test for a few more ...
-if cvs:
-    adc2 = adcc.AdcMatrix("cvs-adc2", refstate2)
-    state2 = adcc.cvs_adc2(refstate2, n_states=n_states)
-else:
-    adc2 = adcc.AdcMatrix("adc2", refstate)
-    state2 = adcc.adc2(refstate, n_states=n_states)
-dense2 = adc2.to_dense_matrix()
-np.testing.assert_almost_equal(dense2, dense2.T)
-spectrum2 = np.linalg.eigvalsh(dense2)
+        dense = matrix.to_dense_matrix()
+        assert_allclose(dense, dense.T, rtol=1e-10, atol=1e-12)
 
-n_decimals = 10
-atol = 1e-6
-ref = np.round(state2.excitation_energies, n_decimals)
-test = np.unique(np.round(spectrum2, n_decimals))[:n_states]
-np.testing.assert_allclose(ref, test, atol=atol)
-del state2
-del dense2
-del spectrum2
+        n_decimals = 10
+        spectrum = np.linalg.eigvalsh(dense)
+        rounded = np.unique(np.round(spectrum, n_decimals))[:n_states]
+        assert_allclose(state.excitation_energies, rounded, atol=10 * conv_tol)
 
-print()
-print()
-print()
+    def template_h2o(self, method):
+        kwargs = {}
+        if "cvs" in method:
+            kwargs["n_states"] = 7
+        if method in ["cvs-adc2"]:
+            kwargs["n_states"] = 5
+        if method in ["cvs-adc1"]:
+            kwargs["n_states"] = 2
+        self.base_test("h2o_sto3g", method, **kwargs)
 
-print("#\n#-- ADC(2)-x\n#")
-n_states = 3  # TODO Test for a few more ...
-if cvs:
-    adc2x = adcc.AdcMatrix("cvs-adc2x", refstate2)
-    state2x = adcc.cvs_adc2x(refstate2, n_states=n_states)
-else:
-    adc2x = adcc.AdcMatrix("adc2x", refstate)
-    state2x = adcc.adc2x(refstate, n_states=n_states)
-dense2x = adc2x.to_dense_matrix()
-np.testing.assert_almost_equal(dense2x, dense2x.T)
-spectrum2x = np.linalg.eigvalsh(dense2x)
-
-n_decimals = 10
-atol = 1e-6
-ref = np.round(state2x.excitation_energies, n_decimals)
-test = np.unique(np.round(spectrum2x, n_decimals))[:n_states]
-np.testing.assert_allclose(ref, test, atol=atol)
-del state2x
-del dense2x
-del spectrum2x
-
-print()
-print()
-print()
-
-print("#\n#-- ADC(3)\n#")
-n_states = 3  # TODO Test for a few more ...
-if cvs:
-    adc3 = adcc.AdcMatrix("cvs-adc3", refstate2)
-    state3 = adcc.cvs_adc3(refstate2, n_states=n_states)
-else:
-    adc3 = adcc.AdcMatrix("adc3", refstate)
-    state3 = adcc.adc3(refstate, n_states=n_states)
-dense3 = adc3.to_dense_matrix()
-np.testing.assert_almost_equal(dense3, dense3.T)
-spectrum3 = np.linalg.eigvalsh(dense3)
-
-n_decimals = 10
-atol = 1e-6
-ref = np.round(state3.excitation_energies, n_decimals)
-test = np.unique(np.round(spectrum3, n_decimals))[:n_states]
-np.testing.assert_allclose(ref, test, atol=atol)
-del state3
-del dense3
-del spectrum3
+    # def template_cn(self, method):
+    #     self.base_test("cn_sto3g", method)
