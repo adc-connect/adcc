@@ -303,10 +303,14 @@ setup(
     description='adcc:  Seamlessly connect your host program to ADC',
     long_description=long_description,
     #
-    url='https://adc-connect.org',
     author="Michael F. Herbst, Maximilian Scheurer",
     author_email='developers@adc-connect.org',
     license="LGPL v3",
+    url='https://adc-connect.org',
+    project_urls={
+        "Source": "https://github.com/adc-connect/adcc",
+        "Issues": "https://github.com/adc-connect/adcc/issues",
+    },
     #
     version=__version__,
     classifiers=[
