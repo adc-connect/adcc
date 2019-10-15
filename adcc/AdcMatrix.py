@@ -22,13 +22,12 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
+import libadcc
+
 from .LazyMp import LazyMp
 from .AdcMethod import AdcMethod
 from .functions import empty_like
 from .AmplitudeVector import AmplitudeVector
-
-import tqdm
-import libadcc
 
 
 class AdcMatrix(libadcc.AdcMatrix):
@@ -191,6 +190,8 @@ class AdcMatrix(libadcc.AdcMatrix):
         This function has not been sufficiently tested to be considered stable.
         """
         from adcc import guess_zero
+
+        import tqdm
 
         # Get zero amplitude of the appropriate symmetry
         # (TODO: Only true for C1, where there is only a single irrep)
