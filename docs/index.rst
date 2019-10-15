@@ -1,6 +1,15 @@
 adcc: Seamlessly connect your program to ADC
 ============================================
 
+.. image:: https://img.shields.io/pypi/v/adcc
+   :target: https://pypi.org/project/adcc
+.. image:: https://img.shields.io/pypi/l/adcc
+   :target: https://pypi.org/project/adcc
+.. image:: https://img.shields.io/github/stars/adc-connect/adcc?style=social
+   :target: https://github.com/adc-connect/adcc
+.. image:: https://travis-ci.org/adc-connect/adcc.svg?branch=master
+   :target: https://travis-ci.org/adc-connect/adcc
+
 .. note::
    This documentation page is still under construction.
 
@@ -10,7 +19,7 @@ adcc: Seamlessly connect your program to ADC
    :alt: adcc logo
    :target: .
 
-**ADC connect** -- or adcc in short -- is a Python-based framework to
+**ADC-connect** -- or adcc in short -- is a Python-based framework to
 connect to arbitrary programs and perform calculations based on the
 algebraic-diagrammatic construction
 approach (ADC) on top of their existing self-consistent field (SCF) procedures.
