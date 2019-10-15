@@ -176,10 +176,19 @@ class AdcMatrix(libadcc.AdcMatrix):
         internal representation of the ADC matrix to a dense matrix and return
         as a numpy array.
 
+        Notes
+        -----
+
         This method is only intended to be used for debugging and
         visualisation purposes as it involves computing a large amount of
         matrix-vector products and the returned array consumes a considerable
         amount of memory.
+
+        The resulting matrix has no spin symmetry imposed, which means that
+        its eigenspectrum may contain non-physical excitations (e.g. with linear
+        combinations of α->β and α->α components in the excitation vector).
+
+        This function has not been sufficiently tested to be considered stable.
         """
         from adcc import guess_zero
 

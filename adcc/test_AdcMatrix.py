@@ -53,6 +53,8 @@ class TestAdcMatrixDenseExport(unittest.TestCase):
         rounded = np.unique(np.round(spectrum, n_decimals))[:n_states]
         assert_allclose(state.excitation_energies, rounded, atol=10 * conv_tol)
 
+        # TODO Test eigenvectors as well.
+
     def template_h2o(self, method):
         kwargs = {}
         if "cvs" in method:
@@ -64,4 +66,8 @@ class TestAdcMatrixDenseExport(unittest.TestCase):
         self.base_test("h2o_sto3g", method, **kwargs)
 
     # def template_cn(self, method):
-    #     self.base_test("cn_sto3g", method)
+    #    TODO Testing this for CN is a bit tricky, because
+    #         the dense basis we employ is not yet spin-adapted
+    #         and allows e.g. simultaneous α->α and α->β components to mix
+    #         A closer investigation is needed here
+    #    self.base_test("cn_sto3g", method, **kwargs)
