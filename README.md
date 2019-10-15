@@ -6,7 +6,7 @@
 [![Documentation](https://img.shields.io/badge/doc-latest-blue.svg)](https://adc-connect.org)
 [![Travis](https://travis-ci.org/adc-connect/adcc.svg?branch=master)](https://travis-ci.org/adc-connect/adcc)
 
-`adcc` (**ADC connect**) is a `python`-based framework to connect to arbitrary programs
+`adcc` (**ADC-connect**) is a `python`-based framework to connect to arbitrary programs
 for running calculations based on the algebraic-diagrammatic construction
 approach (ADC) on top of their self-consistent field (SCF) reference.
 For more details and installation instructions
