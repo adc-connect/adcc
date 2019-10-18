@@ -46,7 +46,6 @@ except ImportError:
     def finalize_options(self):
         pass
 
-
 # Version of the python bindings and adcc python package.
 __version__ = '0.13.1'
 
@@ -57,10 +56,11 @@ def get_adccore_data():
     if abspath not in sys.path:
         sys.path.insert(0, abspath)
 
-    from AdcCore import AdcCore
+    from AdcCore import AdcCore, get_platform
 
     adccore = AdcCore()
-    if not adccore.is_config_file_present or adccore.version != __version__:
+    if not adccore.is_config_file_present or adccore.version != __version__ \
+       or adccore.platform != get_platform():
         # Get this version by building it or downloading it
         adccore.obtain(__version__)
 
@@ -69,6 +69,12 @@ def get_adccore_data():
             "Version mismatch between adcc (== {}) and adccore (== {})"
             "".format(__version__, adccore.version)
         )
+    if adccore.platform != get_platform():
+        raise RuntimeError(
+            "Platform mismatch between this os (== {}) and adccore (== {})"
+            "".format(get_platform(), adccore.platform)
+        )
+
     return adccore
 
 
@@ -297,7 +303,7 @@ terms of the GNU Lesser General Public License v3 (LGPLv3) license. This
 license does not apply to the libadccore.so binary file contained inside
 the directory '/adcc/lib/' of the distributed tarball. For further details
 see the file LICENSE_adccore.
-""".strip()  # TODO extend
+""".strip()
 setup(
     name='adcc',
     description='adcc:  Seamlessly connect your host program to ADC',
@@ -349,7 +355,7 @@ setup(
     ],
     tests_require=["pytest"],
     extras_require={
-        "build_docs": ["sphinx>=2", "breathe"],
+        "build_docs": ["sphinx>=2", "breathe", "sphinxcontrib-bibtex"],
     },
     #
     cmdclass={'build_ext': BuildExt, "pytest": PyTest,
