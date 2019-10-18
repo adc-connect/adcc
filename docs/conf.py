@@ -45,6 +45,8 @@ extensions = [
     # 'sphinx.ext.doctest',
     # 'sphinx.ext.todo',
     # 'sphinx.ext.coverage',
+    #
+    'sphinxcontrib.bibtex',
     'breathe'
 ]
 

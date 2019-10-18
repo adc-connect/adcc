@@ -9,9 +9,17 @@ Even thought the structure of adcc has changed a lot since the early days,
 the code in its current stage would have been impossible without being able
 to rigorously test and compare against adcman along the way.
 
+A good overview of adcc and its features can be found in :cite:`adcc`.
+
 .. note::
    TODO Overview of features (scrape from calculations file)
    A few words of the philosophy
+
+
+Citation
+--------
+We kindly ask all users of adcc, who find the package useful for their
+research to cite the adcc paper :cite:`adcc` in their publications.
 
 
 Contacting us

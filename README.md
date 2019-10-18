@@ -12,6 +12,12 @@ approach (ADC) on top of their self-consistent field (SCF) reference.
 For more details and installation instructions
 [see the `adcc` documentation](https://adc-connect.org).
 
+## Citation
+A preprint of our paper describing `adcc` can be found
+[on HAL](https://hal.archives-ouvertes.fr/hal-02319517)
+or [on arXiv](http://arxiv.org/pdf/1910.07757).
+
+
 ## Licence note
 The `adcc` source code contained in this repository is released
 under the [GNU Lesser General Public License v3 (LGPLv3)](LICENSE).
