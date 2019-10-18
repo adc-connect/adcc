@@ -71,22 +71,34 @@ computed using PySCF.
     state.plot_spectrum(broadening='lorentzian')
     plt.show()
 
-Sounds interesting? See :ref:`installation`
-and :ref:`performing-calculations`
+Sounds interesting? See :ref:`installation` and :ref:`performing-calculations`
 for installation instructions and some more information to get going.
 
 Contents
 --------
+
 .. toctree::
+   :caption: Introduction
    :maxdepth: 2
 
    installation
    calculations
+
+.. toctree::
+   :caption: Advanced topics
+   :maxdepth: 2
+
    reference
    hostprograms
    developers
    adccore
+
+.. toctree::
+   :caption: Extra information
+   :maxdepth: 2
+
    publications
    about
 
 * :ref:`genindex`
+

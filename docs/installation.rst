@@ -10,7 +10,7 @@ The first step is to make sure you have the `openblas <http://www.openblas.net/>
 BLAS library installed. This library is reasonably wide-spread, so there is a good
 chance it may already be installed on your system.
 
-If not you can easily install it
+If not, you can easily install it
 using the package manager of your choice / operating system. For example
 **on Debian and Ubuntu** ``sudo apt-get install libopenblas-base`` should do
 and **on MacOS** try using `Homebrew <https://brew.sh/>`_ with
@@ -27,13 +27,17 @@ Next, **install adcc** from `PyPi <https://pypi.org>`_, using ``pip``:
    pip install pybind11     # Install pybind11 first to suppress some error messages
    pip install adcc
 
-
 If the installation of adcc fails due to an issue with compiling the
-python extension,
-make sure that your ``pip`` uses ``gcc`` and not ``clang`` or any other compiler.
-To enforce using ``gcc`` (e.g. one from Homebrew or a custom openblas installation),
-set the environment variables ``CC`` and ``CXX`` to the full path of your C and C++
-compilers, respectively.
+python extension, check the following:
+
+- Do you have the ``python`` development headers installed? For example on Debian
+  and Ubuntu this is usually **not** the case and needs to be done manually
+  by running ``sudo apt-get install python3-dev``.
+- Make sure your ``pip`` uses ``gcc`` and not ``clang`` or any other compiler
+  for compiling the ``adcc`` extension.
+  To enforce using ``gcc`` (e.g. one from Homebrew or a custom openblas installation),
+  set the environment variables ``CC`` and ``CXX`` to the full path of your C and C++
+  compilers, respectively.
 
 .. note::
    TODO This section needs more details!
