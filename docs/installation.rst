@@ -3,13 +3,24 @@
 Installation
 ============
 
+Installing openblas
+-------------------
+
+The first step is to make sure you have the `openblas <http://www.openblas.net/>`_
+BLAS library installed. This library is reasonably wide-spread, so there is a good
+chance it may already be installed on your system.
+
+If not you can easily install it
+using the package manager of your choice / operating system. For example
+**on Debian and Ubuntu** ``sudo apt-get install libopenblas-base`` should do
+and **on MacOS** try using `Homebrew <https://brew.sh/>`_ with
+``brew install openblas``.
+
+
 Installing adcc
 ---------------
 
-.. important:: This is the anticipated installation process,
-               which is not yet functional.
-
-The first step is to **install adcc** from `PyPi <https://pypi.org>`_, using ``pip``:
+Next, **install adcc** from `PyPi <https://pypi.org>`_, using ``pip``:
 
 .. code-block:: shell
 
@@ -17,14 +28,15 @@ The first step is to **install adcc** from `PyPi <https://pypi.org>`_, using ``p
    pip install adcc
 
 
-.. note::
-   TODO This needs more details!
-
 If the installation of adcc fails due to an issue with compiling the
 python extension,
 make sure that your ``pip`` uses ``gcc`` and not ``clang`` or any other compiler.
-To enforce using ``gcc`` (e.g. one from Homebrew or a custom installation),
-set the environment variables ``CC`` and ``CXX``.
+To enforce using ``gcc`` (e.g. one from Homebrew or a custom openblas installation),
+set the environment variables ``CC`` and ``CXX`` to the full path of your C and C++
+compilers, respectively.
+
+.. note::
+   TODO This section needs more details!
 
 Installing an SCF code
 ----------------------
