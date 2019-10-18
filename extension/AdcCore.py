@@ -37,8 +37,10 @@ def is_head_distinct_from_version(version):
     exists and is not pointing to the repository's HEAD, else returns False.
     """
     try:
-        thead = subprocess.check_output("git rev-parse HEAD".split())
-        tversion = subprocess.check_output(["git", "rev-parse", "v" + version])
+        thead = subprocess.check_output("git rev-parse HEAD".split(),
+                                        stderr=subprocess.STDOUT,)
+        tversion = subprocess.check_output(["git", "rev-parse", "v" + version],
+                                           stderr=subprocess.STDOUT)
         return thead != tversion
     except subprocess.CalledProcessError:
         return False
