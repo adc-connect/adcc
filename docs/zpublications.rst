@@ -19,4 +19,4 @@ Other references
 ----------------
 
 .. bibliography:: ref.bib
-   :style: unsrtalpha
+   :style: alpha

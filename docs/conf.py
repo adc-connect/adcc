@@ -191,6 +191,18 @@ epub_exclude_files = ['search.html']
 
 # -- Extension configuration -------------------------------------------------
 
+# Imgmath settings
+imgmath_latex_preamble = "".join([
+    r"\newcommand*{\mat}[1]{\ensuremath{\mathbf{#1}}}",
+    r"\renewcommand*{\vec}[1]{\ensuremath{\underline{\boldsymbol{#1}}}}"
+    r"\DeclareMathOperator{\tr}{tr}",
+    #
+    r"\newcommand*{\Op}[1]{\ensuremath{\hat{\mathcal{#1}}}}",
+    r"\newcommand*{\bra}[1]{\left\langle#1\right|}",
+    r"\newcommand*{\ket}[1]{\left|#1\right\rangle}"
+    r"\newcommand*{\braket}[2]{\left\langle#1\middle|#2\right\rangle}"
+])
+
 # Napoleon settings
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True

@@ -83,6 +83,7 @@ Contents
 
    installation
    calculations
+   theory
 
 .. toctree::
    :caption: Advanced topics
@@ -97,7 +98,7 @@ Contents
    :caption: Extra information
    :maxdepth: 2
 
-   publications
+   zpublications
    about
 
 * :ref:`genindex`
