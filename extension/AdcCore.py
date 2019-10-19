@@ -141,6 +141,7 @@ class AdcCore:
             "include/adcc/*.hh",
             "include/adcc/*/*.hh",
             "lib/libadccore.so",
+            "lib/libadccore.*.dylib",
             "lib/libadccore.dylib",
             "lib/libstdc++.so.*",
             "lib/libc++.so.*",
@@ -178,12 +179,13 @@ class AdcCore:
                 if 200 <= status_code < 300:  # All ok
                     break
             else:
-                msg = ("Could not download adccore version {} for platform {} from {}"
+                msg = ("Could not download adccore version {} for platform {} from {}."
                        "".format(version, get_platform(), base_url))
                 if 400 <= status_code < 500:
-                    # That's probably an error on our end
-                    msg += (" This should not have happened. Please get in touch with "
-                            "the adcc developers or open an issue.")
+                    # Either an unsupported version or an error on our end
+                    msg += (" This should not have happened and either this means your platform is"
+                            " unsupported or that there is a bug. Please check the adcc installation"
+                            " instructions and if in doubt, please open an issue on github.")
                 raise RuntimeError(msg)
 
             # Delete the old files
