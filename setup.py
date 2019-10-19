@@ -101,6 +101,16 @@ class LinkerDynamic:
         return None
 
 
+def adccsetup(*args, **kwargs):
+    """Wrapper around setup, displaying a link to adc-connect.org on any error."""
+    try:
+        setup(*args, **kwargs)
+    except Exception as e:
+        url = kwargs["url"] + "/installation.html"
+        raise RuntimeError("Unfortunately adcc setup.py failed.\n"
+                           "For hints how to install adcc, see {}.".format(url)) from e
+
+
 #
 # Pybind11 BuildExt
 #
@@ -182,6 +192,9 @@ class BuildExt(BuildCommand):
         BuildCommand.build_extensions(self)
 
 
+#
+# Building sphinx documentation
+#
 class BuildDocs(BuildSphinxDoc):
     def run(self):
         adccore = get_adccore_data()
@@ -304,7 +317,7 @@ license does not apply to the libadccore.so binary file contained inside
 the directory '/adcc/lib/' of the distributed tarball. For further details
 see the file LICENSE_adccore.
 """.strip()
-setup(
+adccsetup(
     name='adcc',
     description='adcc:  Seamlessly connect your host program to ADC',
     long_description=long_description,
@@ -320,7 +333,7 @@ setup(
     #
     version=__version__,
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: '
         'GNU Lesser General Public License v3 (LGPLv3)',
         'License :: Free For Educational Use',
