@@ -50,26 +50,18 @@ Debian and Ubuntu
 
 .. _install-macos:
 
-macOS 10.14 Majave
+macOS 10.14 Mojave
 ..................
 
 .. attention::
    macOS support is still experimental and so far
-   only covers Majave.
+   only covers Mojave.
    We would love to hear your feedback in case things fail.
 
 .. note::
    TODO This section needs more details!
 
-1. **openblas:**
-   Install `openblas <http://www.openblas.net/>`_ using
-   `Homebrew <https://brew.sh/>`_ with
-
-   .. code-block:: shell
-
-      brew install openblas
-
-2. **adcc:**
+1. **adcc:**
    Install from `PyPi <https://pypi.org>`_, using ``pip``:
 
    .. code-block:: shell
