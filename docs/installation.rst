@@ -32,8 +32,10 @@ Debian and Ubuntu
       sudo apt-get install libopenblas-base
 
 2. **Compilation requirements:**
-   Before proceeding, make sure you have the ``python`` development headers
-   and some essential build packages installed, for example
+   For compiling the Python extensions of adcc,
+   you nee dto have the the ``python`` development headers
+   and some essential build packages installed.
+   This can be achieved via
 
    .. code-block:: shell
 
