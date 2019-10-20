@@ -22,8 +22,10 @@ We kindly ask all users of adcc, who find the package useful for their
 research to cite the adcc paper :cite:`adcc` in their publications.
 
 
-Contacting us
--------------
+.. _contact-us:
+
+Contact us
+----------
 
 For general issues about the code,
 it's best to directly open issues `on github <https://github.com/adc-connect/adcc>`_.
