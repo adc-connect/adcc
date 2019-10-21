@@ -48,6 +48,7 @@ except ImportError:
 
 # Version of the python bindings and adcc python package.
 __version__ = '0.13.1'
+adccore_version = ("0.13.1", "")  # (base version, unstable postfix)
 
 
 def get_adccore_data():
@@ -59,22 +60,22 @@ def get_adccore_data():
     from AdcCore import AdcCore, get_platform
 
     adccore = AdcCore()
-    if not adccore.is_config_file_present or adccore.version != __version__ \
+    if not adccore.is_config_file_present or adccore.version != adccore_version[0] \
        or adccore.platform != get_platform():
         # Get this version by building it or downloading it
-        adccore.obtain(__version__)
+        adccore.obtain(*adccore_version)
 
-    if adccore.version != __version__:
+    if adccore.version != adccore_version[0]:
         raise RuntimeError(
-            "Version mismatch between adcc (== {}) and adccore (== {})"
-            "".format(__version__, adccore.version)
+            "Version mismatch between requested adccore version (== {}) "
+            "and available adccore version (== {})"
+            "".format(adccore_version[0], adccore.version)
         )
     if adccore.platform != get_platform():
         raise RuntimeError(
             "Platform mismatch between this os (== {}) and adccore (== {})"
             "".format(get_platform(), adccore.platform)
         )
-
     return adccore
 
 

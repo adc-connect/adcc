@@ -20,13 +20,31 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
+import os
+import re
+import ast
 import adcc
-import libadcc
 import unittest
+
+import pytest
+import libadcc
+
+
+def extract_adccore_version():
+    """Extracts the desired adccore version from the setup.py script"""
+    setupfile = os.path.join(adcc.__path__[-1], "..", "setup.py")
+    assert os.path.isfile(setupfile)
+
+    with open(setupfile, "r") as fp:
+        for line in fp:
+            match = re.match(r"^ *adccore_version *= *(\([^()]*\))", line)
+            if match:
+                return ast.literal_eval(match.group(1))[0]
+        else:
+            pytest.fail("Could not extract adccore version from " + setupfile)
 
 
 class VersionTest(unittest.TestCase):
     def test_versions(self):
         """Test that versions of libadcc and adcc agree"""
-        assert adcc.__version__ == libadcc.__version__
+        assert extract_adccore_version() == libadcc.__version__

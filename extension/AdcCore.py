@@ -31,21 +31,6 @@ import distutils.util
 from os.path import join
 
 
-def is_head_distinct_from_version(version):
-    """
-    Returns True if this is a git repository, the version tag of `version`
-    exists and is not pointing to the repository's HEAD, else returns False.
-    """
-    try:
-        thead = subprocess.check_output("git rev-parse HEAD".split(),
-                                        stderr=subprocess.STDOUT,)
-        tversion = subprocess.check_output(["git", "rev-parse", "v" + version],
-                                           stderr=subprocess.STDOUT)
-        return thead != tversion
-    except subprocess.CalledProcessError:
-        return False
-
-
 def get_platform():
     """Return our platform name 'win32', 'linux_x86_64'"""
     # Copied from https://github.com/pypa/wheel/blob/master/wheel/pep425tags.py
@@ -149,36 +134,25 @@ class AdcCore:
             "lib/libadccore_thirdparty/ctx/*",
         ]
 
-    def get_tarball_name(self, version=None, stable=True):
+    def get_tarball_name(self, version=None, postfix=None):
         """
         Get the platform-dependent name of the adccore tarball
-        of the specified version, stable indicates whether the stable version
-        or the next experimental (modified) version is to be downloaded.
-        stable=False is an advanced use case, use only if you know what you do.
+        of the specified version.
         """
         if version is None:
             version = self.version
-        postfix = ""
-        if not stable:
-            postfix = "m"
+        if postfix is None:
+            postfix = ""
         return "adccore-{}{}-{}.tar.gz".format(version, postfix, get_platform())
 
-    def download(self, version, prefer_unstable=False):
+    def download(self, version, postfix=None):
         """Download a particular version of adccore from the internet"""
-        base_url = "https://get.adc-connect.org/adccore"
-
-        # Download the tarball
-        files_to_try = [self.get_tarball_name(version, stable=True)]
-        if prefer_unstable:
-            files_to_try = [self.get_tarball_name(version, stable=False)] + files_to_try
-
         with tempfile.TemporaryDirectory() as tmpdir:
-            tarball = tmpdir + "/adccore.tar.gz"
-            for fn in files_to_try:
-                status_code = request_urllib(base_url + "/" + fn, tarball)
-                if 200 <= status_code < 300:  # All ok
-                    break
-            else:
+            base_url = "https://get.adc-connect.org/adccore"
+            fn = self.get_tarball_name(version, postfix)
+            local = tmpdir + "/" + fn
+            status_code = request_urllib(base_url + "/" + fn, local)
+            if status_code < 200 or status_code >= 300:
                 msg = ("Could not download adccore version {} for platform {} from {}."
                        "".format(version, get_platform(), base_url))
                 if 400 <= status_code < 500:
@@ -196,19 +170,15 @@ class AdcCore:
             # Change to installation directory
             olddir = os.getcwd()
             os.chdir(self.install_dir)
-            subprocess.run(["tar", "xf", tarball], check=True)
+            subprocess.run(["tar", "xf", local], check=True)
             os.chdir(olddir)
 
-    def obtain(self, version):
+    def obtain(self, version, postfix=None):
         """Obtain the library in some way."""
         if self.has_source:
             self.build()
         else:
-            # By default use the stable version of adccore.
-            # Prefer the unstable version if git is found and the current HEAD
-            # does not agree with the commit referenced by the requested version.
-            prefer_unstable = is_head_distinct_from_version(version)
-            self.download(version, prefer_unstable=prefer_unstable)
+            self.download(version, postfix)
 
     @property
     def config(self):

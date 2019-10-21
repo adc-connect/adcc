@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import os
+import re
+import ast
 import sys
 import glob
 import subprocess
@@ -16,8 +18,18 @@ def get_adccore_data():
     return AdcCore()
 
 
-def make_tarball(adccore, stable=False):
-    filename = adccore.get_tarball_name(stable=stable)
+def extract_postfix(fn):
+    with open(fn, "r") as fp:
+        for line in fp:
+            match = re.match(r"^ *adccore_version *= *(\([^()]*\))", line)
+            if match:
+                return ast.literal_eval(match.group(1))[1]
+        else:
+            raise RuntimeError("Could not extract adccore version from " + fn)
+
+
+def make_tarball(adccore, postfix=None):
+    filename = adccore.get_tarball_name(postfix=postfix)
     fullpath = os.path.abspath("dist/" + filename)
 
     os.makedirs("dist", exist_ok=True)
@@ -38,7 +50,10 @@ def upload_tarball(filename):
         target = json.load(fp)["adccore"]
 
     print()
-    input("Press enter to upload {} -> {}".format(filename, target))
+    try:
+        input("Press enter to upload {} -> {}".format(filename, target))
+    except KeyboardInterrupt:
+        raise SystemExit("... aborted.")
     subprocess.run(["scp", filename, target], check=True)
 
 
@@ -47,14 +62,13 @@ def main():
        not os.path.isfile("setup.py"):
         raise SystemExit("Please run from top dir of repository")
 
-    if len(sys.argv) > 1 and sys.argv[1] in ["-h", "--help"]:
-        raise SystemExit("upload_core [--stable]")
-    stable = len(sys.argv) > 1 and sys.argv[1] == "--stable"
+    # Get postfix from setup.py
+    postfix = extract_postfix("setup.py")
 
     # Build adccore and pack tarball
     adccore = get_adccore_data()
     adccore.build()
-    filename = make_tarball(adccore, stable=stable)
+    filename = make_tarball(adccore, postfix=postfix)
     upload_tarball(filename)
 
 
