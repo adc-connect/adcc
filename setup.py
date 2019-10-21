@@ -314,9 +314,9 @@ computed data can be easily used as well.
 
 Notice, that only the adcc python and C++ source code are released under the
 terms of the GNU Lesser General Public License v3 (LGPLv3) license. This
-license does not apply to the libadccore.so binary file contained inside
-the directory '/adcc/lib/' of the distributed tarball. For further details
-see the file LICENSE_adccore.
+license does not apply to the libadccore.so or accordingly named dylib file
+contained inside the directory '/adcc/lib/' of the distributed tarball.
+For further details see the file LICENSE_adccore.
 """.strip()
 adccsetup(
     name='adcc',
