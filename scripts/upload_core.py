@@ -49,11 +49,13 @@ def upload_tarball(filename):
     with open(os.path.dirname(__file__) + "/config.json") as fp:
         target = json.load(fp)["adccore"]
 
-    print()
-    try:
-        input("Press enter to upload {} -> {}".format(filename, target))
-    except KeyboardInterrupt:
-        raise SystemExit("... aborted.")
+    if sys.stdin.isatty():
+        try:
+            print()
+            input("Press enter to upload {} -> {}".format(filename, target))
+        except KeyboardInterrupt:
+            raise SystemExit("... aborted.")
+    #
     subprocess.run(["scp", filename, target], check=True)
 
 
