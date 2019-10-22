@@ -22,6 +22,7 @@
 ## ---------------------------------------------------------------------
 import unittest
 
+from .misc import expand_test_templates
 from numpy.testing import assert_allclose
 
 from adcc import LazyMp
@@ -29,12 +30,11 @@ from adcc.testdata.cache import cache
 
 import pytest
 
-from .misc import expand_test_templates
 from pytest import approx
 
 # All test cases to deal with here
 testcases = ["h2o_sto3g", "cn_sto3g"]
-if pytest.config.option.mode == "full":
+if cache.mode_full:
     testcases += ["h2o_def2tzvp", "cn_ccpvdz"]
 
 
