@@ -59,6 +59,7 @@ class TestAdcMatrixDenseExport(unittest.TestCase):
         kwargs = {}
         if "cvs" in method:
             kwargs["n_states"] = 7
+            kwargs["max_subspace"] = 30
         if method in ["cvs-adc2"]:
             kwargs["n_states"] = 5
         if method in ["cvs-adc1"]:
