@@ -43,19 +43,25 @@ def make_tarball(adccore, postfix=None):
     return "dist/" + filename
 
 
+def print_input(text, interactive=sys.stdin.isatty()):
+    if interactive:
+        try:
+            input(text)
+        except KeyboardInterrupt:
+            raise SystemExit("... aborted.")
+    else:
+        print(text, "... yes")
+
+
 def upload_tarball(filename):
     import json
 
     with open(os.path.dirname(__file__) + "/config.json") as fp:
         target = json.load(fp)["adccore"]
 
-    if sys.stdin.isatty():
-        try:
-            print()
-            input("Press enter to upload {} -> {}".format(filename, target))
-        except KeyboardInterrupt:
-            raise SystemExit("... aborted.")
-    #
+    print()
+    print_input("Press enter to upload {} -> {}".format(filename, target))
+
     host, tdir = target.split(":")
     command = "put {} {}/".format(filename, tdir)
     subprocess.run(["sftp", "-b", "-", host], input=command.encode(), check=True)
