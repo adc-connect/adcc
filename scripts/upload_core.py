@@ -56,7 +56,9 @@ def upload_tarball(filename):
         except KeyboardInterrupt:
             raise SystemExit("... aborted.")
     #
-    subprocess.run(["scp", filename, target], check=True)
+    host, tdir = target.split(":")
+    command = "put {} {}/".format(filename, tdir)
+    subprocess.run(["sftp", "-b", "-", host], input=command.encode(), check=True)
 
 
 def main():
