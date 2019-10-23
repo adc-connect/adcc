@@ -31,5 +31,5 @@ fi
 
 rm -rf dist
 python3 setup.py build_ext
-python3 setup.py sdist bdist_wheel
+python3 setup.py sdist  # bdist_wheel  (binary wheels for linux not supported)
 twine upload -s dist/*
