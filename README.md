@@ -1,4 +1,4 @@
-<img src="https://adc-connect.org/_images/logo.png" alt="adcc logo" height="50px" />
+<img src="https://adc-connect.org/_images/logo.png" alt="adcc logo" height="100px" />
 
 # adcc: Seamlessly connect your program to ADC
 [![pypi](https://img.shields.io/pypi/v/adcc)](https://pypi.org/project/adcc)
