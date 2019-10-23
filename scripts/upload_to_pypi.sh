@@ -30,5 +30,6 @@ if [ ! -f extension/adccore/adccore_config.json ]; then
 fi
 
 rm -rf dist
+python3 setup.py build_ext
 python3 setup.py sdist bdist_wheel
 twine upload -s dist/*
