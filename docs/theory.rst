@@ -103,10 +103,7 @@ and will not be discussed here.
    * - .. figure:: images/matrix/adc_matrix_schematic.png
           :width: 200px
 
-          Fig 1a. Schematic ADC matrix:
-          singles block :math:`M_{11}`,
-          doubles block :math:`M_{22}` and
-          coupling block :math:`M_{21}`
+          Fig 1a. Schematic ADC matrix
 
      - .. figure:: images/matrix/matrix_water_adc2_sto3g.png
           :width: 200px
@@ -121,10 +118,12 @@ and will not be discussed here.
 
 As a result of the construction of ADC(:math:`n`) as excitations on top of
 an MP(:math:`n`) ground state, the matrix :math:`\mat{M}`
-exhibits a block structure, shown in Figure 1a,
-where one may construct perturbation expansions
-for the individual blocks as well.
-For example in ADC(2) the lower-right block, the doubles-doubles block :math:`M_{22}`,
+exhibits a block structure, shown in Figure 1a.
+In this the singles block is denoted :math:`M_{11}`,
+the doubles block :math:`M_{22}` and the
+coupling block :math:`M_{21}`.
+One may construct perturbation expansions for the individual blocks as well.
+For example in ADC(2) the lower-right :math:`M_{22}` block
 is only present in zeroth order.
 In ADC(3) on the other hand this block is present at first order,
 which makes it consistent with an MP(3) ground state.
