@@ -7,16 +7,16 @@
 ## This file is part of adcc.
 ##
 ## adcc is free software: you can redistribute it and/or modify
-## it under the terms of the GNU Lesser General Public License as published
+## it under the terms of the GNU General Public License as published
 ## by the Free Software Foundation, either version 3 of the License, or
 ## (at your option) any later version.
 ##
 ## adcc is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-## GNU Lesser General Public License for more details.
+## GNU General Public License for more details.
 ##
-## You should have received a copy of the GNU Lesser General Public License
+## You should have received a copy of the GNU General Public License
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
@@ -313,7 +313,7 @@ VeloxChem or molsturm are available, but other SCF codes or even statically
 computed data can be easily used as well.
 
 Notice, that only the adcc python and C++ source code are released under the
-terms of the GNU Lesser General Public License v3 (LGPLv3) license. This
+terms of the GNU General Public License v3 (GPLv3) license. This
 license does not apply to the libadccore.so or accordingly named dylib file
 contained inside the directory '/adcc/lib/' of the distributed tarball.
 For further details see the file LICENSE_adccore.
@@ -325,7 +325,7 @@ adccsetup(
     #
     author="Michael F. Herbst, Maximilian Scheurer",
     author_email='developers@adc-connect.org',
-    license="LGPL v3",
+    license="GPL v3",
     url='https://adc-connect.org',
     project_urls={
         "Source": "https://github.com/adc-connect/adcc",
@@ -335,8 +335,7 @@ adccsetup(
     version=__version__,
     classifiers=[
         'Development Status :: 5 - Production/Stable',
-        'License :: OSI Approved :: '
-        'GNU Lesser General Public License v3 (LGPLv3)',
+        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'License :: Free For Educational Use',
         'Intended Audience :: Science/Research',
         "Topic :: Scientific/Engineering :: Chemistry",

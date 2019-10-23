@@ -4,16 +4,16 @@
 // This file is part of adcc.
 //
 // adcc is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published
+// it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
 // adcc is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Lesser General Public License for more details.
+// GNU General Public License for more details.
 //
-// You should have received a copy of the GNU Lesser General Public License
+// You should have received a copy of the GNU General Public License
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
 
@@ -109,83 +109,95 @@ void export_MoIndexTranslation(py::module& m) {
                                "Return the space supplied on initialisation.")
         .def_property_readonly("ndim", &MoIndexTranslation::ndim,
                                "Return the number of dimensions.")
-        .def_property_readonly("shape",
-                               [](std::shared_ptr<MoIndexTranslation> self) {
-                                 return shape_tuple(self->shape());
-                               },
-                               "Return the length along each dimension.")
+        .def_property_readonly(
+              "shape",
+              [](std::shared_ptr<MoIndexTranslation> self) {
+                return shape_tuple(self->shape());
+              },
+              "Return the length along each dimension.")
         //
-        .def("full_index_of",
-             [](std::shared_ptr<MoIndexTranslation> self, py::tuple tpl) {
-               return shape_tuple(self->full_index_of(parse_tuple(self->ndim(), tpl)));
-             },
-             "Map an index given in the space, which was passed upon construction, to "
-             "the corresponding index in the full MO index range (the ffff space).")
-        .def("block_index_of",
-             [](std::shared_ptr<MoIndexTranslation> self, py::tuple tpl) {
-               return shape_tuple(self->block_index_of(parse_tuple(self->ndim(), tpl)));
-             },
-             "Get the block index of an index, i.e. get the index which points to the "
-             "block of the tensor in which the element with the passed index is "
-             "contained in.")
-        .def("block_index_spatial_of",
-             [](std::shared_ptr<MoIndexTranslation> self, py::tuple tpl) {
-               return shape_tuple(
-                     self->block_index_spatial_of(parse_tuple(self->ndim(), tpl)));
-             },
-             "Get the spatial block index of an index\n"
-             "\n"
-             "The spatial block index is the result of block_index_of modulo the spin "
-             "blocks,\n"
-             "i.e. it maps an index onto the index of the *spatial* blocks only, such "
-             "that\n"
-             "the resulting value is identical for two index where the MOs only differ\n"
-             "by spin. For example the 1st core alpha and the 1st core beta orbital "
-             "will\n"
-             "map to the same value upon a call of this function.")
-        .def("inblock_index_of",
-             [](std::shared_ptr<MoIndexTranslation> self, py::tuple tpl) {
-               return shape_tuple(self->inblock_index_of(parse_tuple(self->ndim(), tpl)));
-             },
-             "Get the in-block index, i.e. the index within the tensor block.")
-        .def("spin_of",
-             [](std::shared_ptr<MoIndexTranslation> self, py::tuple tpl) {
-               return self->spin_of(parse_tuple(self->ndim(), tpl));
-             },
-             "Get the spin block of each of the index components as a string.")
-        .def("split",
-             [](std::shared_ptr<MoIndexTranslation> self, py::tuple tpl) {
-               auto splitted = self->split(parse_tuple(self->ndim(), tpl));
-               return py::make_tuple(shape_tuple(splitted.first),
-                                     shape_tuple(splitted.second));
-             },
-             "Split an index into block index and in-block index")
-        .def("combine",
-             [](std::shared_ptr<MoIndexTranslation> self, py::tuple bidx,
-                py::tuple ibidx) {
-               return shape_tuple(self->combine(parse_tuple(self->ndim(), bidx),
-                                                parse_tuple(self->ndim(), ibidx)));
-             },
-             "Combine a block index and an in-block index into the appropriate index. "
-             "Effectively undoes the effect of 'split'.")
-        .def("combine",
-             [](std::shared_ptr<MoIndexTranslation> self, std::string spin_block,
-                py::tuple bidx, py::tuple ibidx) {
-               return shape_tuple(self->combine(spin_block,
-                                                parse_tuple(self->ndim(), bidx),
-                                                parse_tuple(self->ndim(), ibidx)));
-             },
-             "Combine a spin block (given as a string of 'a's or 'b's), a spatial-only "
-             "block index and an in-block index into the appropriate index. Essentially "
-             "undoes the effect of 'spin_of', 'block_index_spatial_of' and "
-             "'inblock_index_of'.")
-        .def("hf_provider_index_of",
-             [](std::shared_ptr<MoIndexTranslation> self, py::tuple index) {
-               return shape_tuple(
-                     self->hf_provider_index_of(parse_tuple(self->ndim(), index)));
-             },
-             "Map an index (given in the space passed upon construction) to the indexing "
-             "convention of the host program provided to adcc as the HF provider.")
+        .def(
+              "full_index_of",
+              [](std::shared_ptr<MoIndexTranslation> self, py::tuple tpl) {
+                return shape_tuple(self->full_index_of(parse_tuple(self->ndim(), tpl)));
+              },
+              "Map an index given in the space, which was passed upon construction, to "
+              "the corresponding index in the full MO index range (the ffff space).")
+        .def(
+              "block_index_of",
+              [](std::shared_ptr<MoIndexTranslation> self, py::tuple tpl) {
+                return shape_tuple(self->block_index_of(parse_tuple(self->ndim(), tpl)));
+              },
+              "Get the block index of an index, i.e. get the index which points to the "
+              "block of the tensor in which the element with the passed index is "
+              "contained in.")
+        .def(
+              "block_index_spatial_of",
+              [](std::shared_ptr<MoIndexTranslation> self, py::tuple tpl) {
+                return shape_tuple(
+                      self->block_index_spatial_of(parse_tuple(self->ndim(), tpl)));
+              },
+              "Get the spatial block index of an index\n"
+              "\n"
+              "The spatial block index is the result of block_index_of modulo the spin "
+              "blocks,\n"
+              "i.e. it maps an index onto the index of the *spatial* blocks only, such "
+              "that\n"
+              "the resulting value is identical for two index where the MOs only differ\n"
+              "by spin. For example the 1st core alpha and the 1st core beta orbital "
+              "will\n"
+              "map to the same value upon a call of this function.")
+        .def(
+              "inblock_index_of",
+              [](std::shared_ptr<MoIndexTranslation> self, py::tuple tpl) {
+                return shape_tuple(
+                      self->inblock_index_of(parse_tuple(self->ndim(), tpl)));
+              },
+              "Get the in-block index, i.e. the index within the tensor block.")
+        .def(
+              "spin_of",
+              [](std::shared_ptr<MoIndexTranslation> self, py::tuple tpl) {
+                return self->spin_of(parse_tuple(self->ndim(), tpl));
+              },
+              "Get the spin block of each of the index components as a string.")
+        .def(
+              "split",
+              [](std::shared_ptr<MoIndexTranslation> self, py::tuple tpl) {
+                auto splitted = self->split(parse_tuple(self->ndim(), tpl));
+                return py::make_tuple(shape_tuple(splitted.first),
+                                      shape_tuple(splitted.second));
+              },
+              "Split an index into block index and in-block index")
+        .def(
+              "combine",
+              [](std::shared_ptr<MoIndexTranslation> self, py::tuple bidx,
+                 py::tuple ibidx) {
+                return shape_tuple(self->combine(parse_tuple(self->ndim(), bidx),
+                                                 parse_tuple(self->ndim(), ibidx)));
+              },
+              "Combine a block index and an in-block index into the appropriate index. "
+              "Effectively undoes the effect of 'split'.")
+        .def(
+              "combine",
+              [](std::shared_ptr<MoIndexTranslation> self, std::string spin_block,
+                 py::tuple bidx, py::tuple ibidx) {
+                return shape_tuple(self->combine(spin_block,
+                                                 parse_tuple(self->ndim(), bidx),
+                                                 parse_tuple(self->ndim(), ibidx)));
+              },
+              "Combine a spin block (given as a string of 'a's or 'b's), a spatial-only "
+              "block index and an in-block index into the appropriate index. Essentially "
+              "undoes the effect of 'spin_of', 'block_index_spatial_of' and "
+              "'inblock_index_of'.")
+        .def(
+              "hf_provider_index_of",
+              [](std::shared_ptr<MoIndexTranslation> self, py::tuple index) {
+                return shape_tuple(
+                      self->hf_provider_index_of(parse_tuple(self->ndim(), index)));
+              },
+              "Map an index (given in the space passed upon construction) to the "
+              "indexing "
+              "convention of the host program provided to adcc as the HF provider.")
         //
         .def("map_range_to_hf_provider", &MoIndexTranslation_map_range_to_hf_provider,
              "Map a range of indices to host program indices, i.e. the indexing "

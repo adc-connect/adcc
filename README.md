@@ -20,8 +20,8 @@ or [on arXiv](http://arxiv.org/pdf/1910.07757).
 
 ## Licence note
 The `adcc` source code contained in this repository is released
-under the [GNU Lesser General Public License v3 (LGPLv3)](LICENSE).
+under the [GNU General Public License v3 (LGPLv3)](LICENSE).
 This license does, however, not apply to the binary
-`adccore.so` file distributed inside the folder `/adcc/lib/` of
-the release tarball. For its licensing terms,
-see [LICENSE_adccore](LICENSE_adccore).
+`adccore.so` file (on Linux) or `adccore.dylib` file (on macOS)
+distributed inside the folder `/adcc/lib/` of the `adcc` release tarball.
+For its licensing terms, see [LICENSE_adccore](LICENSE_adccore).

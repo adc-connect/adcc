@@ -1,11 +1,11 @@
 ######################
 #--  Introduction  --#
 ######################
-adcc and the adcc source code is released under the terms of the GNU Lesser
-General Public License Version 3 (LGPLv3). This terms of release, however, do
-not apply to the adccore binary file `libadccore.so` (or a simlilarly named
-dylib file for MacOS), contained in the `adcc/lib` directory of the python code
-tarball or the python package directory.
+adcc and the adcc source code is released under the terms of the GNU General Public
+ License Version 3 (LGPLv3). This terms of release, however, do not apply to the
+adccore binary file `libadccore.so` (or a simlilarly named dylib file for MacOS),
+contained in the `adcc/lib` directory of the python code tarball or the python
+package directory.
 
 This measure was taken, since adccore integrates dependencies, where the
 licence terms only permit a public release in the form of a precompiled binary.
