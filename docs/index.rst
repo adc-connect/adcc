@@ -34,6 +34,7 @@ methods includes the ADC(n) family **up to level 3**,
 including variants such as spin-flip and core-valence separation.
 For all methods transition and excited state **properties are available**.
 See the :ref:`performing-calculations` for more details.
+Recently we submitted a paper about adcc, see :cite:`adcc`.
 
 .. _index-example:
 
@@ -70,22 +71,35 @@ computed using PySCF.
     state.plot_spectrum(broadening='lorentzian')
     plt.show()
 
-Sounds interesting? See :ref:`installation`
-and :ref:`performing-calculations`
+Sounds interesting? See :ref:`installation` and :ref:`performing-calculations`
 for installation instructions and some more information to get going.
 
 Contents
 --------
+
 .. toctree::
+   :caption: Introduction
    :maxdepth: 2
 
    installation
    calculations
+   theory
+
+.. toctree::
+   :caption: Advanced topics
+   :maxdepth: 2
+
    reference
    hostprograms
    developers
    adccore
-   publications
+
+.. toctree::
+   :caption: Extra information
+   :maxdepth: 2
+
+   zpublications
    about
 
 * :ref:`genindex`
+

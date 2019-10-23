@@ -76,7 +76,7 @@ See the `Pybind11 extension <https://code.adc-connect.org/extension>`_
 for details.
 
 In case you need a full source code setup
-feel free to contact us and see :ref:`adccore-sources`
+feel free to :ref:`contact-us` and see :ref:`adccore-sources`
 for setup details.
 
 .. _adccore-sources:
@@ -84,13 +84,15 @@ for setup details.
 Development setup with access to adccore source code
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you need to modify both adcc and ``adccore``,
+If you need to modify both adcc and ``adccore``
 to implement a new feature,
-you first need access to the
-`adccore source code <https://code.adc-connect.org/adccore>`_.
-If you do, it is easiest to have both the source
+you first need to get access
+`adccore source code <https://code.adc-connect.org/adccore>`_,
+which is not yet publicly available.
+Feel free to :ref:`contact-us` to discuss this.
+Once you do, it is easiest to have both the source
 code for adcc and ``adccore`` checked out in one directory,
-to be able to work on them simultaneously.
+to be able to work on both of them simultaneously.
 
 For this first clone the adcc repository
 

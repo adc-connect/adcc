@@ -7,16 +7,16 @@
 ## This file is part of adcc.
 ##
 ## adcc is free software: you can redistribute it and/or modify
-## it under the terms of the GNU Lesser General Public License as published
+## it under the terms of the GNU General Public License as published
 ## by the Free Software Foundation, either version 3 of the License, or
 ## (at your option) any later version.
 ##
 ## adcc is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-## GNU Lesser General Public License for more details.
+## GNU General Public License for more details.
 ##
-## You should have received a copy of the GNU Lesser General Public License
+## You should have received a copy of the GNU General Public License
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
@@ -46,9 +46,9 @@ except ImportError:
     def finalize_options(self):
         pass
 
-
 # Version of the python bindings and adcc python package.
 __version__ = '0.13.1'
+adccore_version = ("0.13.1", "")  # (base version, unstable postfix)
 
 
 def get_adccore_data():
@@ -57,17 +57,24 @@ def get_adccore_data():
     if abspath not in sys.path:
         sys.path.insert(0, abspath)
 
-    from AdcCore import AdcCore
+    from AdcCore import AdcCore, get_platform
 
     adccore = AdcCore()
-    if not adccore.is_config_file_present or adccore.version != __version__:
+    if not adccore.is_config_file_present or adccore.version != adccore_version[0] \
+       or adccore.platform != get_platform():
         # Get this version by building it or downloading it
-        adccore.obtain(__version__)
+        adccore.obtain(*adccore_version)
 
-    if adccore.version != __version__:
+    if adccore.version != adccore_version[0]:
         raise RuntimeError(
-            "Version mismatch between adcc (== {}) and adccore (== {})"
-            "".format(__version__, adccore.version)
+            "Version mismatch between requested adccore version (== {}) "
+            "and available adccore version (== {})"
+            "".format(adccore_version[0], adccore.version)
+        )
+    if adccore.platform != get_platform():
+        raise RuntimeError(
+            "Platform mismatch between this os (== {}) and adccore (== {})"
+            "".format(get_platform(), adccore.platform)
         )
     return adccore
 
@@ -93,6 +100,16 @@ class LinkerDynamic:
             if os.path.isfile(name):
                 return name
         return None
+
+
+def adccsetup(*args, **kwargs):
+    """Wrapper around setup, displaying a link to adc-connect.org on any error."""
+    try:
+        setup(*args, **kwargs)
+    except Exception as e:
+        url = kwargs["url"] + "/installation.html"
+        raise RuntimeError("Unfortunately adcc setup.py failed.\n"
+                           "For hints how to install adcc, see {}.".format(url)) from e
 
 
 #
@@ -176,6 +193,9 @@ class BuildExt(BuildCommand):
         BuildCommand.build_extensions(self)
 
 
+#
+# Building sphinx documentation
+#
 class BuildDocs(BuildSphinxDoc):
     def run(self):
         adccore = get_adccore_data()
@@ -293,19 +313,19 @@ VeloxChem or molsturm are available, but other SCF codes or even statically
 computed data can be easily used as well.
 
 Notice, that only the adcc python and C++ source code are released under the
-terms of the GNU Lesser General Public License v3 (LGPLv3) license. This
-license does not apply to the libadccore.so binary file contained inside
-the directory '/adcc/lib/' of the distributed tarball. For further details
-see the file LICENSE_adccore.
-""".strip()  # TODO extend
-setup(
+terms of the GNU General Public License v3 (GPLv3) license. This
+license does not apply to the libadccore.so or accordingly named dylib file
+contained inside the directory '/adcc/lib/' of the distributed tarball.
+For further details see the file LICENSE_adccore.
+""".strip()
+adccsetup(
     name='adcc',
     description='adcc:  Seamlessly connect your host program to ADC',
     long_description=long_description,
     #
     author="Michael F. Herbst, Maximilian Scheurer",
     author_email='developers@adc-connect.org',
-    license="LGPL v3",
+    license="GPL v3",
     url='https://adc-connect.org',
     project_urls={
         "Source": "https://github.com/adc-connect/adcc",
@@ -314,9 +334,8 @@ setup(
     #
     version=__version__,
     classifiers=[
-        'Development Status :: 4 - Beta',
-        'License :: OSI Approved :: '
-        'GNU Lesser General Public License v3 (LGPLv3)',
+        'Development Status :: 5 - Production/Stable',
+        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'License :: Free For Educational Use',
         'Intended Audience :: Science/Research',
         "Topic :: Scientific/Engineering :: Chemistry",
@@ -349,7 +368,7 @@ setup(
     ],
     tests_require=["pytest"],
     extras_require={
-        "build_docs": ["sphinx>=2", "breathe"],
+        "build_docs": ["sphinx>=2", "breathe", "sphinxcontrib-bibtex"],
     },
     #
     cmdclass={'build_ext': BuildExt, "pytest": PyTest,

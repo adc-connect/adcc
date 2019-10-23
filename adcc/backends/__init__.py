@@ -7,25 +7,25 @@
 ## This file is part of adcc.
 ##
 ## adcc is free software: you can redistribute it and/or modify
-## it under the terms of the GNU Lesser General Public License as published
+## it under the terms of the GNU General Public License as published
 ## by the Free Software Foundation, either version 3 of the License, or
 ## (at your option) any later version.
 ##
 ## adcc is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-## GNU Lesser General Public License for more details.
+## GNU General Public License for more details.
 ##
-## You should have received a copy of the GNU Lesser General Public License
+## You should have received a copy of the GNU General Public License
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
 import os
 import warnings
 
-import h5py
-
 from .available_backends import available, first_available, have_backend
+
+import h5py
 
 __all__ = ["import_scf_results", "run_hf", "have_backend", "available"]
 
@@ -51,6 +51,7 @@ def import_scf_results(res):
 
     if have_backend("veloxchem"):
         import veloxchem as vlx
+
         from . import veloxchem as backend_veloxchem
 
         if isinstance(res, vlx.scfrestdriver.ScfRestrictedDriver):

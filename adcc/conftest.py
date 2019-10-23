@@ -7,16 +7,16 @@
 ## This file is part of adcc.
 ##
 ## adcc is free software: you can redistribute it and/or modify
-## it under the terms of the GNU Lesser General Public License as published
+## it under the terms of the GNU General Public License as published
 ## by the Free Software Foundation, either version 3 of the License, or
 ## (at your option) any later version.
 ##
 ## adcc is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-## GNU Lesser General Public License for more details.
+## GNU General Public License for more details.
 ##
-## You should have received a copy of the GNU Lesser General Public License
+## You should have received a copy of the GNU General Public License
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
@@ -24,13 +24,15 @@ import os
 
 import pytest
 
+from .testdata.cache import TestdataCache
 
-def update_testdata():
+
+def update_testdata(session):
     import subprocess
 
     testdata_dir = os.path.join(os.path.dirname(__file__), "testdata")
     cmd = [testdata_dir + "/0_download_testdata.sh"]
-    if pytest.config.option.mode == "full":
+    if session.config.option.mode == "full":
         cmd.append("--full")
     subprocess.check_call(cmd)
 
@@ -56,6 +58,8 @@ def pytest_collection_modifyitems(config, items):
                 item.add_marker(skip_slow)
 
 
-def pytest_runtestloop(session):
-    if not pytest.config.option.skip_update:
-        update_testdata()
+def pytest_collection(session):
+    if not session.config.option.skip_update:
+        update_testdata(session)
+    if session.config.option.mode == "full":
+        TestdataCache.enable_mode_full()

@@ -7,16 +7,16 @@
 ## This file is part of adcc.
 ##
 ## adcc is free software: you can redistribute it and/or modify
-## it under the terms of the GNU Lesser General Public License as published
+## it under the terms of the GNU General Public License as published
 ## by the Free Software Foundation, either version 3 of the License, or
 ## (at your option) any later version.
 ##
 ## adcc is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-## GNU Lesser General Public License for more details.
+## GNU General Public License for more details.
 ##
-## You should have received a copy of the GNU Lesser General Public License
+## You should have received a copy of the GNU General Public License
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
@@ -24,14 +24,10 @@ import os
 import ast
 import adcc
 
-from .geometry import xyz
-
 from adcc import AdcMatrix, ExcitedStates, LazyMp, guess_zero, hdf5io
 from adcc.misc import cached_property
 from adcc.solver import EigenSolverStateBase
 from adcc.caching_policy import CacheAllPolicy
-
-import pytest
 
 
 class AdcMockState(EigenSolverStateBase):
@@ -90,15 +86,21 @@ def fullfile(fn):
 
 
 class TestdataCache():
+    cases = ["h2o_sto3g", "cn_sto3g", "hf3_631g", "h2s_sto3g"]
+    mode_full = False
+
+    @staticmethod
+    def enable_mode_full():
+        if not TestdataCache.mode_full:
+            TestdataCache.mode_full = True
+            TestdataCache.cases += ["cn_ccpvdz", "h2o_def2tzvp", "h2s_6311g"]
+
     @property
     def testcases(self):
         """
         The definition of the test cases: Data generator and reference file
         """
-        cases = ["h2o_sto3g", "cn_sto3g", "hf3_631g", "h2s_sto3g"]
-        if not hasattr(pytest, "config") or pytest.config.option.mode == "full":
-            cases += ["cn_ccpvdz", "h2o_def2tzvp", "h2s_6311g"]
-        return [k for k in cases
+        return [k for k in TestdataCache.cases
                 if os.path.isfile(fullfile(k + "_hfdata.hdf5"))]
 
     @cached_property

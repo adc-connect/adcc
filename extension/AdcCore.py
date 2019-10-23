@@ -7,24 +7,54 @@
 ## This file is part of adcc.
 ##
 ## adcc is free software: you can redistribute it and/or modify
-## it under the terms of the GNU Lesser General Public License as published
+## it under the terms of the GNU General Public License as published
 ## by the Free Software Foundation, either version 3 of the License, or
 ## (at your option) any later version.
 ##
 ## adcc is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-## GNU Lesser General Public License for more details.
+## GNU General Public License for more details.
 ##
-## You should have received a copy of the GNU Lesser General Public License
+## You should have received a copy of the GNU General Public License
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
 import os
 import sys
+import glob
 import json
+import tempfile
+import subprocess
+import distutils.util
 
 from os.path import join
+
+
+def get_platform():
+    """Return our platform name 'win32', 'linux_x86_64'"""
+    # Copied from https://github.com/pypa/wheel/blob/master/wheel/pep425tags.py
+    result = distutils.util.get_platform().replace('.', '_').replace('-', '_')
+    if result == "linux_x86_64" and sys.maxsize == 2147483647:
+        result = "linux_i686"
+    return result
+
+
+def request_urllib(url, filename):
+    """Download a file from the net using requests, displaying
+    a nice progress bar along the way"""
+    import urllib.request
+
+    print("Downloading {} ... this may take a while.".format(url))
+    try:
+        resp = urllib.request.urlopen(url)
+    except urllib.request.HTTPError as e:
+        return e.code
+
+    if 200 <= resp.status < 300:
+        with open(filename, 'wb') as fp:
+            fp.write(resp.read())
+    return resp.status
 
 
 class AdcCore:
@@ -84,19 +114,71 @@ class AdcCore:
         build_adccore.build_documentation(doc_dir, latex=False,
                                           html=False, xml=True)
 
-    def download(self, version):
-        """Download a particular version of adccore from the internet"""
-        raise NotImplementedError("Downloading binaries not yet implemented.")
-        # TODO Idea is to delete the current files in this folder
-        #      and download the tarball of the new adccore and unpack it
-        pass
+    @property
+    def file_globs(self):
+        """
+        Return the file globs to be applied relative to the installation directory
+        in order to obtain all files relevant for the binary distribution of adccore.
+        """
+        return [
+            "adccore_config.json",
+            "include/ctx/*.hh",
+            "include/adcc/*.hh",
+            "include/adcc/*/*.hh",
+            "lib/libadccore.so",
+            "lib/libadccore.*.dylib",
+            "lib/libadccore.dylib",
+            "lib/libstdc++.so.*",
+            "lib/libc++.so.*",
+            "lib/libadccore_LICENSE",
+            "lib/libadccore_thirdparty/ctx/*",
+        ]
 
-    def obtain(self, version):
+    def get_tarball_name(self, version=None, postfix=None):
+        """
+        Get the platform-dependent name of the adccore tarball
+        of the specified version.
+        """
+        if version is None:
+            version = self.version
+        if postfix is None:
+            postfix = ""
+        return "adccore-{}{}-{}.tar.gz".format(version, postfix, get_platform())
+
+    def download(self, version, postfix=None):
+        """Download a particular version of adccore from the internet"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base_url = "https://get.adc-connect.org/adccore"
+            fn = self.get_tarball_name(version, postfix)
+            local = tmpdir + "/" + fn
+            status_code = request_urllib(base_url + "/" + fn, local)
+            if status_code < 200 or status_code >= 300:
+                msg = ("Could not download adccore version {} for platform {} from {}."
+                       "".format(version, get_platform(), base_url))
+                if 400 <= status_code < 500:
+                    # Either an unsupported version or an error on our end
+                    msg += (" This should not have happened and either this means your platform is"
+                            " unsupported or that there is a bug. Please check the adcc installation"
+                            " instructions and if in doubt, please open an issue on github.")
+                raise RuntimeError(msg)
+
+            # Delete the old files
+            for fglob in self.file_globs:
+                for fn in glob.glob(fglob):
+                    os.remove(self.install_dir + "/" + fglob)
+
+            # Change to installation directory
+            olddir = os.getcwd()
+            os.chdir(self.install_dir)
+            subprocess.run(["tar", "xf", local], check=True)
+            os.chdir(olddir)
+
+    def obtain(self, version, postfix=None):
         """Obtain the library in some way."""
         if self.has_source:
             self.build()
         else:
-            self.download(version)
+            self.download(version, postfix)
 
     @property
     def config(self):
@@ -135,8 +217,6 @@ class AdcCore:
         Return a list of all dynamically loaded shared libraries
         the OS needs to provide to function with this package.
         """
-        import subprocess
-
         if sys.platform != "linux":
             raise OSError("required_dynamic_libraries is not "
                           "supported on this OS.")

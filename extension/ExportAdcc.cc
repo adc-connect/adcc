@@ -4,16 +4,16 @@
 // This file is part of adcc.
 //
 // adcc is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published
+// it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
 // adcc is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Lesser General Public License for more details.
+// GNU General Public License for more details.
 //
-// You should have received a copy of the GNU Lesser General Public License
+// You should have received a copy of the GNU General Public License
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
 
@@ -33,7 +33,6 @@ void export_AmplitudeVector(py::module& m);
 void export_CachingPolicy(py::module& m);
 void export_compute_modified_transition_moments(py::module& m);
 void export_compute_one_particle_densities(py::module& m);
-void export_CtxMap(py::module& m);
 void export_guesses(py::module& m);
 void export_HartreeFockProvider(py::module& m);
 void export_LazyMp(py::module& m);
@@ -50,7 +49,6 @@ void export_ThreadPool(py::module& m);
 PYBIND11_MODULE(libadcc, m) {
   namespace pyif = adcc::py_iface;
 
-  pyif::export_CtxMap(m);
   pyif::export_AdcMemory(m);
   pyif::export_ThreadPool(m);
   pyif::export_CachingPolicy(m);

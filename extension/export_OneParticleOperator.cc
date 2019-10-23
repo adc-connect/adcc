@@ -4,16 +4,16 @@
 // This file is part of adcc.
 //
 // adcc is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published
+// it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
 // adcc is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Lesser General Public License for more details.
+// GNU General Public License for more details.
 //
-// You should have received a copy of the GNU Lesser General Public License
+// You should have received a copy of the GNU General Public License
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
 
@@ -98,12 +98,14 @@ void export_OneParticleOperator(py::module& m) {
         .def_property_readonly("ndim", &OneParticleOperator::ndim)
         .def_property_readonly("shape", &OneParticleOperator_shape)
         .def_property_readonly("size", &OneParticleOperator::size)
-        .def("block",
-             [](const OneParticleOperator& self, std::string block) {
-               return self.block(block);
-             },
-             "Obtain a non-zero block from the matrix (e.g. o1o1, o1v1). If the block is "
-             "a zero block, the function throws an ArgumentError.")
+        .def(
+              "block",
+              [](const OneParticleOperator& self, std::string block) {
+                return self.block(block);
+              },
+              "Obtain a non-zero block from the matrix (e.g. o1o1, o1v1). If the block "
+              "is "
+              "a zero block, the function throws an ArgumentError.")
         .def("set_block", &OneParticleOperator::set_block,
              "Set a block of the matrix (e.g. o1o1, o1v1)")
         .def("set_zero_block", set_zero_block_1,
