@@ -52,12 +52,12 @@ Debian and Ubuntu
 
 .. _install-macos:
 
-macOS 10.14 Mojave
-..................
+macOS 10.13 (High Sierra) and 10.14 (Mojave)
+............................................
 
 .. attention::
    macOS support is still experimental and so far
-   only covers Mojave.
+   only covers High Sierra and Mojave.
    We would love to hear your feedback in case things fail.
 
 .. note::
