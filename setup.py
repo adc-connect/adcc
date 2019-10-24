@@ -48,7 +48,7 @@ except ImportError:
 
 # Version of the python bindings and adcc python package.
 __version__ = '0.13.1'
-adccore_version = ("0.13.1", "")  # (base version, unstable postfix)
+adccore_version = ("0.13.2", "")  # (base version, unstable postfix)
 
 
 def get_adccore_data():
