@@ -28,6 +28,7 @@ import tempfile
 import subprocess
 import distutils.util
 
+from distutils import log
 from os.path import join
 
 
@@ -167,6 +168,7 @@ class AdcCore:
             # Delete the old files
             for fglob in self.file_globs:
                 for fn in glob.glob(self.install_dir + "/" + fglob):
+                    log.info("Removing old adccore file {}".format(fn))
                     os.remove(fn)
 
             # Change to installation directory
