@@ -61,10 +61,10 @@ def request_urllib(url, filename):
 class AdcCore:
     def __init__(self):
         this_dir = os.path.dirname(__file__)
-        top_dir = os.path.abspath(join(this_dir, ".."))
-        self.source_dir = join(top_dir, "adccore")
+        self.top_dir = os.path.abspath(join(this_dir, ".."))
+        self.source_dir = join(self.top_dir, "adccore")
         self.install_dir = join(this_dir, "adccore")
-        self.library_dir = join(top_dir, "adcc", "lib")
+        self.library_dir = join(self.top_dir, "adcc", "lib")
         self.include_dir = join(self.install_dir, "include")
         self.config_path = join(self.install_dir, "adccore_config.json")
 
@@ -118,21 +118,22 @@ class AdcCore:
     @property
     def file_globs(self):
         """
-        Return the file globs to be applied relative to the installation directory
-        in order to obtain all files relevant for the binary distribution of adccore.
+        Return the file globs to be applied relative to the top directory of the
+        repository in order to obtain all files relevant for the binary distribution
+        of adccore.
         """
         return [
-            "adccore_config.json",
-            "include/ctx/*.hh",
-            "include/adcc/*.hh",
-            "include/adcc/*/*.hh",
-            "lib/libadccore.so",
-            "lib/libadccore.*.dylib",
-            "lib/libadccore.dylib",
-            "lib/libstdc++.so.*",
-            "lib/libc++.so.*",
-            "lib/libadccore_LICENSE",
-            "lib/libadccore_thirdparty/ctx/*",
+            self.install_dir + "/adccore_config.json",
+            self.install_dir + "/include/ctx/*.hh",
+            self.install_dir + "/include/adcc/*.hh",
+            self.install_dir + "/include/adcc/*/*.hh",
+            self.library_dir + "/libadccore.so",
+            self.library_dir + "/libadccore.*.dylib",
+            self.library_dir + "/libadccore.dylib",
+            self.library_dir + "/libstdc++.so.*",
+            self.library_dir + "/libc++.so.*",
+            self.library_dir + "/libadccore_LICENSE",
+            self.library_dir + "/libadccore_thirdparty/ctx/*",
         ]
 
     def get_tarball_name(self, version=None, postfix=None):
@@ -167,13 +168,13 @@ class AdcCore:
 
             # Delete the old files
             for fglob in self.file_globs:
-                for fn in glob.glob(self.install_dir + "/" + fglob):
+                for fn in glob.glob(fglob):
                     log.info("Removing old adccore file {}".format(fn))
                     os.remove(fn)
 
             # Change to installation directory
             olddir = os.getcwd()
-            os.chdir(self.install_dir)
+            os.chdir(self.top_dir)
             subprocess.run(["tar", "xf", local], check=True)
             os.chdir(olddir)
 
