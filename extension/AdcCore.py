@@ -157,15 +157,17 @@ class AdcCore:
                        "".format(version, get_platform(), base_url))
                 if 400 <= status_code < 500:
                     # Either an unsupported version or an error on our end
-                    msg += (" This should not have happened and either this means your platform is"
-                            " unsupported or that there is a bug. Please check the adcc installation"
-                            " instructions and if in doubt, please open an issue on github.")
+                    msg += (" This should not have happened and either this means your"
+                            " platform / OS / architecture is unsupported or that there"
+                            " is a bug in adcc. Please check the adcc installation"
+                            " instructions (https://adc-connect.org/installation.html)"
+                            " and if in doubt, please open an issue on github.")
                 raise RuntimeError(msg)
 
             # Delete the old files
             for fglob in self.file_globs:
-                for fn in glob.glob(fglob):
-                    os.remove(self.install_dir + "/" + fglob)
+                for fn in glob.glob(self.install_dir + "/" + fglob):
+                    os.remove(fn)
 
             # Change to installation directory
             olddir = os.getcwd()
