@@ -37,6 +37,21 @@ def update_testdata(session):
     subprocess.check_call(cmd)
 
 
+def setup_continuous_integration(session):
+    """
+    If we are in a continuous integration environment,
+    be more moderate with the thread setup.
+    """
+    import adcc
+
+    print("Detected continuous integration session")
+    adcc.thread_pool.reinit(2, 3)
+
+#
+# Pytest Hooks
+#
+
+
 def pytest_addoption(parser):
     parser.addoption(
         "--mode", default="fast", choices=["fast", "full"],
@@ -63,3 +78,8 @@ def pytest_collection(session):
         update_testdata(session)
     if session.config.option.mode == "full":
         TestdataCache.enable_mode_full()
+
+
+def pytest_runtestloop(session):
+    if os.environ.get("CI", "false") == "true":
+        setup_continuous_integration(session)
