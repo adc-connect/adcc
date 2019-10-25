@@ -60,9 +60,8 @@ macOS 10.13 (High Sierra) and 10.14 (Mojave)
    only covers High Sierra and Mojave.
    We would love to hear your feedback in case things fail.
 
-   In adcc 0.13.1 there is a known bug for the pip installation
-   on macOS, causing it to produce a corrupt installation,
-   for a workaround, see https://github.com/adc-connect/adcc/pull/1.
+.. note::
+   Supported from adcc 0.13.2.
 
 .. note::
    TODO This section needs more details!
