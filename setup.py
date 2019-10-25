@@ -311,6 +311,11 @@ adccsetup(
     description="adcc:  Seamlessly connect your host program to ADC",
     long_description=strip_readme(),
     long_description_content_type="text/markdown",
+    keywords=[
+        "ADC", "algebraic-diagrammatic", "construction", "excited", "states",
+        "electronic", "structure", "computational", "chemistry", "quantum",
+        "spectroscopy",
+    ],
     #
     author="Michael F. Herbst, Maximilian Scheurer",
     author_email="developers@adc-connect.org",
