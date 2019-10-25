@@ -63,16 +63,17 @@ macOS 10.13 (High Sierra) and 10.14 (Mojave)
 .. note::
    Supported from adcc 0.13.2.
 
-.. note::
-   TODO This section needs more details!
-
+0. **Homebrew:**
+   Support for macOS currently requires the `Homebrew <https://brew.sh>`_ package manager
+   and a recent version of ``gcc`` (e.g. ``gcc@9``). Hopefully, we will support ``clang`` in the future.
+   
 1. **adcc:**
    Install from `PyPi <https://pypi.org>`_, using ``pip``:
 
    .. code-block:: shell
 
       pip install pybind11     # Install pybind11 first to suppress some error messages
-      pip install adcc
+      CXX=g++-9 CC=gcc-9 pip install adcc   # Install adcc using the correct compiler for Python bindings
 
 .. _install-hostprogram:
 
