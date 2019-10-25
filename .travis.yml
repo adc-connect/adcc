@@ -1,0 +1,59 @@
+branches:
+  only:
+    # Only build master and version tags
+    - master
+    - /^v\d+\.\d+(\.\d+)?(-\S*)?$/
+
+os: linux
+language: python
+python:
+  - "3.7"
+#  - "3.6"    # (best use this for deployment only)
+  - "3.5"
+
+addons:
+  apt:
+    packages:
+      - libopenblas-base
+
+# Environment variables for linux
+env:
+  - [CC=gcc, CXX=g++]
+
+install:
+  - travis_retry pip3 install pyscf  # Install an SCF code
+  - pip3 install --verbose -r requirements.txt
+
+# These jobs are only run with the first python version
+# mentioned in the initial list
+jobs:
+  include:
+    - stage: code style
+      install:
+        - travis_retry pip3 install flake8
+      script: flake8
+      env: CODE_STYLE="flake8"
+    - stage: test
+      language: script
+      os: osx
+      osx_image: xcode11.1  # macos 10.14
+      env: [CC=gcc-9, CXX=g++-9]
+
+# This is the 'test' build stage
+script:  CC=$CC CXX=$CXX python3 setup.py test
+
+stages:
+  - code style
+  - test
+
+after_failure:
+  - $CC --version
+  - $CXX --version
+
+
+# TODO Coverage on the python sources
+# TODO Deployment to pip on linux (once, as sdist) and macos (each os as bdist_wheel)
+
+
+notifications:
+  email: false
