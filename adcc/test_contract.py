@@ -32,6 +32,7 @@ from adcc.testdata.cache import cache
 #       tuple in the IF_DIMENSIONS_MATCH_EXECUTE preprocessor macro
 #       of the TensorImpl::contract_to function in adccore.
 
+
 class TestContract(unittest.TestCase):
     def base_test(self, contr, a, b, out):
         a.set_random()
