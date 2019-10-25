@@ -54,10 +54,11 @@ def make_tarball(adccore, postfix=None):
 
     os.makedirs("dist", exist_ok=True)
     olddir = os.getcwd()
-    os.chdir(adccore.install_dir)
+    os.chdir(adccore.top_dir)
     filelist = []
     for globstr in adccore.file_globs:
-        filelist += glob.glob(globstr)
+        relglob = os.path.relpath(globstr, adccore.top_dir)
+        filelist += glob.glob(relglob)
     subprocess.run(["tar", "cvzf", fullpath] + filelist)
     os.chdir(olddir)
     return "dist/" + filename
