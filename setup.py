@@ -47,7 +47,7 @@ except ImportError:
         pass
 
 # Version of the python bindings and adcc python package.
-__version__ = '0.13.1'
+__version__ = "0.13.1"
 adccore_version = ("0.13.2", "")  # (base version, unstable postfix)
 
 
@@ -102,6 +102,11 @@ class LinkerDynamic:
         return None
 
 
+def strip_readme():
+    with open("README.md") as fp:
+        return "".join([line for line in fp if not line.startswith("<img")])
+
+
 def adccsetup(*args, **kwargs):
     """Wrapper around setup, displaying a link to adc-connect.org on any error."""
     try:
@@ -139,8 +144,8 @@ def has_flag(compiler, flagname):
     """
     import tempfile
 
-    with tempfile.NamedTemporaryFile('w', suffix='.cpp') as f:
-        f.write('int main (int argc, char **argv) { return 0; }')
+    with tempfile.NamedTemporaryFile("w", suffix=".cpp") as f:
+        f.write("int main (int argc, char **argv) { return 0; }")
         try:
             compiler.compile([f.name], extra_postargs=[flagname])
         except setuptools.distutils.errors.CompileError:
@@ -153,13 +158,13 @@ def cpp_flag(compiler):
 
     The c++14 is prefered over c++11 (when it is available).
     """
-    if has_flag(compiler, '-std=c++14'):
-        return '-std=c++14'
-    elif has_flag(compiler, '-std=c++11'):
-        return '-std=c++11'
+    if has_flag(compiler, "-std=c++14"):
+        return "-std=c++14"
+    elif has_flag(compiler, "-std=c++11"):
+        return "-std=c++11"
     else:
-        raise RuntimeError('Unsupported compiler -- at least C++11 support '
-                           'is needed!')
+        raise RuntimeError("Unsupported compiler -- at least C++11 support "
+                           "is needed!")
 
 
 class BuildExt(BuildCommand):
@@ -171,10 +176,10 @@ class BuildExt(BuildCommand):
 
         opts = []
         if sys.platform == "darwin":
-            potential_opts = ['-stdlib=libc++', '-mmacosx-version-min=10.7']
+            potential_opts = ["-stdlib=libc++", "-mmacosx-version-min=10.7"]
             opts.extend([opt for opt in potential_opts
                          if has_flag(self.compiler, opt)])
-        if self.compiler.compiler_type == 'unix':
+        if self.compiler.compiler_type == "unix":
             opts.append(cpp_flag(self.compiler))
             potential_opts = [
                 "-fvisibility=hidden", "-Werror", "-Wall", "-Wextra",
@@ -211,7 +216,7 @@ class BuildDocs(BuildSphinxDoc):
             import breathe  # noqa F401
         except ImportError:
             raise SystemExit("Sphinx or or one of its required plugins not "
-                             "found.\nTry 'pip install -U adcc[build_docs]")
+                             "found.\nTry 'pip install -U adcc[build_docs]'")
         super().run()
 
 
@@ -220,8 +225,8 @@ class BuildDocs(BuildSphinxDoc):
 #
 class PyTest(TestCommand):
     user_options = [
-        ('mode=', 'm', 'Mode for the testsuite (fast or full)'),
-        ('skip-update', 's', 'Skip updating testdata'),
+        ("mode=", "m", "Mode for the testsuite (fast or full)"),
+        ("skip-update", "s", "Skip updating testdata"),
         ("pytest-args=", "a", "Arguments to pass to pytest"),
     ]
 
@@ -286,7 +291,7 @@ else:
 # Setup build of the libadcc extension
 ext_modules = [
     Extension(
-        'libadcc', glob.glob("extension/*.cc"),
+        "libadcc", glob.glob("extension/*.cc"),
         include_dirs=[
             # Path to pybind11 headers
             GetPyBindInclude(),
@@ -297,36 +302,20 @@ ext_modules = [
         library_dirs=[adccore.library_dir],
         extra_link_args=extra_link_args,
         runtime_library_dirs=runtime_library_dirs,
-        language='c++',
+        language="c++",
     ),
 ]
 
-long_description = """
-adcc is a python-based framework for performing quantum-chemical simulations
-based upon the algebraic-diagrammatic construction (ADC) approach.
-
-As of now PP-ADC and CVS-PP-ADC methods are available to compute excited
-states on top of an MP2 ground state. The underlying Hartree-Fock reference
-is not computed inside adcc, much rather external packages should be used
-for this purpose. Interfaces to seamlessly interact with pyscf, psi4,
-VeloxChem or molsturm are available, but other SCF codes or even statically
-computed data can be easily used as well.
-
-Notice, that only the adcc python and C++ source code are released under the
-terms of the GNU General Public License v3 (GPLv3) license. This
-license does not apply to the libadccore.so or accordingly named dylib file
-contained inside the directory '/adcc/lib/' of the distributed tarball.
-For further details see the file LICENSE_adccore.
-""".strip()
 adccsetup(
-    name='adcc',
-    description='adcc:  Seamlessly connect your host program to ADC',
-    long_description=long_description,
+    name="adcc",
+    description="adcc:  Seamlessly connect your host program to ADC",
+    long_description=strip_readme(),
+    long_description_content_type="text/markdown",
     #
     author="Michael F. Herbst, Maximilian Scheurer",
-    author_email='developers@adc-connect.org',
+    author_email="developers@adc-connect.org",
     license="GPL v3",
-    url='https://adc-connect.org',
+    url="https://adc-connect.org",
     project_urls={
         "Source": "https://github.com/adc-connect/adcc",
         "Issues": "https://github.com/adc-connect/adcc/issues",
@@ -334,43 +323,43 @@ adccsetup(
     #
     version=__version__,
     classifiers=[
-        'Development Status :: 5 - Production/Stable',
-        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
-        'License :: Free For Educational Use',
-        'Intended Audience :: Science/Research',
+        "Development Status :: 4 - Beta",
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+        "License :: Free For Educational Use",
+        "Intended Audience :: Science/Research",
         "Topic :: Scientific/Engineering :: Chemistry",
         "Topic :: Education",
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Operating System :: MacOS :: MacOS X',
-        'Operating System :: POSIX :: Linux',
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Operating System :: MacOS :: MacOS X",
+        "Operating System :: POSIX :: Linux",
     ],
     #
     packages=find_packages(exclude=["*.test*", "test"]),
-    package_data={'adcc': ["lib/*.so", "lib/*.dylib",
+    package_data={"adcc": ["lib/*.so", "lib/*.dylib",
                            "lib/*.so.*",
                            "lib/libadccore_LICENSE",
                            "lib/libadccore_thirdparty/ctx/*"],
-                  '': ["LICENSE*"]},
+                  "": ["LICENSE*"]},
     ext_modules=ext_modules,
     zip_safe=False,
     #
     platforms=["Linux", "Mac OS-X"],
-    python_requires='>=3.5',
+    python_requires=">=3.5",
     install_requires=[
-        'pybind11 (>= 2.2)',
-        'numpy (>= 1.13)',      # Maybe even higher?
-        'scipy (>= 1.2)',       # Maybe also lower?
-        'matplotlib (>= 3.0)',  # Maybe also lower?
-        'h5py (>= 2.9)',        # Maybe also lower?
-        'tqdm (>= 4.30)',       # Maybe also lower?
+        "pybind11 (>= 2.2)",
+        "numpy (>= 1.13)",      # Maybe even higher?
+        "scipy (>= 1.2)",       # Maybe also lower?
+        "matplotlib (>= 3.0)",  # Maybe also lower?
+        "h5py (>= 2.9)",        # Maybe also lower?
+        "tqdm (>= 4.30)",       # Maybe also lower?
     ],
     tests_require=["pytest"],
     extras_require={
         "build_docs": ["sphinx>=2", "breathe", "sphinxcontrib-bibtex"],
     },
     #
-    cmdclass={'build_ext': BuildExt, "pytest": PyTest,
+    cmdclass={"build_ext": BuildExt, "pytest": PyTest,
               "build_docs": BuildDocs},
 )
