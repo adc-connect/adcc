@@ -75,8 +75,8 @@ class GatherStatisticsPolicy(CachingPolicy_i):
         maxcon = max(maxcon, 12)
 
         fmt = (
-            "| {:" + str(maxlal) + "} {:" + str(maxsp) + "}" +
-            "    {:" + str(maxcon) + "}  {:6d} |\n"
+            "| {:" + str(maxlal) + "} {:" + str(maxsp) + "}"
+            + "    {:" + str(maxcon) + "}  {:6d} |\n"
         )
         maxbody = 0
         body = ""
@@ -88,10 +88,10 @@ class GatherStatisticsPolicy(CachingPolicy_i):
         cutline = "+" + (maxbody - 3) * "-" + "+"
         title = ("|{:^" + str(maxbody - 3) + "s}|"
                  "\n").format("Tensor caching statistics")
-        header = ("| {:^" + str(maxlal + maxsp + 1) + "}    {:^" + str(maxcon) +
-                  "}  {:>6s} |\n").format("Tensor", "contraction", "count")
-        pp.text(cutline + "\n" + title + cutline + "\n" +
-                header + body + cutline)
+        header = ("| {:^" + str(maxlal + maxsp + 1) + "}    {:^" + str(maxcon)
+                  + "}  {:>6s} |\n").format("Tensor", "contraction", "count")
+        pp.text(cutline + "\n" + title + cutline + "\n"
+                + header + body + cutline)
 
 
 # TODO Ideas:

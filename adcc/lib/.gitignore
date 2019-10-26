@@ -1,0 +1,5 @@
+/*.so
+/*.so.*
+/*.dylib
+/*.a
+/libadccore_thirdparty

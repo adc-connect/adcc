@@ -22,47 +22,21 @@
 ## ---------------------------------------------------------------------
 
 
-def is_pyscf_available():
+def is_module_available(module):
+    import importlib
+
     try:
-        from pyscf import scf
-
-        return True
-    except ImportError:
-        return False
-
-
-def is_psi4_available():
-    try:
-        import psi4
-
-        return True
-    except ImportError:
-        return False
-
-
-def is_molsturm_available():
-    try:
-        import molsturm
-
-        return True
-    except ImportError:
-        return False
-
-
-def is_veloxchem_available():
-    try:
-        import veloxchem
-
+        importlib.import_module(module)
         return True
     except ImportError:
         return False
 
 
 status = {
-    "pyscf": is_pyscf_available(),
-    "psi4": is_psi4_available(),
-    "veloxchem": is_veloxchem_available(),
-    "molsturm": is_molsturm_available(),
+    "pyscf": is_module_available("pyscf"),
+    "psi4": is_module_available("psi4"),
+    "veloxchem": is_module_available("veloxchem"),
+    "molsturm": is_module_available("molsturm"),
 }
 
 
