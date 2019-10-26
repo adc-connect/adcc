@@ -85,9 +85,13 @@ def upload_tarball(filename):
 
     # TODO Ideally one would create a hash here and verify it on download
     #      to ensure integrity of the download process.
-    host, tdir = target.split(":")
-    command = "put {} {}/".format(filename, tdir)
-    subprocess.run(["sftp", "-b", "-", host], input=command.encode(), check=True)
+
+    if ":" in target:  # Remote deployment
+        host, tdir = target.split(":")
+        command = "put {} {}/".format(filename, tdir)
+        subprocess.run(["sftp", "-b", "-", host], input=command.encode(), check=True)
+    else:  # Dummy local deployment
+        subprocess.run(["cp", filename, target], check=True)
 
 
 def main():
