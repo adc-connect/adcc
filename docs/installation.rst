@@ -65,7 +65,8 @@ macOS 10.13 (High Sierra) and 10.14 (Mojave)
 
 0. **Homebrew:**
    Support for macOS currently requires the `Homebrew <https://brew.sh>`_ package manager
-   and a recent version of ``gcc`` (e.g. ``gcc@9``). Hopefully, we will support ``clang`` in the future.
+   and a recent version of ``gcc`` (e.g. ``brew install gcc@9``).
+   Hopefully, we will support ``clang`` in the future.
    
 1. **adcc:**
    Install from `PyPi <https://pypi.org>`_, using ``pip``:

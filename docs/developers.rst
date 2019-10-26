@@ -44,10 +44,6 @@ which is discussed in more detail in :ref:`adccore-layer`.
 Obtaining the adcc sources
 --------------------------
 
-.. note::
-   Links not yet live!
-   Check them once they are
-
 The source code of adcc can be obtained
 `from github <https://github.com/adc-connect/adcc>`_,
 simply by cloning
@@ -90,50 +86,56 @@ you first need to get access
 `adccore source code <https://code.adc-connect.org/adccore>`_,
 which is not yet publicly available.
 Feel free to :ref:`contact-us` to discuss this.
-Once you do, it is easiest to have both the source
-code for adcc and ``adccore`` checked out in one directory,
-to be able to work on both of them simultaneously.
 
-For this first clone the adcc repository
+Once you do, configure the url of the ``adccore`` remote
+on your system. For this drop a file ``~/.adccore.json``
+in your Home directory with the contents
+
+.. code-block:: json
+
+   {"upstream": "ssh://location_of_the_adccore_repository.git"}
+
+where ``location_of_the_adccore_repository.git`` is appropriately
+replaced by the url to the ``adccore`` remote. Afterwards you can
+proceed as above, i.e. just clone the adcc sources via
 
 .. code-block:: shell
 
    git clone https://code.adc-connect.org
 
-and then clone the ``adccore`` repository **into the adcc directory**,
-that is, run
-
-.. code-block:: shell
-
-   cd adcc
-   git clone https://code.adc-connect.org/adccore adccore
-
-directly thereafter.
-You should now have the following folder structure:
-
-.. code-block:: shell
-
-   adcc/README.md
-   adcc/adcc/__init__.py
-   ...
-   adcc/adccore/README.md
-   adcc/adccore/CMakeLists.txt
-   ...
-
-In this way the build system of ``adccore`` can be
-controlled directly from the ``setup.py`` script of the adcc
-repository, such that you generally do not need to worry about
-keeping the two repositories in sync or building them in the correct order:
-If you modify a file inside ``adccore`` the ``setup.py`` script from adcc
-will automatically trigger a compilation (and appropriate installation)
-of this component for you.
-
-This means that building and testing ``adccore`` **and** adcc
-now boils down to a simple
+and initalise the build via
 
 .. code-block:: shell
 
    ./setup.py test
+
+This will automatically clone ``adccore`` into the subfolder ``adccore``
+of the adcc source repository and trigger both building and testing
+of ``adccore`` **and** adcc.
+
+Notice, that in this setup, the build system of ``adccore``
+is integrated with the ``setup.py`` from adcc,
+such that building ``adccore`` is automatically
+triggered from the ``setup.py`` script of the adcc repository.
+You generally do not need to worry about keeping the two repositories
+in sync or building them in the correct order:
+If you modify a file inside ``adccore`` the ``setup.py`` script from adcc
+will automatically trigger a compilation of this component for you.
+
+One case, which does require manual work, however, is if adcc requires
+an newer version of ``adccore``. In this case you will be presented with
+an error and you have to manually checkout the appropriate ``adccore``
+version by running ``git checkout`` inside the ``adccore`` subdirectory.
+For example to obtain version ``0.0.0`` of ``adccore``,
+you need to run
+
+.. code-block:: shell
+
+   git checkout v0.0.0.
+
+This is done to avoid automatically overwriting some development changes
+you might have made inside ``adccore``.
+
 
 ``setup.py`` reference
 ----------------------
@@ -179,8 +181,6 @@ This can be achieved using
 .. code-block:: shell
 
    pip install adcc[build_docs]
-
-.. important:: The above does not work yet.
 
 On the Python-side we follow the `numpy docstring standard <https://numpydoc.readthedocs.io/en/latest/format.html#docstring-standard>`_.
 
