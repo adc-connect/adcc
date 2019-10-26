@@ -1,11 +1,12 @@
 <img src="https://raw.githubusercontent.com/adc-connect/adcc/master/docs/logo/logo.png" alt="adcc logo" height="100px" />
 
 # adcc: Seamlessly connect your program to ADC
+[![license](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://github.com/adc-connect/adcc/blob/master/LICENSE)
+[![pypi](https://img.shields.io/pypi/v/adcc)](https://pypi.org/project/adcc)
 [![Documentation](https://img.shields.io/badge/doc-latest-blue.svg)](https://adc-connect.org)
 [![Travis](https://travis-ci.org/adc-connect/adcc.svg?branch=master)](https://travis-ci.org/adc-connect/adcc)
-[![pypi](https://img.shields.io/pypi/v/adcc)](https://pypi.org/project/adcc)
-[![license](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://github.com/adc-connect/adcc/blob/master/LICENSE)
 [![DOI](https://zenodo.org/badge/215731857.svg)](https://zenodo.org/badge/latestdoi/215731857)
+
 
 adcc (**ADC-connect**) is a python-based framework for performing
 the calculation of molecular spectra and electronically excited states
