@@ -353,12 +353,12 @@ adccsetup(
     platforms=["Linux", "Mac OS-X"],
     python_requires=">=3.5",
     install_requires=[
-        "pybind11 (>= 2.2)",
-        "numpy (>= 1.13)",      # Maybe even higher?
-        "scipy (>= 1.2)",       # Maybe also lower?
-        "matplotlib (>= 3.0)",  # Maybe also lower?
-        "h5py (>= 2.9)",        # Maybe also lower?
-        "tqdm (>= 4.30)",       # Maybe also lower?
+        "pybind11 >= 2.2",
+        "numpy >= 1.13",      # Maybe even higher?
+        "scipy >= 1.2",       # Maybe also lower?
+        "matplotlib >= 3.0",  # Maybe also lower?
+        "h5py >= 2.9",        # Maybe also lower?
+        "tqdm >= 4.30",       # Maybe also lower?
     ],
     tests_require=["pytest"],
     extras_require={
