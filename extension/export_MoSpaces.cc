@@ -112,8 +112,6 @@ void export_MoSpaces(py::module& m) {
               "Contains for each orbital space the mapping from each *block* used inside "
               "the space to the spin it correspond to ('a' is alpha and 'b' is beta)")
         //
-        .def("to_ctx", &MoSpaces::to_ctx)
-        //
         // TODO describe function
         ;
 }

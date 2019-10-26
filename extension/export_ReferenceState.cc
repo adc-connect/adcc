@@ -169,8 +169,6 @@ void export_ReferenceState(py::module& m) {
               [](const ReferenceState& self) { return convert_timer(self.timer()); },
               "Obtain the timer object of this class.")
         //
-        .def("to_ctx", &ReferenceState::to_ctx)
-        //
         ;
 }
 
