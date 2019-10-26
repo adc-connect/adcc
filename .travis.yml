@@ -29,10 +29,13 @@ install:
 jobs:
   include:
     - stage: code style
-      install:
-        - travis_retry pip3 install flake8
+      addons:
+        apt:
+          packages: []   # Do not install openblas here
+      install: travis_retry pip3 install flake8
       script: flake8
       env: CODE_STYLE="flake8"
+    #
     - stage: test
       language: script
       os: osx
