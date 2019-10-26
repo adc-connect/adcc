@@ -83,6 +83,8 @@ def upload_tarball(filename):
     print()
     print_input("Press enter to upload {} -> {}".format(filename, target))
 
+    # TODO Ideally one would create a hash here and verify it on download
+    #      to ensure integrity of the download process.
     host, tdir = target.split(":")
     command = "put {} {}/".format(filename, tdir)
     subprocess.run(["sftp", "-b", "-", host], input=command.encode(), check=True)
