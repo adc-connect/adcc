@@ -82,6 +82,32 @@ class AdcCore:
         return os.path.isfile(join(doc_dir, "xml", "index.xml"))
 
     @property
+    def upstream(self):
+        """Return upstream remote or None if unknown"""
+        jsonfile = os.path.expanduser("~/.adccore.json")
+        if not os.path.isfile(jsonfile):
+            return None
+        try:
+            with open(jsonfile, "r") as fp:
+                return json.load(fp).get("upstream", None)
+        except json.JSONDecodeError:
+            return None
+
+    def checkout(self, version):
+        """Checkout adccore source code in the given version if possible"""
+        if not self.upstream:
+            raise RuntimeError("Cannot checkout adccore, since upstream not known.")
+        subprocess.check_call(["git", "clone", self.upstream, self.source_dir])
+
+        olddir = os.getcwd()
+        os.chdir(self.source_dir)
+        subprocess.check_call(["git", "checkout", "v" + version])
+        subprocess.check_call("git submodule update --init --recursive".split())
+        os.chdir(olddir)
+
+        assert self.has_source
+
+    @property
     def has_source(self):
         """Can adccore be build from source"""
         return os.path.isfile(join(self.source_dir, "build_adccore.py"))
@@ -181,6 +207,9 @@ class AdcCore:
     def obtain(self, version, postfix=None):
         """Obtain the library in some way."""
         if self.has_source:
+            self.build()
+        elif self.upstream:
+            self.checkout(version)
             self.build()
         else:
             self.download(version, postfix)
