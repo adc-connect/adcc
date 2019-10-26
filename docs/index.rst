@@ -1,14 +1,16 @@
 adcc: Seamlessly connect your program to ADC
 ============================================
 
-.. image:: https://img.shields.io/pypi/v/adcc
-   :target: https://pypi.org/project/adcc
-.. image:: https://img.shields.io/pypi/l/adcc
-   :target: https://pypi.org/project/adcc
 .. image:: https://img.shields.io/github/stars/adc-connect/adcc?style=social
    :target: https://github.com/adc-connect/adcc
 .. image:: https://travis-ci.org/adc-connect/adcc.svg?branch=master
    :target: https://travis-ci.org/adc-connect/adcc
+.. image:: https://img.shields.io/pypi/v/adcc
+   :target: https://pypi.org/project/adcc
+.. image:: https://img.shields.io/pypi/l/adcc
+   :target: https://pypi.org/project/adcc
+.. image:: https://zenodo.org/badge/215731857.svg
+   :target: https://zenodo.org/badge/latestdoi/215731857
 
 .. note::
    This documentation page is still under construction.
