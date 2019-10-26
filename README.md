@@ -1,4 +1,4 @@
-<img src="https://adc-connect.org/_images/logo.png" alt="adcc logo" height="100px" />
+<img src="https://raw.githubusercontent.com/adc-connect/adcc/master/docs/logo/logo.png" alt="adcc logo" height="100px" />
 
 # adcc: Seamlessly connect your program to ADC
 [![pypi](https://img.shields.io/pypi/v/adcc)](https://pypi.org/project/adcc)
@@ -6,9 +6,15 @@
 [![Documentation](https://img.shields.io/badge/doc-latest-blue.svg)](https://adc-connect.org)
 [![Travis](https://travis-ci.org/adc-connect/adcc.svg?branch=master)](https://travis-ci.org/adc-connect/adcc)
 
-`adcc` (**ADC-connect**) is a `python`-based framework to connect to arbitrary programs
-for running calculations based on the algebraic-diagrammatic construction
-approach (ADC) on top of their self-consistent field (SCF) reference.
+adcc (**ADC-connect**) is a python-based framework for performing
+the calculation of molecular spectra and electronically excited states
+based upon the algebraic-diagrammatic construction (ADC) approach.
+
+Arbitrary host programs may be used to supply a
+self-consistent field (SCF) reference to start off the ADC calculation.
+Currently adcc comes with ready-to-use interfaces to four programs,
+namely pyscf, psi4, VeloxChem or molsturm. Adding other SCF codes or even
+statically computed data can be easily achieved as well.
 For more details and installation instructions
 [see the `adcc` documentation](https://adc-connect.org).
 
