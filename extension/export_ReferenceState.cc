@@ -113,7 +113,7 @@ void export_ReferenceState(py::module& m) {
               [](const ReferenceState& ref) { return ref.nuclear_multipole(0)[0]; })
         .def_property_readonly("nuclear_dipole",
                                [](const ReferenceState& ref) {
-                                 py::array_t<scalar_type> ret({3});
+                                 py::array_t<scalar_type> ret({{3}});
                                  auto res = ref.nuclear_multipole(1);
                                  std::copy(res.begin(), res.end(), ret.mutable_data());
                                  return res;
