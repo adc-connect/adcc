@@ -39,6 +39,8 @@ def cached_property(f):
             x = self._property_cache[f] = f(self)
             return x
 
+    get.__doc__ = f.__doc__
+
     return property(get)
 
 
