@@ -9,8 +9,6 @@ adcc: Seamlessly connect your program to ADC
    :target: https://pypi.org/project/adcc
 .. image:: https://img.shields.io/pypi/l/adcc
    :target: https://pypi.org/project/adcc
-.. image:: https://zenodo.org/badge/215731857.svg
-   :target: https://zenodo.org/badge/latestdoi/215731857
 
 .. note::
    This documentation page is still under construction.

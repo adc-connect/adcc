@@ -360,7 +360,7 @@ adccsetup(
         "h5py >= 2.9",        # Maybe also lower?
         "tqdm >= 4.30",       # Maybe also lower?
     ],
-    tests_require=["pytest"],
+    tests_require=["pytest", "pytest-cov"],
     extras_require={
         "build_docs": ["sphinx>=2", "breathe", "sphinxcontrib-bibtex"],
     },
