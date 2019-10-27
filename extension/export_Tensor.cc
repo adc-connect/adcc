@@ -122,7 +122,7 @@ static py::array Tensor_dot_list(const Tensor& self, py::list tensors) {
   py::array_t<scalar_type> ret(dots.size());
   std::copy(dots.begin(), dots.end(), ret.mutable_data());
 
-  return ret;
+  return std::move(ret);
 }
 
 static std::shared_ptr<Tensor> Tensor_transpose_1(const Tensor& self) {

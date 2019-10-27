@@ -34,7 +34,7 @@ def is_module_available(module):
 
 status = {
     "pyscf": is_module_available("pyscf"),
-    "psi4": is_module_available("psi4"),
+    "psi4": is_module_available("psi4") and is_module_available("psi4.core"),
     "veloxchem": is_module_available("veloxchem"),
     "molsturm": is_module_available("molsturm"),
 }

@@ -67,7 +67,7 @@ class HartreeFockProvider : public HartreeFockSolution_i {
                                ").");
     }
     py::memoryview memview(py::buffer_info(buffer, n_orbs));
-    fill_occupation_f(py::array({n_orbs}, buffer, memview));
+    fill_occupation_f(py::array({{n_orbs}}, buffer, memview));
   }
 
   void orben_f(scalar_type* buffer, size_t size) const override {
@@ -79,7 +79,7 @@ class HartreeFockProvider : public HartreeFockSolution_i {
                                ").");
     }
     py::memoryview memview(py::buffer_info(buffer, n_orbs));
-    fill_orben_f(py::array({n_orbs}, buffer, memview));
+    fill_orben_f(py::array({{n_orbs}}, buffer, memview));
   }
 
   void orbcoeff_fb(scalar_type* buffer, size_t size) const override {
@@ -303,10 +303,10 @@ class PyHartreeFockProvider : public HartreeFockProvider {
   void fill_fock_ff(py::tuple slices, py::array out) const override {
     PYBIND11_OVERLOAD_PURE(void, HartreeFockProvider, fill_fock_ff, slices, out);
   }
-  void fill_eri_ffff(py::tuple slices, py::array out) const {
+  void fill_eri_ffff(py::tuple slices, py::array out) const override {
     PYBIND11_OVERLOAD_PURE(void, HartreeFockProvider, fill_eri_ffff, slices, out);
   }
-  void fill_eri_phys_asym_ffff(py::tuple slices, py::array out) const {
+  void fill_eri_phys_asym_ffff(py::tuple slices, py::array out) const override {
     PYBIND11_OVERLOAD_PURE(void, HartreeFockProvider, fill_eri_phys_asym_ffff, slices,
                            out);
   }
@@ -381,11 +381,13 @@ void export_HartreeFockProvider(py::module& m) {
         //      and maybe should be removed for this reason
         .def_property_readonly("n_alpha",
                                [](const adcc::HartreeFockSolution_i& self) {
-                                 return count_electrons(self, /* count_beta = */ false);
+                                 return count_electrons(self,
+                                                        /* count_beta = */ false);
                                })
         .def_property_readonly("n_beta",
                                [](const adcc::HartreeFockSolution_i& self) {
-                                 return count_electrons(self, /* count_beta = */ true);
+                                 return count_electrons(self,
+                                                        /* count_beta = */ true);
                                })
         .def_property_readonly("conv_tol", &HartreeFockSolution_i::conv_tol)
         .def_property_readonly("restricted", &HartreeFockSolution_i::restricted)
@@ -408,79 +410,110 @@ void export_HartreeFockProvider(py::module& m) {
   py::class_<HartreeFockProvider, std::shared_ptr<HartreeFockProvider>,
              PyHartreeFockProvider>(
         m, "HartreeFockProvider", hfdata_i,
-        "Abstract class defining the interface for passing data from the host program to "
-        "adcc. All functions of this class need to be overwritten explicitly from "
-        "python.\nIn the remaining documentation we denote with `nf` the value returned "
+        "Abstract class defining the interface for passing data from the host "
+        "program to "
+        "adcc. All functions of this class need to be overwritten explicitly "
+        "from "
+        "python.\nIn the remaining documentation we denote with `nf` the value "
+        "returned "
         "by `get_n_orbs_alpha()` and with `nb` the value returned by "
         "`get_nbas()`.")
         .def(py::init<>())
         //
         .def("get_conv_tol", &HartreeFockProvider::get_conv_tol,
-             "Returns the tolerance value used for SCF convergence. Should be roughly "
+             "Returns the tolerance value used for SCF convergence. Should be "
+             "roughly "
              "equivalent to the l2 norm of the Pulay error.")
         .def("get_restricted", &HartreeFockProvider::get_restricted,
              "Return *True* for a restricted SCF calculation, *False* otherwise.")
         .def("get_energy_scf", &HartreeFockProvider::get_energy_scf,
-             "Returns the final total SCF energy (sum of electronic and nuclear terms.")
+             "Returns the final total SCF energy (sum of electronic and nuclear "
+             "terms.")
         .def("get_spin_multiplicity", &HartreeFockProvider::get_spin_multiplicity,
-             "Returns the spin multiplicity of the HF ground state. A value of 0* (for "
+             "Returns the spin multiplicity of the HF ground state. A value of "
+             "0* (for "
              "unknown) should be supplied for unrestricted calculations.")
         .def("get_n_orbs_alpha", &HartreeFockProvider::get_n_orbs_alpha,
-             "Returns the number of HF *spin* orbitals of alpha spin. It is assumed the "
-             "same number of beta spin orbitals are used. This value is abbreviated by "
+             "Returns the number of HF *spin* orbitals of alpha spin. It is "
+             "assumed the "
+             "same number of beta spin orbitals are used. This value is "
+             "abbreviated by "
              "`nf` in the documentation.")
         .def("get_n_bas", &HartreeFockProvider::get_n_bas,
-             "Returns the number of *spatial* one-electron basis functions. This value "
+             "Returns the number of *spatial* one-electron basis functions. This "
+             "value "
              "is abbreviated by `nb` in the documentation.")
         .def("get_nuclear_multipole", &HartreeFockProvider::get_nuclear_multipole,
-             "Returns the nuclear multipole of the requested order. For `0` returns the "
-             "total nuclear charge as an array of size 1, for `1` returns the nuclear "
+             "Returns the nuclear multipole of the requested order. For `0` "
+             "returns the "
+             "total nuclear charge as an array of size 1, for `1` returns the "
+             "nuclear "
              "dipole moment as an array of size 3.")
         //
         .def("fill_occupation_f", &HartreeFockProvider::fill_orben_f,
-             "Fill the passed numpy array of size `(2 * nf, )` with the occupation "
+             "Fill the passed numpy array of size `(2 * nf, )` with the "
+             "occupation "
              "number for each SCF orbital.")
         .def("fill_orben_f", &HartreeFockProvider::fill_orben_f,
-             "Fill the passed numpy array of size `(2 * nf, )` with the SCF orbital "
+             "Fill the passed numpy array of size `(2 * nf, )` with the SCF "
+             "orbital "
              "energies.")
         .def("fill_orbcoeff_fb", &HartreeFockProvider::fill_orbcoeff_fb,
-             "Fill the passed numpy array of size `(2 * nf, nb)` with the SCF orbital "
-             "coefficients, i.e. the uniform transform from the one-particle basis to "
+             "Fill the passed numpy array of size `(2 * nf, nb)` with the SCF "
+             "orbital "
+             "coefficients, i.e. the uniform transform from the one-particle "
+             "basis to "
              "the molecular orbitals.")
         .def("fill_fock_ff", &HartreeFockProvider::fill_fock_ff,
-             "Fill the passed numpy array `arg1` with a part of the Fock matrix in the "
-             "molecular orbital basis. The block to store is specified by the provided "
-             "tuple of ranges `arg0`, which gives the range of indices to place into the "
+             "Fill the passed numpy array `arg1` with a part of the Fock matrix "
+             "in the "
+             "molecular orbital basis. The block to store is specified by the "
+             "provided "
+             "tuple of ranges `arg0`, which gives the range of indices to place "
+             "into the "
              "buffer along each of the axis. The index counting is done in spin "
              "orbitals, so the full range in each axis is `range(0, 2 * nf)`. The "
-             "implementation should not assume that the alpha-beta and beta-alpha blocks "
+             "implementation should not assume that the alpha-beta and beta-alpha "
+             "blocks "
              "are not accessed even though they are zero by spin symmetry.")
         .def("fill_eri_ffff", &HartreeFockProvider::fill_eri_ffff,
-             "Fill the passed numpy array `arg1` with a part of the electron-repulsion "
+             "Fill the passed numpy array `arg1` with a part of the "
+             "electron-repulsion "
              "integral tensor in the molecular orbital basis. "
-             "The indexing convention is the chemist's notation, i.e. the index tuple "
+             "The indexing convention is the chemist's notation, i.e. the index "
+             "tuple "
              "`(i,j,k,l)` refers to the integral :math:`(ij|kl)`. "
              "The block to store is specified by the provided "
-             "tuple of ranges `arg0`, which gives the range of indices to place into the "
+             "tuple of ranges `arg0`, which gives the range of indices to place "
+             "into the "
              "buffer along each of the axis. The index counting is done in spin "
              "orbitals, so the full range in each axis is `range(0, 2 * nf)`.")
         .def("fill_eri_phys_asym_ffff", &HartreeFockProvider::fill_eri_phys_asym_ffff,
-             "Fill the passed numpy array `arg1` with a part of the **antisymmetrised** "
+             "Fill the passed numpy array `arg1` with a part of the "
+             "**antisymmetrised** "
              "electron-repulsion integral tensor in the molecular orbital basis. "
-             "The indexing convention is the physicist's notation, i.e. the index tuple "
-             "`(i,j,k,l)` refers to the integral :math:`\\langle ij||kl \\rangle`. "
+             "The indexing convention is the physicist's notation, i.e. the "
+             "index tuple "
+             "`(i,j,k,l)` refers to the integral :math:`\\langle ij||kl "
+             "\\rangle`. "
              "The block to store is specified by the provided "
-             "tuple of ranges `arg0`, which gives the range of indices to place into the "
+             "tuple of ranges `arg0`, which gives the range of indices to place "
+             "into the "
              "buffer along each of the axis. The index counting is done in spin "
              "orbitals, so the full range in each axis is `range(0, 2 * nf)`.")
         .def("has_eri_phys_asym_ffff", &HartreeFockProvider::has_eri_phys_asym_ffff,
-             "Returns whether `fill_eri_phys_asym_ffff` function is implemented and "
-             "should be used(*True*) or whether antisymmetrisation should be done inside "
+             "Returns whether `fill_eri_phys_asym_ffff` function is implemented "
+             "and "
+             "should be used(*True*) or whether antisymmetrisation should be "
+             "done inside "
              "adcc starting from the `fill_eri_ffff` function (*False*)")
         .def("flush_cache", &HartreeFockProvider::flush_cache,
-             "This function is called to signal that potential cached data could now be "
-             "flushed to save memory or other resources.\nThis can be used to purge e.g. "
-             "intermediates for the computation of electron-repulsion integral tensor "
+             "This function is called to signal that potential cached data could "
+             "now be "
+             "flushed to save memory or other resources.\nThis can be used to "
+             "purge e.g. "
+             "intermediates for the computation of electron-repulsion integral "
+             "tensor "
              "data.")
         //
         ;

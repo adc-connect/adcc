@@ -147,7 +147,7 @@ def has_flag(compiler, flagname):
     with tempfile.NamedTemporaryFile("w", suffix=".cpp") as f:
         f.write("int main (int argc, char **argv) { return 0; }")
         try:
-            compiler.compile([f.name], extra_postargs=[flagname])
+            compiler.compile([f.name], extra_postargs=["-Werror", flagname])
         except setuptools.distutils.errors.CompileError:
             return False
     return True
