@@ -334,7 +334,6 @@ adccsetup(
         "Intended Audience :: Science/Research",
         "Topic :: Scientific/Engineering :: Chemistry",
         "Topic :: Education",
-        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Operating System :: MacOS :: MacOS X",
@@ -351,7 +350,7 @@ adccsetup(
     zip_safe=False,
     #
     platforms=["Linux", "Mac OS-X"],
-    python_requires=">=3.5",
+    python_requires=">=3.6",
     install_requires=[
         "pybind11 >= 2.2",
         "numpy >= 1.13",      # Maybe even higher?
