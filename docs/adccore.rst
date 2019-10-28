@@ -1,3 +1,5 @@
+:github_url: https://github.com/adc-connect/adcc/blob/master/docs/adccore.rst
+
 .. _adccore-layer:
 
 The adccore C++ layer

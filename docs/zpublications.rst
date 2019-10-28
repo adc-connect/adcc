@@ -1,3 +1,5 @@
+:github_url: https://github.com/adc-connect/adcc/blob/master/docs/zpublications.rst
+
 Publications and references
 ===========================
 
