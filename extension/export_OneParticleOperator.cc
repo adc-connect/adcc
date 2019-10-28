@@ -53,11 +53,12 @@ static py::tuple OneParticleOperator_shape(const OneParticleOperator& self) {
   return shape_tuple(self.shape());
 }
 
-static py::array OneParticleOperator__to_ndarray(const OneParticleOperator& self) {
+static py::array_t<scalar_type> OneParticleOperator__to_ndarray(
+      const OneParticleOperator& self) {
   // Get an empty array of the required shape and export the data into it.
   py::array_t<scalar_type> res(self.shape());
   self.export_to(res.mutable_data(), self.size());
-  return std::move(res);
+  return res;
 }
 
 py::tuple OneParticleOperator__to_ao_basis_ref(const OneParticleOperator& self,

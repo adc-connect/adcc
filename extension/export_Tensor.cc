@@ -115,14 +115,14 @@ static scalar_type Tensor_dot(const Tensor& self, std::shared_ptr<Tensor> other)
   return self.dot(other);
 }
 
-static py::array Tensor_dot_list(const Tensor& self, py::list tensors) {
+static py::array_t<scalar_type> Tensor_dot_list(const Tensor& self, py::list tensors) {
   std::vector<std::shared_ptr<Tensor>> parsed = extract_tensors(tensors);
   std::vector<scalar_type> dots               = self.dot(parsed);
 
   py::array_t<scalar_type> ret(dots.size());
   std::copy(dots.begin(), dots.end(), ret.mutable_data());
 
-  return std::move(ret);
+  return ret;
 }
 
 static std::shared_ptr<Tensor> Tensor_transpose_1(const Tensor& self) {
