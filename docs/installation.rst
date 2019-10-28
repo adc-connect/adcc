@@ -1,3 +1,5 @@
+:github_url: https://github.com/adc-connect/adcc/blob/master/docs/installation.rst
+
 .. _installation:
 
 Installation

@@ -96,7 +96,6 @@ html_baseurl = "https://adc-connect.org/"
 #
 html_theme_options = {
     "canonical_url": html_baseurl,
-    # "github_url": "https://github.com/adc-connect.org/adcc/docs/",
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,

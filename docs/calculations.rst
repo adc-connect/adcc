@@ -1,3 +1,5 @@
+:github_url: https://github.com/adc-connect/adcc/blob/master/docs/calculations.rst
+
 .. _performing-calculations:
 
 Performing calculations with adcc
