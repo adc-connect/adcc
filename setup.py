@@ -26,6 +26,7 @@ import os
 import sys
 import glob
 import setuptools
+import warnings
 
 from os.path import join
 
@@ -87,6 +88,9 @@ class LinkerDynamic:
         self.library_paths += ["/usr/lib", "/lib"]
 
         for conf in ["/etc/ld.so.conf"] + glob.glob("/etc/ld.so.conf.d/*.conf"):
+            if not os.path.isfile(conf):
+                warnings.warn("File {} is broken.".format(conf))
+                continue
             with open(conf, "r") as fp:
                 for line in fp:
                     line = line.strip()
