@@ -89,7 +89,9 @@ class LinkerDynamic:
 
         for conf in ["/etc/ld.so.conf"] + glob.glob("/etc/ld.so.conf.d/*.conf"):
             if not os.path.isfile(conf):
-                warnings.warn("File {} is broken.".format(conf))
+                warnings.warn("Resolving configuration file {} failed. Probably"
+                              " the file has been remove during distribution upgrade"
+                              " and only a symbolic link to the removed file is left.".format(conf))
                 continue
             with open(conf, "r") as fp:
                 for line in fp:
