@@ -67,7 +67,7 @@ class HartreeFockProvider : public HartreeFockSolution_i {
                                ").");
     }
     py::memoryview memview(py::buffer_info(buffer, n_orbs));
-    fill_occupation_f(py::array({{n_orbs}}, buffer, memview));
+    fill_occupation_f(py::array(std::vector<ssize_t>{n_orbs}, buffer, memview));
   }
 
   void orben_f(scalar_type* buffer, size_t size) const override {
@@ -79,7 +79,7 @@ class HartreeFockProvider : public HartreeFockSolution_i {
                                ").");
     }
     py::memoryview memview(py::buffer_info(buffer, n_orbs));
-    fill_orben_f(py::array({{n_orbs}}, buffer, memview));
+    fill_orben_f(py::array(std::vector<ssize_t>{n_orbs}, buffer, memview));
   }
 
   void orbcoeff_fb(scalar_type* buffer, size_t size) const override {
