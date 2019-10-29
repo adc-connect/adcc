@@ -30,14 +30,18 @@ from numpy.testing import assert_allclose, assert_almost_equal
 from adcc.testdata.cache import cache
 
 
-def compare_refstate_with_reference(
-    data, reference, spec, scfres=None, compare_orbcoeff=True,
-    compare_eri_almost_abs=False
-):
-    atol = data["conv_tol"]
-    import_data = data
-    if scfres:
+def compare_refstate_with_reference(data, reference, spec, scfres=None,
+                                    compare_orbcoeff=True, compare_eri="value"):
+    # Extract convergence tolerance setting for comparison threshold
+    if scfres is None:
+        import_data = data
+        atol = data["conv_tol"]
+    else:
         import_data = scfres
+        if hasattr(scfres, "conv_tol"):
+            atol = scfres.conv_tol
+        else:
+            atol = data["conv_tol"]
 
     # TODO once hfdata is an HDF5 file
     # refcases = ast.literal_eval(data["reference_cases"][()])
@@ -60,7 +64,7 @@ def compare_refstate_with_reference(
     assert refstate.n_orbs_beta == data["n_orbs_alpha"]
     assert refstate.n_alpha == sum(data["occupation_f"][:refstate.n_orbs_alpha])
     assert refstate.n_beta == sum(data["occupation_f"][refstate.n_orbs_alpha:])
-    assert refstate.conv_tol == data["conv_tol"]
+    assert refstate.conv_tol == atol  # because atol is set to be the SCF conv_tol
     assert_allclose(refstate.energy_scf, data["energy_scf"], atol=atol)
     assert refstate.mospaces.subspaces == subspaces
 
@@ -90,11 +94,11 @@ def compare_refstate_with_reference(
         assert_allclose(refstate.fock(ss).to_ndarray(),
                         reference["fock"][ss], atol=atol)
 
-    if compare_eri_almost_abs:
+    if compare_eri == "abs":
         for ss in reference["eri"].keys():
             assert_almost_equal(np.abs(refstate.eri(ss).to_ndarray()),
                                 np.abs(reference["eri"][ss]))
-    else:
+    elif compare_eri == "value":
         for ss in reference["eri"].keys():
             assert_allclose(refstate.eri(ss).to_ndarray(),
                             reference["eri"][ss], atol=atol)

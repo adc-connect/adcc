@@ -51,10 +51,10 @@ class TestPyscf(unittest.TestCase):
         mf.conv_tol = 1e-12
         mf.kernel()
 
-        # make core hole
+        # make beta core hole
         mo0 = tuple(c.copy() for c in mf.mo_coeff)
         occ0 = tuple(o.copy() for o in mf.mo_occ)
-        occ0[0][0] = 0.0
+        occ0[1][0] = 0.0
         dm0 = mf.make_rdm1(mo0, occ0)
 
         # Run second SCF with MOM
@@ -87,11 +87,9 @@ class TestPyscf(unittest.TestCase):
             mo_coeff = (scfres.mo_coeff, scfres.mo_coeff)
             fock_bb = (fock_bb, fock_bb)
         else:
-            assert hfdata.spin_multiplicity == 0
-
             # Check SCF type fits
             assert isinstance(scfres, scf.uhf.UHF)
-
+            assert hfdata.n_alpha >= hfdata.n_beta
             mo_occ = scfres.mo_occ
             mo_energy = scfres.mo_energy
             mo_coeff = scfres.mo_coeff
@@ -99,20 +97,6 @@ class TestPyscf(unittest.TestCase):
         # Check n_alpha and n_beta
         assert hfdata.n_alpha == np.sum(mo_occ[0] > 0)
         assert hfdata.n_beta == np.sum(mo_occ[1] > 0)
-
-        # Check the lowest n_alpha / n_beta orbitals are occupied
-        occ_a = [mo_occ[0][mo_energy[0] == ene]
-                 for ene in hfdata.orben_f[:hfdata.n_alpha]]
-        occ_b = [mo_occ[1][mo_energy[1] == ene]
-                 for ene in hfdata.orben_f[n_orbs_alpha:
-                                           n_orbs_alpha + hfdata.n_beta]]
-        assert np.all(np.asarray(occ_a) > 0)
-        assert np.all(np.asarray(occ_b) > 0)
-
-        # TODO: Implement full tests for UHF once the modern interface
-        # is extended
-        if not hfdata.restricted:
-            return
 
         # occupation_f
         assert_almost_equal(hfdata.occupation_f,
@@ -136,9 +120,7 @@ class TestPyscf(unittest.TestCase):
         assert_almost_equal(hfdata.fock_ff, fullfock_ff)
 
         # test symmetry of the ERI tensor
-        allowed_permutations = [
-            p.transposition for p in eri_permutations["chem"]
-        ]
+        allowed_permutations = [p.transposition for p in eri_permutations["chem"]]
         eri = np.empty((hfdata.n_orbs, hfdata.n_orbs,
                         hfdata.n_orbs, hfdata.n_orbs))
         sfull = slice(hfdata.n_orbs)
@@ -149,6 +131,20 @@ class TestPyscf(unittest.TestCase):
 
     def template_rhf_h2o(self, basis):
         mf = adcc.backends.run_hf("pyscf", geometry.xyz["h2o"], basis)
+        self.base_test(mf)
+
+        # Test ERI
+        eri_asymm_construction_test(mf)
+        eri_asymm_construction_test(mf, core_orbitals=1)
+
+        # Test dipole
+        ao_dip = mf.mol.intor_symmetric('int1e_r', comp=3)
+        operator_import_test(mf, list(ao_dip))
+
+    def template_uhf_h2o(self, basis):
+        mf = adcc.backends.run_hf(
+            "pyscf", geometry.xyz["h2o"], basis, multiplicity=3
+        )
         self.base_test(mf)
 
         # Test ERI

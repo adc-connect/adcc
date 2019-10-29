@@ -281,7 +281,7 @@ class VeloxChemHFProvider(HartreeFockProvider):
 
 
 def import_scf(scfdrv):
-    # TODO This could be a little more informative
+    # TODO The error messages in here could be a little more informative
 
     if not isinstance(scfdrv, vlx.scfrestdriver.ScfRestrictedDriver):
         raise InvalidReference("Unsupported type for backends.veloxchem.import_scf.")

@@ -32,9 +32,8 @@ import pytest
 from .misc import expand_test_templates
 from .test_ReferenceState_refdata import compare_refstate_with_reference
 
-# The methods to test (currently only restricted is supported in this test)
-testcases = [case for case in cache.hfimport.keys()
-             if cache.hfdata[case]["restricted"]]
+# The methods to test
+testcases = [case for case in cache.hfimport.keys()]
 backends = [b for b in adcc.backends.available() if b != "molsturm"]
 
 
@@ -54,11 +53,14 @@ class TestBackendsImportReferenceData(unittest.TestCase):
            backend == "veloxchem" and molecule == "h2o":
             pytest.skip("VeloxChem does not support f-functions.")
 
-        scfres = cached_backend_hf(backend, molecule, basis)
-        compare_refstate_with_reference(
-            data, reference, case, scfres, compare_orbcoeff=False,
-            compare_eri_almost_abs=True
-        )
+        multiplicity = 1
+        compare_eri = "abs"
+        if molecule == "cn":
+            multiplicity = 2
+            compare_eri = "off"
+        scfres = cached_backend_hf(backend, molecule, basis, multiplicity)
+        compare_refstate_with_reference(data, reference, case, scfres,
+                                        compare_orbcoeff=False, compare_eri=compare_eri)
 
     def template_generic(self, case, backend):
         self.base_test(case, backend, "gen")

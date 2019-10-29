@@ -20,16 +20,14 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import warnings
 import numpy as np
-
-from .InvalidReference import InvalidReference
-from .eri_build_helper import EriBuilder
 
 from pyscf import ao2mo, gto, scf
 
 from adcc.misc import cached_property
-from adcc.DataHfProvider import DataHfProvider
+
+from .InvalidReference import InvalidReference
+from .eri_build_helper import EriBuilder
 
 from libadcc import HartreeFockProvider
 
@@ -47,17 +45,25 @@ class PyScfOperatorIntegralProvider:
 # TODO: refactor ERI builder to be more general
 # IntegralBuilder would be good
 class PyScfEriBuilder(EriBuilder):
-    def __init__(self, scfres, n_orbs, n_orbs_alpha, n_alpha, n_beta):
+    def __init__(
+        self, scfres, n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted
+    ):
         self.scfres = scfres
-        super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta)
+        if restricted:
+            self.mo_coeff = (self.scfres.mo_coeff,
+                             self.scfres.mo_coeff)
+        else:
+            self.mo_coeff = self.scfres.mo_coeff
+        super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted)
 
     @property
-    def coeffs_occ_alpha(self):
-        return self.scfres.mo_coeff[:, :self.n_alpha]
-
-    @property
-    def coeffs_virt_alpha(self):
-        return self.scfres.mo_coeff[:, self.n_alpha:]
+    def coefficients(self):
+        return {
+            "Oa": self.mo_coeff[0][:, :self.n_alpha],
+            "Ob": self.mo_coeff[1][:, :self.n_beta],
+            "Va": self.mo_coeff[0][:, self.n_alpha:],
+            "Vb": self.mo_coeff[1][:, self.n_beta:],
+        }
 
     def compute_mo_eri(self, block, coeffs, use_cache=True):
         if block in self.eri_cache and use_cache:
@@ -72,7 +78,8 @@ class PyScfEriBuilder(EriBuilder):
 
 class PyScfHFProvider(HartreeFockProvider):
     """
-        This implementation is only valid for RHF
+        This implementation is only valid
+        if no orbital reordering is required.
     """
     def __init__(self, scfres):
         # Do not forget the next line,
@@ -81,8 +88,10 @@ class PyScfHFProvider(HartreeFockProvider):
         self.scfres = scfres
         self.eri_ffff = None
         n_alpha, n_beta = scfres.mol.nelec
-        self.eri_builder = PyScfEriBuilder(self.scfres, self.n_orbs,
-                                           self.n_orbs_alpha, n_alpha, n_beta)
+        self.eri_builder = PyScfEriBuilder(
+            self.scfres, self.n_orbs, self.n_orbs_alpha, n_alpha, n_beta,
+            self.restricted
+        )
         self.operator_integral_provider = PyScfOperatorIntegralProvider(
             self.scfres
         )
@@ -187,6 +196,7 @@ class PyScfHFProvider(HartreeFockProvider):
         self.eri_ffff = None
 
 
+# TODO: not needed anymore, except for core-hole systems
 def convert_scf_to_dict(scfres):
     if not isinstance(scfres, scf.hf.SCF):
         raise InvalidReference("Unsupported type for backends.pyscf.convert_scf_to_dict.")
@@ -367,7 +377,7 @@ def convert_scf_to_dict(scfres):
 
 
 def import_scf(scfres):
-    # TODO This could be a bit more verbose
+    # TODO The error messages here could be a bit more verbose
 
     if not isinstance(scfres, scf.hf.SCF):
         raise InvalidReference("Unsupported type for backends.pyscf.import_scf.")
@@ -381,20 +391,7 @@ def import_scf(scfres):
     # TODO Check for point-group symmetry,
     #      check for density-fitting or choleski
 
-    # Try to determine whether we are restricted
-    if isinstance(scfres.mo_occ, list):
-        restricted = len(scfres.mo_occ) < 2
-    elif isinstance(scfres.mo_occ, np.ndarray):
-        restricted = scfres.mo_occ.ndim < 2
-    else:
-        raise InvalidReference("Unusual pyscf SCF class encountered. Could not "
-                               "determine restricted / unrestricted.")
-
-    if restricted:
-        return PyScfHFProvider(scfres)
-    else:
-        warnings.warn("Falling back to slow import for UHF result.")
-        return DataHfProvider(convert_scf_to_dict(scfres))
+    return PyScfHFProvider(scfres)
 
 
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
@@ -415,5 +412,12 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
     mf.conv_tol = conv_tol
     mf.conv_tol_grad = conv_tol_grad
     mf.max_cycle = max_iter
+    # since we want super tight convergence for tests,
+    # tweak the options for non-RHF systems
+    if multiplicity != 1:
+        mf.max_cycle += 500
+        mf.diis = scf.EDIIS()
+        mf.diis_space = 3
+        mf = scf.addons.frac_occ(mf)
     mf.kernel()
     return mf

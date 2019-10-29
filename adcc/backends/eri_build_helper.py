@@ -136,24 +136,25 @@ class EriBuilder:
 
     Implementation of the following functions in a derived class
     is necessary:
-        coeffs_occ_alpha: provide occupied alpha coefficients
-            (return np.ndarray)
-        coeffs_virt_alpha: provide virtual alpha coefficients
-            (return np.ndarray)
-        compute_mo_eri: compute a block of integrals (Chemists')
-            using the provided coefficients and retrieve block from
-            cache if possible
+        - ``coefficients``: Return a dict from a key describing the block
+          to the MO coefficients as an ``np.ndarray``. The expected keys
+          are ``Oa`` (occupied-alpha), ``Ob`` (occupied-beta),
+          ``Va`` (virtual-alpha), ``Vb`` (virtual-beta).
+        - ``compute_mo_eri``: compute a block of integrals (Chemists')
+          using the provided coefficients and retrieve block from cache
+          if possible
 
     Depending on the host program, other functions like
-        build_eri_phys_asym_block also need to be re-implemented.
+    ``build_eri_phys_asym_block`` also need to be re-implemented.
 
     """
-    def __init__(self, n_orbs, n_orbs_alpha, n_alpha, n_beta):
+    def __init__(self, n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted):
         self.block_slice_mapping = None
         self.n_orbs = n_orbs
         self.n_orbs_alpha = n_orbs_alpha
         self.n_alpha = n_alpha
         self.n_beta = n_beta
+        self.restricted = restricted
 
         self.eri_cache = {}
         self.eri_asymm_cache = {}
@@ -166,20 +167,8 @@ class EriBuilder:
         self.block_slice_mapping = BlockSliceMappingHelper(aro, bro, arv, brv)
 
     @property
-    def coeffs_occ_alpha(self):
-        raise NotImplementedError("Implement coeffs_occ_alpha")
-
-    @property
-    def coeffs_virt_alpha(self):
-        raise NotImplementedError("Implement coeffs_virt_alpha")
-
-    @property
-    def coeffs_occ_beta(self):
-        raise NotImplementedError("Implement coeffs_occ_beta")
-
-    @property
-    def coeffs_virt_beta(self):
-        raise NotImplementedError("Implement coeffs_virt_beta")
+    def coefficients(self):
+        raise NotImplementedError("Implement coefficients")
 
     def compute_mo_eri(self, block, coeffs, use_cache=True):
         raise NotImplementedError("Implement compute_mo_eri")
@@ -200,9 +189,22 @@ class EriBuilder:
         slices  requested slice of ERIs from libtensor
         out     view to libtensor memory
         """
+        # map index slices to orbital and spin space
+        # because we do not have access to the MoSpaces object inside the
+        # HartreeFockProvider implementation
         mapping = self.block_slice_mapping.map_slices_to_blocks_and_spins(
             slices
         )
+
+        # mo_spaces (antisymm. physicists' notation),
+        # e.g. an index slice from <oo||oo> maps to ['O', 'O', 'O', 'O']
+        #
+        # spin_block is the equivalent for the spin block
+        #
+        # comp_block_slices gives you the slices inside the computed block
+        # required. E.g., if you need a part of o2, the full occupied
+        # integral block is computed in the host program, but only
+        # parts of it are written to libtensor memory
         mo_spaces, spin_block, comp_block_slices = mapping
         if len(mo_spaces) != 4:
             raise RuntimeError(
@@ -216,36 +218,47 @@ class EriBuilder:
         # if the backend provides Chemists' ERIs
         # <ij|kl> -> (ik|jl)
         if self.eri_notation == "chem":
-            mo_spaces = "".join(
-                np.take(np.array(mo_spaces), [0, 2, 1, 3])
-            )
+            mo_spaces = "".join(np.take(np.array(mo_spaces), [0, 2, 1, 3]))
         spin_block_str = "".join(spin_block)
-        # TODO: probably not needed in the future
-        # since libtensor will only ask for canonical blocks
         allowed, spin_symm = is_spin_allowed(spin_block_str)
         if allowed:
-            eri = self.build_eri_phys_asym_block(
-                can_block=mo_spaces, spin_symm=spin_symm
-            )
+            eri = self.build_eri_phys_asym_block(can_block=mo_spaces,
+                                                 spin_symm=spin_symm)
             out[:] = eri[comp_block_slices]
         else:
             out[:] = 0
 
     def build_eri_phys_asym_block(self, can_block=None, spin_symm=None):
-        co = self.coeffs_occ_alpha
-        cv = self.coeffs_virt_alpha
         block = can_block
         asym_block = "".join([block[i] for i in [0, 3, 2, 1]])
-        both_blocks = "{}-{}-{}-{}".format(
-            block, asym_block, str(spin_symm.pref1), str(spin_symm.pref2)
-        )
+        both_blocks = f"{block}-{asym_block}-{spin_symm.pref1}-{spin_symm.pref2}"
+        if not self.restricted:
+            # add the spin block to the caching string
+            both_blocks += "-" + spin_symm.transposition
         if both_blocks in self.eri_asymm_cache.keys():
             return self.eri_asymm_cache[both_blocks]
 
         # TODO: avoid caching of (VV|VV)
         # because we don't need it anymore -> <VV||VV> is cached anyways
 
-        coeffs_transform = tuple(co if x == "O" else cv for x in block)
+        spin_chem = list(spin_symm.transposition[i] for i in [0, 2, 1, 3])
+        spin_key = "".join(spin_chem)
+        coeffs_transform = tuple(self.coefficients[x + y]
+                                 for x, y in zip(block, spin_chem))
+
+        if not self.restricted:
+            block += spin_key
+            asym_block += "".join([spin_key[i] for i in [0, 2, 1, 3]])
+
+        # For the given spin block, check which individual blocks
+        # in Chemists' notation are actually needed to form the antisymmetrized
+        # integral in Physicists' notation.
+        # Some of them are zero and don't need to be computed.
+        # Example:
+        # <ov||ov> = <ov|ov> - <ov|vo> = (oo|vv) - (ov|vo)
+        # the last term is zero in the case of (ab|ba)
+
+        # both terms in the antisymm. are non-zero
         if spin_symm.pref1 != 0 and spin_symm.pref2 != 0:
             can_block_integrals = self.compute_mo_eri(block, coeffs_transform)
             eri_phys = can_block_integrals.transpose(0, 2, 1, 3)
@@ -255,9 +268,11 @@ class EriBuilder:
                 asym_block, chem_asym
             ).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
             eris = spin_symm.pref1 * eri_phys - spin_symm.pref2 * asymm
+        # only the second term is zero
         elif spin_symm.pref1 != 0 and spin_symm.pref2 == 0:
             can_block_integrals = self.compute_mo_eri(block, coeffs_transform)
             eris = spin_symm.pref1 * can_block_integrals.transpose(0, 2, 1, 3)
+        # only the first term is zero
         elif spin_symm.pref1 == 0 and spin_symm.pref2 != 0:
             chem_asym = tuple(coeffs_transform[i] for i in [0, 3, 2, 1])
             asymm = self.compute_mo_eri(
@@ -280,19 +295,10 @@ class EriBuilder:
         brv = slice(n_orbs_alpha + n_beta, n_orbs)
         eri = np.zeros((n_orbs, n_orbs, n_orbs, n_orbs))
 
-        co = self.coeffs_occ_alpha
-        cv = self.coeffs_virt_alpha
         blocks = ["OOVV", "OVOV", "OOOV", "OOOO", "OVVV", "VVVV"]
-        # TODO: needs to be refactored to support UHF
         for b in blocks:
             slices_alpha = [aro if x == "O" else arv for x in b]
             slices_beta = [bro if x == "O" else brv for x in b]
-            coeffs_transform = tuple(co if x == "O" else cv for x in b)
-            # make canonical integral block
-            can_block_integrals = self.compute_mo_eri(b, coeffs_transform)
-
-            # automatically set ERI tensor's symmetry-equivalent blocks
-            trans_sym_blocks = get_symm_equivalent_transpositions_for_block(b)
 
             # Slices for the spin-allowed blocks
             aaaa = SpinBlockSlice("aaaa", (slices_alpha[0], slices_alpha[1],
@@ -304,12 +310,19 @@ class EriBuilder:
             bbaa = SpinBlockSlice("bbaa", (slices_beta[0], slices_beta[1],
                                            slices_alpha[2], slices_alpha[3]))
             non_zero_spin_block_slice_list = [aaaa, bbbb, aabb, bbaa]
-            for tsym_block in trans_sym_blocks:
-                sym_block_eri = can_block_integrals.transpose(tsym_block)
-                for non_zero_spin_block in non_zero_spin_block_slice_list:
-                    transposed_spin_slices = tuple(
-                        non_zero_spin_block.slices[i] for i in tsym_block
-                    )
+            trans_sym_blocks = get_symm_equivalent_transpositions_for_block(b)
+
+            # automatically set ERI tensor's symmetry-equivalent blocks
+            for spin_block in non_zero_spin_block_slice_list:
+                coeffs_transform = tuple(self.coefficients[x + y]
+                                         for x, y in zip(b, spin_block.spins))
+                can_block_integrals = self.compute_mo_eri(
+                    b + "".join(spin_block.spins), coeffs_transform
+                )
+                for tsym_block in trans_sym_blocks:
+                    sym_block_eri = can_block_integrals.transpose(tsym_block)
+                    transposed_spin_slices = tuple(spin_block.slices[i]
+                                                   for i in tsym_block)
                     eri[transposed_spin_slices] = sym_block_eri
         return eri
 
