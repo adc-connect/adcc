@@ -51,3 +51,14 @@ jobs:
 # after_success:
 #    - pip3 install coveralls
 #    - coveralls debug --verbose
+
+deploy:  # Note: This will only deploy sdist on linux!
+  skip_cleanup: true
+  provider: pypi
+  user: "__token__"
+  password:
+    secure: "M0IvnPighjcqz6UpKTjNfyuk0bObS8K+3MyYpVHlOHmwWT9/aKnrSQNI+se/khh3x8cSrsdjMWUMMGfWDWEHL+4BXOwsFIPx+34GghLxisbLy0EXKR6ziaMId28PYnLDUbqVLNANMn1s7H/vPseenbmslUrDR8QrTBstsQHIX7CvDqjT06/mfnx9EYAmknOemy222MXZhboYqjeBXtWZq+DHdukUqKLlJwLscV0cC+iOZx+16jkFkVf7xqlc1MbzPUTfFCUUSxGBafGLPWcI0mcgjvuLxAQv9B6HXEZpyaLK5C+Iw2aRUAnIovdyRwOgc1r8pTZ5Zpzat6uhadlb8gETeFdAan8sbRZ6GYbSV31mCHr6pN35N3dRXx6qybCwQGT+pZTPisEEnsR50TqkeI9NiYe0lgU4lE7Ej85kdFdB0w/B3JdanjCrLJNQia7euLPoWA+QAXsMUD8xm57UrrpMX/JsCGMBIajzJOQGoSDPmX72oEWkke3ctobCWBBtslmNYFowj+2aE+1REwSpBR879lK+rudhM2WRFqwbc4JXiCNTWH61exnT5yn3ksDPquCJSQRSLPc7tXQr24TElMtT76UrK2k8DTjj8digAJ2z7kSG5WOc17gj4LoyQMot7Q+ASdWIlBlU1JprsPHpZhPG45iAAJ0E/598Jfm22l8="
+  on:
+    tags: true
+    all_branches: true
+    condition: "$BUILD_SDIST == true"
