@@ -23,7 +23,9 @@
 import psi4
 import numpy as np
 
+from .InvalidReference import InvalidReference
 from .eri_build_helper import EriBuilder
+
 from adcc.misc import cached_property
 
 from libadcc import HartreeFockProvider
@@ -33,7 +35,7 @@ class Psi4OperatorIntegralProvider:
     def __init__(self, wfn):
         self.wfn = wfn
         self.backend = "psi4"
-        self.mints = psi4.core.MintsHelper(self.wfn.basisset())
+        self.mints = psi4.core.MintsHelper(self.wfn)
 
     @cached_property
     def electric_dipole(self):
@@ -43,7 +45,7 @@ class Psi4OperatorIntegralProvider:
 class Psi4EriBuilder(EriBuilder):
     def __init__(self, wfn, n_orbs, n_orbs_alpha, n_alpha, n_beta):
         self.wfn = wfn
-        self.mints = psi4.core.MintsHelper(self.wfn.basisset())
+        self.mints = psi4.core.MintsHelper(self.wfn)
         super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta)
 
     @property
@@ -72,7 +74,7 @@ class Psi4HFProvider(HartreeFockProvider):
         super().__init__()
 
         if not isinstance(wfn, psi4.core.RHF):
-            raise TypeError("Only restricted references (RHF) are supported.")
+            raise InvalidReference("Only restricted references (RHF) are supported.")
 
         self.wfn = wfn
         self.eri_ffff = None
@@ -157,33 +159,46 @@ class Psi4HFProvider(HartreeFockProvider):
         self.eri_cache = None
 
 
-def import_scf(scfdrv):
-    if not isinstance(scfdrv, psi4.core.HF):
-        raise TypeError("Unsupported type for backends.psi4.import_scf.")
+def import_scf(wfn):
+    if not isinstance(wfn, psi4.core.HF):
+        raise InvalidReference(
+            "Only psi4.core.HF and its subtypes are supported references in "
+            "backends.psi4.import_scf. This indicates that you passed an unsupported "
+            "SCF reference. Make sure you did a restricted or unrestricted HF "
+            "calculation."
+        )
 
-    if not isinstance(scfdrv, psi4.core.RHF):
-        raise TypeError("Only restricted references (RHF) are supported.")
+    if not isinstance(wfn, psi4.core.RHF):
+        raise InvalidReference("Right now only restricted references (RHF) are "
+                               "supported for Psi4.")
 
-    # TODO: Psi4 throws an exception if SCF is not converged
-    # and there is, to the best of my knowledge, no `is_converged` property
-    # of the psi4 wavefunction
-    # if not scfdrv.is_converged:
-    #     raise ValueError("Cannot start an adc calculation on top of an SCF, "
-    #                      "which is not converged.")
+    # TODO This is not fully correct, because the core.Wavefunction object
+    #      has an internal, but py-invisible Options structure, which contains
+    #      the actual set of options ... theoretically they could differ
+    scf_type = psi4.core.get_global_option('SCF_TYPE')
+    unsupported_scf_types = ["CD", "DISK_DF", "MEM_DF"]  # Choleski or density-fitting
+    if scf_type in unsupported_scf_types:
+        raise InvalidReference(f"Unsupported Psi4 SCF_TYPE, should not be one "
+                               "of {unsupported_scf_types}")
 
-    provider = Psi4HFProvider(scfdrv)
+    if wfn.nirrep() > 1:
+        raise InvalidReference("The passed Psi4 wave function object needs to have "
+                               "exactly one irrep, i.e. be of C1 symmetry.")
+
+    # Psi4 throws an exception if SCF is not converged, so there is no need
+    # to assert that here.
+    provider = Psi4HFProvider(wfn)
     return provider
-
-
-basissets = {
-    "sto3g": "sto-3g",
-    "def2tzvp": "def2-tzvp",
-    "ccpvdz": "cc-pvdz",
-}
 
 
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
            conv_tol_grad=1e-8, max_iter=150):
+    basissets = {
+        "sto3g": "sto-3g",
+        "def2tzvp": "def2-tzvp",
+        "ccpvdz": "cc-pvdz",
+    }
+
     mol = psi4.geometry("""
         {charge} {multiplicity}
         {xyz}

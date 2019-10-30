@@ -25,9 +25,11 @@ import tempfile
 import numpy as np
 import veloxchem as vlx
 
-from mpi4py import MPI
+from .InvalidReference import InvalidReference
 from .eri_build_helper import (EriBuilder, SpinBlockSlice,
                                get_symm_equivalent_transpositions_for_block)
+
+from mpi4py import MPI
 from adcc.misc import cached_property
 
 from libadcc import HartreeFockProvider
@@ -279,30 +281,31 @@ class VeloxChemHFProvider(HartreeFockProvider):
 
 
 def import_scf(scfdrv):
+    # TODO This could be a little more informative
+
     if not isinstance(scfdrv, vlx.scfrestdriver.ScfRestrictedDriver):
-        raise TypeError("Unsupported type for backends.veloxchem.import_scf.")
+        raise InvalidReference("Unsupported type for backends.veloxchem.import_scf.")
 
     if not hasattr(scfdrv, "task"):
-        raise TypeError("Please attach the VeloxChem task to "
-                        "the VeloxChem SCF driver")
+        raise InvalidReference("Please attach the VeloxChem task to "
+                               "the VeloxChem SCF driver")
 
     if not scfdrv.is_converged:
-        raise ValueError("Cannot start an adc calculation on top of an SCF, "
-                         "which is not converged.")
+        raise InvalidReference("Cannot start an adc calculation on top of an SCF, "
+                               "which is not converged.")
 
     provider = VeloxChemHFProvider(scfdrv)
     return provider
 
 
-basis_remap = {
-    "sto3g": "sto-3g",
-    "def2tzvp": "def2-tzvp",
-    "ccpvdz": "cc-pvdz",
-}
-
-
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=None,
            conv_tol_grad=1e-8, max_iter=150):
+    basis_remap = {
+        "sto3g": "sto-3g",
+        "def2tzvp": "def2-tzvp",
+        "ccpvdz": "cc-pvdz",
+    }
+
     with tempfile.TemporaryDirectory() as tmpdir:
         infile = os.path.join(tmpdir, "vlx.in")
         outfile = os.path.join(tmpdir, "vlx.out")
