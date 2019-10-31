@@ -47,10 +47,10 @@ def setup_continuous_integration(session):
     print("Detected continuous integration session")
     adcc.thread_pool.reinit(2, 3)
 
+
 #
 # Pytest Hooks
 #
-
 
 def pytest_addoption(parser):
     parser.addoption(
