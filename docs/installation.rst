@@ -63,10 +63,9 @@ macOS 10.13 (High Sierra) and 10.14 (Mojave)
    We would love to hear your feedback in case things fail.
    We are currently working on deploying adcc to `Anaconda <https://anaconda.org>`_.
 
-.. note::
-   The installation on macOS requires a ``clang`` compiler.
-   Make sure to have XCode and the command line tools installed.
-   ``clang`` is supported from adcc 0.13.2.
+
+The installation on macOS requires a ``clang`` compiler.
+Make sure to have XCode and the command line tools installed.
  
 1. **adcc:**
    Install from `PyPi <https://pypi.org>`_, using ``pip``:
