@@ -26,6 +26,7 @@ import os
 import sys
 import glob
 import setuptools
+import warnings
 
 from os.path import join
 
@@ -48,7 +49,7 @@ except ImportError:
 
 # Version of the python bindings and adcc python package.
 __version__ = "0.13.1"
-adccore_version = ("0.13.2", "")  # (base version, unstable postfix)
+adccore_version = ("0.13.3", "")  # (base version, unstable postfix)
 
 
 def get_adccore_data():
@@ -87,6 +88,11 @@ class LinkerDynamic:
         self.library_paths += ["/usr/lib", "/lib"]
 
         for conf in ["/etc/ld.so.conf"] + glob.glob("/etc/ld.so.conf.d/*.conf"):
+            if not os.path.isfile(conf):
+                warnings.warn("Resolving configuration file {} failed. Probably"
+                              " the file has been remove during distribution upgrade"
+                              " and only a symbolic link to the removed file is left.".format(conf))
+                continue
             with open(conf, "r") as fp:
                 for line in fp:
                     line = line.strip()
@@ -147,7 +153,7 @@ def has_flag(compiler, flagname):
     with tempfile.NamedTemporaryFile("w", suffix=".cpp") as f:
         f.write("int main (int argc, char **argv) { return 0; }")
         try:
-            compiler.compile([f.name], extra_postargs=[flagname])
+            compiler.compile([f.name], extra_postargs=["-Werror", flagname])
         except setuptools.distutils.errors.CompileError:
             return False
     return True

@@ -115,7 +115,7 @@ static scalar_type Tensor_dot(const Tensor& self, std::shared_ptr<Tensor> other)
   return self.dot(other);
 }
 
-static py::array Tensor_dot_list(const Tensor& self, py::list tensors) {
+static py::array_t<scalar_type> Tensor_dot_list(const Tensor& self, py::list tensors) {
   std::vector<std::shared_ptr<Tensor>> parsed = extract_tensors(tensors);
   std::vector<scalar_type> dots               = self.dot(parsed);
 

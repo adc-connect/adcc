@@ -152,4 +152,3 @@ void export_Symmetry(py::module& m) {
 
 }  // namespace py_iface
 }  // namespace adcc
-

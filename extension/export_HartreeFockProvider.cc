@@ -67,7 +67,7 @@ class HartreeFockProvider : public HartreeFockSolution_i {
                                ").");
     }
     py::memoryview memview(py::buffer_info(buffer, n_orbs));
-    fill_occupation_f(py::array({n_orbs}, buffer, memview));
+    fill_occupation_f(py::array(std::vector<ssize_t>{n_orbs}, buffer, memview));
   }
 
   void orben_f(scalar_type* buffer, size_t size) const override {
@@ -79,7 +79,7 @@ class HartreeFockProvider : public HartreeFockSolution_i {
                                ").");
     }
     py::memoryview memview(py::buffer_info(buffer, n_orbs));
-    fill_orben_f(py::array({n_orbs}, buffer, memview));
+    fill_orben_f(py::array(std::vector<ssize_t>{n_orbs}, buffer, memview));
   }
 
   void orbcoeff_fb(scalar_type* buffer, size_t size) const override {
@@ -303,10 +303,10 @@ class PyHartreeFockProvider : public HartreeFockProvider {
   void fill_fock_ff(py::tuple slices, py::array out) const override {
     PYBIND11_OVERLOAD_PURE(void, HartreeFockProvider, fill_fock_ff, slices, out);
   }
-  void fill_eri_ffff(py::tuple slices, py::array out) const {
+  void fill_eri_ffff(py::tuple slices, py::array out) const override {
     PYBIND11_OVERLOAD_PURE(void, HartreeFockProvider, fill_eri_ffff, slices, out);
   }
-  void fill_eri_phys_asym_ffff(py::tuple slices, py::array out) const {
+  void fill_eri_phys_asym_ffff(py::tuple slices, py::array out) const override {
     PYBIND11_OVERLOAD_PURE(void, HartreeFockProvider, fill_eri_phys_asym_ffff, slices,
                            out);
   }

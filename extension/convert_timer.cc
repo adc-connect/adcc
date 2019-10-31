@@ -52,4 +52,3 @@ py::object convert_timer(const Timer& timer) {
 
 }  // namespace py_iface
 }  // namespace adcc
-
