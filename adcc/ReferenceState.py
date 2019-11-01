@@ -142,8 +142,8 @@ class ReferenceState(libadcc.ReferenceState):
             hfdata = import_scf_results(hfdata)
 
         self._mospaces = MoSpaces(hfdata, frozen_core=frozen_core,
-                                   frozen_virtual=frozen_virtual,
-                                   core_orbitals=core_orbitals)
+                                  frozen_virtual=frozen_virtual,
+                                  core_orbitals=core_orbitals)
         super().__init__(hfdata, self._mospaces, symmetry_check_on_import)
 
         if import_all_below_n_orbs is not None and \
@@ -164,6 +164,18 @@ class ReferenceState(libadcc.ReferenceState):
         ret = super().timer
         ret.attach(self.operators.timer)
         return ret
+
+    @property
+    def is_aufbau_occupation(self):
+        """
+        Returns whether the molecular orbital occupation in this reference
+        is according to the Aufbau principle (lowest-energy orbitals are occupied)
+        """
+        eHOMO = max(max(self.orbital_energies(space).to_ndarray())
+                    for space in self.mospaces.subspaces_occupied)
+        eLUMO = min(min(self.orbital_energies(space).to_ndarray())
+                    for space in self.mospaces.subspaces_virtual)
+        return eHOMO < eLUMO
 
     @property
     def density(self):
