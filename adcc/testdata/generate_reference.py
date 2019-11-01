@@ -25,7 +25,7 @@ import ast
 import sys
 
 from os.path import dirname, join
-from adcc.ReferenceState import expand_spaceargs
+from adcc.MoSpaces import expand_spaceargs
 
 sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
 

@@ -36,32 +36,14 @@ void export_ReferenceState(py::module& m) {
         m, "ReferenceState",
         "Class representing information about the reference state for adcc.")
         .def(py::init<std::shared_ptr<const HartreeFockSolution_i>,
-                      std::shared_ptr<const AdcMemory>, std::vector<size_t>,
-                      std::vector<size_t>, std::vector<size_t>, bool>(),
-             "Setup a ReferenceStateject using lists for orbitals spaces\n"
+                      std::shared_ptr<const MoSpaces>, bool>(),
+             "Setup a ReferenceStateject using an MoSpaces object.\n"
              "\n"
              "hfsoln_ptr        Pointer to the Interface to the host program,\n"
              "                  providing the HartreeFockSolution data, which\n"
              "                  will be provided by this object.\n"
-             "adcmem_ptr        Pointer to the adc memory management object.\n"
-             "core_orbitals     List of orbitals indices (in the full fock space, "
-             "original\n"
-             "                  ordering of the hf object), which defines the orbitals "
-             "to\n"
-             "                  be put into the core space, if any. The same number\n"
-             "                  of alpha and beta orbitals should be selected. These "
-             "will\n"
-             "                  be forcibly occupied.\n"
-             "frozen_core_orbitals\n"
-             "                  List of orbital indices, which define the frozen core,\n"
-             "                  i.e. those occupied orbitals, which do not take part in\n"
-             "                  the ADC calculation. The same number of alpha and beta\n"
-             "                  orbitals has to be selected.\n"
-             "frozen_virtuals   List of orbital indices, which the frozen virtuals,\n"
-             "                  i.e. those virtual orbitals, which do not take part\n"
-             "                  in the ADC calculation. The same number of alpha and "
-             "beta\n"
-             "                  orbitals has to be selected.\n"
+             "mo_ptr            MoSpaces object containing info about the MoSpace setup\n"
+             "                  and the point group symmetry.\n"
              "symmetry_check_on_import\n"
              "                  Should symmetry of the imported objects be checked\n"
              "                  explicitly during the import process. This massively "
@@ -73,13 +55,6 @@ void export_ReferenceState(py::module& m) {
              "                  from the host programs. Do not enable this unless you "
              "know\n"
              "                  that you really want to.\n")
-        .def(py::init<std::shared_ptr<const HartreeFockSolution_i>&,
-                      std::shared_ptr<const AdcMemory>, size_t, size_t, size_t, bool>(),
-             "Construct an MoSpaces object, determining the indices of the special "
-             "spaces automatically from the upper or lower end of the energy range "
-             "respectively. Notice that e.g. core_orbitals=1 will put 1 alpha and 1 beta "
-             "orbitals into the respective core occupied space.")
-        //
         .def_property_readonly("restricted", &ReferenceState::restricted,
                                "Return whether the reference is restricted or not.")
         .def_property_readonly(
