@@ -342,3 +342,62 @@ class ExcitedStates:
             pp.text("ExcitedStates(...)")
         else:
             pp.text(self.describe())
+
+    def describe_amplitudes(self, tolerance=1e-3, index_format=None):
+        """
+        Return a string describing the dominant amplitudes of each
+        excitation vector in human-readable form.
+
+        Note: This function is not yet stabilised. It could disappear
+        at any time without notice.
+        """
+        eV = constants.value("Hartree energy in eV")
+
+        if not index_format:
+            refstate = self.reference_state
+            closed_shell = refstate.n_alpha == refstate.n_beta
+            if closed_shell and refstate.is_aufbau_occupation:
+                index_format = format_homolumo
+            else:
+                index_format = format_hfprovider
+
+        separator = "+" + 61 * "-" + "+\n"
+        ret = separator
+        for i, vec in enumerate(self.excitation_vectors):
+            ene = self.excitation_energies[i]
+            eev = ene * eV
+            ret += f"| State {i:3d} , {ene:13.7g} au, {eev:13.7} eV"
+            ret += 14 * " " + "|\n"
+            ampl_format = format_excitation_vector(
+                self.matrix, vec, tolerance, index_format
+            )
+            ret += "|   " + " |\n|   ".join(ampl_format) + " |\n"
+            ret += separator
+        return ret
+
+
+def format_excitation_vector(matrix, vector, tolerance=1e-3, index_format=format_adcc):
+    """
+    Format an excitation vector by returning a list of strings, where each string
+    represents one important excitation amplitude of the vector. Tolerance gives
+    the minimal size an amplitude needs to have in order to be extracted.
+    """
+    sp = 10 * " "
+    formats = {
+        "ov":   "{0:8s}" + sp + "-> {2:8s}" + sp + "  {1} ->{3}    {4:+7.3g}",
+        "oovv": "{0:8s} {2:8s} -> {4:8s} {6:8s}   {1}{3}->{5}{7}   {8:+7.3g}",
+    }
+    ret = []
+    for part in matrix.blocks:
+        spaces = matrix.block_spaces(part)
+
+        # Strip numbers for the lookup into formats above
+        stripped = "".join(c for c in "".join(spaces) if c.isalpha())
+
+        for index, value in select_tol_absmax(vector[part], tolerance):
+            data = []
+            for j, idx in enumerate(index):
+                data.extend(index_format(matrix.reference_state, spaces[j], idx))
+            data.append(value)
+            ret.append(formats[stripped].format(*data))
+    return ret
