@@ -26,15 +26,15 @@ import numpy as np
 import adcc
 import adcc.backends
 
-from ..misc import expand_test_templates
-from .testing import cached_backend_hf
-
 from numpy.testing import assert_allclose
 
 import pytest
 
+from ..misc import expand_test_templates
+from .testing import cached_backend_hf
+
 # molsturm is super slow
-backends = [b for b in adcc.backends.available if b != "molsturm"]
+backends = [b for b in adcc.backends.available() if b != "molsturm"]
 basissets = ["sto3g", "sto3g", "ccpvdz"]
 
 

@@ -63,20 +63,26 @@ def is_module_available(module, min_version=None):
     return True
 
 
-status = {
-    "pyscf": is_module_available("pyscf", "1.5.0"),
-    "psi4": is_module_available("psi4", "1.2.1") and is_module_available("psi4.core"),
-    "veloxchem": is_module_available("veloxchem"),  # Exports no version info
-    "molsturm": is_module_available("molsturm"),    # Exports no version info
-}
+# Cache for the list of available backends ... cannot be filled right now,
+# since this can lead to import loops when adcc is e.g. used from Psi4
+__status = dict()
 
 
-available = sorted([b for b in status if status[b]])
+def available():
+    global __status
+    if not __status:
+        status = {
+            "pyscf": is_module_available("pyscf", "1.5.0"),
+            "psi4": is_module_available("psi4", "1.2.1") and is_module_available("psi4.core"),
+            "veloxchem": is_module_available("veloxchem"),  # Exports no version info
+            "molsturm": is_module_available("molsturm"),    # Exports no version info
+        }
+    return sorted([b for b in status if status[b]])
 
 
 def have_backend(backend):
     """Is a particular backend available?"""
-    return status.get(backend, False)
+    return backend in available()
 
 
 def import_scf_results(res):
@@ -155,14 +161,14 @@ def run_hf(backend=None, xyz=None, basis="sto-3g", charge=0, multiplicity=1,
     """
 
     if not backend:
-        if len(available) == 0:
+        if len(available()) == 0:
             raise RuntimeError(
                 "No supported host-program available as SCF backend. "
                 "See https://adc-connect.org/installation.html#install-hostprogram "
                 "for installation instructions."
             )
         else:
-            backend = available[0]
+            backend = available()[0]
         warnings.warn("No backend specified. Using {}.".format(backend))
 
     if not have_backend(backend):
