@@ -26,15 +26,106 @@ import numpy as np
 from .misc import cached_property
 from .timings import Timer, timed_member_call
 from .AdcMethod import AdcMethod
+from .FormatIndex import (FormatIndexAdcc, FormatIndexBase,
+                          FormatIndexHfProvider, FormatIndexHomoLumo)
 from .visualisation import ExcitationSpectrum
 from .state_densities import compute_gs2state_optdm, compute_state_diffdm
 from .OneParticleOperator import product_trace
+from .FormatDominantElements import FormatDominantElements
 
 from adcc import dot
+from scipy import constants
 from matplotlib import pyplot as plt
 
-from scipy import constants
 from .solver.SolverStateBase import EigenSolverStateBase
+
+
+class FormatExcitationVector:
+    def __init__(self, matrix, tolerance=1e-3, index_format=None):
+        """
+        Set up a formatter class for formatting excitation vectors.
+
+        Parameters
+        ----------
+        tolerance : float, optional
+            Minimal absolute value of the excitation amplitudes considered
+
+        index_format : NoneType or str or FormatIndexBase, optional
+            Formatter to use for displaying tensor indices.
+            Valid are ``"adcc"`` to keep the adcc-internal indexing,
+            ``"hf"`` to select the HFProvider indexing, ``"homolumo"``
+            to index relative on the HOMO / LUMO / HOCO orbitals.
+            If ``None`` an automatic selection will be made.
+        """
+        self.matrix = matrix
+        refstate = matrix.reference_state
+        if index_format is None:
+            closed_shell = refstate.n_alpha == refstate.n_beta
+            if closed_shell and refstate.is_aufbau_occupation:
+                index_format = "homolumo"
+            else:
+                index_format = "hf"
+        if index_format in ["adcc"]:
+            index_format = FormatIndexAdcc(refstate)
+        elif index_format in ["hf"]:
+            index_format = FormatIndexHfProvider(refstate)
+        elif index_format in ["homolumo"]:
+            index_format = FormatIndexHomoLumo(refstate)
+        elif not isinstance(index_format, FormatIndexBase):
+            raise ValueError("Unsupported value for index_format: "
+                             + str(index_format))
+        self.tensor_format = FormatDominantElements(matrix.mospaces, tolerance,
+                                                    index_format)
+        self.index_format = self.tensor_format.index_format
+        self.value_format = "{:+8.3g}"  # Formatting used for the values
+
+    def optimise_formatting(self, vectors):
+        if not isinstance(vectors, list):
+            return self.optimise_formatting([vectors])
+        for vector in vectors:
+            for block in self.matrix.blocks:
+                spaces = self.matrix.block_spaces(block)
+                self.tensor_format.optimise_formatting((spaces, vector[block]))
+
+    @property
+    def linewidth(self):
+        """The width of an amplitude line if a tensor is formatted with this class"""
+        # TODO This assumes a PP ADC matrix
+        if self.matrix.blocks == ["s"]:
+            nblk = 2
+        elif self.matrix.blocks == ["s", "d"]:
+            nblk = 4
+        else:
+            raise NotImplementedError("Unknown ADC matrix structure")
+        width_indices = nblk * (self.index_format.max_n_characters + 1) + 2
+        width_spins = nblk + 2
+        width_value = len(self.value_format.format(0))
+        return width_indices + width_spins + width_value + 5
+
+    def format(self, vector):
+        idxgap = self.index_format.max_n_characters * " "
+        # TODO This assumes a PP ADC matrix
+        if self.matrix.blocks == ["s"]:
+            formats = {"ov": "{0} -> {1}  {2}->{3}", }
+        elif self.matrix.blocks == ["s", "d"]:
+            formats = {
+                "ov":   "{0} " + idxgap + " -> {1} " + idxgap + "  {2} ->{3} ",
+                "oovv": "{0} {1} -> {2} {3}  {4}{5}->{6}{7}",
+            }
+        else:
+            raise NotImplementedError("Unknown ADC matrix structure")
+
+        ret = []
+        for block in self.matrix.blocks:
+            # Strip numbers for the lookup into formats above
+            spaces = self.matrix.block_spaces(block)
+            stripped = "".join(c for c in "".join(spaces) if c.isalpha())
+
+            formatted = self.tensor_format.format_as_list(spaces, vector[block])
+            for indices, spins, value in formatted:
+                ret.append(formats[stripped].format(*indices, *spins)
+                           + "   " + self.value_format.format(value))
+        return "\n".join(ret)
 
 
 class ExcitedStates:
@@ -268,27 +359,59 @@ class ExcitedStates:
             plt.xlim(plt.xlim()[::-1])
         return plots
 
-    def describe(self):
-        """Return a string providing a human-readable description of
-        the class"""
+    def describe(self, oscillator_strengths=True, state_dipole_moments=False,
+                 transition_dipole_moments=False, block_norms=True):
+        """
+        Return a string providing a human-readable description of the class
+
+        Parameters
+        ----------
+        oscillator_strengths : bool optional
+            Show oscillator strengths, by default ``True``.
+
+        state_dipole_moments : bool, optional
+            Show state dipole moments, by default ``False``.
+
+        transition_dipole_moments : bool, optional
+            Show state dipole moments, by default ``False``.
+
+        block_norms : bool, optional
+            Show the norms of the (1p1h, 2p2h, ...) blocks of the excited states,
+            by default ``True``.
+        """
+        # TODO This function is quite horrible and definitely needs some refactoring
+
         eV = constants.value("Hartree energy in eV")
+        has_dipole = "electric_dipole" in self.operators.available
 
         # Build information about the optional columns
         opt_thead = ""
         opt_body = ""
         opt = {}
-        if "electric_dipole" in self.operators.available:
+        if has_dipole and transition_dipole_moments:
+            opt_body += " {tdmx:8.4f} {tdmy:8.4f} {tdmz:8.4f}"
+            opt_thead += "  transition dipole moment "
+            opt["tdmx"] = lambda i, vec: self.state_dipole_moments[i][0]
+            opt["tdmy"] = lambda i, vec: self.state_dipole_moments[i][1]
+            opt["tdmz"] = lambda i, vec: self.state_dipole_moments[i][2]
+        if has_dipole and oscillator_strengths:
             opt_body += "{osc:8.4f} "
             opt_thead += " osc str "
             opt["osc"] = lambda i, vec: self.oscillator_strengths[i]
-        if "s" in self.matrix.blocks:
+        if "s" in self.matrix.blocks and block_norms:
             opt_body += "{v1:9.4g} "
             opt_thead += "   |v1|^2 "
             opt["v1"] = lambda i, vec: dot(vec["s"], vec["s"])
-        if "d" in self.matrix.blocks:
+        if "d" in self.matrix.blocks and block_norms:
             opt_body += "{v2:9.4g} "
             opt_thead += "   |v2|^2 "
             opt["v2"] = lambda i, vec: dot(vec["d"], vec["d"])
+        if has_dipole and state_dipole_moments:
+            opt_body += " {dmx:8.4f} {dmy:8.4f} {dmz:8.4f}"
+            opt_thead += "     state dipole moment   "
+            opt["dmx"] = lambda i, vec: self.state_dipole_moments[i][0]
+            opt["dmy"] = lambda i, vec: self.state_dipole_moments[i][1]
+            opt["dmz"] = lambda i, vec: self.state_dipole_moments[i][2]
 
         # Heading of the table
         kind = ""
@@ -297,8 +420,8 @@ class ExcitedStates:
             kind = self.kind + " "
 
         spin_change = ""
-        if kind == "spin_flip" and hasattr(self, "spin_change") \
-           and self.spin_change and self.spin_change != -1:
+        if kind.strip() == "spin_flip" and hasattr(self, "spin_change") and \
+                self.spin_change is not None and self.spin_change != -1:
             spin_change = "(ΔMS={:+2d})".format(self.spin_change)
 
         conv = ""
@@ -311,15 +434,22 @@ class ExcitedStates:
         if self.property_method != self.method:
             propname = " (" + self.property_method.name + ")"
 
-        text = ""
-        separator = "+" + 33 * "-" + len(opt_thead) * "-" + "+"
-        text += separator + "\n"
         head = "| {0:18s}  {1:>" + str(11 + len(opt_thead)) + "s} |\n"
         delim = ",  " if kind else ""
-        text += head.format(self.method.name + propname,
-                            kind + spin_change + delim + conv)
-        # TODO Print property method if it differs!
+        headtext = head.format(self.method.name + propname,
+                               kind + spin_change + delim + conv)
+
+        extra = len(headtext) - len(opt_thead) - 36
+        text = ""
+        separator = "+" + 33 * "-" + extra * "-" + len(opt_thead) * "-" + "+"
         text += separator + "\n"
+        text += headtext
+        text += separator + "\n"
+
+        if extra > 0:
+            opt["space"] = lambda i, vec: ""
+            opt_body += "{space:" + str(extra) + "s}"
+            opt_thead += (extra * " ")
 
         # Body of the table
         body = "| {i:2d} {ene:13.7g} {ev:13.7g} " + opt_body + " |\n"
@@ -331,9 +461,7 @@ class ExcitedStates:
             for k, compute in opt.items():
                 fields[k] = compute(i, vec)
             text += body.format(i=i, ene=self.excitation_energies[i],
-                                ev=self.excitation_energies[i] * eV,
-                                **fields)
-            # TODO Add dominant amplitudes
+                                ev=self.excitation_energies[i] * eV, **fields)
         text += separator + "\n"
         return text
 
@@ -346,58 +474,45 @@ class ExcitedStates:
     def describe_amplitudes(self, tolerance=1e-3, index_format=None):
         """
         Return a string describing the dominant amplitudes of each
-        excitation vector in human-readable form.
+        excitation vector in human-readable form. The ``kwargs``
+        are for :py:class:`FormatExcitationVector`.
 
-        Note: This function is not yet stabilised. It could disappear
-        at any time without notice.
+        Parameters
+        ----------
+        tolerance : float, optional
+            Minimal absolute value of the excitation amplitudes considered.
+
+        index_format : NoneType or str or FormatIndexBase, optional
+            Formatter to use for displaying tensor indices.
+            Valid are ``"adcc"`` to keep the adcc-internal indexing,
+            ``"hf"`` to select the HFProvider indexing, ``"homolumo"``
+            to index relative on the HOMO / LUMO / HOCO orbitals.
+            If ``None`` an automatic selection will be made.
         """
         eV = constants.value("Hartree energy in eV")
+        vector_format = FormatExcitationVector(self.matrix, tolerance=tolerance,
+                                               index_format=index_format)
 
-        if not index_format:
-            refstate = self.reference_state
-            closed_shell = refstate.n_alpha == refstate.n_beta
-            if closed_shell and refstate.is_aufbau_occupation:
-                index_format = format_homolumo
-            else:
-                index_format = format_hfprovider
+        # Optimise the formatting by pre-inspecting all tensors
+        for tensor in self.excitation_vectors:
+            vector_format.optimise_formatting(tensor)
 
-        separator = "+" + 61 * "-" + "+\n"
+        # Determine width of a line
+        lw = 2 + vector_format.linewidth
+        separator = "+" + lw * "-" + "+\n"
+
         ret = separator
         for i, vec in enumerate(self.excitation_vectors):
             ene = self.excitation_energies[i]
             eev = ene * eV
-            ret += f"| State {i:3d} , {ene:13.7g} au, {eev:13.7} eV"
-            ret += 14 * " " + "|\n"
-            ampl_format = format_excitation_vector(
-                self.matrix, vec, tolerance, index_format
-            )
-            ret += "|   " + " |\n|   ".join(ampl_format) + " |\n"
+            head = f"State {i:3d} , {ene:13.7g} au"
+            if lw > 47:
+                head += f", {eev:13.7} eV"
+            ret += "| " + head + (lw - len(head) - 2) * " " + " |\n"
             ret += separator
-        return ret
-
-
-def format_excitation_vector(matrix, vector, tolerance=1e-3, index_format=format_adcc):
-    """
-    Format an excitation vector by returning a list of strings, where each string
-    represents one important excitation amplitude of the vector. Tolerance gives
-    the minimal size an amplitude needs to have in order to be extracted.
-    """
-    sp = 10 * " "
-    formats = {
-        "ov":   "{0:8s}" + sp + "-> {2:8s}" + sp + "  {1} ->{3}    {4:+7.3g}",
-        "oovv": "{0:8s} {2:8s} -> {4:8s} {6:8s}   {1}{3}->{5}{7}   {8:+7.3g}",
-    }
-    ret = []
-    for part in matrix.blocks:
-        spaces = matrix.block_spaces(part)
-
-        # Strip numbers for the lookup into formats above
-        stripped = "".join(c for c in "".join(spaces) if c.isalpha())
-
-        for index, value in select_tol_absmax(vector[part], tolerance):
-            data = []
-            for j, idx in enumerate(index):
-                data.extend(index_format(matrix.reference_state, spaces[j], idx))
-            data.append(value)
-            ret.append(formats[stripped].format(*data))
-    return ret
+            formatted = vector_format.format(vec).replace("\n", " |\n| ")
+            ret += "| " + formatted + " |\n"
+            if i != len(self.excitation_vectors) - 1:
+                ret += "\n"
+                ret += separator
+        return ret[:-1]
