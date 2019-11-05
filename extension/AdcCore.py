@@ -41,6 +41,27 @@ def get_platform():
     return result
 
 
+def has_mkl_numpy():
+    """Has numpy been installed and linked against MKL"""
+    try:
+        import numpy.__config__
+
+        if not hasattr(numpy.__config__, "blas_mkl_info"):
+            return False
+        return any("mkl" in lib
+                   for lib in numpy.__config__.blas_mkl_info.get("libraries", {}))
+    except ImportError as e:
+        if "mkl" in str(e):
+            # numpy seems to be installed and linked against MKL, but mkl was not found.
+            raise ImportError("Trying to import numpy for MKL check, but obtained an "
+                              "import error indicating a missing MKL dependency. "
+                              "Did you load the MKL modules properly?") from e
+
+        # This indicates a missing numpy or a big error in numpy. It's best to assume
+        # MKL is not there and (potentially) install the non-mkl version from pypi
+        return False
+
+
 def request_urllib(url, filename):
     """Download a file from the net using requests, displaying
     a nice progress bar along the way"""
@@ -123,8 +144,12 @@ class AdcCore:
 
         import build_adccore
 
+        features = []
+        if has_mkl_numpy():
+            features += ["mkl"]
+
         build_dir = join(self.source_dir, "build")
-        build_adccore.build_install(build_dir, self.install_dir)
+        build_adccore.build_install(build_dir, self.install_dir, features=features)
 
     def build_documentation(self):
         """Build adccore documentation. Only valid if has_source is true"""

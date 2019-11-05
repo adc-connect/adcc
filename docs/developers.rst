@@ -139,6 +139,23 @@ This is done to avoid automatically overwriting some development changes
 you might have made inside ``adccore``.
 
 
+Building adccore with MKL support
+---------------------------------
+
+If you have full source code access
+and you are able to follow the :ref:`adccore-sources`,
+the `Intel Math Kernel Library (R) <https://software.intel.com/en-us/mkl>`_
+can also be integrated into adccore and thus adcc.
+In fact this integration happens automatically during the build
+process of adccore, given that a numpy linked to the MKL was
+detected. For this reason proceed as follows:
+
+1. Load the MKL modules or activate the MKL in your shell as you usally do.
+2. Build and install numpy with linkage to this MKL,
+   e.g. `Build numpy from source <https://docs.scipy.org/doc/numpy/user/building.html>`_.
+3. Build adcc and adccore as described in :ref:`adccore-sources`.
+
+
 ``setup.py`` reference
 ----------------------
 The ``setup.py`` script of adcc is a largely a typical setuptools script,
