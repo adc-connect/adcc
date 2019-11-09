@@ -29,9 +29,9 @@ from libadcc import Tensor
 
 
 class FormatDominantElements:
-    def __init__(self, mospaces, tolerance=1e-3, index_format=FormatIndexAdcc):
+    def __init__(self, mospaces, tolerance=0.01, index_format=FormatIndexAdcc):
         self.mospaces = mospaces
-        self.tolerance = 1e-3
+        self.tolerance = tolerance
         self.value_format = "{:+8.3g}"  # Formatting used for the values
 
         if isinstance(index_format, type):
