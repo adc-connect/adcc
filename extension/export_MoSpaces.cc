@@ -56,12 +56,6 @@ void export_MoSpaces(py::module& m) {
              "                  in the ADC calculation. The same number of alpha and "
              "beta\n"
              "                  orbitals has to be selected.\n")
-        .def(py::init<const HartreeFockSolution_i&, std::shared_ptr<const AdcMemory>,
-                      size_t, size_t, size_t>(),
-             "Construct an MoSpaces object, determining the indices of the special "
-             "spaces automatically from the upper or lower end of the energy range "
-             "respectively. Notice that e.g. core_orbitals=1 will put 1 alpha and 1 beta "
-             "orbitals into the respective core occupied space.")
         //
         .def("n_orbs", &MoSpaces::n_orbs,
              "The number of orbitals in a particular orbital subspace")

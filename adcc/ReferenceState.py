@@ -22,85 +22,16 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
+import libadcc
+
 from .misc import cached_property
 from .Tensor import Tensor
+from .MoSpaces import MoSpaces
 from .backends import import_scf_results
-from .memory_pool import memory_pool
 from .OperatorIntegrals import OperatorIntegrals
 from .OneParticleOperator import OneParticleOperator, product_trace
 
-from collections.abc import Iterable
-
-import libadcc
-
 __all__ = ["ReferenceState"]
-
-
-def expand_spaceargs(hfdata, **spaceargs):
-    if isinstance(spaceargs.get("frozen_core", None), bool) \
-       and spaceargs.get("frozen_core", None):
-        # Determine number of frozen core electrons automatically
-        # TODO The idea is to look at the energy gap in the HF orbital
-        #      energies and exclude the ones, which are very far from the
-        #      HOMO-LUMO gap.
-        raise NotImplementedError("Automatic determination of frozen-core "
-                                  "electrons not implemented.")
-        #
-        # TODO One could also adopt the idea in the paper by Andreas and Chong
-        #      how to automatically select the frozen_virtual orbitals in a
-        #      clever way.
-        #
-
-    def expand_to_list(space, entry, from_min=None, from_max=None):
-        if from_min is None and from_max is None:
-            raise ValueError("Both from_min and from_max is None")
-        if entry is None:
-            return np.array([])
-        elif isinstance(entry, int):
-            if from_min is not None:
-                return from_min + np.arange(entry)
-            return np.arange(from_max - entry, from_max)
-        elif isinstance(entry, Iterable):
-            return np.array(entry)
-        else:
-            raise TypeError("Unsupported type {} passed to argument {}"
-                            "".format(type(entry), space))
-
-    for key in spaceargs:
-        if not isinstance(spaceargs[key], tuple):
-            spaceargs[key] = (spaceargs[key], spaceargs[key])
-
-    any_iterable = False
-    for key in spaceargs:
-        for spin in [0, 1]:
-            if isinstance(spaceargs[key][spin], Iterable):
-                any_iterable = True
-            elif spaceargs[key][spin] is not None:
-                if any_iterable:
-                    raise ValueError("If one of the values of frozen_core, "
-                                     "core_orbitals, frozen_virtual is an "
-                                     "iterable, all must be.")
-
-    noa = hfdata.n_orbs_alpha
-    n_orbs = [0, 0]
-    for key in ["frozen_core", "core_orbitals"]:
-        if key not in spaceargs or not spaceargs[key]:
-            continue
-        list_alpha = expand_to_list(key, spaceargs[key][0],
-                                    from_min=n_orbs[0])
-        list_beta = noa + expand_to_list(key, spaceargs[key][1],
-                                         from_min=n_orbs[1])
-        spaceargs[key] = np.concatenate((list_alpha, list_beta)).tolist()
-        n_orbs[0] += len(list_alpha)
-        n_orbs[1] += len(list_beta)
-
-    key = "frozen_virtual"
-    if key in spaceargs and spaceargs[key]:
-        spaceargs[key] = np.concatenate((
-            expand_to_list(key, spaceargs[key][0], from_max=noa),
-            expand_to_list(key, spaceargs[key][1], from_max=noa) + noa
-        )).tolist()
-    return spaceargs
 
 
 class ReferenceState(libadcc.ReferenceState):
@@ -136,9 +67,10 @@ class ReferenceState(libadcc.ReferenceState):
         ----------
         hfdata
             Object with Hartree-Fock data (e.g. a molsturm scf state, a pyscf
-            SCF object or any class implementing the adcc.HartreeFockProvider
-            interface or in fact any python object representing a pointer to a
-            C++ object derived off the adcc::HartreeFockSolution_i.
+            SCF object or any class implementing the
+            :py:class:`adcc.HartreeFockProvider` interface or in fact any python
+            object representing a pointer to a C++ object derived off
+            the :cpp:class:`adcc::HartreeFockSolution_i`.
 
         core_orbitals : int or list or tuple, optional
             The orbitals to be put into the core-occupied space. For ways to
@@ -148,7 +80,7 @@ class ReferenceState(libadcc.ReferenceState):
             The orbitals to be put into the frozen core space. For ways to
             define the core orbitals see the description above. For an automatic
             selection of the frozen core space one may also specify
-            frozen_core=True.
+            ``frozen_core=True``.
 
         frozen_virtuals : int or list or tuple, optional
             The orbitals to be put into the frozen virtual space. For ways to
@@ -209,27 +141,41 @@ class ReferenceState(libadcc.ReferenceState):
         if not isinstance(hfdata, libadcc.HartreeFockSolution_i):
             hfdata = import_scf_results(hfdata)
 
-        spaceargs = expand_spaceargs(hfdata, frozen_core=frozen_core,
-                                     frozen_virtual=frozen_virtual,
-                                     core_orbitals=core_orbitals)
-        super().__init__(hfdata, memory_pool, spaceargs["core_orbitals"],
-                         spaceargs["frozen_core"], spaceargs["frozen_virtual"],
-                         symmetry_check_on_import)
+        self._mospaces = MoSpaces(hfdata, frozen_core=frozen_core,
+                                  frozen_virtual=frozen_virtual,
+                                  core_orbitals=core_orbitals)
+        super().__init__(hfdata, self._mospaces, symmetry_check_on_import)
 
         if import_all_below_n_orbs is not None and \
            hfdata.n_orbs < import_all_below_n_orbs:
             super().import_all()
 
         self.operators = OperatorIntegrals(
-            hfdata.operator_integral_provider, self.mospaces,
+            hfdata.operator_integral_provider, self._mospaces,
             self.orbital_coefficients, self.conv_tol
         )
+
+    @property
+    def mospaces(self):
+        return self._mospaces
 
     @property
     def timer(self):
         ret = super().timer
         ret.attach(self.operators.timer)
         return ret
+
+    @property
+    def is_aufbau_occupation(self):
+        """
+        Returns whether the molecular orbital occupation in this reference
+        is according to the Aufbau principle (lowest-energy orbitals are occupied)
+        """
+        eHOMO = max(max(self.orbital_energies(space).to_ndarray())
+                    for space in self.mospaces.subspaces_occupied)
+        eLUMO = min(min(self.orbital_energies(space).to_ndarray())
+                    for space in self.mospaces.subspaces_virtual)
+        return eHOMO < eLUMO
 
     @property
     def density(self):

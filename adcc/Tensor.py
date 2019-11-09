@@ -93,3 +93,23 @@ class Tensor(libadcc.Tensor):
                                  "space value from Symmetry object.")
 
         super().__init__(sym_or_mo)
+
+
+def _tensor_select_below_absmax(tensor, tolerance):
+    """
+    Select the absolute maximal values in the tensor,
+    which are below the given tolerance.
+    """
+    n = min(10, tensor.size)
+    res = []
+    while n <= tensor.size:
+        res = tensor.select_n_absmax(n)
+        minampl = min(abs(r[1]) for r in res)
+        if minampl < tolerance:
+            break
+        else:
+            n = max(n + 1, min(tensor.size, 2 * n))
+    return [r for r in res if abs(r[1]) >= tolerance]
+
+
+Tensor.select_below_absmax = _tensor_select_below_absmax
