@@ -20,79 +20,157 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from .backends import import_scf_results
-from .memory_pool import memory_pool
+import numpy as np
+
+from collections.abc import Iterable
 
 import libadcc
 
+from .backends import import_scf_results
+from .memory_pool import memory_pool
+
 __all__ = ["MoSpaces"]
+
+
+def expand_spaceargs(hfdata, **spaceargs):
+    if isinstance(spaceargs.get("frozen_core", None), bool) \
+       and spaceargs.get("frozen_core", None):
+        # Determine number of frozen core electrons automatically
+        # TODO The idea is to look at the energy gap in the HF orbital
+        #      energies and exclude the ones, which are very far from the
+        #      HOMO-LUMO gap.
+        raise NotImplementedError("Automatic determination of frozen-core "
+                                  "electrons not implemented.")
+        #
+        # TODO One could also adopt the idea in the paper by Andreas and Chong
+        #      how to automatically select the frozen_virtual orbitals in a
+        #      clever way.
+        #
+
+    def expand_to_list(space, entry, from_min=None, from_max=None):
+        if from_min is None and from_max is None:
+            raise ValueError("Both from_min and from_max is None")
+        if entry is None:
+            return np.array([])
+        elif isinstance(entry, int):
+            if from_min is not None:
+                return from_min + np.arange(entry)
+            return np.arange(from_max - entry, from_max)
+        elif isinstance(entry, Iterable):
+            return np.array(entry)
+        else:
+            raise TypeError("Unsupported type {} passed to argument {}"
+                            "".format(type(entry), space))
+
+    for key in spaceargs:
+        if not isinstance(spaceargs[key], tuple):
+            spaceargs[key] = (spaceargs[key], spaceargs[key])
+
+    any_iterable = False
+    for key in spaceargs:
+        for spin in [0, 1]:
+            if isinstance(spaceargs[key][spin], Iterable):
+                any_iterable = True
+            elif spaceargs[key][spin] is not None:
+                if any_iterable:
+                    raise ValueError("If one of the values of frozen_core, "
+                                     "core_orbitals, frozen_virtual is an "
+                                     "iterable, all must be.")
+
+    noa = hfdata.n_orbs_alpha
+    n_orbs = [0, 0]
+    for key in ["frozen_core", "core_orbitals"]:
+        if key not in spaceargs or not spaceargs[key]:
+            continue
+        list_alpha = expand_to_list(key, spaceargs[key][0],
+                                    from_min=n_orbs[0])
+        list_beta = noa + expand_to_list(key, spaceargs[key][1],
+                                         from_min=n_orbs[1])
+        spaceargs[key] = np.concatenate((list_alpha, list_beta)).tolist()
+        n_orbs[0] += len(list_alpha)
+        n_orbs[1] += len(list_beta)
+
+    key = "frozen_virtual"
+    if key in spaceargs and spaceargs[key]:
+        spaceargs[key] = np.concatenate((
+            expand_to_list(key, spaceargs[key][0], from_max=noa),
+            expand_to_list(key, spaceargs[key][1], from_max=noa) + noa
+        )).tolist()
+    return spaceargs
 
 
 class MoSpaces(libadcc.MoSpaces):
     def __init__(self, hfdata, core_orbitals=None, frozen_core=None,
                  frozen_virtual=None):
-        """
-        Construct an MoSpaces object.
+        """Construct an MoSpaces object, which holds information for
+        translating between the adcc convention of arranging molecular
+        orbitals and the convention of the host program.
 
-        @param hfdata
-        Object with Hartree-Fock data (e.g. a molsturm scf state, a pyscf SCF
-        object or any class implementing the adcc.HartreeFockProvider interface
-        or in fact any python object representing a pointer to a C++ object
-        derived off the adcc::HartreeFockSolution_i.
+        The documentation of each field here is only brief. Details
+        can be found in :py:`adcc.ReferenceState.__init__`.
 
-        @param core_orbitals
-        (a) The number of alpha and beta core orbitals to use. The first
-        orbitals (in the original ordering of the hfdata object), which are not
-        part of the frozen_core will be selected.
-        (b) Explicit list of orbital indices (in the ordering of the hfdata
-        object) to put into the core-occupied orbital space. The same number of
-        alpha and beta orbitals have to be selected. These will be forcibly
-        occupied.
+        Parameters
+        ----------
+        hfdata
+            Host-program object with Hartree-Fock data.
 
-        @param frozen_core
-        (a) The number of alpha and beta frozen core orbitals to use. The first
-        orbitals (in the original ordering of the hfdata object) will be
-        selected.
-        (b) Explicit list of orbital indices (in the ordering of the hfdata
-        object) to put into the fropen core. The same number of alpha and beta
-        orbitals have to be selected. These will be forcibly occupied.
+        core_orbitals : int or list or tuple, optional
+            The orbitals to be put into the core-occupied space.
 
-        @param frozen_virtuals
-        (a) The number of alpha and beta frozen virtual orbitals to use. The
-        last orbitals will be selected.
-        (b) Explicit list of orbital indices to put into the frozen virtual
-        orbital subspace. The same number of alpha and beta orbitals have to be
-        selected. These will be forcibly unoccupied.
+        frozen_core : int or list or tuple, optional
+            The orbitals to be put into the frozen core space.
+
+        frozen_virtuals : int or list or tuple, optional
+            The orbitals to be put into the frozen virtual space.
         """
         if not isinstance(hfdata, libadcc.HartreeFockSolution_i):
             hfdata = import_scf_results(hfdata)
 
-        if not isinstance(frozen_core, (list, int)) and frozen_core is not None:
-            raise TypeError("frozen_core should be an int or a list")
-        if not isinstance(core_orbitals, (list, int)) \
-           and core_orbitals is not None:
-            raise TypeError("core_orbitals should be an int or a list")
-        if not isinstance(frozen_virtual, (list, int)) \
-           and frozen_virtual is not None:
-            raise TypeError("frozen_virtual should be an int or a list")
+        spaceargs = expand_spaceargs(hfdata, frozen_core=frozen_core,
+                                     frozen_virtual=frozen_virtual,
+                                     core_orbitals=core_orbitals)
+        super().__init__(hfdata, memory_pool, spaceargs["core_orbitals"],
+                         spaceargs["frozen_core"], spaceargs["frozen_virtual"])
 
-        if any(isinstance(k, int) for k in [frozen_core, core_orbitals,
-                                            frozen_virtual]):
-            if frozen_core is None:
-                frozen_core = 0
-            if core_orbitals is None:
-                core_orbitals = 0
-            if frozen_virtual is None:
-                frozen_virtual = 0
-        else:
-            if frozen_core is None:
-                frozen_core = []
-            if core_orbitals is None:
-                core_orbitals = []
-            if frozen_virtual is None:
-                frozen_virtual = []
-        super().__init__(hfdata, memory_pool, core_orbitals, frozen_core,
-                         frozen_virtual)
+    @property
+    def frozen_core(self):
+        """
+        The frozen (inactive) occupied spin orbitals
+        (in the index convention of the host provider).
+        """
+        return self.map_index_hf_provider.get("o3", [])
+
+    @property
+    def core_orbitals(self):
+        """
+        The spin orbitals selected to reside in the core space
+        (in the index convention of the host provider).
+        """
+        return self.map_index_hf_provider.get("o2", [])
+
+    @property
+    def occupied_orbitals(self):
+        """
+        The active valence-occupied spin orbitals
+        (in the index convention of the host provider).
+        """
+        return self.map_index_hf_provider["o1"]
+
+    @property
+    def virtual_orbitals(self):
+        """
+        The active virtual spin orbitals
+        (in the index convention of the host provider).
+        """
+        return self.map_index_hf_provider["v1"]
+
+    @property
+    def frozen_virtual(self):
+        """
+        The frozen (inactive) virtual spin orbitals
+        (in the index convention of the host provider).
+        """
+        return self.map_index_hf_provider.get("o2", [])
 
 
 # TODO some nice describe method
