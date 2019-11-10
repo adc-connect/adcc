@@ -55,9 +55,11 @@ class TestBackendsImportReferenceData(unittest.TestCase):
 
         multiplicity = 1
         compare_eri = "abs"
-        if molecule == "cn":
+        if molecule in ["cn", "ch2nh2"]:
             multiplicity = 2
+        if molecule == "cn":
             compare_eri = "off"
+
         scfres = cached_backend_hf(backend, molecule, basis, multiplicity)
         compare_refstate_with_reference(data, reference, case, scfres,
                                         compare_orbcoeff=False, compare_eri=compare_eri)

@@ -86,7 +86,7 @@ def fullfile(fn):
 
 
 class TestdataCache():
-    cases = ["h2o_sto3g", "cn_sto3g", "hf3_631g", "h2s_sto3g"]
+    cases = ["h2o_sto3g", "cn_sto3g", "hf3_631g", "h2s_sto3g", "ch2nh2_sto3g"]
     mode_full = False
 
     @staticmethod
@@ -167,7 +167,8 @@ class TestdataCache():
                 if datafile is None or not os.path.isfile(datafile):
                     continue
                 fulldict.update(hdf5io.load(datafile))
-            ret[k] = fulldict
+            if fulldict:
+                ret[k] = fulldict
         return ret
 
     @cached_property

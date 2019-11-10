@@ -2,6 +2,8 @@
 
 SOURCE="https://get.adc-connect.org/testdata/0.4.0/"
 DATAFILES=(
+	ch2nh2_sto3g_hfdata.hdf5
+	ch2nh2_sto3g_hfimport.hdf5
 	cn_sto3g_hfdata.hdf5
 	cn_sto3g_hfimport.hdf5
 	cn_sto3g_reference_adc0.hdf5

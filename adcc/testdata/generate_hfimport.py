@@ -64,7 +64,9 @@ def dump_imported(key, dump_cvs=True):
     print("Caching data for {} ...".format(key))
     data = cache.hfdata[key]
     dictionary = {}
-    refcases = ast.literal_eval(data["reference_cases"][()])
+    # TODO once hfdata is an HDF5 file
+    # refcases = ast.literal_eval(data["reference_cases"][()])
+    refcases = ast.literal_eval(data["reference_cases"])
     for name, args in refcases.items():
         print("Working on {} {} ...".format(key, name))
         refstate = adcc.ReferenceState(data, **args)
@@ -82,6 +84,9 @@ def main():
     # CN unrestricted
     dump_imported("cn_sto3g")
     dump_imported("cn_ccpvdz")
+
+    # CH2NH2 unrestricted (no symmetries)
+    dump_imported("ch2nh2_sto3g")
 
 
 if __name__ == "__main__":
