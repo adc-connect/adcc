@@ -24,18 +24,18 @@ import adcc
 import unittest
 import itertools
 
-from .misc import expand_test_templates
-from .test_ReferenceState_refdata import compare_refstate_with_reference
-
 from adcc.testdata.cache import cache
 from adcc.backends.testing import cached_backend_hf
 
 import pytest
 
+from .misc import expand_test_templates
+from .test_ReferenceState_refdata import compare_refstate_with_reference
+
 # The methods to test (currently only restricted is supported in this test)
 testcases = [case for case in cache.hfimport.keys()
              if cache.hfdata[case]["restricted"]]
-backends = [b for b in adcc.backends.available if b != "molsturm"]
+backends = [b for b in adcc.backends.available() if b != "molsturm"]
 
 
 @expand_test_templates(list(itertools.product(testcases, backends)))

@@ -22,33 +22,10 @@
 ## ---------------------------------------------------------------------
 
 
-def is_module_available(module):
-    import importlib
-
-    try:
-        importlib.import_module(module)
-        return True
-    except ImportError:
-        return False
-
-
-status = {
-    "pyscf": is_module_available("pyscf"),
-    "psi4": is_module_available("psi4") and is_module_available("psi4.core"),
-    "veloxchem": is_module_available("veloxchem"),
-    "molsturm": is_module_available("molsturm"),
-}
-
-
-available = sorted([b for b in status if status[b]])
-
-
-def first_available():
-    if len(available) == 0:
-        raise RuntimeError("No backend available.")
-    else:
-        return available[0]
-
-
-def have_backend(backend):
-    return status.get(backend, False)
+class InvalidReference(ValueError):
+    """
+    Exception thrown if a passed SCF reference is invalid, e.g. because
+    a feature like density-fitting has been applied, which is inconsistent
+    with the current capabilities of adcc.
+    """
+    pass

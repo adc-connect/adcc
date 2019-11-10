@@ -41,7 +41,7 @@ from .solver.SolverStateBase import EigenSolverStateBase
 
 
 class FormatExcitationVector:
-    def __init__(self, matrix, tolerance=1e-3, index_format=None):
+    def __init__(self, matrix, tolerance=0.01, index_format=None):
         """
         Set up a formatter class for formatting excitation vectors.
 
@@ -471,7 +471,7 @@ class ExcitedStates:
         else:
             pp.text(self.describe())
 
-    def describe_amplitudes(self, tolerance=1e-3, index_format=None):
+    def describe_amplitudes(self, tolerance=0.01, index_format=None):
         """
         Return a string describing the dominant amplitudes of each
         excitation vector in human-readable form. The ``kwargs``

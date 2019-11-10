@@ -175,7 +175,6 @@ class AdcCore:
         """
         return [
             self.install_dir + "/adccore_config.json",
-            self.install_dir + "/include/ctx/*.hh",
             self.install_dir + "/include/adcc/*.hh",
             self.install_dir + "/include/adcc/*/*.hh",
             self.library_dir + "/libadccore.so",
@@ -184,7 +183,6 @@ class AdcCore:
             self.library_dir + "/libstdc++.so.*",
             self.library_dir + "/libc++.so.*",
             self.library_dir + "/libadccore_LICENSE",
-            self.library_dir + "/libadccore_thirdparty/ctx/*",
         ]
 
     def get_tarball_name(self, version=None, postfix=None):

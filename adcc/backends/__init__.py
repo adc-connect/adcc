@@ -23,11 +23,66 @@
 import os
 import warnings
 
-from .available_backends import available, first_available, have_backend
+from pkg_resources import parse_version
 
 import h5py
 
-__all__ = ["import_scf_results", "run_hf", "have_backend", "available"]
+from .InvalidReference import InvalidReference
+
+__all__ = ["import_scf_results", "run_hf", "have_backend", "available",
+           "InvalidReference"]
+
+
+def is_module_available(module, min_version=None):
+    """Check using importlib if a module is available."""
+    import importlib
+
+    try:
+        mod = importlib.import_module(module)
+    except ImportError:
+        return False
+
+    if not min_version:  # No version check
+        return True
+
+    if not hasattr(mod, "__version__"):
+        warnings.warn(
+            "Could not check host program {} minimal version, "
+            "since __version__ tag not found. Proceeding anyway."
+            "".format(module)
+        )
+        return True
+
+    if parse_version(mod.__version__) < parse_version(min_version):
+        warnings.warn(
+            "Found host program module {}, but its version {} is below "
+            "the least required (== {}). This host program will be ignored."
+            "".format(module, mod.__version__, min_version)
+        )
+        return False
+    return True
+
+
+# Cache for the list of available backends ... cannot be filled right now,
+# since this can lead to import loops when adcc is e.g. used from Psi4
+__status = dict()
+
+
+def available():
+    global __status
+    if not __status:
+        status = {
+            "pyscf": is_module_available("pyscf", "1.5.0"),
+            "psi4": is_module_available("psi4", "1.2.1") and is_module_available("psi4.core"),
+            "veloxchem": is_module_available("veloxchem"),  # Exports no version info
+            "molsturm": is_module_available("molsturm"),    # Exports no version info
+        }
+    return sorted([b for b in status if status[b]])
+
+
+def have_backend(backend):
+    """Is a particular backend available?"""
+    return backend in available()
 
 
 def import_scf_results(res):
@@ -100,10 +155,20 @@ def run_hf(backend=None, xyz=None, basis="sto-3g", charge=0, multiplicity=1,
         conv_tol:       energy convergence tolerance
         conv_tol_grad:  convergence tolerance of the electronic gradient
         max_iter:       maximum number of SCF iterations
+
+        Note: This function only exists for testing purposes and should
+        not be used in production calculations.
     """
 
     if not backend:
-        backend = first_available()
+        if len(available()) == 0:
+            raise RuntimeError(
+                "No supported host-program available as SCF backend. "
+                "See https://adc-connect.org/installation.html#install-hostprogram "
+                "for installation instructions."
+            )
+        else:
+            backend = available()[0]
         warnings.warn("No backend specified. Using {}.".format(backend))
 
     if not have_backend(backend):

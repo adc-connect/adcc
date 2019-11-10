@@ -245,8 +245,7 @@ class FormatIndexHomoLumo(FormatIndexBase):
         """
         maxlen = max(len(self._translate_index(space, idx)[1])
                      for space, idx in space_index_pairs)
-        log_max_idx = int(np.log(max(1, maxlen)))
-        self.maxlen_offset = max(log_max_idx, self.maxlen_offset, 2)
+        self.maxlen_offset = max(maxlen, self.maxlen_offset, 2)
 
     def format(self, space, idx, concat_spin=True):
         word, offset, spin = self._translate_index(space, idx)

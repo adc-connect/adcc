@@ -14,11 +14,9 @@ include extension/AdcCore.py
 # (i.e. include files and compiled binary)
 include extension/adccore/adccore_config.json
 recursive-include extension/adccore/include/adcc/ *.hh
-recursive-include extension/adccore/include/ctx/ *.hh
 include adcc/lib/libadccore.so
 include adcc/lib/libadccore.dylib
 include adcc/lib/libadccore.*.dylib
 include adcc/lib/libstdc++.so.*
 include adcc/lib/libc++.so.*
 include adcc/lib/libadccore_LICENSE
-recursive-include adcc/lib/libadccore_thirdparty/ctx/ *

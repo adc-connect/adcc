@@ -81,6 +81,21 @@ class LazyMp(libadcc.LazyMp):
             raise NotImplementedError("Only dipole moments for level 1 and 2"
                                       " are implemented.")
 
+    def energy(self, level=2):
+        """
+        Obtain the total energy (SCF energy plus all corrections)
+        at a particular level of perturbation theory.
+        """
+        if level == 0:
+            # Sum of orbital energies ...
+            raise NotImplementedError("Total MP(0) energy not implemented.")
+
+        # Accumulator for all energy terms
+        energies = [self.reference_state.energy_scf]
+        for il in range(2, level + 1):
+            energies.append(self.energy_correction(il))
+        return sum(energies)
+
     @property
     def mp2_density(self):
         return self.density(2)

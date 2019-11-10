@@ -23,8 +23,10 @@
 import warnings
 import numpy as np
 
-from pyscf import ao2mo, gto, scf
+from .InvalidReference import InvalidReference
 from .eri_build_helper import EriBuilder
+
+from pyscf import ao2mo, gto, scf
 
 from adcc.misc import cached_property
 from adcc.DataHfProvider import DataHfProvider
@@ -106,8 +108,8 @@ class PyScfHFProvider(HartreeFockProvider):
         elif isinstance(self.scfres.mo_occ, np.ndarray):
             restricted = self.scfres.mo_occ.ndim < 2
         else:
-            raise ValueError("Unusual pyscf SCF class encountered. Could not "
-                             "determine restricted / unrestricted.")
+            raise InvalidReference("Unusual pyscf SCF class encountered. Could not "
+                                   "determine restricted / unrestricted.")
         return restricted
 
     def get_energy_scf(self):
@@ -187,13 +189,13 @@ class PyScfHFProvider(HartreeFockProvider):
 
 def convert_scf_to_dict(scfres):
     if not isinstance(scfres, scf.hf.SCF):
-        raise TypeError("Unsupported type for backends.pyscf.import_scf.")
+        raise InvalidReference("Unsupported type for backends.pyscf.convert_scf_to_dict.")
 
     if not scfres.converged:
-        raise ValueError("Cannot start an adc calculation on top of an SCF, "
-                         "which is not yet converged. Did you forget to run "
-                         "the kernel() or the scf() function of the pyscf scf "
-                         "object?")
+        raise InvalidReference("Cannot start an adc calculation on top of an SCF, "
+                               "which is not yet converged. Did you forget to run "
+                               "the kernel() or the scf() function of the pyscf scf "
+                               "object?")
 
     # Try to determine whether we are restricted
     if isinstance(scfres.mo_occ, list):
@@ -201,8 +203,8 @@ def convert_scf_to_dict(scfres):
     elif isinstance(scfres.mo_occ, np.ndarray):
         restricted = scfres.mo_occ.ndim < 2
     else:
-        raise ValueError("Unusual pyscf SCF class encountered. Could not "
-                         "determine restricted / unrestricted.")
+        raise InvalidReference("Unusual pyscf SCF class encountered. Could not "
+                               "determine restricted / unrestricted.")
 
     mo_occ = scfres.mo_occ
     mo_energy = scfres.mo_energy
@@ -228,16 +230,16 @@ def convert_scf_to_dict(scfres):
     n_orbs_beta = mo_coeff[1].shape[1]
     n_orbs = n_orbs_alpha + n_orbs_beta
     if n_orbs_alpha != n_orbs_beta:
-        raise ValueError("adcc cannot deal with different number of alpha and "
-                         "beta orbitals like in a restricted "
-                         "open-shell reference at the moment.")
+        raise InvalidReference("adcc cannot deal with different number of alpha and "
+                               "beta orbitals like in a restricted "
+                               "open-shell reference at the moment.")
 
     # Determine number of electrons
     n_alpha = np.sum(mo_occ[0] > 0)
     n_beta = np.sum(mo_occ[1] > 0)
     if n_alpha != np.sum(mo_occ[0]) or n_beta != np.sum(mo_occ[1]):
-        raise ValueError("Fractional occupation numbers are not supported "
-                         "in adcc.")
+        raise InvalidReference("Fractional occupation numbers are not supported "
+                               "in adcc.")
 
     # conv_tol is energy convergence, conv_tol_grad is gradient convergence
     if scfres.conv_tol_grad is None:
@@ -365,14 +367,19 @@ def convert_scf_to_dict(scfres):
 
 
 def import_scf(scfres):
+    # TODO This could be a bit more verbose
+
     if not isinstance(scfres, scf.hf.SCF):
-        raise TypeError("Unsupported type for backends.pyscf.import_scf.")
+        raise InvalidReference("Unsupported type for backends.pyscf.import_scf.")
 
     if not scfres.converged:
-        raise ValueError("Cannot start an adc calculation on top of an SCF, "
-                         "which is not yet converged. Did you forget to run "
-                         "the kernel() or the scf() function of the pyscf scf "
-                         "object?")
+        raise InvalidReference("Cannot start an adc calculation on top of an SCF, "
+                               "which is not yet converged. Did you forget to run "
+                               "the kernel() or the scf() function of the pyscf scf "
+                               "object?")
+
+    # TODO Check for point-group symmetry,
+    #      check for density-fitting or choleski
 
     # Try to determine whether we are restricted
     if isinstance(scfres.mo_occ, list):
@@ -380,8 +387,8 @@ def import_scf(scfres):
     elif isinstance(scfres.mo_occ, np.ndarray):
         restricted = scfres.mo_occ.ndim < 2
     else:
-        raise ValueError("Unusual pyscf SCF class encountered. Could not "
-                         "determine restricted / unrestricted.")
+        raise InvalidReference("Unusual pyscf SCF class encountered. Could not "
+                               "determine restricted / unrestricted.")
 
     if restricted:
         return PyScfHFProvider(scfres)

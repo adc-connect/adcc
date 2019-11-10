@@ -2,7 +2,7 @@
 #--  Introduction  --#
 ######################
 adcc and the adcc source code is released under the terms of the GNU General Public
- License Version 3 (LGPLv3). This terms of release, however, do not apply to the
+ License Version 3 (GPLv3). This terms of release, however, do not apply to the
 adccore binary file `libadccore.so` (or a simlilarly named dylib file for MacOS),
 contained in the `adcc/lib` directory of the python code tarball or the python
 package directory.
@@ -118,19 +118,6 @@ them, and agree to be bound by their terms and conditions.
 ####################################################
 This section lists the third-party components integrated into adccore in binary
 form, provides the copyright holders and their terms of use.
-
-#
-# ctx
-#
-- **Description:** Library providing key-value C++ datastructures
-                   for organised hierarchical storage.
-- **Copyright:**   Copyright (c) 2019 Michael F. Herbst
-- **License:**     Apache License 2.0
-- **Website:**     https://github.com/mfherbst/ctx
-- **Publication:** http://doi.org/10.5281/zenodo.2590706
-
-To view the license statement and copyright notices, see the files
-in the folder adcc/lib/libadccore_thirdparty/ctx
 
 #
 # libadc

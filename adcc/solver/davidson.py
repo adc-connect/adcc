@@ -77,8 +77,8 @@ def default_print(state, identifier, file=sys.stdout):
     elif identifier == "is_converged":
         soltime = state.timer.total("iteration")
         print("=== Converged ===", file=file)
-        print("    Number of matrix applies:   ", state.n_applies)
-        print("    Total solver time:          ", strtime(soltime))
+        print("    Number of matrix applies:   ", state.n_applies, file=file)
+        print("    Total solver time:          ", strtime(soltime), file=file)
     elif identifier == "restart":
         print("=== Restart ===", file=file)
 
