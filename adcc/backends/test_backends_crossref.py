@@ -55,8 +55,8 @@ class TestCrossReferenceBackends(unittest.TestCase):
         # UHF not supported for VeloxChem
         if "veloxchem" in backends:
             backends.remove("veloxchem")
-            if not len(backends):
-                pytest.skip("Not enough backends that support UHF available.")
+        if not len(backends):
+            pytest.skip("Not enough backends that support UHF available.")
         for b in backends:
             scfres = cached_backend_hf(b, "h2o", basis, multiplicity=3)
             results[b] = adcc.adc2(scfres, n_states=5, conv_tol=1e-10)
