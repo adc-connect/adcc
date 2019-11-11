@@ -175,6 +175,43 @@ their oscillator strength as well as
 the square norm of the singles (``|v1|^2``) and doubles (``|v2|^2``)
 parts of the corresponding excitation vectors.
 
+A quick overview of the dominating orbitals involved in the
+determined excitations, can also be obtained very easily.
+For this simply print the string returned by
+the :func:`adcc.ExcitedStates.describe_amplitudes()`
+method, i.e. ``print(state.describe_amplitudes())``.
+In our case it would produce a table such as::
+
+    +-------------------------------------------------------+
+    | State   0 ,     0.3043779 au,      8.282543 eV        |
+    +-------------------------------------------------------+
+    | HOMO            -> LUMO             a ->a      -0.675 |
+    | HOMO            -> LUMO +3          a ->a      +0.094 |
+    | HOMO            -> LUMO +4          a ->a     -0.0674 |
+
+    ...
+
+    +-------------------------------------------------------+
+    | State   1 ,     0.3768004 au,      10.25326 eV        |
+    +-------------------------------------------------------+
+    | HOMO            -> LUMO +1          a ->a      +0.663 |
+    | HOMO            -> LUMO +2          a ->a       +0.14 |
+    | HOMO            -> LUMO +6          a ->a      -0.112 |
+
+    ...
+
+    +-------------------------------------------------------+
+    | State   2 ,     0.3866926 au,      10.52244 eV        |
+    +-------------------------------------------------------+
+    | HOMO -1         -> LUMO             a ->a      +0.675 |
+    | HOMO -1         -> LUMO +3          a ->a     -0.0902 |
+    | HOMO -1         -> LUMO+10          a ->a      -0.035 |
+    | HOMO -1         -> LUMO +4          a ->a     +0.0338 |
+
+    ...
+
+In the tables a few lines have been cute near the ``...`` for clearity.
+
 Without a doubt, ADC(3) is a rather expensive method,
 taking already noticable time for a simple system such as
 a triple zeta water calculation. For comparison an equivalent ADC(1)

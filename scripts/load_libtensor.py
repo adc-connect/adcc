@@ -55,8 +55,8 @@ def load_libtensor(fle):
             shape.append(int(v[i + 1]))
         except ValueError:
             raise ValueError("Could not parse libtensor file: "
-                             "Could not parse the " + str(i) + "th element of the "
-                             "dimensionality string.")
+                             "Could not parse the " + str(i) + "th element of "
+                             "the dimensionality string.")
     shape = tuple(shape)
 
     # Construct a string where all fields are on an individual line

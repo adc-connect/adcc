@@ -86,7 +86,7 @@ def fullfile(fn):
 
 
 class TestdataCache():
-    cases = ["h2o_sto3g", "cn_sto3g", "hf3_631g", "h2s_sto3g"]
+    cases = ["h2o_sto3g", "cn_sto3g", "hf3_631g", "h2s_sto3g", "ch2nh2_sto3g"]
     mode_full = False
 
     @staticmethod
@@ -128,11 +128,13 @@ class TestdataCache():
         ret = {}
         for case in self.testcases:
             # TODO once hfdata is an HDF5 file
-            # refcases = ast.literal_eval(self.hfdata[case]["reference_cases"][()])
+            # refcases = ast.literal_eval(
+            #                        self.hfdata[case]["reference_cases"][()])
             refcases = ast.literal_eval(self.hfdata[case]["reference_cases"])
             if "cvs" not in refcases:
                 continue
-            ret[case] = adcc.ReferenceState(self.hfdata[case], **refcases["cvs"])
+            ret[case] = adcc.ReferenceState(self.hfdata[case],
+                                            **refcases["cvs"])
             ret[case].import_all()
         return ret
 
@@ -167,7 +169,8 @@ class TestdataCache():
                 if datafile is None or not os.path.isfile(datafile):
                     continue
                 fulldict.update(hdf5io.load(datafile))
-            ret[k] = fulldict
+            if fulldict:
+                ret[k] = fulldict
         return ret
 
     @cached_property

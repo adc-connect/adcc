@@ -138,7 +138,7 @@ def operator_import_test(scfres, ao_dict):
             )
 
 
-def cached_backend_hf(backend, molecule, basis):
+def cached_backend_hf(backend, molecule, basis, multiplicity=1):
     """
     Run the SCF for a backend and a particular test case (if not done)
     and return the result.
@@ -152,7 +152,8 @@ def cached_backend_hf(backend, molecule, basis):
     def payload():
         hfres = adcc.backends.run_hf(backend, xyz=geometry.xyz[molecule],
                                      basis=basis, conv_tol=1e-13,
-                                     conv_tol_grad=1e-12)
+                                     multiplicity=multiplicity,
+                                     conv_tol_grad=1e-11)
         return adcc.backends.import_scf_results(hfres)
 
     # For reasons not clear to me (mfh), caching does not work
@@ -160,7 +161,7 @@ def cached_backend_hf(backend, molecule, basis):
     if backend == "pyscf":
         return payload()
 
-    key = (backend, molecule, basis)
+    key = (backend, molecule, basis, str(multiplicity))
     try:
         return __cache_cached_backend_hf[key]
     except NameError:

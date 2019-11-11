@@ -72,8 +72,8 @@ class FormatIndexHfProvider(FormatIndexBase):
     def optimise_formatting(self, space_index_pairs):
         """
         Optimise the formatting parameters of this class in order to be able to
-        nicely produce equivalently formatted tensor format strings for all the passed
-        spaces-index pairs.
+        nicely produce equivalently formatted tensor format strings for all the
+        passed spaces-index pairs.
 
         This function can be called multiple times.
         """
@@ -93,8 +93,8 @@ class FormatIndexHfProvider(FormatIndexBase):
     @property
     def max_n_characters(self):
         """
-        The maximum number of characters needed for a formatted index (excluding the "a"
-        or "b" spin string) according to the current optimised formatting.
+        The maximum number of characters needed for a formatted index (excluding
+        the "a" or "b" spin string) according to the current optimised formatting.
         """
         return self.max_digits
 
@@ -132,8 +132,8 @@ class FormatIndexAdcc(FormatIndexBase):
     def optimise_formatting(self, space_index_pairs):
         """
         Optimise the formatting parameters of this class in order to be able to
-        nicely produce equivalently formatted tensor format strings for all the passed
-        spaces-index pairs.
+        nicely produce equivalently formatted tensor format strings for all the
+        passed spaces-index pairs.
 
         This function can be called multiple times.
         """
@@ -154,8 +154,8 @@ class FormatIndexAdcc(FormatIndexBase):
     @property
     def max_n_characters(self):
         """
-        The maximum number of characters needed for a formatted index (excluding the "a"
-        or "b" spin string) according to the current optimised formatting.
+        The maximum number of characters needed for a formatted index (excluding
+        the "a" or "b" spin string) according to the current optimised formatting.
         """
         return 5 + self.max_digits
 
@@ -198,8 +198,9 @@ class FormatIndexHomoLumo(FormatIndexBase):
         # TODO Expand this class there is something sensible
         closed_shell = refstate.n_alpha == refstate.n_beta
         if not refstate.is_aufbau_occupation or not closed_shell:
-            raise ValueError("format_homolumo only produces the right results for "
-                             "closed-shell references with an Aufbau occupation")
+            raise ValueError("format_homolumo only produces the right results "
+                             "for closed-shell references with an Aufbau "
+                             "occupation")
 
     def _translate_index(self, space, idx):
         # Deal with core-occupied orbitals first:
@@ -238,8 +239,8 @@ class FormatIndexHomoLumo(FormatIndexBase):
     def optimise_formatting(self, space_index_pairs):
         """
         Optimise the formatting parameters of this class in order to be able to
-        nicely produce equivalently formatted tensor format strings for all the passed
-        spaces-index pairs.
+        nicely produce equivalently formatted tensor format strings for all the
+        passed spaces-index pairs.
 
         This function can be called multiple times.
         """
@@ -258,7 +259,7 @@ class FormatIndexHomoLumo(FormatIndexBase):
     @property
     def max_n_characters(self):
         """
-        The maximum number of characters needed for a formatted index (excluding the "a"
-        or "b" spin string) according to the current optimised formatting.
+        The maximum number of characters needed for a formatted index (excluding
+        the "a" or "b" spin string) according to the current optimised formatting.
         """
         return 4 + self.maxlen_offset

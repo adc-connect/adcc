@@ -20,16 +20,14 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import warnings
 import numpy as np
-
-from .InvalidReference import InvalidReference
-from .eri_build_helper import EriBuilder
 
 from pyscf import ao2mo, gto, scf
 
 from adcc.misc import cached_property
-from adcc.DataHfProvider import DataHfProvider
+
+from .InvalidReference import InvalidReference
+from .eri_build_helper import EriBuilder
 
 from libadcc import HartreeFockProvider
 
@@ -47,17 +45,25 @@ class PyScfOperatorIntegralProvider:
 # TODO: refactor ERI builder to be more general
 # IntegralBuilder would be good
 class PyScfEriBuilder(EriBuilder):
-    def __init__(self, scfres, n_orbs, n_orbs_alpha, n_alpha, n_beta):
+    def __init__(
+        self, scfres, n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted
+    ):
         self.scfres = scfres
-        super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta)
+        if restricted:
+            self.mo_coeff = (self.scfres.mo_coeff,
+                             self.scfres.mo_coeff)
+        else:
+            self.mo_coeff = self.scfres.mo_coeff
+        super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted)
 
     @property
-    def coeffs_occ_alpha(self):
-        return self.scfres.mo_coeff[:, :self.n_alpha]
-
-    @property
-    def coeffs_virt_alpha(self):
-        return self.scfres.mo_coeff[:, self.n_alpha:]
+    def coefficients(self):
+        return {
+            "Oa": self.mo_coeff[0][:, :self.n_alpha],
+            "Ob": self.mo_coeff[1][:, :self.n_beta],
+            "Va": self.mo_coeff[0][:, self.n_alpha:],
+            "Vb": self.mo_coeff[1][:, self.n_beta:],
+        }
 
     def compute_mo_eri(self, block, coeffs, use_cache=True):
         if block in self.eri_cache and use_cache:
@@ -72,7 +78,8 @@ class PyScfEriBuilder(EriBuilder):
 
 class PyScfHFProvider(HartreeFockProvider):
     """
-        This implementation is only valid for RHF
+        This implementation is only valid
+        if no orbital reordering is required.
     """
     def __init__(self, scfres):
         # Do not forget the next line,
@@ -81,8 +88,10 @@ class PyScfHFProvider(HartreeFockProvider):
         self.scfres = scfres
         self.eri_ffff = None
         n_alpha, n_beta = scfres.mol.nelec
-        self.eri_builder = PyScfEriBuilder(self.scfres, self.n_orbs,
-                                           self.n_orbs_alpha, n_alpha, n_beta)
+        self.eri_builder = PyScfEriBuilder(
+            self.scfres, self.n_orbs, self.n_orbs_alpha, n_alpha, n_beta,
+            self.restricted
+        )
         self.operator_integral_provider = PyScfOperatorIntegralProvider(
             self.scfres
         )
@@ -108,8 +117,8 @@ class PyScfHFProvider(HartreeFockProvider):
         elif isinstance(self.scfres.mo_occ, np.ndarray):
             restricted = self.scfres.mo_occ.ndim < 2
         else:
-            raise InvalidReference("Unusual pyscf SCF class encountered. Could not "
-                                   "determine restricted / unrestricted.")
+            raise InvalidReference("Unusual pyscf SCF class encountered. Could "
+                                   "not determine restricted / unrestricted.")
         return restricted
 
     def get_energy_scf(self):
@@ -187,214 +196,22 @@ class PyScfHFProvider(HartreeFockProvider):
         self.eri_ffff = None
 
 
-def convert_scf_to_dict(scfres):
-    if not isinstance(scfres, scf.hf.SCF):
-        raise InvalidReference("Unsupported type for backends.pyscf.convert_scf_to_dict.")
-
-    if not scfres.converged:
-        raise InvalidReference("Cannot start an adc calculation on top of an SCF, "
-                               "which is not yet converged. Did you forget to run "
-                               "the kernel() or the scf() function of the pyscf scf "
-                               "object?")
-
-    # Try to determine whether we are restricted
-    if isinstance(scfres.mo_occ, list):
-        restricted = len(scfres.mo_occ) < 2
-    elif isinstance(scfres.mo_occ, np.ndarray):
-        restricted = scfres.mo_occ.ndim < 2
-    else:
-        raise InvalidReference("Unusual pyscf SCF class encountered. Could not "
-                               "determine restricted / unrestricted.")
-
-    mo_occ = scfres.mo_occ
-    mo_energy = scfres.mo_energy
-    mo_coeff = scfres.mo_coeff
-    fock_bb = scfres.get_fock()
-
-    # pyscf only keeps occupation and mo energies once if restriced,
-    # so we unfold it here in order to unify the treatment in the rest
-    # of the code
-    if restricted:
-        mo_occ = np.asarray((mo_occ / 2, mo_occ / 2))
-        mo_energy = (mo_energy, mo_energy)
-        mo_coeff = (mo_coeff, mo_coeff)
-        fock_bb = (fock_bb, fock_bb)
-
-    # Transform fock matrix to MOs
-    fock = tuple(mo_coeff[i].transpose().conj() @ fock_bb[i] @ mo_coeff[i]
-                 for i in range(2))
-    del fock_bb
-
-    # Determine number of orbitals
-    n_orbs_alpha = mo_coeff[0].shape[1]
-    n_orbs_beta = mo_coeff[1].shape[1]
-    n_orbs = n_orbs_alpha + n_orbs_beta
-    if n_orbs_alpha != n_orbs_beta:
-        raise InvalidReference("adcc cannot deal with different number of alpha and "
-                               "beta orbitals like in a restricted "
-                               "open-shell reference at the moment.")
-
-    # Determine number of electrons
-    n_alpha = np.sum(mo_occ[0] > 0)
-    n_beta = np.sum(mo_occ[1] > 0)
-    if n_alpha != np.sum(mo_occ[0]) or n_beta != np.sum(mo_occ[1]):
-        raise InvalidReference("Fractional occupation numbers are not supported "
-                               "in adcc.")
-
-    # conv_tol is energy convergence, conv_tol_grad is gradient convergence
-    if scfres.conv_tol_grad is None:
-        conv_tol_grad = np.sqrt(scfres.conv_tol)
-    else:
-        conv_tol_grad = scfres.conv_tol_grad
-    threshold = max(10 * scfres.conv_tol, conv_tol_grad)
-
-    #
-    # Put basic data into a dictionary
-    #
-    data = {
-        "n_orbs_alpha": int(n_orbs_alpha),
-        "energy_scf": float(scfres.e_tot),
-        "restricted": restricted,
-        "threshold": float(threshold),
-        "spin_multiplicity": 0,
-    }
-    if restricted:
-        # Note: In the pyscf world spin is 2S, so the multiplicity
-        #       is spin + 1
-        data["spin_multiplicity"] = int(scfres.mol.spin) + 1
-
-    #
-    # Orbital reordering
-    #
-    # TODO This should not be needed any more
-    # adcc assumes that the occupied orbitals are specified first,
-    # followed by the virtual orbitals. Pyscf does this by means of the
-    # mo_occ numpy arrays, so we need to reorder in order to agree
-    # with what is expected in adcc.
-    #
-    # First build a structured numpy array with the negative occupation
-    # in the primary field and the energy in the secondary
-    # for each alpha and beta
-    order_array = (
-        np.array(list(zip(-mo_occ[0], mo_energy[0])),
-                 dtype=np.dtype("float,float")),
-        np.array(list(zip(-mo_occ[1], mo_energy[1])),
-                 dtype=np.dtype("float,float")),
-    )
-    sort_indices = tuple(np.argsort(ary) for ary in order_array)
-
-    # Use the indices which sort order_array (== stort_indices) to reorder
-    mo_occ = tuple(mo_occ[i][sort_indices[i]] for i in range(2))
-    mo_energy = tuple(mo_energy[i][sort_indices[i]] for i in range(2))
-    mo_coeff = tuple(mo_coeff[i][:, sort_indices[i]] for i in range(2))
-    fock = tuple(fock[i][sort_indices[i]][:, sort_indices[i]] for i in range(2))
-
-    #
-    # SCF orbitals and SCF results
-    #
-    data["occupation_f"] = np.hstack((mo_occ[0], mo_occ[1]))
-    data["orben_f"] = np.hstack((mo_energy[0], mo_energy[1]))
-    fullfock_ff = np.zeros((n_orbs, n_orbs))
-    fullfock_ff[:n_orbs_alpha, :n_orbs_alpha] = fock[0]
-    fullfock_ff[n_orbs_alpha:, n_orbs_alpha:] = fock[1]
-    data["fock_ff"] = fullfock_ff
-
-    non_canonical = np.max(np.abs(data["fock_ff"] - np.diag(data["orben_f"])))
-    if non_canonical > data["threshold"]:
-        raise ValueError("Running adcc on top of a non-canonical fock "
-                         "matrix is not implemented.")
-
-    cf_bf = np.hstack((mo_coeff[0], mo_coeff[1]))
-    data["orbcoeff_fb"] = cf_bf.transpose()
-
-    #
-    # ERI AO to MO transformation
-    #
-    if hasattr(scfres, "_eri") and scfres._eri is not None:
-        # eri is stored ... use it directly
-        eri_ao = scfres._eri
-    else:
-        # eri is not stored ... generate it now.
-        eri_ao = scfres.mol.intor('int2e', aosym='s8')
-
-    aro = slice(0, n_alpha)
-    bro = slice(n_orbs_alpha, n_orbs_alpha + n_beta)
-    arv = slice(n_alpha, n_orbs_alpha)
-    brv = slice(n_orbs_alpha + n_beta, n_orbs)
-
-    # compute full ERI tensor (with really everything)
-    eri = ao2mo.general(
-        eri_ao, (cf_bf, cf_bf, cf_bf, cf_bf), compact=False
-    )
-    eri = eri.reshape(n_orbs, n_orbs, n_orbs, n_orbs)
-    del eri_ao
-
-    # Adjust spin-forbidden blocks to be exactly zero
-    eri[aro, bro, :, :] = 0
-    eri[aro, brv, :, :] = 0
-    eri[arv, bro, :, :] = 0
-    eri[arv, brv, :, :] = 0
-
-    eri[bro, aro, :, :] = 0
-    eri[bro, arv, :, :] = 0
-    eri[brv, aro, :, :] = 0
-    eri[brv, arv, :, :] = 0
-
-    eri[:, :, aro, bro] = 0
-    eri[:, :, aro, brv] = 0
-    eri[:, :, arv, bro] = 0
-    eri[:, :, arv, brv] = 0
-
-    eri[:, :, bro, aro] = 0
-    eri[:, :, bro, arv] = 0
-    eri[:, :, brv, aro] = 0
-    eri[:, :, brv, arv] = 0
-
-    data["eri_ffff"] = eri
-
-    # Compute electric and nuclear multipole moments
-    charges = scfres.mol.atom_charges()
-    coords = scfres.mol.atom_coords()
-    data["multipoles"] = {
-        "nuclear_0": int(np.sum(charges)),
-        "nuclear_1": np.einsum('i,ix->x', charges, coords),
-        "elec_0": -int(n_alpha + n_beta),
-        "elec_1": scfres.mol.intor_symmetric('int1e_r', comp=3),
-    }
-
-    data["backend"] = "pyscf"
-    return data
-
-
 def import_scf(scfres):
-    # TODO This could be a bit more verbose
+    # TODO The error messages here could be a bit more verbose
 
     if not isinstance(scfres, scf.hf.SCF):
         raise InvalidReference("Unsupported type for backends.pyscf.import_scf.")
 
     if not scfres.converged:
-        raise InvalidReference("Cannot start an adc calculation on top of an SCF, "
-                               "which is not yet converged. Did you forget to run "
-                               "the kernel() or the scf() function of the pyscf scf "
-                               "object?")
+        raise InvalidReference("Cannot start an adc calculation on top of an SCF,"
+                               " which is not yet converged. Did you forget to"
+                               " run the kernel() or the scf() function of the"
+                               " pyscf scf object?")
 
     # TODO Check for point-group symmetry,
     #      check for density-fitting or choleski
 
-    # Try to determine whether we are restricted
-    if isinstance(scfres.mo_occ, list):
-        restricted = len(scfres.mo_occ) < 2
-    elif isinstance(scfres.mo_occ, np.ndarray):
-        restricted = scfres.mo_occ.ndim < 2
-    else:
-        raise InvalidReference("Unusual pyscf SCF class encountered. Could not "
-                               "determine restricted / unrestricted.")
-
-    if restricted:
-        return PyScfHFProvider(scfres)
-    else:
-        warnings.warn("Falling back to slow import for UHF result.")
-        return DataHfProvider(convert_scf_to_dict(scfres))
+    return PyScfHFProvider(scfres)
 
 
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
@@ -415,5 +232,59 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
     mf.conv_tol = conv_tol
     mf.conv_tol_grad = conv_tol_grad
     mf.max_cycle = max_iter
+    # since we want super tight convergence for tests,
+    # tweak the options for non-RHF systems
+    if multiplicity != 1:
+        mf.max_cycle += 500
+        mf.diis = scf.EDIIS()
+        mf.diis_space = 3
+        mf = scf.addons.frac_occ(mf)
     mf.kernel()
     return mf
+
+
+def run_core_hole(xyz, basis, charge=0, multiplicity=1,
+                  conv_tol=1e-12, conv_tol_grad=1e-8, max_iter=150):
+    mol = gto.M(
+        atom=xyz,
+        basis=basis,
+        unit="Bohr",
+        # spin in the pyscf world is 2S
+        spin=multiplicity - 1,
+        charge=charge,
+        # Disable commandline argument parsing in pyscf
+        parse_arg=False,
+        dump_input=False,
+        verbose=0,
+    )
+
+    # First normal run
+    mf = scf.UHF(mol)
+    mf.conv_tol = conv_tol
+    mf.conv_tol_grad = conv_tol_grad
+    mf.max_cycle = max_iter
+    # since we want super tight convergence for tests,
+    # tweak the options for non-RHF systems
+    if multiplicity != 1:
+        mf.max_cycle += 500
+        mf.diis = scf.EDIIS()
+        mf.diis_space = 3
+        mf = scf.addons.frac_occ(mf)
+    mf.kernel()
+
+    # make beta core hole
+    mo0 = tuple(c.copy() for c in mf.mo_coeff)
+    occ0 = tuple(o.copy() for o in mf.mo_occ)
+    occ0[1][0] = 0.0
+    dm0 = mf.make_rdm1(mo0, occ0)
+
+    # Run second SCF with MOM
+    mf_chole = scf.UHF(mol)
+    scf.addons.mom_occ_(mf_chole, mo0, occ0)
+    mf_chole.conv_tol = conv_tol
+    mf_chole.conv_tol_grad = conv_tol_grad
+    mf_chole.max_cycle += 500
+    mf_chole.diis = scf.EDIIS()
+    mf_chole.diis_space = 3
+    mf_chole.kernel(dm0)
+    return mf_chole

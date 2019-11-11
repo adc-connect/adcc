@@ -143,7 +143,9 @@ class VeloxChemEriBuilder(EriBuilder):
             slices_beta = [bro if x == "O" else brv for x in b]
 
             # automatically set ERI tensor's symmetry-equivalent blocks
-            trans_sym_blocks = get_symm_equivalent_transpositions_for_block(b, notation="chem")
+            trans_sym_blocks = get_symm_equivalent_transpositions_for_block(
+                b, notation="chem"
+            )
 
             # Slices for the spin-allowed blocks
             aaaa = SpinBlockSlice("aaaa", (slices_alpha[0], slices_alpha[1],
@@ -281,18 +283,19 @@ class VeloxChemHFProvider(HartreeFockProvider):
 
 
 def import_scf(scfdrv):
-    # TODO This could be a little more informative
+    # TODO The error messages in here could be a little more informative
 
     if not isinstance(scfdrv, vlx.scfrestdriver.ScfRestrictedDriver):
-        raise InvalidReference("Unsupported type for backends.veloxchem.import_scf.")
+        raise InvalidReference("Unsupported type for "
+                               "backends.veloxchem.import_scf.")
 
     if not hasattr(scfdrv, "task"):
         raise InvalidReference("Please attach the VeloxChem task to "
                                "the VeloxChem SCF driver")
 
     if not scfdrv.is_converged:
-        raise InvalidReference("Cannot start an adc calculation on top of an SCF, "
-                               "which is not converged.")
+        raise InvalidReference("Cannot start an adc calculation on top "
+                               "of an SCF, which is not converged.")
 
     provider = VeloxChemHFProvider(scfdrv)
     return provider

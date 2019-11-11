@@ -56,7 +56,7 @@ class TestDataHfProvdier(unittest.TestCase):
 
         # Import hfdata from dict
         compare_refstate_with_reference(data, refdata, spec, scfres=bdict,
-                                        compare_eri_almost_abs=True)
+                                        compare_eri="abs")
 
     def test_hdf5(self):
         data = cache.hfdata["cn_sto3g"]
@@ -91,4 +91,4 @@ class TestDataHfProvdier(unittest.TestCase):
 
             # Import hfdata from hdf5 file
             compare_refstate_with_reference(data, refdata, spec, scfres=fn,
-                                            compare_eri_almost_abs=True)
+                                            compare_eri="abs")

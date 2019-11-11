@@ -73,9 +73,10 @@ def available():
     if not __status:
         status = {
             "pyscf": is_module_available("pyscf", "1.5.0"),
-            "psi4": is_module_available("psi4", "1.2.1") and is_module_available("psi4.core"),
-            "veloxchem": is_module_available("veloxchem"),  # Exports no version info
-            "molsturm": is_module_available("molsturm"),    # Exports no version info
+            "psi4": (is_module_available("psi4", "1.3.0")
+                     and is_module_available("psi4.core")),
+            "veloxchem": is_module_available("veloxchem"),  # No version info
+            "molsturm": is_module_available("molsturm"),    # No version info
         }
     return sorted([b for b in status if status[b]])
 
@@ -141,8 +142,7 @@ def import_scf_results(res):
                               "type " + str(type(res)) + " implemented.")
 
 
-def run_hf(backend=None, xyz=None, basis="sto-3g", charge=0, multiplicity=1,
-           conv_tol=1e-12, conv_tol_grad=1e-8, max_iter=150):
+def run_hf(backend, xyz, basis, **kwargs):
     """
         Run a HF calculation with a specified backend, molecule, and SCF
         parameters
@@ -164,7 +164,8 @@ def run_hf(backend=None, xyz=None, basis="sto-3g", charge=0, multiplicity=1,
         if len(available()) == 0:
             raise RuntimeError(
                 "No supported host-program available as SCF backend. "
-                "See https://adc-connect.org/installation.html#install-hostprogram "
+                "See https://adc-connect.org/latest/"
+                "installation.html#install-hostprogram "
                 "for installation instructions."
             )
         else:
@@ -175,17 +176,18 @@ def run_hf(backend=None, xyz=None, basis="sto-3g", charge=0, multiplicity=1,
         raise ValueError("Backend {} not found.".format(backend))
     if backend == "psi4":
         from . import psi4 as backend_hf
+
     elif backend == "pyscf":
         from . import pyscf as backend_hf
+
     elif backend == "veloxchem":
         from . import veloxchem as backend_hf
+
     elif backend == "molsturm":
         from . import molsturm as backend_hf
+
     else:
         raise NotImplementedError("No run_hf function implemented for backend "
                                   "{}.".format(backend))
 
-    return backend_hf.run_hf(
-        xyz, basis, charge, multiplicity, conv_tol,
-        conv_tol_grad, max_iter
-    )
+    return backend_hf.run_hf(xyz, basis, **kwargs)

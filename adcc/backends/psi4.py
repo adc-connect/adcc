@@ -23,10 +23,10 @@
 import psi4
 import numpy as np
 
+from adcc.misc import cached_property
+
 from .InvalidReference import InvalidReference
 from .eri_build_helper import EriBuilder
-
-from adcc.misc import cached_property
 
 from libadcc import HartreeFockProvider
 
@@ -43,18 +43,19 @@ class Psi4OperatorIntegralProvider:
 
 
 class Psi4EriBuilder(EriBuilder):
-    def __init__(self, wfn, n_orbs, n_orbs_alpha, n_alpha, n_beta):
+    def __init__(self, wfn, n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted):
         self.wfn = wfn
         self.mints = psi4.core.MintsHelper(self.wfn)
-        super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta)
+        super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted)
 
     @property
-    def coeffs_occ_alpha(self):
-        return self.wfn.Ca_subset("AO", "OCC")
-
-    @property
-    def coeffs_virt_alpha(self):
-        return self.wfn.Ca_subset("AO", "VIR")
+    def coefficients(self):
+        return {
+            "Oa": self.wfn.Ca_subset("AO", "OCC"),
+            "Ob": self.wfn.Cb_subset("AO", "OCC"),
+            "Va": self.wfn.Ca_subset("AO", "VIR"),
+            "Vb": self.wfn.Cb_subset("AO", "VIR"),
+        }
 
     def compute_mo_eri(self, block, coeffs, use_cache=True):
         if block in self.eri_cache and use_cache:
@@ -66,20 +67,19 @@ class Psi4EriBuilder(EriBuilder):
 
 class Psi4HFProvider(HartreeFockProvider):
     """
-        This implementation is only valid for RHF
+        This implementation is only valid
+        if no orbital reordering is required.
     """
     def __init__(self, wfn):
         # Do not forget the next line,
         # otherwise weird errors result
         super().__init__()
-
-        if not isinstance(wfn, psi4.core.RHF):
-            raise InvalidReference("Only restricted references (RHF) are supported.")
-
         self.wfn = wfn
         self.eri_ffff = None
-        self.eri_builder = Psi4EriBuilder(self.wfn, self.n_orbs, self.wfn.nmo(),
-                                          wfn.nalpha(), wfn.nbeta())
+        self.eri_builder = Psi4EriBuilder(
+            self.wfn, self.n_orbs, self.wfn.nmo(), wfn.nalpha(), wfn.nbeta(),
+            self.restricted
+        )
         self.operator_integral_provider = Psi4OperatorIntegralProvider(self.wfn)
 
     def get_backend(self):
@@ -93,7 +93,7 @@ class Psi4HFProvider(HartreeFockProvider):
         return threshold
 
     def get_restricted(self):
-        return True  # TODO Hard-coded for now.
+        return isinstance(self.wfn, (psi4.core.RHF, psi4.core.ROHF))
 
     def get_energy_scf(self):
         return self.wfn.energy()
@@ -121,7 +121,8 @@ class Psi4HFProvider(HartreeFockProvider):
 
     def fill_orbcoeff_fb(self, out):
         mo_coeff_a = np.asarray(self.wfn.Ca())
-        mo_coeff = (mo_coeff_a, mo_coeff_a)
+        mo_coeff_b = np.asarray(self.wfn.Cb())
+        mo_coeff = (mo_coeff_a, mo_coeff_b)
         out[:] = np.transpose(
             np.hstack((mo_coeff[0], mo_coeff[1]))
         )
@@ -156,34 +157,35 @@ class Psi4HFProvider(HartreeFockProvider):
 
     def flush_cache(self):
         self.eri_ffff = None
-        self.eri_cache = None
+        self.eri_builder.flush_cache()
 
 
 def import_scf(wfn):
     if not isinstance(wfn, psi4.core.HF):
         raise InvalidReference(
             "Only psi4.core.HF and its subtypes are supported references in "
-            "backends.psi4.import_scf. This indicates that you passed an unsupported "
-            "SCF reference. Make sure you did a restricted or unrestricted HF "
-            "calculation."
+            "backends.psi4.import_scf. This indicates that you passed an "
+            "unsupported SCF reference. Make sure you did a restricted or "
+            "unrestricted HF calculation."
         )
 
-    if not isinstance(wfn, psi4.core.RHF):
-        raise InvalidReference("Right now only restricted references (RHF) are "
+    if not isinstance(wfn, (psi4.core.RHF, psi4.core.UHF)):
+        raise InvalidReference("Right now only RHF and UHF references are "
                                "supported for Psi4.")
 
     # TODO This is not fully correct, because the core.Wavefunction object
     #      has an internal, but py-invisible Options structure, which contains
     #      the actual set of options ... theoretically they could differ
     scf_type = psi4.core.get_global_option('SCF_TYPE')
-    unsupported_scf_types = ["CD", "DISK_DF", "MEM_DF"]  # Choleski or density-fitting
+    # CD = Choleski, DF = density-fitting
+    unsupported_scf_types = ["CD", "DISK_DF", "MEM_DF"]
     if scf_type in unsupported_scf_types:
         raise InvalidReference(f"Unsupported Psi4 SCF_TYPE, should not be one "
                                "of {unsupported_scf_types}")
 
     if wfn.nirrep() > 1:
-        raise InvalidReference("The passed Psi4 wave function object needs to have "
-                               "exactly one irrep, i.e. be of C1 symmetry.")
+        raise InvalidReference("The passed Psi4 wave function object needs to "
+                               "have exactly one irrep, i.e. be of C1 symmetry.")
 
     # Psi4 throws an exception if SCF is not converged, so there is no need
     # to assert that here.
@@ -199,24 +201,32 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
         "ccpvdz": "cc-pvdz",
     }
 
-    mol = psi4.geometry("""
+    mol = psi4.geometry(f"""
         {charge} {multiplicity}
         {xyz}
         symmetry c1
         units au
         no_reorient
         no_com
-        """.format(xyz=xyz, charge=charge, multiplicity=multiplicity))
+    """)
+
     psi4.core.be_quiet()
-    reference = "RHF"
+    psi4.set_options({
+        'basis': basissets.get(basis, basis),
+        'scf_type': 'pk',
+        'e_convergence': conv_tol,
+        'd_convergence': conv_tol_grad,
+        'maxiter': max_iter,
+        'reference': "RHF"
+    })
+
     if multiplicity != 1:
-        reference = "UHF"
-    psi4.set_options({'basis': basissets.get(basis, basis),
-                      'scf_type': 'pk',
-                      'e_convergence': conv_tol,
-                      'd_convergence': conv_tol_grad,
-                      'maxiter': max_iter,
-                      'reference': reference})
+        psi4.set_options({
+            'reference': "UHF",
+            'maxiter': max_iter + 500,
+            'soscf': 'true'
+        })
+
     _, wfn = psi4.energy('SCF', return_wfn=True, molecule=mol)
     psi4.core.clean()
     return wfn

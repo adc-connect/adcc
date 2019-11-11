@@ -89,7 +89,9 @@ class FormatExcitationVector:
 
     @property
     def linewidth(self):
-        """The width of an amplitude line if a tensor is formatted with this class"""
+        """
+        The width of an amplitude line if a tensor is formatted with this class
+        """
         # TODO This assumes a PP ADC matrix
         if self.matrix.blocks == ["s"]:
             nblk = 2
@@ -379,7 +381,8 @@ class ExcitedStates:
             Show the norms of the (1p1h, 2p2h, ...) blocks of the excited states,
             by default ``True``.
         """
-        # TODO This function is quite horrible and definitely needs some refactoring
+        # TODO This function is quite horrible and definitely needs some
+        #      refactoring
 
         eV = constants.value("Hartree energy in eV")
         has_dipole = "electric_dipole" in self.operators.available

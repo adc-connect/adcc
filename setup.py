@@ -25,8 +25,8 @@
 import os
 import sys
 import glob
-import setuptools
 import warnings
+import setuptools
 
 from os.path import join
 
@@ -61,7 +61,8 @@ def get_adccore_data():
     from AdcCore import AdcCore, get_platform
 
     adccore = AdcCore()
-    if not adccore.is_config_file_present or adccore.version != adccore_version[0] \
+    if not adccore.is_config_file_present \
+       or adccore.version != adccore_version[0] \
        or adccore.platform != get_platform():
         # Get this version by building it or downloading it
         adccore.obtain(*adccore_version)
@@ -89,9 +90,10 @@ class LinkerDynamic:
 
         for conf in ["/etc/ld.so.conf"] + glob.glob("/etc/ld.so.conf.d/*.conf"):
             if not os.path.isfile(conf):
-                warnings.warn("Resolving configuration file {} failed. Probably"
-                              " the file has been remove during distribution upgrade"
-                              " and only a symbolic link to the removed file is left.".format(conf))
+                warnings.warn("Resolving configuration file {} failed. Probably "
+                              "the file has been remove during distribution "
+                              "upgrade and only a symbolic link to the removed "
+                              "file is left.".format(conf))
                 continue
             with open(conf, "r") as fp:
                 for line in fp:
@@ -120,7 +122,8 @@ def adccsetup(*args, **kwargs):
     except Exception as e:
         url = kwargs["url"] + "/installation.html"
         raise RuntimeError("Unfortunately adcc setup.py failed.\n"
-                           "For hints how to install adcc, see {}.".format(url)) from e
+                           "For hints how to install adcc, see {}."
+                           "".format(url)) from e
 
 
 #
