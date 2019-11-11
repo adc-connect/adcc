@@ -36,35 +36,15 @@ from adcc.testdata import geometry
 
 import pytest
 
-if have_backend("pyscf"):
-    from pyscf import gto, scf
-
 basissets = ["sto3g", "ccpvdz"]
 
 
 @expand_test_templates(basissets)
 @pytest.mark.skipif(not have_backend("pyscf"), reason="pyscf not found.")
 class TestPyscf(unittest.TestCase):
-    def run_core_hole(self, mol):
-        # First normal run
-        mf = scf.UHF(mol)
-        mf.conv_tol = 1e-12
-        mf.kernel()
-
-        # make beta core hole
-        mo0 = tuple(c.copy() for c in mf.mo_coeff)
-        occ0 = tuple(o.copy() for o in mf.mo_occ)
-        occ0[1][0] = 0.0
-        dm0 = mf.make_rdm1(mo0, occ0)
-
-        # Run second SCF with MOM
-        chole = scf.UHF(mol)
-        scf.addons.mom_occ_(chole, mo0, occ0)
-        chole.conv_tol = 1e-12
-        chole.kernel(dm0)
-        return chole
-
     def base_test(self, scfres):
+        from pyscf import scf
+
         hfdata = adcc.backends.import_scf_results(scfres)
         assert hfdata.backend == "pyscf"
 
@@ -156,12 +136,7 @@ class TestPyscf(unittest.TestCase):
         operator_import_test(mf, list(ao_dip))
 
     def test_h2o_sto3g_core_hole(self):
-        mol = gto.M(
-            atom=geometry.xyz["h2o"],
-            basis='sto-3g',
-            unit="Bohr",
-            # needed to disable commandline argument parsing in pyscf
-            parse_arg=False,
-        )
-        mf = self.run_core_hole(mol)
+        from adcc.backends.pyscf import run_core_hole
+
+        mf = run_core_hole(geometry.xyz["h2o"], "sto3g")
         self.base_test(mf)

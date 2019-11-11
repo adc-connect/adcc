@@ -241,3 +241,50 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
         mf = scf.addons.frac_occ(mf)
     mf.kernel()
     return mf
+
+
+def run_core_hole(xyz, basis, charge=0, multiplicity=1,
+                  conv_tol=1e-12, conv_tol_grad=1e-8, max_iter=150):
+    mol = gto.M(
+        atom=xyz,
+        basis=basis,
+        unit="Bohr",
+        # spin in the pyscf world is 2S
+        spin=multiplicity - 1,
+        charge=charge,
+        # Disable commandline argument parsing in pyscf
+        parse_arg=False,
+        dump_input=False,
+        verbose=0,
+    )
+
+    # First normal run
+    mf = scf.UHF(mol)
+    mf.conv_tol = conv_tol
+    mf.conv_tol_grad = conv_tol_grad
+    mf.max_cycle = max_iter
+    # since we want super tight convergence for tests,
+    # tweak the options for non-RHF systems
+    if multiplicity != 1:
+        mf.max_cycle += 500
+        mf.diis = scf.EDIIS()
+        mf.diis_space = 3
+        mf = scf.addons.frac_occ(mf)
+    mf.kernel()
+
+    # make beta core hole
+    mo0 = tuple(c.copy() for c in mf.mo_coeff)
+    occ0 = tuple(o.copy() for o in mf.mo_occ)
+    occ0[1][0] = 0.0
+    dm0 = mf.make_rdm1(mo0, occ0)
+
+    # Run second SCF with MOM
+    mf_chole = scf.UHF(mol)
+    scf.addons.mom_occ_(mf_chole, mo0, occ0)
+    mf_chole.conv_tol = conv_tol
+    mf_chole.conv_tol_grad = conv_tol_grad
+    mf_chole.max_cycle += 500
+    mf_chole.diis = scf.EDIIS()
+    mf_chole.diis_space = 3
+    mf_chole.kernel(dm0)
+    return mf_chole
