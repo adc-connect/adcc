@@ -121,9 +121,9 @@ class TestPyscf(unittest.TestCase):
         ao_dip = mf.mol.intor_symmetric('int1e_r', comp=3)
         operator_import_test(mf, list(ao_dip))
 
-    def template_uhf_h2o(self, basis):
+    def template_uhf_ch2nh2(self, basis):
         mf = adcc.backends.run_hf(
-            "pyscf", geometry.xyz["h2o"], basis, multiplicity=3
+            "pyscf", geometry.xyz["ch2nh2"], basis, multiplicity=2
         )
         self.base_test(mf)
 

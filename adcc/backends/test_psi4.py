@@ -117,9 +117,9 @@ class TestPsi4(unittest.TestCase):
         ao_dip = [np.array(comp) for comp in mints.ao_dipole()]
         operator_import_test(wfn, ao_dip)
 
-    def template_uhf_h2o(self, basis):
-        wfn = adcc.backends.run_hf("psi4", geometry.xyz["h2o"], basis,
-                                   multiplicity=3)
+    def template_uhf_ch2nh2(self, basis):
+        wfn = adcc.backends.run_hf("psi4", geometry.xyz["ch2nh2"], basis,
+                                   multiplicity=2)
         self.base_test(wfn)
 
         # Test ERI

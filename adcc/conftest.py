@@ -64,7 +64,8 @@ def pytest_addoption(parser):
 
 
 def pytest_collection_modifyitems(config, items):
-    slowcases = ["h2o_def2tzvp", "h2o_ccpvdz", "cn_ccpvdz", "h2s_6311g"]
+    slowcases = ["h2o_def2tzvp", "h2o_ccpvdz", "cn_ccpvdz",
+                 "h2s_6311g", "ch2nh2_ccpvdz"]
 
     if config.getoption("mode") == "fast":
         skip_slow = pytest.mark.skip(reason="need '--mode full' option to run.")
