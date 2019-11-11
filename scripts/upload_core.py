@@ -89,7 +89,8 @@ def upload_tarball(filename):
     if ":" in target:  # Remote deployment
         host, tdir = target.split(":")
         command = "put {} {}/".format(filename, tdir)
-        subprocess.run(["sftp", "-b", "-", host], input=command.encode(), check=True)
+        subprocess.run(["sftp", "-b", "-", host], input=command.encode(),
+                       check=True)
     else:  # Dummy local deployment
         subprocess.run(["cp", filename, target], check=True)
 

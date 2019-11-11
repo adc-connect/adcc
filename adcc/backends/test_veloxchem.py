@@ -130,7 +130,8 @@ class TestVeloxchem(unittest.TestCase):
 
         # Test dipole
         dipole_drv = vlx.ElectricDipoleIntegralsDriver(scfdrv.task.mpi_comm)
-        dipole_mats = dipole_drv.compute(scfdrv.task.molecule, scfdrv.task.ao_basis)
+        dipole_mats = dipole_drv.compute(scfdrv.task.molecule,
+                                         scfdrv.task.ao_basis)
         integrals = (dipole_mats.x_to_numpy(), dipole_mats.y_to_numpy(),
                      dipole_mats.z_to_numpy())
         operator_import_test(scfdrv, integrals)

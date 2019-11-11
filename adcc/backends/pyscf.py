@@ -117,8 +117,8 @@ class PyScfHFProvider(HartreeFockProvider):
         elif isinstance(self.scfres.mo_occ, np.ndarray):
             restricted = self.scfres.mo_occ.ndim < 2
         else:
-            raise InvalidReference("Unusual pyscf SCF class encountered. Could not "
-                                   "determine restricted / unrestricted.")
+            raise InvalidReference("Unusual pyscf SCF class encountered. Could "
+                                   "not determine restricted / unrestricted.")
         return restricted
 
     def get_energy_scf(self):
@@ -203,10 +203,10 @@ def import_scf(scfres):
         raise InvalidReference("Unsupported type for backends.pyscf.import_scf.")
 
     if not scfres.converged:
-        raise InvalidReference("Cannot start an adc calculation on top of an SCF, "
-                               "which is not yet converged. Did you forget to run "
-                               "the kernel() or the scf() function of the pyscf scf "
-                               "object?")
+        raise InvalidReference("Cannot start an adc calculation on top of an SCF,"
+                               " which is not yet converged. Did you forget to"
+                               " run the kernel() or the scf() function of the"
+                               " pyscf scf object?")
 
     # TODO Check for point-group symmetry,
     #      check for density-fitting or choleski

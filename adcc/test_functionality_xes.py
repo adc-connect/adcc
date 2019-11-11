@@ -48,8 +48,10 @@ class TestFunctionalityXes(unittest.TestCase):
 
         # Computing the dipole moment implies a lot of cancelling in the
         # contraction, which has quite an impact on the accuracy.
-        assert_allclose(state.oscillator_strengths, ref["oscillator_strengths"], atol=1e-4)
-        assert_allclose(state.state_dipole_moments, ref["state_dipole_moments"], atol=1e-4)
+        assert_allclose(state.oscillator_strengths, ref["oscillator_strengths"],
+                        atol=1e-4)
+        assert_allclose(state.state_dipole_moments, ref["state_dipole_moments"],
+                        atol=1e-4)
 
     def test_h2o_sto3g_adc2x_xes_singlets(self):
         ref = {}

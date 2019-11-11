@@ -73,9 +73,10 @@ def available():
     if not __status:
         status = {
             "pyscf": is_module_available("pyscf", "1.5.0"),
-            "psi4": is_module_available("psi4", "1.3.0") and is_module_available("psi4.core"),
-            "veloxchem": is_module_available("veloxchem"),  # Exports no version info
-            "molsturm": is_module_available("molsturm"),    # Exports no version info
+            "psi4": (is_module_available("psi4", "1.3.0")
+                     and is_module_available("psi4.core")),
+            "veloxchem": is_module_available("veloxchem"),  # No version info
+            "molsturm": is_module_available("molsturm"),    # No version info
         }
     return sorted([b for b in status if status[b]])
 
@@ -163,7 +164,8 @@ def run_hf(backend, xyz, basis, **kwargs):
         if len(available()) == 0:
             raise RuntimeError(
                 "No supported host-program available as SCF backend. "
-                "See https://adc-connect.org/installation.html#install-hostprogram "
+                "See https://adc-connect.org/latest/"
+                "installation.html#install-hostprogram "
                 "for installation instructions."
             )
         else:

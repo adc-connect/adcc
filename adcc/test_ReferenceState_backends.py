@@ -62,7 +62,8 @@ class TestBackendsImportReferenceData(unittest.TestCase):
 
         scfres = cached_backend_hf(backend, molecule, basis, multiplicity)
         compare_refstate_with_reference(data, reference, case, scfres,
-                                        compare_orbcoeff=False, compare_eri=compare_eri)
+                                        compare_orbcoeff=False,
+                                        compare_eri=compare_eri)
 
     def template_generic(self, case, backend):
         self.base_test(case, backend, "gen")

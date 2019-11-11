@@ -164,9 +164,9 @@ def import_scf(wfn):
     if not isinstance(wfn, psi4.core.HF):
         raise InvalidReference(
             "Only psi4.core.HF and its subtypes are supported references in "
-            "backends.psi4.import_scf. This indicates that you passed an unsupported "
-            "SCF reference. Make sure you did a restricted or unrestricted HF "
-            "calculation."
+            "backends.psi4.import_scf. This indicates that you passed an "
+            "unsupported SCF reference. Make sure you did a restricted or "
+            "unrestricted HF calculation."
         )
 
     if not isinstance(wfn, (psi4.core.RHF, psi4.core.UHF)):
@@ -177,14 +177,15 @@ def import_scf(wfn):
     #      has an internal, but py-invisible Options structure, which contains
     #      the actual set of options ... theoretically they could differ
     scf_type = psi4.core.get_global_option('SCF_TYPE')
-    unsupported_scf_types = ["CD", "DISK_DF", "MEM_DF"]  # Choleski or density-fitting
+    # CD = Choleski, DF = density-fitting
+    unsupported_scf_types = ["CD", "DISK_DF", "MEM_DF"]
     if scf_type in unsupported_scf_types:
         raise InvalidReference(f"Unsupported Psi4 SCF_TYPE, should not be one "
                                "of {unsupported_scf_types}")
 
     if wfn.nirrep() > 1:
-        raise InvalidReference("The passed Psi4 wave function object needs to have "
-                               "exactly one irrep, i.e. be of C1 symmetry.")
+        raise InvalidReference("The passed Psi4 wave function object needs to "
+                               "have exactly one irrep, i.e. be of C1 symmetry.")
 
     # Psi4 throws an exception if SCF is not converged, so there is no need
     # to assert that here.

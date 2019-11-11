@@ -41,14 +41,16 @@ class MemoryPool(libadcc.AdcMemory):
 
         tensor_block_size : int, optional
             This parameter roughly has the meaning of how many indices are handled
-            together on operations. A good value is 16 for most nowaday CPU cachelines.
+            together on operations. A good value is 16 for most nowaday CPU
+            cachelines.
 
         pagefile_prefix : str, optional
             Directory prefix for storing temporary cache files.
 
         allocator : str, optional
-            The allocator to be used. Valid values are "libxm", "standard" (libstc++
-            allocator) and "default", where "default" uses the best-available default.
+            The allocator to be used. Valid values are "libxm", "standard"
+            (libstc++ allocator) and "default", where "default" uses the
+            best-available default.
         """
         if allocator not in ["standard", "default"]:
             if allocator not in libadcc.__features__:

@@ -52,13 +52,17 @@ def has_mkl_numpy():
                    for lib in numpy.__config__.blas_mkl_info.get("libraries", {}))
     except ImportError as e:
         if "mkl" in str(e):
-            # numpy seems to be installed and linked against MKL, but mkl was not found.
-            raise ImportError("Trying to import numpy for MKL check, but obtained an "
-                              "import error indicating a missing MKL dependency. "
-                              "Did you load the MKL modules properly?") from e
+            # numpy seems to be installed and linked against MKL,
+            # but mkl was not found.
+            raise ImportError(
+                "Trying to import numpy for MKL check, but obtained an "
+                "import error indicating a missing MKL dependency. "
+                "Did you load the MKL modules properly?"
+            ) from e
 
-        # This indicates a missing numpy or a big error in numpy. It's best to assume
-        # MKL is not there and (potentially) install the non-mkl version from pypi
+        # This indicates a missing numpy or a big error in numpy. It's best
+        # to assume MKL is not there and (potentially) install the non-mkl
+        # version from pypi
         return False
 
 
@@ -117,7 +121,8 @@ class AdcCore:
     def checkout(self, version):
         """Checkout adccore source code in the given version if possible"""
         if not self.upstream:
-            raise RuntimeError("Cannot checkout adccore, since upstream not known.")
+            raise RuntimeError("Cannot checkout adccore, since upstream "
+                               "not known.")
         subprocess.check_call(["git", "clone", self.upstream, self.source_dir])
 
         olddir = os.getcwd()
@@ -149,7 +154,8 @@ class AdcCore:
             features += ["mkl"]
 
         build_dir = join(self.source_dir, "build")
-        build_adccore.build_install(build_dir, self.install_dir, features=features)
+        build_adccore.build_install(build_dir, self.install_dir,
+                                    features=features)
 
     def build_documentation(self):
         """Build adccore documentation. Only valid if has_source is true"""
@@ -170,8 +176,8 @@ class AdcCore:
     def file_globs(self):
         """
         Return the file globs to be applied relative to the top directory of the
-        repository in order to obtain all files relevant for the binary distribution
-        of adccore.
+        repository in order to obtain all files relevant for the binary
+        distribution of adccore.
         """
         return [
             self.install_dir + "/adccore_config.json",
@@ -204,14 +210,15 @@ class AdcCore:
             local = tmpdir + "/" + fn
             status_code = request_urllib(base_url + "/" + fn, local)
             if status_code < 200 or status_code >= 300:
-                msg = ("Could not download adccore version {} for platform {} from {}."
-                       "".format(version, get_platform(), base_url))
+                msg = ("Could not download adccore version {} for platform {} "
+                       "from {}.".format(version, get_platform(), base_url))
                 if 400 <= status_code < 500:
                     # Either an unsupported version or an error on our end
-                    msg += (" This should not have happened and either this means your"
-                            " platform / OS / architecture is unsupported or that there"
-                            " is a bug in adcc. Please check the adcc installation"
-                            " instructions (https://adc-connect.org/installation.html)"
+                    msg += (" This should not have happened and either this means"
+                            " your platform / OS / architecture is unsupported or"
+                            " that there is a bug in adcc. Please check the adcc "
+                            " installation instructions"
+                            " (https://adc-connect.org/latest/installation.html)"
                             " and if in doubt, please open an issue on github.")
                 raise RuntimeError(msg)
 

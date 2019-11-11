@@ -118,7 +118,8 @@ class TestPsi4(unittest.TestCase):
         operator_import_test(wfn, ao_dip)
 
     def template_uhf_h2o(self, basis):
-        wfn = adcc.backends.run_hf("psi4", geometry.xyz["h2o"], basis, multiplicity=3)
+        wfn = adcc.backends.run_hf("psi4", geometry.xyz["h2o"], basis,
+                                   multiplicity=3)
         self.base_test(wfn)
 
         # Test ERI
