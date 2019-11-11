@@ -73,7 +73,7 @@ def available():
     if not __status:
         status = {
             "pyscf": is_module_available("pyscf", "1.5.0"),
-            "psi4": is_module_available("psi4", "1.2.1") and is_module_available("psi4.core"),
+            "psi4": is_module_available("psi4", "1.3.0") and is_module_available("psi4.core"),
             "veloxchem": is_module_available("veloxchem"),  # Exports no version info
             "molsturm": is_module_available("molsturm"),    # Exports no version info
         }
