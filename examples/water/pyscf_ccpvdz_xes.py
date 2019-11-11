@@ -25,7 +25,7 @@ print("Water SCF energy", mf.energy_tot())
 # Make a core hole
 mo0 = copy.deepcopy(mf.mo_coeff)
 occ0 = copy.deepcopy(mf.mo_occ)
-occ0[0][0] = 0.0  # alpha core hole
+occ0[1][0] = 0.0  # beta core hole
 dm = mf.make_rdm1(mo0, occ0)
 
 mf_core = scf.UHF(mol)
