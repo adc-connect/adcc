@@ -141,8 +141,7 @@ def import_scf_results(res):
                               "type " + str(type(res)) + " implemented.")
 
 
-def run_hf(backend=None, xyz=None, basis="sto-3g", charge=0, multiplicity=1,
-           conv_tol=1e-12, conv_tol_grad=1e-8, max_iter=150):
+def run_hf(backend, xyz, basis, **kwargs):
     """
         Run a HF calculation with a specified backend, molecule, and SCF
         parameters
@@ -175,17 +174,18 @@ def run_hf(backend=None, xyz=None, basis="sto-3g", charge=0, multiplicity=1,
         raise ValueError("Backend {} not found.".format(backend))
     if backend == "psi4":
         from . import psi4 as backend_hf
+
     elif backend == "pyscf":
         from . import pyscf as backend_hf
+
     elif backend == "veloxchem":
         from . import veloxchem as backend_hf
+
     elif backend == "molsturm":
         from . import molsturm as backend_hf
+
     else:
         raise NotImplementedError("No run_hf function implemented for backend "
                                   "{}.".format(backend))
 
-    return backend_hf.run_hf(
-        xyz, basis, charge, multiplicity, conv_tol,
-        conv_tol_grad, max_iter
-    )
+    return backend_hf.run_hf(xyz, basis, **kwargs)
