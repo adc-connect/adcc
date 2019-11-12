@@ -29,7 +29,8 @@ from .AdcMethod import AdcMethod
 from .FormatIndex import (FormatIndexAdcc, FormatIndexBase,
                           FormatIndexHfProvider, FormatIndexHomoLumo)
 from .visualisation import ExcitationSpectrum
-from .state_densities import compute_gs2state_optdm, compute_state_diffdm
+from .state_densities import (compute_gs2state_optdm, compute_state_diffdm,
+                              compute_state2state_optdm)
 from .OneParticleOperator import product_trace
 from .FormatDominantElements import FormatDominantElements
 
@@ -235,6 +236,17 @@ class ExcitedStates:
             [product_trace(comp, tdm) for comp in dipole_integrals]
             for tdm in self.transition_dms
         ])
+
+    @timed_member_call(timer="_property_timer")
+    def state2state_transition_dms(self, from_state=0):
+        return [
+            compute_state2state_optdm(
+                self.property_method, self.ground_state,
+                self.excitation_vectors[from_state],
+                self.excitation_vectors[to_state]
+            ) for to_state in range(len(self.excitation_vectors))
+            if to_state != from_state
+        ]
 
     @cached_property
     def oscillator_strengths(self):

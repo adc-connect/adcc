@@ -26,6 +26,7 @@ from .misc import expand_test_templates
 from adcc.testdata.cache import cache
 
 from pytest import approx
+import numpy as np
 
 # The methods to test
 basemethods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
@@ -146,3 +147,29 @@ class TestStateGroundToExcitedTdm(unittest.TestCase, Runners):
             dm_ao_b = dm_ao_b.to_ndarray()
             assert dm_ao_a == approx(refdens_a[i])
             assert dm_ao_b == approx(refdens_b[i])
+
+
+class TestStateExcitedToExcitedTdm(unittest.TestCase, Runners):
+    def base_test(self, system, method, kind):
+        method = method.replace("_", "-")
+
+        refdata = cache.reference_data[system]
+        state = cache.adc_states[system][method][kind]
+
+        state_to_state = refdata[method][kind]["state_to_state"]
+        refevals = refdata[method][kind]["eigenvalues"]
+        for i in range(len(state.excitation_vectors)):
+            # Check that we are talking about the same state when
+            # comparing reference and computed
+            assert state.excitation_energies[i] == refevals[i]
+
+            fromi_ref_a = state_to_state[f"from_{i}"]["state_to_excited_tdm_bb_a"]
+            fromi_ref_b = state_to_state[f"from_{i}"]["state_to_excited_tdm_bb_b"]
+
+            tdms = state.state2state_transition_dms(from_state=i)
+            for j, tdm in enumerate(tdms):
+                dm_ao_a, dm_ao_b = tdm.to_ao_basis()
+                dm_ao_a = dm_ao_a.to_ndarray()
+                dm_ao_b = dm_ao_b.to_ndarray()
+                np.testing.assert_allclose(dm_ao_a, fromi_ref_a[j])
+                np.testing.assert_allclose(dm_ao_b, fromi_ref_b[j])
