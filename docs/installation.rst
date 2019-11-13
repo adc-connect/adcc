@@ -73,7 +73,7 @@ Make sure to have XCode and the command line tools installed.
    .. code-block:: shell
 
       pip install pybind11     # Install pybind11 first to suppress some error messages
-      pip install adcc   # Install adcc
+      pip install adcc
 
 .. _install-hostprogram:
 
@@ -137,8 +137,7 @@ Troubleshooting
 If the installation of adcc fails due to an issue with compiling the
 python extension, check the following:
 
-- Make sure your ``pip`` uses ``gcc`` and not ``clang`` or any other compiler
-  for compiling the ``adcc`` extension.
-  To enforce using ``gcc`` (e.g. one from Homebrew or a custom openblas installation),
-  set the environment variables ``CC`` and ``CXX`` to the full path of your C and C++
-  compilers, respectively.
+- Make sure your ``pip`` uses the correct compiler. On Linux we only support
+  ``gcc`` and not ``clang``. On MacOS we only support Apple ``clang`` and
+  not ``gcc``. To enforce a compiler, set the environment variables ``CC`` and ``CXX``
+  to the full path of your C and C++ compilers, respectively.
