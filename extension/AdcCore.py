@@ -234,11 +234,11 @@ class AdcCore:
             subprocess.run(["tar", "xf", local], check=True)
             os.chdir(olddir)
 
-    def obtain(self, version, postfix=None):
+    def obtain(self, version, postfix=None, allow_checkout=True):
         """Obtain the library in some way."""
         if self.has_source:
             self.build()
-        elif self.upstream:
+        elif allow_checkout and self.upstream:
             self.checkout(version)
             self.build()
         else:

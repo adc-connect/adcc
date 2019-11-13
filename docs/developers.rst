@@ -138,9 +138,14 @@ you need to run
 This is done to avoid automatically overwriting some development changes
 you might have made inside ``adccore``.
 
+Finally, if you want to locally test one of the other methods of obtaining
+``adccore``, the automatic checkout of the ``adccore`` source code
+can be disabled by defining the environment variable ``DISABLE_ADCCORE_CHECKOUT``
+(to any value).
+
 
 Building adccore with MKL support
----------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you have full source code access
 and you are able to follow the :ref:`adccore-sources`,

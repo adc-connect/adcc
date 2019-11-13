@@ -64,8 +64,11 @@ def get_adccore_data():
     if not adccore.is_config_file_present \
        or adccore.version != adccore_version[0] \
        or adccore.platform != get_platform():
+        # Is a checkout of adccore ok?
+        disable_checkout = "DISABLE_ADCCORE_CHECKOUT" in os.environ
+
         # Get this version by building it or downloading it
-        adccore.obtain(*adccore_version)
+        adccore.obtain(*adccore_version, allow_checkout=not disable_checkout)
 
     if adccore.version != adccore_version[0]:
         raise RuntimeError(
