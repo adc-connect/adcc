@@ -183,7 +183,7 @@ class BuildExt(BuildCommand):
         if adccore.has_source:
             adccore.build()  # Update adccore if required
 
-        opts = []
+        opts = ["-Werror"]
         if sys.platform == "darwin":
             potential_opts = ["-stdlib=libc++", "-mmacosx-version-min=10.7"]
             opts.extend([opt for opt in potential_opts
@@ -191,7 +191,7 @@ class BuildExt(BuildCommand):
         if self.compiler.compiler_type == "unix":
             opts.append(cpp_flag(self.compiler))
             potential_opts = [
-                "-fvisibility=hidden", "-Werror", "-Wall", "-Wextra",
+                "-fvisibility=hidden", "-Wall", "-Wextra",
                 "-pedantic", "-Wnon-virtual-dtor", "-Woverloaded-virtual",
                 "-Wcast-align", "-Wconversion", "-Wsign-conversion",
                 "-Wmisleading-indentation", "-Wduplicated-cond",
@@ -361,8 +361,8 @@ adccsetup(
     python_requires=">=3.6",
     install_requires=[
         "pybind11 >= 2.2",
-        "numpy >= 1.13",      # Maybe even higher?
-        "scipy >= 1.2",       # Maybe also lower?
+        "numpy >= 1.14",
+        "scipy >= 1.2",
         "matplotlib >= 3.0",  # Maybe also lower?
         "h5py >= 2.9",        # Maybe also lower?
         "tqdm >= 4.30",       # Maybe also lower?
