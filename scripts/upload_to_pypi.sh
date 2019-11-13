@@ -29,6 +29,8 @@ if [ ! -f extension/adccore/adccore_config.json ]; then
 	exit 1
 fi
 
+read -p "Do you really want to manually upload to pypi? >" RES
+
 rm -rf dist
 python3 setup.py build_ext
 python3 setup.py sdist  # bdist_wheel  (binary wheels for linux not supported)
