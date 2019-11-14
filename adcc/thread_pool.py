@@ -20,13 +20,11 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import os
+
 from libadcc import ThreadPool
 
-try:
-    import multiprocessing
-
-    n_cpus = multiprocessing.cpu_count()
-except ImportError:
-    n_cpus = 1
-
-thread_pool = ThreadPool(n_cpus, 2 * n_cpus - 1)
+thread_pool = ThreadPool()
+if os.cpu_count():
+    # Initialise parallelisation
+    thread_pool.reinit(os.cpu_count())

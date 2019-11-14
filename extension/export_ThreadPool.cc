@@ -30,7 +30,7 @@ namespace py = pybind11;
 static std::string ThreadPool___repr__(const ThreadPool& self) {
   std::stringstream ss;
   ss << "ThreadPool("
-     << "n_cores = " << self.n_cores() << ", n_threads = " << self.n_threads() << ")";
+     << "n_cores = " << self.n_cores() << ")";
   return ss.str();
 }
 
@@ -38,15 +38,13 @@ void export_ThreadPool(py::module& m) {
   py::class_<ThreadPool, std::shared_ptr<ThreadPool>>(
         m, "ThreadPool",
         "Class providing access to the thread pool and the adcc parallelisation.")
-        .def(py::init<>())
-        .def(py::init<size_t, size_t>(),
-             "Initialise the parallelisation by providing the number of cores and the "
-             "number of threads to use.")
-        .def("reinit", &ThreadPool::reinit,
-             "Reinitialise the parallelisation by providing the number of cores and the "
-             "number of threads to use.")
+        .def(py::init<>(), "Initialise a thread pool for serial execution.")
+        .def(
+              "reinit",
+              // TODO testing suggests n_threads = n_cores + 1 is slightly better
+              [](ThreadPool& tp, size_t n_cores) { tp.reinit(n_cores, 2 * n_cores - 1); },
+              "Reinitialise the parallelisation by providing the number of cores to use.")
         .def_property_readonly("n_cores", &ThreadPool::n_cores)
-        .def_property_readonly("n_threads", &ThreadPool::n_threads)
         .def("__repr__", &ThreadPool___repr__)
         //
         ;
