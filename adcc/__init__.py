@@ -31,7 +31,6 @@ from .functions import (add, contract, copy, divide, dot, empty_like,
                         linear_combination, multiply, nosym_like, ones_like,
                         subtract, transpose, zeros_like)
 from .memory_pool import memory_pool
-from .thread_pool import thread_pool
 from .ExcitedStates import ExcitedStates
 from .DataHfProvider import DataHfProvider, DictHfProvider
 from .ReferenceState import ReferenceState
@@ -39,7 +38,7 @@ from .caching_policy import DefaultCachingPolicy, GatherStatisticsPolicy
 from .AmplitudeVector import AmplitudeVector
 from .OneParticleOperator import OneParticleOperator
 
-from libadcc import HartreeFockProvider
+from libadcc import HartreeFockProvider, thread_pool
 
 # This has to be the last set of import
 from .guess import (guess_symmetries, guess_zero, guesses_any, guesses_singlet,

@@ -17,6 +17,7 @@
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include <adcc/ThreadPool.hh>
 #include <adcc/exceptions.hh>
 #include <adcc/metadata.hh>
 #include <pybind11/pybind11.h>
@@ -43,6 +44,7 @@ void export_ReferenceState(py::module& m);
 void export_Symmetry(py::module& m);
 void export_Tensor(py::module& m);
 void export_ThreadPool(py::module& m);
+void ThreadPool_set_n_cores(std::shared_ptr<ThreadPool> ptr, size_t n_cores);
 }  // namespace py_iface
 }  // namespace adcc
 
@@ -95,6 +97,16 @@ PYBIND11_MODULE(libadcc, m) {
     components.append(d);
   }
   m.attr("__components__") = components;
+
+  // Setup thread-pool
+  auto pool_ptr = std::make_shared<adcc::ThreadPool>();
+  try {
+    const size_t n_cpus = py::module::import("os").attr("cpu_count")().cast<size_t>();
+    adcc::py_iface::ThreadPool_set_n_cores(pool_ptr, n_cpus);
+  } catch (py::cast_error& c) {
+    // Single-threaded setup
+  }
+  m.attr("thread_pool") = pool_ptr;
 
   py::register_exception_translator([](std::exception_ptr p) {
     try {

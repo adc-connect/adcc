@@ -34,17 +34,17 @@ static std::string ThreadPool___repr__(const ThreadPool& self) {
   return ss.str();
 }
 
+void ThreadPool_set_n_cores(std::shared_ptr<ThreadPool> ptr, size_t n_cores) {
+  // TODO testing suggests n_threads = n_cores + 1 is slightly better
+  ptr->reinit(n_cores, 2 * n_cores - 1);
+}
+
 void export_ThreadPool(py::module& m) {
   py::class_<ThreadPool, std::shared_ptr<ThreadPool>>(
         m, "ThreadPool",
         "Class providing access to the thread pool and the adcc parallelisation.")
-        .def(py::init<>(), "Initialise a thread pool for serial execution.")
-        .def(
-              "reinit",
-              // TODO testing suggests n_threads = n_cores + 1 is slightly better
-              [](ThreadPool& tp, size_t n_cores) { tp.reinit(n_cores, 2 * n_cores - 1); },
-              "Reinitialise the parallelisation by providing the number of cores to use.")
-        .def_property_readonly("n_cores", &ThreadPool::n_cores)
+        .def_property("n_cores", &ThreadPool::n_cores, &ThreadPool_set_n_cores,
+                      "Get or set the number of cores used by adcc.")
         .def("__repr__", &ThreadPool___repr__)
         //
         ;
