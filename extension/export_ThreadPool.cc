@@ -45,6 +45,19 @@ void export_ThreadPool(py::module& m) {
         "Class providing access to the thread pool and the adcc parallelisation.")
         .def_property("n_cores", &ThreadPool::n_cores, &ThreadPool_set_n_cores,
                       "Get or set the number of cores used by adcc.")
+        .def(
+              "set_threads",
+              [](ThreadPool& pool, size_t threads) {
+                const size_t n_cores = pool.n_cores();
+                pool.reinit(n_cores, threads);
+              },
+              "Temporary interface function to set a specific number of threads "
+              "explicitly. Will disappear very soon, so do not rely on it.")
+        .def(
+              "get_threads", [](const ThreadPool& pool) { return pool.n_threads(); },
+              "Temporary interface function to get the number of threads. "
+              "Will disappear very soon, so do not rely on it.")
+
         .def("__repr__", &ThreadPool___repr__)
         //
         ;
