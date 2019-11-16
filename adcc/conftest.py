@@ -45,7 +45,7 @@ def setup_continuous_integration(session):
     import adcc
 
     print("Detected continuous integration session")
-    adcc.thread_pool.n_cores = 2
+    adcc.set_n_threads(2)
 
 
 #
