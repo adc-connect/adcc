@@ -68,16 +68,6 @@ class MemoryPool(libadcc.AdcMemory):
             shutil.rmtree(self.pagefile_directory)
 
     @property
-    def is_initialised(self):
-        """
-        Is the adcc virtual memory management initialised? If the returns
-        False, the std::allocator of C++ is used.
-        """
-        # The vmm is initialised exactly when do not
-        # use the std::allocator.
-        return not self.use_std_allocator
-
-    @property
     def page_files(self):
         """The list of all page files."""
         return glob.glob(os.path.join(self.pagefile_directory, "pagefile.*"))

@@ -34,10 +34,10 @@ static std::string AdcMemory___repr__(const AdcMemory& self) {
   if (self.allocator() != "standard") {
     double mem_mb = static_cast<double>(self.max_memory()) / 1024. / 1024.;
     ss << "max_memory=" << mem_mb << "MiB, ";
+    ss << "pagefile_directory=" << self.pagefile_directory() << ", ";
   }
-  ss << "tensor_block_size=" << self.tbs_param()
-     << ", pagefile_directory=" << self.pagefile_directory()
-     << ", contraction_batch_size=" << self.contraction_batch_size() << ")";
+  ss << "tensor_block_size=" << self.tbs_param();
+  ss << ", contraction_batch_size=" << self.contraction_batch_size() << ")";
   return ss.str();
 }
 

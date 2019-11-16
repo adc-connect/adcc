@@ -30,23 +30,34 @@ namespace py = pybind11;
 static std::string ThreadPool___repr__(const ThreadPool& self) {
   std::stringstream ss;
   ss << "ThreadPool("
-     << "n_cores = " << self.n_cores() << ", n_threads = " << self.n_threads() << ")";
+     << "n_cores = " << self.n_cores() << ")";
   return ss.str();
+}
+
+void ThreadPool_set_n_cores(std::shared_ptr<ThreadPool> ptr, size_t n_cores) {
+  // TODO testing suggests n_threads = n_cores + 1 is slightly better
+  ptr->reinit(n_cores, 2 * n_cores - 1);
 }
 
 void export_ThreadPool(py::module& m) {
   py::class_<ThreadPool, std::shared_ptr<ThreadPool>>(
         m, "ThreadPool",
         "Class providing access to the thread pool and the adcc parallelisation.")
-        .def(py::init<>())
-        .def(py::init<size_t, size_t>(),
-             "Initialise the parallelisation by providing the number of cores and the "
-             "number of threads to use.")
-        .def("reinit", &ThreadPool::reinit,
-             "Reinitialise the parallelisation by providing the number of cores and the "
-             "number of threads to use.")
-        .def_property_readonly("n_cores", &ThreadPool::n_cores)
-        .def_property_readonly("n_threads", &ThreadPool::n_threads)
+        .def_property("n_cores", &ThreadPool::n_cores, &ThreadPool_set_n_cores,
+                      "Get or set the number of cores used by adcc.")
+        .def(
+              "set_threads",
+              [](ThreadPool& pool, size_t threads) {
+                const size_t n_cores = pool.n_cores();
+                pool.reinit(n_cores, threads);
+              },
+              "Temporary interface function to set a specific number of threads "
+              "explicitly. Will disappear very soon, so do not rely on it.")
+        .def(
+              "get_threads", [](const ThreadPool& pool) { return pool.n_threads(); },
+              "Temporary interface function to get the number of threads. "
+              "Will disappear very soon, so do not rely on it.")
+
         .def("__repr__", &ThreadPool___repr__)
         //
         ;
