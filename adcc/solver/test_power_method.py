@@ -51,5 +51,8 @@ class TestPowerMethod(unittest.TestCase):
 
         ones = np.zeros(size)
         ones[0] = 1 * np.sign(res.eigenvectors[0][0])
-        assert_allclose(res.eigenvectors[0], ones, atol=conv_tol * 10)
+        extrafac = 1
+        if size > 100:
+            extrafac = 3
+        assert_allclose(res.eigenvectors[0], ones, atol=conv_tol * 10 * extrafac)
         assert approx(res.eigenvalues[0]) == ev[0]
