@@ -3,6 +3,7 @@
 # adcc: Seamlessly connect your program to ADC
 [![license](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://github.com/adc-connect/adcc/blob/master/LICENSE)
 [![pypi](https://img.shields.io/pypi/v/adcc)](https://pypi.org/project/adcc)
+[![anaconda](https://anaconda.org/adcc/adcc/badges/version.svg)](https://anaconda.org/adcc/adcc)
 [![Documentation](https://img.shields.io/badge/doc-latest-blue.svg)](https://adc-connect.org)
 [![Travis](https://travis-ci.org/adc-connect/adcc.svg?branch=master)](https://travis-ci.org/adc-connect/adcc)
 [![DOI](https://zenodo.org/badge/215731857.svg)](https://zenodo.org/badge/latestdoi/215731857)
