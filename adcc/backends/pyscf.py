@@ -26,6 +26,7 @@ from .EriBuilder import EriBuilder
 from .InvalidReference import InvalidReference
 
 from pyscf import ao2mo, gto, scf
+from pyscf import solvent
 from adcc.misc import cached_property
 
 from libadcc import HartreeFockProvider
@@ -108,6 +109,30 @@ class PyScfHFProvider(HartreeFockProvider):
         if not self.restricted:
             assert self.scfres.mo_coeff[0].shape[1] == \
                 self.scfres.mo_coeff[1].shape[1]
+
+    def pe_energy(self, dm, elec_only=True):
+        pe_state = self.scfres.with_solvent
+        e_pe, _ = pe_state.kernel(dm, elec_only=elec_only)
+        return e_pe
+
+    def pe_ptss_correction(self, view):
+        # print("I'm lazy ptSS")
+        dm = view.ao_state_difference_density_matrix
+        return self.pe_energy(dm, elec_only=True)
+
+    def pe_ptlr_correction(self, view):
+        # print("I'm lazy ptLR")
+        dm = view.ao_transition_density_matrix
+        return 2.0 * self.pe_energy(dm, elec_only=True)
+
+    @property
+    def addon_functions(self):
+        ret = []
+        if hasattr(self.scfres, "with_solvent"):
+            if isinstance(self.scfres.with_solvent, solvent.pol_embed.PolEmbed):
+                ret.append(self.pe_ptlr_correction)
+                ret.append(self.pe_ptss_correction)
+        return ret
 
     def get_backend(self):
         return "pyscf"

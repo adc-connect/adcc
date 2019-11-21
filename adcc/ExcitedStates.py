@@ -205,6 +205,19 @@ class ExcitedStates:
             if hasattr(data, "excitation_vectors"):
                 self.excitation_vectors = data.excitation_vectors
 
+        for addon_function in self.reference_state.addons:
+            prop_name = addon_function.__name__
+            # TODO: should be lazily evaluated, could not make it work :(
+            setattr(self, prop_name,
+                    [addon_function(self.view(i)) for i in range(self.size)])
+
+    def __len__(self):
+        return self.size
+
+    @property
+    def size(self):
+        return self.excitation_energies.size
+
     @property
     def timer(self):
         """Return a cumulative timer collecting timings from the calculation"""
@@ -586,3 +599,27 @@ class ExcitedStates:
                 ret += "\n"
                 ret += separator
         return ret[:-1]
+
+    # FIXME: just playing around with this a little... not final at all...
+    def view(self, item):
+        # highly illegal
+        tdms = self.transition_dms
+        sdms = self.state_diffdms
+
+        class DummyStateView:
+            def __init__(self, index):
+                self.index = index
+
+            @property
+            def ao_transition_density_matrix(self):
+                density = tdms[self.index].to_ao_basis()
+                density_ao = (density[0] + density[1]).to_ndarray()
+                return density_ao
+
+            @property
+            def ao_state_difference_density_matrix(self):
+                density = sdms[self.index].to_ao_basis()
+                density_ao = (density[0] + density[1]).to_ndarray()
+                return density_ao
+
+        return DummyStateView(item)

@@ -155,6 +155,8 @@ class ReferenceState(libadcc.ReferenceState):
             self.orbital_coefficients, self.conv_tol
         )
 
+        self.addons = hfdata.addon_functions
+
     @property
     def mospaces(self):
         return self._mospaces

@@ -89,6 +89,30 @@ class Psi4HFProvider(HartreeFockProvider):
                                           self.restricted)
         self.operator_integral_provider = Psi4OperatorIntegralProvider(self.wfn)
 
+    def pe_energy(self, dm, elec_only=True):
+        density_psi = psi4.core.Matrix.from_array(dm)
+        e_pe, _ = self.wfn.pe_state.get_pe_contribution(density_psi,
+                                                        elec_only=elec_only)
+        return e_pe
+
+    def pe_ptss_correction(self, view):
+        # print("I'm lazy ptSS")
+        dm = view.ao_state_difference_density_matrix
+        return self.pe_energy(dm, elec_only=True)
+
+    def pe_ptlr_correction(self, view):
+        # print("I'm lazy ptLR")
+        dm = view.ao_transition_density_matrix
+        return 2.0 * self.pe_energy(dm, elec_only=True)
+
+    @property
+    def addon_functions(self):
+        ret = []
+        if hasattr(self.wfn, "pe_state"):
+            ret.append(self.pe_ptlr_correction)
+            ret.append(self.pe_ptss_correction)
+        return ret
+
     def get_backend(self):
         return "psi4"
 
