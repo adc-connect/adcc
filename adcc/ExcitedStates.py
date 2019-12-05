@@ -394,9 +394,9 @@ class ExcitedStates:
         if has_dipole and transition_dipole_moments:
             opt_body += " {tdmx:8.4f} {tdmy:8.4f} {tdmz:8.4f}"
             opt_thead += "  transition dipole moment "
-            opt["tdmx"] = lambda i, vec: self.state_dipole_moments[i][0]
-            opt["tdmy"] = lambda i, vec: self.state_dipole_moments[i][1]
-            opt["tdmz"] = lambda i, vec: self.state_dipole_moments[i][2]
+            opt["tdmx"] = lambda i, vec: self.transition_dipole_moments[i][0]
+            opt["tdmy"] = lambda i, vec: self.transition_dipole_moments[i][1]
+            opt["tdmz"] = lambda i, vec: self.transition_dipole_moments[i][2]
         if has_dipole and oscillator_strengths:
             opt_body += "{osc:8.4f} "
             opt_thead += " osc str "
