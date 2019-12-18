@@ -294,6 +294,28 @@ each take a number of arguments:
 
      state = adcc.adc2(scfres, n_singlets=3, output=None)
 
+Parallelisation in adcc
+-----------------------
+
+On startup, adcc automatically inspects the computer hardware
+and from this selects the number of threads to use for computations.
+Unless this fails, one thread per CPU core is employed,
+such that the computation runs in parallel on all cores.
+If this is not what you want, e.g. because you use adcc on a cluster and
+only part of the available cores are allocated to you,
+you need to explicitly reduce the number of employed threads.
+For example, in order to make adcc use only 8 threads,
+i.e. occupy only 8 CPU cores, you have to run
+
+.. code-block:: python
+
+   adcc.set_n_threads(8)
+
+before calling any of :ref:`adcn-methods` or doing any other
+computation with ``adcc``.
+The current number of threads available to adcc can be similarly
+obtained using the function ``adcc.get_n_threads()``.
+
 
 .. _plotting-spectra:
 

@@ -18,7 +18,7 @@ mol = psi4.geometry("""
 
 # set the number of cores equal to the auto-determined value from
 # the adcc ThreadPool
-psi4.set_num_threads(adcc.thread_pool.n_cores)
+psi4.set_num_threads(adcc.get_n_threads())
 psi4.core.be_quiet()
 psi4.set_options({'basis': "cc-pvdz",
                   'scf_type': 'pk',

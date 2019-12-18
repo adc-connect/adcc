@@ -9,8 +9,10 @@ adcc: Seamlessly connect your program to ADC
    :target: https://travis-ci.org/adc-connect/adcc
 .. image:: https://img.shields.io/pypi/v/adcc
    :target: https://pypi.org/project/adcc
+.. image:: https://anaconda.org/adcc/adcc/badges/version.svg
+   :target: https://anaconda.org/adcc/adcc
 .. image:: https://img.shields.io/pypi/l/adcc
-   :target: https://pypi.org/project/adcc
+   :target: https://github.com/adc-connect/adcc/blob/master/LICENSE
 
 .. note::
    This documentation page is still under construction.

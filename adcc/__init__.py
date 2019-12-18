@@ -38,7 +38,7 @@ from .caching_policy import DefaultCachingPolicy, GatherStatisticsPolicy
 from .AmplitudeVector import AmplitudeVector
 from .OneParticleOperator import OneParticleOperator
 
-from libadcc import HartreeFockProvider, thread_pool
+from libadcc import HartreeFockProvider, get_n_threads, set_n_threads
 
 # This has to be the last set of import
 from .guess import (guess_symmetries, guess_zero, guesses_any, guesses_singlet,
@@ -49,7 +49,7 @@ __all__ = ["run_adc", "AdcMatrix", "AdcMethod", "Symmetry", "ReferenceState",
            "add", "contract", "copy", "divide", "dot", "empty_like",
            "linear_combination", "multiply", "nosym_like", "ones_like",
            "subtract", "transpose", "zeros_like",
-           "memory_pool", "thread_pool", "AmplitudeVector",
+           "memory_pool", "set_n_threads", "get_n_threads", "AmplitudeVector",
            "HartreeFockProvider", "ExcitedStates",
            "Tensor", "DictHfProvider", "DataHfProvider", "OneParticleOperator",
            "guesses_singlet", "guesses_triplet", "guesses_any",

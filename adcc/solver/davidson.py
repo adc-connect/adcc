@@ -24,15 +24,15 @@ import sys
 import warnings
 import numpy as np
 
-from .preconditioner import JacobiPreconditioner
-from .SolverStateBase import EigenSolverStateBase
-from .explicit_symmetrisation import IndexSymmetrisation
-
 from adcc import AdcMatrix, linear_combination
 from adcc.AmplitudeVector import AmplitudeVector
 
 import scipy.linalg as la
 import scipy.sparse.linalg as sla
+
+from .preconditioner import JacobiPreconditioner
+from .SolverStateBase import EigenSolverStateBase
+from .explicit_symmetrisation import IndexSymmetrisation
 
 
 def select_eigenpairs(vectors, n_ep, which):
@@ -83,33 +83,48 @@ def default_print(state, identifier, file=sys.stdout):
         print("=== Restart ===", file=file)
 
 
+# TODO This function should be merged with eigsh
 def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
                         is_converged, which, callback=None, preconditioner=None,
                         preconditioning_method="Davidson", debug_checks=False,
                         residual_min_norm=None, explicit_symmetrisation=None):
-    """
-    @param matrix        Matrix to diagonalise
-    @param state         DavidsonState containing the eigenvector guess
-                         to propagate
-    @param max_subspace  Maximal subspace size
-    @param max_iter      Maximal numer of iterations
-    @param n_ep          Number of eigenpairs to be computed
-    @param is_converged  Function to test for convergence
-    @param callback      Callback to run after each iteration
-    @param which         Which eigenvectors to converge to.
-                         Needs to be compatible with the selected
-                         preconditioner.
-    @param preconditioner           Preconditioner (type or instance)
-    @param preconditioning_method   Precondititoning method. Valid values are
-                                    "Davidson" or "Sleijpen-van-der-Vorst"
-    @param debug_checks  Enable some potentially costly debug checks
-                         (loss of orthogonality in subspace etc)
-    @param residual_min_norm   Minimal norm a residual needs to have in order
-                               to be accepted as a new subspace vector
-                               (defaults to 2 * len(matrix) * machine_expsilon)
-    @param explicit_symmetrisation   Explicit symmetrisation to perform
-                                     on new subspace vectors before adding
-                                     them to the subspace.
+    """Drive the davidson iterations
+
+    Parameters
+    ----------
+    matrix
+        Matrix to diagonalise
+    state
+        DavidsonState containing the eigenvector guess
+    max_subspace : int or NoneType, optional
+        Maximal subspace size
+    max_iter : int, optional
+        Maximal number of iterations
+    n_ep : int or NoneType, optional
+        Number of eigenpairs to be computed
+    is_converged
+        Function to test for convergence
+    callback : callable, optional
+        Callback to run after each iteration
+    which : str, optional
+        Which eigenvectors to converge to. Needs to be chosen such that
+        it agrees with the selected preconditioner.
+    preconditioner
+        Preconditioner (type or instance)
+    preconditioning_method : str, optional
+        Precondititoning method. Valid values are "Davidson"
+        or "Sleijpen-van-der-Vorst"
+    debug_checks : bool, optional
+        Enable some potentially costly debug checks
+        (Loss of orthogonality etc.)
+    residual_min_norm : float or NoneType, optional
+        Minimal norm a residual needs to have in order to be accepted as
+        a new subspace vector
+        (defaults to 2 * len(matrix) * machine_expsilon)
+    explicit_symmetrisation
+        Explicit symmetrisation to apply to new subspace vectors before
+        adding them to the subspace. Allows to correct for loss of index
+        or spin symmetries (type or instance)
     """
     if preconditioning_method not in ["Davidson", "Sleijpen-van-der-Vorst"]:
         raise ValueError("Only 'Davidson' and 'Sleijpen-van-der-Vorst' "
@@ -296,33 +311,44 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
           callback=None, preconditioner=None,
           preconditioning_method="Davidson", debug_checks=False,
           residual_min_norm=None, explicit_symmetrisation=IndexSymmetrisation):
-    """
-    Davidson eigensolver for ADC problems
+    """Davidson eigensolver for ADC problems
 
-    @param matrix        ADC matrix instance
-    @param guesses       Guess vectors (fixes the block size)
-    @param n_ep          Number of eigenpairs to be computed
-    @param max_subspace  Maximal subspace size
-    @param conv_tol      Convergence tolerance on the l2 norm of residuals
-                         to consider them converged
-    @param which         Which eigenvectors to converge to.
-                         Needs to be chosen such that it agrees with
-                         the selected preconditioner.
-    @param max_iter      Maximal numer of iterations
-    @param callback      Callback to run after each iteration
-    @param preconditioner           Preconditioner (type or instance)
-    @param preconditioning_method   Precondititoning method. Valid values are
-                                    "Davidson" or "Sleijpen-van-der-Vorst"
-    @param explicit_symmetrisation   Explicit symmetrisation to apply to new
-                                     subspace vectors before adding them to
-                                     the subspace. Allows to correct for
-                                     loss of index or spin symmetries
-                                     (type or instance)
-    @param debug_checks  Enable some potentially costly debug checks
-                         (Loss of orthogonality etc.)
-    @param residual_min_norm   Minimal norm a residual needs to have in order
-                               to be accepted as a new subspace vector
-                               (defaults to 2 * len(matrix) * machine_expsilon)
+    Parameters
+    ----------
+    matrix
+        ADC matrix instance
+    guesses : list
+        Guess vectors (fixes also the Davidson block size)
+    n_ep : int or NoneType, optional
+        Number of eigenpairs to be computed
+    max_subspace : int or NoneType, optional
+        Maximal subspace size
+    conv_tol : float, optional
+        Convergence tolerance on the l2 norm of residuals to consider
+        them converged
+    which : str, optional
+        Which eigenvectors to converge to. Needs to be chosen such that
+        it agrees with the selected preconditioner.
+    max_iter : int, optional
+        Maximal number of iterations
+    callback : callable, optional
+        Callback to run after each iteration
+    preconditioner
+        Preconditioner (type or instance)
+    preconditioning_method : str, optional
+        Precondititoning method. Valid values are "Davidson"
+        or "Sleijpen-van-der-Vorst"
+    explicit_symmetrisation
+        Explicit symmetrisation to apply to new subspace vectors before
+        adding them to the subspace. Allows to correct for loss of index
+        or spin symmetries (type or instance)
+    debug_checks : bool, optional
+        Enable some potentially costly debug checks
+        (Loss of orthogonality etc.)
+    residual_min_norm : float or NoneType, optional
+        Minimal norm a residual needs to have in order to be accepted as
+        a new subspace vector
+        (defaults to 2 * len(matrix) * machine_expsilon)
     """
     if not isinstance(matrix, AdcMatrix):
         raise TypeError("matrix is not of type AdcMatrix")
