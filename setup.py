@@ -372,7 +372,8 @@ adccsetup(
     ],
     tests_require=["pytest", "pytest-cov"],
     extras_require={
-        "build_docs": ["sphinx>=2", "breathe", "sphinxcontrib-bibtex"],
+        "build_docs": ["sphinx>=2", "breathe", "sphinxcontrib-bibtex",
+                       "sphinx-automodapi"],
     },
     #
     cmdclass={"build_ext": BuildExt, "pytest": PyTest,

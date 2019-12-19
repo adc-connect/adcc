@@ -8,6 +8,8 @@ The adccore C++ layer
 This page contains a reference of the *adccore* C++ library
 and its classes and functions generated automatically
 from the *adccore* source code.
+The functions and classes discussed here are exposed to Python
+as the :ref:`libadcc` python module.
 
 Reference state
 ---------------

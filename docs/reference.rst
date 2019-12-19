@@ -2,8 +2,8 @@
 
 .. _full-reference:
 
-Full adcc reference
-===================
+adcc API reference
+==================
 
 .. note::
    Work in progress. Many function do not yet follow
