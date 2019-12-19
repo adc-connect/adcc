@@ -46,6 +46,7 @@ extensions = [
     # 'sphinx.ext.todo',
     # 'sphinx.ext.coverage',
     #
+    'sphinx_automodapi.automodapi',
     'sphinxcontrib.bibtex',
     'breathe'
 ]

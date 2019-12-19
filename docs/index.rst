@@ -97,6 +97,7 @@ Contents
    hostprograms
    developers
    adccore
+   libadcc
 
 .. toctree::
    :caption: Extra information

@@ -30,7 +30,6 @@ from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod
 from .ExcitedStates import ExcitedStates
 from .ReferenceState import ReferenceState as adcc_ReferenceState
-
 from .solver.davidson import jacobi_davidson
 from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
@@ -277,7 +276,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
 
     if kind not in ["any", "spin_flip", "singlet", "triplet"]:
         raise ValueError("The kind parameter may only take the values 'any', "
-                         "'singlet' or 'triplet'")
+                         "'singlet', 'triplet' or 'spin_flip'")
     if kind in ["singlet", "triplet"] and not refstate.restricted:
         raise ValueError("kind==singlet and kind==triplet are only valid for "
                          "ADC calculations in combination with a restricted "
