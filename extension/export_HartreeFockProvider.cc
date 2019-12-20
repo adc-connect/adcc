@@ -375,7 +375,8 @@ void export_HartreeFockProvider(py::module& m) {
   py::class_<adcc::HartreeFockSolution_i, std::shared_ptr<adcc::HartreeFockSolution_i>>
         hfdata_i(m, "HartreeFockSolution_i",
                  "Interface class representing the data expected in adcc from an "
-                 "interfacing HF / SCF program.");
+                 "interfacing HF / SCF program. Python binding to "
+                 ":cpp:class:`adcc::HartreeFockSolution_i`");
   hfdata_i
         // TODO n_alpha and n_beta are kind of expensive like this
         //      and maybe should be removed for this reason

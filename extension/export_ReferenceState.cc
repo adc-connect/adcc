@@ -34,7 +34,9 @@ void export_ReferenceState(py::module& m) {
 
   py::class_<ReferenceState, std::shared_ptr<ReferenceState>>(
         m, "ReferenceState",
-        "Class representing information about the reference state for adcc.")
+        "Class representing information about the reference state for adcc. Python "
+        "binding to"
+        ":cpp:class:`adcc::ReferenceState`.")
         .def(py::init<std::shared_ptr<const HartreeFockSolution_i>,
                       std::shared_ptr<const MoSpaces>, bool>(),
              "Setup a ReferenceStateject using an MoSpaces object.\n"

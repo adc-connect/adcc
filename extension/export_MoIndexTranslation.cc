@@ -95,7 +95,8 @@ void export_MoIndexTranslation(py::module& m) {
         m, "MoIndexTranslation",
         "Helper object to extract information from indices into orbitals subspaces and "
         "to map them between different indexing conventions (full MO space, MO "
-        "subspaces, indexing convention in the HF Provider / SCF host program, ...")
+        "subspaces, indexing convention in the HF Provider / SCF host program, ... "
+        "Python binding to :cpp:class:`adcc::MoIndexTranslation`.")
         .def(py::init<std::shared_ptr<const MoSpaces>, const std::string&>(),
              "Construct a MoIndexTranslation class from an MoSpaces object and the "
              "identifier for "

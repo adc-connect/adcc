@@ -86,7 +86,8 @@ void export_OneParticleOperator(py::module& m) {
   py::class_<OneParticleOperator, std::shared_ptr<OneParticleOperator>>(
         m, "OneParticleOperator",
         "Class representing a one-particle operator. Also used for one-particle"
-        " (transition) density matrices")
+        " (transition) density matrices. Python binding to "
+        ":cpp:class:`adcc::OneParticleOperator`.")
         .def(py::init<std::shared_ptr<const MoSpaces>, bool, std::string>(),
              "Construct OneParticleOperator object. All blocks are "
              "initialised as zero blocks.\n"

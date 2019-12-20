@@ -58,7 +58,9 @@ static size_t AmplitudeVector___len__(const AmplitudeVector& self) { return self
 void export_AmplitudeVector(py::module& m) {
 
   py::class_<AmplitudeVector, std::shared_ptr<AmplitudeVector>>(
-        m, "AmplitudeVector", "Class representing an AmplitudeVector")
+        m, "AmplitudeVector",
+        "Class representing an AmplitudeVector. Python binding to "
+        ":cpp:class:`adcc::AmplitudeVector`.")
         .def(py::init(&makeAmplitudeVector))
         .def("set_from_tuple", &AmplitudeVector_set_from_tuple)
         .def("to_tuple", &AmplitudeVector_to_tuple)

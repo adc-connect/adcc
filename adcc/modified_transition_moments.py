@@ -20,11 +20,11 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import libadcc
+
 from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod
 from .AmplitudeVector import AmplitudeVector
-
-import libadcc
 
 from libadcc import LazyMp
 
@@ -50,7 +50,7 @@ def compute_modified_transition_moments(gs_or_matrix, dipole_operator,
 
     Returns
     -------
-    AmplitudeVector
+    adcc.AmplitudeVector
     """
     if isinstance(gs_or_matrix, AdcMatrix):
         ground_state = gs_or_matrix.ground_state

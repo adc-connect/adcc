@@ -2,8 +2,8 @@
 
 .. _adccore-layer:
 
-The adccore C++ layer
-=====================
+adccore: C++ core library
+=========================
 
 This page contains a reference of the *adccore* C++ library
 and its classes and functions generated automatically

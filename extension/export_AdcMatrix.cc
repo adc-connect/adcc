@@ -48,10 +48,13 @@ void export_AdcMatrix(py::module& m) {
   // Notice: The method property is deliberately not exported,
   //         because the python version is much more powerful
   py::class_<AdcMatrix, std::shared_ptr<AdcMatrix>>(
-        m, "AdcMatrix", "Class representing the AdcMatrix in various variants.")
+        m, "AdcMatrix",
+        "Class representing the AdcMatrix in various variants. Python binding to "
+        ":cpp:class:`adcc::AdcMatrix`.")
         .def(py::init<std::string, std::shared_ptr<const LazyMp>>())
         .def_property("intermediates", &AdcMatrix::get_intermediates_ptr,
-                      &AdcMatrix::set_intermediates_ptr)
+                      &AdcMatrix::set_intermediates_ptr,
+                      "Get or set the contained :py:class:`libadcc.AdcIntermediates`")
         .def_property_readonly("reference_state", &AdcMatrix::reference_state_ptr)
         .def_property_readonly("ground_state",
                                [](const AdcMatrix& self) {

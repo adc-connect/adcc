@@ -30,7 +30,7 @@ void export_MoSpaces(py::module& m) {
   py::class_<MoSpaces, std::shared_ptr<MoSpaces>>(
         m, "MoSpaces",
         "Class setting up the molecular orbital index spaces and subspaces and exposing "
-        "information about them.")
+        "information about them. Python binding to :cpp:class:`adcc::MoSpaces`.")
         .def(py::init<const HartreeFockSolution_i&, std::shared_ptr<const AdcMemory>,
                       std::vector<size_t>, std::vector<size_t>, std::vector<size_t>>(),
              "Construct an MoSpaces object from a HartreeFockSolution_i, a pointer to\n"

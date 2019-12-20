@@ -2,8 +2,8 @@
 
 .. _full-reference:
 
-adcc API reference
-==================
+adcc reference
+==============
 
 .. note::
    Work in progress. Many function do not yet follow
@@ -94,6 +94,10 @@ Adc Middle layer
     :inherited-members:
     :undoc-members:
 
+.. automodule:: adcc.caching_policy
+    :members:
+    :inherited-members:
+    :undoc-members:
 
 Tensor and symmetry interface
 -----------------------------

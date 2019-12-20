@@ -31,7 +31,8 @@ namespace py_iface {
 void export_LazyMp(py::module& m) {
   py::class_<LazyMp, std::shared_ptr<LazyMp>>(
         m, "LazyMp",
-        "Class representing information about the Mo/ller-Plesset results from ADCman.")
+        "Class representing information about the Mo/ller-Plesset results from ADCman. "
+        "Python binding to :cpp:class:`adcc::LazyMp`.")
         .def(py::init<std::shared_ptr<const ReferenceState>>())
         .def(py::init<std::shared_ptr<const ReferenceState>,
                       std::shared_ptr<CachingPolicy_i>>())

@@ -37,7 +37,9 @@ static std::string AdcIntermediates__repr__(const AdcIntermediates& self) {
 void export_AdcIntermediates(py::module& m) {
 
   py::class_<AdcIntermediates, std::shared_ptr<AdcIntermediates>>(
-        m, "AdcIntermediates", "Class holding the computed ADC intermediates.")
+        m, "AdcIntermediates",
+        "Class holding the computed ADC intermediates. Python binding to "
+        ":cpp:class:`adcc::AdcIntermediates`.")
         .def(py::init<std::shared_ptr<const LazyMp>>())
         .def_property_readonly("adc2_i1", &AdcIntermediates::compute_adc2_i1)
         .def_property_readonly("adc2_i2", &AdcIntermediates::compute_adc2_i2)

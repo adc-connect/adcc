@@ -32,7 +32,7 @@ void export_guesses(py::module& m) {
   py::class_<AdcGuessKind, std::shared_ptr<AdcGuessKind>>(
         m, "AdcGuessKind",
         "Class which collects information about the kind of guess vectors to be "
-        "constructed.")
+        "constructed. Python binding to :cpp:class:`adcc::AdcGuessKind`.")
         .def(py::init<>(), "Construct default AdcGuessKind.")
         .def(py::init<std::string, float, std::string>(),
              "Construct from irrep, spin_change and spin_block_symmetrisation.")

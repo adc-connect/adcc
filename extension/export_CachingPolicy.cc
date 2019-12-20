@@ -44,7 +44,9 @@ void export_CachingPolicy(py::module& m) {
   py::class_<CachingPolicy_i, std::shared_ptr<CachingPolicy_i>, PyCachingPolicy_i>(
         m, "CachingPolicy_i",
         "Should a particular tensor given by a label, its space string and the string of "
-        "the spaces involved in the most expensive contraction be stored.")
+        "the spaces involved in the most expensive contraction be stored. Python binding "
+        "to "
+        ":cpp:class:`adcc::CachingPolicy_i`")
         .def(py::init<>())
         .def("should_cache", &CachingPolicy_i::should_cache,
              "Should a particular tensor given by a label, its space string and the "

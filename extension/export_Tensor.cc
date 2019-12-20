@@ -358,7 +358,8 @@ void export_Tensor(py::module& m) {
         .def(py::init(&adcc::make_tensor_zero),
              "Construct a Tensor object using a Symmetry object describing its symmetry "
              "properties.\n"
-             "The returned object is not guaranteed to contain initialised memory.")
+             "The returned object is not guaranteed to contain initialised memory. "
+             "Python binding to :cpp:class:`adcc::Tensor`")
         .def_property_readonly("ndim", &adcc::Tensor::ndim)
         .def_property_readonly("shape", &Tensor_shape)
         .def_property_readonly("size", &adcc::Tensor::size)

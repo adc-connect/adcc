@@ -34,7 +34,8 @@ void export_Symmetry(py::module& m) {
         m, "Symmetry", "Container for Tensor symmetry information")
         .def(py::init<std::shared_ptr<const MoSpaces>, const std::string&>(),
              "Construct a Symmetry class from an MoSpaces object and the identifier for "
-             "the space (e.g. o1o1, v1o1, o3v2o1v1, ...)")
+             "the space (e.g. o1o1, v1o1, o3v2o1v1, ...). Python binding to "
+             ":cpp:class:`adcc::Symmetry`.")
         .def(py::init<std::shared_ptr<const MoSpaces>, const std::string&,
                       std::map<std::string, std::pair<size_t, size_t>>>(),
              "Construct a Symmetry class from an MoSpaces object, a space string and a "

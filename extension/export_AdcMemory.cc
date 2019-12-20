@@ -46,7 +46,9 @@ void export_AdcMemory(py::module& m) {
   // boost::noncopyable
   py::class_<AdcMemory, std::shared_ptr<AdcMemory>>(
         m, "AdcMemory",
-        "Class controlling the memory allocations for adcc ADC calculations.")
+        "Class controlling the memory allocations for adcc ADC calculations. Python "
+        "binding to "
+        ":cpp:class:`adcc::AdcMemory`.")
         .def(py::init<>())
         .def_property_readonly("allocator", &AdcMemory::allocator,
                                "Return the allocator to which the class is initialised.")
