@@ -16,8 +16,9 @@ based upon the algebraic-diagrammatic construction (ADC) approach.
 Arbitrary host programs may be used to supply a
 self-consistent field (SCF) reference to start off the ADC calculation.
 Currently adcc comes with ready-to-use interfaces to four programs,
-namely pyscf, psi4, VeloxChem or molsturm. Adding other SCF codes or even
-statically computed data can be easily achieved as well.
+namely pyscf, psi4, VeloxChem or molsturm. Adding other SCF codes or
+starting a calculation from
+statically computed data can be easily achieved.
 For more details and installation instructions see the
 [adcc documentation](https://adc-connect.org).
 
