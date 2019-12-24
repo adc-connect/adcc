@@ -170,11 +170,19 @@ class EriBuilder:
     def coefficients(self):
         raise NotImplementedError("Implement coefficients")
 
-    def compute_mo_eri(self, block, coeffs, use_cache=True):
-        raise NotImplementedError("Implement compute_mo_eri")
+    def compute_mo_eri_old(self, block, coeffs, use_cache=True):
+        if block in self.eri_cache and use_cache:
+            return self.eri_cache[block]
+        eri = self.compute_mo_eri(coeffs)
+        if use_cache:
+            self.eri_cache[block] = eri
+        return eri
 
-    def compute_mo_eri_slice(self, coeffs):
-        return self.compute_mo_eri(None, coeffs, use_cache=False)
+    def compute_mo_eri(self, coeffs):
+        """
+        Compute block of the ERI tensor in chemists' indexing
+        """
+        raise NotImplementedError("Implement compute_mo_eri")
 
     @property
     def has_mo_asym_eri(self):
@@ -183,6 +191,23 @@ class EriBuilder:
     @property
     def eri_notation(self):
         return "chem"
+
+    def fill_slice_symm(self, slices, out):
+        mapping = self.block_slice_mapping
+        bblocks, bspins, bslices = mapping.map_slices_to_blocks_and_spins(slices)
+        assert bblocks != []  # TODO Sometimes this assertion fails!
+        if self.restricted:
+            # For restricted spins in chem eri do not matter:
+            bspins = ["a", "a", "a", "a"]
+        cache_key = "".join(bblocks) + "".join(bspins)
+        if cache_key in self.eri_cache:
+            eri = self.eri_cache[cache_key]
+        else:
+            coeffs = tuple(self.coefficients[bblocks[i] + bspins[i]]
+                           for i in range(4))
+            eri = self.compute_mo_eri(coeffs)
+            self.eri_cache[cache_key] = eri
+        out[:] = eri[bslices]
 
     def fill_slice(self, slices, out):
         """
@@ -260,22 +285,22 @@ class EriBuilder:
 
         # both terms in the antisymm. are non-zero
         if spin_symm.pref1 != 0 and spin_symm.pref2 != 0:
-            can_block_integrals = self.compute_mo_eri(block, coeffs_transform)
+            can_block_integrals = self.compute_mo_eri_old(block, coeffs_transform)
             eri_phys = can_block_integrals.transpose(0, 2, 1, 3)
             # (ik|jl) - (il|jk)
             chem_asym = tuple(coeffs_transform[i] for i in [0, 3, 2, 1])
-            asymm = self.compute_mo_eri(
+            asymm = self.compute_mo_eri_old(
                 asym_block, chem_asym
             ).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
             eris = spin_symm.pref1 * eri_phys - spin_symm.pref2 * asymm
         # only the second term is zero
         elif spin_symm.pref1 != 0 and spin_symm.pref2 == 0:
-            can_block_integrals = self.compute_mo_eri(block, coeffs_transform)
+            can_block_integrals = self.compute_mo_eri_old(block, coeffs_transform)
             eris = spin_symm.pref1 * can_block_integrals.transpose(0, 2, 1, 3)
         # only the first term is zero
         elif spin_symm.pref1 == 0 and spin_symm.pref2 != 0:
             chem_asym = tuple(coeffs_transform[i] for i in [0, 3, 2, 1])
-            asymm = self.compute_mo_eri(
+            asymm = self.compute_mo_eri_old(
                 asym_block, chem_asym
             ).transpose(0, 3, 2, 1).transpose(0, 2, 1, 3)
             eris = - spin_symm.pref2 * asymm
@@ -316,7 +341,7 @@ class EriBuilder:
             for spin_block in non_zero_spin_block_slice_list:
                 coeffs_transform = tuple(self.coefficients[x + y]
                                          for x, y in zip(b, spin_block.spins))
-                can_block_integrals = self.compute_mo_eri(
+                can_block_integrals = self.compute_mo_eri_old(
                     b + "".join(spin_block.spins), coeffs_transform
                 )
                 for tsym_block in trans_sym_blocks:

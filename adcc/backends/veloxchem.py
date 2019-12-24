@@ -25,13 +25,12 @@ import tempfile
 import numpy as np
 import veloxchem as vlx
 
+from .EriBuilder import EriBuilder
 from .InvalidReference import InvalidReference
-from .eri_build_helper import (EriBuilder, SpinBlockSlice,
-                               get_symm_equivalent_transpositions_for_block)
 
-from mpi4py import MPI
 from adcc.misc import cached_property
 
+from mpi4py import MPI
 from libadcc import HartreeFockProvider
 
 
@@ -42,129 +41,34 @@ class VeloxChemOperatorIntegralProvider:
 
     @cached_property
     def electric_dipole(self, component="x"):
-        dipole_drv = vlx.ElectricDipoleIntegralsDriver(
-            self.scfdrv.task.mpi_comm
-        )
-        dipole_mats = dipole_drv.compute(
-            self.scfdrv.task.molecule, self.scfdrv.task.ao_basis
-        )
-        integrals = (dipole_mats.x_to_numpy(), dipole_mats.y_to_numpy(),
-                     dipole_mats.z_to_numpy())
-        return list(integrals)
+        task = self.scfdrv.task
+        dipole_drv = vlx.ElectricDipoleIntegralsDriver(task.mpi_comm)
+        dipole_mats = dipole_drv.compute(task.molecule, task.ao_basis)
+        return [dipole_mats.x_to_numpy(), dipole_mats.y_to_numpy(),
+                dipole_mats.z_to_numpy()]
 
 
 # VeloxChem is a special case... not using coefficients at all
 # so we need this boilerplate code to make it work...
 class VeloxChemEriBuilder(EriBuilder):
-    def __init__(self, task, mol_orbs,
-                 n_orbs, n_orbs_alpha, n_alpha, n_beta):
-        self.task = task
-        self.molecule = self.task.molecule
-        self.ao_basis = self.task.ao_basis
-        self.mpi_comm = self.task.mpi_comm
-        self.ostream = self.task.ostream
-        self.mol_orbs = mol_orbs
-        self.moints_drv = vlx.MOIntegralsDriver(self.mpi_comm, self.ostream)
-        super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta)
+    def __init__(self, task, mol_orbs, n_orbs, n_orbs_alpha, n_alpha,
+                 n_beta, restricted):
+        self.moints_drv = vlx.MOIntegralsDriver(task.mpi_comm, task.ostream)
+        self.compute_args = (task.molecule, task.ao_basis, mol_orbs)
+        super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted)
 
-    def compute_mo_eri(self, block, coeffs=None, use_cache=True):
-        # compute_in_mem return Physicists' integrals
-        if isinstance(block, list):
-            block = "".join(block)
-        if block in self.eri_cache and use_cache:
-            return self.eri_cache[block]
-        eri = self.moints_drv.compute_in_mem(
-            self.molecule, self.ao_basis, self.mol_orbs, block
-        )
-        self.eri_cache[block] = eri
-        return eri
+    def compute_mo_eri(self, blocks, spins):
+        assert self.restricted   # Veloxchem cannot do unrestricted
+        assert spins == "aaaa"
 
-    @property
-    def eri_notation(self):
-        return "phys"
+        # Compute_in_mem return Physicists' integrals, so we first transform
+        # the block specification from chemists' convention
+        # to physicists' convention
+        blocks_phys = blocks[0] + blocks[2] + blocks[1] + blocks[3]
+        eri = self.moints_drv.compute_in_mem(*self.compute_args, blocks_phys)
 
-    @property
-    def has_mo_asym_eri(self):
-        return False
-
-    def flush_cache(self):
-        self.eri_asymm_cache = {}
-        self.eri_cache = {}
-
-    def build_eri_phys_asym_block(self, can_block=None, spin_symm=None):
-        block = can_block
-        asym_block = "".join([block[i] for i in [0, 1, 3, 2]])
-        both_blocks = "{}-{}-{}-{}".format(
-            block, asym_block, str(spin_symm.pref1), str(spin_symm.pref2)
-        )
-        if both_blocks in self.eri_asymm_cache.keys():
-            return self.eri_asymm_cache[both_blocks]
-
-        if spin_symm.pref1 != 0 and spin_symm.pref2 != 0:
-            eri_phys = self.compute_mo_eri(block)
-            # <ij|kl> - <ij|lk>
-            asymm = self.compute_mo_eri(
-                asym_block
-            ).transpose(0, 1, 3, 2)
-            eris = spin_symm.pref1 * eri_phys - spin_symm.pref2 * asymm
-        elif spin_symm.pref1 != 0 and spin_symm.pref2 == 0:
-            eri_phys = self.compute_mo_eri(block)
-            eris = spin_symm.pref1 * eri_phys
-        elif spin_symm.pref1 == 0 and spin_symm.pref2 != 0:
-            asymm = self.compute_mo_eri(
-                asym_block
-            ).transpose(0, 1, 3, 2)
-            eris = - spin_symm.pref2 * asymm
-
-        self.eri_asymm_cache[both_blocks] = eris
-        return eris
-
-    def build_full_eri_ffff(self):
-        n_orbs = self.n_orbs
-        n_alpha = self.n_alpha
-        n_beta = self.n_beta
-        n_orbs_alpha = self.n_orbs_alpha
-
-        aro = slice(0, n_alpha)
-        bro = slice(n_orbs_alpha, n_orbs_alpha + n_beta)
-        arv = slice(n_alpha, n_orbs_alpha)
-        brv = slice(n_orbs_alpha + n_beta, n_orbs)
-        eri = np.zeros((n_orbs, n_orbs, n_orbs, n_orbs))
-
-        blocks = ["OOVV", "OVOV", "OOOV", "OOOO", "OVVV", "VVVV"]
-        for bl in blocks:
-            # compute_in_mem return Physicists' integrals
-            # we convert to Chemists' notation because we're building the
-            # full ERI tensor for adcc, which requires Chemists' integrals
-            can_block_integrals = self.compute_mo_eri(bl)
-            b = bl[0] + bl[2] + bl[1] + bl[3]
-            can_block_integrals = can_block_integrals.transpose(0, 2, 1, 3)
-            slices_alpha = [aro if x == "O" else arv for x in b]
-            slices_beta = [bro if x == "O" else brv for x in b]
-
-            # automatically set ERI tensor's symmetry-equivalent blocks
-            trans_sym_blocks = get_symm_equivalent_transpositions_for_block(
-                b, notation="chem"
-            )
-
-            # Slices for the spin-allowed blocks
-            aaaa = SpinBlockSlice("aaaa", (slices_alpha[0], slices_alpha[1],
-                                           slices_alpha[2], slices_alpha[3]))
-            bbbb = SpinBlockSlice("bbbb", (slices_beta[0], slices_beta[1],
-                                           slices_beta[2], slices_beta[3]))
-            aabb = SpinBlockSlice("aabb", (slices_alpha[0], slices_alpha[1],
-                                           slices_beta[2], slices_beta[3]))
-            bbaa = SpinBlockSlice("bbaa", (slices_beta[0], slices_beta[1],
-                                           slices_alpha[2], slices_alpha[3]))
-            non_zero_spin_block_slice_list = [aaaa, bbbb, aabb, bbaa]
-            for tsym_block in trans_sym_blocks:
-                sym_block_eri = can_block_integrals.transpose(tsym_block)
-                for non_zero_spin_block in non_zero_spin_block_slice_list:
-                    transposed_spin_slices = tuple(
-                        non_zero_spin_block.slices[i] for i in tsym_block
-                    )
-                    eri[transposed_spin_slices] = sym_block_eri
-        return eri
+        # Transform slice back to chemists' indexing convention and return
+        return eri.transpose((0, 2, 1, 3))
 
 
 class VeloxChemHFProvider(HartreeFockProvider):
@@ -187,12 +91,11 @@ class VeloxChemHFProvider(HartreeFockProvider):
         self.ao_basis = self.scfdrv.task.ao_basis
         self.mpi_comm = self.scfdrv.task.mpi_comm
         self.ostream = self.scfdrv.task.ostream
-        self.eri_ffff = None
         n_alpha = self.molecule.number_of_alpha_electrons()
         n_beta = self.molecule.number_of_beta_electrons()
         self.eri_builder = VeloxChemEriBuilder(
             self.scfdrv.task, self.mol_orbs, self.n_orbs, self.n_orbs_alpha,
-            n_alpha, n_beta
+            n_alpha, n_beta, self.restricted
         )
 
         self.operator_integral_provider = VeloxChemOperatorIntegralProvider(
@@ -267,19 +170,16 @@ class VeloxChemHFProvider(HartreeFockProvider):
         out[:] = fullfock_ff[slices]
 
     def fill_eri_ffff(self, slices, out):
-        if self.eri_ffff is None:
-            self.eri_ffff = self.eri_builder.build_full_eri_ffff()
-        out[:] = self.eri_ffff[slices]
+        self.eri_builder.fill_slice_symm(slices, out)
 
     def fill_eri_phys_asym_ffff(self, slices, out):
-        self.eri_builder.fill_slice(slices, out)
+        raise NotImplementedError("fill_eri_phys_asym_ffff not implemented.")
 
     def has_eri_phys_asym_ffff(self):
-        return True
+        return False
 
     def flush_cache(self):
         self.eri_builder.flush_cache()
-        self.eri_ffff = None
 
 
 def import_scf(scfdrv):

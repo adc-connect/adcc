@@ -22,12 +22,11 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
-from pyscf import ao2mo, gto, scf
-
-from adcc.misc import cached_property
-
 from .InvalidReference import InvalidReference
 from .eri_build_helper import EriBuilder
+
+from pyscf import ao2mo, gto, scf
+from adcc.misc import cached_property
 
 from libadcc import HartreeFockProvider
 
@@ -65,15 +64,15 @@ class PyScfEriBuilder(EriBuilder):
             "Vb": self.mo_coeff[1][:, self.n_beta:],
         }
 
-    def compute_mo_eri(self, block, coeffs, use_cache=True):
-        if block in self.eri_cache and use_cache:
-            return self.eri_cache[block]
+    def compute_mo_eri(self, coeffs):
+        # TODO Pyscf usse HDF5 internal to do the AO2MO here we read it all
+        #      into memory. This wastes memory and could be avoided if temporary
+        #      files were used instead. These could be deleted on the call
+        #      to `flush_cache` automatically.
         sizes = [i.shape[1] for i in coeffs]
-        eri = ao2mo.general(self.scfres.mol, coeffs,
-                            compact=False).reshape(sizes[0], sizes[1],
-                                                   sizes[2], sizes[3])
-        self.eri_cache[block] = eri
-        return eri
+        return ao2mo.general(self.scfres.mol, coeffs,
+                             compact=False).reshape(sizes[0], sizes[1],
+                                                    sizes[2], sizes[3])
 
 
 class PyScfHFProvider(HartreeFockProvider):
@@ -86,7 +85,6 @@ class PyScfHFProvider(HartreeFockProvider):
         # otherwise weird errors result
         super().__init__()
         self.scfres = scfres
-        self.eri_ffff = None
         n_alpha, n_beta = scfres.mol.nelec
         self.eri_builder = PyScfEriBuilder(
             self.scfres, self.n_orbs, self.n_orbs_alpha, n_alpha, n_beta,
@@ -95,7 +93,6 @@ class PyScfHFProvider(HartreeFockProvider):
         self.operator_integral_provider = PyScfOperatorIntegralProvider(
             self.scfres
         )
-
         if not self.restricted:
             assert self.scfres.mo_coeff[0].shape[1] == \
                 self.scfres.mo_coeff[1].shape[1]
@@ -181,19 +178,16 @@ class PyScfHFProvider(HartreeFockProvider):
         out[:] = np.diag(diagonal)[slices]
 
     def fill_eri_ffff(self, slices, out):
-        if self.eri_ffff is None:
-            self.eri_ffff = self.eri_builder.build_full_eri_ffff()
-        out[:] = self.eri_ffff[slices]
+        self.eri_builder.fill_slice_symm(slices, out)
 
     def fill_eri_phys_asym_ffff(self, slices, out):
-        self.eri_builder.fill_slice(slices, out)
+        raise NotImplementedError("fill_eri_phys_asym_ffff not implemented.")
 
     def has_eri_phys_asym_ffff(self):
-        return True
+        return False
 
     def flush_cache(self):
         self.eri_builder.flush_cache()
-        self.eri_ffff = None
 
 
 def import_scf(scfres):
