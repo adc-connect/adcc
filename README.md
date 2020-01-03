@@ -23,9 +23,14 @@ For more details and installation instructions see the
 [adcc documentation](https://adc-connect.org).
 
 ## Citation
-[![](https://img.shields.io/badge/hal-preprint-red)](https://hal.archives-ouvertes.fr/hal-02319517)
 
-A preprint of our paper describing adcc can be found
+**Paper:** | [![](https://img.shields.io/badge/DOI-10.1002/wcms.1462-blue)](https://doi.org/10.1002/wcms.1462)
+-----------| --------------------------------------------------------------------------------------------------------
+**Code:**  | [![DOI](https://zenodo.org/badge/215731857.svg)](https://zenodo.org/badge/latestdoi/215731857)
+
+If you use adcc, please cite
+[our paper in WIREs Computational Molecular Science](https://doi.org/10.1002/wcms.1462).
+A preprint can be found
 [on HAL](https://hal.archives-ouvertes.fr/hal-02319517)
 or [on arXiv](http://arxiv.org/pdf/1910.07757).
 
