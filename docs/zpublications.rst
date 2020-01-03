@@ -17,7 +17,10 @@ adcc publications
 .. list-table::
 
    * - **Paper:**
-     - .. image:: https://img.shields.io/badge/hal-preprint-red
+     - .. image:: https://img.shields.io/badge/DOI-10.1002/wcms.1462-blue
+          :target: https://doi.org/10.1002/wcms.1462
+
+       .. image:: https://img.shields.io/badge/hal-preprint-red
           :target: https://hal.archives-ouvertes.fr/hal-02319517
 
    * - **Code:**

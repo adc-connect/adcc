@@ -205,7 +205,7 @@ def banner(colour=sys.stdout.isatty(), show_doi=True, show_website=True):
     string += empty
     string += string_component("adcc", __version__, __authors__,
                                email=__email__, licence=__license__,
-                               website=__url__)
+                               website=__url__, doi="10.1002/wcms.1462")
     string += empty
     bt = ""
     if adccore.__build_type__ not in ["Release"]:
