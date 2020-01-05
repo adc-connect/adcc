@@ -1,0 +1,13 @@
+name: adcc37
+channels:
+  - conda-forge
+  - psi4
+  - defaults
+dependencies:
+  - python=3.7
+  - psi4
+  - openblas
+  - pip
+  - pip:
+    - pybind11
+    - .

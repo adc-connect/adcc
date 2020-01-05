@@ -45,10 +45,11 @@ Recently we submitted a paper about adcc, see :cite:`adcc`.
 Getting a first taste
 ---------------------
 
-The next code snippet should give you an idea, how adcc works in practice.
-It shows how an ADC(3) calculation for 3 singlet excited states
-of water can be performed on top of a restricted Hartree-Fock reference
-computed using PySCF.
+You may `interactively try adcc <https://try.adc-connect.org>`_
+from your browser at `https://try.adc-connect.org <https://try.adc-connect.org>`_.
+Alternatively keep reading for a small code snippet, which shows how to
+perform an ADC(3) calculation for 3 singlet excited states of water
+on top of a restricted Hartree-Fock reference computed with PySCF.
 
 .. code-block:: python
 
@@ -75,7 +76,8 @@ computed using PySCF.
     state.plot_spectrum(broadening='lorentzian')
     plt.show()
 
-Sounds interesting? See :ref:`installation` and :ref:`performing-calculations`
+Sounds interesting?
+See :ref:`installation` and :ref:`performing-calculations`
 for installation instructions and some more information to get going.
 
 Contents

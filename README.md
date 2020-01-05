@@ -5,9 +5,9 @@
 [![pypi](https://img.shields.io/pypi/v/adcc)](https://pypi.org/project/adcc)
 [![anaconda](https://anaconda.org/adcc/adcc/badges/version.svg)](https://anaconda.org/adcc/adcc)
 [![Documentation](https://img.shields.io/badge/doc-latest-blue.svg)](https://adc-connect.org)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://try.adc-connect.org)
 [![Travis](https://travis-ci.org/adc-connect/adcc.svg?branch=master)](https://travis-ci.org/adc-connect/adcc)
 [![DOI](https://zenodo.org/badge/215731857.svg)](https://zenodo.org/badge/latestdoi/215731857)
-
 
 adcc (**ADC-connect**) is a python-based framework for performing
 the calculation of molecular spectra and electronically excited states
@@ -19,8 +19,10 @@ Currently adcc comes with ready-to-use interfaces to four programs,
 namely pyscf, psi4, VeloxChem or molsturm. Adding other SCF codes or
 starting a calculation from
 statically computed data can be easily achieved.
-For more details and installation instructions see the
-[adcc documentation](https://adc-connect.org).
+
+Try adcc in your browser at https://try.adc-connect.org
+or take a look at the [adcc documentation](https://adc-connect.org)
+for more details and installation instructions.
 
 ## Citation
 
