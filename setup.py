@@ -105,6 +105,12 @@ class LinkerDynamic:
                        and os.path.isdir(line):
                         self.library_paths.append(line)
 
+        # If we are in a CONDA environment, add conda library prefix
+        if "CONDA_PREFIX" in os.environ:
+            libpath = os.path.join(os.environ["CONDA_PREFIX"], "lib")
+            if os.path.isdir(libpath):
+                self.library_paths.append(libpath)
+
     def find(self, library):
         for path in self.library_paths:
             name = join(path, library)
