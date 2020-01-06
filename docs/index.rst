@@ -14,9 +14,6 @@ adcc: Seamlessly connect your program to ADC
 .. image:: https://img.shields.io/pypi/l/adcc
    :target: https://github.com/adc-connect/adcc/blob/master/LICENSE
 
-.. note::
-   This documentation page is still under construction.
-
 .. image:: logo/logo.png
    :width: 200px
    :align: left
