@@ -29,7 +29,7 @@ jobs:
     #
     # Checking
     - stage: code style
-      python: 3.7
+      python: 3.8
       addons:
         apt:
           packages: []   # Do not install openblas here
@@ -39,9 +39,9 @@ jobs:
     #
     # Testing
     - stage: test
-      python: 3.7
+      python: 3.6
       env: BUILD_SDIST=true
-    - python: 3.6
+    - python: 3.8
     - os: osx
       language: script
       osx_image: xcode11.1  # macos 10.14
