@@ -22,7 +22,7 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
-from adcc.AdcMatrix import AdcMatrix
+from adcc.AdcMatrix import AdcMatrixlike
 from adcc.functions import divide, empty_like, ones_like
 from adcc.AmplitudeVector import AmplitudeVector
 
@@ -51,8 +51,8 @@ class JacobiPreconditioner:
     D is the diagonal of the adcmatrix.
     """
     def __init__(self, adcmatrix, shifts=0.0):
-        if not isinstance(adcmatrix, AdcMatrix):
-            raise TypeError("Only an AdcMatrix may be used with this "
+        if not isinstance(adcmatrix, AdcMatrixlike):
+            raise TypeError("Only an AdcMatrixlike may be used with this "
                             "preconditioner for now.")
 
         self.diagonal = AmplitudeVector(*tuple(

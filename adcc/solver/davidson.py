@@ -24,7 +24,8 @@ import sys
 import warnings
 import numpy as np
 
-from adcc import AdcMatrix, linear_combination
+from adcc import linear_combination
+from adcc.AdcMatrix import AdcMatrixlike
 from adcc.AmplitudeVector import AmplitudeVector
 
 import scipy.linalg as la
@@ -350,8 +351,8 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
         a new subspace vector
         (defaults to 2 * len(matrix) * machine_expsilon)
     """
-    if not isinstance(matrix, AdcMatrix):
-        raise TypeError("matrix is not of type AdcMatrix")
+    if not isinstance(matrix, AdcMatrixlike):
+        raise TypeError("matrix is not of type AdcMatrixlike")
     for guess in guesses:
         if not isinstance(guess, AmplitudeVector):
             raise TypeError("One of the guesses is not of type AmplitudeVector")

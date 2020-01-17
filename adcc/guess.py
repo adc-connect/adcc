@@ -20,7 +20,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from adcc import AdcMatrix, AmplitudeVector, Tensor
+from adcc import AdcMatrixlike, AmplitudeVector, Tensor
 
 import libadcc
 
@@ -77,8 +77,8 @@ def guess_symmetries(matrix, irrep="A", spin_change=0,
                  "symmetric" and "antisymmetric", where "none" enforces
                  no particular symmetry.
     """
-    if not isinstance(matrix, AdcMatrix):
-        raise TypeError("matrix needs to be of type AdcMatrix")
+    if not isinstance(matrix, AdcMatrixlike):
+        raise TypeError("matrix needs to be of type AdcMatrixlike")
     if spin_block_symmetrisation not in ["none", "symmetric", "antisymmetric"]:
         raise ValueError("Invalid value for spin_block_symmetrisation: "
                          "{}".format(spin_block_symmetrisation))
@@ -95,7 +95,15 @@ def guess_symmetries(matrix, irrep="A", spin_change=0,
 
     gkind = libadcc.AdcGuessKind(irrep, float(spin_change),
                                  spin_block_symmetrisation)
-    return libadcc.guess_symmetries(matrix, gkind)
+    symmetries = libadcc.guess_symmetries(matrix.to_cpp(), gkind)
+
+    # FIXME There are cases (e.g. when a AdcBlockView is employed), where
+    #       there returned guess vectors contain a block, which is actually
+    #       removed by the view. This corrects for that. When the guess selection
+    #       has fully migrated to the python world, this should be removed.
+    if len(symmetries) == 2 and "d" not in matrix.blocks:
+        symmetries = [symmetries[0]]
+    return symmetries
 
 
 def guesses_from_diagonal(matrix, n_guesses, block="s",
@@ -129,8 +137,8 @@ def guesses_from_diagonal(matrix, n_guesses, block="s",
                  Tolerance for two entries of the diagonal to be considered
                  degenerate, i.e. identical.
     """
-    if not isinstance(matrix, AdcMatrix):
-        raise TypeError("matrix needs to be of type AdcMatrix")
+    if not isinstance(matrix, AdcMatrixlike):
+        raise TypeError("matrix needs to be of type AdcMatrixlike")
     if spin_block_symmetrisation not in ["none", "symmetric", "antisymmetric"]:
         raise ValueError("Invalid value for spin_block_symmetrisation: "
                          "{}".format(spin_block_symmetrisation))
@@ -154,9 +162,17 @@ def guesses_from_diagonal(matrix, n_guesses, block="s",
 
     gkind = libadcc.AdcGuessKind(irrep, float(spin_change),
                                  spin_block_symmetrisation)
-    guesses = libadcc.guesses_from_diagonal(matrix, gkind, block, n_guesses,
-                                            degeneracy_tolerance)
-    return [AmplitudeVector(*gv.to_tuple()) for gv in guesses]
+    guesses = libadcc.guesses_from_diagonal(matrix.to_cpp(), gkind, block,
+                                            n_guesses, degeneracy_tolerance)
+
+    # FIXME There are cases (e.g. when a AdcBlockView is employed), where
+    #       there returned guess vectors contain a block, which is actually
+    #       removed by the view. This corrects for that. When the guess selection
+    #       has fully migrated to the python world, this should be removed.
+    if len(guesses[0].to_tuple()) == 2 and "d" not in matrix.blocks:
+        return [AmplitudeVector(gv.to_tuple()[0]) for gv in guesses]
+    else:
+        return [AmplitudeVector(*gv.to_tuple()) for gv in guesses]
 
 
 #

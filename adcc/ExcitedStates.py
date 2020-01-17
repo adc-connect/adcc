@@ -34,9 +34,9 @@ from .OneParticleOperator import product_trace
 from .FormatDominantElements import FormatDominantElements
 
 from adcc import dot
-from scipy import constants
 from matplotlib import pyplot as plt
 
+from scipy import constants
 from .solver.SolverStateBase import EigenSolverStateBase
 
 
@@ -176,10 +176,11 @@ class ExcitedStates:
             if hasattr(data, optattr):
                 setattr(self, optattr, getattr(data, optattr))
 
-        if method is None:
+        self.method = getattr(data, "method", method)
+        if self.method is None:
             self.method = self.matrix.method
-        elif not isinstance(method, AdcMethod):
-            method = AdcMethod(method)
+        if not isinstance(self.method, AdcMethod):
+            self.method = AdcMethod(self.method)
         if property_method is None:
             if self.method.level < 3:
                 property_method = self.method
@@ -187,7 +188,7 @@ class ExcitedStates:
                 # Auto-select ADC(2) properties for ADC(3) calc
                 property_method = self.method.at_level(2)
         elif not isinstance(property_method, AdcMethod):
-            property_method = AdcMethod(method)
+            property_method = AdcMethod(property_method)
         self.__property_method = property_method
 
         # Special stuff for special solvers

@@ -30,45 +30,22 @@ from .AmplitudeVector import AmplitudeVector
 import libadcc
 
 
-class AdcMatrix(libadcc.AdcMatrix):
-    def __init__(self, method, mp_results):
-        """
-        Initialise an ADC matrix from a method, the reference_state
-        and appropriate MP results.
-        """
-        if not isinstance(method, AdcMethod):
-            method = AdcMethod(method)
-        if isinstance(mp_results, (libadcc.ReferenceState,
-                                   libadcc.HartreeFockSolution_i)):
-            mp_results = LazyMp(mp_results)
-        if not isinstance(mp_results, libadcc.LazyMp):
-            raise TypeError("mp_results is not a valid object. It needs to be "
-                            "either a LazyMp, a ReferenceState or a "
-                            "HartreeFockSolution_i.")
+class AdcMatrixlike:
+    """
+    Class implementing minimal functionality of AdcMatrixlike objects.
 
-        self.method = method
-        super().__init__(method.name, mp_results)
-
-    def compute_matvec(self, in_ampl, out_ampl=None):
-        """
-        Compute the matrix-vector product of the ADC matrix
-        with an excitation amplitude and return the result
-        in the out_ampl if it is given, else the result
-        will be returned.
-        """
-        if out_ampl is None:
-            out_ampl = empty_like(in_ampl)
-        elif not isinstance(out_ampl, type(in_ampl)):
-            raise TypeError("Types of in_ample and out_ampl do not match.")
-        if not isinstance(in_ampl, AmplitudeVector):
-            raise TypeError("in_ampl has to be of type AmplitudeVector.")
-        else:
-            super().compute_matvec(in_ampl.to_cpp(), out_ampl.to_cpp())
-        return out_ampl
+    Note: This is not the user-facing high-level object. Use adcc.AdcMatrix
+    if you want to construct an ADC matrix object yourself.
+    """
+    def __init__(self, innermatrix):
+        self.innermatrix = innermatrix
 
     @property
     def ndim(self):
         return 2
+
+    def __len__(self):
+        return self.shape[0]
 
     def matvec(self, v):
         out = empty_like(v)
@@ -87,9 +64,6 @@ class AdcMatrix(libadcc.AdcMatrix):
                 return [self.compute_matvec(ov) for ov in other]
         return NotImplemented
 
-    def __repr__(self):
-        return "AdcMatrix(method={})".format(self.method.name)
-
     def construct_symmetrisation_for_blocks(self):
         """
         Construct the symmetrisation functions, which need to be
@@ -104,7 +78,7 @@ class AdcMatrix(libadcc.AdcMatrix):
         Returns a dictionary block identifier -> function
         """
         ret = {}
-        if self.method.is_core_valence_separated:
+        if self.is_core_valence_separated:
             def symmetrise_cvs_adc_doubles(invec, outvec):
                 # CVS doubles part is antisymmetric wrt. (i,K,a,b) <-> (i,K,b,a)
                 invec.antisymmetrise_to(outvec, [(2, 3)])
@@ -251,3 +225,70 @@ class AdcMatrix(libadcc.AdcMatrix):
 
             out[n_s:, :n_s] = np.transpose(out[:n_s, n_s:])
         return out
+
+# Redirect some functions and properties to the innermatrix
+for wfun in ["to_cpp", "compute_apply", "compute_matvec", "diagonal",
+             "has_block", "block_spaces"]:
+    def caller(self, *args, wfuncopy=wfun, **kwargs):
+        return getattr(self.innermatrix, wfuncopy)(*args, **kwargs)
+    if hasattr(libadcc.AdcMatrix, wfun):
+        caller.__doc__ = getattr(libadcc.AdcMatrix, wfun).__doc__
+    setattr(AdcMatrixlike, wfun, caller)
+
+for prop in ["intermediates", "reference_state", "ground_state", "mospaces",
+             "is_core_valence_separated", "shape", "blocks", "timer"]:
+    def caller(self, propcopy=prop):
+        return getattr(self.innermatrix, propcopy)
+    caller.__doc__ = getattr(libadcc.AdcMatrix, prop).__doc__
+    setattr(AdcMatrixlike, prop, property(caller))
+
+
+class AdcMatrix(AdcMatrixlike):
+    def __init__(self, method, mp_results):
+        """
+        Initialise an ADC matrix.
+
+        Parameters
+        ----------
+        method : str or AdcMethod
+            Method to use.
+        mp_results : adcc.ReferenceState or adcc.LazyMp
+            HF reference or MP ground state
+        """
+        if not isinstance(method, AdcMethod):
+            method = AdcMethod(method)
+        if isinstance(mp_results, (libadcc.ReferenceState,
+                                   libadcc.HartreeFockSolution_i)):
+            mp_results = LazyMp(mp_results)
+        if not isinstance(mp_results, libadcc.LazyMp):
+            raise TypeError("mp_results is not a valid object. It needs to be "
+                            "either a LazyMp, a ReferenceState or a "
+                            "HartreeFockSolution_i.")
+
+        self.method = method
+        self.cppmat = libadcc.AdcMatrix(method.name, mp_results)
+        super().__init__(self.cppmat)
+
+    def compute_matvec(self, in_ampl, out_ampl=None):
+        """
+        Compute the matrix-vector product of the ADC matrix
+        with an excitation amplitude and return the result
+        in the out_ampl if it is given, else the result
+        will be returned.
+        """
+        if not isinstance(in_ampl, AmplitudeVector):
+            raise TypeError("in_ampl has to be of type AmplitudeVector.")
+        if out_ampl is None:
+            out_ampl = empty_like(in_ampl)
+        if not isinstance(out_ampl, AmplitudeVector):
+            raise TypeError("out_ampl has to be of type AmplitudeVector.")
+        self.cppmat.compute_matvec(in_ampl.to_cpp(), out_ampl.to_cpp())
+        return out_ampl
+
+    def to_cpp(self):
+        # TODO Notice: This is only needed for guess.py and can probably
+        #      be removed once the guesses are done pyside.
+        return self.cppmat
+
+    def __repr__(self):
+        return f"AdcMatrix({self.method.name})"
