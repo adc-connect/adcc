@@ -44,7 +44,7 @@ from libadcc import HartreeFockProvider, get_n_threads, set_n_threads
 # This has to be the last set of import
 from .guess import (guess_symmetries, guess_zero, guesses_any, guesses_singlet,
                     guesses_spin_flip, guesses_triplet)
-from .run_adc import run_adc
+from .workflow import run_adc
 
 __all__ = ["run_adc", "AdcMatrix", "AdcBlockView", "AdcMatrixlike", "AdcMethod",
            "Symmetry", "ReferenceState",
