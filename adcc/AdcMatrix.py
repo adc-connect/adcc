@@ -64,6 +64,14 @@ class AdcMatrixlike:
                 return [self.compute_matvec(ov) for ov in other]
         return NotImplemented
 
+    @property
+    def intermediates(self):
+        return self.innermatrix.intermediates
+
+    @intermediates.setter
+    def intermediates(self, new):
+        self.innermatrix.intermediates = new
+
     def construct_symmetrisation_for_blocks(self):
         """
         Construct the symmetrisation functions, which need to be
@@ -226,6 +234,7 @@ class AdcMatrixlike:
             out[n_s:, :n_s] = np.transpose(out[:n_s, n_s:])
         return out
 
+
 # Redirect some functions and properties to the innermatrix
 for wfun in ["to_cpp", "compute_apply", "compute_matvec", "diagonal",
              "has_block", "block_spaces"]:
@@ -235,7 +244,7 @@ for wfun in ["to_cpp", "compute_apply", "compute_matvec", "diagonal",
         caller.__doc__ = getattr(libadcc.AdcMatrix, wfun).__doc__
     setattr(AdcMatrixlike, wfun, caller)
 
-for prop in ["intermediates", "reference_state", "ground_state", "mospaces",
+for prop in ["reference_state", "ground_state", "mospaces",
              "is_core_valence_separated", "shape", "blocks", "timer"]:
     def caller(self, propcopy=prop):
         return getattr(self.innermatrix, propcopy)
@@ -244,7 +253,7 @@ for prop in ["intermediates", "reference_state", "ground_state", "mospaces",
 
 
 class AdcMatrix(AdcMatrixlike):
-    def __init__(self, method, mp_results):
+    def __init__(self, method, hf_or_mp):
         """
         Initialise an ADC matrix.
 
@@ -252,21 +261,21 @@ class AdcMatrix(AdcMatrixlike):
         ----------
         method : str or AdcMethod
             Method to use.
-        mp_results : adcc.ReferenceState or adcc.LazyMp
+        hf_or_mp : adcc.ReferenceState or adcc.LazyMp
             HF reference or MP ground state
         """
         if not isinstance(method, AdcMethod):
             method = AdcMethod(method)
-        if isinstance(mp_results, (libadcc.ReferenceState,
-                                   libadcc.HartreeFockSolution_i)):
-            mp_results = LazyMp(mp_results)
-        if not isinstance(mp_results, libadcc.LazyMp):
+        if isinstance(hf_or_mp, (libadcc.ReferenceState,
+                                 libadcc.HartreeFockSolution_i)):
+            hf_or_mp = LazyMp(hf_or_mp)
+        if not isinstance(hf_or_mp, libadcc.LazyMp):
             raise TypeError("mp_results is not a valid object. It needs to be "
                             "either a LazyMp, a ReferenceState or a "
                             "HartreeFockSolution_i.")
 
         self.method = method
-        self.cppmat = libadcc.AdcMatrix(method.name, mp_results)
+        self.cppmat = libadcc.AdcMatrix(method.name, hf_or_mp)
         super().__init__(self.cppmat)
 
     def compute_matvec(self, in_ampl, out_ampl=None):
