@@ -30,7 +30,6 @@ from .AdcMatrix import AdcMatrix, AdcMatrixlike
 from .AdcMethod import AdcMethod
 from .ExcitedStates import ExcitedStates
 from .ReferenceState import ReferenceState as adcc_ReferenceState
-
 from .solver.davidson import jacobi_davidson
 from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
@@ -174,7 +173,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         data_or_matrix, core_orbitals=core_orbitals, frozen_core=frozen_core,
         frozen_virtual=frozen_virtual, method=method)
 
-    n_states, kind = normalise_state_parameters(
+    n_states, kind = validate_state_parameters(
         matrix.reference_state, n_states=n_states, n_singlets=n_singlets,
         n_triplets=n_triplets, n_spin_flip=n_spin_flip, kind=kind)
 
@@ -260,8 +259,8 @@ def construct_adcmatrix(data_or_matrix, core_orbitals=None, frozen_core=None,
         return data_or_matrix
 
 
-def normalise_state_parameters(reference_state, n_states=None, n_singlets=None,
-                               n_triplets=None, n_spin_flip=None, kind="any"):
+def validate_state_parameters(reference_state, n_states=None, n_singlets=None,
+                              n_triplets=None, n_spin_flip=None, kind="any"):
     """
     Check the passed state parameters for consistency with itself and with
     the passed reference and normalise them. In the end return the number of
@@ -277,18 +276,27 @@ def normalise_state_parameters(reference_state, n_states=None, n_singlets=None,
         if not reference_state.restricted:
             raise ValueError("The n_singlets parameter may only be employed "
                              "for restricted references")
+        if kind not in ["singlet", "any"]:
+            raise ValueError(f"Kind parameter {kind} not compatible "
+                             "with n_singlets > 0")
         kind = "singlet"
         n_states = n_singlets
     if n_triplets is not None:
         if not reference_state.restricted:
             raise ValueError("The n_triplets parameter may only be employed "
                              "for restricted references")
+        if kind not in ["triplet", "any"]:
+            raise ValueError(f"Kind parameter {kind} not compatible "
+                             "with n_triplets > 0")
         kind = "triplet"
         n_states = n_triplets
     if n_spin_flip is not None:
         if reference_state.restricted:
             raise ValueError("The n_spin_flip parameter may only be employed "
                              "for unrestricted references")
+        if kind not in ["spin_flip", "any"]:
+            raise ValueError(f"Kind parameter {kind} not compatible "
+                             "with n_spin_flip > 0")
         kind = "spin_flip"
         n_states = n_spin_flip
 
@@ -344,8 +352,8 @@ def diagonalise_adcmatrix(matrix, n_states, kind, solver_method="davidson",
     if guesses is None:
         if n_guesses is None:
             n_guesses = estimate_n_guesses(matrix, n_states)
-        guesses = obtain_guesses_by_inspection(matrix, n_states, kind,
-                                               n_guesses, n_guesses_doubles)
+        guesses = obtain_guesses_by_inspection(matrix, n_guesses, kind,
+                                               n_guesses_doubles)
     else:
         if len(guesses) < n_states:
             raise ValueError("Less guesses provided via guesses (== {}) "
@@ -366,7 +374,7 @@ def diagonalise_adcmatrix(matrix, n_states, kind, solver_method="davidson",
                                explicit_symmetrisation=explicit_symmetrisation,
                                callback=callback, **solverargs)
     else:
-        raise NotImplementedError(f"Solver {solver_method} not implemented.")
+        raise ValueError(f"Solver {solver_method} unknown.")
 
 
 def estimate_n_guesses(matrix, n_states, singles_only=True):
@@ -402,8 +410,7 @@ def estimate_n_guesses(matrix, n_states, singles_only=True):
     return max(n_states, n_guesses)
 
 
-def obtain_guesses_by_inspection(matrix, n_states, kind, n_guesses,
-                                 n_guesses_doubles=None):
+def obtain_guesses_by_inspection(matrix, n_guesses, kind, n_guesses_doubles=None):
     """
     Obtain guesses by inspecting the diagonal matrix elements.
     If n_guesses_doubles is not None, this is number is always adhered to.
@@ -439,8 +446,8 @@ def obtain_guesses_by_inspection(matrix, n_states, kind, n_guesses,
 
     total_guesses = singles_guesses + doubles_guesses
     if len(total_guesses) < n_guesses:
-        raise RuntimeError("Less guesses found than requested: {} found, "
-                           "{} requested".format(len(total_guesses), n_guesses))
+        raise ValueError("Less guesses found than requested: {} found, "
+                         "{} requested".format(len(total_guesses), n_guesses))
     return total_guesses
 
 
