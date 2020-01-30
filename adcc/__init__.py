@@ -61,7 +61,7 @@ __all__ = ["run_adc", "AdcMatrix", "AdcBlockView", "AdcMatrixlike", "AdcMethod",
            "cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x", "cvs_adc3"
            "banner"]
 
-__version__ = "0.13.3"
+__version__ = "0.13.4"
 __license__ = "GPL v3"
 __url__ = "https://adc-connect.org"
 __authors__ = ["Michael F. Herbst", "Maximilian Scheurer"]
