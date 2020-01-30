@@ -22,12 +22,12 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
+from .backends import import_scf_results
+from .memory_pool import memory_pool
+
 from collections.abc import Iterable
 
 import libadcc
-
-from .backends import import_scf_results
-from .memory_pool import memory_pool
 
 __all__ = ["MoSpaces"]
 
@@ -170,7 +170,7 @@ class MoSpaces(libadcc.MoSpaces):
         The frozen (inactive) virtual spin orbitals
         (in the index convention of the host provider).
         """
-        return self.map_index_hf_provider.get("o2", [])
+        return self.map_index_hf_provider.get("v2", [])
 
 
 # TODO some nice describe method

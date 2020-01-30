@@ -113,7 +113,10 @@ void export_OneParticleOperator(py::module& m) {
         .def("set_zero_block", set_zero_block_1,
              "Set a block of the matrix (e.g. o1o1, o1v1) to be explicitly zero.")
         .def("is_zero_block", &OneParticleOperator::is_zero_block)
-        .def("copy", &OneParticleOperator::copy)
+        .def("copy", &OneParticleOperator::copy,
+             "Return a deep copy of this OneParticleOperator.\n\nThis can be used to "
+             "conveniently add tensor corrections on top of existing OneParticleOperator "
+             "objects.")
         .def_property_readonly("is_symmetric", &OneParticleOperator::is_symmetric)
         .def_property_readonly("cartesian_transform",
                                &OneParticleOperator::cartesian_transform)

@@ -33,8 +33,6 @@ static py::tuple AdcMatrix_shape(const AdcMatrix& self) {
   return shape_tuple(self.shape());
 }
 
-static size_t AdcMatrix__len__(const AdcMatrix& self) { return self.shape()[0]; }
-
 static py::list AdcMatrix_blocks(const AdcMatrix& self) {
   py::list ret;
   for (auto& str : self.blocks()) {
@@ -70,7 +68,6 @@ void export_AdcMatrix(py::module& m) {
         .def("has_block", &AdcMatrix::has_block)
         .def_property_readonly("shape", &AdcMatrix_shape)
         .def("block_spaces", &AdcMatrix::block_spaces)
-        .def("__len__", &AdcMatrix__len__)
         .def_property_readonly("blocks", &AdcMatrix_blocks)
         .def("compute_matvec", &AdcMatrix::compute_matvec)
         .def_property_readonly(

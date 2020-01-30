@@ -25,12 +25,13 @@ import sys
 from .LazyMp import LazyMp
 from .Tensor import Tensor
 from .Symmetry import Symmetry
-from .AdcMatrix import AdcMatrix
+from .AdcMatrix import AdcMatrix, AdcMatrixlike
 from .AdcMethod import AdcMethod
 from .functions import (add, contract, copy, divide, dot, empty_like,
                         linear_combination, multiply, nosym_like, ones_like,
                         subtract, transpose, zeros_like)
 from .memory_pool import memory_pool
+from .AdcBlockView import AdcBlockView
 from .ExcitedStates import ExcitedStates
 from .DataHfProvider import DataHfProvider, DictHfProvider
 from .ReferenceState import ReferenceState
@@ -43,9 +44,10 @@ from libadcc import HartreeFockProvider, get_n_threads, set_n_threads
 # This has to be the last set of import
 from .guess import (guess_symmetries, guess_zero, guesses_any, guesses_singlet,
                     guesses_spin_flip, guesses_triplet)
-from .run_adc import run_adc
+from .workflow import run_adc
 
-__all__ = ["run_adc", "AdcMatrix", "AdcMethod", "Symmetry", "ReferenceState",
+__all__ = ["run_adc", "AdcMatrix", "AdcBlockView", "AdcMatrixlike", "AdcMethod",
+           "Symmetry", "ReferenceState",
            "add", "contract", "copy", "divide", "dot", "empty_like",
            "linear_combination", "multiply", "nosym_like", "ones_like",
            "subtract", "transpose", "zeros_like",
