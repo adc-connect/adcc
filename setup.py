@@ -202,7 +202,7 @@ class BuildExt(BuildCommand):
             potential_opts = [
                 "-fvisibility=hidden", "-Wall", "-Wextra",
                 "-pedantic", "-Wnon-virtual-dtor", "-Woverloaded-virtual",
-                "-Wcast-align", "-Wconversion", "-Wsign-conversion",
+                "-Wcast-align", "-Wconversion",
                 "-Wmisleading-indentation", "-Wduplicated-cond",
                 "-Wduplicated-branches", "-Wlogical-op",
                 "-Wdouble-promotion", "-Wformat=2",
