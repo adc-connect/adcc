@@ -25,16 +25,16 @@ import numpy as np
 import adcc
 import adcc.backends
 
+from ..misc import expand_test_templates
+from .testing import (eri_asymm_construction_test, eri_chem_permutations,
+                      operator_import_test)
+
 from numpy.testing import assert_almost_equal
 
 from adcc.backends import have_backend
 from adcc.testdata import geometry
 
 import pytest
-
-from ..misc import expand_test_templates
-from .testing import eri_asymm_construction_test, operator_import_test
-from .eri_build_helper import eri_permutations
 
 if have_backend("psi4"):
     import psi4
@@ -93,14 +93,11 @@ class TestPsi4(unittest.TestCase):
         assert_almost_equal(hfdata.fock_ff, fock_ff)
 
         # test symmetry of the ERI tensor
-        allowed_permutations = [
-            p.transposition for p in eri_permutations["chem"]
-        ]
         eri = np.empty((hfdata.n_orbs, hfdata.n_orbs,
                         hfdata.n_orbs, hfdata.n_orbs))
         sfull = slice(0, hfdata.n_orbs)
         hfdata.fill_eri_ffff((sfull, sfull, sfull, sfull), eri)
-        for perm in allowed_permutations:
+        for perm in eri_chem_permutations:
             eri_perm = np.transpose(eri, perm)
             assert_almost_equal(eri_perm, eri)
 

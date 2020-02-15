@@ -23,8 +23,8 @@
 import psi4
 import numpy as np
 
+from .EriBuilder import EriBuilder
 from .InvalidReference import InvalidReference
-from .eri_build_helper import EriBuilder
 
 from adcc.misc import cached_property
 
@@ -57,7 +57,8 @@ class Psi4EriBuilder(EriBuilder):
             "Vb": self.wfn.Cb_subset("AO", "VIR"),
         }
 
-    def compute_mo_eri(self, coeffs):
+    def compute_mo_eri(self, blocks, spins):
+        coeffs = tuple(self.coefficients[blocks[i] + spins[i]] for i in range(4))
         return np.asarray(self.mints.mo_eri(*coeffs))
 
 
@@ -71,10 +72,9 @@ class Psi4HFProvider(HartreeFockProvider):
         # otherwise weird errors result
         super().__init__()
         self.wfn = wfn
-        self.eri_builder = Psi4EriBuilder(
-            self.wfn, self.n_orbs, self.wfn.nmo(), wfn.nalpha(), wfn.nbeta(),
-            self.restricted
-        )
+        self.eri_builder = Psi4EriBuilder(self.wfn, self.n_orbs, self.wfn.nmo(),
+                                          wfn.nalpha(), wfn.nbeta(),
+                                          self.restricted)
         self.operator_integral_provider = Psi4OperatorIntegralProvider(self.wfn)
 
     def get_backend(self):

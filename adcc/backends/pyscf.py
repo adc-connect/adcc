@@ -22,8 +22,8 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
+from .EriBuilder import EriBuilder
 from .InvalidReference import InvalidReference
-from .eri_build_helper import EriBuilder
 
 from pyscf import ao2mo, gto, scf
 from adcc.misc import cached_property
@@ -44,13 +44,10 @@ class PyScfOperatorIntegralProvider:
 # TODO: refactor ERI builder to be more general
 # IntegralBuilder would be good
 class PyScfEriBuilder(EriBuilder):
-    def __init__(
-        self, scfres, n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted
-    ):
+    def __init__(self, scfres, n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted):
         self.scfres = scfres
         if restricted:
-            self.mo_coeff = (self.scfres.mo_coeff,
-                             self.scfres.mo_coeff)
+            self.mo_coeff = (self.scfres.mo_coeff, self.scfres.mo_coeff)
         else:
             self.mo_coeff = self.scfres.mo_coeff
         super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted)
@@ -64,7 +61,8 @@ class PyScfEriBuilder(EriBuilder):
             "Vb": self.mo_coeff[1][:, self.n_beta:],
         }
 
-    def compute_mo_eri(self, coeffs):
+    def compute_mo_eri(self, blocks, spins):
+        coeffs = tuple(self.coefficients[blocks[i] + spins[i]] for i in range(4))
         # TODO Pyscf usse HDF5 internal to do the AO2MO here we read it all
         #      into memory. This wastes memory and could be avoided if temporary
         #      files were used instead. These could be deleted on the call
@@ -86,10 +84,9 @@ class PyScfHFProvider(HartreeFockProvider):
         super().__init__()
         self.scfres = scfres
         n_alpha, n_beta = scfres.mol.nelec
-        self.eri_builder = PyScfEriBuilder(
-            self.scfres, self.n_orbs, self.n_orbs_alpha, n_alpha, n_beta,
-            self.restricted
-        )
+        self.eri_builder = PyScfEriBuilder(self.scfres, self.n_orbs,
+                                           self.n_orbs_alpha, n_alpha,
+                                           n_beta, self.restricted)
         self.operator_integral_provider = PyScfOperatorIntegralProvider(
             self.scfres
         )
