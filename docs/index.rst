@@ -88,16 +88,17 @@ Contents
    installation
    calculations
    theory
+   benchmarks
+   topics
 
 .. toctree::
    :caption: Advanced topics
    :maxdepth: 2
 
-   reference
    hostprograms
    developers
+   reference
    adccore
-   libadcc
 
 .. toctree::
    :caption: Extra information
