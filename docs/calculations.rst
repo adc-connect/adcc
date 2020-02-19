@@ -9,7 +9,7 @@ This section gives a practical guide for performing ADC calculations with adcc.
 It deliberately does not show all tricks and all tweaks,
 but instead provides a working man's subset of selected features.
 To checkout the full API with all details of the mentioned functions and
-classes, see the :ref:`full-reference`.
+classes, see the advanced topics or the :ref:`API reference <pyapi>`.
 
 Overview of supported features
 ------------------------------

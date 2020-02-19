@@ -15,6 +15,7 @@
 import os
 import sys
 import time
+import subprocess
 
 sys.path.insert(0, os.path.abspath('..'))
 
@@ -22,11 +23,24 @@ import adcc  # noqa: E402
 
 # -- Project information -----------------------------------------------------
 
+
+def determine_tag():
+    commit = subprocess.check_output("git rev-parse HEAD".split(),
+                                     universal_newlines=True).strip()
+    tag = subprocess.check_output("git tag --points-at".split() + [f"{commit}"],
+                                  universal_newlines=True).strip()
+    return tag
+
+
 project = 'adcc'
 author = ", ".join(adcc.__authors__)
 copyright = time.strftime("%Y") + ", " + author
 version = adcc.__version__
 release = adcc.__version__
+
+if determine_tag() == "":
+    version = "dev"
+    release = adcc.__version__ + "+dev"
 
 # -- General configuration ---------------------------------------------------
 

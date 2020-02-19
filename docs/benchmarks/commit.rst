@@ -1,0 +1,1 @@
+This summary only shows a few key results, which have been generated using commit **f7665c10** from the `adcc repository <https://code.adc-connect.org>`_. The full results in interactive form is accessible on https://adc-connect.github.io/adcc-bench.

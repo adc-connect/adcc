@@ -58,7 +58,7 @@ __all__ = ["run_adc", "AdcMatrix", "AdcBlockView", "AdcMatrixlike", "AdcMethod",
            "guess_symmetries", "guesses_spin_flip", "guess_zero",
            "DefaultCachingPolicy", "GatherStatisticsPolicy", "LazyMp",
            "adc0", "adc1", "adc2", "adc2x", "adc3",
-           "cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x", "cvs_adc3"
+           "cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x", "cvs_adc3",
            "banner"]
 
 __version__ = "0.13.4"

@@ -60,6 +60,9 @@ class TestBackendsImportReferenceData(unittest.TestCase):
         if molecule == "cn":
             compare_eri = "off"
 
+        if backend == "veloxchem" and multiplicity != 1:
+            pytest.skip("VeloxChem does not support UHF.")
+
         scfres = cached_backend_hf(backend, molecule, basis, multiplicity)
         compare_refstate_with_reference(data, reference, case, scfres,
                                         compare_orbcoeff=False,

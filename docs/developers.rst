@@ -37,7 +37,7 @@ This allows to use ``adccore`` from Python (via ``libadcc``)
 and directly from C++.
 
 The functionality of adcc has already been described
-in :ref:`performing-calculations` and :ref:`full-reference`.
+in :ref:`performing-calculations` and :ref:`topics`.
 In fact many of the functions and classes described
 in these chapters are only partly implemented in adcc
 and inherit from components defined in ``adccore``,

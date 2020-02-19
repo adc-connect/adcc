@@ -14,9 +14,6 @@ adcc: Seamlessly connect your program to ADC
 .. image:: https://img.shields.io/pypi/l/adcc
    :target: https://github.com/adc-connect/adcc/blob/master/LICENSE
 
-.. note::
-   This documentation page is still under construction.
-
 .. image:: logo/logo.png
    :width: 200px
    :align: left
@@ -38,7 +35,8 @@ methods includes the ADC(n) family **up to level 3**,
 including variants such as spin-flip and core-valence separation.
 For all methods transition and excited state **properties are available**.
 See the :ref:`performing-calculations` for more details.
-Recently we submitted a paper about adcc, see :cite:`adcc`.
+The design and details of adcc can also be found in our recent paper,
+see :cite:`adcc`.
 
 .. _index-example:
 
@@ -90,16 +88,17 @@ Contents
    installation
    calculations
    theory
+   benchmarks
+   topics
 
 .. toctree::
    :caption: Advanced topics
    :maxdepth: 2
 
-   reference
    hostprograms
    developers
+   reference
    adccore
-   libadcc
 
 .. toctree::
    :caption: Extra information

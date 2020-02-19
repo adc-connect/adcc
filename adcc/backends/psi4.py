@@ -23,10 +23,10 @@
 import psi4
 import numpy as np
 
-from adcc.misc import cached_property
-
+from .EriBuilder import EriBuilder
 from .InvalidReference import InvalidReference
-from .eri_build_helper import EriBuilder
+
+from adcc.misc import cached_property
 
 from libadcc import HartreeFockProvider
 
@@ -57,12 +57,9 @@ class Psi4EriBuilder(EriBuilder):
             "Vb": self.wfn.Cb_subset("AO", "VIR"),
         }
 
-    def compute_mo_eri(self, block, coeffs, use_cache=True):
-        if block in self.eri_cache and use_cache:
-            return self.eri_cache[block]
-        eri = np.asarray(self.mints.mo_eri(*coeffs))
-        self.eri_cache[block] = eri
-        return eri
+    def compute_mo_eri(self, blocks, spins):
+        coeffs = tuple(self.coefficients[blocks[i] + spins[i]] for i in range(4))
+        return np.asarray(self.mints.mo_eri(*coeffs))
 
 
 class Psi4HFProvider(HartreeFockProvider):
@@ -75,11 +72,9 @@ class Psi4HFProvider(HartreeFockProvider):
         # otherwise weird errors result
         super().__init__()
         self.wfn = wfn
-        self.eri_ffff = None
-        self.eri_builder = Psi4EriBuilder(
-            self.wfn, self.n_orbs, self.wfn.nmo(), wfn.nalpha(), wfn.nbeta(),
-            self.restricted
-        )
+        self.eri_builder = Psi4EriBuilder(self.wfn, self.n_orbs, self.wfn.nmo(),
+                                          wfn.nalpha(), wfn.nbeta(),
+                                          self.restricted)
         self.operator_integral_provider = Psi4OperatorIntegralProvider(self.wfn)
 
     def get_backend(self):
@@ -143,20 +138,16 @@ class Psi4HFProvider(HartreeFockProvider):
         self.fill_orben_f(diagonal)
         out[:] = np.diag(diagonal)[slices]
 
-    # TODO: obsolete code, just used for testing
     def fill_eri_ffff(self, slices, out):
-        if self.eri_ffff is None:
-            self.eri_ffff = self.eri_builder.build_full_eri_ffff()
-        out[:] = self.eri_ffff[slices]
+        self.eri_builder.fill_slice_symm(slices, out)
 
     def fill_eri_phys_asym_ffff(self, slices, out):
-        self.eri_builder.fill_slice(slices, out)
+        raise NotImplementedError("fill_eri_phys_asym_ffff not implemented.")
 
     def has_eri_phys_asym_ffff(self):
-        return True
+        return False
 
     def flush_cache(self):
-        self.eri_ffff = None
         self.eri_builder.flush_cache()
 
 

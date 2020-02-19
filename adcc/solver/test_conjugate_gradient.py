@@ -36,7 +36,7 @@ from pytest import approx
 
 
 class TestConjugateGradient(unittest.TestCase):
-    def base_adc2(self, kind, guess_function):
+    def base_adc2(self, kind, guess_function, max_iter=100):
         refdata = cache.reference_data["h2o_sto3g"]
         matrix = adcc.AdcMatrix("adc2", cache.refstate["h2o_sto3g"])
 
@@ -48,7 +48,7 @@ class TestConjugateGradient(unittest.TestCase):
                                    explicit_symmetrisation=symm)
         res = power_method(inverse, guesses[0], conv_tol=conv_tol,
                            explicit_symmetrisation=symm, callback=powprint,
-                           max_iter=100)
+                           max_iter=max_iter)
 
         ref_singlets = refdata["adc2"][kind]["eigenvalues"]
         assert res.converged
@@ -67,7 +67,7 @@ class TestConjugateGradient(unittest.TestCase):
             guess["s"].set_random()
             guess["d"].set_random()
             return [guess]
-        self.base_adc2("triplet", guess_random)
+        self.base_adc2("triplet", guess_random, max_iter=200)
 
     def test_adc1_linear_solve(self):
         conv_tol = 1e-9

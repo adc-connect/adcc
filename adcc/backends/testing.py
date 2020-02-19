@@ -24,7 +24,40 @@ import adcc
 import numpy as np
 
 from ..misc import assert_allclose_signfix
-from .eri_build_helper import _eri_phys_asymm_spin_allowed_prefactors
+from collections import namedtuple
+
+ii, jj, kk, ll = 0, 1, 2, 3
+eri_chem_permutations = [(ii, jj, kk, ll),  # (ij|kl)
+                         (kk, ll, ii, jj),  # (kl|ij)
+                         (jj, ii, ll, kk),  # (ji|lk)
+                         (ll, kk, jj, ii),  # (lk|ji)
+                         (jj, ii, kk, ll),  # (ji|kl)
+                         (ll, kk, ii, jj),  # (lk|ij)
+                         (ii, jj, ll, kk),  # (ij|lk)
+                         (kk, ll, jj, ii)]  # (kl|ji)
+del ii, jj, kk, ll
+
+
+# Spin symmetry helper
+# provide allowed spin block transposition
+# together with the prefactors that are needed to form the
+# antisymmetrized integral from Chemists' notation ERIs.
+#   Example: Consider the <ab||ab> block in Physicists' notation
+#   <ab||ab> = <ab|ab> - <ab|ba> = (aa|bb) - (ab|ba)
+#   Here, the last term vanished, so this must be respected when
+#   computing the final integral. The first prefactor (pref1) in
+#   this case is 1, whereas the second prefactor (pref2) is 0 due to
+#   vanishing block of the antisymmetrized integral.
+EriPermutationSpinAntiSymm = namedtuple('EriPermutationSpinAntiSymm',
+                                        ['pref1', 'pref2', 'transposition'])
+eri_phys_asymm_spin_allowed_prefactors = [
+    EriPermutationSpinAntiSymm(1, 1, "aaaa"),
+    EriPermutationSpinAntiSymm(1, 1, "bbbb"),
+    EriPermutationSpinAntiSymm(1, 0, "abab"),
+    EriPermutationSpinAntiSymm(1, 0, "baba"),
+    EriPermutationSpinAntiSymm(0, 1, "baab"),
+    EriPermutationSpinAntiSymm(0, 1, "abba"),
+]
 
 
 def eri_asymm_construction_test(scfres, core_orbitals=0):
@@ -95,7 +128,7 @@ def eri_asymm_construction_test(scfres, core_orbitals=0):
             n = 2
             s_clean = [s[i:i + n] for i in range(0, len(s), n)]
             imported_asymm = refstate.eri(s).to_ndarray()
-            for allowed_spin in _eri_phys_asymm_spin_allowed_prefactors:
+            for allowed_spin in eri_phys_asymm_spin_allowed_prefactors:
                 sl = [lookuptable[x] for x in s_clean]
                 sl = [sl[x][y] for x, y in
                       enumerate(list(allowed_spin.transposition))]

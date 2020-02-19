@@ -1,9 +1,9 @@
 :github_url: https://github.com/adc-connect/adcc/blob/master/docs/reference.rst
 
-.. _full-reference:
+.. _pyapi:
 
-adcc reference
-==============
+API reference
+=============
 
 .. note::
    Work in progress. Many function do not yet follow
@@ -11,149 +11,34 @@ adcc reference
 
 This page contains a structured overview of the python API of adcc.
 See also the :ref:`genindex`.
-For documentation how to connect host programs to adcc,
-see :ref:`hostprograms`.
 
-.. _adcn-methods:
+.. _adccmodule:
 
-The adcc.adcN family of methods
--------------------------------
+adcc module
+-----------
 
-.. autofunction:: adcc.run_adc
-
-.. py:function:: adcc.adc0(data_or_matrix, **kwargs)
-
-    Run an ADC(0) calculation. For more details see :py:func:`adcc.run_adc`.
-
-.. py:function:: adcc.adc1(data_or_matrix, **kwargs)
-
-    Run an ADC(1) calculation. For more details see :py:func:`adcc.run_adc`.
-
-.. py:function:: adcc.adc2(data_or_matrix, **kwargs)
-
-    Run an ADC(2) calculation. For more details see :py:func:`adcc.run_adc`.
-
-.. py:function:: adcc.adc2x(data_or_matrix, **kwargs)
-
-    Run an ADC(2)-x calculation. For more details see :py:func:`adcc.run_adc`.
-
-.. py:function:: adcc.adc3(data_or_matrix, **kwargs)
-
-    Run an ADC(3) calculation. For more details see :py:func:`adcc.run_adc`.
-
-.. py:function:: adcc.cvs_adc0(data_or_matrix, **kwargs)
-
-    Run an CVS-ADC(0) calculation. For more details see :py:func:`adcc.run_adc`.
-
-.. py:function:: adcc.cvs_adc1(data_or_matrix, **kwargs)
-
-    Run an CVS-ADC(1) calculation. For more details see :py:func:`adcc.run_adc`.
-
-.. py:function:: adcc.cvs_adc2(data_or_matrix, **kwargs)
-
-    Run an CVS-ADC(2) calculation. For more details see :py:func:`adcc.run_adc`.
-
-.. py:function:: adcc.cvs_adc2x(data_or_matrix, **kwargs)
-
-    Run an CVS-ADC(2)-x calculation. For more details see :py:func:`adcc.run_adc`.
-
-.. py:function:: adcc.cvs_adc3(data_or_matrix, **kwargs)
-
-    Run an CVS-ADC(3) calculation. For more details see :py:func:`adcc.run_adc`.
-
-.. autoclass:: adcc.ExcitedStates
-    :members:
-
-Visualisation
--------------
-
-.. automodule:: adcc.visualisation
-    :members:
-    :inherited-members:
+.. automodapi:: adcc
+   :no-inheritance-diagram:
+   :no-heading:
 
 
-Adc Middle layer
-----------------
+.. _libadcc:
 
-.. autoclass:: adcc.AdcMatrix
-    :members:
-    :inherited-members:
-    :undoc-members:
+libadcc: Python bindings for adccore
+------------------------------------
 
-.. autoclass:: adcc.AdcMethod
-    :members:
-    :undoc-members:
+The libadcc Python module contains the python bindings
+of :ref:`adccore-layer`.
+They are generated directly from the C++ source code
+using `pybind11 <https://pybind11.readthedocs.io>`_
+and the sources contained in the
+`extension <https://github.com/adc-connect/adcc/tree/master/extension>`_
+subfolder of the adcc github repository.
 
-.. autoclass:: adcc.ReferenceState
-    :members:
-    :inherited-members:
-    :undoc-members:
+It is not recommended to call these functions directly,
+but instead resort to the higher-level functionality
+from the :ref:`adccmodule`.
 
-.. autoclass:: adcc.LazyMp
-    :members:
-    :inherited-members:
-    :undoc-members:
-
-.. automodule:: adcc.caching_policy
-    :members:
-    :inherited-members:
-    :undoc-members:
-
-Tensor and symmetry interface
------------------------------
-
-.. autoclass:: adcc.Tensor
-    :members:
-    :inherited-members:
-    :undoc-members:
-
-.. autoclass:: adcc.Symmetry
-    :members:
-    :inherited-members:
-
-.. autoclass:: adcc.AmplitudeVector
-    :members:
-    :inherited-members:
-
-.. autofunction:: adcc.add
-.. autofunction:: adcc.contract
-.. autofunction:: adcc.copy
-.. autofunction:: adcc.divide
-.. autofunction:: adcc.dot
-.. autofunction:: adcc.empty_like
-.. autofunction:: adcc.linear_combination
-.. autofunction:: adcc.multiply
-.. autofunction:: adcc.nosym_like
-.. autofunction:: adcc.ones_like
-.. autofunction:: adcc.subtract
-.. autofunction:: adcc.transpose
-.. autofunction:: adcc.zeros_like
-
-Solvers
--------
-
-.. automodule:: adcc.solver.conjugate_gradient
-    :members:
-
-.. automodule:: adcc.solver.davidson
-    :members:
-
-.. automodule:: adcc.solver.power_method
-    :members:
-
-Properties
-----------
-
-.. autofunction:: adcc.modified_transition_moments.compute_modified_transition_moments
-
-
-State analysis
---------------
-
-TODO
-
-
-Other stuff and utilities
--------------------------
-
-.. autofunction:: adcc.banner
+.. automodapi:: libadcc
+   :no-inheritance-diagram:
+   :no-heading:
