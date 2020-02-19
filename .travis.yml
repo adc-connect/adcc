@@ -43,7 +43,7 @@ jobs:
       env: BUILD_SDIST=true
     - python: 3.8
     - os: osx
-      language: script
+      language: ruby
       osx_image: xcode11.1  # macos 10.14
 
 # TODO Does not work at the moment, see the travis output
