@@ -89,10 +89,15 @@ def write_details(data, testcase, reference, basis, n_ao=None):
     lines += ["=========  =============  ===================="]
     for method in sorted(set(mmethod).intersection(tmethod)):
         method = method[1:-1]
-        midx = mproduct.index(("'" + basis.lower() + "'", "'" + method + "'",
-                               str(states), str(tol), str(threads)))
-        tidx = tproduct.index(("'" + basis.lower() + "'", "'" + method + "'",
-                               str(states), str(tol), str(threads)))
+        for bas in [basis.upper(), basis.lower()]:
+            try:
+                midx = mproduct.index(("'" + bas + "'", "'" + method + "'",
+                                       str(states), str(tol), str(threads)))
+                tidx = tproduct.index(("'" + bas + "'", "'" + method + "'",
+                                       str(states), str(tol), str(threads)))
+            except ValueError:
+                continue
+
         time = data["results"][timekey]["result"][tidx]
         memory = data["results"][memkey]["result"][midx]
         if time is None:
@@ -111,14 +116,15 @@ def write_details(data, testcase, reference, basis, n_ao=None):
 def main():
     commit = "f7665c10"
     write_commit_file(commit)
-    json_clustern = fetch_json(commit, "mlv-clustern09")
+    json_clustern08 = fetch_json(commit, "mlv-clustern08")
+    json_clustern09 = fetch_json(commit, "mlv-clustern09")
 
-    write_details(json_clustern, "PhosphineCvs", "RHF", "6-311++G**", n_ao=51)
-    write_details(json_clustern, "MethylammoniumRadical", "UHF",
+    write_details(json_clustern09, "PhosphineCvs", "RHF", "6-311++G**", n_ao=51)
+    write_details(json_clustern09, "MethylammoniumRadical", "UHF",
                   "cc-pVTZ", n_ao=116)
-    write_details(json_clustern, "ParaNitroAniline", "RHF", "cc-pVDZ", n_ao=170)
-    write_details(json_clustern, "WaterExpensive", "RHF", "cc-pVQZ", n_ao=115)
-    # write_details(json_clustern, "Noradrenaline", "RHF", "6-311++G**", n_ao=341)
+    write_details(json_clustern09, "ParaNitroAniline", "RHF", "cc-pVDZ", n_ao=170)
+    write_details(json_clustern09, "WaterExpensive", "RHF", "cc-pVQZ", n_ao=115)
+    write_details(json_clustern08, "Noradrenaline", "RHF", "6-311++G**", n_ao=341)
 
 
 if __name__ == "__main__":

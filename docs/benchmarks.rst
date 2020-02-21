@@ -16,12 +16,22 @@ of adcc in order to track performance of adcc across releases.
 
 .. include:: benchmarks/commit.rst
 
-Cluster benchmarks
-------------------
+Cluster benchmarks on Intel(R) Xeon(R) E5-2643
+----------------------------------------------
 
-These benchmarks have been run on a machine with two
-Intel(R) Xeon(R) E5-2690 CPUs @ 2.90GHz using various
-numbers of threads.
+These benchmarks have been run on a node with two
+Intel(R) Xeon(R) E5-2643 CPUs @ 3.30GHz.
+
+Noradrenaline
+~~~~~~~~~~~~~
+
+.. include:: benchmarks/Noradrenaline.rst
+
+Cluster benchmarks on Intel(R) Xeon(R) E5-2690
+----------------------------------------------
+
+These benchmarks have been run on a node with two
+Intel(R) Xeon(R) E5-2690 CPUs @ 2.90GHz.
 
 *p*-Nitroaniline
 ~~~~~~~~~~~~~~~~
