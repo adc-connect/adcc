@@ -44,12 +44,10 @@ def get_platform():
 def has_mkl_numpy():
     """Has numpy been installed and linked against MKL"""
     try:
-        import numpy.__config__
+        from numpy.__config__ import get_info
 
-        if not hasattr(numpy.__config__, "blas_mkl_info"):
-            return False
-        return any("mkl" in lib
-                   for lib in numpy.__config__.blas_mkl_info.get("libraries", {}))
+        return any("mkl" in lib for lib in
+                   get_info("blas_mkl").get("libraries", {}))
     except ImportError as e:
         if "mkl" in str(e):
             # numpy seems to be installed and linked against MKL,
@@ -138,7 +136,7 @@ class AdcCore:
         """Can adccore be build from source"""
         return os.path.isfile(join(self.source_dir, "build_adccore.py"))
 
-    def build(self):
+    def build(self, features=None):
         """Build adccore from source. Only valid if has_source is true"""
         if not self.has_source:
             return RuntimeError("Cannot build adccore from source, "
@@ -149,9 +147,11 @@ class AdcCore:
 
         import build_adccore
 
-        features = []
-        if has_mkl_numpy():
-            features += ["mkl"]
+        if features is None:
+            if has_mkl_numpy():
+                features = ["mkl"]
+            else:
+                features = []
 
         build_dir = join(self.source_dir, "build")
         build_adccore.build_install(build_dir, self.install_dir,
