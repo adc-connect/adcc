@@ -126,6 +126,8 @@ def strip_readme():
 
 def adccsetup(*args, **kwargs):
     """Wrapper around setup, displaying a link to adc-connect.org on any error."""
+    if os.environ.get("CONDA_BUILD", None) == "1":
+        kwargs.pop("install_requires")
     try:
         setup(*args, **kwargs)
     except Exception as e:
