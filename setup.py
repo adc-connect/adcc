@@ -52,6 +52,10 @@ __version__ = "0.13.4"
 adccore_version = ("0.13.6", "")  # (base version, unstable postfix)
 
 
+def is_conda_build():
+    return os.environ.get("CONDA_BUILD", None) == "1"
+
+
 def get_adccore_data():
     """Get a class providing info about the adccore library"""
     abspath = os.path.abspath("extension")
@@ -105,8 +109,8 @@ class LinkerDynamic:
                        and os.path.isdir(line):
                         self.library_paths.append(line)
 
-        # If we are in a CONDA environment, add conda library prefix
-        if "CONDA_PREFIX" in os.environ:
+        if is_conda_build():
+            # If we are in a CONDA environment, add conda library prefix
             libpath = os.path.join(os.environ["CONDA_PREFIX"], "lib")
             if os.path.isdir(libpath):
                 self.library_paths.append(libpath)
@@ -176,7 +180,7 @@ def has_flag(compiler, flagname):
 def cpp_flag(compiler):
     """Return the -std=c++[11/14] compiler flag.
 
-    The c++14 is prefered over c++11 (when it is available).
+    The c++14 is preferred over c++11 (when it is available).
     """
     if has_flag(compiler, "-std=c++14"):
         return "-std=c++14"
@@ -195,13 +199,14 @@ class BuildExt(BuildCommand):
             adccore.build()  # Update adccore if required
 
         opts = ["-Werror"]
+        potential_opts = []
+        if is_conda_build():
+            potential_opts += ["-Wno-error=unused-command-line-argument"]
         if sys.platform == "darwin":
-            potential_opts = ["-stdlib=libc++", "-mmacosx-version-min=10.7"]
-            opts.extend([opt for opt in potential_opts
-                         if has_flag(self.compiler, opt)])
+            potential_opts += ["-stdlib=libc++", "-mmacosx-version-min=10.9"]
         if self.compiler.compiler_type == "unix":
             opts.append(cpp_flag(self.compiler))
-            potential_opts = [
+            potential_opts += [
                 "-fvisibility=hidden", "-Wall", "-Wextra",
                 "-pedantic", "-Wnon-virtual-dtor", "-Woverloaded-virtual",
                 "-Wcast-align", "-Wconversion",
@@ -210,9 +215,9 @@ class BuildExt(BuildCommand):
                 "-Wdouble-promotion", "-Wformat=2",
                 "-Wno-error=deprecated-declarations",
             ]
-            opts.extend([opt for opt in potential_opts
-                         if has_flag(self.compiler, opt)])
 
+        opts.extend([opt for opt in potential_opts
+                     if has_flag(self.compiler, opt)])
         for ext in self.extensions:
             ext.extra_compile_args = opts
         BuildCommand.build_extensions(self)
@@ -347,7 +352,7 @@ adccsetup(
     #
     version=__version__,
     classifiers=[
-        "Development Status :: 4 - Beta",
+        "Development Status :: 5 - Production/Stable",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "License :: Free For Educational Use",
         "Intended Audience :: Science/Research",

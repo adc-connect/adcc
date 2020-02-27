@@ -153,9 +153,15 @@ class AdcCore:
             else:
                 features = []
 
+        skip_stdlib = False
+        if os.environ.get("CONDA_BUILD", None) == "1":
+            # Do not install stdlib in conda builds
+            # TODO I'm not too big a fan of this, but I don't have a better idea
+            skip_stdlib = True
+
         build_dir = join(self.source_dir, "build")
         build_adccore.build_install(build_dir, self.install_dir,
-                                    features=features)
+                                    skip_stdlib=skip_stdlib, features=features)
 
     def build_documentation(self):
         """Build adccore documentation. Only valid if has_source is true"""
