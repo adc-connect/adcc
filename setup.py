@@ -162,7 +162,7 @@ class GetPyBindInclude:
 
 # As of Python 3.6, CCompiler has a `has_flag` method.
 # cf http://bugs.python.org/issue26689
-def has_flag(compiler, flagname):
+def has_flag(compiler, flagname, opts=[]):
     """Return a boolean indicating whether a flag name is supported on
     the specified compiler.
     """
@@ -171,20 +171,21 @@ def has_flag(compiler, flagname):
     with tempfile.NamedTemporaryFile("w", suffix=".cpp") as f:
         f.write("int main (int argc, char **argv) { return 0; }")
         try:
-            compiler.compile([f.name], extra_postargs=["-Werror", flagname])
+            extra_postargs = ["-Werror", flagname] + opts
+            compiler.compile([f.name], extra_postargs=extra_postargs)
         except setuptools.distutils.errors.CompileError:
             return False
     return True
 
 
-def cpp_flag(compiler):
+def cpp_flag(compiler, opts=[]):
     """Return the -std=c++[11/14] compiler flag.
 
     The c++14 is preferred over c++11 (when it is available).
     """
-    if has_flag(compiler, "-std=c++14"):
+    if has_flag(compiler, "-std=c++14", opts):
         return "-std=c++14"
-    elif has_flag(compiler, "-std=c++11"):
+    elif has_flag(compiler, "-std=c++11", opts):
         return "-std=c++11"
     else:
         raise RuntimeError("Unsupported compiler -- at least C++11 support "
@@ -199,13 +200,16 @@ class BuildExt(BuildCommand):
             adccore.build()  # Update adccore if required
 
         opts = ["-Werror"]
-        potential_opts = []
         if is_conda_build():
-            potential_opts += ["-Wno-error=unused-command-line-argument"]
+            newopt = "-Wno-error=unused-command-line-argument"
+            if has_flag(self.compiler, newopt, opts):
+                opts += [newopt]
+
+        potential_opts = []
         if sys.platform == "darwin":
             potential_opts += ["-stdlib=libc++", "-mmacosx-version-min=10.9"]
         if self.compiler.compiler_type == "unix":
-            opts.append(cpp_flag(self.compiler))
+            opts.append(cpp_flag(self.compiler, opts))
             potential_opts += [
                 "-fvisibility=hidden", "-Wall", "-Wextra",
                 "-pedantic", "-Wnon-virtual-dtor", "-Woverloaded-virtual",
@@ -215,9 +219,9 @@ class BuildExt(BuildCommand):
                 "-Wdouble-promotion", "-Wformat=2",
                 "-Wno-error=deprecated-declarations",
             ]
+        opts.extend([newopt for newopt in potential_opts
+                     if has_flag(self.compiler, newopt, opts)])
 
-        opts.extend([opt for opt in potential_opts
-                     if has_flag(self.compiler, opt)])
         for ext in self.extensions:
             ext.extra_compile_args = opts
         BuildCommand.build_extensions(self)
