@@ -5,25 +5,47 @@
 Installation
 ============
 
-Roughly speaking installing adcc boils down to
-installing openblas, adcc itself and a :ref:`host program<install-hostprogram>`
+For running ADC calculations with adcc you will need two things:
+adcc itself and a :ref:`host program<install-hostprogram>`
 (i.e. SCF code) of your choice.
 
-We have some more detailed guides for :ref:`install-debian`
-and :ref:`install-macos`, where we know things should
-be working. Please let us know
-if you managed to get adcc to work in the contexts
-of other OSes or distributions.
+We have some more detailed guides for installing adcc
+:ref:`install-conda`, :ref:`install-pip-debian`
+and :ref:`install-pip-macos`, where we know things should
+be working.
+If you encounter problems see :ref:`troubleshooting`.
+Please get in touch
+by `opening an issue <https://github.com/adc-connect/adcc/issues>`_
+if you cannot get adcc to work.
 
 Installing adcc
 ---------------
 
-.. _install-debian:
+.. _install-conda:
 
-Debian and Ubuntu
-.................
+Using conda (on Debian/Ubuntu and macOS)
+........................................
 
-1. **openblas:**
+The `conda <https://conda.io>`_ binary packages can be installed
+using the `adcc <https://anaconda.org/adcc/>`_ channel:
+
+.. code-block:: shell
+
+   conda install -c adcc adcc
+
+This should work on a recent Debian, Ubuntu or macOS.
+
+
+.. _install-pip-debian:
+
+Using pip (on Debian / Ubuntu)
+..............................
+
+For installing adcc from `PyPi <https://pypi.org>`_, using ``pip``,
+the procedure for Debian / Ubuntu and :ref:`macOS <install-pip-macos>` differs.
+For Debian and Ubuntu:
+
+1. **Install openblas:**
    Make sure you have the `openblas <http://www.openblas.net/>`_
    BLAS library installed. This library is reasonably wide-spread,
    so there is a good chance it may already be installed on your system.
@@ -33,9 +55,9 @@ Debian and Ubuntu
 
       sudo apt-get install libopenblas-base
 
-2. **Compilation requirements:**
+2. **Install compilation requirements:**
    For compiling the Python extensions of adcc,
-   you nee dto have the the ``python`` development headers
+   you need to have the the ``python`` development headers
    and some essential build packages installed.
    This can be achieved via
 
@@ -43,8 +65,7 @@ Debian and Ubuntu
 
       sudo apt-get install python3-dev build-essential
 
-3. **adcc:**
-   Best install it from `PyPi <https://pypi.org>`_, using ``pip``:
+3. **Install adcc:**
 
    .. code-block:: shell
 
@@ -52,28 +73,23 @@ Debian and Ubuntu
       pip install adcc
 
 
-.. _install-macos:
+.. _install-pip-macos:
 
-macOS 10.13 (High Sierra) and 10.14 (Mojave)
-............................................
+Using pip (on macOS)
+....................
 
 .. attention::
-   macOS support is still experimental and so far
-   only covers High Sierra and Mojave.
-   We would love to hear your feedback in case things fail.
-   We are currently working on deploying adcc to `Anaconda <https://anaconda.org>`_.
-
+   macOS support only covers High Sierra (10.13) and Mojave (10.14).
+   For other macOS versions, please :ref:`install adcc using conda <install-conda>`.
 
 The installation on macOS requires a ``clang`` compiler.
 Make sure to have XCode and the command line tools installed.
- 
-1. **adcc:**
-   Install from `PyPi <https://pypi.org>`_, using ``pip``:
+Then install **adcc** using ``pip``:
 
-   .. code-block:: shell
+.. code-block:: shell
 
-      pip install pybind11     # Install pybind11 first to suppress some error messages
-      pip install adcc
+   pip install pybind11     # Install pybind11 first to suppress some error messages
+   pip install adcc
 
 .. _install-hostprogram:
 
@@ -97,6 +113,11 @@ Installing Psi4
 
 - Either use the
   `conda binary distribution <http://psicode.org/psi4manual/master/conda.html>`_
+
+  .. code-block:: shell
+
+     conda install -c psi4 psi4
+
 - **or** use the version packaged in `Debian <https://packages.debian.org/stable/psi4>`_
   or Ubuntu via
 
@@ -131,6 +152,9 @@ the :ref:`devnotes` will provide
 you with some useful pointers to get started.
 
 
+
+.. _troubleshooting:
+
 Troubleshooting
 ---------------
 
@@ -138,6 +162,6 @@ If the installation of adcc fails due to an issue with compiling the
 python extension, check the following:
 
 - Make sure your ``pip`` uses the correct compiler. On Linux we only support
-  ``gcc`` and not ``clang``. On MacOS we only support Apple ``clang`` and
+  ``gcc`` and not ``clang``. On macOS we only support Apple ``clang`` and
   not ``gcc``. To enforce a compiler, set the environment variables ``CC`` and ``CXX``
   to the full path of your C and C++ compilers, respectively.
