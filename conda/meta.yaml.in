@@ -3,8 +3,9 @@ package:
   version: @ADCC_VERSION@
 
 source:
-    git_url: git@github.com:adc-connect/adcc.git
-    git_tag: @ADCC_TAG@
+    # git_url: git@github.com:adc-connect/adcc.git
+    # git_tag: @ADCC_TAG@
+    path: ../
 
 requirements:
   build:
