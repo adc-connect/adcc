@@ -24,10 +24,7 @@ echo "#-- Deploying tag/commit '$ADCC_TAG' (version $ADCC_VERSION) to label '$LA
 echo -e "#\n"
 
 set -eu
-< conda/meta.yaml.in sed "
-	s/@ADCC_VERSION@/$ADCC_VERSION/g;
-	s/@ADCC_TAG@/$ADCC_TAG/g
-" > conda/meta.yaml
+< conda/meta.yaml.in sed "s/@ADCC_VERSION@/$ADCC_VERSION/g;" > conda/meta.yaml
 conda install conda-build anaconda-client --yes
 
 # Setup channels for installing psi4 and pyscf and then build package
