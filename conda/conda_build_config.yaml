@@ -23,4 +23,5 @@ blas_impl:
 mkl:
     - 2019.*
 python:
+    - 3.6
     - 3.7

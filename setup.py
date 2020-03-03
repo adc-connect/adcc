@@ -49,7 +49,7 @@ except ImportError:
 
 # Version of the python bindings and adcc python package.
 __version__ = "0.14.0"
-adccore_version = ("0.13.6", "")  # (base version, unstable postfix)
+adccore_version = ("0.13.7", "")  # (base version, unstable postfix)
 
 
 def is_conda_build():
