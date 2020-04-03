@@ -96,10 +96,25 @@ class OperatorIntegrals:
         Which integrals are available in the underlying backend
         """
         ret = []
-        for integral in ["electric_dipole"]:
+        # TODO: consistent names... linear_momentum = nabla
+        for integral in ["electric_dipole", "magnetic_dipole", "linear_momentum"]:
             if hasattr(self.provider_ao, integral):
                 ret.append(integral)
         return ret
+
+    # TODO: better name
+    def import_dipole_like_operator(self, ao_operator, is_symmetric=True):
+        dipoles = []
+        for i, component in enumerate(["x", "y", "z"]):
+            dip_backend = ao_operator[i]
+            dip_bb = replicate_ao_block(self.mospaces, dip_backend,
+                                        is_symmetric=is_symmetric)
+            dip_ff = OneParticleOperator(self.mospaces, is_symmetric=is_symmetric,
+                                         cartesian_transform=component)
+            transform_operator_ao2mo(dip_bb, dip_ff, self.__coefficients,
+                                     self.__conv_tol)
+            dipoles.append(dip_ff)
+        return dipoles
 
     @property
     @timed_member_call("_import_timer")
@@ -112,18 +127,33 @@ class OperatorIntegrals:
                 "Electric dipole operator not implemented in "
                 "{} backend.".format(self.provider_ao.backend)
             )
+        return self.import_dipole_like_operator(self.provider_ao.electric_dipole, is_symmetric=True)
 
-        dipoles = []
-        for i, component in enumerate(["x", "y", "z"]):
-            dip_backend = self.provider_ao.electric_dipole[i]
-            dip_bb = replicate_ao_block(self.mospaces, dip_backend,
-                                        is_symmetric=True)
-            dip_ff = OneParticleOperator(self.mospaces, is_symmetric=True,
-                                         cartesian_transform=component)
-            transform_operator_ao2mo(dip_bb, dip_ff, self.__coefficients,
-                                     self.__conv_tol)
-            dipoles.append(dip_ff)
-        return dipoles
+    @property
+    @timed_member_call("_import_timer")
+    def magnetic_dipole(self):
+        """
+        Return the magnetic dipole integrals in the molecular orbital basis.
+        """
+        if "magnetic_dipole" not in self.available:
+            raise NotImplementedError(
+                "Magnetic dipole operator not implemented in "
+                "{} backend.".format(self.provider_ao.backend)
+            )
+        return self.import_dipole_like_operator(self.provider_ao.magnetic_dipole, is_symmetric=False)
+
+    @property
+    @timed_member_call("_import_timer")
+    def linear_momentum(self):
+        """
+        Return the linear momentum integrals in the molecular orbital basis.
+        """
+        if "linear_momentum" not in self.available:
+            raise NotImplementedError(
+                "Linear momentum operator not implemented in "
+                "{} backend.".format(self.provider_ao.backend)
+            )
+        return self.import_dipole_like_operator(self.provider_ao.linear_momentum, is_symmetric=False)
 
     @property
     def timer(self):

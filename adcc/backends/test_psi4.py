@@ -114,6 +114,15 @@ class TestPsi4(unittest.TestCase):
         ao_dip = [np.array(comp) for comp in mints.ao_dipole()]
         operator_import_test(wfn, ao_dip)
 
+        # TODO: generalize, code block repeated below...
+        # Test magnetic dipole
+        ao_dip = [np.array(comp) for comp in mints.ao_angular_momentum()]
+        operator_import_test(wfn, ao_dip, operator="magnetic_dipole")
+
+        # Test linear momentum
+        ao_dip = [np.array(comp) for comp in mints.ao_nabla()]
+        operator_import_test(wfn, ao_dip, operator="linear_momentum")
+
     def template_uhf_ch2nh2(self, basis):
         wfn = adcc.backends.run_hf("psi4", geometry.xyz["ch2nh2"], basis,
                                    multiplicity=2)
@@ -126,4 +135,14 @@ class TestPsi4(unittest.TestCase):
         # Test dipole
         mints = psi4.core.MintsHelper(wfn.basisset())
         ao_dip = [np.array(comp) for comp in mints.ao_dipole()]
-        operator_import_test(wfn, ao_dip)
+        operator_import_test(wfn, ao_dip, operator="electric_dipole")
+
+        # Test magnetic dipole
+        ao_dip = [np.array(comp) for comp in mints.ao_angular_momentum()]
+        operator_import_test(wfn, ao_dip, operator="magnetic_dipole")
+
+        # Test linear momentum
+        ao_dip = [np.array(comp) for comp in mints.ao_momentum()]
+        operator_import_test(wfn, ao_dip, operator="linear_momentum")
+
+

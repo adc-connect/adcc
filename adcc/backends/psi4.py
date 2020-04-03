@@ -41,6 +41,18 @@ class Psi4OperatorIntegralProvider:
     def electric_dipole(self):
         return [-np.asarray(comp) for comp in self.mints.ao_dipole()]
 
+    @cached_property
+    def magnetic_dipole(self):
+        # TODO: Gauge origin?
+        # TODO: prefactor -0.5?
+        return [-1.0 * np.asarray(comp) for comp in self.mints.ao_angular_momentum()]
+
+    @cached_property
+    def linear_momentum(self):
+        # TODO: Gauge origin?
+        # TODO: prefactor -0.5?
+        return [np.asarray(comp) for comp in self.mints.ao_nabla()]
+
 
 class Psi4EriBuilder(EriBuilder):
     def __init__(self, wfn, n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted):

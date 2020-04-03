@@ -30,7 +30,7 @@ from numpy.testing import assert_allclose
 
 import pytest
 
-from ..misc import expand_test_templates
+from ..misc import expand_test_templates, assert_allclose_signfix
 from .testing import cached_backend_hf
 
 # molsturm is super slow
@@ -123,5 +123,13 @@ def compare_adc_results(adc_results, atol):
         # test properties
         assert_allclose(state1.oscillator_strengths,
                         state2.oscillator_strengths, atol=atol)
+        assert_allclose(state1.oscillator_strengths_velocity,
+                        state2.oscillator_strengths_velocity, atol=atol)
+        # TODO: currently always zero because we only test non-chiral molecules
+        assert_allclose(state1.rotatory_strengths,
+                        state2.rotatory_strengths, atol=atol)
         assert_allclose(state1.state_dipole_moments,
                         state2.state_dipole_moments, atol=atol)
+        # TODO: use correct signfix (state-dependent) or test rotatory strength (chiral molecule) when implemented?
+        assert_allclose(np.abs(state1.transition_magnetic_dipole_moments),
+                        np.abs(state2.transition_magnetic_dipole_moments), atol=atol)

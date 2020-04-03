@@ -38,6 +38,7 @@ import pytest
 
 if have_backend("veloxchem"):
     import veloxchem as vlx
+    from veloxchem.veloxchemlib import AngularMomentumIntegralsDriver, LinearMomentumIntegralsDriver
 
 basissets = ["sto3g", "ccpvdz"]
 
@@ -130,4 +131,20 @@ class TestVeloxchem(unittest.TestCase):
                                          scfdrv.task.ao_basis)
         integrals = (dipole_mats.x_to_numpy(), dipole_mats.y_to_numpy(),
                      dipole_mats.z_to_numpy())
-        operator_import_test(scfdrv, integrals)
+        operator_import_test(scfdrv, integrals, operator="electric_dipole")
+
+        # Test magnetic dipole
+        angmom_drv = AngularMomentumIntegralsDriver(scfdrv.task.mpi_comm)
+        angmom_mats = angmom_drv.compute(scfdrv.task.molecule,
+                                         scfdrv.task.ao_basis)
+        integrals = (angmom_mats.x_to_numpy(), angmom_mats.y_to_numpy(),
+                     angmom_mats.z_to_numpy())
+        operator_import_test(scfdrv, integrals, operator="magnetic_dipole")
+
+        # Test magnetic dipole
+        linmom_drv = LinearMomentumIntegralsDriver(scfdrv.task.mpi_comm)
+        linmom_mats = linmom_drv.compute(scfdrv.task.molecule,
+                                         scfdrv.task.ao_basis)
+        integrals = (linmom_mats.x_to_numpy(), linmom_mats.y_to_numpy(),
+                     linmom_mats.z_to_numpy())
+        operator_import_test(scfdrv, integrals, operator="linear_momentum")

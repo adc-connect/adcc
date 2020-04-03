@@ -120,6 +120,14 @@ class TestPyscf(unittest.TestCase):
         ao_dip = mf.mol.intor_symmetric('int1e_r', comp=3)
         operator_import_test(mf, list(ao_dip))
 
+        # Test magnetic dipole
+        ao_magdip = mf.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
+        operator_import_test(mf, list(ao_magdip), "magnetic_dipole")
+
+        # Test linear momentum
+        ao_linmom = mf.mol.intor('int1e_ipovlp', comp=3, hermi=2)
+        operator_import_test(mf, list(ao_linmom), "linear_momentum")
+
     def template_uhf_ch2nh2(self, basis):
         mf = adcc.backends.run_hf(
             "pyscf", geometry.xyz["ch2nh2"], basis, multiplicity=2
@@ -133,6 +141,14 @@ class TestPyscf(unittest.TestCase):
         # Test dipole
         ao_dip = mf.mol.intor_symmetric('int1e_r', comp=3)
         operator_import_test(mf, list(ao_dip))
+
+        # Test magnetic dipole
+        ao_magdip = mf.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
+        operator_import_test(mf, list(ao_magdip), "magnetic_dipole")
+
+        # Test linear momentum
+        ao_linmom = mf.mol.intor('int1e_ipovlp', comp=3, hermi=2)
+        operator_import_test(mf, list(ao_linmom), "linear_momentum")
 
     def test_h2o_sto3g_core_hole(self):
         from adcc.backends.pyscf import run_core_hole
