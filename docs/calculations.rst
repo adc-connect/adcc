@@ -659,6 +659,6 @@ if desired.
 Further examples and details
 ----------------------------
 Some further examples can be found in the ``examples`` folder
-of the `adcc code repository <https://code.adc-connect.org/examples>`_.
+of the `adcc code repository <https://code.adc-connect.org/tree/master/examples>`_.
 For more details about the calculation parameters,
 see the reference for :ref:`adcn-methods`.

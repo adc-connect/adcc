@@ -29,6 +29,8 @@ research to cite the adcc paper :cite:`adcc` in their publications.
 Contact us
 ----------
 
-For general issues about the code,
-it's best to directly open issues `on github <https://github.com/adc-connect/adcc>`_.
-Otherwise you can reach us by mail (``developers@adc-connect.org``)
+You found a bug? Something is not working?
+You have a great idea about a possible feature for adcc?
+The primary place to discuss such issues about adcc is
+`our issue page on github <https://github.com/adc-connect/adcc/issues>`_.
+Alternatively you can also reach us by mail (``developers@adc-connect.org``).
