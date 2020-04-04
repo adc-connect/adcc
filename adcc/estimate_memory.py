@@ -72,7 +72,7 @@ def estimate_n_floats(method, n_o, n_c, n_v, max_subspace=0,
         count["vv"] += 4  # Fock + coefficients + TDMs
 
     # Computed states (singles block)
-    count["ov"] += max_subspace
+    count["ov"] += max_subspace * 3
 
     if method.level >= 1:
         count["oo"] += 1  # MP2 diffdm
@@ -95,7 +95,7 @@ def estimate_n_floats(method, n_o, n_c, n_v, max_subspace=0,
         eriimport = "ovvv"
 
         # Computed states (doubles block)
-        count["ovov"] += max_subspace
+        count["ovov"] += max_subspace * 3
 
     if method.name in ["adc2", "adc2x"]:
         count["oo"] += 1  # I1 intermediate
@@ -106,6 +106,7 @@ def estimate_n_floats(method, n_o, n_c, n_v, max_subspace=0,
         count["ovov"] += 1  # M11 intermediate
         count["ovvv"] += 3  # t2eri + Pia intermediate
         count["ooov"] += 3  # t2eri + Pib intermediate
+        eriimport = "vvvv"
 
     spinfac2 = 1  # Spin factor for rank 2 tensors
     spinfac4 = 1  # for rank 4 tensors
@@ -161,7 +162,8 @@ def estimate_minimal_memory(data_or_matrix, method, core_orbitals=None,
 
     # Estimate minimal number of floats to store, expand to bytes and return
     n_states = max(n_singlets, n_triplets, n_states, n_spin_flip)
-    max_subspace = 10 * n_states
+    if max_subspace is None:
+        max_subspace = 10 * n_states
     n_floats = estimate_n_floats(method, n_o, n_c, n_v, max_subspace,
                                  restricted=mospaces.restricted)
     byte_per_float = 8  # 64bit = double
