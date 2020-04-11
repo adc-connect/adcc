@@ -17,6 +17,4 @@ recursive-include extension/adccore/include/adcc/ *.hh
 include adcc/lib/libadccore.so
 include adcc/lib/libadccore.dylib
 include adcc/lib/libadccore.*.dylib
-include adcc/lib/libstdc++.so.*
-include adcc/lib/libc++.so.*
 include adcc/lib/libadccore_LICENSE
