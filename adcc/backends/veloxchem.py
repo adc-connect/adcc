@@ -25,7 +25,8 @@ import tempfile
 import numpy as np
 import veloxchem as vlx
 from veloxchem.mpitask import MpiTask
-from veloxchem.veloxchemlib import AngularMomentumIntegralsDriver, LinearMomentumIntegralsDriver
+from veloxchem.veloxchemlib import (AngularMomentumIntegralsDriver,
+                                    LinearMomentumIntegralsDriver)
 
 from .EriBuilder import EriBuilder
 from .InvalidReference import InvalidReference

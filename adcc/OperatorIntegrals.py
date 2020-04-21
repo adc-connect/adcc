@@ -127,7 +127,8 @@ class OperatorIntegrals:
                 "Electric dipole operator not implemented in "
                 "{} backend.".format(self.provider_ao.backend)
             )
-        return self.import_dipole_like_operator(self.provider_ao.electric_dipole, is_symmetric=True)
+        return self.import_dipole_like_operator(self.provider_ao.electric_dipole,
+                                                is_symmetric=True)
 
     @property
     @timed_member_call("_import_timer")
@@ -140,7 +141,8 @@ class OperatorIntegrals:
                 "Magnetic dipole operator not implemented in "
                 "{} backend.".format(self.provider_ao.backend)
             )
-        return self.import_dipole_like_operator(self.provider_ao.magnetic_dipole, is_symmetric=False)
+        return self.import_dipole_like_operator(self.provider_ao.magnetic_dipole,
+                                                is_symmetric=False)
 
     @property
     @timed_member_call("_import_timer")
@@ -153,7 +155,8 @@ class OperatorIntegrals:
                 "Linear momentum operator not implemented in "
                 "{} backend.".format(self.provider_ao.backend)
             )
-        return self.import_dipole_like_operator(self.provider_ao.linear_momentum, is_symmetric=False)
+        return self.import_dipole_like_operator(self.provider_ao.linear_momentum,
+                                                is_symmetric=False)
 
     @property
     def timer(self):

@@ -144,5 +144,3 @@ class TestPsi4(unittest.TestCase):
         # Test linear momentum
         ao_dip = [np.array(comp) for comp in mints.ao_momentum()]
         operator_import_test(wfn, ao_dip, operator="linear_momentum")
-
-

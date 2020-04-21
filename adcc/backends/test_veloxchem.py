@@ -38,7 +38,8 @@ import pytest
 
 if have_backend("veloxchem"):
     import veloxchem as vlx
-    from veloxchem.veloxchemlib import AngularMomentumIntegralsDriver, LinearMomentumIntegralsDriver
+    from veloxchem.veloxchemlib import (AngularMomentumIntegralsDriver,
+                                        LinearMomentumIntegralsDriver)
 
 basissets = ["sto3g", "ccpvdz"]
 
