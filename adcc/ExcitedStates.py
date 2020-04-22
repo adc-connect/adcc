@@ -389,7 +389,7 @@ class ExcitedStates:
             prefac = 2.0 * np.pi**2 / fine_structure_au
             absorption = prefac * self.oscillator_strengths
             ylabel = "Cross section (au)"
-        elif yaxis in ["rotational_strength", "rotatory_strength"]:
+        elif yaxis in ["rot", "rotational_strength", "rotatory_strength"]:
             absorption = self.rotatory_strengths
             ylabel = "Rotatory strength (au)"
         else:
