@@ -96,13 +96,11 @@ class OperatorIntegrals:
         Which integrals are available in the underlying backend
         """
         ret = []
-        # TODO: consistent names... linear_momentum = nabla
         for integral in ["electric_dipole", "magnetic_dipole", "momentum"]:
             if hasattr(self.provider_ao, integral):
                 ret.append(integral)
         return ret
 
-    # TODO: better name
     def import_dipole_like_operator(self, ao_operator, is_symmetric=True):
         dipoles = []
         for i, component in enumerate(["x", "y", "z"]):

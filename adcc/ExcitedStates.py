@@ -246,7 +246,6 @@ class ExcitedStates:
             warnings.warn("ADC(0) transition velocity dipole moments "
                           "are known to be faulty in some cases.")
         dipole_integrals = self.operators.momentum
-        # TODO: check for correct signs
         return np.array([
             [product_trace(comp, tdm) for comp in dipole_integrals]
             for tdm in self.transition_dms
@@ -452,7 +451,6 @@ class ExcitedStates:
         opt_thead = ""
         opt_body = ""
         opt = {}
-        # TODO: print rotational strength
         if has_dipole and transition_dipole_moments:
             opt_body += " {tdmx:8.4f} {tdmy:8.4f} {tdmz:8.4f}"
             opt_thead += "  transition dipole moment "
