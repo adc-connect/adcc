@@ -126,7 +126,7 @@ class TestPyscf(unittest.TestCase):
 
         # Test linear momentum
         ao_linmom = mf.mol.intor('int1e_ipovlp', comp=3, hermi=2)
-        operator_import_test(mf, list(ao_linmom), "linear_momentum")
+        operator_import_test(mf, list(ao_linmom), "momentum")
 
     def template_uhf_ch2nh2(self, basis):
         mf = adcc.backends.run_hf(
@@ -148,7 +148,7 @@ class TestPyscf(unittest.TestCase):
 
         # Test linear momentum
         ao_linmom = mf.mol.intor('int1e_ipovlp', comp=3, hermi=2)
-        operator_import_test(mf, list(ao_linmom), "linear_momentum")
+        operator_import_test(mf, list(ao_linmom), "momentum")
 
     def test_h2o_sto3g_core_hole(self):
         from adcc.backends.pyscf import run_core_hole

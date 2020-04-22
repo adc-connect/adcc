@@ -245,7 +245,7 @@ class ExcitedStates:
         if self.property_method.level == 0:
             warnings.warn("ADC(0) transition velocity dipole moments "
                           "are known to be faulty in some cases.")
-        dipole_integrals = self.operators.linear_momentum
+        dipole_integrals = self.operators.momentum
         # TODO: check for correct signs
         return np.array([
             [product_trace(comp, tdm) for comp in dipole_integrals]
@@ -445,7 +445,7 @@ class ExcitedStates:
         has_dipole = "electric_dipole" in self.operators.available
         has_rotatory = all(
             op in self.operators.available
-            for op in ["magnetic_dipole", "linear_momentum"]
+            for op in ["magnetic_dipole", "momentum"]
         )
 
         # Build information about the optional columns

@@ -155,8 +155,8 @@ def operator_import_test(scfres, ao_dict, operator="electric_dipole"):
         dip_imported = refstate.operators.electric_dipole
     elif operator == "magnetic_dipole":
         dip_imported = refstate.operators.magnetic_dipole
-    elif operator == "linear_momentum":
-        dip_imported = refstate.operators.linear_momentum
+    elif operator == "momentum":
+        dip_imported = refstate.operators.momentum
     else:
         raise ValueError(f"Unknown operator {operator}.")
 

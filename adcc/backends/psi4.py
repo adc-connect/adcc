@@ -44,16 +44,13 @@ class Psi4OperatorIntegralProvider:
     @cached_property
     def magnetic_dipole(self):
         # TODO: Gauge origin?
-        # TODO: prefactor -0.5?
         return [
             -1.0 * np.asarray(comp)
             for comp in self.mints.ao_angular_momentum()
         ]
 
     @cached_property
-    def linear_momentum(self):
-        # TODO: Gauge origin?
-        # TODO: prefactor -0.5?
+    def momentum(self):
         return [np.asarray(comp) for comp in self.mints.ao_nabla()]
 
 

@@ -50,6 +50,13 @@ class TestCrossReferenceBackends(unittest.TestCase):
             results[b] = adcc.adc2(scfres, n_singlets=5, conv_tol=1e-10)
         compare_adc_results(results, 5e-9)
 
+    def template_adc2_r2methyloxirane(self, basis):
+        results = {}
+        for b in backends:
+            scfres = cached_backend_hf(b, "r2methyloxirane", basis)
+            results[b] = adcc.adc2(scfres, n_singlets=3, conv_tol=1e-10)
+        compare_adc_results(results, 5e-9)
+
     def template_adc2_uhf_ch2nh2(self, basis):
         results = {}
         # UHF not supported for VeloxChem
@@ -121,17 +128,24 @@ def compare_adc_results(adc_results, atol):
                 )
 
         # test properties
-        assert_allclose(state1.oscillator_strengths,
-                        state2.oscillator_strengths, atol=atol)
-        assert_allclose(state1.oscillator_strengths_velocity,
-                        state2.oscillator_strengths_velocity, atol=atol)
-        # TODO: currently always zero because we only test non-chiral molecules
-        assert_allclose(state1.rotatory_strengths,
-                        state2.rotatory_strengths, atol=atol)
-        assert_allclose(state1.state_dipole_moments,
-                        state2.state_dipole_moments, atol=atol)
-        # TODO: use correct signfix (state-dependent) or test rotatory strength
-        #  (chiral molecule) when implemented?
-        assert_allclose(np.abs(state1.transition_magnetic_dipole_moments),
-                        np.abs(state2.transition_magnetic_dipole_moments),
-                        atol=atol)
+        if "electric_dipole" in state1.operators.available and \
+                "electric_dipole" in state2.operators.available:
+            assert_allclose(state1.oscillator_strengths,
+                            state2.oscillator_strengths, atol=atol)
+            assert_allclose(state1.state_dipole_moments,
+                            state2.state_dipole_moments, atol=atol)
+        if "momentum" in state1.operators.available and \
+                "momentum" in state2.operators.available:
+            assert_allclose(state1.oscillator_strengths_velocity,
+                            state2.oscillator_strengths_velocity, atol=atol)
+        has_rotatory1 = all(
+            op in state1.operators.available
+            for op in ["magnetic_dipole", "momentum"]
+        )
+        has_rotatory2 = all(
+            op in state2.operators.available
+            for op in ["magnetic_dipole", "momentum"]
+        )
+        if has_rotatory1 and has_rotatory2:
+            assert_allclose(state1.rotatory_strengths,
+                            state2.rotatory_strengths, atol=atol)

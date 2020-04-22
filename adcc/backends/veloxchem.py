@@ -53,7 +53,6 @@ class VeloxChemOperatorIntegralProvider:
     @cached_property
     def magnetic_dipole(self):
         # TODO: Gauge origin?
-        # TODO: prefactor -0.5?
         task = self.scfdrv.task
         angmom_drv = AngularMomentumIntegralsDriver(task.mpi_comm)
         angmom_mats = angmom_drv.compute(task.molecule, task.ao_basis)
@@ -61,9 +60,7 @@ class VeloxChemOperatorIntegralProvider:
                 -1.0 * angmom_mats.z_to_numpy())
 
     @cached_property
-    def linear_momentum(self):
-        # TODO: Gauge origin?
-        # TODO: prefactor?
+    def momentum(self):
         task = self.scfdrv.task
         linmom_drv = LinearMomentumIntegralsDriver(task.mpi_comm)
         linmom_mats = linmom_drv.compute(task.molecule, task.ao_basis)

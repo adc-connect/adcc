@@ -148,4 +148,4 @@ class TestVeloxchem(unittest.TestCase):
                                          scfdrv.task.ao_basis)
         integrals = (linmom_mats.x_to_numpy(), linmom_mats.y_to_numpy(),
                      linmom_mats.z_to_numpy())
-        operator_import_test(scfdrv, integrals, operator="linear_momentum")
+        operator_import_test(scfdrv, integrals, operator="momentum")

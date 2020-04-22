@@ -43,16 +43,13 @@ class PyScfOperatorIntegralProvider:
     @cached_property
     def magnetic_dipole(self):
         # TODO: Gauge origin?
-        # TODO: prefactor -0.5?
         with self.scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
             return list(
                 -1.0 * self.scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
             )
 
     @cached_property
-    def linear_momentum(self):
-        # TODO: Gauge origin?
-        # TODO: prefactor?
+    def momentum(self):
         with self.scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
             return list(self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2))
 
