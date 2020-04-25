@@ -119,7 +119,7 @@ def power_method(A, guess, conv_tol=1e-9, max_iter=70, callback=None,
             return state
 
         if explicit_symmetrisation:
-            x = explicit_symmetrisation.symmetrise([Ax], [guess])[0]
+            x = explicit_symmetrisation.symmetrise(Ax)
         else:
             x = Ax
         x = x / np.sqrt(x @ x)

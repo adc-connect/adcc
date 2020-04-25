@@ -68,6 +68,11 @@ class AmplitudeVector:
         """Return a copy of the AmplitudeVector"""
         return AmplitudeVector(*tuple(t.copy() for t in self.tensors))
 
+    def evaluate(self):
+        for t in self.tensors:
+            t.evaluate()
+        return self
+
     def ones_like(self):
         """Return an empty AmplitudeVector of the same shape and symmetry"""
         return AmplitudeVector(*tuple(t.ones_like() for t in self.tensors))
@@ -84,19 +89,6 @@ class AmplitudeVector:
         """Return an AmplitudeVector of the same shape and symmetry with
            all elements set to zero"""
         return AmplitudeVector(*tuple(t.zeros_like() for t in self.tensors))
-
-    def add_linear_combination(self, scalars, others):
-        """Return an AmplitudeVector of the same shape and symmetry with
-           all elements set to zero"""
-        if not isinstance(others, list):
-            raise TypeError("Other is expected to be a list")
-        if len(others) != len(scalars):
-            raise ValueError("Length of scalars and others lists do not agree.")
-        alltensors = [[av[b] for av in others] for b in self.blocks]
-        return AmplitudeVector(*tuple(
-            t.add_linear_combination(scalars, ot)
-            for t, ot in zip(self.tensors, alltensors)
-        ))
 
     def dot(self, other):
         """Return the dot product with another AmplitudeVector

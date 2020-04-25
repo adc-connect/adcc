@@ -28,9 +28,9 @@ from .Tensor import Tensor
 from .Symmetry import Symmetry
 from .AdcMatrix import AdcMatrix, AdcMatrixlike
 from .AdcMethod import AdcMethod
-from .functions import (add, contract, copy, divide, dot, empty_like,
-                        linear_combination, multiply, nosym_like, ones_like,
-                        subtract, transpose, zeros_like)
+from .functions import (contract, copy, direct_sum, dot, empty_like, evaluate,
+                        linear_combination, nosym_like, ones_like, transpose,
+                        zeros_like)
 from .memory_pool import memory_pool
 from .AdcBlockView import AdcBlockView
 from .ExcitedStates import ExcitedStates
@@ -49,9 +49,9 @@ from .workflow import run_adc
 
 __all__ = ["run_adc", "AdcMatrix", "AdcBlockView", "AdcMatrixlike", "AdcMethod",
            "Symmetry", "ReferenceState",
-           "add", "contract", "copy", "divide", "dot", "empty_like",
-           "linear_combination", "multiply", "nosym_like", "ones_like",
-           "subtract", "transpose", "zeros_like",
+           "contract", "copy", "dot", "empty_like", "evaluate",
+           "linear_combination", "nosym_like", "ones_like", "transpose",
+           "zeros_like", "direct_sum",
            "memory_pool", "set_n_threads", "get_n_threads", "AmplitudeVector",
            "HartreeFockProvider", "ExcitedStates",
            "Tensor", "DictHfProvider", "DataHfProvider", "OneParticleOperator",

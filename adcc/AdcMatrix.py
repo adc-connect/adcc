@@ -87,17 +87,14 @@ class AdcMatrixlike:
         """
         ret = {}
         if self.is_core_valence_separated:
-            def symmetrise_cvs_adc_doubles(invec, outvec):
-                # CVS doubles part is antisymmetric wrt. (i,K,a,b) <-> (i,K,b,a)
-                invec.antisymmetrise_to(outvec, [(2, 3)])
-            ret["d"] = symmetrise_cvs_adc_doubles
+            # CVS doubles part is antisymmetric wrt. (i,K,a,b) <-> (i,K,b,a)
+            ret["d"] = lambda v: v.antisymmetrise([(2, 3)])
         else:
-            def symmetrise_generic_adc_doubles(invec, outvec):
-                scratch = empty_like(outvec)
+            def symmetrise_generic_adc_doubles(invec):
                 # doubles part is antisymmetric wrt. (i,j,a,b) <-> (i,j,b,a)
-                invec.antisymmetrise_to(scratch, [(2, 3)])
+                scratch = invec.antisymmetrise([(2, 3)])
                 # doubles part is symmetric wrt. (i,j,a,b) <-> (j,i,b,a)
-                scratch.symmetrise_to(outvec, [(0, 1), (2, 3)])
+                return scratch.symmetrise([(0, 1), (2, 3)])
             ret["d"] = symmetrise_generic_adc_doubles
         return ret
 
