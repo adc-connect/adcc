@@ -23,7 +23,6 @@
 import adcc
 import numpy as np
 
-from ..misc import assert_allclose_signfix
 from collections import namedtuple
 
 ii, jj, kk, ll = 0, 1, 2, 3
@@ -179,7 +178,7 @@ def operator_import_test(scfres, ao_dict, operator="electric_dipole"):
             dip_mock["v1o1"] = dip_vo
 
         for b in dip_imported_comp.blocks:
-            assert_allclose_signfix(
+            np.testing.assert_allclose(
                 dip_mock[b], dip_imported_comp[b].to_ndarray(),
                 atol=refstate.conv_tol
             )

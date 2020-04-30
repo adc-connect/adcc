@@ -111,12 +111,12 @@ class TestPsi4(unittest.TestCase):
 
         # Test dipole
         mints = psi4.core.MintsHelper(wfn.basisset())
-        ao_dip = [np.array(comp) for comp in mints.ao_dipole()]
+        ao_dip = [-1.0 * np.array(comp) for comp in mints.ao_dipole()]
         operator_import_test(wfn, ao_dip)
 
         # TODO: generalize, code block repeated below...
         # Test magnetic dipole
-        ao_dip = [np.array(comp) for comp in mints.ao_angular_momentum()]
+        ao_dip = [-1.0 * np.array(comp) for comp in mints.ao_angular_momentum()]
         operator_import_test(wfn, ao_dip, operator="magnetic_dipole")
 
         # Test linear momentum
@@ -134,7 +134,7 @@ class TestPsi4(unittest.TestCase):
 
         # Test dipole
         mints = psi4.core.MintsHelper(wfn.basisset())
-        ao_dip = [np.array(comp) for comp in mints.ao_dipole()]
+        ao_dip = [-1.0 * np.array(comp) for comp in mints.ao_dipole()]
         operator_import_test(wfn, ao_dip, operator="electric_dipole")
 
         # Test magnetic dipole
