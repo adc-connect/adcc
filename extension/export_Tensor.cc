@@ -95,8 +95,10 @@ static py::array_t<scalar_type> Tensor_to_ndarray(const Tensor& self) {
   return res;
 }
 
-static void Tensor_from_ndarray_tol(Tensor& self, py::array_t<scalar_type> in_array,
-                                    double symmetry_tolerance) {
+static void Tensor_from_ndarray_tol(
+      Tensor& self,
+      py::array_t<scalar_type, py::array::c_style | py::array::forcecast> in_array,
+      double symmetry_tolerance) {
   py::ssize_t nd = in_array.ndim();
   if (nd < 1) throw invalid_argument("Cannot import from 0D array.");
 
