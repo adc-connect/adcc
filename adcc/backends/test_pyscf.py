@@ -122,7 +122,7 @@ class TestPyscf(unittest.TestCase):
 
         # Test magnetic dipole
         with mf.mol.with_common_orig([0.0, 0.0, 0.0]):
-            ao_magdip = -1.0 * mf.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
+            ao_magdip = 1.0 * mf.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
         operator_import_test(mf, list(ao_magdip), "magnetic_dipole")
 
         # Test linear momentum

@@ -45,13 +45,15 @@ class PyScfOperatorIntegralProvider:
         # TODO: Gauge origin?
         with self.scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
             return list(
-                -1.0 * self.scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
+                0.5 * self.scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
             )
 
     @cached_property
     def momentum(self):
         with self.scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
-            return list(self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2))
+            return list(
+                -1.0 * self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
+            )
 
 
 # TODO: refactor ERI builder to be more general

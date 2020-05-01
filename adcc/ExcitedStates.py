@@ -200,6 +200,10 @@ class ExcitedStates:
                 self.excitation_energies = data.eigenvalues
             if hasattr(data, "eigenvectors"):
                 self.excitation_vectors = data.eigenvectors
+            if hasattr(data, "excitation_energies"):
+                self.excitation_energies = data.excitation_energies
+            if hasattr(data, "excitation_vectors"):
+                self.excitation_vectors = data.excitation_vectors
 
     @property
     def timer(self):

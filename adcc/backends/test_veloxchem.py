@@ -139,8 +139,8 @@ class TestVeloxchem(unittest.TestCase):
         angmom_mats = angmom_drv.compute(scfdrv.task.molecule,
                                          scfdrv.task.ao_basis)
         integrals = (
-            -1.0 * angmom_mats.x_to_numpy(), -1.0 * angmom_mats.y_to_numpy(),
-            -1.0 * angmom_mats.z_to_numpy()
+            angmom_mats.x_to_numpy(), angmom_mats.y_to_numpy(),
+            angmom_mats.z_to_numpy()
         )
         operator_import_test(scfdrv, integrals, operator="magnetic_dipole")
 
