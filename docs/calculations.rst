@@ -398,6 +398,21 @@ of parameters to alter the default plotting behaviour:
   used line marker.
   See the `Matplotlib documentation <https://matplotlib.org/api/_as_gen/matplotlib.pyplot.plot.html>`_ for details.
 
+In the same manner, one can model the ECD spectrum of chiral molecules
+with the :func:`adcc.ExcitedStates.plot_spectrum` function. An example
+script for obtaining the ECD spectrum of (R)- and (S)-2-methyloxirane can be
+found in the `examples folder <https://code.adc-connect.org/tree/master/examples>`_.
+The only difference to plotting a UV/Vis spectrum as shown above is to specify
+a different ``yaxis`` parameter, i.e.
+
+.. code-block:: python
+
+    plots = state.plot_spectrum(yaxis="rotatory_strength")
+
+which then, in the example, produces the following plot:
+
+.. image:: images/ecd_methyloxirane.png
+
 
 Reusing intermediate data
 -------------------------
