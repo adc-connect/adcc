@@ -116,11 +116,11 @@ class TestPsi4(unittest.TestCase):
 
         # TODO: generalize, code block repeated below...
         # Test magnetic dipole
-        ao_dip = [-1.0 * np.array(comp) for comp in mints.ao_angular_momentum()]
+        ao_dip = [0.5 * np.array(comp) for comp in mints.ao_angular_momentum()]
         operator_import_test(wfn, ao_dip, operator="magnetic_dipole")
 
         # Test linear momentum
-        ao_dip = [np.array(comp) for comp in mints.ao_nabla()]
+        ao_dip = [-1.0 * np.array(comp) for comp in mints.ao_nabla()]
         operator_import_test(wfn, ao_dip, operator="momentum")
 
     def template_uhf_ch2nh2(self, basis):
@@ -138,9 +138,9 @@ class TestPsi4(unittest.TestCase):
         operator_import_test(wfn, ao_dip, operator="electric_dipole")
 
         # Test magnetic dipole
-        ao_dip = [-1.0 * np.array(comp) for comp in mints.ao_angular_momentum()]
+        ao_dip = [0.5 * np.array(comp) for comp in mints.ao_angular_momentum()]
         operator_import_test(wfn, ao_dip, operator="magnetic_dipole")
 
         # Test linear momentum
-        ao_dip = [np.array(comp) for comp in mints.ao_nabla()]
+        ao_dip = [-1.0 * np.array(comp) for comp in mints.ao_nabla()]
         operator_import_test(wfn, ao_dip, operator="momentum")

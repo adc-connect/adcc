@@ -122,11 +122,11 @@ class TestPyscf(unittest.TestCase):
 
         # Test magnetic dipole
         with mf.mol.with_common_orig([0.0, 0.0, 0.0]):
-            ao_magdip = 1.0 * mf.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
+            ao_magdip = 0.5 * mf.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
         operator_import_test(mf, list(ao_magdip), "magnetic_dipole")
 
         # Test linear momentum
-        ao_linmom = mf.mol.intor('int1e_ipovlp', comp=3, hermi=2)
+        ao_linmom = -1.0 * mf.mol.intor('int1e_ipovlp', comp=3, hermi=2)
         operator_import_test(mf, list(ao_linmom), "momentum")
 
     def template_uhf_ch2nh2(self, basis):
@@ -145,11 +145,11 @@ class TestPyscf(unittest.TestCase):
 
         # Test magnetic dipole
         with mf.mol.with_common_orig([0.0, 0.0, 0.0]):
-            ao_magdip = -1.0 * mf.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
+            ao_magdip = 0.5 * mf.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
         operator_import_test(mf, list(ao_magdip), "magnetic_dipole")
 
         # Test linear momentum
-        ao_linmom = mf.mol.intor('int1e_ipovlp', comp=3, hermi=2)
+        ao_linmom = -1.0 * mf.mol.intor('int1e_ipovlp', comp=3, hermi=2)
         operator_import_test(mf, list(ao_linmom), "momentum")
 
     def test_h2o_sto3g_core_hole(self):
