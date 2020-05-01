@@ -57,7 +57,7 @@ __all__ = ["run_adc", "AdcMatrix", "AdcBlockView", "AdcMatrixlike", "AdcMethod",
            "guesses_singlet", "guesses_triplet", "guesses_any",
            "guess_symmetries", "guesses_spin_flip", "guess_zero",
            "DefaultCachingPolicy", "GatherStatisticsPolicy", "LazyMp",
-           "adc0", "adc1", "adc2", "adc2x", "adc3",
+           "adc0", "cis", "adc1", "adc2", "adc2x", "adc3",
            "cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x", "cvs_adc3",
            "banner"]
 
@@ -77,6 +77,12 @@ def with_runadc_doc(func):
 @with_runadc_doc
 def adc0(*args, **kwargs):
     return run_adc(*args, **kwargs, method="adc0")
+
+
+@with_runadc_doc
+def cis(*args, **kwargs):
+    state = run_adc(*args, **kwargs, method="adc1")
+    return ExcitedStates(state, property_method="adc0")
 
 
 @with_runadc_doc
