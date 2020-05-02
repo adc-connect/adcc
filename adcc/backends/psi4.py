@@ -50,7 +50,7 @@ class Psi4OperatorIntegralProvider:
         ]
 
     @cached_property
-    def momentum(self):
+    def nabla(self):
         return [-1.0 * np.asarray(comp) for comp in self.mints.ao_nabla()]
 
 

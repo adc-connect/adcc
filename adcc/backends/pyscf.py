@@ -49,7 +49,7 @@ class PyScfOperatorIntegralProvider:
             )
 
     @cached_property
-    def momentum(self):
+    def nabla(self):
         with self.scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
             return list(
                 -1.0 * self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)

@@ -96,7 +96,7 @@ class OperatorIntegrals:
         Which integrals are available in the underlying backend
         """
         ret = []
-        for integral in ["electric_dipole", "magnetic_dipole", "momentum"]:
+        for integral in ["electric_dipole", "magnetic_dipole", "nabla"]:
             if hasattr(self.provider_ao, integral):
                 ret.append(integral)
         return ret
@@ -144,17 +144,17 @@ class OperatorIntegrals:
 
     @property
     @timed_member_call("_import_timer")
-    def momentum(self):
+    def nabla(self):
         """
         Return the momentum (nabla operator) integrals
         in the molecular orbital basis.
         """
-        if "momentum" not in self.available:
+        if "nabla" not in self.available:
             raise NotImplementedError(
-                "Momentum operator not implemented in "
+                "Nabla operator not implemented in "
                 "{} backend.".format(self.provider_ao.backend)
             )
-        return self.import_dipole_like_operator(self.provider_ao.momentum,
+        return self.import_dipole_like_operator(self.provider_ao.nabla,
                                                 is_symmetric=False)
 
     @property

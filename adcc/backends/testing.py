@@ -143,21 +143,14 @@ def eri_asymm_construction_test(scfres, core_orbitals=0):
                 )
 
 
-def operator_import_test(scfres, ao_dict, operator="electric_dipole"):
+def operator_import_from_ao_test(scfres, ao_dict, operator="electric_dipole"):
     refstate = adcc.ReferenceState(scfres)
     occa = refstate.orbital_coefficients_alpha("o1b").to_ndarray()
     occb = refstate.orbital_coefficients_beta("o1b").to_ndarray()
     virta = refstate.orbital_coefficients_alpha("v1b").to_ndarray()
     virtb = refstate.orbital_coefficients_beta("v1b").to_ndarray()
 
-    if operator == "electric_dipole":
-        dip_imported = refstate.operators.electric_dipole
-    elif operator == "magnetic_dipole":
-        dip_imported = refstate.operators.magnetic_dipole
-    elif operator == "momentum":
-        dip_imported = refstate.operators.momentum
-    else:
-        raise ValueError(f"Unknown operator {operator}.")
+    dip_imported = getattr(refstate.operators, operator)
 
     for i, ao_component in enumerate(ao_dict):
         dip_oo = np.einsum('ib,ba,ja->ij', occa, ao_component, occa)

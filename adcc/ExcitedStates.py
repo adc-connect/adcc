@@ -243,13 +243,13 @@ class ExcitedStates:
 
     @cached_property
     @timed_member_call(timer="_property_timer")
-    def transition_velocity_dipole_moments(self):
+    def transition_dipole_moments_velocity(self):
         """List of transition dipole moments in the
         velocity gauge of all computed states"""
         if self.property_method.level == 0:
             warnings.warn("ADC(0) transition velocity dipole moments "
                           "are known to be faulty in some cases.")
-        dipole_integrals = self.operators.momentum
+        dipole_integrals = self.operators.nabla
         return np.array([
             [product_trace(comp, tdm) for comp in dipole_integrals]
             for tdm in self.transition_dms
@@ -263,7 +263,6 @@ class ExcitedStates:
             warnings.warn("ADC(0) transition magnetic dipole moments "
                           "are known to be faulty in some cases.")
         mag_dipole_integrals = self.operators.magnetic_dipole
-        # TODO: check for correct signs and prefactors
         return np.array([
             [product_trace(comp, tdm) for comp in mag_dipole_integrals]
             for tdm in self.transition_dms
@@ -284,7 +283,7 @@ class ExcitedStates:
         velocity gauge of all computed states"""
         return 2. / 3. * np.array([
             np.linalg.norm(tdm)**2 / np.abs(ev)
-            for tdm, ev in zip(self.transition_velocity_dipole_moments,
+            for tdm, ev in zip(self.transition_dipole_moments_velocity,
                                self.excitation_energies)
         ])
 
@@ -293,7 +292,7 @@ class ExcitedStates:
         """List of rotatory strengths of all computed states"""
         return np.array([
             np.dot(tdm, magmom) / ee
-            for tdm, magmom, ee in zip(self.transition_velocity_dipole_moments,
+            for tdm, magmom, ee in zip(self.transition_dipole_moments_velocity,
                                        self.transition_magnetic_dipole_moments,
                                        self.excitation_energies)
         ])
@@ -446,10 +445,8 @@ class ExcitedStates:
 
         eV = constants.value("Hartree energy in eV")
         has_dipole = "electric_dipole" in self.operators.available
-        has_rotatory = all(
-            op in self.operators.available
-            for op in ["magnetic_dipole", "momentum"]
-        )
+        has_rotatory = all(op in self.operators.available
+                           for op in ["magnetic_dipole", "nabla"])
 
         # Build information about the optional columns
         opt_thead = ""

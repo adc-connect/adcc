@@ -60,7 +60,7 @@ class VeloxChemOperatorIntegralProvider:
                 0.5 * angmom_mats.z_to_numpy())
 
     @cached_property
-    def momentum(self):
+    def nabla(self):
         task = self.scfdrv.task
         linmom_drv = LinearMomentumIntegralsDriver(task.mpi_comm)
         linmom_mats = linmom_drv.compute(task.molecule, task.ao_basis)
