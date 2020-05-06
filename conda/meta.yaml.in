@@ -5,10 +5,12 @@ package:
 source:
     path: ../
 
+build:
+  ignore_run_exports:
+    - mkl
+
 requirements:
   build:
-    ignore_run_exports:
-      - mkl
     - {{ compiler('c') }}
     - {{ compiler('cxx') }}
     - python {{ python }}
