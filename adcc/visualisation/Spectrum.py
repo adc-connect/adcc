@@ -154,5 +154,5 @@ class Spectrum:
         # if we have negative y-values (e.g., rotatory strengths),
         # draw y = 0 as an extra line for clarity
         if np.any(self.y < 0.0):
-            plt.axhline(0.0, color='black', lw=0.5)
+            plt.axhline(0.0, color='gray', lw=0.5)
         return p
