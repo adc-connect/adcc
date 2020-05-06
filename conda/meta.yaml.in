@@ -14,6 +14,8 @@ requirements:
     - cmake >=3.2
     - ninja
     - ccache
+    ignore_run_exports:
+        - mkl
   host:
     - python {{ python }}
     - mkl-devel {{ mkl }}
@@ -31,7 +33,7 @@ requirements:
     - tqdm >=4.30
   run:
     - {{ pin_compatible('python', max_pin='x.x') }}
-    - {{ pin_compatible('mkl', max_pin='x') }}
+    - {{ pin_compatible('mkl', upper_bound='2021.0') }}
     - {{ pin_compatible('numpy', max_pin='x.x') }}
     - h5py >=2.9
     - scipy >=1.2
