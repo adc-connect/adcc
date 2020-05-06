@@ -27,12 +27,13 @@ import sys
 from os.path import dirname, join
 from adcc.MoSpaces import expand_spaceargs
 
-sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
-
-import adcctestdata as atd  # noqa: E402
 import numpy as np
 import h5py
 import adcc
+
+sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
+
+import adcctestdata as atd  # noqa: E402
 
 
 def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
