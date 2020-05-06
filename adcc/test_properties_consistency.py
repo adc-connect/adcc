@@ -23,7 +23,7 @@
 import unittest
 import numpy as np
 
-from .misc import assert_allclose_signfix, expand_test_templates
+from .misc import expand_test_templates
 
 from numpy.testing import assert_allclose
 from adcc.testdata.cache import cache
