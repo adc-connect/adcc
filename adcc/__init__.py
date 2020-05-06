@@ -21,6 +21,7 @@
 ##
 ## ---------------------------------------------------------------------
 import sys
+import warnings
 
 from .LazyMp import LazyMp
 from .Tensor import Tensor
@@ -81,6 +82,7 @@ def adc0(*args, **kwargs):
 
 @with_runadc_doc
 def cis(*args, **kwargs):
+    warnings.warn("CIS is an untested feature. Use with caution.")
     state = run_adc(*args, **kwargs, method="adc1")
     return ExcitedStates(state, property_method="adc0")
 
