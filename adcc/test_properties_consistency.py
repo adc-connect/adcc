@@ -23,61 +23,68 @@
 import unittest
 import numpy as np
 
-from .misc import assert_allclose_signfix
-from .test_state_densities import Runners
+from .misc import assert_allclose_signfix, expand_test_templates
 
 from numpy.testing import assert_allclose
 from adcc.testdata.cache import cache
 
 from pytest import approx
 
+methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 
-class TestTransitionDipoleMoments(unittest.TestCase, Runners):
+
+@expand_test_templates(methods)
+class RunnersConsistency:
+    def base_test(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def template_methox_sto3g_singlet(self, method):
+        self.base_test("methox_sto3g", method, "singlet")
+
+
+class TestMagneticTransitionDipoleMoments(unittest.TestCase, RunnersConsistency):
     def base_test(self, system, method, kind):
         method = method.replace("_", "-")
 
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
 
-        res_tdms = state.transition_dipole_moments
-        ref_tdms = refdata[method][kind]["transition_dipole_moments"]
-        refevals = refdata[method][kind]["eigenvalues"]
-        n_ref = len(state.excitation_vectors)
-        for i in range(n_ref):
-            res_tdm = res_tdms[i]
-            ref_tdm = ref_tdms[i]
-            assert state.excitation_energies[i] == refevals[i]
-            res_tdm_norm = np.sum(res_tdm * res_tdm)
-            ref_tdm_norm = np.sum(ref_tdm * ref_tdm)
-            assert res_tdm_norm == approx(ref_tdm_norm, abs=1e-5)
-            assert_allclose_signfix(res_tdm, ref_tdm, atol=1e-5)
-
-
-class TestOscillatorStrengths(unittest.TestCase, Runners):
-    def base_test(self, system, method, kind):
-        method = method.replace("_", "-")
-
-        refdata = cache.reference_data[system]
-        state = cache.adc_states[system][method][kind]
-
-        res_oscs = state.oscillator_strengths
-        ref_tdms = refdata[method][kind]["transition_dipole_moments"]
-        refevals = refdata[method][kind]["eigenvalues"]
-        n_ref = len(state.excitation_vectors)
-        for i in range(n_ref):
-            assert state.excitation_energies[i] == refevals[i]
-            ref_tdm_norm = np.sum(ref_tdms[i] * ref_tdms[i])
-            assert res_oscs[i] == approx(2. / 3. * ref_tdm_norm * refevals[i])
-
-
-class TestStateDipoleMoments(unittest.TestCase, Runners):
-    def base_test(self, system, method, kind):
-        method = method.replace("_", "-")
-
-        refdata = cache.reference_data[system]
-        state = cache.adc_states[system][method][kind]
-
-        res_dms = state.state_dipole_moments
+        res_dms = state.transition_magnetic_dipole_moments
         ref = refdata[method][kind]
         n_ref = len(state.excitation_vectors)
-        assert_allclose(res_dms, ref["state_dipole_moments"][:n_ref], atol=1e-4)
+        assert_allclose(
+            res_dms, ref["transition_magnetic_dipole_moments"][:n_ref], atol=1e-4
+        )
+
+
+class TestTransitionDipoleMomentsVelocity(unittest.TestCase, RunnersConsistency):
+    def base_test(self, system, method, kind):
+        method = method.replace("_", "-")
+
+        refdata = cache.reference_data[system]
+        state = cache.adc_states[system][method][kind]
+
+        res_dms = state.transition_dipole_moments_velocity
+        ref = refdata[method][kind]
+        n_ref = len(state.excitation_vectors)
+        assert_allclose(
+            res_dms, ref["transition_dipole_moments_velocity"][:n_ref], atol=1e-4
+        )
+
+
+class TestRotatoryStrengths(unittest.TestCase, RunnersConsistency):
+    def base_test(self, system, method, kind):
+        method = method.replace("_", "-")
+
+        refdata = cache.reference_data[system]
+        state = cache.adc_states[system][method][kind]
+
+        res_rots = state.rotatory_strengths
+        ref_tmdm = refdata[method][kind]["transition_magnetic_dipole_moments"]
+        ref_tdmvel = refdata[method][kind]["transition_dipole_moments_velocity"]
+        refevals = refdata[method][kind]["eigenvalues"]
+        n_ref = len(state.excitation_vectors)
+        for i in range(n_ref):
+            assert state.excitation_energies[i] == refevals[i]
+            ref_dot = np.dot(ref_tmdm[i], ref_tdmvel[i])
+            assert res_rots[i] == approx(ref_dot / refevals[i])
