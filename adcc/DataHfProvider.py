@@ -203,6 +203,20 @@ class DataHfProvider(HartreeFockProvider):
                                  + str((3, nb, nb)) + " not "
                                  + str(mmp["elec_1"].shape))
             opprov.electric_dipole = np.asarray(mmp["elec_1"])
+        if "mag_1" in mmp:
+            if mmp["mag_1"].shape != (3, nb, nb):
+                raise ValueError("multipoles/mag_1 is expected to have shape "
+                                 + str((3, nb, nb)) + " not "
+                                 + str(mmp["mag_1"].shape))
+            opprov.magnetic_dipole = np.asarray(mmp["mag_1"])
+        varop = data.get("uncategorized_operators", {})
+        if "nabla" in varop:
+            if varop["nabla"].shape != (3, nb, nb):
+                raise ValueError("uncategorized_operators/nabla is expected to "
+                                 "have shape "
+                                 + str((3, nb, nb)) + " not "
+                                 + str(varop["nabla"].shape))
+            opprov.nabla = np.asarray(varop["nabla"])
         self.operator_integral_provider = opprov
 
     #
