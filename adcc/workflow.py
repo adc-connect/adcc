@@ -82,7 +82,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
 
     conv_tol : float, optional
         Convergence tolerance to employ in the iterative solver for obtaining
-        the ADC vectors (default: `1e-6` or SCF tolerance / 100,
+        the ADC vectors (default: `1e-6` or 10 * SCF tolerance,
         whatever is larger)
 
     solver_method : str, optional
@@ -334,7 +334,7 @@ def diagonalise_adcmatrix(matrix, n_states, kind, solver_method="davidson",
 
     # Determine default ADC convergence tolerance
     if conv_tol is None:
-        conv_tol = max(reference_state.conv_tol / 100, 1e-6)
+        conv_tol = max(10 * reference_state.conv_tol, 1e-6)
     if reference_state.conv_tol > conv_tol:
         raise ValueError(
             "Convergence tolerance of SCF results "
