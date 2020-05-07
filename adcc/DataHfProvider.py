@@ -203,20 +203,21 @@ class DataHfProvider(HartreeFockProvider):
                                  + str((3, nb, nb)) + " not "
                                  + str(mmp["elec_1"].shape))
             opprov.electric_dipole = np.asarray(mmp["elec_1"])
-        if "mag_1" in mmp:
-            if mmp["mag_1"].shape != (3, nb, nb):
-                raise ValueError("multipoles/mag_1 is expected to have shape "
-                                 + str((3, nb, nb)) + " not "
-                                 + str(mmp["mag_1"].shape))
-            opprov.magnetic_dipole = np.asarray(mmp["mag_1"])
-        varop = data.get("uncategorized_operators", {})
-        if "nabla" in varop:
-            if varop["nabla"].shape != (3, nb, nb):
-                raise ValueError("uncategorized_operators/nabla is expected to "
+        magm = data.get("magnetic_moments", {})
+        if "mag_1" in magm:
+            if magm["mag_1"].shape != (3, nb, nb):
+                raise ValueError("magnetic_moments/mag_1 is expected to have "
+                                 "shape " + str((3, nb, nb)) + " not "
+                                 + str(magm["mag_1"].shape))
+            opprov.magnetic_dipole = np.asarray(magm["mag_1"])
+        derivs = data.get("derivatives", {})
+        if "nabla" in derivs:
+            if derivs["nabla"].shape != (3, nb, nb):
+                raise ValueError("derivatives/nabla is expected to "
                                  "have shape "
                                  + str((3, nb, nb)) + " not "
-                                 + str(varop["nabla"].shape))
-            opprov.nabla = np.asarray(varop["nabla"])
+                                 + str(derivs["nabla"].shape))
+            opprov.nabla = np.asarray(derivs["nabla"])
         self.operator_integral_provider = opprov
 
     #
