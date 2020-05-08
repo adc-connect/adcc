@@ -30,7 +30,8 @@ from adcc.testdata.cache import cache
 
 from pytest import approx
 
-methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+basemethods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+methods = [m for bm in basemethods for m in [bm, "cvs_" + bm]]
 
 
 @expand_test_templates(methods)

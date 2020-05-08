@@ -49,5 +49,5 @@ h5f = atd.dump_pyscf(mf, "methox_sto3g_hfdata.hdf5")
 
 h5f["reference_cases"] = str({
     "gen":   {},
-    # "cvs":    {"core_orbitals":  1},
+    "cvs":    {"core_orbitals":  1},
 })

@@ -25,7 +25,6 @@ import ast
 import sys
 
 from os.path import dirname, join
-from adcc.MoSpaces import expand_spaceargs
 
 import numpy as np
 import h5py
@@ -45,7 +44,7 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
     else:
         raise TypeError("Unknown type for out, only HDF5 file and str supported.")
 
-    # TODO: splin-flip, etc...
+    # TODO: splin-flip, etc.
     states = []
     if "n_states" in kwargs:
         state = adcc.run_adc(data, method=method, **kwargs)
@@ -75,21 +74,23 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
     # obtain ground state
     ground_state = states[0].ground_state
     # TODO: is this the total energy or energy correction?
+    # TODO: will always compute MP(2)/MP(3) energy
     mp["mp2/energy"] = ground_state.energy(2)
-    mp["mp3/energy"] = ground_state.energy(3)
+    # TODO: missing in adcc for cvs
+    if "cvs" not in method:
+        mp["mp3/energy"] = ground_state.energy(3)
 
     mp["mp2/dipole"] = ground_state.dipole_moment(level=2)
-
-    # for key in ["mp1/t_o1o1v1v1", "mp1/t_o2o2v1v1", "mp1/t_o1o2v1v1",
-    #             "mp1/df_o1v1", "mp1/df_o2v1", "mp2/td_o1o1v1v1"]:
     mp.create_dataset("mp1/t_o1o1v1v1",
                       data=ground_state.t2("o1o1v1v1").to_ndarray(),
                       compression=8)
     mp.create_dataset("mp1/df_o1v1", data=ground_state.df("o1v1").to_ndarray(),
                       compression=8)
-    mp.create_dataset("mp2/td_o1o1v1v1",
-                      data=ground_state.td2("o1o1v1v1").to_ndarray(),
-                      compression=8)
+    # TODO: missing in adcc for cvs
+    if "cvs" not in method:
+        mp.create_dataset("mp2/td_o1o1v1v1",
+                          data=ground_state.td2("o1o1v1v1").to_ndarray(),
+                          compression=8)
     if ground_state.has_core_occupied_space:
         mp.create_dataset("mp1/t_o2o2v1v1",
                           data=ground_state.t2("o2o2v1v1").to_ndarray(),
@@ -113,23 +114,10 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
     #
     adc = out.create_group(adc_tree)
 
-    # TODO: take this into account above when creating adcc results
     available_kinds = []
-    # kind_trees = {
-    #     "singlet": method_tree + "/rhf/singlets/0",
-    #     "triplet": method_tree + "/rhf/triplets/0",
-    #     "state": method_tree + "/uhf/0",
-    #     "spin_flip": method_tree + "/uhf/0",
-    # }
-    # if "n_spin_flip" not in kwargs:
-    #     del kind_trees["spin_flip"]
-    # if "n_states" not in kwargs:
-    #     del kind_trees["state"]
-
     for state in states:
         assert state.converged
-        kind = state.kind
-        available_kinds.append(kind)
+        available_kinds.append(state.kind)
         dm_bb_a = []
         dm_bb_b = []
         tdm_bb_a = []
@@ -166,6 +154,7 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
             else:
                 eigenvectors_doubles.clear()
 
+        kind = state.kind
         # Transform to numpy array
         adc[kind + "/state_diffdm_bb_a"] = np.asarray(dm_bb_a)
         adc[kind + "/state_diffdm_bb_b"] = np.asarray(dm_bb_b)
@@ -192,7 +181,6 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
                                      dtype=h5py.special_dtype(vlen=str)))
 
     # TODO: dump state2state once in master
-
     return out
 
 
@@ -212,7 +200,7 @@ def dump_method_adcc(case, method, kwargs, spec):
     # Get dictionary of parameters for the reference cases.
     refcases = ast.literal_eval(hfdata.data["reference_cases"][()])
     kwargs = dict(kwargs)
-    kwargs.update(expand_spaceargs(hfdata, **refcases[spec]))
+    kwargs.update(**refcases[spec])
 
     fullmethod = method
     if "cvs" in spec:
@@ -233,18 +221,9 @@ def dump_method_adcc(case, method, kwargs, spec):
 
 
 def dump_methox_sto3g():  # (R)-2-methyloxirane
-    kwargs = {"n_singlets": 2}  # "n_singlets": 5, "n_triplets": 5}
-    # overwrite = {"adc2": {"n_singlets": 9, "n_triplets": 10}, }
-    overwrite = {}
-    dump_all_adcc("methox_sto3g", kwargs, overwrite, spec="gen")
-    # TODO: not working
-    # dump_all_adcc("methox_sto3g", kwargs, overwrite, spec="cvs")
-
-
-# def dump_h2o_def2tzvp():  # H2O restricted
-#     kwargs = {"n_singlets": 3, "n_triplets": 3, "n_guess_singles": 6,
-#               "max_subspace": 24}
-#     dump_all("h2o_def2tzvp", kwargs, spec="gen")
+    kwargs = {"n_singlets": 2}
+    dump_all_adcc("methox_sto3g", kwargs, spec="gen")
+    dump_all_adcc("methox_sto3g", kwargs, spec="cvs")
 
 
 def main():
