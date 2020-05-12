@@ -2,7 +2,7 @@
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2018 by the adcc authors
+## Copyright (C) 2020 by the adcc authors
 ##
 ## This file is part of adcc.
 ##
@@ -20,19 +20,10 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import os
-import ast
-import sys
-
-from os.path import dirname, join
-
-import numpy as np
-import h5py
 import adcc
+import numpy as np
 
-sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
-
-import adcctestdata as atd  # noqa: E402
+import h5py
 
 
 def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
@@ -44,16 +35,14 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
     else:
         raise TypeError("Unknown type for out, only HDF5 file and str supported.")
 
-    # TODO: splin-flip, etc.
+    # TODO: spin-flip, etc.
     states = []
     if "n_states" in kwargs:
         state = adcc.run_adc(data, method=method, **kwargs)
         states.append(state)
     else:
-        n_singlets = kwargs.get("n_singlets", 0)
-        n_triplets = kwargs.get("n_triplets", 0)
-        kwargs.pop("n_singlets", None)
-        kwargs.pop("n_triplets", None)
+        n_singlets = kwargs.pop("n_singlets", 0)
+        n_triplets = kwargs.pop("n_triplets", 0)
         if n_singlets:
             state = adcc.run_adc(data, method=method, n_singlets=n_singlets,
                                  **kwargs)
@@ -73,12 +62,11 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
 
     # obtain ground state
     ground_state = states[0].ground_state
-    # TODO: is this the total energy or energy correction?
-    # TODO: will always compute MP(2)/MP(3) energy
-    mp["mp2/energy"] = ground_state.energy(2)
-    # TODO: missing in adcc for cvs
+
+    mp["mp2/energy"] = ground_state.energy_correction(2)
     if "cvs" not in method:
-        mp["mp3/energy"] = ground_state.energy(3)
+        # TODO: MP3 energy correction missing in adcc for cvs
+        mp["mp3/energy"] = ground_state.energy_correction(3)
 
     mp["mp2/dipole"] = ground_state.dipole_moment(level=2)
     mp.create_dataset("mp1/t_o1o1v1v1",
@@ -86,8 +74,8 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
                       compression=8)
     mp.create_dataset("mp1/df_o1v1", data=ground_state.df("o1v1").to_ndarray(),
                       compression=8)
-    # TODO: missing in adcc for cvs
     if "cvs" not in method:
+        # TODO: missing in adcc for cvs
         mp.create_dataset("mp2/td_o1o1v1v1",
                           data=ground_state.td2("o1o1v1v1").to_ndarray(),
                           compression=8)
@@ -182,53 +170,3 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
 
     # TODO: dump state2state once in master
     return out
-
-
-def dump_all_adcc(case, kwargs, kwargs_overwrite={}, spec="gen"):
-    assert spec in ["gen", "cvs"]
-    for method in ["adc0", "adc1", "adc2", "adc2x", "adc3"]:
-        kw = kwargs_overwrite.get(method, kwargs)
-        dump_method_adcc(case, method, kw, spec)
-
-
-def dump_method_adcc(case, method, kwargs, spec):
-    h5file = case + "_hfdata.hdf5"
-    if not os.path.isfile(h5file):
-        raise ValueError("HfData not found: " + h5file)
-    hfdata = atd.HdfProvider(h5file)
-
-    # Get dictionary of parameters for the reference cases.
-    refcases = ast.literal_eval(hfdata.data["reference_cases"][()])
-    kwargs = dict(kwargs)
-    kwargs.update(**refcases[spec])
-
-    fullmethod = method
-    if "cvs" in spec:
-        fullmethod = "cvs-" + method
-
-    prefix = ""
-    if spec != "gen":
-        prefix = spec.replace("-", "_") + "_"
-    adc_tree = prefix.replace("_", "-") + method
-    mp_tree = prefix.replace("_", "-") + "mp"
-
-    dumpfile = "{}_reference_{}{}.hdf5".format(case, prefix, method)
-    print(dumpfile)
-    if not os.path.isfile(dumpfile):
-        print(kwargs)
-        dump_reference_adcc(h5file, fullmethod, dumpfile, mp_tree=mp_tree,
-                            adc_tree=adc_tree, n_states_full=2, **kwargs)
-
-
-def dump_methox_sto3g():  # (R)-2-methyloxirane
-    kwargs = {"n_singlets": 2}
-    dump_all_adcc("methox_sto3g", kwargs, spec="gen")
-    dump_all_adcc("methox_sto3g", kwargs, spec="cvs")
-
-
-def main():
-    dump_methox_sto3g()
-
-
-if __name__ == "__main__":
-    main()
