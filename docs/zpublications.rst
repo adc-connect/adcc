@@ -27,7 +27,6 @@ adcc publications
      - .. image:: https://zenodo.org/badge/215731857.svg
           :target: https://zenodo.org/badge/latestdoi/215731857
 
-
 .. bibliography:: pub.bib
    :all:
    :style: unsrtalpha
