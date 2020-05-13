@@ -23,13 +23,17 @@
 import os
 import ast
 import sys
+import adcc
 
+from dump_reference_adcc import dump_reference_adcc
 from os.path import dirname, join
 from adcc.MoSpaces import expand_spaceargs
 
 import h5py
 
 sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
+
+import adcctestdata as atd  # noqa: E402
 
 
 def dump_all(case, kwargs, kwargs_overwrite={}, spec="gen", generator="atd"):
@@ -45,19 +49,19 @@ def dump_method(case, method, kwargs, spec, generator="atd"):
         raise ValueError("HfData not found: " + h5file)
 
     if generator == "atd":
-        import adcctestdata as atd
         dumpfunction = atd.dump_reference
         hfdata = atd.HdfProvider(h5file)
     else:
-        import adcc
-        from dump_reference_adcc import dump_reference_adcc
         dumpfunction = dump_reference_adcc
         hfdata = adcc.DataHfProvider(h5py.File(h5file, "r"))
 
     # Get dictionary of parameters for the reference cases.
     refcases = ast.literal_eval(hfdata.data["reference_cases"][()])
     kwargs = dict(kwargs)
-    kwargs.update(expand_spaceargs(hfdata, **refcases[spec]))
+    if generator == "atd":
+        kwargs.update(expand_spaceargs(hfdata, **refcases[spec]))
+    else:
+        kwargs.update(refcases[spec])
 
     fullmethod = method
     if "cvs" in spec:
