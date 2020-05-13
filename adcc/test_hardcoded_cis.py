@@ -2,7 +2,7 @@
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2018 by the adcc authors
+## Copyright (C) 2020 by the adcc authors
 ##
 ## This file is part of adcc.
 ##
@@ -20,10 +20,11 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import adcc
 import unittest
 import numpy as np
+
 from adcc.testdata.cache import cache
-import adcc
 
 
 class TestHardCodedCisResults(unittest.TestCase):

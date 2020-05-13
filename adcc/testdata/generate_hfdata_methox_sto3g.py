@@ -2,7 +2,7 @@
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2018 by the adcc authors
+## Copyright (C) 2020 by the adcc authors
 ##
 ## This file is part of adcc.
 ##

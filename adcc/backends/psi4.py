@@ -23,10 +23,10 @@
 import psi4
 import numpy as np
 
+from adcc.misc import cached_property
+
 from .EriBuilder import EriBuilder
 from .InvalidReference import InvalidReference
-
-from adcc.misc import cached_property
 
 from libadcc import HartreeFockProvider
 
@@ -183,8 +183,8 @@ def import_scf(wfn):
     # CD = Choleski, DF = density-fitting
     unsupported_scf_types = ["CD", "DISK_DF", "MEM_DF"]
     if scf_type in unsupported_scf_types:
-        raise InvalidReference(f"Unsupported Psi4 SCF_TYPE, should not be one "
-                               "of {unsupported_scf_types}")
+        raise InvalidReference("Unsupported Psi4 SCF_TYPE, should not be one "
+                               f"of {unsupported_scf_types}")
 
     if wfn.nirrep() > 1:
         raise InvalidReference("The passed Psi4 wave function object needs to "

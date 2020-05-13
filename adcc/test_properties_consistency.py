@@ -2,7 +2,7 @@
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2018 by the adcc authors
+## Copyright (C) 2020 by the adcc authors
 ##
 ## This file is part of adcc.
 ##
@@ -23,11 +23,10 @@
 import unittest
 import numpy as np
 
-from .misc import expand_test_templates
-
 from numpy.testing import assert_allclose
 from adcc.testdata.cache import cache
 
+from .misc import expand_test_templates
 from pytest import approx
 
 basemethods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
