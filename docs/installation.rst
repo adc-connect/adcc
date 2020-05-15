@@ -145,7 +145,8 @@ Congratulations! With these packages installed you are all set
 to run ADC calculations.
 Feel free to take a look at the
 :ref:`performing-calculations` section
-for learning how to use adcc in practice.
+for learning how to use adcc in practice or take
+a look at our `examples folder on github <https://code.adc-connect.org/tree/master/examples>`_.
 
 Finally, if you are interested in developing or contributing
 to adcc, even the better! In this case we hope
