@@ -21,9 +21,12 @@ ${PYTHON} setup.py test
 # Check adcc finds pyscf and psi4
 # TODO Installing psi4 currently does not work, so disabled here
 ${PYTHON} <<- EOF
-	import adcc
-	# assert "psi4" in adcc.backends.available()
-	assert "pyscf" in adcc.backends.available()
+    import adcc
+    import sys
+
+    # assert "psi4" in adcc.backends.available()
+    if sys.version_info.minor == 7:
+        assert "pyscf" in adcc.backends.available()
 EOF
 
 # Now install adcc
