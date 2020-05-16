@@ -25,8 +25,8 @@ requirements:
     # Testing:
     - pytest
     - pytest-cov
-    - pyscf    # [py37]
     # - psi4   # TODO Unfortunately installing psi4 here does not work.
+    # - pyscf  # TODO Unfortunately pyscf neither
     # Standard dependencies:
     - numpy >=1.14
     - h5py >=2.9
