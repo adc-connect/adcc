@@ -35,7 +35,7 @@ from .testing import cached_backend_hf
 
 # molsturm is super slow
 backends = [b for b in adcc.backends.available() if b != "molsturm"]
-basissets = ["sto3g", "sto3g", "ccpvdz"]
+basissets = ["sto3g", "ccpvdz"]
 
 
 @pytest.mark.skipif(len(backends) < 2,
@@ -53,9 +53,10 @@ class TestCrossReferenceBackends(unittest.TestCase):
     def template_adc2_r2methyloxirane(self, basis):
         results = {}
         for b in backends:
-            scfres = cached_backend_hf(b, "r2methyloxirane", basis)
-            results[b] = adcc.adc2(scfres, n_singlets=3, conv_tol=1e-10)
-        compare_adc_results(results, 5e-9)
+            scfres = cached_backend_hf(b, "r2methyloxirane", basis,
+                                       conv_tol=1e-11)
+            results[b] = adcc.adc2(scfres, n_singlets=3, conv_tol=1e-8)
+        compare_adc_results(results, 5e-7)
 
     def template_adc2_uhf_ch2nh2(self, basis):
         results = {}

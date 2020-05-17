@@ -177,7 +177,7 @@ def operator_import_from_ao_test(scfres, ao_dict, operator="electric_dipole"):
             )
 
 
-def cached_backend_hf(backend, molecule, basis, multiplicity=1):
+def cached_backend_hf(backend, molecule, basis, multiplicity=1, conv_tol=1e-13):
     """
     Run the SCF for a backend and a particular test case (if not done)
     and return the result.
@@ -189,10 +189,11 @@ def cached_backend_hf(backend, molecule, basis, multiplicity=1):
     global __cache_cached_backend_hf
 
     def payload():
+        conv_tol_grad = 100 * conv_tol
         hfres = adcc.backends.run_hf(backend, xyz=geometry.xyz[molecule],
-                                     basis=basis, conv_tol=1e-13,
+                                     basis=basis, conv_tol=conv_tol,
                                      multiplicity=multiplicity,
-                                     conv_tol_grad=1e-11)
+                                     conv_tol_grad=conv_tol_grad)
         return adcc.backends.import_scf_results(hfres)
 
     # For reasons not clear to me (mfh), caching does not work
