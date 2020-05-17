@@ -196,7 +196,7 @@ def import_scf(wfn):
     return provider
 
 
-def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
+def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
            conv_tol_grad=1e-8, max_iter=150):
     basissets = {
         "sto3g": "sto-3g",

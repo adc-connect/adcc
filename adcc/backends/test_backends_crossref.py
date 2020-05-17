@@ -54,9 +54,9 @@ class TestCrossReferenceBackends(unittest.TestCase):
         results = {}
         for b in backends:
             scfres = cached_backend_hf(b, "r2methyloxirane", basis,
-                                       conv_tol=1e-11)
-            results[b] = adcc.adc2(scfres, n_singlets=3, conv_tol=1e-8)
-        compare_adc_results(results, 5e-7)
+                                       conv_tol=1e-10)
+            results[b] = adcc.adc2(scfres, n_singlets=3, conv_tol=1e-9)
+        compare_adc_results(results, 5e-8)
 
     def template_adc2_uhf_ch2nh2(self, basis):
         results = {}
@@ -66,14 +66,15 @@ class TestCrossReferenceBackends(unittest.TestCase):
         if not len(backends):
             pytest.skip("Not enough backends that support UHF available.")
         for b in backends:
-            scfres = cached_backend_hf(b, "ch2nh2", basis, multiplicity=2)
-            results[b] = adcc.adc2(scfres, n_states=5, conv_tol=1e-10)
-        compare_adc_results(results, 5e-9)
+            scfres = cached_backend_hf(b, "ch2nh2", basis, multiplicity=2,
+                                       conv_tol=1e-10)
+            results[b] = adcc.adc2(scfres, n_states=5, conv_tol=1e-9)
+        compare_adc_results(results, 5e-8)
 
     def template_cvs_adc2_h2o(self, basis):
         results = {}
         for b in backends:
-            scfres = cached_backend_hf(b, "h2o", basis)
+            scfres = cached_backend_hf(b, "h2o", basis, conv_tol=1e-11)
             results[b] = adcc.cvs_adc2(scfres, n_singlets=5, core_orbitals=1,
                                        conv_tol=1e-10)
         compare_adc_results(results, 5e-9)

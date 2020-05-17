@@ -220,8 +220,8 @@ def import_scf(scfres):
     return PyScfHFProvider(scfres)
 
 
-def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
-           conv_tol_grad=1e-8, max_iter=150):
+def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
+           conv_tol_grad=1e-9, max_iter=150):
     mol = gto.M(
         atom=xyz,
         basis=basis,
@@ -250,7 +250,7 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
 
 
 def run_core_hole(xyz, basis, charge=0, multiplicity=1,
-                  conv_tol=1e-12, conv_tol_grad=1e-8, max_iter=150):
+                  conv_tol=1e-11, conv_tol_grad=1e-9, max_iter=150):
     mol = gto.M(
         atom=xyz,
         basis=basis,
