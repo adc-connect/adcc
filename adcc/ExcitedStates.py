@@ -348,7 +348,8 @@ class ExcitedStates:
             ["eV", "au", "nm", "cm-1"]
         yaxis : str
             Quantity to plot on the y-Axis. Options are "cross_section",
-            "osc_strength", "dipole" (plots norm of transition dipole).
+            "osc_strength", "dipole" (plots norm of transition dipole),
+            "rotational_strength" (ECD spectrum with rotational strength)
         width : float, optional
             Gaussian broadening standard deviation or Lorentzian broadening
             gamma parameter. The value should be given in atomic units
