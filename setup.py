@@ -201,6 +201,10 @@ class BuildExt(BuildCommand):
 
         opts = []
         potential_opts = []
+        if is_conda_build():
+            newopt = "-Wno-error=unused-command-line-argument"
+            if has_flag(self.compiler, newopt, opts):
+                opts += [newopt]
         if sys.platform == "darwin":
             potential_opts += ["-stdlib=libc++", "-mmacosx-version-min=10.9"]
         if self.compiler.compiler_type == "unix":
