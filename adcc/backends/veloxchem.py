@@ -24,6 +24,9 @@ import os
 import tempfile
 import numpy as np
 import veloxchem as vlx
+from veloxchem.mpitask import MpiTask
+from veloxchem.veloxchemlib import (AngularMomentumIntegralsDriver,
+                                    LinearMomentumIntegralsDriver)
 
 from .EriBuilder import EriBuilder
 from .InvalidReference import InvalidReference
@@ -40,12 +43,29 @@ class VeloxChemOperatorIntegralProvider:
         self.backend = "veloxchem"
 
     @cached_property
-    def electric_dipole(self, component="x"):
+    def electric_dipole(self):
         task = self.scfdrv.task
         dipole_drv = vlx.ElectricDipoleIntegralsDriver(task.mpi_comm)
         dipole_mats = dipole_drv.compute(task.molecule, task.ao_basis)
         return [dipole_mats.x_to_numpy(), dipole_mats.y_to_numpy(),
                 dipole_mats.z_to_numpy()]
+
+    @cached_property
+    def magnetic_dipole(self):
+        # TODO: Gauge origin?
+        task = self.scfdrv.task
+        angmom_drv = AngularMomentumIntegralsDriver(task.mpi_comm)
+        angmom_mats = angmom_drv.compute(task.molecule, task.ao_basis)
+        return (0.5 * angmom_mats.x_to_numpy(), 0.5 * angmom_mats.y_to_numpy(),
+                0.5 * angmom_mats.z_to_numpy())
+
+    @cached_property
+    def nabla(self):
+        task = self.scfdrv.task
+        linmom_drv = LinearMomentumIntegralsDriver(task.mpi_comm)
+        linmom_mats = linmom_drv.compute(task.molecule, task.ao_basis)
+        return (-1.0 * linmom_mats.x_to_numpy(), -1.0 * linmom_mats.y_to_numpy(),
+                -1.0 * linmom_mats.z_to_numpy())
 
 
 # VeloxChem is a special case... not using coefficients at all
@@ -224,7 +244,7 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=None,
                       "xyz:\n{}".format("\n".join(xyz.split(";"))),
                       "@end"]
             fp.write("\n".join(lines))
-        task = vlx.MpiTask([infile, outfile], MPI.COMM_WORLD)
+        task = MpiTask([infile, outfile], MPI.COMM_WORLD)
 
         scfdrv = vlx.ScfRestrictedDriver(task.mpi_comm, task.ostream)
         # elec. gradient norm

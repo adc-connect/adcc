@@ -5,6 +5,10 @@ package:
 source:
     path: ../
 
+build:
+  ignore_run_exports:
+    - mkl
+
 requirements:
   build:
     - {{ compiler('c') }}
@@ -21,8 +25,8 @@ requirements:
     # Testing:
     - pytest
     - pytest-cov
-    - pyscf
     # - psi4   # TODO Unfortunately installing psi4 here does not work.
+    # - pyscf  # TODO Unfortunately pyscf neither
     # Standard dependencies:
     - numpy >=1.14
     - h5py >=2.9
@@ -31,7 +35,7 @@ requirements:
     - tqdm >=4.30
   run:
     - {{ pin_compatible('python', max_pin='x.x') }}
-    - {{ pin_compatible('mkl', max_pin='x') }}
+    - {{ pin_compatible('mkl', upper_bound='2021.0') }}
     - {{ pin_compatible('numpy', max_pin='x.x') }}
     - h5py >=2.9
     - scipy >=1.2

@@ -7,6 +7,7 @@ from mpi4py import MPI
 
 import adcc
 import veloxchem as vlx
+from veloxchem.mpitask import MpiTask
 
 # Run SCF in VeloxChem
 with tempfile.TemporaryDirectory() as tmpdir:
@@ -33,7 +34,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
                  H 1.693194615993441 0 -0.599043184453037
                  @end
                  """)
-    task = vlx.MpiTask([infile, outfile], MPI.COMM_WORLD)
+    task = MpiTask([infile, outfile], MPI.COMM_WORLD)
     scfdrv = vlx.ScfRestrictedDriver(task.mpi_comm, task.ostream)
     scfdrv.conv_thresh = 1e-8
     scfdrv.compute(task.molecule, task.ao_basis, task.min_basis)

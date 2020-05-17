@@ -23,32 +23,45 @@
 import os
 import ast
 import sys
+import adcc
 
+from dump_reference_adcc import dump_reference_adcc
 from os.path import dirname, join
 from adcc.MoSpaces import expand_spaceargs
+
+import h5py
 
 sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
 
 import adcctestdata as atd  # noqa: E402
 
 
-def dump_all(case, kwargs, kwargs_overwrite={}, spec="gen"):
+def dump_all(case, kwargs, kwargs_overwrite={}, spec="gen", generator="atd"):
     assert spec in ["gen", "cvs"]
     for method in ["adc0", "adc1", "adc2", "adc2x", "adc3"]:
         kw = kwargs_overwrite.get(method, kwargs)
-        dump_method(case, method, kw, spec)
+        dump_method(case, method, kw, spec, generator=generator)
 
 
-def dump_method(case, method, kwargs, spec):
+def dump_method(case, method, kwargs, spec, generator="atd"):
     h5file = case + "_hfdata.hdf5"
     if not os.path.isfile(h5file):
         raise ValueError("HfData not found: " + h5file)
-    hfdata = atd.HdfProvider(h5file)
+
+    if generator == "atd":
+        dumpfunction = atd.dump_reference
+        hfdata = atd.HdfProvider(h5file)
+    else:
+        dumpfunction = dump_reference_adcc
+        hfdata = adcc.DataHfProvider(h5py.File(h5file, "r"))
 
     # Get dictionary of parameters for the reference cases.
     refcases = ast.literal_eval(hfdata.data["reference_cases"][()])
     kwargs = dict(kwargs)
-    kwargs.update(expand_spaceargs(hfdata, **refcases[spec]))
+    if generator == "atd":
+        kwargs.update(expand_spaceargs(hfdata, **refcases[spec]))
+    else:
+        kwargs.update(refcases[spec])
 
     fullmethod = method
     if "cvs" in spec:
@@ -62,8 +75,13 @@ def dump_method(case, method, kwargs, spec):
 
     dumpfile = "{}_reference_{}{}.hdf5".format(case, prefix, method)
     if not os.path.isfile(dumpfile):
-        atd.dump_reference(hfdata, fullmethod, dumpfile, mp_tree=mp_tree,
-                           adc_tree=adc_tree, n_states_full=2, **kwargs)
+        dumpfunction(hfdata, fullmethod, dumpfile, mp_tree=mp_tree,
+                     adc_tree=adc_tree, n_states_full=2, **kwargs)
+
+
+#
+# =============================================================================
+#
 
 
 def dump_h2o_sto3g():  # H2O restricted
@@ -142,6 +160,12 @@ def dump_h2s_6311g():
     dump_method(case, "adc2x", kwargs, spec="cvs")
 
 
+def dump_methox_sto3g():  # (R)-2-methyloxirane
+    kwargs = {"n_singlets": 2}
+    dump_all("methox_sto3g", kwargs, spec="gen", generator="adcc")
+    dump_all("methox_sto3g", kwargs, spec="cvs", generator="adcc")
+
+
 def main():
     dump_h2o_sto3g()
     dump_h2o_def2tzvp()
@@ -150,6 +174,7 @@ def main():
     dump_hf3_631g()
     dump_h2s_sto3g()
     dump_h2s_6311g()
+    dump_methox_sto3g()
 
 
 if __name__ == "__main__":

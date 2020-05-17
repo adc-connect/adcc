@@ -200,6 +200,10 @@ class ExcitedStates:
                 self.excitation_energies = data.eigenvalues
             if hasattr(data, "eigenvectors"):
                 self.excitation_vectors = data.eigenvectors
+            if hasattr(data, "excitation_energies"):
+                self.excitation_energies = data.excitation_energies
+            if hasattr(data, "excitation_vectors"):
+                self.excitation_vectors = data.excitation_vectors
 
     @property
     def timer(self):
@@ -238,12 +242,59 @@ class ExcitedStates:
         ])
 
     @cached_property
+    @timed_member_call(timer="_property_timer")
+    def transition_dipole_moments_velocity(self):
+        """List of transition dipole moments in the
+        velocity gauge of all computed states"""
+        if self.property_method.level == 0:
+            warnings.warn("ADC(0) transition velocity dipole moments "
+                          "are known to be faulty in some cases.")
+        dipole_integrals = self.operators.nabla
+        return np.array([
+            [product_trace(comp, tdm) for comp in dipole_integrals]
+            for tdm in self.transition_dms
+        ])
+
+    @cached_property
+    @timed_member_call(timer="_property_timer")
+    def transition_magnetic_dipole_moments(self):
+        """List of transition magnetic dipole moments of all computed states"""
+        if self.property_method.level == 0:
+            warnings.warn("ADC(0) transition magnetic dipole moments "
+                          "are known to be faulty in some cases.")
+        mag_dipole_integrals = self.operators.magnetic_dipole
+        return np.array([
+            [product_trace(comp, tdm) for comp in mag_dipole_integrals]
+            for tdm in self.transition_dms
+        ])
+
+    @cached_property
     def oscillator_strengths(self):
         """List of oscillator strengths of all computed states"""
         return 2. / 3. * np.array([
             np.linalg.norm(tdm)**2 * np.abs(ev)
             for tdm, ev in zip(self.transition_dipole_moments,
                                self.excitation_energies)
+        ])
+
+    @cached_property
+    def oscillator_strengths_velocity(self):
+        """List of oscillator strengths in
+        velocity gauge of all computed states"""
+        return 2. / 3. * np.array([
+            np.linalg.norm(tdm)**2 / np.abs(ev)
+            for tdm, ev in zip(self.transition_dipole_moments_velocity,
+                               self.excitation_energies)
+        ])
+
+    @cached_property
+    def rotatory_strengths(self):
+        """List of rotatory strengths of all computed states"""
+        return np.array([
+            np.dot(tdm, magmom) / ee
+            for tdm, magmom, ee in zip(self.transition_dipole_moments_velocity,
+                                       self.transition_magnetic_dipole_moments,
+                                       self.excitation_energies)
         ])
 
     @cached_property
@@ -340,6 +391,9 @@ class ExcitedStates:
             prefac = 2.0 * np.pi**2 / fine_structure_au
             absorption = prefac * self.oscillator_strengths
             ylabel = "Cross section (au)"
+        elif yaxis in ["rot", "rotational_strength", "rotatory_strength"]:
+            absorption = self.rotatory_strengths
+            ylabel = "Rotatory strength (au)"
         else:
             raise ValueError("Unknown yaxis specifier: {}".format(yaxis))
 
@@ -362,8 +416,9 @@ class ExcitedStates:
             plt.xlim(plt.xlim()[::-1])
         return plots
 
-    def describe(self, oscillator_strengths=True, state_dipole_moments=False,
-                 transition_dipole_moments=False, block_norms=True):
+    def describe(self, oscillator_strengths=True, rotatory_strengths=False,
+                 state_dipole_moments=False, transition_dipole_moments=False,
+                 block_norms=True):
         """
         Return a string providing a human-readable description of the class
 
@@ -371,6 +426,9 @@ class ExcitedStates:
         ----------
         oscillator_strengths : bool optional
             Show oscillator strengths, by default ``True``.
+
+        rotatory_strengths : bool optional
+           Show rotatory strengths, by default ``False``.
 
         state_dipole_moments : bool, optional
             Show state dipole moments, by default ``False``.
@@ -387,6 +445,8 @@ class ExcitedStates:
 
         eV = constants.value("Hartree energy in eV")
         has_dipole = "electric_dipole" in self.operators.available
+        has_rotatory = all(op in self.operators.available
+                           for op in ["magnetic_dipole", "nabla"])
 
         # Build information about the optional columns
         opt_thead = ""
@@ -402,6 +462,10 @@ class ExcitedStates:
             opt_body += "{osc:8.4f} "
             opt_thead += " osc str "
             opt["osc"] = lambda i, vec: self.oscillator_strengths[i]
+        if has_rotatory and rotatory_strengths:
+            opt_body += "{rot:8.4f} "
+            opt_thead += " rot str "
+            opt["rot"] = lambda i, vec: self.rotatory_strengths[i]
         if "s" in self.matrix.blocks and block_norms:
             opt_body += "{v1:9.4g} "
             opt_thead += "   |v1|^2 "

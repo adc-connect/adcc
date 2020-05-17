@@ -27,7 +27,7 @@ import adcc.backends
 
 from ..misc import expand_test_templates
 from .testing import (eri_asymm_construction_test, eri_chem_permutations,
-                      operator_import_test)
+                      operator_import_from_ao_test)
 
 from numpy.testing import assert_almost_equal, assert_array_equal
 
@@ -38,6 +38,8 @@ import pytest
 
 if have_backend("veloxchem"):
     import veloxchem as vlx
+    from veloxchem.veloxchemlib import (AngularMomentumIntegralsDriver,
+                                        LinearMomentumIntegralsDriver)
 
 basissets = ["sto3g", "ccpvdz"]
 
@@ -116,18 +118,40 @@ class TestVeloxchem(unittest.TestCase):
             eri_perm = np.transpose(eri, perm)
             assert_almost_equal(eri_perm, eri)
 
-    def template_rhf_h2o(self, basis):
-        scfdrv = adcc.backends.run_hf("veloxchem", geometry.xyz["h2o"], basis)
-        self.base_test(scfdrv)
-
-        # Test ERI
-        eri_asymm_construction_test(scfdrv)
-        eri_asymm_construction_test(scfdrv, core_orbitals=1)
-
+    def operators_test(self, scfdrv):
         # Test dipole
         dipole_drv = vlx.ElectricDipoleIntegralsDriver(scfdrv.task.mpi_comm)
         dipole_mats = dipole_drv.compute(scfdrv.task.molecule,
                                          scfdrv.task.ao_basis)
         integrals = (dipole_mats.x_to_numpy(), dipole_mats.y_to_numpy(),
                      dipole_mats.z_to_numpy())
-        operator_import_test(scfdrv, integrals)
+        operator_import_from_ao_test(scfdrv, integrals,
+                                     operator="electric_dipole")
+
+        # Test magnetic dipole
+        angmom_drv = AngularMomentumIntegralsDriver(scfdrv.task.mpi_comm)
+        angmom_mats = angmom_drv.compute(scfdrv.task.molecule,
+                                         scfdrv.task.ao_basis)
+        integrals = (
+            0.5 * angmom_mats.x_to_numpy(), 0.5 * angmom_mats.y_to_numpy(),
+            0.5 * angmom_mats.z_to_numpy()
+        )
+        operator_import_from_ao_test(scfdrv, integrals,
+                                     operator="magnetic_dipole")
+
+        # Test nabla
+        linmom_drv = LinearMomentumIntegralsDriver(scfdrv.task.mpi_comm)
+        linmom_mats = linmom_drv.compute(scfdrv.task.molecule,
+                                         scfdrv.task.ao_basis)
+        integrals = (-1.0 * linmom_mats.x_to_numpy(),
+                     -1.0 * linmom_mats.y_to_numpy(),
+                     -1.0 * linmom_mats.z_to_numpy())
+        operator_import_from_ao_test(scfdrv, integrals, operator="nabla")
+
+    def template_rhf_h2o(self, basis):
+        scfdrv = adcc.backends.run_hf("veloxchem", geometry.xyz["h2o"], basis)
+        self.base_test(scfdrv)
+        self.operators_test(scfdrv)
+        # Test ERI
+        eri_asymm_construction_test(scfdrv)
+        eri_asymm_construction_test(scfdrv, core_orbitals=1)

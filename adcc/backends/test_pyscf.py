@@ -27,7 +27,7 @@ import adcc.backends
 
 from ..misc import expand_test_templates
 from .testing import (eri_asymm_construction_test, eri_chem_permutations,
-                      operator_import_test)
+                      operator_import_from_ao_test)
 
 from numpy.testing import assert_almost_equal
 
@@ -108,31 +108,37 @@ class TestPyscf(unittest.TestCase):
             eri_perm = np.transpose(eri, perm)
             assert_almost_equal(eri_perm, eri)
 
+    def operators_test(self, mf):
+        # Test dipole
+        ao_dip = mf.mol.intor_symmetric('int1e_r', comp=3)
+        operator_import_from_ao_test(mf, list(ao_dip))
+
+        # Test magnetic dipole
+        with mf.mol.with_common_orig([0.0, 0.0, 0.0]):
+            ao_magdip = 0.5 * mf.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
+        operator_import_from_ao_test(mf, list(ao_magdip), "magnetic_dipole")
+
+        # Test nabla
+        ao_linmom = -1.0 * mf.mol.intor('int1e_ipovlp', comp=3, hermi=2)
+        operator_import_from_ao_test(mf, list(ao_linmom), "nabla")
+
     def template_rhf_h2o(self, basis):
         mf = adcc.backends.run_hf("pyscf", geometry.xyz["h2o"], basis)
         self.base_test(mf)
-
+        self.operators_test(mf)
         # Test ERI
         eri_asymm_construction_test(mf)
         eri_asymm_construction_test(mf, core_orbitals=1)
-
-        # Test dipole
-        ao_dip = mf.mol.intor_symmetric('int1e_r', comp=3)
-        operator_import_test(mf, list(ao_dip))
 
     def template_uhf_ch2nh2(self, basis):
         mf = adcc.backends.run_hf(
             "pyscf", geometry.xyz["ch2nh2"], basis, multiplicity=2
         )
         self.base_test(mf)
-
+        self.operators_test(mf)
         # Test ERI
         eri_asymm_construction_test(mf)
         eri_asymm_construction_test(mf, core_orbitals=1)
-
-        # Test dipole
-        ao_dip = mf.mol.intor_symmetric('int1e_r', comp=3)
-        operator_import_test(mf, list(ao_dip))
 
     def test_h2o_sto3g_core_hole(self):
         from adcc.backends.pyscf import run_core_hole

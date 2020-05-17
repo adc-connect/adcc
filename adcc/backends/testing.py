@@ -23,7 +23,6 @@
 import adcc
 import numpy as np
 
-from ..misc import assert_allclose_signfix
 from collections import namedtuple
 
 ii, jj, kk, ll = 0, 1, 2, 3
@@ -144,12 +143,14 @@ def eri_asymm_construction_test(scfres, core_orbitals=0):
                 )
 
 
-def operator_import_test(scfres, ao_dict):
+def operator_import_from_ao_test(scfres, ao_dict, operator="electric_dipole"):
     refstate = adcc.ReferenceState(scfres)
     occa = refstate.orbital_coefficients_alpha("o1b").to_ndarray()
     occb = refstate.orbital_coefficients_beta("o1b").to_ndarray()
     virta = refstate.orbital_coefficients_alpha("v1b").to_ndarray()
     virtb = refstate.orbital_coefficients_beta("v1b").to_ndarray()
+
+    dip_imported = getattr(refstate.operators, operator)
 
     for i, ao_component in enumerate(ao_dict):
         dip_oo = np.einsum('ib,ba,ja->ij', occa, ao_component, occa)
@@ -163,10 +164,15 @@ def operator_import_test(scfres, ao_dict):
 
         dip_mock = {"o1o1": dip_oo, "o1v1": dip_ov, "v1v1": dip_vv}
 
-        dip_imported = refstate.operators.electric_dipole[i]
-        for b in dip_imported.blocks:
-            assert_allclose_signfix(
-                dip_mock[b], dip_imported[b].to_ndarray(),
+        dip_imported_comp = dip_imported[i]
+        if not dip_imported_comp.is_symmetric:
+            dip_vo = np.einsum('ib,ba,ja->ij', virta, ao_component, occa)
+            dip_vo += np.einsum('ib,ba,ja->ij', virtb, ao_component, occb)
+            dip_mock["v1o1"] = dip_vo
+
+        for b in dip_imported_comp.blocks:
+            np.testing.assert_allclose(
+                dip_mock[b], dip_imported_comp[b].to_ndarray(),
                 atol=refstate.conv_tol
             )
 

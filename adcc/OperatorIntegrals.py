@@ -22,12 +22,12 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
+import libadcc
+
 from .misc import cached_property
 from .Tensor import Tensor
 from .timings import Timer, timed_member_call
 from .OneParticleOperator import OneParticleOperator
-
-import libadcc
 
 
 def transform_operator_ao2mo(tensor_bb, tensor_ff, coefficients,
@@ -92,38 +92,51 @@ class OperatorIntegrals:
 
     @cached_property
     def available(self):
-        """
-        Which integrals are available in the underlying backend
-        """
-        ret = []
-        for integral in ["electric_dipole"]:
-            if hasattr(self.provider_ao, integral):
-                ret.append(integral)
-        return ret
+        """Which integrals are available in the underlying backend"""
+        return [integral
+                for integral in ("electric_dipole", "magnetic_dipole", "nabla")
+                if hasattr(self.provider_ao, integral)]
 
-    @property
-    @timed_member_call("_import_timer")
-    def electric_dipole(self):
-        """
-        Return the electric dipole integrals in the molecular orbital basis.
-        """
-        if "electric_dipole" not in self.available:
-            raise NotImplementedError(
-                "Electric dipole operator not implemented in "
-                "{} backend.".format(self.provider_ao.backend)
-            )
+    def import_dipole_like_operator(self, integral, is_symmetric=True):
+        if integral not in self.available:
+            raise NotImplementedError(f"{integral.replace('_', ' ')} operator "
+                                      "not implemented "
+                                      f"in {self.provider_ao.backend} backend.")
 
         dipoles = []
         for i, component in enumerate(["x", "y", "z"]):
-            dip_backend = self.provider_ao.electric_dipole[i]
+            dip_backend = getattr(self.provider_ao, integral)[i]
             dip_bb = replicate_ao_block(self.mospaces, dip_backend,
-                                        is_symmetric=True)
-            dip_ff = OneParticleOperator(self.mospaces, is_symmetric=True,
+                                        is_symmetric=is_symmetric)
+            dip_ff = OneParticleOperator(self.mospaces, is_symmetric=is_symmetric,
                                          cartesian_transform=component)
             transform_operator_ao2mo(dip_bb, dip_ff, self.__coefficients,
                                      self.__conv_tol)
             dipoles.append(dip_ff)
         return dipoles
+
+    @property
+    @timed_member_call("_import_timer")
+    def electric_dipole(self):
+        """Return the electric dipole integrals in the molecular orbital basis."""
+        return self.import_dipole_like_operator("electric_dipole",
+                                                is_symmetric=True)
+
+    @property
+    @timed_member_call("_import_timer")
+    def magnetic_dipole(self):
+        """Return the magnetic dipole integrals in the molecular orbital basis."""
+        return self.import_dipole_like_operator("magnetic_dipole",
+                                                is_symmetric=False)
+
+    @property
+    @timed_member_call("_import_timer")
+    def nabla(self):
+        """
+        Return the momentum (nabla operator) integrals
+        in the molecular orbital basis.
+        """
+        return self.import_dipole_like_operator("nabla", is_symmetric=False)
 
     @property
     def timer(self):

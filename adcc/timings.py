@@ -73,7 +73,7 @@ def strtime(span, colour=False):
     if span < 86400:
         full = int(span / 3600)
         return (ch + "{:2d}h ".format(full) + cm
-                + "{:2d}m".format(full, int(span / 60 - full * 60)) + cr)
+                + "{:2d}m".format(int(span / 60 - full * 60)) + cr)
     else:
         full = int(span / 86400)
         return (cd + "{:3d}d ".format(full) + ch

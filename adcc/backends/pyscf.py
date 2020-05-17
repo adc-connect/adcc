@@ -40,6 +40,21 @@ class PyScfOperatorIntegralProvider:
     def electric_dipole(self):
         return list(self.scfres.mol.intor_symmetric('int1e_r', comp=3))
 
+    @cached_property
+    def magnetic_dipole(self):
+        # TODO: Gauge origin?
+        with self.scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
+            return list(
+                0.5 * self.scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
+            )
+
+    @cached_property
+    def nabla(self):
+        with self.scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
+            return list(
+                -1.0 * self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
+            )
+
 
 # TODO: refactor ERI builder to be more general
 # IntegralBuilder would be good

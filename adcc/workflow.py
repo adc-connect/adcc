@@ -30,6 +30,7 @@ from .AdcMatrix import AdcMatrix, AdcMatrixlike
 from .AdcMethod import AdcMethod
 from .ExcitedStates import ExcitedStates
 from .ReferenceState import ReferenceState as adcc_ReferenceState
+
 from .solver.davidson import jacobi_davidson
 from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
@@ -336,9 +337,9 @@ def diagonalise_adcmatrix(matrix, n_states, kind, solver_method="davidson",
         conv_tol = max(reference_state.conv_tol / 100, 1e-6)
     if reference_state.conv_tol > conv_tol:
         raise ValueError(
-            f"Convergence tolerance of SCF results "
-            "(== {reference_state.conv_tol}) needs to be lower than ADC "
-            "convergence tolerance parameter conv_tol (== {conv_tol})."
+            "Convergence tolerance of SCF results "
+            f"(== {reference_state.conv_tol}) needs to be lower than ADC "
+            f"convergence tolerance parameter conv_tol (== {conv_tol})."
         )
 
     # Determine explicit_symmetrisation

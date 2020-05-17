@@ -199,26 +199,17 @@ class BuildExt(BuildCommand):
         if adccore.has_source:
             adccore.build()  # Update adccore if required
 
-        opts = ["-Werror"]
+        opts = []
+        potential_opts = []
         if is_conda_build():
             newopt = "-Wno-error=unused-command-line-argument"
             if has_flag(self.compiler, newopt, opts):
                 opts += [newopt]
-
-        potential_opts = []
         if sys.platform == "darwin":
             potential_opts += ["-stdlib=libc++", "-mmacosx-version-min=10.9"]
         if self.compiler.compiler_type == "unix":
             opts.append(cpp_flag(self.compiler, opts))
-            potential_opts += [
-                "-fvisibility=hidden", "-Wall", "-Wextra",
-                "-pedantic", "-Wnon-virtual-dtor", "-Woverloaded-virtual",
-                "-Wcast-align", "-Wconversion",
-                "-Wmisleading-indentation", "-Wduplicated-cond",
-                "-Wduplicated-branches", "-Wlogical-op",
-                "-Wdouble-promotion", "-Wformat=2",
-                "-Wno-error=deprecated-declarations",
-            ]
+            potential_opts += ["-fvisibility=hidden", "-Wall", "-Wextra"]
         opts.extend([newopt for newopt in potential_opts
                      if has_flag(self.compiler, newopt, opts)])
 

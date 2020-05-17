@@ -203,6 +203,21 @@ class DataHfProvider(HartreeFockProvider):
                                  + str((3, nb, nb)) + " not "
                                  + str(mmp["elec_1"].shape))
             opprov.electric_dipole = np.asarray(mmp["elec_1"])
+        magm = data.get("magnetic_moments", {})
+        if "mag_1" in magm:
+            if magm["mag_1"].shape != (3, nb, nb):
+                raise ValueError("magnetic_moments/mag_1 is expected to have "
+                                 "shape " + str((3, nb, nb)) + " not "
+                                 + str(magm["mag_1"].shape))
+            opprov.magnetic_dipole = np.asarray(magm["mag_1"])
+        derivs = data.get("derivatives", {})
+        if "nabla" in derivs:
+            if derivs["nabla"].shape != (3, nb, nb):
+                raise ValueError("derivatives/nabla is expected to "
+                                 "have shape "
+                                 + str((3, nb, nb)) + " not "
+                                 + str(derivs["nabla"].shape))
+            opprov.nabla = np.asarray(derivs["nabla"])
         self.operator_integral_provider = opprov
 
     #

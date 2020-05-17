@@ -27,7 +27,7 @@ import adcc.backends
 
 from ..misc import expand_test_templates
 from .testing import (eri_asymm_construction_test, eri_chem_permutations,
-                      operator_import_test)
+                      operator_import_from_ao_test)
 
 from numpy.testing import assert_almost_equal
 
@@ -101,29 +101,33 @@ class TestPsi4(unittest.TestCase):
             eri_perm = np.transpose(eri, perm)
             assert_almost_equal(eri_perm, eri)
 
+    def operators_test(self, wfn):
+        # Test dipole
+        mints = psi4.core.MintsHelper(wfn.basisset())
+        ao_dip = [-1.0 * np.array(comp) for comp in mints.ao_dipole()]
+        operator_import_from_ao_test(wfn, ao_dip)
+
+        # Test magnetic dipole
+        ao_dip = [0.5 * np.array(comp) for comp in mints.ao_angular_momentum()]
+        operator_import_from_ao_test(wfn, ao_dip, operator="magnetic_dipole")
+
+        # Test nabla
+        ao_dip = [-1.0 * np.array(comp) for comp in mints.ao_nabla()]
+        operator_import_from_ao_test(wfn, ao_dip, operator="nabla")
+
     def template_rhf_h2o(self, basis):
         wfn = adcc.backends.run_hf("psi4", geometry.xyz["h2o"], basis)
         self.base_test(wfn)
-
+        self.operators_test(wfn)
         # Test ERI
         eri_asymm_construction_test(wfn)
         eri_asymm_construction_test(wfn, core_orbitals=1)
-
-        # Test dipole
-        mints = psi4.core.MintsHelper(wfn.basisset())
-        ao_dip = [np.array(comp) for comp in mints.ao_dipole()]
-        operator_import_test(wfn, ao_dip)
 
     def template_uhf_ch2nh2(self, basis):
         wfn = adcc.backends.run_hf("psi4", geometry.xyz["ch2nh2"], basis,
                                    multiplicity=2)
         self.base_test(wfn)
-
+        self.operators_test(wfn)
         # Test ERI
         eri_asymm_construction_test(wfn)
         eri_asymm_construction_test(wfn, core_orbitals=1)
-
-        # Test dipole
-        mints = psi4.core.MintsHelper(wfn.basisset())
-        ao_dip = [np.array(comp) for comp in mints.ao_dipole()]
-        operator_import_test(wfn, ao_dip)
