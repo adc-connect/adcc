@@ -35,7 +35,7 @@ from .testing import cached_backend_hf
 
 # molsturm is super slow
 backends = [b for b in adcc.backends.available() if b != "molsturm"]
-basissets = ["sto3g", "sto3g", "ccpvdz"]
+basissets = ["sto3g", "ccpvdz"]
 
 
 @pytest.mark.skipif(len(backends) < 2,
@@ -53,9 +53,10 @@ class TestCrossReferenceBackends(unittest.TestCase):
     def template_adc2_r2methyloxirane(self, basis):
         results = {}
         for b in backends:
-            scfres = cached_backend_hf(b, "r2methyloxirane", basis)
-            results[b] = adcc.adc2(scfres, n_singlets=3, conv_tol=1e-10)
-        compare_adc_results(results, 5e-9)
+            scfres = cached_backend_hf(b, "r2methyloxirane", basis,
+                                       conv_tol=1e-10)
+            results[b] = adcc.adc2(scfres, n_singlets=3, conv_tol=1e-9)
+        compare_adc_results(results, 5e-8)
 
     def template_adc2_uhf_ch2nh2(self, basis):
         results = {}
@@ -65,17 +66,18 @@ class TestCrossReferenceBackends(unittest.TestCase):
         if not len(backends):
             pytest.skip("Not enough backends that support UHF available.")
         for b in backends:
-            scfres = cached_backend_hf(b, "ch2nh2", basis, multiplicity=2)
-            results[b] = adcc.adc2(scfres, n_states=5, conv_tol=1e-10)
-        compare_adc_results(results, 5e-9)
+            scfres = cached_backend_hf(b, "ch2nh2", basis, multiplicity=2,
+                                       conv_tol=1e-10)
+            results[b] = adcc.adc2(scfres, n_states=5, conv_tol=1e-9)
+        compare_adc_results(results, 5e-8)
 
     def template_cvs_adc2_h2o(self, basis):
         results = {}
         for b in backends:
-            scfres = cached_backend_hf(b, "h2o", basis)
+            scfres = cached_backend_hf(b, "h2o", basis, conv_tol=1e-10)
             results[b] = adcc.cvs_adc2(scfres, n_singlets=5, core_orbitals=1,
-                                       conv_tol=1e-10)
-        compare_adc_results(results, 5e-9)
+                                       conv_tol=1e-9)
+        compare_adc_results(results, 5e-8)
 
     def template_hf_properties_h2o(self, basis):
         results = {}
