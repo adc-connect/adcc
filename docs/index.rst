@@ -76,7 +76,9 @@ on top of a restricted Hartree-Fock reference computed with PySCF.
 
 Sounds interesting?
 See :ref:`installation` and :ref:`performing-calculations`
-for installation instructions and some more information to get going.
+for installation instructions and some more information to get going
+or take a look at our `examples folder on github <https://code.adc-connect.org/tree/master/examples>`_
+for more ideas what adcc can be used for.
 
 Contents
 --------

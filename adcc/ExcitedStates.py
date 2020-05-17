@@ -34,9 +34,9 @@ from .OneParticleOperator import product_trace
 from .FormatDominantElements import FormatDominantElements
 
 from adcc import dot
-from matplotlib import pyplot as plt
 
 from scipy import constants
+from matplotlib import pyplot as plt
 from .solver.SolverStateBase import EigenSolverStateBase
 
 
@@ -404,9 +404,10 @@ class ExcitedStates:
             plots = sp.plot(style="discrete", **kwargs)
         else:
             kwdisc = kwargs.copy()
-            kwdisc["label"] = ""
+            kwdisc.pop("label", "")
             plots = sp.plot(style="discrete", **kwdisc)
 
+            kwargs.pop("color", "")
             sp_broad = sp.broaden_lines(width, shape=broadening)
             plots.extend(sp_broad.plot(color=plots[0].get_color(),
                                        style="continuous", **kwargs))

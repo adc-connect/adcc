@@ -101,50 +101,91 @@ class AdcMatrixlike:
             ret["d"] = symmetrise_generic_adc_doubles
         return ret
 
-    def dense_basis(self, blocks=None):
+    def dense_basis(self, blocks=None, ordering="adcc"):
         """
         Return the list of indices and their values
         of the dense basis representation
+
+        ordering: adcc, spin, spatial
         """
         ret = []
         if blocks is None:
             blocks = self.blocks
 
+        # Define function to impose the order in the basis
+        if ordering == "adcc":
+            def reduce_index(n_orbsa, idx):
+                return idx, idx
+        elif ordering == "spin":
+            def reduce_index(n_orbsa, idx):
+                is_beta = [idx[i] >= n_orbsa[i] for i in range(len(idx))]
+                spatial = [idx[i] - n_orbsa[i] if is_beta[i] else idx[i]
+                           for i in range(len(idx))]
+                # Sort first by spin, then by spatial
+                return (is_beta, spatial)
+        elif ordering == "spatial":
+            def reduce_index(n_orbsa, idx):
+                is_beta = [idx[i] >= n_orbsa[i] for i in range(len(idx))]
+                spatial = [idx[i] - n_orbsa[i] if is_beta[i] else idx[i]
+                           for i in range(len(idx))]
+                print(spatial, is_beta)
+                # Sort first by spatial, then by spin
+                return (spatial, is_beta)
+
         if "s" in blocks:
+            ret_s = []
             sp_s = self.block_spaces("s")
             n_orbs_s = [self.mospaces.n_orbs(sp) for sp in sp_s]
+            n_orbsa_s = [self.mospaces.n_orbs_alpha(sp) for sp in sp_s]
             for i in range(n_orbs_s[0]):
                 for a in range(n_orbs_s[1]):
-                    ret.append([((i, a), 1)])
+                    ret_s.append([((i, a), 1)])
+
+            def sortfctn(x):
+                return min(reduce_index(n_orbsa_s, idx) for idx, factor in x)
+            ret_s.sort(key=sortfctn)
+            print()
+            ret_s.sort(key=sortfctn)
+            ret.extend(ret_s)
 
         if "d" in blocks:
+            ret_d = []
             sp_d = self.block_spaces("d")
+            print(sp_d)
+            n_orbsa_d = [self.mospaces.n_orbs_alpha(sp) for sp in sp_d]
 
             if sp_d[0] == sp_d[1] and sp_d[2] == sp_d[3]:
                 nso = self.mospaces.n_orbs(sp_d[0])
                 nsv = self.mospaces.n_orbs(sp_d[2])
-                ret.extend([[((i, j, a, b), +1 / 2),
-                             ((j, i, a, b), -1 / 2),
-                             ((i, j, b, a), -1 / 2),
-                             ((j, i, b, a), +1 / 2)]
-                            for i in range(nso) for j in range(i)
-                            for a in range(nsv) for b in range(a)])
+                ret_d.extend([[((i, j, a, b), +1 / 2),
+                               ((j, i, a, b), -1 / 2),
+                               ((i, j, b, a), -1 / 2),
+                               ((j, i, b, a), +1 / 2)]
+                              for i in range(nso) for j in range(i)
+                              for a in range(nsv) for b in range(a)])
             elif sp_d[2] == sp_d[3]:
                 nso = self.mospaces.n_orbs(sp_d[0])
                 nsc = self.mospaces.n_orbs(sp_d[1])
                 nsv = self.mospaces.n_orbs(sp_d[2])
-                ret.extend([[((i, j, a, b), +1 / np.sqrt(2)),
-                             ((i, j, b, a), -1 / np.sqrt(2))]
-                            for i in range(nso) for j in range(nsc)
-                            for a in range(nsv) for b in range(a)])
+                ret_d.extend([[((i, j, a, b), +1 / np.sqrt(2)),
+                               ((i, j, b, a), -1 / np.sqrt(2))]
+                              for i in range(nso) for j in range(nsc)
+                              for a in range(nsv) for b in range(a)])
             else:
                 nso = self.mospaces.n_orbs(sp_d[0])
                 nsc = self.mospaces.n_orbs(sp_d[1])
                 nsv = self.mospaces.n_orbs(sp_d[2])
                 nsw = self.mospaces.n_orbs(sp_d[3])
-                ret.append([((i, j, b, a), 1)
-                            for i in range(nso) for j in range(nsc)
-                            for a in range(nsv) for b in range(nsw)])
+                ret_d.append([((i, j, b, a), 1)
+                              for i in range(nso) for j in range(nsc)
+                              for a in range(nsv) for b in range(nsw)])
+
+            def sortfctn(x):
+                return min(reduce_index(n_orbsa_d, idx) for idx, factor in x)
+            ret_d.sort(key=sortfctn)
+            print()
+            ret_d.sort(key=sortfctn)
+            ret.extend(ret_d)
 
         if any(b not in "sd" for b in self.blocks):
             raise NotImplementedError("Blocks other than s and d "
