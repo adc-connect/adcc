@@ -1,6 +1,6 @@
 name: adcc37
 channels:
-  - adcc/label/dev
+  - adcc
   - psi4/label/dev
   - defaults
 dependencies:
