@@ -3,19 +3,30 @@
 About this project
 ==================
 
-The adcc project was initiated in 2016 at Heidelberg University, where most
-initial development took place. This first version of the code was heavily
+The adcc project was initiated at Heidelberg University
+from the frustration of the difficulties encountered when
+starting ADC calculations from unusual
+SCF references (in this case from the `molsturm <https://molsturm.org>`_ code).
+In the initial phase of development adcc was heavily
 inspired by the `adcman <http://doi.org/10.1080/00268976.2013.859313>`_ package
 by Michael Wormit *et. al.*.
-Even thought the structure of adcc has changed a lot since the early days,
-the code in its current stage would have been impossible without being able
-to rigorously test and compare against adcman along the way.
+By the time of the first release in late 2019 the structure of adcc
+has been completely rewritten and polished.
 
-A good overview of adcc and its features can be found in :cite:`adcc`.
-
-.. note::
-   TODO Overview of features (scrape from calculations file)
-   A few words of the philosophy
+In its current form adcc features a strong focus on flexibility
+for both developing novel ADC methods
+and performing sophisticated analysis on top of obtained computational results.
+Standard workflows like plotting spectra or visualising obtained results
+are simple and often only take a single command,
+but still provide access to underlying low-level objects to make
+customisation possible.
+As a result the project is accessible to novices to the field,
+but still offers a low barrier to start developing more complex
+simulation procedures, where this might be needed.
+As numerous :ref:`adcc-related publications<publications>` prove
+this philosophy has already enabled key advances
+and successfully pushed the state of the art in computational spectroscopy methods.
+A more detailed overview of adcc and its features can be found in :cite:`adcc`.
 
 
 Citation
