@@ -33,6 +33,7 @@ mol = gto.M(
 )
 pe_options = cppe.PeOptions()
 pe_options.potfile = "pna_6w.pot"
+# pe_options.iso_pol = True
 
 scfres = PE(scf.RHF(mol), pe_options)
 scfres.conv_tol = 1e-10
