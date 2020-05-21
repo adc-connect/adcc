@@ -348,8 +348,8 @@ class ExcitedStates:
             ["eV", "au", "nm", "cm-1"]
         yaxis : str
             Quantity to plot on the y-Axis. Options are "cross_section",
-            "osc_strength", "dipole" (plots norm of transition dipole),
-            "rotational_strength" (ECD spectrum with rotational strength)
+            "oscillator_strength", "dipole" (plots norm of transition dipole),
+            "rotatory_strengths" (ECD spectrum with rotational strength),
         width : float, optional
             Gaussian broadening standard deviation or Lorentzian broadening
             gamma parameter. The value should be given in atomic units
@@ -379,7 +379,7 @@ class ExcitedStates:
         else:
             raise ValueError("Unknown xaxis specifier: {}".format(xaxis))
 
-        if yaxis in ["osc", "osc_strength", "oscillator_strength", "f"]:
+        if yaxis in ["osc", "oscillator_strength", "f"]:
             absorption = self.oscillator_strengths
             ylabel = "Oscillator strengths (au)"
         elif yaxis in ["dipole", "dipole_norm", "μ"]:
