@@ -155,6 +155,8 @@ def run_hf(backend, xyz, basis, **kwargs):
         conv_tol:       energy convergence tolerance
         conv_tol_grad:  convergence tolerance of the electronic gradient
         max_iter:       maximum number of SCF iterations
+        potfile:        name of the potential file for polarizable embedding
+        TODO: change to option dictionary for PE?
 
         Note: This function only exists for testing purposes and should
         not be used in production calculations.
@@ -190,4 +192,9 @@ def run_hf(backend, xyz, basis, **kwargs):
         raise NotImplementedError("No run_hf function implemented for backend "
                                   "{}.".format(backend))
 
-    return backend_hf.run_hf(xyz, basis, **kwargs)
+    # TODO: needs better integration!
+    potfile = kwargs.pop("potfile", None)
+    if potfile:
+        return backend_hf.run_pe_hf(xyz, basis, potfile, **kwargs)
+    else:
+        return backend_hf.run_hf(xyz, basis, **kwargs)

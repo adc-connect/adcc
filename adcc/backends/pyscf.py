@@ -126,12 +126,14 @@ class PyScfHFProvider(HartreeFockProvider):
         return 2.0 * self.pe_energy(dm, elec_only=True)
 
     @property
-    def addon_functions(self):
-        ret = []
+    def excitation_energy_corrections(self):
+        ret = {}
+        # TODO: use named tuple?!
+        # description_short, description
         if hasattr(self.scfres, "with_solvent"):
             if isinstance(self.scfres.with_solvent, solvent.pol_embed.PolEmbed):
-                ret.append(self.pe_ptlr_correction)
-                ret.append(self.pe_ptss_correction)
+                ret["pe_ptlr_correction"] = self.pe_ptlr_correction
+                ret["pe_ptss_correction"] = self.pe_ptss_correction
         return ret
 
     def get_backend(self):
@@ -270,6 +272,30 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
         mf.diis = scf.EDIIS()
         mf.diis_space = 3
         mf = scf.addons.frac_occ(mf)
+    mf.kernel()
+    return mf
+
+
+def run_pe_hf(xyz, basis, potfile, charge=0, multiplicity=1, conv_tol=1e-11,
+              conv_tol_grad=1e-9, max_iter=150):
+    from pyscf.solvent import PE
+    import cppe
+    mol = gto.M(
+        atom=xyz,
+        basis=basis,
+        unit="Bohr",
+        # spin in the pyscf world is 2S
+        spin=multiplicity - 1,
+        charge=charge,
+        # Disable commandline argument parsing in pyscf
+        parse_arg=False,
+        dump_input=False,
+        verbose=0,
+    )
+    mf = PE(scf.HF(mol), potfile)
+    mf.conv_tol = conv_tol
+    mf.conv_tol_grad = conv_tol_grad
+    mf.max_cycle = max_iter
     mf.kernel()
     return mf
 

@@ -44,11 +44,17 @@ scfres.kernel()
 state = adcc.adc2(scfres, n_singlets=5, conv_tol=1e-8)
 
 n_exc = 3
-ptlr = state.pe_ptlr_correction[n_exc] * eV
-ptss = state.pe_ptss_correction[n_exc] * eV
+ptlr = state.pe_ptlr_correction
+ptss = state.pe_ptss_correction
+
+# test that the corrections are properly added
+np.testing.assert_allclose(
+    state.excitation_energies_uncorrected + ptlr + ptss,
+    state.excitation_energies
+)
 
 # hard-coded Q-Chem values
 np.testing.assert_allclose(
-    np.array([ptss, ptlr]), np.array([-0.009186, -0.007242]),
-    atol=1e-5
+    np.array([ptss[n_exc] * eV, ptlr[n_exc] * eV]),
+    np.array([-0.009186, -0.007242]), atol=1e-5
 )

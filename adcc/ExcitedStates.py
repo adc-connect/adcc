@@ -131,7 +131,8 @@ class FormatExcitationVector:
 
 
 class ExcitedStates:
-    def __init__(self, data, method=None, property_method=None):
+    def __init__(self, data, method=None, property_method=None,
+                 excitation_energy_corrections=None):
         """Construct an ExcitedStates class from some data obtained
         from an interative solver.
 
@@ -154,6 +155,9 @@ class ExcitedStates:
         property_method : str, optional
             Provide an explicit method for property calculations to
             override the automatic selection.
+        excitation_energy_corrections : dict, optional
+            Provide a dictionary of functions to compute corrections for
+            excitation energies, called for each excitation individually
         """
         self.matrix = data.matrix
         self.ground_state = self.matrix.ground_state
@@ -194,22 +198,39 @@ class ExcitedStates:
         # Special stuff for special solvers
         if isinstance(data, EigenSolverStateBase):
             self.excitation_vectors = data.eigenvectors
-            self.excitation_energies = data.eigenvalues
+            self.__excitation_energies = data.eigenvalues
         else:
             if hasattr(data, "eigenvalues"):
-                self.excitation_energies = data.eigenvalues
+                self.__excitation_energies = data.eigenvalues
             if hasattr(data, "eigenvectors"):
                 self.excitation_vectors = data.eigenvectors
             if hasattr(data, "excitation_energies"):
-                self.excitation_energies = data.excitation_energies
+                self.__excitation_energies = data.excitation_energies
             if hasattr(data, "excitation_vectors"):
                 self.excitation_vectors = data.excitation_vectors
 
-        for addon_function in self.reference_state.addons:
-            prop_name = addon_function.__name__
-            # TODO: should be lazily evaluated, could not make it work :(
-            setattr(self, prop_name,
-                    [addon_function(self.view(i)) for i in range(self.size)])
+        # Collect all excitation energy corrections
+        self.__excitation_energies_uncorrected = self.excitation_energies.copy()
+
+        if excitation_energy_corrections is None:
+            excitation_energy_corrections = {}
+        elif not isinstance(excitation_energy_corrections, dict):
+            raise TypeError("excitation_energy_corrections must be a dict.")
+
+        if hasattr(self.reference_state, "excitation_energy_corrections"):
+            excitation_energy_corrections.update(
+                self.reference_state.excitation_energy_corrections)
+
+        for key in excitation_energy_corrections:
+            corr_function = excitation_energy_corrections[key]
+            if not callable(corr_function):
+                raise TypeError("Elements in excitation_energy_corrections "
+                                "must be callable.")
+            # call the function for exc. energy correction
+            setattr(self, key, np.array([
+                corr_function(self.view(i)) for i in range(self.size)]))
+            # add value to excitation energies
+            self.__excitation_energies += getattr(self, key)
 
     def __len__(self):
         return self.size
@@ -232,6 +253,16 @@ class ExcitedStates:
     def property_method(self):
         """The method used to evaluate ADC properties"""
         return self.__property_method
+
+    @property
+    def excitation_energies(self):
+        """Excitation energies including all corrections in atomic units"""
+        return self.__excitation_energies
+
+    @property
+    def excitation_energies_uncorrected(self):
+        """Excitation energies without any corrections in atomic units"""
+        return self.__excitation_energies_uncorrected
 
     @cached_property
     @timed_member_call(timer="_property_timer")
