@@ -243,8 +243,8 @@ def import_scf(scfdrv):
     return provider
 
 
-def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=None,
-           conv_tol_grad=1e-8, max_iter=150):
+def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol_grad=1e-8,
+           max_iter=150):
     basis_remap = {
         "sto3g": "sto-3g",
         "def2tzvp": "def2-tzvp",

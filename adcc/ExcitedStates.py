@@ -21,6 +21,7 @@
 ##
 ## ---------------------------------------------------------------------
 import warnings
+from collections import namedtuple
 import numpy as np
 
 from .misc import cached_property
@@ -30,7 +31,7 @@ from .FormatIndex import (FormatIndexAdcc, FormatIndexBase,
                           FormatIndexHfProvider, FormatIndexHomoLumo)
 from .visualisation import ExcitationSpectrum
 from .state_densities import compute_gs2state_optdm, compute_state_diffdm
-from .OneParticleOperator import product_trace
+from .OneParticleOperator import product_trace, OneParticleOperator
 from .FormatDominantElements import FormatDominantElements
 
 from adcc import dot
@@ -228,7 +229,7 @@ class ExcitedStates:
                                 "must be callable.")
             # call the function for exc. energy correction
             setattr(self, key, np.array([
-                corr_function(self.view(i)) for i in range(self.size)]))
+                corr_function(exci) for exci in self.excitations]))
             # add value to excitation energies
             self.__excitation_energies += getattr(self, key)
 
@@ -631,26 +632,52 @@ class ExcitedStates:
                 ret += separator
         return ret[:-1]
 
-    # FIXME: just playing around with this a little... not final at all...
-    def view(self, item):
-        # highly illegal
-        tdms = self.transition_dms
-        sdms = self.state_diffdms
+    @property
+    def excitations(self):
+        """
+        Provides a list of Excitations, i.e., a view to all individual
+        excited states and their properties. Still under heavy development.
+        """
+        exci_prop = self._excitation_properties
 
-        class DummyStateView:
+        def transform_to_ao(dm):
+            if not isinstance(dm, OneParticleOperator):
+                raise TypeError("Density matrix must be of type"
+                                " OneParticleOperator.")
+            density = dm.to_ao_basis()
+            density_ao = density[0] + density[1]
+            return density_ao.to_ndarray()
+
+        outer_self = self
+
+        class Excitation:
             def __init__(self, index):
                 self.index = index
+                for key in exci_prop:
+                    prop = exci_prop[key]
+                    prop_val = getattr(outer_self, prop.function_name)[self.index]
+                    setattr(self, key, prop_val)
+                    if prop.transform_to_ao:
+                        setattr(self, f"{key}_ao", transform_to_ao(prop_val))
+        excitations = [Excitation(i) for i in range(self.size)]
+        return excitations
 
-            @property
-            def ao_transition_density_matrix(self):
-                density = tdms[self.index].to_ao_basis()
-                density_ao = (density[0] + density[1]).to_ndarray()
-                return density_ao
+    # TODO: really hard to solve this with decorators
+    # because one only has access to "self" once the function is actually called
+    # :(
+    @property
+    def _excitation_properties(self):
+        return {
+            "transition_dm":
+                ExcitationProperty("transition density matrix",
+                                   "transition_dms", True),
+            "state_diffdm":
+                ExcitationProperty("state difference density matrix",
+                                   "state_diffdms", True),
+        }
 
-            @property
-            def ao_state_difference_density_matrix(self):
-                density = sdms[self.index].to_ao_basis()
-                density_ao = (density[0] + density[1]).to_ndarray()
-                return density_ao
 
-        return DummyStateView(item)
+# TODO: WIP
+ExcitationProperty = namedtuple(
+    "ExcitationProperty", ["description", "function_name", "transform_to_ao"]
+)

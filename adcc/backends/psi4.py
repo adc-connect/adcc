@@ -96,21 +96,19 @@ class Psi4HFProvider(HartreeFockProvider):
         return e_pe
 
     def pe_ptss_correction(self, view):
-        # print("I'm lazy ptSS")
-        dm = view.ao_state_difference_density_matrix
+        dm = view.state_diffdm_ao
         return self.pe_energy(dm, elec_only=True)
 
     def pe_ptlr_correction(self, view):
-        # print("I'm lazy ptLR")
-        dm = view.ao_transition_density_matrix
+        dm = view.transition_dm_ao
         return 2.0 * self.pe_energy(dm, elec_only=True)
 
     @property
-    def addon_functions(self):
-        ret = []
+    def excitation_energy_corrections(self):
+        ret = {}
         if hasattr(self.wfn, "pe_state"):
-            ret.append(self.pe_ptlr_correction)
-            ret.append(self.pe_ptss_correction)
+            ret["pe_ptlr_correction"] = self.pe_ptlr_correction
+            ret["pe_ptss_correction"] = self.pe_ptss_correction
         return ret
 
     def get_backend(self):
@@ -221,7 +219,7 @@ def import_scf(wfn):
 
 
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
-           conv_tol_grad=1e-8, max_iter=150):
+           conv_tol_grad=1e-8, max_iter=150, potfile=None):
     basissets = {
         "sto3g": "sto-3g",
         "def2tzvp": "def2-tzvp",
@@ -237,6 +235,8 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
         no_com
     """)
 
+    pe = potfile is not None
+
     psi4.core.be_quiet()
     psi4.set_options({
         'basis': basissets.get(basis, basis),
@@ -244,8 +244,11 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
         'e_convergence': conv_tol,
         'd_convergence': conv_tol_grad,
         'maxiter': max_iter,
-        'reference': "RHF"
+        'reference': "RHF",
+        'pe': 'true' if pe else 'false',
     })
+    if pe:
+        psi4.set_module_options("pe", {"potfile": potfile})
 
     if multiplicity != 1:
         psi4.set_options({

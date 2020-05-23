@@ -192,9 +192,4 @@ def run_hf(backend, xyz, basis, **kwargs):
         raise NotImplementedError("No run_hf function implemented for backend "
                                   "{}.".format(backend))
 
-    # TODO: needs better integration!
-    potfile = kwargs.pop("potfile", None)
-    if potfile:
-        return backend_hf.run_pe_hf(xyz, basis, potfile, **kwargs)
-    else:
-        return backend_hf.run_hf(xyz, basis, **kwargs)
+    return backend_hf.run_hf(xyz, basis, **kwargs)

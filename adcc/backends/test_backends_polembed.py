@@ -38,42 +38,42 @@ from scipy import constants
 eV = constants.value("Hartree energy in eV")
 
 
-backends = [b for b in adcc.backends.available() if b != "molsturm"]
+backends = [b for b in adcc.backends.available()
+            if b not in ["molsturm", "veloxchem"]]
 basissets = ["sto3g", "ccpvdz"]
 methods = ["adc1", "adc2", "adc3"]
 
 
 @pytest.mark.skipif(len(backends) == 0,
                     reason="No backend found.")
-@expand_test_templates(list(itertools.product(methods, basissets)))
+@expand_test_templates(list(itertools.product(basissets, methods, backends)))
 class TestPolarizableEmbedding(unittest.TestCase):
-    def template_formaldehyde_pe(self, method, basis):
+    def template_pe_formaldehyde(self, basis, method, backend):
         basename = f"formaldehyde_{basis}_pe_{method}"
         qc_result = qchem_data[basename]
-        for b in backends:
-            scfres = cached_backend_hf(b, "formaldehyde", basis,
-                                       potfile=pe_potentials["fa_6w"])
-            state = adcc.run_adc(scfres, method=method,
-                                 n_singlets=5, conv_tol=1e-10)
-            assert_allclose(
-                qc_result["excitation_energies_ev"],
-                state.excitation_energies_uncorrected * eV,
-                atol=1e-5
-            )
-            assert_allclose(
-                qc_result["excitation_energies_ev"]
-                + qc_result["pe_ptss_corrections_ev"]
-                + qc_result["pe_ptlr_corrections_ev"],
-                state.excitation_energies * eV,
-                atol=1e-5
-            )
-            assert_allclose(
-                qc_result["pe_ptss_corrections_ev"],
-                state.pe_ptss_correction * eV,
-                atol=1e-5
-            )
-            assert_allclose(
-                qc_result["pe_ptlr_corrections_ev"],
-                state.pe_ptlr_correction * eV,
-                atol=1e-5
-            )
+        scfres = cached_backend_hf(backend, "formaldehyde", basis,
+                                   potfile=pe_potentials["fa_6w"])
+        state = adcc.run_adc(scfres, method=method,
+                             n_singlets=5, conv_tol=1e-10)
+        assert_allclose(
+            qc_result["excitation_energies_ev"],
+            state.excitation_energies_uncorrected * eV,
+            atol=1e-5
+        )
+        assert_allclose(
+            qc_result["excitation_energies_ev"]
+            + qc_result["pe_ptss_corrections_ev"]
+            + qc_result["pe_ptlr_corrections_ev"],
+            state.excitation_energies * eV,
+            atol=1e-5
+        )
+        assert_allclose(
+            qc_result["pe_ptss_corrections_ev"],
+            state.pe_ptss_correction * eV,
+            atol=1e-5
+        )
+        assert_allclose(
+            qc_result["pe_ptlr_corrections_ev"],
+            state.pe_ptlr_correction * eV,
+            atol=1e-5
+        )
