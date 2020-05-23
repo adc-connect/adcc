@@ -21,12 +21,15 @@
 ##
 ## ---------------------------------------------------------------------
 import os
+import sh
 import tempfile
 
 from cclib.parser import QChem
 
-from ..geometry import xyz
+from adcc.testdata.geometry import xyz
+from adcc.testdata.static_data import pe_potentials
 from adcc import hdf5io
+
 
 _qchem_template = """
 $rem
@@ -44,6 +47,10 @@ adc_nguess_singles       {n_guesses}
 adc_davidson_maxsubspace {max_ss}
 adc_prop_es              true
 cc_rest_occ              {cc_rest_occ}
+
+! scf stuff
+use_libqints             true
+gen_scfman               true
 $end
 
 $molecule
@@ -83,9 +90,9 @@ def clean_xyz(xyz):
 
 
 def generate_qchem_input_file(fname, method, basis, coords, potfile=None,
-                              charge=0, multiplicity=1, memory=3000,
+                              charge=0, multiplicity=1, memory=8000,
                               singlet_states=5, triplet_states=0, bohr=True,
-                              maxiter=60, conv_tol=6, n_core_orbitals=0):
+                              maxiter=160, conv_tol=10, n_core_orbitals=0):
     nguess_singles = 2 * max(singlet_states, triplet_states)
     max_ss = 5 * nguess_singles
     pe = potfile is not None
@@ -115,7 +122,7 @@ def generate_qchem_input_file(fname, method, basis, coords, potfile=None,
 
 def dump_qchem(molecule, method, basis, **kwargs):
     with tempfile.TemporaryDirectory() as tmpdir:
-        pe = kwargs.get("potfile", None)
+        pe = kwargs.get("potfile", None) is not None
         if pe:
             basename = f"{molecule}_{basis}_pe_{method}"
         else:
@@ -135,27 +142,29 @@ def dump_qchem(molecule, method, basis, **kwargs):
         )
         # only works with my (ms) fork of cclib
         # github.com/maxscheurer/cclib, branch dev-qchem
-        os.system("qchem {} {}".format(infile, outfile))
+        # os.system("qchem {} {}".format(infile, outfile))
+        sh.qchem(infile, outfile)
         res = QChem(outfile).parse()
         ret["oscillator_strengths"] = res.etoscs
         ret["state_dipole_moments_debye"] = res.etdipmoms
         ret["excitation_energies_ev"] = res.etenergies
-        print(dir(res))
         if pe:
-            ret["pe_ptss_corrections_ev"]
-            ret["pe_ptlr_corrections_ev"]
-        print(ret)
-        # hdf5io.save(fname="{}_qc.hdf5".format(basename),
-        #             dictionary=ret)
-        # bla = hdf5io.load(fname="{}_qc.hdf5".format(basename))
-        # print(bla)
+            ret["pe_ptss_corrections_ev"] = res.peenergies["ptSS"]
+            ret["pe_ptlr_corrections_ev"] = res.peenergies["ptLR"]
+        return basename, ret
 
 
 def main():
-    for basis in ["sto3g", "ccpvdz"]:
-        dump_qchem("h2o", "adc2", basis)
-        # basename = "h2o_{}_cvs_adc2".format(basis)
-        # dump_qc_h2o(basename, "cvs-adc2", basis, n_core_orbitals=1)
+    basissets = ["sto3g", "ccpvdz"]
+    methods = ["adc1", "adc2", "adc3"]
+    qchem_results = {}
+    for method in methods:
+        for basis in basissets:
+            key, ret = dump_qchem("formaldehyde", method, basis,
+                                  potfile=pe_potentials["fa_6w"])
+            qchem_results[key] = ret
+            print(f"Dumped {key}.")
+    hdf5io.save(fname="qchem_dump.hdf5", dictionary=qchem_results)
 
 
 if __name__ == "__main__":

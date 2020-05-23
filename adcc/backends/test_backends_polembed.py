@@ -21,9 +21,8 @@
 ##
 ## ---------------------------------------------------------------------
 import unittest
-import itertools
-import numpy as np
 import adcc
+import itertools
 import adcc.backends
 
 from numpy.testing import assert_allclose
@@ -33,20 +32,48 @@ import pytest
 from ..misc import expand_test_templates
 from .testing import cached_backend_hf
 from ..testdata.static_data import pe_potentials
+from ..testdata.qchem import qchem_data
+
+from scipy import constants
+eV = constants.value("Hartree energy in eV")
+
 
 backends = [b for b in adcc.backends.available() if b != "molsturm"]
-basissets = ["sto3g", "cc-pvdz"]
+basissets = ["sto3g", "ccpvdz"]
+methods = ["adc1", "adc2", "adc3"]
 
 
 @pytest.mark.skipif(len(backends) == 0,
                     reason="No backend found.")
-@expand_test_templates(basissets)
+@expand_test_templates(list(itertools.product(methods, basissets)))
 class TestPolarizableEmbedding(unittest.TestCase):
-    def template_pe_adc2_formaldehyde(self, basis):
-        results = {}
+    def template_formaldehyde_pe(self, method, basis):
+        basename = f"formaldehyde_{basis}_pe_{method}"
+        qc_result = qchem_data[basename]
         for b in backends:
-            print(b)
             scfres = cached_backend_hf(b, "formaldehyde", basis,
                                        potfile=pe_potentials["fa_6w"])
-            results[b] = adcc.adc2(scfres, n_singlets=5, conv_tol=1e-10)
-            print(results[b].pe_ptss_correction)
+            state = adcc.run_adc(scfres, method=method,
+                                 n_singlets=5, conv_tol=1e-10)
+            assert_allclose(
+                qc_result["excitation_energies_ev"],
+                state.excitation_energies_uncorrected * eV,
+                atol=1e-5
+            )
+            assert_allclose(
+                qc_result["excitation_energies_ev"]
+                + qc_result["pe_ptss_corrections_ev"]
+                + qc_result["pe_ptlr_corrections_ev"],
+                state.excitation_energies * eV,
+                atol=1e-5
+            )
+            assert_allclose(
+                qc_result["pe_ptss_corrections_ev"],
+                state.pe_ptss_correction * eV,
+                atol=1e-5
+            )
+            assert_allclose(
+                qc_result["pe_ptlr_corrections_ev"],
+                state.pe_ptlr_correction * eV,
+                atol=1e-5
+            )

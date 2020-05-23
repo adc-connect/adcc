@@ -279,7 +279,6 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
 def run_pe_hf(xyz, basis, potfile, charge=0, multiplicity=1, conv_tol=1e-11,
               conv_tol_grad=1e-9, max_iter=150):
     from pyscf.solvent import PE
-    import cppe
     mol = gto.M(
         atom=xyz,
         basis=basis,
