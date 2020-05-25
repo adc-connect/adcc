@@ -155,7 +155,7 @@ class AdcCore:
 
         build_dir = join(self.source_dir, "build")
         build_adccore.build_install(build_dir, self.install_dir,
-                                    features=features, skip_stdlib=True)
+                                    features=features)
 
     def build_documentation(self):
         """Build adccore documentation. Only valid if has_source is true"""
