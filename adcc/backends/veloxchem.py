@@ -127,21 +127,19 @@ class VeloxChemHFProvider(HartreeFockProvider):
         return e_pe
 
     def pe_ptss_correction(self, view):
-        # print("I'm lazy ptSS")
-        dm = view.ao_state_difference_density_matrix
+        dm = view.state_diffdm_ao
         return self.pe_energy(dm, elec_only=True)
 
     def pe_ptlr_correction(self, view):
-        # print("I'm lazy ptLR")
-        dm = view.ao_transition_density_matrix
+        dm = view.transition_dm_ao
         return 2.0 * self.pe_energy(dm, elec_only=True)
 
     @property
-    def addon_functions(self):
-        ret = []
+    def excitation_energy_corrections(self):
+        ret = {}
         if hasattr(self.scfdrv, "pe_drv"):
-            ret.append(self.pe_ptlr_correction)
-            ret.append(self.pe_ptss_correction)
+            ret["pe_ptlr_corrections"] = self.pe_ptlr_correction
+            ret["pe_ptss_corrections"] = self.pe_ptss_correction
         return ret
 
     def get_backend(self):
@@ -244,12 +242,15 @@ def import_scf(scfdrv):
 
 
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol_grad=1e-8,
-           max_iter=150):
+           max_iter=150, potfile=None):
     basis_remap = {
         "sto3g": "sto-3g",
         "def2tzvp": "def2-tzvp",
         "ccpvdz": "cc-pvdz",
     }
+    # TODO: PE results in VeloxChem are currently wrong, because
+    # polarizabilities are always made isotropic
+    pe = potfile is not None
 
     with tempfile.TemporaryDirectory() as tmpdir:
         infile = os.path.join(tmpdir, "vlx.in")
@@ -257,8 +258,11 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol_grad=1e-8,
         with open(infile, "w") as fp:
             lines = ["@jobs", "task: hf", "@end", ""]
             lines += ["@method settings",
-                      "basis: {}".format(basis_remap.get(basis, basis)),
-                      "@end"]
+                      "basis: {}".format(basis_remap.get(basis, basis))]
+            if pe:
+                lines += ["pe: yes",
+                          f"potfile: {potfile}"]
+            lines += ["@end"]
             lines += ["@molecule",
                       "charge: {}".format(charge),
                       "multiplicity: {}".format(multiplicity),
@@ -269,6 +273,8 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol_grad=1e-8,
         task = MpiTask([infile, outfile], MPI.COMM_WORLD)
 
         scfdrv = vlx.ScfRestrictedDriver(task.mpi_comm, task.ostream)
+        scfdrv.update_settings(task.input_dict['scf'],
+                               task.input_dict['method_settings'])
         # elec. gradient norm
         scfdrv.conv_thresh = conv_tol_grad
         scfdrv.max_iter = max_iter

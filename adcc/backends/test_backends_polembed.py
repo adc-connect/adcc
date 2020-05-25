@@ -69,11 +69,11 @@ class TestPolarizableEmbedding(unittest.TestCase):
         )
         assert_allclose(
             qc_result["pe_ptss_corrections_ev"],
-            state.pe_ptss_correction * eV,
+            state.pe_ptss_corrections * eV,
             atol=1e-5
         )
         assert_allclose(
             qc_result["pe_ptlr_corrections_ev"],
-            state.pe_ptlr_correction * eV,
+            state.pe_ptlr_corrections * eV,
             atol=1e-5
         )

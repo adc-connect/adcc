@@ -21,7 +21,6 @@
 ##
 ## ---------------------------------------------------------------------
 import warnings
-from collections import namedtuple
 import numpy as np
 
 from .misc import cached_property
@@ -39,6 +38,17 @@ from adcc import dot
 from scipy import constants
 from matplotlib import pyplot as plt
 from .solver.SolverStateBase import EigenSolverStateBase
+
+
+def mark_excitation_property(**kwargs):
+    """
+    Decorator to mark properties of excited states which
+    can be transferred to Excitation
+    """
+    def inner(f, kwargs=kwargs):
+        f.__excitation_property = kwargs
+        return f
+    return inner
 
 
 class FormatExcitationVector:
@@ -230,6 +240,7 @@ class ExcitedStates:
             # call the function for exc. energy correction
             setattr(self, key, np.array([
                 corr_function(exci) for exci in self.excitations]))
+            # TODO: add energy corrections with reasonable name to Excitation
             # add value to excitation energies
             self.__excitation_energies += getattr(self, key)
 
@@ -256,16 +267,19 @@ class ExcitedStates:
         return self.__property_method
 
     @property
+    @mark_excitation_property(name="excitation_energy")
     def excitation_energies(self):
         """Excitation energies including all corrections in atomic units"""
         return self.__excitation_energies
 
     @property
+    @mark_excitation_property(name="excitation_energy_uncorrected")
     def excitation_energies_uncorrected(self):
         """Excitation energies without any corrections in atomic units"""
         return self.__excitation_energies_uncorrected
 
     @cached_property
+    @mark_excitation_property(name="transition_dm", transform_to_ao=True)
     @timed_member_call(timer="_property_timer")
     def transition_dms(self):
         """List of transition density matrices of all computed states"""
@@ -274,6 +288,7 @@ class ExcitedStates:
                 for evec in self.excitation_vectors]
 
     @cached_property
+    @mark_excitation_property(name="transition_dipole_moment")
     @timed_member_call(timer="_property_timer")
     def transition_dipole_moments(self):
         """List of transition dipole moments of all computed states"""
@@ -287,6 +302,7 @@ class ExcitedStates:
         ])
 
     @cached_property
+    @mark_excitation_property(name="transition_dipole_moment_velocity")
     @timed_member_call(timer="_property_timer")
     def transition_dipole_moments_velocity(self):
         """List of transition dipole moments in the
@@ -301,6 +317,7 @@ class ExcitedStates:
         ])
 
     @cached_property
+    @mark_excitation_property(name="transition_magnetic_dipole_moment")
     @timed_member_call(timer="_property_timer")
     def transition_magnetic_dipole_moments(self):
         """List of transition magnetic dipole moments of all computed states"""
@@ -314,6 +331,7 @@ class ExcitedStates:
         ])
 
     @cached_property
+    @mark_excitation_property(name="oscillator_strength")
     def oscillator_strengths(self):
         """List of oscillator strengths of all computed states"""
         return 2. / 3. * np.array([
@@ -323,6 +341,7 @@ class ExcitedStates:
         ])
 
     @cached_property
+    @mark_excitation_property(name="oscillator_strength_velocity")
     def oscillator_strengths_velocity(self):
         """List of oscillator strengths in
         velocity gauge of all computed states"""
@@ -333,6 +352,7 @@ class ExcitedStates:
         ])
 
     @cached_property
+    @mark_excitation_property(name="rotatory_strength")
     def rotatory_strengths(self):
         """List of rotatory strengths of all computed states"""
         return np.array([
@@ -343,6 +363,7 @@ class ExcitedStates:
         ])
 
     @cached_property
+    @mark_excitation_property(name="state_diffdm", transform_to_ao=True)
     @timed_member_call(timer="_property_timer")
     def state_diffdms(self):
         """List of difference density matrices of all computed states"""
@@ -351,12 +372,14 @@ class ExcitedStates:
                 for evec in self.excitation_vectors]
 
     @property
+    @mark_excitation_property(name="state_dm", transform_to_ao=True)
     def state_dms(self):
         """List of state density matrices of all computed states"""
         mp_density = self.ground_state.density(self.property_method.level)
         return [mp_density + diffdm for diffdm in self.state_diffdms]
 
     @cached_property
+    @mark_excitation_property(name="state_dipole_moment")
     @timed_member_call(timer="_property_timer")
     def state_dipole_moments(self):
         """List of state dipole moments"""
@@ -638,46 +661,53 @@ class ExcitedStates:
         Provides a list of Excitations, i.e., a view to all individual
         excited states and their properties. Still under heavy development.
         """
-        exci_prop = self._excitation_properties
-
-        def transform_to_ao(dm):
-            if not isinstance(dm, OneParticleOperator):
-                raise TypeError("Density matrix must be of type"
-                                " OneParticleOperator.")
-            density = dm.to_ao_basis()
-            density_ao = density[0] + density[1]
-            return density_ao.to_ndarray()
-
-        outer_self = self
-
         class Excitation:
-            def __init__(self, index):
-                self.index = index
-                for key in exci_prop:
-                    prop = exci_prop[key]
-                    prop_val = getattr(outer_self, prop.function_name)[self.index]
-                    setattr(self, key, prop_val)
-                    if prop.transform_to_ao:
-                        setattr(self, f"{key}_ao", transform_to_ao(prop_val))
-        excitations = [Excitation(i) for i in range(self.size)]
+            pass
+
+        excitations = []
+        for i in range(self.size):
+            e = Excitation()
+            e.idx = i
+            e.__parent_state = self
+            for key in dir(self):
+                if key == "excitations":
+                    continue
+                if "__" in key or key.startswith("_"):
+                    continue  # skip "private" fields
+                if hasattr(type(self), key):
+                    if not isinstance(getattr(type(self), key), property):
+                        continue
+                else:
+                    continue
+
+                fget = getattr(type(self), key).fget
+                if not hasattr(fget, "__excitation_property"):
+                    # print(dir(fget), key, "not found.")
+                    continue
+                # Extract the kwargs passed to mark_excitation_property
+                kwargs = getattr(fget, "__excitation_property").copy()
+
+                def payload(self, key=key, kwargs=kwargs):
+                    return getattr(self.__parent_state, key)[self.idx]
+
+                setattr(type(e), kwargs["name"], property(payload))
+
+                transform = kwargs.pop("transform_to_ao", False)
+                if transform:
+                    def payload_transform(self, key=key):
+                        return transform_to_ao(
+                            getattr(self.__parent_state, key)[self.idx])
+                    setattr(type(e), kwargs["name"] + "_ao",
+                            property(payload_transform))
+            excitations.append(e)
+
         return excitations
 
-    # TODO: really hard to solve this with decorators
-    # because one only has access to "self" once the function is actually called
-    # :(
-    @property
-    def _excitation_properties(self):
-        return {
-            "transition_dm":
-                ExcitationProperty("transition density matrix",
-                                   "transition_dms", True),
-            "state_diffdm":
-                ExcitationProperty("state difference density matrix",
-                                   "state_diffdms", True),
-        }
 
-
-# TODO: WIP
-ExcitationProperty = namedtuple(
-    "ExcitationProperty", ["description", "function_name", "transform_to_ao"]
-)
+def transform_to_ao(dm):
+    if not isinstance(dm, OneParticleOperator):
+        raise TypeError("Density matrix must be of type"
+                        " OneParticleOperator.")
+    density = dm.to_ao_basis()
+    density_ao = density[0] + density[1]
+    return density_ao.to_ndarray()

@@ -19,7 +19,7 @@ addons:
 
 install:
   - pip3 install pyscf
-  - pip3 install git+https://github.com/maxscheurer/cppe.git@pip
+  - pip3 install git+https://github.com/maxscheurer/cppe.git
   - pip3 install --verbose -r requirements.txt
 script: python3 setup.py test -a '--cov=adcc'
 

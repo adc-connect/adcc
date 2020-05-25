@@ -40,6 +40,9 @@ def cached_property(f):
             return x
 
     get.__doc__ = f.__doc__
+    # TODO: find more elegant solution for this
+    if hasattr(f, "__excitation_property"):
+        get.__excitation_property = f.__excitation_property
 
     return property(get)
 

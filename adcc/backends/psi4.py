@@ -107,8 +107,8 @@ class Psi4HFProvider(HartreeFockProvider):
     def excitation_energy_corrections(self):
         ret = {}
         if hasattr(self.wfn, "pe_state"):
-            ret["pe_ptlr_correction"] = self.pe_ptlr_correction
-            ret["pe_ptss_correction"] = self.pe_ptss_correction
+            ret["pe_ptlr_corrections"] = self.pe_ptlr_correction
+            ret["pe_ptss_corrections"] = self.pe_ptss_correction
         return ret
 
     def get_backend(self):
