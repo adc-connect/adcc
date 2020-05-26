@@ -52,8 +52,8 @@ rhss = [
     for dip in dips
 ]
 
-S = np.zeros((len(state.excitation_energies), 3, 3))
-for f, ee in enumerate(state.excitation_energies):
+S = np.zeros((len(state.excitation_energy), 3, 3))
+for f, ee in enumerate(state.excitation_energy):
     freq = ee / 2.0
     matrix = ShiftedMat("adc2", state.ground_state, freq)
     preconditioner = JacobiPreconditioner(matrix)
@@ -74,11 +74,11 @@ for f, ee in enumerate(state.excitation_energies):
         for nu in range(mu, 3):
             tdm_mu_f = compute_state2state_optdm(
                 "adc2", matrix.ground_state, response[mu].solution,
-                state.excitation_vectors[f]
+                state.excitation_vector[f]
             )
             tdm_nu_f = compute_state2state_optdm(
                 "adc2", matrix.ground_state, response[nu].solution,
-                state.excitation_vectors[f]
+                state.excitation_vector[f]
             )
             # compute the matrix element
             S[f, mu, nu] = (

@@ -26,7 +26,7 @@ import tempfile
 
 from cclib.parser import QChem
 
-from adcc.testdata.geometry import xyz
+from adcc.testdata.static_data import xyz
 from adcc.testdata.static_data import pe_potentials
 from adcc import hdf5io
 
@@ -142,7 +142,6 @@ def dump_qchem(molecule, method, basis, **kwargs):
         )
         # only works with my (ms) fork of cclib
         # github.com/maxscheurer/cclib, branch dev-qchem
-        # os.system("qchem {} {}".format(infile, outfile))
         sh.qchem(infile, outfile)
         res = QChem(outfile).parse()
         ret["oscillator_strengths"] = res.etoscs

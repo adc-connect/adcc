@@ -33,25 +33,27 @@ class TestExcitationView(unittest.TestCase, Runners):
     def base_test(self, system, method, kind):
         method = method.replace("_", "-")
         state = cache.adc_states[system][method][kind]
-        n_ref = len(state.excitation_vectors)
+        n_ref = len(state.excitation_vector)
         assert n_ref == state.size
 
-        properties = {
-            "excitation_energies": "excitation_energy",
-            "oscillator_strengths": "oscillator_strength",
-            "transition_dipole_moments": "transition_dipole_moment",
-            "state_dipole_moments": "state_dipole_moment",
-            "state_diffdms": "state_diffdm"
-        }
-
         for i, exci in enumerate(state.excitations):
-            for p in properties:
-                ref = getattr(state, p)[i]
-                res = getattr(exci, properties[p])
+            for key in dir(exci):
+                if key.startswith("_"):
+                    continue
+                blacklist = ["__", "index", "_ao", "excitation_vector"]
+                if any(b in key for b in blacklist):
+                    continue
+                try:
+                    ref = getattr(state, key)[i]
+                    res = getattr(exci, key)
+                except NotImplementedError:
+                    # nabla, etc. not implemented in dict backend
+                    continue
                 if isinstance(ref, OneParticleOperator):
                     assert ref.blocks == res.blocks
                     for b in ref.blocks:
-                        assert_allclose(ref[b].to_ndarray(), res[b].to_ndarray())
+                        assert_allclose(ref[b].to_ndarray(),
+                                        res[b].to_ndarray())
                 else:
                     assert_allclose(ref, res)
 
@@ -61,25 +63,32 @@ class TestCustomExcitationEnergyCorrections(unittest.TestCase, Runners):
         method = method.replace("_", "-")
         state = cache.adc_states[system][method][kind]
 
-        def custom_correction1(exci):
-            return exci.excitation_energy ** 2
-
-        def custom_correction2(exci):
-            return 2.0
-
         corrections = {
-            "custom_correction1": custom_correction1,
-            "custom_correction2": custom_correction2,
+            "custom_correction1": lambda exci: exci.excitation_energy ** 2,
+            "custom_correction2": lambda exci: 2.0,
         }
-        excitation_energies = state.excitation_energies.copy()
-
         state_corrected = ExcitedStates(state,
                                         excitation_energy_corrections=corrections)
         for i in range(state.size):
             assert hasattr(state_corrected, "custom_correction1")
             assert hasattr(state_corrected, "custom_correction2")
-            assert_allclose(excitation_energies[i],
-                            state_corrected.excitation_energies_uncorrected[i])
-            corr = excitation_energies[i] ** 2 + 2.0
-            assert_allclose(excitation_energies[i] + corr,
-                            state_corrected.excitation_energies[i])
+            assert_allclose(state.excitation_energy[i],
+                            state_corrected.excitation_energy_uncorrected[i])
+            corr = state.excitation_energy[i] ** 2 + 2.0
+            assert_allclose(state.excitation_energy[i] + corr,
+                            state_corrected.excitation_energy[i])
+
+        corrections2 = {"custom_correction2": lambda exci: 3.0,
+                        "custom_correction3": lambda exci: -42.0}
+        state_corrected2 = ExcitedStates(
+            state_corrected, excitation_energy_corrections=corrections2
+        )
+        for i in range(state.size):
+            assert hasattr(state_corrected2, "custom_correction1")
+            assert hasattr(state_corrected2, "custom_correction2")
+            assert hasattr(state_corrected2, "custom_correction3")
+            assert_allclose(state.excitation_energy[i],
+                            state_corrected2.excitation_energy_uncorrected[i])
+            corr = state.excitation_energy[i] ** 2 + 3.0 - 42.0
+            assert_allclose(state.excitation_energy[i] + corr,
+                            state_corrected2.excitation_energy[i])

@@ -49,9 +49,9 @@ class TestMagneticTransitionDipoleMoments(unittest.TestCase, RunnersConsistency)
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
 
-        res_dms = state.transition_magnetic_dipole_moments
+        res_dms = state.transition_magnetic_dipole_moment
         ref = refdata[method][kind]
-        n_ref = len(state.excitation_vectors)
+        n_ref = len(state.excitation_vector)
         assert_allclose(
             res_dms, ref["transition_magnetic_dipole_moments"][:n_ref], atol=1e-4
         )
@@ -64,9 +64,9 @@ class TestTransitionDipoleMomentsVelocity(unittest.TestCase, RunnersConsistency)
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
 
-        res_dms = state.transition_dipole_moments_velocity
+        res_dms = state.transition_dipole_moment_velocity
         ref = refdata[method][kind]
-        n_ref = len(state.excitation_vectors)
+        n_ref = len(state.excitation_vector)
         assert_allclose(
             res_dms, ref["transition_dipole_moments_velocity"][:n_ref], atol=1e-4
         )
@@ -79,12 +79,12 @@ class TestRotatoryStrengths(unittest.TestCase, RunnersConsistency):
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
 
-        res_rots = state.rotatory_strengths
+        res_rots = state.rotatory_strength
         ref_tmdm = refdata[method][kind]["transition_magnetic_dipole_moments"]
         ref_tdmvel = refdata[method][kind]["transition_dipole_moments_velocity"]
         refevals = refdata[method][kind]["eigenvalues"]
-        n_ref = len(state.excitation_vectors)
+        n_ref = len(state.excitation_vector)
         for i in range(n_ref):
-            assert state.excitation_energies[i] == refevals[i]
+            assert state.excitation_energy[i] == refevals[i]
             ref_dot = np.dot(ref_tmdm[i], ref_tdmvel[i])
             assert res_rots[i] == approx(ref_dot / refevals[i])

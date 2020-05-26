@@ -20,7 +20,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-
+import os
 
 # all coordinates in Bohr
 xyz = {
@@ -74,4 +74,10 @@ xyz = {
     H 2.0682421748693 5.7438044586615 1.5798996515014
     H 1.8588483602149 3.6361694243085 -1.2192956060942
     """
+}
+
+_thisdir = os.path.dirname(__file__)
+pe_potentials = {
+    # Formaldehyde + 6 Water molecules
+    "fa_6w": os.path.join(_thisdir, "potentials/fa_6w.pot"),
 }

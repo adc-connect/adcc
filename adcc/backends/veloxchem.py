@@ -126,20 +126,14 @@ class VeloxChemHFProvider(HartreeFockProvider):
         e_pe, _ = self.scfdrv.pe_drv.get_pe_contribution(dm, elec_only=elec_only)
         return e_pe
 
-    def pe_ptss_correction(self, view):
-        dm = view.state_diffdm_ao
-        return self.pe_energy(dm, elec_only=True)
-
-    def pe_ptlr_correction(self, view):
-        dm = view.transition_dm_ao
-        return 2.0 * self.pe_energy(dm, elec_only=True)
-
     @property
     def excitation_energy_corrections(self):
         ret = {}
         if hasattr(self.scfdrv, "pe_drv"):
-            ret["pe_ptlr_corrections"] = self.pe_ptlr_correction
-            ret["pe_ptss_corrections"] = self.pe_ptss_correction
+            ret["pe_ptlr_correction"] = lambda view: \
+                2.0 * self.pe_energy(view.transition_dm_ao, elec_only=True)
+            ret["pe_ptss_correction"] = lambda view: \
+                self.pe_energy(view.state_diffdm_ao, elec_only=True)
         return ret
 
     def get_backend(self):
@@ -242,15 +236,12 @@ def import_scf(scfdrv):
 
 
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol_grad=1e-8,
-           max_iter=150, potfile=None):
+           max_iter=150, pe_options=None):
     basis_remap = {
         "sto3g": "sto-3g",
         "def2tzvp": "def2-tzvp",
         "ccpvdz": "cc-pvdz",
     }
-    # TODO: PE results in VeloxChem are currently wrong, because
-    # polarizabilities are always made isotropic
-    pe = potfile is not None
 
     with tempfile.TemporaryDirectory() as tmpdir:
         infile = os.path.join(tmpdir, "vlx.in")
@@ -259,7 +250,10 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol_grad=1e-8,
             lines = ["@jobs", "task: hf", "@end", ""]
             lines += ["@method settings",
                       "basis: {}".format(basis_remap.get(basis, basis))]
-            if pe:
+            # TODO: PE results in VeloxChem are currently wrong, because
+            # polarizabilities are always made isotropic
+            if pe_options:
+                potfile = pe_options["potfile"]
                 lines += ["pe: yes",
                           f"potfile: {potfile}"]
             lines += ["@end"]

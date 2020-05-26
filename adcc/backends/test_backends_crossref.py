@@ -107,14 +107,14 @@ def compare_adc_results(adc_results, atol):
         state1 = adc_results[comb[0]]
         state2 = adc_results[comb[1]]
         assert_allclose(
-            state1.excitation_energies, state2.excitation_energies
+            state1.excitation_energy, state2.excitation_energy
         )
         assert state1.n_iter == state2.n_iter
 
-        blocks1 = state1.excitation_vectors[0].blocks
-        blocks2 = state2.excitation_vectors[0].blocks
+        blocks1 = state1.excitation_vector[0].blocks
+        blocks2 = state2.excitation_vector[0].blocks
         assert blocks1 == blocks2
-        for v1, v2 in zip(state1.excitation_vectors, state2.excitation_vectors):
+        for v1, v2 in zip(state1.excitation_vector, state2.excitation_vector):
             for block in blocks1:
                 v1np = v1[block].to_ndarray()
                 v2np = v2[block].to_ndarray()
@@ -132,20 +132,20 @@ def compare_adc_results(adc_results, atol):
         # test properties
         if "electric_dipole" in state1.operators.available and \
                 "electric_dipole" in state2.operators.available:
-            assert_allclose(state1.oscillator_strengths,
-                            state2.oscillator_strengths, atol=atol)
-            assert_allclose(state1.state_dipole_moments,
-                            state2.state_dipole_moments, atol=atol)
+            assert_allclose(state1.oscillator_strength,
+                            state2.oscillator_strength, atol=atol)
+            assert_allclose(state1.state_dipole_moment,
+                            state2.state_dipole_moment, atol=atol)
 
         if "nabla" in state1.operators.available and \
                 "nabla" in state2.operators.available:
-            assert_allclose(state1.oscillator_strengths_velocity,
-                            state2.oscillator_strengths_velocity, atol=atol)
+            assert_allclose(state1.oscillator_strength_velocity,
+                            state2.oscillator_strength_velocity, atol=atol)
 
         has_rotatory1 = all(op in state1.operators.available
                             for op in ["magnetic_dipole", "nabla"])
         has_rotatory2 = all(op in state2.operators.available
                             for op in ["magnetic_dipole", "nabla"])
         if has_rotatory1 and has_rotatory2:
-            assert_allclose(state1.rotatory_strengths,
-                            state2.rotatory_strengths, atol=atol)
+            assert_allclose(state1.rotatory_strength,
+                            state2.rotatory_strength, atol=atol)

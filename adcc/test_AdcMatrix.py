@@ -53,7 +53,7 @@ class TestAdcMatrixDenseExport(unittest.TestCase):
         n_decimals = 10
         spectrum = np.linalg.eigvalsh(dense)
         rounded = np.unique(np.round(spectrum, n_decimals))[:n_states]
-        assert_allclose(state.excitation_energies, rounded, atol=10 * conv_tol)
+        assert_allclose(state.excitation_energy, rounded, atol=10 * conv_tol)
 
         # TODO Test eigenvectors as well.
 

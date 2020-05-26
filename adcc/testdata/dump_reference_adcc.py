@@ -112,7 +112,7 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
         tdm_bb_b = []
         eigenvectors_singles = []
         eigenvectors_doubles = []
-        n_states = state.excitation_energies.size
+        n_states = state.excitation_energy.size
 
         # Up to n_states_extract states we save everything
         if n_states_full is not None:
@@ -121,23 +121,23 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
             n_states_extract = n_states
 
         for i in range(n_states_extract):
-            bb_a, bb_b = state.state_diffdms[i].transform_to_ao_basis(
+            bb_a, bb_b = state.state_diffdm[i].transform_to_ao_basis(
                 state.reference_state
             )
             dm_bb_a.append(bb_a.to_ndarray())
             dm_bb_b.append(bb_b.to_ndarray())
-            bb_a, bb_b = state.transition_dms[i].transform_to_ao_basis(
+            bb_a, bb_b = state.transition_dm[i].transform_to_ao_basis(
                 state.reference_state
             )
             tdm_bb_a.append(bb_a.to_ndarray())
             tdm_bb_b.append(bb_b.to_ndarray())
 
             eigenvectors_singles.append(
-                state.excitation_vectors[i]['s'].to_ndarray()
+                state.excitation_vector[i]['s'].to_ndarray()
             )
-            if 'd' in state.excitation_vectors[i].blocks:
+            if 'd' in state.excitation_vector[i].blocks:
                 eigenvectors_doubles.append(
-                    state.excitation_vectors[i]['d'].to_ndarray()
+                    state.excitation_vector[i]['d'].to_ndarray()
                 )
             else:
                 eigenvectors_doubles.clear()
@@ -148,13 +148,13 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
         adc[kind + "/state_diffdm_bb_b"] = np.asarray(dm_bb_b)
         adc[kind + "/ground_to_excited_tdm_bb_a"] = np.asarray(tdm_bb_a)
         adc[kind + "/ground_to_excited_tdm_bb_b"] = np.asarray(tdm_bb_b)
-        adc[kind + "/state_dipole_moments"] = state.state_dipole_moments
-        adc[kind + "/transition_dipole_moments"] = state.transition_dipole_moments
+        adc[kind + "/state_dipole_moments"] = state.state_dipole_moment
+        adc[kind + "/transition_dipole_moments"] = state.transition_dipole_moment
         adc[kind + "/transition_dipole_moments_velocity"] = \
-            state.transition_dipole_moments_velocity
+            state.transition_dipole_moment_velocity
         adc[kind + "/transition_magnetic_dipole_moments"] = \
-            state.transition_magnetic_dipole_moments
-        adc[kind + "/eigenvalues"] = state.excitation_energies
+            state.transition_magnetic_dipole_moment
+        adc[kind + "/eigenvalues"] = state.excitation_energy
         adc[kind + "/eigenvectors_singles"] = np.asarray(
             eigenvectors_singles)
 

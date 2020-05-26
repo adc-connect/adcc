@@ -24,7 +24,7 @@ import sys
 import numpy as np
 
 from pyscf import gto, scf
-from geometry import xyz
+from static_data import xyz
 from os.path import dirname, join
 
 sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))

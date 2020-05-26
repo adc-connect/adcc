@@ -32,7 +32,7 @@ from .testing import (eri_asymm_construction_test, eri_chem_permutations,
 from numpy.testing import assert_almost_equal
 
 from adcc.backends import have_backend
-from adcc.testdata import geometry
+from adcc.testdata import static_data
 
 import pytest
 
@@ -116,7 +116,7 @@ class TestPsi4(unittest.TestCase):
         operator_import_from_ao_test(wfn, ao_dip, operator="nabla")
 
     def template_rhf_h2o(self, basis):
-        wfn = adcc.backends.run_hf("psi4", geometry.xyz["h2o"], basis)
+        wfn = adcc.backends.run_hf("psi4", static_data.xyz["h2o"], basis)
         self.base_test(wfn)
         self.operators_test(wfn)
         # Test ERI
@@ -124,7 +124,7 @@ class TestPsi4(unittest.TestCase):
         eri_asymm_construction_test(wfn, core_orbitals=1)
 
     def template_uhf_ch2nh2(self, basis):
-        wfn = adcc.backends.run_hf("psi4", geometry.xyz["ch2nh2"], basis,
+        wfn = adcc.backends.run_hf("psi4", static_data.xyz["ch2nh2"], basis,
                                    multiplicity=2)
         self.base_test(wfn)
         self.operators_test(wfn)

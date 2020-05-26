@@ -55,9 +55,9 @@ osc_strengths = []    # Oscillator strength
 print()
 print("  st  ex.ene. (au)         f     transition dipole moment (au)"
       "        state dip (au)")
-for i, exci in enumerate(state.excitation_energies):
+for i, exci in enumerate(state.excitation_energy):
     # Compute transition density matrix
-    tdm_ao = state.transition_dms[i].to_ao_basis()
+    tdm_ao = state.transition_dm[i].to_ao_basis()
     ρ_tdm_tot = (tdm_ao[0] + tdm_ao[1]).to_ndarray()
 
     # Compute transition dipole moment
@@ -65,7 +65,7 @@ for i, exci in enumerate(state.excitation_energies):
     osc = 2. / 3. * np.linalg.norm(tdip)**2 * np.abs(exci)
 
     # Compute excited states density matrix and excited state dipole moment
-    opdm_ao = state.state_dms[i].to_ao_basis()
+    opdm_ao = state.state_dm[i].to_ao_basis()
     ρ_opdm_tot = (opdm_ao[0] + opdm_ao[1]).to_ndarray()
     sdip_el = np.einsum('xij,ij->x', dip_ao, ρ_opdm_tot)
     sdip = sdip_el - dip_nucl
@@ -87,7 +87,7 @@ for i, exci in enumerate(state.excitation_energies):
 
     # Save oscillator strength and excitation energies
     osc_strengths.append(osc)
-    exc_energies.append(state.excitation_energies[i])
+    exc_energies.append(state.excitation_energy[i])
 exc_energies = np.array(exc_energies) * eV
 osc_strengths = np.array(osc_strengths)
 

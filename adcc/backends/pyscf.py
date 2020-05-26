@@ -115,21 +115,15 @@ class PyScfHFProvider(HartreeFockProvider):
         e_pe, _ = pe_state.kernel(dm, elec_only=elec_only)
         return e_pe
 
-    def pe_ptss_correction(self, view):
-        dm = view.state_diffdm_ao
-        return self.pe_energy(dm, elec_only=True)
-
-    def pe_ptlr_correction(self, view):
-        dm = view.transition_dm_ao
-        return 2.0 * self.pe_energy(dm, elec_only=True)
-
     @property
     def excitation_energy_corrections(self):
         ret = {}
         if hasattr(self.scfres, "with_solvent"):
             if isinstance(self.scfres.with_solvent, solvent.pol_embed.PolEmbed):
-                ret["pe_ptlr_corrections"] = self.pe_ptlr_correction
-                ret["pe_ptss_corrections"] = self.pe_ptss_correction
+                ret["pe_ptlr_correction"] = lambda view: \
+                    2.0 * self.pe_energy(view.transition_dm_ao, elec_only=True)
+                ret["pe_ptss_correction"] = lambda view: \
+                    self.pe_energy(view.state_diffdm_ao, elec_only=True)
         return ret
 
     def get_backend(self):
@@ -244,7 +238,7 @@ def import_scf(scfres):
 
 
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
-           conv_tol_grad=1e-9, max_iter=150, potfile=None):
+           conv_tol_grad=1e-9, max_iter=150, pe_options=None):
     mol = gto.M(
         atom=xyz,
         basis=basis,
@@ -257,9 +251,9 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
         dump_input=False,
         verbose=0,
     )
-    if potfile:
+    if pe_options:
         from pyscf.solvent import PE
-        mf = PE(scf.HF(mol), potfile)
+        mf = PE(scf.HF(mol), pe_options["potfile"])
     else:
         mf = scf.HF(mol)
     mf.conv_tol = conv_tol

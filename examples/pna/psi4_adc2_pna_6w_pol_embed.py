@@ -2,7 +2,6 @@
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 import adcc
 import psi4
-import numpy as np
 
 from scipy import constants
 eV = constants.value("Hartree energy in eV")  # Hartree to eV
@@ -30,14 +29,6 @@ mol = psi4.geometry("""
     no_com
     """)
 
-# mol = psi4.geometry("""
-#     O 0 0 0
-#     H 0 0 1.795239827225189
-#     H 1.693194615993441 0 -0.599043184453037
-#     symmetry c1
-#     units au
-#     """)
-
 # set the number of cores equal to the auto-determined value from
 # the adcc ThreadPool
 psi4.core.set_num_threads(4)
@@ -47,20 +38,9 @@ psi4.set_options({'basis': "sto-3g",
                   'pe': 'true',
                   'e_convergence': 1e-10,
                   'd_convergence': 1e-10})
-psi4.set_module_options(
-    "pe", {"potfile": "pna_6w.pot"}
-)
+psi4.set_module_options("pe", {"potfile": "pna_6w.pot"})
 scf_e, wfn = psi4.energy('SCF', return_wfn=True)
 
 # Run an adc2 calculation:
 state = adcc.adc2(wfn, n_singlets=5, conv_tol=1e-8)
-
-n_exc = 3
-ptlr = state.pe_ptlr_correction[n_exc] * eV
-ptss = state.pe_ptss_correction[n_exc] * eV
-
-# hard-coded Q-Chem values
-np.testing.assert_allclose(
-    np.array([ptss, ptlr]), np.array([-0.009186, -0.007242]),
-    atol=1e-5
-)
+print(state.pe_ptss_energy_correction)
