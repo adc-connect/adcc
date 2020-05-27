@@ -30,12 +30,7 @@ class PreconditionerIdentity:
     """
     Preconditioner, which does absolutely nothing
     """
-    def apply(self, invecs, outvecs=None):
-        """
-        Apply preconditioner to a bunch of input vectors
-        """
-        if outvecs is not None:
-            raise NotImplementedError("Sorry, not implemented.")
+    def apply(self, invecs):
         return invecs
 
     def __matmul__(self, x):
