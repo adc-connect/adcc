@@ -23,13 +23,17 @@
 import os
 import sh
 import tempfile
+import yaml
 
 from cclib.parser import QChem
+import numpy as np
 
 from adcc.testdata.static_data import xyz
 from adcc.testdata.static_data import pe_potentials
-from adcc import hdf5io
 
+from scipy import constants
+
+eV = constants.value("Hartee energy in eV")
 
 _qchem_template = """
 $rem
@@ -144,12 +148,14 @@ def dump_qchem(molecule, method, basis, **kwargs):
         # github.com/maxscheurer/cclib, branch dev-qchem
         sh.qchem(infile, outfile)
         res = QChem(outfile).parse()
-        ret["oscillator_strengths"] = res.etoscs
-        ret["state_dipole_moments_debye"] = res.etdipmoms
-        ret["excitation_energies_ev"] = res.etenergies
+        ret["oscillator_strength"] = res.etoscs
+        ret["excitation_energy"] = res.etenergies / eV
         if pe:
-            ret["pe_ptss_corrections_ev"] = res.peenergies["ptSS"]
-            ret["pe_ptlr_corrections_ev"] = res.peenergies["ptLR"]
+            ret["pe_ptss_correction"] = res.peenergies["ptSS"] / eV
+            ret["pe_ptlr_correction"] = res.peenergies["ptLR"] / eV
+        for key in ret:
+            if isinstance(ret[key], np.ndarray):
+                ret[key] = ret[key].tolist()
         return basename, ret
 
 
@@ -163,7 +169,8 @@ def main():
                                   potfile=pe_potentials["fa_6w"])
             qchem_results[key] = ret
             print(f"Dumped {key}.")
-    hdf5io.save(fname="qchem_dump.hdf5", dictionary=qchem_results)
+    with open("qchem_dump.yml", "w") as yamlout:
+        yaml.safe_dump(qchem_results, yamlout)
 
 
 if __name__ == "__main__":
