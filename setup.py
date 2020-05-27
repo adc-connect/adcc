@@ -371,6 +371,7 @@ adccsetup(
     platforms=["Linux", "Mac OS-X"],
     python_requires=">=3.6",
     install_requires=[
+        "opt_einsum >= 3.0",
         "pybind11 >= 2.2",
         "numpy >= 1.14",
         "scipy >= 1.2",
