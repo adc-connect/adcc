@@ -23,7 +23,6 @@
 import numpy as np
 
 from adcc.AdcMatrix import AdcMatrixlike
-from adcc.functions import divide, empty_like, ones_like
 from adcc.AmplitudeVector import AmplitudeVector
 
 
@@ -31,12 +30,7 @@ class PreconditionerIdentity:
     """
     Preconditioner, which does absolutely nothing
     """
-    def apply(self, invecs, outvecs=None):
-        """
-        Apply preconditioner to a bunch of input vectors
-        """
-        if outvecs is not None:
-            invecs.copy_to(outvecs)
+    def apply(self, invecs):
         return invecs
 
     def __matmul__(self, x):
@@ -74,41 +68,30 @@ class JacobiPreconditioner:
         #     raise NotImplementedError("Using only a single common shift is "
         #                               "not implemented at the moment.")
 
-    def __compute_single_matvec(self, shift, invec, outvec):
+    def __compute_single_matvec(self, shift, invec):
         eps = 1e-6  # Epsilon factor to make sure that 1 / (shift - diagonal)
         #             does not become ill-conditioned as soon as the shift
         #             approaches the actual diagonal values (which are the
         #             eigenvalues for the ADC(2) doubles part if the coupling
         #             block are absent)
-        shifted_diagonal = (self.diagonal
-                            - (shift - eps) * ones_like(self.diagonal))
-        divide(invec, shifted_diagonal, outvec)
-        return outvec
+        return invec / (self.diagonal - (shift - eps))
 
-    def apply(self, invecs, outvecs=None):
+    def apply(self, invecs):
         if isinstance(invecs, AmplitudeVector):
-            if outvecs is None:
-                outvecs = empty_like(invecs)
-
             if not isinstance(self.shifts, (float, np.number)):
                 raise TypeError("Can only apply JacobiPreconditioner "
                                 "to a single vector if shifts is "
                                 "only a single number.")
-            return self.__compute_single_matvec(self.shifts, invecs, outvecs)
+            return self.__compute_single_matvec(self.shifts, invecs)
         elif isinstance(invecs, list):
-            if outvecs is None:
-                outvecs = [empty_like(v) for v in invecs]
-
             if len(self.shifts) != len(invecs):
                 raise ValueError("Number of vectors passed does not agree "
                                  "with number of shifts stored inside "
                                  "precoditioner. Update using the "
                                  "'update_shifts' method.")
 
-            for i in range(len(invecs)):
-                self.__compute_single_matvec(self.shifts[i],
-                                             invecs[i], outvecs[i])
-            return outvecs
+            return [self.__compute_single_matvec(self.shifts[i], v)
+                    for i, v in enumerate(invecs)]
         else:
             raise TypeError("Input type not understood: " + str(type(invecs)))
 

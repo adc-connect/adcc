@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 import sys
 import numpy as np
+
+from adcc import copy, evaluate
+
 import scipy.linalg as la
 
 from ..functions import dot
 from .preconditioner import PreconditionerIdentity
 from .explicit_symmetrisation import IndexSymmetrisation
-
-from adcc import copy
 
 
 class IterativeInverse:
@@ -129,14 +130,14 @@ def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
 
     # Initialise iterates
     state.solution = x0
-    state.residual = rhs - matrix @ state.solution
+    state.residual = evaluate(rhs - matrix @ state.solution)
     state.n_applies += 1
     state.residual_norm = np.sqrt(state.residual @ state.residual)
     pk = zk = Pinv @ state.residual
 
     if explicit_symmetrisation:
         # TODO Not sure this is the right spot ... also this syntax is ugly
-        pk = explicit_symmetrisation.symmetrise([pk], [x0])[0]
+        pk = explicit_symmetrisation.symmetrise(pk)
 
     callback(state, "start")
     while state.n_iter < max_iter:
@@ -150,10 +151,10 @@ def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
         state.n_applies += 1
         res_dot_zk = dot(state.residual, zk)
         ak = float(res_dot_zk / dot(pk, Apk))
-        state.solution += ak * pk
+        state.solution = evaluate(state.solution + ak * pk)
 
         residual_old = state.residual
-        state.residual = residual_old - ak * Apk
+        state.residual = evaluate(residual_old - ak * Apk)
         state.residual_norm = np.sqrt(state.residual @ state.residual)
 
         callback(state, "next_iter")
@@ -167,11 +168,11 @@ def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
                                  + str(max_iter) + " reached in conjugate "
                                  "gradient procedure.")
 
-        zk = Pinv @ state.residual
+        zk = evaluate(Pinv @ state.residual)
 
         if explicit_symmetrisation:
             # TODO Not sure this is the right spot ... also this syntax is ugly
-            zk = explicit_symmetrisation.symmetrise([zk], [pk])[0]
+            zk = explicit_symmetrisation.symmetrise(zk)
 
         if cg_type == "fletcher_reeves":
             bk = float(dot(zk, state.residual) / res_dot_zk)

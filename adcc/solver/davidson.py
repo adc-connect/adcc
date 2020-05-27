@@ -24,7 +24,7 @@ import sys
 import warnings
 import numpy as np
 
-from adcc import linear_combination
+from adcc import evaluate, linear_combination
 from adcc.AdcMatrix import AdcMatrixlike
 from adcc.AmplitudeVector import AmplitudeVector
 
@@ -196,9 +196,8 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         with state.timer.record("residuals"):
             # Form residuals, A * SS * v - λ * SS * v = Ax * v + SS * (-λ*v)
             def form_residual(rval, rvec):
-                Axv = linear_combination(rvec, Ax)
-                Axv.add_linear_combination(-rval * rvec, SS)
-                return Axv
+                return evaluate(linear_combination(rvec, Ax)
+                                - linear_combination(rval * rvec, SS))
             residuals = [form_residual(rvals[i], v)
                          for i, v in enumerate(np.transpose(rvecs))]
             assert len(residuals) == n_block
@@ -227,7 +226,8 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         if is_converged(state):
             # Build the eigenvectors we desire from the subspace vectors:
             selected = select_eigenpairs(np.transpose(rvecs), n_ep, which)
-            state.eigenvectors = [linear_combination(v, SS) for v in selected]
+            state.eigenvectors = [linear_combination(v, SS).evaluate()
+                                  for v in selected]
 
             state.converged = True
             callback(state, "is_converged")
@@ -245,9 +245,11 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
                 # The addition of the preconditioned vectors goes beyond max.
                 # subspace size => Collapse first, ie keep current Ritz vectors
                 # as new subspace
-                SS = [linear_combination(v, SS) for v in np.transpose(rvecs)]
+                SS = [linear_combination(v, SS).evaluate()
+                      for v in np.transpose(rvecs)]
                 state.subspace_vectors = SS
-                Ax = [linear_combination(v, Ax) for v in np.transpose(rvecs)]
+                Ax = [linear_combination(v, Ax).evaluate()
+                      for v in np.transpose(rvecs)]
                 n_ss_vec = len(SS)
 
                 # Update projection of ADC matrix A onto subspace
@@ -260,13 +262,13 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             if preconditioner:
                 if hasattr(preconditioner, "update_shifts"):
                     preconditioner.update_shifts(rvals)
-                preconds = preconditioner.apply(residuals)
+                preconds = evaluate(preconditioner @ residuals)
             else:
                 preconds = residuals
 
             # Explicitly symmetrise the new vectors if requested
             if explicit_symmetrisation:
-                explicit_symmetrisation.symmetrise(preconds, SS)
+                explicit_symmetrisation.symmetrise(preconds)
 
         # Project the components of the preconditioned vectors away
         # which are already contained in the subspace.
@@ -276,11 +278,11 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             for i in range(n_block):
                 pvec = preconds[i]
                 # Project out the components of the current subspace
-                pvec = pvec - linear_combination(pvec @ SS, SS)
+                pvec = evaluate(pvec - linear_combination(pvec @ SS, SS))
                 pnorm = np.sqrt(pvec @ pvec)
                 if pnorm > residual_min_norm:
                     # Extend the subspace
-                    SS.append(pvec / pnorm)
+                    SS.append(evaluate(pvec / pnorm))
                     n_ss_added += 1
                     n_ss_vec = len(SS)
 

@@ -87,88 +87,6 @@ def nosym_like(a):
     return a.nosym_like()
 
 
-def contract(contraction, a, b, out=None):
-    """
-    Form a single, einsum-like contraction, that is contract
-    tensor a and be to form out via a contraction defined
-    by the first argument string, e.g. "ab,bc->ac"
-    or "abc,bcd->ad".
-
-    Note: The contract function is experimental. Its interface can change
-          and the function may disappear in the future.
-    """
-    if out is None:
-        return libadcc.contract(contraction, a, b)
-    else:
-        return libadcc.contract_to(contraction, a, b, out)
-
-
-def add(a, b, out=None):
-    """
-    Return the elementwise sum of two objects
-    If out is given the result will be written to the
-    latter tensor.
-    """
-    if out is None:
-        return a + b
-    if isinstance(a, AmplitudeVector):
-        for block in a.blocks:
-            add(a[block], b[block], out[block])
-    else:
-        return libadcc.add(a, b, out)
-
-
-def subtract(a, b, out=None):
-    """
-    Return the elementwise difference of two objects
-    If out is given the result will be written to the
-    latter tensor.
-    """
-    if out is None:
-        return a - b
-    if isinstance(a, AmplitudeVector):
-        for block in a.blocks:
-            subtract(a[block], b[block], out[block])
-    else:
-        return libadcc.subtract(a, b, out)
-
-
-def multiply(a, b, out=None):
-    """
-    Return the elementwise product of two objects
-    If out is given the result will be written to the
-    latter tensor.
-
-    Note: If out is not given, the symmetry of the
-    contained objects will be destroyed!
-    """
-    if out is None:
-        return a * b
-    if isinstance(a, AmplitudeVector):
-        for block in a.blocks:
-            multiply(a[block], b[block], out[block])
-    else:
-        return libadcc.multiply(a, b, out)
-
-
-def divide(a, b, out=None):
-    """
-    Return the elementwise division of two objects
-    If out is given the result will be written to the
-    latter tensor.
-
-    Note: If out is not given, the symmetry of the
-    contained objects will be destroyed!
-    """
-    if out is None:
-        return a / b
-    if isinstance(a, AmplitudeVector):
-        for block in a.blocks:
-            divide(a[block], b[block], out[block])
-    else:
-        return libadcc.divide(a, b, out)
-
-
 def linear_combination(coefficients, tensors):
     """
     Form a linear combination from a list of tensors.
@@ -183,5 +101,95 @@ def linear_combination(coefficients, tensors):
     if len(tensors) != len(coefficients):
         raise ValueError("Number of coefficient values does not match "
                          "number of tensors.")
-    ret = zeros_like(tensors[0])
-    return ret.add_linear_combination(coefficients, tensors)
+    start = coefficients[0] * tensors[0]
+    return sum((c * t for (c, t) in zip(coefficients[1:], tensors[1:])), start)
+
+
+def evaluate(a):
+    """Force full evaluation of a tensor expression"""
+    if isinstance(a, AmplitudeVector):
+        for block in a.blocks:
+            a[block].evaluate()
+        return a
+    elif isinstance(a, list):
+        return [evaluate(elem) for elem in a]
+    else:
+        return libadcc.evaluate(a)
+
+
+def direct_sum(subscripts, *operands):
+    subscripts = subscripts.replace(" ", "")
+
+    def split_signs_symbols(subscripts):
+        subscripts = subscripts.replace(",", "+")
+        if subscripts[0] not in "+-":
+            subscripts = "+" + subscripts
+        signs = [x for x in subscripts if x in "+-"]
+        symbols = subscripts[1:].replace("-", "+").split("+")
+        return signs, symbols
+
+    if "->" in subscripts:
+        src, dest = subscripts.split("->")
+        signs, src = split_signs_symbols(src)
+        # permutation = tuple(dest.index(c) for c in "".join(src))
+        permutation = tuple("".join(src).index(c) for c in dest)
+    else:
+        signs, src = split_signs_symbols(subscripts)
+        permutation = None
+
+    if len(src) != len(operands):
+        raise ValueError("Number of contraction subscripts does not agree with "
+                         "number of operands")
+    for i, idcs in enumerate(src):
+        if len(idcs) != operands[i].ndim:
+            raise ValueError(f"Number of subscripts of {i}-th tensor (== {idcs}) "
+                             "does not match dimension of tensor "
+                             f"(== {operands[i].ndim}).")
+
+    if signs[0] == "-":
+        res = -operands[0]
+    else:
+        res = operands[0]
+    for i, op in enumerate(operands[1:]):
+        if signs[i + 1] == "-":
+            op = -op
+        res = libadcc.direct_sum(res, op)
+    if permutation is not None:
+        res = res.transpose(permutation)
+    return res
+
+
+def contract(subscripts, a, b):
+    """
+    Form a single, einsum-like contraction, that is contract
+    tensor a and be to form out via a contraction defined
+    by the first argument string, e.g. "ab,bc->ac"
+    or "abc,bcd->ad".
+
+    Note: The contract function is experimental. Its interface can change
+          and the function will likely disappear in the future.
+    """
+    contraction, result = subscripts.split("->")
+    contraction = contraction.split(",")
+    if len(contraction) != 2 or result == "" or subscripts.count("->") != 1:
+        raise ValueError("Expected one comma and one -> in the string")
+
+    subscripts_from_tensordot = ""
+    a_axes = []
+    b_axes = []
+    for i, c in enumerate(contraction[0]):
+        if c in result:
+            subscripts_from_tensordot += c
+            continue
+        try:
+            a_axes.append(i)
+            b_axes.append(contraction[1].index(c))
+        except ValueError:
+            raise ValueError(f"Contraction letter {c} not found in subscripts "
+                             "for second tensor")
+    for j, c in enumerate(contraction[1]):
+        if c not in contraction[0]:
+            subscripts_from_tensordot += c
+
+    permutation = tuple(subscripts_from_tensordot.index(c) for c in result)
+    return libadcc.tensordot(a, b, (a_axes, b_axes)).transpose(permutation)

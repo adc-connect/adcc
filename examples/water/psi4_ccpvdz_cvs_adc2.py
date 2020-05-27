@@ -24,7 +24,7 @@ psi4.set_options({'basis': "cc-pvdz",
 scf_e, wfn = psi4.energy('SCF', return_wfn=True)
 
 # Run an adc2 calculation:
-state = adcc.cvs_adc2(wfn, n_singlets=5, n_core_orbitals=1)
+state = adcc.cvs_adc2(wfn, n_singlets=5, core_orbitals=1)
 
 print(state.describe())
 

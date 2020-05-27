@@ -20,7 +20,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from adcc import empty_like
+from adcc import evaluate
 from adcc.AmplitudeVector import AmplitudeVector
 
 from libadcc import amplitude_vector_enforce_spin_kind
@@ -43,46 +43,28 @@ class IndexSymmetrisation():
     def __init__(self, matrix):
         # Build symmetrisation functions required to be executed
         # for the respective block
-        self.sym_for_block = matrix.construct_symmetrisation_for_blocks()
+        self.symmetrisation_functions = \
+            matrix.construct_symmetrisation_for_blocks()
 
-    def symmetrise(self, new_vectors, existing_subspace):
+    def symmetrise(self, new_vectors):
         """
         Symmetrise a set of new vectors to be added to the subspace.
 
         new_vectors          Vectors to symmetrise (updated in-place)
-        existing_subspace    Existing subspace to take as a template
 
         Returns:
             The updated new_vectors
-
-        It should be noted:
-          - No orthogonalisation is performed
-          - Only new_vectors are operated upon, existing_subspace
-            is assumed to be properly symmetrised already.
-          - Does not add new_vectors to the existing_subspace object
         """
-        if not isinstance(existing_subspace[0], AmplitudeVector):
-            raise TypeError("existing_subspace has to be an "
-                            "iterable of AmplitudeVector")
-
+        if isinstance(new_vectors, AmplitudeVector):
+            return self.symmetrise([new_vectors])[0]
         for vec in new_vectors:
             if not isinstance(vec, AmplitudeVector):
                 raise TypeError("new_vectors has to be an "
                                 "iterable of AmplitudeVector")
             for b in vec.blocks:
-                if b not in self.sym_for_block:
+                if b not in self.symmetrisation_functions:
                     continue
-                index_symm_func = self.sym_for_block[b]
-
-                # Create an empty block from the subspace vectors
-                # since this has the appropriate symmetry set up
-                symmetrised = empty_like(existing_subspace[0][b])
-                #
-                # symmetrise what we have (syntax is function(in, out)
-                index_symm_func(vec[b], symmetrised)
-                #
-                # Substitute inside the passed amplitude vector
-                vec[b] = symmetrised
+                vec[b] = evaluate(self.symmetrisation_functions[b](vec[b]))
         return new_vectors
 
 
@@ -95,8 +77,10 @@ class IndexSpinSymmetrisation(IndexSymmetrisation):
         super().__init__(matrix)
         self.enforce_spin_kind = enforce_spin_kind
 
-    def symmetrise(self, new_vectors, existing_subspace):
-        new_vectors = super().symmetrise(new_vectors, existing_subspace)
+    def symmetrise(self, new_vectors):
+        if isinstance(new_vectors, AmplitudeVector):
+            return self.symmetrise([new_vectors])[0]
+        new_vectors = super().symmetrise(new_vectors)
 
         # Enforce singlet (or other spin_kind) spin in the doubles block
         # of all amplitude vectors

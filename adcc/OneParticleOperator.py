@@ -24,6 +24,8 @@ import warnings
 
 import libadcc
 
+from .functions import evaluate
+
 
 class OneParticleOperator(libadcc.OneParticleOperator):
     def __init__(self, mospaces, is_symmetric=True, cartesian_transform="1"):
@@ -107,7 +109,7 @@ class OneParticleOperator(libadcc.OneParticleOperator):
                 obT = other.block(b).transpose()
                 if not self.is_zero_block(brev):
                     obT += self.block(brev)
-                self.set_block(brev, obT)
+                self.set_block(brev, evaluate(obT))
 
         # Update ReferenceState pointer
         if hasattr(self, "reference_state"):
@@ -141,7 +143,7 @@ class OneParticleOperator(libadcc.OneParticleOperator):
                 obT = -1.0 * other.block(b).transpose()
                 if not self.is_zero_block(brev):
                     obT += self.block(brev)
-                self.set_block(brev, obT)
+                self.set_block(brev, evaluate(obT))
 
         # Update ReferenceState pointer
         if hasattr(self, "reference_state"):
