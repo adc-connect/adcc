@@ -155,6 +155,10 @@ class ReferenceState(libadcc.ReferenceState):
             self.orbital_coefficients, self.conv_tol
         )
 
+        for name in ["excitation_energy_corrections"]:
+            if hasattr(hfdata, name):
+                setattr(self, name, getattr(hfdata, name))
+
     @property
     def mospaces(self):
         return self._mospaces

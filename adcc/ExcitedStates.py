@@ -38,6 +38,7 @@ from adcc import dot
 from scipy import constants
 from matplotlib import pyplot as plt
 from .solver.SolverStateBase import EigenSolverStateBase
+from .Excitation import Excitation, mark_excitation_property
 
 
 class FormatExcitationVector:
@@ -131,7 +132,8 @@ class FormatExcitationVector:
 
 
 class ExcitedStates:
-    def __init__(self, data, method=None, property_method=None):
+    def __init__(self, data, method=None, property_method=None,
+                 excitation_energy_corrections={}):
         """Construct an ExcitedStates class from some data obtained
         from an interative solver.
 
@@ -154,6 +156,9 @@ class ExcitedStates:
         property_method : str, optional
             Provide an explicit method for property calculations to
             override the automatic selection.
+        excitation_energy_corrections : dict, optional
+            Provide a dictionary of functions to compute corrections for
+            excitation energies, called for each excitation individually
         """
         self.matrix = data.matrix
         self.ground_state = self.matrix.ground_state
@@ -193,17 +198,54 @@ class ExcitedStates:
 
         # Special stuff for special solvers
         if isinstance(data, EigenSolverStateBase):
-            self.excitation_vectors = data.eigenvectors
-            self.excitation_energies = data.eigenvalues
+            self.__excitation_vector = data.eigenvectors
+            self.__excitation_energy_uncorrected = data.eigenvalues
         else:
             if hasattr(data, "eigenvalues"):
-                self.excitation_energies = data.eigenvalues
+                self.__excitation_energy_uncorrected = data.eigenvalues
             if hasattr(data, "eigenvectors"):
-                self.excitation_vectors = data.eigenvectors
-            if hasattr(data, "excitation_energies"):
-                self.excitation_energies = data.excitation_energies
-            if hasattr(data, "excitation_vectors"):
-                self.excitation_vectors = data.excitation_vectors
+                self.__excitation_vector = data.eigenvectors
+            # if both excitation_energy and excitation_energy_uncorrected
+            # are present, the latter one has priority
+            if hasattr(data, "excitation_energy"):
+                self.__excitation_energy_uncorrected = \
+                    data.excitation_energy.copy()
+            if hasattr(data, "excitation_energy_uncorrected"):
+                self.__excitation_energy_uncorrected =\
+                    data.excitation_energy_uncorrected.copy()
+            if hasattr(data, "excitation_vector"):
+                self.__excitation_vector = data.excitation_vector
+            if hasattr(data, "excitation_energy_corrections"):
+                merged = data.excitation_energy_corrections.copy()
+                merged.update(excitation_energy_corrections)
+                excitation_energy_corrections = merged
+
+        # Collect all excitation energy corrections
+        self.__excitation_energy = self.__excitation_energy_uncorrected.copy()
+
+        if hasattr(self.reference_state, "excitation_energy_corrections"):
+            merged = self.reference_state.excitation_energy_corrections.copy()
+            merged.update(excitation_energy_corrections)
+            excitation_energy_corrections = merged
+
+        self.excitation_energy_corrections = excitation_energy_corrections
+        for key in self.excitation_energy_corrections:
+            corr_function = self.excitation_energy_corrections[key]
+            if not callable(corr_function):
+                raise TypeError("Elements in excitation_energy_corrections "
+                                "must be callable.")
+            # call the function for exc. energy correction
+            correction = np.array([corr_function(exci)
+                                   for exci in self.excitations])
+            setattr(self, key, correction)
+            self.__excitation_energy += correction
+
+    def __len__(self):
+        return self.size
+
+    @property
+    def size(self):
+        return self.__excitation_energy.size
 
     @property
     def timer(self):
@@ -220,17 +262,37 @@ class ExcitedStates:
         """The method used to evaluate ADC properties"""
         return self.__property_method
 
+    @property
+    @mark_excitation_property()
+    def excitation_energy(self):
+        """Excitation energies including all corrections in atomic units"""
+        return self.__excitation_energy
+
+    @property
+    @mark_excitation_property()
+    def excitation_energy_uncorrected(self):
+        """Excitation energies without any corrections in atomic units"""
+        return self.__excitation_energy_uncorrected
+
+    @property
+    @mark_excitation_property()
+    def excitation_vector(self):
+        """List of excitation vectors"""
+        return self.__excitation_vector
+
     @cached_property
+    @mark_excitation_property(transform_to_ao=True)
     @timed_member_call(timer="_property_timer")
-    def transition_dms(self):
+    def transition_dm(self):
         """List of transition density matrices of all computed states"""
         return [compute_gs2state_optdm(self.property_method, self.ground_state,
                                        evec, self.matrix.intermediates)
-                for evec in self.excitation_vectors]
+                for evec in self.excitation_vector]
 
     @cached_property
+    @mark_excitation_property()
     @timed_member_call(timer="_property_timer")
-    def transition_dipole_moments(self):
+    def transition_dipole_moment(self):
         """List of transition dipole moments of all computed states"""
         if self.property_method.level == 0:
             warnings.warn("ADC(0) transition dipole moments are known to be "
@@ -238,12 +300,13 @@ class ExcitedStates:
         dipole_integrals = self.operators.electric_dipole
         return np.array([
             [product_trace(comp, tdm) for comp in dipole_integrals]
-            for tdm in self.transition_dms
+            for tdm in self.transition_dm
         ])
 
     @cached_property
+    @mark_excitation_property()
     @timed_member_call(timer="_property_timer")
-    def transition_dipole_moments_velocity(self):
+    def transition_dipole_moment_velocity(self):
         """List of transition dipole moments in the
         velocity gauge of all computed states"""
         if self.property_method.level == 0:
@@ -252,12 +315,13 @@ class ExcitedStates:
         dipole_integrals = self.operators.nabla
         return np.array([
             [product_trace(comp, tdm) for comp in dipole_integrals]
-            for tdm in self.transition_dms
+            for tdm in self.transition_dm
         ])
 
     @cached_property
+    @mark_excitation_property()
     @timed_member_call(timer="_property_timer")
-    def transition_magnetic_dipole_moments(self):
+    def transition_magnetic_dipole_moment(self):
         """List of transition magnetic dipole moments of all computed states"""
         if self.property_method.level == 0:
             warnings.warn("ADC(0) transition magnetic dipole moments "
@@ -265,55 +329,61 @@ class ExcitedStates:
         mag_dipole_integrals = self.operators.magnetic_dipole
         return np.array([
             [product_trace(comp, tdm) for comp in mag_dipole_integrals]
-            for tdm in self.transition_dms
+            for tdm in self.transition_dm
         ])
 
     @cached_property
-    def oscillator_strengths(self):
+    @mark_excitation_property()
+    def oscillator_strength(self):
         """List of oscillator strengths of all computed states"""
         return 2. / 3. * np.array([
             np.linalg.norm(tdm)**2 * np.abs(ev)
-            for tdm, ev in zip(self.transition_dipole_moments,
-                               self.excitation_energies)
+            for tdm, ev in zip(self.transition_dipole_moment,
+                               self.excitation_energy)
         ])
 
     @cached_property
-    def oscillator_strengths_velocity(self):
+    @mark_excitation_property()
+    def oscillator_strength_velocity(self):
         """List of oscillator strengths in
         velocity gauge of all computed states"""
         return 2. / 3. * np.array([
             np.linalg.norm(tdm)**2 / np.abs(ev)
-            for tdm, ev in zip(self.transition_dipole_moments_velocity,
-                               self.excitation_energies)
+            for tdm, ev in zip(self.transition_dipole_moment_velocity,
+                               self.excitation_energy)
         ])
 
     @cached_property
-    def rotatory_strengths(self):
+    @mark_excitation_property()
+    def rotatory_strength(self):
         """List of rotatory strengths of all computed states"""
         return np.array([
             np.dot(tdm, magmom) / ee
-            for tdm, magmom, ee in zip(self.transition_dipole_moments_velocity,
-                                       self.transition_magnetic_dipole_moments,
-                                       self.excitation_energies)
+            for tdm, magmom, ee in zip(self.transition_dipole_moment_velocity,
+                                       self.transition_magnetic_dipole_moment,
+                                       self.excitation_energy)
         ])
 
     @cached_property
+    @mark_excitation_property(transform_to_ao=True)
     @timed_member_call(timer="_property_timer")
-    def state_diffdms(self):
+    def state_diffdm(self):
         """List of difference density matrices of all computed states"""
         return [compute_state_diffdm(self.property_method, self.ground_state,
                                      evec, self.matrix.intermediates)
-                for evec in self.excitation_vectors]
+                for evec in self.excitation_vector]
 
     @property
-    def state_dms(self):
+    @mark_excitation_property(transform_to_ao=True)
+    def state_dm(self):
         """List of state density matrices of all computed states"""
         mp_density = self.ground_state.density(self.property_method.level)
-        return [mp_density + diffdm for diffdm in self.state_diffdms]
+        return [mp_density + diffdm for diffdm in self.state_diffdm]
 
     @cached_property
+    @mark_excitation_property()
     @timed_member_call(timer="_property_timer")
-    def state_dipole_moments(self):
+    def state_dipole_moment(self):
         """List of state dipole moments"""
         pmethod = self.property_method
         if pmethod.level == 0:
@@ -324,7 +394,7 @@ class ExcitedStates:
         dipole_integrals = self.operators.electric_dipole
         return gs_dip_moment - np.array([
             [product_trace(comp, ddm) for comp in dipole_integrals]
-            for ddm in self.state_diffdms
+            for ddm in self.state_diffdm
         ])
 
     def plot_spectrum(self, broadening="lorentzian", xaxis="eV",
@@ -357,43 +427,43 @@ class ExcitedStates:
         """
         if xaxis == "eV":
             eV = constants.value("Hartree energy in eV")
-            energies = self.excitation_energies * eV
+            energies = self.excitation_energy * eV
             width = width * eV
             xlabel = "Energy (eV)"
         elif xaxis in ["au", "Hartree", "a.u."]:
-            energies = self.excitation_energies
+            energies = self.excitation_energy
             xlabel = "Energy (au)"
         elif xaxis == "nm":
             hc = constants.h * constants.c
             Eh = constants.value("Hartree energy")
-            energies = hc / (self.excitation_energies * Eh) * 1e9
+            energies = hc / (self.excitation_energy * Eh) * 1e9
             xlabel = "Wavelength (nm)"
             if broadening is not None and not callable(broadening):
                 raise ValueError("xaxis=nm and broadening enabled is "
                                  "not supported.")
         elif xaxis in ["cm-1", "cm^-1", "cm^{-1}"]:
             towvn = constants.value("hartree-inverse meter relationship") / 100
-            energies = self.excitation_energies * towvn
+            energies = self.excitation_energy * towvn
             width = width * towvn
             xlabel = "Wavenumbers (cm^{-1})"
         else:
             raise ValueError("Unknown xaxis specifier: {}".format(xaxis))
 
         if yaxis in ["osc", "osc_strength", "oscillator_strength", "f"]:
-            absorption = self.oscillator_strengths
+            absorption = self.oscillator_strength
             ylabel = "Oscillator strengths (au)"
         elif yaxis in ["dipole", "dipole_norm", "μ"]:
-            absorption = np.linalg.norm(self.transition_dipole_moments, axis=1)
+            absorption = np.linalg.norm(self.transition_dipole_moment, axis=1)
             ylabel = "Modulus of transition dipole (au)"
         elif yaxis in ["cross_section", "σ"]:
             # TODO Source?
             fine_structure = constants.fine_structure
             fine_structure_au = 1 / fine_structure
             prefac = 2.0 * np.pi**2 / fine_structure_au
-            absorption = prefac * self.oscillator_strengths
+            absorption = prefac * self.oscillator_strength
             ylabel = "Cross section (au)"
         elif yaxis in ["rot", "rotational_strength", "rotatory_strength"]:
-            absorption = self.rotatory_strengths
+            absorption = self.rotatory_strength
             ylabel = "Rotatory strength (au)"
         else:
             raise ValueError("Unknown yaxis specifier: {}".format(yaxis))
@@ -457,17 +527,17 @@ class ExcitedStates:
         if has_dipole and transition_dipole_moments:
             opt_body += " {tdmx:8.4f} {tdmy:8.4f} {tdmz:8.4f}"
             opt_thead += "  transition dipole moment "
-            opt["tdmx"] = lambda i, vec: self.transition_dipole_moments[i][0]
-            opt["tdmy"] = lambda i, vec: self.transition_dipole_moments[i][1]
-            opt["tdmz"] = lambda i, vec: self.transition_dipole_moments[i][2]
+            opt["tdmx"] = lambda i, vec: self.transition_dipole_moment[i][0]
+            opt["tdmy"] = lambda i, vec: self.transition_dipole_moment[i][1]
+            opt["tdmz"] = lambda i, vec: self.transition_dipole_moment[i][2]
         if has_dipole and oscillator_strengths:
             opt_body += "{osc:8.4f} "
             opt_thead += " osc str "
-            opt["osc"] = lambda i, vec: self.oscillator_strengths[i]
+            opt["osc"] = lambda i, vec: self.oscillator_strength[i]
         if has_rotatory and rotatory_strengths:
             opt_body += "{rot:8.4f} "
             opt_thead += " rot str "
-            opt["rot"] = lambda i, vec: self.rotatory_strengths[i]
+            opt["rot"] = lambda i, vec: self.rotatory_strength[i]
         if "s" in self.matrix.blocks and block_norms:
             opt_body += "{v1:9.4g} "
             opt_thead += "   |v1|^2 "
@@ -479,9 +549,9 @@ class ExcitedStates:
         if has_dipole and state_dipole_moments:
             opt_body += " {dmx:8.4f} {dmy:8.4f} {dmz:8.4f}"
             opt_thead += "     state dipole moment   "
-            opt["dmx"] = lambda i, vec: self.state_dipole_moments[i][0]
-            opt["dmy"] = lambda i, vec: self.state_dipole_moments[i][1]
-            opt["dmz"] = lambda i, vec: self.state_dipole_moments[i][2]
+            opt["dmx"] = lambda i, vec: self.state_dipole_moment[i][0]
+            opt["dmy"] = lambda i, vec: self.state_dipole_moment[i][1]
+            opt["dmz"] = lambda i, vec: self.state_dipole_moment[i][2]
 
         # Heading of the table
         kind = ""
@@ -526,12 +596,12 @@ class ExcitedStates:
         text += "|  #        excitation energy    " + opt_thead + " |\n"
         text += "|          (au)           (eV)   "
         text += len(opt_thead) * " " + " |\n"
-        for i, vec in enumerate(self.excitation_vectors):
+        for i, vec in enumerate(self.excitation_vector):
             fields = {}
             for k, compute in opt.items():
                 fields[k] = compute(i, vec)
-            text += body.format(i=i, ene=self.excitation_energies[i],
-                                ev=self.excitation_energies[i] * eV, **fields)
+            text += body.format(i=i, ene=self.excitation_energy[i],
+                                ev=self.excitation_energy[i] * eV, **fields)
         text += separator + "\n"
         return text
 
@@ -564,7 +634,7 @@ class ExcitedStates:
                                                index_format=index_format)
 
         # Optimise the formatting by pre-inspecting all tensors
-        for tensor in self.excitation_vectors:
+        for tensor in self.excitation_vector:
             vector_format.optimise_formatting(tensor)
 
         # Determine width of a line
@@ -572,8 +642,8 @@ class ExcitedStates:
         separator = "+" + lw * "-" + "+\n"
 
         ret = separator
-        for i, vec in enumerate(self.excitation_vectors):
-            ene = self.excitation_energies[i]
+        for i, vec in enumerate(self.excitation_vector):
+            ene = self.excitation_energy[i]
             eev = ene * eV
             head = f"State {i:3d} , {ene:13.7g} au"
             if lw > 47:
@@ -582,7 +652,46 @@ class ExcitedStates:
             ret += separator
             formatted = vector_format.format(vec).replace("\n", " |\n| ")
             ret += "| " + formatted + " |\n"
-            if i != len(self.excitation_vectors) - 1:
+            if i != len(self.excitation_vector) - 1:
                 ret += "\n"
                 ret += separator
         return ret[:-1]
+
+    @property
+    def excitations(self):
+        """
+        Provides a list of Excitations, i.e., a view to all individual
+        excited states and their properties. Still under heavy development.
+        """
+        excitations = [Excitation(self, index=i, method=self.method)
+                       for i in range(self.size)]
+        return excitations
+
+
+# deprecated property names of ExcitedStates
+deprecated = {
+    "excitation_energies": "excitation_energy",
+    "transition_dipole_moments": "transition_dipole_moment",
+    "transition_dms": "transition_dm",
+    "transition_dipole_moments_velocity":
+        "transition_dipole_moment_velocity",
+    "transition_magnetic_dipole_moments":
+        "transition_magnetic_dipole_moment",
+    "state_dipole_moments": "state_dipole_moment",
+    "state_dms": "state_dm",
+    "state_diffdms": "state_diffdm",
+    "oscillator_strengths": "oscillator_strength",
+    "oscillator_stenths_velocity": "oscillator_strength_velocity",
+    "rotatory_strengths": "rotatory_strength",
+    "excitation_vectors": "excitation_vector",
+}
+
+for dep_property in deprecated:
+    new_key = deprecated[dep_property]
+
+    def deprecated_property(self, key=new_key, old_key=dep_property):
+        warnings.warn(f"Property '{old_key}' is deprecated "
+                      " and will be removed in version 0.16.0."
+                      f" Please use '{key}' instead.")
+        return getattr(self, key)
+    setattr(ExcitedStates, dep_property, property(deprecated_property))

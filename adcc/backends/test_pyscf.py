@@ -32,7 +32,7 @@ from .testing import (eri_asymm_construction_test, eri_chem_permutations,
 from numpy.testing import assert_almost_equal
 
 from adcc.backends import have_backend
-from adcc.testdata import geometry
+from adcc.testdata import static_data
 
 import pytest
 
@@ -123,7 +123,7 @@ class TestPyscf(unittest.TestCase):
         operator_import_from_ao_test(mf, list(ao_linmom), "nabla")
 
     def template_rhf_h2o(self, basis):
-        mf = adcc.backends.run_hf("pyscf", geometry.xyz["h2o"], basis)
+        mf = adcc.backends.run_hf("pyscf", static_data.xyz["h2o"], basis)
         self.base_test(mf)
         self.operators_test(mf)
         # Test ERI
@@ -132,7 +132,7 @@ class TestPyscf(unittest.TestCase):
 
     def template_uhf_ch2nh2(self, basis):
         mf = adcc.backends.run_hf(
-            "pyscf", geometry.xyz["ch2nh2"], basis, multiplicity=2
+            "pyscf", static_data.xyz["ch2nh2"], basis, multiplicity=2
         )
         self.base_test(mf)
         self.operators_test(mf)
@@ -143,5 +143,5 @@ class TestPyscf(unittest.TestCase):
     def test_h2o_sto3g_core_hole(self):
         from adcc.backends.pyscf import run_core_hole
 
-        mf = run_core_hole(geometry.xyz["h2o"], "sto3g")
+        mf = run_core_hole(static_data.xyz["h2o"], "sto3g")
         self.base_test(mf)

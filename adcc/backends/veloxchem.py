@@ -122,6 +122,21 @@ class VeloxChemHFProvider(HartreeFockProvider):
             self.scfdrv
         )
 
+    def pe_energy(self, dm, elec_only=True):
+        e_pe, _ = self.scfdrv.pe_drv.get_pe_contribution(dm.to_ndarray(),
+                                                         elec_only=elec_only)
+        return e_pe
+
+    @property
+    def excitation_energy_corrections(self):
+        ret = {}
+        if hasattr(self.scfdrv, "pe_drv"):
+            ret["pe_ptlr_correction"] = lambda view: \
+                2.0 * self.pe_energy(view.transition_dm_ao, elec_only=True)
+            ret["pe_ptss_correction"] = lambda view: \
+                self.pe_energy(view.state_diffdm_ao, elec_only=True)
+        return ret
+
     def get_backend(self):
         return "veloxchem"
 
@@ -221,8 +236,8 @@ def import_scf(scfdrv):
     return provider
 
 
-def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=None,
-           conv_tol_grad=1e-8, max_iter=150):
+def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol_grad=1e-8,
+           max_iter=150, pe_options=None):
     basis_remap = {
         "sto3g": "sto-3g",
         "def2tzvp": "def2-tzvp",
@@ -235,8 +250,14 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=None,
         with open(infile, "w") as fp:
             lines = ["@jobs", "task: hf", "@end", ""]
             lines += ["@method settings",
-                      "basis: {}".format(basis_remap.get(basis, basis)),
-                      "@end"]
+                      "basis: {}".format(basis_remap.get(basis, basis))]
+            # TODO: PE results in VeloxChem are currently wrong, because
+            # polarizabilities are always made isotropic
+            if pe_options:
+                potfile = pe_options["potfile"]
+                lines += ["pe: yes",
+                          f"potfile: {potfile}"]
+            lines += ["@end"]
             lines += ["@molecule",
                       "charge: {}".format(charge),
                       "multiplicity: {}".format(multiplicity),
@@ -247,6 +268,8 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=None,
         task = MpiTask([infile, outfile], MPI.COMM_WORLD)
 
         scfdrv = vlx.ScfRestrictedDriver(task.mpi_comm, task.ostream)
+        scfdrv.update_settings(task.input_dict['scf'],
+                               task.input_dict['method_settings'])
         # elec. gradient norm
         scfdrv.conv_thresh = conv_tol_grad
         scfdrv.max_iter = max_iter

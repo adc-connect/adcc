@@ -32,7 +32,7 @@ from .testing import (eri_asymm_construction_test, eri_chem_permutations,
 from numpy.testing import assert_almost_equal, assert_array_equal
 
 from adcc.backends import have_backend
-from adcc.testdata import geometry
+from adcc.testdata import static_data
 
 import pytest
 
@@ -149,7 +149,7 @@ class TestVeloxchem(unittest.TestCase):
         operator_import_from_ao_test(scfdrv, integrals, operator="nabla")
 
     def template_rhf_h2o(self, basis):
-        scfdrv = adcc.backends.run_hf("veloxchem", geometry.xyz["h2o"], basis)
+        scfdrv = adcc.backends.run_hf("veloxchem", static_data.xyz["h2o"], basis)
         self.base_test(scfdrv)
         self.operators_test(scfdrv)
         # Test ERI

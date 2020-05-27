@@ -55,7 +55,7 @@ class TestFunctionalityBase(unittest.TestCase):
         # Checks
         assert isinstance(res, ExcitedStates)
         assert res.converged
-        assert_allclose(res.excitation_energies[:n_ref],
+        assert_allclose(res.excitation_energy[:n_ref],
                         ref["eigenvalues"], atol=1e-7)
 
         if test_mp:
@@ -78,7 +78,7 @@ class TestFunctionalityBase(unittest.TestCase):
         for i in range(n_ref):
             # Computing the dipole moment implies a lot of cancelling in the
             # contraction, which has quite an impact on the accuracy.
-            res_tdm = res.transition_dipole_moments[i]
+            res_tdm = res.transition_dipole_moment[i]
             ref_tdm = ref["transition_dipole_moments"][i]
 
             # Test norm and actual values
@@ -97,7 +97,7 @@ class TestFunctionalityBase(unittest.TestCase):
 
         # Computing the dipole moment implies a lot of cancelling in the
         # contraction, which has quite an impact on the accuracy.
-        assert_allclose(res.state_dipole_moments[:n_ref],
+        assert_allclose(res.state_dipole_moment[:n_ref],
                         ref["state_dipole_moments"], atol=1e-4)
 
         # Test we do not use too many iterations

@@ -27,7 +27,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 
 from adcc.backends import have_backend
-from adcc.testdata import geometry
+from adcc.testdata import static_data
 
 import pytest
 
@@ -41,16 +41,16 @@ class TestFunctionalityXes(unittest.TestCase):
 
         basis = system.split("_")[-1]
         molecule = system.split("_")[0]
-        mf = run_core_hole(geometry.xyz[molecule], basis)
+        mf = run_core_hole(static_data.xyz[molecule], basis)
         state = adcc.adc2x(mf, conv_tol=1e-7, n_states=len(ref["eigenvalues"]))
 
-        assert_allclose(state.excitation_energies, ref["eigenvalues"], atol=1e-6)
+        assert_allclose(state.excitation_energy, ref["eigenvalues"], atol=1e-6)
 
         # Computing the dipole moment implies a lot of cancelling in the
         # contraction, which has quite an impact on the accuracy.
-        assert_allclose(state.oscillator_strengths, ref["oscillator_strengths"],
+        assert_allclose(state.oscillator_strength, ref["oscillator_strengths"],
                         atol=1e-4)
-        assert_allclose(state.state_dipole_moments, ref["state_dipole_moments"],
+        assert_allclose(state.state_dipole_moment, ref["state_dipole_moments"],
                         atol=1e-4)
 
     def test_h2o_sto3g_adc2x_xes_singlets(self):

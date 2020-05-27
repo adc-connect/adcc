@@ -89,6 +89,22 @@ class Psi4HFProvider(HartreeFockProvider):
                                           self.restricted)
         self.operator_integral_provider = Psi4OperatorIntegralProvider(self.wfn)
 
+    def pe_energy(self, dm, elec_only=True):
+        density_psi = psi4.core.Matrix.from_array(dm.to_ndarray())
+        e_pe, _ = self.wfn.pe_state.get_pe_contribution(density_psi,
+                                                        elec_only=elec_only)
+        return e_pe
+
+    @property
+    def excitation_energy_corrections(self):
+        ret = {}
+        if hasattr(self.wfn, "pe_state"):
+            ret["pe_ptlr_correction"] = lambda view: \
+                2.0 * self.pe_energy(view.transition_dm_ao, elec_only=True)
+            ret["pe_ptss_correction"] = lambda view: \
+                self.pe_energy(view.state_diffdm_ao, elec_only=True)
+        return ret
+
     def get_backend(self):
         return "psi4"
 
@@ -197,7 +213,7 @@ def import_scf(wfn):
 
 
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
-           conv_tol_grad=1e-8, max_iter=150):
+           conv_tol_grad=1e-8, max_iter=150, pe_options=None):
     basissets = {
         "sto3g": "sto-3g",
         "def2tzvp": "def2-tzvp",
@@ -220,8 +236,11 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
         'e_convergence': conv_tol,
         'd_convergence': conv_tol_grad,
         'maxiter': max_iter,
-        'reference': "RHF"
+        'reference': "RHF",
+        'pe': 'true' if pe_options else 'false',
     })
+    if pe_options:
+        psi4.set_module_options("pe", {"potfile": pe_options["potfile"]})
 
     if multiplicity != 1:
         psi4.set_options({

@@ -40,7 +40,7 @@ class TestHartreeFockProvider(unittest.TestCase):
 
         ref = refdata["adc2"]["singlet"]["eigenvalues"]
         assert res.converged
-        assert res.excitation_energies == approx(ref)
+        assert res.excitation_energy == approx(ref)
 
     def test_h2o(self):
         self.base_test("h2o_sto3g")

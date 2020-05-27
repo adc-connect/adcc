@@ -46,8 +46,8 @@ class TestHardCodedCisResults(unittest.TestCase):
         hf = cache.hfdata["methox_sto3g"]
         state = adcc.cis(hf, n_singlets=6, conv_tol=1e-8)
         np.testing.assert_allclose(vlx_result['excitation_energies'],
-                                   state.excitation_energies, atol=1e-6)
+                                   state.excitation_energy, atol=1e-6)
         np.testing.assert_allclose(vlx_result['rotatory_strengths'],
-                                   state.rotatory_strengths, atol=1e-4)
+                                   state.rotatory_strength, atol=1e-4)
         np.testing.assert_allclose(vlx_result['oscillator_strengths'],
-                                   state.oscillator_strengths, atol=1e-4)
+                                   state.oscillator_strength, atol=1e-4)

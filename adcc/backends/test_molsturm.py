@@ -31,7 +31,7 @@ from .testing import eri_asymm_construction_test
 from numpy.testing import assert_almost_equal
 
 from adcc.backends import have_backend
-from adcc.testdata import geometry
+from adcc.testdata import static_data
 
 import pytest
 
@@ -83,13 +83,13 @@ class TestMolsturm(unittest.TestCase):
         assert_almost_equal(eri, scfres["eri_ffff"])
 
     def template_rhf_h2o(self, basis):
-        scfres = adcc.backends.run_hf("molsturm", geometry.xyz["h2o"], basis)
+        scfres = adcc.backends.run_hf("molsturm", static_data.xyz["h2o"], basis)
         self.base_test(scfres)
         eri_asymm_construction_test(scfres)
         eri_asymm_construction_test(scfres, core_orbitals=1)
 
     def template_uhf_h2o(self, basis):
-        scfres = adcc.backends.run_hf("molsturm", geometry.xyz["h2o"], basis,
+        scfres = adcc.backends.run_hf("molsturm", static_data.xyz["h2o"], basis,
                                       multiplicity=3, conv_tol_grad=1e-6)
         self.base_test(scfres)
         eri_asymm_construction_test(scfres)

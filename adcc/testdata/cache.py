@@ -22,6 +22,8 @@
 ## ---------------------------------------------------------------------
 import os
 import ast
+import numpy as np
+import yaml
 import adcc
 
 from adcc import AdcMatrix, ExcitedStates, LazyMp, guess_zero, hdf5io
@@ -234,3 +236,25 @@ class TestdataCache():
 
 # Setup cache object
 cache = TestdataCache()
+
+
+def lists_to_ndarray(dictionary):
+    data = dictionary.copy()
+    for key in data:
+        d = data[key]
+        if isinstance(d, dict):
+            data[key] = lists_to_ndarray(d)
+        elif isinstance(d, list):
+            data[key] = np.array(d)
+    return data
+
+
+def read_qchem_data():
+    thisdir = os.path.dirname(__file__)
+    yaml_file = os.path.join(thisdir, "qchem_dump.yml")
+    with open(yaml_file, "r") as f:
+        data_raw = yaml.safe_load(f)
+    return lists_to_ndarray(data_raw)
+
+
+qchem_data = read_qchem_data()

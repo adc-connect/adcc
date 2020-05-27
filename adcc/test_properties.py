@@ -39,14 +39,14 @@ class TestTransitionDipoleMoments(unittest.TestCase, Runners):
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
 
-        res_tdms = state.transition_dipole_moments
+        res_tdms = state.transition_dipole_moment
         ref_tdms = refdata[method][kind]["transition_dipole_moments"]
         refevals = refdata[method][kind]["eigenvalues"]
-        n_ref = len(state.excitation_vectors)
+        n_ref = len(state.excitation_vector)
         for i in range(n_ref):
             res_tdm = res_tdms[i]
             ref_tdm = ref_tdms[i]
-            assert state.excitation_energies[i] == refevals[i]
+            assert state.excitation_energy[i] == refevals[i]
             res_tdm_norm = np.sum(res_tdm * res_tdm)
             ref_tdm_norm = np.sum(ref_tdm * ref_tdm)
             assert res_tdm_norm == approx(ref_tdm_norm, abs=1e-5)
@@ -60,12 +60,12 @@ class TestOscillatorStrengths(unittest.TestCase, Runners):
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
 
-        res_oscs = state.oscillator_strengths
+        res_oscs = state.oscillator_strength
         ref_tdms = refdata[method][kind]["transition_dipole_moments"]
         refevals = refdata[method][kind]["eigenvalues"]
-        n_ref = len(state.excitation_vectors)
+        n_ref = len(state.excitation_vector)
         for i in range(n_ref):
-            assert state.excitation_energies[i] == refevals[i]
+            assert state.excitation_energy[i] == refevals[i]
             ref_tdm_norm = np.sum(ref_tdms[i] * ref_tdms[i])
             assert res_oscs[i] == approx(2. / 3. * ref_tdm_norm * refevals[i])
 
@@ -77,7 +77,7 @@ class TestStateDipoleMoments(unittest.TestCase, Runners):
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
 
-        res_dms = state.state_dipole_moments
+        res_dms = state.state_dipole_moment
         ref = refdata[method][kind]
-        n_ref = len(state.excitation_vectors)
+        n_ref = len(state.excitation_vector)
         assert_allclose(res_dms, ref["state_dipole_moments"][:n_ref], atol=1e-4)

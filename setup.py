@@ -378,7 +378,7 @@ adccsetup(
         "h5py >= 2.9",        # Maybe also lower?
         "tqdm >= 4.30",       # Maybe also lower?
     ],
-    tests_require=["pytest", "pytest-cov"],
+    tests_require=["pytest", "pytest-cov", "pyyaml"],
     extras_require={
         "build_docs": ["sphinx>=2", "breathe", "sphinxcontrib-bibtex",
                        "sphinx-automodapi"],

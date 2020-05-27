@@ -113,12 +113,12 @@ class TestStateDiffDm(unittest.TestCase, Runners):
         refdens_a = refdata[method][kind]["state_diffdm_bb_a"]
         refdens_b = refdata[method][kind]["state_diffdm_bb_b"]
         refevals = refdata[method][kind]["eigenvalues"]
-        for i in range(len(state.excitation_vectors)):
+        for i in range(len(state.excitation_vector)):
             # Check that we are talking about the same state when
             # comparing reference and computed
-            assert state.excitation_energies[i] == refevals[i]
+            assert state.excitation_energy[i] == refevals[i]
 
-            dm_ao_a, dm_ao_b = state.state_diffdms[i].to_ao_basis()
+            dm_ao_a, dm_ao_b = state.state_diffdm[i].to_ao_basis()
             dm_ao_a = dm_ao_a.to_ndarray()
             dm_ao_b = dm_ao_b.to_ndarray()
             assert dm_ao_a == approx(refdens_a[i])
@@ -135,12 +135,12 @@ class TestStateGroundToExcitedTdm(unittest.TestCase, Runners):
         refdens_a = refdata[method][kind]["ground_to_excited_tdm_bb_a"]
         refdens_b = refdata[method][kind]["ground_to_excited_tdm_bb_b"]
         refevals = refdata[method][kind]["eigenvalues"]
-        for i in range(len(state.excitation_vectors)):
+        for i in range(len(state.excitation_vector)):
             # Check that we are talking about the same state when
             # comparing reference and computed
-            assert state.excitation_energies[i] == refevals[i]
+            assert state.excitation_energy[i] == refevals[i]
 
-            tdms = state.transition_dms[i].to_ao_basis()
+            tdms = state.transition_dm[i].to_ao_basis()
             dm_ao_a, dm_ao_b = tdms
             dm_ao_a = dm_ao_a.to_ndarray()
             dm_ao_b = dm_ao_b.to_ndarray()

@@ -155,6 +155,7 @@ def run_hf(backend, xyz, basis, **kwargs):
         conv_tol:       energy convergence tolerance
         conv_tol_grad:  convergence tolerance of the electronic gradient
         max_iter:       maximum number of SCF iterations
+        pe_options:     dictionary with options for polarizable embedding (PE)
 
         Note: This function only exists for testing purposes and should
         not be used in production calculations.

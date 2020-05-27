@@ -26,6 +26,7 @@ from .EriBuilder import EriBuilder
 from .InvalidReference import InvalidReference
 
 from pyscf import ao2mo, gto, scf
+from pyscf import solvent
 from adcc.misc import cached_property
 
 from libadcc import HartreeFockProvider
@@ -108,6 +109,22 @@ class PyScfHFProvider(HartreeFockProvider):
         if not self.restricted:
             assert self.scfres.mo_coeff[0].shape[1] == \
                 self.scfres.mo_coeff[1].shape[1]
+
+    def pe_energy(self, dm, elec_only=True):
+        pe_state = self.scfres.with_solvent
+        e_pe, _ = pe_state.kernel(dm.to_ndarray(), elec_only=elec_only)
+        return e_pe
+
+    @property
+    def excitation_energy_corrections(self):
+        ret = {}
+        if hasattr(self.scfres, "with_solvent"):
+            if isinstance(self.scfres.with_solvent, solvent.pol_embed.PolEmbed):
+                ret["pe_ptlr_correction"] = lambda view: \
+                    2.0 * self.pe_energy(view.transition_dm_ao, elec_only=True)
+                ret["pe_ptss_correction"] = lambda view: \
+                    self.pe_energy(view.state_diffdm_ao, elec_only=True)
+        return ret
 
     def get_backend(self):
         return "pyscf"
@@ -221,7 +238,7 @@ def import_scf(scfres):
 
 
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
-           conv_tol_grad=1e-9, max_iter=150):
+           conv_tol_grad=1e-9, max_iter=150, pe_options=None):
     mol = gto.M(
         atom=xyz,
         basis=basis,
@@ -234,7 +251,11 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
         dump_input=False,
         verbose=0,
     )
-    mf = scf.HF(mol)
+    if pe_options:
+        from pyscf.solvent import PE
+        mf = PE(scf.HF(mol), pe_options["potfile"])
+    else:
+        mf = scf.HF(mol)
     mf.conv_tol = conv_tol
     mf.conv_tol_grad = conv_tol_grad
     mf.max_cycle = max_iter
