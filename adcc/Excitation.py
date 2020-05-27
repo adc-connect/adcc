@@ -91,8 +91,7 @@ class Excitation:
             if transform:
                 def get_parent_property_transform(self, key=key):
                     matrix = getattr(self.parent_state, key)[self.index]
-                    density_ao = sum(matrix.to_ao_basis())
-                    return density_ao.to_ndarray()
+                    return sum(matrix.to_ao_basis())
 
                 setattr(Excitation, key + "_ao",
                         property(get_parent_property_transform))

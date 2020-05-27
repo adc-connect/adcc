@@ -112,7 +112,7 @@ class PyScfHFProvider(HartreeFockProvider):
 
     def pe_energy(self, dm, elec_only=True):
         pe_state = self.scfres.with_solvent
-        e_pe, _ = pe_state.kernel(dm, elec_only=elec_only)
+        e_pe, _ = pe_state.kernel(dm.to_ndarray(), elec_only=elec_only)
         return e_pe
 
     @property

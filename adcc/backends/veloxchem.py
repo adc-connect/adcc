@@ -123,7 +123,8 @@ class VeloxChemHFProvider(HartreeFockProvider):
         )
 
     def pe_energy(self, dm, elec_only=True):
-        e_pe, _ = self.scfdrv.pe_drv.get_pe_contribution(dm, elec_only=elec_only)
+        e_pe, _ = self.scfdrv.pe_drv.get_pe_contribution(dm.to_ndarray(),
+                                                         elec_only=elec_only)
         return e_pe
 
     @property

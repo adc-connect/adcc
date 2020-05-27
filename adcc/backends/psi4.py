@@ -90,7 +90,7 @@ class Psi4HFProvider(HartreeFockProvider):
         self.operator_integral_provider = Psi4OperatorIntegralProvider(self.wfn)
 
     def pe_energy(self, dm, elec_only=True):
-        density_psi = psi4.core.Matrix.from_array(dm)
+        density_psi = psi4.core.Matrix.from_array(dm.to_ndarray())
         e_pe, _ = self.wfn.pe_state.get_pe_contribution(density_psi,
                                                         elec_only=elec_only)
         return e_pe
