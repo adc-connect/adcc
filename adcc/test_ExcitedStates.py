@@ -40,7 +40,8 @@ class TestExcitationView(unittest.TestCase, Runners):
             for key in dir(exci):
                 if key.startswith("_"):
                     continue
-                blacklist = ["__", "index", "_ao", "excitation_vector"]
+                blacklist = ["__", "index", "_ao", "excitation_vector",
+                             "method", "parent_state"]
                 if any(b in key for b in blacklist):
                     continue
                 try:

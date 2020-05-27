@@ -249,14 +249,12 @@ def lists_to_ndarray(dictionary):
     return data
 
 
-class QChemData:
-    @property
-    def data(self):
-        thisdir = os.path.dirname(__file__)
-        yaml_file = os.path.join(thisdir, "qchem_dump.yml")
-        with open(yaml_file, "r") as f:
-            data_raw = yaml.safe_load(f)
-        return lists_to_ndarray(data_raw)
+def read_qchem_data():
+    thisdir = os.path.dirname(__file__)
+    yaml_file = os.path.join(thisdir, "qchem_dump.yml")
+    with open(yaml_file, "r") as f:
+        data_raw = yaml.safe_load(f)
+    return lists_to_ndarray(data_raw)
 
 
-qchem_data = QChemData().data
+qchem_data = read_qchem_data()

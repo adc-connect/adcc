@@ -28,12 +28,12 @@ import yaml
 from cclib.parser import QChem
 import numpy as np
 
-from adcc.testdata.static_data import xyz
-from adcc.testdata.static_data import pe_potentials
+from static_data import xyz
+from static_data import pe_potentials
 
 from scipy import constants
 
-eV = constants.value("Hartee energy in eV")
+eV = constants.value("Hartree energy in eV")
 
 _qchem_template = """
 $rem
@@ -141,9 +141,8 @@ def dump_qchem(molecule, method, basis, **kwargs):
             "pe": pe,
             "geometry": geom
         }
-        generate_qchem_input_file(
-            infile, method, basis, geom, **kwargs
-        )
+        generate_qchem_input_file(infile, method, basis,
+                                  geom, **kwargs)
         # only works with my (ms) fork of cclib
         # github.com/maxscheurer/cclib, branch dev-qchem
         sh.qchem(infile, outfile)
@@ -151,8 +150,8 @@ def dump_qchem(molecule, method, basis, **kwargs):
         ret["oscillator_strength"] = res.etoscs
         ret["excitation_energy"] = res.etenergies / eV
         if pe:
-            ret["pe_ptss_correction"] = res.peenergies["ptSS"] / eV
-            ret["pe_ptlr_correction"] = res.peenergies["ptLR"] / eV
+            ret["pe_ptss_correction"] = np.array(res.peenergies["ptSS"]) / eV
+            ret["pe_ptlr_correction"] = np.array(res.peenergies["ptLR"]) / eV
         for key in ret:
             if isinstance(ret[key], np.ndarray):
                 ret[key] = ret[key].tolist()

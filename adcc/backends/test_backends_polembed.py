@@ -32,10 +32,7 @@ import pytest
 from ..misc import expand_test_templates
 from .testing import cached_backend_hf
 from ..testdata.static_data import pe_potentials
-from ..testdata.qchem import qchem_data
-
-from scipy import constants
-eV = constants.value("Hartree energy in eV")
+from ..testdata.cache import qchem_data
 
 
 backends = [b for b in adcc.backends.available()
@@ -56,24 +53,24 @@ class TestPolarizableEmbedding(unittest.TestCase):
         state = adcc.run_adc(scfres, method=method,
                              n_singlets=5, conv_tol=1e-10)
         assert_allclose(
-            qc_result["excitation_energies_ev"],
-            state.excitation_energy_uncorrected * eV,
+            qc_result["excitation_energy"],
+            state.excitation_energy_uncorrected,
             atol=1e-5
         )
         assert_allclose(
-            + qc_result["excitation_energies_ev"]
-            + qc_result["pe_ptss_corrections_ev"]
-            + qc_result["pe_ptlr_corrections_ev"],
-            state.excitation_energy * eV,
+            + qc_result["excitation_energy"]
+            + qc_result["pe_ptss_correction"]
+            + qc_result["pe_ptlr_correction"],
+            state.excitation_energy,
             atol=1e-5
         )
         assert_allclose(
-            qc_result["pe_ptss_corrections_ev"],
-            state.pe_ptss_correction * eV,
+            qc_result["pe_ptss_correction"],
+            state.pe_ptss_correction,
             atol=1e-5
         )
         assert_allclose(
-            qc_result["pe_ptlr_corrections_ev"],
-            state.pe_ptlr_correction * eV,
+            qc_result["pe_ptlr_correction"],
+            state.pe_ptlr_correction,
             atol=1e-5
         )
