@@ -25,6 +25,7 @@ requirements:
     # Testing:
     - pytest
     - pytest-cov
+    - pyyaml
     # - psi4   # TODO Unfortunately installing psi4 here does not work.
     # - pyscf  # TODO Unfortunately pyscf neither
     # Standard dependencies:
