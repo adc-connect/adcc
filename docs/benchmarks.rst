@@ -27,12 +27,6 @@ Noradrenaline
 
 .. include:: benchmarks/Noradrenaline.rst
 
-Cluster benchmarks on Intel(R) Xeon(R) E5-2690
-----------------------------------------------
-
-These benchmarks have been run on a node with two
-Intel(R) Xeon(R) E5-2690 CPUs @ 2.90GHz.
-
 *p*-Nitroaniline
 ~~~~~~~~~~~~~~~~
 
