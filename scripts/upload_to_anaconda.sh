@@ -23,13 +23,26 @@ echo -e "\n#"
 echo "#-- Deploying tag/commit '$ADCC_TAG' (version $ADCC_VERSION) to label '$LABEL'"
 echo -e "#\n"
 
+PYREGEX="$1"
 set -eu
-< conda/meta.yaml.in sed "s/@ADCC_VERSION@/$ADCC_VERSION/g;" > conda/meta.yaml
-conda install conda-build anaconda-client --yes
 
-# Setup channels for installing psi4 and pyscf and then build package
+# Build conda/meta.yaml and conda_build_config.yaml
+if [ "$PYREGEX" ]; then
+	# Apply version restriction regex
+	 < conda/conda_build_config.yaml awk -v "vregex=$PYREGEX" '
+		/^[a-z_]+:/ {pr = 0}  # Switch on printing for any new yaml keys
+		pr == 1 && $0 ~ "^[[:space:]]+- " vregex {print; next}  # print matches
+		pr == 0               # Print if pr is 0 (unset or printing enabled)
+		/^python:/ {pr=1}     # Switch off printing if we have entered python:
+	' > conda_build_config.yaml.temp
+	mv conda_build_config.yaml.temp conda/conda_build_config.yaml
+fi
+< conda/meta.yaml.in sed "s/@ADCC_VERSION@/$ADCC_VERSION/g;" > conda/meta.yaml
+
+# Install requirements and setup channels
+conda install conda-build anaconda-client --yes
 # conda config --append channels psi4/label/dev
-conda config --append channels pyscf
+# conda config --append channels pyscf
 
 # Running build and deployment
 conda build conda --user adcc --token $ANACONDA_TOKEN --label $LABEL
