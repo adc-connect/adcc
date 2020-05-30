@@ -216,6 +216,23 @@ static double Tensor_trace_2(const Tensor& tensor) {
   return tensor.trace("ii");
 }
 
+static ten_ptr linear_combination_strict(
+      py::array_t<scalar_type, py::array::c_style> coefficients, py::list tensors) {
+
+  if (coefficients.ndim() != 1) {
+    throw invalid_argument("coefficients array needs to have exactly one dimension.");
+  }
+  size_t in_size             = static_cast<size_t>(coefficients.shape(0));
+  const scalar_type* in_data = coefficients.data();
+  std::vector<scalar_type> scalars(in_size);
+  std::copy(in_data, in_data + in_size, scalars.data());
+  std::vector<ten_ptr> parsed = extract_tensors(tensors);
+
+  auto ret = parsed[0]->zeros_like();
+  ret->add_linear_combination(scalars, parsed);
+  return ret;
+}
+
 //
 // Element access
 //
@@ -479,6 +496,8 @@ void export_Tensor(py::module& m) {
   m.def("direct_sum", &direct_sum, py::arg("a"), py::arg("b"));
   m.def("trace", &Tensor_trace_1, py::arg("subscripts"), py::arg("tensor"));
   m.def("trace", &Tensor_trace_2, py::arg("tensor"));
+  m.def("linear_combination_strict", &linear_combination_strict, py::arg("coefficients"),
+        py::arg("tensors"));
 }
 
 }  // namespace py_iface

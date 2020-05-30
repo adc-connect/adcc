@@ -87,7 +87,7 @@ def nosym_like(a):
     return a.nosym_like()
 
 
-def linear_combination(coefficients, tensors):
+def lincomb(coefficients, tensors, evaluate=False):
     """
     Form a linear combination from a list of tensors.
 
@@ -95,14 +95,50 @@ def linear_combination(coefficients, tensors):
     linear combination, else return a list of vectors
     representing the linear combination by reading
     the coefficients row-by-row.
+
+    Parameters
+    ----------
+    coefficients : list
+        Coefficients for the linear combination
+    tensors : list
+        Tensors for the linear combination
+    evaluate : bool
+        Should the linear combination be evaluated (True) or should just
+        a lazy expression be formed (False). Notice that
+        `lincomb(..., evaluate=True)`
+        is identical to `lincomb(..., evaluate=False).evaluate()`,
+        but the former is generally faster.
     """
     if len(tensors) == 0:
         raise ValueError("List of tensors cannot be empty")
     if len(tensors) != len(coefficients):
         raise ValueError("Number of coefficient values does not match "
                          "number of tensors.")
-    start = coefficients[0] * tensors[0]
-    return sum((c * t for (c, t) in zip(coefficients[1:], tensors[1:])), start)
+    if isinstance(tensors[0], AmplitudeVector):
+        return AmplitudeVector(*tuple(
+            lincomb(coefficients, [ten[block] for ten in tensors],
+                    evaluate=evaluate)
+            for block in tensors[0].blocks
+        ))
+    elif not isinstance(tensors[0], libadcc.Tensor):
+        raise TypeError("Tensor type not supported")
+
+    if evaluate:
+        # Perform strict evaluation on this linear combination
+        return libadcc.linear_combination_strict(coefficients, tensors)
+    else:
+        # Perform lazy evaluation on this linear combination
+        start = float(coefficients[0]) * tensors[0]
+        return sum((float(c) * t
+                    for (c, t) in zip(coefficients[1:], tensors[1:])), start)
+
+
+def linear_combination(*args, **kwargs):
+    import warnings
+
+    warnings.warn(DeprecationWarning("linear_combination is deprecated and will "
+                                     "be removed in 0.17. Use lincomb."))
+    return lincomb(*args, **kwargs)
 
 
 def evaluate(a):
