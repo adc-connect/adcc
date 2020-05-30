@@ -37,7 +37,6 @@ requirements:
   run:
     - {{ pin_compatible('python', max_pin='x.x') }}
     - {{ pin_compatible('mkl', upper_bound='2021.0') }}
-    # - {{ pin_compatible('numpy', max_pin='x.x') }}
     - numpy >=1.14
     - h5py >=2.9
     - scipy >=1.2
