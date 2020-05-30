@@ -21,8 +21,8 @@
 ##
 ## ---------------------------------------------------------------------
 import unittest
-import adcc
 import itertools
+import adcc
 import adcc.backends
 
 from numpy.testing import assert_allclose
@@ -31,8 +31,15 @@ import pytest
 
 from ..misc import expand_test_templates
 from .testing import cached_backend_hf
-from ..testdata.static_data import pe_potentials
 from ..testdata.cache import qchem_data
+from ..testdata.static_data import pe_potentials
+
+try:
+    import cppe  # noqa: F401
+
+    has_cppe = True
+except ImportError:
+    has_cppe = False
 
 
 backends = [b for b in adcc.backends.available()
@@ -41,6 +48,7 @@ basissets = ["sto3g", "ccpvdz"]
 methods = ["adc1", "adc2", "adc3"]
 
 
+@pytest.mark.skipif(not has_cppe, reason="CPPE not found")
 @pytest.mark.skipif(len(backends) == 0, reason="No backend found.")
 @expand_test_templates(list(itertools.product(basissets, methods, backends)))
 class TestPolarizableEmbedding(unittest.TestCase):
