@@ -237,9 +237,9 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
         'd_convergence': conv_tol_grad,
         'maxiter': max_iter,
         'reference': "RHF",
-        'pe': 'true' if pe_options else 'false',
     })
     if pe_options:
+        psi4.set_options({"pe", "true"})
         psi4.set_module_options("pe", {"potfile": pe_options["potfile"]})
 
     if multiplicity != 1:
