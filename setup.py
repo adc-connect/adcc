@@ -371,12 +371,13 @@ adccsetup(
     platforms=["Linux", "Mac OS-X"],
     python_requires=">=3.6",
     install_requires=[
+        "opt_einsum >= 3.0",
         "pybind11 >= 2.2",
         "numpy >= 1.14",
         "scipy >= 1.2",
-        "matplotlib >= 3.0",  # Maybe also lower?
-        "h5py >= 2.9",        # Maybe also lower?
-        "tqdm >= 4.30",       # Maybe also lower?
+        "matplotlib >= 3.0",
+        "h5py >= 2.9",
+        "tqdm >= 4.30",
     ],
     tests_require=["pytest", "pytest-cov", "pyyaml"],
     extras_require={

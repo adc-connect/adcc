@@ -23,6 +23,7 @@
 from .AmplitudeVector import AmplitudeVector
 
 import libadcc
+import opt_einsum
 
 
 def dot(a, b):
@@ -195,6 +196,29 @@ def direct_sum(subscripts, *operands):
     return res
 
 
+def einsum(subscripts, *operands, optimise="auto"):
+    """
+    Evaluate Einstein summation convention for the operands similar
+    to numpy's einsum function. Uses opt_einsum and libadcc to
+    perform the contractions.
+
+    Using this function does not evaluate, but returns a contraction
+    expression tree where contractions are queued in optimal order.
+
+    Parameters
+    ----------
+
+    subscripts : str
+        Specifies the subscripts for summation.
+    *operands : list of tensors
+        These are the arrays for the operation.
+    optimise : str, list or bool, optional (default: ``auto``)
+        Choose the type of the path optimisation, see
+        opt_einsum.contract for details.
+    """
+    return opt_einsum.contract(subscripts, *operands, optimize=optimise)
+
+
 def contract(subscripts, a, b):
     """
     Form a single, einsum-like contraction, that is contract
@@ -202,30 +226,10 @@ def contract(subscripts, a, b):
     by the first argument string, e.g. "ab,bc->ac"
     or "abc,bcd->ad".
 
-    Note: The contract function is experimental. Its interface can change
-          and the function will likely disappear in the future.
+    Note: The contract function is deprecated. It will disappear in 0.18.
     """
-    contraction, result = subscripts.split("->")
-    contraction = contraction.split(",")
-    if len(contraction) != 2 or result == "" or subscripts.count("->") != 1:
-        raise ValueError("Expected one comma and one -> in the string")
+    import warnings
 
-    subscripts_from_tensordot = ""
-    a_axes = []
-    b_axes = []
-    for i, c in enumerate(contraction[0]):
-        if c in result:
-            subscripts_from_tensordot += c
-            continue
-        try:
-            a_axes.append(i)
-            b_axes.append(contraction[1].index(c))
-        except ValueError:
-            raise ValueError(f"Contraction letter {c} not found in subscripts "
-                             "for second tensor")
-    for j, c in enumerate(contraction[1]):
-        if c not in contraction[0]:
-            subscripts_from_tensordot += c
-
-    permutation = tuple(subscripts_from_tensordot.index(c) for c in result)
-    return libadcc.tensordot(a, b, (a_axes, b_axes)).transpose(permutation)
+    warnings.warn(DeprecationWarning("contract is deprecated and will "
+                                     "be removed in 0.18. Use einsum."))
+    return einsum(subscripts, a, b)

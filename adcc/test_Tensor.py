@@ -23,11 +23,12 @@
 import unittest
 import numpy as np
 
-from .misc import expand_test_templates
 from numpy.testing import assert_allclose
 
-from adcc import contract, direct_sum, empty_like, nosym_like
+from adcc import direct_sum, einsum, empty_like, nosym_like
 from adcc.testdata.cache import cache
+
+from .misc import expand_test_templates
 
 
 @expand_test_templates(["h2o_sto3g", "cn_sto3g"])
@@ -84,11 +85,11 @@ class TestTensor(unittest.TestCase):
 
         # (Slightly) modified ADC(2) singles block equation
         res = (
-            + contract("ib,ab->ia", u1, f_vv + i1)
-            - contract("ij,ja->ia", f_oo - i2, u1)
-            - contract("jaib,jb->ia", ovov, u1)
-            - 0.5 * contract("ijab,jb->ia", t2, contract("jkbc,kc->jb", oovv, u1))
-            - 0.5 * contract("ijab,jb->ia", oovv, contract("jkbc,kc->jb", t2, u1))
+            + einsum("ib,ab->ia", u1, f_vv + i1)
+            - einsum("ij,ja->ia", f_oo - i2, u1)
+            - einsum("jaib,jb->ia", ovov, u1)
+            - 0.5 * einsum("ijab,jkbc,kc->ia", t2, oovv, u1)
+            - 0.5 * einsum("ijab,jkbc,kc->ia", oovv, t2, u1)
         )
         ref = (
             + np.einsum("ib,ab->ia", nu1, nf_vv + ni1)
@@ -110,7 +111,7 @@ class TestTensor(unittest.TestCase):
         noovv = oovv.to_ndarray()
         novov = ovov.to_ndarray()
 
-        res = libadcc.trace("iaai", contract("ijab,kcja->icbk", oovv, ovov))
+        res = libadcc.trace("iaai", einsum("ijab,kcja->icbk", oovv, ovov))
         ref = np.einsum("ijab,ibja->", noovv, novov)
         assert_allclose(res, ref, rtol=1e-10, atol=1e-14)
 
@@ -126,6 +127,6 @@ class TestTensor(unittest.TestCase):
                - oev.to_ndarray()[None, None, None, :])
         ref = ref.transpose((2, 0, 3, 1))
 
-        res = direct_sum("ab-i-c->iacb", contract("ijac,ijcb->ab", oovv, oovv),
+        res = direct_sum("ab-i-c->iacb", einsum("ijac,ijcb->ab", oovv, oovv),
                          oeo, oev)
         assert_allclose(res.to_ndarray(), ref, rtol=1e-10, atol=1e-14)

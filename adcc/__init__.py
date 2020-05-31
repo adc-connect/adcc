@@ -28,9 +28,9 @@ from .Tensor import Tensor
 from .Symmetry import Symmetry
 from .AdcMatrix import AdcMatrix, AdcMatrixlike
 from .AdcMethod import AdcMethod
-from .functions import (contract, copy, direct_sum, dot, empty_like, evaluate,
-                        lincomb, linear_combination, nosym_like, ones_like,
-                        transpose, zeros_like)
+from .functions import (contract, copy, direct_sum, dot, einsum, empty_like,
+                        evaluate, lincomb, linear_combination, nosym_like,
+                        ones_like, transpose, zeros_like)
 from .memory_pool import memory_pool
 from .AdcBlockView import AdcBlockView
 from .ExcitedStates import ExcitedStates
@@ -39,6 +39,7 @@ from .ReferenceState import ReferenceState
 from .caching_policy import DefaultCachingPolicy, GatherStatisticsPolicy
 from .AmplitudeVector import AmplitudeVector
 from .OneParticleOperator import OneParticleOperator
+from .opt_einsum_integration import register_with_opt_einsum
 
 from libadcc import HartreeFockProvider, get_n_threads, set_n_threads
 
@@ -49,7 +50,7 @@ from .workflow import run_adc
 
 __all__ = ["run_adc", "AdcMatrix", "AdcBlockView", "AdcMatrixlike", "AdcMethod",
            "Symmetry", "ReferenceState",
-           "contract", "copy", "dot", "empty_like", "evaluate",
+           "einsum", "contract", "copy", "dot", "empty_like", "evaluate",
            "lincomb", "nosym_like", "ones_like", "transpose",
            "linear_combination", "zeros_like", "direct_sum",
            "memory_pool", "set_n_threads", "get_n_threads", "AmplitudeVector",
@@ -233,3 +234,6 @@ def banner(colour=sys.stdout.isatty(), show_doi=True, show_website=True):
     string += empty
     string += "+" + 78 * "-" + "+"
     return string
+
+
+register_with_opt_einsum()
