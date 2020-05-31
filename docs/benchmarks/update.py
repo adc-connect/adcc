@@ -114,16 +114,14 @@ def write_details(data, testcase, reference, basis, n_ao=None):
 
 
 def main():
-    commit = "f7665c10"
+    commit = "9c7bba83"
     write_commit_file(commit)
     json_clustern08 = fetch_json(commit, "mlv-clustern08")
-    json_clustern09 = fetch_json(commit, "mlv-clustern09")
-
-    write_details(json_clustern09, "PhosphineCvs", "RHF", "6-311++G**", n_ao=51)
-    write_details(json_clustern09, "MethylammoniumRadical", "UHF",
+    write_details(json_clustern08, "PhosphineCvs", "RHF", "6-311++G**", n_ao=51)
+    write_details(json_clustern08, "MethylammoniumRadical", "UHF",
                   "cc-pVTZ", n_ao=116)
-    write_details(json_clustern09, "ParaNitroAniline", "RHF", "cc-pVDZ", n_ao=170)
-    write_details(json_clustern09, "WaterExpensive", "RHF", "cc-pVQZ", n_ao=115)
+    write_details(json_clustern08, "ParaNitroAniline", "RHF", "cc-pVDZ", n_ao=170)
+    write_details(json_clustern08, "WaterExpensive", "RHF", "cc-pVQZ", n_ao=115)
     write_details(json_clustern08, "Noradrenaline", "RHF", "6-311++G**", n_ao=341)
 
 
