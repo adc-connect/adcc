@@ -25,6 +25,7 @@ import subprocess
 
 
 def build_docs():
+    subprocess.run("rm -r docs/api".split(), check=True)
     subprocess.run("./setup.py build_docs".split(), check=True)
     return "build/sphinx/html"
 

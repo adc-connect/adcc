@@ -116,19 +116,16 @@ Tensor and symmetry interface
     :members:
     :inherited-members:
 
-.. autofunction:: adcc.add
-.. autofunction:: adcc.contract
 .. autofunction:: adcc.copy
-.. autofunction:: adcc.divide
 .. autofunction:: adcc.dot
+.. autofunction:: adcc.einsum
+.. autofunction:: adcc.lincomb
 .. autofunction:: adcc.empty_like
-.. autofunction:: adcc.linear_combination
-.. autofunction:: adcc.multiply
 .. autofunction:: adcc.nosym_like
 .. autofunction:: adcc.ones_like
-.. autofunction:: adcc.subtract
-.. autofunction:: adcc.transpose
 .. autofunction:: adcc.zeros_like
+.. autofunction:: adcc.evaluate
+.. autofunction:: adcc.direct_sum
 
 Solvers
 -------
