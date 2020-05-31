@@ -20,8 +20,6 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import warnings
-
 import libadcc
 
 from .functions import evaluate
@@ -63,11 +61,6 @@ class OneParticleOperator(libadcc.OneParticleOperator):
         if hasattr(self, "reference_state"):
             ret.reference_state = self.reference_state
         return ret
-
-    def transform_to_ao_basis(self, refstate):
-        warnings.warn(DeprecationWarning("transform_to_ao_basis is deprecated. "
-                                         "Use to_ao_basis instead."))
-        return self.to_ao_basis(refstate)
 
     def to_ao_basis(self, refstate_or_coefficients=None):
         """
