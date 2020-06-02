@@ -32,6 +32,20 @@ typedef std::shared_ptr<Tensor> ten_ptr;
 
 static std::vector<std::vector<size_t>> parse_permutations(
       const py::iterable& permutations) {
+  bool iterator_of_ints = false;
+  for (auto tpl : permutations) {
+    if (py::isinstance<py::int_>(tpl)) iterator_of_ints = true;
+    break;
+  }
+
+  if (iterator_of_ints) {
+    std::vector<size_t> perms;
+    for (auto itm : permutations) {
+      perms.push_back(itm.cast<size_t>());
+    }
+    return std::vector<std::vector<size_t>>{perms};
+  }
+
   std::vector<std::vector<size_t>> vec_perms;
   for (auto tpl : permutations) {
     std::vector<size_t> perms;
@@ -157,12 +171,27 @@ static ten_ptr Tensor_symmetrise_2(const Tensor& self, py::args permutations) {
   return self.symmetrise(parse_permutations(permutations));
 }
 
+static ten_ptr Tensor_symmetrise_3(const Tensor& self) {
+  if (self.ndim() != 2) {
+    throw invalid_argument("symmetrise without arguments may only be used for matrices.");
+  }
+  return self.symmetrise({{0, 1}});
+}
+
 static ten_ptr Tensor_antisymmetrise_1(const Tensor& self, py::list permutations) {
   return self.antisymmetrise(parse_permutations(permutations));
 }
 
 static ten_ptr Tensor_antisymmetrise_2(const Tensor& self, py::args permutations) {
   return self.antisymmetrise(parse_permutations(permutations));
+}
+
+static ten_ptr Tensor_antisymmetrise_3(const Tensor& self) {
+  if (self.ndim() != 2) {
+    throw invalid_argument(
+          "antisymmetrise without arguments may only be used for matrices.");
+  }
+  return self.antisymmetrise({{0, 1}});
 }
 
 static py::object tensordot_1(ten_ptr a, ten_ptr b, py::iterable axes) {
@@ -210,7 +239,7 @@ static double Tensor_trace_1(std::string subscripts, const Tensor& tensor) {
 }
 static double Tensor_trace_2(const Tensor& tensor) {
   if (tensor.ndim() != 2) {
-    throw adcc::not_implemented_error(
+    throw invalid_argument(
           "trace function without arguments may only be used for matrices.");
   }
   return tensor.trace("ii");
@@ -425,8 +454,10 @@ void export_Tensor(py::module& m) {
         .def("transpose", &Tensor_transpose_2)
         .def("symmetrise", &Tensor_symmetrise_1)
         .def("symmetrise", &Tensor_symmetrise_2)
+        .def("symmetrise", &Tensor_symmetrise_3)
         .def("antisymmetrise", &Tensor_antisymmetrise_1)
         .def("antisymmetrise", &Tensor_antisymmetrise_2)
+        .def("antisymmetrise", &Tensor_antisymmetrise_3)
         .def("to_ndarray", &Tensor_to_ndarray,
              "Export the tensor data to a standard np::ndarray by making a copy.")
         .def("set_from_ndarray", &Tensor_from_ndarray,

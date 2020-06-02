@@ -18,8 +18,7 @@ addons:
       - libopenblas-base
 
 install:
-  - pip3 install pyscf
-  - pip3 install cppe
+  - pip3 install pyscf cppe
   - pip3 install --verbose -r requirements.txt
 script: python3 setup.py test -a '--cov=adcc'
 
