@@ -22,14 +22,14 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
-import libadcc
-
 from .misc import cached_property
 from .Tensor import Tensor
 from .MoSpaces import MoSpaces
 from .backends import import_scf_results
 from .OperatorIntegrals import OperatorIntegrals
 from .OneParticleOperator import OneParticleOperator, product_trace
+
+import libadcc
 
 __all__ = ["ReferenceState"]
 
@@ -159,6 +159,14 @@ class ReferenceState(libadcc.ReferenceState):
             if hasattr(hfdata, name):
                 setattr(self, name, getattr(hfdata, name))
 
+    def __getattr__(self, attr):
+        from . import block as b
+
+        if attr.startswith("f"):
+            return self.fock(b.__getattr__(attr[1:]))
+        else:
+            return self.eri(b.__getattr__(attr))
+
     @property
     def mospaces(self):
         return self._mospaces
@@ -187,9 +195,9 @@ class ReferenceState(libadcc.ReferenceState):
         Return the Hartree-Fock density in the MO basis
         """
         density = OneParticleOperator(self.mospaces, is_symmetric=True)
-        for b in density.blocks:
-            sym = libadcc.make_symmetry_operator(self.mospaces, b, True, "1")
-            density.set_block(b, Tensor(sym))
+        for block in density.blocks:
+            sym = libadcc.make_symmetry_operator(self.mospaces, block, True, "1")
+            density.set_block(block, Tensor(sym))
         for ss in self.mospaces.subspaces_occupied:
             density[ss + ss].set_mask("ii", 1)
         density.reference_state = self

@@ -20,10 +20,10 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from .AmplitudeVector import AmplitudeVector
-
 import libadcc
 import opt_einsum
+
+from .AmplitudeVector import AmplitudeVector
 
 
 def dot(a, b):
@@ -144,12 +144,10 @@ def linear_combination(*args, **kwargs):
 
 def evaluate(a):
     """Force full evaluation of a tensor expression"""
-    if isinstance(a, AmplitudeVector):
-        for block in a.blocks:
-            a[block].evaluate()
-        return a
-    elif isinstance(a, list):
+    if isinstance(a, list):
         return [evaluate(elem) for elem in a]
+    elif hasattr(a, "evaluate"):
+        return a.evaluate()
     else:
         return libadcc.evaluate(a)
 
@@ -216,7 +214,8 @@ def einsum(subscripts, *operands, optimise="auto"):
         Choose the type of the path optimisation, see
         opt_einsum.contract for details.
     """
-    return opt_einsum.contract(subscripts, *operands, optimize=optimise)
+    return opt_einsum.contract(subscripts, *operands, optimize=optimise,
+                               backend="libadcc")
 
 
 def contract(subscripts, a, b):
