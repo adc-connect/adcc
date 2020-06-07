@@ -232,6 +232,17 @@ static py::object tensordot_2(ten_ptr a, ten_ptr b, size_t axes) {
 
 static py::object tensordot_3(ten_ptr a, ten_ptr b) { return tensordot_2(a, b, 2); }
 
+static ten_ptr Tensor_diagonal(ten_ptr ten, py::args permutations) {
+  std::vector<size_t> axes;
+  if (py::len(permutations) == 0) {
+    axes.push_back(0);
+    axes.push_back(1);
+  } else {
+    for (auto itm : permutations) axes.push_back(itm.cast<size_t>());
+  }
+  return ten->diagonal(axes);
+}
+
 static ten_ptr direct_sum(ten_ptr a, ten_ptr b) { return a->direct_sum(b); }
 
 static double Tensor_trace_1(std::string subscripts, const Tensor& tensor) {
@@ -446,6 +457,7 @@ void export_Tensor(py::module& m) {
         .def("set_mask", &adcc::Tensor::set_mask,
              "Set all elements corresponding to an index mask, which is given by a "
              "string eg. 'iijkli' sets elements T_{iijkli}")
+        .def("diagonal", &Tensor_diagonal)
         .def("copy", &Tensor::copy, "Returns a deep copy of the tensor.")
         .def("dot", &Tensor_dot)
         .def("dot", &Tensor_dot_list)

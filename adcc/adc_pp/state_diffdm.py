@@ -69,13 +69,13 @@ def diffdm_adc2(mp, amplitude, intermediates):
     p1_oo = dm[b.oo].evaluate()  # ADC(1) diffdm
     p1_vv = dm[b.vv].evaluate()  # ADC(1) diffdm
 
-    # Compute zeroth order doubles contributions
+    # Zeroth order doubles contributions
     p2_oo = -einsum("ikab,jkab->ij", u2, u2)
     p2_vv = einsum("ijac,ijbc->ab", u2, u2)
-    p2_ov = -2 * einsum("jb,ijab->ia", u1, u2)
+    p2_ov = -2 * einsum("jb,ijab->ia", u1, u2).evaluate()
 
     # ADC(2) ISR intermediate (TODO Move to intermediates)
-    ru1 = einsum("ijab,jb->ia", t2, u1)
+    ru1 = einsum("ijab,jb->ia", t2, u1).evaluate()
 
     # Compute second-order contributions to the density matrix
     dm[b.oo] = (  # adc2_p_oo
@@ -127,7 +127,7 @@ def diffdm_cvs_adc2(mp, amplitude, intermediates):
     p0_vv = intermediates.cv_p_vv
     p1_vv = dm[b.vv].evaluate()  # ADC(1) diffdm
 
-    # Compute zeroth order doubles contributions
+    # Zeroth order doubles contributions
     p2_ov = -sqrt(2) * einsum("jb,ijab->ia", u1, u2)
     p2_vo = -sqrt(2) * einsum("ijab,jb->ai", u2, u1)
     p2_oo = -einsum("ljab,kjab->kl", u2, u2)

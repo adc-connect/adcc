@@ -25,7 +25,7 @@ from adcc.AmplitudeVector import AmplitudeVector
 
 import libadcc
 
-DISPATCH = {}
+DISPATCH = {}  # None implemented
 
 
 def state2state_transition_dm(method, ground_state, amplitude_from,

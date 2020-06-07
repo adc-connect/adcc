@@ -28,13 +28,14 @@ from numpy.testing import assert_allclose
 from adcc import einsum, empty_like, nosym_like
 from adcc.testdata.cache import cache
 
+import pytest
+
 
 class TestEinsum(unittest.TestCase):
-    def base_test(self, contr, a, b):
-        a.set_random()
-        b.set_random()
-        ref = np.einsum(contr, a.to_ndarray(), b.to_ndarray())
-        out = einsum(contr, a, b)
+    def base_test(self, contr, *arr):
+        arr = [a.set_random() for a in arr]
+        ref = np.einsum(contr, *[a.to_ndarray() for a in arr])
+        out = einsum(contr, *arr)
         assert_allclose(out.to_ndarray(), ref, rtol=1e-10, atol=1e-14)
 
     def test_einsum_1_1_0(self):
@@ -127,3 +128,55 @@ class TestEinsum(unittest.TestCase):
         a = empty_like(refstate.eri("o1v1o1v1"))
         b = empty_like(refstate.eri("o1o1o1v1"))
         self.base_test("iajb,jikb->ka", a, b)
+
+    def test_diagonal_1(self):
+        refstate = cache.refstate["cn_sto3g"]
+        a = empty_like(refstate.eri("o1v1o1v1"))
+        self.base_test("iaia->ia", a)
+
+    def test_diagonal_2(self):
+        refstate = cache.refstate["cn_sto3g"]
+        a = empty_like(refstate.eri("o1v1o1v1"))
+        self.base_test("iaia->ai", a)
+
+    def test_diagonal_3(self):
+        refstate = cache.refstate["h2o_sto3g"]
+        a = empty_like(refstate.ovov)
+        self.base_test("iaja->aij", a)
+
+    def test_diagonal_4(self):
+        refstate = cache.refstate["h2o_sto3g"]
+        a = empty_like(refstate.ovov)
+        self.base_test("iaja->ija", a)
+
+    def test_diagonal_5(self):
+        refstate = cache.refstate["cn_sto3g"]
+        a = empty_like(refstate.ovov)
+        b = empty_like(refstate.foo)
+        self.base_test("laib,il->aib", a, b)
+
+    def test_diagonal_6(self):
+        refstate = cache.refstate["h2o_sto3g"]
+        a = empty_like(refstate.fov)
+        b = empty_like(refstate.fvo)
+        self.base_test("ai,ia->i", a, b)
+
+    def test_diagonal_7(self):
+        refstate = cache.refstate["h2o_sto3g"]
+        a = empty_like(refstate.ovov)
+        b = empty_like(refstate.fvv)
+        self.base_test("iaib,ba->ia", a, b)
+
+    def test_partial_trace(self):
+        refstate = cache.refstate["h2o_sto3g"]
+        a = empty_like(refstate.ovov)
+        b = empty_like(refstate.fvv)
+        with pytest.raises(NotImplementedError, match=r"Partial traces.*"):
+            einsum("iaib,ba->a", a, b)
+
+    def test_thc(self):
+        refstate = cache.refstate["h2o_sto3g"]
+        a = nosym_like(refstate.foo)
+        b = nosym_like(refstate.fov)
+        c = nosym_like(refstate.foo)
+        self.base_test("ij,ia,ik->jka", a, b, c)
