@@ -24,8 +24,11 @@ import libadcc
 import numpy as np
 
 from .LazyMp import LazyMp
+from .adc_pp import matrix as ppmatrix
+from .timings import Timer
 from .AdcMethod import AdcMethod
-from .functions import empty_like
+from .functions import empty_like, evaluate
+from .Intermediates import Intermediates
 from .AmplitudeVector import AmplitudeVector
 
 
@@ -308,8 +311,7 @@ class AdcMatrix(AdcMatrixlike):
                             "HartreeFockSolution_i.")
 
         self.method = method
-        self.cppmat = libadcc.AdcMatrix(method.name, hf_or_mp)
-        super().__init__(self.cppmat)
+        super().__init__(libadcc.AdcMatrix(method.name, hf_or_mp))
 
     def compute_matvec(self, in_ampl, out_ampl=None):
         """
@@ -320,11 +322,12 @@ class AdcMatrix(AdcMatrixlike):
         """
         if not isinstance(in_ampl, AmplitudeVector):
             raise TypeError("in_ampl has to be of type AmplitudeVector.")
+
         if out_ampl is None:
             out_ampl = empty_like(in_ampl)
         if not isinstance(out_ampl, AmplitudeVector):
             raise TypeError("out_ampl has to be of type AmplitudeVector.")
-        self.cppmat.compute_matvec(in_ampl.to_cpp(), out_ampl.to_cpp())
+        self.innermatrix.compute_matvec(in_ampl.to_cpp(), out_ampl.to_cpp())
         return out_ampl
 
     def __repr__(self):
@@ -361,8 +364,161 @@ class AdcMatrixShifted(AdcMatrixlike):
         self.innermatrix.compute_apply(block, in_vec, out_vec)
         if block[0] == block[1]:  # Diagonal block
             out_vec += self.shift * in_vec
+        return out_vec
 
     def diagonal(self, block):
         out = self.innermatrix.diagonal(block)
         out = out + self.shift  # Shift the diagonal
         return out
+
+
+#
+# TODO The new AdcMatrix
+#
+class AdcMatrixPython(AdcMatrixlike):
+    def __init__(self, *args, **kwargs):
+        super().__init__(AdcMatrixCore(*args, **kwargs))
+
+
+class AdcMatrixCore:
+    def __init__(self, method, hf_or_mp, block_orders=None, intermediates=None):
+        if isinstance(hf_or_mp, (libadcc.ReferenceState,
+                                 libadcc.HartreeFockSolution_i)):
+            hf_or_mp = LazyMp(hf_or_mp)
+        if not isinstance(hf_or_mp, libadcc.LazyMp):
+            raise TypeError("mp_results is not a valid object. It needs to be "
+                            "either a LazyMp, a ReferenceState or a "
+                            "HartreeFockSolution_i.")
+
+        if not isinstance(method, AdcMethod):
+            method = AdcMethod(method)
+
+        self.method = method
+        self.ground_state = hf_or_mp
+        self.reference_state = hf_or_mp.reference_state
+        self.mospaces = hf_or_mp.reference_state.mospaces
+        self.is_core_valence_separated = method.is_core_valence_separated
+
+        # Determine block orders
+        new_orders = {
+            #             ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),
+            "adc0":  dict(ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
+            "adc1":  dict(ph_ph=1, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
+            "adc2":  dict(ph_ph=2, ph_pphh=1,    pphh_ph=1,    pphh_pphh=0),     # noqa: E501
+            "adc2x": dict(ph_ph=2, ph_pphh=1,    pphh_ph=1,    pphh_pphh=1),     # noqa: E501
+            "adc3":  dict(ph_ph=3, ph_pphh=2,    pphh_ph=2,    pphh_pphh=1),     # noqa: E501
+        }[method.base_method.name]
+        if block_orders is not None:
+            new_orders.update(block_orders)
+        block_orders = new_orders
+
+        # Sanity checks on block_orders
+        for block in block_orders.keys():
+            if block not in ("ph_ph", "ph_pphh", "pphh_ph", "pphh_pphh"):
+                raise ValueError(f"Invalid block order key: {block}")
+        if block_orders["ph_pphh"] != block_orders["pphh_ph"]:
+            raise ValueError("ph_pphh and pphh_ph should always have "
+                             "the same order")
+        if block_orders["ph_pphh"] is not None \
+           and block_orders["pphh_pphh"] is None:
+            raise ValueError("pphh_pphh cannot be node if ph_pphh isn't.")
+
+        if intermediates is None:
+            self.intermediates = Intermediates()
+        else:
+            self.intermediates = intermediates
+
+        # Build the blocks
+        variant = None
+        if method.is_core_valence_separated:
+            variant = "cvs"
+        self.__blocks = {
+            block: ppmatrix.block(hf_or_mp, block.split("_"), order=order,
+                                  intermediates=self.intermediates,
+                                  variant=variant)
+            for block, order in block_orders.items() if order is not None
+        }
+
+        # TODO Remove this
+        # automatically get the shape and subspace
+        # blocks of the matrix from the orders
+        # TODO once the AmplitudeVector object support missing blocks
+        #      this would be self.diagonal.blocks and self.diagonal.ph.subspaces
+        #      and self.diagonal.pphh.subspaces
+        self.__block_spaces = {}
+        if variant == "cvs":
+            self.__block_spaces["s"] = ["o2", "v1"]
+            if block_orders.get("pphh_pphh", None) is not None:
+                self.__block_spaces["d"] = ["o1", "o2", "v1", "v1"]
+        else:
+            self.__block_spaces["s"] = ["o1", "v1"]
+            if block_orders.get("pphh_pphh", None) is not None:
+                self.__block_spaces["d"] = ["o1", "o1", "v1", "v1"]
+        self.blocks = list(self.__block_spaces.keys())
+
+    @property
+    def timer(self):
+        return Timer()  # TODO Implement properly
+
+    def diagonal(self, block):
+        if block not in self.blocks:
+            raise ValueError("block not in blocks")
+        # TODO The block argument should be brought more
+        #      in line with the ph, pphh stuff
+
+        # TODO Once the AmplitudeVector object support missing blocks this would
+        #      just be return sum(bl.diagonal for bl in self.__blocks)
+
+        if block == "s":
+            return evaluate(sum(bl.diagonal.ph
+                                for bl in self.__blocks.values()
+                                if bl.diagonal and "s" in bl.diagonal.blocks
+                                and bl.diagonal.ph))
+        else:
+            return evaluate(sum(bl.diagonal.pphh
+                                for bl in self.__blocks.values()
+                                if bl.diagonal and "d" in bl.diagonal.blocks
+                                and bl.diagonal.pphh))
+
+    def compute_apply(self, block, tensor, out):
+        # TODO Drop out parameter (unused here anyway)
+        # TODO A lot of junk code to get compatibility to the old interface
+        key = {"ss": "ph_ph", "sd": "ph_pphh",
+               "ds": "pphh_ph", "dd": "pphh_pphh"}[block]
+        if block[1] == "s":
+            ampl = AmplitudeVector(ph=tensor)
+        else:
+            ampl = AmplitudeVector(pphh=tensor)
+        ret = self.__blocks[key].apply(ampl)
+
+        if block[0] == "s":
+            return ret.ph
+        else:
+            return ret.pphh
+
+    def compute_matvec(self, ampl):
+        # TODO Once properly supported in AmplitudeVector, this should be
+        # return sum(bl.apply(ampl) for bl in self.__blocks.values())
+
+        res = [bl.apply(ampl) for bl in self.__blocks.values()]
+        ph = sum(v.ph for v in res if "s" in v.blocks and v.ph)
+        pphh = None
+        if "d" in self.blocks:
+            pphh = sum(v.pphh for v in res if "d" in v.blocks and v.pphh)
+        return AmplitudeVector(ph=ph, pphh=pphh)
+
+    def has_block(self, block):  # TODO This should be deprecated
+        return block in self.blocks
+
+    @property
+    def shape(self):
+        length = 0
+        for bl in self.blocks:
+            prod = 1
+            for sp in self.block_spaces(bl):
+                prod *= self.mospaces.n_orbs(sp)
+            length += prod
+        return (length, length)
+
+    def block_spaces(self, block):  # TODO This should be deprecated
+        return self.__block_spaces[block]

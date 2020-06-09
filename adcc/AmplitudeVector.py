@@ -25,10 +25,31 @@ import libadcc
 BLOCK_LABELS = ["s", "d", "t"]
 
 
+# TODO Extend AmplitudeVector to cases where only the doubles block is present?
 class AmplitudeVector:
-    def __init__(self, *tensors):
+    def __init__(self, *tensors, ph=None, pphh=None):
         """Initialise an AmplitudeVector from some blocks"""
-        self.tensors = list(tensors)
+        # TODO ph and pphh are new-style constructors, they should
+        #      take over passing their tensors into a dict.
+        if len(tensors) == 0:
+            if pphh is not None:
+                if ph is None:
+                    ph = 0
+                self.tensors = [ph, pphh]
+            else:
+                assert ph is not None
+                self.tensors = [ph]
+        else:
+            assert ph is None and pphh is None
+            self.tensors = list(tensors)
+
+    @property
+    def ph(self):    # TODO temporary
+        return self.tensors[0]
+
+    @property
+    def pphh(self):  # TODO temporary
+        return self.tensors[1]
 
     # TODO Attach some information about this Amplitude, e.g.
     #      is it CVS?
@@ -137,8 +158,14 @@ class AmplitudeVector:
     def __add__(self, other):
         return self.__forward_to_blocks("__add__", other)
 
+    def __radd__(self, other):
+        return self.__forward_to_blocks("__radd__", other)
+
     def __sub__(self, other):
         return self.__forward_to_blocks("__sub__", other)
+
+    def __rsub__(self, other):
+        return self.__forward_to_blocks("__rsub__", other)
 
     def __truediv__(self, other):
         return self.__forward_to_blocks("__truediv__", other)

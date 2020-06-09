@@ -20,14 +20,13 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import libadcc
 import numpy as np
 
 from .misc import cached_property
 from .ReferenceState import ReferenceState
 from .caching_policy import DefaultCachingPolicy
 from .OneParticleOperator import OneParticleOperator, product_trace
-
-import libadcc
 
 
 class LazyMp(libadcc.LazyMp):
@@ -45,6 +44,16 @@ class LazyMp(libadcc.LazyMp):
             raise TypeError("hf needs to be a ReferenceState "
                             "or a HartreeFockSolution_i")
         super().__init__(hf, caching_policy)
+
+    def __getattr__(self, attr):
+        from . import block as b
+
+        # Shortcut some quantities, which are needed most often
+        if attr.startswith("t2") and len(attr) == 4:  # t2oo, t2oc, t2cc
+            xxvv = b.__getattr__(attr[2:4] + "vv")
+            return self.t2(xxvv)
+        else:
+            raise AttributeError
 
     @property
     def mp2_diffdm(self):

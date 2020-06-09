@@ -28,7 +28,7 @@ from libadcc import HartreeFockProvider, get_n_threads, set_n_threads
 from .LazyMp import LazyMp
 from .Tensor import Tensor
 from .Symmetry import Symmetry
-from .AdcMatrix import AdcMatrix, AdcMatrixlike
+from .AdcMatrix import AdcMatrix, AdcMatrixPython, AdcMatrixlike
 from .AdcMethod import AdcMethod
 from .functions import (contract, copy, direct_sum, dot, einsum, empty_like,
                         evaluate, lincomb, linear_combination, nosym_like,
@@ -51,7 +51,7 @@ from .workflow import run_adc
 from .exceptions import InputError
 
 __all__ = ["run_adc", "InputError", "AdcMatrix", "AdcBlockView", "AdcMatrixlike",
-           "AdcMethod", "Symmetry", "ReferenceState",
+           "AdcMethod", "AdcMatrixPython", "Symmetry", "ReferenceState",
            "einsum", "contract", "copy", "dot", "empty_like", "evaluate",
            "lincomb", "nosym_like", "ones_like", "transpose",
            "linear_combination", "zeros_like", "direct_sum",
