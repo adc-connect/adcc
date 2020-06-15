@@ -75,7 +75,7 @@ def compute_modified_transition_moments(gs_or_matrix, dipole_operator,
 
     if method.is_core_valence_separated:
         return modified_transition_moments_cvs(gs_or_matrix,
-                                                   dipole_operator, method)
+                                               dipole_operator, method)
     mtm_cpp = libadcc.compute_modified_transition_moments(
         method.name, ground_state, dipole_operator
     )
@@ -89,7 +89,7 @@ def modified_transition_moments_cvs(gs_or_matrix, dipole_operator,
         intermediates = gs_or_matrix.intermediates
     elif isinstance(gs_or_matrix, LazyMp):
         ground_state = gs_or_matrix
-        intermediates = AdcMatrix(method, ground_state)
+        intermediates = AdcMatrix(method, ground_state).intermediates
 
     if method.name == "cvs-adc1":
         return AmplitudeVector(dipole_operator['o2v1'])
