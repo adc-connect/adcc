@@ -32,7 +32,7 @@ from adcc.testdata.cache import cache
 from pytest import approx
 
 # The methods to test
-methods = ["adc2"]
+methods = ["adc2", "cvs-adc1", "cvs-adc2"]
 
 
 @expand_test_templates(methods)
@@ -47,7 +47,7 @@ class TestModifiedTransitionMoments(unittest.TestCase):
         groundstate = adcc.LazyMp(refstate)
 
         mtms = [compute_modified_transition_moments(
-            groundstate, refstate.operators.electric_dipole[i], "adc2"
+            groundstate, refstate.operators.electric_dipole[i], method
         ) for i in range(3)]
 
         for i in range(n_ref):
