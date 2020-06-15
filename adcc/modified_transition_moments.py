@@ -74,43 +74,39 @@ def compute_modified_transition_moments(gs_or_matrix, dipole_operator,
                         "libadcc.OneParticleOperator.")
 
     if method.is_core_valence_separated:
-        if method.name == "cvs-adc1":
-            return AmplitudeVector(dipole_operator['o2v1'])
-        else:
-            cvs_mtm = Adc2CVSModifiedTransitionMoments(method,
-                                                       ground_state,
-                                                       dipole_operator)
-            return cvs_mtm.cvs_adc2_mtm()
+        return modified_transition_moments_cvs(gs_or_matrix,
+                                                   dipole_operator, method)
     mtm_cpp = libadcc.compute_modified_transition_moments(
         method.name, ground_state, dipole_operator
     )
     return AmplitudeVector(*mtm_cpp.to_tuple())
 
 
-class Adc2CVSModifiedTransitionMoments:
-    def __init__(self, method, ground_state, dipole_operator):
-        self.ground_state = ground_state
-        self.cvs_matrix = AdcMatrix(method, ground_state)
-        self.intermediates = self.cvs_matrix.intermediates
-        self.dipole_operator = dipole_operator
+def modified_transition_moments_cvs(gs_or_matrix, dipole_operator,
+                                    method=None):
+    if isinstance(gs_or_matrix, AdcMatrix):
+        ground_state = gs_or_matrix.ground_state
+        intermediates = gs_or_matrix.intermediates
+    elif isinstance(gs_or_matrix, LazyMp):
+        ground_state = gs_or_matrix
+        intermediates = AdcMatrix(method, ground_state)
 
-    def f1(self):
-        rho_ov = self.intermediates.cv_p_ov
-        rho_vv = self.intermediates.cv_p_vv
-        d_co = self.dipole_operator['o2o1']
-        d_cv = self.dipole_operator['o2v1']
-        return(
-            + d_cv
-            - einsum("Ib,ba->Ia", d_cv, rho_vv)
-            - einsum("Ij,ja->Ia", d_co, rho_ov)
-        )
+    if method.name == "cvs-adc1":
+        return AmplitudeVector(dipole_operator['o2v1'])
 
-    def f2(self):
-        mp_t2_oovv = self.ground_state.t2("o1o1v1v1")
-        d_co = self.dipole_operator['o2o1']
-        return(
-            + 0.5**0.5 * einsum("Ik,kjab->jIab", d_co, mp_t2_oovv)
-        )
+    rho_ov = intermediates.cv_p_ov
+    rho_vv = intermediates.cv_p_vv
+    d_co = dipole_operator['o2o1']
+    d_cv = dipole_operator['o2v1']
 
-    def cvs_adc2_mtm(self):
-        return AmplitudeVector(self.f1(), self.f2())
+    mp_t2_oovv = ground_state.t2("o1o1v1v1")
+
+    f1 = (
+        + d_cv
+        - einsum("Ib,ba->Ia", d_cv, rho_vv)
+        - einsum("Ij,ja->Ia", d_co, rho_ov)
+    )
+
+    f2 = + 0.5**0.5 * einsum("Ik,kjab->jIab", d_co, mp_t2_oovv)
+
+    return AmplitudeVector(f1, f2)
