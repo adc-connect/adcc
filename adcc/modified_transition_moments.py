@@ -118,7 +118,7 @@ def modified_transition_moments_cvs(gs_or_matrix, dipole_operator,
         return AmplitudeVector(f1, f2)
     else:
         raise NotImplementedError("compute_modified_transition_moments "
-                                  "not implemented for", method.name)
+                                  f"not implemented for {method.name}")
 
 
 def modified_transition_moments(gs_or_matrix, dipole_operator,
@@ -140,4 +140,4 @@ def modified_transition_moments(gs_or_matrix, dipole_operator,
         )
     else:
         raise NotImplementedError("compute_modified_transition_moments "
-                                  "not implemented for", method.name)
+                                  f"not implemented for {method.name}")
