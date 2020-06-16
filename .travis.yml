@@ -23,6 +23,10 @@ install:
   - pip3 install --verbose -r requirements.txt
 script: python3 setup.py test -a '--cov=adcc'
 
+after_success:
+   - pip3 install coveralls
+   - coveralls
+
 # These jobs are only run with the first python version
 # mentioned in the initial list
 jobs:
@@ -37,6 +41,7 @@ jobs:
       install: travis_retry pip3 install flake8
       script: flake8
       env: CODE_STYLE="flake8"
+      after_success: []  # No need to upload coverage
     #
     # Testing
     - stage: test
@@ -46,12 +51,6 @@ jobs:
     - os: osx
       language: ruby
       osx_image: xcode11.1  # macos 10.14
-
-# TODO Does not work at the moment, see the travis output
-# https://travis-ci.com/adc-connect/adcc/jobs/603309015#L2647
-# after_success:
-#    - pip3 install coveralls
-#    - coveralls debug --verbose
 
 deploy:  # Note: This will only deploy sdist on linux!
   skip_cleanup: true
