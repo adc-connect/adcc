@@ -5,8 +5,8 @@ adcc: Seamlessly connect your program to ADC
 
 .. image:: https://img.shields.io/github/stars/adc-connect/adcc?style=social
    :target: https://github.com/adc-connect/adcc
-.. image:: https://travis-ci.org/adc-connect/adcc.svg?branch=master
-   :target: https://travis-ci.org/adc-connect/adcc
+.. image:: https://travis-ci.com/adc-connect/adcc.svg?branch=master
+   :target: https://travis-ci.com/adc-connect/adcc
 .. image:: https://img.shields.io/pypi/v/adcc
    :target: https://pypi.org/project/adcc
 .. image:: https://anaconda.org/adcc/adcc/badges/version.svg
