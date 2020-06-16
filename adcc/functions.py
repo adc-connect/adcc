@@ -150,6 +150,8 @@ def evaluate(a):
         return a
     elif isinstance(a, list):
         return [evaluate(elem) for elem in a]
+    elif hasattr(a, "evaluate"):
+        return a.evaluate()
     else:
         return libadcc.evaluate(a)
 
