@@ -32,36 +32,46 @@ from adcc.testdata.cache import cache
 from pytest import approx
 
 # The methods to test
-methods = ["adc2"]
+basemethods = ["adc0", "adc1", "adc2"]
+methods = [m for bm in basemethods for m in [bm, "cvs-" + bm]]
 
 
 @expand_test_templates(methods)
 class TestModifiedTransitionMoments(unittest.TestCase):
     def base_test(self, system, method, kind):
-        hf = cache.hfdata[system]
         refdata = cache.reference_data[system]
         ref = refdata[method][kind]
         n_ref = len(ref["eigenvectors_singles"])
 
-        refstate = adcc.ReferenceState(hf)
+        if "cvs" in method:
+            refstate = cache.refstate_cvs[system]
+        else:
+            refstate = cache.refstate[system]
         groundstate = adcc.LazyMp(refstate)
 
         mtms = [compute_modified_transition_moments(
-            groundstate, refstate.operators.electric_dipole[i], "adc2"
+            groundstate, refstate.operators.electric_dipole[i], method
         ) for i in range(3)]
 
         for i in range(n_ref):
-            ref_s = ref["eigenvectors_singles"][i]
-            ref_d = ref["eigenvectors_doubles"][i]
-            mtm_np_s = [mtms[i]['s'].to_ndarray() for i in range(3)]
-            mtm_np_d = [mtms[i]['d'].to_ndarray() for i in range(3)]
             # computing the scalar product of the eigenvector
             # and the modified transition moments yields
             # the transition dipole moment (doi.org/10.1063/1.1752875)
+            ref_s = ref["eigenvectors_singles"][i]
+            mtm_np_s = [mtms[i]['s'].to_ndarray() for i in range(3)]
+
             res_tdm = -1.0 * np.array([
-                np.sum(ref_s * mtm_s) + np.sum(ref_d * mtm_d)
-                for mtm_s, mtm_d in zip(mtm_np_s, mtm_np_d)
+                np.sum(ref_s * mtm_s) for mtm_s in mtm_np_s
             ])
+
+            if 'd' in mtms[i].blocks:
+                ref_d = ref["eigenvectors_doubles"][i]
+                mtm_np_d = [mtms[i]['d'].to_ndarray() for i in range(3)]
+
+                res_tdm -= np.array([
+                    np.sum(ref_d * mtm_d) for mtm_d in mtm_np_d
+                ])
+
             ref_tdm = ref["transition_dipole_moments"][i]
 
             # Test norm and actual values

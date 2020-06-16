@@ -26,7 +26,11 @@ from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod
 from .AmplitudeVector import AmplitudeVector
 
-from libadcc import LazyMp
+from libadcc import AdcIntermediates, LazyMp
+
+from adcc import einsum
+
+from math import sqrt
 
 
 def compute_modified_transition_moments(gs_or_matrix, dipole_operator,
@@ -72,10 +76,68 @@ def compute_modified_transition_moments(gs_or_matrix, dipole_operator,
                         "libadcc.OneParticleOperator.")
 
     if method.is_core_valence_separated:
-        raise NotImplementedError("compute_modified_transition_moments "
-                                  "not implemented for CVS")
+        return modified_transition_moments_cvs(gs_or_matrix,
+                                               dipole_operator, method)
+    if method.name == "adc2":
+        mtm_cpp = libadcc.compute_modified_transition_moments(
+            method.name, ground_state, dipole_operator
+        )
+        return AmplitudeVector(*mtm_cpp.to_tuple())
+    else:
+        return modified_transition_moments(gs_or_matrix,
+                                           dipole_operator, method)
 
-    mtm_cpp = libadcc.compute_modified_transition_moments(
-        method.name, ground_state, dipole_operator
-    )
-    return AmplitudeVector(*mtm_cpp.to_tuple())
+
+def modified_transition_moments_cvs(gs_or_matrix, dipole_operator,
+                                    method=None):
+    if method.name == "cvs-adc0" or method.name == "cvs-adc1":
+        return AmplitudeVector(dipole_operator['o2v1'])
+
+    elif method.name == "cvs-adc2":
+        if isinstance(gs_or_matrix, AdcMatrix):
+            ground_state = gs_or_matrix.ground_state
+            intermediates = gs_or_matrix.intermediates
+        elif isinstance(gs_or_matrix, LazyMp):
+            ground_state = gs_or_matrix
+            intermediates = AdcIntermediates(ground_state)
+
+        rho_ov = intermediates.cv_p_ov
+        rho_vv = intermediates.cv_p_vv
+        d_co = dipole_operator['o2o1']
+        d_cv = dipole_operator['o2v1']
+
+        mp_t2_oovv = ground_state.t2("o1o1v1v1")
+
+        f1 = (
+            + d_cv
+            - einsum("Ib,ba->Ia", d_cv, rho_vv)
+            - einsum("Ij,ja->Ia", d_co, rho_ov)
+        )
+
+        f2 = + 1.0 / sqrt(2) * einsum("Ik,kjab->jIab", d_co, mp_t2_oovv)
+        return AmplitudeVector(f1, f2)
+    else:
+        raise NotImplementedError("compute_modified_transition_moments "
+                                  f"not implemented for {method.name}")
+
+
+def modified_transition_moments(gs_or_matrix, dipole_operator,
+                                method=None):
+    if method.name == "adc0":
+        return AmplitudeVector(dipole_operator['o1v1'])
+
+    elif method.name == "adc1":
+        if isinstance(gs_or_matrix, AdcMatrix):
+            ground_state = gs_or_matrix.ground_state
+        elif isinstance(gs_or_matrix, LazyMp):
+            ground_state = gs_or_matrix
+
+        d_ov = dipole_operator['o1v1']
+        mp_t2_oovv = ground_state.t2("o1o1v1v1")
+
+        return AmplitudeVector(
+            d_ov - einsum("ijab,jb->ia", mp_t2_oovv, d_ov)
+        )
+    else:
+        raise NotImplementedError("compute_modified_transition_moments "
+                                  f"not implemented for {method.name}")
