@@ -48,7 +48,7 @@ jobs:
       osx_image: xcode11.1  # macos 10.14
 
 # TODO Does not work at the moment, see the travis output
-# https://travis-ci.org/adc-connect/adcc/jobs/603309015#L2647
+# https://travis-ci.com/adc-connect/adcc/jobs/603309015#L2647
 # after_success:
 #    - pip3 install coveralls
 #    - coveralls debug --verbose

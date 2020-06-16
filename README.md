@@ -6,7 +6,7 @@
 [![anaconda](https://anaconda.org/adcc/adcc/badges/version.svg)](https://anaconda.org/adcc/adcc)
 [![Documentation](https://img.shields.io/badge/doc-latest-blue.svg)](https://adc-connect.org)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://try.adc-connect.org)
-[![Travis](https://travis-ci.org/adc-connect/adcc.svg?branch=master)](https://travis-ci.org/adc-connect/adcc)
+[![Travis](https://travis-ci.com/adc-connect/adcc.svg?branch=master)](https://travis-ci.com/adc-connect/adcc)
 [![DOI](https://zenodo.org/badge/215731857.svg)](https://zenodo.org/badge/latestdoi/215731857)
 
 adcc (**ADC-connect**) is a python-based framework for performing
