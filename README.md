@@ -1,13 +1,24 @@
 <img src="https://raw.githubusercontent.com/adc-connect/adcc/master/docs/logo/logo.png" alt="adcc logo" height="100px" />
 
 # adcc: Seamlessly connect your program to ADC
-[![license](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://github.com/adc-connect/adcc/blob/master/LICENSE)
-[![pypi](https://img.shields.io/pypi/v/adcc)](https://pypi.org/project/adcc)
-[![anaconda](https://anaconda.org/adcc/adcc/badges/version.svg)](https://anaconda.org/adcc/adcc)
-[![Documentation](https://img.shields.io/badge/doc-latest-blue.svg)](https://adc-connect.org)
-[![Binder](https://mybinder.org/badge_logo.svg)](https://try.adc-connect.org)
-[![Travis](https://travis-ci.com/adc-connect/adcc.svg?branch=master)](https://travis-ci.com/adc-connect/adcc)
-[![DOI](https://zenodo.org/badge/215731857.svg)](https://zenodo.org/badge/latestdoi/215731857)
+| **Documentation**                                       | **Build Status**                                       |  **Installation**                                                                      |
+|:------------------------------------------------------- |:------------------------------------------------------ |:-------------------------------------------------------------------------------------- |
+| [![][docs-img]][docs-url] [![][binder-img]][binder-url] | [![][travis-img]][travis-url] [![][cov-img]][cov-url]  | [![][pypi-img]][pypi-url] [![][conda-img]][conda-url] [![][license-img]][license-url]  |
+
+[docs-img]: https://img.shields.io/badge/doc-latest-blue.svg
+[docs-url]: https://adc-connect.org
+[binder-img]: https://mybinder.org/badge_logo.svg
+[binder-url]: https://try.adc-connect.org
+[travis-img]: https://travis-ci.com/adc-connect/adcc.svg?branch=master
+[travis-url]: https://travis-ci.com/adc-connect/adcc
+[cov-img]: https://coveralls.io/repos/adc-connect/adcc/badge.svg?branch=master&service=github
+[cov-url]: https://coveralls.io/github/adc-connect/adcc?branch=master
+[license-img]: https://img.shields.io/badge/License-GPL%20v3-blue.svg
+[license-url]: https://github.com/adc-connect/adcc/blob/master/LICENSE
+[pypi-img]: https://img.shields.io/pypi/v/adcc
+[pypi-url]: https://pypi.org/project/adcc
+[conda-img]: https://anaconda.org/adcc/adcc/badges/version.svg
+[conda-url]: https://anaconda.org/adcc/adcc
 
 adcc (**ADC-connect**) is a python-based framework for performing
 the calculation of molecular spectra and electronically excited states
