@@ -32,6 +32,7 @@ from adcc import einsum
 
 from math import sqrt
 
+
 def compute_modified_transition_moments(gs_or_matrix, dipole_operator,
                                         method=None):
     """Compute the modified transition moments (MTM) for the provided
