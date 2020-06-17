@@ -28,6 +28,7 @@ from .misc import expand_test_templates
 from numpy.testing import assert_allclose
 from adcc.testdata.cache import cache
 
+import pytest
 import libadcc
 
 # Test diagonal, block-wise apply and matvec
@@ -102,6 +103,11 @@ class TestAdcMatrix(unittest.TestCase):
             for b2 in ["s", "d"]:
                 if f"result_{b1}{b2}" not in matdata:
                     continue
+
+                if b1 + b2 == "dd" and method in ["adc2x", "adc3"]:
+                    pytest.xfail("ADC(2)-x and ADC(3) doubles-doubles apply"
+                                 "is buggy in adccore.")
+
                 matrix.compute_apply(b1 + b2, invec[b2], outvec[b1])
                 assert_allclose(matdata[f"result_{b1}{b2}"],
                                 outvec[b1].to_ndarray(),
