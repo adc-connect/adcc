@@ -102,6 +102,7 @@ class TestDataFrameExport(unittest.TestCase, Runners):
         df = state.to_dataframe()
         df.drop(["excitation", "kind"], inplace=True, axis=1)
         components = ["x", "y", "z"]
+        assert len(df.columns)
         for key in df.columns:
             if hasattr(state, key):
                 assert_allclose(df[key], getattr(state, key))

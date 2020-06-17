@@ -663,11 +663,6 @@ class ExcitedStates:
         """
         Exports the ExcitedStates object as :class:`pandas.DataFrame`.
         All values are printed in atomic units.
-
-        Parameters
-        ----------
-        export_vectors: bool, optional
-            Whether to export vector quantities (transition moments)
         """
         propkeys = self.excitation_property_keys.copy()
         propkeys.extend(self.excitation_energy_corrections.keys())
