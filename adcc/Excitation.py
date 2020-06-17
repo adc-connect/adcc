@@ -42,31 +42,6 @@ def mark_excitation_property(**kwargs):
     return inner
 
 
-def extract_excitation_property_keys(state):
-    """
-    Extracts the property keys of an ExcitedStates instance which are marked
-    as excitation property with :func:`mark_excitation_property`.
-
-    Parameters
-    ----------
-    state : :class:`adcc.ExcitedStates`
-    """
-    ret = []
-    for key in dir(state):
-        if key == "excitations":
-            continue
-        if "__" in key or key.startswith("_"):
-            continue  # skip "private" fields
-        if not hasattr(type(state), key):
-            continue
-        if not isinstance(getattr(type(state), key), property):
-            continue
-        fget = getattr(type(state), key).fget
-        if hasattr(fget, "__excitation_property"):
-            ret.append(key)
-    return ret
-
-
 class Excitation:
     def __init__(self, parent_state, index, method):
         """Construct an Excitation from an :class:`adcc.ExcitedStates`
@@ -91,8 +66,7 @@ class Excitation:
         self.__parent_state = parent_state
         self.index = index
         self.method = method
-        property_keys = extract_excitation_property_keys(self.parent_state)
-        for key in property_keys:
+        for key in self.parent_state.excitation_property_keys:
             fget = getattr(type(self.parent_state), key).fget
             # Extract the kwargs passed to mark_excitation_property
             kwargs = getattr(fget, "__excitation_property").copy()

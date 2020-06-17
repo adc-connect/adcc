@@ -659,7 +659,7 @@ class ExcitedStates:
                 ret += separator
         return ret[:-1]
 
-    def to_dataframe(self, export_vectors=True):
+    def to_dataframe(self):
         """
         Exports the ExcitedStates object as :class:`pandas.DataFrame`.
         All values are printed in atomic units.
@@ -669,7 +669,7 @@ class ExcitedStates:
         export_vectors: bool, optional
             Whether to export vector quantities (transition moments)
         """
-        propkeys = extract_excitation_property_keys(self)
+        propkeys = self.excitation_property_keys.copy()
         propkeys.extend(self.excitation_energy_corrections.keys())
         data = {
             "excitation": np.arange(0, self.size, dtype=int),
@@ -677,8 +677,8 @@ class ExcitedStates:
         }
         # fill the dict with data, sort out stuff that we cannot represent
         # in a table
-        from adcc import Tensor, AmplitudeVector, OneParticleOperator
-        unacceptable_types = [AmplitudeVector, OneParticleOperator, Tensor]
+        unacceptable_types = [adcc.AmplitudeVector, adcc.OneParticleOperator,
+                              adcc.Tensor]
         for key in propkeys:
             d = getattr(self, key)
             if isinstance(d, list):
@@ -687,10 +687,8 @@ class ExcitedStates:
             elif isinstance(d, np.ndarray):
                 if d.ndim == 1:
                     data[key] = d
-                elif d.ndim == 2 and d.shape[1] == 3 and export_vectors:
-                    component = ["x", "y", "z"]
-                    # TODO: ugly, but works...
-                    for i, p in enumerate(component):
+                elif d.ndim == 2 and d.shape[1] == 3:
+                    for i, p in enumerate(["x", "y", "z"]):
                         data[f"{key}_{p}"] = d[:, i]
                 elif d.ndim > 2:
                     raise TypeError(f"Exporting NumPy array with shape {d.shape}"
@@ -700,6 +698,27 @@ class ExcitedStates:
         df = pd.DataFrame(data=data)
         df.set_index("excitation")
         return df
+
+    @property
+    def excitation_property_keys(self):
+        """
+        Extracts the property keys which are marked
+        as excitation property with :func:`mark_excitation_property`.
+        """
+        ret = []
+        for key in dir(self):
+            if key == "excitations":
+                continue
+            if "__" in key or key.startswith("_"):
+                continue  # skip "private" fields
+            if not hasattr(type(self), key):
+                continue
+            if not isinstance(getattr(type(self), key), property):
+                continue
+            fget = getattr(type(self), key).fget
+            if hasattr(fget, "__excitation_property"):
+                ret.append(key)
+        return ret
 
     @property
     def excitations(self):
