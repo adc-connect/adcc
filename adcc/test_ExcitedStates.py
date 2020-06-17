@@ -93,3 +93,21 @@ class TestCustomExcitationEnergyCorrections(unittest.TestCase, Runners):
             corr = state.excitation_energy[i] ** 2 + 3.0 - 42.0
             assert_allclose(state.excitation_energy[i] + corr,
                             state_corrected2.excitation_energy[i])
+
+
+class TestDataFrameExport(unittest.TestCase, Runners):
+    def base_test(self, system, method, kind):
+        method = method.replace("_", "-")
+        state = cache.adc_states[system][method][kind]
+        df = state.to_dataframe()
+        df.drop(["excitation", "kind"], inplace=True, axis=1)
+        components = ["x", "y", "z"]
+        for key in df.columns:
+            if hasattr(state, key):
+                assert_allclose(df[key], getattr(state, key))
+            elif hasattr(state, key[:-2]):
+                newkey = key[:-2]
+                i = components.index(key[-1])
+                assert_allclose(df[key], getattr(state, newkey)[:, i])
+            else:
+                raise KeyError(f"Key {key} not found in ExcitedStates object.")

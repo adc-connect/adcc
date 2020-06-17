@@ -680,7 +680,11 @@ class ExcitedStates:
         unacceptable_types = [adcc.AmplitudeVector, adcc.OneParticleOperator,
                               adcc.Tensor]
         for key in propkeys:
-            d = getattr(self, key)
+            try:
+                d = getattr(self, key)
+            except NotImplementedError:
+                # some properties are not available for every backend
+                continue
             if isinstance(d, list):
                 if not any(type(e) in unacceptable_types for e in d):
                     data[key] = d
