@@ -662,6 +662,7 @@ class ExcitedStates:
     def to_dataframe(self, export_vectors=True):
         """
         Exports the ExcitedStates object as :class:`pandas.DataFrame`.
+        All values are printed in atomic units.
 
         Parameters
         ----------
@@ -681,9 +682,8 @@ class ExcitedStates:
         for key in propkeys:
             d = getattr(self, key)
             if isinstance(d, list):
-                if any(type(e) in unacceptable_types for e in d):
-                    continue
-                data[key] = d
+                if not any(type(e) in unacceptable_types for e in d):
+                    data[key] = d
             elif isinstance(d, np.ndarray):
                 if d.ndim == 1:
                     data[key] = d
