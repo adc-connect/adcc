@@ -20,13 +20,12 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
 import unittest
 import numpy as np
 
-from .misc import expand_test_templates
-from .modified_transition_moments import compute_modified_transition_moments
+from .modified_transition_moments import modified_transition_moments
 
+from adcc.misc import expand_test_templates
 from adcc.testdata.cache import cache
 
 from pytest import approx
@@ -39,39 +38,17 @@ methods = [m for bm in basemethods for m in [bm, "cvs-" + bm]]
 @expand_test_templates(methods)
 class TestModifiedTransitionMoments(unittest.TestCase):
     def base_test(self, system, method, kind):
-        refdata = cache.reference_data[system]
-        ref = refdata[method][kind]
-        n_ref = len(ref["eigenvectors_singles"])
+        state = cache.adc_states[system][method][kind]
+        ref = cache.reference_data[system][method][kind]
+        n_ref = len(state.excitation_vector)
 
-        if "cvs" in method:
-            refstate = cache.refstate_cvs[system]
-        else:
-            refstate = cache.refstate[system]
-        groundstate = adcc.LazyMp(refstate)
-
-        mtms = [compute_modified_transition_moments(
-            groundstate, refstate.operators.electric_dipole[i], method
-        ) for i in range(3)]
-
+        mtms = modified_transition_moments(method, state.ground_state)
         for i in range(n_ref):
             # computing the scalar product of the eigenvector
             # and the modified transition moments yields
             # the transition dipole moment (doi.org/10.1063/1.1752875)
-            ref_s = ref["eigenvectors_singles"][i]
-            mtm_np_s = [mtms[i]['s'].to_ndarray() for i in range(3)]
-
-            res_tdm = -1.0 * np.array([
-                np.sum(ref_s * mtm_s) for mtm_s in mtm_np_s
-            ])
-
-            if 'd' in mtms[i].blocks:
-                ref_d = ref["eigenvectors_doubles"][i]
-                mtm_np_d = [mtms[i]['d'].to_ndarray() for i in range(3)]
-
-                res_tdm -= np.array([
-                    np.sum(ref_d * mtm_d) for mtm_d in mtm_np_d
-                ])
-
+            excivec = state.excitation_vector[i]
+            res_tdm = -1.0 * np.array([excivec @ mtms[i] for i in range(3)])
             ref_tdm = ref["transition_dipole_moments"][i]
 
             # Test norm and actual values

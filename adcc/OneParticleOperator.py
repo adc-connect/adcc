@@ -26,7 +26,7 @@ from .functions import evaluate
 
 
 class OneParticleOperator(libadcc.OneParticleOperator):
-    def __init__(self, mospaces, is_symmetric=True, cartesian_transform="1"):
+    def __init__(self, spaces, is_symmetric=True, cartesian_transform="1"):
         """
         Construct an OneParticleOperator object. All blocks are initialised
         as zero blocks.
@@ -34,7 +34,7 @@ class OneParticleOperator(libadcc.OneParticleOperator):
         Parameters
         ----------
 
-        mospaces : adcc.Mospaces
+        spaces : adcc.Mospaces or adcc.ReferenceState or adcc.LazyMp
             MoSpaces object
 
         is_symmetric : bool
@@ -43,7 +43,14 @@ class OneParticleOperator(libadcc.OneParticleOperator):
         cartesian_transform : str
             Symbol for cartesian transformation (see make_symmetry for details.)
         """
-        super().__init__(mospaces, is_symmetric, cartesian_transform)
+        if isinstance(spaces, libadcc.ReferenceState):
+            super().__init__(spaces.mospaces, is_symmetric, cartesian_transform)
+            self.reference_state = spaces
+        elif isinstance(spaces, libadcc.LazyMp):
+            super().__init__(spaces.mospaces, is_symmetric, cartesian_transform)
+            self.reference_state = spaces.reference_state
+        else:
+            super().__init__(spaces, is_symmetric, cartesian_transform)
 
     @classmethod
     def from_cpp(cls, cpp_operator):
@@ -169,6 +176,11 @@ class OneParticleOperator(libadcc.OneParticleOperator):
 
     def __rmul__(self, other):
         return self.copy().__imul__(other)
+
+    def evaluate(self):
+        for b in self.blocks_nonzero:
+            self.block(b).evaluate()
+        return self
 
 
 def product_trace(op1, op2):

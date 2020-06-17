@@ -28,10 +28,25 @@ namespace adcc {
 namespace py_iface {
 
 namespace py = pybind11;
+using namespace pybind11::literals;
 typedef std::shared_ptr<Tensor> ten_ptr;
 
 static std::vector<std::vector<size_t>> parse_permutations(
       const py::iterable& permutations) {
+  bool iterator_of_ints = false;
+  for (auto tpl : permutations) {
+    if (py::isinstance<py::int_>(tpl)) iterator_of_ints = true;
+    break;
+  }
+
+  if (iterator_of_ints) {
+    std::vector<size_t> perms;
+    for (auto itm : permutations) {
+      perms.push_back(itm.cast<size_t>());
+    }
+    return std::vector<std::vector<size_t>>{perms};
+  }
+
   std::vector<std::vector<size_t>> vec_perms;
   for (auto tpl : permutations) {
     std::vector<size_t> perms;
@@ -154,6 +169,13 @@ static ten_ptr Tensor_symmetrise_1(const Tensor& self, py::list permutations) {
 }
 
 static ten_ptr Tensor_symmetrise_2(const Tensor& self, py::args permutations) {
+  if (py::len(permutations) == 0) {
+    if (self.ndim() != 2) {
+      throw invalid_argument(
+            "symmetrise without arguments may only be used for matrices.");
+    }
+    return self.symmetrise({{0, 1}});
+  }
   return self.symmetrise(parse_permutations(permutations));
 }
 
@@ -162,6 +184,13 @@ static ten_ptr Tensor_antisymmetrise_1(const Tensor& self, py::list permutations
 }
 
 static ten_ptr Tensor_antisymmetrise_2(const Tensor& self, py::args permutations) {
+  if (py::len(permutations) == 0) {
+    if (self.ndim() != 2) {
+      throw invalid_argument(
+            "antisymmetrise without arguments may only be used for matrices.");
+    }
+    return self.antisymmetrise({{0, 1}});
+  }
   return self.antisymmetrise(parse_permutations(permutations));
 }
 
@@ -203,6 +232,17 @@ static py::object tensordot_2(ten_ptr a, ten_ptr b, size_t axes) {
 
 static py::object tensordot_3(ten_ptr a, ten_ptr b) { return tensordot_2(a, b, 2); }
 
+static ten_ptr Tensor_diagonal(ten_ptr ten, py::args permutations) {
+  std::vector<size_t> axes;
+  if (py::len(permutations) == 0) {
+    axes.push_back(0);
+    axes.push_back(1);
+  } else {
+    for (auto itm : permutations) axes.push_back(itm.cast<size_t>());
+  }
+  return ten->diagonal(axes);
+}
+
 static ten_ptr direct_sum(ten_ptr a, ten_ptr b) { return a->direct_sum(b); }
 
 static double Tensor_trace_1(std::string subscripts, const Tensor& tensor) {
@@ -210,7 +250,7 @@ static double Tensor_trace_1(std::string subscripts, const Tensor& tensor) {
 }
 static double Tensor_trace_2(const Tensor& tensor) {
   if (tensor.ndim() != 2) {
-    throw adcc::not_implemented_error(
+    throw invalid_argument(
           "trace function without arguments may only be used for matrices.");
   }
   return tensor.trace("ii");
@@ -417,6 +457,7 @@ void export_Tensor(py::module& m) {
         .def("set_mask", &adcc::Tensor::set_mask,
              "Set all elements corresponding to an index mask, which is given by a "
              "string eg. 'iijkli' sets elements T_{iijkli}")
+        .def("diagonal", &Tensor_diagonal)
         .def("copy", &Tensor::copy, "Returns a deep copy of the tensor.")
         .def("dot", &Tensor_dot)
         .def("dot", &Tensor_dot_list)
@@ -490,14 +531,14 @@ void export_Tensor(py::module& m) {
         ;
 
   m.def("evaluate", &adcc::evaluate);
-  m.def("tensordot", &tensordot_1, py::arg("a"), py::arg("b"), py::arg("axes"));
-  m.def("tensordot", &tensordot_2, py::arg("a"), py::arg("b"), py::arg("axes"));
-  m.def("tensordot", &tensordot_3, py::arg("a"), py::arg("b"));
-  m.def("direct_sum", &direct_sum, py::arg("a"), py::arg("b"));
-  m.def("trace", &Tensor_trace_1, py::arg("subscripts"), py::arg("tensor"));
-  m.def("trace", &Tensor_trace_2, py::arg("tensor"));
-  m.def("linear_combination_strict", &linear_combination_strict, py::arg("coefficients"),
-        py::arg("tensors"));
+  m.def("tensordot", &tensordot_1, "a"_a, "b"_a, "axes"_a);
+  m.def("tensordot", &tensordot_2, "a"_a, "b"_a, "axes"_a);
+  m.def("tensordot", &tensordot_3, "a"_a, "b"_a);
+  m.def("direct_sum", &direct_sum, "a"_a, "b"_a);
+  m.def("trace", &Tensor_trace_1, "subscripts"_a, "tensor"_a);
+  m.def("trace", &Tensor_trace_2, "tensor"_a);
+  m.def("linear_combination_strict", &linear_combination_strict, "coefficients"_a,
+        "tensors"_a);
 }
 
 }  // namespace py_iface

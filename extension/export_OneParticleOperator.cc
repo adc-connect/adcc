@@ -80,9 +80,6 @@ py::tuple OneParticleOperator__to_ao_basis_coeff(const OneParticleOperator& self
 
 /** Exports adcc/OneParticleOperator.hh to python */
 void export_OneParticleOperator(py::module& m) {
-  void (OneParticleOperator::*set_zero_block_1)(std::string) =
-        &OneParticleOperator::set_zero_block;
-
   py::class_<OneParticleOperator, std::shared_ptr<OneParticleOperator>>(
         m, "OneParticleOperator",
         "Class representing a one-particle operator. Also used for one-particle"
@@ -110,8 +107,13 @@ void export_OneParticleOperator(py::module& m) {
               "a zero block, the function throws an ArgumentError.")
         .def("set_block", &OneParticleOperator::set_block,
              "Set a block of the matrix (e.g. o1o1, o1v1)")
-        .def("set_zero_block", set_zero_block_1,
+        .def("set_zero_block",
+             py::overload_cast<std::string>(&OneParticleOperator::set_zero_block),
              "Set a block of the matrix (e.g. o1o1, o1v1) to be explicitly zero.")
+        .def("set_zero_block",
+             py::overload_cast<std::vector<std::string>>(
+                   &OneParticleOperator::set_zero_block),
+             "Set a few blocks of the matrix (e.g. o1o1, o1v1) to be explicitly zero.")
         .def("is_zero_block", &OneParticleOperator::is_zero_block)
         .def("copy", &OneParticleOperator::copy,
              "Return a deep copy of this OneParticleOperator.\n\nThis can be used to "
@@ -130,6 +132,8 @@ void export_OneParticleOperator(py::module& m) {
              "Return the operator in MOs as a full, non-sparse numpy array.")
         .def("__getitem__",
              [](OneParticleOperator& self, std::string block) { return self[block]; })
+        .def("__setitem__", &OneParticleOperator::set_block,
+             "Set a block of the matrix (e.g. o1o1, o1v1)")
         .def("__repr__", &OneParticleOperator___repr__)
         .def("__len__", &OneParticleOperator___len__)
         //

@@ -23,12 +23,11 @@
 import unittest
 import numpy as np
 
+from .misc import expand_test_templates
 from numpy.testing import assert_allclose
 
 from adcc import direct_sum, einsum, empty_like, nosym_like
 from adcc.testdata.cache import cache
-
-from .misc import expand_test_templates
 
 
 @expand_test_templates(["h2o_sto3g", "cn_sto3g"])
@@ -129,4 +128,18 @@ class TestTensor(unittest.TestCase):
 
         res = direct_sum("ab-i-c->iacb", einsum("ijac,ijcb->ab", oovv, oovv),
                          oeo, oev)
+        assert_allclose(res.to_ndarray(), ref, rtol=1e-10, atol=1e-14)
+
+    def test_nontrivial_diagonal(self):
+        refstate = cache.refstate["cn_sto3g"]
+        mtcs = [nosym_like(refstate.eri("o1o1v1v1")).set_random(),
+                nosym_like(refstate.eri("o1v1o1v1")).set_random(),
+                nosym_like(refstate.eri("o1o1v1v1")).set_random()]
+        mnps = [m.to_ndarray() for m in mtcs]
+
+        res = einsum("ijab,ibkc,kjad->cd", mtcs[0], mtcs[1], mtcs[2]).diagonal()
+        ref = np.einsum("ijab,ibkc,kjad->cd", mnps[0], mnps[1],
+                        mnps[2]).diagonal()
+
+        assert res.needs_evaluation
         assert_allclose(res.to_ndarray(), ref, rtol=1e-10, atol=1e-14)

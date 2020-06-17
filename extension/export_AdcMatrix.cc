@@ -28,6 +28,7 @@ namespace adcc {
 namespace py_iface {
 
 namespace py = pybind11;
+using namespace pybind11::literals;
 
 static py::tuple AdcMatrix_shape(const AdcMatrix& self) {
   return shape_tuple(self.shape());
@@ -63,13 +64,13 @@ void export_AdcMatrix(py::module& m) {
         .def_property_readonly("mospaces", &AdcMatrix::mospaces_ptr)
         .def_property_readonly("is_core_valence_separated",
                                &AdcMatrix::is_core_valence_separated)
-        .def("compute_apply", &AdcMatrix::compute_apply)
+        .def("compute_apply", &AdcMatrix::compute_apply, "block"_a, "in"_a, "out"_a)
         .def("diagonal", &AdcMatrix::diagonal)
         .def("has_block", &AdcMatrix::has_block)
         .def_property_readonly("shape", &AdcMatrix_shape)
         .def("block_spaces", &AdcMatrix::block_spaces)
         .def_property_readonly("blocks", &AdcMatrix_blocks)
-        .def("compute_matvec", &AdcMatrix::compute_matvec)
+        .def("compute_matvec", &AdcMatrix::compute_matvec, "ins"_a, "outs"_a)
         .def_property_readonly(
               "timer", [](const AdcMatrix& self) { return convert_timer(self.timer()); },
               "Obtain the timer object of this class.")

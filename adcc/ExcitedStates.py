@@ -23,13 +23,14 @@
 import warnings
 import numpy as np
 
+from . import adc_pp
 from .misc import cached_property
 from .timings import Timer, timed_member_call
 from .AdcMethod import AdcMethod
+from .Excitation import Excitation, mark_excitation_property
 from .FormatIndex import (FormatIndexAdcc, FormatIndexBase,
                           FormatIndexHfProvider, FormatIndexHomoLumo)
 from .visualisation import ExcitationSpectrum
-from .state_densities import compute_gs2state_optdm, compute_state_diffdm
 from .OneParticleOperator import product_trace
 from .FormatDominantElements import FormatDominantElements
 
@@ -38,7 +39,6 @@ from adcc import dot
 from scipy import constants
 from matplotlib import pyplot as plt
 from .solver.SolverStateBase import EigenSolverStateBase
-from .Excitation import Excitation, mark_excitation_property
 
 
 class FormatExcitationVector:
@@ -285,8 +285,8 @@ class ExcitedStates:
     @timed_member_call(timer="_property_timer")
     def transition_dm(self):
         """List of transition density matrices of all computed states"""
-        return [compute_gs2state_optdm(self.property_method, self.ground_state,
-                                       evec, self.matrix.intermediates)
+        return [adc_pp.transition_dm(self.property_method, self.ground_state,
+                                     evec, self.matrix.intermediates)
                 for evec in self.excitation_vector]
 
     @cached_property
@@ -369,8 +369,8 @@ class ExcitedStates:
     @timed_member_call(timer="_property_timer")
     def state_diffdm(self):
         """List of difference density matrices of all computed states"""
-        return [compute_state_diffdm(self.property_method, self.ground_state,
-                                     evec, self.matrix.intermediates)
+        return [adc_pp.state_diffdm(self.property_method, self.ground_state,
+                                    evec, self.matrix.intermediates)
                 for evec in self.excitation_vector]
 
     @property

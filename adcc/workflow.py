@@ -200,7 +200,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         return exstates
     else:
         raise NotImplementedError(f"Solver method {solver_method} not "
-                                  "implemented. Try 'davidson' or 'auto'")
+                                  "implemented. Try 'davidson'")
 
 
 #
