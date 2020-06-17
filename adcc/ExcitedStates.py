@@ -22,6 +22,7 @@
 ## ---------------------------------------------------------------------
 import warnings
 import numpy as np
+import pandas as pd
 
 from . import adc_pp
 from .misc import cached_property
@@ -39,6 +40,7 @@ from adcc import dot
 from scipy import constants
 from matplotlib import pyplot as plt
 from .solver.SolverStateBase import EigenSolverStateBase
+from .Excitation import Excitation, mark_excitation_property
 
 
 class FormatExcitationVector:
@@ -656,6 +658,48 @@ class ExcitedStates:
                 ret += "\n"
                 ret += separator
         return ret[:-1]
+
+    def to_dataframe(self, export_vectors=True):
+        """
+        Exports the ExcitedStates object as :class:`pandas.DataFrame`.
+
+        Parameters
+        ----------
+        export_vectors: bool, optional
+            Whether to export vector quantities (transition moments)
+        """
+        propkeys = extract_excitation_property_keys(self)
+        propkeys.extend(self.excitation_energy_corrections.keys())
+        data = {
+            "excitation": np.arange(0, self.size, dtype=int),
+            "kind": np.tile(self.kind, self.size)
+        }
+        # fill the dict with data, sort out stuff that we cannot represent
+        # in a table
+        from adcc import Tensor, AmplitudeVector, OneParticleOperator
+        unacceptable_types = [AmplitudeVector, OneParticleOperator, Tensor]
+        for key in propkeys:
+            d = getattr(self, key)
+            if isinstance(d, list):
+                if any(type(e) in unacceptable_types for e in d):
+                    continue
+                data[key] = d
+            elif isinstance(d, np.ndarray):
+                if d.ndim == 1:
+                    data[key] = d
+                elif d.ndim == 2 and d.shape[1] == 3 and export_vectors:
+                    component = ["x", "y", "z"]
+                    # TODO: ugly, but works...
+                    for i, p in enumerate(component):
+                        data[f"{key}_{p}"] = d[:, i]
+                elif d.ndim > 2:
+                    raise TypeError(f"Exporting NumPy array with shape {d.shape}"
+                                    " not supported.")
+            else:
+                data[key] = d
+        df = pd.DataFrame(data=data)
+        df.set_index("excitation")
+        return df
 
     @property
     def excitations(self):
