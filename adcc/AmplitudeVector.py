@@ -90,6 +90,11 @@ class AmplitudeVector:
            all elements set to zero"""
         return AmplitudeVector(*tuple(t.zeros_like() for t in self.tensors))
 
+    def set_random(self):
+        for t in self.tensors:
+            t.set_random()
+        return self
+
     def dot(self, other):
         """Return the dot product with another AmplitudeVector
         or the dot products with a list of AmplitudeVectors.

@@ -27,7 +27,7 @@ import h5py
 
 
 def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
-                        n_states_full=None, **kwargs):
+                        n_states_full=None, n_guess_singles=None, **kwargs):
     if isinstance(dumpfile, h5py.File):
         out = dumpfile
     elif isinstance(dumpfile, str):
@@ -45,11 +45,11 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
         n_triplets = kwargs.pop("n_triplets", 0)
         if n_singlets:
             state = adcc.run_adc(data, method=method, n_singlets=n_singlets,
-                                 **kwargs)
+                                 n_guesses=n_guess_singles, **kwargs)
             states.append(state)
         if n_triplets:
             state = adcc.run_adc(data, method=method, n_triplets=n_triplets,
-                                 **kwargs)
+                                 n_guesses=n_guess_singles, **kwargs)
             states.append(state)
 
     if not len(states):
@@ -102,6 +102,46 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
     #
     adc = out.create_group(adc_tree)
 
+    # Data for matrix tests
+    gmatrix = adc.create_group("matrix")
+    random_vector = adcc.copy(states[0].excitation_vector[0]).set_random()
+
+    # Compute matvec and block-wise apply
+    matvec = states[0].matrix.compute_matvec(random_vector)
+    result = {"ss": adcc.copy(random_vector["s"]), }
+    states[0].matrix.compute_apply("ss", random_vector["s"], result["ss"])
+    if "d" in random_vector.blocks:
+        if not ("cvs" in method and "adc3" in method):
+            result["ds"] = adcc.copy(random_vector["d"])
+            states[0].matrix.compute_apply("ds", random_vector["s"], result["ds"])
+            result["sd"] = adcc.copy(random_vector["s"])
+            states[0].matrix.compute_apply("sd", random_vector["d"], result["sd"])
+
+        # TODO CVS-ADC(2)-x and CVS-ADC(3) compute_apply("dd") is not implemented
+        if not ("cvs" in method and ("adc2x" in method or "adc3" in method)):
+            result["dd"] = adcc.copy(random_vector["d"])
+            states[0].matrix.compute_apply("dd", random_vector["d"], result["dd"])
+
+    gmatrix["random_singles"] = random_vector["s"].to_ndarray()
+    gmatrix["diagonal_singles"] = states[0].matrix.diagonal("s").to_ndarray()
+    gmatrix["matvec_singles"] = matvec["s"].to_ndarray()
+    gmatrix["result_ss"] = result["ss"].to_ndarray()
+    if 'd' in random_vector.blocks:
+        gmatrix.create_dataset("random_doubles", compression=8,
+                               data=random_vector["d"].to_ndarray())
+        gmatrix.create_dataset("diagonal_doubles", compression=8,
+                               data=states[0].matrix.diagonal("d").to_ndarray())
+        gmatrix.create_dataset("matvec_doubles", compression=8,
+                               data=matvec["d"].to_ndarray())
+        if "ds" in result:
+            gmatrix.create_dataset("result_ds", compression=8,
+                                   data=result["ds"].to_ndarray())
+        if "sd" in result:
+            gmatrix["result_sd"] = result["sd"].to_ndarray()
+        if "dd" in result:
+            gmatrix.create_dataset("result_dd", compression=8,
+                                   data=result["dd"].to_ndarray())
+
     available_kinds = []
     for state in states:
         assert state.converged
@@ -121,14 +161,10 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
             n_states_extract = n_states
 
         for i in range(n_states_extract):
-            bb_a, bb_b = state.state_diffdm[i].transform_to_ao_basis(
-                state.reference_state
-            )
+            bb_a, bb_b = state.state_diffdm[i].to_ao_basis(state.reference_state)
             dm_bb_a.append(bb_a.to_ndarray())
             dm_bb_b.append(bb_b.to_ndarray())
-            bb_a, bb_b = state.transition_dm[i].transform_to_ao_basis(
-                state.reference_state
-            )
+            bb_a, bb_b = state.transition_dm[i].to_ao_basis(state.reference_state)
             tdm_bb_a.append(bb_a.to_ndarray())
             tdm_bb_b.append(bb_b.to_ndarray())
 

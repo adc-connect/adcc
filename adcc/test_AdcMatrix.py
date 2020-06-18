@@ -2,7 +2,7 @@
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2019 by the adcc authors
+## Copyright (C) 2020 by the adcc authors
 ##
 ## This file is part of adcc.
 ##
@@ -22,58 +22,96 @@
 ## ---------------------------------------------------------------------
 import adcc
 import unittest
-import numpy as np
+import itertools
 
 from .misc import expand_test_templates
 from numpy.testing import assert_allclose
 from adcc.testdata.cache import cache
 
+import pytest
 import libadcc
 
-methods = ["adc1", "adc2", "adc2x", "adc3"]
-methods += ["cvs-" + m for m in methods]
+# Test diagonal, block-wise apply and matvec
+
+# Reference data for cn_sto3g and h2o_sto3g contains
+# a random vector and the result of block-wise application and matvec
+# as well as reference results for the diagonal() call
+
+testcases = ["h2o_sto3g", "cn_sto3g"]
+basemethods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+methods = [m for bm in basemethods for m in [bm, "cvs-" + bm]]
+
+# TODO Also test these cases:
+# methods += ["fc-adc2", "fv-adc2x", "fv-cvs-adc2x", "fc-fv-adc2"]
 
 
-@expand_test_templates(methods)
-class TestAdcMatrixDenseExport(unittest.TestCase):
-    def base_test(self, case, method, conv_tol=1e-8, **kwargs):
-        kwargs.setdefault("n_states", 10)
-        n_states = kwargs["n_states"]
+@expand_test_templates(list(itertools.product(testcases, methods)))
+class TestAdcMatrix(unittest.TestCase):
+    def construct_matrix(self, case, method):
+        refdata = cache.reference_data[case]
+        matdata = refdata[method]["matrix"]
         if "cvs" in method:
             refstate = cache.refstate_cvs[case]
         else:
             refstate = cache.refstate[case]
 
         matrix = adcc.AdcMatrix(method, refstate)
-        state = adcc.run_adc(matrix, method=method, conv_tol=conv_tol, **kwargs)
+        return matrix, matdata
 
-        dense = matrix.to_dense_matrix()
-        assert_allclose(dense, dense.T, rtol=1e-10, atol=1e-12)
+    def construct_input(self, case, method):
+        refdata = cache.reference_data[case]
+        firstkind = refdata["available_kinds"][0]
+        state = cache.adc_states[case][method][firstkind]
+        matdata = refdata[method]["matrix"]
 
-        n_decimals = 10
-        spectrum = np.linalg.eigvalsh(dense)
-        rounded = np.unique(np.round(spectrum, n_decimals))[:n_states]
-        assert_allclose(state.excitation_energy, rounded, atol=10 * conv_tol)
+        out = state.excitation_vector[0].copy()
+        out["s"].set_from_ndarray(matdata["random_singles"])
+        if "random_doubles" in matdata:
+            out["d"].set_from_ndarray(matdata["random_doubles"])
+        return out
 
-        # TODO Test eigenvectors as well.
+    def template_diagonal(self, case, method):
+        matrix, matdata = self.construct_matrix(case, method)
 
-    def template_h2o(self, method):
-        kwargs = {}
-        if "cvs" in method:
-            kwargs["n_states"] = 7
-            kwargs["max_subspace"] = 30
-        if method in ["cvs-adc2"]:
-            kwargs["n_states"] = 5
-        if method in ["cvs-adc1"]:
-            kwargs["n_states"] = 2
-        self.base_test("h2o_sto3g", method, **kwargs)
+        diag_s = matrix.diagonal("s")
+        assert_allclose(matdata["diagonal_singles"], diag_s.to_ndarray(),
+                        rtol=1e-10, atol=1e-12)
 
-    # def template_cn(self, method):
-    #    TODO Testing this for CN is a bit tricky, because
-    #         the dense basis we employ is not yet spin-adapted
-    #         and allows e.g. simultaneous α->α and α->β components to mix
-    #         A closer investigation is needed here
-    #    self.base_test("cn_sto3g", method, **kwargs)
+        if "d" in matrix.blocks:
+            diag_d = matrix.diagonal("d")
+            assert_allclose(matdata["diagonal_doubles"], diag_d.to_ndarray(),
+                            rtol=1e-10, atol=1e-12)
+
+    def template_matvec(self, case, method):
+        matrix, matdata = self.construct_matrix(case, method)
+        invec = self.construct_input(case, method)
+
+        outvec = matrix @ invec
+
+        assert_allclose(matdata["matvec_singles"], outvec["s"].to_ndarray(),
+                        rtol=1e-10, atol=1e-12)
+        if "matvec_doubles" in matdata:
+            assert_allclose(matdata["matvec_doubles"], outvec["d"].to_ndarray(),
+                            rtol=1e-10, atol=1e-12)
+
+    def template_compute_block(self, case, method):
+        matrix, matdata = self.construct_matrix(case, method)
+        invec = self.construct_input(case, method)
+        outvec = invec.copy()
+
+        for b1 in ["s", "d"]:
+            for b2 in ["s", "d"]:
+                if f"result_{b1}{b2}" not in matdata:
+                    continue
+
+                if b1 + b2 == "dd" and method in ["adc2x", "adc3"]:
+                    pytest.xfail("ADC(2)-x and ADC(3) doubles-doubles apply"
+                                 "is buggy in adccore.")
+
+                matrix.compute_apply(b1 + b2, invec[b2], outvec[b1])
+                assert_allclose(matdata[f"result_{b1}{b2}"],
+                                outvec[b1].to_ndarray(),
+                                rtol=1e-10, atol=1e-12)
 
 
 class TestAdcMatrixInterface(unittest.TestCase):
