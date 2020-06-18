@@ -66,19 +66,8 @@ class Excitation:
         self.__parent_state = parent_state
         self.index = index
         self.method = method
-        for key in dir(self.parent_state):
-            if key == "excitations":
-                continue
-            if "__" in key or key.startswith("_"):
-                continue  # skip "private" fields
-            if not hasattr(type(self.parent_state), key):
-                continue
-            if not isinstance(getattr(type(self.parent_state), key), property):
-                continue
-
+        for key in self.parent_state.excitation_property_keys:
             fget = getattr(type(self.parent_state), key).fget
-            if not hasattr(fget, "__excitation_property"):
-                continue
             # Extract the kwargs passed to mark_excitation_property
             kwargs = getattr(fget, "__excitation_property").copy()
 

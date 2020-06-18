@@ -378,6 +378,7 @@ adccsetup(
         "matplotlib >= 3.0",
         "h5py >= 2.9",
         "tqdm >= 4.30",
+        "pandas >= 0.25.0",
     ],
     tests_require=["pytest", "pytest-cov", "pyyaml"],
     extras_require={
