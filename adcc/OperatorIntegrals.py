@@ -22,12 +22,12 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
-import libadcc
-
 from .misc import cached_property
 from .Tensor import Tensor
 from .timings import Timer, timed_member_call
 from .OneParticleOperator import OneParticleOperator
+
+import libadcc
 
 
 def transform_operator_ao2mo(tensor_bb, tensor_ff, coefficients,
@@ -108,8 +108,7 @@ class OperatorIntegrals:
             dip_backend = getattr(self.provider_ao, integral)[i]
             dip_bb = replicate_ao_block(self.mospaces, dip_backend,
                                         is_symmetric=is_symmetric)
-            dip_ff = OneParticleOperator(self.mospaces, is_symmetric=is_symmetric,
-                                         cartesian_transform=component)
+            dip_ff = OneParticleOperator(self.mospaces, is_symmetric=is_symmetric)
             transform_operator_ao2mo(dip_bb, dip_ff, self.__coefficients,
                                      self.__conv_tol)
             dipoles.append(dip_ff)

@@ -22,14 +22,15 @@
 ## ---------------------------------------------------------------------
 import os
 import ast
-import numpy as np
-import yaml
 import adcc
+import numpy as np
 
 from adcc import AdcMatrix, ExcitedStates, LazyMp, guess_zero, hdf5io
 from adcc.misc import cached_property
 from adcc.solver import EigenSolverStateBase
 from adcc.caching_policy import CacheAllPolicy
+
+import yaml
 
 
 class AdcMockState(EigenSolverStateBase):
@@ -62,7 +63,7 @@ def make_mock_adc_state(refstate, matmethod, kind, reference):
         raise ValueError("Unknown kind: {}".format(kind))
 
     state.eigenvectors = [
-        guess_zero(matrix, irrep="A", spin_change=spin_change,
+        guess_zero(matrix, spin_change=spin_change,
                    spin_block_symmetrisation=symm)
         for i in range(n_full)
     ]

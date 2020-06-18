@@ -24,14 +24,12 @@ import libadcc
 
 
 class Symmetry(libadcc.Symmetry):
-    def __init__(self, mospaces, space, irreps_allowed=None, permutations=None,
+    def __init__(self, mospaces, space, permutations=None,
                  spin_block_maps=None, spin_blocks_forbidden=None):
         if not isinstance(mospaces, libadcc.MoSpaces):
             raise TypeError("mospaces needs to be an MoSpaces instance.")
 
         super().__init__(mospaces, space)
-        if irreps_allowed is not None:
-            self.irreps_allowed = irreps_allowed
         if permutations is not None:
             self.permutations = permutations
         if spin_block_maps is not None:
