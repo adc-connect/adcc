@@ -698,25 +698,6 @@ class ExcitedStates:
         df.set_index("excitation")
         return df
 
-    def to_dataframe_amplitudes(self, tolerance=0.01, index_format=None):
-        """
-        Exports
-        """
-
-        vector_format = FormatExcitationVector(self.matrix, tolerance=tolerance,
-                                               index_format=index_format)
-        # Optimise the formatting by pre-inspecting all tensors
-        for tensor in self.excitation_vector:
-            vector_format.optimise_formatting(tensor)
-
-        for e in self.excitations:
-            formatted = vector_format.format(e.excitation_vector)
-            print(formatted)
-
-        # df = pd.DataFrame(data=data)
-        # df.set_index("excitation")
-        return None
-
     @property
     def excitation_property_keys(self):
         """
