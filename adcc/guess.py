@@ -20,7 +20,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from adcc import AdcMatrixlike, AmplitudeVector, Tensor
+from adcc import AdcMatrixlike, AmplitudeVector, Symmetry, Tensor
 
 import libadcc
 
@@ -29,8 +29,7 @@ __all__ = ["guess_zero", "guesses_from_diagonal",
            "guesses_spin_flip"]
 
 
-def guess_zero(matrix, spin_change=0,
-               spin_block_symmetrisation="none"):
+def guess_zero(matrix, spin_change=0, spin_block_symmetrisation="none"):
     """
     Return an AmplitudeVector object filled with zeros, but where the symmetry
     has been properly set up to meet the specified requirements on the guesses.
@@ -56,8 +55,64 @@ def guess_zero(matrix, spin_change=0,
     ))
 
 
-def guess_symmetries(matrix, spin_change=0,
-                     spin_block_symmetrisation="none"):
+def guess_symmetry_singles(matrix, spin_change=0,
+                           spin_block_symmetrisation="none"):
+    symmetry = Symmetry(matrix.mospaces, "".join(matrix.block_spaces("s")))
+    symmetry.irreps_allowed = ["A"]
+    if spin_change != 0 and spin_block_symmetrisation != "none":
+        raise NotImplementedError("spin_symmetrisation != 'none' only "
+                                  "implemented for spin_change == 0")
+    elif spin_block_symmetrisation == "symmetric":
+        symmetry.spin_block_maps = [("aa", "bb", 1)]
+        symmetry.spin_blocks_forbidden = ["ab", "ba"]
+    elif spin_block_symmetrisation == "antisymmetric":
+        symmetry.spin_block_maps = [("aa", "bb", -1)]
+        symmetry.spin_blocks_forbidden = ["ab", "ba"]
+    return symmetry
+
+
+def guess_symmetry_doubles(matrix, spin_change=0,
+                           spin_block_symmetrisation="none"):
+    spaces_d = matrix.block_spaces("d")
+    symmetry = Symmetry(matrix.mospaces, "".join(spaces_d))
+    symmetry.irreps_allowed = ["A"]
+
+    if spin_change != 0 and spin_block_symmetrisation != "none":
+        raise NotImplementedError("spin_symmetrisation != 'none' only "
+                                  "implemented for spin_change == 0")
+
+    if spin_change == 0 \
+       and spin_block_symmetrisation in ("symmetric", "antisymmetric"):
+        fac = 1 if spin_block_symmetrisation == "symmetric" else -1
+        # Spin mapping between blocks where alpha and beta are just mirrored
+        symmetry.spin_block_maps = [("aaaa", "bbbb", fac),
+                                    ("abab", "baba", fac),
+                                    ("abba", "baab", fac)]
+
+        # Mark blocks which change spin as forbidden
+        symmetry.spin_blocks_forbidden = ["aabb",  # spin_change +2
+                                          "bbaa",  # spin_change -2
+                                          "aaab",  # spin_change +1
+                                          "aaba",  # spin_change +1
+                                          "abaa",  # spin_change -1
+                                          "baaa",  # spin_change -1
+                                          "abbb",  # spin_change +1
+                                          "babb",  # spin_change +1
+                                          "bbab",  # spin_change -1
+                                          "bbba"]  # spin_change -1
+
+    # Add index permutation symmetry:
+    permutations = ["ijab"]
+    if spaces_d[0] == spaces_d[1]:
+        permutations.append("-jiab")
+    if spaces_d[2] == spaces_d[3]:
+        permutations.append("-ijba")
+    if len(permutations) > 1:
+        symmetry.permutations = permutations
+    return symmetry
+
+
+def guess_symmetries(matrix, spin_change=0, spin_block_symmetrisation="none"):
     """
     Return guess symmetry objects (one for each AmplitudeVector block) such
     that the specified requirements on the guesses are satisfied.
@@ -88,21 +143,32 @@ def guess_symmetries(matrix, spin_change=0,
     if int(spin_change * 2) / 2 != spin_change:
         raise ValueError("Only integer or half-integer spin_change is allowed. "
                          "You passed {}".format(spin_change))
-    gkind = libadcc.AdcGuessKind("A", float(spin_change),
-                                 spin_block_symmetrisation)
-    symmetries = libadcc.guess_symmetries(matrix.to_cpp(), gkind)
 
-    # FIXME There are cases (e.g. when a AdcBlockView is employed), where
-    #       there returned guess vectors contain a block, which is actually
-    #       removed by the view. This corrects for that. When the guess selection
-    #       has fully migrated to the python world, this should be removed.
-    if len(symmetries) == 2 and "d" not in matrix.blocks:
-        symmetries = [symmetries[0]]
+    max_spin_change = 0
+    if "s" in matrix.blocks:
+        max_spin_change = 1
+    if "d" in matrix.blocks:
+        max_spin_change = 2
+    if spin_change > max_spin_change:
+        raise ValueError("spin_change for singles guesses may only be in the "
+                         f"range [{-max_spin_change}, {max_spin_change}] and "
+                         f"not {spin_change}.")
+
+    symmetries = []
+    if "s" in matrix.blocks:
+        symmetries.append(guess_symmetry_singles(
+            matrix, spin_change=spin_change,
+            spin_block_symmetrisation=spin_block_symmetrisation
+        ))
+    if "d" in matrix.blocks:
+        symmetries.append(guess_symmetry_doubles(
+            matrix, spin_change=spin_change,
+            spin_block_symmetrisation=spin_block_symmetrisation
+        ))
     return symmetries
 
 
-def guesses_from_diagonal(matrix, n_guesses, block="s",
-                          spin_change=0,
+def guesses_from_diagonal(matrix, n_guesses, block="s", spin_change=0,
                           spin_block_symmetrisation="none",
                           degeneracy_tolerance=1e-14):
     """
