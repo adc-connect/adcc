@@ -28,7 +28,6 @@ from . import adc_pp
 from .misc import cached_property
 from .timings import Timer, timed_member_call
 from .AdcMethod import AdcMethod
-from .Excitation import Excitation, mark_excitation_property
 from .FormatIndex import (FormatIndexAdcc, FormatIndexBase,
                           FormatIndexHfProvider, FormatIndexHomoLumo)
 from .visualisation import ExcitationSpectrum
@@ -402,6 +401,7 @@ class ExcitedStates:
     @property
     @mark_excitation_property()
     def cross_section(self):
+        """List of one-photon absorption cross sections of all computed states"""
         # TODO Source?
         fine_structure = constants.fine_structure
         fine_structure_au = 1 / fine_structure
