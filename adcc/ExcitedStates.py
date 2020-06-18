@@ -662,41 +662,55 @@ class ExcitedStates:
     def to_dataframe(self):
         """
         Exports the ExcitedStates object as :class:`pandas.DataFrame`.
-        All values are printed in atomic units.
+        Atomic units are used for all values.
         """
-        propkeys = self.excitation_property_keys.copy()
+        propkeys = self.excitation_property_keys
         propkeys.extend(self.excitation_energy_corrections.keys())
         data = {
             "excitation": np.arange(0, self.size, dtype=int),
             "kind": np.tile(self.kind, self.size)
         }
-        # fill the dict with data, sort out stuff that we cannot represent
-        # in a table
-        unacceptable_types = [adcc.AmplitudeVector, adcc.OneParticleOperator,
-                              adcc.Tensor]
         for key in propkeys:
             try:
                 d = getattr(self, key)
             except NotImplementedError:
                 # some properties are not available for every backend
                 continue
-            if isinstance(d, list):
-                if not any(type(e) in unacceptable_types for e in d):
-                    data[key] = d
-            elif isinstance(d, np.ndarray):
-                if d.ndim == 1:
-                    data[key] = d
-                elif d.ndim == 2 and d.shape[1] == 3:
-                    for i, p in enumerate(["x", "y", "z"]):
-                        data[f"{key}_{p}"] = d[:, i]
-                elif d.ndim > 2:
-                    raise TypeError(f"Exporting NumPy array with shape {d.shape}"
-                                    " not supported.")
-            else:
+            if not isinstance(d, np.ndarray):
+                continue
+            if not np.issubdtype(d.dtype, np.number):
+                continue
+            if d.ndim == 1:
                 data[key] = d
+            elif d.ndim == 2 and d.shape[1] == 3:
+                for i, p in enumerate(["x", "y", "z"]):
+                    data[f"{key}_{p}"] = d[:, i]
+            elif d.ndim > 2:
+                warnings.warn(f"Exporting NumPy array for property {key}"
+                              f" with shape {d.shape} not supported.")
+                continue
         df = pd.DataFrame(data=data)
         df.set_index("excitation")
         return df
+
+    def to_dataframe_amplitudes(self, tolerance=0.01, index_format=None):
+        """
+        Exports
+        """
+
+        vector_format = FormatExcitationVector(self.matrix, tolerance=tolerance,
+                                               index_format=index_format)
+        # Optimise the formatting by pre-inspecting all tensors
+        for tensor in self.excitation_vector:
+            vector_format.optimise_formatting(tensor)
+
+        for e in self.excitations:
+            formatted = vector_format.format(e.excitation_vector)
+            print(formatted)
+
+        # df = pd.DataFrame(data=data)
+        # df.set_index("excitation")
+        return None
 
     @property
     def excitation_property_keys(self):
