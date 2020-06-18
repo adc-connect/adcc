@@ -26,7 +26,7 @@ import libadcc
 
 
 class Tensor(libadcc.Tensor):
-    def __init__(self, sym_or_mo, space=None, irreps_allowed=None,
+    def __init__(self, sym_or_mo, space=None,
                  permutations=None, spin_block_maps=None,
                  spin_blocks_forbidden=None):
         """Construct an uninitialised Tensor from an :class:`MoSpaces` or
@@ -42,8 +42,6 @@ class Tensor(libadcc.Tensor):
         spaces : str, optional
             Space of the tensor, can be None if the first argument is
             a :class:`Symmetry` object.
-        irreps_allowed : list, optional
-            List of allowed irreducible representations.
         permutations : list, optional
             List of permutational symmetries of the Tensor.
         spin_block_maps : list, optional
@@ -67,12 +65,11 @@ class Tensor(libadcc.Tensor):
 
         >>> Tensor(mospaces, "v1v1", permutations=["ab", "-ba"])
 
-        Construct a tensor in "o1v1", which transforms like the irrep
-        "A", which maps the alpha-alpha block anti-symmetrically
-        to the beta-beta block and which has the other spin blocks set to zero:
+        Construct a tensor in "o1v1", which maps the alpha-alpha block
+        anti-symmetrically to the beta-beta block and which has the
+        other spin blocks set to zero:
 
-        >>> Tensor(mospaces, "o1v1", irreps_allowed=["A"],
-        ...        spin_block_maps=[("aa", "bb", -1)],
+        >>> Tensor(mospaces, "o1v1", spin_block_maps=[("aa", "bb", -1)],
         ...        spin_blocks_forbidden=["ab", "ba"])
 
         """
@@ -84,7 +81,7 @@ class Tensor(libadcc.Tensor):
                 raise ValueError("If the first argument to Tensor is no "
                                  "Symmetry object, the second argument (spaces)"
                                  "needs to be given")
-            sym_or_mo = Symmetry(sym_or_mo, space, irreps_allowed, permutations,
+            sym_or_mo = Symmetry(sym_or_mo, space, permutations,
                                  spin_block_maps, spin_blocks_forbidden)
 
         if space is not None:

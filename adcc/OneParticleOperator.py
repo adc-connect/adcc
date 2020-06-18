@@ -20,13 +20,13 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import libadcc
-
 from .functions import evaluate
+
+import libadcc
 
 
 class OneParticleOperator(libadcc.OneParticleOperator):
-    def __init__(self, spaces, is_symmetric=True, cartesian_transform="1"):
+    def __init__(self, spaces, is_symmetric=True):
         """
         Construct an OneParticleOperator object. All blocks are initialised
         as zero blocks.
@@ -39,23 +39,20 @@ class OneParticleOperator(libadcc.OneParticleOperator):
 
         is_symmetric : bool
             Is the operator symmetric?
-
-        cartesian_transform : str
-            Symbol for cartesian transformation (see make_symmetry for details.)
         """
         if isinstance(spaces, libadcc.ReferenceState):
-            super().__init__(spaces.mospaces, is_symmetric, cartesian_transform)
+            super().__init__(spaces.mospaces, is_symmetric, "1")
             self.reference_state = spaces
         elif isinstance(spaces, libadcc.LazyMp):
-            super().__init__(spaces.mospaces, is_symmetric, cartesian_transform)
+            super().__init__(spaces.mospaces, is_symmetric, "1")
             self.reference_state = spaces.reference_state
         else:
-            super().__init__(spaces, is_symmetric, cartesian_transform)
+            super().__init__(spaces, is_symmetric, "1")
 
     @classmethod
     def from_cpp(cls, cpp_operator):
-        ret = cls(cpp_operator.mospaces, cpp_operator.is_symmetric,
-                  cpp_operator.cartesian_transform)
+        assert cpp_operator.cartesian_transform == "1"
+        ret = cls(cpp_operator.mospaces, cpp_operator.is_symmetric)
         for b in cpp_operator.blocks_nonzero:
             ret.set_block(b, cpp_operator.block(b))
         return ret

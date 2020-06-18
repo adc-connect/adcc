@@ -29,14 +29,13 @@ __all__ = ["guess_zero", "guesses_from_diagonal",
            "guesses_spin_flip"]
 
 
-def guess_zero(matrix, irrep="A", spin_change=0,
+def guess_zero(matrix, spin_change=0,
                spin_block_symmetrisation="none"):
     """
     Return an AmplitudeVector object filled with zeros, but where the symmetry
     has been properly set up to meet the specified requirements on the guesses.
 
     matrix       The matrix for which guesses are to be constructed
-    irrep        String describing the irreducable representation to consider.
     spin_change  The spin change to enforce in an excitation.
                  Typical values are 0 (singlet/triplet/any) and -1 (spin-flip).
     spin_block_symmetrisation
@@ -51,20 +50,19 @@ def guess_zero(matrix, irrep="A", spin_change=0,
     """
     return AmplitudeVector(*tuple(
         Tensor(sym) for sym in guess_symmetries(
-            matrix, irrep=irrep, spin_change=spin_change,
+            matrix, spin_change=spin_change,
             spin_block_symmetrisation=spin_block_symmetrisation
         )
     ))
 
 
-def guess_symmetries(matrix, irrep="A", spin_change=0,
+def guess_symmetries(matrix, spin_change=0,
                      spin_block_symmetrisation="none"):
     """
     Return guess symmetry objects (one for each AmplitudeVector block) such
     that the specified requirements on the guesses are satisfied.
 
     matrix       The matrix for which guesses are to be constructed
-    irrep        String describing the irreducable representation to consider.
     spin_change  The spin change to enforce in an excitation.
                  Typical values are 0 (singlet/triplet/any) and -1 (spin-flip).
     spin_block_symmetrisation
@@ -90,10 +88,7 @@ def guess_symmetries(matrix, irrep="A", spin_change=0,
     if int(spin_change * 2) / 2 != spin_change:
         raise ValueError("Only integer or half-integer spin_change is allowed. "
                          "You passed {}".format(spin_change))
-    if irrep != "A":
-        raise NotImplementedError("Currently only irrep == 'A' is implemented.")
-
-    gkind = libadcc.AdcGuessKind(irrep, float(spin_change),
+    gkind = libadcc.AdcGuessKind("A", float(spin_change),
                                  spin_block_symmetrisation)
     symmetries = libadcc.guess_symmetries(matrix.to_cpp(), gkind)
 
@@ -107,7 +102,7 @@ def guess_symmetries(matrix, irrep="A", spin_change=0,
 
 
 def guesses_from_diagonal(matrix, n_guesses, block="s",
-                          irrep="A", spin_change=0,
+                          spin_change=0,
                           spin_block_symmetrisation="none",
                           degeneracy_tolerance=1e-14):
     """
@@ -121,7 +116,6 @@ def guesses_from_diagonal(matrix, n_guesses, block="s",
                  vectors are returned if this many could not be found.
     block        Diagonal block to use for obtaining the guesses
                  (typically "s" or "d").
-    irrep        String describing the irreducable representation to consider.
     spin_change  The spin change to enforce in an excitation.
                  Typical values are 0 (singlet/triplet/any) and -1 (spin-flip).
     spin_block_symmetrisation
@@ -154,13 +148,10 @@ def guesses_from_diagonal(matrix, n_guesses, block="s",
     if not matrix.has_block(block):
         raise ValueError("The passed ADC matrix does not have the block '{}.'"
                          "".format(block))
-    if irrep != "A":
-        raise NotImplementedError("Currently only irrep == 'A' is implemented.")
-
     if n_guesses == 0:
         return []
 
-    gkind = libadcc.AdcGuessKind(irrep, float(spin_change),
+    gkind = libadcc.AdcGuessKind("A", float(spin_change),
                                  spin_block_symmetrisation)
     guesses = libadcc.guesses_from_diagonal(matrix.to_cpp(), gkind, block,
                                             n_guesses, degeneracy_tolerance)
@@ -178,7 +169,7 @@ def guesses_from_diagonal(matrix, n_guesses, block="s",
 #
 # Specialisations of guesses_from_diagonal for common cases
 #
-def guesses_singlet(matrix, n_guesses, block="s", irrep="A", **kwargs):
+def guesses_singlet(matrix, n_guesses, block="s", **kwargs):
     """
     Obtain guesses for computing singlet states by inspecting the passed
     ADC matrix.
@@ -188,15 +179,14 @@ def guesses_singlet(matrix, n_guesses, block="s", irrep="A", **kwargs):
                  vectors are returned if this many could not be found.
     block        Diagonal block to use for obtaining the guesses
                  (typically "s" or "d").
-    irrep        String describing the irreducable representation to consider.
     kwargs       Any other argument understood by guesses_from_diagonal.
     """
-    return guesses_from_diagonal(matrix, n_guesses, block=block, irrep=irrep,
+    return guesses_from_diagonal(matrix, n_guesses, block=block,
                                  spin_block_symmetrisation="symmetric",
                                  spin_change=0, **kwargs)
 
 
-def guesses_triplet(matrix, n_guesses, block="s", irrep="A", **kwargs):
+def guesses_triplet(matrix, n_guesses, block="s", **kwargs):
     """
     Obtain guesses for computing triplet states by inspecting the passed
     ADC matrix.
@@ -206,10 +196,9 @@ def guesses_triplet(matrix, n_guesses, block="s", irrep="A", **kwargs):
                  vectors are returned if this many could not be found.
     block        Diagonal block to use for obtaining the guesses
                  (typically "s" or "d").
-    irrep        String describing the irreducable representation to consider.
     kwargs       Any other argument understood by guesses_from_diagonal.
     """
-    return guesses_from_diagonal(matrix, n_guesses, block=block, irrep=irrep,
+    return guesses_from_diagonal(matrix, n_guesses, block=block,
                                  spin_block_symmetrisation="antisymmetric",
                                  spin_change=0, **kwargs)
 
@@ -218,7 +207,7 @@ def guesses_triplet(matrix, n_guesses, block="s", irrep="A", **kwargs):
 guesses_any = guesses_from_diagonal
 
 
-def guesses_spin_flip(matrix, n_guesses, block="s", irrep="A", **kwargs):
+def guesses_spin_flip(matrix, n_guesses, block="s", **kwargs):
     """
     Obtain guesses for computing spin-flip states by inspecting the passed
     ADC matrix.
@@ -228,8 +217,7 @@ def guesses_spin_flip(matrix, n_guesses, block="s", irrep="A", **kwargs):
                  vectors are returned if this many could not be found.
     block        Diagonal block to use for obtaining the guesses
                  (typically "s" or "d").
-    irrep        String describing the irreducable representation to consider.
     kwargs       Any other argument understood by guesses_from_diagonal.
     """
-    return guesses_from_diagonal(matrix, n_guesses, block=block, irrep=irrep,
+    return guesses_from_diagonal(matrix, n_guesses, block=block,
                                  spin_change=-1, **kwargs)
