@@ -11,6 +11,8 @@ research to cite the adcc paper :cite:`adcc` and the
 `DOI of the adcc code <https://zenodo.org/badge/latestdoi/215731857>`_
 in the version which was used for the calculation.
 
+.. _publications:
+
 adcc publications
 -----------------
 
