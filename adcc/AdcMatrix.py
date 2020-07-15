@@ -54,7 +54,7 @@ class AdcMatrixlike:
 
     def rmatvec(self, v):
         # ADC matrix is symmetric
-        return self.matvec(self, v)
+        return self.matvec(v)
 
     def __matmul__(self, other):
         if isinstance(other, AmplitudeVector):
