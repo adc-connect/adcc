@@ -44,8 +44,7 @@ def extract_postfix(fn):
             match = re.match(r"^ *adccore_version *= *(\([^()]*\))", line)
             if match:
                 return ast.literal_eval(match.group(1))[1]
-        else:
-            raise RuntimeError("Could not extract adccore version from " + fn)
+        raise RuntimeError("Could not extract adccore version from " + fn)
 
 
 def make_tarball(adccore, postfix=None):

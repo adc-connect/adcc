@@ -107,13 +107,9 @@ def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
             isinstance(explicit_symmetrisation, type):
         explicit_symmetrisation = explicit_symmetrisation(matrix)
 
-    # The problem size
-    n_problem = matrix.shape[1]
-
     if x0 is None:
         # Start with random guess
         raise NotImplementedError("Random guess is not yet implemented.")
-        x0 = np.random.rand((n_problem))
     else:
         x0 = copy(x0)
 

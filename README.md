@@ -1,9 +1,10 @@
 <img src="https://raw.githubusercontent.com/adc-connect/adcc/master/docs/logo/logo.png" alt="adcc logo" height="100px" />
 
-# adcc: Seamlessly connect your program to ADC
-| **Documentation**                                       | **Build Status**                                       |  **Installation**                                                                      |
-|:------------------------------------------------------- |:------------------------------------------------------ |:-------------------------------------------------------------------------------------- |
-| [![][docs-img]][docs-url] [![][binder-img]][binder-url] | [![][travis-img]][travis-url] [![][cov-img]][cov-url]  | [![][pypi-img]][pypi-url] [![][conda-img]][conda-url] [![][license-img]][license-url]  |
+# adcc: Seamlessly connect your program to ADC                                                                
+| **Documentation** | [![][docs-img]][docs-url] [![][binder-img]][binder-url] |
+| :------ | :------- |
+| **Build Status**  | [![][travis-img]][travis-url] [![][cov-img]][cov-url] [![][lgtm-img]][lgtm-url] |
+|  **Installation** | [![][pypi-img]][pypi-url] [![][conda-img]][conda-url] [![][license-img]][license-url]  |
 
 [docs-img]: https://img.shields.io/badge/doc-latest-blue.svg
 [docs-url]: https://adc-connect.org
@@ -19,6 +20,8 @@
 [pypi-url]: https://pypi.org/project/adcc
 [conda-img]: https://anaconda.org/adcc/adcc/badges/version.svg
 [conda-url]: https://anaconda.org/adcc/adcc
+[lgtm-img]: https://img.shields.io/lgtm/grade/python/github/adc-connect/adcc?label=code%20quality
+[lgtm-url]: https://lgtm.com/projects/g/adc-connect/adcc/context:python
 
 adcc (**ADC-connect**) is a python-based framework for performing
 the calculation of molecular spectra and electronically excited states
