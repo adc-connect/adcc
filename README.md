@@ -20,7 +20,7 @@
 [pypi-url]: https://pypi.org/project/adcc
 [conda-img]: https://anaconda.org/adcc/adcc/badges/version.svg
 [conda-url]: https://anaconda.org/adcc/adcc
-[lgtm-img]: https://img.shields.io/lgtm/grade/python/g/adc-connect/adcc.svg?logoWidth=18
+[lgtm-img]: https://img.shields.io/lgtm/grade/python/github/adc-connect/adcc?label=code%20quality
 [lgtm-url]: https://lgtm.com/projects/g/adc-connect/adcc/context:python
 
 adcc (**ADC-connect**) is a python-based framework for performing
