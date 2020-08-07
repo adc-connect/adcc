@@ -37,7 +37,9 @@ class MemoryPool(libadcc.AdcMemory):
         Parameters
         ----------
         max_memory : int
-            Estimate for the maximally employed memory
+            Estimate for the maximally employed memory. Note that this value
+            is only effective if the allocator parameter is "libxm". and not
+            for "default" or "standard".
 
         tensor_block_size : int, optional
             This parameter roughly has the meaning of how many indices are handled
