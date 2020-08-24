@@ -458,7 +458,7 @@ This can be achieved using the ``guesses`` parameter:
 
    adc2_state = adcc.adc2(scfres, n_singlets=3)
    adc2x_state = adcc.adc2x(adc2_state.ground_state, n_singlets=3,
-                            guesses=adc2_state.eigenvectors)
+                            guesses=adc2_state.excitation_vector)
 
 This trick of course can also be used to tighten a
 previous ADC result in case a smaller convergence tolerance is needed,
@@ -474,7 +474,7 @@ e.g.
     
     # Now converge tighter, using the previous result
     state = adcc.adc2(state.matrix, n_singlets=3, conv_tol=1e-7,
-                      guesses=state.eigenvectors)
+                      guesses=state.excitation_vector)
 
 
 .. _computed-data:
