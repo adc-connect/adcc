@@ -21,7 +21,6 @@
 ##
 ## ---------------------------------------------------------------------
 from math import sqrt
-from collections import namedtuple
 
 from adcc import block as b
 from adcc.functions import direct_sum, einsum, zeros_like
@@ -39,15 +38,53 @@ __all__ = ["block"]
 #      really so much our focus.
 
 
-#
-# Dispatch routine
-#
-"""
-`apply` is a function mapping an AmplitudeVector to the contribution of this
-block to the result of applying the ADC matrix. `diagonal` is an `AmplitudeVector`
-containing the expression to the diagonal of the ADC matrix from this block.
-"""
-AdcBlock = namedtuple("AdcBlock", ["apply", "diagonal"])
+class AdcBlock:
+    def __init__(self, apply, diagonal):
+        """AdcBlock contains the matrix apply and diagonal
+        routines for a specific ADC matrix block and is used to compose
+        the dispatch routines for :py:class:`AdcMatrix`
+
+        Parameters
+        ----------
+        apply : callable
+            function mapping an AmplitudeVector to the contribution of
+            this block to the result of applying the ADC matrix
+        diagonal : AmplitudeVector, int, float
+            expression to the diagonal of the ADC matrix from this block
+        """
+        if not callable(apply):
+            raise TypeError("apply needs to be callable.")
+        if not isinstance(diagonal, (AmplitudeVector, int, float)):
+            raise TypeError("diagonal needs to be an AmplitudeVector or a number.")
+        self._applies = [apply]
+        self._diagonals = [diagonal]
+
+    def add_block(self, other):
+        """Adds another :py:class:`AdcBlock` to this AdcBlock.
+
+        Parameters
+        ----------
+        other : AdcBlock
+            block to be added
+        """
+        if not isinstance(other, AdcBlock):
+            raise TypeError("other must be of type AdcBlock.")
+        self._applies.append(other.apply)
+        self._diagonals.append(other.diagonal)
+
+    def apply(self, ampl):
+        """Applies the block to an input AmplitudeVector
+
+        Parameters
+        ----------
+        ampl : AmplitudeVector
+            Input AmplitudeVector
+        """
+        return sum(app(ampl) for app in self._applies)
+
+    @property
+    def diagonal(self):
+        return sum(self._diagonals)
 
 
 def block(ground_state, spaces, order, variant=None, intermediates=None):
@@ -58,7 +95,9 @@ def block(ground_state, spaces, order, variant=None, intermediates=None):
 
     It is assumed largely, that CVS is equivalent to mp.has_core_occupied_space,
     while one would probably want in the long run that one can have an "o2" space,
-    but not do CVS
+    but not do CVS.
+
+    Returns an instance of :py:class:`AdcBlock`.
     """
     if isinstance(variant, str):
         variant = [variant]

@@ -55,6 +55,16 @@ class PyScfOperatorIntegralProvider:
                 -1.0 * self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
             )
 
+    @property
+    def density_dependent_operators(self):
+        ret = {}
+        if hasattr(self.scfres, "with_solvent"):
+            if isinstance(self.scfres.with_solvent, solvent.pol_embed.PolEmbed):
+                ret["pe_induction_elec"] = lambda dm: \
+                    self.scfres.with_solvent._exec_cppe(dm.to_ndarray(),
+                                                        elec_only=True)[1]
+        return ret
+
 
 # TODO: refactor ERI builder to be more general
 # IntegralBuilder would be good

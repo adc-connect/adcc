@@ -248,12 +248,13 @@ def lists_to_ndarray(dictionary):
     return data
 
 
-def read_qchem_data():
+def read_yaml_data(fname):
     thisdir = os.path.dirname(__file__)
-    yaml_file = os.path.join(thisdir, "qchem_dump.yml")
+    yaml_file = os.path.join(thisdir, fname)
     with open(yaml_file, "r") as f:
         data_raw = yaml.safe_load(f)
     return lists_to_ndarray(data_raw)
 
 
-qchem_data = read_qchem_data()
+qchem_data = read_yaml_data("qchem_dump.yml")
+tmole_data = read_yaml_data("tmole_dump.yml")

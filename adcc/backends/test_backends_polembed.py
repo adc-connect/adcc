@@ -31,8 +31,10 @@ import pytest
 
 from ..misc import expand_test_templates
 from .testing import cached_backend_hf
-from ..testdata.cache import qchem_data
+from ..testdata.cache import qchem_data, tmole_data
 from ..testdata.static_data import pe_potentials
+
+from ..adc_pp.solvent import block_ph_ph_0_pe
 
 try:
     import cppe  # noqa: F401
@@ -52,7 +54,7 @@ methods = ["adc1", "adc2", "adc3"]
 @pytest.mark.skipif(len(backends) == 0, reason="No backend found.")
 @expand_test_templates(list(itertools.product(basissets, methods, backends)))
 class TestPolarizableEmbedding(unittest.TestCase):
-    def template_pe_formaldehyde(self, basis, method, backend):
+    def template_pe_perturbative_formaldehyde(self, basis, method, backend):
         basename = f"formaldehyde_{basis}_pe_{method}"
         qc_result = qchem_data[basename]
         pe_options = {"potfile": pe_potentials["fa_6w"]}
@@ -81,4 +83,31 @@ class TestPolarizableEmbedding(unittest.TestCase):
             qc_result["pe_ptlr_correction"],
             state.pe_ptlr_correction,
             atol=1e-5
+        )
+
+    def template_pe_coupling_formaldehyde(self, basis, method, backend):
+        if method != "adc2":
+            pytest.skip("")
+        basename = f"formaldehyde_{basis}_pe_{method}"
+        tm_result = tmole_data[basename]
+        pe_options = {"potfile": pe_potentials["fa_6w"]}
+        scfres = cached_backend_hf(backend, "formaldehyde", basis,
+                                   pe_options=pe_options)
+        assert_allclose(scfres.energy_scf, tm_result["energy_scf"], atol=1e-8)
+
+        matrix = adcc.AdcMatrix(
+            method, scfres,
+            additional_blocks={'ph_ph': block_ph_ph_0_pe}
+        )
+
+        assert_allclose(
+            matrix.ground_state.energy(2),
+            tm_result["energy_mp2"],
+            atol=1e-8
+        )
+        state = adcc.run_adc(matrix, n_singlets=5, conv_tol=1e-7)
+        assert_allclose(
+            state.excitation_energy_uncorrected,
+            tm_result["excitation_energy"],
+            atol=1e-6
         )

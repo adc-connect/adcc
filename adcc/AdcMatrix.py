@@ -50,7 +50,8 @@ class AdcMatrix(AdcMatrixlike):
         "adc3":  dict(ph_ph=3, ph_pphh=2,    pphh_ph=2,    pphh_pphh=1),     # noqa: E501
     }
 
-    def __init__(self, method, hf_or_mp, block_orders=None, intermediates=None):
+    def __init__(self, method, hf_or_mp, block_orders=None, intermediates=None,
+                 additional_blocks=None):
         """
         Initialise an ADC matrix.
 
@@ -120,6 +121,22 @@ class AdcMatrix(AdcMatrixlike):
                                       variant=variant)
                 for block, order in block_orders.items() if order is not None
             }
+            if additional_blocks is not None:
+                if not isinstance(additional_blocks, dict):
+                    raise TypeError("additional_blocks needs to "
+                                    " be a dict.")
+                for space in additional_blocks:
+                    if space not in self.blocks_ph:
+                        raise ValueError("Can only add blocks"
+                                         " to existing matrix blocks.")
+                    block_fun = additional_blocks[space]
+                    if not callable(block_fun):
+                        raise TypeError("Items in additional_blocks "
+                                        "must be callable.")
+                    block = block_fun(
+                        self.reference_state, self.ground_state, self.intermediates
+                    )
+                    self.blocks_ph[space].add_block(block)
             self.__diagonal = sum(bl.diagonal for bl in self.blocks_ph.values()
                                   if bl.diagonal)
             self.__diagonal.evaluate()
