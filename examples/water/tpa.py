@@ -11,8 +11,8 @@ from adcc.solver.preconditioner import JacobiPreconditioner
 from adcc.AmplitudeVector import AmplitudeVector
 from adcc.solver import IndexSymmetrisation
 from adcc.solver.conjugate_gradient import conjugate_gradient, default_print
-from adcc.modified_transition_moments import compute_modified_transition_moments
-from adcc.state_densities import compute_state2state_optdm
+from adcc.adc_pp.modified_transition_moments import modified_transition_moments
+from adcc.adc_pp.state2state_transition_dm import state2state_transition_dm
 from adcc.OneParticleOperator import product_trace
 
 
@@ -47,10 +47,7 @@ state = adcc.adc2(scfres, n_singlets=1, conv_tol=1e-8)
 
 # setup modified transition moments
 dips = state.reference_state.operators.electric_dipole
-rhss = [
-    compute_modified_transition_moments(state.matrix, dip, "adc2")
-    for dip in dips
-]
+rhss = modified_transition_moments("adc2", state.ground_state, dips)
 
 S = np.zeros((len(state.excitation_energy), 3, 3))
 for f, ee in enumerate(state.excitation_energy):
@@ -72,11 +69,11 @@ for f, ee in enumerate(state.excitation_energy):
         response.append(res)
     for mu in range(3):
         for nu in range(mu, 3):
-            tdm_mu_f = compute_state2state_optdm(
+            tdm_mu_f = state2state_transition_dm(
                 "adc2", matrix.ground_state, response[mu].solution,
                 state.excitation_vector[f]
             )
-            tdm_nu_f = compute_state2state_optdm(
+            tdm_nu_f = state2state_transition_dm(
                 "adc2", matrix.ground_state, response[nu].solution,
                 state.excitation_vector[f]
             )

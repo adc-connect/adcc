@@ -21,11 +21,13 @@
 ##
 ## ---------------------------------------------------------------------
 import unittest
+import numpy as np
 
-from .misc import expand_test_templates
+from adcc.State2States import State2States
 from adcc.testdata.cache import cache
 
-from pytest import approx
+from .misc import expand_test_templates
+from pytest import approx, skip
 
 # The methods to test
 basemethods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
@@ -119,10 +121,8 @@ class TestStateDiffDm(unittest.TestCase, Runners):
             assert state.excitation_energy[i] == refevals[i]
 
             dm_ao_a, dm_ao_b = state.state_diffdm[i].to_ao_basis()
-            dm_ao_a = dm_ao_a.to_ndarray()
-            dm_ao_b = dm_ao_b.to_ndarray()
-            assert dm_ao_a == approx(refdens_a[i])
-            assert dm_ao_b == approx(refdens_b[i])
+            assert dm_ao_a.to_ndarray() == approx(refdens_a[i])
+            assert dm_ao_b.to_ndarray() == approx(refdens_b[i])
 
 
 class TestStateGroundToExcitedTdm(unittest.TestCase, Runners):
@@ -140,9 +140,35 @@ class TestStateGroundToExcitedTdm(unittest.TestCase, Runners):
             # comparing reference and computed
             assert state.excitation_energy[i] == refevals[i]
 
-            tdms = state.transition_dm[i].to_ao_basis()
-            dm_ao_a, dm_ao_b = tdms
-            dm_ao_a = dm_ao_a.to_ndarray()
-            dm_ao_b = dm_ao_b.to_ndarray()
-            assert dm_ao_a == approx(refdens_a[i])
-            assert dm_ao_b == approx(refdens_b[i])
+            dm_ao_a, dm_ao_b = state.transition_dm[i].to_ao_basis()
+            assert dm_ao_a.to_ndarray() == approx(refdens_a[i])
+            assert dm_ao_b.to_ndarray() == approx(refdens_b[i])
+
+
+class TestStateExcitedToExcitedTdm(unittest.TestCase, Runners):
+    def base_test(self, system, method, kind):
+        method = method.replace("_", "-")
+        if "cvs" in method:
+            skip("State-to-state transition dms not yet implemented for CVS.")
+        refdata = cache.reference_data[system]
+        state = cache.adc_states[system][method][kind]
+        state_to_state = refdata[method][kind]["state_to_state"]
+        refevals = refdata[method][kind]["eigenvalues"]
+
+        for i, exci in enumerate(state.excitations):
+            # Check that we are talking about the same state when
+            # comparing reference and computed
+            assert exci.excitation_energy == refevals[i]
+            fromi_ref_a = state_to_state[f"from_{i}"]["state_to_excited_tdm_bb_a"]
+            fromi_ref_b = state_to_state[f"from_{i}"]["state_to_excited_tdm_bb_b"]
+
+            state2state = State2States(state, initial=i)
+            for ii, j in enumerate(range(i + 1, state.size)):
+                assert state.excitation_energy[j] == refevals[j]
+                ee_ref = refevals[j] - refevals[i]
+                assert state2state.excitation_energy[ii] == ee_ref
+                dm_ao_a, dm_ao_b = state2state.transition_dm[ii].to_ao_basis()
+                np.testing.assert_allclose(fromi_ref_a[ii],
+                                           dm_ao_a.to_ndarray().T, atol=1e-4)
+                np.testing.assert_allclose(fromi_ref_b[ii],
+                                           dm_ao_b.to_ndarray().T, atol=1e-4)
