@@ -23,6 +23,8 @@
 import sys
 import warnings
 
+from libadcc import HartreeFockProvider, get_n_threads, set_n_threads
+
 from .LazyMp import LazyMp
 from .Tensor import Tensor
 from .Symmetry import Symmetry
@@ -41,15 +43,14 @@ from .AmplitudeVector import AmplitudeVector
 from .OneParticleOperator import OneParticleOperator
 from .opt_einsum_integration import register_with_opt_einsum
 
-from libadcc import HartreeFockProvider, get_n_threads, set_n_threads
-
 # This has to be the last set of import
 from .guess import (guess_symmetries, guess_zero, guesses_any, guesses_singlet,
                     guesses_spin_flip, guesses_triplet)
 from .workflow import run_adc
+from .exceptions import InputError
 
-__all__ = ["run_adc", "AdcMatrix", "AdcBlockView", "AdcMatrixlike", "AdcMethod",
-           "Symmetry", "ReferenceState",
+__all__ = ["run_adc", "InputError", "AdcMatrix", "AdcBlockView", "AdcMatrixlike",
+           "AdcMethod", "Symmetry", "ReferenceState",
            "einsum", "contract", "copy", "dot", "empty_like", "evaluate",
            "lincomb", "nosym_like", "ones_like", "transpose",
            "linear_combination", "zeros_like", "direct_sum",

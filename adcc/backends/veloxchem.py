@@ -23,18 +23,19 @@
 import os
 import tempfile
 import numpy as np
-import veloxchem as vlx
-from veloxchem.mpitask import MpiTask
-from veloxchem.veloxchemlib import (AngularMomentumIntegralsDriver,
-                                    LinearMomentumIntegralsDriver)
-
-from .EriBuilder import EriBuilder
-from .InvalidReference import InvalidReference
-
-from adcc.misc import cached_property
 
 from mpi4py import MPI
 from libadcc import HartreeFockProvider
+from adcc.misc import cached_property
+
+import veloxchem as vlx
+
+from .EriBuilder import EriBuilder
+from ..exceptions import InvalidReference
+
+from veloxchem.mpitask import MpiTask
+from veloxchem.veloxchemlib import (AngularMomentumIntegralsDriver,
+                                    LinearMomentumIntegralsDriver)
 
 
 class VeloxChemOperatorIntegralProvider:

@@ -2,7 +2,7 @@
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2019 by the adcc authors
+## Copyright (C) 2020 by the adcc authors
 ##
 ## This file is part of adcc.
 ##
@@ -20,7 +20,14 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from adcc.workflow import InputError
+
+
+class InputError(ValueError):
+    """
+    Exception thrown during the validation stage of the arguments passed to
+    :py:`run_adc` to signal that an input is not valid.
+    """
+    pass
 
 
 class InvalidReference(InputError):

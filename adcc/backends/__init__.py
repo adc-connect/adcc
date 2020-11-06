@@ -21,16 +21,12 @@
 ##
 ## ---------------------------------------------------------------------
 import os
+import h5py
 import warnings
 
 from pkg_resources import parse_version
 
-import h5py
-
-from .InvalidReference import InvalidReference
-
-__all__ = ["import_scf_results", "run_hf", "have_backend", "available",
-           "InvalidReference"]
+__all__ = ["import_scf_results", "run_hf", "have_backend", "available"]
 
 
 def is_module_available(module, min_version=None):
