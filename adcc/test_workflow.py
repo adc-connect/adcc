@@ -21,12 +21,12 @@
 ##
 ## ---------------------------------------------------------------------
 import adcc
-
-from adcc.testdata.cache import cache
-
 import pytest
 
 from pytest import approx
+
+from adcc import InputError
+from adcc.testdata.cache import cache
 
 
 class TestWorkflow:
@@ -55,7 +55,7 @@ class TestWorkflow:
             dict(n_states=2, kind="bla"),      # Kind invaled
         ]
         for case in invalid_cases:
-            with pytest.raises(ValueError):
+            with pytest.raises(InputError):
                 validate_state_parameters(refstate, **case)
 
     def test_validate_state_parameters_uhf(self):
@@ -85,7 +85,7 @@ class TestWorkflow:
             dict(n_singlets=6),    # UHF with singlets
         ]
         for case in invalid_cases:
-            with pytest.raises(ValueError):
+            with pytest.raises(InputError):
                 validate_state_parameters(refstate, **case)
 
     def test_construct_adcmatrix(self):
@@ -128,6 +128,7 @@ class TestWorkflow:
 
         invalid_cases = [
             dict(),                   # Missing method
+            dict(method="dadadad"),   # Unknown method
             dict(frozen_core=1),      # Missing method
             dict(frozen_virtual=3),   # Missing method
             dict(core_orbitals=4),    # Missing method
@@ -137,7 +138,7 @@ class TestWorkflow:
             dict(method="adc2", core_orbitals=3, frozen_virtual=2),
         ]
         for case in invalid_cases:
-            with pytest.raises(ValueError):
+            with pytest.raises(InputError):
                 construct_adcmatrix(hfdata, **case)
 
         #
@@ -152,7 +153,7 @@ class TestWorkflow:
             assert isinstance(res, adcc.AdcMatrix)
             assert res.method == adcc.AdcMethod("adc2")
 
-            with pytest.raises(ValueError,
+            with pytest.raises(InputError,
                                match=r"Cannot run a core-valence"):
                 construct_adcmatrix(obj, method="cvs-adc2x")
             with pytest.warns(UserWarning,
@@ -167,9 +168,9 @@ class TestWorkflow:
             assert isinstance(res, adcc.AdcMatrix)
             assert res.method == adcc.AdcMethod("cvs-adc2x")
 
-            with pytest.raises(ValueError):
+            with pytest.raises(InputError):
                 construct_adcmatrix(obj)  # Missing method
-            with pytest.raises(ValueError, match=r"Cannot run a general"):
+            with pytest.raises(InputError, match=r"Cannot run a general"):
                 construct_adcmatrix(obj, method="adc2")
             with pytest.warns(UserWarning,
                               match=r"^Ignored core_orbitals parameter"):
@@ -214,16 +215,16 @@ class TestWorkflow:
         assert res.converged
         assert res.eigenvalues == approx(ref_singlets[:3])
 
-        with pytest.raises(ValueError):  # Too low tolerance
+        with pytest.raises(InputError):  # Too low tolerance
             res = diagonalise_adcmatrix(matrix, n_states=9, kind="singlet",
                                         solver_method="davidson",
                                         conv_tol=1e-14)
 
-        with pytest.raises(ValueError):  # Wrong solver method
+        with pytest.raises(InputError):  # Wrong solver method
             res = diagonalise_adcmatrix(matrix, n_states=9, kind="singlet",
                                         solver_method="blubber")
 
-        with pytest.raises(ValueError):  # Too few guesses
+        with pytest.raises(InputError):  # Too few guesses
             res = diagonalise_adcmatrix(matrix, n_states=9, kind="singlet",
                                         solver_method="davidson",
                                         guesses=guesses)
@@ -262,8 +263,8 @@ class TestWorkflow:
                 matrix2, n_guesses=i, kind="triplet", n_guesses_doubles=2)
             assert len(res) == i
 
-        with pytest.raises(ValueError):
+        with pytest.raises(InputError):
             obtain_guesses_by_inspection(matrix1, n_guesses=4, kind="any",
                                          n_guesses_doubles=2)
-        with pytest.raises(ValueError):
+        with pytest.raises(InputError):
             obtain_guesses_by_inspection(matrix1, n_guesses=40, kind="any")

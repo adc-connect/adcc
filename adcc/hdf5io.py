@@ -33,9 +33,20 @@ def __emplace_ndarray(keyval, group, typ, **kwargs):
 
 
 def __extract_ndarray(dataset):
-    # dtype = __dtype_array_from_hdf5(dataset.dtype)
     arr = np.empty(dataset.shape, dtype=dataset.dtype)
     dataset.read_direct(arr)
+
+    if dataset.dtype == h5py.special_dtype(vlen=str):
+        # HDF5 3.0.0 and up no longer extracts variable-string fields
+        # as string but extracts them as raw bytes.
+        # Here we decode the bytes explicitly.
+        arr_flat = np.reshape(arr, -1)
+        if len(arr_flat) > 0 and isinstance(arr_flat[0], bytes):
+            arr_str = np.empty(dataset.shape, dtype='O')
+            arr_str_flat = np.reshape(arr_str, -1)
+            for i in range(len(arr_flat)):
+                arr_str_flat[i] = arr_flat[i].decode()
+            arr = arr_str
     return (basename(dataset.name), arr)
 
 
@@ -107,7 +118,11 @@ def __extract_scalar(dataset):
     else:
         ret = dataset[0]
 
-    if dtype is not None:
+    if dtype == str and isinstance(ret, bytes):
+        # HDF5 3.0.0 and up no longer extracts variable-string fields
+        # as string but extracts them as raw bytes.
+        ret = ret.decode()
+    elif dtype is not None:
         ret = dtype(ret)
     return (basename(dataset.name), ret)
 
