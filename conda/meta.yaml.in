@@ -21,7 +21,7 @@ requirements:
   host:
     - python {{ python }}
     - mkl-devel {{ mkl }}
-    - pybind11 >=2.4
+    - pybind11 >=2.6
     # Testing:
     - pytest
     - pytest-cov

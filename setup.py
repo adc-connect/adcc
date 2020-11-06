@@ -372,7 +372,7 @@ adccsetup(
     python_requires=">=3.6",
     install_requires=[
         "opt_einsum >= 3.0",
-        "pybind11 >= 2.2",
+        "pybind11 >= 2.6",
         "numpy >= 1.14",
         "scipy >= 1.2",
         "matplotlib >= 3.0",

@@ -66,7 +66,7 @@ class HartreeFockProvider : public HartreeFockSolution_i {
                                ") does not agree with n_orbs (" + std::to_string(n_orbs) +
                                ").");
     }
-    py::memoryview memview(py::buffer_info(buffer, n_orbs));
+    auto memview = py::memoryview::from_memory(buffer, n_orbs * sizeof(scalar_type));
     fill_occupation_f(py::array(std::vector<ssize_t>{n_orbs}, buffer, memview));
   }
 
@@ -78,7 +78,7 @@ class HartreeFockProvider : public HartreeFockSolution_i {
                                ") does not agree with n_orbs (" + std::to_string(n_orbs) +
                                ").");
     }
-    py::memoryview memview(py::buffer_info(buffer, n_orbs));
+    auto memview = py::memoryview::from_memory(buffer, n_orbs * sizeof(scalar_type));
     fill_orben_f(py::array(std::vector<ssize_t>{n_orbs}, buffer, memview));
   }
 
@@ -91,7 +91,8 @@ class HartreeFockProvider : public HartreeFockSolution_i {
                                ") does not agree with n_orbs*n_bas (" +
                                std::to_string(n_orbs * n_bas) + ").");
     }
-    py::memoryview memview(py::buffer_info(buffer, n_orbs * n_bas));
+    auto memview =
+          py::memoryview::from_memory(buffer, n_orbs * n_bas * sizeof(scalar_type));
     fill_orbcoeff_fb(py::array({n_orbs, n_bas}, buffer, memview));
   }
 
@@ -119,7 +120,8 @@ class HartreeFockProvider : public HartreeFockSolution_i {
             "Expected length from range and strides (== " + std::to_string(slength) +
             ") overshoots buffer size (== " + std::to_string(ssize) + ").");
     }
-    py::memoryview memview(py::buffer_info(buffer, d1_length * d2_length));
+    auto memview = py::memoryview::from_memory(
+          buffer, d1_length * d2_length * sizeof(scalar_type));
     std::vector<ssize_t> strides{static_cast<ssize_t>(sizeof(scalar_type) * d1_stride),
                                  static_cast<ssize_t>(sizeof(scalar_type) * d2_stride)};
     py::tuple slices = py::make_tuple(
@@ -169,8 +171,8 @@ class HartreeFockProvider : public HartreeFockSolution_i {
             ") overshoots buffer size (== " + std::to_string(ssize) + ").");
     }
 
-    py::memoryview memview(
-          py::buffer_info(buffer, d1_length * d2_length * d3_length * d4_length));
+    auto memview = py::memoryview::from_memory(
+          buffer, d1_length * d2_length * d3_length * d4_length * sizeof(scalar_type));
     std::vector<ssize_t> strides{static_cast<ssize_t>(sizeof(scalar_type) * d1_stride),
                                  static_cast<ssize_t>(sizeof(scalar_type) * d2_stride),
                                  static_cast<ssize_t>(sizeof(scalar_type) * d3_stride),
@@ -226,8 +228,8 @@ class HartreeFockProvider : public HartreeFockSolution_i {
             ") overshoots buffer size (== " + std::to_string(ssize) + ").");
     }
 
-    py::memoryview memview(
-          py::buffer_info(buffer, d1_length * d2_length * d3_length * d4_length));
+    auto memview = py::memoryview::from_memory(
+          buffer, d1_length * d2_length * d3_length * d4_length * sizeof(scalar_type));
     std::vector<ssize_t> strides{static_cast<ssize_t>(sizeof(scalar_type) * d1_stride),
                                  static_cast<ssize_t>(sizeof(scalar_type) * d2_stride),
                                  static_cast<ssize_t>(sizeof(scalar_type) * d3_stride),
