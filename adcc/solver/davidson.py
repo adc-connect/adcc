@@ -22,28 +22,19 @@
 ## ---------------------------------------------------------------------
 import sys
 import warnings
-import numpy as np
 
 from adcc import evaluate, lincomb
 from adcc.AdcMatrix import AdcMatrixlike
 from adcc.AmplitudeVector import AmplitudeVector
 
+import numpy as np
 import scipy.linalg as la
 import scipy.sparse.linalg as sla
 
+from .common import select_eigenpairs
 from .preconditioner import JacobiPreconditioner
 from .SolverStateBase import EigenSolverStateBase
 from .explicit_symmetrisation import IndexSymmetrisation
-
-
-def select_eigenpairs(vectors, n_ep, which):
-    if which in ["LM", "LA"]:
-        return vectors[-n_ep:]
-    elif which in ["SM", "SA"]:
-        return vectors[:n_ep]
-    else:
-        raise ValueError("For now only the values 'LM', 'LA', 'SM' and 'SA' "
-                         "are understood.")
 
 
 class DavidsonState(EigenSolverStateBase):
