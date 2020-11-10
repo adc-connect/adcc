@@ -38,6 +38,24 @@ from .explicit_symmetrisation import IndexSymmetrisation
 
 
 class GramSchmidtOrthogonaliser:
+    def __init__(self, explicit_symmetrisation=None):
+        self.explicit_symmetrisation = explicit_symmetrisation
+
+    def qr(self, vectors):
+        # A stupid QR using Gram-Schmidt ... because we need it.
+        if len(vectors) == 0:
+            return []
+        elif len(vectors) == 1:
+            norm_v = np.sqrt(vectors[0] @ vectors[0])
+            return [evaluate(vectors[0] / norm_v)], np.array([[norm_v]])
+        else:
+            n_vec = len(vectors)
+            Q = self.orthogonalise(vectors)
+            R = np.zeros((n_vec, n_vec))
+            raise NotImplementedError()
+            # See https://en.wikipedia.org/wiki/QR_decomposition
+            return Q, R
+
     def orthogonalise(self, vectors):
         if len(vectors) == 0:
             return []
@@ -50,7 +68,10 @@ class GramSchmidtOrthogonaliser:
         # Project out the components of the current subspace
         # That is form (1 - SS * SS^T) * vector = vector + SS * (-SS^T * vector)
         coefficients = np.hstack(([1], -(vector @ subspace)))
-        return lincomb(coefficients, [vector] + subspace, evaluate=True)
+        res = lincomb(coefficients, [vector] + subspace, evaluate=True)
+        if self.explicit_symmetrisation is not None:
+            self.explicit_symmetrisation.symmetrise(res)
+        return res
 
 
 class LanczosIterator:
@@ -87,8 +108,7 @@ class LanczosIterator:
         self.n_problem = n_problem
         self.n_block = n_block
         self.n_restart = n_restart
-        self.ortho = GramSchmidtOrthogonaliser()
-        self.explicit_symmetrisation = explicit_symmetrisation
+        self.ortho = GramSchmidtOrthogonaliser(explicit_symmetrisation)
 
         # To be initialised by __iter__
         self.lanczos_subspace = []
@@ -127,16 +147,7 @@ class LanczosIterator:
             return LanczosSubspace(self)
 
         q = self.lanczos_subspace[-self.n_block:]
-        if self.n_block == 1:
-            beta = np.array([[np.sqrt(self.residual[0] @ self.residual[0])]])
-            v = [self.residual[0] / beta[0, 0]]
-        else:
-            # v, beta = qr(self.residual)
-            raise NotImplementedError()
-        if self.explicit_symmetrisation is not None:
-            # TODO Is this needed?
-            self.explicit_symmetrisation.symmetrise(v)
-
+        v, beta = self.ortho.qr(self.residual)
         if np.linalg.norm(beta) < np.finfo(float).eps * self.n_problem:
             # No point to go on ... new vectors will be decoupled from old ones
             raise StopIteration()
@@ -160,9 +171,6 @@ class LanczosIterator:
         self.ortho.orthogonalise_against(
             r[p], self.lanczos_subspace + self.ritz_vectors
         )
-        if self.explicit_symmetrisation is not None:
-            # TODO Is this needed?
-            self.explicit_symmetrisation.symmetrise(r)
 
         # Commit results
         self.n_iter += 1
