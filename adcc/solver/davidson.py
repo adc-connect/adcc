@@ -22,14 +22,13 @@
 ## ---------------------------------------------------------------------
 import sys
 import warnings
+import numpy as np
+import scipy.linalg as la
+import scipy.sparse.linalg as sla
 
 from adcc import evaluate, lincomb
 from adcc.AdcMatrix import AdcMatrixlike
 from adcc.AmplitudeVector import AmplitudeVector
-
-import numpy as np
-import scipy.linalg as la
-import scipy.sparse.linalg as sla
 
 from .common import select_eigenpairs
 from .preconditioner import JacobiPreconditioner
@@ -202,6 +201,9 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             #      check for convergence, so using the norm squared is fine,
             #      in theory ... it should just be consistent. I think it is
             #      better to go for the actual norm (no squared) inside the code
+            #
+            #      If this adapted, also change the conv_tol to tol conversion
+            #      inside the Lanczos procedure.
 
             # TODO
             # The select_eigenpairs is not that great ... better one makes a
@@ -225,9 +227,12 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             return state
 
         if state.n_iter == max_iter:
-            raise la.LinAlgError("Maximum number of iterations (== "
-                                 + str(max_iter) + " reached in davidson "
-                                 "procedure.")
+            warnings.warn(la.LinAlgWarning(
+                f"Maximum number of iterations (== {max_iter}) "
+                "reached in davidson procedure."))
+            state.timer.stop("iteration")
+            state.converged = False
+            return state
 
         if n_ss_vec + n_block > max_subspace:
             callback(state, "restart")
@@ -288,11 +293,13 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
                     ))
 
         if n_ss_added == 0:
+            state.timer.stop("iteration")
             state.converged = False
-            raise la.LinAlgError(
+            warnings.warn(la.LinAlgWarning(
                 "Davidson procedure could not generate any further vectors for "
-                "the subpace. Iteration cannot be continued like this and will "
-                "be aborted without convergence. Try a different guess.")
+                "the subspace. Iteration cannot be continued like this and will "
+                "be aborted without convergence. Try a different guess."))
+            return state
 
         with state.timer.record("projection"):
             Ax.extend(matrix @ SS[-n_ss_added:])
@@ -317,7 +324,7 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
     max_subspace : int or NoneType, optional
         Maximal subspace size
     conv_tol : float, optional
-        Convergence tolerance on the l2 norm of residuals to consider
+        Convergence tolerance on the l2 norm squared of residuals to consider
         them converged
     which : str, optional
         Which eigenvectors to converge to. Needs to be chosen such that
