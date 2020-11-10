@@ -23,13 +23,12 @@
 import sys
 import copy
 import warnings
+import numpy as np
+import scipy.linalg as la
 
 from adcc import evaluate, lincomb
 from adcc.AdcMatrix import AdcMatrixlike
 from adcc.AmplitudeVector import AmplitudeVector
-
-import numpy as np
-import scipy.linalg as la
 
 from .common import select_eigenpairs
 from .SolverStateBase import EigenSolverStateBase
@@ -138,6 +137,10 @@ class LanczosIterator:
             # TODO Is this needed?
             self.explicit_symmetrisation.symmetrise(v)
 
+        if np.linalg.norm(beta) < np.finfo(float).eps * self.n_problem:
+            # No point to go on ... new vectors will be decoupled from old ones
+            raise StopIteration()
+
         # r = A * v - q * beta^T
         self.n_applies += self.n_block
         r = self.matrix @ v
@@ -228,11 +231,24 @@ class LanczosSubspace:
         Return the reconstructed matrix-vector product for all subspace vectors
         (using the Lanczos relation).
         """
-        raise NotImplementedError()
-        # TODO Form    AV  = V * T + r * b'
-        # where b = rayleighextension
-        #       T = subspace_matrix
-        #       r = self.residual
+        r, T = self.residual, self.subspace_matrix
+        # b = self.rayleigh_extension; V = self.subspace
+        # Form AV  = V * T + r * b'
+        AV = []
+        for i in range(len(self.subspace)):
+            # Compute AV[:, i]
+            coefficients = []
+            vectors = []
+            for (j, v) in enumerate(self.subspace):
+                if T[j, i] != 0:
+                    coefficients.append(T[j, i])
+                    vectors.append(v)
+            if i >= len(self.subspace) - self.n_block:
+                ires = i - (len(self.subspace) - self.n_block)
+                coefficients.append(1)
+                vectors.append(r[ires])
+            AV.append(lincomb(np.array(coefficients), vectors, evaluate=True))
+        return AV
 
 
 #
@@ -283,6 +299,14 @@ def lanczos_iterations(iterator, n_ep, max_subspace, conv_tol=1e-9, which="LA",
         def callback(state, identifier):
             pass
 
+    # TODO For consistency with the Davidson the conv_tol is interpreted
+    #      as the residual norm *squared*. Arnoldi, however, uses the actual norm
+    #      to check for convergence and so on. See also the comment in Davidson
+    #      around the line computing state.residual_norms
+    #
+    #      See also the squaring of the residual norms below
+    tol = np.sqrt(conv_tol)
+
     if state is None:
         state = LanczosState(iterator)
         callback(state, "start")
@@ -309,13 +333,13 @@ def lanczos_iterations(iterator, n_ep, max_subspace, conv_tol=1e-9, which="LA",
         is_rval_converged = np.ones_like(rvals, dtype=bool)
         for i, rval in enumerate(rvals):
             lhs = norm_residual * np.linalg.norm(b.T @ rvecs[:, i])
-            rhs = max(mintol, conv_tol * abs(rval))
+            rhs = max(mintol, tol * abs(rval))
             if lhs > rhs:
                 is_rval_converged[i] = False
-            if mintol < conv_tol * abs(rval):
+            if mintol < tol * abs(rval):
                 eigenpair_error.append(lhs / abs(rval))
             else:
-                eigenpair_error.append(lhs * conv_tol / mintol)
+                eigenpair_error.append(lhs * tol / mintol)
         eigenpair_error = np.array(eigenpair_error)
 
         # Update state
@@ -329,21 +353,35 @@ def lanczos_iterations(iterator, n_ep, max_subspace, conv_tol=1e-9, which="LA",
         state.residual_norms = select_eigenpairs(eigenpair_error, n_ep, which)
         converged = np.all(select_eigenpairs(is_rval_converged, n_ep, which))
 
+        # TODO For consistency with the Davidson the residual norms are squared
+        #      again to give output in the same order of magnitude.
+        state.residual_norms = state.residual_norms**2
+
         callback(state, "next_iter")
         state.timer.restart("iteration")
 
         if converged:
-            raise NotImplementedError()
-            # TODO Compute and update eigenvectors!
-            # TODO Compute actual residual norms!
-            ## # Reconstruct A * V = V * T + r * b' using Lanczos relation
-            ## # and compute actual residuals
-            ## AV  = V * T + r * b'
-            ## Vr  = V * ev
-            ## AVr = AV * ev
-            ## R   = AVr - Vr * Diagonal(ew)
-            ## norm_residuals = norm.(eachcol(R))
-            ##
+            # TODO Optimise: No need to compute *all* residuals here
+            V = subspace.subspace
+            AV = subspace.matrix_product
+
+            def form_residual(rval, rvec):
+                coefficients = np.hstack((rvec, -rval * rvec))
+                return lincomb(coefficients, AV + V, evaluate=True)
+            state.residuals = [form_residual(rvals[i], v)
+                               for i, v in enumerate(np.transpose(rvecs))]
+            state.residuals = select_eigenpairs(state.residuals, n_ep, which)
+
+            selected = select_eigenpairs(np.transpose(rvecs), n_ep, which)
+            state.eigenvectors = [lincomb(v, V, evaluate=True) for v in selected]
+
+            rnorms = np.array([np.sqrt(r @ r) for r in state.residuals])
+            state.residual_norms = rnorms
+
+            # TODO For consistency with the Davidson the residual norms are
+            #      squared again to give output in the same order of magnitude.
+            state.residual_norms = state.residual_norms**2
+
             state.converged = True
             callback(state, "is_converged")
             state.timer.stop("iteration")
@@ -353,6 +391,14 @@ def lanczos_iterations(iterator, n_ep, max_subspace, conv_tol=1e-9, which="LA",
             callback(state, "restart")
             # TODO Do a thick restart
             raise NotImplementedError()
+
+    state.timer.stop("iteration")
+    state.converged = False
+    warnings.warn(la.LinAlgWarning(
+        "Lanczos procedure found maximal subspace possible. Iteration cannot be "
+        "continued like this and will be aborted without convergence. "
+        "Try a different guess."))
+    return state
 
 
 def lanczos(matrix, guesses, n_ep, max_subspace=None,
