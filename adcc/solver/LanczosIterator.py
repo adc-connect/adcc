@@ -24,6 +24,7 @@ import copy
 import numpy as np
 
 from adcc import evaluate, lincomb
+from adcc.timings import Timer
 from adcc.AdcMatrix import AdcMatrixlike
 from adcc.AmplitudeVector import AmplitudeVector
 
@@ -66,6 +67,7 @@ class LanczosIterator:
         self.n_restart = n_restart
         self.ortho = GramSchmidtOrthogonaliser(explicit_symmetrisation)
         self.explicit_symmetrisation = explicit_symmetrisation
+        self.timer = Timer()  # TODO More fine-grained timings
 
         # To be initialised by __iter__
         self.lanczos_subspace = []

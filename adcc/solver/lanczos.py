@@ -40,6 +40,7 @@ class LanczosState(EigenSolverStateBase):
         self.subspace_residual = None  # Lanczos subspace residual vector(s)
         self.subspace_vectors = None   # Current subspace vectors
         self.algorithm = "lanczos"
+        self.timer = iterator.timer
 
 
 def default_print(state, identifier, file=sys.stdout):
@@ -97,7 +98,8 @@ def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9
         T = subspace.subspace_matrix
         b = subspace.rayleigh_extension
         eps = np.finfo(float).eps
-        rvals, rvecs = np.linalg.eigh(T)
+        with state.timer.record("rayleigh_ritz"):
+            rvals, rvecs = np.linalg.eigh(T)
 
         if debug_checks:
             orth = np.array([[SSi @ SSj for SSi in subspace.subspace]

@@ -154,7 +154,7 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
 
     with state.timer.record("projection"):
         # Initial application of A to the subspace
-        Ax = matrix @ SS
+        Ax = evaluate(matrix @ SS)
         state.n_applies += n_ss_vec
 
     while state.n_iter < max_iter:
