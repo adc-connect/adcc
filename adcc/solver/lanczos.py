@@ -38,8 +38,9 @@ from .explicit_symmetrisation import IndexSymmetrisation
 
 
 class GramSchmidtOrthogonaliser:
-    def __init__(self, explicit_symmetrisation=None):
+    def __init__(self, explicit_symmetrisation=None, n_rounds=1):
         self.explicit_symmetrisation = explicit_symmetrisation
+        self.n_rounds = n_rounds
 
     def qr(self, vectors):
         # A stupid QR using Gram-Schmidt ... because we need it.
@@ -52,8 +53,9 @@ class GramSchmidtOrthogonaliser:
             n_vec = len(vectors)
             Q = self.orthogonalise(vectors)
             R = np.zeros((n_vec, n_vec))
-            raise NotImplementedError()
-            # See https://en.wikipedia.org/wiki/QR_decomposition
+            for i in range(n_vec):
+                for j in range(i, n_vec):
+                    R[i, j] = Q[i] @ vectors[j]
             return Q, R
 
     def orthogonalise(self, vectors):
@@ -61,17 +63,19 @@ class GramSchmidtOrthogonaliser:
             return []
         subspace = [evaluate(vectors[0] / np.sqrt(vectors[0] @ vectors[0]))]
         for v in vectors[1:]:
-            subspace.append(self.orthogonalise_against(v, subspace))
+            w = self.orthogonalise_against(v, subspace)
+            subspace.append(evaluate(w / np.sqrt(w @ w)))
         return subspace
 
     def orthogonalise_against(self, vector, subspace):
         # Project out the components of the current subspace
         # That is form (1 - SS * SS^T) * vector = vector + SS * (-SS^T * vector)
-        coefficients = np.hstack(([1], -(vector @ subspace)))
-        res = lincomb(coefficients, [vector] + subspace, evaluate=True)
-        if self.explicit_symmetrisation is not None:
-            self.explicit_symmetrisation.symmetrise(res)
-        return res
+        for _ in range(self.n_rounds):
+            coefficients = np.hstack(([1], -(vector @ subspace)))
+            vector = lincomb(coefficients, [vector] + subspace, evaluate=True)
+            if self.explicit_symmetrisation is not None:
+                self.explicit_symmetrisation.symmetrise(vector)
+        return vector
 
 
 class LanczosIterator:
@@ -168,9 +172,10 @@ class LanczosIterator:
              for p in range(self.n_block)]
 
         # Full reorthogonalisation
-        self.ortho.orthogonalise_against(
-            r[p], self.lanczos_subspace + self.ritz_vectors
-        )
+        for p in range(self.n_block):
+            r[p] = self.ortho.orthogonalise_against(
+                r[p], self.lanczos_subspace + self.ritz_vectors
+            )
 
         # Commit results
         self.n_iter += 1
@@ -214,11 +219,11 @@ class LanczosSubspace:
             T[:n_restart, n_restart:n_restart + self.n_block] = ritz_overlaps
 
         for i, alpha in enumerate(self.alphas):
-            rnge = range(i * self.n_block, (i + 1) * self.n_block)
+            rnge = slice(i * self.n_block, (i + 1) * self.n_block)
             T[rnge, rnge] = alpha
         for i, beta in enumerate(self.betas):
-            rnge = range(i * self.n_block, (i + 1) * self.n_block)
-            rnge_plus = range(rnge.start + self.n_block, rnge.stop + self.n_block)
+            rnge = slice(i * self.n_block, (i + 1) * self.n_block)
+            rnge_plus = slice(rnge.start + self.n_block, rnge.stop + self.n_block)
             T[rnge, rnge_plus] = beta.T
             T[rnge_plus, rnge] = beta
         return T
@@ -230,7 +235,7 @@ class LanczosSubspace:
         n_ss = n_k + n_restart
         b = np.zeros((n_ss, self.n_block))
         for i in range(self.n_block):
-            b[n_restart + (n_k - 1) * self.n_block + i, i] = 1
+            b[n_ss - self.n_block + i, i] = 1
         return b
 
     @property
@@ -327,7 +332,19 @@ def lanczos_iterations(iterator, n_ep, max_subspace, conv_tol=1e-9, which="LA",
     for subspace in iterator:
         T = subspace.subspace_matrix
         b = subspace.rayleigh_extension
+        eps = np.finfo(float).eps
         rvals, rvecs = np.linalg.eigh(T)
+
+        if debug_checks:
+            orth = np.array([[SSi @ SSj for SSi in subspace.subspace]
+                             for SSj in subspace.subspace])
+            orth -= np.eye(len(subspace.subspace))
+            state.subspace_orthogonality = np.max(np.abs(orth))
+            if state.subspace_orthogonality > max(tol / 1000, subspace.n_problem * eps):
+                warnings.warn(la.LinAlgWarning(
+                    "Subspace in lanczos has lost orthogonality. "
+                    "Expect inaccurate results."
+                ))
 
         # Norm of the residual vector block
         norm_residual = np.sqrt(np.sum(subspace.residual[p] @ subspace.residual[p]
@@ -336,7 +353,7 @@ def lanczos_iterations(iterator, n_ep, max_subspace, conv_tol=1e-9, which="LA",
         # Minimal tolerance for convergence criterion
         # same settings as in ARPACK are used:
         #    norm(r) * norm(b^T * rvec) <= max(mintol, tol * abs(rval)
-        mintol = np.finfo(float).eps * np.max(np.abs(rvals))
+        mintol = eps * np.max(np.abs(rvals))
         eigenpair_error = []
         is_rval_converged = np.ones_like(rvals, dtype=bool)
         for i, rval in enumerate(rvals):
