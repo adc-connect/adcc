@@ -37,8 +37,8 @@ class LanczosState(EigenSolverStateBase):
     def __init__(self, iterator):
         super().__init__(iterator.matrix)
         self.n_restart = 0
-        self.residual = None          # Lanczos residual vector(s)
-        self.subspace_vectors = None  # Current subspace vectors
+        self.subspace_residual = None  # Lanczos subspace residual vector(s)
+        self.subspace_vectors = None   # Current subspace vectors
         self.algorithm = "lanczos"
 
 
@@ -138,10 +138,12 @@ def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9
         state.converged = False
         state.eigenvectors = None  # Not computed in Lanczos
         state.subspace_vectors = subspace.subspace
-        state.residual = subspace.residual
-        state.eigenvalues = select_eigenpairs(rvals, n_ep, which)
-        state.residual_norms = select_eigenpairs(eigenpair_error, n_ep, which)
-        converged = np.all(select_eigenpairs(is_rval_converged, n_ep, which))
+        state.subspace_residual = subspace.residual
+
+        epair_mask = select_eigenpairs(rvals, n_ep, which)
+        state.eigenvalues = rvals[epair_mask]
+        state.residual_norms = eigenpair_error[epair_mask]
+        converged = np.all(is_rval_converged[epair_mask])
 
         # TODO For consistency with the Davidson the residual norms are squared
         #      again to give output in the same order of magnitude.
@@ -151,19 +153,18 @@ def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9
         state.timer.restart("iteration")
 
         if converged:
-            # TODO Optimise: No need to compute *all* residuals here
             V = subspace.subspace
             AV = subspace.matrix_product
 
             def form_residual(rval, rvec):
                 coefficients = np.hstack((rvec, -rval * rvec))
                 return lincomb(coefficients, AV + V, evaluate=True)
-            state.residuals = [form_residual(rvals[i], v)
-                               for i, v in enumerate(np.transpose(rvecs))]
-            state.residuals = select_eigenpairs(state.residuals, n_ep, which)
-
-            selected = select_eigenpairs(np.transpose(rvecs), n_ep, which)
-            state.eigenvectors = [lincomb(v, V, evaluate=True) for v in selected]
+            state.residuals = [form_residual(rvals[i], rvec)
+                               for i, rvec in enumerate(np.transpose(rvecs))
+                               if i in epair_mask]
+            state.eigenvectors = [lincomb(rvec, V, evaluate=True)
+                                  for i, rvec in enumerate(np.transpose(rvecs))
+                                  if i in epair_mask]
 
             rnorms = np.array([np.sqrt(r @ r) for r in state.residuals])
             state.residual_norms = rnorms
@@ -177,16 +178,26 @@ def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9
             state.timer.stop("iteration")
             return state
 
+        if state.n_iter >= max_iter:
+            warnings.warn(la.LinAlgWarning(
+                f"Maximum number of iterations (== {max_iter}) "
+                "reached in lanczos procedure."))
+            state.timer.stop("iteration")
+            state.converged = False
+            return state
+
         if len(rvecs) + subspace.n_block > max_subspace:
             callback(state, "restart")
 
+            epair_mask = select_eigenpairs(rvals, min_subspace, which)
             V = subspace.subspace
             vn, betan = subspace.ortho.qr(subspace.residual)
-            rvecsT = select_eigenpairs(np.transpose(rvecs), min_subspace, which)
 
-            Y = [lincomb(rvec, V, evaluate=True) for rvec in rvecsT]
-            Theta = select_eigenpairs(rvals, min_subspace, which)
-            Sigma = rvecsT @ b @ betan.T
+            Y = [lincomb(rvec, V, evaluate=True)
+                 for i, rvec in enumerate(np.transpose(rvecs))
+                 if i in epair_mask]
+            Theta = rvals[epair_mask]
+            Sigma = rvecs[:, epair_mask].T @ b @ betan.T
 
             iterator = LanczosIterator(
                 iterator.matrix, vn, ritz_vectors=Y, ritz_values=Theta,
@@ -208,7 +219,7 @@ def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9
 
 
 def lanczos(matrix, guesses, n_ep, max_subspace=None,
-            conv_tol=1e-9, which="LA", max_iter=100,
+            conv_tol=1e-9, which="LM", max_iter=100,
             callback=None, debug_checks=False,
             explicit_symmetrisation=IndexSymmetrisation,
             min_subspace=None):

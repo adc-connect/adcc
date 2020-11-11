@@ -193,8 +193,9 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             assert len(residuals) == n_block
 
             # Update the state's eigenpairs and residuals
-            state.eigenvalues = select_eigenpairs(rvals, n_ep, which)
-            state.residuals = select_eigenpairs(residuals, n_ep, which)
+            epair_mask = select_eigenpairs(rvals, n_ep, which)
+            state.eigenvalues = rvals[epair_mask]
+            state.residuals = [residuals[i] for i in epair_mask]
             state.residual_norms = np.array([r @ r for r in state.residuals])
             # TODO This is misleading ... actually residual_norms contains
             #      the norms squared. That's also the used e.g. in adcman to
@@ -205,21 +206,13 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             #      If this adapted, also change the conv_tol to tol conversion
             #      inside the Lanczos procedure.
 
-            # TODO
-            # The select_eigenpairs is not that great ... better one makes a
-            # function which returns a mask. In that way one can have one
-            # form_residual function, which also returns the formed Ritz vectors
-            # (i.e. our approximations to the eigenpairs) and one which only
-            # forms the residuals ... this would save some duplicate work
-            # in the is_converged section *and* would allow the callback to do
-            # some stuff with the eigenpairs if desired.
-
         callback(state, "next_iter")
         state.timer.restart("iteration")
         if is_converged(state):
             # Build the eigenvectors we desire from the subspace vectors:
-            selected = select_eigenpairs(np.transpose(rvecs), n_ep, which)
-            state.eigenvectors = [lincomb(v, SS, evaluate=True) for v in selected]
+            state.eigenvectors = [lincomb(v, SS, evaluate=True)
+                                  for i, v in enumerate(np.transpose(rvecs))
+                                  if i in epair_mask]
 
             state.converged = True
             callback(state, "is_converged")
