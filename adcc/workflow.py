@@ -33,6 +33,7 @@ from .AdcMethod import AdcMethod
 from .exceptions import InputError
 from .ExcitedStates import ExcitedStates
 from .ReferenceState import ReferenceState as adcc_ReferenceState
+from .solver.lanczos import lanczos
 from .solver.davidson import jacobi_davidson
 from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
@@ -41,7 +42,7 @@ __all__ = ["run_adc"]
 
 
 def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
-            solver_method=None, guesses=None, n_guesses=None,
+            eigensolver=None, guesses=None, n_guesses=None,
             n_guesses_doubles=None, output=sys.stdout, core_orbitals=None,
             frozen_core=None, frozen_virtual=None, method=None,
             n_singlets=None, n_triplets=None, n_spin_flip=None,
@@ -85,7 +86,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         the ADC vectors (default: `1e-6` or 10 * SCF tolerance,
         whatever is larger)
 
-    solver_method : str, optional
+    eigensolver : str, optional
         The eigensolver algorithm to use.
 
     n_guesses : int, optional
@@ -186,13 +187,13 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         spin_change = -1
 
     # Select solver to run
-    if solver_method is None:
-        solver_method = "davidson"
+    if eigensolver is None:
+        eigensolver = "davidson"
 
     diagres = diagonalise_adcmatrix(
         matrix, n_states, kind, guesses=guesses, n_guesses=n_guesses,
         n_guesses_doubles=n_guesses_doubles, conv_tol=conv_tol, output=output,
-        solver_method=solver_method, **solverargs)
+        eigensolver=eigensolver, **solverargs)
     exstates = ExcitedStates(diagres)
     exstates.kind = kind
     exstates.spin_change = spin_change
@@ -328,12 +329,12 @@ def validate_state_parameters(reference_state, n_states=None, n_singlets=None,
     return n_states, kind
 
 
-def diagonalise_adcmatrix(matrix, n_states, kind, solver_method="davidson",
+def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
                           guesses=None, n_guesses=None, n_guesses_doubles=None,
                           conv_tol=None, output=sys.stdout, **solverargs):
     """
     This function seeks appropriate guesses and afterwards proceeds to
-    diagonalise the ADC matrix using the specified solver_method.
+    diagonalise the ADC matrix using the specified eigensolver.
     Internal function called from run_adc.
     """
     reference_state = matrix.reference_state
@@ -355,10 +356,26 @@ def diagonalise_adcmatrix(matrix, n_states, kind, solver_method="davidson",
             matrix, enforce_spin_kind=kind
         )
 
+    # Set some solver-specific parameters
+    if eigensolver == "davidson":
+        n_guesses_per_state = 2
+        callback = setup_solver_printing(
+            "Jacobi-Davidson", matrix, kind, solver.davidson.default_print,
+            output=output)
+        run_eigensolver = jacobi_davidson
+    elif eigensolver == "lanczos":
+        n_guesses_per_state = 1
+        callback = setup_solver_printing(
+            "Lanczos", matrix, kind, solver.lanczos.default_print,
+            output=output)
+        run_eigensolver = lanczos
+    else:
+        raise InputError(f"Solver {eigensolver} unknown, try 'davidson'.")
+
     # Obtain or check guesses
     if guesses is None:
         if n_guesses is None:
-            n_guesses = estimate_n_guesses(matrix, n_states)
+            n_guesses = estimate_n_guesses(matrix, n_states, n_guesses_per_state)
         guesses = obtain_guesses_by_inspection(matrix, n_guesses, kind,
                                                n_guesses_doubles)
     else:
@@ -373,18 +390,15 @@ def diagonalise_adcmatrix(matrix, n_states, kind, solver_method="davidson",
             warnings.warn("Ignoring n_guesses_doubles parameter, since guesses "
                           "are explicitly provided.")
 
-    if solver_method == "davidson":
-        callback = setup_solver_printing(
-            "Jacobi-Davidson", matrix, kind, solver.davidson.default_print,
-            output=output)
-        return jacobi_davidson(matrix, guesses, n_ep=n_states, conv_tol=conv_tol,
-                               explicit_symmetrisation=explicit_symmetrisation,
-                               callback=callback, **solverargs)
-    else:
-        raise InputError(f"Solver {solver_method} unknown, try 'davidson'.")
+    solverargs.setdefault("which", "SA")
+    return run_eigensolver(matrix, guesses, n_ep=n_states, conv_tol=conv_tol,
+                           callback=callback,
+                           explicit_symmetrisation=explicit_symmetrisation,
+                           **solverargs)
 
 
-def estimate_n_guesses(matrix, n_states, singles_only=True):
+def estimate_n_guesses(matrix, n_states, singles_only=True,
+                       n_guesses_per_state=2):
     """
     Implementation of a basic heuristic to find a good number of guess
     vectors to be searched for using the find_guesses function.
@@ -394,10 +408,11 @@ def estimate_n_guesses(matrix, n_states, singles_only=True):
     n_states           Number of states to be computed
     singles_only       Try to stay withing the singles excitation space
                        with the number of guess vectors.
+    n_guesses_per_state  Number of guesses to search for for each state
     """
     # Try to use at least 4 or twice the number of states
     # to be computed as guesses
-    n_guesses = max(4, 2 * n_states)
+    n_guesses = n_guesses_per_state * max(2, n_states)
 
     if singles_only:
         # Compute the maximal number of sensible singles block guesses.

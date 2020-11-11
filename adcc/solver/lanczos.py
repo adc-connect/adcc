@@ -232,9 +232,9 @@ def lanczos(matrix, guesses, n_ep, max_subspace=None,
     if not isinstance(guesses, list):
         guesses = [guesses]
     if not max_subspace:
-        max_subspace = max(2 * n_ep + len(guesses), 20)
+        max_subspace = max(2 * n_ep + len(guesses), 20, 8 * len(guesses))
     if not min_subspace:
-        min_subspace = max(int(max_subspace / 2), n_ep + len(guesses))
+        min_subspace = n_ep + 2 * len(guesses)
     if conv_tol < matrix.shape[1] * np.finfo(float).eps:
         warnings.warn(la.LinAlgWarning(
             "Convergence tolerance (== {:5.2g}) lower than "
