@@ -52,7 +52,7 @@ class LanczosIterator:
             ritz_values = np.empty((0, ))  # Theta
         else:
             n_restart = len(ritz_values)
-            if ritz_vectors.shape != (n_problem, n_restart) or \
+            if len(ritz_vectors) != n_restart or \
                ritz_overlaps.shape != (n_restart, n_block):
                 raise ValueError("Restart vector shape does not agree "
                                  "with problem.")
@@ -65,6 +65,7 @@ class LanczosIterator:
         self.n_block = n_block
         self.n_restart = n_restart
         self.ortho = GramSchmidtOrthogonaliser(explicit_symmetrisation)
+        self.explicit_symmetrisation = explicit_symmetrisation
 
         # To be initialised by __iter__
         self.lanczos_subspace = []
@@ -89,6 +90,11 @@ class LanczosIterator:
         Sigma, Y = self.ritz_overlaps, self.ritz_vectors
         r = [lincomb(np.hstack(([1], -alpha[:, p], -Sigma[:, p])),
                      [r[p]] + v + Y, evaluate=True) for p in range(self.n_block)]
+
+        # r = r - Y * Y'r (Full reorthogonalisation)
+        for p in range(self.n_block):
+            r[p] = self.ortho.orthogonalise_against(r[p], self.ritz_vectors)
+
         iterator.residual = r
         iterator.n_iter = 0
         iterator.n_applies = self.n_block
@@ -160,7 +166,7 @@ class LanczosSubspace:
         # TODO Use sparse representation
 
         n_k = len(self.__iterator.lanczos_subspace)
-        n_restart = len(self.__iterator.ritz_values)
+        n_restart = self.n_restart
         n_ss = n_k + n_restart
         ritz_values = self.__iterator.ritz_values
         ritz_overlaps = self.__iterator.ritz_overlaps
@@ -169,12 +175,15 @@ class LanczosSubspace:
         if n_restart > 0:
             T[:n_restart, :n_restart] = np.diag(ritz_values)
             T[:n_restart, n_restart:n_restart + self.n_block] = ritz_overlaps
+            T[n_restart:n_restart + self.n_block, :n_restart] = ritz_overlaps.T
 
         for i, alpha in enumerate(self.alphas):
-            rnge = slice(i * self.n_block, (i + 1) * self.n_block)
+            rnge = slice(n_restart + i * self.n_block,
+                         n_restart + (i + 1) * self.n_block)
             T[rnge, rnge] = alpha
         for i, beta in enumerate(self.betas):
-            rnge = slice(i * self.n_block, (i + 1) * self.n_block)
+            rnge = slice(n_restart + i * self.n_block,
+                         n_restart + (i + 1) * self.n_block)
             rnge_plus = slice(rnge.start + self.n_block, rnge.stop + self.n_block)
             T[rnge, rnge_plus] = beta.T
             T[rnge_plus, rnge] = beta
@@ -183,8 +192,7 @@ class LanczosSubspace:
     @property
     def rayleigh_extension(self):
         n_k = len(self.__iterator.lanczos_subspace)
-        n_restart = len(self.__iterator.ritz_values)
-        n_ss = n_k + n_restart
+        n_ss = n_k + self.n_restart
         b = np.zeros((n_ss, self.n_block))
         for i in range(self.n_block):
             b[n_ss - self.n_block + i, i] = 1

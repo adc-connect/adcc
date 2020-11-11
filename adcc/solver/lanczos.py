@@ -70,9 +70,9 @@ def default_print(state, identifier, file=sys.stdout):
         print("=== Restart ===", file=file)
 
 
-def lanczos_iterations(iterator, n_ep, max_subspace, conv_tol=1e-9, which="LA",
-                       max_iter=100, callback=None, debug_checks=False,
-                       state=None, explicit_symmetrisation=IndexSymmetrisation):
+def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9,
+                       which="LA", max_iter=100, callback=None,
+                       debug_checks=False, state=None):
     if callback is None:
         def callback(state, identifier):
             pass
@@ -92,7 +92,6 @@ def lanczos_iterations(iterator, n_ep, max_subspace, conv_tol=1e-9, which="LA",
         n_applies_offset = 0
     else:
         n_applies_offset = state.n_applies
-        state.n_restart += 1
 
     for subspace in iterator:
         T = subspace.subspace_matrix
@@ -180,8 +179,24 @@ def lanczos_iterations(iterator, n_ep, max_subspace, conv_tol=1e-9, which="LA",
 
         if len(rvecs) + subspace.n_block > max_subspace:
             callback(state, "restart")
-            # TODO Do a thick restart
-            raise NotImplementedError()
+
+            V = subspace.subspace
+            vn, betan = subspace.ortho.qr(subspace.residual)
+            rvecsT = select_eigenpairs(np.transpose(rvecs), min_subspace, which)
+
+            Y = [lincomb(rvec, V, evaluate=True) for rvec in rvecsT]
+            Theta = select_eigenpairs(rvals, min_subspace, which)
+            Sigma = rvecsT @ b @ betan.T
+
+            iterator = LanczosIterator(
+                iterator.matrix, vn, ritz_vectors=Y, ritz_values=Theta,
+                ritz_overlaps=Sigma,
+                explicit_symmetrisation=iterator.explicit_symmetrisation
+            )
+            state.n_restart += 1
+            return lanczos_iterations(
+                iterator, n_ep, min_subspace, max_subspace, conv_tol, which,
+                max_iter, callback, debug_checks, state)
 
     state.timer.stop("iteration")
     state.converged = False
@@ -195,14 +210,20 @@ def lanczos_iterations(iterator, n_ep, max_subspace, conv_tol=1e-9, which="LA",
 def lanczos(matrix, guesses, n_ep, max_subspace=None,
             conv_tol=1e-9, which="LA", max_iter=100,
             callback=None, debug_checks=False,
-            explicit_symmetrisation=IndexSymmetrisation):
-    iterator = LanczosIterator(matrix, guesses)
+            explicit_symmetrisation=IndexSymmetrisation,
+            min_subspace=None):
     if explicit_symmetrisation is not None and \
             isinstance(explicit_symmetrisation, type):
         explicit_symmetrisation = explicit_symmetrisation(matrix)
+    iterator = LanczosIterator(matrix, guesses,
+                               explicit_symmetrisation=explicit_symmetrisation)
 
+    if not isinstance(guesses, list):
+        guesses = [guesses]
     if not max_subspace:
-        max_subspace = max(2 * n_ep + 1, 20)
+        max_subspace = max(2 * n_ep + len(guesses), 20)
+    if not min_subspace:
+        min_subspace = max(int(max_subspace / 2), n_ep + len(guesses))
     if conv_tol < matrix.shape[1] * np.finfo(float).eps:
         warnings.warn(la.LinAlgWarning(
             "Convergence tolerance (== {:5.2g}) lower than "
@@ -211,6 +232,5 @@ def lanczos(matrix, guesses, n_ep, max_subspace=None,
             "".format(conv_tol, matrix.shape[1] * np.finfo(float).eps)
         ))
 
-    return lanczos_iterations(iterator, n_ep, max_subspace, conv_tol, which,
-                              max_iter, callback, debug_checks,
-                              explicit_symmetrisation=explicit_symmetrisation)
+    return lanczos_iterations(iterator, n_ep, min_subspace, max_subspace,
+                              conv_tol, which, max_iter, callback, debug_checks)
