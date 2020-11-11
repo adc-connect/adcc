@@ -21,252 +21,17 @@
 ##
 ## ---------------------------------------------------------------------
 import sys
-import copy
 import warnings
 import numpy as np
 import scipy.linalg as la
 
-from adcc import evaluate, lincomb
-from adcc.AdcMatrix import AdcMatrixlike
-from adcc.AmplitudeVector import AmplitudeVector
+from adcc import lincomb
 
 from .common import select_eigenpairs
+from .LanczosIterator import LanczosIterator
 from .SolverStateBase import EigenSolverStateBase
 from .explicit_symmetrisation import IndexSymmetrisation
 
-# https://docs.scipy.org/doc/scipy/reference/generated/scipy.linalg.eig_banded.html
-
-
-class GramSchmidtOrthogonaliser:
-    def __init__(self, explicit_symmetrisation=None, n_rounds=1):
-        self.explicit_symmetrisation = explicit_symmetrisation
-        self.n_rounds = n_rounds
-
-    def qr(self, vectors):
-        # A stupid QR using Gram-Schmidt ... because we need it.
-        if len(vectors) == 0:
-            return []
-        elif len(vectors) == 1:
-            norm_v = np.sqrt(vectors[0] @ vectors[0])
-            return [evaluate(vectors[0] / norm_v)], np.array([[norm_v]])
-        else:
-            n_vec = len(vectors)
-            Q = self.orthogonalise(vectors)
-            R = np.zeros((n_vec, n_vec))
-            for i in range(n_vec):
-                for j in range(i, n_vec):
-                    R[i, j] = Q[i] @ vectors[j]
-            return Q, R
-
-    def orthogonalise(self, vectors):
-        if len(vectors) == 0:
-            return []
-        subspace = [evaluate(vectors[0] / np.sqrt(vectors[0] @ vectors[0]))]
-        for v in vectors[1:]:
-            w = self.orthogonalise_against(v, subspace)
-            subspace.append(evaluate(w / np.sqrt(w @ w)))
-        return subspace
-
-    def orthogonalise_against(self, vector, subspace):
-        # Project out the components of the current subspace
-        # That is form (1 - SS * SS^T) * vector = vector + SS * (-SS^T * vector)
-        for _ in range(self.n_rounds):
-            coefficients = np.hstack(([1], -(vector @ subspace)))
-            vector = lincomb(coefficients, [vector] + subspace, evaluate=True)
-            if self.explicit_symmetrisation is not None:
-                self.explicit_symmetrisation.symmetrise(vector)
-        return vector
-
-
-class LanczosIterator:
-    def __init__(self, matrix, guesses, ritz_vectors=None, ritz_values=None,
-                 ritz_overlaps=None, explicit_symmetrisation=None):
-        if not isinstance(matrix, AdcMatrixlike):
-            raise TypeError("matrix is not of type AdcMatrixlike")
-        n_problem = matrix.shape[1]   # Problem size
-
-        if not isinstance(guesses, list):
-            guesses = [guesses]
-        for guess in guesses:
-            if not isinstance(guess, AmplitudeVector):
-                raise TypeError("One of the guesses is not an AmplitudeVector")
-        n_block = len(guesses)  # Lanczos block size
-
-        # For thick restarts, defaults to no restart
-        if ritz_values is None:
-            n_restart = 0
-            ritz_vectors = []  # Y
-            ritz_overlaps = np.empty((0, n_block))  # Sigma
-            ritz_values = np.empty((0, ))  # Theta
-        else:
-            n_restart = len(ritz_values)
-            if ritz_vectors.shape != (n_problem, n_restart) or \
-               ritz_overlaps.shape != (n_restart, n_block):
-                raise ValueError("Restart vector shape does not agree "
-                                 "with problem.")
-
-        self.matrix = matrix
-        self.ritz_values = ritz_values
-        self.ritz_vectors = ritz_vectors
-        self.ritz_overlaps = ritz_overlaps
-        self.n_problem = n_problem
-        self.n_block = n_block
-        self.n_restart = n_restart
-        self.ortho = GramSchmidtOrthogonaliser(explicit_symmetrisation)
-
-        # To be initialised by __iter__
-        self.lanczos_subspace = []
-        self.alphas = []  # Diagonal matrix block of subspace matrix
-        self.betas = []   # Side-diagonal matrix blocks of subspace matrix
-        self.residual = guesses
-        self.n_iter = 0
-        self.n_applies = 0
-
-    def __iter__(self):
-        iterator = copy.copy(self)
-        v = self.ortho.orthogonalise(self.residual)
-
-        # Initialise Lanczos subspace
-        iterator.lanczos_subspace = v
-        r = evaluate(self.matrix @ v)
-        alpha = np.empty((self.n_block, self.n_block))
-        for p in range(self.n_block):
-            alpha[p, :] = v[p] @ r
-
-        # r = r - v * alpha - Y * Sigma
-        Sigma, Y = self.ritz_overlaps, self.ritz_vectors
-        r = [lincomb(np.hstack(([1], -alpha[:, p], -Sigma[:, p])),
-                     [r[p]] + v + Y, evaluate=True) for p in range(self.n_block)]
-        iterator.residual = r
-        iterator.n_iter = 0
-        iterator.n_applies = self.n_block
-        iterator.alphas = [alpha]
-        iterator.betas = []
-        return iterator
-
-    def __next__(self):
-        # First iteration already done at class setup
-        if self.n_iter == 0:
-            self.n_iter += 1
-            return LanczosSubspace(self)
-
-        q = self.lanczos_subspace[-self.n_block:]
-        v, beta = self.ortho.qr(self.residual)
-        if np.linalg.norm(beta) < np.finfo(float).eps * self.n_problem:
-            # No point to go on ... new vectors will be decoupled from old ones
-            raise StopIteration()
-
-        # r = A * v - q * beta^T
-        self.n_applies += self.n_block
-        r = self.matrix @ v
-        r = [lincomb(np.hstack(([1], -(beta.T)[:, p])), [r[p]] + q, evaluate=True)
-             for p in range(self.n_block)]
-
-        # alpha = v^T * r
-        alpha = np.empty((self.n_block, self.n_block))
-        for p in range(self.n_block):
-            alpha[p, :] = v[p] @ r
-
-        # r = r - v * alpha
-        r = [lincomb(np.hstack(([1], -alpha[:, p])), [r[p]] + v, evaluate=True)
-             for p in range(self.n_block)]
-
-        # Full reorthogonalisation
-        for p in range(self.n_block):
-            r[p] = self.ortho.orthogonalise_against(
-                r[p], self.lanczos_subspace + self.ritz_vectors
-            )
-
-        # Commit results
-        self.n_iter += 1
-        self.lanczos_subspace.extend(v)
-        self.residual = r
-        self.alphas.append(alpha)
-        self.betas.append(beta)
-        return LanczosSubspace(self)
-
-
-class LanczosSubspace:
-    def __init__(self, iterator):
-        self.__iterator = iterator
-        self.n_iter = iterator.n_iter
-        self.n_restart = iterator.n_restart
-        self.residual = iterator.residual
-        self.n_block = iterator.n_block
-        self.n_problem = iterator.n_problem
-        self.matrix = iterator.matrix
-        self.ortho = iterator.ortho
-        self.alphas = iterator.alphas
-        self.betas = iterator.betas
-        self.n_applies = iterator.n_applies
-
-        # Combined set of subspace vectors
-        self.subspace = iterator.ritz_vectors + iterator.lanczos_subspace
-
-    @property
-    def subspace_matrix(self):
-        # TODO Use sparse representation
-
-        n_k = len(self.__iterator.lanczos_subspace)
-        n_restart = len(self.__iterator.ritz_values)
-        n_ss = n_k + n_restart
-        ritz_values = self.__iterator.ritz_values
-        ritz_overlaps = self.__iterator.ritz_overlaps
-
-        T = np.zeros((n_ss, n_ss))
-        if n_restart > 0:
-            T[:n_restart, :n_restart] = np.diag(ritz_values)
-            T[:n_restart, n_restart:n_restart + self.n_block] = ritz_overlaps
-
-        for i, alpha in enumerate(self.alphas):
-            rnge = slice(i * self.n_block, (i + 1) * self.n_block)
-            T[rnge, rnge] = alpha
-        for i, beta in enumerate(self.betas):
-            rnge = slice(i * self.n_block, (i + 1) * self.n_block)
-            rnge_plus = slice(rnge.start + self.n_block, rnge.stop + self.n_block)
-            T[rnge, rnge_plus] = beta.T
-            T[rnge_plus, rnge] = beta
-        return T
-
-    @property
-    def rayleigh_extension(self):
-        n_k = len(self.__iterator.lanczos_subspace)
-        n_restart = len(self.__iterator.ritz_values)
-        n_ss = n_k + n_restart
-        b = np.zeros((n_ss, self.n_block))
-        for i in range(self.n_block):
-            b[n_ss - self.n_block + i, i] = 1
-        return b
-
-    @property
-    def matrix_product(self):
-        """
-        Return the reconstructed matrix-vector product for all subspace vectors
-        (using the Lanczos relation).
-        """
-        r, T = self.residual, self.subspace_matrix
-        # b = self.rayleigh_extension; V = self.subspace
-        # Form AV  = V * T + r * b'
-        AV = []
-        for i in range(len(self.subspace)):
-            # Compute AV[:, i]
-            coefficients = []
-            vectors = []
-            for (j, v) in enumerate(self.subspace):
-                if T[j, i] != 0:
-                    coefficients.append(T[j, i])
-                    vectors.append(v)
-            if i >= len(self.subspace) - self.n_block:
-                ires = i - (len(self.subspace) - self.n_block)
-                coefficients.append(1)
-                vectors.append(r[ires])
-            AV.append(lincomb(np.array(coefficients), vectors, evaluate=True))
-        return AV
-
-
-#
-# Lanczos eigensolver from here
-#
 
 class LanczosState(EigenSolverStateBase):
     def __init__(self, iterator):
@@ -340,7 +105,8 @@ def lanczos_iterations(iterator, n_ep, max_subspace, conv_tol=1e-9, which="LA",
                              for SSj in subspace.subspace])
             orth -= np.eye(len(subspace.subspace))
             state.subspace_orthogonality = np.max(np.abs(orth))
-            if state.subspace_orthogonality > max(tol / 1000, subspace.n_problem * eps):
+            orthotol = max(tol / 1000, subspace.n_problem * eps)
+            if state.subspace_orthogonality > orthotol:
                 warnings.warn(la.LinAlgWarning(
                     "Subspace in lanczos has lost orthogonality. "
                     "Expect inaccurate results."
