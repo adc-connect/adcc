@@ -223,6 +223,9 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             warnings.warn(la.LinAlgWarning(
                 f"Maximum number of iterations (== {max_iter}) "
                 "reached in davidson procedure."))
+            state.eigenvectors = [lincomb(v, SS, evaluate=True)
+                                  for i, v in enumerate(np.transpose(rvecs))
+                                  if i in epair_mask]
             state.timer.stop("iteration")
             state.converged = False
             return state
@@ -288,6 +291,9 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         if n_ss_added == 0:
             state.timer.stop("iteration")
             state.converged = False
+            state.eigenvectors = [lincomb(v, SS, evaluate=True)
+                                  for i, v in enumerate(np.transpose(rvecs))
+                                  if i in epair_mask]
             warnings.warn(la.LinAlgWarning(
                 "Davidson procedure could not generate any further vectors for "
                 "the subspace. Iteration cannot be continued like this and will "

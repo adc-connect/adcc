@@ -71,6 +71,29 @@ def default_print(state, identifier, file=sys.stdout):
         print("=== Restart ===", file=file)
 
 
+def amend_true_residuals(state, subspace, rvals, rvecs, epair_mask):
+    V = subspace.subspace
+    AV = subspace.matrix_product
+
+    def form_residual(rval, rvec):
+        coefficients = np.hstack((rvec, -rval * rvec))
+        return lincomb(coefficients, AV + V, evaluate=True)
+    state.residuals = [form_residual(rvals[i], rvec)
+                       for i, rvec in enumerate(np.transpose(rvecs))
+                       if i in epair_mask]
+    state.eigenvectors = [lincomb(rvec, V, evaluate=True)
+                          for i, rvec in enumerate(np.transpose(rvecs))
+                          if i in epair_mask]
+
+    rnorms = np.array([np.sqrt(r @ r) for r in state.residuals])
+    state.residual_norms = rnorms
+
+    # TODO For consistency with the Davidson the residual norms are
+    #      squared again to give output in the same order of magnitude.
+    state.residual_norms = state.residual_norms**2
+    return state
+
+
 def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9,
                        which="LA", max_iter=100, callback=None,
                        debug_checks=False, state=None):
@@ -155,26 +178,8 @@ def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9
         state.timer.restart("iteration")
 
         if converged:
-            V = subspace.subspace
-            AV = subspace.matrix_product
-
-            def form_residual(rval, rvec):
-                coefficients = np.hstack((rvec, -rval * rvec))
-                return lincomb(coefficients, AV + V, evaluate=True)
-            state.residuals = [form_residual(rvals[i], rvec)
-                               for i, rvec in enumerate(np.transpose(rvecs))
-                               if i in epair_mask]
-            state.eigenvectors = [lincomb(rvec, V, evaluate=True)
-                                  for i, rvec in enumerate(np.transpose(rvecs))
-                                  if i in epair_mask]
-
-            rnorms = np.array([np.sqrt(r @ r) for r in state.residuals])
-            state.residual_norms = rnorms
-
-            # TODO For consistency with the Davidson the residual norms are
-            #      squared again to give output in the same order of magnitude.
-            state.residual_norms = state.residual_norms**2
-
+            state = amend_true_residuals(state, subspace, rvals,
+                                         rvecs, epair_mask)
             state.converged = True
             callback(state, "is_converged")
             state.timer.stop("iteration")
@@ -184,6 +189,8 @@ def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9
             warnings.warn(la.LinAlgWarning(
                 f"Maximum number of iterations (== {max_iter}) "
                 "reached in lanczos procedure."))
+            state = amend_true_residuals(state, subspace, rvals,
+                                         rvecs, epair_mask)
             state.timer.stop("iteration")
             state.converged = False
             return state
@@ -211,6 +218,7 @@ def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9
                 iterator, n_ep, min_subspace, max_subspace, conv_tol, which,
                 max_iter, callback, debug_checks, state)
 
+    state = amend_true_residuals(state, subspace, rvals, rvecs, epair_mask)
     state.timer.stop("iteration")
     state.converged = False
     warnings.warn(la.LinAlgWarning(
