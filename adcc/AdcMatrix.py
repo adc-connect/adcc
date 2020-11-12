@@ -368,7 +368,7 @@ class AdcMatrixShifted(AdcMatrixlike):
     def compute_apply(self, block, in_vec, out_vec):
         self.innermatrix.compute_apply(block, in_vec, out_vec)
         if block[0] == block[1]:  # Diagonal block
-            out_vec = out_vec + self.shift * in_vec
+            out_vec += self.shift * in_vec
 
     def diagonal(self, block):
         out = self.innermatrix.diagonal(block)
