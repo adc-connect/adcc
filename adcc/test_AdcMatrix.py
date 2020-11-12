@@ -21,15 +21,18 @@
 ##
 ## ---------------------------------------------------------------------
 import adcc
-import unittest
-import itertools
-
-from .misc import expand_test_templates
-from numpy.testing import assert_allclose
-from adcc.testdata.cache import cache
-
 import pytest
 import libadcc
+import unittest
+import itertools
+import numpy as np
+
+from numpy.testing import assert_allclose
+
+from adcc.AdcMatrix import AdcMatrixShifted
+from adcc.testdata.cache import cache
+
+from .misc import expand_test_templates
 
 # Test diagonal, block-wise apply and matvec
 
@@ -221,3 +224,43 @@ class TestAdcMatrixInterface(unittest.TestCase):
         cppmatrix.compute_apply("ss", v["s"], refv["s"])
         diffv = resv["s"] - refv["s"]
         assert diffv.dot(diffv) < 1e-12
+
+
+@expand_test_templates(testcases)
+class TestAdcMatrixShifted(unittest.TestCase):
+    def construct_matrices(self, case, shift):
+        reference_state = cache.refstate[case]
+        ground_state = adcc.LazyMp(reference_state)
+        matrix = adcc.AdcMatrix("adc3", ground_state)
+        shifted = AdcMatrixShifted(matrix, shift)
+        return matrix, shifted
+
+    def template_diagonal(self, case):
+        shift = -0.3
+        matrix, shifted = self.construct_matrices(case, shift)
+
+        for block in ("s", "d"):
+            odiag = matrix.diagonal(block).to_ndarray()
+            sdiag = shifted.diagonal(block).to_ndarray()
+            assert np.max(np.abs(sdiag - shift - odiag)) < 1e-12
+
+    def template_matmul(self, case):
+        shift = -0.3
+        matrix, shifted = self.construct_matrices(case, shift)
+
+        vec = adcc.guess_zero(matrix)
+        vec["s"].set_random()
+        vec["d"].set_random()
+
+        ores = matrix @ vec
+        sres = shifted @ vec
+
+        assert ores["s"].describe_symmetry() == sres["s"].describe_symmetry()
+        assert ores["d"].describe_symmetry() == sres["d"].describe_symmetry()
+
+        diff_s = sres["s"] - ores["s"] - shift * vec["s"]
+        diff_d = sres["d"] - ores["d"] - shift * vec["d"]
+        assert np.max(np.abs(diff_s.to_ndarray())) < 1e-12
+        assert np.max(np.abs(diff_d.to_ndarray())) < 1e-12
+
+    # TODO Test to_dense_matrix, compute_apply
