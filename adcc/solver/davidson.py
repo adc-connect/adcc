@@ -333,8 +333,7 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
         Convergence tolerance on the l2 norm squared of residuals to consider
         them converged
     which : str, optional
-        Which eigenvectors to converge to. Needs to be chosen such that
-        it agrees with the selected preconditioner.
+        Which eigenvectors to converge to (e.g. LM, LA, SM, SA)
     max_iter : int, optional
         Maximal number of iterations
     callback : callable, optional

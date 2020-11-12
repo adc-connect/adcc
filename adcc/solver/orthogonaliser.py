@@ -27,11 +27,27 @@ from adcc import evaluate, lincomb
 
 class GramSchmidtOrthogonaliser:
     def __init__(self, explicit_symmetrisation=None, n_rounds=1):
+        """
+        Initialise the GramSchmidtOrthogonaliser
+
+        Parameters
+        ----------
+        explicit_symmetrisation
+            The explicit symmetrisation to use on each orthogonalised vector
+        n_rounds : int
+            The number of times to apply the (regular) Gram-Schmidt
+        """
         self.explicit_symmetrisation = explicit_symmetrisation
         self.n_rounds = n_rounds
 
     def qr(self, vectors):
-        # A stupid QR using Gram-Schmidt ... because we need it.
+        """
+        A simple (and inefficient / inaccurate) QR decomposition based
+        on Gram-Schmidt. Use only if no alternatives.
+
+        vectors : list
+            List of vectors representing the input matrix to decompose.
+        """
         if len(vectors) == 0:
             return []
         elif len(vectors) == 1:
@@ -47,6 +63,10 @@ class GramSchmidtOrthogonaliser:
             return Q, R
 
     def orthogonalise(self, vectors):
+        """
+        Orthogonalise the passed vectors with each other and return
+        orthonormal vectors.
+        """
         if len(vectors) == 0:
             return []
         subspace = [evaluate(vectors[0] / np.sqrt(vectors[0] @ vectors[0]))]
@@ -56,6 +76,16 @@ class GramSchmidtOrthogonaliser:
         return subspace
 
     def orthogonalise_against(self, vector, subspace):
+        """
+        Orthogonalise the passed vector against a subspace. The latter is assumed
+        to only consist of orthonormal vectors. Effectively computes
+        ``(1 - SS * SS^T) * vector`.
+
+        vector
+            Vector to make orthogonal to the subspace
+        subspace : list
+            Subspace of orthonormal vectors.
+        """
         # Project out the components of the current subspace
         # That is form (1 - SS * SS^T) * vector = vector + SS * (-SS^T * vector)
         for _ in range(self.n_rounds):

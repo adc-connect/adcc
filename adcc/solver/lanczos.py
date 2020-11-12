@@ -72,6 +72,10 @@ def default_print(state, identifier, file=sys.stdout):
 
 
 def amend_true_residuals(state, subspace, rvals, rvecs, epair_mask):
+    """
+    Compute the true residuals and residual norms (and not the ones estimated from
+    the Lanczos subspace) and amend the `state` accordingly.
+    """
     V = subspace.subspace
     AV = subspace.matrix_product
 
@@ -97,6 +101,32 @@ def amend_true_residuals(state, subspace, rvals, rvecs, epair_mask):
 def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9,
                        which="LA", max_iter=100, callback=None,
                        debug_checks=False, state=None):
+    """Drive the Lanczos iterations
+
+    Parameters
+    ----------
+    iterator : LanczosIterator
+        Iterator generating the Lanczos subspace (contains matrix, guess,
+        residual, Ritz pairs from restart, symmetrisation and orthogonalisation)
+    n_ep : int
+        Number of eigenpairs to be computed
+    min_subspace : int
+        Subspace size to collapse to when performing a thick restart.
+    max_subspace : int
+        Maximal subspace size
+    conv_tol : float, optional
+        Convergence tolerance on the l2 norm squared of residuals to consider
+        them converged
+    which : str, optional
+        Which eigenvectors to converge to (e.g. LM, LA, SM, SA)
+    max_iter : int, optional
+        Maximal number of iterations
+    callback : callable, optional
+        Callback to run after each iteration
+    debug_checks : bool, optional
+        Enable some potentially costly debug checks
+        (Loss of orthogonality etc.)
+    """
     if callback is None:
         def callback(state, identifier):
             pass
@@ -233,6 +263,37 @@ def lanczos(matrix, guesses, n_ep, max_subspace=None,
             callback=None, debug_checks=False,
             explicit_symmetrisation=IndexSymmetrisation,
             min_subspace=None):
+    """Lanczos eigensolver for ADC problems
+
+    Parameters
+    ----------
+    matrix
+        ADC matrix instance
+    guesses : list
+        Guess vectors (fixes also the Lanczos block size)
+    n_ep : int
+        Number of eigenpairs to be computed
+    max_subspace : int or NoneType, optional
+        Maximal subspace size
+    conv_tol : float, optional
+        Convergence tolerance on the l2 norm squared of residuals to consider
+        them converged
+    which : str, optional
+        Which eigenvectors to converge to (e.g. LM, LA, SM, SA)
+    max_iter : int, optional
+        Maximal number of iterations
+    callback : callable, optional
+        Callback to run after each iteration
+    debug_checks : bool, optional
+        Enable some potentially costly debug checks
+        (Loss of orthogonality etc.)
+    explicit_symmetrisation : optional
+        Explicit symmetrisation to use after orthogonalising the
+        subspace vectors. Allows to correct for loss of index or spin
+        symmetries during orthogonalisation (type or instance).
+    min_subspace : int or NoneType, optional
+        Subspace size to collapse to when performing a thick restart.
+    """
     if explicit_symmetrisation is not None and \
             isinstance(explicit_symmetrisation, type):
         explicit_symmetrisation = explicit_symmetrisation(matrix)

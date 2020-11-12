@@ -32,6 +32,31 @@ from .orthogonaliser import GramSchmidtOrthogonaliser
 class LanczosIterator:
     def __init__(self, matrix, guesses, ritz_vectors=None, ritz_values=None,
                  ritz_overlaps=None, explicit_symmetrisation=None):
+        """
+        Initialise an iterator generating :py:class:`LanczosSubspace` objects,
+        which represent a growing Krylov subspace started from the `matrix`
+        and guess vectors `guesses` or optionally using a thick restart from
+        the passed Ritz vectors, Ritz values and Ritz overlaps.
+
+        Parameters
+        ----------
+        matrix
+            Matrix to build the Krylov subspace
+        guesses : list
+            Vectors to build the Krylov subspace
+        ritz_vectors : list or NoneType, optional
+            Ritz vectors for thick restarts
+        ritz_values : numpy.ndarray or NoneType, optional
+            Ritz values corresponding to the `ritz_vectors` for thick restarts
+        ritz_overlaps : numpy.ndarray or NoneType, optional
+            The values ``ritz_vectors.T @ matrix @ guesses`` (which can also
+            be computed purely inside the previous Lanczos subspace before the
+            collapse, see the code of the :py:`lanczos_iterations` function).
+        explicit_symmetrisation : optional
+            Explicit symmetrisation to use after orthogonalising the
+            subspace vectors. Allows to correct for loss of index or spin
+            symmetries during orthogonalisation (type or instance).
+        """
         n_problem = matrix.shape[1]   # Problem size
 
         if not isinstance(guesses, list):
@@ -77,6 +102,7 @@ class LanczosIterator:
         return self
 
     def __next__(self):
+        """Advance the iterator, i.e. extend the Lanczos subspace"""
         if self.n_iter == 0:
             # Initialise Lanczos subspace
             v = self.ortho.orthogonalise(self.residual)
@@ -141,24 +167,28 @@ class LanczosIterator:
 
 
 class LanczosSubspace:
+    """Container for the Lanczos subspace."""
     def __init__(self, iterator):
         self.__iterator = iterator
-        self.n_iter = iterator.n_iter
-        self.n_restart = iterator.n_restart
-        self.residual = iterator.residual
-        self.n_block = iterator.n_block
-        self.n_problem = iterator.n_problem
-        self.matrix = iterator.matrix
-        self.ortho = iterator.ortho
-        self.alphas = iterator.alphas
-        self.betas = iterator.betas
-        self.n_applies = iterator.n_applies
+        self.n_iter = iterator.n_iter        # Number of iterations
+        self.n_restart = iterator.n_restart  # Number of restart vectors
+        self.residual = iterator.residual    # Lanczos residual vector(s)
+        self.n_block = iterator.n_block      # Block size
+        self.n_problem = iterator.n_problem  # Problem size
+        self.matrix = iterator.matrix        # Problem matrix
+        self.ortho = iterator.ortho          # Orthogonaliser
+        self.alphas = iterator.alphas        # Diagonal blocks
+        self.betas = iterator.betas          # Side-diagonal blocks
+        self.n_applies = iterator.n_applies  # Number of applies
 
         # Combined set of subspace vectors
         self.subspace = iterator.ritz_vectors + iterator.lanczos_subspace
 
     @property
     def subspace_matrix(self):
+        """
+        Return the projection of the problem matrix into the Lanczos subspace
+        """
         # TODO Use sparse representation
 
         n_k = len(self.__iterator.lanczos_subspace)
