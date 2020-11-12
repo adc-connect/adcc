@@ -250,7 +250,14 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         with state.timer.record("preconditioner"):
             if preconditioner:
                 if hasattr(preconditioner, "update_shifts"):
-                    preconditioner.update_shifts(rvals)
+                    # Epsilon factor to make sure that 1 / (shift - diagonal)
+                    # does not become ill-conditioned as soon as the shift
+                    # approaches the actual diagonal values (which are the
+                    # eigenvalues for the ADC(2) doubles part if the coupling
+                    # block are absent)
+                    rvals_eps = 1e-6
+                    preconditioner.update_shifts(rvals - rvals_eps)
+
                 preconds = evaluate(preconditioner @ residuals)
             else:
                 preconds = residuals
