@@ -20,14 +20,13 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import libadcc
 import numpy as np
 
 from .LazyMp import LazyMp
 from .AdcMethod import AdcMethod
 from .functions import empty_like
 from .AmplitudeVector import AmplitudeVector
-
-import libadcc
 
 
 class AdcMatrixlike:
@@ -125,7 +124,6 @@ class AdcMatrixlike:
                 is_beta = [idx[i] >= n_orbsa[i] for i in range(len(idx))]
                 spatial = [idx[i] - n_orbsa[i] if is_beta[i] else idx[i]
                            for i in range(len(idx))]
-                print(spatial, is_beta)
                 # Sort first by spatial, then by spin
                 return (spatial, is_beta)
 
@@ -141,14 +139,12 @@ class AdcMatrixlike:
             def sortfctn(x):
                 return min(reduce_index(n_orbsa_s, idx) for idx, factor in x)
             ret_s.sort(key=sortfctn)
-            print()
             ret_s.sort(key=sortfctn)
             ret.extend(ret_s)
 
         if "d" in blocks:
             ret_d = []
             sp_d = self.block_spaces("d")
-            print(sp_d)
             n_orbsa_d = [self.mospaces.n_orbs_alpha(sp) for sp in sp_d]
 
             if sp_d[0] == sp_d[1] and sp_d[2] == sp_d[3]:
@@ -180,7 +176,6 @@ class AdcMatrixlike:
             def sortfctn(x):
                 return min(reduce_index(n_orbsa_d, idx) for idx, factor in x)
             ret_d.sort(key=sortfctn)
-            print()
             ret_d.sort(key=sortfctn)
             ret.extend(ret_d)
 
@@ -209,9 +204,9 @@ class AdcMatrixlike:
 
         This function has not been sufficiently tested to be considered stable.
         """
-        from adcc import guess_zero
-
         import tqdm
+
+        from adcc import guess_zero
 
         # Get zero amplitude of the appropriate symmetry
         # (TODO: Only true for C1, where there is only a single irrep)
@@ -339,3 +334,43 @@ class AdcMatrix(AdcMatrixlike):
 
     def __repr__(self):
         return f"AdcMatrix({self.method.name})"
+
+
+class AdcMatrixShifted(AdcMatrixlike):
+    def __init__(self, matrix, shift=0.0):
+        """
+        Initialise a shifted ADC matrix. Applying this class to a vector ``v``
+        represents an efficient version of ``matrix @ v + shift * v``.
+
+        Parameters
+        ----------
+        matrix : AdcMatrixlike
+            Matrix which is shifted
+        shift : float
+            Value by which to shift the matrix
+        """
+        super().__init__(matrix)
+        self.shift = shift
+
+    def compute_matvec(self, in_ampl, out_ampl=None):
+        out = self.innermatrix.compute_matvec(in_ampl, out_ampl)
+        out = out + self.shift * in_ampl
+        return out
+
+    def to_dense_matrix(self, out=None):
+        self.innermatrix.to_dense_matrix(self, out)
+        out = out + self.shift * np.eye(*out.shape)
+        return out
+
+    def to_cpp(self):
+        raise NotImplementedError("to_cpp not implemented for AdcMatrixShifted")
+
+    def compute_apply(self, block, in_vec, out_vec):
+        self.innermatrix.compute_apply(block, in_vec, out_vec)
+        if block[0] == block[1]:  # Diagonal block
+            out_vec += self.shift * in_vec
+
+    def diagonal(self, block):
+        out = self.innermatrix.diagonal(block)
+        out = out + self.shift  # Shift the diagonal
+        return out

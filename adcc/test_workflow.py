@@ -203,7 +203,7 @@ class TestWorkflow:
         matrix = adcc.AdcMatrix("adc2", adcc.LazyMp(cache.refstate["h2o_sto3g"]))
 
         res = diagonalise_adcmatrix(matrix, n_states=3, kind="singlet",
-                                    solver_method="davidson")
+                                    eigensolver="davidson")
         ref_singlets = refdata["adc2"]["singlet"]["eigenvalues"]
         assert res.converged
         assert res.eigenvalues == approx(ref_singlets[:3])
@@ -217,16 +217,16 @@ class TestWorkflow:
 
         with pytest.raises(InputError):  # Too low tolerance
             res = diagonalise_adcmatrix(matrix, n_states=9, kind="singlet",
-                                        solver_method="davidson",
+                                        eigensolver="davidson",
                                         conv_tol=1e-14)
 
         with pytest.raises(InputError):  # Wrong solver method
             res = diagonalise_adcmatrix(matrix, n_states=9, kind="singlet",
-                                        solver_method="blubber")
+                                        eigensolver="blubber")
 
         with pytest.raises(InputError):  # Too few guesses
             res = diagonalise_adcmatrix(matrix, n_states=9, kind="singlet",
-                                        solver_method="davidson",
+                                        eigensolver="davidson",
                                         guesses=guesses)
 
     def test_estimate_n_guesses(self):

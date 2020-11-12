@@ -24,15 +24,16 @@ import adcc
 import unittest
 import numpy as np
 
+from pytest import approx
+
 from adcc.solver import IndexSpinSymmetrisation
 from adcc.solver.power_method import default_print as powprint, power_method
 from adcc.solver.preconditioner import JacobiPreconditioner
 from adcc.solver.conjugate_gradient import (IterativeInverse,
                                             conjugate_gradient,
-                                            default_print as cgprint)
+                                            default_print as cgprint,
+                                            guess_from_previous)
 from adcc.testdata.cache import cache
-
-from pytest import approx
 
 
 class TestConjugateGradient(unittest.TestCase):
@@ -45,7 +46,7 @@ class TestConjugateGradient(unittest.TestCase):
         symm = IndexSpinSymmetrisation(matrix, enforce_spin_kind=kind)
         inverse = IterativeInverse(matrix, Pinv=JacobiPreconditioner,
                                    conv_tol=conv_tol / 10,
-                                   explicit_symmetrisation=symm)
+                                   construct_guess=guess_from_previous)
         res = power_method(inverse, guesses[0], conv_tol=conv_tol,
                            explicit_symmetrisation=symm, callback=powprint,
                            max_iter=max_iter)

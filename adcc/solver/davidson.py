@@ -23,27 +23,17 @@
 import sys
 import warnings
 import numpy as np
+import scipy.linalg as la
+import scipy.sparse.linalg as sla
 
 from adcc import evaluate, lincomb
 from adcc.AdcMatrix import AdcMatrixlike
 from adcc.AmplitudeVector import AmplitudeVector
 
-import scipy.linalg as la
-import scipy.sparse.linalg as sla
-
+from .common import select_eigenpairs
 from .preconditioner import JacobiPreconditioner
 from .SolverStateBase import EigenSolverStateBase
 from .explicit_symmetrisation import IndexSymmetrisation
-
-
-def select_eigenpairs(vectors, n_ep, which):
-    if which in ["LM", "LA"]:
-        return vectors[-n_ep:]
-    elif which in ["SM", "SA"]:
-        return vectors[:n_ep]
-    else:
-        raise ValueError("For now only the values 'LM', 'LA', 'SM' and 'SA' "
-                         "are understood.")
 
 
 class DavidsonState(EigenSolverStateBase):
@@ -164,7 +154,7 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
 
     with state.timer.record("projection"):
         # Initial application of A to the subspace
-        Ax = matrix @ SS
+        Ax = evaluate(matrix @ SS)
         state.n_applies += n_ss_vec
 
     while state.n_iter < max_iter:
@@ -203,30 +193,26 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             assert len(residuals) == n_block
 
             # Update the state's eigenpairs and residuals
-            state.eigenvalues = select_eigenpairs(rvals, n_ep, which)
-            state.residuals = select_eigenpairs(residuals, n_ep, which)
+            epair_mask = select_eigenpairs(rvals, n_ep, which)
+            state.eigenvalues = rvals[epair_mask]
+            state.residuals = [residuals[i] for i in epair_mask]
             state.residual_norms = np.array([r @ r for r in state.residuals])
             # TODO This is misleading ... actually residual_norms contains
             #      the norms squared. That's also the used e.g. in adcman to
             #      check for convergence, so using the norm squared is fine,
             #      in theory ... it should just be consistent. I think it is
             #      better to go for the actual norm (no squared) inside the code
-
-            # TODO
-            # The select_eigenpairs is not that great ... better one makes a
-            # function which returns a mask. In that way one can have one
-            # form_residual function, which also returns the formed Ritz vectors
-            # (i.e. our approximations to the eigenpairs) and one which only
-            # forms the residuals ... this would save some duplicate work
-            # in the is_converged section *and* would allow the callback to do
-            # some stuff with the eigenpairs if desired.
+            #
+            #      If this adapted, also change the conv_tol to tol conversion
+            #      inside the Lanczos procedure.
 
         callback(state, "next_iter")
         state.timer.restart("iteration")
         if is_converged(state):
             # Build the eigenvectors we desire from the subspace vectors:
-            selected = select_eigenpairs(np.transpose(rvecs), n_ep, which)
-            state.eigenvectors = [lincomb(v, SS, evaluate=True) for v in selected]
+            state.eigenvectors = [lincomb(v, SS, evaluate=True)
+                                  for i, v in enumerate(np.transpose(rvecs))
+                                  if i in epair_mask]
 
             state.converged = True
             callback(state, "is_converged")
@@ -234,9 +220,15 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             return state
 
         if state.n_iter == max_iter:
-            raise la.LinAlgError("Maximum number of iterations (== "
-                                 + str(max_iter) + " reached in davidson "
-                                 "procedure.")
+            warnings.warn(la.LinAlgWarning(
+                f"Maximum number of iterations (== {max_iter}) "
+                "reached in davidson procedure."))
+            state.eigenvectors = [lincomb(v, SS, evaluate=True)
+                                  for i, v in enumerate(np.transpose(rvecs))
+                                  if i in epair_mask]
+            state.timer.stop("iteration")
+            state.converged = False
+            return state
 
         if n_ss_vec + n_block > max_subspace:
             callback(state, "restart")
@@ -258,7 +250,14 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         with state.timer.record("preconditioner"):
             if preconditioner:
                 if hasattr(preconditioner, "update_shifts"):
-                    preconditioner.update_shifts(rvals)
+                    # Epsilon factor to make sure that 1 / (shift - diagonal)
+                    # does not become ill-conditioned as soon as the shift
+                    # approaches the actual diagonal values (which are the
+                    # eigenvalues for the ADC(2) doubles part if the coupling
+                    # block are absent)
+                    rvals_eps = 1e-6
+                    preconditioner.update_shifts(rvals - rvals_eps)
+
                 preconds = evaluate(preconditioner @ residuals)
             else:
                 preconds = residuals
@@ -297,11 +296,16 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
                     ))
 
         if n_ss_added == 0:
+            state.timer.stop("iteration")
             state.converged = False
-            raise la.LinAlgError(
+            state.eigenvectors = [lincomb(v, SS, evaluate=True)
+                                  for i, v in enumerate(np.transpose(rvecs))
+                                  if i in epair_mask]
+            warnings.warn(la.LinAlgWarning(
                 "Davidson procedure could not generate any further vectors for "
-                "the subpace. Iteration cannot be continued like this and will "
-                "be aborted without convergence. Try a different guess.")
+                "the subspace. Iteration cannot be continued like this and will "
+                "be aborted without convergence. Try a different guess."))
+            return state
 
         with state.timer.record("projection"):
             Ax.extend(matrix @ SS[-n_ss_added:])
@@ -326,11 +330,10 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
     max_subspace : int or NoneType, optional
         Maximal subspace size
     conv_tol : float, optional
-        Convergence tolerance on the l2 norm of residuals to consider
+        Convergence tolerance on the l2 norm squared of residuals to consider
         them converged
     which : str, optional
-        Which eigenvectors to converge to. Needs to be chosen such that
-        it agrees with the selected preconditioner.
+        Which eigenvectors to converge to (e.g. LM, LA, SM, SA)
     max_iter : int, optional
         Maximal number of iterations
     callback : callable, optional

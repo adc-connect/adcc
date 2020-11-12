@@ -1,18 +1,33 @@
 #!/usr/bin/env python3
 import sys
 import numpy as np
+import scipy.linalg as la
 
 from adcc import copy, evaluate
-
-import scipy.linalg as la
 
 from ..functions import dot
 from .preconditioner import PreconditionerIdentity
 from .explicit_symmetrisation import IndexSymmetrisation
 
 
+def guess_from_previous(matrix, rhs, previous_cgstate):
+    """
+    Gets passed the matrix, the cgstate from the previous solution
+    and the new RHS and may use this information to construct
+    a guess for the next CG to perform.
+    """
+    if previous_cgstate is None:
+        return rhs
+    else:
+        return previous_cgstate.solution
+
+
+def guess_from_rhs(matrix, rhs, previous_cgstate):
+    return rhs
+
+
 class IterativeInverse:
-    def __init__(self, matrix, **kwargs):
+    def __init__(self, matrix, construct_guess=guess_from_rhs, **kwargs):
         """Initialise an iterative inverse
 
         This object mimics to be the inverse of a passed matrix
@@ -26,31 +41,31 @@ class IterativeInverse:
         """
         self.matrix = matrix
         self.kwargs = kwargs
+        self.construct_guess = construct_guess
         self.cgstate = None
 
-    def construct_guess(self, rhs):
-        """
-        Construct a guess for the next CG solver.
-        """
-        if self.cgstate is None:
-            return rhs
-        else:
-            return self.cgstate.solution
+    @property
+    def shape(self):
+        return self.matrix.shape  # Inversion does not change the shape
 
     def __matmul__(self, x):
-        guess = self.construct_guess(x)
-        self.cgstate = conjugate_gradient(self.matrix, x, guess, **self.kwargs)
-        return self.cgstate.solution
+        if isinstance(x, list):
+            return [self.__matmul__(xi) for xi in x]
+        else:
+            guess = self.construct_guess(self.matrix,  x, self.cgstate)
+            self.cgstate = conjugate_gradient(self.matrix, x, guess,
+                                              **self.kwargs)
+            return self.cgstate.solution
 
 
 class State:
     def __init__(self):
-        self.solution = None             # Current approximation to the solution
-        self.residual = None             # Current residual
-        self.residual_norm = None        # Current residual norm
-        self.converged = False           # Flag whether iteration is converged
-        self.n_iter = 0                  # Number of iterations
-        self.n_applies = 0               # Number of applies
+        self.solution = None       # Current approximation to the solution
+        self.residual = None       # Current residual
+        self.residual_norm = None  # Current residual norm
+        self.converged = False     # Flag whether iteration is converged
+        self.n_iter = 0            # Number of iterations
+        self.n_applies = 0         # Number of applies
 
 
 def default_print(state, identifier, file=sys.stdout):
