@@ -26,7 +26,12 @@ import unittest
 from pytest import approx
 
 from adcc import LazyMp
-from adcc.solver.lanczos import lanczos
+from adcc.AdcMatrix import AdcMatrixShifted
+from adcc.solver.lanczos import default_print as la_print, lanczos
+from adcc.solver.preconditioner import JacobiPreconditioner
+from adcc.solver.conjugate_gradient import (IterativeInverse,
+                                            default_print as cg_print)
+from adcc.solver.explicit_symmetrisation import IndexSpinSymmetrisation
 from adcc.testdata.cache import cache
 
 
@@ -54,3 +59,51 @@ class TestSolverLanczos(unittest.TestCase):
         ref_triplets = refdata["adc2"]["triplet"]["eigenvalues"][:6]
         assert res.converged
         assert res.eigenvalues == approx(ref_triplets)
+
+    def test_adc2_shift_invert_singlets(self):
+        refdata = cache.reference_data["h2o_sto3g"]
+        matrix = adcc.AdcMatrix("adc2", LazyMp(cache.refstate["h2o_sto3g"]))
+        conv_tol = 1e-5
+        shift = -0.5
+
+        # Construct shift and inverted matrix:
+        shinv = IterativeInverse(AdcMatrixShifted(matrix, shift),
+                                 conv_tol=conv_tol / 10,
+                                 Pinv=JacobiPreconditioner,
+                                 callback=cg_print)
+
+        # Solve for singlets
+        guesses = adcc.guesses_singlet(matrix, n_guesses=5, block="s")
+        symm = IndexSpinSymmetrisation(matrix, enforce_spin_kind="singlet")
+        res = lanczos(shinv, guesses, n_ep=5, callback=la_print,
+                      explicit_symmetrisation=symm)
+        assert res.converged
+
+        # Undo spectral transformation and compare
+        eigenvalues = sorted(1 / res.eigenvalues - shift)
+        ref_singlets = refdata["adc2"]["singlet"]["eigenvalues"][:5]
+        assert eigenvalues == approx(ref_singlets)
+
+    def test_adc2_shift_invert_triplets(self):
+        refdata = cache.reference_data["h2o_sto3g"]
+        matrix = adcc.AdcMatrix("adc2", LazyMp(cache.refstate["h2o_sto3g"]))
+        conv_tol = 1e-5
+        shift = -0.5
+
+        # Construct shift and inverted matrix:
+        shinv = IterativeInverse(AdcMatrixShifted(matrix, shift),
+                                 conv_tol=conv_tol / 10,
+                                 Pinv=JacobiPreconditioner,
+                                 callback=cg_print)
+
+        # Solve for triplets
+        guesses = adcc.guesses_triplet(matrix, n_guesses=5, block="s")
+        symm = IndexSpinSymmetrisation(matrix, enforce_spin_kind="triplet")
+        res = lanczos(shinv, guesses, n_ep=5, callback=la_print,
+                      explicit_symmetrisation=symm)
+        assert res.converged
+
+        # Undo spectral transformation and compare
+        eigenvalues = sorted(1 / res.eigenvalues - shift)
+        ref_triplets = refdata["adc2"]["triplet"]["eigenvalues"][:5]
+        assert eigenvalues == approx(ref_triplets)
