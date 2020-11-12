@@ -26,7 +26,7 @@ import unittest
 from pytest import approx
 
 from adcc import LazyMp
-from adcc.solver.lanczos import default_print, lanczos
+from adcc.solver.lanczos import lanczos
 from adcc.testdata.cache import cache
 
 

@@ -20,12 +20,10 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import copy
 import numpy as np
 
 from adcc import evaluate, lincomb
 from adcc.timings import Timer
-from adcc.AdcMatrix import AdcMatrixlike
 from adcc.AmplitudeVector import AmplitudeVector
 
 from .orthogonaliser import GramSchmidtOrthogonaliser
@@ -34,8 +32,6 @@ from .orthogonaliser import GramSchmidtOrthogonaliser
 class LanczosIterator:
     def __init__(self, matrix, guesses, ritz_vectors=None, ritz_values=None,
                  ritz_overlaps=None, explicit_symmetrisation=None):
-        if not isinstance(matrix, AdcMatrixlike):
-            raise TypeError("matrix is not of type AdcMatrixlike")
         n_problem = matrix.shape[1]   # Problem size
 
         if not isinstance(guesses, list):
@@ -69,7 +65,7 @@ class LanczosIterator:
         self.explicit_symmetrisation = explicit_symmetrisation
         self.timer = Timer()  # TODO More fine-grained timings
 
-        # To be initialised by __iter__
+        # To be initialised by first call to __next__
         self.lanczos_subspace = []
         self.alphas = []  # Diagonal matrix block of subspace matrix
         self.betas = []   # Side-diagonal matrix blocks of subspace matrix
@@ -78,38 +74,36 @@ class LanczosIterator:
         self.n_applies = 0
 
     def __iter__(self):
-        iterator = copy.copy(self)
-        v = self.ortho.orthogonalise(self.residual)
-
-        # Initialise Lanczos subspace
-        iterator.lanczos_subspace = v
-        r = evaluate(self.matrix @ v)
-        alpha = np.empty((self.n_block, self.n_block))
-        for p in range(self.n_block):
-            alpha[p, :] = v[p] @ r
-
-        # r = r - v * alpha - Y * Sigma
-        Sigma, Y = self.ritz_overlaps, self.ritz_vectors
-        r = [lincomb(np.hstack(([1], -alpha[:, p], -Sigma[:, p])),
-                     [r[p]] + v + Y, evaluate=True) for p in range(self.n_block)]
-
-        # r = r - Y * Y'r (Full reorthogonalisation)
-        for p in range(self.n_block):
-            r[p] = self.ortho.orthogonalise_against(r[p], self.ritz_vectors)
-
-        iterator.residual = r
-        iterator.n_iter = 0
-        iterator.n_applies = self.n_block
-        iterator.alphas = [alpha]
-        iterator.betas = []
-        return iterator
+        return self
 
     def __next__(self):
-        # First iteration already done at class setup
         if self.n_iter == 0:
-            self.n_iter += 1
+            # Initialise Lanczos subspace
+            v = self.ortho.orthogonalise(self.residual)
+            self.lanczos_subspace = v
+            r = evaluate(self.matrix @ v)
+            alpha = np.empty((self.n_block, self.n_block))
+            for p in range(self.n_block):
+                alpha[p, :] = v[p] @ r
+
+            # r = r - v * alpha - Y * Sigma
+            Sigma, Y = self.ritz_overlaps, self.ritz_vectors
+            r = [lincomb(np.hstack(([1], -alpha[:, p], -Sigma[:, p])),
+                         [r[p]] + v + Y, evaluate=True)
+                 for p in range(self.n_block)]
+
+            # r = r - Y * Y'r (Full reorthogonalisation)
+            for p in range(self.n_block):
+                r[p] = self.ortho.orthogonalise_against(r[p], self.ritz_vectors)
+
+            self.residual = r
+            self.n_iter = 1
+            self.n_applies = self.n_block
+            self.alphas = [alpha]  # Diagonal matrix block of subspace matrix
+            self.betas = []        # Side-diagonal matrix blocks
             return LanczosSubspace(self)
 
+        # Iteration 1 and onwards:
         q = self.lanczos_subspace[-self.n_block:]
         v, beta = self.ortho.qr(self.residual)
         if np.linalg.norm(beta) < np.finfo(float).eps * self.n_problem:
