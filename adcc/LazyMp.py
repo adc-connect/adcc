@@ -96,6 +96,34 @@ class LazyMp(libadcc.LazyMp):
             energies.append(self.energy_correction(il))
         return sum(energies)
 
+    def to_qcvars(self, properties=False, recurse=False, maxlevel=2):
+        """
+        Return a dictionary with property keys compatible to a Psi4 wavefunction
+        or a QCEngine Atomicresults object.
+        """
+        qcvars = {}
+        for level in range(2, maxlevel + 1):
+            try:
+                mpcorr = self.energy_correction(level)
+                qcvars[f"MP{level} CORRELATION ENERGY"] = mpcorr
+                qcvars[f"MP{level} TOTAL ENERGY"] = self.energy(level)
+            except NotImplementedError:
+                pass
+            except ValueError:
+                pass
+
+        if properties:
+            for level in range(2, maxlevel + 1):
+                try:
+                    qcvars["MP2 DIPOLE"] = self.dipole_moment(level)
+                except NotImplementedError:
+                    pass
+
+        if recurse:
+            qcvars.update(self.reference_state.to_qcvars(properties, recurse))
+
+        return qcvars
+
     @property
     def mp2_density(self):
         return self.density(2)

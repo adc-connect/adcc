@@ -189,6 +189,16 @@ class ReferenceState(libadcc.ReferenceState):
                     for space in self.mospaces.subspaces_virtual)
         return eHOMO < eLUMO
 
+    def to_qcvars(self, properties=False, recurse=False):
+        """
+        Return a dictionary with property keys compatible to a Psi4 wavefunction
+        or a QCEngine Atomicresults object.
+        """
+        qcvars = {"HF TOTAL ENERGY": self.energy_scf, }
+        if properties:
+            qcvars["HF DIPOLE"] = self.dipole_moment
+        return qcvars
+
     @property
     def density(self):
         """
