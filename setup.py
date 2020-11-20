@@ -132,6 +132,7 @@ def adccsetup(*args, **kwargs):
     """Wrapper around setup, displaying a link to adc-connect.org on any error."""
     if is_conda_build():
         kwargs.pop("install_requires")
+        kwargs.pop("tests_require")
     try:
         setup(*args, **kwargs)
     except Exception as e:
