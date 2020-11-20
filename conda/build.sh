@@ -4,6 +4,7 @@ set -eu
 # Setup wrapper scripts for ccache during adcc builds
 ccache -M 1Gi
 
+mkdir -p $HOME/bin
 rm -rf $HOME/bin/cc
 rm -rf $HOME/bin/cxx
 echo -e '#!/bin/sh\n' "ccache $CC \$@" > $HOME/bin/cc
