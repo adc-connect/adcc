@@ -17,6 +17,7 @@ echo ++CC=$CC
 echo ++CXX=$CXX
 
 # First run tests
+${PYTHON} -m pip install pytest
 ${PYTHON} setup.py test
 
 # Check adcc finds pyscf and psi4
