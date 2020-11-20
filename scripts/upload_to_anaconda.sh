@@ -23,6 +23,10 @@ echo -e "\n#"
 echo "#-- Deploying tag/commit '$ADCC_TAG' (version $ADCC_VERSION) to label '$LABEL'"
 echo -e "#\n"
 
+# TODO: remove
+whoami
+echo $(which conda)
+
 PYREGEX="$1"
 set -eu
 
