@@ -46,9 +46,9 @@ jobs:
       - name: Run tests
         run: python setup.py test -a '--cov=adcc'
       - name: Upload coverage
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pip install coveralls
+          coveralls
   #
   # Test source code formatting
   #
