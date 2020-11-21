@@ -18,8 +18,8 @@ jobs:
       matrix:
         include:
           - {version: '3.6', os: ubuntu-latest}
-          - {version: '3.8', os: macOS-10.14  }
-          - {version: '3.6', os: ubuntu-latest}
+          - {version: '3.8', os: ubuntu-latest}
+          - {version: '3.6', os: macOS-10.14  }
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -36,13 +36,15 @@ jobs:
             ${{ runner.os }}-test-${{ env.cache-name }}-
             ${{ runner.os }}-test-
             ${{ runner.os }}-
-      - name: Install dependencies
+      - name: Install system dependencies on Linux
+        run: sudo apt-get install libopenblas-base
+        if: contains( matrix.os, 'ubuntu')
+      - name: Install python dependencies
         run: |
-          sudo apt-get install libopenblas-base
-          pip install pyscf cppe
-          pip install -r requirements.txt
+          python -m pip install pyscf cppe
+          python -m pip install -r requirements.txt
       - name: Run tests
-        run: python3 setup.py test -a '--cov=adcc'
+        run: python setup.py test -a '--cov=adcc'
       - name: Upload coverage
         uses: coverallsapp/github-action@master
         with:
