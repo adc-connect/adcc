@@ -1,0 +1,63 @@
+name: CI
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    - cron:  '0 4 * * 6'  # Run every Sunday
+
+jobs:
+  #
+  # Unit tests
+  #
+  test:
+    name: Python ${{ matrix.version }} - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {version: '3.6', os: ubuntu-latest}
+          - {version: '3.8', os: macOS-10.14  }
+          - {version: '3.6', os: ubuntu-latest}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.version }}
+      - uses: actions/cache@v1
+        env:
+          cache-name: cache-artifacts
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-test-${{ env.cache-name }}-${{ hashFiles('**/setup.py') }}
+          restore-keys: |
+            ${{ runner.os }}-test-${{ env.cache-name }}-
+            ${{ runner.os }}-test-
+            ${{ runner.os }}-
+      - name: Install dependencies
+        run: |
+          sudo apt-get install libopenblas-base
+          pip install pyscf cppe
+          pip install -r requirements.txt
+      - name: Run tests
+        run: python3 setup.py test -a '--cov=adcc'
+      - name: Upload coverage
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+  #
+  # Test source code formatting
+  #
+  formatting:
+    name: Code style
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: Install dependencies
+        run: pip install flake8
+      - run: flake8

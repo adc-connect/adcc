@@ -3,15 +3,15 @@
 # adcc: Seamlessly connect your program to ADC                                                                
 | **Documentation** | [![][docs-img]][docs-url] [![][binder-img]][binder-url] |
 | :------ | :------- |
-| **Build Status**  | [![][travis-img]][travis-url] [![][cov-img]][cov-url] [![][lgtm-img]][lgtm-url] |
+| **Build Status**  | [![][ci-img]][ci-url] [![][cov-img]][cov-url] [![][lgtm-img]][lgtm-url] |
 |  **Installation** | [![][pypi-img]][pypi-url] [![][conda-img]][conda-url] [![][license-img]][license-url]  |
 
 [docs-img]: https://img.shields.io/badge/doc-latest-blue.svg
 [docs-url]: https://adc-connect.org
 [binder-img]: https://mybinder.org/badge_logo.svg
 [binder-url]: https://try.adc-connect.org
-[travis-img]: https://travis-ci.com/adc-connect/adcc.svg?branch=master
-[travis-url]: https://travis-ci.com/adc-connect/adcc
+[ci-img]: https://github.com/adc-connect/adcc/workflows/CI/badge.svg?branch=master&event=push
+[ci-url]: https://github.com/adc-connect/adcc/actions
 [cov-img]: https://coveralls.io/repos/adc-connect/adcc/badge.svg?branch=master&service=github
 [cov-url]: https://coveralls.io/github/adc-connect/adcc?branch=master
 [license-img]: https://img.shields.io/badge/License-GPL%20v3-blue.svg
