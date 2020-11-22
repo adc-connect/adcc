@@ -28,6 +28,7 @@ from libadcc import MoIndexTranslation
 from itertools import groupby
 
 from .guess import guess_zero
+from .functions import evaluate
 
 
 class TensorElement:
@@ -160,14 +161,20 @@ def guesses_from_diagonal_singles(matrix, n_guesses, spin_change=0,
 
     # By construction of find_smallest_elements the returned elements
     # are already sorted such that adjacent vectors of equal value
-    # only differ in spin indices if possible and further are sorted
-    # by element value, so we can just group by the value.
-    #
-    # Notice: This deals with spatial degeneracies (e.g. due to degenerate
-    # orbitals) but does not deal with spin (singlet versus triplet), since
-    # this is decided already via the spin_block_symmetrisation.
+    # only differ in spin indices (or they consider excitations from
+    # degenerate orbitals). We want to form spin-adapted linear combinations
+    # for the case of an unrestricted reference in the following
+    # and therefore to exclude the spatial degeneracies we sort explicitly
+    # only by value, and spatial indices (and not by spin).
+
+    def telem_nospin(telem):
+        return (telem.value, telem.block_index_spatial, telem.inblock_index)
+
     ivec = 0
-    for value, group in groupby(elements, key=lambda telem: telem.value):
+    for value, group in groupby(elements, key=telem_nospin):
+        if ivec >= len(ret):
+            break
+
         group = list(group)
         if len(group) == 1:  # Just add the single vector
             ret[ivec]["s"][group[0].index] = 1.0
@@ -177,14 +184,14 @@ def guesses_from_diagonal_singles(matrix, n_guesses, spin_change=0,
             # spatial parts must be identical.
 
             # Add the positive linear combination ...
-            ret[ivec]["s"][group[0].index] = 1 / sqrt(2)
-            ret[ivec]["s"][group[1].index] = 1 / sqrt(2)
+            ret[ivec]["s"][group[0].index] = 1
+            ret[ivec]["s"][group[1].index] = 1
             ivec += 1
 
             # ... and the negative linear combination
             if ivec < n_guesses:
-                ret[ivec]["s"][group[0].index] = 1 / sqrt(2)
-                ret[ivec]["s"][group[1].index] = -1 / sqrt(2)
+                ret[ivec]["s"][group[0].index] = +1
+                ret[ivec]["s"][group[1].index] = -1
                 ivec += 1
         else:
             raise AssertionError("group size > 3 should not occur "
@@ -192,7 +199,8 @@ def guesses_from_diagonal_singles(matrix, n_guesses, spin_change=0,
     assert ivec == n_guesses
 
     # Resize in case less guesses found than requested
-    return ret[:ivec]
+    # and normalise vectors
+    return [evaluate(v / sqrt(v @ v)) for v in ret[:ivec]]
 
 
 def guesses_from_diagonal_doubles(matrix, n_guesses, spin_change=0,
@@ -221,3 +229,23 @@ def guesses_from_diagonal_doubles(matrix, n_guesses, spin_change=0,
 
     # Resize in case less guesses found than requested
     return ret[:n_found]
+
+# TODO Generic algorithm for forming orthogonal spin components of arbitrary
+#      size. Could be useful for the doubles guesses later on.
+# if ivec + len(group) <= n_guesses:
+#     # Just add all of them with element 1.0
+#     for gvec in group:
+#         ret[ivec]["s"][gvec.index] = 1.0
+#         ivec += 1
+# else:
+#     # Generate orthogonal coefficients for the linear combination
+#     # of guess vectors: Make sure every guess vector has a
+#     # non-zero component
+#     coeff = np.eye(len(group))
+#     coeff[:, 0] = 1
+#     coeff, _ = np.linalg.qr(coeff)  # orthogonalise
+
+#     for ifrom, ito in enumerate(range(ivec, n_guesses)):
+#         for j in range(len(group)):
+#             ret[ito]["s"][group[j].index] = -coeff[j, ifrom]
+#         ivec += 1
