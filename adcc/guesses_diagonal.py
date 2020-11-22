@@ -20,13 +20,14 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import libadcc
 import numpy as np
 
 from numpy import sqrt
-from .guess import guess_zero
+from libadcc import MoIndexTranslation
 from itertools import groupby
 
-from libadcc import MoIndexTranslation
+from .guess import guess_zero
 
 
 class TensorElement:
@@ -192,3 +193,31 @@ def guesses_from_diagonal_singles(matrix, n_guesses, spin_change=0,
 
     # Resize in case less guesses found than requested
     return ret[:ivec]
+
+
+def guesses_from_diagonal_doubles(matrix, n_guesses, spin_change=0,
+                                  spin_block_symmetrisation="none",
+                                  degeneracy_tolerance=1e-14):
+    if n_guesses == 0:
+        return []
+
+    # Create a result vector of zero vectors with appropriate symmetry setup
+    ret = [guess_zero(matrix, spin_change=spin_change,
+                      spin_block_symmetrisation=spin_block_symmetrisation)
+           for _ in range(n_guesses)]
+
+    # Build delta-Fock matrices
+    spaces_d = matrix.block_spaces("d")
+    df02 = matrix.ground_state.df(spaces_d[0] + spaces_d[2])
+    df13 = matrix.ground_state.df(spaces_d[1] + spaces_d[3])
+
+    guesses_d = [gv["d"] for gv in ret]  # Extract doubles parts
+    spin_change_twice = int(spin_change * 2)
+    assert spin_change_twice / 2 == spin_change
+    n_found = libadcc.fill_pp_doubles_guesses(
+        guesses_d, matrix.mospaces, df02, df13,
+        spin_change_twice, degeneracy_tolerance
+    )
+
+    # Resize in case less guesses found than requested
+    return ret[:n_found]
