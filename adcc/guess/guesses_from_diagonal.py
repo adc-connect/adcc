@@ -23,12 +23,72 @@
 import libadcc
 import numpy as np
 
+from adcc import AdcMatrixlike, evaluate
 from numpy import sqrt
 from libadcc import MoIndexTranslation
 from itertools import groupby
 
-from .guess import guess_zero
-from .functions import evaluate
+from .guess_zero import guess_zero
+
+
+def guesses_from_diagonal(matrix, n_guesses, block="s", spin_change=0,
+                          spin_block_symmetrisation="none",
+                          degeneracy_tolerance=1e-14):
+    """
+    Obtain guesses by inspecting a block of the diagonal of the passed ADC
+    matrix. The symmetry of the returned vectors is already set-up properly.
+    Note that this routine may return fewer vectors than requested in case the
+    requested number could not be found.
+
+    matrix       The matrix for which guesses are to be constructed
+    n_guesses    The number of guesses to be searched for. Less number of
+                 vectors are returned if this many could not be found.
+    block        Diagonal block to use for obtaining the guesses
+                 (typically "s" or "d").
+    spin_change  The spin change to enforce in an excitation.
+                 Typical values are 0 (singlet/triplet/any) and -1 (spin-flip).
+    spin_block_symmetrisation
+                 Symmetrisation to enforce between equivalent spin blocks, which
+                 all yield the desired spin_change. E.g. if spin_change == 0,
+                 then both the alpha->alpha and beta->beta blocks of the singles
+                 part of the excitation vector achieve a spin change of 0.
+                 The symmetry specified with this parameter will then be imposed
+                 between the a-a and b-b blocks. Valid values are "none",
+                 "symmetric" and "antisymmetric", where "none" enforces
+                 no particular symmetry.
+    degeneracy_tolerance
+                 Tolerance for two entries of the diagonal to be considered
+                 degenerate, i.e. identical.
+    """
+    if not isinstance(matrix, AdcMatrixlike):
+        raise TypeError("matrix needs to be of type AdcMatrixlike")
+    if spin_block_symmetrisation not in ["none", "symmetric", "antisymmetric"]:
+        raise ValueError("Invalid value for spin_block_symmetrisation: "
+                         "{}".format(spin_block_symmetrisation))
+    if spin_block_symmetrisation != "none" and \
+       not matrix.reference_state.restricted:
+        raise ValueError("spin_block_symmetrisation != none is only valid for "
+                         "ADC calculations on top of restricted reference "
+                         "states.")
+    if int(spin_change * 2) / 2 != spin_change:
+        raise ValueError("Only integer or half-integer spin_change is allowed. "
+                         "You passed {}".format(spin_change))
+
+    if not matrix.has_block(block):
+        raise ValueError("The passed ADC matrix does not have the block '{}.'"
+                         "".format(block))
+    if n_guesses == 0:
+        return []
+
+    if block == "s":
+        guessfunction = guesses_from_diagonal_singles
+    elif block == "d":
+        guessfunction = guesses_from_diagonal_doubles
+    else:
+        raise ValueError(f"Don't know how to generate guesses for block {block}")
+
+    return guessfunction(matrix, n_guesses, spin_change,
+                         spin_block_symmetrisation, degeneracy_tolerance)
 
 
 class TensorElement:
@@ -196,7 +256,7 @@ def guesses_from_diagonal_singles(matrix, n_guesses, spin_change=0,
         else:
             raise AssertionError("group size > 3 should not occur "
                                  "when setting up single guesse.")
-    assert ivec == n_guesses
+    assert ivec <= n_guesses
 
     # Resize in case less guesses found than requested
     # and normalise vectors
