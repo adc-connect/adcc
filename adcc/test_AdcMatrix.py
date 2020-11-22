@@ -141,7 +141,6 @@ class TestAdcMatrixInterface(unittest.TestCase):
         assert matrix.reference_state == reference_state
         assert matrix.mospaces == reference_state.mospaces
         assert isinstance(matrix.timer, adcc.timings.Timer)
-        assert isinstance(matrix.to_cpp(), libadcc.AdcMatrix)
 
     def test_properties_cvs_adc1(self):
         case = "h2o_sto3g"
@@ -165,7 +164,6 @@ class TestAdcMatrixInterface(unittest.TestCase):
         assert matrix.reference_state == reference_state
         assert matrix.mospaces == reference_state.mospaces
         assert isinstance(matrix.timer, adcc.timings.Timer)
-        assert isinstance(matrix.to_cpp(), libadcc.AdcMatrix)
 
     def test_intermediates_adc2(self):
         ground_state = adcc.LazyMp(cache.refstate["h2o_sto3g"])

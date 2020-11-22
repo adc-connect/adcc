@@ -57,7 +57,6 @@ class TestAdcMatrixBlockView(unittest.TestCase):
         assert view.reference_state == reference_state
         assert view.mospaces == reference_state.mospaces
         assert isinstance(view.timer, adcc.timings.Timer)
-        assert view.to_cpp() == matrix.to_cpp()
 
         # Check diagonal
         diff = matrix.diagonal("s") - view.diagonal("s")

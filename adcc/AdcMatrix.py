@@ -269,7 +269,7 @@ class AdcMatrixlike:
 
 
 # Redirect some functions and properties to the innermatrix
-for wfun in ["to_cpp", "compute_apply", "compute_matvec", "diagonal",
+for wfun in ["compute_apply", "compute_matvec", "diagonal",
              "has_block", "block_spaces"]:
     def caller(self, *args, wfuncopy=wfun, **kwargs):
         return getattr(self.innermatrix, wfuncopy)(*args, **kwargs)
@@ -327,11 +327,6 @@ class AdcMatrix(AdcMatrixlike):
         self.cppmat.compute_matvec(in_ampl.to_cpp(), out_ampl.to_cpp())
         return out_ampl
 
-    def to_cpp(self):
-        # TODO Notice: This is only needed for guess.py and can probably
-        #      be removed once the guesses are done pyside.
-        return self.cppmat
-
     def __repr__(self):
         return f"AdcMatrix({self.method.name})"
 
@@ -361,9 +356,6 @@ class AdcMatrixShifted(AdcMatrixlike):
         self.innermatrix.to_dense_matrix(self, out)
         out = out + self.shift * np.eye(*out.shape)
         return out
-
-    def to_cpp(self):
-        raise NotImplementedError("to_cpp not implemented for AdcMatrixShifted")
 
     def compute_apply(self, block, in_vec, out_vec):
         self.innermatrix.compute_apply(block, in_vec, out_vec)
