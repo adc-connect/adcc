@@ -21,7 +21,6 @@
 ##
 ## ---------------------------------------------------------------------
 import adcc
-import pytest
 import libadcc
 import unittest
 import itertools
@@ -106,11 +105,6 @@ class TestAdcMatrix(unittest.TestCase):
             for b2 in ["s", "d"]:
                 if f"result_{b1}{b2}" not in matdata:
                     continue
-
-                if b1 + b2 == "dd" and method in ["adc2x", "adc3"]:
-                    pytest.xfail("ADC(2)-x and ADC(3) doubles-doubles apply"
-                                 "is buggy in adccore.")
-
                 matrix.compute_apply(b1 + b2, invec[b2], outvec[b1])
                 assert_allclose(matdata[f"result_{b1}{b2}"],
                                 outvec[b1].to_ndarray(),
