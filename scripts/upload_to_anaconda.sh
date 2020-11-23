@@ -45,4 +45,4 @@ conda install conda-build anaconda-client --yes
 # conda config --append channels pyscf
 
 # Running build and deployment
-conda build conda -c conda-forge --user adcc --token $ANACONDA_TOKEN --label $LABEL
+conda build conda blas=*=mkl -c conda-forge --user adcc --token $ANACONDA_TOKEN --label $LABEL
