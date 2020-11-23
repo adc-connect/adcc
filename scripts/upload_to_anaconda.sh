@@ -40,9 +40,9 @@ fi
 < conda/meta.yaml.in sed "s/@ADCC_VERSION@/$ADCC_VERSION/g;" > conda/meta.yaml
 
 # Install requirements and setup channels
-conda install conda-build anaconda-client --yes
+conda install conda-build anaconda-client conda-verify --yes
 # conda config --append channels psi4/label/dev
 # conda config --append channels pyscf
 
 # Running build and deployment
-conda build conda blas=*=mkl -c conda-forge --user adcc --token $ANACONDA_TOKEN --label $LABEL
+conda build conda -c defaults -c conda-forge --user adcc --token $ANACONDA_TOKEN --label $LABEL
