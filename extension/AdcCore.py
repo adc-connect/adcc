@@ -249,18 +249,17 @@ class AdcCore:
         if sys.platform == "linux":
             return get_platform() == self.platform
         elif sys.platform == "darwin":
-            os_platform_tag = distutils.util.get_platform()
-            _, os_version, _ = os_platform_tag.split('-')
-            os_version = tuple([int(x) for x in os_version.split(".")])
+            os_version = tuple([int(x) for x in get_platform().split('_')[1:3]])
 
-            if "_" not in self.platform or not self.platform.startswith("macosx"):
+            if not self.platform.startswith("macosx"):
                 return False
+
+            core_platform_split = self.platform.split('_')[1:3]
             try:
-                core_version = self.platform.split('_')[1]
-                core_version = tuple([int(x) for x in core_version.split(".")])
+                core_version = tuple([int(x) for x in core_platform_split])
             except ValueError:
                 return False
-
+            # MacOS is fine with things being compiled on earlier versions
             return core_version <= os_version
         else:
             raise OSError("Unsupported platform: {}".format(sys.platform))
