@@ -255,8 +255,11 @@ class AdcCore:
 
             if "-" not in self.platform or not self.platform.startswith("macosx"):
                 return False
-            core_version = self.platform.split('-')[1]
-            core_version = tuple([int(x) for x in core_version.split(".")])
+            try:
+                core_version = self.platform.split('-')[1]
+                core_version = tuple([int(x) for x in core_version.split(".")])
+            except ValueError:
+                return False
 
             return core_version <= os_version
         else:
