@@ -21,7 +21,6 @@
 ##
 ## ---------------------------------------------------------------------
 import adcc
-import pytest
 import libadcc
 import unittest
 import itertools
@@ -106,11 +105,6 @@ class TestAdcMatrix(unittest.TestCase):
             for b2 in ["s", "d"]:
                 if f"result_{b1}{b2}" not in matdata:
                     continue
-
-                if b1 + b2 == "dd" and method in ["adc2x", "adc3"]:
-                    pytest.xfail("ADC(2)-x and ADC(3) doubles-doubles apply"
-                                 "is buggy in adccore.")
-
                 matrix.compute_apply(b1 + b2, invec[b2], outvec[b1])
                 assert_allclose(matdata[f"result_{b1}{b2}"],
                                 outvec[b1].to_ndarray(),
@@ -141,7 +135,6 @@ class TestAdcMatrixInterface(unittest.TestCase):
         assert matrix.reference_state == reference_state
         assert matrix.mospaces == reference_state.mospaces
         assert isinstance(matrix.timer, adcc.timings.Timer)
-        assert isinstance(matrix.to_cpp(), libadcc.AdcMatrix)
 
     def test_properties_cvs_adc1(self):
         case = "h2o_sto3g"
@@ -165,7 +158,6 @@ class TestAdcMatrixInterface(unittest.TestCase):
         assert matrix.reference_state == reference_state
         assert matrix.mospaces == reference_state.mospaces
         assert isinstance(matrix.timer, adcc.timings.Timer)
-        assert isinstance(matrix.to_cpp(), libadcc.AdcMatrix)
 
     def test_intermediates_adc2(self):
         ground_state = adcc.LazyMp(cache.refstate["h2o_sto3g"])

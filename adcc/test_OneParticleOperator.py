@@ -184,7 +184,6 @@ class TestOneParticleOperator(unittest.TestCase):
         assert cpy.blocks_nonzero == mp2diff.blocks_nonzero
         assert cpy.reference_state == mp2diff.reference_state
         assert cpy.mospaces == mp2diff.mospaces
-        assert cpy.cartesian_transform == mp2diff.cartesian_transform
 
         for b in mp2diff.blocks:
             assert cpy.is_zero_block(b) == mp2diff.is_zero_block(b)

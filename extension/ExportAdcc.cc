@@ -31,8 +31,6 @@ void export_AdcMemory(py::module& m);
 void export_amplitude_vector_enforce_spin_kind(py::module& m);
 void export_AmplitudeVector(py::module& m);
 void export_CachingPolicy(py::module& m);
-void export_compute_modified_transition_moments(py::module& m);
-void export_compute_one_particle_densities(py::module& m);
 void export_guesses(py::module& m);
 void export_HartreeFockProvider(py::module& m);
 void export_LazyMp(py::module& m);
@@ -67,8 +65,6 @@ PYBIND11_MODULE(libadcc, m) {
   pyif::export_AdcMatrix(m);
   pyif::export_guesses(m);
   pyif::export_amplitude_vector_enforce_spin_kind(m);
-  pyif::export_compute_modified_transition_moments(m);
-  pyif::export_compute_one_particle_densities(m);
 
   // Set metadata about libadcc
   m.attr("__version__")    = adcc::version::version_string();

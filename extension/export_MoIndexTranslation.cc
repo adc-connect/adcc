@@ -104,6 +104,7 @@ void export_MoIndexTranslation(py::module& m) {
         .def(py::init<std::shared_ptr<const MoSpaces>, const std::vector<std::string>&>(),
              "Construct a MoIndexTranslation class from an MoSpaces object and the "
              "list of identifiers for the space (e.g. [\"o1\", \"o1\"] ...)")
+        .def_property_readonly("subspaces", &MoIndexTranslation::subspaces)
         .def_property_readonly("mospaces", &MoIndexTranslation::mospaces_ptr,
                                "Return the MoSpaces object supplied on initialisation")
         .def_property_readonly("space", &MoIndexTranslation::space,
@@ -169,6 +170,16 @@ void export_MoIndexTranslation(py::module& m) {
                                       shape_tuple(splitted.second));
               },
               "Split an index into block index and in-block index")
+        .def(
+              "split_spin",
+              [](std::shared_ptr<MoIndexTranslation> self, py::tuple tpl) {
+                auto splitted = self->split_spin(parse_tuple(self->ndim(), tpl));
+                return py::make_tuple(std::get<0>(splitted),
+                                      shape_tuple(std::get<1>(splitted)),
+                                      shape_tuple(std::get<2>(splitted)));
+              },
+              "Split an index into a spin block descriptor, a spatial block index and an "
+              "in-block index.")
         .def(
               "combine",
               [](std::shared_ptr<MoIndexTranslation> self, py::tuple bidx,

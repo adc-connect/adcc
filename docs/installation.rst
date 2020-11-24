@@ -80,7 +80,7 @@ Using pip (on macOS)
 ....................
 
 .. attention::
-   macOS support only covers High Sierra (10.13) and Mojave (10.14).
+   macOS support only covers Mojave (10.14) for the moment.
    For other macOS versions, please :ref:`install adcc using conda <install-conda>`.
 
 The installation on macOS requires a ``clang`` compiler.
