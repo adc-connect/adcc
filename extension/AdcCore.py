@@ -249,14 +249,14 @@ class AdcCore:
         if sys.platform == "linux":
             return get_platform() == self.platform
         elif sys.platform == "darwin":
-            os_platform_tag = get_platform()
+            os_platform_tag = distutils.util.get_platform()
             _, os_version, _ = os_platform_tag.split('-')
             os_version = tuple([int(x) for x in os_version.split(".")])
 
-            if "-" not in self.platform or not self.platform.startswith("macosx"):
+            if "_" not in self.platform or not self.platform.startswith("macosx"):
                 return False
             try:
-                core_version = self.platform.split('-')[1]
+                core_version = self.platform.split('_')[1]
                 core_version = tuple([int(x) for x in core_version.split(".")])
             except ValueError:
                 return False
