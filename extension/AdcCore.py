@@ -245,6 +245,24 @@ class AdcCore:
             self.download(version, postfix)
 
     @property
+    def agrees_with_os_platform(self):
+        if sys.platform == "linux":
+            return get_platform() == self.platform
+        elif sys.platform == "darwin":
+            os_platform_tag = get_platform()
+            _, os_version, _ = os_platform_tag.split('-')
+            os_version = tuple([int(x) for x in os_version.split(".")])
+
+            if "-" not in self.platform or not self.platform.startswith("macosx"):
+                return False
+            core_version = self.platform.split('-')[1]
+            core_version = tuple([int(x) for x in core_version.split(".")])
+
+            return core_version <= os_version
+        else:
+            raise OSError("Unsupported platform: {}".format(sys.platform))
+
+    @property
     def config(self):
         if not self.is_config_file_present:
             raise RuntimeError(

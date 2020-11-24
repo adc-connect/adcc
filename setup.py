@@ -62,12 +62,12 @@ def get_adccore_data():
     if abspath not in sys.path:
         sys.path.insert(0, abspath)
 
-    from AdcCore import AdcCore, get_platform
+    import AdcCore
 
-    adccore = AdcCore()
+    adccore = AdcCore.AdcCore()
     if not adccore.is_config_file_present \
        or adccore.version != adccore_version[0] \
-       or adccore.platform != get_platform():
+       or not adccore.agrees_with_os_platform:
         # Is a checkout of adccore ok?
         disable_checkout = "DISABLE_ADCCORE_CHECKOUT" in os.environ
 
@@ -80,10 +80,10 @@ def get_adccore_data():
             "and available adccore version (== {})"
             "".format(adccore_version[0], adccore.version)
         )
-    if adccore.platform != get_platform():
+    if not adccore.agrees_with_os_platform:
         raise RuntimeError(
             "Platform mismatch between this os (== {}) and adccore (== {})"
-            "".format(get_platform(), adccore.platform)
+            "".format(AdcCore.get_platform(), adccore.platform)
         )
     return adccore
 
