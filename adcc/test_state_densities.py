@@ -169,6 +169,6 @@ class TestStateExcitedToExcitedTdm(unittest.TestCase, Runners):
                 assert state2state.excitation_energy[ii] == ee_ref
                 dm_ao_a, dm_ao_b = state2state.transition_dm[ii].to_ao_basis()
                 np.testing.assert_allclose(fromi_ref_a[ii],
-                                           dm_ao_a.to_ndarray().T, atol=1e-4)
+                                           dm_ao_a.to_ndarray(), atol=1e-4)
                 np.testing.assert_allclose(fromi_ref_b[ii],
-                                           dm_ao_b.to_ndarray().T, atol=1e-4)
+                                           dm_ao_b.to_ndarray(), atol=1e-4)

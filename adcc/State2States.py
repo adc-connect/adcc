@@ -31,25 +31,43 @@ from .ElectronicTransition import ElectronicTransition
 
 
 class State2States(ElectronicTransition):
-    """
-    Documentation
-    """
-    def __init__(self, parent_state, initial=0):
-        self.parent_state = parent_state
-        self.reference_state = self.parent_state.reference_state
-        self.ground_state = self.parent_state.ground_state
-        self.matrix = self.parent_state.matrix
-        self.property_method = self.parent_state.property_method
-        self.operators = self.parent_state.operators
+    def __init__(self, data, method=None, property_method=None, initial=0):
+        """Construct a State2States class from some data obtained
+            from an interative solver or other suitable data.
+
+            The class provides access to the results from an ADC calculation
+            as well as derived properties. Properties are computed lazily
+            on the fly as requested by the user.
+
+            By default the ADC method is extracted from the data object
+            and the property method in property_method is set equal to
+            this method, except ADC(3) where property_method=="adc2".
+            This can be overwritten using the parameters.
+
+            Parameters
+            ----------
+            data
+                Any kind of iterative solver state. Typically derived off
+                a :class:`solver.EigenSolverStateBase`. Can also be an
+                :class:`ExcitedStates` object.
+            method : str, optional
+                Provide an explicit method parameter if data contains none.
+            property_method : str, optional
+                Provide an explicit method for property calculations to
+                override the automatic selection.
+            initial : int, optional
+                Provide the index of the excited state from which transitions
+                to all other states are to be computed.
+        """
+        super().__init__(data, method, property_method)
         self.initial = initial
-    # TODO: describe?!
 
     @property
     def excitation_energy(self):
         return np.array([
-            e.excitation_energy
-            - self.parent_state.excitation_energy[self.initial]
-            for e in self.parent_state.excitations if e.index > self.initial
+            self._excitation_energy[final]
+            - self._excitation_energy[self.initial]
+            for final in range(self.size) if final > self.initial
         ])
 
     @cached_property
@@ -63,9 +81,9 @@ class State2States(ElectronicTransition):
         return [
             adc_pp.state2state_transition_dm(
                 self.property_method, self.ground_state,
-                self.parent_state.excitation_vector[self.initial],
-                e.excitation_vector, self.matrix.intermediates
+                self.excitation_vector[self.initial],
+                self.excitation_vector[final],
+                self.matrix.intermediates
             )
-            for e in self.parent_state.excitations
-            if e.index > self.initial
+            for final in range(self.size) if final > self.initial
         ]

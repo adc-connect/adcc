@@ -24,19 +24,135 @@ import warnings
 import numpy as np
 
 from .misc import cached_property
-from .timings import timed_member_call
+from .timings import Timer, timed_member_call
 from .visualisation import ExcitationSpectrum
 from .OneParticleOperator import product_trace
+from .AdcMethod import AdcMethod
 
 from scipy import constants
 from matplotlib import pyplot as plt
 from .Excitation import mark_excitation_property
+from .solver.SolverStateBase import EigenSolverStateBase
 
 
 class ElectronicTransition:
-    """
-    Documentation
-    """
+    def __init__(self, data, method=None, property_method=None):
+        """Construct an ElectronicTransition class from some data obtained
+        from an interative solver or other suitable data.
+
+        Parameters
+        ----------
+        data
+            Any kind of iterative solver state. Typically derived off
+            a :class:`solver.EigenSolverStateBase`.
+        method : str, optional
+            Provide an explicit method parameter if data contains none.
+        property_method : str, optional
+            Provide an explicit method for property calculations to
+            override the automatic selection.
+        excitation_energy_corrections : dict, optional
+            Provide a dictionary of functions to compute corrections for
+            excitation energies, called for each excitation individually
+        """
+        self.matrix = data.matrix
+        self.ground_state = self.matrix.ground_state
+        self.reference_state = self.matrix.ground_state.reference_state
+        self.operators = self.reference_state.operators
+
+        # List of all the objects which have timers (do not yet collect
+        # timers, since new times might be added implicitly at a later point)
+        self._property_timer = Timer()
+        self._timed_objects = [("", self.reference_state),
+                               ("adcmatrix", self.matrix),
+                               ("mp", self.ground_state),
+                               ("intermediates", self.matrix.intermediates)]
+        if hasattr(data, "timer"):
+            datakey = getattr(data, "algorithm", data.__class__.__name__)
+            self._timed_objects.append((datakey, data))
+
+        # Copy some optional attributes
+        for optattr in ["converged", "spin_change", "kind", "n_iter"]:
+            if hasattr(data, optattr):
+                setattr(self, optattr, getattr(data, optattr))
+
+        self.method = getattr(data, "method", method)
+        if self.method is None:
+            self.method = self.matrix.method
+        if not isinstance(self.method, AdcMethod):
+            self.method = AdcMethod(self.method)
+        if property_method is None:
+            if self.method.level < 3:
+                property_method = self.method
+            else:
+                # Auto-select ADC(2) properties for ADC(3) calc
+                property_method = self.method.at_level(2)
+        elif not isinstance(property_method, AdcMethod):
+            property_method = AdcMethod(property_method)
+        self._property_method = property_method
+
+        # Special stuff for special solvers
+        if isinstance(data, EigenSolverStateBase):
+            self._excitation_vector = data.eigenvectors
+            self._excitation_energy_uncorrected = data.eigenvalues
+        else:
+            if hasattr(data, "eigenvalues"):
+                self._excitation_energy_uncorrected = data.eigenvalues
+            if hasattr(data, "eigenvectors"):
+                self._excitation_vector = data.eigenvectors
+            # if both excitation_energy and excitation_energy_uncorrected
+            # are present, the latter one has priority
+            if hasattr(data, "excitation_energy"):
+                self._excitation_energy_uncorrected = \
+                    data.excitation_energy.copy()
+            if hasattr(data, "excitation_energy_uncorrected"):
+                self._excitation_energy_uncorrected =\
+                    data.excitation_energy_uncorrected.copy()
+            if hasattr(data, "excitation_vector"):
+                self._excitation_vector = data.excitation_vector
+
+        # Collect all excitation energy corrections
+        self._excitation_energy = self._excitation_energy_uncorrected.copy()
+
+    def __len__(self):
+        return self.size
+
+    @property
+    def size(self):
+        return self._excitation_energy.size
+
+    @property
+    def timer(self):
+        """Return a cumulative timer collecting timings from the calculation"""
+        ret = Timer()
+        for key, obj in self._timed_objects:
+            ret.attach(obj.timer, subtree=key)
+        ret.attach(self._property_timer, subtree="properties")
+        ret.time_construction = self.reference_state.timer.time_construction
+        return ret
+
+    @property
+    def property_method(self):
+        """The method used to evaluate ADC properties"""
+        return self._property_method
+
+    @property
+    @mark_excitation_property()
+    def excitation_energy(self):
+        """Excitation energies including all corrections in atomic units"""
+        return self._excitation_energy
+
+    @property
+    @mark_excitation_property()
+    def excitation_energy_uncorrected(self):
+        """Excitation energies without any corrections in atomic units"""
+        return self._excitation_energy_uncorrected
+
+    @property
+    @mark_excitation_property()
+    def excitation_vector(self):
+        """List of excitation vectors"""
+        return self._excitation_vector
+
     @cached_property
     @mark_excitation_property()
     @timed_member_call(timer="_property_timer")
