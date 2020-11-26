@@ -71,10 +71,10 @@ def default_print(state, identifier, file=sys.stdout):
         print("=== Restart ===", file=file)
 
 
-def amend_true_residuals(state, subspace, rvals, rvecs, epair_mask):
+def compute_true_residuals(subspace, rvals, rvecs, epair_mask):
     """
     Compute the true residuals and residual norms (and not the ones estimated from
-    the Lanczos subspace) and amend the `state` accordingly.
+    the Lanczos subspace).
     """
     V = subspace.subspace
     AV = subspace.matrix_product
@@ -82,20 +82,57 @@ def amend_true_residuals(state, subspace, rvals, rvecs, epair_mask):
     def form_residual(rval, rvec):
         coefficients = np.hstack((rvec, -rval * rvec))
         return lincomb(coefficients, AV + V, evaluate=True)
-    state.residuals = [form_residual(rvals[i], rvec)
-                       for i, rvec in enumerate(np.transpose(rvecs))
-                       if i in epair_mask]
-    state.eigenvectors = [lincomb(rvec, V, evaluate=True)
-                          for i, rvec in enumerate(np.transpose(rvecs))
-                          if i in epair_mask]
+    residuals = [form_residual(rvals[i], rvec)
+                 for i, rvec in enumerate(np.transpose(rvecs))
+                 if i in epair_mask]
+    eigenvectors = [lincomb(rvec, V, evaluate=True)
+                    for i, rvec in enumerate(np.transpose(rvecs))
+                    if i in epair_mask]
+    rnorms = np.array([np.sqrt(r @ r) for r in residuals])
 
-    rnorms = np.array([np.sqrt(r @ r) for r in state.residuals])
-    state.residual_norms = rnorms
+    # Note here the actual residual norm (and not the residual norm squared)
+    # is returned.
+    return eigenvectors, residuals, rnorms
+
+
+def amend_true_residuals(state, subspace, rvals, rvecs, epair_mask):
+    """
+    Compute the true residuals and residual norms (and not the ones estimated from
+    the Lanczos subspace) and amend the `state` accordingly.
+    """
+    res = compute_true_residuals(subspace, rvals, rvecs, epair_mask)
+    state.eigenvectors, state.residuals, state.residual_norms = res
 
     # TODO For consistency with the Davidson the residual norms are
-    #      squared again to give output in the same order of magnitude.
+    #      squared to give output in the same order of magnitude.
     state.residual_norms = state.residual_norms**2
+
     return state
+
+
+def check_convergence(subspace, rvals, rvecs, tol):
+    b = subspace.rayleigh_extension
+
+    # Norm of the residual vector block
+    norm_residual = np.sqrt(np.sum(subspace.residual[p] @ subspace.residual[p]
+                                   for p in range(subspace.n_block)))
+
+    # Minimal tolerance for convergence criterion
+    # same settings as in ARPACK are used:
+    #    norm(r) * norm(b^T * rvec) <= max(mintol, tol * abs(rval)
+    mintol = np.finfo(float).eps * np.max(np.abs(rvals))
+    eigenpair_error = []
+    eigenpair_converged = np.ones_like(rvals, dtype=bool)
+    for i, rval in enumerate(rvals):
+        lhs = norm_residual * np.linalg.norm(b.T @ rvecs[:, i])
+        rhs = max(mintol, tol * abs(rval))
+        if lhs > rhs:
+            eigenpair_converged[i] = False
+        if mintol < tol * abs(rval):
+            eigenpair_error.append(lhs / abs(rval))
+        else:
+            eigenpair_error.append(lhs * tol / mintol)
+    return eigenpair_converged, np.array(eigenpair_error)
 
 
 def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9,
@@ -148,44 +185,18 @@ def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9
         n_applies_offset = state.n_applies
 
     for subspace in iterator:
-        T = subspace.subspace_matrix
         b = subspace.rayleigh_extension
-        eps = np.finfo(float).eps
         with state.timer.record("rayleigh_ritz"):
-            rvals, rvecs = np.linalg.eigh(T)
+            rvals, rvecs = np.linalg.eigh(subspace.subspace_matrix)
 
         if debug_checks:
-            orth = np.array([[SSi @ SSj for SSi in subspace.subspace]
-                             for SSj in subspace.subspace])
-            orth -= np.eye(len(subspace.subspace))
-            state.subspace_orthogonality = np.max(np.abs(orth))
+            eps = np.finfo(float).eps
             orthotol = max(tol / 1000, subspace.n_problem * eps)
-            if state.subspace_orthogonality > orthotol:
-                warnings.warn(la.LinAlgWarning(
-                    "Subspace in lanczos has lost orthogonality. "
-                    "Expect inaccurate results."
-                ))
+            orth = subspace.check_orthogonality(orthotol)
+            state.subspace_orthogonality = orth
 
-        # Norm of the residual vector block
-        norm_residual = np.sqrt(np.sum(subspace.residual[p] @ subspace.residual[p]
-                                       for p in range(subspace.n_block)))
-
-        # Minimal tolerance for convergence criterion
-        # same settings as in ARPACK are used:
-        #    norm(r) * norm(b^T * rvec) <= max(mintol, tol * abs(rval)
-        mintol = eps * np.max(np.abs(rvals))
-        eigenpair_error = []
-        is_rval_converged = np.ones_like(rvals, dtype=bool)
-        for i, rval in enumerate(rvals):
-            lhs = norm_residual * np.linalg.norm(b.T @ rvecs[:, i])
-            rhs = max(mintol, tol * abs(rval))
-            if lhs > rhs:
-                is_rval_converged[i] = False
-            if mintol < tol * abs(rval):
-                eigenpair_error.append(lhs / abs(rval))
-            else:
-                eigenpair_error.append(lhs * tol / mintol)
-        eigenpair_error = np.array(eigenpair_error)
+        is_rval_converged, eigenpair_error = check_convergence(subspace, rvals,
+                                                               rvecs, tol)
 
         # Update state
         state.n_iter += 1
