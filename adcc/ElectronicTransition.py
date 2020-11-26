@@ -50,9 +50,6 @@ class ElectronicTransition:
         property_method : str, optional
             Provide an explicit method for property calculations to
             override the automatic selection.
-        excitation_energy_corrections : dict, optional
-            Provide a dictionary of functions to compute corrections for
-            excitation energies, called for each excitation individually
         """
         self.matrix = data.matrix
         self.ground_state = self.matrix.ground_state
