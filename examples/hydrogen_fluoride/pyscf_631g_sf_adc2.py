@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 import adcc
-
 from pyscf import gto, scf
 
 # Run SCF in pyscf
@@ -20,3 +19,7 @@ scfres.kernel()
 # Run solver and print results
 states = adcc.adc2(scfres, n_spin_flip=5, conv_tol=1e-8)
 print(states.describe())
+
+# Plot the excitation spectrum
+s2s = adcc.State2States(states, initial=0)
+s2s.plot_spectrum()

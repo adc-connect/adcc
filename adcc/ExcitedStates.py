@@ -135,7 +135,7 @@ class ExcitedStates(ElectronicTransition):
                  excitation_energy_corrections={}):
         """Construct an ExcitedStates class from some data obtained
         from an interative solver or another :class:`ExcitedStates`
-        object. 
+        object.
 
         The class provides access to the results from an ADC calculation
         as well as derived properties. Properties are computed lazily

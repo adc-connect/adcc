@@ -519,6 +519,20 @@ dissociation limit.
    states = adcc.adc2x(scfres, n_spin_flip=5)
    print(states.describe())
 
+Since the first excited state in the case of spin-flip computations corresponds
+to the singlet ground state, one requires an additional step to plot the excitation
+spectrum. This can be conveniently achieved using the :class:`adcc.State2States` class
+which exposes results for transitions between excited states. In our case, we want to
+plot the spectrum for transitions from the first excited state to all other higher-lying states:
+
+.. code-block:: python
+
+   s2s = adcc.State2States(states, initial=0)
+   s2s.plot_spectrum()
+
+Another use case for :class:`adcc.State2States` class for canonical ADC calculations
+is the investigation of excited state absorption.
+
 Core-valence-separated calculations
 -----------------------------------
 .. note::
