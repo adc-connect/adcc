@@ -40,17 +40,17 @@ class AdcMethod:
                              + ",".join(self.available_methods) + " are known.")
 
         split = method.split("-")
-        self.base_method = split[-1]
+        self.__base_method = split[-1]
         split = split[:-1]
         self.is_core_valence_separated = "cvs" in split
 
         try:
-            if self.base_method == "adc2x":
+            if self.__base_method == "adc2x":
                 self.level = 2
             else:
-                self.level = int(self.base_method[-1])
+                self.level = int(self.__base_method[-1])
         except ValueError:
-            raise ValueError("Not a valid base method: " + self.base_method)
+            raise ValueError("Not a valid base method: " + self.__base_method)
 
     def at_level(self, newlevel):
         """
@@ -65,9 +65,9 @@ class AdcMethod:
     @property
     def name(self):
         if self.is_core_valence_separated:
-            return "cvs-" + self.base_method
+            return "cvs-" + self.__base_method
         else:
-            return self.base_method
+            return self.__base_method
 
     @property
     def property_method(self):
@@ -76,10 +76,18 @@ class AdcMethod:
         for this ADC method. This only differs from the name property
         for the ADC(2)-x family of methods.
         """
-        if self.base_method == "adc2x":
+        if self.__base_method == "adc2x":
             return AdcMethod(self.name.replace("adc2x", "adc2")).name
         else:
             return self.name
+
+    @property
+    def base_method(self):
+        """
+        The base (full) method, i.e. with all approximations such as
+        CVS stripped off.
+        """
+        return AdcMethod(self.__base_method)
 
     def __eq__(self, other):
         return self.name == other.name

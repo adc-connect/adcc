@@ -20,7 +20,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import warnings
 import numpy as np
+import scipy.linalg as la
 
 from adcc import evaluate, lincomb
 from adcc.timings import Timer
@@ -248,3 +250,17 @@ class LanczosSubspace:
                 vectors.append(r[ires])
             AV.append(lincomb(np.array(coefficients), vectors, evaluate=True))
         return AV
+
+    def check_orthogonality(self, tolerance=None):
+        if tolerance is None:
+            tolerance = self.n_problem * np.finfo(float).eps
+        orth = np.array([[SSi @ SSj for SSi in self.subspace]
+                         for SSj in self.subspace])
+        orth -= np.eye(len(self.subspace))
+        orth = np.max(np.abs(orth))
+        if orth > tolerance:
+            warnings.warn(la.LinAlgWarning(
+                "LanczosSubspace has lost orthogonality. "
+                "Expect inaccurate results."
+            ))
+        return orth
