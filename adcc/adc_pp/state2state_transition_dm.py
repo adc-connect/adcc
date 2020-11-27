@@ -31,7 +31,7 @@ import libadcc
 
 
 def s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates):
-    check_singles_amplitudes(amplitude_l, amplitude_r)
+    check_singles_amplitudes(amplitude_l, amplitude_r, spaces=[b.o, b.v])
     ul1 = amplitude_l["s"]
     ur1 = amplitude_r["s"]
 
@@ -42,7 +42,8 @@ def s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates):
 
 
 def s2s_tdm_adc2(mp, amplitude_l, amplitude_r, intermediates):
-    check_doubles_amplitudes(amplitude_l, amplitude_r)
+    check_doubles_amplitudes(amplitude_l, amplitude_r,
+                             spaces=[b.o, b.o, b.v, b.v])
     dm = s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates)
 
     ul1, ul2 = amplitude_l["s"], amplitude_l["d"]

@@ -20,17 +20,16 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from adcc import block as b
 
 
-def check_singles_amplitudes(*amplitudes, core_space=False):
+def check_singles_amplitudes(*amplitudes, spaces):
     check_have_singles_block(*amplitudes)
-    check_singles_subspaces(*amplitudes, core_space=core_space)
+    check_singles_subspaces(*amplitudes, spaces=spaces)
 
 
-def check_doubles_amplitudes(*amplitudes, core_space=False):
+def check_doubles_amplitudes(*amplitudes, spaces):
     check_have_doubles_block(*amplitudes)
-    check_doubles_subspaces(*amplitudes, core_space=core_space)
+    check_doubles_subspaces(*amplitudes, spaces=spaces)
 
 
 def check_have_singles_block(*amplitudes):
@@ -42,26 +41,24 @@ def check_have_singles_block(*amplitudes):
 
 def check_have_doubles_block(*amplitudes):
     if any("d" not in amplitude.blocks for amplitude in amplitudes):
-        raise ValueError("state2state_transition_dm at ADC(2) level and "
+        raise ValueError("ADC(2) level and "
                          "beyond expects an excitation amplitude with a "
                          "singles and a doubles part.")
 
 
-def check_singles_subspaces(*amplitudes, core_space=False):
-    C = b.c if core_space else b.o
+def check_singles_subspaces(*amplitudes, spaces):
     for amplitude in amplitudes:
-        ul1 = amplitude["s"]
-        if ul1.subspaces != [C, b.v]:
+        u1 = amplitude["s"]
+        if u1.subspaces != spaces:
             raise ValueError("Mismatch in subspaces singles part "
-                             f"(== {ul1.subspaces}), where {C}{b.v} "
+                             f"(== {u1.subspaces}), where {spaces} "
                              "was expected.")
 
 
-def check_doubles_subspaces(*amplitudes, core_space=False):
-    C = b.c if core_space else b.o
+def check_doubles_subspaces(*amplitudes, spaces):
     for amplitude in amplitudes:
-        ul2 = amplitude["d"]
-        if ul2.subspaces != [b.o, C, b.v, b.v]:
+        u2 = amplitude["d"]
+        if u2.subspaces != spaces:
             raise ValueError("Mismatch in subspaces doubles part "
-                             f"(== {ul2.subspaces}), where "
-                             f"{b.o}{C}{b.v}{b.v} was expected.")
+                             f"(== {u2.subspaces}), where "
+                             f"{spaces} was expected.")
