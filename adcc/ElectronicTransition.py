@@ -92,6 +92,7 @@ class ElectronicTransition:
         if isinstance(data, EigenSolverStateBase):
             self._excitation_vector = data.eigenvectors
             self._excitation_energy_uncorrected = data.eigenvalues
+            self.residual_norm = data.residual_norms
         else:
             if hasattr(data, "eigenvalues"):
                 self._excitation_energy_uncorrected = data.eigenvalues
