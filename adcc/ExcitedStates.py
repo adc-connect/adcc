@@ -134,7 +134,8 @@ class ExcitedStates(ElectronicTransition):
     def __init__(self, data, method=None, property_method=None,
                  excitation_energy_corrections={}):
         """Construct an ExcitedStates class from some data obtained
-        from an interative solver or other suitable data.
+        from an interative solver or another :class:`ExcitedStates`
+        object. 
 
         The class provides access to the results from an ADC calculation
         as well as derived properties. Properties are computed lazily

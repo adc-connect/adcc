@@ -27,21 +27,16 @@ from adcc.AdcMethod import AdcMethod
 from adcc.functions import einsum
 from adcc.AmplitudeVector import AmplitudeVector
 from adcc.OneParticleOperator import OneParticleOperator
+from .util import check_singles_amplitudes, check_doubles_amplitudes
 
 import libadcc
 
 
 def diffdm_adc0(mp, amplitude, intermediates):
-    if "s" not in amplitude.blocks:
-        raise ValueError("state_diffdm at ADC(0) level and beyond expects "
-                         "an excitation amplitude with a singles part.")
+    check_singles_amplitudes(amplitude, core_space=mp.has_core_occupied_space)
     # C is either c(ore) or o(ccupied)
     C = b.c if mp.has_core_occupied_space else b.o
-
     u1 = amplitude["s"]
-    if u1.subspaces != [C, b.v]:
-        raise ValueError("Mismatch in subspaces singles part "
-                         f"(== {u1.subspaces}), where {C}{b.v} was expected")
 
     dm = OneParticleOperator(mp, is_symmetric=True)
     dm[C + C] = -einsum("ia,ja->ij", u1, u1)
@@ -51,16 +46,9 @@ def diffdm_adc0(mp, amplitude, intermediates):
 
 def diffdm_adc2(mp, amplitude, intermediates):
     dm = diffdm_adc0(mp, amplitude, intermediates)  # Get ADC(1) result
-    if "d" not in amplitude.blocks:
-        raise ValueError("state_diffdm at ADC(2) level and beyond "
-                         "expects an excitation amplitude with a singles and a "
-                         "doubles part.")
+    check_doubles_amplitudes(amplitude)
     u1 = amplitude["s"]
     u2 = amplitude["d"]
-    if u2.subspaces != [b.o, b.o, b.v, b.v]:
-        raise ValueError("Mismatch in subspaces doubles part "
-                         f"(== {u2.subspaces}), where "
-                         f"{b.o}{b.o}{b.v}{b.v} was expected.")
 
     t2 = mp.t2(b.oovv)
     p0_ov = mp.mp2_diffdm[b.ov]
@@ -111,16 +99,9 @@ def diffdm_adc2(mp, amplitude, intermediates):
 
 def diffdm_cvs_adc2(mp, amplitude, intermediates):
     dm = diffdm_adc0(mp, amplitude, intermediates)  # Get ADC(1) result
-    if "d" not in amplitude.blocks:
-        raise ValueError("state_diffdm at ADC(2) level and beyond "
-                         "expects an excitation amplitude with a singles and a "
-                         "doubles part.")
+    check_doubles_amplitudes(amplitude, core_space=True)
     u1 = amplitude["s"]
     u2 = amplitude["d"]
-    if u2.subspaces != [b.o, b.c, b.v, b.v]:
-        raise ValueError("Mismatch in subspaces doubles part "
-                         f"(== {u2.subspaces}), where "
-                         f"{b.o}{b.c}{b.v}{b.v} was expected.")
 
     t2 = mp.t2(b.oovv)
     p0_ov = intermediates.cv_p_ov

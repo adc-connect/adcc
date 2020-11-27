@@ -33,11 +33,11 @@ from .ElectronicTransition import ElectronicTransition
 class State2States(ElectronicTransition):
     def __init__(self, data, method=None, property_method=None, initial=0):
         """Construct a State2States class from some data obtained
-            from an interative solver or other suitable data.
+            from an interative solver or an :class:`ExcitedStates` object.
 
-            The class provides access to the results from an ADC calculation
-            as well as derived properties. Properties are computed lazily
-            on the fly as requested by the user.
+            The class provides access to ADC transition properties between
+            excited states, i.e., from the `initial` state to all higher-lying
+            excited states obtained from an ADC calculation.
 
             By default the ADC method is extracted from the data object
             and the property method in property_method is set equal to

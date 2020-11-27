@@ -38,7 +38,8 @@ from .solver.SolverStateBase import EigenSolverStateBase
 class ElectronicTransition:
     def __init__(self, data, method=None, property_method=None):
         """Construct an ElectronicTransition class from some data obtained
-        from an interative solver or other suitable data.
+        from an interative solver or another :class:`ElectronicTransition`
+        object.
 
         Parameters
         ----------

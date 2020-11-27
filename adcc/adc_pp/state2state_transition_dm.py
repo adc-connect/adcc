@@ -25,47 +25,13 @@ from adcc.AdcMethod import AdcMethod
 from adcc.functions import einsum
 from adcc.AmplitudeVector import AmplitudeVector
 from adcc.OneParticleOperator import OneParticleOperator
+from .util import check_singles_amplitudes, check_doubles_amplitudes
 
 import libadcc
 
 
-# TODO: just a sketch for what I'd like to have, because we need to check on
-# 2 amplitude vectors simultaneously
-def _check_have_singles_block(*amplitudes):
-    if any("s" not in amplitude.blocks for amplitude in amplitudes):
-        raise ValueError("state2state_transition_dm at ADC(0) level and "
-                         "beyond expects an excitation amplitude with a "
-                         "singles part.")
-
-
-def _check_have_doubles_block(*amplitudes):
-    if any("d" not in amplitude.blocks for amplitude in amplitudes):
-        raise ValueError("state2state_transition_dm at ADC(2) level and "
-                         "beyond expects an excitation amplitude with a "
-                         "singles and a doubles part.")
-
-
-def _check_singles_subspaces(*amplitudes):
-    for amplitude in amplitudes:
-        ul1 = amplitude["s"]
-        if ul1.subspaces != [b.o, b.v]:
-            raise ValueError("Mismatch in subspaces singles part "
-                             f"(== {ul1.subspaces}), where {b.o}{b.v} "
-                             "was expected.")
-
-
-def _check_doubles_subspaces(*amplitudes):
-    for amplitude in amplitudes:
-        ul2 = amplitude["d"]
-        if ul2.subspaces != [b.o, b.o, b.v, b.v]:
-            raise ValueError("Mismatch in subspaces doubles part "
-                             f"(== {ul2.subspaces}), where "
-                             f"{b.o}{b.o}{b.v}{b.v} was expected.")
-
-
 def s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates):
-    _check_have_singles_block(amplitude_l, amplitude_r)
-    _check_singles_subspaces(amplitude_l, amplitude_r)
+    check_singles_amplitudes(amplitude_l, amplitude_r)
     ul1 = amplitude_l["s"]
     ur1 = amplitude_r["s"]
 
@@ -76,14 +42,11 @@ def s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates):
 
 
 def s2s_tdm_adc2(mp, amplitude_l, amplitude_r, intermediates):
-    _check_have_doubles_block(amplitude_l, amplitude_r)
-    _check_doubles_subspaces(amplitude_l, amplitude_r)
+    check_doubles_amplitudes(amplitude_l, amplitude_r)
     dm = s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates)
 
-    ul1 = amplitude_l["s"]
-    ur1 = amplitude_r["s"]
-    ul2 = amplitude_l["d"]
-    ur2 = amplitude_r["d"]
+    ul1, ul2 = amplitude_l["s"], amplitude_l["d"]
+    ur1, ur2 = amplitude_r["s"], amplitude_r["d"]
 
     t2 = mp.t2(b.oovv)
     p0_ov = mp.mp2_diffdm[b.ov]
@@ -101,20 +64,20 @@ def s2s_tdm_adc2(mp, amplitude_l, amplitude_r, intermediates):
         + 0.5 * einsum('ik,kj->ij', p1_oo, p0_oo)
         + 0.5 * einsum('ik,kj->ij', p0_oo, p1_oo)
         - 0.5 * einsum('ikcd,lk,jlcd->ij', t2, p1_oo, t2)
-        + einsum('ikcd,jkcb,db->ij', t2, t2, p1_vv)
+        + 1.0 * einsum('ikcd,jkcb,db->ij', t2, t2, p1_vv)
         - 0.5 * einsum('ia,jkac,kc->ij', ur1, t2, rul1)
         - 0.5 * einsum('ikac,kc,ja->ij', t2, rur1, ul1)
-        - einsum('ia,ja->ij', rul1, rur1)
+        - 1.0 * einsum('ia,ja->ij', rul1, rur1)
     )
     dm[b.vv] = (
         p1_vv + 2.0 * einsum('ijac,ijbc->ab', ul2, ur2)
         - 0.5 * einsum("ac,cb->ab", p1_vv, p0_vv)
         - 0.5 * einsum("ac,cb->ab", p0_vv, p1_vv)
         - 0.5 * einsum("klbc,klad,cd->ab", t2, t2, p1_vv)
-        + einsum("klbc,jk,jlac->ab", t2, p1_oo, t2)
+        + 1.0 * einsum("klbc,jk,jlac->ab", t2, p1_oo, t2)
         + 0.5 * einsum("ikac,kc,ib->ab", t2, rul1, ur1)
         + 0.5 * einsum("ia,ikbc,kc->ab", ul1, t2, rur1)
-        + einsum("ia,ib->ab", rur1, rul1)
+        + 1.0 * einsum("ia,ib->ab", rur1, rul1)
     )
 
     p1_ov = -2.0 * einsum("jb,ijab->ia", ul1, ur2).evaluate()
