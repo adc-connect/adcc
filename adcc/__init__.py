@@ -36,6 +36,7 @@ from .functions import (contract, copy, direct_sum, dot, einsum, empty_like,
 from .memory_pool import memory_pool
 from .AdcBlockView import AdcBlockView
 from .ExcitedStates import ExcitedStates
+from .State2States import State2States
 from .DataHfProvider import DataHfProvider, DictHfProvider
 from .ReferenceState import ReferenceState
 from .caching_policy import DefaultCachingPolicy, GatherStatisticsPolicy
@@ -55,7 +56,7 @@ __all__ = ["run_adc", "InputError", "AdcMatrix", "AdcBlockView", "AdcMatrixlike"
            "lincomb", "nosym_like", "ones_like", "transpose",
            "linear_combination", "zeros_like", "direct_sum",
            "memory_pool", "set_n_threads", "get_n_threads", "AmplitudeVector",
-           "HartreeFockProvider", "ExcitedStates",
+           "HartreeFockProvider", "ExcitedStates", "State2States",
            "Tensor", "DictHfProvider", "DataHfProvider", "OneParticleOperator",
            "guesses_singlet", "guesses_triplet", "guesses_any",
            "guess_symmetries", "guesses_spin_flip", "guess_zero",

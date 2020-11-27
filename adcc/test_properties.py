@@ -23,13 +23,15 @@
 import unittest
 import numpy as np
 
+from numpy.testing import assert_allclose
+
+from adcc.State2States import State2States
+from adcc.testdata.cache import cache
+
 from .misc import assert_allclose_signfix
 from .test_state_densities import Runners
 
-from numpy.testing import assert_allclose
-from adcc.testdata.cache import cache
-
-from pytest import approx
+from pytest import approx, skip
 
 
 class TestTransitionDipoleMoments(unittest.TestCase, Runners):
@@ -81,3 +83,25 @@ class TestStateDipoleMoments(unittest.TestCase, Runners):
         ref = refdata[method][kind]
         n_ref = len(state.excitation_vector)
         assert_allclose(res_dms, ref["state_dipole_moments"][:n_ref], atol=1e-4)
+
+
+class TestState2StateTransitionDipoleMoments(unittest.TestCase, Runners):
+    def base_test(self, system, method, kind):
+        method = method.replace("_", "-")
+        if "cvs" in method:
+            skip("State-to-state transition dms not yet implemented for CVS.")
+
+        refdata = cache.reference_data[system]
+        state = cache.adc_states[system][method][kind]
+
+        state_to_state = refdata[method][kind]["state_to_state"]
+        refevals = refdata[method][kind]["eigenvalues"]
+        for i, exci in enumerate(state.excitations):
+            assert exci.excitation_energy == refevals[i]
+            fromi_ref = state_to_state[f"from_{i}"]["transition_dipole_moments"]
+
+            state2state = State2States(state, initial=i)
+            for ii, j in enumerate(range(i + 1, state.size)):
+                assert state.excitation_energy[j] == refevals[j]
+                assert_allclose_signfix(state2state.transition_dipole_moment[ii],
+                                        fromi_ref[ii], atol=1e-4)

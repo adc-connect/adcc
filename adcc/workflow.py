@@ -311,7 +311,8 @@ def validate_state_parameters(reference_state, n_states=None, n_singlets=None,
     # Check if there are states to be computed
     if n_states is None or n_states == 0:
         raise InputError("No excited states to be computed. Specify at least "
-                         "one of n_states, n_singlets or n_triplets")
+                         "one of n_states, n_singlets, n_triplets, "
+                         "or n_spin_flip")
     if n_states < 0:
         raise InputError("n_states needs to be positive")
 
