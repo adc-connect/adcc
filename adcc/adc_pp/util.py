@@ -22,14 +22,14 @@
 ## ---------------------------------------------------------------------
 
 
-def check_singles_amplitudes(*amplitudes, spaces):
+def check_singles_amplitudes(spaces, *amplitudes):
     check_have_singles_block(*amplitudes)
-    check_singles_subspaces(*amplitudes, spaces=spaces)
+    check_singles_subspaces(spaces, *amplitudes)
 
 
-def check_doubles_amplitudes(*amplitudes, spaces):
+def check_doubles_amplitudes(spaces, *amplitudes):
     check_have_doubles_block(*amplitudes)
-    check_doubles_subspaces(*amplitudes, spaces=spaces)
+    check_doubles_subspaces(spaces, *amplitudes)
 
 
 def check_have_singles_block(*amplitudes):
@@ -46,7 +46,7 @@ def check_have_doubles_block(*amplitudes):
                          "singles and a doubles part.")
 
 
-def check_singles_subspaces(*amplitudes, spaces):
+def check_singles_subspaces(spaces, *amplitudes):
     for amplitude in amplitudes:
         u1 = amplitude["s"]
         if u1.subspaces != spaces:
@@ -55,7 +55,7 @@ def check_singles_subspaces(*amplitudes, spaces):
                              "was expected.")
 
 
-def check_doubles_subspaces(*amplitudes, spaces):
+def check_doubles_subspaces(spaces, *amplitudes):
     for amplitude in amplitudes:
         u2 = amplitude["d"]
         if u2.subspaces != spaces:

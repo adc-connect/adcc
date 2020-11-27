@@ -35,7 +35,7 @@ import libadcc
 def diffdm_adc0(mp, amplitude, intermediates):
     # C is either c(ore) or o(ccupied)
     C = b.c if mp.has_core_occupied_space else b.o
-    check_singles_amplitudes(amplitude, spaces=[C, b.v])
+    check_singles_amplitudes([C, b.v], amplitude)
     u1 = amplitude["s"]
 
     dm = OneParticleOperator(mp, is_symmetric=True)
@@ -46,7 +46,7 @@ def diffdm_adc0(mp, amplitude, intermediates):
 
 def diffdm_adc2(mp, amplitude, intermediates):
     dm = diffdm_adc0(mp, amplitude, intermediates)  # Get ADC(1) result
-    check_doubles_amplitudes(amplitude, spaces=[b.o, b.o, b.v, b.v])
+    check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
     u1 = amplitude["s"]
     u2 = amplitude["d"]
 
@@ -99,7 +99,7 @@ def diffdm_adc2(mp, amplitude, intermediates):
 
 def diffdm_cvs_adc2(mp, amplitude, intermediates):
     dm = diffdm_adc0(mp, amplitude, intermediates)  # Get ADC(1) result
-    check_doubles_amplitudes(amplitude, spaces=[b.o, b.c, b.v, b.v])
+    check_doubles_amplitudes([b.o, b.c, b.v, b.v], amplitude)
     u1 = amplitude["s"]
     u2 = amplitude["d"]
 
