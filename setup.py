@@ -53,7 +53,10 @@ adccore_version = ("0.14.5", "")  # (base version, unstable postfix)
 
 
 def is_conda_build():
-    return os.environ.get("CONDA_BUILD", None) == "1"
+    return (
+        os.environ.get("CONDA_BUILD", None) == "1"
+        or os.environ.get("CONDA_EXE", None)
+    )
 
 
 def get_adccore_data():
@@ -63,6 +66,12 @@ def get_adccore_data():
         sys.path.insert(0, abspath)
 
     import AdcCore
+
+    if is_conda_build():
+        os.environ["LDFLAGS_LD"] = \
+            os.environ["LDFLAGS_LD"].replace("-dead_strip_dylibs", "")
+        os.environ["LDFLAGS"] = \
+            os.environ["LDFLAGS"].replace("-Wl,-dead_strip_dylibs", "")
 
     adccore = AdcCore.AdcCore()
     if not adccore.is_config_file_present \
