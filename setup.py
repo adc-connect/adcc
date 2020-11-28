@@ -53,7 +53,10 @@ adccore_version = ("0.14.4", "")  # (base version, unstable postfix)
 
 
 def is_conda_build():
-    return os.environ.get("CONDA_BUILD", None) == "1"
+    return (
+        os.environ.get("CONDA_BUILD", None) == "1"
+        or os.environ.get("CONDA_EXE", None)
+    )
 
 
 def get_adccore_data():
@@ -63,6 +66,13 @@ def get_adccore_data():
         sys.path.insert(0, abspath)
 
     import AdcCore
+
+    # TODO: find a more sustainable and clean solution ASAP
+    if is_conda_build():
+        os.environ["LDFLAGS_LD"] = \
+            os.environ["LDFLAGS_LD"].replace("-dead_strip_dylibs", "")
+        os.environ["LDFLAGS"] = \
+            os.environ["LDFLAGS"].replace("-Wl,-dead_strip_dylibs", "")
 
     adccore = AdcCore.AdcCore()
     if not adccore.is_config_file_present \
@@ -132,6 +142,7 @@ def adccsetup(*args, **kwargs):
     """Wrapper around setup, displaying a link to adc-connect.org on any error."""
     if is_conda_build():
         kwargs.pop("install_requires")
+        kwargs.pop("tests_require")
     try:
         setup(*args, **kwargs)
     except Exception as e:
