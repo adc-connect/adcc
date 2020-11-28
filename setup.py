@@ -48,7 +48,7 @@ except ImportError:
         pass
 
 # Version of the python bindings and adcc python package.
-__version__ = "0.15.2"
+__version__ = "0.15.3"
 adccore_version = ("0.14.4", "")  # (base version, unstable postfix)
 
 
