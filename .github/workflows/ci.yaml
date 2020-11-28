@@ -19,7 +19,7 @@ jobs:
         include:
           - {version: '3.6', os: ubuntu-latest}
           - {version: '3.8', os: ubuntu-latest}
-          - {version: '3.6', os: macOS-10.14  }
+          - {version: '3.6', os: macOS-10.15  }
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2

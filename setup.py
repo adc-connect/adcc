@@ -67,6 +67,7 @@ def get_adccore_data():
 
     import AdcCore
 
+    # TODO: find a more sustainable and clean solution ASAP
     if is_conda_build():
         os.environ["LDFLAGS_LD"] = \
             os.environ["LDFLAGS_LD"].replace("-dead_strip_dylibs", "")
