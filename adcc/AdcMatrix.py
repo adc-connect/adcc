@@ -433,7 +433,7 @@ class AdcMatrixCore:
         if method.is_core_valence_separated:
             variant = "cvs"
         self.__blocks = {
-            block: ppmatrix.block(hf_or_mp, block.split("_"), order=order,
+            block: ppmatrix.block(self.ground_state, block.split("_"), order=order,
                                   intermediates=self.intermediates,
                                   variant=variant)
             for block, order in block_orders.items() if order is not None
