@@ -20,16 +20,18 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import libadcc
+
 from math import sqrt
 
 from adcc import block as b
 from adcc.AdcMethod import AdcMethod
 from adcc.functions import einsum
+from adcc.Intermediates import Intermediates
 from adcc.AmplitudeVector import AmplitudeVector
 from adcc.OneParticleOperator import OneParticleOperator
-from .util import check_singles_amplitudes, check_doubles_amplitudes
 
-import libadcc
+from .util import check_doubles_amplitudes, check_singles_amplitudes
 
 
 def diffdm_adc0(mp, amplitude, intermediates):
@@ -104,8 +106,8 @@ def diffdm_cvs_adc2(mp, amplitude, intermediates):
     u2 = amplitude["d"]
 
     t2 = mp.t2(b.oovv)
-    p0_ov = intermediates.cv_p_ov
-    p0_vv = intermediates.cv_p_vv
+    p0_ov = intermediates.cvs_p0_ov
+    p0_vv = intermediates.cvs_p0_vv
     p1_vv = dm[b.vv].evaluate()  # ADC(1) diffdm
 
     # Zeroth order doubles contributions
@@ -161,7 +163,7 @@ def state_diffdm(method, ground_state, amplitude, intermediates=None):
         The ground state upon which the excitation was based
     amplitude : AmplitudeVector
         The amplitude vector
-    intermediates : AdcIntermediates
+    intermediates : adcc.Intermediates
         Intermediates from the ADC calculation to reuse
     """
     if not isinstance(method, AdcMethod):
@@ -171,7 +173,7 @@ def state_diffdm(method, ground_state, amplitude, intermediates=None):
     if not isinstance(amplitude, AmplitudeVector):
         raise TypeError("amplitude should be an AmplitudeVector object.")
     if intermediates is None:
-        intermediates = libadcc.AdcIntermediates(ground_state)
+        intermediates = Intermediates(ground_state)
 
     if method.name not in DISPATCH:
         raise NotImplementedError("state_diffdm is not implemented "

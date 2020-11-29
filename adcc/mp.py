@@ -43,6 +43,7 @@ def compute_mp2_diffdm(hf, mp, space, apply_cvs=None):
     elif apply_cvs is False:
         raise NotImplementedError("Not applying the CVS if reference has "
                                   "it is not yet implemented")
+    assert not hf.has_core_occupied_space or apply_cvs
 
     t2 = mp.t2(b.oovv)
     if space == "oo":

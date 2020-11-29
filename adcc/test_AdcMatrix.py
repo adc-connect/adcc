@@ -21,17 +21,17 @@
 ##
 ## ---------------------------------------------------------------------
 import adcc
-import libadcc
 import unittest
 import itertools
 import numpy as np
 
 from numpy.testing import assert_allclose
 
-from adcc.AdcMatrix import AdcMatrixShifted
+from adcc.AdcMatrix import AdcMatrixCore, AdcMatrixShifted
 from adcc.testdata.cache import cache
 
 from .misc import expand_test_templates
+from .Intermediates import Intermediates
 
 # Test diagonal, block-wise apply and matvec
 
@@ -99,15 +99,14 @@ class TestAdcMatrix(unittest.TestCase):
     def template_compute_block(self, case, method):
         matrix, matdata = self.construct_matrix(case, method)
         invec = self.construct_input(case, method)
-        outvec = invec.copy()
 
         for b1 in ["s", "d"]:
             for b2 in ["s", "d"]:
                 if f"result_{b1}{b2}" not in matdata:
                     continue
-                matrix.compute_apply(b1 + b2, invec[b2], outvec[b1])
+                ret = matrix.compute_apply(b1 + b2, invec[b2])
                 assert_allclose(matdata[f"result_{b1}{b2}"],
-                                outvec[b1].to_ndarray(),
+                                ret.to_ndarray(),
                                 rtol=1e-10, atol=1e-12)
 
 
@@ -162,22 +161,22 @@ class TestAdcMatrixInterface(unittest.TestCase):
     def test_intermediates_adc2(self):
         ground_state = adcc.LazyMp(cache.refstate["h2o_sto3g"])
         matrix = adcc.AdcMatrix("adc2", ground_state)
-        assert isinstance(matrix.intermediates, libadcc.AdcIntermediates)
-        intermediates = libadcc.AdcIntermediates(ground_state)
+        assert isinstance(matrix.intermediates, Intermediates)
+        intermediates = Intermediates(ground_state)
         matrix.intermediates = intermediates
         assert matrix.intermediates == intermediates
 
     def test_diagonal_adc2(self):
         ground_state = adcc.LazyMp(cache.refstate["h2o_sto3g"])
         matrix = adcc.AdcMatrix("adc2", ground_state)
-        cppmatrix = libadcc.AdcMatrix("adc2", ground_state)
+        cppmatrix = AdcMatrixCore("adc2", ground_state)
         diff = cppmatrix.diagonal("s") - matrix.diagonal("s")
         assert diff.dot(diff) < 1e-12
 
     def test_matvec_adc2(self):
         ground_state = adcc.LazyMp(cache.refstate["h2o_sto3g"])
         matrix = adcc.AdcMatrix("adc2", ground_state)
-        cppmatrix = libadcc.AdcMatrix("adc2", ground_state)
+        cppmatrix = AdcMatrixCore("adc2", ground_state)
 
         vectors = [adcc.guess_zero(matrix) for i in range(3)]
         for vec in vectors:
@@ -189,9 +188,9 @@ class TestAdcMatrixInterface(unittest.TestCase):
         refv = adcc.empty_like(v)
         refw = adcc.empty_like(w)
         refx = adcc.empty_like(x)
-        cppmatrix.compute_matvec(v.to_cpp(), refv.to_cpp())
-        cppmatrix.compute_matvec(w.to_cpp(), refw.to_cpp())
-        cppmatrix.compute_matvec(x.to_cpp(), refx.to_cpp())
+        refv = cppmatrix.compute_matvec(v)
+        refw = cppmatrix.compute_matvec(w)
+        refx = cppmatrix.compute_matvec(x)
 
         # @ operator (1 vector)
         resv = matrix @ v
@@ -207,13 +206,13 @@ class TestAdcMatrixInterface(unittest.TestCase):
             assert diffs[i]["d"].dot(diffs[i]["d"]) < 1e-12
 
         # compute matvec
-        matrix.compute_matvec(v, resv)
+        resv = matrix.compute_matvec(v)
         diffv = refv - resv
         assert diffv["s"].dot(diffv["s"]) < 1e-12
         assert diffv["d"].dot(diffv["d"]) < 1e-12
 
-        matrix.compute_apply("ss", v["s"], resv["s"])
-        cppmatrix.compute_apply("ss", v["s"], refv["s"])
+        resv["s"] = matrix.compute_apply("ss", v["s"])
+        refv["s"] = cppmatrix.compute_apply("ss", v["s"])
         diffv = resv["s"] - refv["s"]
         assert diffv.dot(diffv) < 1e-12
 

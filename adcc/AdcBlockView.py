@@ -20,13 +20,11 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import libadcc
 import numpy as np
 
 from .AdcMatrix import AdcMatrixlike
-from .functions import empty_like
 from .AmplitudeVector import AmplitudeVector
-
-import libadcc
 
 
 class AdcBlockView(AdcMatrixlike):
@@ -83,12 +81,10 @@ class AdcBlockView(AdcMatrixlike):
         self.__assert_block(block)
         return super().block_spaces(self.__block)
 
-    def compute_matvec(self, in_ampl, out_ampl=None):
+    def compute_matvec(self, in_ampl):
         """
         Compute the matrix-vector product of the ADC matrix
-        with an excitation amplitude and return the result
-        in the out_ampl if it is given, else the result
-        will be returned.
+        with an excitation amplitude and return the result.
         """
         # Unwrap input object, making sure we have two adcc.Tensors: one
         # for the input and one for the result
@@ -101,19 +97,9 @@ class AdcBlockView(AdcMatrixlike):
         elif not isinstance(in_ampl, libadcc.Tensor):
             raise TypeError("in_ampl has to be of type AmplitudeVector "
                             "or Tensor.")
-        if out_ampl is None:
-            out_ampl = empty_like(in_ampl)
-        elif isinstance(out_ampl, AmplitudeVector):
-            if not out_ampl.blocks == [self.__block]:
-                raise ValueError("out_ampl does not consist of the "
-                                 "correct blocks")
-            out_ampl = out_ampl[self.__block]
-        elif not isinstance(out_ampl, libadcc.Tensor):
-            raise TypeError("out_ampl has to be of type AmplitudeVector "
-                            "or Tensor.")
 
         # Compute the matrix-vector product
-        super().compute_apply(2 * self.__block, in_ampl, out_ampl)
+        out_ampl = super().compute_apply(2 * self.__block, in_ampl)
 
         if return_bare_tensors:
             return out_ampl
@@ -123,6 +109,6 @@ class AdcBlockView(AdcMatrixlike):
                 raise NotImplementedError
             return AmplitudeVector(out_ampl)
 
-    def compute_apply(self, block, in_ampl, out_ampl):
+    def compute_apply(self, block, in_ampl):
         self.__assert_block(block)
-        super().compute_apply(block, in_ampl, out_ampl)
+        return super().compute_apply(block, in_ampl)

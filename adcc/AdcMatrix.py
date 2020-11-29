@@ -271,25 +271,25 @@ class AdcMatrixlike:
         return out
 
 
-# Redirect some functions and properties to the innermatrix
-for wfun in ["compute_apply", "compute_matvec", "diagonal",
-             "has_block", "block_spaces"]:
-    def caller(self, *args, wfuncopy=wfun, **kwargs):
-        return getattr(self.innermatrix, wfuncopy)(*args, **kwargs)
-    if hasattr(libadcc.AdcMatrix, wfun):
-        caller.__doc__ = getattr(libadcc.AdcMatrix, wfun).__doc__
-    setattr(AdcMatrixlike, wfun, caller)
-
 for prop in ["reference_state", "ground_state", "mospaces",
              "is_core_valence_separated", "shape", "blocks", "timer"]:
     def caller(self, propcopy=prop):
         return getattr(self.innermatrix, propcopy)
-    caller.__doc__ = getattr(libadcc.AdcMatrix, prop).__doc__
     setattr(AdcMatrixlike, prop, property(caller))
 
 
+# TODO Get rid of the core class
 class AdcMatrix(AdcMatrixlike):
-    def __init__(self, method, hf_or_mp):
+    def __init__(self, *args, **kwargs):
+        super().__init__(AdcMatrixCore(*args, **kwargs))
+        self.method = self.innermatrix.method
+
+    def __repr__(self):
+        return f"AdcMatrix({self.method.name})"
+
+
+class AdcMatrixCore:
+    def __init__(self, method, hf_or_mp, block_orders=None, intermediates=None):
         """
         Initialise an ADC matrix.
 
@@ -299,89 +299,12 @@ class AdcMatrix(AdcMatrixlike):
             Method to use.
         hf_or_mp : adcc.ReferenceState or adcc.LazyMp
             HF reference or MP ground state
+        block_orders : optional
+            The order of perturbation theory to employ for each matrix block.
+            If not set, defaults according to the selected ADC method are chosen.
+        intermediates : adcc.Intermediates or NoneType
+            Allows to pass intermediates to re-use to this class.
         """
-        if not isinstance(method, AdcMethod):
-            method = AdcMethod(method)
-        if isinstance(hf_or_mp, (libadcc.ReferenceState,
-                                 libadcc.HartreeFockSolution_i)):
-            hf_or_mp = LazyMp(hf_or_mp)
-        if not isinstance(hf_or_mp, libadcc.LazyMp):
-            raise TypeError("mp_results is not a valid object. It needs to be "
-                            "either a LazyMp, a ReferenceState or a "
-                            "HartreeFockSolution_i.")
-
-        self.method = method
-        super().__init__(libadcc.AdcMatrix(method.name, hf_or_mp))
-
-    def compute_matvec(self, in_ampl, out_ampl=None):
-        """
-        Compute the matrix-vector product of the ADC matrix
-        with an excitation amplitude and return the result
-        in the out_ampl if it is given, else the result
-        will be returned.
-        """
-        if not isinstance(in_ampl, AmplitudeVector):
-            raise TypeError("in_ampl has to be of type AmplitudeVector.")
-
-        if out_ampl is None:
-            out_ampl = empty_like(in_ampl)
-        if not isinstance(out_ampl, AmplitudeVector):
-            raise TypeError("out_ampl has to be of type AmplitudeVector.")
-        self.innermatrix.compute_matvec(in_ampl.to_cpp(), out_ampl.to_cpp())
-        return out_ampl
-
-    def __repr__(self):
-        return f"AdcMatrix({self.method.name})"
-
-
-class AdcMatrixShifted(AdcMatrixlike):
-    def __init__(self, matrix, shift=0.0):
-        """
-        Initialise a shifted ADC matrix. Applying this class to a vector ``v``
-        represents an efficient version of ``matrix @ v + shift * v``.
-
-        Parameters
-        ----------
-        matrix : AdcMatrixlike
-            Matrix which is shifted
-        shift : float
-            Value by which to shift the matrix
-        """
-        super().__init__(matrix)
-        self.shift = shift
-
-    def compute_matvec(self, in_ampl, out_ampl=None):
-        out = self.innermatrix.compute_matvec(in_ampl, out_ampl)
-        out = out + self.shift * in_ampl
-        return out
-
-    def to_dense_matrix(self, out=None):
-        self.innermatrix.to_dense_matrix(self, out)
-        out = out + self.shift * np.eye(*out.shape)
-        return out
-
-    def compute_apply(self, block, in_vec, out_vec):
-        self.innermatrix.compute_apply(block, in_vec, out_vec)
-        if block[0] == block[1]:  # Diagonal block
-            out_vec += self.shift * in_vec
-        return out_vec
-
-    def diagonal(self, block):
-        out = self.innermatrix.diagonal(block)
-        out = out + self.shift  # Shift the diagonal
-        return out
-
-
-#
-# TODO The new AdcMatrix
-#
-class AdcMatrixPython(AdcMatrixlike):
-    def __init__(self, *args, **kwargs):
-        super().__init__(AdcMatrixCore(*args, **kwargs))
-
-
-class AdcMatrixCore:
-    def __init__(self, method, hf_or_mp, block_orders=None, intermediates=None):
         if isinstance(hf_or_mp, (libadcc.ReferenceState,
                                  libadcc.HartreeFockSolution_i)):
             hf_or_mp = LazyMp(hf_or_mp)
@@ -478,8 +401,7 @@ class AdcMatrixCore:
                                 if bl.diagonal and "d" in bl.diagonal.blocks
                                 and bl.diagonal.pphh))
 
-    def compute_apply(self, block, tensor, out):
-        # TODO Drop out parameter (unused here anyway)
+    def compute_apply(self, block, tensor):
         # TODO A lot of junk code to get compatibility to the old interface
         key = {"ss": "ph_ph", "sd": "ph_pphh",
                "ds": "pphh_ph", "dd": "pphh_pphh"}[block]
@@ -528,3 +450,51 @@ class AdcMatrixCore:
 
     def block_spaces(self, block):  # TODO This should be deprecated
         return self.__block_spaces[block]
+
+
+# Redirect some functions and properties of AdcMatrixlike to the innermatrix
+for wfun in ["compute_apply", "compute_matvec", "diagonal",
+             "has_block", "block_spaces"]:
+    def caller(self, *args, wfuncopy=wfun, **kwargs):
+        return getattr(self.innermatrix, wfuncopy)(*args, **kwargs)
+    if hasattr(AdcMatrixCore, wfun):
+        caller.__doc__ = getattr(AdcMatrixCore, wfun).__doc__
+    setattr(AdcMatrixlike, wfun, caller)
+
+
+class AdcMatrixShifted(AdcMatrixlike):
+    def __init__(self, matrix, shift=0.0):
+        """
+        Initialise a shifted ADC matrix. Applying this class to a vector ``v``
+        represents an efficient version of ``matrix @ v + shift * v``.
+
+        Parameters
+        ----------
+        matrix : AdcMatrixlike
+            Matrix which is shifted
+        shift : float
+            Value by which to shift the matrix
+        """
+        super().__init__(matrix)
+        self.shift = shift
+
+    def compute_matvec(self, in_ampl):
+        out = self.innermatrix.compute_matvec(in_ampl)
+        out = out + self.shift * in_ampl
+        return out
+
+    def to_dense_matrix(self, out=None):
+        self.innermatrix.to_dense_matrix(self, out)
+        out = out + self.shift * np.eye(*out.shape)
+        return out
+
+    def compute_apply(self, block, in_vec):
+        ret = self.innermatrix.compute_apply(block, in_vec)
+        if block[0] == block[1]:  # Diagonal block
+            ret += self.shift * in_vec
+        return ret
+
+    def diagonal(self, block):
+        out = self.innermatrix.diagonal(block)
+        out = out + self.shift  # Shift the diagonal
+        return out

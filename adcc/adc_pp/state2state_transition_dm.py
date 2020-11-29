@@ -20,14 +20,16 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import libadcc
+
 from adcc import block as b
 from adcc.AdcMethod import AdcMethod
 from adcc.functions import einsum
+from adcc.Intermediates import Intermediates
 from adcc.AmplitudeVector import AmplitudeVector
 from adcc.OneParticleOperator import OneParticleOperator
-from .util import check_singles_amplitudes, check_doubles_amplitudes
 
-import libadcc
+from .util import check_doubles_amplitudes, check_singles_amplitudes
 
 
 def s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates):
@@ -126,7 +128,7 @@ def state2state_transition_dm(method, ground_state, amplitude_from,
         The amplitude vector of the state to start from
     amplitude_to : AmplitudeVector
         The amplitude vector of the state to excite to
-    intermediates : AdcIntermediates
+    intermediates : adcc.Intermediates
         Intermediates from the ADC calculation to reuse
     """
     if not isinstance(method, AdcMethod):
@@ -138,7 +140,7 @@ def state2state_transition_dm(method, ground_state, amplitude_from,
     if not isinstance(amplitude_to, AmplitudeVector):
         raise TypeError("amplitude_to should be an AmplitudeVector object.")
     if intermediates is None:
-        intermediates = libadcc.AdcIntermediates(ground_state)
+        intermediates = Intermediates(ground_state)
 
     if method.name not in DISPATCH:
         raise NotImplementedError("state2state_transition_dm is not implemented "

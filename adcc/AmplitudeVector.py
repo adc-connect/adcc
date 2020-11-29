@@ -20,7 +20,6 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import libadcc
 
 BLOCK_LABELS = ["s", "d", "t"]
 
@@ -53,13 +52,6 @@ class AmplitudeVector:
 
     # TODO Attach some information about this Amplitude, e.g.
     #      is it CVS?
-
-    def to_cpp(self):
-        """
-        Return the C++ equivalent of this object.
-        This is needed at the interface to the C++ code.
-        """
-        return libadcc.AmplitudeVector(tuple(self.tensors))
 
     @property
     def blocks(self):

@@ -20,14 +20,15 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import libadcc
+
 from math import sqrt
 
 from adcc import block as b
 from adcc.AdcMethod import AdcMethod
 from adcc.functions import einsum, evaluate
+from adcc.Intermediates import Intermediates
 from adcc.AmplitudeVector import AmplitudeVector
-
-import libadcc
 
 
 def mtm_adc0(mp, dipop, intermediates):
@@ -67,8 +68,8 @@ def mtm_cvs_adc0(mp, dipop, intermediates):
 def mtm_cvs_adc2(mp, dipop, intermediates):
     f1 = (
         + dipop[b.cv]
-        - einsum("Ib,ba->Ia", dipop[b.cv], intermediates.cv_p_vv)
-        - einsum("Ij,ja->Ia", dipop[b.co], intermediates.cv_p_ov)
+        - einsum("Ib,ba->Ia", dipop[b.cv], intermediates.cvs_p0_vv)
+        - einsum("Ij,ja->Ia", dipop[b.co], intermediates.cvs_p0_ov)
     )
     f2 = (1 / sqrt(2)) * einsum("Ik,kjab->jIab", dipop[b.co], mp.t2(b.oovv))
     return AmplitudeVector(f1, f2)
@@ -98,7 +99,7 @@ def modified_transition_moments(method, ground_state, dipole_operator=None,
     dipole_operator : adcc.OneParticleOperator or list, optional
         Only required if different dipole operators than the standard
         dipole operators in the MO basis should be used.
-    intermediates : AdcIntermediates
+    intermediates : adcc.Intermediates
         Intermediates from the ADC calculation to reuse
 
     Returns
@@ -110,7 +111,7 @@ def modified_transition_moments(method, ground_state, dipole_operator=None,
     if not isinstance(ground_state, libadcc.LazyMp):
         raise TypeError("ground_state should be a LazyMp object.")
     if intermediates is None:
-        intermediates = libadcc.AdcIntermediates(ground_state)
+        intermediates = Intermediates(ground_state)
 
     unpack = False
     if dipole_operator is None:

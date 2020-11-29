@@ -233,7 +233,7 @@ def timed_call(f):
     return decorated
 
 
-def timed_member_call(timer):
+def timed_member_call(timer="timer"):
     """
     Decorator to automatically time calls to instance member functions.
     The name of the instance attribute where timings are stored is the
