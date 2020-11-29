@@ -25,7 +25,7 @@ import numpy as np
 
 from .LazyMp import LazyMp
 from .adc_pp import matrix as ppmatrix
-from .timings import Timer
+from .timings import Timer, timed_member_call
 from .AdcMethod import AdcMethod
 from .functions import empty_like, evaluate
 from .Intermediates import Intermediates
@@ -393,6 +393,7 @@ class AdcMatrixCore:
         if not isinstance(method, AdcMethod):
             method = AdcMethod(method)
 
+        self.timer = Timer()
         self.method = method
         self.ground_state = hf_or_mp
         self.reference_state = hf_or_mp.reference_state
@@ -424,7 +425,7 @@ class AdcMatrixCore:
             raise ValueError("pphh_pphh cannot be node if ph_pphh isn't.")
 
         if intermediates is None:
-            self.intermediates = Intermediates()
+            self.intermediates = Intermediates(self.ground_state)
         else:
             self.intermediates = intermediates
 
@@ -456,10 +457,7 @@ class AdcMatrixCore:
                 self.__block_spaces["d"] = ["o1", "o1", "v1", "v1"]
         self.blocks = list(self.__block_spaces.keys())
 
-    @property
-    def timer(self):
-        return Timer()  # TODO Implement properly
-
+    @timed_member_call()
     def diagonal(self, block):
         if block not in self.blocks:
             raise ValueError("block not in blocks")
@@ -489,14 +487,22 @@ class AdcMatrixCore:
             ampl = AmplitudeVector(ph=tensor)
         else:
             ampl = AmplitudeVector(pphh=tensor)
-        ret = self.__blocks[key].apply(ampl)
+        with self.timer.record("apply/" + block):
+            ret = self.__blocks[key].apply(ampl)
 
         if block[0] == "s":
             return ret.ph
         else:
             return ret.pphh
 
+    @timed_member_call()
     def compute_matvec(self, ampl):
+        """
+        Compute the matrix-vector product of the ADC matrix
+        with an excitation amplitude and return the result
+        in the out_ampl if it is given, else the result
+        will be returned.
+        """
         # TODO Once properly supported in AmplitudeVector, this should be
         # return sum(bl.apply(ampl) for bl in self.__blocks.values())
 

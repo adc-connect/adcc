@@ -23,6 +23,8 @@
 from adcc import block as b
 from adcc.functions import direct_sum, einsum
 
+from .Intermediates import register_as_intermediate
+
 # TODO Maybe merge this with LazyMp ??
 
 
@@ -53,3 +55,21 @@ def compute_mp2_diffdm(hf, mp, space, apply_cvs=None):
         return 0.5 * einsum("ijac,ijbc->ab", t2, t2)
     else:
         raise NotImplementedError(f"Space {space} not implemented.")
+
+
+#
+# Register cvs_p0 intermedites
+#
+@register_as_intermediate
+def cvs_p0_oo(hf, mp, intermediates):
+    return compute_mp2_diffdm(hf, mp, "oo", apply_cvs=True)
+
+
+@register_as_intermediate
+def cvs_p0_ov(hf, mp, intermediates):
+    return compute_mp2_diffdm(hf, mp, "ov", apply_cvs=True)
+
+
+@register_as_intermediate
+def cvs_p0_vv(hf, mp, intermediates):
+    return compute_mp2_diffdm(hf, mp, "vv", apply_cvs=True)

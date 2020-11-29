@@ -23,6 +23,7 @@
 import libadcc
 import numpy as np
 
+from .mp import compute_mp2_diffdm  # noqa: F401
 from .misc import cached_property
 from .ReferenceState import ReferenceState
 from .caching_policy import DefaultCachingPolicy

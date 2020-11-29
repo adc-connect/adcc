@@ -25,10 +25,8 @@ from collections import namedtuple
 
 from adcc import block as b
 from adcc.functions import direct_sum, einsum, zeros_like
-from adcc.Intermediates import Intermediates
+from adcc.Intermediates import Intermediates, register_as_intermediate
 from adcc.AmplitudeVector import AmplitudeVector
-
-from ..mp import compute_mp2_diffdm
 
 __all__ = ["block"]
 
@@ -42,6 +40,10 @@ __all__ = ["block"]
 #      Think a bit about the anonymous intermediates, which of these could, should
 #      be put into the intermediates datastructure and which not.
 
+# Move the diagonal function inside the block function (i.e. just evaluate the
+# diagonal inside the block function) unless the diagonal function is reused for
+# a higher order. This probably allows to get rid of some code.
+
 #
 # Dispatch routine
 #
@@ -54,8 +56,7 @@ containing the expression to the diagonal of the ADC matrix from this block.
 AdcBlock = namedtuple("AdcBlock", ["apply", "diagonal"])
 
 
-def block(ground_state, spaces, order, variant=None,
-          intermediates=Intermediates()):
+def block(ground_state, spaces, order, variant=None, intermediates=None):
     """
     Gets ground state, potentially intermediates, spaces (ph, pphh and so on)
     and the perturbation theory order for the block,
@@ -70,6 +71,8 @@ def block(ground_state, spaces, order, variant=None,
     elif variant is None:
         variant = []
     reference_state = ground_state.reference_state
+    if intermediates is None:
+        intermediates = Intermediates(ground_state)
 
     if ground_state.has_core_occupied_space and "cvs" not in variant:
         raise ValueError("Cannot run a general (non-core-valence approximated) "
@@ -290,13 +293,8 @@ def block_ph_ph_2(hf, mp, intermediates):
     #      How about precomputing the contractions
     #      ijab,jkbc,kc->ia and ijab,jkbc,kc->ia ?
     #
-    # TODO Could it be that the mp.t2oo and hf.oovv contractions
-    #      in the apply function are already available as t2eri intermediates?
-    #      for sure it might make sense to precompute them
-    i1_expr = 0.5 * einsum("ijac,ijbc->ab", mp.t2oo, hf.oovv).symmetrise()
-    i2_expr = 0.5 * einsum("ikab,jkab->ij", mp.t2oo, hf.oovv).symmetrise()
-    i1 = intermediates.push("adc2_i1", i1_expr)
-    i2 = intermediates.push("adc2_i2", i2_expr)
+    i1 = intermediates.adc2_i1
+    i2 = intermediates.adc2_i2
     i1f = (hf.fvv + i1).evaluate()
     i2f = (hf.foo - i2).evaluate()
     term_t2_eri = (
@@ -315,7 +313,8 @@ def block_ph_ph_2(hf, mp, intermediates):
 
 
 def block_ph_pphh_2(hf, mp, intermediates):
-    # TODO These two are identical with the intermediates in block_ph_pphh
+    # TODO These two are identical with the intermediates in block_pphh_ph
+    #      These are related to the pia and pib intermediates of adcman
     term_ooov = (
         + hf.ooov                                            # 1st order
         - 2.0 * mp.t2eri(b.ooov, b.ov).antisymmetrise(0, 1)  # 2nd order
@@ -339,6 +338,7 @@ def block_ph_pphh_2(hf, mp, intermediates):
 
 def block_pphh_ph_2(hf, mp, intermediates):
     # TODO These two are identical with the intermediates in block_ph_pphh
+    #      These are related to the pia and pib intermediates of adcman
     term_ooov = (
         + hf.ooov                                            # 1st order
         - 2.0 * mp.t2eri(b.ooov, b.ov).antisymmetrise(0, 1)  # 2nd order
@@ -376,8 +376,7 @@ def diagonal_cvs_ph_ph_2(hf, mp, intermediates):
 
 
 def block_cvs_ph_ph_2(hf, mp, intermediates):
-    i1_expr = 0.5 * einsum("ijac,ijbc->ab", mp.t2oo, hf.oovv).symmetrise()
-    i1 = intermediates.push("adc2_i1", i1_expr)
+    i1 = intermediates.adc2_i1
     i1f = (hf.fvv + i1).evaluate()  # TODO Maybe make this part of i1?
 
     def apply(ampl):
@@ -391,6 +390,7 @@ def block_cvs_ph_ph_2(hf, mp, intermediates):
 
 def block_cvs_ph_pphh_2(hf, mp, intermediates):
     # TODO These two terms could be evaluated and stored as intermediates
+    # Some of these terms also occurr in block_cvs_pphh_ph_2
     term_occv = (einsum("jIKb,ljcb->lKIc", hf.occv, mp.t2oo) - hf.occv).evaluate()
     term_ovvv = (0.5 * einsum("jmla,jmcd->lacd", hf.ooov, mp.t2oo) - hf.ovvv).evaluate()
 
@@ -425,39 +425,34 @@ def block_cvs_pphh_ph_2(hf, mp, intermediates):
 #
 # 3rd order general and CVS
 #
-def diagonal_ph_ph_3(hf, mp, intermediates):
-    m11 = intermediates.adc3_m11
-    return AmplitudeVector(ph=einsum("iaia->ia", m11))
-
-
-def diagonal_cvs_ph_ph_3(hf, mp, intermediates):
-    m11 = intermediates.cvs_adc3_m11
-    return AmplitudeVector(ph=einsum("iaia->ia", m11))
-
-
 def block_ph_ph_3(hf, mp, intermediates):
-    m11 = intermediates.push(
-        "adc3_m11", lambda: compute_adc3_m11(hf, mp, intermediates)
-    )
+    if hf.has_core_occupied_space:
+        m11 = intermediates.cvs_adc3_m11
+    else:
+        m11 = intermediates.adc3_m11
+    diagonal = AmplitudeVector(ph=einsum("iaia->ia", m11))
 
     def apply(ampl):
         return AmplitudeVector(ph=einsum("iajb,jb->ia", m11, ampl.ph))
-    return AdcBlock(apply, diagonal_ph_ph_3(hf, mp, intermediates))
+    return AdcBlock(apply, diagonal)
 
 
-def block_cvs_ph_ph_3(hf, mp, intermediates):
-    m11 = intermediates.push(
-        "cvs_adc3_m11", lambda: compute_cvs_adc3_m11(hf, mp, intermediates)
-    )
-
-    def apply(ampl):
-        return AmplitudeVector(ph=einsum("iajb,jb->ia", m11, ampl.ph))
-    return AdcBlock(apply, diagonal_cvs_ph_ph_3(hf, mp, intermediates))
+block_cvs_ph_ph_3 = block_ph_ph_3
 
 
 #
-# 3rd order intermediates
+# Intermediates
 #
+
+@register_as_intermediate
+def adc2_i1(hf, mp, intermediates):
+    return 0.5 * einsum("ijac,ijbc->ab", mp.t2oo, hf.oovv).symmetrise()
+
+
+@register_as_intermediate
+def adc2_i2(hf, mp, intermediates):
+    return 0.5 * einsum("ikab,jkab->ij", mp.t2oo, hf.oovv).symmetrise()
+
 
 def adc3_i1(hf, mp, intermediates):
     # Used for both CVS and general
@@ -517,7 +512,8 @@ def cvs_adc3_i2(hf, mp, intermediates):
     )
 
 
-def compute_adc3_m11(hf, mp, intermediates):
+@register_as_intermediate
+def adc3_m11(hf, mp, intermediates):
     td2 = mp.td2(b.oovv)
     p0_ov = mp.mp2_diffdm[b.ov]
     p0_oo = mp.mp2_diffdm[b.oo]
@@ -563,14 +559,8 @@ def compute_adc3_m11(hf, mp, intermediates):
     )
 
 
-def compute_cvs_adc3_m11(hf, mp, intermediates):
-    intermediates.push("cvs_p0_oo",
-                       compute_mp2_diffdm(hf, mp, "oo", apply_cvs=True))
-    intermediates.push("cvs_p0_ov",
-                       compute_mp2_diffdm(hf, mp, "ov", apply_cvs=True))
-    intermediates.push("cvs_p0_vv",
-                       compute_mp2_diffdm(hf, mp, "vv", apply_cvs=True))
-
+@register_as_intermediate
+def cvs_adc3_m11(hf, mp, intermediates):
     i1 = adc3_i1(hf, mp, intermediates).evaluate()
     i2 = cvs_adc3_i2(hf, mp, intermediates).evaluate()
     t2sq = einsum("ikac,jkbc->iajb", mp.t2oo, mp.t2oo).evaluate()

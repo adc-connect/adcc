@@ -24,34 +24,52 @@ from .timings import Timer
 from .functions import evaluate
 
 
-class Intermediates(dict):
+class Intermediates():
     """
-    TODO docme
+    Class offering to return a number of intermediate tensors.
+    The tensors are cached internally for later reuse
     """
-    def __init__(self):
-        super().__init__()
+    generators = {}      # Registered generator functions
+
+    def __init__(self, ground_state):
+        self.ground_state = ground_state
+        self.reference_state = ground_state.reference_state
         self.timer = Timer()
+        self.cached_tensors = {}  # Cached tensors
         # TODO Make caching configurable ??
 
-    def push(self, key, expression_or_function):
-        """
-        Register an intermediate using a particular key.
-        The second argument can either be an expression to evaluate or
-        a function to call for obtaining the evaluated intermediate tensor.
-        This will be done instantly in case the intermediate is not yet known
-        and the result returned.
-        """
-        if not self.__contains__(key):
-            with self.timer.record(key):
-                if callable(expression_or_function):
-                    tensor = evaluate(expression_or_function())
-                else:
-                    tensor = evaluate(expression_or_function)
-            self.__setitem__(key, tensor)
-        return self.__getitem__(key)
-
     def __getattr__(self, key):
-        if self.__contains__(key):
-            return self.__getitem__(key)
+        if key in self.cached_tensors:
+            return self.cached_tensors[key]
+        elif key in self.generators:
+            # Evaluate the tensor, all generators take (hf, mp, intermediates)
+            generator = self.generators[key]
+            with self.timer.record(key):
+                tensor = generator(self.reference_state, self.ground_state, self)
+                self.cached_tensors[key] = evaluate(tensor)
+            return self.cached_tensors[key]
         else:
             raise AttributeError
+
+    def clear(self):
+        """Clear all cached tensors to free storage"""
+        self.cached_tensors.clear()
+
+    def __repr__(self):
+        return (
+            "AdcIntermediates(contains="
+            + list(self.cached_tensors.keys()).join(",")
+            + ")"
+        )
+
+
+def register_as_intermediate(function):
+    """
+    This decorator allows to register a function such that it can
+    be used to produce intermediates for storage in Intermediates.
+    The rule of thumb is that this should only be used on expressions
+    which are used in multiple places of the ADC code (e.g. properties
+    and matrix, multiple ADC variants etc.)
+    """
+    Intermediates.generators[function.__name__] = function
+    return function
