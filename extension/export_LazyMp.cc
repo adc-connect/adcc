@@ -17,7 +17,6 @@
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include "caching_policy_hack.hh"
 #include "convert_timer.hh"
 #include <adcc/LazyMp.hh>
 #include <adcc/ReferenceState.hh>
@@ -34,8 +33,6 @@ void export_LazyMp(py::module& m) {
         "Class representing information about the Mo/ller-Plesset results from ADCman. "
         "Python binding to :cpp:class:`adcc::LazyMp`.")
         .def(py::init<std::shared_ptr<const ReferenceState>>())
-        .def(py::init<std::shared_ptr<const ReferenceState>,
-                      std::shared_ptr<CachingPolicy_i>>())
         .def(py::init<const LazyMp&>())
         .def("energy_correction", &LazyMp::energy_correction,
              "Obtain the appropriate MP energy correction.")

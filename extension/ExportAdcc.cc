@@ -27,7 +27,6 @@ namespace adcc {
 namespace py_iface {
 void export_AdcMemory(py::module& m);
 void export_amplitude_vector_enforce_spin_kind(py::module& m);
-void export_CachingPolicy(py::module& m);
 void export_guesses(py::module& m);
 void export_HartreeFockProvider(py::module& m);
 void export_LazyMp(py::module& m);
@@ -46,8 +45,6 @@ PYBIND11_MODULE(libadcc, m) {
 
   pyif::export_AdcMemory(m);
   pyif::export_threading(m);
-  pyif::export_CachingPolicy(m);
-
   pyif::export_HartreeFockProvider(m);
   pyif::export_MoSpaces(m);
   pyif::export_Symmetry(m);

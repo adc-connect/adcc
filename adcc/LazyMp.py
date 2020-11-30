@@ -26,12 +26,11 @@ import numpy as np
 from .mp import compute_mp2_diffdm  # noqa: F401
 from .misc import cached_property
 from .ReferenceState import ReferenceState
-from .caching_policy import DefaultCachingPolicy
 from .OneParticleOperator import OneParticleOperator, product_trace
 
 
 class LazyMp(libadcc.LazyMp):
-    def __init__(self, hf, caching_policy=DefaultCachingPolicy()):
+    def __init__(self, hf):
         """
         Initialise the class dealing with the M/oller-Plesset ground state.
         """
@@ -44,7 +43,7 @@ class LazyMp(libadcc.LazyMp):
         if not isinstance(hf, ReferenceState):
             raise TypeError("hf needs to be a ReferenceState "
                             "or a HartreeFockSolution_i")
-        super().__init__(hf, caching_policy)
+        super().__init__(hf)
 
     def __getattr__(self, attr):
         from . import block as b

@@ -23,14 +23,12 @@
 import os
 import ast
 import adcc
+import yaml
 import numpy as np
 
 from adcc import AdcMatrix, ExcitedStates, LazyMp, guess_zero, hdf5io
 from adcc.misc import cached_property
 from adcc.solver import EigenSolverStateBase
-from adcc.caching_policy import CacheAllPolicy
-
-import yaml
 
 
 class AdcMockState(EigenSolverStateBase):
@@ -39,7 +37,7 @@ class AdcMockState(EigenSolverStateBase):
 
 
 def make_mock_adc_state(refstate, matmethod, kind, reference):
-    ground_state = LazyMp(refstate, CacheAllPolicy())
+    ground_state = LazyMp(refstate)
     matrix = AdcMatrix(matmethod, ground_state)
 
     # Number of full state results

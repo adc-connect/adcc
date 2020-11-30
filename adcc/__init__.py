@@ -39,7 +39,6 @@ from .State2States import State2States
 from .ExcitedStates import ExcitedStates
 from .DataHfProvider import DataHfProvider, DictHfProvider
 from .ReferenceState import ReferenceState
-from .caching_policy import DefaultCachingPolicy, GatherStatisticsPolicy
 from .AmplitudeVector import AmplitudeVector
 from .OneParticleOperator import OneParticleOperator
 from .opt_einsum_integration import register_with_opt_einsum
@@ -59,8 +58,7 @@ __all__ = ["run_adc", "InputError", "AdcMatrix", "AdcBlockView", "AdcMatrixlike"
            "HartreeFockProvider", "ExcitedStates", "State2States",
            "Tensor", "DictHfProvider", "DataHfProvider", "OneParticleOperator",
            "guesses_singlet", "guesses_triplet", "guesses_any",
-           "guess_symmetries", "guesses_spin_flip", "guess_zero",
-           "DefaultCachingPolicy", "GatherStatisticsPolicy", "LazyMp",
+           "guess_symmetries", "guesses_spin_flip", "guess_zero", "LazyMp",
            "adc0", "cis", "adc1", "adc2", "adc2x", "adc3",
            "cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x", "cvs_adc3",
            "banner"]
