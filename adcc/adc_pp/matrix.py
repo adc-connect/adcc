@@ -30,17 +30,18 @@ from adcc.AmplitudeVector import AmplitudeVector
 
 __all__ = ["block"]
 
-# TODO Extend AmplitudeVector to cases where only the doubles block is present.
+# TODO One thing one could still do to improve timings is implement a "fast einsum"
+#      that does not call opt_einsum, but directly dispatches to libadcc. This could
+#      lower the call overhead in the applies for the cases where we have only a
+#      trivial einsum to do. For the moment I'm not convinced that is worth the
+#      effort ... I suppose it only makes a difference for the cheaper ADC variants
+#      (ADC(0), ADC(1), CVS-ADC(0-2)-x), but then on the other hand they are not
+#      really so much our focus.
 
-# TODO
-# Move the diagonal function inside the block function (i.e. just evaluate the
-# diagonal inside the block function) unless the diagonal function is reused for
-# a higher order. This probably allows to get rid of some code.
 
 #
 # Dispatch routine
 #
-
 """
 `apply` is a function mapping an AmplitudeVector to the contribution of this
 block to the result of applying the ADC matrix. `diagonal` is an `AmplitudeVector`
@@ -85,30 +86,22 @@ def block(ground_state, spaces, order, variant=None, intermediates=None):
 
 
 #
-# 0th order general
+# 0th order main
 #
-def diagonal_ph_ph_0(hf):
-    fCC = hf.fcc if hf.has_core_occupied_space else hf.foo
-    return AmplitudeVector(ph=direct_sum("a-i->ia", hf.fvv.diagonal(),
-                                         fCC.diagonal()))
-
-
 def block_ph_ph_0(hf, mp, intermediates):
+    fCC = hf.fcc if hf.has_core_occupied_space else hf.foo
+    diagonal = AmplitudeVector(ph=direct_sum("a-i->ia", hf.fvv.diagonal(),
+                                             fCC.diagonal()))
+
     def apply(ampl):
-        fCC = hf.fcc if hf.has_core_occupied_space else hf.foo
         return AmplitudeVector(ph=(
             + einsum("ib,ab->ia", ampl.ph, hf.fvv)
             - einsum("IJ,Ja->Ia", fCC, ampl.ph)
         ))
-    return AdcBlock(apply, diagonal_ph_ph_0(hf))
+    return AdcBlock(apply, diagonal)
 
 
-def block_ph_pphh_0(hf, mp, intermediates):
-    return AdcBlock(lambda ampl: 0, 0)
-
-
-def block_pphh_ph_0(hf, mp, intermediates):
-    return AdcBlock(lambda ampl: 0, 0)
+block_cvs_ph_ph_0 = block_ph_ph_0
 
 
 def diagonal_pphh_pphh_0(hf):
@@ -130,16 +123,6 @@ def block_pphh_pphh_0(hf, mp, intermediates):
     return AdcBlock(apply, diagonal_pphh_pphh_0(hf))
 
 
-#
-# 0th order CVS
-#
-diagonal_cvs_ph_ph_0 = diagonal_ph_ph_0
-diagonal_cvs_pphh_pphh_0 = diagonal_pphh_pphh_0
-block_cvs_ph_ph_0 = block_ph_ph_0
-block_cvs_ph_pphh_0 = block_ph_pphh_0
-block_cvs_pphh_ph_0 = block_pphh_ph_0
-
-
 def block_cvs_pphh_pphh_0(hf, mp, intermediates):
     def apply(ampl):
         return AmplitudeVector(pphh=(
@@ -147,20 +130,34 @@ def block_cvs_pphh_pphh_0(hf, mp, intermediates):
             - einsum("ik,kJab->iJab", hf.foo, ampl.pphh)
             - einsum("JK,iKab->iJab", hf.fcc, ampl.pphh)
         ))
-    return AdcBlock(apply, diagonal_cvs_pphh_pphh_0(hf))
+    return AdcBlock(apply, diagonal_pphh_pphh_0(hf))
 
 
 #
-# 1st order general
+# 0th order coupling
 #
-def diagonal_ph_ph_1(hf):
-    CvCv = hf.cvcv if hf.has_core_occupied_space else hf.ovov
-    return diagonal_ph_ph_0(hf) - AmplitudeVector(ph=einsum("IaIa->Ia", CvCv))
+def block_ph_pphh_0(hf, mp, intermediates):
+    return AdcBlock(lambda ampl: 0, 0)
 
 
+def block_pphh_ph_0(hf, mp, intermediates):
+    return AdcBlock(lambda ampl: 0, 0)
+
+
+block_cvs_ph_pphh_0 = block_ph_pphh_0
+block_cvs_pphh_ph_0 = block_pphh_ph_0
+
+
+#
+# 1st order main
+#
 def block_ph_ph_1(hf, mp, intermediates):
     fCC = hf.fcc if hf.has_core_occupied_space else hf.foo
     CvCv = hf.cvcv if hf.has_core_occupied_space else hf.ovov
+    diagonal = AmplitudeVector(ph=(
+        + direct_sum("a-i->ia", hf.fvv.diagonal(), fCC.diagonal())  # order 0
+        - einsum("IaIa->Ia", CvCv)  # order 1
+    ))
 
     def apply(ampl):
         return AmplitudeVector(ph=(                 # PT order
@@ -168,25 +165,10 @@ def block_ph_ph_1(hf, mp, intermediates):
             - einsum("IJ,Ja->Ia", fCC, ampl.ph)     # 0
             - einsum("JaIb,Jb->Ia", CvCv, ampl.ph)  # 1
         ))
-    return AdcBlock(apply, diagonal_ph_ph_1(hf))
+    return AdcBlock(apply, diagonal)
 
 
-def block_ph_pphh_1(hf, mp, intermediates):
-    def apply(ampl):
-        return AmplitudeVector(ph=(
-            + einsum("jkib,jkab->ia", hf.ooov, ampl.pphh)
-            + einsum("ijbc,jabc->ia", ampl.pphh, hf.ovvv)
-        ))
-    return AdcBlock(apply, 0)
-
-
-def block_pphh_ph_1(hf, mp, intermediates):
-    def apply(ampl):
-        return AmplitudeVector(pphh=(
-            + einsum("ic,jcab->ijab", ampl.ph, hf.ovvv).antisymmetrise(0, 1)
-            - einsum("ijka,kb->ijab", hf.ooov, ampl.ph).antisymmetrise(2, 3)
-        ))
-    return AdcBlock(apply, 0)
+block_cvs_ph_ph_1 = block_ph_ph_1
 
 
 def diagonal_pphh_pphh_1(hf):
@@ -224,33 +206,6 @@ def block_pphh_pphh_1(hf, mp, intermediates):
     return AdcBlock(apply, diagonal_pphh_pphh_1(hf))
 
 
-#
-# 1st order CVS
-#
-diagonal_cvs_ph_ph_1 = diagonal_ph_ph_1
-block_cvs_ph_ph_1 = block_ph_ph_1
-diagonal_cvs_pphh_pphh_1 = diagonal_pphh_pphh_1
-
-
-def block_cvs_ph_pphh_1(hf, mp, intermediates):
-    def apply(ampl):
-        return AmplitudeVector(ph=(
-            + sqrt(2) * einsum("jKIb,jKab->Ia", hf.occv, ampl.pphh)
-            - 1 / sqrt(2) * einsum("jIbc,jabc->Ia", ampl.pphh, hf.ovvv)
-        ))
-    return AdcBlock(apply, 0)
-
-
-def block_cvs_pphh_ph_1(hf, mp, intermediates):
-    def apply(ampl):
-        return AmplitudeVector(pphh=(
-            + sqrt(2) * einsum("jIKb,Ka->jIab",
-                               hf.occv, ampl.ph).antisymmetrise(2, 3)
-            - 1 / sqrt(2) * einsum("Ic,jcab->jIab", ampl.ph, hf.ovvv)
-        ))
-    return AdcBlock(apply, 0)
-
-
 def block_cvs_pphh_pphh_1(hf, mp, intermediates):
     def apply(ampl):
         return AmplitudeVector(pphh=(
@@ -266,27 +221,60 @@ def block_cvs_pphh_pphh_1(hf, mp, intermediates):
             + 1.0 * einsum("iJlK,lKab->iJab", hf.ococ, ampl.pphh)
             + 0.5 * einsum("iJcd,abcd->iJab", ampl.pphh, hf.vvvv)
         ))
-    return AdcBlock(apply, diagonal_cvs_pphh_pphh_1(hf))
+    return AdcBlock(apply, diagonal_pphh_pphh_1(hf))
 
 
 #
-# 2nd order general
+# 1st order coupling
 #
-def diagonal_ph_ph_2(hf, mp, intermediates):
+def block_ph_pphh_1(hf, mp, intermediates):
+    def apply(ampl):
+        return AmplitudeVector(ph=(
+            + einsum("jkib,jkab->ia", hf.ooov, ampl.pphh)
+            + einsum("ijbc,jabc->ia", ampl.pphh, hf.ovvv)
+        ))
+    return AdcBlock(apply, 0)
+
+
+def block_cvs_ph_pphh_1(hf, mp, intermediates):
+    def apply(ampl):
+        return AmplitudeVector(ph=(
+            + sqrt(2) * einsum("jKIb,jKab->Ia", hf.occv, ampl.pphh)
+            - 1 / sqrt(2) * einsum("jIbc,jabc->Ia", ampl.pphh, hf.ovvv)
+        ))
+    return AdcBlock(apply, 0)
+
+
+def block_pphh_ph_1(hf, mp, intermediates):
+    def apply(ampl):
+        return AmplitudeVector(pphh=(
+            + einsum("ic,jcab->ijab", ampl.ph, hf.ovvv).antisymmetrise(0, 1)
+            - einsum("ijka,kb->ijab", hf.ooov, ampl.ph).antisymmetrise(2, 3)
+        ))
+    return AdcBlock(apply, 0)
+
+
+def block_cvs_pphh_ph_1(hf, mp, intermediates):
+    def apply(ampl):
+        return AmplitudeVector(pphh=(
+            + sqrt(2) * einsum("jIKb,Ka->jIab",
+                               hf.occv, ampl.ph).antisymmetrise(2, 3)
+            - 1 / sqrt(2) * einsum("Ic,jcab->jIab", ampl.ph, hf.ovvv)
+        ))
+    return AdcBlock(apply, 0)
+
+
+#
+# 2nd order main
+#
+def block_ph_ph_2(hf, mp, intermediates):
     i1 = intermediates.adc2_i1
     i2 = intermediates.adc2_i2
-    return diagonal_ph_ph_1(hf) + AmplitudeVector(ph=(
-        + direct_sum("a+i->ia", i1.diagonal(), i2.diagonal())
+    diagonal = AmplitudeVector(ph=(
+        + direct_sum("a-i->ia", i1.diagonal(), i2.diagonal())
+        - einsum("IaIa->Ia", hf.ovov)
         - einsum("ikac,ikac->ia", mp.t2oo, hf.oovv)
     ))
-
-
-def block_ph_ph_2(hf, mp, intermediates):
-    # TODO Ideas: Add fvv to i1 and foo to i2 once and for all
-    i1 = intermediates.adc2_i1
-    i2 = intermediates.adc2_i2
-    i1f = (hf.fvv + i1).evaluate()
-    i2f = (hf.foo - i2).evaluate()
 
     # Not used anywhere else, so kept as an anonymous intermediate
     term_t2_eri = (
@@ -296,14 +284,33 @@ def block_ph_ph_2(hf, mp, intermediates):
 
     def apply(ampl):
         return AmplitudeVector(ph=(
-            + einsum("ib,ab->ia", ampl.ph, i1f)  # 0
-            - einsum("ij,ja->ia", i2f, ampl.ph)  # 0
+            + einsum("ib,ab->ia", ampl.ph, i1)
+            - einsum("ij,ja->ia", i2, ampl.ph)
             - einsum("jaib,jb->ia", hf.ovov, ampl.ph)    # 1
             - 0.5 * einsum("ikac,kc->ia", term_t2_eri, ampl.ph)  # 2
         ))
-    return AdcBlock(apply, diagonal_ph_ph_2(hf, mp, intermediates))
+    return AdcBlock(apply, diagonal)
 
 
+def block_cvs_ph_ph_2(hf, mp, intermediates):
+    i1 = intermediates.adc2_i1
+    diagonal = AmplitudeVector(ph=(
+        + direct_sum("a-i->ia", i1.diagonal(), hf.fcc.diagonal())
+        - einsum("IaIa->Ia", hf.cvcv)
+    ))
+
+    def apply(ampl):
+        return AmplitudeVector(ph=(
+            + einsum("ib,ab->ia", ampl.ph, i1)
+            - einsum("ij,ja->ia", hf.fcc, ampl.ph)
+            - einsum("JaIb,Jb->Ia", hf.cvcv, ampl.ph)
+        ))
+    return AdcBlock(apply, diagonal)
+
+
+#
+# 2nd order coupling
+#
 def block_ph_pphh_2(hf, mp, intermediates):
     pia_ooov = intermediates.adc3_pia
     pib_ovvv = intermediates.adc3_pib
@@ -314,6 +321,19 @@ def block_ph_pphh_2(hf, mp, intermediates):
             + einsum("ijbc,jabc->ia", ampl.pphh, pib_ovvv)
             + einsum("icab,jkcd,jkbd->ia", hf.ovvv, ampl.pphh, mp.t2oo)  # 2nd
             + einsum("ijka,jlbc,klbc->ia", hf.ooov, mp.t2oo, ampl.pphh)  # 2nd
+        ))
+    return AdcBlock(apply, 0)
+
+
+def block_cvs_ph_pphh_2(hf, mp, intermediates):
+    pia_occv = intermediates.cvs_adc3_pia
+    pib_ovvv = intermediates.adc3_pib
+
+    def apply(ampl):
+        return AmplitudeVector(ph=(1 / sqrt(2)) * (
+            + 2.0 * einsum("lKIc,lKac->Ia", pia_occv, ampl.pphh)
+            - einsum("lIcd,lacd->Ia", ampl.pphh, pib_ovvv)
+            - einsum("jIKa,ljcd,lKcd->Ia", hf.occv, mp.t2oo, ampl.pphh)
         ))
     return AdcBlock(apply, 0)
 
@@ -336,43 +356,6 @@ def block_pphh_ph_2(hf, mp, intermediates):
     return AdcBlock(apply, 0)
 
 
-#
-# 2nd order CVS
-#
-def diagonal_cvs_ph_ph_2(hf, mp, intermediates):
-    i1 = intermediates.adc2_i1
-    zeros_c = zeros_like(hf.orbital_energies(b.c))
-    return diagonal_cvs_ph_ph_1(hf) + AmplitudeVector(ph=(
-        direct_sum("a+i->ia", i1.diagonal(), zeros_c)
-    ))
-
-
-def block_cvs_ph_ph_2(hf, mp, intermediates):
-    i1 = intermediates.adc2_i1
-    i1f = (hf.fvv + i1).evaluate()  # TODO Maybe make this part of i1?
-
-    def apply(ampl):
-        return AmplitudeVector(ph=(
-            + einsum("ib,ab->ia", ampl.ph, i1f)
-            - einsum("ij,ja->ia", hf.fcc, ampl.ph)
-            - einsum("JaIb,Jb->Ia", hf.cvcv, ampl.ph)
-        ))
-    return AdcBlock(apply, diagonal_cvs_ph_ph_2(hf, mp, intermediates))
-
-
-def block_cvs_ph_pphh_2(hf, mp, intermediates):
-    pia_occv = intermediates.cvs_adc3_pia
-    pib_ovvv = intermediates.adc3_pib
-
-    def apply(ampl):
-        return AmplitudeVector(ph=(1 / sqrt(2)) * (
-            + 2.0 * einsum("lKIc,lKac->Ia", pia_occv, ampl.pphh)
-            - einsum("lIcd,lacd->Ia", ampl.pphh, pib_ovvv)
-            - einsum("jIKa,ljcd,lKcd->Ia", hf.occv, mp.t2oo, ampl.pphh)
-        ))
-    return AdcBlock(apply, 0)
-
-
 def block_cvs_pphh_ph_2(hf, mp, intermediates):
     pia_occv = intermediates.cvs_adc3_pia
     pib_ovvv = intermediates.adc3_pib
@@ -387,7 +370,7 @@ def block_cvs_pphh_ph_2(hf, mp, intermediates):
 
 
 #
-# 3rd order general and CVS
+# 3rd order main
 #
 def block_ph_ph_3(hf, mp, intermediates):
     if hf.has_core_occupied_space:
@@ -410,12 +393,14 @@ block_cvs_ph_ph_3 = block_ph_ph_3
 
 @register_as_intermediate
 def adc2_i1(hf, mp, intermediates):
-    return 0.5 * einsum("ijac,ijbc->ab", mp.t2oo, hf.oovv).symmetrise()
+    # This definition differs from libadc. It additionally has the hf.fvv term.
+    return hf.fvv + 0.5 * einsum("ijac,ijbc->ab", mp.t2oo, hf.oovv).symmetrise()
 
 
 @register_as_intermediate
 def adc2_i2(hf, mp, intermediates):
-    return 0.5 * einsum("ikab,jkab->ij", mp.t2oo, hf.oovv).symmetrise()
+    # This definition differs from libadc. It additionally has the hf.foo term.
+    return hf.foo - 0.5 * einsum("ikab,jkab->ij", mp.t2oo, hf.oovv).symmetrise()
 
 
 def adc3_i1(hf, mp, intermediates):
@@ -555,8 +540,7 @@ def cvs_adc3_m11(hf, mp, intermediates):
 
 @register_as_intermediate
 def adc3_pia(hf, mp, intermediates):
-    # Note that this definition differs from libadc, since it includes
-    # the hf.ooov term as well.
+    # This definition differs from libadc. It additionally has the hf.ooov term.
     return (                          # Perturbation theory in ADC coupling block
         + hf.ooov                                            # 1st order
         - 2.0 * mp.t2eri(b.ooov, b.ov).antisymmetrise(0, 1)  # 2nd order
@@ -573,8 +557,7 @@ def cvs_adc3_pia(hf, mp, intermediates):
 
 @register_as_intermediate
 def adc3_pib(hf, mp, intermediates):
-    # Note that this definition differs from libadc, since it includes
-    # the hf.ovvv term as well.
+    # This definition differs from libadc. It additionally has the hf.ovvv term.
     return (                          # Perturbation theory in ADC coupling block
         + hf.ovvv                                            # 1st order
         + 2.0 * mp.t2eri(b.ovvv, b.ov).antisymmetrise(2, 3)  # 2nd order

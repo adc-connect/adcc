@@ -24,7 +24,7 @@
 BLOCK_LABELS = ["s", "d", "t"]
 
 
-# TODO Extend AmplitudeVector to cases where only the doubles block is present?
+# TODO Extend AmplitudeVector to cases where only the doubles block is present
 class AmplitudeVector:
     def __init__(self, *tensors, ph=None, pphh=None):
         """Initialise an AmplitudeVector from some blocks"""
