@@ -28,13 +28,12 @@ from libadcc import HartreeFockProvider, get_n_threads, set_n_threads
 from .LazyMp import LazyMp
 from .Tensor import Tensor
 from .Symmetry import Symmetry
-from .AdcMatrix import AdcMatrix, AdcMatrixlike
+from .AdcMatrix import AdcBlockView, AdcMatrix
 from .AdcMethod import AdcMethod
 from .functions import (contract, copy, direct_sum, dot, einsum, empty_like,
                         evaluate, lincomb, linear_combination, nosym_like,
                         ones_like, transpose, zeros_like)
 from .memory_pool import memory_pool
-from .AdcBlockView import AdcBlockView
 from .State2States import State2States
 from .ExcitedStates import ExcitedStates
 from .DataHfProvider import DataHfProvider, DictHfProvider
@@ -49,7 +48,7 @@ from .guess import (guess_symmetries, guess_zero, guesses_any, guesses_singlet,
 from .workflow import run_adc
 from .exceptions import InputError
 
-__all__ = ["run_adc", "InputError", "AdcMatrix", "AdcBlockView", "AdcMatrixlike",
+__all__ = ["run_adc", "InputError", "AdcMatrix", "AdcBlockView",
            "AdcMethod", "Symmetry", "ReferenceState",
            "einsum", "contract", "copy", "dot", "empty_like", "evaluate",
            "lincomb", "nosym_like", "ones_like", "transpose",
@@ -83,7 +82,7 @@ def adc0(*args, **kwargs):
 
 @with_runadc_doc
 def cis(*args, **kwargs):
-    warnings.warn("CIS is an untested feature. Use with caution.")
+    warnings.warn("CIS is a hardly tested feature. Use with caution.")
     state = run_adc(*args, **kwargs, method="adc1")
     return ExcitedStates(state, property_method="adc0")
 

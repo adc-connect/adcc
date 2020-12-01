@@ -20,10 +20,10 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+from libadcc import amplitude_vector_enforce_spin_kind
+
 from adcc import evaluate
 from adcc.AmplitudeVector import AmplitudeVector
-
-from libadcc import amplitude_vector_enforce_spin_kind
 
 # TODO
 #    This interface is not that great and leads to duplicate information
@@ -61,7 +61,7 @@ class IndexSymmetrisation():
             if not isinstance(vec, AmplitudeVector):
                 raise TypeError("new_vectors has to be an "
                                 "iterable of AmplitudeVector")
-            for b in vec.blocks:
+            for b in vec.blocks_ph:
                 if b not in self.symmetrisation_functions:
                     continue
                 vec[b] = evaluate(self.symmetrisation_functions[b](vec[b]))

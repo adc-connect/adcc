@@ -27,7 +27,7 @@ import numpy as np
 
 from numpy.testing import assert_allclose
 
-from adcc.AdcMatrix import AdcMatrixCore, AdcMatrixShifted
+from adcc.AdcMatrix import AdcMatrixShifted
 from adcc.testdata.cache import cache
 
 from .misc import expand_test_templates
@@ -166,17 +166,9 @@ class TestAdcMatrixInterface(unittest.TestCase):
         matrix.intermediates = intermediates
         assert matrix.intermediates == intermediates
 
-    def test_diagonal_adc2(self):
-        ground_state = adcc.LazyMp(cache.refstate["h2o_sto3g"])
-        matrix = adcc.AdcMatrix("adc2", ground_state)
-        cppmatrix = AdcMatrixCore("adc2", ground_state)
-        diff = cppmatrix.diagonal("s") - matrix.diagonal("s")
-        assert diff.dot(diff) < 1e-12
-
     def test_matvec_adc2(self):
         ground_state = adcc.LazyMp(cache.refstate["h2o_sto3g"])
         matrix = adcc.AdcMatrix("adc2", ground_state)
-        cppmatrix = AdcMatrixCore("adc2", ground_state)
 
         vectors = [adcc.guess_zero(matrix) for i in range(3)]
         for vec in vectors:
@@ -185,12 +177,9 @@ class TestAdcMatrixInterface(unittest.TestCase):
         v, w, x = vectors
 
         # Compute references:
-        refv = adcc.empty_like(v)
-        refw = adcc.empty_like(w)
-        refx = adcc.empty_like(x)
-        refv = cppmatrix.compute_matvec(v)
-        refw = cppmatrix.compute_matvec(w)
-        refx = cppmatrix.compute_matvec(x)
+        refv = matrix.matvec(v)
+        refw = matrix.matvec(w)
+        refx = matrix.matvec(x)
 
         # @ operator (1 vector)
         resv = matrix @ v
@@ -206,13 +195,20 @@ class TestAdcMatrixInterface(unittest.TestCase):
             assert diffs[i]["d"].dot(diffs[i]["d"]) < 1e-12
 
         # compute matvec
-        resv = matrix.compute_matvec(v)
+        resv = matrix.matvec(v)
         diffv = refv - resv
         assert diffv["s"].dot(diffv["s"]) < 1e-12
         assert diffv["d"].dot(diffv["d"]) < 1e-12
 
+        resv = matrix.rmatvec(v)
+        diffv = refv - resv
+        assert diffv["s"].dot(diffv["s"]) < 1e-12
+        assert diffv["d"].dot(diffv["d"]) < 1e-12
+
+        # Test apply
         resv["s"] = matrix.compute_apply("ss", v["s"])
-        refv["s"] = cppmatrix.compute_apply("ss", v["s"])
+        resv["s"] += matrix.compute_apply("sd", v["d"])
+        refv = matrix.matvec(v)
         diffv = resv["s"] - refv["s"]
         assert diffv.dot(diffv) < 1e-12
 

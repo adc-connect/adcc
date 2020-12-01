@@ -20,7 +20,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from adcc import AdcMatrixlike, AmplitudeVector, Symmetry, Tensor
+from adcc import AmplitudeVector, Symmetry, Tensor
+
+from ..AdcMatrix import AdcMatrixlike
 
 
 def guess_zero(matrix, spin_change=0, spin_block_symmetrisation="none"):

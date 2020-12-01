@@ -23,11 +23,12 @@
 import libadcc
 import numpy as np
 
-from adcc import AdcMatrixlike, evaluate
+from adcc import evaluate
 from numpy import sqrt
 from libadcc import MoIndexTranslation
 from itertools import groupby
 
+from ..AdcMatrix import AdcMatrixlike
 from .guess_zero import guess_zero
 
 

@@ -20,91 +20,110 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import warnings
 
-BLOCK_LABELS = ["s", "d", "t"]
 
-
-# TODO Extend AmplitudeVector to cases where only the doubles block is present
-class AmplitudeVector:
-    def __init__(self, *tensors, ph=None, pphh=None):
-        """Initialise an AmplitudeVector from some blocks"""
-        # TODO ph and pphh are new-style constructors, they should
-        #      take over passing their tensors into a dict.
-        if len(tensors) == 0:
-            if pphh is not None:
-                if ph is None:
-                    ph = 0
-                self.tensors = [ph, pphh]
-            else:
-                assert ph is not None
-                self.tensors = [ph]
+class AmplitudeVector(dict):
+    def __init__(self, *args, **kwargs):
+        """
+        Construct an AmplitudeVector. Typical use cases are
+        ``AmplitudeVector(ph=tensor_singles, pphh=tensor_doubles)``.
+        """
+        if args:
+            warnings.warn("Using the list interface of AmplitudeVector is "
+                          "deprecated and will be removed in version 0.16.0. Use "
+                          "AmplitudeVector(ph=tensor_singles, pphh=tensor_doubles) "
+                          "instead.")
+            if len(args) == 1:
+                super().__init__(ph=args[0])
+            elif len(args) == 2:
+                super().__init__(ph=args[0], pphh=args[1])
         else:
-            assert ph is None and pphh is None
-            self.tensors = list(tensors)
+            super().__init__(**kwargs)
 
-    @property
-    def ph(self):    # TODO temporary
-        return self.tensors[0]
-
-    @property
-    def pphh(self):  # TODO temporary
-        return self.tensors[1]
-
-    # TODO Attach some information about this Amplitude, e.g.
-    #      is it CVS?
+    def __getattr__(self, key):
+        if self.__contains__(key):
+            return self.__getitem__(key)
+        raise AttributeError
 
     @property
     def blocks(self):
-        return [BLOCK_LABELS[i] for i in range(len(self.tensors))]
+        warnings.warn("The blocks attribute will change behaviour in 0.16.0.")
+        if sorted(self.blocks_ph) == ["ph", "pphh"]:
+            return ["s", "d"]
+        if sorted(self.blocks_ph) == ["pphh"]:
+            return ["d"]
+        elif sorted(self.blocks_ph) == ["ph"]:
+            return ["s"]
+        elif sorted(self.blocks_ph) == []:
+            return []
+        else:
+            raise NotImplementedError(self.blocks_ph)
+
+    @property
+    def blocks_ph(self):
+        """
+        Return the blocks which are used inside the vector.
+        Note: This is a temporary name. The attribute will be removed in 0.16.0.
+        """
+        return sorted(self.keys())
 
     def __getitem__(self, index):
-        if isinstance(index, int):
-            return self.tensors[index]
-        elif isinstance(index, str):
-            if index not in BLOCK_LABELS:
-                raise ValueError("Invalid index, either a block string "
-                                 "like s,d,t, ... or an integer index "
-                                 "are expected.")
-            return self.__getitem__(BLOCK_LABELS.index(index))
+        if index in (0, 1, "s", "d"):
+            warnings.warn("Using the list interface of AmplitudeVector is "
+                          "deprecated and will be removed in version 0.16.0. Use "
+                          "block labels like 'ph', 'pphh' instead.")
+            if index in (0, "s"):
+                return self.__getitem__("ph")
+            elif index in (1, "d"):
+                return self.__getitem__("pphh")
+            else:
+                raise KeyError(index)
+        else:
+            return super().__getitem__(index)
 
     def __setitem__(self, index, item):
-        if isinstance(index, int):
-            self.tensors[index] = item
-        elif isinstance(index, str):
-            if index not in BLOCK_LABELS:
-                raise ValueError("Invalid index, either a block string "
-                                 "like s,d,t, ... or an integer index "
-                                 "are expected.")
-            return self.__setitem__(BLOCK_LABELS.index(index), item)
+        if index in (0, 1, "s", "d"):
+            warnings.warn("Using the list interface of AmplitudeVector is "
+                          "deprecated and will be removed in version 0.16.0. Use "
+                          "block labels like 'ph', 'pphh' instead.")
+            if index in (0, "s"):
+                return self.__setitem__("ph", item)
+            elif index in (1, "d"):
+                return self.__setitem__("pphh", item)
+            else:
+                raise KeyError(index)
+        else:
+            super().__setitem__(index, item)
 
     def copy(self):
         """Return a copy of the AmplitudeVector"""
-        return AmplitudeVector(*tuple(t.copy() for t in self.tensors))
+        return AmplitudeVector(**{k: t.copy() for k, t in self.items()})
 
     def evaluate(self):
-        for t in self.tensors:
+        for t in self.values():
             t.evaluate()
         return self
 
     def ones_like(self):
         """Return an empty AmplitudeVector of the same shape and symmetry"""
-        return AmplitudeVector(*tuple(t.ones_like() for t in self.tensors))
+        return AmplitudeVector(**{k: t.ones_like() for k, t in self.items()})
 
     def empty_like(self):
         """Return an empty AmplitudeVector of the same shape and symmetry"""
-        return AmplitudeVector(*tuple(t.empty_like() for t in self.tensors))
+        return AmplitudeVector(**{k: t.empty_like() for k, t in self.items()})
 
     def nosym_like(self):
         """Return an empty AmplitudeVector of the same shape and symmetry"""
-        return AmplitudeVector(*tuple(t.nosym_like() for t in self.tensors))
+        return AmplitudeVector(**{k: t.nosym_like() for k, t in self.items()})
 
     def zeros_like(self):
         """Return an AmplitudeVector of the same shape and symmetry with
            all elements set to zero"""
-        return AmplitudeVector(*tuple(t.zeros_like() for t in self.tensors))
+        return AmplitudeVector(**{k: t.zeros_like() for k, t in self.items()})
 
     def set_random(self):
-        for t in self.tensors:
+        for t in self.values():
             t.set_random()
         return self
 
@@ -116,10 +135,9 @@ class AmplitudeVector:
         if isinstance(other, list):
             # Make a list where the first index is all singles parts,
             # the second is all doubles parts and so on
-            alltensors = [[av[b] for av in other] for b in self.blocks]
-            return sum(t.dot(ots) for t, ots in zip(self.tensors, alltensors))
+            return sum(self[b].dot([av[b] for av in other]) for b in self.keys())
         else:
-            return sum(t.dot(ot) for t, ot in zip(self.tensors, other.tensors))
+            return sum(self[b].dot(other[b]) for b in self.keys())
 
     def __matmul__(self, other):
         if isinstance(other, AmplitudeVector):
@@ -131,27 +149,23 @@ class AmplitudeVector:
 
     def __forward_to_blocks(self, fname, other):
         if isinstance(other, AmplitudeVector):
-            ret = tuple(getattr(t, fname)(ot)
-                        for t, ot in zip(self.tensors, other.tensors))
+            if sorted(other.blocks_ph) != sorted(self.blocks_ph):
+                raise ValueError("Blocks of both AmplitudeVector objects "
+                                 f"need to agree to perform {fname}")
+            ret = {k: getattr(tensor, fname)(other[k])
+                   for k, tensor in self.items()}
         else:
-            ret = tuple(getattr(t, fname)(other) for t in self.tensors)
-
-        if any(r == NotImplemented for r in ret):
+            ret = {k: getattr(tensor, fname)(other) for k, tensor in self.items()}
+        if any(r == NotImplemented for r in ret.values()):
             return NotImplemented
         else:
-            return AmplitudeVector(*ret)
+            return AmplitudeVector(**ret)
 
     def __mul__(self, other):
         return self.__forward_to_blocks("__mul__", other)
 
     def __rmul__(self, other):
         return self.__forward_to_blocks("__rmul__", other)
-
-    def __add__(self, other):
-        return self.__forward_to_blocks("__add__", other)
-
-    def __radd__(self, other):
-        return self.__forward_to_blocks("__radd__", other)
 
     def __sub__(self, other):
         return self.__forward_to_blocks("__sub__", other)
@@ -175,4 +189,22 @@ class AmplitudeVector:
         return self.__forward_to_blocks("__itruediv__", other)
 
     def __repr__(self):
-        return "AmplitudeVector(blocks=" + ",".join(self.blocks) + ")"
+        return "AmplitudeVector(" + "=..., ".join(self.blocks_ph) + "=...)"
+
+    # __add__ is special because we want to be able to add AmplitudeVectors
+    # with missing blocks
+    def __add__(self, other):
+        if isinstance(other, AmplitudeVector):
+            allblocks = sorted(set(self.blocks_ph).union(other.blocks_ph))
+            ret = {k: self.get(k, 0) + other.get(k, 0) for k in allblocks}
+            ret = {k: v for k, v in ret.items() if v != 0}
+        else:
+            ret = {k: tensor + other for k, tensor in self.items()}
+        return AmplitudeVector(**ret)
+
+    def __radd__(self, other):
+        if isinstance(other, AmplitudeVector):
+            return other.__add__(self)
+        else:
+            ret = {k: other + tensor for k, tensor in self.items()}
+            return AmplitudeVector(**ret)

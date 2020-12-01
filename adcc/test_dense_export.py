@@ -24,9 +24,10 @@ import adcc
 import unittest
 import numpy as np
 
-from .misc import expand_test_templates
 from numpy.testing import assert_allclose
 from adcc.testdata.cache import cache
+
+from .misc import expand_test_templates
 
 methods = ["adc1", "adc2", "adc2x", "adc3"]
 methods += ["cvs-" + m for m in methods]
@@ -45,7 +46,7 @@ class TestAdcMatrixDenseExport(unittest.TestCase):
         matrix = adcc.AdcMatrix(method, refstate)
         state = adcc.run_adc(matrix, method=method, conv_tol=conv_tol, **kwargs)
 
-        dense = matrix.to_dense_matrix()
+        dense = matrix.to_ndarray()
         assert_allclose(dense, dense.T, rtol=1e-10, atol=1e-12)
 
         n_decimals = 10
