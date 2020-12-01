@@ -20,9 +20,8 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import libadcc
-
 from adcc import block as b
+from adcc.LazyMp import LazyMp
 from adcc.AdcMethod import AdcMethod
 from adcc.functions import einsum
 from adcc.Intermediates import Intermediates
@@ -133,7 +132,7 @@ def state2state_transition_dm(method, ground_state, amplitude_from,
     """
     if not isinstance(method, AdcMethod):
         method = AdcMethod(method)
-    if not isinstance(ground_state, libadcc.LazyMp):
+    if not isinstance(ground_state, LazyMp):
         raise TypeError("ground_state should be a LazyMp object.")
     if not isinstance(amplitude_from, AmplitudeVector):
         raise TypeError("amplitude_from should be an AmplitudeVector object.")

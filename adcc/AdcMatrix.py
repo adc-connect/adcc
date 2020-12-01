@@ -308,7 +308,7 @@ class AdcMatrixCore:
         if isinstance(hf_or_mp, (libadcc.ReferenceState,
                                  libadcc.HartreeFockSolution_i)):
             hf_or_mp = LazyMp(hf_or_mp)
-        if not isinstance(hf_or_mp, libadcc.LazyMp):
+        if not isinstance(hf_or_mp, LazyMp):
             raise TypeError("mp_results is not a valid object. It needs to be "
                             "either a LazyMp, a ReferenceState or a "
                             "HartreeFockSolution_i.")

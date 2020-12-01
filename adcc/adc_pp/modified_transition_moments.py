@@ -20,11 +20,10 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import libadcc
-
 from math import sqrt
 
 from adcc import block as b
+from adcc.LazyMp import LazyMp
 from adcc.AdcMethod import AdcMethod
 from adcc.functions import einsum, evaluate
 from adcc.Intermediates import Intermediates
@@ -108,7 +107,7 @@ def modified_transition_moments(method, ground_state, dipole_operator=None,
     """
     if not isinstance(method, AdcMethod):
         method = AdcMethod(method)
-    if not isinstance(ground_state, libadcc.LazyMp):
+    if not isinstance(ground_state, LazyMp):
         raise TypeError("ground_state should be a LazyMp object.")
     if intermediates is None:
         intermediates = Intermediates(ground_state)

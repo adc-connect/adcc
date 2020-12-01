@@ -23,11 +23,12 @@
 import sys
 import warnings
 
-from libadcc import LazyMp, ReferenceState
+from libadcc import ReferenceState
 
 from . import solver
 from .guess import (guesses_any, guesses_singlet, guesses_spin_flip,
                     guesses_triplet)
+from .LazyMp import LazyMp
 from .AdcMatrix import AdcMatrix, AdcMatrixlike
 from .AdcMethod import AdcMethod
 from .exceptions import InputError

@@ -20,9 +20,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from .functions import evaluate
-
 import libadcc
+
+from .functions import evaluate
 
 
 class OneParticleOperator(libadcc.OneParticleOperator):
@@ -40,14 +40,17 @@ class OneParticleOperator(libadcc.OneParticleOperator):
         is_symmetric : bool
             Is the operator symmetric?
         """
-        if isinstance(spaces, libadcc.ReferenceState):
+        if hasattr(spaces, "mospaces"):
             super().__init__(spaces.mospaces, is_symmetric, "1")
-            self.reference_state = spaces
-        elif isinstance(spaces, libadcc.LazyMp):
-            super().__init__(spaces.mospaces, is_symmetric, "1")
-            self.reference_state = spaces.reference_state
         else:
             super().__init__(spaces, is_symmetric, "1")
+
+        # Set reference_state if possible
+        if isinstance(spaces, libadcc.ReferenceState):
+            self.reference_state = spaces
+        elif hasattr(spaces, "reference_state"):
+            assert isinstance(spaces.reference_state, libadcc.ReferenceState)
+            self.reference_state = spaces.reference_state
 
     @classmethod
     def from_cpp(cls, cpp_operator):
