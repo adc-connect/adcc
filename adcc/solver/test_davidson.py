@@ -23,11 +23,11 @@
 import adcc
 import unittest
 
+from pytest import approx
+
 from adcc import LazyMp
 from adcc.testdata.cache import cache
 from adcc.solver.davidson import jacobi_davidson
-
-from pytest import approx
 
 
 class TestSolverDavidson(unittest.TestCase):
@@ -36,7 +36,7 @@ class TestSolverDavidson(unittest.TestCase):
         matrix = adcc.AdcMatrix("adc2", LazyMp(cache.refstate["h2o_sto3g"]))
 
         # Solve for singlets
-        guesses = adcc.guesses_singlet(matrix, n_guesses=9, block="s")
+        guesses = adcc.guesses_singlet(matrix, n_guesses=9, block="ph")
         res = jacobi_davidson(matrix, guesses, n_ep=9)
 
         ref_singlets = refdata["adc2"]["singlet"]["eigenvalues"]
@@ -48,7 +48,7 @@ class TestSolverDavidson(unittest.TestCase):
         matrix = adcc.AdcMatrix("adc2", LazyMp(cache.refstate["h2o_sto3g"]))
 
         # Solve for triplets
-        guesses = adcc.guesses_triplet(matrix, n_guesses=10, block="s")
+        guesses = adcc.guesses_triplet(matrix, n_guesses=10, block="ph")
         res = jacobi_davidson(matrix, guesses, n_ep=10)
 
         ref_triplets = refdata["adc2"]["triplet"]["eigenvalues"]

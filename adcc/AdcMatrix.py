@@ -255,7 +255,8 @@ class AdcMatrix(AdcMatrixlike):
             #      for example) and basically they only need to support some
             #      form of matrix-vector product and some stastics like
             #      spaces and sizes etc.
-        block_orders = {block: self.block_orders[block]}
+        block_orders = {bl: None for bl in self.block_orders.keys()}
+        block_orders[block] = self.block_orders[block]
         return AdcMatrix(self.method, self.ground_state,
                          block_orders=block_orders,
                          intermediates=self.intermediates)
@@ -430,7 +431,6 @@ class AdcMatrix(AdcMatrixlike):
 
         # Extract singles-singles block (contiguous)
         assert "ph" in self.axis_blocks
-        n_ph = self.axis_lengths["ph"]
         n_orbs_ph = [self.mospaces.n_orbs(sp) for sp in self.axis_spaces["ph"]]
         n_ph = np.prod(n_orbs_ph)
         assert len(basis["ph"]) == n_ph

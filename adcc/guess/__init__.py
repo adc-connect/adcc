@@ -28,7 +28,7 @@ __all__ = ["guess_zero", "guesses_from_diagonal",
            "guesses_spin_flip", "guess_symmetries"]
 
 
-def guesses_singlet(matrix, n_guesses, block="s", **kwargs):
+def guesses_singlet(matrix, n_guesses, block="ph", **kwargs):
     """
     Obtain guesses for computing singlet states by inspecting the passed
     ADC matrix.
@@ -37,7 +37,7 @@ def guesses_singlet(matrix, n_guesses, block="s", **kwargs):
     n_guesses    The number of guesses to be searched for. Less number of
                  vectors are returned if this many could not be found.
     block        Diagonal block to use for obtaining the guesses
-                 (typically "s" or "d").
+                 (typically "ph" or "pphh").
     kwargs       Any other argument understood by guesses_from_diagonal.
     """
     return guesses_from_diagonal(matrix, n_guesses, block=block,
@@ -45,7 +45,7 @@ def guesses_singlet(matrix, n_guesses, block="s", **kwargs):
                                  spin_change=0, **kwargs)
 
 
-def guesses_triplet(matrix, n_guesses, block="s", **kwargs):
+def guesses_triplet(matrix, n_guesses, block="ph", **kwargs):
     """
     Obtain guesses for computing triplet states by inspecting the passed
     ADC matrix.
@@ -54,7 +54,7 @@ def guesses_triplet(matrix, n_guesses, block="s", **kwargs):
     n_guesses    The number of guesses to be searched for. Less number of
                  vectors are returned if this many could not be found.
     block        Diagonal block to use for obtaining the guesses
-                 (typically "s" or "d").
+                 (typically "ph" or "pphh").
     kwargs       Any other argument understood by guesses_from_diagonal.
     """
     return guesses_from_diagonal(matrix, n_guesses, block=block,
@@ -66,7 +66,7 @@ def guesses_triplet(matrix, n_guesses, block="s", **kwargs):
 guesses_any = guesses_from_diagonal
 
 
-def guesses_spin_flip(matrix, n_guesses, block="s", **kwargs):
+def guesses_spin_flip(matrix, n_guesses, block="ph", **kwargs):
     """
     Obtain guesses for computing spin-flip states by inspecting the passed
     ADC matrix.
@@ -75,7 +75,7 @@ def guesses_spin_flip(matrix, n_guesses, block="s", **kwargs):
     n_guesses    The number of guesses to be searched for. Less number of
                  vectors are returned if this many could not be found.
     block        Diagonal block to use for obtaining the guesses
-                 (typically "s" or "d").
+                 (typically "ph" or "pphh").
     kwargs       Any other argument understood by guesses_from_diagonal.
     """
     return guesses_from_diagonal(matrix, n_guesses, block=block,

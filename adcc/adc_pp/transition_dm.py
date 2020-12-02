@@ -37,7 +37,7 @@ def tdm_adc0(mp, amplitude, intermediates):
     # C is either c(ore) or o(ccupied)
     C = b.c if mp.has_core_occupied_space else b.o
     check_singles_amplitudes([C, b.v], amplitude)
-    u1 = amplitude["s"]
+    u1 = amplitude.ph
 
     # Transition density matrix for (CVS-)ADC(0)
     dm = OneParticleOperator(mp, is_symmetric=False)
@@ -48,7 +48,7 @@ def tdm_adc0(mp, amplitude, intermediates):
 def tdm_adc1(mp, amplitude, intermediates):
     dm = tdm_adc0(mp, amplitude, intermediates)  # Get ADC(0) result
     # adc1_dp0_ov
-    dm[b.ov] = -einsum("ijab,jb->ia", mp.t2(b.oovv), amplitude["s"])
+    dm[b.ov] = -einsum("ijab,jb->ia", mp.t2(b.oovv), amplitude.ph)
     return dm
 
 
@@ -56,8 +56,8 @@ def tdm_cvs_adc2(mp, amplitude, intermediates):
     # Get CVS-ADC(1) result (same as CVS-ADC(0))
     dm = tdm_adc0(mp, amplitude, intermediates)
     check_doubles_amplitudes([b.o, b.c, b.v, b.v], amplitude)
-    u1 = amplitude["s"]
-    u2 = amplitude["d"]
+    u1 = amplitude.ph
+    u2 = amplitude.pphh
 
     t2 = mp.t2(b.oovv)
     p0_ov = intermediates.cvs_p0_ov
@@ -77,8 +77,8 @@ def tdm_cvs_adc2(mp, amplitude, intermediates):
 def tdm_adc2(mp, amplitude, intermediates):
     dm = tdm_adc1(mp, amplitude, intermediates)  # Get ADC(1) result
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
-    u1 = amplitude["s"]
-    u2 = amplitude["d"]
+    u1 = amplitude.ph
+    u2 = amplitude.pphh
 
     t2 = mp.t2(b.oovv)
     td2 = mp.td2(b.oovv)

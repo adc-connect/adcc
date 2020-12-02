@@ -67,20 +67,20 @@ class TestAdcMatrix(unittest.TestCase):
         matdata = refdata[method]["matrix"]
 
         out = state.excitation_vector[0].copy()
-        out["s"].set_from_ndarray(matdata["random_singles"])
+        out.ph.set_from_ndarray(matdata["random_singles"])
         if "random_doubles" in matdata:
-            out["d"].set_from_ndarray(matdata["random_doubles"])
+            out.pphh.set_from_ndarray(matdata["random_doubles"])
         return out
 
     def template_diagonal(self, case, method):
         matrix, matdata = self.construct_matrix(case, method)
 
-        diag_s = matrix.diagonal("s")
+        diag_s = matrix.diagonal().ph
         assert_allclose(matdata["diagonal_singles"], diag_s.to_ndarray(),
                         rtol=1e-10, atol=1e-12)
 
-        if "d" in matrix.blocks:
-            diag_d = matrix.diagonal("d")
+        if "pphh" in matrix.axis_blocks:
+            diag_d = matrix.diagonal().pphh
             assert_allclose(matdata["diagonal_doubles"], diag_d.to_ndarray(),
                             rtol=1e-10, atol=1e-12)
 
@@ -90,21 +90,23 @@ class TestAdcMatrix(unittest.TestCase):
 
         outvec = matrix @ invec
 
-        assert_allclose(matdata["matvec_singles"], outvec["s"].to_ndarray(),
+        assert_allclose(matdata["matvec_singles"], outvec.ph.to_ndarray(),
                         rtol=1e-10, atol=1e-12)
         if "matvec_doubles" in matdata:
-            assert_allclose(matdata["matvec_doubles"], outvec["d"].to_ndarray(),
+            assert_allclose(matdata["matvec_doubles"], outvec.pphh.to_ndarray(),
                             rtol=1e-10, atol=1e-12)
 
     def template_compute_block(self, case, method):
         matrix, matdata = self.construct_matrix(case, method)
         invec = self.construct_input(case, method)
+        translate = {"s": "ph", "d": "pphh"}
 
         for b1 in ["s", "d"]:
             for b2 in ["s", "d"]:
                 if f"result_{b1}{b2}" not in matdata:
                     continue
-                ret = matrix.compute_apply(b1 + b2, invec[b2])
+                pb1, pb2 = translate[b1], translate[b2]
+                ret = matrix.block_apply(pb1 + "_" + pb2, invec[pb2])
                 assert_allclose(matdata[f"result_{b1}{b2}"],
                                 ret.to_ndarray(),
                                 rtol=1e-10, atol=1e-12)
@@ -124,12 +126,13 @@ class TestAdcMatrixInterface(unittest.TestCase):
         assert matrix.shape == (1640, 1640)
         assert len(matrix) == 1640
 
-        assert matrix.blocks == ["s", "d"]
-        assert matrix.has_block("s")
-        assert matrix.has_block("d")
-        assert not matrix.has_block("t")
-        assert matrix.block_spaces("s") == ["o1", "v1"]
-        assert matrix.block_spaces("d") == ["o1", "o1", "v1", "v1"]
+        assert matrix.axis_blocks == ["ph", "pphh"]
+        assert sorted(matrix.axis_spaces.keys()) == matrix.axis_blocks
+        assert sorted(matrix.axis_lengths.keys()) == matrix.axis_blocks
+        assert matrix.axis_spaces["ph"] == ["o1", "v1"]
+        assert matrix.axis_spaces["pphh"] == ["o1", "o1", "v1", "v1"]
+        assert matrix.axis_lengths["ph"] == 40
+        assert matrix.axis_lengths["pphh"] == 1600
 
         assert matrix.reference_state == reference_state
         assert matrix.mospaces == reference_state.mospaces
@@ -148,11 +151,11 @@ class TestAdcMatrixInterface(unittest.TestCase):
         assert matrix.shape == (8, 8)
         assert len(matrix) == 8
 
-        assert matrix.blocks == ["s"]
-        assert matrix.has_block("s")
-        assert not matrix.has_block("d")
-        assert not matrix.has_block("t")
-        assert matrix.block_spaces("s") == ["o2", "v1"]
+        assert matrix.axis_blocks == ["ph"]
+        assert sorted(matrix.axis_spaces.keys()) == matrix.axis_blocks
+        assert sorted(matrix.axis_lengths.keys()) == matrix.axis_blocks
+        assert matrix.axis_spaces["ph"] == ["o2", "v1"]
+        assert matrix.axis_lengths["ph"] == 8
 
         assert matrix.reference_state == reference_state
         assert matrix.mospaces == reference_state.mospaces
@@ -172,8 +175,7 @@ class TestAdcMatrixInterface(unittest.TestCase):
 
         vectors = [adcc.guess_zero(matrix) for i in range(3)]
         for vec in vectors:
-            vec["s"].set_random()
-            vec["d"].set_random()
+            vec.set_random()
         v, w, x = vectors
 
         # Compute references:
@@ -184,32 +186,32 @@ class TestAdcMatrixInterface(unittest.TestCase):
         # @ operator (1 vector)
         resv = matrix @ v
         diffv = refv - resv
-        assert diffv["s"].dot(diffv["s"]) < 1e-12
-        assert diffv["d"].dot(diffv["d"]) < 1e-12
+        assert diffv.ph.dot(diffv.ph) < 1e-12
+        assert diffv.pphh.dot(diffv.pphh) < 1e-12
 
         # @ operator (multiple vectors)
         resv, resw, resx = matrix @ [v, w, x]
         diffs = [refv - resv, refw - resw, refx - resx]
         for i in range(3):
-            assert diffs[i]["s"].dot(diffs[i]["s"]) < 1e-12
-            assert diffs[i]["d"].dot(diffs[i]["d"]) < 1e-12
+            assert diffs[i].ph.dot(diffs[i].ph) < 1e-12
+            assert diffs[i].pphh.dot(diffs[i].pphh) < 1e-12
 
         # compute matvec
         resv = matrix.matvec(v)
         diffv = refv - resv
-        assert diffv["s"].dot(diffv["s"]) < 1e-12
-        assert diffv["d"].dot(diffv["d"]) < 1e-12
+        assert diffv.ph.dot(diffv.ph) < 1e-12
+        assert diffv.pphh.dot(diffv.pphh) < 1e-12
 
         resv = matrix.rmatvec(v)
         diffv = refv - resv
-        assert diffv["s"].dot(diffv["s"]) < 1e-12
-        assert diffv["d"].dot(diffv["d"]) < 1e-12
+        assert diffv.ph.dot(diffv.ph) < 1e-12
+        assert diffv.pphh.dot(diffv.pphh) < 1e-12
 
         # Test apply
-        resv["s"] = matrix.compute_apply("ss", v["s"])
-        resv["s"] += matrix.compute_apply("sd", v["d"])
+        resv.ph = matrix.block_apply("ph_ph", v.ph)
+        resv.ph += matrix.block_apply("ph_pphh", v.pphh)
         refv = matrix.matvec(v)
-        diffv = resv["s"] - refv["s"]
+        diffv = resv.ph - refv.ph
         assert diffv.dot(diffv) < 1e-12
 
 
@@ -226,9 +228,9 @@ class TestAdcMatrixShifted(unittest.TestCase):
         shift = -0.3
         matrix, shifted = self.construct_matrices(case, shift)
 
-        for block in ("s", "d"):
-            odiag = matrix.diagonal(block).to_ndarray()
-            sdiag = shifted.diagonal(block).to_ndarray()
+        for block in ("ph", "pphh"):
+            odiag = matrix.diagonal()[block].to_ndarray()
+            sdiag = shifted.diagonal()[block].to_ndarray()
             assert np.max(np.abs(sdiag - shift - odiag)) < 1e-12
 
     def template_matmul(self, case):
@@ -236,17 +238,16 @@ class TestAdcMatrixShifted(unittest.TestCase):
         matrix, shifted = self.construct_matrices(case, shift)
 
         vec = adcc.guess_zero(matrix)
-        vec["s"].set_random()
-        vec["d"].set_random()
+        vec.set_random()
 
         ores = matrix @ vec
         sres = shifted @ vec
 
-        assert ores["s"].describe_symmetry() == sres["s"].describe_symmetry()
-        assert ores["d"].describe_symmetry() == sres["d"].describe_symmetry()
+        assert ores.ph.describe_symmetry() == sres.ph.describe_symmetry()
+        assert ores.pphh.describe_symmetry() == sres.pphh.describe_symmetry()
 
-        diff_s = sres["s"] - ores["s"] - shift * vec["s"]
-        diff_d = sres["d"] - ores["d"] - shift * vec["d"]
+        diff_s = sres.ph - ores.ph - shift * vec.ph
+        diff_d = sres.pphh - ores.pphh - shift * vec.pphh
         assert np.max(np.abs(diff_s.to_ndarray())) < 1e-12
         assert np.max(np.abs(diff_d.to_ndarray())) < 1e-12
 

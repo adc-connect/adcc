@@ -37,7 +37,7 @@ def diffdm_adc0(mp, amplitude, intermediates):
     # C is either c(ore) or o(ccupied)
     C = b.c if mp.has_core_occupied_space else b.o
     check_singles_amplitudes([C, b.v], amplitude)
-    u1 = amplitude["s"]
+    u1 = amplitude.ph
 
     dm = OneParticleOperator(mp, is_symmetric=True)
     dm[C + C] = -einsum("ia,ja->ij", u1, u1)
@@ -48,8 +48,7 @@ def diffdm_adc0(mp, amplitude, intermediates):
 def diffdm_adc2(mp, amplitude, intermediates):
     dm = diffdm_adc0(mp, amplitude, intermediates)  # Get ADC(1) result
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
-    u1 = amplitude["s"]
-    u2 = amplitude["d"]
+    u1, u2 = amplitude.ph, amplitude.pphh
 
     t2 = mp.t2(b.oovv)
     p0_ov = mp.mp2_diffdm[b.ov]
@@ -101,8 +100,7 @@ def diffdm_adc2(mp, amplitude, intermediates):
 def diffdm_cvs_adc2(mp, amplitude, intermediates):
     dm = diffdm_adc0(mp, amplitude, intermediates)  # Get ADC(1) result
     check_doubles_amplitudes([b.o, b.c, b.v, b.v], amplitude)
-    u1 = amplitude["s"]
-    u2 = amplitude["d"]
+    u1, u2 = amplitude.ph, amplitude.pphh
 
     t2 = mp.t2(b.oovv)
     p0_ov = intermediates.cvs_p0_ov

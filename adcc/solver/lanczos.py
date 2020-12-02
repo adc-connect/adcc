@@ -114,8 +114,8 @@ def check_convergence(subspace, rvals, rvecs, tol):
     b = subspace.rayleigh_extension
 
     # Norm of the residual vector block
-    norm_residual = np.sqrt(np.sum(subspace.residual[p] @ subspace.residual[p]
-                                   for p in range(subspace.n_block)))
+    norm_residual = np.sqrt(sum(subspace.residual[p] @ subspace.residual[p]
+                                for p in range(subspace.n_block)))
 
     # Minimal tolerance for convergence criterion
     # same settings as in ARPACK are used:

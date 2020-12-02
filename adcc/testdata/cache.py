@@ -70,9 +70,9 @@ def make_mock_adc_state(refstate, matmethod, kind, reference):
     vec_singles = reference[kind]["eigenvectors_singles"]
     vec_doubles = reference[kind].get("eigenvectors_doubles", None)
     for i, evec in enumerate(state.eigenvectors):
-        evec["s"].set_from_ndarray(vec_singles[i])
+        evec.ph.set_from_ndarray(vec_singles[i])
         if has_doubles:
-            evec["d"].set_from_ndarray(vec_doubles[i], 1e-14)
+            evec.pphh.set_from_ndarray(vec_doubles[i], 1e-14)
     return ExcitedStates(state)
 
 

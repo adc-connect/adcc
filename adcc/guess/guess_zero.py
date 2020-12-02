@@ -43,12 +43,12 @@ def guess_zero(matrix, spin_change=0, spin_block_symmetrisation="none"):
                  "symmetric" and "antisymmetric", where "none" enforces
                  no particular symmetry.
     """
-    return AmplitudeVector(*tuple(
-        Tensor(sym) for sym in guess_symmetries(
+    return AmplitudeVector(**{
+        block: Tensor(sym) for block, sym in guess_symmetries(
             matrix, spin_change=spin_change,
             spin_block_symmetrisation=spin_block_symmetrisation
-        )
-    ))
+        ).items()
+    })
 
 
 def guess_symmetries(matrix, spin_change=0, spin_block_symmetrisation="none"):
@@ -84,32 +84,32 @@ def guess_symmetries(matrix, spin_change=0, spin_block_symmetrisation="none"):
                          "You passed {}".format(spin_change))
 
     max_spin_change = 0
-    if "s" in matrix.blocks:
+    if "ph" in matrix.axis_blocks:
         max_spin_change = 1
-    if "d" in matrix.blocks:
+    if "pphh" in matrix.axis_blocks:
         max_spin_change = 2
     if spin_change > max_spin_change:
         raise ValueError("spin_change for singles guesses may only be in the "
                          f"range [{-max_spin_change}, {max_spin_change}] and "
                          f"not {spin_change}.")
 
-    symmetries = []
-    if "s" in matrix.blocks:
-        symmetries.append(guess_symmetry_singles(
+    symmetries = {}
+    if "ph" in matrix.axis_blocks:
+        symmetries["ph"] = guess_symmetry_singles(
             matrix, spin_change=spin_change,
             spin_block_symmetrisation=spin_block_symmetrisation
-        ))
-    if "d" in matrix.blocks:
-        symmetries.append(guess_symmetry_doubles(
+        )
+    if "pphh" in matrix.axis_blocks:
+        symmetries["pphh"] = guess_symmetry_doubles(
             matrix, spin_change=spin_change,
             spin_block_symmetrisation=spin_block_symmetrisation
-        ))
+        )
     return symmetries
 
 
 def guess_symmetry_singles(matrix, spin_change=0,
                            spin_block_symmetrisation="none"):
-    symmetry = Symmetry(matrix.mospaces, "".join(matrix.block_spaces("s")))
+    symmetry = Symmetry(matrix.mospaces, "".join(matrix.axis_spaces["ph"]))
     symmetry.irreps_allowed = ["A"]
     if spin_change != 0 and spin_block_symmetrisation != "none":
         raise NotImplementedError("spin_symmetrisation != 'none' only "
@@ -125,7 +125,7 @@ def guess_symmetry_singles(matrix, spin_change=0,
 
 def guess_symmetry_doubles(matrix, spin_change=0,
                            spin_block_symmetrisation="none"):
-    spaces_d = matrix.block_spaces("d")
+    spaces_d = matrix.axis_spaces["pphh"]
     symmetry = Symmetry(matrix.mospaces, "".join(spaces_d))
     symmetry.irreps_allowed = ["A"]
 

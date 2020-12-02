@@ -31,12 +31,12 @@ from adcc.AmplitudeVector import AmplitudeVector
 
 
 def mtm_adc0(mp, dipop, intermediates):
-    return AmplitudeVector(dipop[b.ov])
+    return AmplitudeVector(ph=dipop[b.ov])
 
 
 def mtm_adc1(mp, dipop, intermediates):
     f1 = dipop[b.ov] - einsum("ijab,jb->ia", mp.t2(b.oovv), dipop[b.ov])
-    return AmplitudeVector(f1)
+    return AmplitudeVector(ph=f1)
 
 
 def mtm_adc2(mp, dipop, intermediates):
@@ -57,11 +57,11 @@ def mtm_adc2(mp, dipop, intermediates):
         + einsum("ijac,bc->ijab", t2, dipop[b.vv]).antisymmetrise(2, 3)
         - einsum("ik,kjab->ijab", dipop[b.oo], t2).antisymmetrise(0, 1)
     )
-    return AmplitudeVector(f1, f2)
+    return AmplitudeVector(ph=f1, pphh=f2)
 
 
 def mtm_cvs_adc0(mp, dipop, intermediates):
-    return AmplitudeVector(dipop[b.cv])
+    return AmplitudeVector(ph=dipop[b.cv])
 
 
 def mtm_cvs_adc2(mp, dipop, intermediates):
@@ -71,7 +71,7 @@ def mtm_cvs_adc2(mp, dipop, intermediates):
         - einsum("Ij,ja->Ia", dipop[b.co], intermediates.cvs_p0_ov)
     )
     f2 = (1 / sqrt(2)) * einsum("Ik,kjab->jIab", dipop[b.co], mp.t2(b.oovv))
-    return AmplitudeVector(f1, f2)
+    return AmplitudeVector(ph=f1, pphh=f2)
 
 
 DISPATCH = {

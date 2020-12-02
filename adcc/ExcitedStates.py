@@ -24,20 +24,18 @@ import warnings
 import numpy as np
 import pandas as pd
 
+from adcc import dot
+from scipy import constants
+
 from . import adc_pp
 from .misc import cached_property
 from .timings import timed_member_call
+from .Excitation import Excitation, mark_excitation_property
 from .FormatIndex import (FormatIndexAdcc, FormatIndexBase,
                           FormatIndexHfProvider, FormatIndexHomoLumo)
 from .OneParticleOperator import product_trace
-from .FormatDominantElements import FormatDominantElements
-
-from adcc import dot
-
-from scipy import constants
-from .Excitation import Excitation, mark_excitation_property
-
 from .ElectronicTransition import ElectronicTransition
+from .FormatDominantElements import FormatDominantElements
 
 
 class FormatExcitationVector:
@@ -83,8 +81,7 @@ class FormatExcitationVector:
         if not isinstance(vectors, list):
             return self.optimise_formatting([vectors])
         for vector in vectors:
-            for block in self.matrix.blocks:
-                spaces = self.matrix.block_spaces(block)
+            for block, spaces in self.matrix.axis_spaces.items():
                 self.tensor_format.optimise_formatting((spaces, vector[block]))
 
     @property
@@ -93,9 +90,9 @@ class FormatExcitationVector:
         The width of an amplitude line if a tensor is formatted with this class
         """
         # TODO This assumes a PP ADC matrix
-        if self.matrix.blocks == ["s"]:
+        if self.matrix.axis_blocks == ["ph"]:
             nblk = 2
-        elif self.matrix.blocks == ["s", "d"]:
+        elif self.matrix.axis_blocks == ["ph", "pphh"]:
             nblk = 4
         else:
             raise NotImplementedError("Unknown ADC matrix structure")
@@ -107,9 +104,9 @@ class FormatExcitationVector:
     def format(self, vector):
         idxgap = self.index_format.max_n_characters * " "
         # TODO This assumes a PP ADC matrix
-        if self.matrix.blocks == ["s"]:
+        if self.matrix.axis_blocks == ["ph"]:
             formats = {"ov": "{0} -> {1}  {2}->{3}", }
-        elif self.matrix.blocks == ["s", "d"]:
+        elif self.matrix.axis_blocks == ["ph", "pphh"]:
             formats = {
                 "ov":   "{0} " + idxgap + " -> {1} " + idxgap + "  {2} ->{3} ",
                 "oovv": "{0} {1} -> {2} {3}  {4}{5}->{6}{7}",
@@ -118,9 +115,8 @@ class FormatExcitationVector:
             raise NotImplementedError("Unknown ADC matrix structure")
 
         ret = []
-        for block in self.matrix.blocks:
+        for block, spaces in self.matrix.axis_spaces.items():
             # Strip numbers for the lookup into formats above
-            spaces = self.matrix.block_spaces(block)
             stripped = "".join(c for c in "".join(spaces) if c.isalpha())
 
             formatted = self.tensor_format.format_as_list(spaces, vector[block])
@@ -252,7 +248,7 @@ class ExcitedStates(ElectronicTransition):
             by default ``True``.
         """
         # TODO This function is quite horrible and definitely needs some
-        #      refactoring
+        #      refactoring, also it assumes ADC-PP everywhere
 
         eV = constants.value("Hartree energy in eV")
         has_dipole = "electric_dipole" in self.operators.available
@@ -277,14 +273,14 @@ class ExcitedStates(ElectronicTransition):
             opt_body += "{rot:8.4f} "
             opt_thead += " rot str "
             opt["rot"] = lambda i, vec: self.rotatory_strength[i]
-        if "s" in self.matrix.blocks and block_norms:
+        if "ph" in self.matrix.axis_blocks and block_norms:
             opt_body += "{v1:9.4g} "
             opt_thead += "   |v1|^2 "
-            opt["v1"] = lambda i, vec: dot(vec["s"], vec["s"])
-        if "d" in self.matrix.blocks and block_norms:
+            opt["v1"] = lambda i, vec: dot(vec.ph, vec.ph)
+        if "pphh" in self.matrix.axis_blocks and block_norms:
             opt_body += "{v2:9.4g} "
             opt_thead += "   |v2|^2 "
-            opt["v2"] = lambda i, vec: dot(vec["d"], vec["d"])
+            opt["v2"] = lambda i, vec: dot(vec.pphh, vec.pphh)
         if has_dipole and state_dipole_moments:
             opt_body += " {dmx:8.4f} {dmy:8.4f} {dmz:8.4f}"
             opt_thead += "     state dipole moment   "
