@@ -49,9 +49,7 @@ class JacobiPreconditioner:
             raise TypeError("Only an AdcMatrixlike may be used with this "
                             "preconditioner for now.")
 
-        self.diagonal = AmplitudeVector(*tuple(
-            adcmatrix.diagonal(block) for block in adcmatrix.blocks
-        ))
+        self.diagonal = adcmatrix.diagonal()
         self.shifts = shifts
 
     def update_shifts(self, shifts):

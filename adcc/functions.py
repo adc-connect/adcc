@@ -21,6 +21,7 @@
 ##
 ## ---------------------------------------------------------------------
 import libadcc
+
 import opt_einsum
 
 from .AmplitudeVector import AmplitudeVector
@@ -116,11 +117,11 @@ def lincomb(coefficients, tensors, evaluate=False):
         raise ValueError("Number of coefficient values does not match "
                          "number of tensors.")
     if isinstance(tensors[0], AmplitudeVector):
-        return AmplitudeVector(*tuple(
-            lincomb(coefficients, [ten[block] for ten in tensors],
-                    evaluate=evaluate)
-            for block in tensors[0].blocks
-        ))
+        return AmplitudeVector(**{
+            block: lincomb(coefficients, [ten[block] for ten in tensors],
+                           evaluate=evaluate)
+            for block in tensors[0].blocks_ph
+        })
     elif not isinstance(tensors[0], libadcc.Tensor):
         raise TypeError("Tensor type not supported")
 
@@ -225,10 +226,10 @@ def contract(subscripts, a, b):
     by the first argument string, e.g. "ab,bc->ac"
     or "abc,bcd->ad".
 
-    Note: The contract function is deprecated. It will disappear in 0.18.
+    Note: The contract function is deprecated. It will disappear in 0.16.
     """
     import warnings
 
     warnings.warn(DeprecationWarning("contract is deprecated and will "
-                                     "be removed in 0.18. Use einsum."))
+                                     "be removed in 0.16. Use einsum."))
     return einsum(subscripts, a, b)

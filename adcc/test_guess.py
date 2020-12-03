@@ -26,11 +26,11 @@ import numpy as np
 import adcc
 import adcc.guess
 
-from .misc import expand_test_templates
+from pytest import approx
 from numpy.testing import assert_array_equal
 from adcc.testdata.cache import cache
 
-from pytest import approx
+from .misc import expand_test_templates
 
 # The methods to test
 methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
@@ -61,7 +61,7 @@ class TestGuess(unittest.TestCase):
             fac = -1
 
         # Singles
-        gts = guess["s"].to_ndarray()
+        gts = guess.ph.to_ndarray()
         assert gts.shape == (nCa + nCb, nva + nvb)
         assert np.max(np.abs(gts[nCa:, :nva])) == 0
         assert np.max(np.abs(gts[:nCa, nva:])) == 0
@@ -71,10 +71,10 @@ class TestGuess(unittest.TestCase):
                                fac * gts[nCa:, nva:])
 
         # Doubles
-        if "d" not in matrix.blocks:
+        if "pphh" not in matrix.axis_blocks:
             return
 
-        gtd = guess["d"].to_ndarray()
+        gtd = guess.pphh.to_ndarray()
         assert gtd.shape == (noa + nob, nCa + nCb, nva + nvb, nva + nvb)
 
         assert np.max(np.abs(gtd[:noa, :nCa, nva:, nva:])) == 0  # aa->bb
@@ -100,7 +100,7 @@ class TestGuess(unittest.TestCase):
         if not matrix.is_core_valence_separated:
             assert_array_equal(gtd.transpose((1, 0, 2, 3)), -gtd)
 
-        if block == "s":
+        if block == "ph":
             assert np.max(np.abs(gtd[:noa, :nCa, :nva, :nva])) == 0
             assert np.max(np.abs(gtd[noa:, nCa:, nva:, nva:])) == 0
             assert np.max(np.abs(gtd[:noa, nCa:, :nva, nva:])) == 0
@@ -110,7 +110,7 @@ class TestGuess(unittest.TestCase):
             has_aa = np.max(np.abs(gts[:nCa, :nva])) > 0
             has_bb = np.max(np.abs(gts[nCa:, nva:])) > 0
             assert has_aa or has_bb
-        elif block == "d":
+        elif block == "pphh":
             assert np.max(np.abs(gts[:nCa, :nva])) == 0
             assert np.max(np.abs(gts[nCa:, nva:])) == 0
             has_aaaa = np.max(np.abs(gtd[:noa, :nCa, :nva, :nva])) > 0
@@ -135,17 +135,17 @@ class TestGuess(unittest.TestCase):
         nvb = mospaces.n_orbs_beta("v1")
 
         # Singles
-        gts = guess["s"].to_ndarray()
+        gts = guess.ph.to_ndarray()
         assert gts.shape == (nCa + nCb, nva + nvb)
         assert np.max(np.abs(gts[:nCa, :nva])) == 0  # a->a
         assert np.max(np.abs(gts[nCa:, :nva])) == 0  # b->a
         assert np.max(np.abs(gts[nCa:, nva:])) == 0  # b->b
 
         # Doubles
-        if "d" not in matrix.blocks:
+        if "pphh" not in matrix.axis_blocks:
             return
 
-        gtd = guess["d"].to_ndarray()
+        gtd = guess.pphh.to_ndarray()
         assert gtd.shape == (noa + nob, nCa + nCb, nva + nvb, nva + nvb)
         assert np.max(np.abs(gtd[:noa, :nCa, :nva, :nva])) == 0  # aa->aa
         assert np.max(np.abs(gtd[:noa, :nCa, nva:, nva:])) == 0  # aa->bb
@@ -164,13 +164,13 @@ class TestGuess(unittest.TestCase):
         if not matrix.is_core_valence_separated:
             assert_array_equal(gtd.transpose((1, 0, 2, 3)), -gtd)
 
-        if block == "s":
+        if block == "ph":
             assert np.max(np.abs(gtd[:noa, :nCa, :nva, nva:])) == 0  # aa->ab
             assert np.max(np.abs(gtd[:noa, :nCa, nva:, :nva])) == 0  # aa->ba
             assert np.max(np.abs(gtd[:noa, nCa:, nva:, nva:])) == 0  # ab->bb
             assert np.max(np.abs(gtd[noa:, :nCa, nva:, nva:])) == 0  # ba->bb
             assert np.max(np.abs(gts[:nCa, nva:])) > 0
-        elif block == "d":
+        elif block == "pphh":
             assert np.max(np.abs(gts[:nCa, nva:])) == 0
             has_aaab = np.max(np.abs(gtd[:noa, :nCa, :nva, nva:])) > 0
             has_aaba = np.max(np.abs(gtd[:noa, :nCa, nva:, :nva])) > 0
@@ -199,8 +199,8 @@ class TestGuess(unittest.TestCase):
         # Make a list of diagonal indices, ordered by the corresponding
         # diagonal values
         sidcs = None
-        if block == "s":
-            diagonal = matrix.diagonal("s").to_ndarray()
+        if block == "ph":
+            diagonal = matrix.diagonal().ph.to_ndarray()
 
             # Build list of indices, which would sort the diagonal
             sidcs = np.dstack(np.unravel_index(np.argsort(diagonal.ravel()),
@@ -215,8 +215,8 @@ class TestGuess(unittest.TestCase):
                     if any((idx[0] >= nCa and idx[1] >= nva,
                             idx[0]  < nCa and idx[1]  < nva))  # noqa: E221
                 ]
-        elif block == "d":
-            diagonal = matrix.diagonal("d").to_ndarray()
+        elif block == "pphh":
+            diagonal = matrix.diagonal().pphh.to_ndarray()
 
             # Build list of indices, which would sort the diagonal
             sidcs = np.dstack(np.unravel_index(np.argsort(diagonal.ravel()),
@@ -300,49 +300,49 @@ class TestGuess(unittest.TestCase):
             self.assert_guess_values(matrix, block, guesses, spin_flip=True)
 
     def template_singles_h2o(self, method):
-        self.base_test_no_spin_change("h2o_sto3g", method, "s")
+        self.base_test_no_spin_change("h2o_sto3g", method, "ph")
 
     def template_singles_h2o_cvs(self, method):
-        self.base_test_no_spin_change("h2o_sto3g", "cvs-" + method, "s",
+        self.base_test_no_spin_change("h2o_sto3g", "cvs-" + method, "ph",
                                       max_guesses=2)
 
     def template_singles_cn(self, method):
-        self.base_test_no_spin_change("cn_sto3g", method, "s")
+        self.base_test_no_spin_change("cn_sto3g", method, "ph")
 
     def template_singles_cn_cvs(self, method):
-        self.base_test_no_spin_change("cn_sto3g", "cvs-" + method, "s",
+        self.base_test_no_spin_change("cn_sto3g", "cvs-" + method, "ph",
                                       max_guesses=7)
 
     def template_singles_hf3(self, method):
-        self.base_test_spin_flip("hf3_631g", method, "s")
+        self.base_test_spin_flip("hf3_631g", method, "ph")
 
     # TODO These tests fails because of adcman, because some delta-Fock-based
     #      approximation is used for the diagonal instead of the actual
     #      doubles diagonal which would be employed for ADC(2) and ADC(3)
     # def test_doubles_h2o_adc2(self):
-    #     self.base_test_no_spin_change("h2o_sto3g", "adc2", "d", max_guesses=3)
+    #     self.base_test_no_spin_change("h2o_sto3g", "adc2", "pphh", max_guesses=3)
     #
     # def test_doubles_h2o_adc3(self):
-    #     self.base_test_no_spin_change("h2o_sto3g", "adc3", "d", max_guesses=3)
+    #     self.base_test_no_spin_change("h2o_sto3g", "adc3", "pphh", max_guesses=3)
     #
     # def test_doubles_cn_adc2(self):
-    #     self.base_test_no_spin_change("cn_sto3g", "adc2", "d")
+    #     self.base_test_no_spin_change("cn_sto3g", "adc2", "pphh")
     #
     # def test_doubles_cn_adc3(self):
-    #    self.base_test_no_spin_change("cn_sto3g", "adc3", "d")
+    #    self.base_test_no_spin_change("cn_sto3g", "adc3", "pphh")
     #
     # TODO Perhaps could be templatified as well one the issues are resolved
 
     def test_doubles_h2o_cvs_adc2(self):
-        self.base_test_no_spin_change("h2o_sto3g", "cvs-adc2", "d",
+        self.base_test_no_spin_change("h2o_sto3g", "cvs-adc2", "pphh",
                                       max_guesses=5)
 
     def test_doubles_hf3_adc2(self):
-        self.base_test_spin_flip("hf3_631g", "adc2", "d")
+        self.base_test_spin_flip("hf3_631g", "adc2", "pphh")
 
     # TODO See above
     # def test_doubles_hf3_adc3(self):
-    #     self.base_test_spin_flip("hf3_631g", "adc3", "d")
+    #     self.base_test_spin_flip("hf3_631g", "adc3", "pphh")
 
     #
     # Tests against reference values
@@ -352,7 +352,7 @@ class TestGuess(unittest.TestCase):
         if matrix.reference_state.restricted:
             symmetrisations = ["symmetric", "antisymmetric"]
 
-        for block in ["s", "d"]:
+        for block in ["ph", "pphh"]:
             for symm in symmetrisations:
                 ref_sb = ref[(block, symm)]
                 guesses = adcc.guess.guesses_from_diagonal(
@@ -400,20 +400,20 @@ class TestGuess(unittest.TestCase):
         symm = [1 / np.sqrt(2), 1 / np.sqrt(2)]
         asymm = [1 / np.sqrt(2), -1 / np.sqrt(2)]
         return {
-            ("s", "symmetric"): [
+            ("ph", "symmetric"): [
                 ([(4, 0), (9, 2)], symm), ([(4, 1), (9, 3)], symm),
                 ([(3, 0), (8, 2)], symm), ([(3, 1), (8, 3)], symm),
                 ([(2, 0), (7, 2)], symm), ([(2, 1), (7, 3)], symm),
                 ([(1, 0), (6, 2)], symm), ([(1, 1), (6, 3)], symm),
             ],
-            ("s", "antisymmetric"): [
+            ("ph", "antisymmetric"): [
                 # nonzeros          values
                 ([(4, 0), (9, 2)], asymm), ([(4, 1), (9, 3)], asymm),
                 ([(3, 0), (8, 2)], asymm), ([(3, 1), (8, 3)], asymm),
                 ([(2, 0), (7, 2)], asymm), ([(2, 1), (7, 3)], asymm),
                 ([(1, 0), (6, 2)], asymm), ([(1, 1), (6, 3)], asymm),
             ],
-            ("d", "symmetric"): [
+            ("pphh", "symmetric"): [
                 ([(4, 9, 0, 2), (4, 9, 2, 0), (9, 4, 0, 2), (9, 4, 2, 0)],
                  [0.5, -0.5, -0.5, 0.5]),
                 ([(3, 9, 0, 2), (3, 9, 2, 0), (4, 8, 0, 2), (4, 8, 2, 0),
@@ -445,7 +445,7 @@ class TestGuess(unittest.TestCase):
                 ([(4, 9, 1, 3), (4, 9, 3, 1), (9, 4, 1, 3), (9, 4, 3, 1)],
                  [0.5, -0.5, -0.5, 0.5]),
             ],
-            ("d", "antisymmetric"): [
+            ("pphh", "antisymmetric"): [
                 ([(3, 9, 0, 2), (3, 9, 2, 0), (4, 8, 0, 2), (4, 8, 2, 0),
                   (8, 4, 0, 2), (8, 4, 2, 0), (9, 3, 0, 2), (9, 3, 2, 0)],
                  [sq8, -sq8, -sq8, sq8, sq8, -sq8, -sq8, sq8]),
@@ -482,13 +482,13 @@ class TestGuess(unittest.TestCase):
     def get_ref_cn(self):
         sq8 = 1 / np.sqrt(8)
         return {
-            ("s", "none"): [
+            ("ph", "none"): [
                 ([(11, 3)], [1.]), ([(12, 3)], [1.]),
                 ([( 6, 0)], [1.]), ([( 6, 1)], [1.]),  # noqa: E201
                 ([(10, 3)], [1.]), ([( 5, 0)], [1.]),  # noqa: E201
                 ([( 4, 1)], [1.]), ([(11, 5)], [1.]),  # noqa: E201
             ],
-            ("d", "none"): [
+            ("pphh", "none"): [
                 ([(6, 11, 0, 3), (6, 11, 3, 0), (11, 6, 0, 3), (11, 6, 3, 0)],
                  [-0.5, 0.5, 0.5, -0.5]),
                 ([(6, 12, 0, 3), (6, 12, 3, 0), (12, 6, 0, 3), (12, 6, 3, 0)],

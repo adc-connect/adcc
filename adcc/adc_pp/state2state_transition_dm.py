@@ -21,19 +21,20 @@
 ##
 ## ---------------------------------------------------------------------
 from adcc import block as b
+from adcc.LazyMp import LazyMp
 from adcc.AdcMethod import AdcMethod
 from adcc.functions import einsum
+from adcc.Intermediates import Intermediates
 from adcc.AmplitudeVector import AmplitudeVector
 from adcc.OneParticleOperator import OneParticleOperator
-from .util import check_singles_amplitudes, check_doubles_amplitudes
 
-import libadcc
+from .util import check_doubles_amplitudes, check_singles_amplitudes
 
 
 def s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates):
     check_singles_amplitudes([b.o, b.v], amplitude_l, amplitude_r)
-    ul1 = amplitude_l["s"]
-    ur1 = amplitude_r["s"]
+    ul1 = amplitude_l.ph
+    ur1 = amplitude_r.ph
 
     dm = OneParticleOperator(mp, is_symmetric=False)
     dm[b.oo] = -einsum('ja,ia->ij', ul1, ur1)
@@ -45,8 +46,8 @@ def s2s_tdm_adc2(mp, amplitude_l, amplitude_r, intermediates):
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude_l, amplitude_r)
     dm = s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates)
 
-    ul1, ul2 = amplitude_l["s"], amplitude_l["d"]
-    ur1, ur2 = amplitude_r["s"], amplitude_r["d"]
+    ul1, ul2 = amplitude_l.ph, amplitude_l.pphh
+    ur1, ur2 = amplitude_r.ph, amplitude_r.pphh
 
     t2 = mp.t2(b.oovv)
     p0_ov = mp.mp2_diffdm[b.ov]
@@ -126,19 +127,19 @@ def state2state_transition_dm(method, ground_state, amplitude_from,
         The amplitude vector of the state to start from
     amplitude_to : AmplitudeVector
         The amplitude vector of the state to excite to
-    intermediates : AdcIntermediates
+    intermediates : adcc.Intermediates
         Intermediates from the ADC calculation to reuse
     """
     if not isinstance(method, AdcMethod):
         method = AdcMethod(method)
-    if not isinstance(ground_state, libadcc.LazyMp):
+    if not isinstance(ground_state, LazyMp):
         raise TypeError("ground_state should be a LazyMp object.")
     if not isinstance(amplitude_from, AmplitudeVector):
         raise TypeError("amplitude_from should be an AmplitudeVector object.")
     if not isinstance(amplitude_to, AmplitudeVector):
         raise TypeError("amplitude_to should be an AmplitudeVector object.")
     if intermediates is None:
-        intermediates = libadcc.AdcIntermediates(ground_state)
+        intermediates = Intermediates(ground_state)
 
     if method.name not in DISPATCH:
         raise NotImplementedError("state2state_transition_dm is not implemented "

@@ -20,38 +20,79 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import libadcc
 import numpy as np
 
+from .mp import compute_mp2_diffdm  # noqa: F401
 from .misc import cached_property
 from .ReferenceState import ReferenceState
-from .caching_policy import DefaultCachingPolicy
 from .OneParticleOperator import OneParticleOperator, product_trace
 
-import libadcc
 
-
-class LazyMp(libadcc.LazyMp):
-    def __init__(self, hf, caching_policy=DefaultCachingPolicy()):
+class LazyMp:
+    def __init__(self, hf):
         """
         Initialise the class dealing with the M/oller-Plesset ground state.
         """
-        if isinstance(hf, libadcc.LazyMp):
-            # Copy-Constructor, needed from C++ side
-            super().__init__(hf)
-            return
         if isinstance(hf, libadcc.HartreeFockSolution_i):
             hf = ReferenceState(hf)
         if not isinstance(hf, ReferenceState):
             raise TypeError("hf needs to be a ReferenceState "
                             "or a HartreeFockSolution_i")
-        super().__init__(hf, caching_policy)
+        self.reference_state = hf
+        self.__cpp = libadcc.LazyMp(hf)
+        self.mospaces = hf.mospaces
+        self.has_core_occupied_space = hf.has_core_occupied_space
+
+    @property
+    def timer(self):
+        return self.__cpp.timer
+
+    def __getattr__(self, attr):
+        from . import block as b
+
+        # Shortcut some quantities, which are needed most often
+        if attr.startswith("t2") and len(attr) == 4:  # t2oo, t2oc, t2cc
+            xxvv = b.__getattr__(attr[2:4] + "vv")
+            return self.t2(xxvv)
+        else:
+            raise AttributeError
+
+    def df(self, space):
+        """Delta Fock matrix"""
+        # TODO This is so cheap to compute that it does not really deserve
+        #      any caching
+        return self.__cpp.df(space)
+
+    def t2(self, space):
+        """T2 amplitudes"""
+        return self.__cpp.t2(space)
+
+    def set_t2(self, space, tensor):
+        """
+        Set the T2 amplitudes tensor. This invalidates all data depending on the T2
+        amplitudes in this class. Note, that potential other caches, such as
+        computed ADC intermediates are *not* automatically invalidated.
+        """
+        return self.__cpp.set_t2(space, tensor)
+
+    def td2(self, space):
+        """Return the T^D_2 term"""
+        return self.__cpp.td2(space)
+
+    def t2eri(self, space, contraction):
+        """
+        Return the T2 tensor with ERI tensor contraction intermediates.
+        These are called pi1 to pi7 in libadc.
+        """
+        return self.__cpp.t2eri(space, contraction)
 
     @property
     def mp2_diffdm(self):
         """
         Return the MP2 differensce density in the MO basis.
         """
-        ret = OneParticleOperator.from_cpp(super().mp2_diffdm)
+        ret = OneParticleOperator.from_cpp(self.__cpp.mp2_diffdm)
         ret.reference_state = self.reference_state
         return ret
 
@@ -80,6 +121,10 @@ class LazyMp(libadcc.LazyMp):
         else:
             raise NotImplementedError("Only dipole moments for level 1 and 2"
                                       " are implemented.")
+
+    def energy_correction(self, level=2):
+        """Obtain the MP energy correction at a particular level"""
+        return self.__cpp.energy_correction(level)
 
     def energy(self, level=2):
         """
@@ -121,7 +166,6 @@ class LazyMp(libadcc.LazyMp):
 
         if recurse:
             qcvars.update(self.reference_state.to_qcvars(properties, recurse))
-
         return qcvars
 
     @property

@@ -23,11 +23,12 @@
 import sys
 import warnings
 
-from libadcc import LazyMp, ReferenceState
+from libadcc import ReferenceState
 
 from . import solver
 from .guess import (guesses_any, guesses_singlet, guesses_spin_flip,
                     guesses_triplet)
+from .LazyMp import LazyMp
 from .AdcMatrix import AdcMatrix, AdcMatrixlike
 from .AdcMethod import AdcMethod
 from .exceptions import InputError
@@ -442,7 +443,7 @@ def obtain_guesses_by_inspection(matrix, n_guesses, kind, n_guesses_doubles=None
     Internal function called from run_adc.
     """
     if n_guesses_doubles is not None and n_guesses_doubles > 0 \
-       and "d" not in matrix.blocks:
+       and "pphh" not in matrix.axis_blocks:
         raise InputError("n_guesses_doubles > 0 is only sensible if the ADC "
                          "method has a doubles block (i.e. it is *not* ADC(0), "
                          "ADC(1) or a variant thereof.")
@@ -456,16 +457,17 @@ def obtain_guesses_by_inspection(matrix, n_guesses, kind, n_guesses_doubles=None
     n_guess_singles = n_guesses
     if n_guesses_doubles is not None:
         n_guess_singles = n_guesses - n_guesses_doubles
-    singles_guesses = guess_function(matrix, n_guess_singles, block="s")
+    singles_guesses = guess_function(matrix, n_guess_singles, block="ph")
 
     doubles_guesses = []
-    if "d" in matrix.blocks:
+    if "pphh" in matrix.axis_blocks:
         # Determine number of doubles guesses to request if not
         # explicitly specified
         if n_guesses_doubles is None:
             n_guesses_doubles = n_guesses - len(singles_guesses)
         if n_guesses_doubles > 0:
-            doubles_guesses = guess_function(matrix, n_guesses_doubles, block="d")
+            doubles_guesses = guess_function(matrix, n_guesses_doubles,
+                                             block="pphh")
 
     total_guesses = singles_guesses + doubles_guesses
     if len(total_guesses) < n_guesses:

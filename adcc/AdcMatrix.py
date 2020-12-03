@@ -21,55 +21,245 @@
 ##
 ## ---------------------------------------------------------------------
 import libadcc
+import warnings
 import numpy as np
 
 from .LazyMp import LazyMp
+from .adc_pp import matrix as ppmatrix
+from .timings import Timer, timed_member_call
 from .AdcMethod import AdcMethod
-from .functions import empty_like
+from .Intermediates import Intermediates
 from .AmplitudeVector import AmplitudeVector
 
 
 class AdcMatrixlike:
     """
-    Class implementing minimal functionality of AdcMatrixlike objects.
-
-    Note: This is not the user-facing high-level object. Use adcc.AdcMatrix
-    if you want to construct an ADC matrix object yourself.
+    Base class marker for all objects like ADC matrices.
     """
-    def __init__(self, innermatrix):
-        self.innermatrix = innermatrix
+    pass
 
-    @property
-    def ndim(self):
-        return 2
+
+class AdcMatrix(AdcMatrixlike):
+    # Default perturbation-theory orders for the matrix blocks (== standard ADC-PP).
+    default_block_orders = {
+        #             ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),
+        "adc0":  dict(ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
+        "adc1":  dict(ph_ph=1, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
+        "adc2":  dict(ph_ph=2, ph_pphh=1,    pphh_ph=1,    pphh_pphh=0),     # noqa: E501
+        "adc2x": dict(ph_ph=2, ph_pphh=1,    pphh_ph=1,    pphh_pphh=1),     # noqa: E501
+        "adc3":  dict(ph_ph=3, ph_pphh=2,    pphh_ph=2,    pphh_pphh=1),     # noqa: E501
+    }
+
+    def __init__(self, method, hf_or_mp, block_orders=None, intermediates=None):
+        """
+        Initialise an ADC matrix.
+
+        Parameters
+        ----------
+        method : str or AdcMethod
+            Method to use.
+        hf_or_mp : adcc.ReferenceState or adcc.LazyMp
+            HF reference or MP ground state
+        block_orders : optional
+            The order of perturbation theory to employ for each matrix block.
+            If not set, defaults according to the selected ADC method are chosen.
+        intermediates : adcc.Intermediates or NoneType
+            Allows to pass intermediates to re-use to this class.
+        """
+        if isinstance(hf_or_mp, (libadcc.ReferenceState,
+                                 libadcc.HartreeFockSolution_i)):
+            hf_or_mp = LazyMp(hf_or_mp)
+        if not isinstance(hf_or_mp, LazyMp):
+            raise TypeError("mp_results is not a valid object. It needs to be "
+                            "either a LazyMp, a ReferenceState or a "
+                            "HartreeFockSolution_i.")
+
+        if not isinstance(method, AdcMethod):
+            method = AdcMethod(method)
+
+        self.timer = Timer()
+        self.method = method
+        self.ground_state = hf_or_mp
+        self.reference_state = hf_or_mp.reference_state
+        self.mospaces = hf_or_mp.reference_state.mospaces
+        self.is_core_valence_separated = method.is_core_valence_separated
+        self.ndim = 2
+
+        self.intermediates = intermediates
+        if self.intermediates is None:
+            self.intermediates = Intermediates(self.ground_state)
+
+        # Determine orders of PT in the blocks
+        if block_orders is None:
+            block_orders = self.default_block_orders[method.base_method.name]
+        else:
+            tmp_orders = self.default_block_orders[method.base_method.name].copy()
+            tmp_orders.update(block_orders)
+            block_orders = tmp_orders
+
+        # Sanity checks on block_orders
+        for block in block_orders.keys():
+            if block not in ("ph_ph", "ph_pphh", "pphh_ph", "pphh_pphh"):
+                raise ValueError(f"Invalid block order key: {block}")
+        if block_orders["ph_pphh"] != block_orders["pphh_ph"]:
+            raise ValueError("ph_pphh and pphh_ph should always have "
+                             "the same order")
+        if block_orders["ph_pphh"] is not None \
+           and block_orders["pphh_pphh"] is None:
+            raise ValueError("pphh_pphh cannot be None if ph_pphh isn't.")
+        self.block_orders = block_orders
+
+        # Build the blocks and diagonals
+        with self.timer.record("build"):
+            variant = None
+            if method.is_core_valence_separated:
+                variant = "cvs"
+            self.blocks_ph = {  # TODO Rename to self.block in 0.16.0
+                block: ppmatrix.block(self.ground_state, block.split("_"),
+                                      order=order, intermediates=self.intermediates,
+                                      variant=variant)
+                for block, order in block_orders.items() if order is not None
+            }
+            self.__diagonal = sum(bl.diagonal for bl in self.blocks_ph.values()
+                                  if bl.diagonal)
+            self.__diagonal.evaluate()
+            self.__init_space_data(self.__diagonal)
+
+    def __init_space_data(self, diagonal):
+        """Update the cached data regarding the spaces of the ADC matrix"""
+        self.axis_spaces = {}
+        self.axis_lengths = {}
+        for block in diagonal.blocks_ph:
+            self.axis_spaces[block] = getattr(diagonal, block).subspaces
+            self.axis_lengths[block] = np.prod([
+                self.mospaces.n_orbs(sp) for sp in self.axis_spaces[block]
+            ])
+        self.shape = (sum(self.axis_lengths.values()),
+                      sum(self.axis_lengths.values()))
+
+    def __repr__(self):
+        ret = f"AdcMatrix({self.method.name}, "
+        for b, o in self.block_orders.items():
+            ret += f"{b}={o}, "
+        return ret + ")"
 
     def __len__(self):
         return self.shape[0]
 
+    @property
+    def blocks(self):
+        # TODO Remove in 0.16.0
+        return self.__diagonal.blocks
+
+    def has_block(self, block):
+        warnings.warn("The has_block function is deprecated and "
+                      "will be removed in 0.16.0. "
+                      "Use `in matrix.axis_blocks` in the future.")
+        return self.block_spaces(block) is not None
+
+    def block_spaces(self, block):
+        warnings.warn("The block_spaces function is deprecated and "
+                      "will be removed in 0.16.0. "
+                      "Use `matrix.axis_spaces[block]` in the future.")
+        return {
+            "s": self.axis_spaces.get("ph", None),
+            "d": self.axis_spaces.get("pphh", None),
+            "t": self.axis_spaces.get("ppphhh", None),
+        }[block]
+
+    @property
+    def axis_blocks(self):
+        """
+        Return the blocks used along one of the axes of the ADC matrix
+        (e.g. ['ph', 'pphh']).
+        """
+        return list(self.axis_spaces.keys())
+
+    def diagonal(self, block=None):
+        """Return the diagonal of the ADC matrix"""
+        if block is not None:
+            warnings.warn("Support for the block argument will be dropped "
+                          "in 0.16.0.")
+            if block == "s":
+                return self.__diagonal.ph
+            if block == "d":
+                return self.__diagonal.pphh
+        return self.__diagonal
+
+    def compute_apply(self, block, tensor):
+        warnings.warn("The compute_apply function is deprecated and "
+                      "will be removed in 0.16.0.")
+        if block in ("ss", "sd", "ds", "dd"):
+            warnings.warn("The singles-doubles interface is deprecated and "
+                          "will be removed in 0.16.0.")
+            block = {"ss": "ph_ph", "sd": "ph_pphh",
+                     "ds": "pphh_ph", "dd": "pphh_pphh"}[block]
+        return self.block_apply(block, tensor)
+
+    def block_apply(self, block, tensor):
+        """
+        Compute the application of a block of the ADC matrix
+        with another AmplitudeVector or Tensor. Non-matching blocks
+        in the AmplitudeVector will be ignored.
+        """
+        if not isinstance(tensor, libadcc.Tensor):
+            raise TypeError("tensor should be an adcc.Tensor")
+
+        with self.timer.record(f"apply/{block}"):
+            outblock, inblock = block.split("_")
+            ampl = AmplitudeVector(**{inblock: tensor})
+            ret = self.blocks_ph[block].apply(ampl)
+            return getattr(ret, outblock)
+
+    @timed_member_call()
     def matvec(self, v):
-        out = empty_like(v)
-        self.compute_matvec(v, out)
-        return out
+        """
+        Compute the matrix-vector product of the ADC matrix
+        with an excitation amplitude and return the result.
+        """
+        return sum(block.apply(v) for block in self.blocks_ph.values())
 
     def rmatvec(self, v):
         # ADC matrix is symmetric
         return self.matvec(v)
 
+    def compute_matvec(self, ampl):
+        """
+        Compute the matrix-vector product of the ADC matrix
+        with an excitation amplitude and return the result.
+        """
+        warnings.warn("The compute_matvec function is deprecated and "
+                      "will be removed in 0.16.0.")
+        return self.matvec(ampl)
+
     def __matmul__(self, other):
         if isinstance(other, AmplitudeVector):
-            return self.compute_matvec(other)
+            return self.matvec(other)
         if isinstance(other, list):
             if all(isinstance(elem, AmplitudeVector) for elem in other):
-                return [self.compute_matvec(ov) for ov in other]
+                return [self.matvec(ov) for ov in other]
         return NotImplemented
 
-    @property
-    def intermediates(self):
-        return self.innermatrix.intermediates
-
-    @intermediates.setter
-    def intermediates(self, new):
-        self.innermatrix.intermediates = new
+    def block_view(self, block):
+        """
+        Return a view into the AdcMatrix that represents a single
+        block of the matrix. Currently only diagonal blocks are supported.
+        """
+        b1, b2 = block.split("_")
+        if b1 != b2:
+            raise NotImplementedError("Off-diagonal block views not yet "
+                                      "implemented.")
+            # TODO For off-diagonal blocks we probably need a different
+            #      data structure as the AdcMatrix class as these block
+            #      are inherently different than an AdcMatrix (no Hermiticity
+            #      for example) and basically they only need to support some
+            #      form of matrix-vector product and some stastics like
+            #      spaces and sizes etc.
+        block_orders = {bl: None for bl in self.block_orders.keys()}
+        block_orders[block] = self.block_orders[block]
+        return AdcMatrix(self.method, self.ground_state,
+                         block_orders=block_orders,
+                         intermediates=self.intermediates)
 
     def construct_symmetrisation_for_blocks(self):
         """
@@ -87,17 +277,17 @@ class AdcMatrixlike:
         ret = {}
         if self.is_core_valence_separated:
             # CVS doubles part is antisymmetric wrt. (i,K,a,b) <-> (i,K,b,a)
-            ret["d"] = lambda v: v.antisymmetrise([(2, 3)])
+            ret["pphh"] = lambda v: v.antisymmetrise([(2, 3)])
         else:
             def symmetrise_generic_adc_doubles(invec):
                 # doubles part is antisymmetric wrt. (i,j,a,b) <-> (i,j,b,a)
                 scratch = invec.antisymmetrise([(2, 3)])
                 # doubles part is symmetric wrt. (i,j,a,b) <-> (j,i,b,a)
                 return scratch.symmetrise([(0, 1), (2, 3)])
-            ret["d"] = symmetrise_generic_adc_doubles
+            ret["pphh"] = symmetrise_generic_adc_doubles
         return ret
 
-    def dense_basis(self, blocks=None, ordering="adcc"):
+    def dense_basis(self, axis_blocks=None, ordering="adcc"):
         """
         Return the list of indices and their values
         of the dense basis representation
@@ -105,8 +295,10 @@ class AdcMatrixlike:
         ordering: adcc, spin, spatial
         """
         ret = []
-        if blocks is None:
-            blocks = self.blocks
+        if axis_blocks is None:
+            axis_blocks = self.axis_blocks
+        if not isinstance(axis_blocks, list):
+            axis_blocks = [axis_blocks]
 
         # Define function to impose the order in the basis
         if ordering == "adcc":
@@ -127,9 +319,9 @@ class AdcMatrixlike:
                 # Sort first by spatial, then by spin
                 return (spatial, is_beta)
 
-        if "s" in blocks:
+        if "ph" in axis_blocks:
             ret_s = []
-            sp_s = self.block_spaces("s")
+            sp_s = self.axis_spaces["ph"]
             n_orbs_s = [self.mospaces.n_orbs(sp) for sp in sp_s]
             n_orbsa_s = [self.mospaces.n_orbs_alpha(sp) for sp in sp_s]
             for i in range(n_orbs_s[0]):
@@ -142,9 +334,9 @@ class AdcMatrixlike:
             ret_s.sort(key=sortfctn)
             ret.extend(ret_s)
 
-        if "d" in blocks:
+        if "pphh" in axis_blocks:
             ret_d = []
-            sp_d = self.block_spaces("d")
+            sp_d = self.axis_spaces["pphh"]
             n_orbsa_d = [self.mospaces.n_orbs_alpha(sp) for sp in sp_d]
 
             if sp_d[0] == sp_d[1] and sp_d[2] == sp_d[3]:
@@ -179,12 +371,12 @@ class AdcMatrixlike:
             ret_d.sort(key=sortfctn)
             ret.extend(ret_d)
 
-        if any(b not in "sd" for b in self.blocks):
-            raise NotImplementedError("Blocks other than s and d "
+        if any(b not in ("ph", "pphh") for b in self.axis_blocks):
+            raise NotImplementedError("Blocks other than ph and pphh "
                                       "not implemented")
         return ret
 
-    def to_dense_matrix(self, out=None):
+    def to_ndarray(self, out=None):
         """
         Return the ADC matrix object as a dense numpy array. Converts the sparse
         internal representation of the ADC matrix to a dense matrix and return
@@ -204,6 +396,8 @@ class AdcMatrixlike:
 
         This function has not been sufficiently tested to be considered stable.
         """
+        # TODO Update to ph / pphh
+        # TODO Still uses deprecated functions
         import tqdm
 
         from adcc import guess_zero
@@ -216,7 +410,7 @@ class AdcMatrixlike:
         # Build the shape of the returned array
         # Since the basis of the doubles block is not the unit vectors
         # this *not* equal to the shape of the AdcMatrix object
-        basis = {b: self.dense_basis(b) for b in self.blocks}
+        basis = {b: self.dense_basis(b) for b in self.axis_blocks}
         mat_len = sum(len(basis[b]) for b in basis)
 
         if out is None:
@@ -229,109 +423,65 @@ class AdcMatrixlike:
             out[:] = 0  # Zero all data in out.
 
         # Check for the cases actually implemented
-        if any(b not in "sd" for b in self.blocks):
-            raise NotImplementedError("Blocks other than s and d "
+        if any(b not in ("ph", "pphh") for b in self.axis_blocks):
+            raise NotImplementedError("Blocks other than ph and pphh "
                                       "not implemented")
-        if "s" not in self.blocks:
-            raise NotImplementedError("Block 's' needs to be present")
+        if "ph" not in self.axis_blocks:
+            raise NotImplementedError("Block 'ph' needs to be present")
 
         # Extract singles-singles block (contiguous)
-        assert "s" in self.blocks
-        n_orbs_s = [self.mospaces.n_orbs(sp) for sp in self.block_spaces("s")]
-        n_s = np.prod(n_orbs_s)
-        assert len(basis["s"]) == n_s
-        view_ss = out[:n_s, :n_s].reshape(*n_orbs_s, *n_orbs_s)
-        for i in range(n_orbs_s[0]):
-            for a in range(n_orbs_s[1]):
+        assert "ph" in self.axis_blocks
+        n_orbs_ph = [self.mospaces.n_orbs(sp) for sp in self.axis_spaces["ph"]]
+        n_ph = np.prod(n_orbs_ph)
+        assert len(basis["ph"]) == n_ph
+        view_ss = out[:n_ph, :n_ph].reshape(*n_orbs_ph, *n_orbs_ph)
+        for i in range(n_orbs_ph[0]):
+            for a in range(n_orbs_ph[1]):
                 ampl = ampl_zero.copy()
-                ampl["s"][i, a] = 1
-                view_ss[:, :, i, a] = (self @ ampl)["s"].to_ndarray()
+                ampl.ph[i, a] = 1
+                view_ss[:, :, i, a] = (self @ ampl).ph.to_ndarray()
 
         # Extract singles-doubles and doubles-doubles block
-        if "d" in self.blocks:
-            assert self.blocks == ["s", "d"]
-            view_sd = out[:n_s, n_s:].reshape(*n_orbs_s, len(basis["d"]))
-            view_dd = out[n_s:, n_s:]
-            for j, bas1 in tqdm.tqdm(enumerate(basis["d"]),
-                                     total=len(basis["d"])):
+        if "pphh" in self.axis_blocks:
+            assert self.axis_blocks == ["ph", "pphh"]
+            view_sd = out[:n_ph, n_ph:].reshape(*n_orbs_ph, len(basis["pphh"]))
+            view_dd = out[n_ph:, n_ph:]
+            for j, bas1 in tqdm.tqdm(enumerate(basis["pphh"]),
+                                     total=len(basis["pphh"])):
                 ampl = ampl_zero.copy()
                 for idx, val in bas1:
-                    ampl["d"][idx] = val
+                    ampl.pphh[idx] = val
                 ret_ampl = self @ ampl
-                view_sd[:, :, j] = ret_ampl["s"].to_ndarray()
+                view_sd[:, :, j] = ret_ampl.ph.to_ndarray()
 
-                for i, bas2 in enumerate(basis["d"]):
-                    view_dd[i, j] = sum(val * ret_ampl["d"][idx]
+                for i, bas2 in enumerate(basis["pphh"]):
+                    view_dd[i, j] = sum(val * ret_ampl.pphh[idx]
                                         for idx, val in bas2)
 
-            out[n_s:, :n_s] = np.transpose(out[:n_s, n_s:])
+            out[n_ph:, :n_ph] = np.transpose(out[:n_ph, n_ph:])
         return out
 
 
-# Redirect some functions and properties to the innermatrix
-for wfun in ["compute_apply", "compute_matvec", "diagonal",
-             "has_block", "block_spaces"]:
-    def caller(self, *args, wfuncopy=wfun, **kwargs):
-        return getattr(self.innermatrix, wfuncopy)(*args, **kwargs)
-    if hasattr(libadcc.AdcMatrix, wfun):
-        caller.__doc__ = getattr(libadcc.AdcMatrix, wfun).__doc__
-    setattr(AdcMatrixlike, wfun, caller)
+class AdcBlockView(AdcMatrix):
+    def __init__(self, fullmatrix, block):
+        warnings.warn("The AdcBlockView class got deprecated and will be "
+                      "removed in 0.16.0. Use the matrix.block_view "
+                      "function instead.")
+        assert isinstance(fullmatrix, AdcMatrix)
 
-for prop in ["reference_state", "ground_state", "mospaces",
-             "is_core_valence_separated", "shape", "blocks", "timer"]:
-    def caller(self, propcopy=prop):
-        return getattr(self.innermatrix, propcopy)
-    caller.__doc__ = getattr(libadcc.AdcMatrix, prop).__doc__
-    setattr(AdcMatrixlike, prop, property(caller))
-
-
-class AdcMatrix(AdcMatrixlike):
-    def __init__(self, method, hf_or_mp):
-        """
-        Initialise an ADC matrix.
-
-        Parameters
-        ----------
-        method : str or AdcMethod
-            Method to use.
-        hf_or_mp : adcc.ReferenceState or adcc.LazyMp
-            HF reference or MP ground state
-        """
-        if not isinstance(method, AdcMethod):
-            method = AdcMethod(method)
-        if isinstance(hf_or_mp, (libadcc.ReferenceState,
-                                 libadcc.HartreeFockSolution_i)):
-            hf_or_mp = LazyMp(hf_or_mp)
-        if not isinstance(hf_or_mp, libadcc.LazyMp):
-            raise TypeError("mp_results is not a valid object. It needs to be "
-                            "either a LazyMp, a ReferenceState or a "
-                            "HartreeFockSolution_i.")
-
-        self.method = method
-        self.cppmat = libadcc.AdcMatrix(method.name, hf_or_mp)
-        super().__init__(self.cppmat)
-
-    def compute_matvec(self, in_ampl, out_ampl=None):
-        """
-        Compute the matrix-vector product of the ADC matrix
-        with an excitation amplitude and return the result
-        in the out_ampl if it is given, else the result
-        will be returned.
-        """
-        if not isinstance(in_ampl, AmplitudeVector):
-            raise TypeError("in_ampl has to be of type AmplitudeVector.")
-        if out_ampl is None:
-            out_ampl = empty_like(in_ampl)
-        if not isinstance(out_ampl, AmplitudeVector):
-            raise TypeError("out_ampl has to be of type AmplitudeVector.")
-        self.cppmat.compute_matvec(in_ampl.to_cpp(), out_ampl.to_cpp())
-        return out_ampl
-
-    def __repr__(self):
-        return f"AdcMatrix({self.method.name})"
+        self.__fullmatrix = fullmatrix
+        self.__block = block
+        if block == "s":
+            block_orders = dict(ph_ph=fullmatrix.block_orders["ph_ph"],
+                                ph_pphh=None, pphh_ph=None, pphh_pphh=None)
+        else:
+            raise NotImplementedError(f"Block {block} not implemented")
+        super().__init__(fullmatrix.method, fullmatrix.ground_state,
+                         block_orders=block_orders,
+                         intermediates=fullmatrix.intermediates)
 
 
-class AdcMatrixShifted(AdcMatrixlike):
+class AdcMatrixShifted(AdcMatrix):
     def __init__(self, matrix, shift=0.0):
         """
         Initialise a shifted ADC matrix. Applying this class to a vector ``v``
@@ -339,30 +489,40 @@ class AdcMatrixShifted(AdcMatrixlike):
 
         Parameters
         ----------
-        matrix : AdcMatrixlike
+        matrix : AdcMatrix
             Matrix which is shifted
         shift : float
             Value by which to shift the matrix
         """
-        super().__init__(matrix)
+        super().__init__(matrix.method, matrix.ground_state,
+                         block_orders=matrix.block_orders,
+                         intermediates=matrix.intermediates)
         self.shift = shift
 
-    def compute_matvec(self, in_ampl, out_ampl=None):
-        out = self.innermatrix.compute_matvec(in_ampl, out_ampl)
+    def matvec(self, in_ampl):
+        out = super().matvec(in_ampl)
         out = out + self.shift * in_ampl
         return out
 
-    def to_dense_matrix(self, out=None):
-        self.innermatrix.to_dense_matrix(self, out)
+    def to_ndarray(self, out=None):
+        super().to_ndarray(self, out)
         out = out + self.shift * np.eye(*out.shape)
         return out
 
-    def compute_apply(self, block, in_vec, out_vec):
-        self.innermatrix.compute_apply(block, in_vec, out_vec)
-        if block[0] == block[1]:  # Diagonal block
-            out_vec += self.shift * in_vec
+    def block_apply(self, block, in_vec):
+        ret = super().block_apply(block, in_vec)
+        inblock, outblock = block.split("_")
+        if inblock == outblock:
+            ret += self.shift * in_vec
+        return ret
 
-    def diagonal(self, block):
-        out = self.innermatrix.diagonal(block)
+    def diagonal(self, block=None):
+        out = super().diagonal(block)
         out = out + self.shift  # Shift the diagonal
         return out
+
+    def block_view(self, block):
+        raise NotImplementedError("Block-view not yet implemented for "
+                                  "shifted ADC matrices.")
+        # TODO The way to implement this is to ask the inner matrix to
+        #      a block_view and then wrap that in an AdcMatrixShifted.

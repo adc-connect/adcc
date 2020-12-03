@@ -44,7 +44,7 @@ py::object convert_timer(const Timer& timer) {
 
   py::object pyTimer            = py::module::import("adcc.timings").attr("Timer");
   py::object ret                = pyTimer();
-  ret.attr("intervals")         = shifted_intervals;
+  ret.attr("raw_data")          = shifted_intervals;
   ret.attr("start_times")       = shifted_start_times;
   ret.attr("time_construction") = timer.time_construction + clock_shift;
   return ret;

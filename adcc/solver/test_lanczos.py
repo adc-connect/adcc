@@ -41,7 +41,7 @@ class TestSolverLanczos(unittest.TestCase):
         matrix = adcc.AdcMatrix("adc2", LazyMp(cache.refstate["h2o_sto3g"]))
 
         # Solve for singlets
-        guesses = adcc.guesses_singlet(matrix, n_guesses=5, block="s")
+        guesses = adcc.guesses_singlet(matrix, n_guesses=5, block="ph")
         res = lanczos(matrix, guesses, n_ep=5, which="SM")
 
         ref_singlets = refdata["adc2"]["singlet"]["eigenvalues"][:5]
@@ -53,7 +53,7 @@ class TestSolverLanczos(unittest.TestCase):
         matrix = adcc.AdcMatrix("adc2", LazyMp(cache.refstate["h2o_sto3g"]))
 
         # Solve for triplets
-        guesses = adcc.guesses_triplet(matrix, n_guesses=6, block="s")
+        guesses = adcc.guesses_triplet(matrix, n_guesses=6, block="ph")
         res = lanczos(matrix, guesses, n_ep=6, which="SM")
 
         ref_triplets = refdata["adc2"]["triplet"]["eigenvalues"][:6]
@@ -73,7 +73,7 @@ class TestSolverLanczos(unittest.TestCase):
                                  callback=cg_print)
 
         # Solve for singlets
-        guesses = adcc.guesses_singlet(matrix, n_guesses=5, block="s")
+        guesses = adcc.guesses_singlet(matrix, n_guesses=5, block="ph")
         symm = IndexSpinSymmetrisation(matrix, enforce_spin_kind="singlet")
         res = lanczos(shinv, guesses, n_ep=5, callback=la_print,
                       explicit_symmetrisation=symm)
@@ -97,7 +97,7 @@ class TestSolverLanczos(unittest.TestCase):
                                  callback=cg_print)
 
         # Solve for triplets
-        guesses = adcc.guesses_triplet(matrix, n_guesses=5, block="s")
+        guesses = adcc.guesses_triplet(matrix, n_guesses=5, block="ph")
         symm = IndexSpinSymmetrisation(matrix, enforce_spin_kind="triplet")
         res = lanczos(shinv, guesses, n_ep=5, callback=la_print,
                       explicit_symmetrisation=symm)

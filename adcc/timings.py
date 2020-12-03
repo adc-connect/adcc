@@ -22,6 +22,7 @@
 ## ---------------------------------------------------------------------
 import sys
 import time
+import numpy as np
 
 from contextlib import contextmanager
 from os.path import join
@@ -85,7 +86,7 @@ class Timer:
     # TODO Describe function to print a nice table
     def __init__(self):
         self.time_construction = time.perf_counter()
-        self.intervals = {}
+        self.raw_data = {}  # Raw data of time intervals [start, end]
         self.start_times = {}
 
     def attach(self, other, subtree=""):
@@ -93,11 +94,11 @@ class Timer:
         Attach the timing results from another timer,
         i.e. merge both timers together.
         """
-        for k, v in other.intervals.items():
+        for k, v in other.raw_data.items():
             kfull = join(subtree, k)
-            if kfull not in self.intervals:
-                self.intervals[kfull] = []
-            self.intervals[kfull].extend(v)
+            if kfull not in self.raw_data:
+                self.raw_data[kfull] = []
+            self.raw_data[kfull].extend(v)
 
         for k, v in other.start_times.items():
             kfull = join(subtree, k)
@@ -111,10 +112,10 @@ class Timer:
             now = time.perf_counter()
         if task in self.start_times:
             start = self.start_times.pop(task)
-            if task in self.intervals:
-                self.intervals[task].append((start, now))
+            if task in self.raw_data:
+                self.raw_data[task].append((start, now))
             else:
-                self.intervals[task] = [(start, now)]
+                self.raw_data[task] = [(start, now)]
             return now - start
         return 0
 
@@ -152,7 +153,7 @@ class Timer:
     def tasks(self):
         """The list of all tasks known to this object"""
         all_tasks = set(self.start_times.keys())
-        all_tasks.update(set(self.intervals.keys()))
+        all_tasks.update(set(self.raw_data.keys()))
         return sorted(list(all_tasks))
 
     @property
@@ -160,18 +161,31 @@ class Timer:
         """Get total time since this class has been constructed"""
         return time.perf_counter() - self.time_construction
 
-    def total(self, task):
-        """Get total runtime on a task in seconds"""
-        if task not in self.intervals:
+    def intervals(self, task):
+        """Get all time intervals recorded for a particular task"""
+        if task not in self.raw_data:
             if task not in self.start_times:
                 raise ValueError("Unknown task: " + task)
             return self.current(task)
         else:
-            cur = 0
+            intervals = [end - start for start, end in self.raw_data[task]]
             if task in self.start_times:
-                cur = time.perf_counter() - self.start_times[task]
-            cumul = sum(end - start for start, end in self.intervals[task])
-            return cur + cumul
+                intervals.append(time.perf_counter() - self.start_times[task])
+            return np.array(intervals)
+
+    def total(self, task):
+        """Get total runtime on a task in seconds"""
+        return np.sum(self.intervals(task))
+
+    def best(self, task):
+        """Get the best time of all the intervals recorded for a task"""
+        return np.min(self.intervals(task))
+
+    def median(self, task):
+        return np.median(self.intervals(task))
+
+    def average(self, task):
+        return np.average(self.intervals(task))
 
     def current(self, task):
         """Get current time on a task without stopping it"""
@@ -219,7 +233,7 @@ def timed_call(f):
     return decorated
 
 
-def timed_member_call(timer):
+def timed_member_call(timer="timer"):
     """
     Decorator to automatically time calls to instance member functions.
     The name of the instance attribute where timings are stored is the

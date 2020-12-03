@@ -23,20 +23,21 @@
 from math import sqrt
 
 from adcc import block as b
+from adcc.LazyMp import LazyMp
 from adcc.AdcMethod import AdcMethod
 from adcc.functions import einsum
+from adcc.Intermediates import Intermediates
 from adcc.AmplitudeVector import AmplitudeVector
 from adcc.OneParticleOperator import OneParticleOperator
-from .util import check_singles_amplitudes, check_doubles_amplitudes
 
-import libadcc
+from .util import check_doubles_amplitudes, check_singles_amplitudes
 
 
 def diffdm_adc0(mp, amplitude, intermediates):
     # C is either c(ore) or o(ccupied)
     C = b.c if mp.has_core_occupied_space else b.o
     check_singles_amplitudes([C, b.v], amplitude)
-    u1 = amplitude["s"]
+    u1 = amplitude.ph
 
     dm = OneParticleOperator(mp, is_symmetric=True)
     dm[C + C] = -einsum("ia,ja->ij", u1, u1)
@@ -47,8 +48,7 @@ def diffdm_adc0(mp, amplitude, intermediates):
 def diffdm_adc2(mp, amplitude, intermediates):
     dm = diffdm_adc0(mp, amplitude, intermediates)  # Get ADC(1) result
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
-    u1 = amplitude["s"]
-    u2 = amplitude["d"]
+    u1, u2 = amplitude.ph, amplitude.pphh
 
     t2 = mp.t2(b.oovv)
     p0_ov = mp.mp2_diffdm[b.ov]
@@ -100,12 +100,11 @@ def diffdm_adc2(mp, amplitude, intermediates):
 def diffdm_cvs_adc2(mp, amplitude, intermediates):
     dm = diffdm_adc0(mp, amplitude, intermediates)  # Get ADC(1) result
     check_doubles_amplitudes([b.o, b.c, b.v, b.v], amplitude)
-    u1 = amplitude["s"]
-    u2 = amplitude["d"]
+    u1, u2 = amplitude.ph, amplitude.pphh
 
     t2 = mp.t2(b.oovv)
-    p0_ov = intermediates.cv_p_ov
-    p0_vv = intermediates.cv_p_vv
+    p0_ov = intermediates.cvs_p0_ov
+    p0_vv = intermediates.cvs_p0_vv
     p1_vv = dm[b.vv].evaluate()  # ADC(1) diffdm
 
     # Zeroth order doubles contributions
@@ -161,17 +160,17 @@ def state_diffdm(method, ground_state, amplitude, intermediates=None):
         The ground state upon which the excitation was based
     amplitude : AmplitudeVector
         The amplitude vector
-    intermediates : AdcIntermediates
+    intermediates : adcc.Intermediates
         Intermediates from the ADC calculation to reuse
     """
     if not isinstance(method, AdcMethod):
         method = AdcMethod(method)
-    if not isinstance(ground_state, libadcc.LazyMp):
+    if not isinstance(ground_state, LazyMp):
         raise TypeError("ground_state should be a LazyMp object.")
     if not isinstance(amplitude, AmplitudeVector):
         raise TypeError("amplitude should be an AmplitudeVector object.")
     if intermediates is None:
-        intermediates = libadcc.AdcIntermediates(ground_state)
+        intermediates = Intermediates(ground_state)
 
     if method.name not in DISPATCH:
         raise NotImplementedError("state_diffdm is not implemented "

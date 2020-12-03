@@ -23,8 +23,9 @@
 import adcc
 import unittest
 
-from .misc import expand_test_templates
 from adcc.testdata.cache import cache
+
+from .misc import expand_test_templates
 
 methods = ["adc1", "adc2", "adc2x", "adc3", "cvs-adc1", "cvs-adc2x"]
 
@@ -35,46 +36,46 @@ class TestAdcMatrixBlockView(unittest.TestCase):
         if "cvs" in method:
             reference_state = cache.refstate_cvs["h2o_sto3g"]
             shape = (8, 8)
-            spaces_s = ["o2", "v1"]
+            spaces_ph = ["o2", "v1"]
         else:
             reference_state = cache.refstate["h2o_sto3g"]
             shape = (40, 40)
-            spaces_s = ["o1", "v1"]
+            spaces_ph = ["o1", "v1"]
         matrix = adcc.AdcMatrix(method, adcc.LazyMp(reference_state))
-        view = adcc.AdcBlockView(matrix, "s")
+        view = matrix.block_view("ph_ph")
 
         assert view.ndim == 2
         assert view.is_core_valence_separated == ("cvs" in method)
         assert view.shape == shape
         assert len(view) == shape[0]
 
-        assert view.blocks == ["s"]
-        assert view.has_block("s")
-        assert not view.has_block("d")
-        assert not view.has_block("t")
-        assert view.block_spaces("s") == spaces_s
+        assert view.axis_blocks == ["ph"]
+        assert sorted(view.axis_spaces.keys()) == view.axis_blocks
+        assert sorted(view.axis_lengths.keys()) == view.axis_blocks
+        assert view.axis_spaces["ph"] == spaces_ph
+        assert view.axis_lengths["ph"] == shape[0]
 
         assert view.reference_state == reference_state
         assert view.mospaces == reference_state.mospaces
         assert isinstance(view.timer, adcc.timings.Timer)
 
         # Check diagonal
-        diff = matrix.diagonal("s") - view.diagonal("s")
+        diff = matrix.diagonal().ph - view.diagonal().ph
         assert diff.dot(diff) < 1e-12
 
         # Check @ (one vector and multiple vectors)
         invec = adcc.guess_zero(matrix)
-        invec["s"].set_random()
+        invec.ph.set_random()
         # "d" left as zero
-        invec_singles = adcc.AmplitudeVector(invec["s"])
+        invec_singles = adcc.AmplitudeVector(ph=invec.ph)
 
         ref = matrix @ invec
         res = view @ invec_singles
-        diff = res["s"] - ref["s"]
+        diff = res.ph - ref.ph
         assert diff.dot(diff) < 1e-12
 
         res = view @ [invec_singles, invec_singles, invec_singles]
-        diff = [res[i]["s"] - ref["s"] for i in range(3)]
+        diff = [res[i].ph - ref.ph for i in range(3)]
         assert max(d.dot(d) for d in diff) < 1e-12
 
-        # Missing: Check for compute_matvec and compute_apply
+        # Missing: Check for matvec and block_apply

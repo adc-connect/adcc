@@ -23,20 +23,21 @@
 from math import sqrt
 
 from adcc import block as b
+from adcc.LazyMp import LazyMp
 from adcc.AdcMethod import AdcMethod
 from adcc.functions import einsum
+from adcc.Intermediates import Intermediates
 from adcc.AmplitudeVector import AmplitudeVector
 from adcc.OneParticleOperator import OneParticleOperator
-from .util import check_singles_amplitudes, check_doubles_amplitudes
 
-import libadcc
+from .util import check_doubles_amplitudes, check_singles_amplitudes
 
 
 def tdm_adc0(mp, amplitude, intermediates):
     # C is either c(ore) or o(ccupied)
     C = b.c if mp.has_core_occupied_space else b.o
     check_singles_amplitudes([C, b.v], amplitude)
-    u1 = amplitude["s"]
+    u1 = amplitude.ph
 
     # Transition density matrix for (CVS-)ADC(0)
     dm = OneParticleOperator(mp, is_symmetric=False)
@@ -47,7 +48,7 @@ def tdm_adc0(mp, amplitude, intermediates):
 def tdm_adc1(mp, amplitude, intermediates):
     dm = tdm_adc0(mp, amplitude, intermediates)  # Get ADC(0) result
     # adc1_dp0_ov
-    dm[b.ov] = -einsum("ijab,jb->ia", mp.t2(b.oovv), amplitude["s"])
+    dm[b.ov] = -einsum("ijab,jb->ia", mp.t2(b.oovv), amplitude.ph)
     return dm
 
 
@@ -55,12 +56,12 @@ def tdm_cvs_adc2(mp, amplitude, intermediates):
     # Get CVS-ADC(1) result (same as CVS-ADC(0))
     dm = tdm_adc0(mp, amplitude, intermediates)
     check_doubles_amplitudes([b.o, b.c, b.v, b.v], amplitude)
-    u1 = amplitude["s"]
-    u2 = amplitude["d"]
+    u1 = amplitude.ph
+    u2 = amplitude.pphh
 
     t2 = mp.t2(b.oovv)
-    p0_ov = intermediates.cv_p_ov
-    p0_vv = intermediates.cv_p_vv
+    p0_ov = intermediates.cvs_p0_ov
+    p0_vv = intermediates.cvs_p0_vv
 
     # Compute CVS-ADC(2) tdm
     dm[b.oc] = (  # cvs_adc2_dp0_oc
@@ -76,8 +77,8 @@ def tdm_cvs_adc2(mp, amplitude, intermediates):
 def tdm_adc2(mp, amplitude, intermediates):
     dm = tdm_adc1(mp, amplitude, intermediates)  # Get ADC(1) result
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
-    u1 = amplitude["s"]
-    u2 = amplitude["d"]
+    u1 = amplitude.ph
+    u2 = amplitude.pphh
 
     t2 = mp.t2(b.oovv)
     td2 = mp.td2(b.oovv)
@@ -128,17 +129,17 @@ def transition_dm(method, ground_state, amplitude, intermediates=None):
         The ground state upon which the excitation was based
     amplitude : AmplitudeVector
         The amplitude vector
-    intermediates : AdcIntermediates
+    intermediates : adcc.Intermediates
         Intermediates from the ADC calculation to reuse
     """
     if not isinstance(method, AdcMethod):
         method = AdcMethod(method)
-    if not isinstance(ground_state, libadcc.LazyMp):
+    if not isinstance(ground_state, LazyMp):
         raise TypeError("ground_state should be a LazyMp object.")
     if not isinstance(amplitude, AmplitudeVector):
         raise TypeError("amplitude should be an AmplitudeVector object.")
     if intermediates is None:
-        intermediates = libadcc.AdcIntermediates(ground_state)
+        intermediates = Intermediates(ground_state)
 
     if method.name not in DISPATCH:
         raise NotImplementedError("transition_dm is not implemented "

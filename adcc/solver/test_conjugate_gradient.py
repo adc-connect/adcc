@@ -65,8 +65,7 @@ class TestConjugateGradient(unittest.TestCase):
         def guess_random(matrix, n_guesses):
             guess = adcc.guess_zero(matrix,
                                     spin_block_symmetrisation="antisymmetric")
-            guess["s"].set_random()
-            guess["d"].set_random()
+            guess.set_random()
             return [guess]
         self.base_adc2("triplet", guess_random, max_iter=200)
 
@@ -74,10 +73,10 @@ class TestConjugateGradient(unittest.TestCase):
         conv_tol = 1e-9
         matrix = adcc.AdcMatrix("adc1", cache.refstate["h2o_sto3g"])
         rhs = adcc.guess_zero(matrix)
-        rhs["s"].set_random()
+        rhs.set_random()
 
         guess = rhs.copy()
-        guess["s"].set_random()
+        guess.set_random()
         res = conjugate_gradient(matrix, rhs, guess, callback=cgprint,
                                  conv_tol=conv_tol)
         residual = matrix @ res.solution - rhs
@@ -87,12 +86,10 @@ class TestConjugateGradient(unittest.TestCase):
         conv_tol = 1e-9
         matrix = adcc.AdcMatrix("adc2x", cache.refstate["h2o_sto3g"])
         rhs = adcc.guess_zero(matrix)
-        rhs["s"].set_random()
-        rhs["d"].set_random()
+        rhs.set_random()
 
         guess = rhs.copy()
-        guess["s"].set_random()
-        guess["d"].set_random()
+        guess.set_random()
         res = conjugate_gradient(matrix, rhs, guess, callback=cgprint,
                                  conv_tol=conv_tol, Pinv=JacobiPreconditioner)
         residual = matrix @ res.solution - rhs

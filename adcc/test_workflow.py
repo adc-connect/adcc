@@ -208,7 +208,7 @@ class TestWorkflow:
         assert res.converged
         assert res.eigenvalues == approx(ref_singlets[:3])
 
-        guesses = adcc.guesses_singlet(matrix, n_guesses=6, block="s")
+        guesses = adcc.guesses_singlet(matrix, n_guesses=6, block="ph")
         res = diagonalise_adcmatrix(matrix, n_states=3, kind="singlet",
                                     guesses=guesses)
         ref_singlets = refdata["adc2"]["singlet"]["eigenvalues"]
