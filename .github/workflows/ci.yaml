@@ -45,12 +45,14 @@ jobs:
           python -m pip install --user -r requirements.txt
       - name: Run tests
         run: python setup.py test -a '--cov=adcc'
-      - name: Upload coverage
+      - name: Upload coverage to coveralls
         run: |
           pip install coveralls
           coveralls
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload coverage to codecov
+        uses: codecov/codecov-action@v1
   #
   # Test source code formatting
   #
