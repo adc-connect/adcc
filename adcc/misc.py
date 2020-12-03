@@ -21,6 +21,7 @@
 ##
 ## ---------------------------------------------------------------------
 import numpy as np
+from functools import wraps
 
 
 def cached_property(f):
@@ -45,6 +46,41 @@ def cached_property(f):
         get.__excitation_property = f.__excitation_property
 
     return property(get)
+
+
+def cached_member_function(function):
+    """
+    Decorates a member function being called with
+    one or more arguments and stores the results
+    in field `_function_cache` of the class instance.
+    """
+    fname = function.__name__
+
+    @wraps(function)
+    def wrapper(self, *args):
+        try:
+            fun_cache = self._function_cache[fname]
+        except AttributeError:
+            self._function_cache = {}
+            fun_cache = self._function_cache[fname] = {}
+        except KeyError:
+            fun_cache = self._function_cache[fname] = {}
+
+        try:
+            return fun_cache[args]
+        except KeyError:
+            # adds a timer on top
+            if hasattr(self, "timer"):
+                descr = '_'.join([str(a) for a in args])
+                with self.timer.record(f"{fname}/{descr}"):
+                    try:
+                        fun_cache[args] = result = function(self, *args).evaluate()
+                    except AttributeError:
+                        fun_cache[args] = result = function(self, *args)
+            else:
+                fun_cache[args] = result = function(self, *args)
+            return result
+    return wrapper
 
 
 def expand_test_templates(arguments, template_prefix="template_"):
