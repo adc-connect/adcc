@@ -53,8 +53,10 @@ class TestLazyMp(unittest.TestCase):
         mp = self.mp["h2o_sto3g"]
         assert mp.energy_correction(0) == 0.0
         assert mp.energy_correction(1) == 0.0
-        # with pytest.raises(NotImplementedError):
-        #     mp.t2(b.vvoo)
+        with pytest.raises(AssertionError):
+            mp.t2(b.vvoo)
+        with pytest.raises(NotImplementedError):
+            mp.t2eri(b.oooo, b.oo)
         with pytest.raises(NotImplementedError):
             mp.td2(b.ccvv)
         with pytest.raises(NotImplementedError):

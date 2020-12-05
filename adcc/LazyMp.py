@@ -22,6 +22,7 @@
 ## ---------------------------------------------------------------------
 import libadcc
 import numpy as np
+import textwrap
 
 from .functions import direct_sum, evaluate, einsum
 from .misc import cached_property, cached_member_function
@@ -33,9 +34,12 @@ from . import block as b
 
 
 def split_spaces(spacestr):
-    # TODO: improve
-    n = 2
-    return tuple(spacestr[i:i + n] for i in range(0, len(spacestr), n))
+    sp = textwrap.wrap(spacestr, 2)
+    try:
+        assert all(s in ('o1', 'o2', 'v1') for s in sp)
+        return sp
+    except AssertionError:
+        raise ValueError(f"Invalid space string '{spacestr}'.")
 
 
 class LazyMp:
@@ -61,14 +65,14 @@ class LazyMp:
         else:
             raise AttributeError
 
+    @cached_member_function
     def df(self, space):
         """Delta Fock matrix"""
         hf = self.reference_state
         s1, s2 = split_spaces(space)
-        assert all(s in self.mospaces.subspaces for s in (s1, s2))
         fC = hf.fock(s1 + s1).diagonal()
         fv = hf.fock(s2 + s2).diagonal()
-        return direct_sum("-i+a->ia", fC, fv).evaluate()
+        return direct_sum("-i+a->ia", fC, fv)
 
     @cached_member_function
     def t2(self, space):
@@ -92,11 +96,11 @@ class LazyMp:
         denom = direct_sum(
             'ia,jb->ijab', self.df(b.ov), self.df(b.ov)
         ).symmetrise(0, 1)
-        return evaluate(
-            (+ 4.0 * t2erit.antisymmetrise(2, 3).antisymmetrise(0, 1)
-             - 0.5 * self.t2eri(b.oovv, b.vv)
-             - 0.5 * self.t2eri(b.oovv, b.oo)) / denom
-        )
+        return (
+            + 4.0 * t2erit.antisymmetrise(2, 3).antisymmetrise(0, 1)
+            - 0.5 * self.t2eri(b.oovv, b.vv)
+            - 0.5 * self.t2eri(b.oovv, b.oo)
+        ) / denom
 
     @cached_member_function
     def t2eri(self, space, contraction):
@@ -105,6 +109,7 @@ class LazyMp:
         These are called pi1 to pi7 in libadc.
         """
         hf = self.reference_state
+        key = space + contraction
         expressions = {
             # space + contraction
             b.ooov + b.vv: ('ijbc,kabc->ijka', b.ovvv),
@@ -115,8 +120,12 @@ class LazyMp:
             b.ovvv + b.oo: ('jkbc,jkia->iabc', b.ooov),
             b.ovvv + b.ov: ('ijbd,jcad->iabc', b.ovvv),
         }
-        contraction, eri_block = expressions[space + contraction]
-        return einsum(contraction, self.t2oo, hf.eri(eri_block))
+        if key not in expressions:
+            raise NotImplementedError("t2eri intermediate not implemented "
+                                      f"for space '{space}' and contraction "
+                                      f"'{contraction}'.")
+        contraction_str, eri_block = expressions[key]
+        return einsum(contraction_str, self.t2oo, hf.eri(eri_block))
 
     @cached_property
     @timed_member_call(timer="timer")
@@ -143,25 +152,29 @@ class LazyMp:
                 + einsum("iMLb,LMab->ia", hf.occv, self.t2cc)
                 - einsum("iLMb,LMab->ia", hf.occv, self.t2cc)
             ) / self.df(b.ov)
-            ret[b.vv] += (+ 0.5 * einsum("IJac,IJbc->ab", self.t2cc, self.t2cc)
-                          + 1.0 * einsum("kJac,kJbc->ab", self.t2oc, self.t2oc))
+            ret[b.vv] += (
+                + 0.5 * einsum("IJac,IJbc->ab", self.t2cc, self.t2cc)
+                + 1.0 * einsum("kJac,kJbc->ab", self.t2oc, self.t2oc)
+            )
             # compute extra CVS blocks
-            ret[b.cc] = -0.5 * (+ einsum("kIab,kJab->IJ", self.t2oc, self.t2oc)
-                                + einsum('LIab,LJab->IJ', self.t2cc, self.t2cc))
-            ret[b.co] = -0.5 * (+ einsum("kIab,kjab->Ij", self.t2oc, self.t2oo)
-                                + einsum("ILab,jLab->Ij", self.t2cc, self.t2oc))
+            ret[b.cc] = -0.5 * (
+                + einsum("kIab,kJab->IJ", self.t2oc, self.t2oc)
+                + einsum('LIab,LJab->IJ', self.t2cc, self.t2cc)
+            )
+            ret[b.co] = -0.5 * (
+                + einsum("kIab,kjab->Ij", self.t2oc, self.t2oo)
+                + einsum("ILab,jLab->Ij", self.t2cc, self.t2oc)
+            )
             ret[b.cv] = -0.5 * (
-                - 1.0 * einsum("jIbc,jabc->Ia", self.t2oc, hf.ovvv)
-                + 1.0 * einsum("jkIb,jkab->Ia", hf.oocv, self.t2oo)
-                + 1.0 * einsum("jMIb,jMab->Ia", hf.occv, self.t2oc)
-                + 1.0 * einsum("ILbc,Labc->Ia", self.t2cc, hf.cvvv)
-                + 1.0 * einsum("kLIb,kLab->Ia", hf.occv, self.t2oc)
-                + 1.0 * einsum("LMIb,LMab->Ia", hf.cccv, self.t2cc)
+                - einsum("jIbc,jabc->Ia", self.t2oc, hf.ovvv)
+                + einsum("jkIb,jkab->Ia", hf.oocv, self.t2oo)
+                + einsum("jMIb,jMab->Ia", hf.occv, self.t2oc)
+                + einsum("ILbc,Labc->Ia", self.t2cc, hf.cvvv)
+                + einsum("kLIb,kLab->Ia", hf.occv, self.t2oc)
+                + einsum("LMIb,LMab->Ia", hf.cccv, self.t2cc)
             ) / self.df(b.cv)
-        for bb in ret.blocks_nonzero:
-            ret[bb].evaluate()
         ret.reference_state = self.reference_state
-        return ret
+        return evaluate(ret)
 
     def density(self, level=2):
         """
