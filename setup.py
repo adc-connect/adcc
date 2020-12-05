@@ -69,10 +69,10 @@ def get_adccore_data():
 
     # TODO: find a more sustainable and clean solution ASAP
     if is_conda_build():
-        os.environ["LDFLAGS_LD"] = \
-            os.environ["LDFLAGS_LD"].replace("-dead_strip_dylibs", "")
-        os.environ["LDFLAGS"] = \
-            os.environ["LDFLAGS"].replace("-Wl,-dead_strip_dylibs", "")
+        for flag in ("LDFLAGS_LD", "LDFLAGS"):
+            if flag in os.environ:
+                os.environ[flag] = \
+                    os.environ[flag].replace("-dead_strip_dylibs", "")
 
     adccore = AdcCore.AdcCore()
     if not adccore.is_config_file_present \

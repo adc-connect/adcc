@@ -23,6 +23,7 @@
 import unittest
 
 from .misc import expand_test_templates
+from . import block as b
 from numpy.testing import assert_allclose
 
 from adcc import LazyMp
@@ -48,6 +49,19 @@ class TestLazyMp(unittest.TestCase):
             cls.mp[case] = LazyMp(cache.refstate[case])
             cls.mp_cvs[case] = LazyMp(cache.refstate_cvs[case])
 
+    def test_exceptions(self):
+        mp = self.mp["h2o_sto3g"]
+        assert mp.energy_correction(0) == 0.0
+        assert mp.energy_correction(1) == 0.0
+        with pytest.raises(AssertionError):
+            mp.t2(b.vvoo)
+        with pytest.raises(NotImplementedError):
+            mp.t2eri(b.oooo, b.oo)
+        with pytest.raises(NotImplementedError):
+            mp.td2(b.ccvv)
+        with pytest.raises(NotImplementedError):
+            mp.energy_correction(4)
+
     #
     # Generic
     #
@@ -70,11 +84,13 @@ class TestLazyMp(unittest.TestCase):
         refmp = cache.reference_data[case]["mp"]
         assert_allclose(self.mp[case].t2("o1o1v1v1").to_ndarray(),
                         refmp["mp1"]["t_o1o1v1v1"], atol=1e-12)
+        assert "t2/o1o1v1v1" in self.mp[case].timer.tasks
 
     def template_td2(self, case):
         refmp = cache.reference_data[case]["mp"]
         assert_allclose(self.mp[case].td2("o1o1v1v1").to_ndarray(),
                         refmp["mp2"]["td_o1o1v1v1"], atol=1e-12)
+        assert "td2/o1o1v1v1" in self.mp[case].timer.tasks
 
     def template_mp2_density_mo(self, case):
         refmp = cache.reference_data[case]["mp"]
@@ -84,6 +100,7 @@ class TestLazyMp(unittest.TestCase):
         for label in ["o1o1", "o1v1", "v1v1"]:
             assert_allclose(mp2diff[label].to_ndarray(),
                             refmp["mp2"]["dm_" + label], atol=1e-12)
+        assert "mp2_diffdm" in self.mp[case].timer.tasks
 
     def template_mp2_density_ao(self, case):
         refmp = cache.reference_data[case]["mp"]
@@ -93,19 +110,6 @@ class TestLazyMp(unittest.TestCase):
         dm_α, dm_β = mp2diff.to_ao_basis(reference_state)
         assert_allclose(dm_α.to_ndarray(), refmp["mp2"]["dm_bb_a"], atol=1e-12)
         assert_allclose(dm_β.to_ndarray(), refmp["mp2"]["dm_bb_b"], atol=1e-12)
-
-    def template_set_t2(self, case):
-        mp = LazyMp(cache.refstate[case])
-        t2orig = mp.t2("o1o1v1v1")
-        mp2orig = mp.energy_correction(2)
-
-        # Scale T2 amplitudes by factor 2, which should scale the energy by 2
-        fac = 2
-        t2scaled = fac * t2orig
-        mp.set_t2("o1o1v1v1", t2scaled)
-        mp2scaled = mp.energy_correction(2)
-
-        assert mp2scaled == approx(fac * mp2orig)
 
     #
     # CVS
@@ -173,3 +177,20 @@ class TestLazyMp(unittest.TestCase):
         # CVS MP(2) densities in AOs should be equal to the non-CVS one
         assert_allclose(dm_α.to_ndarray(), refmp["mp2"]["dm_bb_a"], atol=1e-12)
         assert_allclose(dm_β.to_ndarray(), refmp["mp2"]["dm_bb_b"], atol=1e-12)
+
+    #
+    # Cache
+    #
+    def template_cache(self, case):
+        # call some stuff twice
+        self.mp[case].energy_correction(2)
+        self.mp[case].energy_correction(2)
+        self.mp[case].energy_correction(3)
+        self.mp[case].energy_correction(3)
+        timer = self.mp[case].timer
+        assert "energy_correction/2" in timer.tasks
+        assert "energy_correction/3" in timer.tasks
+        assert len(timer.intervals("t2/o1o1v1v1")) == 1
+        assert len(timer.intervals("td2/o1o1v1v1")) == 1
+        assert len(timer.intervals("energy_correction/2")) == 1
+        assert len(timer.intervals("energy_correction/3")) == 1

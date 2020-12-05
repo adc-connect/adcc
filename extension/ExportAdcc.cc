@@ -29,7 +29,6 @@ void export_AdcMemory(py::module& m);
 void export_amplitude_vector_enforce_spin_kind(py::module& m);
 void export_guesses(py::module& m);
 void export_HartreeFockProvider(py::module& m);
-void export_LazyMp(py::module& m);
 void export_MoIndexTranslation(py::module& m);
 void export_MoSpaces(py::module& m);
 void export_OneParticleOperator(py::module& m);
@@ -53,7 +52,6 @@ PYBIND11_MODULE(libadcc, m) {
   pyif::export_ReferenceState(m);
 
   pyif::export_OneParticleOperator(m);
-  pyif::export_LazyMp(m);
   pyif::export_guesses(m);
   pyif::export_amplitude_vector_enforce_spin_kind(m);
 

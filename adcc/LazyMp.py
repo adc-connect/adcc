@@ -23,10 +23,14 @@
 import libadcc
 import numpy as np
 
-from .mp import compute_mp2_diffdm  # noqa: F401
-from .misc import cached_property
+from .functions import direct_sum, evaluate, einsum
+from .misc import cached_property, cached_member_function
 from .ReferenceState import ReferenceState
 from .OneParticleOperator import OneParticleOperator, product_trace
+from .Intermediates import register_as_intermediate
+from .timings import Timer, timed_member_call
+from .MoSpaces import split_spaces
+from . import block as b
 
 
 class LazyMp:
@@ -40,17 +44,11 @@ class LazyMp:
             raise TypeError("hf needs to be a ReferenceState "
                             "or a HartreeFockSolution_i")
         self.reference_state = hf
-        self.__cpp = libadcc.LazyMp(hf)
         self.mospaces = hf.mospaces
+        self.timer = Timer()
         self.has_core_occupied_space = hf.has_core_occupied_space
 
-    @property
-    def timer(self):
-        return self.__cpp.timer
-
     def __getattr__(self, attr):
-        from . import block as b
-
         # Shortcut some quantities, which are needed most often
         if attr.startswith("t2") and len(attr) == 4:  # t2oo, t2oc, t2cc
             xxvv = b.__getattr__(attr[2:4] + "vv")
@@ -58,43 +56,118 @@ class LazyMp:
         else:
             raise AttributeError
 
+    @cached_member_function
     def df(self, space):
         """Delta Fock matrix"""
-        # TODO This is so cheap to compute that it does not really deserve
-        #      any caching
-        return self.__cpp.df(space)
+        hf = self.reference_state
+        s1, s2 = split_spaces(space)
+        fC = hf.fock(s1 + s1).diagonal()
+        fv = hf.fock(s2 + s2).diagonal()
+        return direct_sum("-i+a->ia", fC, fv)
 
+    @cached_member_function
     def t2(self, space):
         """T2 amplitudes"""
-        return self.__cpp.t2(space)
+        hf = self.reference_state
+        sp = split_spaces(space)
+        assert all(s == b.v for s in sp[2:])
+        eia = self.df(sp[0] + b.v)
+        ejb = self.df(sp[1] + b.v)
+        return (
+            hf.eri(space) / direct_sum("ia+jb->ijab", eia, ejb).symmetrise((2, 3))
+        )
 
-    def set_t2(self, space, tensor):
-        """
-        Set the T2 amplitudes tensor. This invalidates all data depending on the T2
-        amplitudes in this class. Note, that potential other caches, such as
-        computed ADC intermediates are *not* automatically invalidated.
-        """
-        return self.__cpp.set_t2(space, tensor)
-
+    @cached_member_function
     def td2(self, space):
         """Return the T^D_2 term"""
-        return self.__cpp.td2(space)
+        if space != b.oovv:
+            raise NotImplementedError("T^D_2 term not implemented "
+                                      f"for space {space}.")
+        t2erit = self.t2eri(b.oovv, b.ov).transpose((1, 0, 2, 3))
+        denom = direct_sum(
+            'ia,jb->ijab', self.df(b.ov), self.df(b.ov)
+        ).symmetrise(0, 1)
+        return (
+            + 4.0 * t2erit.antisymmetrise(2, 3).antisymmetrise(0, 1)
+            - 0.5 * self.t2eri(b.oovv, b.vv)
+            - 0.5 * self.t2eri(b.oovv, b.oo)
+        ) / denom
 
+    @cached_member_function
     def t2eri(self, space, contraction):
         """
         Return the T2 tensor with ERI tensor contraction intermediates.
         These are called pi1 to pi7 in libadc.
         """
-        return self.__cpp.t2eri(space, contraction)
+        hf = self.reference_state
+        key = space + contraction
+        expressions = {
+            # space + contraction
+            b.ooov + b.vv: ('ijbc,kabc->ijka', b.ovvv),
+            b.ooov + b.ov: ('ilab,lkjb->ijka', b.ooov),
+            b.oovv + b.oo: ('klab,ijkl->ijab', b.oooo),
+            b.oovv + b.ov: ('jkac,kbic->ijab', b.ovov),
+            b.oovv + b.vv: ('ijcd,abcd->ijab', b.vvvv),
+            b.ovvv + b.oo: ('jkbc,jkia->iabc', b.ooov),
+            b.ovvv + b.ov: ('ijbd,jcad->iabc', b.ovvv),
+        }
+        if key not in expressions:
+            raise NotImplementedError("t2eri intermediate not implemented "
+                                      f"for space '{space}' and contraction "
+                                      f"'{contraction}'.")
+        contraction_str, eri_block = expressions[key]
+        return einsum(contraction_str, self.t2oo, hf.eri(eri_block))
 
-    @property
+    @cached_property
+    @timed_member_call(timer="timer")
     def mp2_diffdm(self):
         """
         Return the MP2 differensce density in the MO basis.
         """
-        ret = OneParticleOperator.from_cpp(self.__cpp.mp2_diffdm)
+        hf = self.reference_state
+        ret = OneParticleOperator(self.mospaces, is_symmetric=True)
+        # NOTE: the following 3 blocks are equivalent to the cvs_p0 intermediates
+        # defined at the end of this file
+        ret[b.oo] = -0.5 * einsum("ikab,jkab->ij", self.t2oo, self.t2oo)
+        ret[b.ov] = -0.5 * (
+            + einsum("ijbc,jabc->ia", self.t2oo, hf.ovvv)
+            + einsum("jkib,jkab->ia", hf.ooov, self.t2oo)
+        ) / self.df(b.ov)
+        ret[b.vv] = 0.5 * einsum("ijac,ijbc->ab", self.t2oo, self.t2oo)
+
+        if self.has_core_occupied_space:
+            # additional terms to "revert" CVS for ground state density
+            ret[b.oo] += -0.5 * einsum("iLab,jLab->ij", self.t2oc, self.t2oc)
+            ret[b.ov] += -0.5 * (
+                + einsum("jMib,jMab->ia", hf.ocov, self.t2oc)
+                + einsum("iLbc,Labc->ia", self.t2oc, hf.cvvv)
+                + einsum("kLib,kLab->ia", hf.ocov, self.t2oc)
+                + einsum("iMLb,LMab->ia", hf.occv, self.t2cc)
+                - einsum("iLMb,LMab->ia", hf.occv, self.t2cc)
+            ) / self.df(b.ov)
+            ret[b.vv] += (
+                + 0.5 * einsum("IJac,IJbc->ab", self.t2cc, self.t2cc)
+                + 1.0 * einsum("kJac,kJbc->ab", self.t2oc, self.t2oc)
+            )
+            # compute extra CVS blocks
+            ret[b.cc] = -0.5 * (
+                + einsum("kIab,kJab->IJ", self.t2oc, self.t2oc)
+                + einsum('LIab,LJab->IJ', self.t2cc, self.t2cc)
+            )
+            ret[b.co] = -0.5 * (
+                + einsum("kIab,kjab->Ij", self.t2oc, self.t2oo)
+                + einsum("ILab,jLab->Ij", self.t2cc, self.t2oc)
+            )
+            ret[b.cv] = -0.5 * (
+                - einsum("jIbc,jabc->Ia", self.t2oc, hf.ovvv)
+                + einsum("jkIb,jkab->Ia", hf.oocv, self.t2oo)
+                + einsum("jMIb,jMab->Ia", hf.occv, self.t2oc)
+                + einsum("ILbc,Labc->Ia", self.t2cc, hf.cvvv)
+                + einsum("kLIb,kLab->Ia", hf.occv, self.t2oc)
+                + einsum("LMIb,LMab->Ia", hf.cccv, self.t2cc)
+            ) / self.df(b.cv)
         ret.reference_state = self.reference_state
-        return ret
+        return evaluate(ret)
 
     def density(self, level=2):
         """
@@ -122,9 +195,30 @@ class LazyMp:
             raise NotImplementedError("Only dipole moments for level 1 and 2"
                                       " are implemented.")
 
+    @cached_member_function
     def energy_correction(self, level=2):
         """Obtain the MP energy correction at a particular level"""
-        return self.__cpp.energy_correction(level)
+        if level > 3:
+            raise NotImplementedError(f"MP({level}) energy correction "
+                                      "not implemented.")
+        if level < 2:
+            return 0.0
+        hf = self.reference_state
+        is_cvs = self.has_core_occupied_space
+        if level == 2 and not is_cvs:
+            terms = [(1.0, hf.oovv, self.t2oo)]
+        elif level == 2 and is_cvs:
+            terms = [(1.0, hf.oovv, self.t2oo),
+                     (2.0, hf.ocvv, self.t2oc),
+                     (1.0, hf.ccvv, self.t2cc)]
+        elif level == 3 and not is_cvs:
+            terms = [(1.0, hf.oovv, self.td2(b.oovv))]
+        elif level == 3 and is_cvs:
+            raise NotImplementedError("CVS-MP3 energy correction not implemented.")
+        return sum(
+            -0.25 * pref * eri.dot(t2)
+            for pref, eri, t2 in terms
+        )
 
     def energy(self, level=2):
         """
@@ -179,3 +273,25 @@ class LazyMp:
         mp2corr = -np.array([product_trace(comp, self.mp2_diffdm)
                              for comp in dipole_integrals])
         return refstate.dipole_moment + mp2corr
+
+
+#
+# Register cvs_p0 intermedites
+#
+@register_as_intermediate
+def cvs_p0_oo(hf, mp, intermediates):
+    # NOTE: equal to mp2_diffdm if CVS applied for the density
+    return -0.5 * einsum("ikab,jkab->ij", mp.t2oo, mp.t2oo)
+
+
+@register_as_intermediate
+def cvs_p0_ov(hf, mp, intermediates):
+    # NOTE: equal to mp2_diffdm if CVS applied for the density
+    return -0.5 * (+ einsum("ijbc,jabc->ia", mp.t2oo, hf.ovvv)
+                   + einsum("jkib,jkab->ia", hf.ooov, mp.t2oo)) / mp.df(b.ov)
+
+
+@register_as_intermediate
+def cvs_p0_vv(hf, mp, intermediates):
+    # NOTE: equal to mp2_diffdm if CVS applied for the density
+    return 0.5 * einsum("ijac,ijbc->ab", mp.t2oo, mp.t2oo)

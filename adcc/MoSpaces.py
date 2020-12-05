@@ -21,6 +21,8 @@
 ##
 ## ---------------------------------------------------------------------
 import numpy as np
+import textwrap
+from itertools import product
 
 from .backends import import_scf_results
 from .memory_pool import memory_pool
@@ -30,6 +32,20 @@ from collections.abc import Iterable
 import libadcc
 
 __all__ = ["MoSpaces"]
+
+__valid_spaces = list(map(''.join, product(["o", "v"], ["1", "2", "3"])))
+
+
+def split_spaces(spacestr):
+    """Utility function to split a string with
+    multiple spaces into the individual space strings
+    """
+    sp = textwrap.wrap(spacestr, 2)
+    try:
+        assert all(s in __valid_spaces for s in sp)
+        return sp
+    except AssertionError:
+        raise ValueError(f"Invalid space string '{spacestr}'.")
 
 
 def expand_spaceargs(hfdata, **spaceargs):
