@@ -12,6 +12,7 @@
 /dist
 *.egg-info
 /.eggs
+/siteconfig.py
 
 # Testing
 .pytest_cache
