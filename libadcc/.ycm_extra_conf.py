@@ -1,10 +1,9 @@
 import os
 
-try:
-    from pybind11 import get_include as get_python_include
-except ImportError:
-    def get_python_include(user):
-        return ""
+# This file is loosely based upon the file
+# cpp/ycm/.ycm_extra_conf.py from the youcompleteme daemon process
+# available on github:
+# https://github.com/Valloric/ycmd/blob/master/cpp/ycm/.ycm_extra_conf.py
 
 
 # These are the compilation flags that will be used in case there's no
@@ -41,9 +40,6 @@ flags = [
     # To suppress errors shown here, use "-isystem"
     # instead of "-I"
     '-I', '.',
-    '-isystem', './adccore/include',
-    '-isystem', get_python_include(user=False),
-    '-isystem', get_python_include(user=True),
     # Explicit clang includes:
     '-isystem', '/usr/include/c++/v1',
 ]
