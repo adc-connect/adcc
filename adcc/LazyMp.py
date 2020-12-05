@@ -22,7 +22,6 @@
 ## ---------------------------------------------------------------------
 import libadcc
 import numpy as np
-import textwrap
 
 from .functions import direct_sum, evaluate, einsum
 from .misc import cached_property, cached_member_function
@@ -30,16 +29,8 @@ from .ReferenceState import ReferenceState
 from .OneParticleOperator import OneParticleOperator, product_trace
 from .Intermediates import register_as_intermediate
 from .timings import Timer, timed_member_call
+from .MoSpaces import split_spaces
 from . import block as b
-
-
-def split_spaces(spacestr):
-    sp = textwrap.wrap(spacestr, 2)
-    try:
-        assert all(s in ('o1', 'o2', 'v1') for s in sp)
-        return sp
-    except AssertionError:
-        raise ValueError(f"Invalid space string '{spacestr}'.")
 
 
 class LazyMp:
@@ -135,6 +126,8 @@ class LazyMp:
         """
         hf = self.reference_state
         ret = OneParticleOperator(self.mospaces, is_symmetric=True)
+        # NOTE: the following 3 blocks are equivalent to the cvs_p0 intermediates
+        # defined at the end of this file
         ret[b.oo] = -0.5 * einsum("ikab,jkab->ij", self.t2oo, self.t2oo)
         ret[b.ov] = -0.5 * (
             + einsum("ijbc,jabc->ia", self.t2oo, hf.ovvv)
@@ -211,14 +204,17 @@ class LazyMp:
         if level < 2:
             return 0.0
         hf = self.reference_state
-        if level == 2 and not self.has_core_occupied_space:
+        is_cvs = self.has_core_occupied_space
+        if level == 2 and not is_cvs:
             terms = [(1.0, hf.oovv, self.t2oo)]
-        elif level == 2 and self.has_core_occupied_space:
+        elif level == 2 and is_cvs:
             terms = [(1.0, hf.oovv, self.t2oo),
                      (2.0, hf.ocvv, self.t2oc),
                      (1.0, hf.ccvv, self.t2cc)]
-        elif level == 3:
+        elif level == 3 and not is_cvs:
             terms = [(1.0, hf.oovv, self.td2(b.oovv))]
+        elif level == 3 and is_cvs:
+            raise NotImplementedError("CVS-MP3 energy correction not implemented.")
         return sum(
             -0.25 * pref * eri.dot(t2)
             for pref, eri, t2 in terms
@@ -284,15 +280,18 @@ class LazyMp:
 #
 @register_as_intermediate
 def cvs_p0_oo(hf, mp, intermediates):
+    # NOTE: equal to mp2_diffdm if CVS applied for the density
     return -0.5 * einsum("ikab,jkab->ij", mp.t2oo, mp.t2oo)
 
 
 @register_as_intermediate
 def cvs_p0_ov(hf, mp, intermediates):
+    # NOTE: equal to mp2_diffdm if CVS applied for the density
     return -0.5 * (+ einsum("ijbc,jabc->ia", mp.t2oo, hf.ovvv)
                    + einsum("jkib,jkab->ia", hf.ooov, mp.t2oo)) / mp.df(b.ov)
 
 
 @register_as_intermediate
 def cvs_p0_vv(hf, mp, intermediates):
+    # NOTE: equal to mp2_diffdm if CVS applied for the density
     return 0.5 * einsum("ijac,ijbc->ab", mp.t2oo, mp.t2oo)
