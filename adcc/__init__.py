@@ -148,8 +148,6 @@ def banner(colour=sys.stdout.isatty(), show_doi=True, show_website=True):
         Should a website for each project be printed.
 
     """
-    import libadcc as adccore
-
     if colour:
         yellow = '\033[93m'
         green = '\033[92m'
@@ -164,7 +162,7 @@ def banner(colour=sys.stdout.isatty(), show_doi=True, show_website=True):
         white = ''
 
     empty = "|" + 78 * " " + "|\n"
-    maxlen = max(7, max(len(comp["name"]) for comp in adccore.__components__))
+    maxlen = 7
 
     def string_component(name, version, authors=None, description=None,
                          email=None, doi=None, website=None, licence=None):
@@ -216,19 +214,6 @@ def banner(colour=sys.stdout.isatty(), show_doi=True, show_website=True):
     string += string_component("adcc", __version__, __authors__,
                                email=__email__, licence=__license__,
                                website=__url__, doi="10.1002/wcms.1462")
-    string += empty
-    bt = ""
-    if adccore.__build_type__ not in ["Release"]:
-        bt = "  " + adccore.__build_type__
-    string += string_component("adccore", adccore.__version__ + bt,
-                               adccore.__authors__, licence=__license__)
-    string += empty
-
-    string += "+{:-^78s}+\n".format("  Integrated third-party components  ")
-    for comp in adccore.__components__:
-        if show_doi or show_website:
-            string += empty
-        string += string_component(**comp)
 
     string += empty
     string += "+" + 78 * "-" + "+"

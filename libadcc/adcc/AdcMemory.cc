@@ -25,11 +25,11 @@
 #include <libtensor/core/allocator.h>
 #include <libtensor/core/batching_policy_base.h>
 #include <libtensor/core/impl/std_allocator.h>
-#pragma GCC visibility pop
 
-#ifdef ADCC_WITH_LIBXM
+#ifdef WITH_LIBXM
 #include <libtensor/core/impl/xm_allocator.h>
-#endif  // ADCC_WITH_LIBXM
+#endif  // WITH_LIBXM
+#pragma GCC visibility pop
 
 namespace adcc {
 
@@ -91,9 +91,9 @@ void AdcMemory::initialise(std::string pagefile_directory, size_t max_memory,
   if (allocator == "default") {
     // Preference is 1. libxm 2. standard
     allocator = "standard";
-#ifdef ADCC_WITH_LIBXM
+#ifdef WITH_LIBXM
     allocator = "libxm";
-#endif  // ADCC_WITH_LIBXM
+#endif  // WITH_LIBXM
   }
 
   if (allocator == "standard") {
@@ -106,7 +106,7 @@ void AdcMemory::initialise(std::string pagefile_directory, size_t max_memory,
           max_memory,                    // Memory limit in bytes
           pagefile_directory.c_str()     // Prefix to page file path.
     );
-#ifdef ADCC_WITH_LIBXM
+#ifdef WITH_LIBXM
   } else if (allocator == "libxm") {
     shutdown();  // Shutdown previously initialised allocator (if any)
     libtensor::allocator::init(
@@ -117,7 +117,7 @@ void AdcMemory::initialise(std::string pagefile_directory, size_t max_memory,
           max_memory,                    // Memory limit in bytes
           pagefile_directory.c_str()     // Prefix to page file path.
     );
-#endif  // ADCC_WITH_LIBXM
+#endif  // WITH_LIBXM
   } else {
     throw invalid_argument("A libtensor memory allocator named '" + allocator +
                            "' is not known to adcc.");
