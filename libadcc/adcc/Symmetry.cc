@@ -24,7 +24,10 @@
 
 // TODO Temporary until there is a better describe() function
 #include "TensorImpl/as_lt_symmetry.hh"
+// Change visibility of libtensor singletons to public
+#pragma GCC visibility push(default)
 #include <libtensor/symmetry/print_symmetry.h>
+#pragma GCC visibility pop
 
 namespace adcc {
 

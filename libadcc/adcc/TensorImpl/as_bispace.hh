@@ -20,7 +20,11 @@
 #pragma once
 #include "adcc/AxisInfo.hh"
 #include <array>
+
+// Change visibility of libtensor singletons to public
+#pragma GCC visibility push(default)
 #include <libtensor/expr/bispace/bispace.h>
+#pragma GCC visibility pop
 
 namespace adcc {
 /**

@@ -24,22 +24,32 @@
 """Setup for adcc"""
 import os
 import sys
+import glob
+import shlex
+import shutil
+import sysconfig
 import setuptools
+import subprocess
 
 from setuptools import find_packages, setup
 from setuptools.command.test import test as TestCommand
 
-import setupext
+try:
+    from pybind11.setup_helpers import Pybind11Extension, build_ext
+except ImportError:
+    # Failing for the first time is ok because of setup_requires
+    from setuptools import Extension as Pybind11Extension
+    from setuptools.command import build_ext
 
 #
-# Building sphinx documentation
+# Custom commands
 #
 
 try:
-    from sphinx.setup_command import BuildDoc as BuildSphinxDoc
+    from sphinx.setup_command import BuildDoc
 except ImportError:
     # No sphinx found -> make a dummy class
-    class BuildSphinxDoc(setuptools.Command):
+    class BuildDoc(setuptools.Command):
         user_options = []
 
     def initialize_options(self):
@@ -48,17 +58,8 @@ except ImportError:
     def finalize_options(self):
         pass
 
-
-class BuildDocs(BuildSphinxDoc):
     def run(self):
-        try:
-            import breathe  # noqa F401
-
-            import sphinx  # noqa F401
-        except ImportError:
-            raise SystemExit("Sphinx or or one of its required plugins not "
-                             "found.\nTry 'pip install -U adcc[build_docs]'")
-        super().run()
+        raise SystemExit("Sphinx not found. Try 'pip install -U adcc[build_docs]'")
 
 
 class PyTest(TestCommand):
@@ -98,17 +99,115 @@ class PyTest(TestCommand):
 
 
 #
+# Setup libadcc extension
+#
+def get_pkg_config():
+    """
+    Get path to pkg-config and set up the PKG_CONFIG environment variable.
+    """
+    pkg_config = os.environ.get('PKG_CONFIG', 'pkg-config')
+    if shutil.which(pkg_config) is None:
+        print("WARNING: Pkg-config is not installed. Adcc may not be "
+              "able to find some dependencies.")
+        return None
+    pkg_config_path = sysconfig.get_config_var('LIBDIR')
+    if pkg_config_path is not None:
+        pkg_config_path = os.path.join(pkg_config_path, 'pkgconfig')
+        try:
+            os.environ['PKG_CONFIG_PATH'] += ':' + pkg_config_path
+        except KeyError:
+            os.environ['PKG_CONFIG_PATH'] = pkg_config_path
+    return pkg_config
+
+
+def extract_library_dirs(libs):
+    libdirs = []
+    for flag in libs:
+        if flag.startswith("-L") and os.path.isdir(flag[2:]):
+            libdirs.append(flag[2:])
+    return libdirs
+
+
+def libadcc_extension():
+    thisdir = os.path.dirname(__file__)
+
+    # Initial lot of flags
+    libraries = []
+    library_dirs = []
+    include_dirs = [os.path.join(thisdir, "libadcc")]
+    extra_link_args = []
+    extra_compile_args = ["-Wall", "-Wextra", "-Werror"]
+    runtime_library_dirs = []
+    extra_objects = []
+    define_macros = [("NDEBUG", 1), ]
+    search_system = True
+
+    # User-provided config
+    adcc_config = os.environ.get('ADCC_CONFIG')
+    if adcc_config and not os.path.isfile(adcc_config):
+        raise FileNotFoundError(adcc_config)
+    for siteconfig in [adcc_config, "siteconfig.py", "~/.adcc/siteconfig.py"]:
+        if siteconfig is not None:
+            siteconfig = os.path.expanduser(siteconfig)
+            if os.path.isfile(siteconfig):
+                print("Reading siteconfig file:", siteconfig)
+                exec(open(siteconfig, "r").read())
+                break
+
+    # Check if we should search the system for libtensor
+    if search_system:
+        pkg_config = get_pkg_config()
+        if pkg_config:
+            cmd = [pkg_config, "libtensorlight"]
+            cflags = shlex.split(os.fsdecode(
+                subprocess.check_output([*cmd, "--cflags"])))
+            libs = shlex.split(os.fsdecode(
+                subprocess.check_output([*cmd, "--libs"])))
+            extra_compile_args.extend(cflags)
+            extra_link_args.extend(libs)
+
+            # Add to rpath to ensure that library gets found
+            # at runtime
+            runtime_library_dirs.extend(extract_library_dirs(libs))
+        else:
+            # Just press our thumbs that it gets found somehow
+            libraries.append("tensorlight")
+
+    sourcefiles = set(glob.glob("libadcc/**/*.cc", recursive=True))
+    testfiles = glob.glob("libadcc/**/tests/*.cc", recursive=True)
+    sourcefiles = sorted(sourcefiles.difference(testfiles))
+
+    return Pybind11Extension(
+        "libadcc",
+        sourcefiles,
+        libraries=libraries,
+        library_dirs=library_dirs,
+        include_dirs=include_dirs,
+        extra_link_args=extra_link_args,
+        extra_compile_args=extra_compile_args,
+        runtime_library_dirs=runtime_library_dirs,
+        extra_objects=extra_objects,
+        define_macros=define_macros,
+        language="c++",
+        cxx_std=14,
+    )
+
+
+#
 # Main setup code
 #
-def strip_readme():
-    with open("README.md") as fp:
-        return "".join([line for line in fp if not line.startswith("<img")])
+def is_conda_build():
+    return (
+        os.environ.get("CONDA_BUILD", None) == "1"
+        or os.environ.get("CONDA_EXE", None)
+    )
 
 
 def adccsetup(*args, **kwargs):
     """Wrapper around setup, displaying a link to adc-connect.org on any error."""
-    if setupext.is_conda_build():
+    if is_conda_build():
         kwargs.pop("install_requires")
+        kwargs.pop("setup_requires")
         kwargs.pop("tests_require")
     try:
         setup(*args, **kwargs)
@@ -124,10 +223,13 @@ def main():
         raise RuntimeError("Running setup.py is only supported "
                            "from top level of repository as './setup.py <command>'")
 
+    with open("README.md") as fp:
+        readme = "".join([line for line in fp if not line.startswith("<img")])
+
     adccsetup(
         name="adcc",
         description="adcc:  Seamlessly connect your host program to ADC",
-        long_description=strip_readme(),
+        long_description=readme,
         long_description_content_type="text/markdown",
         keywords=[
             "ADC", "algebraic-diagrammatic", "construction", "excited", "states",
@@ -164,14 +266,14 @@ def main():
                                "lib/*.so.*",
                                "lib/libadccore_LICENSE"],
                       "": ["LICENSE*"]},
-        ext_modules=setupext.get_extensions(),
+        ext_modules=[libadcc_extension()],
         zip_safe=False,
         #
         platforms=["Linux", "Mac OS-X"],
         python_requires=">=3.6",
+        setup_requires=["pybind11 >= 2.6"],
         install_requires=[
             "opt_einsum >= 3.0",
-            "pybind11 >= 2.6",
             "numpy >= 1.14",
             "scipy >= 1.2",
             "matplotlib >= 3.0",
@@ -185,8 +287,8 @@ def main():
                            "sphinx-automodapi"],
         },
         #
-        cmdclass={"build_ext": setupext.BuildExt, "pytest": PyTest,
-                  "build_docs": BuildDocs},
+        cmdclass={"build_ext": build_ext, "pytest": PyTest,
+                  "build_docs": BuildDoc},
     )
 
 

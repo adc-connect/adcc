@@ -19,8 +19,12 @@
 
 #pragma once
 #include <adcc/Symmetry.hh>
+
+// Change visibility of libtensor singletons to public
+#pragma GCC visibility push(default)
 #include <libtensor/core/scalar_transf_double.h>  // Note: This header is needed here
 #include <libtensor/core/symmetry.h>
+#pragma GCC visibility pop
 
 namespace adcc {
 /**

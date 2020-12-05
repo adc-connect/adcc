@@ -20,7 +20,11 @@
 #pragma once
 #include "Tensor.hh"
 #include "TensorImpl/ExpressionTree.hh"
+
+// Change visibility of libtensor singletons to public
+#pragma GCC visibility push(default)
 #include <libtensor/libtensor.h>
+#pragma GCC visibility pop
 
 namespace adcc {
 /**

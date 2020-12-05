@@ -18,11 +18,15 @@
 //
 
 // This needs to be the first include ... libtensor reasons
+#pragma GCC visibility push(default)
 #include <libtensor/expr/eval/eval_exception.h>
+#pragma GCC visibility pop
 //
 #include "ExpressionTree.hh"
 #include "adcc/exceptions.hh"
-#include <adcc/BlasSequential.hh>
+
+// Change visibility of libtensor singletons to public
+#pragma GCC visibility push(default)
 #include <libtensor/block_tensor/btod_add.h>
 #include <libtensor/block_tensor/btod_set.h>
 #include <libtensor/expr/btensor/eval_btensor_double.h>
@@ -37,7 +41,9 @@
 #include <libtensor/expr/opt/opt_merge_adjacent_add.h>
 #include <libtensor/expr/opt/opt_merge_adjacent_transf.h>
 #include <libtensor/expr/opt/opt_merge_equiv_ident.h>
+#include <libtensor/linalg/BlasSequential.h>
 #include <libtensor/symmetry/so_copy.h>
+#pragma GCC visibility pop
 
 namespace adcc {
 namespace lt = libtensor;
@@ -250,7 +256,7 @@ template <size_t N>
 void ExpressionTree::evaluate_to(lt::btensor<N, scalar_type>& result, bool add) const {
   lt::expr::expr_tree assigntree = optimise_tree(assignment_tree(*this, result, add));
 
-  BlasSequential seq;  // Switch to sequential BLAS for evaluations
+  lt::BlasSequential seq;  // Switch to sequential BLAS for evaluations
 
   if (is_linear_combination(assigntree)) {
     evaluate_linear_combination(assigntree, result, add);

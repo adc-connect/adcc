@@ -19,8 +19,12 @@
 
 #pragma once
 #include "adcc/config.hh"
-#include <libtensor/expr/btensor/btensor.h>
 #include <vector>
+
+// Change visibility of libtensor singletons to public
+#pragma GCC visibility push(default)
+#include <libtensor/expr/btensor/btensor.h>
+#pragma GCC visibility pop
 
 namespace adcc {
 namespace lt = libtensor;

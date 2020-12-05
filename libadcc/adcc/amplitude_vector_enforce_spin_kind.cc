@@ -20,7 +20,11 @@
 #include "amplitude_vector_enforce_spin_kind.hh"
 #include <adcc/TensorImpl.hh>
 #include <adcc/exceptions.hh>
+
+// Change visibility of libtensor singletons to public
+#pragma GCC visibility push(default)
 #include <libtensor/core/short_orbit.h>
+#pragma GCC visibility pop
 
 namespace adcc {
 
@@ -150,8 +154,7 @@ void amplitude_vector_enforce_spin_kind(std::shared_ptr<Tensor> doubles_tensor,
 
     if (!zero1) {  // (alpha, beta, alpha, beta) is not zero
       lt::dense_tensor_rd_i<4, scalar_type>& blk1 = ctrl.req_const_block(ci1);
-      lt::tod_copy<4>(blk1, orb1.get_transf(i1))
-            .perform(/* assign= */ true, blk);
+      lt::tod_copy<4>(blk1, orb1.get_transf(i1)).perform(/* assign= */ true, blk);
       ctrl.ret_const_block(ci1);
     }
     if (!zero2) {  // (alpha, beta, beta, alpha) is not zero

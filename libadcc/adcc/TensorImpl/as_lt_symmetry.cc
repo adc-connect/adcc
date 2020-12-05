@@ -20,11 +20,15 @@
 #include "as_lt_symmetry.hh"
 #include "adcc/exceptions.hh"
 #include "as_bispace.hh"
+
+// Change visibility of libtensor singletons to public
+#pragma GCC visibility push(default)
 #include <libtensor/core/permutation_builder.h>
 #include <libtensor/core/scalar_transf.h>
 #include <libtensor/symmetry/se_label.h>
 #include <libtensor/symmetry/se_part.h>
 #include <libtensor/symmetry/se_perm.h>
+#pragma GCC visibility pop
 
 namespace adcc {
 namespace lt = libtensor;

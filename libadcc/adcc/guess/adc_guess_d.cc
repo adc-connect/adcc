@@ -1,11 +1,15 @@
 #include "adc_guess_d.hh"
 #include <adcc/exceptions.hh>
+
+// Change visibility of libtensor singletons to public
+#pragma GCC visibility push(default)
 #include <libtensor/block_tensor/btod_dotprod.h>
 #include <libtensor/block_tensor/btod_scale.h>
 #include <libtensor/block_tensor/btod_select.h>
 #include <libtensor/block_tensor/btod_set_elem.h>
 #include <libtensor/libtensor.h>
 #include <libtensor/symmetry/symmetry_element_set_adapter.h>
+#pragma GCC visibility pop
 
 namespace adcc {
 

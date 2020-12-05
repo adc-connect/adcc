@@ -22,6 +22,9 @@
 #include "TensorImpl/as_lt_symmetry.hh"
 #include "TensorImpl/get_block_starts.hh"
 #include "util/shape_to_string.hh"
+
+// Change visibility of libtensor singletons to public
+#pragma GCC visibility push(default)
 #include <libtensor/block_tensor/btod_add.h>
 #include <libtensor/block_tensor/btod_copy.h>
 #include <libtensor/block_tensor/btod_dotprod.h>
@@ -32,6 +35,7 @@
 #include <libtensor/block_tensor/btod_set_diag.h>
 #include <libtensor/block_tensor/btod_set_elem.h>
 #include <libtensor/symmetry/print_symmetry.h>
+#pragma GCC visibility pop
 
 namespace adcc {
 namespace lt = libtensor;
@@ -553,8 +557,7 @@ void TensorImpl<N>::add_linear_combination(
   for (size_t i = 0; i < scalars.size(); ++i) {
     DIMENSIONALITY_CHECK(tensors[i]);
     if (!operator_ptr) {
-      operator_ptr.reset(
-            new lt::btod_add<N>(as_btensor<N>(tensors[i]), scalars[i]));
+      operator_ptr.reset(new lt::btod_add<N>(as_btensor<N>(tensors[i]), scalars[i]));
     } else {
       operator_ptr->add_op(as_btensor<N>(tensors[i]), scalars[i]);
     }
@@ -1163,29 +1166,25 @@ bool TensorImpl<N>::is_element_allowed(const std::vector<size_t>& tidx) const {
 template <size_t N>
 std::vector<std::pair<std::vector<size_t>, scalar_type>> TensorImpl<N>::select_n_absmax(
       size_t n, bool unique_by_symmetry) const {
-  return execute_select_n<lt::compare4absmax>(*libtensor_ptr(), n,
-                                                           unique_by_symmetry);
+  return execute_select_n<lt::compare4absmax>(*libtensor_ptr(), n, unique_by_symmetry);
 }
 
 template <size_t N>
 std::vector<std::pair<std::vector<size_t>, scalar_type>> TensorImpl<N>::select_n_absmin(
       size_t n, bool unique_by_symmetry) const {
-  return execute_select_n<lt::compare4absmin>(*libtensor_ptr(), n,
-                                                           unique_by_symmetry);
+  return execute_select_n<lt::compare4absmin>(*libtensor_ptr(), n, unique_by_symmetry);
 }
 
 template <size_t N>
 std::vector<std::pair<std::vector<size_t>, scalar_type>> TensorImpl<N>::select_n_max(
       size_t n, bool unique_by_symmetry) const {
-  return execute_select_n<lt::compare4max>(*libtensor_ptr(), n,
-                                                        unique_by_symmetry);
+  return execute_select_n<lt::compare4max>(*libtensor_ptr(), n, unique_by_symmetry);
 }
 
 template <size_t N>
 std::vector<std::pair<std::vector<size_t>, scalar_type>> TensorImpl<N>::select_n_min(
       size_t n, bool unique_by_symmetry) const {
-  return execute_select_n<lt::compare4min>(*libtensor_ptr(), n,
-                                                        unique_by_symmetry);
+  return execute_select_n<lt::compare4min>(*libtensor_ptr(), n, unique_by_symmetry);
 }
 
 template <size_t N>
@@ -1216,8 +1215,8 @@ void TensorImpl<N>::import_from(const scalar_type* memptr, size_t size,
     lt::btod_set<N>(0.0).perform(*libtensor_ptr());
 
     scalar_type* noconst_mem = const_cast<scalar_type*>(memptr);
-    libtensor::btod_import_raw<N>(noconst_mem,
-                                         libtensor_ptr()->get_bis().get_dims(), tolerance)
+    libtensor::btod_import_raw<N>(noconst_mem, libtensor_ptr()->get_bis().get_dims(),
+                                  tolerance)
           .perform(*libtensor_ptr());
   } else {
     // Fast algorithm without symmetry check (via import_from with generator)

@@ -18,7 +18,11 @@
 //
 
 #pragma once
+
+// Change visibility of libtensor singletons to public
+#pragma GCC visibility push(default)
 #include <libtensor/symmetry/product_table_container.h>
+#pragma GCC visibility pop
 
 namespace adcc {
 /**

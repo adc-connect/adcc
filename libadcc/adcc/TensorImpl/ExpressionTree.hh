@@ -19,9 +19,13 @@
 
 #pragma once
 #include "adcc/config.hh"
+#include <ostream>
+
+// Change visibility of libtensor singletons to public
+#pragma GCC visibility push(default)
 #include <libtensor/expr/btensor/btensor.h>
 #include <libtensor/expr/dag/print_tree.h>
-#include <ostream>
+#pragma GCC visibility pop
 
 namespace adcc {
 

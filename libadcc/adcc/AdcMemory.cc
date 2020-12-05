@@ -19,9 +19,13 @@
 
 #include "AdcMemory.hh"
 #include "exceptions.hh"
+
+// Change visibility of libtensor singletons to public
+#pragma GCC visibility push(default)
 #include <libtensor/core/allocator.h>
 #include <libtensor/core/batching_policy_base.h>
 #include <libtensor/core/impl/std_allocator.h>
+#pragma GCC visibility pop
 
 #ifdef ADCC_WITH_LIBXM
 #include <libtensor/core/impl/xm_allocator.h>

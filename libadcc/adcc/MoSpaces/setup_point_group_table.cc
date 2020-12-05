@@ -19,7 +19,11 @@
 
 #include "setup_point_group_table.hh"
 #include <adcc/exceptions.hh>
+
+// Change visibility of libtensor singletons to public
+#pragma GCC visibility push(default)
 #include <libtensor/symmetry/point_group_table.h>
+#pragma GCC visibility pop
 
 namespace adcc {
 namespace lt        = libtensor;

@@ -17,9 +17,10 @@
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include <adcc/backend.hh>
 #include <adcc/exceptions.hh>
-#include <adcc/metadata.hh>
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 namespace py = pybind11;
 
@@ -55,31 +56,15 @@ PYBIND11_MODULE(libadcc, m) {
   pyif::export_guesses(m);
   pyif::export_amplitude_vector_enforce_spin_kind(m);
 
-  // Set metadata about libadcc
-  m.attr("__version__")    = adcc::version::version_string();
-  m.attr("__build_type__") = adcc::version::is_debug() ? "Debug" : "Release";
-  m.attr("__authors__")    = adcc::__authors__();
-  m.attr("__email__")      = adcc::__email__();
-
-  // Set libadcc feature list
-  py::list features;
-  for (auto& feature : adcc::__features__()) features.append(feature);
-  m.attr("__features__") = features;
-
-  // Set libadcc components list
-  py::list components;
-  for (const adcc::Component& comp : adcc::__components__()) {
-    py::dict d;
-    d["name"]        = comp.name;
-    d["version"]     = comp.version;
-    d["description"] = comp.description;
-    d["authors"]     = comp.authors;
-    d["doi"]         = comp.doi;
-    d["website"]     = comp.website;
-    d["licence"]     = comp.licence;
-    components.append(d);
-  }
-  m.attr("__components__") = components;
+  // Set metadata about libtensor
+  py::dict tensor_backend;
+  const adcc::TensorBackend& back = adcc::tensor_backend();
+  tensor_backend["name"]          = back.name;
+  tensor_backend["version"]       = back.version;
+  tensor_backend["authors"]       = back.authors;
+  tensor_backend["features"]      = back.features;
+  tensor_backend["blas"]          = back.blas;
+  m.attr("__backend__")           = tensor_backend;
 
   // Exception translation
   py::register_exception_translator([](std::exception_ptr p) {

@@ -1,5 +1,8 @@
 #pragma once
+// Change visibility of libtensor singletons to public
+#pragma GCC visibility push(default)
 #include <libtensor/libtensor.h>
+#pragma GCC visibility pop
 #include <map>
 #include <set>
 
