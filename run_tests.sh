@@ -18,3 +18,25 @@ elif [ "$PART" == "valgrind_pytest" ]; then
 	echo "Unknown part: $PART, known are: gdb_pytest valgrind_pytest" >&2
 	exit 1
 fi
+
+
+BUILD_DIR="$(dirname "${BASH_SOURCE[0]}")/build"
+if [ ! -d "$BUILD_DIR" ]; then
+	echo "Could not find build directory $BUILD_DIR" >&2
+	exit 1
+fi
+
+PART="$1"
+shift
+
+if [ "$PART" == "cpp" ]; then
+	cd "$BUILD_DIR" && "./src/adcc/tests/adccore_tests" "$@"
+elif [ "$PART" == "gdb_cpp" ]; then
+	cd "$BUILD_DIR" && \
+		gdb --tui --ex run --args ./src/adcc/tests/adccore_tests  "$@"
+elif [ "$PART" == "" ]; then
+	$0 "cpp"
+else
+	echo "Unknown part: $PART, known are: cpp gdb_cpp" >&2
+	exit 1
+fi
