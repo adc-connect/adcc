@@ -27,19 +27,27 @@ import sys
 import glob
 import shlex
 import shutil
+import tempfile
+import functools
 import sysconfig
 import setuptools
 import subprocess
+
+from distutils import log
 
 from setuptools import find_packages, setup
 from setuptools.command.test import test as TestCommand
 
 try:
     from pybind11.setup_helpers import Pybind11Extension, build_ext
+
+    have_pybind11 = True
 except ImportError:
     # Failing for the first time is ok because of setup_requires
     from setuptools import Extension as Pybind11Extension
-    from setuptools.command import build_ext
+    from setuptools.command.build_ext import build_ext
+
+    have_pybind11 = False
 
 #
 # Custom commands
@@ -101,14 +109,15 @@ class PyTest(TestCommand):
 #
 # Setup libadcc extension
 #
+@functools.lru_cache()
 def get_pkg_config():
     """
     Get path to pkg-config and set up the PKG_CONFIG environment variable.
     """
     pkg_config = os.environ.get('PKG_CONFIG', 'pkg-config')
     if shutil.which(pkg_config) is None:
-        print("WARNING: Pkg-config is not installed. Adcc may not be "
-              "able to find some dependencies.")
+        log.warn("WARNING: Pkg-config is not installed. Adcc may not be "
+                 "able to find some dependencies.")
         return None
 
     # Some default places to search for pkg-config files:
@@ -124,12 +133,104 @@ def get_pkg_config():
     return pkg_config
 
 
+def search_with_pkg_config(library, minversion=None, define_prefix=True):
+    """
+    Search the OS with pkg-config for a library and return the resulting
+    cflags and libs stored inside the pc file. Also checks for a minimal
+    version if `minversion` is not `None`.
+    """
+    pkg_config = get_pkg_config()
+    if pkg_config:
+        cmd = [pkg_config, "libtensorlight"]
+        if define_prefix:
+            cmd.append("--define-prefix")
+
+        try:
+            if minversion:
+                subprocess.check_call([*cmd, f"--atleast-version={minversion}"])
+
+            cflags = shlex.split(os.fsdecode(
+                subprocess.check_output([*cmd, "--cflags"])))
+            libs = shlex.split(os.fsdecode(
+                subprocess.check_output([*cmd, "--libs"])))
+
+            return cflags, libs
+        except (OSError, subprocess.CalledProcessError):
+            pass
+    return None, None
+
+
 def extract_library_dirs(libs):
+    """
+    From the `libs` flags returned by `search_with_pkg_config` extract
+    the existing library directories.
+    """
     libdirs = []
     for flag in libs:
         if flag.startswith("-L") and os.path.isdir(flag[2:]):
             libdirs.append(flag[2:])
     return libdirs
+
+
+def request_urllib(url, filename):
+    """Download a file from the net"""
+    import urllib.request
+
+    try:
+        resp = urllib.request.urlopen(url)
+    except urllib.request.HTTPError as e:
+        return e.code
+
+    if 200 <= resp.status < 300:
+        with open(filename, 'wb') as fp:
+            fp.write(resp.read())
+    return resp.status
+
+
+def install_libtensor(url, destination):
+    """
+    Download libtensor from `url` and install at `destination`, removing possibly
+    existing files from a previous installation.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        print(f"Downloading libtensorlight from {url} to {destination} ...")
+        fn = os.path.basename(url)
+        local = tmpdir + "/" + fn
+
+        status_code = request_urllib(url, local)
+        if status_code < 200 or status_code >= 300:
+            msg = "Could not download libtensorlight."
+            if 400 <= status_code < 500:
+                # Either an unsupported version or an error on our end
+                msg += (" This should not have happened and either this means"
+                        " your platform / OS / architecture is unsupported or"
+                        " that there is a bug in adcc. Please check the adcc "
+                        " installation instructions"
+                        " (https://adc-connect.org/latest/installation.html)"
+                        " and if in doubt, please open an issue on github.")
+            raise RuntimeError(msg)
+
+        file_globs = [
+            destination + "/include/libtensorlight/**/*.hh",
+            destination + "/include/libtensor/**/*.hh",
+            destination + "/include/libutil/**/*.hh",
+            destination + "/lib/libtensorlight.so",
+            destination + "/lib/libtensorlight.so.*",
+            destination + "/lib/libtensorlight.dylib",
+            destination + "/lib/libtensorlight.*.dylib",
+            destination + "/lib/pkgconfig/libtensorlight.pc",
+        ]
+
+        for fglob in file_globs:
+            for fn in glob.glob(fglob, recursive=True):
+                log.info(f"Removing old libtensor file: {fn}")
+                os.remove(fn)
+
+        # Change to installation directory
+        olddir = os.getcwd()
+        os.chdir(destination)
+        subprocess.run(["tar", "xf", local], check=True)
+        os.chdir(olddir)
 
 
 def libadcc_extension():
@@ -143,8 +244,14 @@ def libadcc_extension():
     extra_compile_args = ["-Wall", "-Wextra", "-Werror", "-O3"]
     runtime_library_dirs = []
     extra_objects = []
-    define_macros = [("NDEBUG", 1), ]
+    define_macros = []
     search_system = True
+
+    if sys.platform == "linux":
+        libtensor_autoinstall = "~/.local"
+    else:
+        # Not yes supported on other platforms
+        libtensor_autoinstall = None
 
     # User-provided config
     adcc_config = os.environ.get('ADCC_CONFIG')
@@ -154,33 +261,47 @@ def libadcc_extension():
         if siteconfig is not None:
             siteconfig = os.path.expanduser(siteconfig)
             if os.path.isfile(siteconfig):
-                print("Reading siteconfig file:", siteconfig)
+                log.info("Reading siteconfig file:", siteconfig)
                 exec(open(siteconfig, "r").read())
                 break
 
-    # Check if we should search the system for libtensor
-    if search_system:
-        pkg_config = get_pkg_config()
-        if pkg_config:
-            cmd = [pkg_config, "libtensorlight"]
-            cflags = shlex.split(os.fsdecode(
-                subprocess.check_output([*cmd, "--cflags"])))
-            libs = shlex.split(os.fsdecode(
-                subprocess.check_output([*cmd, "--libs"])))
+    # Keep track whether libtensor has been found
+    found_libtensor = "tensorlight" in libraries
+    lt_version = "2.9.9"
+
+    if not found_libtensor:
+        if search_system:  # Try to find libtensor on the OS using pkg-config
+            log.info("Searching OS for libtensorlight using pkg-config")
+            cflags, libs = search_with_pkg_config("libtensorlight", lt_version)
+
+        # Try to download libtensor if not on the OS
+        if (cflags is None or libs is None) and libtensor_autoinstall:
+            assert sys.platform == "linux"  # TODO Currently Linux hard-coded
+            base = "https://get.adc-connect.org/libtensorlight"
+            url = f"{base}/libtensorlight-{lt_version}-linux_x86_64.tar.gz"
+            destdir = os.path.expanduser(libtensor_autoinstall)
+            install_libtensor(url, destdir)
+            os.environ['PKG_CONFIG_PATH'] += f":{destdir}/lib/pkg_config"
+            cflags, libs = search_with_pkg_config("libtensorlight", lt_version)
+            assert cflags is not None and libs is not None
+
+        if cflags is not None and libs is not None:
+            found_libtensor = True
             extra_compile_args.extend(cflags)
             extra_link_args.extend(libs)
-
-            # Add to rpath to ensure that library gets found
-            # at runtime
             runtime_library_dirs.extend(extract_library_dirs(libs))
-        else:
-            # Just press our thumbs that it gets found somehow
-            libraries.append("tensorlight")
+
+    if not found_libtensor:
+        raise RuntimeError("Did not find the libtensorlight library.")
 
     sourcefiles = set(glob.glob("libadcc/**/*.cc", recursive=True))
     testfiles = glob.glob("libadcc/**/tests/*.cc", recursive=True)
     sourcefiles = sorted(sourcefiles.difference(testfiles))
 
+    # This is needed on the first pass where pybind11 is not yet installed
+    cxx_stdargs = dict()
+    if have_pybind11:
+        cxx_stdargs["cxx_std"] = 14
     return Pybind11Extension(
         "libadcc",
         sourcefiles,
@@ -193,7 +314,7 @@ def libadcc_extension():
         extra_objects=extra_objects,
         define_macros=define_macros,
         language="c++",
-        cxx_std=14,
+        **cxx_stdargs,
     )
 
 
@@ -222,79 +343,72 @@ def adccsetup(*args, **kwargs):
                            "".format(url)) from e
 
 
-def main():
-    if not os.path.isfile("adcc/__init__.py"):
-        raise RuntimeError("Running setup.py is only supported "
-                           "from top level of repository as './setup.py <command>'")
-
+def read_readme():
     with open("README.md") as fp:
-        readme = "".join([line for line in fp if not line.startswith("<img")])
-
-    adccsetup(
-        name="adcc",
-        description="adcc:  Seamlessly connect your host program to ADC",
-        long_description=readme,
-        long_description_content_type="text/markdown",
-        keywords=[
-            "ADC", "algebraic-diagrammatic", "construction", "excited", "states",
-            "electronic", "structure", "computational", "chemistry", "quantum",
-            "spectroscopy",
-        ],
-        #
-        author="Michael F. Herbst, Maximilian Scheurer",
-        author_email="developers@adc-connect.org",
-        license="GPL v3",
-        url="https://adc-connect.org",
-        project_urls={
-            "Source": "https://github.com/adc-connect/adcc",
-            "Issues": "https://github.com/adc-connect/adcc/issues",
-        },
-        #
-        version="0.15.4",
-        classifiers=[
-            "Development Status :: 5 - Production/Stable",
-            "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-            "License :: Free For Educational Use",
-            "Intended Audience :: Science/Research",
-            "Topic :: Scientific/Engineering :: Chemistry",
-            "Topic :: Education",
-            "Programming Language :: Python :: 3.6",
-            "Programming Language :: Python :: 3.7",
-            "Programming Language :: Python :: 3.8",
-            "Operating System :: MacOS :: MacOS X",
-            "Operating System :: POSIX :: Linux",
-        ],
-        #
-        packages=find_packages(exclude=["*.test*", "test"]),
-        package_data={"adcc": ["lib/*.so", "lib/*.dylib",
-                               "lib/*.so.*",
-                               "lib/libadccore_LICENSE"],
-                      "": ["LICENSE*"]},
-        ext_modules=[libadcc_extension()],
-        zip_safe=False,
-        #
-        platforms=["Linux", "Mac OS-X"],
-        python_requires=">=3.6",
-        setup_requires=["pybind11 >= 2.6"],
-        install_requires=[
-            "opt_einsum >= 3.0",
-            "numpy >= 1.14",
-            "scipy >= 1.2",
-            "matplotlib >= 3.0",
-            "h5py >= 2.9",
-            "tqdm >= 4.30",
-            "pandas >= 0.25.0",
-        ],
-        tests_require=["pytest", "pytest-cov", "pyyaml"],
-        extras_require={
-            "build_docs": ["sphinx>=2", "breathe", "sphinxcontrib-bibtex",
-                           "sphinx-automodapi"],
-        },
-        #
-        cmdclass={"build_ext": build_ext, "pytest": PyTest,
-                  "build_docs": BuildDoc},
-    )
+        return "".join([line for line in fp if not line.startswith("<img")])
 
 
-if __name__ == "__main__":
-    main()
+if not os.path.isfile("adcc/__init__.py"):
+    raise RuntimeError("Running setup.py is only supported "
+                       "from top level of repository as './setup.py <command>'")
+
+adccsetup(
+    name="adcc",
+    description="adcc:  Seamlessly connect your host program to ADC",
+    long_description=read_readme(),
+    long_description_content_type="text/markdown",
+    keywords=[
+        "ADC", "algebraic-diagrammatic", "construction", "excited", "states",
+        "electronic", "structure", "computational", "chemistry", "quantum",
+        "spectroscopy",
+    ],
+    #
+    author="Michael F. Herbst, Maximilian Scheurer",
+    author_email="developers@adc-connect.org",
+    license="GPL v3",
+    url="https://adc-connect.org",
+    project_urls={
+        "Source": "https://github.com/adc-connect/adcc",
+        "Issues": "https://github.com/adc-connect/adcc/issues",
+    },
+    #
+    version="0.15.5",
+    classifiers=[
+        "Development Status :: 5 - Production/Stable",
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+        "License :: Free For Educational Use",
+        "Intended Audience :: Science/Research",
+        "Topic :: Scientific/Engineering :: Chemistry",
+        "Topic :: Education",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Operating System :: MacOS :: MacOS X",
+        "Operating System :: POSIX :: Linux",
+    ],
+    #
+    packages=find_packages(exclude=["*.test*", "test"]),
+    ext_modules=[libadcc_extension()],
+    zip_safe=False,
+    #
+    platforms=["Linux", "Mac OS-X"],
+    python_requires=">=3.6",
+    setup_requires=["pybind11 >= 2.6"],
+    install_requires=[
+        "opt_einsum >= 3.0",
+        "numpy >= 1.14",
+        "scipy >= 1.2",
+        "matplotlib >= 3.0",
+        "h5py >= 2.9",
+        "tqdm >= 4.30",
+        "pandas >= 0.25.0",
+    ],
+    tests_require=["pytest", "pytest-cov", "pyyaml"],
+    extras_require={
+        "build_docs": ["sphinx>=2", "breathe", "sphinxcontrib-bibtex",
+                       "sphinx-automodapi"],
+    },
+    #
+    cmdclass={"build_ext": build_ext, "pytest": PyTest,
+              "build_docs": BuildDoc},
+)
