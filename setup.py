@@ -110,13 +110,17 @@ def get_pkg_config():
         print("WARNING: Pkg-config is not installed. Adcc may not be "
               "able to find some dependencies.")
         return None
-    pkg_config_path = sysconfig.get_config_var('LIBDIR')
-    if pkg_config_path is not None:
-        pkg_config_path = os.path.join(pkg_config_path, 'pkgconfig')
-        try:
-            os.environ['PKG_CONFIG_PATH'] += ':' + pkg_config_path
-        except KeyError:
-            os.environ['PKG_CONFIG_PATH'] = pkg_config_path
+
+    # Some default places to search for pkg-config files:
+    pkg_config_paths = [sysconfig.get_config_var('LIBDIR'),
+                        os.path.expanduser("~/.local/lib")]
+    for path in pkg_config_paths:
+        if path is not None:
+            path = os.path.join(path, 'pkgconfig')
+            try:
+                os.environ['PKG_CONFIG_PATH'] += ':' + path
+            except KeyError:
+                os.environ['PKG_CONFIG_PATH'] = path
     return pkg_config
 
 
@@ -136,7 +140,7 @@ def libadcc_extension():
     library_dirs = []
     include_dirs = [os.path.join(thisdir, "libadcc")]
     extra_link_args = []
-    extra_compile_args = ["-Wall", "-Wextra", "-Werror"]
+    extra_compile_args = ["-Wall", "-Wextra", "-Werror", "-O3"]
     runtime_library_dirs = []
     extra_objects = []
     define_macros = [("NDEBUG", 1), ]
