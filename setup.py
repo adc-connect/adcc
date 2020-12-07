@@ -247,11 +247,10 @@ def libadcc_extension():
     define_macros = []
     search_system = True
 
-    if sys.platform == "linux":
+    if sys.platform.startswith("linux") or sys.platform.startswith("darwin"):
         libtensor_autoinstall = "~/.local"
     else:
-        # Not yes supported on other platforms
-        libtensor_autoinstall = None
+        libtensor_autoinstall = None  # Not yet supported on other platforms
 
     # User-provided config
     adcc_config = os.environ.get('ADCC_CONFIG')
@@ -276,9 +275,16 @@ def libadcc_extension():
 
         # Try to download libtensor if not on the OS
         if (cflags is None or libs is None) and libtensor_autoinstall:
-            assert sys.platform == "linux"  # TODO Currently Linux hard-coded
             base = "https://get.adc-connect.org/libtensorlight"
-            url = f"{base}/libtensorlight-{lt_version}-linux_x86_64.tar.gz"
+            # TODO This is still a bit hackish and might not work in general!
+            if sys.platform == "linux":
+                platform = "linux_x86_64"
+            elif sys.platform == "darwin":
+                platform = "macosx_10_15_x86_64"
+            else:
+                raise AssertionError("Should not get to download for "
+                                     "unspported platform.")
+            url = f"{base}/libtensorlight-{lt_version}-{platform}.tar.gz"
             destdir = os.path.expanduser(libtensor_autoinstall)
             install_libtensor(url, destdir)
             os.environ['PKG_CONFIG_PATH'] += f":{destdir}/lib/pkg_config"
@@ -289,7 +295,12 @@ def libadcc_extension():
             found_libtensor = True
             extra_compile_args.extend(cflags)
             extra_link_args.extend(libs)
-            runtime_library_dirs.extend(extract_library_dirs(libs))
+            if sys.platform == "darwin":
+                extra_link_args.append("-Wl,-rpath,@loader_path")
+                for path in extract_library_dirs(libs):
+                    extra_link_args.append(f"-Wl,-rpath,{path}")
+            else:
+                runtime_library_dirs.extend(extract_library_dirs(libs))
 
     if not found_libtensor:
         raise RuntimeError("Did not find the libtensorlight library.")

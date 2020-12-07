@@ -33,10 +33,12 @@ typedef std::shared_ptr<Tensor> ten_ptr;
 
 static std::vector<std::vector<size_t>> parse_permutations(
       const py::iterable& permutations) {
-  bool iterator_of_ints = false;
+  bool iterator_of_ints = true;
   for (auto tpl : permutations) {
-    if (py::isinstance<py::int_>(tpl)) iterator_of_ints = true;
-    break;
+    if (!py::isinstance<py::int_>(tpl)) {
+      iterator_of_ints = false;
+      break;
+    }
   }
 
   if (iterator_of_ints) {
