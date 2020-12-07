@@ -247,10 +247,19 @@ def libadcc_extension():
     define_macros = []
     search_system = True
 
-    if sys.platform.startswith("linux") or sys.platform.startswith("darwin"):
+    if sys.platform == "darwin" and is_conda_build():
+        extra_compile_args += ["-Wno-unused-command-line-argument",
+                               "-Wno-undefined-var-template"]
+
+    platform_autoinstall = (
+        sys.platform.startswith("linux") or sys.platform.startswith("darwin")
+    )
+    if platform_autoinstall and not is_conda_build():
         libtensor_autoinstall = "~/.local"
     else:
-        libtensor_autoinstall = None  # Not yet supported on other platforms
+        # Not yet supported on other platforms and disabled
+        # for conda builds
+        libtensor_autoinstall = None
 
     # User-provided config
     adcc_config = os.environ.get('ADCC_CONFIG')
@@ -295,6 +304,7 @@ def libadcc_extension():
             found_libtensor = True
             extra_compile_args.extend(cflags)
             extra_link_args.extend(libs)
+            print(f"Using libtensorlight libraries: {libs}.")
             if sys.platform == "darwin":
                 extra_link_args.append("-Wl,-rpath,@loader_path")
                 for path in extract_library_dirs(libs):
