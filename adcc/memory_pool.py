@@ -24,9 +24,8 @@ import os
 import glob
 import atexit
 import shutil
-import tempfile
-
 import libadcc
+import tempfile
 
 
 class MemoryPool(libadcc.AdcMemory):
@@ -54,11 +53,6 @@ class MemoryPool(libadcc.AdcMemory):
             (libstc++ allocator) and "default", where "default" uses the
             best-available default.
         """
-        if allocator not in ["standard", "default"]:
-            if allocator not in libadcc.__features__:
-                raise ValueError("Allocator {} is unknown or not compiled into "
-                                 "this version of adcc.".format(allocator))
-
         if not pagefile_directory:
             pagefile_directory = tempfile.mkdtemp(prefix="adcc_", dir="/tmp")
         super().initialise(pagefile_directory, max_memory, tensor_block_size,

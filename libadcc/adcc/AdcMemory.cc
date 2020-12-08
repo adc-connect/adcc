@@ -19,16 +19,13 @@
 
 #include "AdcMemory.hh"
 #include "exceptions.hh"
+#include <algorithm>
+#include <libtensor/metadata.h>
 
 // Change visibility of libtensor singletons to public
 #pragma GCC visibility push(default)
 #include <libtensor/core/allocator.h>
 #include <libtensor/core/batching_policy_base.h>
-#include <libtensor/core/impl/std_allocator.h>
-
-#ifdef WITH_LIBXM
-#include <libtensor/core/impl/xm_allocator.h>
-#endif  // WITH_LIBXM
 #pragma GCC visibility pop
 
 namespace adcc {
@@ -88,40 +85,34 @@ void AdcMemory::initialise(std::string pagefile_directory, size_t max_memory,
                            " bytes of memory need to be requested.");
   }
 
+  const bool has_libxm = [] {
+    const std::vector<std::string>& libtensor_features = libtensor::metadata::features();
+    const auto it =
+          std::find(libtensor_features.begin(), libtensor_features.end(), "libxm");
+    return it != libtensor_features.end();
+  }();
+
   if (allocator == "default") {
     // Preference is 1. libxm 2. standard
-    allocator = "standard";
-#ifdef WITH_LIBXM
-    allocator = "libxm";
-#endif  // WITH_LIBXM
+    allocator = has_libxm ? "libxm" : "standard";
   }
 
   if (allocator == "standard") {
-    shutdown();  // Shutdown previously initialised allocator (if any)
-    libtensor::allocator<double>::init(
-          libtensor::std_allocator<double>{},
-          tbs_param,                     // Exponential base of data block size
-          tbs_param * memunit,           // Smallest data block size in bytes
-          largest_block_size * memunit,  // Largest data block size in bytes
-          max_memory,                    // Memory limit in bytes
-          pagefile_directory.c_str()     // Prefix to page file path.
-    );
-#ifdef WITH_LIBXM
-  } else if (allocator == "libxm") {
-    shutdown();  // Shutdown previously initialised allocator (if any)
-    libtensor::allocator::init(
-          libtensor::lt_xm_allocator::lt_xm_allocator<double>{},
-          tbs_param,                     // Exponential base of data block size
-          tbs_param * memunit,           // Smallest data block size in bytes
-          largest_block_size * memunit,  // Largest data block size in bytes
-          max_memory,                    // Memory limit in bytes
-          pagefile_directory.c_str()     // Prefix to page file path.
-    );
-#endif  // WITH_LIBXM
+  } else if (allocator == "libxm" && has_libxm) {
   } else {
-    throw invalid_argument("A libtensor memory allocator named '" + allocator +
-                           "' is not known to adcc.");
+    throw invalid_argument("A memory allocator named '" + allocator +
+                           "' is not known to adcc. Perhaps it is not compiled in.");
   }
+
+  shutdown();  // Shutdown previously initialised allocator (if any)
+  libtensor::allocator<double>::init(
+        allocator,
+        tbs_param,                     // Exponential base of data block size
+        tbs_param * memunit,           // Smallest data block size in bytes
+        largest_block_size * memunit,  // Largest data block size in bytes
+        max_memory,                    // Memory limit in bytes
+        pagefile_directory.c_str()     // Prefix to page file path.
+  );
   m_allocator = allocator;
 
   // Set initial batch size
