@@ -25,6 +25,7 @@
 import os
 import sys
 import glob
+import json
 import shlex
 import shutil
 import tempfile
@@ -187,6 +188,18 @@ def request_urllib(url, filename):
     return resp.status
 
 
+def assets_most_recent_release(project):
+    """Return the assert urls attached to the most recent release of a project."""
+    url = f"https://api.github.com/repos/{project}/releases"
+    with tempfile.TemporaryDirectory() as tmpdir:
+        fn = tmpdir + "/releases.json"
+        request_urllib(url, fn)
+        with open(fn) as fp:
+            ret = json.loads(fp.read())
+        assets = ret[0]["assets"]
+        return [asset["browser_download_url"] for asset in assets]
+
+
 def install_libtensor(url, destination):
     """
     Download libtensor from `url` and install at `destination`, removing possibly
@@ -199,16 +212,11 @@ def install_libtensor(url, destination):
 
         status_code = request_urllib(url, local)
         if status_code < 200 or status_code >= 300:
-            msg = "Could not download libtensorlight."
-            if 400 <= status_code < 500:
-                # Either an unsupported version or an error on our end
-                msg += (" This should not have happened and either this means"
-                        " your platform / OS / architecture is unsupported or"
-                        " that there is a bug in adcc. Please check the adcc "
-                        " installation instructions"
-                        " (https://adc-connect.org/latest/installation.html)"
-                        " and if in doubt, please open an issue on github.")
-            raise RuntimeError(msg)
+            raise RuntimeError(
+                "Could not download libtensorlight. Check for a network issue "
+                "and if in doubt see the adcc installation instructions "
+                "(https://adc-connect.org/latest/installation.html)."
+            )
 
         file_globs = [
             destination + "/include/libtensorlight/**/*.hh",
@@ -233,6 +241,7 @@ def install_libtensor(url, destination):
         os.chdir(olddir)
 
 
+@functools.lru_cache()
 def libadcc_extension():
     thisdir = os.path.dirname(__file__)
 
@@ -275,29 +284,37 @@ def libadcc_extension():
 
     # Keep track whether libtensor has been found
     found_libtensor = "tensorlight" in libraries
-    lt_version = "2.9.9"
+    lt_min_version = "2.9.9"
 
     if not found_libtensor:
         if search_system:  # Try to find libtensor on the OS using pkg-config
             log.info("Searching OS for libtensorlight using pkg-config")
-            cflags, libs = search_with_pkg_config("libtensorlight", lt_version)
+            cflags, libs = search_with_pkg_config("libtensorlight", lt_min_version)
 
         # Try to download libtensor if not on the OS
         if (cflags is None or libs is None) and libtensor_autoinstall:
-            base = "https://get.adc-connect.org/libtensorlight"
-            # TODO This is still a bit hackish and might not work in general!
+            assets = assets_most_recent_release("adc-connect/libtensor")
+            url = []
             if sys.platform == "linux":
-                platform = "linux_x86_64"
+                url = [asset for asset in assets if "-linux_x86_64" in asset]
             elif sys.platform == "darwin":
-                platform = "macosx_10_15_x86_64"
+                url = [asset for asset in assets
+                       if "-macosx_" in asset and "_x86_64" in asset]
             else:
                 raise AssertionError("Should not get to download for "
                                      "unspported platform.")
-            url = f"{base}/libtensorlight-{lt_version}-{platform}.tar.gz"
+            if len(url) != 1:
+                raise RuntimeError(
+                    "Could not find a libtensor version to download. "
+                    "Check your platform is supported and if in doubt see the "
+                    "adcc installation instructions "
+                    "(https://adc-connect.org/latest/installation.html)."
+                )
+
             destdir = os.path.expanduser(libtensor_autoinstall)
-            install_libtensor(url, destdir)
+            install_libtensor(url[0], destdir)
             os.environ['PKG_CONFIG_PATH'] += f":{destdir}/lib/pkg_config"
-            cflags, libs = search_with_pkg_config("libtensorlight", lt_version)
+            cflags, libs = search_with_pkg_config("libtensorlight", lt_min_version)
             assert cflags is not None and libs is not None
 
         if cflags is not None and libs is not None:

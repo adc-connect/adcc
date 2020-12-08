@@ -30,6 +30,7 @@ jobs:
           cache-name: cache-artifacts
         with:
           path: |
+            ~/.ccache
             ~/.cache/pip
           key: ${{ runner.os }}-test-${{ env.cache-name }}-${{ hashFiles('**/setup.py') }}
           restore-keys: |
@@ -37,12 +38,17 @@ jobs:
             ${{ runner.os }}-test-
             ${{ runner.os }}-
       - name: Install system dependencies on Linux
-        run: sudo apt-get install libopenblas-base
+        run: sudo apt-get install libopenblas-base ccache
         if: contains( matrix.os, 'ubuntu')
+      - name: Install system dependencies on macOS
+        run:  brew install ccache
+        if: contains( matrix.os, 'macos')
       - name: Install python dependencies
         run: |
+          export PATH="/usr/local/opt/ccache/libexec:$PATH"
+          export PATH="/usr/lib/ccache:$PATH"
           python -m pip install --user pyscf cppe wheel
-          python -m pip install --user -r requirements.txt
+          python -m pip install --user -r requirements.txt -v
       - name: Run tests
         run: python setup.py test -a '--cov=adcc'
       - name: Upload coverage to coveralls
