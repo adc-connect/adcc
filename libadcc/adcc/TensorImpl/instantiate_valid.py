@@ -28,7 +28,7 @@ print("//")
 for n_contr_idcs, dima, dimb, dimout in valid_combinations:
     if n_contr_idcs == 0:
         continue
-    print(f"IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT({n_contr_idcs}, {dima}, {dimb}) //")
+    print(f"IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT({n_contr_idcs}, {dima}, {dimb}) //")  # noqa: E501
 
 print()
 print()

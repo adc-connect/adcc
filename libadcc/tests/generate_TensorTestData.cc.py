@@ -35,7 +35,7 @@ a_asym_01_23 = 0.5 * (a - a.transpose((1, 0, 3, 2)))
 #
 #
 
-HEADER="""
+HEADER = """
 //
 // Copyright (C) 2018 by the adcc authors
 //
@@ -70,16 +70,16 @@ with open("./TensorTestData.cc", "w") as f:
     f.write(HEADER)
     f.write("namespace adcc {\nnamespace tests {\n\n")
     f.write("size_t TensorTestData::N = " + str(N) + ";")
-    f.write("std::vector<double> TensorTestData::a = {" +
-            npprint(a.ravel()) + "};")
-    f.write("std::vector<double> TensorTestData::a_sym_01 = {" +
-            npprint(a_sym_01.ravel()) + "};")
-    f.write("std::vector<double> TensorTestData::a_asym_01 = {" +
-            npprint(a_asym_01.ravel()) + "};")
-    f.write("std::vector<double> TensorTestData::a_sym_01_23 = {" +
-            npprint(a_sym_01_23.ravel()) + "};")
-    f.write("std::vector<double> TensorTestData::a_asym_01_23 = {" +
-            npprint(a_asym_01_23.ravel()) + "};")
+    f.write("std::vector<double> TensorTestData::a = {"
+            + npprint(a.ravel()) + "};")
+    f.write("std::vector<double> TensorTestData::a_sym_01 = {"
+            + npprint(a_sym_01.ravel()) + "};")
+    f.write("std::vector<double> TensorTestData::a_asym_01 = {"
+            + npprint(a_asym_01.ravel()) + "};")
+    f.write("std::vector<double> TensorTestData::a_sym_01_23 = {"
+            + npprint(a_sym_01_23.ravel()) + "};")
+    f.write("std::vector<double> TensorTestData::a_asym_01_23 = {"
+            + npprint(a_asym_01_23.ravel()) + "};")
     f.write("\n}\n}")
 
 

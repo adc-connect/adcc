@@ -49,8 +49,10 @@ jobs:
           export PATH="/usr/lib/ccache:$PATH"
           python -m pip install --user pyscf cppe wheel
           python -m pip install --user -r requirements.txt -v
-      - name: Run tests
+      - name: Run python tests
         run: python setup.py test -a '--cov=adcc'
+      - name: Run C++ tests
+        run: python setup.py cpptest -v
       - name: Upload coverage to coveralls
         run: |
           pip install coveralls

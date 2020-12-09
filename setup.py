@@ -35,6 +35,7 @@ import setuptools
 import subprocess
 
 from distutils import log
+from distutils.core import Command
 
 from setuptools import find_packages, setup
 from setuptools.command.test import test as TestCommand
@@ -105,6 +106,69 @@ class PyTest(TestCommand):
         args += shlex.split(self.pytest_args)
         errno = pytest.main(args)
         sys.exit(errno)
+
+
+class CppTest(Command):
+    description = "Build and run C++ tests"
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        test_executable = self.compile_test_executable()
+        subprocess.check_call([test_executable])
+
+    def compile_test_executable(self):
+        from distutils.ccompiler import new_compiler
+        from distutils.sysconfig import customize_compiler
+
+        output_dir = os.path.abspath("build/cpptest")
+        test_executable = output_dir + "/libadcc_tests"
+        if os.path.isfile(test_executable):
+            print(f"Skipping recompilation of {os.path.relpath(test_executable)}. "
+                  "Delete file if recompilation desired.")
+            return test_executable  # Don't recompile
+
+        # Download catch
+        if not os.path.isfile(output_dir + "/catch2/catch.hpp"):
+            os.makedirs(output_dir + "/catch2", exist_ok=True)
+            base = "https://github.com/catchorg/Catch2/releases/download/"
+            request_urllib(base + "v2.7.0/catch.hpp",
+                           output_dir + "/catch2/catch.hpp")
+
+        # Adapt stuff from libadcc extension
+        libadcc = libadcc_extension()
+        include_dirs = libadcc.include_dirs + [output_dir]
+        sources = libadcc_sources("cpptest")
+        extra_compile_args = [arg for arg in libadcc.extra_compile_args
+                              if not any(arg.startswith(start)
+                                         for start in ("-fvisibility", "-g", "-O"))]
+
+        # Reduce optimisation a bit to ensure that the debugging experience is good
+        extra_compile_args += ["-O1", "-g"]
+        debug = True
+
+        # Bring forward stuff from libadcc
+        compiler = new_compiler(verbose=self.verbose)
+        customize_compiler(compiler)
+        objects = compiler.compile(
+            sources, output_dir, libadcc.define_macros, include_dirs,
+            debug, extra_postargs=extra_compile_args
+        )
+
+        if libadcc.extra_objects:
+            objects.extend(libadcc.extra_objects)
+
+        compiler.link_executable(
+            objects, "libadcc_tests", output_dir, libadcc.libraries,
+            libadcc.library_dirs, libadcc.runtime_library_dirs, debug,
+            extra_postargs=libadcc.extra_link_args, target_lang=libadcc.language
+        )
+        return test_executable
 
 
 #
@@ -196,7 +260,7 @@ def assets_most_recent_release(project):
         request_urllib(url, fn)
         with open(fn) as fp:
             ret = json.loads(fp.read())
-        assets = ret[0]["assets"]
+        assets = [ret[i]["assets"] for i in range(len(ret))][0]
         return [asset["browser_download_url"] for asset in assets]
 
 
@@ -239,6 +303,18 @@ def install_libtensor(url, destination):
         os.chdir(destination)
         subprocess.run(["tar", "xf", local], check=True)
         os.chdir(olddir)
+
+
+def libadcc_sources(target):
+    sourcefiles = set(glob.glob("libadcc/**/*.cc", recursive=True))
+    unittests = glob.glob("libadcc/**/tests/*.cc", recursive=True)
+    exportfiles = glob.glob("libadcc/*.cc")
+    if target == "extension":
+        return sorted(sourcefiles.difference(unittests))
+    elif target == "cpptest":
+        return sorted(sourcefiles.difference(exportfiles))
+    else:
+        raise ValueError(f"Unknown target: {target}")
 
 
 @functools.lru_cache()
@@ -321,7 +397,7 @@ def libadcc_extension():
             found_libtensor = True
             extra_compile_args.extend(cflags)
             extra_link_args.extend(libs)
-            print(f"Using libtensorlight libraries: {libs}.")
+            log.info(f"Using libtensorlight libraries: {libs}.")
             if sys.platform == "darwin":
                 extra_link_args.append("-Wl,-rpath,@loader_path")
                 for path in extract_library_dirs(libs):
@@ -332,17 +408,13 @@ def libadcc_extension():
     if not found_libtensor:
         raise RuntimeError("Did not find the libtensorlight library.")
 
-    sourcefiles = set(glob.glob("libadcc/**/*.cc", recursive=True))
-    testfiles = glob.glob("libadcc/**/tests/*.cc", recursive=True)
-    sourcefiles = sorted(sourcefiles.difference(testfiles))
-
     # This is needed on the first pass where pybind11 is not yet installed
     cxx_stdargs = dict()
     if have_pybind11:
         cxx_stdargs["cxx_std"] = 14
     return Pybind11Extension(
         "libadcc",
-        sourcefiles,
+        libadcc_sources("extension"),
         libraries=libraries,
         library_dirs=library_dirs,
         include_dirs=include_dirs,
@@ -448,5 +520,5 @@ adccsetup(
     },
     #
     cmdclass={"build_ext": build_ext, "pytest": PyTest,
-              "build_docs": BuildDoc},
+              "build_docs": BuildDoc, "cpptest": CppTest},
 )
