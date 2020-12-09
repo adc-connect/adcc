@@ -24,10 +24,6 @@ if [ ! -f scripts/upload_to_pypi.sh -o ! -f setup.py ]; then
 	echo "Please run from top dir of repository" >&2
 	exit 1
 fi
-if [ ! -f extension/adccore/adccore_config.json ]; then
-	echo "Please compile and install / download adccore first" >&2
-	exit 1
-fi
 
 read -p "Do you really want to manually upload to pypi? >" RES
 

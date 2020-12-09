@@ -35,7 +35,6 @@ import setuptools
 import subprocess
 
 from distutils import log
-from distutils.core import Command
 
 from setuptools import find_packages, setup
 from setuptools.command.test import test as TestCommand
@@ -51,25 +50,37 @@ except ImportError:
 
     have_pybind11 = False
 
+try:
+    from sphinx.setup_command import BuildDoc as SphinxBuildDoc
+
+    have_sphinx = True
+except ImportError:
+    have_sphinx = False
+
 #
 # Custom commands
 #
 
-try:
-    from sphinx.setup_command import BuildDoc
-except ImportError:
+if have_sphinx:
+    class BuildDocs(SphinxBuildDoc):
+        def run(self):
+            subprocess.check_call(["doxygen"], cwd="docs")
+            super().run()
+else:
     # No sphinx found -> make a dummy class
-    class BuildDoc(setuptools.Command):
+    class BuildDocs(setuptools.Command):
         user_options = []
 
-    def initialize_options(self):
-        pass
+        def initialize_options(self):
+            pass
 
-    def finalize_options(self):
-        pass
+        def finalize_options(self):
+            pass
 
-    def run(self):
-        raise SystemExit("Sphinx not found. Try 'pip install -U adcc[build_docs]'")
+        def run(self):
+            raise RuntimeError(
+                "Sphinx not found. Try 'pip install -U adcc[build_docs]'"
+            )
 
 
 class PyTest(TestCommand):
@@ -90,8 +101,6 @@ class PyTest(TestCommand):
             raise Exception("Only test modes 'fast' and 'full' are supported")
 
     def run_tests(self):
-        import shlex
-
         # import here, cause outside the eggs aren't loaded
         import pytest
 
@@ -108,7 +117,7 @@ class PyTest(TestCommand):
         sys.exit(errno)
 
 
-class CppTest(Command):
+class CppTest(setuptools.Command):
     description = "Build and run C++ tests"
     user_options = []
 
@@ -300,6 +309,7 @@ def install_libtensor(url, destination):
 
         # Change to installation directory
         olddir = os.getcwd()
+        os.makedirs(destination, exist_ok=True)
         os.chdir(destination)
         subprocess.run(["tar", "xf", local], check=True)
         os.chdir(olddir)
@@ -389,7 +399,7 @@ def libadcc_extension():
 
             destdir = os.path.expanduser(libtensor_autoinstall)
             install_libtensor(url[0], destdir)
-            os.environ['PKG_CONFIG_PATH'] += f":{destdir}/lib/pkg_config"
+            os.environ['PKG_CONFIG_PATH'] += f":{destdir}/lib/pkgconfig"
             cflags, libs = search_with_pkg_config("libtensorlight", lt_min_version)
             assert cflags is not None and libs is not None
 
@@ -516,9 +526,9 @@ adccsetup(
     tests_require=["pytest", "pytest-cov", "pyyaml"],
     extras_require={
         "build_docs": ["sphinx>=2", "breathe", "sphinxcontrib-bibtex",
-                       "sphinx-automodapi"],
+                       "sphinx-automodapi", "sphinx-rtd-theme"],
     },
     #
     cmdclass={"build_ext": build_ext, "pytest": PyTest,
-              "build_docs": BuildDoc, "cpptest": CppTest},
+              "build_docs": BuildDocs, "cpptest": CppTest},
 )
