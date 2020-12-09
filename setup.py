@@ -158,15 +158,17 @@ class CppTest(setuptools.Command):
                                          for start in ("-fvisibility", "-g", "-O"))]
 
         # Reduce optimisation a bit to ensure that the debugging experience is good
-        extra_compile_args += ["-O1", "-g"]
-        debug = True
+        if "--coverage" in extra_compile_args:
+            extra_compile_args += ["-O0", "-g"]
+        else:
+            extra_compile_args += ["-O1", "-g"]
 
         # Bring forward stuff from libadcc
         compiler = new_compiler(verbose=self.verbose)
         customize_compiler(compiler)
         objects = compiler.compile(
             sources, output_dir, libadcc.define_macros, include_dirs,
-            debug, extra_postargs=extra_compile_args
+            debug=True, extra_postargs=extra_compile_args
         )
 
         if libadcc.extra_objects:
@@ -174,7 +176,7 @@ class CppTest(setuptools.Command):
 
         compiler.link_executable(
             objects, "libadcc_tests", output_dir, libadcc.libraries,
-            libadcc.library_dirs, libadcc.runtime_library_dirs, debug,
+            libadcc.library_dirs, libadcc.runtime_library_dirs, debug=True,
             extra_postargs=libadcc.extra_link_args, target_lang=libadcc.language
         )
         return test_executable
@@ -332,29 +334,33 @@ def libadcc_extension():
     thisdir = os.path.dirname(__file__)
 
     # Initial lot of flags
-    libraries = []
-    library_dirs = []
-    include_dirs = [os.path.join(thisdir, "libadcc")]
-    extra_link_args = []
-    extra_compile_args = ["-Wall", "-Wextra", "-Werror", "-O3"]
-    runtime_library_dirs = []
-    extra_objects = []
-    define_macros = []
-    search_system = True
+    flags = dict(
+        libraries=[],
+        library_dirs=[],
+        include_dirs=[os.path.join(thisdir, "libadcc")],
+        extra_link_args=[],
+        extra_compile_args=["-Wall", "-Wextra", "-Werror", "-O3"],
+        runtime_library_dirs=[],
+        extra_objects=[],
+        define_macros=[],
+        search_system=True,
+        coverage=False,
+        libtensor_autoinstall="~/.local",
+    )
 
     if sys.platform == "darwin" and is_conda_build():
-        extra_compile_args += ["-Wno-unused-command-line-argument",
-                               "-Wno-undefined-var-template"]
+        flags["extra_compile_args"] += ["-Wno-unused-command-line-argument",
+                                        "-Wno-undefined-var-template"]
 
     platform_autoinstall = (
         sys.platform.startswith("linux") or sys.platform.startswith("darwin")
     )
     if platform_autoinstall and not is_conda_build():
-        libtensor_autoinstall = "~/.local"
+        flags["libtensor_autoinstall"] = "~/.local"
     else:
         # Not yet supported on other platforms and disabled
         # for conda builds
-        libtensor_autoinstall = None
+        flags["libtensor_autoinstall"] = None
 
     # User-provided config
     adcc_config = os.environ.get('ADCC_CONFIG')
@@ -365,20 +371,21 @@ def libadcc_extension():
             siteconfig = os.path.expanduser(siteconfig)
             if os.path.isfile(siteconfig):
                 log.info("Reading siteconfig file:", siteconfig)
-                exec(open(siteconfig, "r").read())
+                exec(open(siteconfig, "r").read(), flags)
+                flags.pop("__builtins__")
                 break
 
     # Keep track whether libtensor has been found
-    found_libtensor = "tensorlight" in libraries
+    found_libtensor = "tensorlight" in flags["libraries"]
     lt_min_version = "2.9.9"
 
     if not found_libtensor:
-        if search_system:  # Try to find libtensor on the OS using pkg-config
+        if flags["search_system"]:  # Find libtensor on the OS using pkg-config
             log.info("Searching OS for libtensorlight using pkg-config")
             cflags, libs = search_with_pkg_config("libtensorlight", lt_min_version)
 
         # Try to download libtensor if not on the OS
-        if (cflags is None or libs is None) and libtensor_autoinstall:
+        if (cflags is None or libs is None) and flags["libtensor_autoinstall"]:
             assets = assets_most_recent_release("adc-connect/libtensor")
             url = []
             if sys.platform == "linux":
@@ -397,7 +404,7 @@ def libadcc_extension():
                     "(https://adc-connect.org/latest/installation.html)."
                 )
 
-            destdir = os.path.expanduser(libtensor_autoinstall)
+            destdir = os.path.expanduser(flags["libtensor_autoinstall"])
             install_libtensor(url[0], destdir)
             os.environ['PKG_CONFIG_PATH'] += f":{destdir}/lib/pkgconfig"
             cflags, libs = search_with_pkg_config("libtensorlight", lt_min_version)
@@ -405,37 +412,35 @@ def libadcc_extension():
 
         if cflags is not None and libs is not None:
             found_libtensor = True
-            extra_compile_args.extend(cflags)
-            extra_link_args.extend(libs)
+            flags["extra_compile_args"].extend(cflags)
+            flags["extra_link_args"].extend(libs)
             log.info(f"Using libtensorlight libraries: {libs}.")
             if sys.platform == "darwin":
-                extra_link_args.append("-Wl,-rpath,@loader_path")
+                flags["extra_link_args"].append("-Wl,-rpath,@loader_path")
                 for path in extract_library_dirs(libs):
-                    extra_link_args.append(f"-Wl,-rpath,{path}")
+                    flags["extra_link_args"].append(f"-Wl,-rpath,{path}")
             else:
-                runtime_library_dirs.extend(extract_library_dirs(libs))
+                flags["runtime_library_dirs"].extend(extract_library_dirs(libs))
 
     if not found_libtensor:
         raise RuntimeError("Did not find the libtensorlight library.")
 
-    # This is needed on the first pass where pybind11 is not yet installed
-    cxx_stdargs = dict()
+    # Filter out the arguments to pass to Pybind11Extension
+    extargs = {k: v for k, v in flags.items()
+               if k in ("libraries", "library_dirs", "include_dirs",
+                        "extra_link_args", "extra_compile_args",
+                        "runtime_library_dirs", "extra_objects",
+                        "define_macros")}
     if have_pybind11:
-        cxx_stdargs["cxx_std"] = 14
-    return Pybind11Extension(
-        "libadcc",
-        libadcc_sources("extension"),
-        libraries=libraries,
-        library_dirs=library_dirs,
-        include_dirs=include_dirs,
-        extra_link_args=extra_link_args,
-        extra_compile_args=extra_compile_args,
-        runtime_library_dirs=runtime_library_dirs,
-        extra_objects=extra_objects,
-        define_macros=define_macros,
-        language="c++",
-        **cxx_stdargs,
-    )
+        # This is needed on the first pass where pybind11 is not yet installed
+        extargs["cxx_std"] = 14
+
+    ext = Pybind11Extension("libadcc", libadcc_sources("extension"),
+                            language="c++", **extargs)
+    if flags["coverage"]:
+        ext.extra_compile_args += ["--coverage", "-O0", "-g"]
+        ext.extra_link_args += ["--coverage"]
+    return ext
 
 
 #

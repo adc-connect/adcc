@@ -11,7 +11,7 @@
 # extra_objects = []       # Extra objects to link in
 # define_macros = []       # Extra macros to define
 # search_system = True     # Search the system for libtensor or not
-# download_missing = True  # Download libtensor automatically if missing on system
+# coverage = False         # Compile C++ extension with coverage
 #
 # Place to install libtensor to if missing on the system.
 # Set to None to disable feature.
