@@ -17,11 +17,11 @@
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include "../MoSpaces.hh"
 #include "HFSolutionMock.hh"
-#include <adcc/MoSpaces.hh>
 #include <catch2/catch.hpp>
 
-namespace adcc {
+namespace libadcc {
 namespace tests {
 
 TEST_CASE("Test MoSpaces", "[MoSpaces]") {
@@ -549,5 +549,5 @@ TEST_CASE("Test MoSpaces", "[MoSpaces]") {
 }  // MoSpaces
 
 }  // namespace tests
-}  // namespace adcc
+}  // namespace libadcc
 

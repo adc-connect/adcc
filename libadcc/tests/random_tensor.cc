@@ -18,11 +18,11 @@
 //
 
 #include "random_tensor.hh"
+#include "../exceptions.hh"
 #include "wrap_libtensor.hh"
-#include <adcc/exceptions.hh>
 #include <random>
 
-namespace adcc {
+namespace libadcc {
 namespace tests {
 namespace lt = libtensor;
 
@@ -48,8 +48,7 @@ std::shared_ptr<Tensor> random_tensor(std::shared_ptr<AdcMemory> adcmem_ptr,
     std::vector<AxisInfo> axes{{subspaces[0], dimension[0]}};
 
     auto t_ptr = std::make_shared<lt::btensor<1>>(bispace);
-    lt::btod_import_raw<1>(buffer.data(), bispace.get_bis().get_dims())
-          .perform(*t_ptr);
+    lt::btod_import_raw<1>(buffer.data(), bispace.get_bis().get_dims()).perform(*t_ptr);
     return wrap_libtensor(adcmem_ptr, axes, t_ptr);
   } else if (N == 2) {
     lt::bispace<1> bispace_0(dimension[0]);
@@ -61,8 +60,7 @@ std::shared_ptr<Tensor> random_tensor(std::shared_ptr<AdcMemory> adcmem_ptr,
     };
 
     auto t_ptr = std::make_shared<lt::btensor<2>>(bispace);
-    lt::btod_import_raw<2>(buffer.data(), bispace.get_bis().get_dims())
-          .perform(*t_ptr);
+    lt::btod_import_raw<2>(buffer.data(), bispace.get_bis().get_dims()).perform(*t_ptr);
     return wrap_libtensor(adcmem_ptr, axes, t_ptr);
   } else if (N == 3) {
     lt::bispace<1> bispace_0(dimension[0]);
@@ -76,8 +74,7 @@ std::shared_ptr<Tensor> random_tensor(std::shared_ptr<AdcMemory> adcmem_ptr,
     };
 
     auto t_ptr = std::make_shared<lt::btensor<3>>(bispace);
-    lt::btod_import_raw<3>(buffer.data(), bispace.get_bis().get_dims())
-          .perform(*t_ptr);
+    lt::btod_import_raw<3>(buffer.data(), bispace.get_bis().get_dims()).perform(*t_ptr);
     return wrap_libtensor(adcmem_ptr, axes, t_ptr);
   } else if (N == 4) {
     lt::bispace<1> bispace_0(dimension[0]);
@@ -93,8 +90,7 @@ std::shared_ptr<Tensor> random_tensor(std::shared_ptr<AdcMemory> adcmem_ptr,
     };
 
     auto t_ptr = std::make_shared<lt::btensor<4>>(bispace);
-    lt::btod_import_raw<4>(buffer.data(), bispace.get_bis().get_dims())
-          .perform(*t_ptr);
+    lt::btod_import_raw<4>(buffer.data(), bispace.get_bis().get_dims()).perform(*t_ptr);
     return wrap_libtensor(adcmem_ptr, axes, t_ptr);
   } else {
     throw not_implemented_error("random_tensor not implemented for dimensionality " +
@@ -119,4 +115,4 @@ INSTANTIATE(4)
 #undef INSTANTIATE
 
 }  // namespace tests
-}  // namespace adcc
+}  // namespace libadcc

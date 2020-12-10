@@ -18,12 +18,12 @@
 //
 
 #pragma once
-#include <adcc/Tensor.hh>
+#include "../Tensor.hh"
 #include <ostream>
 
-namespace adcc {
+namespace libadcc {
 
-std::ostream& operator<<(std::ostream& o, const adcc::Tensor& t) {
+std::ostream& operator<<(std::ostream& o, const Tensor& t) {
   std::vector<double> exported;
   t.export_to(exported);
   o << "(";
@@ -39,5 +39,5 @@ std::ostream& operator<<(std::ostream& o, const adcc::Tensor& t) {
   return o;
 }
 
-}  // namespace adcc
+}  // namespace libadcc
 

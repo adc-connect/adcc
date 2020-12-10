@@ -39,7 +39,8 @@ flags = [
     # warnings within them
     # To suppress errors shown here, use "-isystem"
     # instead of "-I"
-    '-I', '.',
+    '-isystem', '~/.local/include',
+    '-isystem', '/usr/local/include',
     # Explicit clang includes:
     '-isystem', '/usr/include/c++/v1',
 ]

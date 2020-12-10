@@ -68,7 +68,7 @@ def npprint(arr):
 
 with open("./TensorTestData.cc", "w") as f:
     f.write(HEADER)
-    f.write("namespace adcc {\nnamespace tests {\n\n")
+    f.write("namespace libadcc {\nnamespace tests {\n\n")
     f.write("size_t TensorTestData::N = " + str(N) + ";")
     f.write("std::vector<double> TensorTestData::a = {"
             + npprint(a.ravel()) + "};")

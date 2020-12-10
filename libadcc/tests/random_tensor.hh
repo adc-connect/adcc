@@ -18,10 +18,10 @@
 //
 
 #pragma once
-#include <adcc/Tensor.hh>
-#include <adcc/TensorImpl.hh>
+#include "../Tensor.hh"
+#include "../TensorImpl.hh"
 
-namespace adcc {
+namespace libadcc {
 namespace tests {
 
 template <size_t N>
@@ -30,4 +30,4 @@ std::shared_ptr<Tensor> random_tensor(std::shared_ptr<AdcMemory> adcmem_ptr,
                                       std::array<std::string, N> subspaces);
 
 }  // namespace tests
-}  // namespace adcc
+}  // namespace libadcc

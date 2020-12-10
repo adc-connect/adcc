@@ -18,9 +18,9 @@
 //
 
 #pragma once
-#include <adcc/TensorImpl.hh>
+#include "../TensorImpl.hh"
 
-namespace adcc {
+namespace libadcc {
 
 template <size_t N>
 std::shared_ptr<Tensor> wrap_libtensor(
@@ -29,5 +29,5 @@ std::shared_ptr<Tensor> wrap_libtensor(
   return std::make_shared<TensorImpl<N>>(adcmem_ptr, axes, libtensor_ptr);
 }
 
-}  // namespace adcc
+}  // namespace libadcc
 

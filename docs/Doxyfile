@@ -2,10 +2,10 @@ PROJECT_NAME     = libadcc
 PROJECT_NUMBER   = 
 PROJECT_BRIEF    = "Compiled component to adcc"
 
-INPUT            = ../libadcc/adcc
+INPUT            = ../libadcc
 RECURSIVE        = YES
 OUTPUT_DIRECTORY = ../build/libadcc_docs
-EXCLUDE_PATTERNS = *.cc */tests/*
+EXCLUDE_PATTERNS = *.cc  */tests/*  */pyiface/*  *.py
 
 GENERATE_LATEX   = NO
 GENERATE_HTML    = NO

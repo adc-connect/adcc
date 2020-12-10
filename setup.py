@@ -319,8 +319,8 @@ def install_libtensor(url, destination):
 
 def libadcc_sources(target):
     sourcefiles = set(glob.glob("libadcc/**/*.cc", recursive=True))
-    unittests = glob.glob("libadcc/**/tests/*.cc", recursive=True)
-    exportfiles = glob.glob("libadcc/*.cc")
+    unittests = glob.glob("libadcc/tests/*.cc", recursive=True)
+    exportfiles = glob.glob("libadcc/pyiface/*.cc")
     if target == "extension":
         return sorted(sourcefiles.difference(unittests))
     elif target == "cpptest":
@@ -331,13 +331,11 @@ def libadcc_sources(target):
 
 @functools.lru_cache()
 def libadcc_extension():
-    thisdir = os.path.dirname(__file__)
-
     # Initial lot of flags
     flags = dict(
         libraries=[],
         library_dirs=[],
-        include_dirs=[os.path.join(thisdir, "libadcc")],
+        include_dirs=[],
         extra_link_args=[],
         extra_compile_args=["-Wall", "-Wextra", "-Werror", "-O3"],
         runtime_library_dirs=[],

@@ -18,12 +18,12 @@
 //
 
 #pragma once
-#include <adcc/HartreeFockSolution_i.hh>
-#include <adcc/exceptions.hh>
+#include "../HartreeFockSolution_i.hh"
+#include "../exceptions.hh"
 #include <array>
 #include <vector>
 
-namespace adcc {
+namespace libadcc {
 namespace tests {
 
 /** Mock of the abstract interface which allows to test some
@@ -98,4 +98,4 @@ struct HFSolutionMock : public HartreeFockSolution_i {
 };
 
 }  // namespace tests
-}  // namespace adcc
+}  // namespace libadcc

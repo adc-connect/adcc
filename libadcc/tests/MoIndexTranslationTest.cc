@@ -17,11 +17,11 @@
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include "../MoIndexTranslation.hh"
 #include "HFSolutionMock.hh"
-#include <adcc/MoIndexTranslation.hh>
 #include <catch2/catch.hpp>
 
-namespace adcc {
+namespace libadcc {
 namespace tests {
 
 TEST_CASE("Test MoIndexTranslation", "[MoIndexTranslation]") {
@@ -473,5 +473,5 @@ TEST_CASE("Test MoIndexTranslation", "[MoIndexTranslation]") {
   }    // Scattered CVS space
 }  // MoIndexTranslation
 }  // namespace tests
-}  // namespace adcc
+}  // namespace libadcc
 

@@ -21,7 +21,7 @@
 #include <cstddef>
 #include <vector>
 
-namespace adcc {
+namespace libadcc {
 namespace tests {
 
 struct TensorTestData {
@@ -47,4 +47,4 @@ struct TensorTestData {
 };
 
 }  // namespace tests
-}  // namespace adcc
+}  // namespace libadcc

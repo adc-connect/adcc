@@ -40,5 +40,5 @@ C++ interface
 For directly passing data to *adccore* on the C++ level,
 the following interface needs to be implemented:
 
-.. doxygenclass:: adcc::HartreeFockSolution_i
+.. doxygenclass:: libadcc::HartreeFockSolution_i
    :members:

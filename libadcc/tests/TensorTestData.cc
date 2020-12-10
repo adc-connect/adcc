@@ -19,7 +19,7 @@
 
 #include "TensorTestData.hh"
 
-namespace adcc {
+namespace libadcc {
 namespace tests {
 
 size_t TensorTestData::N              = 3;
@@ -164,4 +164,4 @@ std::vector<double> TensorTestData::a_asym_01_23 = {
       -5.525309734468361045e-01, 0.000000000000000000e+00,  3.194539884123348550e-01,
       3.324266264695684425e-01,  -3.194539884123348550e-01, 0.000000000000000000e+00};
 }  // namespace tests
-}  // namespace adcc
+}  // namespace libadcc

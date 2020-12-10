@@ -17,14 +17,14 @@
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include "../Tensor.hh"
+#include "../AdcMemory.hh"
+#include "../TensorImpl.hh"
+#include "../TensorImpl/get_block_starts.hh"
 #include "TensorTestData.hh"
 #include "output_tensor.hh"
 #include "random_tensor.hh"
 #include "wrap_libtensor.hh"
-#include <adcc/AdcMemory.hh>
-#include <adcc/Tensor.hh>
-#include <adcc/TensorImpl.hh>
-#include <adcc/TensorImpl/get_block_starts.hh>
 #include <algorithm>
 #include <array>
 #include <catch2/catch.hpp>
@@ -42,7 +42,7 @@
     }                                               \
   }
 
-namespace adcc {
+namespace libadcc {
 namespace tests {
 
 TEST_CASE("Test Tensor interface", "[tensor]") {
@@ -77,16 +77,11 @@ TEST_CASE("Test Tensor interface", "[tensor]") {
     auto m_ptr  = std::make_shared<libtensor::btensor<2>>(bis55);
     auto b_ptr  = std::make_shared<libtensor::btensor<2>>(bia55);
 
-    libtensor::btod_import_raw<1>(vector1, bis5.get_bis().get_dims())
-          .perform(*v1_ptr);
-    libtensor::btod_import_raw<1>(vector2, bis5.get_bis().get_dims())
-          .perform(*v2_ptr);
-    libtensor::btod_import_raw<1>(vector3, bis5.get_bis().get_dims())
-          .perform(*v3_ptr);
-    libtensor::btod_import_raw<2>(matrix, bis55.get_bis().get_dims())
-          .perform(*m_ptr);
-    libtensor::btod_import_raw<2>(batrix, bia55.get_bis().get_dims())
-          .perform(*b_ptr);
+    libtensor::btod_import_raw<1>(vector1, bis5.get_bis().get_dims()).perform(*v1_ptr);
+    libtensor::btod_import_raw<1>(vector2, bis5.get_bis().get_dims()).perform(*v2_ptr);
+    libtensor::btod_import_raw<1>(vector3, bis5.get_bis().get_dims()).perform(*v3_ptr);
+    libtensor::btod_import_raw<2>(matrix, bis55.get_bis().get_dims()).perform(*m_ptr);
+    libtensor::btod_import_raw<2>(batrix, bia55.get_bis().get_dims()).perform(*b_ptr);
 
     // Enwrap them into a Tensor object
     std::shared_ptr<Tensor> v1_tensor_ptr = wrap_libtensor(adcmem_ptr, ax5, v1_ptr);
@@ -488,8 +483,7 @@ TEST_CASE("Test Tensor interface", "[tensor]") {
     std::vector<AxisInfo> ax3333(4, {"x", TensorTestData::N});
 
     auto in_ptr = std::make_shared<libtensor::btensor<4, scalar_type>>(bia3333);
-    libtensor::btod_import_raw<4>(TensorTestData::a.data(),
-                                         bia3333.get_bis().get_dims())
+    libtensor::btod_import_raw<4>(TensorTestData::a.data(), bia3333.get_bis().get_dims())
           .perform(*in_ptr);
 
     std::shared_ptr<Tensor> in_tensor_ptr = wrap_libtensor(adcmem_ptr, ax3333, in_ptr);
@@ -805,8 +799,7 @@ TEST_CASE("Test Tensor interface", "[tensor]") {
                        2.2,  2.2,  4.4,  -1.3, 3.1,  -1.1};
 
     auto m_ptr = std::make_shared<libtensor::btensor<2>>(bis66);
-    libtensor::btod_import_raw<2>(matrix, bis66.get_bis().get_dims())
-          .perform(*m_ptr);
+    libtensor::btod_import_raw<2>(matrix, bis66.get_bis().get_dims()).perform(*m_ptr);
     std::shared_ptr<Tensor> m_tensor_ptr = wrap_libtensor(adcmem_ptr, ax55, m_ptr);
 
     SECTION("get_element") {
@@ -995,4 +988,4 @@ TEST_CASE("Test Tensor interface", "[tensor]") {
 
 }  // TEST_CASE
 }  // namespace tests
-}  // namespace adcc
+}  // namespace libadcc
