@@ -1,8 +1,8 @@
 #!/bin/bash
 set -eu
 
-# First run tests
-${PYTHON} setup.py test
+# First run h2o_sto3g tests
+${PYTHON} setup.py test -a "-k h2o_sto3g"
 
 # Check adcc finds pyscf and psi4
 # TODO Installing psi4 or pyscf currently does not work, so disabled here

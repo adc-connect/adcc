@@ -26,7 +26,7 @@ namespace libadcc {
 /** Access to a Hartree-Fock solution where all quantities are
  *  available in the *MO* orbital basis.
  *
- * This is the interface an SCF code needs to supply in order to be useful for adccore.
+ * This is the interface an SCF code needs to supply in order to be useful for libadcc.
  *
  * To explain the index ordering, we will refer to a calculation with six basis
  * functions, labelled from b1 to b6 and four spatial molecular orbitals.

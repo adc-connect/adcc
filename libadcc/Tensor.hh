@@ -41,7 +41,7 @@ struct TensorOrScalar {
   scalar_type scalar;
 };
 
-/** The tensor interface used by adccore */
+/** The tensor interface used by libadcc */
 class Tensor {
  public:
   /** Construct a tensor interface class.

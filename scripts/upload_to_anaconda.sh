@@ -34,4 +34,4 @@ conda install conda-build anaconda-client conda-verify --yes
 # conda config --append channels pyscf
 
 # Running build and deployment
-conda build conda -c adcc/label/main -c defaults -c conda-forge --user adcc --token $ANACONDA_TOKEN --label $LABEL
+conda build conda -m conda/config_${LABEL}.yaml -c adcc/label/main -c defaults -c conda-forge --user adcc --token $ANACONDA_TOKEN --label $LABEL

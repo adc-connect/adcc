@@ -37,7 +37,7 @@ The interface for this is:
 
 C++ interface
 -------------
-For directly passing data to *adccore* on the C++ level,
+For directly passing data to *libadcc* on the C++ level,
 the following interface needs to be implemented:
 
 .. doxygenclass:: libadcc::HartreeFockSolution_i

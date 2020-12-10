@@ -21,9 +21,6 @@
 # Jupyter
 .ipynb_checkpoints/
 
-# adccore
-/adccore
-
 # psi4
 timer.dat
 *.clean

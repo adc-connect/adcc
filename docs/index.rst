@@ -100,7 +100,6 @@ Contents
    hostprograms
    developers
    reference
-   adccore
 
 .. toctree::
    :caption: Extra information
