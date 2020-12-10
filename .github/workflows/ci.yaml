@@ -17,9 +17,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {version: '3.6', os: ubuntu-latest}
-          - {version: '3.8', os: ubuntu-latest}
-          - {version: '3.6', os: macOS-10.15  }
+          - {version: '3.6', os: ubuntu-latest, documentation: True}
+          - {version: '3.8', os: ubuntu-latest, documentation: False}
+          - {version: '3.6', os: macOS-10.15  , documentation: False}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -30,6 +30,7 @@ jobs:
           cache-name: cache-artifacts
         with:
           path: |
+            ~/.ccache
             ~/.cache/pip
           key: ${{ runner.os }}-test-${{ env.cache-name }}-${{ hashFiles('**/setup.py') }}
           restore-keys: |
@@ -37,22 +38,59 @@ jobs:
             ${{ runner.os }}-test-
             ${{ runner.os }}-
       - name: Install system dependencies on Linux
-        run: sudo apt-get install libopenblas-base
+        run: sudo apt-get install libopenblas-base ccache doxygen lcov
         if: contains( matrix.os, 'ubuntu')
+      - name: Install system dependencies on macOS
+        run:  brew install ccache doxygen lcov
+        if: contains( matrix.os, 'macos')
+      #
+      - name: Dump siteconfig with coverage flags for C++
+        run: |
+          mkdir $HOME/.adcc/
+          echo 'coverage = True' > $HOME/.adcc/siteconfig.py
       - name: Install python dependencies
         run: |
+          export PATH="/usr/local/opt/ccache/libexec:$PATH"
+          export PATH="/usr/lib/ccache:$PATH"
           python -m pip install --user pyscf cppe wheel
-          python -m pip install --user -r requirements.txt
-      - name: Run tests
+          python -m pip install --user -r requirements.txt -v
+      #
+      - name: Run python tests
         run: python setup.py test -a '--cov=adcc'
+      - name: Run C++ tests
+        run: python setup.py cpptest -v
+      #
+      - name: Dependencies for documentation
+        run: python -m pip install --user .[build_docs]
+        if: matrix.documentation
+      - name: Build documentation
+        run: python setup.py build_docs
+        if: matrix.documentation
+      - name: Upload documentation artefact
+        uses: actions/upload-artifact@v2
+        with:
+          name: documentation
+          path: build/sphinx/html
+        if: matrix.documentation
+      #
+      - name: Upload coverage to codecov
+        run: |
+          pip install codecov
+          codecov -X gcov
+          lcov --directory . --capture --output-file coverage.info
+          lcov --remove coverage.info '/opt/*' '/Applications/*' '/Library/*' '/usr/*' "${HOME}"'/.cache/*' "${HOME}"'/.local/*' "${PWD}"'/build/*' "${PWD}"'libadcc/tests/*' --output-file coverage.info
+          lcov --list coverage.info
+          codecov -X gcov -f coverage.info
+
       - name: Upload coverage to coveralls
+        # Note: Needs to be after the above step, because it parses the coverage.info
         run: |
           pip install coveralls
-          coveralls
+          sudo gem install coveralls-lcov
+          coveralls-lcov -v -n coverage.info > coverage.json
+          coveralls --merge=coverage.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload coverage to codecov
-        uses: codecov/codecov-action@v1
   #
   # Test source code formatting
   #
@@ -65,5 +103,12 @@ jobs:
         with:
           python-version: '3.8'
       - name: Install dependencies
-        run: pip install flake8
+        run: |
+          pip install flake8
+          sudo apt-get install clang-format-9
       - run: flake8
+      - name: Checking C++ files with clang-format
+        working-directory: libadcc
+        run: |
+          find . -type f \( -name '*.cc' -o -name '*.hh' \) -print0 | xargs -r0 clang-format -i
+          git diff --exit-code

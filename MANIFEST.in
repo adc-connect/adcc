@@ -1,20 +1,6 @@
 # Exclude test stuff
 global-exclude test_*.py
 exclude adcc/conftest.py
-
+global-include libadcc/**/*.hh libadcc/**/*.cc
+include LICENSE
 include README.md
-include LICENSE*
-
-# Include the files to be compiled into an extension
-include extension/*.cc
-include extension/*.hh
-include extension/AdcCore.py
-
-# Gather required data from adccore binary blob
-# (i.e. include files and compiled binary)
-include extension/adccore/adccore_config.json
-recursive-include extension/adccore/include/adcc/ *.hh
-include adcc/lib/libadccore.so
-include adcc/lib/libadccore.dylib
-include adcc/lib/libadccore.*.dylib
-include adcc/lib/libadccore_LICENSE

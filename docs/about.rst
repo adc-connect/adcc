@@ -11,7 +11,8 @@ In the initial phase of development adcc was heavily
 inspired by the `adcman <http://doi.org/10.1080/00268976.2013.859313>`_ package
 by Michael Wormit *et. al.*.
 By the time of the first release in late 2019 the structure of adcc
-has been completely rewritten and polished.
+has been completely rewritten and polished
+and finally in late 2020 the code became fully open-source.
 
 In its current form adcc features a strong focus on flexibility
 for both developing novel ADC methods

@@ -223,9 +223,9 @@ napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = True
 
 # Breathe settings
-adccore_doc_dir = (
+libadcc_doc_dir = (
     os.path.abspath(os.path.dirname(__file__))
-    + "/../extension/adccore/share/adccore/docs/xml"
+    + "/../build/libadcc_docs/xml"
 )
-breathe_projects = {"adccore": adccore_doc_dir, }
-breathe_default_project = "adccore"
+breathe_projects = {"libadcc": libadcc_doc_dir, }
+breathe_default_project = "libadcc"

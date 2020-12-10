@@ -12,17 +12,7 @@ CONDA_BUILD_SYSROOT:
     - /Users/runner/MacOSX10.9.sdk     # [osx]
 c_compiler_version:
     - 7.3.0                            # [linux]
-    - 4                                # [osx]
+    - 10                               # [osx]
 cxx_compiler_version:
     - 7.3.0                            # [linux]
-    - 4                                # [osx]
-
-# <<< Other Stuff >>>
-blas_impl:
-    - mkl
-mkl:
-    - 2019.*
-python:
-    - 3.6
-    - 3.7
-    - 3.8
+    - 10                               # [osx]

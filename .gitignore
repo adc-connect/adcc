@@ -12,6 +12,7 @@
 /dist
 *.egg-info
 /.eggs
+/siteconfig.py
 
 # Testing
 .pytest_cache
@@ -19,9 +20,6 @@
 
 # Jupyter
 .ipynb_checkpoints/
-
-# adccore
-/adccore
 
 # psi4
 timer.dat

@@ -1,0 +1,3 @@
+# only python 3.8 for dev deployment
+python:
+    - 3.8

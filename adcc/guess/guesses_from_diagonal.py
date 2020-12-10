@@ -24,7 +24,6 @@ import libadcc
 import numpy as np
 
 from adcc import evaluate
-from numpy import sqrt
 from libadcc import MoIndexTranslation
 from itertools import groupby
 
@@ -261,7 +260,7 @@ def guesses_from_diagonal_singles(matrix, n_guesses, spin_change=0,
 
     # Resize in case less guesses found than requested
     # and normalise vectors
-    return [evaluate(v / sqrt(v @ v)) for v in ret[:ivec]]
+    return [evaluate(v / np.sqrt(v @ v)) for v in ret[:ivec]]
 
 
 def guesses_from_diagonal_doubles(matrix, n_guesses, spin_change=0,
