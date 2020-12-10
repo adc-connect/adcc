@@ -26,6 +26,7 @@ import os
 import sys
 import glob
 import json
+import time
 import shlex
 import shutil
 import tempfile
@@ -268,7 +269,15 @@ def assets_most_recent_release(project):
     url = f"https://api.github.com/repos/{project}/releases"
     with tempfile.TemporaryDirectory() as tmpdir:
         fn = tmpdir + "/releases.json"
-        request_urllib(url, fn)
+        for _ in range(3):
+            status = request_urllib(url, fn)
+            if 200 <= status < 300:
+                break
+            time.sleep(1)
+        else:
+            raise RuntimeError(f"Error downloading asset list from {url} "
+                               f"... Response: {status}")
+
         with open(fn) as fp:
             ret = json.loads(fp.read())
         assets = [ret[i]["assets"] for i in range(len(ret))][0]
