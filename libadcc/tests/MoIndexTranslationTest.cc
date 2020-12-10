@@ -474,4 +474,3 @@ TEST_CASE("Test MoIndexTranslation", "[MoIndexTranslation]") {
 }  // MoIndexTranslation
 }  // namespace tests
 }  // namespace libadcc
-

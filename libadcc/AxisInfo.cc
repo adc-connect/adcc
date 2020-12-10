@@ -30,4 +30,3 @@ bool operator==(const AxisInfo& lhs, const AxisInfo& rhs) {
 }
 
 }  // namespace libadcc
-

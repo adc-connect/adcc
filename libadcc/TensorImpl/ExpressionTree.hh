@@ -76,4 +76,3 @@ inline std::ostream& operator<<(std::ostream& o, const ExpressionTree& expr) {
 }
 
 }  // namespace libadcc
-

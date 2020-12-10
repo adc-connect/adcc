@@ -103,5 +103,12 @@ jobs:
         with:
           python-version: '3.8'
       - name: Install dependencies
-        run: pip install flake8
+        run: |
+          pip install flake8
+          sudo apt-get install clang-format-9
       - run: flake8
+      - name: Checking C++ files with clang-format
+        working-directory: libadcc
+        run: |
+          find . -type f \( -name '*.cc' -o -name '*.hh' \) -print0 | xargs -r0 clang-format -i
+          git diff --exit-code

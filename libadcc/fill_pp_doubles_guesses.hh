@@ -44,4 +44,3 @@ size_t fill_pp_doubles_guesses(std::vector<std::shared_ptr<Tensor>> guesses_d,
                                int spin_change_twice, scalar_type degeneracy_tolerance);
 
 }  // namespace libadcc
-

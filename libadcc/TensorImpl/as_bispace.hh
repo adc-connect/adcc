@@ -38,4 +38,3 @@ libtensor::bispace<N> as_bispace(const std::vector<AxisInfo>& axes);
 
 ///@}
 }  // namespace libadcc
-

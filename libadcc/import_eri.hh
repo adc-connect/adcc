@@ -45,4 +45,3 @@ std::shared_ptr<Tensor> import_eri_chem_then_asym(const HartreeFockSolution_i& h
                                                   bool symmetry_check_on_import);
 
 }  // namespace libadcc
-

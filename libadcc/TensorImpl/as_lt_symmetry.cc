@@ -213,4 +213,3 @@ INSTANTIATE(4)
 #undef INSTANTIATE
 
 }  // namespace libadcc
-

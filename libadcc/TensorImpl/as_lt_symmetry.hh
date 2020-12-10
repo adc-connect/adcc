@@ -39,4 +39,3 @@ std::shared_ptr<libtensor::symmetry<N, scalar_type>> as_lt_symmetry(const Symmet
 
 ///@}
 }  // namespace libadcc
-

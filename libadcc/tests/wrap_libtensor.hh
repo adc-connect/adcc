@@ -30,4 +30,3 @@ std::shared_ptr<Tensor> wrap_libtensor(
 }
 
 }  // namespace libadcc
-

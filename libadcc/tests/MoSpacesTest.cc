@@ -550,4 +550,3 @@ TEST_CASE("Test MoSpaces", "[MoSpaces]") {
 
 }  // namespace tests
 }  // namespace libadcc
-

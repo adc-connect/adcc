@@ -102,4 +102,3 @@ std::shared_ptr<Symmetry> make_symmetry_operator_basis(
 
 ///@}
 }  // namespace libadcc
-

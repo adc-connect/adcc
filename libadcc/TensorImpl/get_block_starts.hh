@@ -42,4 +42,3 @@ std::vector<std::vector<size_t>> get_block_starts(lt::btensor<N, scalar_type>& b
 }
 
 }  // namespace libadcc
-

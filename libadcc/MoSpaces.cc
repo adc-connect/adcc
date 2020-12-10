@@ -505,4 +505,3 @@ size_t MoSpaces::libtensor_irrep_index(std::string irrep) const {
 }
 
 }  // namespace libadcc
-

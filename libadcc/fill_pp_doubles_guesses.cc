@@ -71,4 +71,3 @@ size_t fill_pp_doubles_guesses(std::vector<std::shared_ptr<Tensor>> guesses_d,
 }
 
 }  // namespace libadcc
-

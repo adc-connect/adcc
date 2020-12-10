@@ -180,4 +180,3 @@ struct MoSpaces {
 
 ///@}
 }  // namespace libadcc
-

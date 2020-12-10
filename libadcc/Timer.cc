@@ -61,4 +61,3 @@ void Timer::start(const std::string& task) {
 }
 
 }  // namespace libadcc
-

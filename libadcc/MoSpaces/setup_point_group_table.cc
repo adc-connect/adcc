@@ -87,4 +87,3 @@ std::map<size_t, std::string> setup_point_group_table(lt::product_table_containe
 }
 
 }  // namespace libadcc
-

@@ -37,4 +37,3 @@ std::map<size_t, std::string> setup_point_group_table(
 
 ///@}
 }  // namespace libadcc
-

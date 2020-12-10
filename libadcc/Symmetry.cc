@@ -413,4 +413,3 @@ void Symmetry::set_spin_blocks_forbidden(std::vector<std::string> forbidden) {
 }
 
 }  // namespace libadcc
-

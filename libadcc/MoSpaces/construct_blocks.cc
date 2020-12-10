@@ -76,4 +76,3 @@ std::vector<size_t> construct_blocks(std::vector<size_t> block_starts_crude,
 }
 
 }  // namespace libadcc
-

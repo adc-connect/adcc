@@ -563,4 +563,3 @@ void ReferenceState::set_cached_eri_blocks(std::vector<std::string> newlist) {
 }
 
 }  // namespace libadcc
-

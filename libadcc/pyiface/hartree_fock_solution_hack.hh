@@ -73,4 +73,3 @@ struct is_holder_type<const HartreeFockSolution_i,
                       std::shared_ptr<const HartreeFockSolution_i>> : std::true_type {};
 }  // namespace detail
 }  // namespace pybind11
-
