@@ -132,7 +132,7 @@ def cvs_adc3(*args, **kwargs):
     return run_adc(*args, **kwargs, method="cvs-adc3")
 
 
-def banner(colour=sys.stdout.isatty(), show_doi=True, show_website=True):
+def banner(colour=sys.stdout.isatty()):
     """Return a nice banner describing adcc and its components
 
     The returned string contains version information, maintainer emails
@@ -142,81 +142,51 @@ def banner(colour=sys.stdout.isatty(), show_doi=True, show_website=True):
     ----------
     colour : bool
         Should colour be used in the print out
-    show_doi : bool
-        Should DOI and publication information be printed.
-    show_website : bool
-        Should a website for each project be printed.
-
     """
     if colour:
         yellow = '\033[93m'
         green = '\033[92m'
         cyan = '\033[96m'
-        grey = '\033[38;5;248m'
         white = '\033[0m'
     else:
         yellow = ''
         green = ''
         cyan = ''
-        grey = ''
         white = ''
 
-    empty = "|" + 78 * " " + "|\n"
-    maxlen = 7
-
-    def string_component(name, version, authors=None, description=None,
-                         email=None, doi=None, website=None, licence=None):
-        fmt = "|   " + green + "{0:<" + str(maxlen) + "s}" + white
-        fmt += "  {1:8s}  " + yellow + "{2:<" + str(62 - maxlen) + "}"
-        fmt += white + " |"
-        fmt_email = "|     " + maxlen * " " + "{0:8s}  " + cyan
-        fmt_email += "{1:<" + str(62 - maxlen) + "}" + white + " |"
-        fmt_cite = "|     " + maxlen * " " + "{0:8s}  " + grey
-        fmt_cite += "{1:<" + str(62 - maxlen) + "}" + white + " |"
-        fmt_other = "|     " + maxlen * " " + "{0:8s}  {1:<"
-        fmt_other += str(62 - maxlen) + "} |"
-
-        string = fmt.format(name, "version", version) + "\n"
-        if authors:
-            if isinstance(authors, str):
-                authors = authors.replace(" and ", ", ").split(", ")
-
-            groups = []
-            cbuffer = []
-            for i, author in enumerate(authors):
-                if len(", ".join(cbuffer) + author) + 2 <= 62 - maxlen:
-                    cbuffer.append(author)
-                else:
-                    groups.append(cbuffer)
-                    cbuffer = [author]
-            if cbuffer:
-                groups.append(cbuffer)
-            for i, buf in enumerate(groups):
-                authors = "authors" if i == 0 else ""
-                joined = ", ".join(buf)
-                if i != len(groups) - 1:
-                    joined += ","
-                string += fmt_other.format(authors, joined) + "\n"
-        if doi and show_doi:
-            string += fmt_cite.format("citation", "DOI " + doi) + "\n"
-        if website and show_website:
-            string += fmt_other.format("website", website) + "\n"
-        if email:
-            string += fmt_email.format("email", email) + "\n"
-        return string
-
-    string = "+" + 78 * "-" + "+\n"
-    string += "|{0:^78s}|\n".format(
+    empty = "|" + 70 * " " + "|\n"
+    string = "+" + 70 * "-" + "+\n"
+    string += "|{0:^70s}|\n".format(
         "adcc:  Seamlessly connect your host program to ADC"
-    )
-    string += "+" + 78 * "-" + "+\n"
+    ).replace("adcc", "adc" + yellow + "c" + white)
+    string += "+" + 70 * "-" + "+\n"
     string += empty
-    string += string_component("adcc", __version__, __authors__,
-                               email=__email__, licence=__license__,
-                               website=__url__, doi="10.1002/wcms.1462")
+    string += "|     version     " + green + f"{__version__:<52}" + white + " |\n"
 
+    # Print authors as groups
+    groups = []
+    cbuffer = []
+    for i, author in enumerate(__authors__):
+        if len(", ".join(cbuffer) + author) + 2 <= 52:
+            cbuffer.append(author)
+        else:
+            groups.append(cbuffer)
+            cbuffer = [author]
+    if cbuffer:
+        groups.append(cbuffer)
+    for i, buf in enumerate(groups):
+        authors = "authors" if i == 0 else ""
+        joined = ", ".join(buf)
+        if i != len(groups) - 1:
+            joined += ","
+        string += f"|     {authors:8s}    {joined:<52} |\n"
+
+    string += "|     citation    " + yellow + "DOI 10.1002/wcms.1462" + white
+    string += 32 * " " + "|\n"
+    string += f"|     website     {__url__:<52} |\n"
+    string += "|     email       " + cyan + f"{__email__:<52}" + white + " |\n"
     string += empty
-    string += "+" + 78 * "-" + "+"
+    string += "+" + 70 * "-" + "+"
     return string
 
 
