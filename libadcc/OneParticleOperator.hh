@@ -42,9 +42,9 @@ struct OneParticleOperator {
   /** Construct an empty OneParticleOperator object. Will construct
    * an object with all blocks initialised as zero blocks.
    *
-   * \param mospaces      MoSpaces object
+   * \param mospaces_ptr  MoSpaces object
    * \param is_symmetric  Is the operator symmetric
-   * \param cartesian_transformation
+   * \param cartesian_transform
    *                      The cartesian function according to which the operator
    *                      transforms. See make_symmetry_operator for details.
    */

@@ -14,10 +14,6 @@ Python dictionary or HDF5 file
     :members: __init__
 
 
-.. note::
-   TODO Have some examples
-
-
 Host-program specific interface
 -------------------------------
 
@@ -29,11 +25,14 @@ The interface for this is:
 .. autoclass:: adcc.HartreeFockProvider
     :members:
 
-.. note::
-   TODO Explain the OperatorIntegralProvider and its mechanism.
+Examples in the adcc source code for these interface are
+located in the
+`adcc/backend folder <https://github.com/adc-connect/adcc/tree/master/adcc/backends>`_.
+For example `pyscf.py <https://github.com/adc-connect/adcc/blob/master/adcc/backends/pyscf.py>`_
+or `psi4.py <https://github.com/adc-connect/adcc/tree/master/adcc/backends/psi4.py>`_.
 
 .. note::
-   TODO Point at examples in adcc source code
+   TODO Explain the OperatorIntegralProvider and its mechanism.
 
 C++ interface
 -------------

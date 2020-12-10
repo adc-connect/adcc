@@ -34,7 +34,7 @@ using the `adcc <https://anaconda.org/adcc/>`_ channel:
    conda install -c adcc adcc
 
 This should work on a recent Debian, Ubuntu or macOS
-and with python 3.6, 3.7 and 3.8.
+and with python 3.6, 3.7, 3.8 or 3.9.
 
 
 .. _install-pip-debian:
@@ -80,7 +80,7 @@ Using pip (on macOS)
 ....................
 
 .. attention::
-   macOS support only covers Mojave (10.14) and Catalina (10.15) for the moment.
+   macOS support only covers Catalina (10.15) for the moment.
    For other macOS versions, please :ref:`install adcc using conda <install-conda>`.
 
 The installation on macOS requires a ``clang`` compiler.

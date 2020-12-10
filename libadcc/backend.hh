@@ -4,10 +4,11 @@
 
 namespace libadcc {
 /**
- *  \defgroup Information about the tensor backend
+ *  \addtogroup Tensor
  */
 ///@{
 
+/** Structure to hold information about the tensor backends */
 struct TensorBackend {
   std::string name;
   std::string version;

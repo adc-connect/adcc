@@ -31,10 +31,7 @@ struct guess_element {
         : bidx(bidx_), idx(idx_), coeff(coeff_) {}
 };
 
-/** \brief Base class for guess formation
-
-    \ingroup adc_pp
- **/
+/** \brief Base class for guess formation **/
 template <size_t N>
 class index_handler {
  public:

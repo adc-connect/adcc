@@ -95,11 +95,6 @@ Adc Middle layer
     :inherited-members:
     :undoc-members:
 
-.. automodule:: adcc.caching_policy
-    :members:
-    :inherited-members:
-    :undoc-members:
-
 Tensor and symmetry interface
 -----------------------------
 
@@ -130,28 +125,26 @@ Tensor and symmetry interface
 Solvers
 -------
 
-.. automodule:: adcc.solver.conjugate_gradient
+.. automodule:: adcc.solver.davidson
     :members:
 
-.. automodule:: adcc.solver.davidson
+.. automodule:: adcc.solver.lanczos
     :members:
 
 .. automodule:: adcc.solver.power_method
     :members:
 
-Properties
-----------
+Adc Equations
+-------------
 
-.. autofunction:: adcc.modified_transition_moments.compute_modified_transition_moments
+.. automodule:: adcc.adc_pp
+    :members:
 
-
-State analysis
---------------
-
-TODO
+.. automodule:: adcc.adc_pp.matrix
+    :members:
 
 
-Other stuff and utilities
--------------------------
+Utilities
+---------
 
 .. autofunction:: adcc.banner

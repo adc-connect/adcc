@@ -21,8 +21,6 @@ namespace libadcc {
     \code
     void add(size_t);
     \endcode
-
-    \ingroup adc_pp
  **/
 class index_group_d {
  public:
@@ -120,8 +118,6 @@ class index_group_d {
 /** \brief Map of (value, index group) pairs
 
      \sa adc_guess_d, adc_guess_d
-
-     \ingroup adc_pp
  **/
 class index_group_map_d {
  public:

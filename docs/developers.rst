@@ -47,7 +47,7 @@ simply by cloning
 
    git clone https://code.adc-connect.org
 
-Building and testing adcc can be achieved by
+Building and testing libadcc and adcc can be achieved by
 
 .. code-block:: shell
 
@@ -55,8 +55,9 @@ Building and testing adcc can be achieved by
 
 Afterwards modifications on the adcc python level can be done
 at wish without re-running any build commands. If you modify source
-files in ``libadcc``, make sure to re-run the build command such that
-your changes are being compiled into the ``libadcc`` shared library.
+files in ``libadcc``, make sure to re-run the ``./setup.py test``
+such that your changes are being compiled into
+the ``libadcc`` shared library.
 
 
 ``setup.py`` reference
@@ -82,9 +83,10 @@ but has a few additional commands and features worth knowing:
          ./setup.py test -a "-k 'functionality and adc2'"
 
       will run only the tests, which have the keywords "functionality" and
-      "adc2" in their description. 
+      "adc2" in their description.
 - ``setup.py build_docs``: Build the documentation locally using
   Doxygen and Sphinx. See the section below for details.
+- ``setup.py cpptests``: Build and run the C++ tests for ``libadcc``
 
 Documentation, documentation, documentation
 -------------------------------------------

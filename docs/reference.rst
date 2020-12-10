@@ -25,7 +25,7 @@ adcc module
 .. _libadcc:
 
 libadcc: Python bindings
-------------------------------------
+------------------------
 
 The libadcc Python module contains python bindings of :ref:`libadcc-layer`.
 They are generated directly from the C++ source code
@@ -46,7 +46,7 @@ from the :ref:`adccmodule`.
 .. _libadcc-layer:
 
 libadcc: C++ library
-------------------------------------
+--------------------
 
 A reference of the C++ part of *libadcc*
 and its classes and functions can be found in the following.
@@ -54,7 +54,7 @@ The functions and classes discussed here are exposed to Python
 as the :ref:`libadcc` python module.
 
 Reference state
-~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^
 This category lists the *libadcc* functionality,
 which imports the data from the :cpp:class:`libadcc::HartreeFockSolution_i`
 interface into the :cpp:class:`libadcc::ReferenceState`
@@ -73,21 +73,21 @@ and the one used by the SCF program.
 
 
 ADC guess setup
-~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^
 .. doxygengroup:: AdcGuess
    :members:
    :content-only:
 
 
 One-particle operators
-~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^
 .. doxygengroup:: Properties
    :members:
    :content-only:
 
 
 Tensor interface
-~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^
 The generalised :cpp:class:`libadcc::Tensor` interface
 used by adcc and libadcc to perform tensor operations.
 
@@ -97,23 +97,16 @@ used by adcc and libadcc to perform tensor operations.
 
 
 Utilities
-~~~~~~~~~
+^^^^^^^^^
+Some random things to set up shop.
+
 .. doxygengroup:: Utilities
    :members:
    :content-only:
 
 
-Metadata access
-~~~~~~~~~~~~~~~
-These classes and functions provide access to metadate about *libadcc*.
-
-.. doxygengroup:: Metadata
-   :members:
-   :content-only:
-
-
 Tensor implementation using libtensor
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 This section describes the implementation of the
 Tensor functionality of :cpp:class:`libadcc::Tensor`
 using the libtensor tensor library.
