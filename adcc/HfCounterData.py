@@ -22,9 +22,9 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
-from .DataHfProvider import DataOperatorIntegralProvider
-
 from libadcc import HartreeFockProvider
+
+from .DataHfProvider import DataOperatorIntegralProvider
 
 
 class HfCounterData(HartreeFockProvider):
@@ -160,16 +160,17 @@ class HfCounterData(HartreeFockProvider):
             # map equivalent spin blocks onto another
             fac = 1.0
             if self.__restricted:
-                if block == "bbbb":  # bbbb -> aaaa
+                if block == "bbbb":    # bbbb -> aaaa
                     block = "aaaa"
-                if block == "baba":  # baba -> abab
+                elif block == "baba":  # baba -> abab
                     block = "abab"
-                if block == "abba":  # abba -> -baba -> -abab
-                    block = "abab"
-                    fac *= -1
-                if block == "baab":  # baab -> abba -> -baba -> -abab
+                elif block == "abba":  # abba -> -baba -> -abab
                     block = "abab"
                     fac *= -1
+                elif block == "baab":  # baab -> abba -> -baba -> -abab
+                    block = "abab"
+                    fac *= -1
+                assert block in ("aaaa", "abab")
 
             # Zero elements by index permutation
             if val[0] == val[1]:
