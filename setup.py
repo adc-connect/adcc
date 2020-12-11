@@ -32,12 +32,11 @@ import shutil
 import tempfile
 import functools
 import sysconfig
-import setuptools
 import subprocess
 
 from distutils import log
 
-from setuptools import find_packages, setup
+from setuptools import Command, find_packages, setup
 from setuptools.command.test import test as TestCommand
 
 try:
@@ -69,7 +68,7 @@ if have_sphinx:
             super().run()
 else:
     # No sphinx found -> make a dummy class
-    class BuildDocs(setuptools.Command):
+    class BuildDocs(Command):
         user_options = []
 
         def initialize_options(self):
@@ -118,7 +117,7 @@ class PyTest(TestCommand):
         sys.exit(errno)
 
 
-class CppTest(setuptools.Command):
+class CppTest(Command):
     description = "Build and run C++ tests"
     user_options = []
 
