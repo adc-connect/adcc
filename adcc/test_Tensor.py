@@ -20,14 +20,16 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import pytest
 import unittest
 import numpy as np
 
-from .misc import expand_test_templates
 from numpy.testing import assert_allclose
 
 from adcc import direct_sum, einsum, empty_like, nosym_like
 from adcc.testdata.cache import cache
+
+from .misc import expand_test_templates
 
 
 @expand_test_templates(["h2o_sto3g", "cn_sto3g"])
@@ -143,3 +145,10 @@ class TestTensor(unittest.TestCase):
 
         assert res.needs_evaluation
         assert_allclose(res.to_ndarray(), ref, rtol=1e-10, atol=1e-14)
+
+    def test_dimension_mismatch(self):
+        refstate = cache.refstate["h2o_sto3g"]
+        with pytest.raises(ValueError, match="^Shape of this tensor"):
+            refstate.foo + refstate.fvv
+        with pytest.raises(ValueError, match="^Dimensionality of this tensor"):
+            refstate.foo + refstate.oooo

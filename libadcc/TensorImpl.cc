@@ -46,13 +46,13 @@ namespace lt = libtensor;
       throw dimension_mismatch(                                                        \
             "Dimensionality of this tensor (" + std::to_string(ndim()) +               \
             ") does not agree with the dimensionality of the other tensor"             \
-            "passed, which has dimensionality " +                                      \
+            " passed, which has dimensionality " +                                     \
             std::to_string(OTHER->ndim()) + ".");                                      \
     }                                                                                  \
     if (shape() != OTHER->shape()) {                                                   \
       throw dimension_mismatch("Shape of this tensor (" + shape_to_string(shape()) +   \
                                ") does not agree with the shape of the other tensor" + \
-                               "tensor passed, which has shape " +                     \
+                               " passed, which has shape " +                           \
                                shape_to_string(OTHER->shape()) + ".");                 \
     }                                                                                  \
     if (axes() != OTHER->axes()) {                                                     \
