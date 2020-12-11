@@ -18,7 +18,7 @@ jobs:
       matrix:
         include:
           - {version: '3.6', os: ubuntu-latest, documentation: True}
-          - {version: '3.8', os: ubuntu-latest, documentation: False}
+          - {version: '3.9', os: ubuntu-latest, documentation: False}
           - {version: '3.6', os: macOS-10.15  , documentation: False}
     steps:
       - uses: actions/checkout@v2
@@ -101,7 +101,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
-          python-version: '3.8'
+          python-version: '3.9'
       - name: Install dependencies
         run: |
           pip install flake8
