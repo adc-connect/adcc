@@ -80,7 +80,7 @@ Using pip (on macOS)
 ....................
 
 .. attention::
-   macOS support only covers Catalina (10.15) for the moment.
+   macOS support via pip covers Catalina (10.15) and Big Sur (11.0).
    For other macOS versions, please :ref:`install adcc using conda <install-conda>`.
 
 The installation on macOS requires a ``clang`` compiler.
