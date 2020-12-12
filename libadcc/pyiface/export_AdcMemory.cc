@@ -24,6 +24,7 @@
 
 namespace libadcc {
 
+using namespace pybind11::literals;
 namespace py = pybind11;
 
 static std::string AdcMemory___repr__(const AdcMemory& self) {
@@ -31,51 +32,33 @@ static std::string AdcMemory___repr__(const AdcMemory& self) {
 
   ss << "AdcMemory(allocator=" << self.allocator() << ", ";
   if (self.allocator() != "standard") {
-    double mem_mb = static_cast<double>(self.max_memory()) / 1024. / 1024.;
-    ss << "max_memory=" << mem_mb << "MiB, ";
     ss << "pagefile_directory=" << self.pagefile_directory() << ", ";
   }
-  ss << "tensor_block_size=" << self.tbs_param();
-  ss << ", contraction_batch_size=" << self.contraction_batch_size() << ")";
+  ss << "contraction_batch_size=" << self.contraction_batch_size() << ", ";
+  ss << "max_block_size=" << self.max_block_size() << ")";
   return ss.str();
 }
 
 void export_AdcMemory(py::module& m) {
-  // boost::noncopyable
   py::class_<AdcMemory, std::shared_ptr<AdcMemory>>(
         m, "AdcMemory",
         "Class controlling the memory allocations for adcc ADC calculations. Python "
-        "binding to "
-        ":cpp:class:`libadcc::AdcMemory`.")
+        "binding to :cpp:class:`libadcc::AdcMemory`.")
         .def(py::init<>())
         .def_property_readonly("allocator", &AdcMemory::allocator,
                                "Return the allocator to which the class is initialised.")
-        .def_property_readonly("max_memory", &AdcMemory::max_memory,
-                               "Return the max_memory parameter value to which the class "
-                               "was initialised.\nNote: This value is only a meaningful "
-                               "upper bound if allocator != \"standard\"")
         .def_property_readonly("pagefile_directory", &AdcMemory::pagefile_directory,
                                "Return the pagefile_directory value:\nNote: This value "
                                "is only meaningful if allocator != \"standard\"")
-        .def_property_readonly("tensor_block_size", &AdcMemory::tbs_param,
-                               "Return the tensor_block_size parameter.")
+        .def_property_readonly(
+              "max_block_size", &AdcMemory::max_block_size,
+              "Return the maximal block size a tenor may have along each axis.")
         .def_property("contraction_batch_size", &AdcMemory::contraction_batch_size,
                       &AdcMemory::set_contraction_batch_size,
                       "Get or set the batch size for contraction, i.e. the number of "
-                      "blocks handled simultaneously in a tensor contraction.")
-        .def("initialise", &AdcMemory::initialise,
-             "Initialise the adcc memory management.\n\n"
-             "@param   max_memory   Estimate for the maximally employed memory\n"
-             "@param tensor_block_size   This parameter roughly has the meaning\n"
-             "                           of how many indices are handled together\n"
-             "                           on operations. A good value is 16 for most\n"
-             "                           nowaday CPU cachelines.\n"
-             "@param pagefile_prefix     Directory prefix for storing temporary\n"
-             "                           cache files.\n"
-             "@param allocator   The allocator to be used. Valid values are \"libxm\",\n"
-             "                   \"libvmm\", \"standard\" and \"default\", where "
-             "\"default\"\n"
-             "                   uses a default chosen from the first three.")
+                      "elements handled simultaneously in a tensor contraction.")
+        .def("initialise", &AdcMemory::initialise, "pagefile_directory"_a,
+             "max_block_size"_a, "allocator"_a)
         .def("__repr__", &AdcMemory___repr__)
         //
         ;

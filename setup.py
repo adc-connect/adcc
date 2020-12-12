@@ -268,7 +268,7 @@ def assets_most_recent_release(project):
     url = f"https://api.github.com/repos/{project}/releases"
     with tempfile.TemporaryDirectory() as tmpdir:
         fn = tmpdir + "/releases.json"
-        for _ in range(3):
+        for _ in range(10):
             status = request_urllib(url, fn)
             if 200 <= status < 300:
                 break

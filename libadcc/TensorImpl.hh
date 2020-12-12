@@ -110,7 +110,7 @@ class TensorImpl : public Tensor {
   std::string describe_expression(std::string stage = "unoptimised") const override;
 
   /** Convert object to btensor for use in libtensor functions. */
-  explicit operator libtensor::btensor<N, scalar_type>&() { return *libtensor_ptr(); }
+  explicit operator libtensor::btensor<N, scalar_type> &() { return *libtensor_ptr(); }
 
   /** Return inner btensor object
    *

@@ -446,7 +446,7 @@ MoSpaces::MoSpaces(const HartreeFockSolution_i& hf,
   //
   // Lambda to construct the blocks for a particular space.
   // Modifies map_block_start, map_block_spin, map_block_irrep
-  const size_t max_block_size = adcmem_ptr->tbs_param();
+  const size_t max_block_size = adcmem_ptr->max_block_size();
   auto construct_blocks_for   = [this, &map_index_sub_to_full, &irrep_of, &spin_of,
                                &subspace_of, &max_block_size](const std::string& space) {
     std::vector<size_t> fidx_of;
