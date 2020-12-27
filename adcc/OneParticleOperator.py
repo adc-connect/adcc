@@ -94,8 +94,10 @@ class OneParticleOperator:
 
     def is_zero_block(self, block):
         """
-        Checks if block is a zero block
+        Checks if block is explicitly marked as zero block
         """
+        if block not in self.blocks:
+            return False
         return block not in self.blocks_nonzero
 
     def block(self, block):
