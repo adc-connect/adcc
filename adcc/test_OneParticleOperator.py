@@ -329,7 +329,13 @@ class TestOneParticleOperator(unittest.TestCase):
         a *= 12
         assert_array_almost_equal_nulp(a.to_ndarray(), ref)
 
-    def test_is_zero_block(self):
+    def test_block_functions(self):
         ref = cache.refstate["h2o_sto3g"]
         a = OneParticleOperator(ref.mospaces, is_symmetric=True)
+        a["o1o1"].set_random()
+        a["o1v1"].set_random()
+        a["v1v1"].set_random()
+        assert a.size == a.shape[0] * a.shape[1]
         assert not a.is_zero_block("v1o1")
+        a.set_zero_block("o1o1")
+        assert a.is_zero_block("o1o1")

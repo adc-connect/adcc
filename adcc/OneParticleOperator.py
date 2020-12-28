@@ -82,8 +82,7 @@ class OneParticleOperator:
         """
         Returns the number of elements of the OneParticleOperator
         """
-        sh = self.shape
-        return sh[0] * sh[1]
+        return np.prod(self.shape)
 
     @property
     def blocks_nonzero(self):
@@ -109,8 +108,8 @@ class OneParticleOperator:
         return self._tensors[block]
 
     def __getitem__(self, block):
+        # TODO: sanity checks
         assert block in self.blocks
-        s1, s2 = split_spaces(block)
         if block not in self._tensors:
             sym = libadcc.make_symmetry_operator(
                 self.mospaces, block, self.is_symmetric, "1"
@@ -125,14 +124,15 @@ class OneParticleOperator:
         """
         Assigns tensor to a given block
         """
+        # TODO: sanity checks
         assert block in self.blocks
-        s1, s2 = split_spaces(block)
         self._tensors[block] = tensor
 
     def set_zero_block(self, block):
         """
         Set a given block as zero block
         """
+        # TODO: sanity checks
         assert block in self.blocks
         self._tensors.pop(block)
 
