@@ -98,11 +98,10 @@ class TestOneParticleOperator(unittest.TestCase):
         dipx_mo = ref.operators.electric_dipole[0]
         mp2diff_mo = adcc.LazyMp(ref).mp2_diffdm
         mp2diff_nosym = OneParticleOperator(ref.mospaces, is_symmetric=False)
-        mp2diff_nosym.set_block("o1o1", mp2diff_mo["o1o1"])
-        mp2diff_nosym.set_block("o1v1", mp2diff_mo["o1v1"])
-        mp2diff_nosym.set_block("v1v1", mp2diff_mo["v1v1"])
-        mp2diff_nosym.set_block("v1o1",
-                                zeros_like(mp2diff_mo["o1v1"].transpose()))
+        mp2diff_nosym["o1o1"] = mp2diff_mo["o1o1"]
+        mp2diff_nosym["o1v1"] = mp2diff_mo["o1v1"]
+        mp2diff_nosym["v1v1"] = mp2diff_mo["v1v1"]
+        mp2diff_nosym["v1o1"] = zeros_like(mp2diff_mo["o1v1"].transpose())
         mp2diff_ao = mp2diff_nosym.to_ao_basis(ref)
 
         mp2a = mp2diff_ao[0].to_ndarray()
@@ -135,17 +134,16 @@ class TestOneParticleOperator(unittest.TestCase):
         mp2diff_nosym = OneParticleOperator(ref.mospaces, is_symmetric=False)
         dipx_nosym = OneParticleOperator(ref.mospaces, is_symmetric=False)
 
-        mp2diff_nosym.set_block("o1o1", mp2diff_mo["o1o1"])
-        mp2diff_nosym.set_block("o1v1", mp2diff_mo["o1v1"])
-        mp2diff_nosym.set_block("v1v1", mp2diff_mo["v1v1"])
-        mp2diff_nosym.set_block("v1o1",
-                                zeros_like(mp2diff_mo["o1v1"].transpose()))
+        mp2diff_nosym["o1o1"] = mp2diff_mo["o1o1"]
+        mp2diff_nosym["o1v1"] = mp2diff_mo["o1v1"]
+        mp2diff_nosym["v1v1"] = mp2diff_mo["v1v1"]
+        mp2diff_nosym["v1o1"] = zeros_like(mp2diff_mo["o1v1"].transpose())
         mp2diff_ao = mp2diff_nosym.to_ao_basis(ref)
 
-        dipx_nosym.set_block("o1o1", dipx_mo["o1o1"])
-        dipx_nosym.set_block("o1v1", dipx_mo["o1v1"])
-        dipx_nosym.set_block("v1v1", dipx_mo["v1v1"])
-        dipx_nosym.set_block("v1o1", zeros_like(dipx_mo["o1v1"].transpose()))
+        dipx_nosym["o1o1"] = dipx_mo["o1o1"]
+        dipx_nosym["o1v1"] = dipx_mo["o1v1"]
+        dipx_nosym["v1v1"] = dipx_mo["v1v1"]
+        dipx_nosym["v1o1"] = zeros_like(dipx_mo["o1v1"].transpose())
         dipx_ao = dipx_nosym.to_ao_basis(ref)
 
         mp2a = mp2diff_ao[0].to_ndarray()
@@ -349,9 +347,12 @@ class TestOneParticleOperator(unittest.TestCase):
         with raises(KeyError):
             a["xyz"]
         with raises(KeyError):
-            a.set_block("xyz", a["o1o1"])
+            a["xyz"] = a["o1o1"]
         with raises(KeyError):
             a.set_zero_block("xyz")
         # invalid tensor shape
         with raises(ValueError):
-            a.set_block("o1o1", a["o1v1"])
+            a["o1o1"] = a["o1v1"]
+        # shortcuts
+        np.testing.assert_allclose(a.oo.to_ndarray(),
+                                   a["o1o1"].to_ndarray())

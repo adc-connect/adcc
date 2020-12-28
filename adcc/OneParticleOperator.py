@@ -20,6 +20,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import warnings
 import numpy as np
 from itertools import product, combinations_with_replacement
 
@@ -60,11 +61,17 @@ class OneParticleOperator:
         occs = sorted(self.mospaces.subspaces_occupied, reverse=True)
         virts = sorted(self.mospaces.subspaces_virtual, reverse=True)
         self.orbital_subspaces = occs + virts
+        # check that orbital subspaces are correct
+        assert sum(self.mospaces.n_orbs(ss) for ss in self.orbital_subspaces) \
+            == self.mospaces.n_orbs("f")
         if self.is_symmetric:
+            # unique combinations of orbital subspaces (respects the symmetry)
+            # and repeated elements (e.g. o1o1)
             combs = list(
                 combinations_with_replacement(self.orbital_subspaces, r=2)
             )
         else:
+            # Cartesian product of subspaces, equivalent to nested for loop
             combs = list(product(self.orbital_subspaces, repeat=2))
         self.blocks = ["".join(com) for com in combs]
         self._tensors = {}
@@ -74,7 +81,7 @@ class OneParticleOperator:
         """
         Returns the shape tuple of the OneParticleOperator
         """
-        size = sum(self.mospaces.n_orbs(ss) for ss in self.orbital_subspaces)
+        size = self.mospaces.n_orbs("f")
         return (size, size)
 
     @property
@@ -102,7 +109,9 @@ class OneParticleOperator:
 
     def block(self, block):
         """
-        Returns tensor of the given block
+        Returns tensor of the given block.
+        Does not create a block in case it is marked as a zero block.
+        Use __getitem__ for that purpose.
         """
         if block not in self.blocks_nonzero:
             raise KeyError("The block function does not support "
@@ -121,10 +130,11 @@ class OneParticleOperator:
             self._tensors[block] = Tensor(sym)
         return self._tensors[block]
 
-    def __setitem__(self, block, tensor):
-        self.set_block(block, tensor)
+    def __getattr__(self, attr):
+        from . import block as b
+        return self.__getitem__(b.__getattr__(attr))
 
-    def set_block(self, block, tensor):
+    def __setitem__(self, block, tensor):
         """
         Assigns tensor to a given block
         """
@@ -139,6 +149,15 @@ class OneParticleOperator:
                              f"Expected shape {expected_shape}, but "
                              f"got shape {tensor.shape} instead.")
         self._tensors[block] = tensor
+
+    def set_block(self, block, tensor):
+        """
+        Assigns tensor to a given block. Deprecated
+        """
+        warnings.warn("The set_block function is deprecated and will be "
+                      " removed in 0.16.0. "
+                      " Use __setitem__ instead.")
+        self.__setitem__(block, tensor)
 
     def set_zero_block(self, block):
         """
@@ -181,7 +200,7 @@ class OneParticleOperator:
         """
         ret = OneParticleOperator(self.mospaces, self.is_symmetric)
         for b in self.blocks_nonzero:
-            ret.set_block(b, self.block(b).copy())
+            ret[b] = self.block(b).copy()
         if hasattr(self, "reference_state"):
             ret.reference_state = self.reference_state
         return ret
@@ -243,9 +262,9 @@ class OneParticleOperator:
 
         for b in other.blocks_nonzero:
             if self.is_zero_block(b):
-                self.set_block(b, other.block(b).copy())
+                self[b] = other.block(b).copy()
             else:
-                self.set_block(b, self.block(b) + other.block(b))
+                self[b] = self.block(b) + other.block(b)
 
         if not self.is_symmetric and other.is_symmetric:
             for b in other.blocks_nonzero:
@@ -256,7 +275,7 @@ class OneParticleOperator:
                 obT = other.block(b).transpose()
                 if not self.is_zero_block(brev):
                     obT += self.block(brev)
-                self.set_block(brev, evaluate(obT))
+                self[brev] = evaluate(obT)
 
         # Update ReferenceState pointer
         if hasattr(self, "reference_state"):
@@ -275,9 +294,9 @@ class OneParticleOperator:
 
         for b in other.blocks_nonzero:
             if self.is_zero_block(b):
-                self.set_block(b, -1.0 * other.block(b))  # The copy is implicit
+                self[b] = -1.0 * other.block(b)  # The copy is implicit
             else:
-                self.set_block(b, self.block(b) - other.block(b))
+                self[b] = self.block(b) - other.block(b)
 
         if not self.is_symmetric and other.is_symmetric:
             for b in other.blocks_nonzero:
@@ -288,7 +307,7 @@ class OneParticleOperator:
                 obT = -1.0 * other.block(b).transpose()
                 if not self.is_zero_block(brev):
                     obT += self.block(brev)
-                self.set_block(brev, evaluate(obT))
+                self[brev] = evaluate(obT)
 
         # Update ReferenceState pointer
         if hasattr(self, "reference_state"):
@@ -301,7 +320,7 @@ class OneParticleOperator:
         if not isinstance(other, (float, int)):
             return NotImplemented
         for b in self.blocks_nonzero:
-            self.set_block(b, self.block(b) * other)
+            self[b] = self.block(b) * other
         return self
 
     def __add__(self, other):

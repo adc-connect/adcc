@@ -207,7 +207,7 @@ class ReferenceState(libadcc.ReferenceState):
         density = OneParticleOperator(self.mospaces, is_symmetric=True)
         for block in density.blocks:
             sym = libadcc.make_symmetry_operator(self.mospaces, block, True, "1")
-            density.set_block(block, Tensor(sym))
+            density[block] = Tensor(sym)
         for ss in self.mospaces.subspaces_occupied:
             density[ss + ss].set_mask("ii", 1)
         density.reference_state = self
