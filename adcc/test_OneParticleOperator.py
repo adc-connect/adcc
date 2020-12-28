@@ -30,7 +30,7 @@ from adcc import OneParticleOperator, zeros_like
 from adcc.OneParticleOperator import product_trace
 from adcc.testdata.cache import cache
 
-from pytest import approx
+from pytest import approx, raises
 
 
 class TestOneParticleOperator(unittest.TestCase):
@@ -332,6 +332,9 @@ class TestOneParticleOperator(unittest.TestCase):
     def test_block_functions(self):
         ref = cache.refstate["h2o_sto3g"]
         a = OneParticleOperator(ref.mospaces, is_symmetric=True)
+        # no AO transformation with only zero blocks possible
+        with raises(ValueError):
+            a.to_ao_basis(ref)
         a["o1o1"].set_random()
         a["o1v1"].set_random()
         a["v1v1"].set_random()
@@ -339,3 +342,16 @@ class TestOneParticleOperator(unittest.TestCase):
         assert not a.is_zero_block("v1o1")
         a.set_zero_block("o1o1")
         assert a.is_zero_block("o1o1")
+        # access to zero blocks forbidden via block function
+        with raises(KeyError):
+            a.block("o1o1")
+        # invalid block names
+        with raises(KeyError):
+            a["xyz"]
+        with raises(KeyError):
+            a.set_block("xyz", a["o1o1"])
+        with raises(KeyError):
+            a.set_zero_block("xyz")
+        # invalid tensor shape
+        with raises(ValueError):
+            a.set_block("o1o1", a["o1v1"])

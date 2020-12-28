@@ -38,7 +38,7 @@ class OneParticleOperator:
 
         Parameters
         ----------
-        spaces : adcc.Mospaces or adcc.ReferenceState or adcc.LazyMp
+        spaces : adcc.MoSpaces or adcc.ReferenceState or adcc.LazyMp
             MoSpaces object
 
         is_symmetric : bool
@@ -93,7 +93,8 @@ class OneParticleOperator:
 
     def is_zero_block(self, block):
         """
-        Checks if block is explicitly marked as zero block
+        Checks if block is explicitly marked as zero block.
+        Returns False if the block does not exist.
         """
         if block not in self.blocks:
             return False
@@ -103,13 +104,16 @@ class OneParticleOperator:
         """
         Returns tensor of the given block
         """
-        # TODO: sanity checks
-        assert block in self.blocks_nonzero
+        if block not in self.blocks_nonzero:
+            raise KeyError("The block function does not support "
+                           "access to zero-blocks. Available non-zero "
+                           f"blocks are: {self.blocks_nonzero}.")
         return self._tensors[block]
 
     def __getitem__(self, block):
-        # TODO: sanity checks
-        assert block in self.blocks
+        if block not in self.blocks:
+            raise KeyError(f"Invalid block {block} requested. "
+                           f"Available blocks are: {self.blocks}.")
         if block not in self._tensors:
             sym = libadcc.make_symmetry_operator(
                 self.mospaces, block, self.is_symmetric, "1"
@@ -124,22 +128,31 @@ class OneParticleOperator:
         """
         Assigns tensor to a given block
         """
-        # TODO: sanity checks
-        assert block in self.blocks
+        if block not in self.blocks:
+            raise KeyError(f"Invalid block {block} assigned. "
+                           f"Available blocks are: {self.blocks}.")
+        s1, s2 = split_spaces(block)
+        expected_shape = (self.mospaces.n_orbs(s1),
+                          self.mospaces.n_orbs(s2))
+        if expected_shape != tensor.shape:
+            raise ValueError("Invalid shape of incoming tensor. "
+                             f"Expected shape {expected_shape}, but "
+                             f"got shape {tensor.shape} instead.")
         self._tensors[block] = tensor
 
     def set_zero_block(self, block):
         """
         Set a given block as zero block
         """
-        # TODO: sanity checks
-        assert block in self.blocks
+        if block not in self.blocks:
+            raise KeyError(f"Invalid block {block} set as zero block. "
+                           f"Available blocks are: {self.blocks}.")
         self._tensors.pop(block)
 
     def to_ndarray(self):
         """
         Returns the OneParticleOperator as a contiguous
-        np.ndarray instance with all blocks
+        np.ndarray instance including all blocks
         """
         ret = np.zeros((self.shape))
         row_offset = 0
@@ -174,6 +187,9 @@ class OneParticleOperator:
         return ret
 
     def __transform_to_ao(self, refstate_or_coefficients):
+        if not len(self.blocks_nonzero):
+            raise ValueError("At least one non-zero block is needed to "
+                             "transform the OneParticleOperator.")
         if isinstance(refstate_or_coefficients, libadcc.ReferenceState):
             hf = refstate_or_coefficients
             coeff_map = {}
@@ -187,8 +203,9 @@ class OneParticleOperator:
         dm_bb_b = 0
         for block in self.blocks_nonzero:
             s1, s2 = split_spaces(block)
+            # scale off-diagonal block of symmetric operator by 2
+            # because only one of the blocks is actually present
             pref = 2.0 if (s1 != s2 and self.is_symmetric) else 1.0
-            # TODO: sanity check
             dm_bb_a += pref * einsum("ip,ij,jq->pq", coeff_map[f"{s1}_a"],
                                      self[block], coeff_map[f"{s2}_a"])
             dm_bb_b += pref * einsum("ip,ij,jq->pq", coeff_map[f"{s1}_b"],
@@ -200,7 +217,10 @@ class OneParticleOperator:
 
     def to_ao_basis(self, refstate_or_coefficients=None):
         """
-        TODO DOCME
+        Transforms the OneParticleOperator to the atomic orbital
+        basis using a ReferenceState or a coefficient map. If no
+        ReferenceState or coefficient map is given, the ReferenceState
+        used to construct the OneParticleOperator is taken instead.
         """
         if isinstance(refstate_or_coefficients, (dict, libadcc.ReferenceState)):
             return self.__transform_to_ao(refstate_or_coefficients)
