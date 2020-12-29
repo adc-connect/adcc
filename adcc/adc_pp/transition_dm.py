@@ -48,7 +48,7 @@ def tdm_adc0(mp, amplitude, intermediates):
 def tdm_adc1(mp, amplitude, intermediates):
     dm = tdm_adc0(mp, amplitude, intermediates)  # Get ADC(0) result
     # adc1_dp0_ov
-    dm[b.ov] = -einsum("ijab,jb->ia", mp.t2(b.oovv), amplitude.ph)
+    dm.ov = -einsum("ijab,jb->ia", mp.t2(b.oovv), amplitude.ph)
     return dm
 
 
@@ -64,13 +64,13 @@ def tdm_cvs_adc2(mp, amplitude, intermediates):
     p0_vv = intermediates.cvs_p0_vv
 
     # Compute CVS-ADC(2) tdm
-    dm[b.oc] = (  # cvs_adc2_dp0_oc
+    dm.oc = (  # cvs_adc2_dp0_oc
         - einsum("ja,Ia->jI", p0_ov, u1)
         + (1 / sqrt(2)) * einsum("kIab,jkab->jI", u2, t2)
     )
 
     # cvs_adc2_dp0_vc
-    dm[b.vc] = u1.transpose() - einsum("ab,Ib->aI", p0_vv, u1)
+    dm.vc = u1.transpose() - einsum("ab,Ib->aI", p0_vv, u1)
     return dm
 
 
@@ -82,24 +82,22 @@ def tdm_adc2(mp, amplitude, intermediates):
 
     t2 = mp.t2(b.oovv)
     td2 = mp.td2(b.oovv)
-    p0_ov = mp.mp2_diffdm[b.ov]
-    p0_oo = mp.mp2_diffdm[b.oo]
-    p0_vv = mp.mp2_diffdm[b.vv]
+    p0 = mp.mp2_diffdm
 
     # Compute ADC(2) tdm
-    dm[b.oo] = (  # adc2_dp0_oo
-        - einsum("ia,ja->ij", p0_ov, u1)
+    dm.oo = (  # adc2_dp0_oo
+        - einsum("ia,ja->ij", p0.ov, u1)
         - einsum("ikab,jkab->ij", u2, t2)
     )
-    dm[b.vv] = (  # adc2_dp0_vv
-        + einsum("ia,ib->ab", u1, p0_ov)
+    dm.vv = (  # adc2_dp0_vv
+        + einsum("ia,ib->ab", u1, p0.ov)
         + einsum("ijac,ijbc->ab", u2, t2)
     )
-    dm[b.ov] -= einsum("ijab,jb->ia", td2, u1)  # adc2_dp0_ov
-    dm[b.vo] += 0.5 * (  # adc2_dp0_vo
+    dm.ov -= einsum("ijab,jb->ia", td2, u1)  # adc2_dp0_ov
+    dm.vo += 0.5 * (  # adc2_dp0_vo
         + einsum("ijab,jkbc,kc->ai", t2, t2, u1)
-        - einsum("ab,ib->ai", p0_vv, u1)
-        + einsum("ja,ij->ai", u1, p0_oo)
+        - einsum("ab,ib->ai", p0.vv, u1)
+        + einsum("ja,ij->ai", u1, p0.oo)
     )
     return dm
 

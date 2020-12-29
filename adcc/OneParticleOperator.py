@@ -150,6 +150,13 @@ class OneParticleOperator:
                              f"got shape {tensor.shape} instead.")
         self._tensors[block] = tensor
 
+    def __setattr__(self, attr, value):
+        try:
+            from . import block as b
+            self.__setitem__(b.__getattr__(attr), value)
+        except AttributeError:
+            super().__setattr__(attr, value)
+
     def set_block(self, block, tensor):
         """
         Assigns tensor to a given block. Deprecated

@@ -41,7 +41,7 @@ def diffdm_adc0(mp, amplitude, intermediates):
 
     dm = OneParticleOperator(mp, is_symmetric=True)
     dm[C + C] = -einsum("ia,ja->ij", u1, u1)
-    dm[b.vv] = einsum("ia,ib->ab", u1, u1)
+    dm.vv = einsum("ia,ib->ab", u1, u1)
     return dm
 
 
@@ -51,11 +51,9 @@ def diffdm_adc2(mp, amplitude, intermediates):
     u1, u2 = amplitude.ph, amplitude.pphh
 
     t2 = mp.t2(b.oovv)
-    p0_ov = mp.mp2_diffdm[b.ov]
-    p0_oo = mp.mp2_diffdm[b.oo]
-    p0_vv = mp.mp2_diffdm[b.vv]
-    p1_oo = dm[b.oo].evaluate()  # ADC(1) diffdm
-    p1_vv = dm[b.vv].evaluate()  # ADC(1) diffdm
+    p0 = mp.mp2_diffdm
+    p1_oo = dm.oo.evaluate()  # ADC(1) diffdm
+    p1_vv = dm.vv.evaluate()  # ADC(1) diffdm
 
     # Zeroth order doubles contributions
     p2_oo = -einsum("ikab,jkab->ij", u2, u2)
@@ -66,9 +64,9 @@ def diffdm_adc2(mp, amplitude, intermediates):
     ru1 = einsum("ijab,jb->ia", t2, u1).evaluate()
 
     # Compute second-order contributions to the density matrix
-    dm[b.oo] = (  # adc2_p_oo
+    dm.oo = (  # adc2_p_oo
         p1_oo + 2 * p2_oo - einsum("ia,ja->ij", ru1, ru1) + (
-            + einsum("ik,kj->ij", p1_oo, p0_oo)
+            + einsum("ik,kj->ij", p1_oo, p0.oo)
             - einsum("ikcd,jkcd->ij", t2,
                      + 0.5 * einsum("lk,jlcd->jkcd", p1_oo, t2)
                      - einsum("jkcb,db->jkcd", t2, p1_vv))
@@ -76,9 +74,9 @@ def diffdm_adc2(mp, amplitude, intermediates):
         ).symmetrise()
     )
 
-    dm[b.vv] = (  # adc2_p_vv
+    dm.vv = (  # adc2_p_vv
         p1_vv + 2 * p2_vv + einsum("ia,ib->ab", ru1, ru1) - (
-            + einsum("ac,cb->ab", p1_vv, p0_vv)
+            + einsum("ac,cb->ab", p1_vv, p0.vv)
             + einsum("klbc,klac->ab", t2,
                      + 0.5 * einsum("klad,cd->klac", t2, p1_vv)
                      - einsum("jk,jlac->klac", p1_oo, t2))
@@ -86,11 +84,11 @@ def diffdm_adc2(mp, amplitude, intermediates):
         ).symmetrise()
     )
 
-    dm[b.ov] = (  # adc2_p_ov
+    dm.ov = (  # adc2_p_ov
         + p2_ov
         - einsum("ijab,jb->ia", t2, p2_ov)
-        - einsum("ib,ba->ia", p0_ov, p1_vv)
-        + einsum("ij,ja->ia", p1_oo, p0_ov)
+        - einsum("ib,ba->ia", p0.ov, p1_vv)
+        + einsum("ij,ja->ia", p1_oo, p0.ov)
         - einsum("ib,klca,klcb->ia", u1, t2, u2)
         - einsum("ikcd,jkcd,ja->ia", t2, u2, u1)
     )
@@ -105,7 +103,7 @@ def diffdm_cvs_adc2(mp, amplitude, intermediates):
     t2 = mp.t2(b.oovv)
     p0_ov = intermediates.cvs_p0_ov
     p0_vv = intermediates.cvs_p0_vv
-    p1_vv = dm[b.vv].evaluate()  # ADC(1) diffdm
+    p1_vv = dm.vv.evaluate()  # ADC(1) diffdm
 
     # Zeroth order doubles contributions
     p2_ov = -sqrt(2) * einsum("jb,ijab->ia", u1, u2)
@@ -115,22 +113,22 @@ def diffdm_cvs_adc2(mp, amplitude, intermediates):
 
     # Second order contributions
     # cvs_adc2_dp_oo
-    dm[b.oo] = p2_oo + einsum("ab,ikac,jkbc->ij", p1_vv, t2, t2)
+    dm.oo = p2_oo + einsum("ab,ikac,jkbc->ij", p1_vv, t2, t2)
 
-    dm[b.ov] = p2_ov + (  # cvs_adc2_dp_ov
+    dm.ov = p2_ov + (  # cvs_adc2_dp_ov
         - einsum("ka,ab->kb", p0_ov, p1_vv)
         - einsum("lkdb,dl->kb", t2, p2_vo)
         + 1 / sqrt(2) * einsum("ib,klad,liad->kb", u1, t2, u2)
     )
 
-    dm[b.vv] = p1_vv + p2_vv - 0.5 * (  # cvs_adc2_dp_vv
+    dm.vv = p1_vv + p2_vv - 0.5 * (  # cvs_adc2_dp_vv
         + einsum("cb,ac->ab", p1_vv, p0_vv)
         + einsum("cb,ac->ab", p0_vv, p1_vv)
         + einsum("ijbc,ijad,cd->ab", t2, t2, p1_vv)
     )
 
     # Add 2nd order correction to CVS-ADC(1) diffdm
-    dm[b.cc] -= einsum("kIab,kJab->IJ", u2, u2)
+    dm.cc -= einsum("kIab,kJab->IJ", u2, u2)
     return dm
 
 

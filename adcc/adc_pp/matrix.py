@@ -411,9 +411,9 @@ def adc3_i1(hf, mp, intermediates):
         p0_ov = intermediates.cvs_p0_ov
         p0_vv = intermediates.cvs_p0_vv
     else:
-        p0_ov = mp.mp2_diffdm[b.ov]
-        p0_oo = mp.mp2_diffdm[b.oo]
-        p0_vv = mp.mp2_diffdm[b.vv]
+        p0_ov = mp.mp2_diffdm.ov
+        p0_oo = mp.mp2_diffdm.oo
+        p0_vv = mp.mp2_diffdm.vv
 
     t2eri_sum = (
         + einsum("jicb->ijcb", mp.t2eri(b.oovv, b.ov))  # t2eri4
@@ -433,9 +433,7 @@ def adc3_i1(hf, mp, intermediates):
 def adc3_i2(hf, mp, intermediates):
     # Used only for general
     td2 = mp.td2(b.oovv)
-    p0_ov = mp.mp2_diffdm[b.ov]
-    p0_oo = mp.mp2_diffdm[b.oo]
-    p0_vv = mp.mp2_diffdm[b.vv]
+    p0 = mp.mp2_diffdm
 
     # t2eri4 + t2eri3 / 4
     t2eri_sum = mp.t2eri(b.oovv, b.ov) + 0.25 * mp.t2eri(b.oovv, b.oo)
@@ -443,10 +441,10 @@ def adc3_i2(hf, mp, intermediates):
         (  # symmetrise i<>j
             + 0.5 * einsum("ikab,jkab->ij", mp.t2oo + td2, hf.oovv)
             - 1.0 * einsum("ikab,jkab->ij", mp.t2oo, t2eri_sum)
-            + 2.0 * einsum("kija,ka->ij", hf.ooov, p0_ov)
+            + 2.0 * einsum("kija,ka->ij", hf.ooov, p0.ov)
         ).symmetrise()
-        - einsum("ikjl,kl->ij", hf.oooo, p0_oo)
-        - einsum("iajb,ab->ij", hf.ovov, p0_vv)
+        - einsum("ikjl,kl->ij", hf.oooo, p0.oo)
+        - einsum("iajb,ab->ij", hf.ovov, p0.vv)
     )
 
 
@@ -464,9 +462,7 @@ def cvs_adc3_i2(hf, mp, intermediates):
 @register_as_intermediate
 def adc3_m11(hf, mp, intermediates):
     td2 = mp.td2(b.oovv)
-    p0_ov = mp.mp2_diffdm[b.ov]
-    p0_oo = mp.mp2_diffdm[b.oo]
-    p0_vv = mp.mp2_diffdm[b.vv]
+    p0 = mp.mp2_diffdm
 
     i1 = adc3_i1(hf, mp, intermediates).evaluate()
     i2 = adc3_i2(hf, mp, intermediates).evaluate()
@@ -490,10 +486,10 @@ def adc3_m11(hf, mp, intermediates):
         - (  # symmetrise i<>j and a<>b
             + einsum("jkbc,ikac->iajb", hf.oovv, mp.t2oo + td2)
             - einsum("jkbc,ikac->iajb", mp.t2oo, t2eri_sum)
-            - einsum("ibac,jc->iajb", hf.ovvv, 2.0 * p0_ov)
-            - einsum("ikja,kb->iajb", hf.ooov, 2.0 * p0_ov)
-            - einsum("jaic,bc->iajb", hf.ovov, p0_vv)
-            + einsum("ik,jakb->iajb", p0_oo, hf.ovov)
+            - einsum("ibac,jc->iajb", hf.ovvv, 2.0 * p0.ov)
+            - einsum("ikja,kb->iajb", hf.ooov, 2.0 * p0.ov)
+            - einsum("jaic,bc->iajb", hf.ovov, p0.vv)
+            + einsum("ik,jakb->iajb", p0.oo, hf.ovov)
             + einsum("ibkc,kajc->iajb", hf.ovov, 2.0 * t2sq)
         ).symmetrise((0, 2), (1, 3))
         # TODO This hack is done to avoid opt_einsum being smart and instantiating
