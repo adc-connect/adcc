@@ -136,7 +136,7 @@ class OneParticleOperator:
 
     def __setitem__(self, block, tensor):
         """
-        Assigns tensor to a given block
+        Assigns a tensor to the specified block
         """
         if block not in self.blocks:
             raise KeyError(f"Invalid block {block} assigned. "
@@ -162,8 +162,8 @@ class OneParticleOperator:
         Assigns tensor to a given block. Deprecated
         """
         warnings.warn("The set_block function is deprecated and will be "
-                      " removed in 0.16.0. "
-                      " Use __setitem__ instead.")
+                      "removed in 0.16.0. "
+                      "Use __setitem__ instead.")
         self.__setitem__(block, tensor)
 
     def set_zero_block(self, block):
@@ -180,25 +180,27 @@ class OneParticleOperator:
         Returns the OneParticleOperator as a contiguous
         np.ndarray instance including all blocks
         """
+        # offsets to start index of spaces
+        offsets = {
+            sp: sum(
+                self.mospaces.n_orbs(ss)
+                for ss in self.orbital_subspaces[:self.orbital_subspaces.index(sp)]
+            )
+            for sp in self.orbital_subspaces
+        }
+        # slices for each space
+        slices = {
+            sp: slice(offsets[sp], offsets[sp] + self.mospaces.n_orbs(sp))
+            for sp in offsets
+        }
         ret = np.zeros((self.shape))
-        row_offset = 0
-        for i, sp1 in enumerate(self.orbital_subspaces):
-            n_orbs1 = self.mospaces.n_orbs(sp1)
-            col_offset = 0
-            for j, sp2 in enumerate(self.orbital_subspaces):
-                n_orbs2 = self.mospaces.n_orbs(sp2)
-                if self.is_symmetric and j < i:
-                    if not self.is_zero_block(sp2 + sp1):
-                        dm_12 = self.block(sp2 + sp1)
-                        ret[row_offset:row_offset + n_orbs1,
-                            col_offset:col_offset + n_orbs2] = dm_12.to_ndarray().T
-                else:
-                    if not self.is_zero_block(sp1 + sp2):
-                        dm_12 = self.block(sp1 + sp2)
-                        ret[row_offset:row_offset + n_orbs1,
-                            col_offset:col_offset + n_orbs2] = dm_12.to_ndarray()
-                col_offset += n_orbs2
-            row_offset += n_orbs1
+        for block in self.blocks_nonzero:
+            sp1, sp2 = split_spaces(block)
+            rowslice, colslice = slices[sp1], slices[sp2]
+            dm_block = self[block].to_ndarray()
+            ret[rowslice, colslice] = dm_block
+            if self.is_symmetric and sp1 != sp2:
+                ret[colslice, rowslice] = dm_block.T
         return ret
 
     def copy(self):
