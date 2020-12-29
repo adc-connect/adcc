@@ -67,8 +67,8 @@ def mtm_cvs_adc0(mp, dipop, intermediates):
 def mtm_cvs_adc2(mp, dipop, intermediates):
     f1 = (
         + dipop.cv
-        - einsum("Ib,ba->Ia", dipop.cv, intermediates.cvs_p0_vv)
-        - einsum("Ij,ja->Ia", dipop.co, intermediates.cvs_p0_ov)
+        - einsum("Ib,ba->Ia", dipop.cv, intermediates.cvs_p0.vv)
+        - einsum("Ij,ja->Ia", dipop.co, intermediates.cvs_p0.ov)
     )
     f2 = (1 / sqrt(2)) * einsum("Ik,kjab->jIab", dipop.co, mp.t2(b.oovv))
     return AmplitudeVector(ph=f1, pphh=f2)

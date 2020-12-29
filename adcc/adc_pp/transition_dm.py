@@ -60,17 +60,16 @@ def tdm_cvs_adc2(mp, amplitude, intermediates):
     u2 = amplitude.pphh
 
     t2 = mp.t2(b.oovv)
-    p0_ov = intermediates.cvs_p0_ov
-    p0_vv = intermediates.cvs_p0_vv
+    p0 = intermediates.cvs_p0
 
     # Compute CVS-ADC(2) tdm
     dm.oc = (  # cvs_adc2_dp0_oc
-        - einsum("ja,Ia->jI", p0_ov, u1)
+        - einsum("ja,Ia->jI", p0.ov, u1)
         + (1 / sqrt(2)) * einsum("kIab,jkab->jI", u2, t2)
     )
 
     # cvs_adc2_dp0_vc
-    dm.vc = u1.transpose() - einsum("ab,Ib->aI", p0_vv, u1)
+    dm.vc = u1.transpose() - einsum("ab,Ib->aI", p0.vv, u1)
     return dm
 
 

@@ -276,22 +276,14 @@ class LazyMp:
 
 
 #
-# Register cvs_p0 intermedites
+# Register cvs_p0 intermediate
 #
 @register_as_intermediate
-def cvs_p0_oo(hf, mp, intermediates):
+def cvs_p0(hf, mp, intermediates):
     # NOTE: equal to mp2_diffdm if CVS applied for the density
-    return -0.5 * einsum("ikab,jkab->ij", mp.t2oo, mp.t2oo)
-
-
-@register_as_intermediate
-def cvs_p0_ov(hf, mp, intermediates):
-    # NOTE: equal to mp2_diffdm if CVS applied for the density
-    return -0.5 * (+ einsum("ijbc,jabc->ia", mp.t2oo, hf.ovvv)
-                   + einsum("jkib,jkab->ia", hf.ooov, mp.t2oo)) / mp.df(b.ov)
-
-
-@register_as_intermediate
-def cvs_p0_vv(hf, mp, intermediates):
-    # NOTE: equal to mp2_diffdm if CVS applied for the density
-    return 0.5 * einsum("ijac,ijbc->ab", mp.t2oo, mp.t2oo)
+    ret = OneParticleOperator(hf.mospaces, is_symmetric=True)
+    ret.oo = -0.5 * einsum("ikab,jkab->ij", mp.t2oo, mp.t2oo)
+    ret.ov = -0.5 * (+ einsum("ijbc,jabc->ia", mp.t2oo, hf.ovvv)
+                     + einsum("jkib,jkab->ia", hf.ooov, mp.t2oo)) / mp.df(b.ov)
+    ret.vv = 0.5 * einsum("ijac,ijbc->ab", mp.t2oo, mp.t2oo)
+    return ret

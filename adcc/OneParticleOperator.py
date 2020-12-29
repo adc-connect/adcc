@@ -191,7 +191,7 @@ class OneParticleOperator:
         # slices for each space
         slices = {
             sp: slice(offsets[sp], offsets[sp] + self.mospaces.n_orbs(sp))
-            for sp in offsets
+            for sp in self.orbital_subspaces
         }
         ret = np.zeros((self.shape))
         for block in self.blocks_nonzero:

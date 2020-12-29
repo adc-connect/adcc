@@ -101,8 +101,7 @@ def diffdm_cvs_adc2(mp, amplitude, intermediates):
     u1, u2 = amplitude.ph, amplitude.pphh
 
     t2 = mp.t2(b.oovv)
-    p0_ov = intermediates.cvs_p0_ov
-    p0_vv = intermediates.cvs_p0_vv
+    p0 = intermediates.cvs_p0
     p1_vv = dm.vv.evaluate()  # ADC(1) diffdm
 
     # Zeroth order doubles contributions
@@ -116,14 +115,14 @@ def diffdm_cvs_adc2(mp, amplitude, intermediates):
     dm.oo = p2_oo + einsum("ab,ikac,jkbc->ij", p1_vv, t2, t2)
 
     dm.ov = p2_ov + (  # cvs_adc2_dp_ov
-        - einsum("ka,ab->kb", p0_ov, p1_vv)
+        - einsum("ka,ab->kb", p0.ov, p1_vv)
         - einsum("lkdb,dl->kb", t2, p2_vo)
         + 1 / sqrt(2) * einsum("ib,klad,liad->kb", u1, t2, u2)
     )
 
     dm.vv = p1_vv + p2_vv - 0.5 * (  # cvs_adc2_dp_vv
-        + einsum("cb,ac->ab", p1_vv, p0_vv)
-        + einsum("cb,ac->ab", p0_vv, p1_vv)
+        + einsum("cb,ac->ab", p1_vv, p0.vv)
+        + einsum("cb,ac->ab", p0.vv, p1_vv)
         + einsum("ijbc,ijad,cd->ab", t2, t2, p1_vv)
     )
 
