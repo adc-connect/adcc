@@ -128,37 +128,37 @@ class LazyMp:
         ret = OneParticleOperator(self.mospaces, is_symmetric=True)
         # NOTE: the following 3 blocks are equivalent to the cvs_p0 intermediates
         # defined at the end of this file
-        ret[b.oo] = -0.5 * einsum("ikab,jkab->ij", self.t2oo, self.t2oo)
-        ret[b.ov] = -0.5 * (
+        ret.oo = -0.5 * einsum("ikab,jkab->ij", self.t2oo, self.t2oo)
+        ret.ov = -0.5 * (
             + einsum("ijbc,jabc->ia", self.t2oo, hf.ovvv)
             + einsum("jkib,jkab->ia", hf.ooov, self.t2oo)
         ) / self.df(b.ov)
-        ret[b.vv] = 0.5 * einsum("ijac,ijbc->ab", self.t2oo, self.t2oo)
+        ret.vv = 0.5 * einsum("ijac,ijbc->ab", self.t2oo, self.t2oo)
 
         if self.has_core_occupied_space:
             # additional terms to "revert" CVS for ground state density
-            ret[b.oo] += -0.5 * einsum("iLab,jLab->ij", self.t2oc, self.t2oc)
-            ret[b.ov] += -0.5 * (
+            ret.oo += -0.5 * einsum("iLab,jLab->ij", self.t2oc, self.t2oc)
+            ret.ov += -0.5 * (
                 + einsum("jMib,jMab->ia", hf.ocov, self.t2oc)
                 + einsum("iLbc,Labc->ia", self.t2oc, hf.cvvv)
                 + einsum("kLib,kLab->ia", hf.ocov, self.t2oc)
                 + einsum("iMLb,LMab->ia", hf.occv, self.t2cc)
                 - einsum("iLMb,LMab->ia", hf.occv, self.t2cc)
             ) / self.df(b.ov)
-            ret[b.vv] += (
+            ret.vv += (
                 + 0.5 * einsum("IJac,IJbc->ab", self.t2cc, self.t2cc)
                 + 1.0 * einsum("kJac,kJbc->ab", self.t2oc, self.t2oc)
             )
             # compute extra CVS blocks
-            ret[b.cc] = -0.5 * (
+            ret.cc = -0.5 * (
                 + einsum("kIab,kJab->IJ", self.t2oc, self.t2oc)
                 + einsum('LIab,LJab->IJ', self.t2cc, self.t2cc)
             )
-            ret[b.co] = -0.5 * (
+            ret.co = -0.5 * (
                 + einsum("kIab,kjab->Ij", self.t2oc, self.t2oo)
                 + einsum("ILab,jLab->Ij", self.t2cc, self.t2oc)
             )
-            ret[b.cv] = -0.5 * (
+            ret.cv = -0.5 * (
                 - einsum("jIbc,jabc->Ia", self.t2oc, hf.ovvv)
                 + einsum("jkIb,jkab->Ia", hf.oocv, self.t2oo)
                 + einsum("jMIb,jMab->Ia", hf.occv, self.t2oc)
@@ -276,22 +276,14 @@ class LazyMp:
 
 
 #
-# Register cvs_p0 intermedites
+# Register cvs_p0 intermediate
 #
 @register_as_intermediate
-def cvs_p0_oo(hf, mp, intermediates):
+def cvs_p0(hf, mp, intermediates):
     # NOTE: equal to mp2_diffdm if CVS applied for the density
-    return -0.5 * einsum("ikab,jkab->ij", mp.t2oo, mp.t2oo)
-
-
-@register_as_intermediate
-def cvs_p0_ov(hf, mp, intermediates):
-    # NOTE: equal to mp2_diffdm if CVS applied for the density
-    return -0.5 * (+ einsum("ijbc,jabc->ia", mp.t2oo, hf.ovvv)
-                   + einsum("jkib,jkab->ia", hf.ooov, mp.t2oo)) / mp.df(b.ov)
-
-
-@register_as_intermediate
-def cvs_p0_vv(hf, mp, intermediates):
-    # NOTE: equal to mp2_diffdm if CVS applied for the density
-    return 0.5 * einsum("ijac,ijbc->ab", mp.t2oo, mp.t2oo)
+    ret = OneParticleOperator(hf.mospaces, is_symmetric=True)
+    ret.oo = -0.5 * einsum("ikab,jkab->ij", mp.t2oo, mp.t2oo)
+    ret.ov = -0.5 * (+ einsum("ijbc,jabc->ia", mp.t2oo, hf.ovvv)
+                     + einsum("jkib,jkab->ia", hf.ooov, mp.t2oo)) / mp.df(b.ov)
+    ret.vv = 0.5 * einsum("ijac,ijbc->ab", mp.t2oo, mp.t2oo)
+    return ret

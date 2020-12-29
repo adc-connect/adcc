@@ -37,8 +37,8 @@ def s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates):
     ur1 = amplitude_r.ph
 
     dm = OneParticleOperator(mp, is_symmetric=False)
-    dm[b.oo] = -einsum('ja,ia->ij', ul1, ur1)
-    dm[b.vv] = einsum('ia,ib->ab', ul1, ur1)
+    dm.oo = -einsum('ja,ia->ij', ul1, ur1)
+    dm.vv = einsum('ia,ib->ab', ul1, ur1)
     return dm
 
 
@@ -50,30 +50,28 @@ def s2s_tdm_adc2(mp, amplitude_l, amplitude_r, intermediates):
     ur1, ur2 = amplitude_r.ph, amplitude_r.pphh
 
     t2 = mp.t2(b.oovv)
-    p0_ov = mp.mp2_diffdm[b.ov]
-    p0_oo = mp.mp2_diffdm[b.oo]
-    p0_vv = mp.mp2_diffdm[b.vv]
-    p1_oo = dm[b.oo].evaluate()  # ADC(1) tdm
-    p1_vv = dm[b.vv].evaluate()  # ADC(1) tdm
+    p0 = mp.mp2_diffdm
+    p1_oo = dm.oo.evaluate()  # ADC(1) tdm
+    p1_vv = dm.vv.evaluate()  # ADC(1) tdm
 
     # ADC(2) ISR intermediate (TODO Move to intermediates)
     rul1 = einsum('ijab,jb->ia', t2, ul1).evaluate()
     rur1 = einsum('ijab,jb->ia', t2, ur1).evaluate()
 
-    dm[b.oo] = (
+    dm.oo = (
         p1_oo - 2.0 * einsum('ikab,jkab->ij', ur2, ul2)
-        + 0.5 * einsum('ik,kj->ij', p1_oo, p0_oo)
-        + 0.5 * einsum('ik,kj->ij', p0_oo, p1_oo)
+        + 0.5 * einsum('ik,kj->ij', p1_oo, p0.oo)
+        + 0.5 * einsum('ik,kj->ij', p0.oo, p1_oo)
         - 0.5 * einsum('ikcd,lk,jlcd->ij', t2, p1_oo, t2)
         + 1.0 * einsum('ikcd,jkcb,db->ij', t2, t2, p1_vv)
         - 0.5 * einsum('ia,jkac,kc->ij', ur1, t2, rul1)
         - 0.5 * einsum('ikac,kc,ja->ij', t2, rur1, ul1)
         - 1.0 * einsum('ia,ja->ij', rul1, rur1)
     )
-    dm[b.vv] = (
+    dm.vv = (
         p1_vv + 2.0 * einsum('ijac,ijbc->ab', ul2, ur2)
-        - 0.5 * einsum("ac,cb->ab", p1_vv, p0_vv)
-        - 0.5 * einsum("ac,cb->ab", p0_vv, p1_vv)
+        - 0.5 * einsum("ac,cb->ab", p1_vv, p0.vv)
+        - 0.5 * einsum("ac,cb->ab", p0.vv, p1_vv)
         - 0.5 * einsum("klbc,klad,cd->ab", t2, t2, p1_vv)
         + 1.0 * einsum("klbc,jk,jlac->ab", t2, p1_oo, t2)
         + 0.5 * einsum("ikac,kc,ib->ab", t2, rul1, ur1)
@@ -84,19 +82,19 @@ def s2s_tdm_adc2(mp, amplitude_l, amplitude_r, intermediates):
     p1_ov = -2.0 * einsum("jb,ijab->ia", ul1, ur2).evaluate()
     p1_vo = -2.0 * einsum("ijab,jb->ai", ul2, ur1).evaluate()
 
-    dm[b.ov] = (
+    dm.ov = (
         p1_ov
         - einsum("ijab,bj->ia", t2, p1_vo)
-        - einsum("ib,ba->ia", p0_ov, p1_vv)
-        + einsum("ij,ja->ia", p1_oo, p0_ov)
+        - einsum("ib,ba->ia", p0.ov, p1_vv)
+        + einsum("ij,ja->ia", p1_oo, p0.ov)
         - einsum("ib,klca,klcb->ia", ur1, t2, ul2)
         - einsum("ikcd,jkcd,ja->ia", t2, ul2, ur1)
     )
-    dm[b.vo] = (
+    dm.vo = (
         p1_vo
         - einsum("ijab,jb->ai", t2, p1_ov)
-        - einsum("ib,ab->ai", p0_ov, p1_vv)
-        + einsum("ji,ja->ai", p1_oo, p0_ov)
+        - einsum("ib,ab->ai", p0.ov, p1_vv)
+        + einsum("ji,ja->ai", p1_oo, p0.ov)
         - einsum("ib,klca,klcb->ai", ul1, t2, ur2)
         - einsum("ikcd,jkcd,ja->ai", t2, ur2, ul1)
     )

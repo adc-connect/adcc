@@ -31,11 +31,11 @@ from adcc.AmplitudeVector import AmplitudeVector
 
 
 def mtm_adc0(mp, dipop, intermediates):
-    return AmplitudeVector(ph=dipop[b.ov])
+    return AmplitudeVector(ph=dipop.ov)
 
 
 def mtm_adc1(mp, dipop, intermediates):
-    f1 = dipop[b.ov] - einsum("ijab,jb->ia", mp.t2(b.oovv), dipop[b.ov])
+    f1 = dipop.ov - einsum("ijab,jb->ia", mp.t2(b.oovv), dipop.ov)
     return AmplitudeVector(ph=f1)
 
 
@@ -44,33 +44,33 @@ def mtm_adc2(mp, dipop, intermediates):
     p0 = mp.mp2_diffdm
 
     f1 = (
-        + dipop[b.ov]
+        + dipop.ov
         - einsum("ijab,jb->ia", t2,
-                 + dipop[b.ov] - 0.5 * einsum("jkbc,kc->jb", t2, dipop[b.ov]))
-        + 0.5 * einsum("ij,ja->ia", p0[b.oo], dipop[b.ov])
-        - 0.5 * einsum("ib,ab->ia", dipop[b.ov], p0[b.vv])
-        + einsum("ib,ab->ia", p0[b.ov], dipop[b.vv])
-        - einsum("ij,ja->ia", dipop[b.oo], p0[b.ov])
-        - einsum("ijab,jb->ia", mp.td2(b.oovv), dipop[b.ov])
+                 + dipop.ov - 0.5 * einsum("jkbc,kc->jb", t2, dipop.ov))
+        + 0.5 * einsum("ij,ja->ia", p0.oo, dipop.ov)
+        - 0.5 * einsum("ib,ab->ia", dipop.ov, p0.vv)
+        + einsum("ib,ab->ia", p0.ov, dipop.vv)
+        - einsum("ij,ja->ia", dipop.oo, p0.ov)
+        - einsum("ijab,jb->ia", mp.td2(b.oovv), dipop.ov)
     )
     f2 = (
-        + einsum("ijac,bc->ijab", t2, dipop[b.vv]).antisymmetrise(2, 3)
-        - einsum("ik,kjab->ijab", dipop[b.oo], t2).antisymmetrise(0, 1)
+        + einsum("ijac,bc->ijab", t2, dipop.vv).antisymmetrise(2, 3)
+        - einsum("ik,kjab->ijab", dipop.oo, t2).antisymmetrise(0, 1)
     )
     return AmplitudeVector(ph=f1, pphh=f2)
 
 
 def mtm_cvs_adc0(mp, dipop, intermediates):
-    return AmplitudeVector(ph=dipop[b.cv])
+    return AmplitudeVector(ph=dipop.cv)
 
 
 def mtm_cvs_adc2(mp, dipop, intermediates):
     f1 = (
-        + dipop[b.cv]
-        - einsum("Ib,ba->Ia", dipop[b.cv], intermediates.cvs_p0_vv)
-        - einsum("Ij,ja->Ia", dipop[b.co], intermediates.cvs_p0_ov)
+        + dipop.cv
+        - einsum("Ib,ba->Ia", dipop.cv, intermediates.cvs_p0.vv)
+        - einsum("Ij,ja->Ia", dipop.co, intermediates.cvs_p0.ov)
     )
-    f2 = (1 / sqrt(2)) * einsum("Ik,kjab->jIab", dipop[b.co], mp.t2(b.oovv))
+    f2 = (1 / sqrt(2)) * einsum("Ik,kjab->jIab", dipop.co, mp.t2(b.oovv))
     return AmplitudeVector(ph=f1, pphh=f2)
 
 

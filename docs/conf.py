@@ -229,3 +229,6 @@ libadcc_doc_dir = (
 )
 breathe_projects = {"libadcc": libadcc_doc_dir, }
 breathe_default_project = "libadcc"
+
+# Bibtex
+bibtex_bibfiles = ['ref.bib', 'pub.bib']

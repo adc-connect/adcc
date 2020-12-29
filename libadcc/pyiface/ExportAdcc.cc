@@ -31,7 +31,6 @@ void export_adc_pp(py::module& m);
 void export_HartreeFockProvider(py::module& m);
 void export_MoIndexTranslation(py::module& m);
 void export_MoSpaces(py::module& m);
-void export_OneParticleOperator(py::module& m);
 void export_ReferenceState(py::module& m);
 void export_Symmetry(py::module& m);
 void export_Tensor(py::module& m);
@@ -45,7 +44,6 @@ PYBIND11_MODULE(libadcc, m) {
   libadcc::export_HartreeFockProvider(m);
   libadcc::export_MoIndexTranslation(m);
   libadcc::export_MoSpaces(m);
-  libadcc::export_OneParticleOperator(m);
   libadcc::export_ReferenceState(m);
   libadcc::export_Symmetry(m);
   libadcc::export_Tensor(m);

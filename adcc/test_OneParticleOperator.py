@@ -30,16 +30,16 @@ from adcc import OneParticleOperator, zeros_like
 from adcc.OneParticleOperator import product_trace
 from adcc.testdata.cache import cache
 
-from pytest import approx
+from pytest import approx, raises
 
 
 class TestOneParticleOperator(unittest.TestCase):
     def test_to_ndarray(self):
         mp2diff = adcc.LazyMp(cache.refstate["h2o_sto3g"]).mp2_diffdm
 
-        dm_oo = mp2diff["o1o1"].to_ndarray()
-        dm_ov = mp2diff["o1v1"].to_ndarray()
-        dm_vv = mp2diff["v1v1"].to_ndarray()
+        dm_oo = mp2diff.oo.to_ndarray()
+        dm_ov = mp2diff.ov.to_ndarray()
+        dm_vv = mp2diff.vv.to_ndarray()
 
         dm_o = np.hstack((dm_oo, dm_ov))
         dm_v = np.hstack((dm_ov.transpose(), dm_vv))
@@ -51,15 +51,15 @@ class TestOneParticleOperator(unittest.TestCase):
     def test_to_ndarray_nosym(self):
         ref = cache.refstate["h2o_sto3g"]
         dm = OneParticleOperator(ref.mospaces, is_symmetric=False)
-        dm["o1o1"].set_random()
-        dm["o1v1"].set_random()
-        dm["v1o1"].set_random()
-        dm["v1v1"].set_random()
+        dm.oo.set_random()
+        dm.ov.set_random()
+        dm.vo.set_random()
+        dm.vv.set_random()
 
-        dm_oo = dm["o1o1"].to_ndarray()
-        dm_ov = dm["o1v1"].to_ndarray()
-        dm_vo = dm["v1o1"].to_ndarray()
-        dm_vv = dm["v1v1"].to_ndarray()
+        dm_oo = dm.oo.to_ndarray()
+        dm_ov = dm.ov.to_ndarray()
+        dm_vo = dm.vo.to_ndarray()
+        dm_vv = dm.vv.to_ndarray()
 
         dm_o = np.hstack((dm_oo, dm_ov))
         dm_v = np.hstack((dm_vo, dm_vv))
@@ -79,13 +79,13 @@ class TestOneParticleOperator(unittest.TestCase):
         dipx_ref = np.sum(mp2a * dipx_ao) + np.sum(mp2b * dipx_ao)
 
         oo = np.sum(
-            mp2diff_mo["o1o1"].to_ndarray() * dipx_mo["o1o1"].to_ndarray()
+            mp2diff_mo.oo.to_ndarray() * dipx_mo.oo.to_ndarray()
         )
         ov = 2.0 * np.sum(
-            mp2diff_mo["o1v1"].to_ndarray() * dipx_mo["o1v1"].to_ndarray()
+            mp2diff_mo.ov.to_ndarray() * dipx_mo.ov.to_ndarray()
         )
         vv = np.sum(
-            mp2diff_mo["v1v1"].to_ndarray() * dipx_mo["v1v1"].to_ndarray()
+            mp2diff_mo.vv.to_ndarray() * dipx_mo.vv.to_ndarray()
         )
         dipx_np = oo + ov + vv
 
@@ -98,11 +98,10 @@ class TestOneParticleOperator(unittest.TestCase):
         dipx_mo = ref.operators.electric_dipole[0]
         mp2diff_mo = adcc.LazyMp(ref).mp2_diffdm
         mp2diff_nosym = OneParticleOperator(ref.mospaces, is_symmetric=False)
-        mp2diff_nosym.set_block("o1o1", mp2diff_mo["o1o1"])
-        mp2diff_nosym.set_block("o1v1", mp2diff_mo["o1v1"])
-        mp2diff_nosym.set_block("v1v1", mp2diff_mo["v1v1"])
-        mp2diff_nosym.set_block("v1o1",
-                                zeros_like(mp2diff_mo["o1v1"].transpose()))
+        mp2diff_nosym.oo = mp2diff_mo.oo
+        mp2diff_nosym.ov = mp2diff_mo.ov
+        mp2diff_nosym.vv = mp2diff_mo.vv
+        mp2diff_nosym.vo = zeros_like(mp2diff_mo.ov.transpose())
         mp2diff_ao = mp2diff_nosym.to_ao_basis(ref)
 
         mp2a = mp2diff_ao[0].to_ndarray()
@@ -111,16 +110,16 @@ class TestOneParticleOperator(unittest.TestCase):
         dipx_ref = np.sum(mp2a * dipx_ao) + np.sum(mp2b * dipx_ao)
 
         oo = np.sum(
-            mp2diff_nosym["o1o1"].to_ndarray() * dipx_mo["o1o1"].to_ndarray()
+            mp2diff_nosym.oo.to_ndarray() * dipx_mo.oo.to_ndarray()
         )
         ov = np.sum(
-            mp2diff_nosym["o1v1"].to_ndarray() * dipx_mo["o1v1"].to_ndarray()
+            mp2diff_nosym.ov.to_ndarray() * dipx_mo.ov.to_ndarray()
         )
         vo = np.sum(
-            mp2diff_nosym["v1o1"].to_ndarray() * dipx_mo["o1v1"].to_ndarray().T
+            mp2diff_nosym.vo.to_ndarray() * dipx_mo.ov.to_ndarray().T
         )
         vv = np.sum(
-            mp2diff_nosym["v1v1"].to_ndarray() * dipx_mo["v1v1"].to_ndarray()
+            mp2diff_nosym.vv.to_ndarray() * dipx_mo.vv.to_ndarray()
         )
         dipx_np = oo + ov + vo + vv
 
@@ -135,17 +134,16 @@ class TestOneParticleOperator(unittest.TestCase):
         mp2diff_nosym = OneParticleOperator(ref.mospaces, is_symmetric=False)
         dipx_nosym = OneParticleOperator(ref.mospaces, is_symmetric=False)
 
-        mp2diff_nosym.set_block("o1o1", mp2diff_mo["o1o1"])
-        mp2diff_nosym.set_block("o1v1", mp2diff_mo["o1v1"])
-        mp2diff_nosym.set_block("v1v1", mp2diff_mo["v1v1"])
-        mp2diff_nosym.set_block("v1o1",
-                                zeros_like(mp2diff_mo["o1v1"].transpose()))
+        mp2diff_nosym.oo = mp2diff_mo.oo
+        mp2diff_nosym.ov = mp2diff_mo.ov
+        mp2diff_nosym.vv = mp2diff_mo.vv
+        mp2diff_nosym.vo = zeros_like(mp2diff_mo.ov.transpose())
         mp2diff_ao = mp2diff_nosym.to_ao_basis(ref)
 
-        dipx_nosym.set_block("o1o1", dipx_mo["o1o1"])
-        dipx_nosym.set_block("o1v1", dipx_mo["o1v1"])
-        dipx_nosym.set_block("v1v1", dipx_mo["v1v1"])
-        dipx_nosym.set_block("v1o1", zeros_like(dipx_mo["o1v1"].transpose()))
+        dipx_nosym.oo = dipx_mo.oo
+        dipx_nosym.ov = dipx_mo.ov
+        dipx_nosym.vv = dipx_mo.vv
+        dipx_nosym.vo = zeros_like(dipx_mo.ov.transpose())
         dipx_ao = dipx_nosym.to_ao_basis(ref)
 
         mp2a = mp2diff_ao[0].to_ndarray()
@@ -155,16 +153,16 @@ class TestOneParticleOperator(unittest.TestCase):
         dipx_ref = np.sum(mp2a * dipxa) + np.sum(mp2b * dipxb)
 
         oo = np.sum(
-            mp2diff_nosym["o1o1"].to_ndarray() * dipx_nosym["o1o1"].to_ndarray()
+            mp2diff_nosym.oo.to_ndarray() * dipx_nosym.oo.to_ndarray()
         )
         ov = np.sum(
-            mp2diff_nosym["o1v1"].to_ndarray() * dipx_nosym["o1v1"].to_ndarray()
+            mp2diff_nosym.ov.to_ndarray() * dipx_nosym.ov.to_ndarray()
         )
         vo = np.sum(
-            mp2diff_nosym["v1o1"].to_ndarray() * dipx_nosym["v1o1"].to_ndarray()
+            mp2diff_nosym.vo.to_ndarray() * dipx_nosym.vo.to_ndarray()
         )
         vv = np.sum(
-            mp2diff_nosym["v1v1"].to_ndarray() * dipx_nosym["v1v1"].to_ndarray()
+            mp2diff_nosym.vv.to_ndarray() * dipx_nosym.vv.to_ndarray()
         )
         dipx_np = oo + ov + vo + vv
 
@@ -195,13 +193,13 @@ class TestOneParticleOperator(unittest.TestCase):
     def test_add(self):
         ref = cache.refstate["h2o_sto3g"]
         a = OneParticleOperator(ref.mospaces, is_symmetric=False)
-        a["o1o1"].set_random()
-        a["v1o1"].set_random()
-        a["v1v1"].set_random()
+        a.oo.set_random()
+        a.vo.set_random()
+        a.vv.set_random()
 
         b = OneParticleOperator(ref.mospaces, is_symmetric=True)
-        b["o1o1"].set_random()
-        b["v1v1"].set_random()
+        b.oo.set_random()
+        b.vv.set_random()
 
         assert_array_almost_equal_nulp((a + b).to_ndarray(),
                                        a.to_ndarray() + b.to_ndarray())
@@ -211,15 +209,15 @@ class TestOneParticleOperator(unittest.TestCase):
     def test_add_nosym(self):
         ref = cache.refstate["h2o_sto3g"]
         a = OneParticleOperator(ref.mospaces, is_symmetric=True)
-        a["o1o1"].set_random()
-        a["o1v1"].set_random()
-        a["v1v1"].set_random()
+        a.oo.set_random()
+        a.ov.set_random()
+        a.vv.set_random()
 
         b = OneParticleOperator(ref.mospaces, is_symmetric=False)
-        b["o1o1"].set_random()
-        b["o1v1"].set_random()
-        b["v1o1"].set_random()
-        b["v1v1"].set_random()
+        b.oo.set_random()
+        b.ov.set_random()
+        b.vo.set_random()
+        b.vv.set_random()
 
         assert_array_almost_equal_nulp((a + b).to_ndarray(),
                                        a.to_ndarray() + b.to_ndarray())
@@ -229,15 +227,15 @@ class TestOneParticleOperator(unittest.TestCase):
     def test_iadd(self):
         ref = cache.refstate["h2o_sto3g"]
         a = OneParticleOperator(ref.mospaces, is_symmetric=False)
-        a["o1o1"].set_random()
-        a["v1o1"].set_random()
-        a["o1v1"].set_random()
-        a["v1v1"].set_random()
+        a.oo.set_random()
+        a.vo.set_random()
+        a.ov.set_random()
+        a.vv.set_random()
 
         b = OneParticleOperator(ref.mospaces, is_symmetric=False)
-        b["o1o1"].set_random()
-        b["o1v1"].set_random()
-        b["v1v1"].set_random()
+        b.oo.set_random()
+        b.ov.set_random()
+        b.vv.set_random()
 
         ref = a.to_ndarray() + b.to_ndarray()
         a += b
@@ -246,14 +244,14 @@ class TestOneParticleOperator(unittest.TestCase):
     def test_sub(self):
         ref = cache.refstate["h2o_sto3g"]
         a = OneParticleOperator(ref.mospaces, is_symmetric=True)
-        a["o1o1"].set_random()
-        a["o1v1"].set_random()
-        a["v1v1"].set_random()
+        a.oo.set_random()
+        a.ov.set_random()
+        a.vv.set_random()
 
         b = OneParticleOperator(ref.mospaces, is_symmetric=True)
-        b["o1o1"].set_random()
-        b["o1v1"].set_random()
-        b["v1v1"].set_random()
+        b.oo.set_random()
+        b.ov.set_random()
+        b.vv.set_random()
 
         assert_array_almost_equal_nulp((a - b).to_ndarray(),
                                        a.to_ndarray() - b.to_ndarray())
@@ -267,15 +265,15 @@ class TestOneParticleOperator(unittest.TestCase):
     def test_sub_nosym(self):
         ref = cache.refstate["h2o_sto3g"]
         a = OneParticleOperator(ref.mospaces, is_symmetric=True)
-        a["o1o1"].set_random()
-        a["o1v1"].set_random()
-        a["v1v1"].set_random()
+        a.oo.set_random()
+        a.ov.set_random()
+        a.vv.set_random()
 
         b = OneParticleOperator(ref.mospaces, is_symmetric=False)
-        b["o1o1"].set_random()
-        b["o1v1"].set_random()
-        b["v1o1"].set_random()
-        b["v1v1"].set_random()
+        b.oo.set_random()
+        b.ov.set_random()
+        b.vo.set_random()
+        b.vv.set_random()
 
         assert_array_almost_equal_nulp((a - b).to_ndarray(),
                                        a.to_ndarray() - b.to_ndarray())
@@ -289,12 +287,12 @@ class TestOneParticleOperator(unittest.TestCase):
     def test_isub(self):
         ref = cache.refstate["h2o_sto3g"]
         a = OneParticleOperator(ref.mospaces, is_symmetric=True)
-        a["o1o1"].set_random()
-        a["o1v1"].set_random()
+        a.oo.set_random()
+        a.ov.set_random()
 
         b = OneParticleOperator(ref.mospaces, is_symmetric=True)
-        b["o1v1"].set_random()
-        b["v1v1"].set_random()
+        b.ov.set_random()
+        b.vv.set_random()
 
         ref = a.to_ndarray() - b.to_ndarray()
         a -= b
@@ -303,28 +301,58 @@ class TestOneParticleOperator(unittest.TestCase):
     def test_mul(self):
         ref = cache.refstate["h2o_sto3g"]
         a = OneParticleOperator(ref.mospaces, is_symmetric=True)
-        a["o1o1"].set_random()
-        a["o1v1"].set_random()
+        a.oo.set_random()
+        a.ov.set_random()
         assert_array_almost_equal_nulp((1.2 * a).to_ndarray(),
                                        1.2 * a.to_ndarray())
 
     def test_rmul(self):
         ref = cache.refstate["h2o_sto3g"]
         a = OneParticleOperator(ref.mospaces, is_symmetric=False)
-        a["o1o1"].set_random()
-        a["v1o1"].set_random()
-        a["o1v1"].set_random()
+        a.oo.set_random()
+        a.vo.set_random()
+        a.ov.set_random()
         assert_array_almost_equal_nulp((a * -1.8).to_ndarray(),
                                        -1.8 * a.to_ndarray())
 
     def test_imul(self):
         ref = cache.refstate["h2o_sto3g"]
         a = OneParticleOperator(ref.mospaces, is_symmetric=False)
-        a["o1o1"].set_random()
-        a["v1o1"].set_random()
-        a["o1v1"].set_random()
-        a["v1v1"].set_random()
+        a.oo.set_random()
+        a.vo.set_random()
+        a.ov.set_random()
+        a.vv.set_random()
 
         ref = 12 * a.to_ndarray()
         a *= 12
         assert_array_almost_equal_nulp(a.to_ndarray(), ref)
+
+    def test_block_functions(self):
+        ref = cache.refstate["h2o_sto3g"]
+        a = OneParticleOperator(ref.mospaces, is_symmetric=True)
+        # no AO transformation with only zero blocks possible
+        with raises(ValueError):
+            a.to_ao_basis(ref)
+        a.oo.set_random()
+        a.ov.set_random()
+        a.vv.set_random()
+        assert a.size == a.shape[0] * a.shape[1]
+        assert not a.is_zero_block("v1o1")
+        a.set_zero_block("o1o1")
+        assert a.is_zero_block("o1o1")
+        # access to zero blocks forbidden via block function
+        with raises(KeyError):
+            a.block("o1o1")
+        # invalid block names
+        with raises(KeyError):
+            a["xyz"]
+        with raises(KeyError):
+            a["xyz"] = a.oo
+        with raises(KeyError):
+            a.set_zero_block("xyz")
+        # invalid tensor shape
+        with raises(ValueError):
+            a.oo = a.ov
+        # shortcuts
+        np.testing.assert_allclose(a.oo.to_ndarray(),
+                                   a["o1o1"].to_ndarray())
