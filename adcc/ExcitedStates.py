@@ -217,6 +217,12 @@ class ExcitedStates(ElectronicTransition):
         ret += other
         return ret
 
+    @property
+    @mark_excitation_property()
+    def total_energy(self):
+        # TODO: excitation_energy_uncorrected for PE-ADC with postSCF
+        return self.excitation_energy + self.ground_state.energy(self.method.level)
+
     @cached_property
     @mark_excitation_property(transform_to_ao=True)
     @timed_member_call(timer="_property_timer")

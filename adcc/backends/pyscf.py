@@ -29,8 +29,67 @@ from .EriBuilder import EriBuilder
 from ..exceptions import InvalidReference
 from ..ExcitedStates import EnergyCorrection
 
-from pyscf import ao2mo, gto, scf
+from pyscf import ao2mo, gto, scf, grad
 from pyscf.solvent import ddcosmo
+
+
+class PyScfGradientProvider:
+    def __init__(self, scfres):
+        self.scfres = scfres
+        self.mol = self.scfres.mol
+        self.backend = "pyscf"
+
+    def correlated_gradient(self, g1_ao, w_ao, g2_ao_1, g2_ao_2):
+        natoms = self.mol.natm
+        Gradient = {}
+        Gradient["N"] = np.zeros((natoms, 3))
+        Gradient["S"] = np.zeros((natoms, 3))
+        Gradient["T+V"] = np.zeros((natoms, 3))
+        Gradient["OEI"] = np.zeros((natoms, 3))
+        Gradient["TEI"] = np.zeros((natoms, 3))
+        Gradient["Total"] = np.zeros((natoms, 3))
+
+        # TODO: does RHF/UHF matter here?
+        gradient = grad.RHF(self.scfres)
+        hcore_deriv = gradient.hcore_generator()
+        Sx = -1.0 * self.mol.intor('int1e_ipovlp', aosym='s1')
+        ERIx = -1.0 * self.mol.intor('int2e_ip1', aosym='s1')
+
+        ao_slices = self.mol.aoslice_by_atom()
+        for ia in range(natoms):
+            # TODO: only contract/compute with specific slices
+            # of density matrices (especially TPDM)
+            # this requires a lot of work however...
+            k0, k1 = ao_slices[ia, 2:]
+
+            # derivative of the overlap matrix
+            Sx_a = np.zeros_like(Sx)
+            Sx_a[:, k0:k1] = Sx[:, k0:k1]
+            Sx_a += Sx_a.transpose(0, 2, 1)
+            Gradient["S"][ia] += np.einsum("xpq,pq->x", Sx_a, w_ao)
+
+            # derivative of the core Hamiltonian
+            Hx_a = hcore_deriv(ia)
+            Gradient["T+V"][ia] += np.einsum("xpq,pq->x", Hx_a, g1_ao)
+
+            # derivatives of the ERIs
+            ERIx_a = np.zeros_like(ERIx)
+            ERIx_a[:, k0:k1] = ERIx[:, k0:k1]
+            ERIx_a += (
+                + ERIx_a.transpose(0, 2, 1, 4, 3)
+                + ERIx_a.transpose(0, 3, 4, 1, 2)
+                + ERIx_a.transpose(0, 4, 3, 2, 1)
+            )
+            Gradient["TEI"][ia] += np.einsum(
+                "pqrs,xprqs->x", g2_ao_1, ERIx_a, optimize=True
+            )
+            Gradient["TEI"][ia] -= np.einsum(
+                "pqrs,xpsqr->x", g2_ao_2, ERIx_a, optimize=True
+            )
+        Gradient["N"] = gradient.grad_nuc()
+        Gradient["OEI"] = Gradient["T+V"] + Gradient["S"]
+        Gradient["Total"] = Gradient["OEI"] + Gradient["TEI"] + Gradient["N"]
+        return Gradient
 
 
 class PyScfOperatorIntegralProvider:
@@ -111,7 +170,7 @@ class PyScfEriBuilder(EriBuilder):
 
     def compute_mo_eri(self, blocks, spins):
         coeffs = tuple(self.coefficients[blocks[i] + spins[i]] for i in range(4))
-        # TODO Pyscf usse HDF5 internal to do the AO2MO here we read it all
+        # TODO Pyscf uses HDF5 internal to do the AO2MO here we read it all
         #      into memory. This wastes memory and could be avoided if temporary
         #      files were used instead. These could be deleted on the call
         #      to `flush_cache` automatically.
@@ -138,6 +197,7 @@ class PyScfHFProvider(HartreeFockProvider):
         self.operator_integral_provider = PyScfOperatorIntegralProvider(
             self.scfres
         )
+        self.gradient_provider = PyScfGradientProvider(self.scfres)
         if not self.restricted:
             assert self.scfres.mo_coeff[0].shape[1] == \
                 self.scfres.mo_coeff[1].shape[1]

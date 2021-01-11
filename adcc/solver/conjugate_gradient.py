@@ -143,7 +143,7 @@ def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
     state.solution = x0
     state.residual = evaluate(rhs - matrix @ state.solution)
     state.n_applies += 1
-    state.residual_norm = np.sqrt(state.residual @ state.residual)
+    state.residual_norm = np.sqrt(state.residual.dot(state.residual))
     pk = zk = Pinv @ state.residual
 
     if explicit_symmetrisation:
@@ -166,7 +166,7 @@ def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
 
         residual_old = state.residual
         state.residual = evaluate(residual_old - ak * Apk)
-        state.residual_norm = np.sqrt(state.residual @ state.residual)
+        state.residual_norm = np.sqrt(state.residual.dot(state.residual))
 
         callback(state, "next_iter")
         if is_converged(state):
