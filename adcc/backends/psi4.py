@@ -82,10 +82,8 @@ class Psi4GradientProvider:
 
         # Build TE contributions
         for atom in range(natoms):
-            string = "TEI" + str(atom)
             deriv2 = self.mints.ao_tei_deriv1(atom)
             for p in range(3):
-                map_key = string + cart[p]
                 deriv2_np = np.asarray(deriv2[p])
                 Gradient["TEI"][atom, p] += np.einsum(
                     'pqrs,prqs->', g2_ao_1, deriv2_np, optimize=True
