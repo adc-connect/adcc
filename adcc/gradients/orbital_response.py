@@ -123,12 +123,12 @@ class OrbitalResponseMatrix:
             - einsum("ibja,jb->ia", self.hf.ovov, l_ov)
         )
         # TODO: generalize once other solvent methods are available
-        if "pe_induction_elec" in self.hf.operators.density_dependent_operators:
+        if self.hf.environment == "pe":
             # PE contribution to the orbital Hessian
             ops = self.hf.operators
             dm = OneParticleOperator(self.hf, is_symmetric=True)
             dm.ov = l_ov
-            ret += ops.density_dependent_operators["pe_induction_elec"](dm).ov
+            ret += ops.pe_induction_elec(dm).ov
         return evaluate(ret)
 
 
