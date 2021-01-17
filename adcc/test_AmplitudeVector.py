@@ -38,6 +38,8 @@ class TestAmplitudeVector(unittest.TestCase):
         v, w = vectors
         with pytest.raises(AttributeError):
             v.pph
+        with pytest.raises(AttributeError):
+            v.pph = w.ph
         # setattr with expression
         z = adcc.zeros_like(v)
         z.ph = v.ph + w.ph
