@@ -46,6 +46,11 @@ class AmplitudeVector(dict):
             return self.__getitem__(key)
         raise AttributeError
 
+    def __setattr__(self, key, item):
+        if self.__contains__(key):
+            return self.__setitem__(key, item)
+        raise AttributeError
+
     @property
     def blocks(self):
         warnings.warn("The blocks attribute will change behaviour in 0.16.0.")
@@ -94,7 +99,7 @@ class AmplitudeVector(dict):
             else:
                 raise KeyError(index)
         else:
-            super().__setitem__(index, item)
+            return super().__setitem__(index, item)
 
     def copy(self):
         """Return a copy of the AmplitudeVector"""
