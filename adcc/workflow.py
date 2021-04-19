@@ -191,6 +191,10 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     if eigensolver is None:
         eigensolver = "davidson"
 
+    # add solvent coupling terms to matrix?
+    # matrix += pe_coupling_term
+    # solvent_scheme: scf, pt, ptlr, ptss, ...
+
     diagres = diagonalise_adcmatrix(
         matrix, n_states, kind, guesses=guesses, n_guesses=n_guesses,
         n_guesses_doubles=n_guesses_doubles, conv_tol=conv_tol, output=output,
@@ -198,6 +202,10 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     exstates = ExcitedStates(diagres)
     exstates.kind = kind
     exstates.spin_change = spin_change
+
+    # if solvent_scheme == "ptss":
+    #     ptss_correction = PerturbativeSolventCorrection("state-specific")
+    #     exstates += ptss_correction
     return exstates
 
 

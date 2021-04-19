@@ -34,6 +34,7 @@ from .testing import cached_backend_hf
 from ..testdata.cache import qchem_data, tmole_data
 from ..testdata.static_data import pe_potentials
 
+from ..AdcMatrix import AdcExtraTerm
 from ..adc_pp.solvent import block_ph_ph_0_pe
 
 try:
@@ -62,6 +63,9 @@ class TestPolarizableEmbedding(unittest.TestCase):
                                    pe_options=pe_options)
         state = adcc.run_adc(scfres, method=method,
                              n_singlets=5, conv_tol=1e-10)
+        corrs = state.reference_state.excitation_energy_corrections
+        state += corrs
+
         assert_allclose(
             qc_result["excitation_energy"],
             state.excitation_energy_uncorrected,
@@ -95,10 +99,14 @@ class TestPolarizableEmbedding(unittest.TestCase):
                                    pe_options=pe_options)
         assert_allclose(scfres.energy_scf, tm_result["energy_scf"], atol=1e-8)
 
-        matrix = adcc.AdcMatrix(
-            method, scfres,
-            additional_blocks={'ph_ph': block_ph_ph_0_pe}
-        )
+        matrix = adcc.AdcMatrix(method, scfres)
+        solvent = AdcExtraTerm(matrix, {'ph_ph': block_ph_ph_0_pe})
+
+        with pytest.raises(NotImplementedError):
+            solvent += matrix
+
+        matrix += solvent
+        assert len(matrix.extra_terms)
 
         assert_allclose(
             matrix.ground_state.energy(2),

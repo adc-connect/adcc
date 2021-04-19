@@ -38,6 +38,19 @@ from .ElectronicTransition import ElectronicTransition
 from .FormatDominantElements import FormatDominantElements
 
 
+class EnergyCorrection:
+    def __init__(self, name, function, description=None):
+        assert isinstance(name, str)
+        assert callable(function)
+        self.name = name
+        self.function = function
+        self.description = description
+
+    def __call__(self, excitation):
+        assert isinstance(excitation, Excitation)
+        return self.function(excitation)
+
+
 class FormatExcitationVector:
     def __init__(self, matrix, tolerance=0.01, index_format=None):
         """
@@ -127,8 +140,7 @@ class FormatExcitationVector:
 
 
 class ExcitedStates(ElectronicTransition):
-    def __init__(self, data, method=None, property_method=None,
-                 excitation_energy_corrections={}):
+    def __init__(self, data, method=None, property_method=None):
         """Construct an ExcitedStates class from some data obtained
         from an interative solver or another :class:`ExcitedStates`
         object.
@@ -153,33 +165,46 @@ class ExcitedStates(ElectronicTransition):
         property_method : str, optional
             Provide an explicit method for property calculations to
             override the automatic selection.
-        excitation_energy_corrections : dict, optional
-            Provide a dictionary of functions to compute corrections for
-            excitation energies, called for each excitation individually
         """
         super().__init__(data, method, property_method)
+        self._excitation_energy_corrections = []
+        # copy energy corrections if possible
+        # and avoids re-computation of the corrections
+        if hasattr(data, "_excitation_energy_corrections"):
+            for eec in data._excitation_energy_corrections:
+                correction_energy = getattr(data, eec.name)
+                setattr(self, eec.name, correction_energy)
+                self._excitation_energy += correction_energy
+                self._excitation_energy_corrections.append(eec)
 
-        if hasattr(data, "excitation_energy_corrections"):
-            merged = data.excitation_energy_corrections.copy()
-            merged.update(excitation_energy_corrections)
-            excitation_energy_corrections = merged
+    def __add_energy_correction(self, correction):
+        assert isinstance(correction, EnergyCorrection)
+        if hasattr(self, correction.name):
+            raise ValueError("ExcitedStates already has a correction"
+                             f" with the name '{correction.name}'")
+        correction_energy = np.array([correction(exci)
+                                      for exci in self.excitations])
+        setattr(self, correction.name, correction_energy)
+        self._excitation_energy += correction_energy
+        self._excitation_energy_corrections.append(correction)
 
-        if hasattr(self.reference_state, "excitation_energy_corrections"):
-            merged = self.reference_state.excitation_energy_corrections.copy()
-            merged.update(excitation_energy_corrections)
-            excitation_energy_corrections = merged
+    def __iadd__(self, other):
+        if isinstance(other, EnergyCorrection):
+            self.__add_energy_correction(other)
+        elif isinstance(other, list):
+            for k in other:
+                assert isinstance(k, EnergyCorrection)
+                self.__add_energy_correction(k)
+        else:
+            raise TypeError("Can only add EnergyCorrection (or list"
+                            " of EnergyCorrection) to"
+                            f" ExcitedState, not '{type(other)}'")
+        return self
 
-        self.excitation_energy_corrections = excitation_energy_corrections
-        for key in self.excitation_energy_corrections:
-            corr_function = self.excitation_energy_corrections[key]
-            if not callable(corr_function):
-                raise TypeError("Elements in excitation_energy_corrections "
-                                "must be callable.")
-            # call the function for exc. energy correction
-            correction = np.array([corr_function(exci)
-                                   for exci in self.excitations])
-            setattr(self, key, correction)
-            self._excitation_energy += correction
+    def __add__(self, other):
+        ret = ExcitedStates(self, self.method, self.property_method)
+        ret += other
+        return ret
 
     @cached_property
     @mark_excitation_property(transform_to_ao=True)
@@ -338,6 +363,16 @@ class ExcitedStates(ElectronicTransition):
             text += body.format(i=i, ene=self.excitation_energy[i],
                                 ev=self.excitation_energy[i] * eV, **fields)
         text += separator + "\n"
+        if len(self._excitation_energy_corrections):
+            head_corr = "|  excitation energy corrections included:"
+            text += head_corr
+            nspace = len(separator) - len(head_corr) - 1
+            text += nspace * " " + "|\n"
+            maxlen = len(separator) - 8
+            for eec in self._excitation_energy_corrections:
+                label = f"|    - {eec.name:{maxlen}.{maxlen}}|\n"
+                text += label
+            text += separator + "\n"
         return text
 
     def _repr_pretty_(self, pp, cycle):
@@ -398,7 +433,7 @@ class ExcitedStates(ElectronicTransition):
         Atomic units are used for all values.
         """
         propkeys = self.excitation_property_keys
-        propkeys.extend(self.excitation_energy_corrections.keys())
+        propkeys.extend([k.name for k in self._excitation_energy_corrections])
         data = {
             "excitation": np.arange(0, self.size, dtype=int),
             "kind": np.tile(self.kind, self.size)

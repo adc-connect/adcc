@@ -32,6 +32,48 @@ from .Intermediates import Intermediates
 from .AmplitudeVector import AmplitudeVector
 
 
+class AdcExtraTerm:
+    # NOTE: currently requires the matrix
+    # to allow for block construction with the same
+    # interface as the usual adc_pp, i.e.,
+    # reference_state, ground_state, intermediates
+    def __init__(self, matrix, blocks):
+        """Initialise an AdcExtraTerm.
+        This class can be used to add customs terms
+        to an existing :py:class:`AdcMatrix`
+
+        Parameters
+        ----------
+        matrix : AdcMatrix
+            The matrix for which the extra term
+            should be created.
+        blocks : dict
+            A dictionary where the key labels the matrix block
+            and the item denotes a callable to construct
+            an :py:class:`AdcBlock`
+        """
+        self.ground_state = matrix.ground_state
+        self.reference_state = matrix.reference_state
+        self.intermediates = matrix.intermediates
+        self.blocks = {}
+        if not isinstance(blocks, dict):
+            raise TypeError("blocks needs to be a dict.")
+        for space in blocks:
+            block_fun = blocks[space]
+            if not callable(block_fun):
+                raise TypeError("Items in additional_blocks must be callable.")
+            block = block_fun(
+                self.reference_state, self.ground_state, self.intermediates
+            )
+            self.blocks[space] = block
+
+    def __iadd__(self, other):
+        # disable in-place addition getting accidentally
+        # short-circuited to AdcMatrix.__radd__
+        raise NotImplementedError("In-place addition not implemented "
+                                  " for AdcExtraTerm")
+
+
 class AdcMatrixlike:
     """
     Base class marker for all objects like ADC matrices.
@@ -50,8 +92,7 @@ class AdcMatrix(AdcMatrixlike):
         "adc3":  dict(ph_ph=3, ph_pphh=2,    pphh_ph=2,    pphh_pphh=1),     # noqa: E501
     }
 
-    def __init__(self, method, hf_or_mp, block_orders=None, intermediates=None,
-                 additional_blocks=None):
+    def __init__(self, method, hf_or_mp, block_orders=None, intermediates=None):
         """
         Initialise an ADC matrix.
 
@@ -85,6 +126,7 @@ class AdcMatrix(AdcMatrixlike):
         self.mospaces = hf_or_mp.reference_state.mospaces
         self.is_core_valence_separated = method.is_core_valence_separated
         self.ndim = 2
+        self.extra_terms = []
 
         self.intermediates = intermediates
         if self.intermediates is None:
@@ -113,34 +155,63 @@ class AdcMatrix(AdcMatrixlike):
         # Build the blocks and diagonals
         with self.timer.record("build"):
             variant = None
-            if method.is_core_valence_separated:
+            if self.is_core_valence_separated:
                 variant = "cvs"
             self.blocks_ph = {  # TODO Rename to self.block in 0.16.0
                 block: ppmatrix.block(self.ground_state, block.split("_"),
                                       order=order, intermediates=self.intermediates,
                                       variant=variant)
-                for block, order in block_orders.items() if order is not None
+                for block, order in self.block_orders.items() if order is not None
             }
-            if additional_blocks is not None:
-                if not isinstance(additional_blocks, dict):
-                    raise TypeError("additional_blocks needs to "
-                                    " be a dict.")
-                for space in additional_blocks:
-                    if space not in self.blocks_ph:
-                        raise ValueError("Can only add blocks"
-                                         " to existing matrix blocks.")
-                    block_fun = additional_blocks[space]
-                    if not callable(block_fun):
-                        raise TypeError("Items in additional_blocks "
-                                        "must be callable.")
-                    block = block_fun(
-                        self.reference_state, self.ground_state, self.intermediates
-                    )
-                    self.blocks_ph[space].add_block(block)
             self.__diagonal = sum(bl.diagonal for bl in self.blocks_ph.values()
                                   if bl.diagonal)
             self.__diagonal.evaluate()
             self.__init_space_data(self.__diagonal)
+
+    def __iadd__(self, other):
+        """In-place addition of an :py:class:`AdcExtraTerm`
+
+        Parameters
+        ----------
+        other : AdcExtraTerm
+            the extra term to be added
+        """
+        assert isinstance(other, AdcExtraTerm)
+        assert all(k in self.blocks_ph for k in other.blocks)
+        for sp in other.blocks:
+            ob = other.blocks[sp]
+            self.blocks_ph[sp].add_block(ob)
+        diag = sum(bl.diagonal for bl in other.blocks.values()
+                   if bl.diagonal)
+        # iadd does not work with numbers
+        self.__diagonal = self.__diagonal + diag
+        self.__diagonal.evaluate()
+        self.extra_terms.append(other)
+        return self
+
+    def __add__(self, other):
+        """Addition of an :py:class:`AdcExtraTerm`, creating
+        a copy of self and adding the term to the new matrix
+
+        Parameters
+        ----------
+        other : AdcExtraTerm
+            the extra term to be added
+
+        Returns
+        -------
+        AdcMatrix
+            a copy of the AdcMatrix with the extra term added
+        """
+        # NOTE: re-computes the (expensive) diagonal...
+        ret = AdcMatrix(self.method, self.ground_state,
+                        block_orders=self.block_orders,
+                        intermediates=self.intermediates)
+        ret += other
+        return ret
+
+    def __radd__(self, other):
+        return self.__add__(other)
 
     def __init_space_data(self, diagonal):
         """Update the cached data regarding the spaces of the ADC matrix"""

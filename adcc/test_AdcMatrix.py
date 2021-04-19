@@ -22,12 +22,14 @@
 ## ---------------------------------------------------------------------
 import adcc
 import unittest
+import pytest
 import itertools
 import numpy as np
 
 from numpy.testing import assert_allclose
 
-from adcc.AdcMatrix import AdcMatrixShifted
+from adcc.AdcMatrix import AdcMatrixShifted, AdcExtraTerm
+from adcc.adc_pp.matrix import AdcBlock
 from adcc.testdata.cache import cache
 
 from .misc import expand_test_templates
@@ -213,6 +215,66 @@ class TestAdcMatrixInterface(unittest.TestCase):
         refv = matrix.matvec(v)
         diffv = resv.ph - refv.ph
         assert diffv.dot(diffv) < 1e-12
+
+    def test_extra_term(self):
+        ground_state = adcc.LazyMp(cache.refstate["h2o_sto3g"])
+        matrix = adcc.AdcMatrix("adc2", ground_state)
+        shift = -0.3
+        shifted = AdcMatrixShifted(matrix, shift)
+        # TODO: need to do this to differentiate between
+        # diagonals for ph and pphh
+        # if we just pass numbers, i.e., shift
+        # we get 2*shift on the diagonal :(
+        ones = matrix.diagonal().ones_like()
+
+        with pytest.raises(TypeError):
+            AdcBlock(0, 0)
+        with pytest.raises(TypeError):
+            AdcBlock(lambda x: x, "fail")
+        with pytest.raises(TypeError):
+            abc = AdcBlock(lambda x: x, ones)
+            abc.add_block("fail")
+
+        with pytest.raises(TypeError):
+            AdcExtraTerm(matrix, "fail")
+        with pytest.raises(TypeError):
+            AdcExtraTerm(matrix, {"fail": "not_callable"})
+
+        def __shift_ph(hf, mp, intermediates):
+            def apply(invec):
+                return adcc.AmplitudeVector(ph=shift * invec.ph)
+            diag = adcc.AmplitudeVector(ph=shift * ones.ph)
+            return AdcBlock(apply, diag)
+
+        def __shift_pphh(hf, mp, intermediates):
+            def apply(invec):
+                return adcc.AmplitudeVector(pphh=shift * invec.pphh)
+            diag = adcc.AmplitudeVector(pphh=shift * ones.pphh)
+            return AdcBlock(apply, diag)
+        extra = AdcExtraTerm(
+            matrix, {'ph_ph': __shift_ph, 'pphh_pphh': __shift_pphh}
+        )
+        shifted_2 = matrix + extra
+        shifted_3 = extra + matrix
+        for manual in [shifted_2, shifted_3]:
+            assert_allclose(
+                shifted.diagonal().ph.to_ndarray(),
+                manual.diagonal().ph.to_ndarray(),
+                atol=1e-12
+            )
+            assert_allclose(
+                shifted.diagonal().pphh.to_ndarray(),
+                manual.diagonal().pphh.to_ndarray(),
+                atol=1e-12
+            )
+            vec = adcc.guess_zero(matrix)
+            vec.set_random()
+            ref = shifted @ vec
+            ret = manual @ vec
+            diff_s = ref.ph - ret.ph
+            diff_d = ref.pphh - ret.pphh
+            assert np.max(np.abs(diff_s.to_ndarray())) < 1e-12
+            assert np.max(np.abs(diff_d.to_ndarray())) < 1e-12
 
 
 @expand_test_templates(testcases)

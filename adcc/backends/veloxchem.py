@@ -32,6 +32,7 @@ import veloxchem as vlx
 
 from .EriBuilder import EriBuilder
 from ..exceptions import InvalidReference
+from ..ExcitedStates import EnergyCorrection
 
 from veloxchem.mpitask import MpiTask
 from veloxchem.veloxchemlib import (AngularMomentumIntegralsDriver,
@@ -130,12 +131,20 @@ class VeloxChemHFProvider(HartreeFockProvider):
 
     @property
     def excitation_energy_corrections(self):
-        ret = {}
+        ret = []
         if hasattr(self.scfdrv, "pe_drv"):
-            ret["pe_ptlr_correction"] = lambda view: \
-                2.0 * self.pe_energy(view.transition_dm_ao, elec_only=True)
-            ret["pe_ptss_correction"] = lambda view: \
-                self.pe_energy(view.state_diffdm_ao, elec_only=True)
+            ptlr = EnergyCorrection(
+                "pe_ptlr_correction",
+                lambda view: 2.0 * self.pe_energy(view.transition_dm_ao,
+                                                  elec_only=True)
+            )
+            ptss = EnergyCorrection(
+                "pe_ptss_correction",
+                lambda view: self.pe_energy(view.state_diffdm_ao,
+                                            elec_only=True)
+            )
+            ret.append(ptlr)
+            ret.append(ptss)
         return ret
 
     def get_backend(self):
