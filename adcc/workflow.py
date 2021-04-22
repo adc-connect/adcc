@@ -29,7 +29,7 @@ from . import solver
 from .guess import (guesses_any, guesses_singlet, guesses_spin_flip,
                     guesses_triplet)
 from .LazyMp import LazyMp
-from .AdcMatrix import AdcMatrix, AdcMatrixlike
+from .AdcMatrix import AdcMatrix, AdcMatrixlike, AdcExtraTerm
 from .AdcMethod import AdcMethod
 from .exceptions import InputError
 from .ExcitedStates import ExcitedStates
@@ -47,6 +47,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
             n_guesses_doubles=None, output=sys.stdout, core_orbitals=None,
             frozen_core=None, frozen_virtual=None, method=None,
             n_singlets=None, n_triplets=None, n_spin_flip=None,
+            solvent_scheme=None,
             **solverargs):
     """Run an ADC calculation.
 
@@ -191,9 +192,11 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     if eigensolver is None:
         eigensolver = "davidson"
 
-    # add solvent coupling terms to matrix?
-    # matrix += pe_coupling_term
-    # solvent_scheme: scf, pt, ptlr, ptss, ...
+    # Setup solvent coupling terms and energy corrections
+    solvent_matrix_terms, solvent_energy_corrections = \
+        setup_solvent(matrix, solvent_scheme)
+    # add terms to matrix
+    matrix += solvent_matrix_terms
 
     diagres = diagonalise_adcmatrix(
         matrix, n_states, kind, guesses=guesses, n_guesses=n_guesses,
@@ -203,9 +206,8 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     exstates.kind = kind
     exstates.spin_change = spin_change
 
-    # if solvent_scheme == "ptss":
-    #     ptss_correction = PerturbativeSolventCorrection("state-specific")
-    #     exstates += ptss_correction
+    # add corrections to excited states
+    exstates += solvent_energy_corrections
     return exstates
 
 
@@ -503,3 +505,85 @@ def setup_solver_printing(solmethod_name, matrix, kind, default_print,
         def inner_callback(state, identifier):
             default_print(state, identifier, output)
         return inner_callback
+
+
+def setup_solvent(matrix, solvent_scheme):
+    """
+    Setup solvent matrix terms and/or energy corrections.
+    Internal function called from run_adc.
+    """
+    # TODO: move someplace meaningful & reasonable...
+    valid_solvent_schemes = {
+        "hf": """
+            only couple via the 'solvated' orbitals of the HF reference
+            state, no additional matrix terms or perturbative corrections
+            are used automatically
+        """,
+        "ptss": """
+            perturbative state-specific (ptSS) correction, computed based on
+            the difference density between the ground and excited state
+        """,
+        "ptlr": """
+            perturbative linear-response (ptLR) correction, computed based on
+            the transition density between the ground and excited state
+        """,
+        # NOTE: could also be called 'lr'...
+        "postscf": """
+            iterative coupling to the solvent via a CIS-like coupling
+            density matrix, the term is added to the ADC matrix
+        """,
+    }
+    valid_scheme_names = list(valid_solvent_schemes.keys())
+
+    hf = matrix.reference_state
+    if hf.solvent and not solvent_scheme:
+        raise InputError(
+            "Solvent found in reference state, but no solvent_scheme"
+            " specified. Please select one or more of the following"
+            f" schemes: {valid_solvent_schemes.keys()}."
+        )
+    elif solvent_scheme and not hf.solvent:
+        raise InputError(
+            "solvent_scheme specified, but no solvent method"
+            " was found in reference state."
+        )
+    elif solvent_scheme is None and hf.solvent is None:
+        # nothing to do
+        return [], []
+    if not isinstance(solvent_scheme, list):
+        solvent_scheme = [solvent_scheme]
+    if any(scheme not in valid_solvent_schemes for scheme in solvent_scheme):
+        raise InputError("Invalid solvent_scheme given."
+                         f" Valid schemes are: {valid_scheme_names}.")
+    if "hf" in solvent_scheme:
+        if len(solvent_scheme) > 1:
+            raise InputError("hf solvent_scheme cannot be combined"
+                             " with other schemes.")
+        return [], []
+    if "postscf" in solvent_scheme and "ptlr" in solvent_scheme:
+        raise InputError("Cannot combine ptlr correction with iterative"
+                         " postscf linear response procedure.")
+
+    extra_matrix_terms = []
+    energy_corrections = []
+
+    pt_schemes = [pt for pt in ["ptss", "ptlr"] if pt in solvent_scheme]
+    for pt in pt_schemes:
+        hf_corr = hf.excitation_energy_corrections
+        eec_key = f"{hf.solvent}_{pt}_correction"
+        if eec_key not in hf_corr:
+            raise ValueError(f"{pt} correction requested, but could not find"
+                             f" the needed function {eec_key} in"
+                             f" reference state from backend {hf.backend}.")
+        energy_corrections.append(hf_corr[eec_key])
+    if "postscf" in solvent_scheme:
+        from adcc.adc_pp import solvent as solvent_mat_terms
+        block_key = f"block_ph_ph_0_{hf.solvent}"
+        if not hasattr(solvent_mat_terms, block_key):
+            raise NotImplementedError("Matrix term for postscf coupling"
+                                      f" with solvent {hf.solvent}"
+                                      " not implemented.")
+        block_fun = getattr(solvent_mat_terms, block_key)
+        extra_matrix_terms.append(AdcExtraTerm(matrix, {'ph_ph': block_fun}))
+
+    return extra_matrix_terms, energy_corrections

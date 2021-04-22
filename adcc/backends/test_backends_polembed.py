@@ -31,6 +31,7 @@ import pytest
 
 from ..misc import expand_test_templates
 from .testing import cached_backend_hf
+from ..exceptions import InputError
 from ..testdata.cache import qchem_data, tmole_data
 from ..testdata.static_data import pe_potentials
 
@@ -62,9 +63,8 @@ class TestPolarizableEmbedding(unittest.TestCase):
         scfres = cached_backend_hf(backend, "formaldehyde", basis,
                                    pe_options=pe_options)
         state = adcc.run_adc(scfres, method=method,
-                             n_singlets=5, conv_tol=1e-10)
-        corrs = state.reference_state.excitation_energy_corrections
-        state += corrs
+                             n_singlets=5, conv_tol=1e-10,
+                             solvent_scheme=["ptlr", "ptss"])
 
         assert_allclose(
             qc_result["excitation_energy"],
@@ -105,6 +105,7 @@ class TestPolarizableEmbedding(unittest.TestCase):
         with pytest.raises(NotImplementedError):
             solvent += matrix
 
+        # manually add the coupling term
         matrix += solvent
         assert len(matrix.extra_terms)
 
@@ -113,7 +114,25 @@ class TestPolarizableEmbedding(unittest.TestCase):
             tm_result["energy_mp2"],
             atol=1e-8
         )
-        state = adcc.run_adc(matrix, n_singlets=5, conv_tol=1e-7)
+        state = adcc.run_adc(matrix, n_singlets=5, conv_tol=1e-7,
+                             solvent_scheme="hf")
+        assert_allclose(
+            state.excitation_energy_uncorrected,
+            tm_result["excitation_energy"],
+            atol=1e-6
+        )
+
+        # invalid combination
+        with pytest.raises(InputError):
+            adcc.run_adc(scfres, method=method, n_singlets=5,
+                         solvent_scheme=["postscf", "ptlr"])
+        # no scheme specified
+        with pytest.raises(InputError):
+            adcc.run_adc(scfres, method=method, n_singlets=5)
+
+        # automatically add coupling term
+        state = adcc.run_adc(scfres, method=method, n_singlets=5,
+                             conv_tol=1e-7, solvent_scheme="postscf")
         assert_allclose(
             state.excitation_energy_uncorrected,
             tm_result["excitation_energy"],

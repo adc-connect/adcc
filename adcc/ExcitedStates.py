@@ -193,8 +193,7 @@ class ExcitedStates(ElectronicTransition):
             self.__add_energy_correction(other)
         elif isinstance(other, list):
             for k in other:
-                assert isinstance(k, EnergyCorrection)
-                self.__add_energy_correction(k)
+                self += k
         else:
             raise TypeError("Can only add EnergyCorrection (or list"
                             " of EnergyCorrection) to"

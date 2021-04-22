@@ -29,10 +29,7 @@ mol = psi4.geometry("""
     no_com
     """)
 
-# set the number of cores equal to the auto-determined value from
-# the adcc ThreadPool
 psi4.core.set_num_threads(4)
-# psi4.core.be_quiet()
 psi4.set_options({'basis': "sto-3g",
                   'scf_type': 'pk',
                   'pe': 'true',
@@ -42,5 +39,6 @@ psi4.set_module_options("pe", {"potfile": "pna_6w.pot"})
 scf_e, wfn = psi4.energy('SCF', return_wfn=True)
 
 # Run an adc2 calculation:
-state = adcc.adc2(wfn, n_singlets=5, conv_tol=1e-8)
-print(state.pe_ptss_energy_correction)
+state = adcc.adc2(wfn, n_singlets=5, conv_tol=1e-8,
+                  solvent_scheme=['ptss', 'ptlr'])
+print(state.describe())

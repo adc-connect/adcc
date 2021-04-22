@@ -176,8 +176,16 @@ class AdcMatrix(AdcMatrixlike):
         other : AdcExtraTerm
             the extra term to be added
         """
-        assert isinstance(other, AdcExtraTerm)
-        assert all(k in self.blocks_ph for k in other.blocks)
+        if isinstance(other, list):
+            for k in other:
+                self += k
+            return self
+        if not isinstance(other, AdcExtraTerm):
+            raise TypeError("Can only add AdcExtra term or"
+                            " lists thereof to AdcMatrix.")
+        if not all(k in self.blocks_ph for k in other.blocks):
+            raise ValueError("Can only add to blocks of"
+                             " AdcMatrix that already exist.")
         for sp in other.blocks:
             ob = other.blocks[sp]
             self.blocks_ph[sp].add_block(ob)

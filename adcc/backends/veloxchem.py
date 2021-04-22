@@ -131,7 +131,7 @@ class VeloxChemHFProvider(HartreeFockProvider):
 
     @property
     def excitation_energy_corrections(self):
-        ret = []
+        ret = {}
         if hasattr(self.scfdrv, "pe_drv"):
             ptlr = EnergyCorrection(
                 "pe_ptlr_correction",
@@ -143,8 +143,8 @@ class VeloxChemHFProvider(HartreeFockProvider):
                 lambda view: self.pe_energy(view.state_diffdm_ao,
                                             elec_only=True)
             )
-            ret.append(ptlr)
-            ret.append(ptss)
+            ret["pe_ptlr_correction"] = ptlr
+            ret["pe_ptss_correction"] = ptss
         return ret
 
     def get_backend(self):

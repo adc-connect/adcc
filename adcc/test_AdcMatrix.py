@@ -218,6 +218,9 @@ class TestAdcMatrixInterface(unittest.TestCase):
 
     def test_extra_term(self):
         ground_state = adcc.LazyMp(cache.refstate["h2o_sto3g"])
+        matrix_adc1 = adcc.AdcMatrix("adc1", ground_state)
+        with pytest.raises(TypeError):
+            matrix_adc1 += 42
         matrix = adcc.AdcMatrix("adc2", ground_state)
         shift = -0.3
         shifted = AdcMatrixShifted(matrix, shift)
@@ -254,6 +257,9 @@ class TestAdcMatrixInterface(unittest.TestCase):
         extra = AdcExtraTerm(
             matrix, {'ph_ph': __shift_ph, 'pphh_pphh': __shift_pphh}
         )
+        # cannot add to 'pphh_pphh' in ADC(1) matrix
+        with pytest.raises(ValueError):
+            matrix_adc1 += extra
         shifted_2 = matrix + extra
         shifted_3 = extra + matrix
         for manual in [shifted_2, shifted_3]:
