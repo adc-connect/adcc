@@ -39,10 +39,9 @@ namespace libadcc {
  */
 class AdcMemory {
  public:
-  /** Setup the class and directly call initialise with the default allocator */
-  AdcMemory(std::string pagefile_directory, size_t max_memory, size_t tbs_param = 16)
-        : AdcMemory{} {
-    initialise(pagefile_directory, max_memory, tbs_param);
+  /** Setup the class and directly call initialise with the standard allocator */
+  AdcMemory(std::string pagefile_directory, size_t max_block_size = 16) : AdcMemory{} {
+    initialise(pagefile_directory, max_block_size);
   }
 
   /** Setup the AdcMemory class using the std::allocator for memory management */
@@ -58,65 +57,50 @@ class AdcMemory {
   /** Return the allocator to which the class is initialised. */
   std::string allocator() const { return m_allocator; }
 
-  /** Return the max_memory parameter value to which the class was initialised.
-   *  \note This value is only a meaningful upper bound if
-   *  allocator() != "standard" */
-  size_t max_memory() const { return m_max_memory; }
-
   /** Return the pagefileprefix value
    *
    * \note This value is only meaningful if allocator() != "standard" */
   std::string pagefile_directory() const { return m_pagefile_directory; }
 
-  /** Return the tbs_param value */
-  size_t tbs_param() const { return m_tbs_param; }
-
   /** Get the contraction batch size, this is the number of
-   *  tensor blocks, which are processed in a batch in a tensor contraction. */
+   *  tensor elements, which are processed in a batch in a tensor contraction. */
   size_t contraction_batch_size() const;
 
   /** Set the contraction batch size */
   void set_contraction_batch_size(size_t bsize);
 
+  /** Get the maximal block size a tensor may have along each axis */
+  size_t max_block_size() const { return m_max_block_size; }
+
   /** Setup the environment for the memory management.
    *
    * \param pagefile_directory  File prefix for page files
-   * \param max_memory          The maximal memory adc makes use of (in bytes).
-   * \param tbs_param           The tensor block size parameter.
-   *                            This parameter roughly has the meaning of how many indices
-   *                            are handled together on operations. A good value seems to
-   *                            be 16.
-   * \param allocator   The allocator to be used. Valid values are "libxm", "libvmm",
-   *                    "standard" and "default", where "default" uses a default
-   *                    chosen from the first three.
+   * \param max_block_size      Maximal block size a tensor may have along each axis.
+   * \param allocator   The allocator to be used. Valid values are "libxm" or
+   *                    "standard" where "standard" is just the standard C++ allocator.
    *
-   * \note For some allocators \c pagefile_directory and \c max_memory are not supported
-   *       and thus ignored.
-   * \note "libxm" and "libvmm" are extra features, which are not available in a
-   *       default setup.
+   * \note For some allocators \c pagefile_directory is not supported and thus ignored.
+   * \note "libxm" is an extra features, which might not be available in a default setup.
    **/
-  void initialise(std::string pagefile_directory, size_t max_memory,
-                  size_t tbs_param = 16, std::string allocator = "default");
+  void initialise(std::string pagefile_directory, size_t max_block_size = 16,
+                  std::string allocator = "standard");
 
  protected:
   /** Shutdown the allocator, i.e. cleanup all memory currently held. */
   void shutdown();
 
  private:
+  /** Maximal size a tensor block may have along any axis. */
+  size_t m_max_block_size;
+
   /** The allocator this object is currently initialised to. */
   std::string m_allocator;
 
   /** Has the initialise function been called by the user */
   bool m_initialise_called;
 
-  /** Configured maximal memory in bytes */
-  size_t m_max_memory;
-
   /** Configured file prefix for pagefiles */
   std::string m_pagefile_directory;
-
-  /** Configured tensor block size parameter */
-  size_t m_tbs_param;
 };
 
 ///@}

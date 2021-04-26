@@ -29,34 +29,26 @@ import tempfile
 
 
 class MemoryPool(libadcc.AdcMemory):
-    def initialise(self, max_memory, tensor_block_size=16,
-                   pagefile_directory=None, allocator="default"):
+    def initialise(self, scratch_directory="/tmp", max_block_size=16,
+                   allocator="standard"):
         """Initialise the adcc memory management.
 
         Parameters
         ----------
-        max_memory : int
-            Estimate for the maximally employed memory. Note that this value
-            is only effective if the allocator parameter is "libxm". and not
-            for "default" or "standard".
+        scratch_directory : str, optional
+            Directory for storing temporary pagefiles. This should be a fast
+            storage location as tensor data will be mapped to asynchronously
+            to this directory for the "libxc" allocator.
 
-        tensor_block_size : int, optional
-            This parameter roughly has the meaning of how many indices are handled
-            together on operations. A good value is 16 for most nowaday CPU
-            cachelines.
-
-        pagefile_prefix : str, optional
-            Directory prefix for storing temporary cache files.
+        max_block_size : int, optional
+            The maximal size a tensor block may have along each axis.
 
         allocator : str, optional
-            The allocator to be used. Valid values are "libxm", "standard"
-            (libstc++ allocator) and "default", where "default" uses the
-            best-available default.
+            The allocator to be used. Valid values are "libxm" or "standard"
+            (libstc++ allocator).
         """
-        if not pagefile_directory:
-            pagefile_directory = tempfile.mkdtemp(prefix="adcc_", dir="/tmp")
-        super().initialise(pagefile_directory, max_memory, tensor_block_size,
-                           allocator)
+        pagefile_directory = tempfile.mkdtemp(prefix="adcc_", dir=scratch_directory)
+        super().initialise(pagefile_directory, max_block_size, allocator)
         atexit.register(MemoryPool.cleanup, self)
 
     def cleanup(self):
@@ -64,9 +56,15 @@ class MemoryPool(libadcc.AdcMemory):
             shutil.rmtree(self.pagefile_directory)
 
     @property
+    def scratch_directory(self):
+        return os.path.dirname(self.pagefile_directory)
+
+    @property
     def page_files(self):
         """The list of all page files."""
-        return glob.glob(os.path.join(self.pagefile_directory, "pagefile.*"))
+        globs = ["pagefile.*", "xmpagefile"]
+        globs = [os.path.join(self.pagefile_directory, pat) for pat in globs]
+        return [c for pat in globs for c in glob.glob(pat)]
 
     @property
     def total_size_page_files(self):

@@ -36,7 +36,7 @@ TEST_CASE("Test MoIndexTranslation", "[MoIndexTranslation]") {
   SECTION("Block size 16") {
     const HFSolutionMock& tested = hf_h2o;
     const size_t block_size      = 16;
-    adcmem_ptr->initialise("/tmp", 1000ul * 1000ul * 1000ul, block_size, "standard");
+    adcmem_ptr->initialise("/tmp", block_size, "standard");
     std::shared_ptr<MoSpaces> mospaces_ptr(new MoSpaces(tested, adcmem_ptr, {}, {}, {}));
 
     SECTION("Space o1o1") {
@@ -231,7 +231,7 @@ TEST_CASE("Test MoIndexTranslation", "[MoIndexTranslation]") {
   SECTION("Block size 4") {
     const HFSolutionMock& tested = hf_h2o;
     const size_t block_size      = 4;
-    adcmem_ptr->initialise("/tmp", 1000ul * 1000ul * 1000ul, block_size, "standard");
+    adcmem_ptr->initialise("/tmp", block_size, "standard");
     std::shared_ptr<MoSpaces> mospaces_ptr(new MoSpaces(tested, adcmem_ptr, {}, {}, {}));
 
     SECTION("Space o1o1") {
@@ -363,7 +363,7 @@ TEST_CASE("Test MoIndexTranslation", "[MoIndexTranslation]") {
   SECTION("Scattered CVS space") {
     const HFSolutionMock& tested = hf_h2o;
     const size_t block_size      = 16;
-    adcmem_ptr->initialise("/tmp", 1000ul * 1000ul * 1000ul, block_size, "standard");
+    adcmem_ptr->initialise("/tmp", block_size, "standard");
     std::shared_ptr<MoSpaces> mospaces_ptr(
           new MoSpaces(tested, adcmem_ptr, {3, 8}, {}, {}));
 

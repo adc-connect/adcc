@@ -118,10 +118,9 @@ Symmetry::Symmetry(std::shared_ptr<const MoSpaces> mospaces_ptr, const std::stri
                                 mospaces_ptr->map_block_start.at(ss)});
     } else {
       // ss is an extra axes
-      const size_t max_block_size = mospaces_ptr->adcmem_ptr()->tbs_param();
-      const size_t n_orbs_alpha   = itextra->second.first;
-      const size_t n_orbs_beta    = itextra->second.second;
-      const size_t n_orbs         = n_orbs_alpha + n_orbs_beta;
+      const size_t n_orbs_alpha = itextra->second.first;
+      const size_t n_orbs_beta  = itextra->second.second;
+      const size_t n_orbs       = n_orbs_alpha + n_orbs_beta;
 
       if (n_orbs_alpha == 0) {
         throw invalid_argument(
@@ -135,8 +134,8 @@ Symmetry::Symmetry(std::shared_ptr<const MoSpaces> mospaces_ptr, const std::stri
         splits_crude.push_back(n_orbs_alpha);
       }
 
-      const std::vector<size_t> blks =
-            construct_blocks(splits_crude, n_orbs, max_block_size);
+      const std::vector<size_t> blks = construct_blocks(
+            splits_crude, n_orbs, mospaces_ptr->adcmem_ptr()->max_block_size());
 
       m_axes.push_back(AxisInfo{ss, n_orbs_alpha, n_orbs_beta, blks});
     }

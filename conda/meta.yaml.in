@@ -10,10 +10,10 @@ requirements:
     - {{ compiler('c') }}
     - {{ compiler('cxx') }}
     - python {{ python }}
-    - libtensorlight
+    - libtensorlight >=3.0.1
   host:
     - python {{ python }}
-    - libtensorlight
+    - libtensorlight >=3.0.1
     - pybind11 >=2.6
     # Testing:
     - pytest
@@ -31,7 +31,7 @@ requirements:
     - pandas >=0.25.0
   run:
     - {{ pin_compatible('python', max_pin='x.x') }}
-    - libtensorlight
+    - libtensorlight >=3.0.1
     - numpy >=1.14
     - h5py >=2.9
     - scipy >=1.2

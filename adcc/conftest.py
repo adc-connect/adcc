@@ -21,7 +21,6 @@
 ##
 ## ---------------------------------------------------------------------
 import os
-
 import pytest
 
 from .testdata.cache import TestdataCache
@@ -61,6 +60,10 @@ def pytest_addoption(parser):
         "--skip-update", default=False, action="store_true",
         help="Skip updating testdata"
     )
+    parser.addoption(
+        "--allocator", default="standard", choices=["standard", "libxm"],
+        help="Allocator to use for the tests"
+    )
 
 
 def pytest_collection_modifyitems(config, items):
@@ -85,3 +88,9 @@ def pytest_collection(session):
 def pytest_runtestloop(session):
     if os.environ.get("CI", "false") == "true":
         setup_continuous_integration(session)
+    if session.config.option.allocator != "standard":
+        import adcc
+
+        allocator = session.config.option.allocator
+        adcc.memory_pool.initialise(allocator=allocator)
+        print(f"Using allocator: {allocator}")

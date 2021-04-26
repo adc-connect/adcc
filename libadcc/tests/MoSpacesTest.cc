@@ -31,7 +31,7 @@ TEST_CASE("Test MoSpaces", "[MoSpaces]") {
   SECTION("Block size 16") {
     const HFSolutionMock& tested = hf_h2o;
     const size_t block_size      = 16;
-    adcmem_ptr->initialise("/tmp", 1000ul * 1000ul * 1000ul, block_size, "standard");
+    adcmem_ptr->initialise("/tmp", block_size, "standard");
     MoSpaces mo(tested, adcmem_ptr, {}, {}, {});
 
     CHECK(mo.point_group == "C1");
@@ -81,7 +81,7 @@ TEST_CASE("Test MoSpaces", "[MoSpaces]") {
   SECTION("Block size 4") {
     const HFSolutionMock& tested = hf_h2o;
     const size_t block_size      = 4;
-    adcmem_ptr->initialise("/tmp", 1000ul * 1000ul * 1000ul, block_size, "standard");
+    adcmem_ptr->initialise("/tmp", block_size, "standard");
     MoSpaces mo(tested, adcmem_ptr, {}, {}, {});
 
     CHECK(mo.point_group == "C1");
@@ -125,7 +125,7 @@ TEST_CASE("Test MoSpaces", "[MoSpaces]") {
   SECTION("Block size 16, 1 core (lowest)") {
     const HFSolutionMock& tested = hf_h2o;
     const size_t block_size      = 16;
-    adcmem_ptr->initialise("/tmp", 1000ul * 1000ul * 1000ul, block_size, "standard");
+    adcmem_ptr->initialise("/tmp", block_size, "standard");
     MoSpaces mo(tested, adcmem_ptr, {0, 7}, {}, {});
 
     CHECK(mo.point_group == "C1");
@@ -175,7 +175,7 @@ TEST_CASE("Test MoSpaces", "[MoSpaces]") {
   SECTION("Block size 16, 1 core (scattered)") {
     const HFSolutionMock& tested = hf_h2o;
     const size_t block_size      = 16;
-    adcmem_ptr->initialise("/tmp", 1000ul * 1000ul * 1000ul, block_size, "standard");
+    adcmem_ptr->initialise("/tmp", block_size, "standard");
     MoSpaces mo(tested, adcmem_ptr, {3, 8}, {}, {});
 
     CHECK(mo.point_group == "C1");
@@ -225,7 +225,7 @@ TEST_CASE("Test MoSpaces", "[MoSpaces]") {
   SECTION("1 frozen virtual, highest") {
     const HFSolutionMock& tested = hf_h2o;
     const size_t block_size      = 16;
-    adcmem_ptr->initialise("/tmp", 1000ul * 1000ul * 1000ul, block_size, "standard");
+    adcmem_ptr->initialise("/tmp", block_size, "standard");
     MoSpaces mo(tested, adcmem_ptr, {}, {}, {6, 13});
 
     CHECK(mo.point_group == "C1");
@@ -275,7 +275,7 @@ TEST_CASE("Test MoSpaces", "[MoSpaces]") {
   SECTION("1 frozen virtual, scattered") {
     const HFSolutionMock& tested = hf_h2o;
     const size_t block_size      = 16;
-    adcmem_ptr->initialise("/tmp", 1000ul * 1000ul * 1000ul, block_size, "standard");
+    adcmem_ptr->initialise("/tmp", block_size, "standard");
     MoSpaces mo(tested, adcmem_ptr, {}, {}, {5, 11});
 
     CHECK(mo.point_group == "C1");
@@ -325,7 +325,7 @@ TEST_CASE("Test MoSpaces", "[MoSpaces]") {
   SECTION("Block size 16, 1 frozen core (lowest)") {
     const HFSolutionMock& tested = hf_h2o;
     const size_t block_size      = 16;
-    adcmem_ptr->initialise("/tmp", 1000ul * 1000ul * 1000ul, block_size, "standard");
+    adcmem_ptr->initialise("/tmp", block_size, "standard");
     MoSpaces mo(tested, adcmem_ptr, {}, {0, 7}, {});
 
     CHECK(mo.point_group == "C1");
@@ -375,7 +375,7 @@ TEST_CASE("Test MoSpaces", "[MoSpaces]") {
   SECTION("Block size 16, 1 frozen core (scattered)") {
     const HFSolutionMock& tested = hf_h2o;
     const size_t block_size      = 16;
-    adcmem_ptr->initialise("/tmp", 1000ul * 1000ul * 1000ul, block_size, "standard");
+    adcmem_ptr->initialise("/tmp", block_size, "standard");
     MoSpaces mo(tested, adcmem_ptr, {}, {6, 8}, {});
 
     CHECK(mo.point_group == "C1");
@@ -425,7 +425,7 @@ TEST_CASE("Test MoSpaces", "[MoSpaces]") {
   SECTION("Block size 16, 1 frozen core, 1 core, 1 frozen virtual (logical)") {
     const HFSolutionMock& tested = hf_h2o;
     const size_t block_size      = 16;
-    adcmem_ptr->initialise("/tmp", 1000ul * 1000ul * 1000ul, block_size, "standard");
+    adcmem_ptr->initialise("/tmp", block_size, "standard");
     MoSpaces mo(tested, adcmem_ptr, {1, 8}, {0, 7}, {6, 13});
 
     CHECK(mo.point_group == "C1");
@@ -487,7 +487,7 @@ TEST_CASE("Test MoSpaces", "[MoSpaces]") {
   SECTION("Block size 16, 1 frozen core, 1 core, 1 frozen virtual (scattered)") {
     const HFSolutionMock& tested = hf_h2o;
     const size_t block_size      = 16;
-    adcmem_ptr->initialise("/tmp", 1000ul * 1000ul * 1000ul, block_size, "standard");
+    adcmem_ptr->initialise("/tmp", block_size, "standard");
     //                               core   fzcore   fzvirt
     MoSpaces mo(tested, adcmem_ptr, {3, 9}, {1, 8}, {4, 10});
 

@@ -268,7 +268,7 @@ def assets_most_recent_release(project):
     url = f"https://api.github.com/repos/{project}/releases"
     with tempfile.TemporaryDirectory() as tmpdir:
         fn = tmpdir + "/releases.json"
-        for _ in range(3):
+        for _ in range(10):
             status = request_urllib(url, fn)
             if 200 <= status < 300:
                 break
@@ -352,6 +352,7 @@ def libadcc_extension():
         search_system=True,
         coverage=False,
         libtensor_autoinstall="~/.local",
+        libtensor_url=None,
     )
 
     if sys.platform == "darwin" and is_conda_build():
@@ -383,7 +384,7 @@ def libadcc_extension():
 
     # Keep track whether libtensor has been found
     found_libtensor = "tensorlight" in flags["libraries"]
-    lt_min_version = "2.9.9"
+    lt_min_version = "3.0.1"
 
     if not found_libtensor:
         if flags["search_system"]:  # Find libtensor on the OS using pkg-config
@@ -392,26 +393,30 @@ def libadcc_extension():
 
         # Try to download libtensor if not on the OS
         if (cflags is None or libs is None) and flags["libtensor_autoinstall"]:
-            assets = assets_most_recent_release("adc-connect/libtensor")
-            url = []
-            if sys.platform == "linux":
-                url = [asset for asset in assets if "-linux_x86_64" in asset]
-            elif sys.platform == "darwin":
-                url = [asset for asset in assets
-                       if "-macosx_" in asset and "_x86_64" in asset]
+            if flags["libtensor_url"]:
+                url = flags["libtensor_url"]
             else:
-                raise AssertionError("Should not get to download for "
-                                     "unspported platform.")
-            if len(url) != 1:
-                raise RuntimeError(
-                    "Could not find a libtensor version to download. "
-                    "Check your platform is supported and if in doubt see the "
-                    "adcc installation instructions "
-                    "(https://adc-connect.org/latest/installation.html)."
-                )
+                assets = assets_most_recent_release("adc-connect/libtensor")
+                url = []
+                if sys.platform == "linux":
+                    url = [asset for asset in assets if "-linux_x86_64" in asset]
+                elif sys.platform == "darwin":
+                    url = [asset for asset in assets
+                           if "-macosx_" in asset and "_x86_64" in asset]
+                else:
+                    raise AssertionError("Should not get to download for "
+                                         "unspported platform.")
+                if len(url) != 1:
+                    raise RuntimeError(
+                        "Could not find a libtensor version to download. "
+                        "Check your platform is supported and if in doubt see the "
+                        "adcc installation instructions "
+                        "(https://adc-connect.org/latest/installation.html)."
+                    )
+                url = url[0]
 
             destdir = os.path.expanduser(flags["libtensor_autoinstall"])
-            install_libtensor(url[0], destdir)
+            install_libtensor(url, destdir)
             os.environ['PKG_CONFIG_PATH'] += f":{destdir}/lib/pkgconfig"
             cflags, libs = search_with_pkg_config("libtensorlight", lt_min_version)
             assert cflags is not None and libs is not None
