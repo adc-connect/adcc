@@ -37,6 +37,6 @@ def block_ph_ph_0_pe(hf, mp, intermediates):
     def apply(ampl):
         tdm = OneParticleOperator(mp, is_symmetric=False)
         tdm.vo = ampl.ph.transpose()
-        vpe = op.density_dependent_operators["pe_induction_elec"](tdm)
+        vpe = op.pe_induction_elec(tdm)
         return AmplitudeVector(ph=vpe.ov)
     return AdcBlock(apply, 0)

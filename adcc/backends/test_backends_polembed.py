@@ -91,7 +91,7 @@ class TestPolarizableEmbedding(unittest.TestCase):
 
     def template_pe_coupling_formaldehyde(self, basis, method, backend):
         if method != "adc2":
-            pytest.skip("")
+            pytest.skip("Reference only exists for adc2.")
         basename = f"formaldehyde_{basis}_pe_{method}"
         tm_result = tmole_data[basename]
         pe_options = {"potfile": pe_potentials["fa_6w"]}
@@ -101,9 +101,6 @@ class TestPolarizableEmbedding(unittest.TestCase):
 
         matrix = adcc.AdcMatrix(method, scfres)
         solvent = AdcExtraTerm(matrix, {'ph_ph': block_ph_ph_0_pe})
-
-        with pytest.raises(NotImplementedError):
-            solvent += matrix
 
         # manually add the coupling term
         matrix += solvent

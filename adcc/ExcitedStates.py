@@ -39,12 +39,25 @@ from .FormatDominantElements import FormatDominantElements
 
 
 class EnergyCorrection:
-    def __init__(self, name, function, description=None):
-        assert isinstance(name, str)
-        assert callable(function)
+    def __init__(self, name, function):
+        """A helper class to represent excitation energy
+        corrections.
+
+        Parameters
+        ----------
+        name : str
+            descriptive name of the energy correction
+        function : callable
+            function that takes a :py:class:`Excitation`
+            as single argument and returns the energy
+            correction as a float
+        """
+        if not isinstance(name, str):
+            raise TypeError("name needs to be a string.")
+        if not callable(function):
+            raise TypeError("function needs to be callable.")
         self.name = name
         self.function = function
-        self.description = description
 
     def __call__(self, excitation):
         assert isinstance(excitation, Excitation)

@@ -67,12 +67,6 @@ class AdcExtraTerm:
             )
             self.blocks[space] = block
 
-    def __iadd__(self, other):
-        # disable in-place addition getting accidentally
-        # short-circuited to AdcMatrix.__radd__
-        raise NotImplementedError("In-place addition not implemented "
-                                  " for AdcExtraTerm")
-
 
 class AdcMatrixlike:
     """
@@ -157,13 +151,15 @@ class AdcMatrix(AdcMatrixlike):
             variant = None
             if self.is_core_valence_separated:
                 variant = "cvs"
-            self.blocks_ph = {  # TODO Rename to self.block in 0.16.0
+            blocks = {
                 block: ppmatrix.block(self.ground_state, block.split("_"),
                                       order=order, intermediates=self.intermediates,
                                       variant=variant)
                 for block, order in self.block_orders.items() if order is not None
             }
-            self.__diagonal = sum(bl.diagonal for bl in self.blocks_ph.values()
+            # TODO Rename to self.block in 0.16.0
+            self.blocks_ph = {bl: blocks[bl].apply for bl in blocks}
+            self.__diagonal = sum(bl.diagonal for bl in blocks.values()
                                   if bl.diagonal)
             self.__diagonal.evaluate()
             self.__init_space_data(self.__diagonal)
@@ -176,23 +172,22 @@ class AdcMatrix(AdcMatrixlike):
         other : AdcExtraTerm
             the extra term to be added
         """
-        if isinstance(other, list):
-            for k in other:
-                self += k
-            return self
         if not isinstance(other, AdcExtraTerm):
-            raise TypeError("Can only add AdcExtra term or"
-                            " lists thereof to AdcMatrix.")
+            return NotImplemented
         if not all(k in self.blocks_ph for k in other.blocks):
             raise ValueError("Can only add to blocks of"
                              " AdcMatrix that already exist.")
         for sp in other.blocks:
-            ob = other.blocks[sp]
-            self.blocks_ph[sp].add_block(ob)
-        diag = sum(bl.diagonal for bl in other.blocks.values()
-                   if bl.diagonal)
+            orig_app = self.blocks_ph[sp]
+            other_app = other.blocks[sp].apply
+
+            def patched_apply(ampl, original=orig_app, other=other_app):
+                return sum(app(ampl) for app in (original, other))
+            self.blocks_ph[sp] = patched_apply
+        other_diagonal = sum(bl.diagonal for bl in other.blocks.values()
+                             if bl.diagonal)
         # iadd does not work with numbers
-        self.__diagonal = self.__diagonal + diag
+        self.__diagonal = self.__diagonal + other_diagonal
         self.__diagonal.evaluate()
         self.extra_terms.append(other)
         return self
@@ -211,6 +206,8 @@ class AdcMatrix(AdcMatrixlike):
         AdcMatrix
             a copy of the AdcMatrix with the extra term added
         """
+        if not isinstance(other, AdcExtraTerm):
+            return NotImplemented
         # NOTE: re-computes the (expensive) diagonal...
         ret = AdcMatrix(self.method, self.ground_state,
                         block_orders=self.block_orders,
@@ -304,7 +301,7 @@ class AdcMatrix(AdcMatrixlike):
         with self.timer.record(f"apply/{block}"):
             outblock, inblock = block.split("_")
             ampl = AmplitudeVector(**{inblock: tensor})
-            ret = self.blocks_ph[block].apply(ampl)
+            ret = self.blocks_ph[block](ampl)
             return getattr(ret, outblock)
 
     @timed_member_call()
@@ -313,7 +310,7 @@ class AdcMatrix(AdcMatrixlike):
         Compute the matrix-vector product of the ADC matrix
         with an excitation amplitude and return the result.
         """
-        return sum(block.apply(v) for block in self.blocks_ph.values())
+        return sum(block(v) for block in self.blocks_ph.values())
 
     def rmatvec(self, v):
         # ADC matrix is symmetric

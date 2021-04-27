@@ -57,14 +57,14 @@ class PyScfOperatorIntegralProvider:
             )
 
     @property
-    def density_dependent_operators(self):
-        ret = {}
+    def pe_induction_elec(self):
         if hasattr(self.scfres, "with_solvent"):
             if isinstance(self.scfres.with_solvent, solvent.pol_embed.PolEmbed):
-                ret["pe_induction_elec"] = lambda dm: \
-                    self.scfres.with_solvent._exec_cppe(dm.to_ndarray(),
-                                                        elec_only=True)[1]
-        return ret
+                def pe_induction_elec_ao(dm):
+                    return self.scfres.with_solvent._exec_cppe(
+                        dm.to_ndarray(), elec_only=True
+                    )[1]
+                return pe_induction_elec_ao
 
 
 # TODO: refactor ERI builder to be more general

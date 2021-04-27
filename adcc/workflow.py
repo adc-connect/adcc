@@ -193,10 +193,11 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         eigensolver = "davidson"
 
     # Setup solvent coupling terms and energy corrections
-    solvent_matrix_terms, solvent_energy_corrections = \
-        setup_solvent(matrix, solvent_scheme)
+    ret = setup_solvent(matrix, solvent_scheme)
+    solvent_matrix_term, solvent_energy_corrections = ret
     # add terms to matrix
-    matrix += solvent_matrix_terms
+    if solvent_matrix_term:
+        matrix += solvent_matrix_term
 
     diagres = diagonalise_adcmatrix(
         matrix, n_states, kind, guesses=guesses, n_guesses=n_guesses,
@@ -564,7 +565,7 @@ def setup_solvent(matrix, solvent_scheme):
         raise InputError("Cannot combine ptlr correction with iterative"
                          " postscf linear response procedure.")
 
-    extra_matrix_terms = []
+    extra_matrix_term = None
     energy_corrections = []
 
     pt_schemes = [pt for pt in ["ptss", "ptlr"] if pt in solvent_scheme]
@@ -584,6 +585,6 @@ def setup_solvent(matrix, solvent_scheme):
                                       f" with solvent {hf.solvent}"
                                       " not implemented.")
         block_fun = getattr(solvent_mat_terms, block_key)
-        extra_matrix_terms.append(AdcExtraTerm(matrix, {'ph_ph': block_fun}))
+        extra_matrix_term = AdcExtraTerm(matrix, {'ph_ph': block_fun})
 
-    return extra_matrix_terms, energy_corrections
+    return extra_matrix_term, energy_corrections

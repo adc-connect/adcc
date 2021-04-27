@@ -231,14 +231,6 @@ class TestAdcMatrixInterface(unittest.TestCase):
         ones = matrix.diagonal().ones_like()
 
         with pytest.raises(TypeError):
-            AdcBlock(0, 0)
-        with pytest.raises(TypeError):
-            AdcBlock(lambda x: x, "fail")
-        with pytest.raises(TypeError):
-            abc = AdcBlock(lambda x: x, ones)
-            abc.add_block("fail")
-
-        with pytest.raises(TypeError):
             AdcExtraTerm(matrix, "fail")
         with pytest.raises(TypeError):
             AdcExtraTerm(matrix, {"fail": "not_callable"})
