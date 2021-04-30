@@ -86,7 +86,8 @@ class AdcMatrix(AdcMatrixlike):
         "adc3":  dict(ph_ph=3, ph_pphh=2,    pphh_ph=2,    pphh_pphh=1),     # noqa: E501
     }
 
-    def __init__(self, method, hf_or_mp, block_orders=None, intermediates=None):
+    def __init__(self, method, hf_or_mp, block_orders=None, intermediates=None,
+                 diagonal_precomputed=None):
         """
         Initialise an ADC matrix.
 
@@ -101,6 +102,8 @@ class AdcMatrix(AdcMatrixlike):
             If not set, defaults according to the selected ADC method are chosen.
         intermediates : adcc.Intermediates or NoneType
             Allows to pass intermediates to re-use to this class.
+        diagonal_precomputed: adcc.AmplitudeVector
+            Allows to pass a pre-computed diagonal, for internal use only.
         """
         if isinstance(hf_or_mp, (libadcc.ReferenceState,
                                  libadcc.HartreeFockSolution_i)):
@@ -159,9 +162,18 @@ class AdcMatrix(AdcMatrixlike):
             }
             # TODO Rename to self.block in 0.16.0
             self.blocks_ph = {bl: blocks[bl].apply for bl in blocks}
-            self.__diagonal = sum(bl.diagonal for bl in blocks.values()
-                                  if bl.diagonal)
-            self.__diagonal.evaluate()
+            if diagonal_precomputed:
+                if not isinstance(diagonal_precomputed, AmplitudeVector):
+                    raise TypeError("diagonal_precomputed needs to be"
+                                    " an AmplitudeVector.")
+                if diagonal_precomputed.needs_evaluation:
+                    raise ValueError("diagonal_precomputed must already"
+                                     " be evaluated.")
+                self.__diagonal = diagonal_precomputed
+            else:
+                self.__diagonal = sum(bl.diagonal for bl in blocks.values()
+                                      if bl.diagonal)
+                self.__diagonal.evaluate()
             self.__init_space_data(self.__diagonal)
 
     def __iadd__(self, other):
@@ -208,10 +220,10 @@ class AdcMatrix(AdcMatrixlike):
         """
         if not isinstance(other, AdcExtraTerm):
             return NotImplemented
-        # NOTE: re-computes the (expensive) diagonal...
         ret = AdcMatrix(self.method, self.ground_state,
                         block_orders=self.block_orders,
-                        intermediates=self.intermediates)
+                        intermediates=self.intermediates,
+                        diagonal_precomputed=self.diagonal())
         ret += other
         return ret
 

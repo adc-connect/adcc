@@ -36,7 +36,7 @@ from ..testdata.cache import qchem_data, tmole_data
 from ..testdata.static_data import pe_potentials
 
 from ..AdcMatrix import AdcExtraTerm
-from ..adc_pp.solvent import block_ph_ph_0_pe
+from ..adc_pp.environment import block_ph_ph_0_pe
 
 try:
     import cppe  # noqa: F401
@@ -64,7 +64,7 @@ class TestPolarizableEmbedding(unittest.TestCase):
                                    pe_options=pe_options)
         state = adcc.run_adc(scfres, method=method,
                              n_singlets=5, conv_tol=1e-10,
-                             solvent_scheme=["ptlr", "ptss"])
+                             environment=["ptlr", "ptss"])
 
         assert_allclose(
             qc_result["excitation_energy"],
@@ -89,7 +89,7 @@ class TestPolarizableEmbedding(unittest.TestCase):
             atol=1e-5
         )
 
-    def template_pe_coupling_formaldehyde(self, basis, method, backend):
+    def template_pe_linear_response_formaldehyde(self, basis, method, backend):
         if method != "adc2":
             pytest.skip("Reference only exists for adc2.")
         basename = f"formaldehyde_{basis}_pe_{method}"
@@ -112,7 +112,7 @@ class TestPolarizableEmbedding(unittest.TestCase):
             atol=1e-8
         )
         state = adcc.run_adc(matrix, n_singlets=5, conv_tol=1e-7,
-                             solvent_scheme="hf")
+                             environment=False)
         assert_allclose(
             state.excitation_energy_uncorrected,
             tm_result["excitation_energy"],
@@ -122,14 +122,14 @@ class TestPolarizableEmbedding(unittest.TestCase):
         # invalid combination
         with pytest.raises(InputError):
             adcc.run_adc(scfres, method=method, n_singlets=5,
-                         solvent_scheme=["postscf", "ptlr"])
+                         environment={"linear_response": True, "ptlr": True})
         # no scheme specified
         with pytest.raises(InputError):
             adcc.run_adc(scfres, method=method, n_singlets=5)
 
         # automatically add coupling term
         state = adcc.run_adc(scfres, method=method, n_singlets=5,
-                             conv_tol=1e-7, solvent_scheme="postscf")
+                             conv_tol=1e-7, environment="linear_response")
         assert_allclose(
             state.excitation_energy_uncorrected,
             tm_result["excitation_energy"],

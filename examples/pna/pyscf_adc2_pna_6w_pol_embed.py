@@ -38,13 +38,13 @@ scfres.kernel()
 
 # model the solvent through perturbative corrections
 state_pt = adcc.adc2(scfres, n_singlets=5, conv_tol=1e-5,
-                     solvent_scheme=['ptss', 'ptlr'])
+                     environment=['ptss', 'ptlr'])
 
-# now model the solvent through linear-response/postscf coupling
+# now model the solvent through linear-response coupling
 # in the ADC matrix, re-using the matrix from previous run.
 # This will modify state_pt.matrix
 state_lr = adcc.run_adc(state_pt.matrix, n_singlets=5, conv_tol=1e-5,
-                        solvent_scheme='postscf')
+                        environment='linear_response')
 
 print(state_pt.describe())
 print(state_lr.describe())

@@ -110,6 +110,10 @@ class AmplitudeVector(dict):
             t.evaluate()
         return self
 
+    @property
+    def needs_evaluation(self):
+        return any(t.needs_evaluation for k, t in self.items())
+
     def ones_like(self):
         """Return an empty AmplitudeVector of the same shape and symmetry"""
         return AmplitudeVector(**{k: t.ones_like() for k, t in self.items()})

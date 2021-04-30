@@ -222,6 +222,14 @@ class TestAdcMatrixInterface(unittest.TestCase):
         with pytest.raises(TypeError):
             matrix_adc1 += 42
         matrix = adcc.AdcMatrix("adc2", ground_state)
+
+        with pytest.raises(TypeError):
+            adcc.AdcMatrix("adc2", ground_state,
+                           diagonal_precomputed=42)
+        with pytest.raises(ValueError):
+            adcc.AdcMatrix("adc2", ground_state,
+                           diagonal_precomputed=matrix.diagonal() + 42)
+
         shift = -0.3
         shifted = AdcMatrixShifted(matrix, shift)
         # TODO: need to do this to differentiate between

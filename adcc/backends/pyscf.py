@@ -128,7 +128,7 @@ class PyScfHFProvider(HartreeFockProvider):
     @property
     def excitation_energy_corrections(self):
         ret = {}
-        if self.solvent == "pe":
+        if self.environment == "pe":
             ptlr = EnergyCorrection(
                 "pe_ptlr_correction",
                 lambda view: 2.0 * self.pe_energy(view.transition_dm_ao,
@@ -147,7 +147,7 @@ class PyScfHFProvider(HartreeFockProvider):
         return ret
 
     @property
-    def solvent(self):
+    def environment(self):
         ret = None
         if hasattr(self.scfres, "with_solvent"):
             if isinstance(self.scfres.with_solvent, solvent.pol_embed.PolEmbed):

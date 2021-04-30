@@ -47,8 +47,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
             n_guesses_doubles=None, output=sys.stdout, core_orbitals=None,
             frozen_core=None, frozen_virtual=None, method=None,
             n_singlets=None, n_triplets=None, n_spin_flip=None,
-            solvent_scheme=None,
-            **solverargs):
+            environment=None, **solverargs):
     """Run an ADC calculation.
 
     Main entry point to run an ADC calculation. The reference to build the ADC
@@ -192,12 +191,12 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     if eigensolver is None:
         eigensolver = "davidson"
 
-    # Setup solvent coupling terms and energy corrections
-    ret = setup_solvent(matrix, solvent_scheme)
-    solvent_matrix_term, solvent_energy_corrections = ret
+    # Setup environment coupling terms and energy corrections
+    ret = setup_environment(matrix, environment)
+    env_matrix_term, env_energy_corrections = ret
     # add terms to matrix
-    if solvent_matrix_term:
-        matrix += solvent_matrix_term
+    if env_matrix_term:
+        matrix += env_matrix_term
 
     diagres = diagonalise_adcmatrix(
         matrix, n_states, kind, guesses=guesses, n_guesses=n_guesses,
@@ -207,8 +206,8 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     exstates.kind = kind
     exstates.spin_change = spin_change
 
-    # add corrections to excited states
-    exstates += solvent_energy_corrections
+    # add environment corrections to excited states
+    exstates += env_energy_corrections
     return exstates
 
 
@@ -508,83 +507,91 @@ def setup_solver_printing(solmethod_name, matrix, kind, default_print,
         return inner_callback
 
 
-def setup_solvent(matrix, solvent_scheme):
+def setup_environment(matrix, environment):
     """
-    Setup solvent matrix terms and/or energy corrections.
+    Setup environment matrix terms and/or energy corrections.
     Internal function called from run_adc.
     """
-    # TODO: move someplace meaningful & reasonable...
-    valid_solvent_schemes = {
-        "hf": """
-            only couple via the 'solvated' orbitals of the HF reference
-            state, no additional matrix terms or perturbative corrections
-            are used automatically
-        """,
-        "ptss": """
-            perturbative state-specific (ptSS) correction, computed based on
-            the difference density between the ground and excited state
-        """,
-        "ptlr": """
-            perturbative linear-response (ptLR) correction, computed based on
-            the transition density between the ground and excited state
-        """,
-        # NOTE: could also be called 'lr'...
-        "postscf": """
-            iterative coupling to the solvent via a CIS-like coupling
-            density matrix, the term is added to the ADC matrix
-        """,
-    }
-    valid_scheme_names = list(valid_solvent_schemes.keys())
-
+    valid_envs = ["ptss", "ptlr", "linear_response"]
+    # valid_solvent_schemes = {
+    #     "hf": """
+    #         only couple via the 'solvated' orbitals of the HF reference
+    #         state, no additional matrix terms or perturbative corrections
+    #         are used automatically
+    #     """,
+    #     "ptss": """
+    #         perturbative state-specific (ptSS) correction, computed based on
+    #         the difference density between the ground and excited state
+    #     """,
+    #     "ptlr": """
+    #         perturbative linear-response (ptLR) correction, computed based on
+    #         the transition density between the ground and excited state
+    #     """,
+    #     # NOTE: could also be called 'lr'...
+    #     "postscf": """
+    #         iterative coupling to the solvent via a CIS-like coupling
+    #         density matrix, the term is added to the ADC matrix
+    #     """,
+    # }
     hf = matrix.reference_state
-    if hf.solvent and not solvent_scheme:
+    if hf.environment and environment is None:
         raise InputError(
-            "Solvent found in reference state, but no solvent_scheme"
-            " specified. Please select one or more of the following"
-            f" schemes: {valid_solvent_schemes.keys()}."
+            "Environment found in reference state, but no environment"
+            " configuration specified. Please select from the following"
+            f" schemes: {valid_envs}."
         )
-    elif solvent_scheme and not hf.solvent:
+    elif environment and not hf.environment:
         raise InputError(
-            "solvent_scheme specified, but no solvent method"
+            "Environment specified, but no environment"
             " was found in reference state."
         )
-    elif solvent_scheme is None and hf.solvent is None:
-        # nothing to do
-        return [], []
-    if not isinstance(solvent_scheme, list):
-        solvent_scheme = [solvent_scheme]
-    if any(scheme not in valid_solvent_schemes for scheme in solvent_scheme):
-        raise InputError("Invalid solvent_scheme given."
-                         f" Valid schemes are: {valid_scheme_names}.")
-    if "hf" in solvent_scheme:
-        if len(solvent_scheme) > 1:
-            raise InputError("hf solvent_scheme cannot be combined"
-                             " with other schemes.")
-        return [], []
-    if "postscf" in solvent_scheme and "ptlr" in solvent_scheme:
-        raise InputError("Cannot combine ptlr correction with iterative"
-                         " postscf linear response procedure.")
+    elif not hf.environment:
+        environment = False
 
-    extra_matrix_term = None
+    if isinstance(environment, bool):
+        environment = {"ptss": True, "ptlr": True} if environment else {}
+    elif isinstance(environment, list):
+        environment = {k: True for k in environment}
+    elif isinstance(environment, str):
+        environment = {environment: True}
+    elif not isinstance(environment, dict):
+        raise TypeError("Invalid type for environment parameter"
+                        f"' {type(environment)}'.")
+
+    if any(env not in valid_envs for env in environment):
+        raise InputError("Invalid key specified for environment."
+                         f" Valid keys are '{valid_envs}'.")
+
+    env_matrix_term = None
     energy_corrections = []
 
-    pt_schemes = [pt for pt in ["ptss", "ptlr"] if pt in solvent_scheme]
-    for pt in pt_schemes:
+    forbidden_combinations = [
+        ["ptlr", "linear_response"],
+    ]
+    for fbc in forbidden_combinations:
+        if all(environment.get(k, False) for k in fbc):
+            raise InputError("Combination of environment schemes"
+                             f" '{fbc}' not allowed. Check the"
+                             " adcc documentation for more details.")
+
+    for pt in ["ptss", "ptlr"]:
+        if not environment.get(pt, False):
+            continue
         hf_corr = hf.excitation_energy_corrections
-        eec_key = f"{hf.solvent}_{pt}_correction"
+        eec_key = f"{hf.environment}_{pt}_correction"
         if eec_key not in hf_corr:
             raise ValueError(f"{pt} correction requested, but could not find"
                              f" the needed function {eec_key} in"
                              f" reference state from backend {hf.backend}.")
         energy_corrections.append(hf_corr[eec_key])
-    if "postscf" in solvent_scheme:
-        from adcc.adc_pp import solvent as solvent_mat_terms
-        block_key = f"block_ph_ph_0_{hf.solvent}"
-        if not hasattr(solvent_mat_terms, block_key):
-            raise NotImplementedError("Matrix term for postscf coupling"
-                                      f" with solvent {hf.solvent}"
+    if environment.get("linear_response", False):
+        from adcc.adc_pp import environment as adcpp_env
+        block_key = f"block_ph_ph_0_{hf.environment}"
+        if not hasattr(adcpp_env, block_key):
+            raise NotImplementedError("Matrix term for linear response coupling"
+                                      f" with solvent {hf.environment}"
                                       " not implemented.")
-        block_fun = getattr(solvent_mat_terms, block_key)
-        extra_matrix_term = AdcExtraTerm(matrix, {'ph_ph': block_fun})
+        block_fun = getattr(adcpp_env, block_key)
+        env_matrix_term = AdcExtraTerm(matrix, {'ph_ph': block_fun})
 
-    return extra_matrix_term, energy_corrections
+    return env_matrix_term, energy_corrections

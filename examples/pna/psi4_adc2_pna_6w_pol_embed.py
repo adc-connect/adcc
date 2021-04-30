@@ -40,5 +40,5 @@ scf_e, wfn = psi4.energy('SCF', return_wfn=True)
 
 # Run an adc2 calculation:
 state = adcc.adc2(wfn, n_singlets=5, conv_tol=1e-8,
-                  solvent_scheme=['ptss', 'ptlr'])
+                  environment=True)
 print(state.describe())
