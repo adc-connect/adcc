@@ -27,9 +27,10 @@ from .matrix import AdcBlock
 def block_ph_ph_0_pe(hf, mp, intermediates):
     """
     Constructs an :py:class:`AdcBlock` that describes the
-    coupling to the polarizable environment from PE via a CIS-like
-    coupling density as described in 10.1021/ct300763v, eq 63.
-    Since the contribution depends on the input amplitude itself,
+    linear response coupling to the polarizable environment
+    from PE via a CIS-like transition density as described
+    in 10.1021/ct300763v, eq 63. Since the contribution
+    depends on the input amplitude itself,
     a diagonal term cannot be formulated.
     """
     op = hf.operators

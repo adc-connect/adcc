@@ -129,6 +129,10 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         virtuals for both the MP and ADC methods performed). For ways to define
         these see the description in :py:class:`adcc.ReferenceState`.
 
+    environment : bool or list or dict, optional
+        The keywords to specify how coupling to an environment model,
+        e.g. PE, is treated. For details see :ref:`environment`.
+
     Other parameters
     ----------------
     max_subspace : int, optional
@@ -513,26 +517,6 @@ def setup_environment(matrix, environment):
     Internal function called from run_adc.
     """
     valid_envs = ["ptss", "ptlr", "linear_response"]
-    # valid_solvent_schemes = {
-    #     "hf": """
-    #         only couple via the 'solvated' orbitals of the HF reference
-    #         state, no additional matrix terms or perturbative corrections
-    #         are used automatically
-    #     """,
-    #     "ptss": """
-    #         perturbative state-specific (ptSS) correction, computed based on
-    #         the difference density between the ground and excited state
-    #     """,
-    #     "ptlr": """
-    #         perturbative linear-response (ptLR) correction, computed based on
-    #         the transition density between the ground and excited state
-    #     """,
-    #     # NOTE: could also be called 'lr'...
-    #     "postscf": """
-    #         iterative coupling to the solvent via a CIS-like coupling
-    #         density matrix, the term is added to the ADC matrix
-    #     """,
-    # }
     hf = matrix.reference_state
     if hf.environment and environment is None:
         raise InputError(

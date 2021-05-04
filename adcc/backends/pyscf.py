@@ -281,7 +281,7 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
     )
     if pe_options:
         from pyscf.solvent import PE
-        mf = PE(scf.HF(mol), pe_options["potfile"])
+        mf = PE(scf.HF(mol), pe_options)
     else:
         mf = scf.HF(mol)
     mf.conv_tol = conv_tol

@@ -33,10 +33,6 @@ from .AmplitudeVector import AmplitudeVector
 
 
 class AdcExtraTerm:
-    # NOTE: currently requires the matrix
-    # to allow for block construction with the same
-    # interface as the usual adc_pp, i.e.,
-    # reference_state, ground_state, intermediates
     def __init__(self, matrix, blocks):
         """Initialise an AdcExtraTerm.
         This class can be used to add customs terms
@@ -109,7 +105,7 @@ class AdcMatrix(AdcMatrixlike):
                                  libadcc.HartreeFockSolution_i)):
             hf_or_mp = LazyMp(hf_or_mp)
         if not isinstance(hf_or_mp, LazyMp):
-            raise TypeError("mp_results is not a valid object. It needs to be "
+            raise TypeError("hf_or_mp is not a valid object. It needs to be "
                             "either a LazyMp, a ReferenceState or a "
                             "HartreeFockSolution_i.")
 
