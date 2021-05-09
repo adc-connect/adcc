@@ -102,7 +102,8 @@ class OperatorIntegrals:
             "electric_dipole",
             "magnetic_dipole",
             "nabla",
-            "pe_induction_elec"
+            "pe_induction_elec",
+            "pcm_induction_elec"
         )
         return [integral for integral in integrals
                 if hasattr(self.provider_ao, integral)]
@@ -186,6 +187,39 @@ class OperatorIntegrals:
                                       f"in {self.provider_ao.backend} backend.")
         callback = self.provider_ao.pe_induction_elec
         return self.__import_density_dependent_operator(callback)
+
+    @property
+    def pcm_induction_elec(self):
+        """
+        Returns a function to obtain the (density-dependent)
+        PCM electronic induction operator in the molecular orbital basis
+        """
+        if "pcm_induction_elec" not in self.available:
+            raise NotImplementedError("PCM electronic induction operator "
+                                      "not implemented "
+                                      f"in {self.provider_ao.backend} backend.")
+        callback = self.provider_ao.pcm_induction_elec
+        return self.__import_density_dependent_operator(callback)
+
+    @property
+    def density_dependent_operators(self):
+        if not hasattr(self.provider_ao, "density_dependent_operators"):
+            return {}
+        ret = {}
+        for op in self.provider_ao.density_dependent_operators:
+            ao_callback = self.provider_ao.density_dependent_operators[op]
+
+            def process_operator(dm, callback=ao_callback):
+                dm_ao = sum(dm.to_ao_basis())
+                v_ao = callback(dm_ao)
+                v_bb = replicate_ao_block(self.mospaces, v_ao, is_symmetric=True)
+                v_ff = OneParticleOperator(self.mospaces, is_symmetric=True)
+                transform_operator_ao2mo(
+                    v_bb, v_ff, self.__coefficients, self.__conv_tol
+                )
+                return v_ff
+            ret[op] = process_operator
+        return ret
 
     @property
     def timer(self):

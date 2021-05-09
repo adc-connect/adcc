@@ -64,6 +64,14 @@ class Psi4OperatorIntegralProvider:
                 )[1]
             return pe_induction_elec_ao
 
+    @property
+    def pcm_induction_elec(self):
+        if self.wfn.PCM_enabled():
+            def pcm_induction_elec_ao(dm):
+                return psi4.core.PCM.compute_V(self.wfn.get_PCM(),
+                    psi4.core.Matrix.from_array(dm.to_ndarray()))
+            return pcm_induction_elec_ao
+
 
 class Psi4EriBuilder(EriBuilder):
     def __init__(self, wfn, n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted):
@@ -128,6 +136,8 @@ class Psi4HFProvider(HartreeFockProvider):
         ret = None
         if hasattr(self.wfn, "pe_state"):
             ret = "pe"
+        if hasattr(self.wfn, "PCM_enabled"):
+            ret = "pcm"
         return ret
 
     def get_backend(self):
