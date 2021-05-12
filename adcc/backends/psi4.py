@@ -136,7 +136,7 @@ class Psi4HFProvider(HartreeFockProvider):
         ret = None
         if hasattr(self.wfn, "pe_state"):
             ret = "pe"
-        if hasattr(self.wfn, "PCM_enabled"):
+        if self.wfn.PCM_enabled():
             ret = "pcm"
         return ret
 
