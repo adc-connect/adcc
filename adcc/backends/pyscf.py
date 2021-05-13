@@ -21,6 +21,7 @@
 ##
 ## ---------------------------------------------------------------------
 import numpy as np
+import warnings
 
 from libadcc import HartreeFockProvider
 from adcc.misc import cached_property
@@ -39,7 +40,14 @@ class PyScfOperatorIntegralProvider:
 
     @cached_property
     def electric_dipole(self):
-        return list(self.scfres.mol.intor_symmetric('int1e_r', comp=3))
+        if hasattr(self.scfres, "with_solvent"):
+            if self.scfres.with_solvent.eef:
+                warnings.warn("Using modified dipole operator due to EEF."
+                              " Only transition moments are physically"
+                              " meaningful.")
+            return self.scfres.with_solvent.effective_dipole_operator()
+        else:
+            return list(self.scfres.mol.intor_symmetric('int1e_r', comp=3))
 
     @cached_property
     def magnetic_dipole(self):
