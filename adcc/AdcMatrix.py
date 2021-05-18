@@ -49,6 +49,7 @@ class AdcMatrix(AdcMatrixlike):
         "adc2x": dict(ph_ph=2, ph_pphh=1,    pphh_ph=1,    pphh_pphh=1),     # noqa: E501
         "adc3":  dict(ph_ph=3, ph_pphh=2,    pphh_ph=2,    pphh_pphh=1),     # noqa: E501
     }
+    matrix_block_generator = ppmatrix.block
 
     def __init__(self, method, hf_or_mp, block_orders=None, intermediates=None):
         """
@@ -97,30 +98,20 @@ class AdcMatrix(AdcMatrixlike):
             tmp_orders.update(block_orders)
             block_orders = tmp_orders
 
-        # Sanity checks on block_orders
-        for block in block_orders.keys():
-            if block not in ("ph_ph", "ph_pphh", "pphh_ph", "pphh_pphh"):
-                raise ValueError(f"Invalid block order key: {block}")
-        if block_orders["ph_pphh"] != block_orders["pphh_ph"]:
-            raise ValueError("ph_pphh and pphh_ph should always have "
-                             "the same order")
-        if block_orders["ph_pphh"] is not None \
-           and block_orders["pphh_pphh"] is None:
-            raise ValueError("pphh_pphh cannot be None if ph_pphh isn't.")
-        self.block_orders = block_orders
+        self._sanity_check_block_orders(block_orders)
 
         # Build the blocks and diagonals
         with self.timer.record("build"):
             variant = None
             if method.is_core_valence_separated:
                 variant = "cvs"
-            self.blocks_ph = {  # TODO Rename to self.block in 0.16.0
-                block: ppmatrix.block(self.ground_state, block.split("_"),
-                                      order=order, intermediates=self.intermediates,
-                                      variant=variant)
+            self.block = {
+                block: self.matrix_block_generator(self.ground_state, block.split("_"),
+                                                   order=order, intermediates=self.intermediates,
+                                                   variant=variant)
                 for block, order in block_orders.items() if order is not None
             }
-            self.__diagonal = sum(bl.diagonal for bl in self.blocks_ph.values()
+            self.__diagonal = sum(bl.diagonal for bl in self.block.values()
                                   if bl.diagonal)
             self.__diagonal.evaluate()
             self.__init_space_data(self.__diagonal)
@@ -145,6 +136,19 @@ class AdcMatrix(AdcMatrixlike):
 
     def __len__(self):
         return self.shape[0]
+
+    def _sanity_check_block_orders(self, block_orders):
+        # Sanity checks on block_orders
+        for block in block_orders.keys():
+            if block not in ("ph_ph", "ph_pphh", "pphh_ph", "pphh_pphh"):
+                raise ValueError(f"Invalid block order key: {block}")
+        if block_orders["ph_pphh"] != block_orders["pphh_ph"]:
+            raise ValueError("ph_pphh and pphh_ph should always have "
+                             "the same order")
+        if block_orders["ph_pphh"] is not None \
+           and block_orders["pphh_pphh"] is None:
+            raise ValueError("pphh_pphh cannot be None if ph_pphh isn't.")
+        self.block_orders = block_orders
 
     @property
     def blocks(self):
@@ -208,7 +212,7 @@ class AdcMatrix(AdcMatrixlike):
         with self.timer.record(f"apply/{block}"):
             outblock, inblock = block.split("_")
             ampl = AmplitudeVector(**{inblock: tensor})
-            ret = self.blocks_ph[block].apply(ampl)
+            ret = self.block[block].apply(ampl)
             return getattr(ret, outblock)
 
     @timed_member_call()
@@ -217,7 +221,7 @@ class AdcMatrix(AdcMatrixlike):
         Compute the matrix-vector product of the ADC matrix
         with an excitation amplitude and return the result.
         """
-        return sum(block.apply(v) for block in self.blocks_ph.values())
+        return sum(block.apply(v) for block in self.block.values())
 
     def rmatvec(self, v):
         # ADC matrix is symmetric
@@ -479,7 +483,6 @@ class AdcBlockView(AdcMatrix):
         super().__init__(fullmatrix.method, fullmatrix.ground_state,
                          block_orders=block_orders,
                          intermediates=fullmatrix.intermediates)
-
 
 class AdcMatrixShifted(AdcMatrix):
     def __init__(self, matrix, shift=0.0):
