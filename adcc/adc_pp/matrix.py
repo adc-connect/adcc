@@ -53,8 +53,8 @@ AdcBlock = namedtuple("AdcBlock", ["apply", "diagonal"])
 def block(ground_state, spaces, order, variant=None, intermediates=None):
     """
     Gets ground state, potentially intermediates, spaces (ph, pphh and so on)
-    and the perturbation theory order for the block,
-    variant is "cvs" or sth like that.
+    and the perturbation theory order for the block, variant is "cvs" or sth
+    like that.
 
     It is assumed largely, that CVS is equivalent to mp.has_core_occupied_space,
     while one would probably want in the long run that one can have an "o2" space,

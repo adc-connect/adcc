@@ -49,7 +49,6 @@ class AdcMatrix(AdcMatrixlike):
         "adc2x": dict(ph_ph=2, ph_pphh=1,    pphh_ph=1,    pphh_pphh=1),     # noqa: E501
         "adc3":  dict(ph_ph=3, ph_pphh=2,    pphh_ph=2,    pphh_pphh=1),     # noqa: E501
     }
-    matrix_block_generator = ppmatrix.block
 
     def __init__(self, method, hf_or_mp, block_orders=None, intermediates=None):
         """
@@ -98,7 +97,7 @@ class AdcMatrix(AdcMatrixlike):
             tmp_orders.update(block_orders)
             block_orders = tmp_orders
 
-        self._sanity_check_block_orders(block_orders)
+        self.__sanity_check_block_orders(block_orders)
 
         # Build the blocks and diagonals
         with self.timer.record("build"):
@@ -106,9 +105,9 @@ class AdcMatrix(AdcMatrixlike):
             if method.is_core_valence_separated:
                 variant = "cvs"
             self.block = {
-                block: self.matrix_block_generator(self.ground_state, block.split("_"),
-                                                   order=order, intermediates=self.intermediates,
-                                                   variant=variant)
+                block: self.__generate_matrix_block(self.ground_state, block.split("_"),
+                                                   order, variant=variant,
+                                                   intermediates=self.intermediates)
                 for block, order in block_orders.items() if order is not None
             }
             self.__diagonal = sum(bl.diagonal for bl in self.block.values()
@@ -128,16 +127,7 @@ class AdcMatrix(AdcMatrixlike):
         self.shape = (sum(self.axis_lengths.values()),
                       sum(self.axis_lengths.values()))
 
-    def __repr__(self):
-        ret = f"AdcMatrix({self.method.name}, "
-        for b, o in self.block_orders.items():
-            ret += f"{b}={o}, "
-        return ret + ")"
-
-    def __len__(self):
-        return self.shape[0]
-
-    def _sanity_check_block_orders(self, block_orders):
+    def __sanity_check_block_orders(self, block_orders):
         # Sanity checks on block_orders
         for block in block_orders.keys():
             if block not in ("ph_ph", "ph_pphh", "pphh_ph", "pphh_pphh"):
@@ -149,6 +139,18 @@ class AdcMatrix(AdcMatrixlike):
            and block_orders["pphh_pphh"] is None:
             raise ValueError("pphh_pphh cannot be None if ph_pphh isn't.")
         self.block_orders = block_orders
+
+    def __generate_matrix_block(self, *args, **kwargs):
+        return ppmatrix.block(*args, **kwargs)
+
+    def __repr__(self):
+        ret = f"AdcMatrix({self.method.name}, "
+        for b, o in self.block_orders.items():
+            ret += f"{b}={o}, "
+        return ret + ")"
+
+    def __len__(self):
+        return self.shape[0]
 
     @property
     def blocks(self):
