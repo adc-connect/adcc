@@ -522,7 +522,7 @@ def setup_environment(matrix, environment):
         raise InputError(
             "Environment found in reference state, but no environment"
             " configuration specified. Please select from the following"
-            f" schemes: {valid_envs}."
+            f" schemes: {valid_envs} or set to False."
         )
     elif environment and not hf.environment:
         raise InputError(
@@ -530,17 +530,19 @@ def setup_environment(matrix, environment):
             " was found in reference state."
         )
     elif not hf.environment:
-        environment = False
+        environment = {}
 
-    if isinstance(environment, bool):
-        environment = {"ptss": True, "ptlr": True} if environment else {}
-    elif isinstance(environment, list):
-        environment = {k: True for k in environment}
-    elif isinstance(environment, str):
-        environment = {environment: True}
-    elif not isinstance(environment, dict):
-        raise TypeError("Invalid type for environment parameter"
-                        f"' {type(environment)}'.")
+    convertor = {
+        bool: lambda value: {"ptss": True, "ptlr": True} if value else {},
+        list: lambda value: {k: True for k in value},
+        str: lambda value: {value: True},
+        dict: lambda value: value,
+    }
+    conversion = convertor.get(type(environment), None)
+    if conversion is None:
+        raise TypeError("Cannot convert environment parameter of type"
+                        f"'{type(environment)}' to dict.")
+    environment = conversion(environment)
 
     if any(env not in valid_envs for env in environment):
         raise InputError("Invalid key specified for environment."

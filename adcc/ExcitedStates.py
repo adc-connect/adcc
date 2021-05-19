@@ -208,12 +208,12 @@ class ExcitedStates(ElectronicTransition):
             for k in other:
                 self += k
         else:
-            raise TypeError("Can only add EnergyCorrection (or list"
-                            " of EnergyCorrection) to"
-                            f" ExcitedState, not '{type(other)}'")
+            return NotImplemented
         return self
 
     def __add__(self, other):
+        if not isinstance(other, (EnergyCorrection, list)):
+            return NotImplemented
         ret = ExcitedStates(self, self.method, self.property_method)
         ret += other
         return ret
@@ -376,7 +376,7 @@ class ExcitedStates(ElectronicTransition):
                                 ev=self.excitation_energy[i] * eV, **fields)
         text += separator + "\n"
         if len(self._excitation_energy_corrections):
-            head_corr = "|  excitation energy corrections included:"
+            head_corr = "|  Excitation energy includes these corrections:"
             text += head_corr
             nspace = len(separator) - len(head_corr) - 1
             text += nspace * " " + "|\n"

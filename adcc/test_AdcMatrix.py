@@ -229,19 +229,18 @@ class TestAdcMatrixInterface(unittest.TestCase):
         with pytest.raises(ValueError):
             adcc.AdcMatrix("adc2", ground_state,
                            diagonal_precomputed=matrix.diagonal() + 42)
-
-        shift = -0.3
-        shifted = AdcMatrixShifted(matrix, shift)
-        # TODO: need to do this to differentiate between
-        # diagonals for ph and pphh
-        # if we just pass numbers, i.e., shift
-        # we get 2*shift on the diagonal :(
-        ones = matrix.diagonal().ones_like()
-
         with pytest.raises(TypeError):
             AdcExtraTerm(matrix, "fail")
         with pytest.raises(TypeError):
             AdcExtraTerm(matrix, {"fail": "not_callable"})
+
+        shift = -0.3
+        shifted = AdcMatrixShifted(matrix, shift)
+        # TODO: need to use AmplitudeVector to differentiate between
+        # diagonals for ph and pphh
+        # if we just pass numbers, i.e., shift
+        # we get 2*shift on the diagonal
+        ones = matrix.diagonal().ones_like()
 
         def __shift_ph(hf, mp, intermediates):
             def apply(invec):
@@ -260,6 +259,7 @@ class TestAdcMatrixInterface(unittest.TestCase):
         # cannot add to 'pphh_pphh' in ADC(1) matrix
         with pytest.raises(ValueError):
             matrix_adc1 += extra
+
         shifted_2 = matrix + extra
         shifted_3 = extra + matrix
         for manual in [shifted_2, shifted_3]:

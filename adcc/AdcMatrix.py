@@ -112,6 +112,14 @@ class AdcMatrix(AdcMatrixlike):
         if not isinstance(method, AdcMethod):
             method = AdcMethod(method)
 
+        if diagonal_precomputed:
+            if not isinstance(diagonal_precomputed, AmplitudeVector):
+                raise TypeError("diagonal_precomputed needs to be"
+                                " an AmplitudeVector.")
+            if diagonal_precomputed.needs_evaluation:
+                raise ValueError("diagonal_precomputed must already"
+                                 " be evaluated.")
+
         self.timer = Timer()
         self.method = method
         self.ground_state = hf_or_mp
@@ -159,12 +167,6 @@ class AdcMatrix(AdcMatrixlike):
             # TODO Rename to self.block in 0.16.0
             self.blocks_ph = {bl: blocks[bl].apply for bl in blocks}
             if diagonal_precomputed:
-                if not isinstance(diagonal_precomputed, AmplitudeVector):
-                    raise TypeError("diagonal_precomputed needs to be"
-                                    " an AmplitudeVector.")
-                if diagonal_precomputed.needs_evaluation:
-                    raise ValueError("diagonal_precomputed must already"
-                                     " be evaluated.")
                 self.__diagonal = diagonal_precomputed
             else:
                 self.__diagonal = sum(bl.diagonal for bl in blocks.values()
@@ -194,7 +196,6 @@ class AdcMatrix(AdcMatrixlike):
             self.blocks_ph[sp] = patched_apply
         other_diagonal = sum(bl.diagonal for bl in other.blocks.values()
                              if bl.diagonal)
-        # iadd does not work with numbers
         self.__diagonal = self.__diagonal + other_diagonal
         self.__diagonal.evaluate()
         self.extra_terms.append(other)

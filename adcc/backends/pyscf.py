@@ -127,7 +127,7 @@ class PyScfHFProvider(HartreeFockProvider):
 
     @property
     def excitation_energy_corrections(self):
-        ret = {}
+        ret = []
         if self.environment == "pe":
             ptlr = EnergyCorrection(
                 "pe_ptlr_correction",
@@ -139,12 +139,8 @@ class PyScfHFProvider(HartreeFockProvider):
                 lambda view: self.pe_energy(view.state_diffdm_ao,
                                             elec_only=True)
             )
-            # NOTE: I don't like the duplicate 'name',
-            # but this way it's easier to exctract the corrections
-            # directly
-            ret["pe_ptlr_correction"] = ptlr
-            ret["pe_ptss_correction"] = ptss
-        return ret
+            ret.extend([ptlr, ptss])
+        return {ec.name: ec for ec in ret}
 
     @property
     def environment(self):
