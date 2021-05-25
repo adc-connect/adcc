@@ -94,6 +94,8 @@ class FormatExcitationVector:
             nblk = 2
         elif self.matrix.axis_blocks == ["ph", "pphh"]:
             nblk = 4
+        elif "hh" in self.matrix.axis_spaces:
+            raise NotImplementedError("Line width not supported for DIP")
         else:
             raise NotImplementedError("Unknown ADC matrix structure")
         width_indices = nblk * (self.index_format.max_n_characters + 1) + 2
