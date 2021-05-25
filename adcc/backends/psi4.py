@@ -68,7 +68,8 @@ class Psi4OperatorIntegralProvider:
     def pcm_induction_elec(self):
         if self.wfn.PCM_enabled():
             def pcm_induction_elec_ao(dm):
-                return psi4.core.PCM.compute_V(self.wfn.get_PCM(),
+                return psi4.core.PCM.compute_V(
+                    self.wfn.get_PCM(),
                     psi4.core.Matrix.from_array(dm.to_ndarray()))
             return pcm_induction_elec_ao
 
