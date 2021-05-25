@@ -23,6 +23,7 @@
 import libadcc
 import warnings
 import numpy as np
+from itertools import chain
 
 from .LazyMp import LazyMp
 from .adc_pp import matrix as ppmatrix
@@ -119,7 +120,7 @@ class AdcMatrix(AdcMatrixlike):
         """Update the cached data regarding the spaces of the ADC matrix"""
         self.axis_spaces = {}
         self.axis_lengths = {}
-        for block in diagonal.blocks_ph:
+        for block in diagonal.block:
             self.axis_spaces[block] = getattr(diagonal, block).subspaces
             self.axis_lengths[block] = np.prod([
                 self.mospaces.n_orbs(sp) for sp in self.axis_spaces[block]
@@ -429,17 +430,21 @@ class AdcMatrix(AdcMatrixlike):
             out[:] = 0  # Zero all data in out.
 
         # Check for the cases actually implemented
-        if any(b not in ("ph", "pphh") for b in self.axis_blocks):
-            raise NotImplementedError("Blocks other than ph and pphh "
-                                      "not implemented")
-        if "ph" not in self.axis_blocks:
-            raise NotImplementedError("Block 'ph' needs to be present")
+        if any(b not in ("ph", "pphh", "hh", "phhh") for b in self.axis_blocks):
+            raise NotImplementedError("Blocks other than ph and pphh (PP) or hh"
+                                      "and phhh (DIP) not implemented")
+        if all(b not in self.axis_blocks for b in ("ph", "hh")):
+            raise NotImplementedError("Block 'ph' or 'hh' needs to be present")
 
         # Extract singles-singles block (contiguous)
-        assert "ph" in self.axis_blocks
-        n_orbs_ph = [self.mospaces.n_orbs(sp) for sp in self.axis_spaces["ph"]]
+        assert any(b in self.axis_blocks for b in ("ph", "hh"))
+        n_orbs_ph = [
+            self.mospaces.n_orbs(sp)
+            for sp in chain(self.axis_spaces.get("ph", []),
+                            self.axis_spaces.get("hh", []))
+        ]
         n_ph = np.prod(n_orbs_ph)
-        assert len(basis["ph"]) == n_ph
+        assert (len(basis["ph"]) == n_ph) or (len(basis["ph"]) == n_ph)
         view_ss = out[:n_ph, :n_ph].reshape(*n_orbs_ph, *n_orbs_ph)
         for i in range(n_orbs_ph[0]):
             for a in range(n_orbs_ph[1]):

@@ -80,9 +80,9 @@ def guesses_from_diagonal(matrix, n_guesses, block="ph", spin_change=0,
     if n_guesses == 0:
         return []
 
-    if block == "ph":
+    if block in ("ph", "hh"):
         guessfunction = guesses_from_diagonal_singles
-    elif block == "pphh":
+    elif block in ("pphh", "phhh"):
         guessfunction = guesses_from_diagonal_doubles
     else:
         raise ValueError(f"Don't know how to generate guesses for block {block}")
