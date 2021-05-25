@@ -26,7 +26,7 @@ from collections import namedtuple
 from adcc import block as b
 from adcc.functions import direct_sum, einsum, zeros_like
 from adcc.Intermediates import Intermediates, register_as_intermediate
-from adcc.DipAmplitudeVector import DipAmplitudeVector
+from adcc.AmplitudeVector import AmplitudeVector
 
 __all__ = ["block"]
 
@@ -90,7 +90,7 @@ def block(ground_state, spaces, order, variant=None, intermediates=None):
 # 0th order main
 #
 def block_hh_hh_0(hf, mp, intermediates):
-    diagonal = DipAmplitudeVector(hh=direct_sum("-a-i->ia", hf.foo.diagonal(),
+    diagonal = AmplitudeVector(hh=direct_sum("-a-i->ia", hf.foo.diagonal(),
                                   hf.foo.diagonal()))
 
     return AdcBlock(lambda ampl: 0, diagonal)
@@ -103,7 +103,7 @@ def block_phhh_phhh_0(hf, mp, intermediates):
 
     # Possible speed up trough symmetrisation possible, but not pursued
     # at the present moment.
-    diagonal = DipAmplitudeVector(phhh=direct_sum("ij+ma->maij",
+    diagonal = AmplitudeVector(phhh=direct_sum("ij+ma->maij",
                                        direct_sum("-k-l->lk", hf.foo.diagonal(), hf.foo.diagonal()),
                                        df))
 
@@ -125,14 +125,14 @@ def block_phhh_hh_0(hf, mp, intermediates):
 # 1st order main
 #
 def block_hh_hh_1(hf, mp, intermediates):
-    diagonal = DipAmplitudeVector(hh=(
+    diagonal = AmplitudeVector(hh=(
         direct_sum("-i-k>ki",
                    hf.foo.diagonalize(), hf.foo.diagonalize()).symmetrise ()
         + 0.5 * hf.oooo.diagonalize()
     ))
 
     def apply(ampl):
-        return DipAmplitudeVector(hh=(
+        return AmplitudeVector(hh=(
             - einsum("ik,kj->ij", hf.foo, ampl.hh)
             - einsum("jk,ik->ij", hf.foo, ampl.hh)
             + 0.25 * einsum("ijkl,kl->ij", hf.oooo, ampl.hh)
@@ -145,7 +145,7 @@ def block_hh_hh_1(hf, mp, intermediates):
 #
 def block_hh_phhh_1(hf, mp, intermediates):
     def apply(ampl):
-        return DipAmplitudeVector(hh=(
+        return AmplitudeVector(hh=(
             + einsum("jkib,jkab->ia", hf.ooov, ampl.phhh).antisymmetrise(0, 1)
             + einsum("ijbc,jabc->ia", ampl.phhh, hf.ooov).antisymmetrise(0, 1)
         ))
@@ -154,7 +154,7 @@ def block_hh_phhh_1(hf, mp, intermediates):
 
 def block_phhh_hh_1(hf, mp, intermediates):
     def apply(ampl):
-        return DipAmplitudeVector(phhh=(
+        return AmplitudeVector(phhh=(
             + einsum("il,jkla->ijka", ampl.hh, hf.ooov).antisymmetrise(0, 1)
             - einsum("kila,lj->ijka", hf.ooov, ampl.hh).antisymmetrise(0, 1)
             + einsum("ijla,kl->ijka", hf.ooov, ampl.hh) # Possible symmetrisation?
@@ -170,7 +170,7 @@ def block_hh_hh_2(hf, mp, intermediates):
     # Not sure if this will work directly...
     itm = intermediates.adc2_itm
 
-    diagonal = DipAmplitude(hh=(
+    diagonal = Amplitude(hh=(
         + direct_sum("-i-k->ki", hf.foo.diagonal(), hf.foo.diagonal())
         - hf.foooo.diagonal()
         - itm.diagonal()
