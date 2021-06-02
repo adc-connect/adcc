@@ -27,6 +27,8 @@ to be applied. Arbitrary combinations of these variants,
 e.g. applying **both** CVS and FC approximations are supported as well.
 See :ref:`frozen-spaces` for details.
 
+Calculations with :ref:`environment` are also supported.
+
 General ADC(n) calculations
 ---------------------------
 General ADC(n) calculations,
@@ -683,6 +685,126 @@ Notice, that any other combination of CVS, FC and FV is possible
 as well.
 In fact all three may be combined jointly with any available ADC method,
 if desired.
+
+
+.. _`environment`:
+
+Polarisable Embedding
+---------------------
+
+ADC calculations with the Polarisable Embedding (PE) model are supported
+for the PySCF and Psi4 backends via the `CPPE library <https://github.com/maxscheurer/cppe>`_ :cite:`Scheurer2019`.
+In the PE model, interactions with the environment are represented by a
+multi-center multipole expansion for electrostatics, and polarisation is modeled
+via dipole polarizabilities located at the expansion sites.
+For a general introduction of PE and a tutorial on how to set up calculations, please see the tutorial review :cite:`Steinmann2019`.
+The embedding potential needed for PE can be generated using `PyFraME <https://gitlab.com/FraME-projects/PyFraME>`_, which is installable
+via ``pip install pyframe``.
+
+There are different options to include environment effects in ADC excited state calculations, summarised in
+the following table:
+
++------------------------------------------------+-----------------------+--------------------------------------------------------------------------+-----------------------------------------------+
+| Name                                           | ``environment``       | Comment                                                                  | Reference                                     |
++================================================+=======================+==========================================================================+===============================================+
+| coupling through reference state only          | ``False``             | only couple via the 'solvated' orbitals of the SCF reference state,      | :cite:`Scheurer2018`                          |
+|                                                |                       | no additional matrix terms or corrections are used                       |                                               |
++------------------------------------------------+-----------------------+--------------------------------------------------------------------------+-----------------------------------------------+
+| perturbative state-specific correction (ptSS)  | ``"ptss"``            | computed from the difference density betweenthe ground and excited state | :cite:`Scheurer2018`                          |
++------------------------------------------------+-----------------------+--------------------------------------------------------------------------+-----------------------------------------------+
+| perturbative linear-response correction (ptLR) | ``"ptlr"``            | computed from the transition density between                             | :cite:`Scheurer2018`                          |
+|                                                |                       | the ground and excited state                                             |                                               |
++------------------------------------------------+-----------------------+--------------------------------------------------------------------------+-----------------------------------------------+
+| linear response iterative coupling             | ``"linear_response"`` | iterative coupling to the solvent via a CIS-like coupling density,       | :cite:`Lunkenheimer2013`, :cite:`Marefat2018` |
+|                                                |                       | the additional term is added to the ADC matrix                           |                                               |
++------------------------------------------------+-----------------------+--------------------------------------------------------------------------+-----------------------------------------------+
+
+The scheme can be selected with the ``environment`` parameter in :func:`adcc.run_adc` (and also in the short-hand method functions, e.g. :func:`adcc.adc2`).
+If a PE-SCF ground state is found but no ``environment`` parameter is specified, an error will be thrown.
+Specifying ``environment=True`` will enable both perturbative corrections, equivalent to ``environment=["ptss", "ptlr"]``.
+Combining ``"ptlr"`` with ``"linear_response"`` is not allowed since both describe the same physical effect in a different manner.
+
+The following example computes PE-ADC(2) excited states of para-nitroaniline in the presence of six water molecules
+a) with perturbative corrections and
+b) with the linear response scheme. The results of both schemes are then printed out for comparison.
+
+.. code-block:: python
+
+   import adcc
+   from pyscf import gto, scf
+   from pyscf.solvent import PE
+
+   mol = gto.M(
+      atom="""
+      C          8.64800        1.07500       -1.71100
+      C          9.48200        0.43000       -0.80800
+      C          9.39600        0.75000        0.53800
+      C          8.48200        1.71200        0.99500
+      C          7.65300        2.34500        0.05500
+      C          7.73200        2.03100       -1.29200
+      H         10.18300       -0.30900       -1.16400
+      H         10.04400        0.25200        1.24700
+      H          6.94200        3.08900        0.38900
+      H          7.09700        2.51500       -2.01800
+      N          8.40100        2.02500        2.32500
+      N          8.73400        0.74100       -3.12900
+      O          7.98000        1.33100       -3.90100
+      O          9.55600       -0.11000       -3.46600
+      H          7.74900        2.71100        2.65200
+      H          8.99100        1.57500        2.99500
+      """,
+      basis='sto-3g',
+   )
+
+   scfres = PE(scf.RHF(mol), {"potfile": "pna_6w.pot"})
+   scfres.conv_tol = 1e-8
+   scfres.conv_tol_grad = 1e-6
+   scfres.max_cycle = 250
+   scfres.kernel()
+
+   # model the solvent through perturbative corrections
+   state_pt = adcc.adc2(scfres, n_singlets=5, conv_tol=1e-5,
+                        environment=['ptss', 'ptlr'])
+
+   # now model the solvent through linear-response coupling
+   # in the ADC matrix, re-using the matrix from previous run.
+   # This will modify state_pt.matrix
+   state_lr = adcc.run_adc(state_pt.matrix, n_singlets=5, conv_tol=1e-5,
+                           environment='linear_response')
+
+   print(state_pt.describe())
+   print(state_lr.describe())
+
+
+The output of the last two lines is::
+
+   +--------------------------------------------------------------+
+   | adc2                                    singlet ,  converged |
+   +--------------------------------------------------------------+
+   |  #        excitation energy     osc str    |v1|^2    |v2|^2  |
+   |          (au)           (eV)                                 |
+   |  0     0.1434972      3.904756   0.0000    0.9187   0.08128  |
+   |  1     0.1554448      4.229869   0.0000    0.9179   0.08211  |
+   |  2     0.2102638      5.721569   0.0209    0.8977    0.1023  |
+   |  3     0.2375643      6.464453   0.6198    0.9033   0.09666  |
+   |  4     0.2699134      7.344718   0.0762    0.8975    0.1025  |
+   +--------------------------------------------------------------+
+   |  Excitation energy includes these corrections:               |
+   |    - pe_ptss_correction                                      |
+   |    - pe_ptlr_correction                                      |
+   +--------------------------------------------------------------+
+
+   +--------------------------------------------------------------+
+   | adc2                                    singlet ,  converged |
+   +--------------------------------------------------------------+
+   |  #        excitation energy     osc str    |v1|^2    |v2|^2  |
+   |          (au)           (eV)                                 |
+   |  0     0.1435641      3.906577   0.0000    0.9187   0.08128  |
+   |  1     0.1555516      4.232775   0.0000    0.9179   0.08211  |
+   |  2      0.210272      5.721794   0.0212    0.8977    0.1023  |
+   |  3     0.2378427       6.47203   0.6266    0.9034   0.09663  |
+   |  4     0.2698889       7.34405   0.0805     0.898     0.102  |
+   +--------------------------------------------------------------+
 
 
 Further examples and details

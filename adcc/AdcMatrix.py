@@ -32,6 +32,38 @@ from .Intermediates import Intermediates
 from .AmplitudeVector import AmplitudeVector
 
 
+class AdcExtraTerm:
+    def __init__(self, matrix, blocks):
+        """Initialise an AdcExtraTerm.
+        This class can be used to add customs terms
+        to an existing :py:class:`AdcMatrix`
+
+        Parameters
+        ----------
+        matrix : AdcMatrix
+            The matrix for which the extra term
+            should be created.
+        blocks : dict
+            A dictionary where the key labels the matrix block
+            and the item denotes a callable to construct
+            an :py:class:`AdcBlock`
+        """
+        self.ground_state = matrix.ground_state
+        self.reference_state = matrix.reference_state
+        self.intermediates = matrix.intermediates
+        self.blocks = {}
+        if not isinstance(blocks, dict):
+            raise TypeError("blocks needs to be a dict.")
+        for space in blocks:
+            block_fun = blocks[space]
+            if not callable(block_fun):
+                raise TypeError("Items in additional_blocks must be callable.")
+            block = block_fun(
+                self.reference_state, self.ground_state, self.intermediates
+            )
+            self.blocks[space] = block
+
+
 class AdcMatrixlike:
     """
     Base class marker for all objects like ADC matrices.
@@ -50,7 +82,8 @@ class AdcMatrix(AdcMatrixlike):
         "adc3":  dict(ph_ph=3, ph_pphh=2,    pphh_ph=2,    pphh_pphh=1),     # noqa: E501
     }
 
-    def __init__(self, method, hf_or_mp, block_orders=None, intermediates=None):
+    def __init__(self, method, hf_or_mp, block_orders=None, intermediates=None,
+                 diagonal_precomputed=None):
         """
         Initialise an ADC matrix.
 
@@ -65,17 +98,27 @@ class AdcMatrix(AdcMatrixlike):
             If not set, defaults according to the selected ADC method are chosen.
         intermediates : adcc.Intermediates or NoneType
             Allows to pass intermediates to re-use to this class.
+        diagonal_precomputed: adcc.AmplitudeVector
+            Allows to pass a pre-computed diagonal, for internal use only.
         """
         if isinstance(hf_or_mp, (libadcc.ReferenceState,
                                  libadcc.HartreeFockSolution_i)):
             hf_or_mp = LazyMp(hf_or_mp)
         if not isinstance(hf_or_mp, LazyMp):
-            raise TypeError("mp_results is not a valid object. It needs to be "
+            raise TypeError("hf_or_mp is not a valid object. It needs to be "
                             "either a LazyMp, a ReferenceState or a "
                             "HartreeFockSolution_i.")
 
         if not isinstance(method, AdcMethod):
             method = AdcMethod(method)
+
+        if diagonal_precomputed:
+            if not isinstance(diagonal_precomputed, AmplitudeVector):
+                raise TypeError("diagonal_precomputed needs to be"
+                                " an AmplitudeVector.")
+            if diagonal_precomputed.needs_evaluation:
+                raise ValueError("diagonal_precomputed must already"
+                                 " be evaluated.")
 
         self.timer = Timer()
         self.method = method
@@ -84,6 +127,7 @@ class AdcMatrix(AdcMatrixlike):
         self.mospaces = hf_or_mp.reference_state.mospaces
         self.is_core_valence_separated = method.is_core_valence_separated
         self.ndim = 2
+        self.extra_terms = []
 
         self.intermediates = intermediates
         if self.intermediates is None:
@@ -112,18 +156,76 @@ class AdcMatrix(AdcMatrixlike):
         # Build the blocks and diagonals
         with self.timer.record("build"):
             variant = None
-            if method.is_core_valence_separated:
+            if self.is_core_valence_separated:
                 variant = "cvs"
-            self.blocks_ph = {  # TODO Rename to self.block in 0.16.0
+            blocks = {
                 block: ppmatrix.block(self.ground_state, block.split("_"),
                                       order=order, intermediates=self.intermediates,
                                       variant=variant)
-                for block, order in block_orders.items() if order is not None
+                for block, order in self.block_orders.items() if order is not None
             }
-            self.__diagonal = sum(bl.diagonal for bl in self.blocks_ph.values()
-                                  if bl.diagonal)
-            self.__diagonal.evaluate()
+            # TODO Rename to self.block in 0.16.0
+            self.blocks_ph = {bl: blocks[bl].apply for bl in blocks}
+            if diagonal_precomputed:
+                self.__diagonal = diagonal_precomputed
+            else:
+                self.__diagonal = sum(bl.diagonal for bl in blocks.values()
+                                      if bl.diagonal)
+                self.__diagonal.evaluate()
             self.__init_space_data(self.__diagonal)
+
+    def __iadd__(self, other):
+        """In-place addition of an :py:class:`AdcExtraTerm`
+
+        Parameters
+        ----------
+        other : AdcExtraTerm
+            the extra term to be added
+        """
+        if not isinstance(other, AdcExtraTerm):
+            return NotImplemented
+        if not all(k in self.blocks_ph for k in other.blocks):
+            raise ValueError("Can only add to blocks of"
+                             " AdcMatrix that already exist.")
+        for sp in other.blocks:
+            orig_app = self.blocks_ph[sp]
+            other_app = other.blocks[sp].apply
+
+            def patched_apply(ampl, original=orig_app, other=other_app):
+                return sum(app(ampl) for app in (original, other))
+            self.blocks_ph[sp] = patched_apply
+        other_diagonal = sum(bl.diagonal for bl in other.blocks.values()
+                             if bl.diagonal)
+        self.__diagonal = self.__diagonal + other_diagonal
+        self.__diagonal.evaluate()
+        self.extra_terms.append(other)
+        return self
+
+    def __add__(self, other):
+        """Addition of an :py:class:`AdcExtraTerm`, creating
+        a copy of self and adding the term to the new matrix
+
+        Parameters
+        ----------
+        other : AdcExtraTerm
+            the extra term to be added
+
+        Returns
+        -------
+        AdcMatrix
+            a copy of the AdcMatrix with the extra term added
+        """
+        if not isinstance(other, AdcExtraTerm):
+            return NotImplemented
+        ret = AdcMatrix(self.method, self.ground_state,
+                        block_orders=self.block_orders,
+                        intermediates=self.intermediates,
+                        diagonal_precomputed=self.diagonal())
+        ret += other
+        return ret
+
+    def __radd__(self, other):
+        return self.__add__(other)
 
     def __init_space_data(self, diagonal):
         """Update the cached data regarding the spaces of the ADC matrix"""
@@ -208,7 +310,7 @@ class AdcMatrix(AdcMatrixlike):
         with self.timer.record(f"apply/{block}"):
             outblock, inblock = block.split("_")
             ampl = AmplitudeVector(**{inblock: tensor})
-            ret = self.blocks_ph[block].apply(ampl)
+            ret = self.blocks_ph[block](ampl)
             return getattr(ret, outblock)
 
     @timed_member_call()
@@ -217,7 +319,7 @@ class AdcMatrix(AdcMatrixlike):
         Compute the matrix-vector product of the ADC matrix
         with an excitation amplitude and return the result.
         """
-        return sum(block.apply(v) for block in self.blocks_ph.values())
+        return sum(block(v) for block in self.blocks_ph.values())
 
     def rmatvec(self, v):
         # ADC matrix is symmetric

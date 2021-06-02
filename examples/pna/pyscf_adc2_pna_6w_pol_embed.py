@@ -2,7 +2,6 @@
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 
 import adcc
-import cppe
 from pyscf import gto, scf
 from pyscf.solvent import PE
 
@@ -30,18 +29,22 @@ mol = gto.M(
     """,
     basis='sto-3g',
 )
-pe_options = cppe.PeOptions()
-pe_options.potfile = "pna_6w.pot"
-# pe_options.iso_pol = True
 
-scfres = PE(scf.RHF(mol), pe_options)
-scfres.conv_tol = 1e-10
-scfres.conv_tol_grad = 1e-10
+scfres = PE(scf.RHF(mol), {"potfile": "pna_6w.pot"})
+scfres.conv_tol = 1e-8
+scfres.conv_tol_grad = 1e-6
 scfres.max_cycle = 250
 scfres.kernel()
 
-state = adcc.adc2(scfres, n_singlets=5, conv_tol=1e-8)
+# model the solvent through perturbative corrections
+state_pt = adcc.adc2(scfres, n_singlets=5, conv_tol=1e-5,
+                     environment=['ptss', 'ptlr'])
 
-ptlr = state.pe_ptlr_correction
-ptss = state.pe_ptss_correction
-print(ptlr, ptss)
+# now model the solvent through linear-response coupling
+# in the ADC matrix, re-using the matrix from previous run.
+# This will modify state_pt.matrix
+state_lr = adcc.run_adc(state_pt.matrix, n_singlets=5, conv_tol=1e-5,
+                        environment='linear_response')
+
+print(state_pt.describe())
+print(state_lr.describe())

@@ -29,6 +29,7 @@ import psi4
 
 from .EriBuilder import EriBuilder
 from ..exceptions import InvalidReference
+from ..ExcitedStates import EnergyCorrection
 
 
 class Psi4OperatorIntegralProvider:
@@ -52,6 +53,16 @@ class Psi4OperatorIntegralProvider:
     @cached_property
     def nabla(self):
         return [-1.0 * np.asarray(comp) for comp in self.mints.ao_nabla()]
+
+    @property
+    def pe_induction_elec(self):
+        if hasattr(self.wfn, "pe_state"):
+            def pe_induction_elec_ao(dm):
+                return self.wfn.pe_state.get_pe_contribution(
+                    psi4.core.Matrix.from_array(dm.to_ndarray()),
+                    elec_only=True
+                )[1]
+            return pe_induction_elec_ao
 
 
 class Psi4EriBuilder(EriBuilder):
@@ -97,12 +108,26 @@ class Psi4HFProvider(HartreeFockProvider):
 
     @property
     def excitation_energy_corrections(self):
-        ret = {}
+        ret = []
+        if self.environment == "pe":
+            ptlr = EnergyCorrection(
+                "pe_ptlr_correction",
+                lambda view: 2.0 * self.pe_energy(view.transition_dm_ao,
+                                                  elec_only=True)
+            )
+            ptss = EnergyCorrection(
+                "pe_ptss_correction",
+                lambda view: self.pe_energy(view.state_diffdm_ao,
+                                            elec_only=True)
+            )
+            ret.extend([ptlr, ptss])
+        return {ec.name: ec for ec in ret}
+
+    @property
+    def environment(self):
+        ret = None
         if hasattr(self.wfn, "pe_state"):
-            ret["pe_ptlr_correction"] = lambda view: \
-                2.0 * self.pe_energy(view.transition_dm_ao, elec_only=True)
-            ret["pe_ptss_correction"] = lambda view: \
-                self.pe_energy(view.state_diffdm_ao, elec_only=True)
+            ret = "pe"
         return ret
 
     def get_backend(self):
@@ -239,7 +264,7 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
         'reference': "RHF",
     })
     if pe_options:
-        psi4.set_options({"pe", "true"})
+        psi4.set_options({"pe": "true"})
         psi4.set_module_options("pe", {"potfile": pe_options["potfile"]})
 
     if multiplicity != 1:

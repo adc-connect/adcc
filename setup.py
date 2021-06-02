@@ -460,7 +460,7 @@ def libadcc_extension():
 def is_conda_build():
     return (
         os.environ.get("CONDA_BUILD", None) == "1"
-        or os.environ.get("CONDA_EXE", None)
+        or os.environ.get("CONDA_EXE", None) is not None
     )
 
 

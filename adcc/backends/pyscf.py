@@ -27,6 +27,7 @@ from adcc.misc import cached_property
 
 from .EriBuilder import EriBuilder
 from ..exceptions import InvalidReference
+from ..ExcitedStates import EnergyCorrection
 
 from pyscf import ao2mo, gto, scf, solvent
 
@@ -54,6 +55,16 @@ class PyScfOperatorIntegralProvider:
             return list(
                 -1.0 * self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
             )
+
+    @property
+    def pe_induction_elec(self):
+        if hasattr(self.scfres, "with_solvent"):
+            if isinstance(self.scfres.with_solvent, solvent.pol_embed.PolEmbed):
+                def pe_induction_elec_ao(dm):
+                    return self.scfres.with_solvent._exec_cppe(
+                        dm.to_ndarray(), elec_only=True
+                    )[1]
+                return pe_induction_elec_ao
 
 
 # TODO: refactor ERI builder to be more general
@@ -116,13 +127,27 @@ class PyScfHFProvider(HartreeFockProvider):
 
     @property
     def excitation_energy_corrections(self):
-        ret = {}
+        ret = []
+        if self.environment == "pe":
+            ptlr = EnergyCorrection(
+                "pe_ptlr_correction",
+                lambda view: 2.0 * self.pe_energy(view.transition_dm_ao,
+                                                  elec_only=True)
+            )
+            ptss = EnergyCorrection(
+                "pe_ptss_correction",
+                lambda view: self.pe_energy(view.state_diffdm_ao,
+                                            elec_only=True)
+            )
+            ret.extend([ptlr, ptss])
+        return {ec.name: ec for ec in ret}
+
+    @property
+    def environment(self):
+        ret = None
         if hasattr(self.scfres, "with_solvent"):
             if isinstance(self.scfres.with_solvent, solvent.pol_embed.PolEmbed):
-                ret["pe_ptlr_correction"] = lambda view: \
-                    2.0 * self.pe_energy(view.transition_dm_ao, elec_only=True)
-                ret["pe_ptss_correction"] = lambda view: \
-                    self.pe_energy(view.state_diffdm_ao, elec_only=True)
+                ret = "pe"
         return ret
 
     def get_backend(self):
@@ -252,7 +277,7 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
     )
     if pe_options:
         from pyscf.solvent import PE
-        mf = PE(scf.HF(mol), pe_options["potfile"])
+        mf = PE(scf.HF(mol), pe_options)
     else:
         mf = scf.HF(mol)
     mf.conv_tol = conv_tol

@@ -21,11 +21,12 @@
 ##
 ## ---------------------------------------------------------------------
 import unittest
+import pytest
 from numpy.testing import assert_allclose
 
 from adcc.testdata.cache import cache
 from adcc.OneParticleOperator import OneParticleOperator
-from adcc.ExcitedStates import ExcitedStates
+from adcc.ExcitedStates import EnergyCorrection
 from .test_state_densities import Runners
 
 
@@ -64,12 +65,13 @@ class TestCustomExcitationEnergyCorrections(unittest.TestCase, Runners):
         method = method.replace("_", "-")
         state = cache.adc_states[system][method][kind]
 
-        corrections = {
-            "custom_correction1": lambda exci: exci.excitation_energy ** 2,
-            "custom_correction2": lambda exci: 2.0,
-        }
-        state_corrected = ExcitedStates(state,
-                                        excitation_energy_corrections=corrections)
+        cc1 = EnergyCorrection("custom_correction1",
+                               lambda exci: exci.excitation_energy ** 2)
+        cc2 = EnergyCorrection("custom_correction2",
+                               lambda exci: 2.0)
+        cc3 = EnergyCorrection("custom_correction3",
+                               lambda exci: -42.0)
+        state_corrected = state + [cc1, cc2]
         for i in range(state.size):
             assert hasattr(state_corrected, "custom_correction1")
             assert hasattr(state_corrected, "custom_correction2")
@@ -79,20 +81,22 @@ class TestCustomExcitationEnergyCorrections(unittest.TestCase, Runners):
             assert_allclose(state.excitation_energy[i] + corr,
                             state_corrected.excitation_energy[i])
 
-        corrections2 = {"custom_correction2": lambda exci: 3.0,
-                        "custom_correction3": lambda exci: -42.0}
-        state_corrected2 = ExcitedStates(
-            state_corrected, excitation_energy_corrections=corrections2
-        )
+        with pytest.raises(ValueError):
+            state_corrected += cc2
+        with pytest.raises(TypeError):
+            state_corrected += 1
+
+        state_corrected2 = state_corrected + cc3
         for i in range(state.size):
             assert hasattr(state_corrected2, "custom_correction1")
             assert hasattr(state_corrected2, "custom_correction2")
             assert hasattr(state_corrected2, "custom_correction3")
             assert_allclose(state.excitation_energy[i],
                             state_corrected2.excitation_energy_uncorrected[i])
-            corr = state.excitation_energy[i] ** 2 + 3.0 - 42.0
+            corr = state.excitation_energy[i] ** 2 + 2.0 - 42.0
             assert_allclose(state.excitation_energy[i] + corr,
                             state_corrected2.excitation_energy[i])
+        state_corrected2.describe()
 
 
 class TestDataFrameExport(unittest.TestCase, Runners):

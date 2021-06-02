@@ -58,7 +58,7 @@ def block(ground_state, spaces, order, variant=None, intermediates=None):
 
     It is assumed largely, that CVS is equivalent to mp.has_core_occupied_space,
     while one would probably want in the long run that one can have an "o2" space,
-    but not do CVS
+    but not do CVS.
     """
     if isinstance(variant, str):
         variant = [variant]

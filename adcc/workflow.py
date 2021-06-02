@@ -29,7 +29,7 @@ from . import solver
 from .guess import (guesses_any, guesses_singlet, guesses_spin_flip,
                     guesses_triplet)
 from .LazyMp import LazyMp
-from .AdcMatrix import AdcMatrix, AdcMatrixlike
+from .AdcMatrix import AdcMatrix, AdcMatrixlike, AdcExtraTerm
 from .AdcMethod import AdcMethod
 from .exceptions import InputError
 from .ExcitedStates import ExcitedStates
@@ -47,7 +47,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
             n_guesses_doubles=None, output=sys.stdout, core_orbitals=None,
             frozen_core=None, frozen_virtual=None, method=None,
             n_singlets=None, n_triplets=None, n_spin_flip=None,
-            **solverargs):
+            environment=None, **solverargs):
     """Run an ADC calculation.
 
     Main entry point to run an ADC calculation. The reference to build the ADC
@@ -129,6 +129,10 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         virtuals for both the MP and ADC methods performed). For ways to define
         these see the description in :py:class:`adcc.ReferenceState`.
 
+    environment : bool or list or dict, optional
+        The keywords to specify how coupling to an environment model,
+        e.g. PE, is treated. For details see :ref:`environment`.
+
     Other parameters
     ----------------
     max_subspace : int, optional
@@ -191,6 +195,13 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     if eigensolver is None:
         eigensolver = "davidson"
 
+    # Setup environment coupling terms and energy corrections
+    ret = setup_environment(matrix, environment)
+    env_matrix_term, env_energy_corrections = ret
+    # add terms to matrix
+    if env_matrix_term:
+        matrix += env_matrix_term
+
     diagres = diagonalise_adcmatrix(
         matrix, n_states, kind, guesses=guesses, n_guesses=n_guesses,
         n_guesses_doubles=n_guesses_doubles, conv_tol=conv_tol, output=output,
@@ -198,6 +209,9 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     exstates = ExcitedStates(diagres)
     exstates.kind = kind
     exstates.spin_change = spin_change
+
+    # add environment corrections to excited states
+    exstates += env_energy_corrections
     return exstates
 
 
@@ -495,3 +509,75 @@ def setup_solver_printing(solmethod_name, matrix, kind, default_print,
         def inner_callback(state, identifier):
             default_print(state, identifier, output)
         return inner_callback
+
+
+def setup_environment(matrix, environment):
+    """
+    Setup environment matrix terms and/or energy corrections.
+    Internal function called from run_adc.
+    """
+    valid_envs = ["ptss", "ptlr", "linear_response"]
+    hf = matrix.reference_state
+    if hf.environment and environment is None:
+        raise InputError(
+            "Environment found in reference state, but no environment"
+            " configuration specified. Please select from the following"
+            f" schemes: {valid_envs} or set to False."
+        )
+    elif environment and not hf.environment:
+        raise InputError(
+            "Environment specified, but no environment"
+            " was found in reference state."
+        )
+    elif not hf.environment:
+        environment = {}
+
+    convertor = {
+        bool: lambda value: {"ptss": True, "ptlr": True} if value else {},
+        list: lambda value: {k: True for k in value},
+        str: lambda value: {value: True},
+        dict: lambda value: value,
+    }
+    conversion = convertor.get(type(environment), None)
+    if conversion is None:
+        raise TypeError("Cannot convert environment parameter of type"
+                        f"'{type(environment)}' to dict.")
+    environment = conversion(environment)
+
+    if any(env not in valid_envs for env in environment):
+        raise InputError("Invalid key specified for environment."
+                         f" Valid keys are '{valid_envs}'.")
+
+    env_matrix_term = None
+    energy_corrections = []
+
+    forbidden_combinations = [
+        ["ptlr", "linear_response"],
+    ]
+    for fbc in forbidden_combinations:
+        if all(environment.get(k, False) for k in fbc):
+            raise InputError("Combination of environment schemes"
+                             f" '{fbc}' not allowed. Check the"
+                             " adcc documentation for more details.")
+
+    for pt in ["ptss", "ptlr"]:
+        if not environment.get(pt, False):
+            continue
+        hf_corr = hf.excitation_energy_corrections
+        eec_key = f"{hf.environment}_{pt}_correction"
+        if eec_key not in hf_corr:
+            raise ValueError(f"{pt} correction requested, but could not find"
+                             f" the needed function {eec_key} in"
+                             f" reference state from backend {hf.backend}.")
+        energy_corrections.append(hf_corr[eec_key])
+    if environment.get("linear_response", False):
+        from adcc.adc_pp import environment as adcpp_env
+        block_key = f"block_ph_ph_0_{hf.environment}"
+        if not hasattr(adcpp_env, block_key):
+            raise NotImplementedError("Matrix term for linear response coupling"
+                                      f" with solvent {hf.environment}"
+                                      " not implemented.")
+        block_fun = getattr(adcpp_env, block_key)
+        env_matrix_term = AdcExtraTerm(matrix, {'ph_ph': block_fun})
+
+    return env_matrix_term, energy_corrections
