@@ -508,7 +508,7 @@ adccsetup(
         "Issues": "https://github.com/adc-connect/adcc/issues",
     },
     #
-    version="0.15.8",
+    version="0.15.9",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
