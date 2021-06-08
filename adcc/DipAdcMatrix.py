@@ -20,7 +20,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-ffrom .AdcMatrix import AdcMatrix
+from .AdcMatrix import AdcMatrix
 from .adc_dip import matrix as dipmatrix
 
 class DipAdcMatrix(AdcMatrix):

@@ -120,7 +120,7 @@ class AdcMatrix(AdcMatrixlike):
         """Update the cached data regarding the spaces of the ADC matrix"""
         self.axis_spaces = {}
         self.axis_lengths = {}
-        for block in diagonal.block:
+        for block in diagonal.block.keys():
             self.axis_spaces[block] = getattr(diagonal, block).subspaces
             self.axis_lengths[block] = np.prod([
                 self.mospaces.n_orbs(sp) for sp in self.axis_spaces[block]

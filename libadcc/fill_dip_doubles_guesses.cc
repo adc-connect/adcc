@@ -66,7 +66,7 @@ size_t fill_dip_doubles_guesses(std::vector<std::shared_ptr<Tensor>> guesses_d,
     throw not_implemented_error("spin_change == -1 has not been tested.");
   }
 
-  return adc_guess_d(guesspairs, asbt2(df1), asbt2(df2), sym_s, ab_d, spin_change_twice,
+  return adc_guess_d(guesspairs, asbt2(df23), asbt2(df23), sym_s, ab_d, spin_change_twice,
                      degeneracy_tolerance);
 }
 

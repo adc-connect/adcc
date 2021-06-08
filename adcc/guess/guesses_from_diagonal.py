@@ -28,6 +28,7 @@ from libadcc import MoIndexTranslation
 from itertools import groupby
 
 from ..AdcMatrix import AdcMatrixlike
+from ..DipAdcMatrix import DipAdcMatrix
 from .guess_zero import guess_zero
 
 
@@ -80,12 +81,17 @@ def guesses_from_diagonal(matrix, n_guesses, block="ph", spin_change=0,
     if n_guesses == 0:
         return []
 
-    if block in ("ph", "hh"):
+    # Could this be more elegant?
+    guessfunction = None
+    if block in ("hh", "ph"):
         guessfunction = guesses_from_diagonal_singles
-    elif block in ("pphh", "phhh"):
-        guessfunction = guesses_from_diagonal_doubles
+    if isinstance(matrix, DipAdcMatrix) and block == "phhh":
+        guessfunction = guesses_from_diagonal_doubles_dip
+    elif isinstance(matrix, AdcMatrix) and block == "pphh":
+        guessfunction = guesses_from_diagonal_doubles_pp
     else:
-        raise ValueError(f"Don't know how to generate guesses for block {block}")
+        raise NotImplemented("No guess functions for this AdcMatrixlike and "
+                             "block combination found.")
 
     return guessfunction(matrix, n_guesses, spin_change,
                          spin_block_symmetrisation, degeneracy_tolerance)
@@ -196,9 +202,11 @@ def find_smallest_matching_elements(predicate, tensor, motrans, n_elements,
 def guesses_from_diagonal_singles(matrix, n_guesses, spin_change=0,
                                   spin_block_symmetrisation="none",
                                   degeneracy_tolerance=1e-14):
-    motrans = MoIndexTranslation(matrix.mospaces, matrix.axis_spaces["ph"])
-    if n_guesses == 0:
-        return []
+    s = "ph"
+    if isinstance(matrix, DipAdcMatrix):
+        s = "hh"
+
+    motrans = MoIndexTranslation(matrix.mospaces, matrix.axis_spaces[s])
 
     # Create a result vector of zero vectors with appropriate symmetry setup
     ret = [guess_zero(matrix, spin_change=spin_change,
@@ -209,11 +217,11 @@ def guesses_from_diagonal_singles(matrix, n_guesses, spin_change=0,
     # This predicate checks an index is an allowed element for the singles
     # part of the guess vectors and has the requested spin-change
     def pred_singles(telem):
-        return (ret[0].ph.is_allowed(telem.index)
+        return (ret[0][s].is_allowed(telem.index)
                 and telem.spin_change == spin_change)
 
     elements = find_smallest_matching_elements(
-        pred_singles, matrix.diagonal().ph, motrans, n_guesses,
+        pred_singles, matrix.diagonal()[s], motrans, n_guesses,
         degeneracy_tolerance=degeneracy_tolerance
     )
     if len(elements) == 0:
@@ -237,21 +245,21 @@ def guesses_from_diagonal_singles(matrix, n_guesses, spin_change=0,
 
         group = list(group)
         if len(group) == 1:  # Just add the single vector
-            ret[ivec].ph[group[0].index] = 1.0
+            ret[ivec][s][group[0].index] = 1.0
             ivec += 1
         elif len(group) == 2:
             # Since these two are grouped together, their
             # spatial parts must be identical.
 
             # Add the positive linear combination ...
-            ret[ivec].ph[group[0].index] = 1
-            ret[ivec].ph[group[1].index] = 1
+            ret[ivec][s][group[0].index] = 1
+            ret[ivec][s][group[1].index] = 1
             ivec += 1
 
             # ... and the negative linear combination
             if ivec < n_guesses:
-                ret[ivec].ph[group[0].index] = +1
-                ret[ivec].ph[group[1].index] = -1
+                ret[ivec][s][group[0].index] = +1
+                ret[ivec][s][group[1].index] = -1
                 ivec += 1
         else:
             raise AssertionError("group size > 3 should not occur "
@@ -263,7 +271,7 @@ def guesses_from_diagonal_singles(matrix, n_guesses, spin_change=0,
     return [evaluate(v / np.sqrt(v @ v)) for v in ret[:ivec]]
 
 
-def guesses_from_diagonal_doubles(matrix, n_guesses, spin_change=0,
+def guesses_from_diagonal_doubles_pp(matrix, n_guesses, spin_change=0,
                                   spin_block_symmetrisation="none",
                                   degeneracy_tolerance=1e-14):
     if n_guesses == 0:
@@ -289,6 +297,34 @@ def guesses_from_diagonal_doubles(matrix, n_guesses, spin_change=0,
 
     # Resize in case less guesses found than requested
     return ret[:n_found]
+
+
+def guesses_from_diagonal_doubles_dip(matrix, n_guesses, spin_change=0,
+                                  spin_block_symmetrisation="none",
+                                  degeneracy_tolerance=1e-14):
+    if n_guesses == 0:
+        return []
+
+    # Create a result vector of zero vectors with appropriate symmetry setup
+    ret = [guess_zero(matrix, spin_change=spin_change,
+                      spin_block_symmetrisation=spin_block_symmetrisation)
+           for _ in range(n_guesses)]
+
+    # Build delta-Fock matrices
+    spaces_d = matrix.axis_spaces["phhh"]
+    df23 = matrix.ground_state.df(spaces_d[2] + spaces_d[3])
+
+    guesses_d = [gv.pphh for gv in ret]  # Extract doubles parts
+    spin_change_twice = int(spin_change * 2)
+    assert spin_change_twice / 2 == spin_change
+    n_found = libadcc.fill_dip_doubles_guesses(
+        guesses_d, matrix.mospaces, df23,
+        spin_change_twice, degeneracy_tolerance
+    )
+
+    # Resize in case less guesses found than requested
+    return ret[:n_found]
+
 
 # TODO Generic algorithm for forming orthogonal spin components of arbitrary
 #      size. Could be useful for the doubles guesses later on.
