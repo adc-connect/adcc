@@ -153,13 +153,13 @@ def guess_symmetry_doubles(matrix, spin_change=0,
     if spin_change == 0 \
        and spin_block_symmetrisation in ("symmetric", "antisymmetric"):
         fac = 1 if spin_block_symmetrisation == "symmetric" else -1
-        # Spin mapping between blocks where alpha and beta are just mirrored
-        symmetry.spin_block_maps = [("aaaa", "bbbb", fac),
-                                    ("abab", "baba", fac),
-                                    ("abba", "baab", fac)]
 
         # Mark blocks which change spin as forbidden
         if isinstance(matrix, DipAdcMatrix):
+            # Spin mapping between blocks where alpha and beta are just mirrored
+            symmetry.spin_block_maps = [('baaa', 'abbb', fac),
+                                        ('aaba', 'bbab', fac),
+                                        ('abaa', 'babb', fac)]
             symmetry.spin_blocks_forbidden = [
                 "aaab",
                 "bbba",
@@ -183,6 +183,10 @@ def guess_symmetry_doubles(matrix, spin_change=0,
             if len(permutations) > 1:
                 symmetry.permutations = permutations
         else:
+            # Spin mapping between blocks where alpha and beta are just mirrored
+            symmetry.spin_block_maps = [("aaaa", "bbbb", fac),
+                                        ("abab", "baba", fac),
+                                        ("abba", "baab", fac)]
             symmetry.spin_blocks_forbidden = ["aabb",  # spin_change +2
                                               "bbaa",  # spin_change -2
                                               "aaab",  # spin_change +1

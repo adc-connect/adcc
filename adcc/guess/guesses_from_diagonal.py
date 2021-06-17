@@ -202,6 +202,7 @@ def find_smallest_matching_elements(predicate, tensor, motrans, n_elements,
 def guesses_from_diagonal_singles(matrix, n_guesses, spin_change=0,
                                   spin_block_symmetrisation="none",
                                   degeneracy_tolerance=1e-14):
+    # TODO: find better name. s for single is not great.
     s = "ph"
     if isinstance(matrix, DipAdcMatrix):
         s = "hh"
