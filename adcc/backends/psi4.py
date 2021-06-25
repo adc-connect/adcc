@@ -65,13 +65,13 @@ class Psi4OperatorIntegralProvider:
             return pe_induction_elec_ao
 
     @property
-    def pcm_induction_elec(self):
+    def pcm_potential_elec(self):
         if self.wfn.PCM_enabled():
-            def pcm_induction_elec_ao(dm):
+            def pcm_potential_elec_ao(dm):
                 return psi4.core.PCM.compute_V(
                     self.wfn.get_PCM(),
                     psi4.core.Matrix.from_array(dm.to_ndarray()))
-            return pcm_induction_elec_ao
+            return pcm_potential_elec_ao
 
 
 class Psi4EriBuilder(EriBuilder):

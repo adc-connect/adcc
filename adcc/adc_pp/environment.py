@@ -57,6 +57,6 @@ def block_ph_ph_0_pcm(hf, mp, intermediates):
     def apply(ampl):
         tdm = OneParticleOperator(mp, is_symmetric=False)
         tdm.vo = ampl.ph.transpose()
-        vpe = op.pcm_induction_elec(tdm)
+        vpe = op.pcm_potential_elec(tdm)
         return AmplitudeVector(ph=vpe.ov)
     return AdcBlock(apply, 0)
