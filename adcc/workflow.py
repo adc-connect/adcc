@@ -22,6 +22,7 @@
 ## ---------------------------------------------------------------------
 import sys
 import warnings
+import numpy as np
 
 from libadcc import ReferenceState
 
@@ -38,6 +39,7 @@ from .solver.lanczos import lanczos
 from .solver.davidson import jacobi_davidson
 from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
+from .AmplitudeVector import QED_AmplitudeVector
 
 __all__ = ["run_adc"]
 
@@ -378,8 +380,11 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
     if guesses is None:
         if n_guesses is None:
             n_guesses = estimate_n_guesses(matrix, n_states, n_guesses_per_state)
-        guesses = obtain_guesses_by_inspection(matrix, n_guesses, kind,
+        #guesses = obtain_guesses_by_inspection(matrix, n_guesses, kind,             # guesses are obtained here
+        #                                       n_guesses_doubles)
+        guesses = obtain_guesses_by_inspection_qed(matrix, n_guesses, kind,             # guesses are obtained here
                                                n_guesses_doubles)
+        #print(guesses)
     else:
         if len(guesses) < n_states:
             raise InputError("Less guesses provided via guesses (== {}) "
@@ -392,6 +397,7 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
             warnings.warn("Ignoring n_guesses_doubles parameter, since guesses "
                           "are explicitly provided.")
 
+    #print("from workflow...guesses[0].pphh = ", guesses[0].pphh)
     solverargs.setdefault("which", "SA")
     return run_eigensolver(matrix, guesses, n_ep=n_states, conv_tol=conv_tol,
                            callback=callback,
@@ -452,6 +458,7 @@ def obtain_guesses_by_inspection(matrix, n_guesses, kind, n_guesses_doubles=None
     guess_function = {"any": guesses_any, "singlet": guesses_singlet,
                       "triplet": guesses_triplet,
                       "spin_flip": guesses_spin_flip}[kind]
+    
 
     # Determine number of singles guesses to request
     n_guess_singles = n_guesses
@@ -475,6 +482,48 @@ def obtain_guesses_by_inspection(matrix, n_guesses, kind, n_guesses_doubles=None
                          "{} requested".format(len(total_guesses), n_guesses))
     return total_guesses
 
+
+def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=None): # sadly we cannot do this, since later functions
+    # require the matrix (AdcMatrix), instead of just the diagonal, which is a QED_Amplitude
+    guesses_elec = obtain_guesses_by_inspection(matrix.elec, n_guesses, kind, n_guesses_doubles) 
+    guesses_phot = obtain_guesses_by_inspection(matrix.phot, n_guesses, kind, n_guesses_doubles)
+    #print("this is from obtain_guess_qed from workflow: guesses_elec[0].pphh", guesses_elec[0].pphh)
+    if len(guesses_elec) != len(guesses_phot):
+        raise InputError("amount of guesses for electronic and photonic must be equal, but are"
+                         "{} electronic and {} photonic guesses".format(len(guesses_elec), len(guesses_phot)))
+    # for now we make gs guess zero
+    print("groundstate guesses are still zero, see workflow.py func obtain_guesses_by_inspection_qed")
+    guess_elec0 = np.zeros(len(guesses_elec))
+    guess_phot0 = np.zeros(len(guesses_phot)) # using omega (actual diagonal 1st order) results in strange behaviour of davidson solver
+    guesses_tmp = []
+    try:
+        dummy_var = guesses_elec[0].pphh
+        #print(dummy_var)
+        contains_doubles = True
+    except AttributeError:
+        contains_doubles = False
+    for guess_index in np.arange(len(guesses_elec)): # build QED_AmplitudeVectors from AmplitudeVector guesses
+        #if hasattr(guesses_elec[0], "pphh"):
+        if contains_doubles: 
+            print("doubles guesses are set up")
+            guesses_tmp.append(QED_AmplitudeVector(guess_elec0[guess_index], guesses_elec[guess_index].ph, guesses_elec[guess_index].pphh,
+                            guess_phot0[guess_index], guesses_phot[guess_index].ph, guesses_phot[guess_index].pphh))
+        else:
+            print("singles guesses are set up")
+            guesses_tmp.append(QED_AmplitudeVector(guess_elec0[guess_index], guesses_elec[guess_index].ph, None,
+                            guess_phot0[guess_index], guesses_phot[guess_index].ph, None))
+
+    # guesses_tmp needs to be normalized then
+    #for vec in guesses_tmp:
+    #    print(type(vec.gs), vec.gs)
+    #    print(type(vec.ph), vec.ph)
+    #    print(type(vec.gs1), vec.gs1)
+    #    print(type(vec.ph1), vec.ph1)
+    #print("from workflow guess_qed...guesses_tmp[0].pphh = ", guesses_tmp[0].pphh)
+    #normalized_guesses = [vec / np.sqrt(vec @ vec) for vec in guesses_tmp]
+    #print("after normalization guesses[0].pphh is ", normalized_guesses[0].pphh)
+    return [vec / np.sqrt(vec @ vec) for vec in guesses_tmp]
+    #return guesses
 
 def setup_solver_printing(solmethod_name, matrix, kind, default_print,
                           output=None):

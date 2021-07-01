@@ -28,6 +28,7 @@ from .MoSpaces import MoSpaces
 from .backends import import_scf_results
 from .OperatorIntegrals import OperatorIntegrals
 from .OneParticleOperator import OneParticleOperator, product_trace
+from .misc import cached_member_function
 
 import libadcc
 
@@ -164,8 +165,92 @@ class ReferenceState(libadcc.ReferenceState):
 
         if attr.startswith("f"):
             return self.fock(b.__getattr__(attr[1:]))
+        elif attr.startswith("get_qed_total_dip"):
+            return self.get_qed_total_dip(b.__getattr__(attr))
+        elif attr.startswith("get_qed_omega"):
+            return self.get_qed_omega
         else:
             return self.eri(b.__getattr__(attr))
+
+    @cached_member_function
+    def get_qed_total_dip(self, block):
+        if hasattr(self, "coupling"):
+            from . import block as b
+            dips = self.operators.electric_dipole
+            #import ctypes
+            #dips_id_int = int(dips, base=16)
+            #print(ctypes.cast(dips_id_int, ctypes.py_object).value)
+            #print(dips[block])
+            couplings = self.coupling
+            freqs = self.frequency
+            #test_el_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
+            #omega_square = x**2 for x in freqs
+            #omega = np.linalg.norm(freqs)
+            total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
+            for coupling, freq, dip in zip(couplings, freqs, dips):
+                total_dip += coupling * np.sqrt(2 * freq) * dip
+                #test_el_dip = dip
+            total_dip.evaluate()
+            #test_el_dip.evaluate()
+            #print(str(block))
+            #print(test_el_dip[block])
+            #print(total_dip[block])
+            return total_dip[block]
+
+    @cached_member_function
+    def get_qed_omega(self):
+        if hasattr(self, "coupling"):
+            freqs = self.frequency
+            omega = np.linalg.norm(freqs)
+            return omega
+
+    @cached_member_function
+    def qed_D_object(self, block):
+        if hasattr(self, "coupling"):
+            from . import block as b
+            from .functions import einsum
+            total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
+            omega = ReferenceState.get_qed_omega(self)
+            total_dip.oo = ReferenceState.get_qed_total_dip(self, b.oo)
+            total_dip.ov = ReferenceState.get_qed_total_dip(self, b.ov)
+            total_dip.vv = ReferenceState.get_qed_total_dip(self, b.vv)
+            # We have to define all the blocks from the D_{pqrs} = d_{pr} d_{qs} - d_{ps} d_{qr} object, which has the
+            # same symmetry properties as the ERI object
+            # Actually in b.ovov: second term: ib,ja would be ib,aj , but d_{ia} = d_{ai}, and d.ov is implemented (as usual)
+            ds = {
+                b.oooo: einsum('ik,jl->ijkl', total_dip.oo, total_dip.oo) - einsum('il,jk->ijkl', total_dip.oo, total_dip.oo),
+                b.ooov: einsum('ik,ja->ijka', total_dip.oo, total_dip.ov) - einsum('ia,jk->ijka', total_dip.ov, total_dip.oo),
+                b.oovv: einsum('ia,jb->ijab', total_dip.ov, total_dip.ov) - einsum('ib,ja->ijab', total_dip.ov, total_dip.ov),
+                b.ovvv: einsum('ib,ac->iabc', total_dip.ov, total_dip.vv) - einsum('ic,ab->iabc', total_dip.ov, total_dip.vv),
+                b.ovov: einsum('ij,ab->iajb', total_dip.oo, total_dip.vv) - einsum('ib,ja->iajb', total_dip.ov, total_dip.ov),
+                b.vvvv: einsum('ac,bd->abcd', total_dip.vv, total_dip.vv) - einsum('ad,bc->abcd', total_dip.vv, total_dip.vv),
+            }
+            return ds[block]
+
+    def eri(self, block):
+        if hasattr(self, "coupling"):
+            from . import block as b
+            from .functions import einsum
+            ds_init = OneParticleOperator(self.mospaces, is_symmetric=True) #Since there is no TwoParticleOperator we do this
+            ds = {
+                b.oooo: einsum('ik,jl->ijkl', ds_init.oo, ds_init.oo),
+                b.ooov: einsum('ik,ja->ijka', ds_init.oo, ds_init.ov),
+                b.oovv: einsum('ia,jb->ijab', ds_init.ov, ds_init.ov),
+                b.ovvv: einsum('ib,ac->iabc', ds_init.ov, ds_init.vv),
+                b.ovov: einsum('ij,ab->iajb', ds_init.oo, ds_init.vv),
+                b.vvvv: einsum('ac,bd->abcd', ds_init.vv, ds_init.vv),
+            }
+            ds[block] = ReferenceState.qed_D_object(self, block)
+            return super().eri(block) + ds[block]
+        else:
+            #raise InvalidReference(
+            #"Please define the attribute coupling and frequency to the Psi4 wfn object, before importing it in adcc!"
+            #"e.g. : refstate = adcc.ReferenceState(wfn)"
+            #"refstate.coupling = [x, y, z] # Just as you did in hilbert"
+            #"refstate.frequency = [x, y, z] # Just as you did in hilbert"
+            #"state = adcc.adc2(refstate, n_singlets=3)"
+            #)
+            return super().eri(block)
 
     @property
     def mospaces(self):

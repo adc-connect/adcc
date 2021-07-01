@@ -23,7 +23,7 @@
 from libadcc import amplitude_vector_enforce_spin_kind
 
 from adcc import evaluate
-from adcc.AmplitudeVector import AmplitudeVector
+from adcc.AmplitudeVector import AmplitudeVector, QED_AmplitudeVector
 
 # TODO
 #    This interface is not that great and leads to duplicate information
@@ -55,16 +55,34 @@ class IndexSymmetrisation():
         Returns:
             The updated new_vectors
         """
-        if isinstance(new_vectors, AmplitudeVector):
-            return self.symmetrise([new_vectors])[0]
-        for vec in new_vectors:
+
+        def symm_subroutine(vec):
             if not isinstance(vec, AmplitudeVector):
-                raise TypeError("new_vectors has to be an "
-                                "iterable of AmplitudeVector")
+                    raise TypeError("new_vectors has to be an "
+                                    "iterable of AmplitudeVector")
             for b in vec.blocks_ph:
                 if b not in self.symmetrisation_functions:
                     continue
                 vec[b] = evaluate(self.symmetrisation_functions[b](vec[b]))
+            return vec
+
+        if isinstance(new_vectors, AmplitudeVector):
+            return self.symmetrise([new_vectors])[0]
+        elif isinstance(new_vectors[0], QED_AmplitudeVector):
+            # we dont have to symmetrise the gs blocks...actually only the pphh blocks are symmetrised here
+            for vec in new_vectors:
+                vec.elec = symm_subroutine(vec.elec)
+                vec.phot = symm_subroutine(vec.phot)
+        elif isinstance(new_vectors[0], AmplitudeVector):
+            for vec in new_vectors:
+                vec = symm_subroutine(vec)
+            #if not isinstance(vec, AmplitudeVector):
+            #    raise TypeError("new_vectors has to be an "
+            #                    "iterable of AmplitudeVector")
+            #for b in vec.blocks_ph:
+            #    if b not in self.symmetrisation_functions:
+            #        continue
+            #    vec[b] = evaluate(self.symmetrisation_functions[b](vec[b]))
         return new_vectors
 
 

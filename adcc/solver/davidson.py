@@ -28,7 +28,7 @@ import scipy.sparse.linalg as sla
 
 from adcc import evaluate, lincomb
 from adcc.AdcMatrix import AdcMatrixlike
-from adcc.AmplitudeVector import AmplitudeVector
+from adcc.AmplitudeVector import AmplitudeVector, QED_AmplitudeVector
 
 from .common import select_eigenpairs
 from .preconditioner import JacobiPreconditioner
@@ -139,6 +139,7 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
 
     # The current subspace
     SS = state.subspace_vectors
+    #print("from davidson...SS[0].pphh", SS[0].pphh)
 
     # The matrix A projected into the subspace
     # as a continuous array. Only the view
@@ -151,6 +152,9 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
 
     callback(state, "start")
     state.timer.restart("iteration")
+
+    #print(matrix.shape)
+    #print(SS)
 
     with state.timer.record("projection"):
         # Initial application of A to the subspace
@@ -169,6 +173,8 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         with state.timer.record("projection"):
             Ass = Ass_cont[:n_ss_vec, :n_ss_vec]  # Increase the work view size
             for i in range(n_block):
+                #print(type(Ax[-n_block + i]), Ax[-n_block + i])
+                #print(type(SS), SS)
                 Ass[:, -n_block + i] = Ax[-n_block + i] @ SS
             Ass[-n_block:, :] = np.transpose(Ass[:, -n_block:])
 
@@ -187,6 +193,9 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             # Form residuals, A * SS * v - λ * SS * v = Ax * v + SS * (-λ*v)
             def form_residual(rval, rvec):
                 coefficients = np.hstack((rvec, -rval * rvec))
+                #print(type(coefficients), coefficients)
+                #print(type(SS), SS)
+                #print(type(Ax), Ax)
                 return lincomb(coefficients, Ax + SS, evaluate=True)
             residuals = [form_residual(rvals[i], v)
                          for i, v in enumerate(np.transpose(rvecs))]
@@ -197,6 +206,12 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             state.eigenvalues = rvals[epair_mask]
             state.residuals = [residuals[i] for i in epair_mask]
             state.residual_norms = np.array([r @ r for r in state.residuals])
+            # building the eigenvectors here is just for debugging purposes
+            eigenvecs = [lincomb(v, SS, evaluate=True)
+                                  for i, v in enumerate(np.transpose(rvecs))
+                                  if i in epair_mask]
+            for eigv in eigenvecs:
+                print("norm of eigenvector", np.sqrt(eigv @ eigv))
             # TODO This is misleading ... actually residual_norms contains
             #      the norms squared. That's also the used e.g. in adcman to
             #      check for convergence, so using the norm squared is fine,
@@ -264,6 +279,9 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
 
             # Explicitly symmetrise the new vectors if requested
             if explicit_symmetrisation:
+                #if isinstance(preconds[0], QED_AmplitudeVector):
+                #    
+                #else:
                 explicit_symmetrisation.symmetrise(preconds)
 
         # Project the components of the preconditioned vectors away
@@ -275,6 +293,8 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
                 pvec = preconds[i]
                 # Project out the components of the current subspace
                 # That is form (1 - SS * SS^T) * pvec = pvec + SS * (-SS^T * pvec)
+                #print("pvec SS", pvec, SS)
+                #print(pvec.elec.ph, SS[0].elec.ph)
                 coefficients = np.hstack(([1], -(pvec @ SS)))
                 pvec = lincomb(coefficients, [pvec] + SS, evaluate=True)
                 pnorm = np.sqrt(pvec @ pvec)
@@ -358,7 +378,9 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
     if not isinstance(matrix, AdcMatrixlike):
         raise TypeError("matrix is not of type AdcMatrixlike")
     for guess in guesses:
-        if not isinstance(guess, AmplitudeVector):
+        if not isinstance(guess, (AmplitudeVector, QED_AmplitudeVector)):
+            #print(guess)
+            #print(guesses)
             raise TypeError("One of the guesses is not of type AmplitudeVector")
 
     if preconditioner is not None and isinstance(preconditioner, type):
@@ -390,6 +412,7 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
             "".format(conv_tol, matrix.shape[1] * np.finfo(float).eps)
         ))
 
+    #print("this is from davidson...guesses[0].pphh = ", guesses[0].pphh)
     state = DavidsonState(matrix, guesses)
     davidson_iterations(matrix, state, max_subspace, max_iter,
                         n_ep=n_ep, is_converged=convergence_test,

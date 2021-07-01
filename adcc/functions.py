@@ -24,7 +24,7 @@ import libadcc
 
 import opt_einsum
 
-from .AmplitudeVector import AmplitudeVector
+from .AmplitudeVector import AmplitudeVector, QED_AmplitudeVector
 
 
 def dot(a, b):
@@ -121,7 +121,32 @@ def lincomb(coefficients, tensors, evaluate=False):
             block: lincomb(coefficients, [ten[block] for ten in tensors],
                            evaluate=evaluate)
             for block in tensors[0].blocks_ph
-        })
+        }) # rewrite this for QED_AmplitudeVector, where ph,pphh,ph1,pphh1 still undergo libadcc.Tensor stuff, while gs and gs1 have to be treated separately
+    elif isinstance(tensors[0], QED_AmplitudeVector):
+        #for qed_vec in tensors:
+        #print(tensors.gs, tensors.elec, tensors.gs1, tensors.phot)
+        # give .elec and .phot to lin_comb_strict via AmplitudeVector instance
+        # then coeff[0] * .gs[from first tensor/vector] + coeff[1] * .gs[from second tensor/vector] + ...
+        # same for .gs1
+        gs_part = 0
+        gs1_part = 0
+        elec_list = []
+        phot_list = []
+        for coeff_ind, ten in enumerate(tensors):
+            gs_part += coefficients[coeff_ind] * ten.gs
+            gs1_part += coefficients[coeff_ind] * ten.gs1
+            elec_list.append(ten.elec)
+            phot_list.append(ten.phot)
+        elec_part = lincomb(coefficients, elec_list, evaluate=evaluate)
+        phot_part = lincomb(coefficients, phot_list, evaluate=evaluate)
+        if "pphh" in elec_part.blocks_ph:
+            return QED_AmplitudeVector(gs_part, elec_part.ph, elec_part.pphh, gs1_part, phot_part.ph, phot_part.pphh)
+        else:
+            return QED_AmplitudeVector(gs_part, elec_part.ph, None, gs1_part, phot_part.ph, None)
+        #print(qed_vec.ph)
+        #print(coefficients)
+        #print(tensors[0][block])
+        #NotImplementedError("lincomb does not exist for list of QED_AmplitudeVectors yet")
     elif not isinstance(tensors[0], libadcc.Tensor):
         raise TypeError("Tensor type not supported")
 

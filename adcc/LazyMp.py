@@ -47,6 +47,12 @@ class LazyMp:
         self.mospaces = hf.mospaces
         self.timer = Timer()
         self.has_core_occupied_space = hf.has_core_occupied_space
+        #for qed mp2
+        self.get_qed_total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
+        self.get_qed_total_dip.oo = hf.get_qed_total_dip(b.oo)
+        self.get_qed_total_dip.ov = hf.get_qed_total_dip(b.ov)
+        self.get_qed_total_dip.vv = hf.get_qed_total_dip(b.vv)
+        self.get_qed_omega = hf.get_qed_omega
 
     def __getattr__(self, attr):
         # Shortcut some quantities, which are needed most often
@@ -196,17 +202,123 @@ class LazyMp:
                                       " are implemented.")
 
     @cached_member_function
+    def qed_t1_df(self, space):
+        #if space != b.ov:
+            #raise NotImplementedError("qed_t1 term not implemented "
+            #                          f"for space {space}.")
+        total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
+        if space == b.oo:
+            total_dip.oo = self.get_qed_total_dip.oo
+            return total_dip.oo
+        elif space == b.ov:
+            total_dip.ov = self.get_qed_total_dip.ov
+            return total_dip.ov
+        elif space == b.vv:
+            total_dip.vv = self.get_qed_total_dip.vv
+            return total_dip.vv
+        #return total_dip.ov #/ self.df(b.ov)
+
+    @cached_member_function
+    def qed_t1(self, space):
+        """ Return new electronic singly excited amplitude in the first order correction to the wavefunction for qed for N=1 """
+        if space != b.ov:
+            raise NotImplementedError("qed_t1 term not implemented "
+                                      f"for space {space}.")
+        return self.qed_t1_df(b.ov) / self.df(b.ov) #einsum("kc,kc->kc", self.qed_t1(b.ov), self.df(b.ov))
+
+    @cached_member_function
+    def qed_t0_df(self, space):
+        total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
+        total_dip.oo = self.get_qed_total_dip.oo
+        total_dip.ov = self.get_qed_total_dip.ov
+        total_dip.vv = self.get_qed_total_dip.vv
+        if space == b.ov:
+            occ_sum = einsum("ka,ki->ia", total_dip.ov, total_dip.oo)
+            virt_sum = einsum("ac,ic->ia", total_dip.vv, total_dip.ov)
+            #return einsum("ka,ki->ia", total_dip.ov, total_dip.oo) - einsum("ac,ic->ia", total_dip.vv, total_dip.ov)
+            #print(total_dip.ov)
+            #return einsum("ia,ia->ia", occ_sum, virt_sum)
+        elif space == b.oo:
+            occ_sum = einsum("ki,kj->ij", total_dip.oo, total_dip.oo)
+            virt_sum = einsum("ic,jc->ij", total_dip.ov, total_dip.ov)
+        elif space == b.vv:
+            occ_sum = einsum("ka,kb->ab", total_dip.ov, total_dip.ov)
+            virt_sum = einsum("ac,bc->ab", total_dip.vv, total_dip.vv)
+        return occ_sum - virt_sum
+
+    @cached_member_function
+    def qed_t0(self, space):
+        """ Return new electronic singly excited amplitude in the first order correction to the wavefunction for qed for N=0 """
+        if space != b.ov:
+            raise NotImplementedError("qed_t0 term not implemented "
+                                      f"for space {space}.")
+        return self.qed_t0_df(b.ov) / self.df(b.ov)
+
+    @cached_member_function
+    def diff_df(self, space):
+        if space == b.ov:
+            raise NotImplementedError("This would not make sense to construct!!!")
+        elif space == b.vv: # this returns (eps_a - eps_b)
+            return einsum("ia,ib->ab", self.df(b.ov), - self.df(b.ov))
+        elif space == b.oo: # this returns (- eps_i + eps_j)
+            return einsum("ia,ja->ij", self.df(b.ov), - self.df(b.ov))
+
+
+
+    @cached_member_function
     def energy_correction(self, level=2):
         """Obtain the MP energy correction at a particular level"""
+        qed_mp2_correction = 0
         if level > 3:
             raise NotImplementedError(f"MP({level}) energy correction "
                                       "not implemented.")
-        if level < 2:
+        if level < 2: #for qed_mp1 from non-qed-hf also first corrections come into play...for now done in mp2 part here
             return 0.0
         hf = self.reference_state
         is_cvs = self.has_core_occupied_space
         if level == 2 and not is_cvs:
             terms = [(1.0, hf.oovv, self.t2oo)]
+            mp2_correction = sum(
+                -0.25 * pref * eri.dot(t2)
+                for pref, eri, t2 in terms
+            )
+            if hasattr(hf, "coupling"):
+                print("mp2 energy with two electron qed perturbation " + str(mp2_correction))
+                #check if qed-hf (psi4.core.Wavefunction) input or non-qed-hf input (standard hf) is given
+                total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
+                omega, total_dip.ov = ReferenceState.get_qed_omega(hf), self.get_qed_total_dip.ov
+                qed_terms = [(omega/2, total_dip.ov, self.qed_t1(b.ov))]
+                qed_mp2_correction_1 = sum(
+                    -pref * lambda_dip.dot(qed_t)
+                    for pref, lambda_dip, qed_t in qed_terms
+                )
+                if hasattr(hf, "qed_hf"):
+                    print("full qed MP2 energy correction (qed-hf) " + str(mp2_correction + qed_mp2_correction_1))
+                else:
+                    #total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
+                    #omega, total_dip.ov = ReferenceState.get_qed_omega(hf), self.get_qed_total_dip.ov
+                    #qed_terms_1 = [(omega/2, total_dip.ov, self.qed_t1(b.ov))]
+                    #qed_mp2_correction_1 = sum(
+                    #    -pref * lambda_dip.dot(qed_t)
+                    #    for pref, lambda_dip, qed_t in qed_terms_1
+                    #)
+                    qed_terms_0 = [(1.0, self.qed_t0(b.ov), self.qed_t0_df(b.ov))]
+                    qed_mp2_correction_0 = sum(
+                        -0.25 * pref * ampl_t0.dot(ampl_t0_df)
+                        for pref, ampl_t0, ampl_t0_df in qed_terms_0
+                    )
+                    #mp1 terms:
+                    qed_mp1_additional_terms = [(0.5, total_dip.ov)]
+                    qed_mp1_correction = sum(
+                        pref * lambda_dip.dot(lambda_dip)
+                        for pref, lambda_dip in qed_mp1_additional_terms
+                    )
+                    #print(self.qed_t0(b.ov))
+                    #print(self.qed_t0_df(b.ov))
+                    #print(qed_mp2_correction_0)
+                    print("full qed MP2 energy correction (standard hf) " 
+                    + str(mp2_correction + qed_mp2_correction_1 + qed_mp2_correction_0))
+                    print("qed-mp1 correction, due to standard hf input " + str(qed_mp1_correction))
         elif level == 2 and is_cvs:
             terms = [(1.0, hf.oovv, self.t2oo),
                      (2.0, hf.ocvv, self.t2oc),
@@ -218,7 +330,7 @@ class LazyMp:
         return sum(
             -0.25 * pref * eri.dot(t2)
             for pref, eri, t2 in terms
-        )
+        ) + qed_mp2_correction
 
     def energy(self, level=2):
         """
