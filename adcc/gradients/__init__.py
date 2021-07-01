@@ -27,7 +27,7 @@ from adcc.Excitation import Excitation
 from adcc.timings import Timer
 from adcc.functions import einsum, evaluate
 
-from adcc.OneParticleOperator import product_trace
+from adcc.OneParticleOperator import OneParticleOperator, product_trace
 from .TwoParticleDensityMatrix import TwoParticleDensityMatrix
 from .orbital_response import (
     orbital_response, orbital_response_rhs, energy_weighted_density_matrix
@@ -61,8 +61,31 @@ def nuclear_gradient(excitation_or_mp):
     with timer.record("amplitude_response"):
         g1a, g2a = amplitude_relaxed_densities(excitation_or_mp)
 
+    env_lr_excited = False
+    g1_exci_ao = None
+    if hf.environment == "pe":
+        try:
+            if len(excitation_or_mp.matrix.extra_terms):
+                env_lr_excited = True
+                x = excitation_or_mp.excitation_vector
+                d_xi = OneParticleOperator(hf, is_symmetric=False)
+                d_xi.vo = x.ph.transpose()
+                v_pe = hf.operators.pe_induction_elec(d_xi)
+                rhs_pe = (
+                    + 2.0 * einsum("ja,ij->ia", x.ph, v_pe.oo)
+                    - 2.0 * einsum("ib,ab->ia", x.ph, v_pe.vv)
+                )
+                g1_exci = OneParticleOperator(hf, is_symmetric=True)
+                g1_exci.ov = x.ph
+                g1_exci_ao = sum(g1_exci.to_ao_basis()).to_ndarray()
+        except AttributeError:
+            pass
+
     with timer.record("orbital_response"):
         rhs = orbital_response_rhs(hf, g1a, g2a).evaluate()
+        if env_lr_excited:
+            rhs += rhs_pe
+            rhs.evaluate()
         l_ov = orbital_response(hf, rhs)
 
     # orbital-relaxed OPDM (without reference state)
@@ -74,6 +97,11 @@ def nuclear_gradient(excitation_or_mp):
 
     with timer.record("energy_weighted_density_matrix"):
         w = energy_weighted_density_matrix(hf, g1o, g2a)
+        if env_lr_excited:
+            x = excitation_or_mp.excitation_vector
+            w.oo -= einsum('jc,ic->ij', x.ph, v_pe.ov)
+            w.ov -= einsum("ja,ij->ia", x.ph, v_pe.oo)
+            w.vv -= einsum('kb,ka->ab', x.ph, v_pe.ov)
 
     # build two-particle density matrices for contraction with TEI
     with timer.record("form_tpdm"):
@@ -102,5 +130,10 @@ def nuclear_gradient(excitation_or_mp):
         Gradient = hf.gradient_provider.correlated_gradient(
             g1_ao, w_ao, g2_ao_1, g2_ao_2
         )
+        if hf.environment == "pe":
+            pe_grad = hf.gradient_provider.pe_gradient(g1_ao, g1_exci_ao)
+            Gradient["PE"] = pe_grad
+            Gradient["Total"] += pe_grad
+
     Gradient["timer"] = timer
     return Gradient

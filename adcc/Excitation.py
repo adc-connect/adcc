@@ -66,6 +66,7 @@ class Excitation:
         self.__parent_state = parent_state
         self.index = index
         self.method = method
+        self.matrix = parent_state.matrix
         self.ground_state = parent_state.ground_state
         self.reference_state = parent_state.reference_state
         for key in self.parent_state.excitation_property_keys:

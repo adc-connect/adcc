@@ -90,6 +90,48 @@ class PyScfGradientProvider:
         Gradient["Total"] = Gradient["OEI"] + Gradient["TEI"] + Gradient["N"]
         return Gradient
 
+    def pe_gradient(self, g1_ao, g1_exci_ao=None):
+        from pyscf.solvent import pol_embed_grad as pegrad
+        g1_hf = self.scfres.make_rdm1(ao_repr=True)
+        if not (isinstance(g1_hf, np.ndarray) and g1_hf.ndim == 2):
+            g1_hf = g1_hf[0] + g1_hf[1]
+        peobj = self.scfres.with_solvent
+        if peobj.do_ecp:
+            raise NotImplementedError("Gradients for PE(ECP) not implemented.")
+
+        mol = peobj.mol
+        natoms = mol.natm
+        de = np.zeros((natoms, 3))
+        cppe_state = peobj.cppe_state
+        # electrostatics part
+        nuc_ee_grad = cppe_state.nuclear_interaction_energy_gradient()
+        op_es = pegrad._grad_electrostatic_elec(mol, peobj)
+        elec_ee_grad = pegrad._grad_from_operator(mol, op_es, g1_ao)
+        de += nuc_ee_grad + elec_ee_grad
+
+        # induction part
+        positions = cppe_state.positions_polarizable
+        n_polsites = positions.shape[0]
+        if n_polsites > 0:
+            nuc_field_grad = cppe_state.nuclear_field_gradient().reshape(natoms, 3, n_polsites, 3)
+            mu_e = pegrad._induced_moments(mol, peobj, positions, g1_ao, elec_only=False)
+            mu_hf = pegrad._induced_moments(mol, peobj, positions, g1_hf, elec_only=False)
+            v_e = pegrad._grad_induction_elec(mol, positions, mu_e)
+            v_hf = pegrad._grad_induction_elec(mol, positions, mu_hf)
+            grad_induction_nuc = -np.einsum("acpk,pk->ac", nuc_field_grad, mu_e)
+            grad_induction_el = (
+                + pegrad._grad_from_operator(mol, v_e, g1_hf)
+                + pegrad._grad_from_operator(mol, v_hf, g1_ao - g1_hf)
+            )
+            de += grad_induction_nuc + grad_induction_el
+
+        # induction part (LR coupling)
+        if n_polsites > 0 and g1_exci_ao is not None:
+            mu_exci = pegrad._induced_moments(mol, peobj, positions, g1_exci_ao, elec_only=True)
+            v_exci = pegrad._grad_induction_elec(mol, positions, mu_exci)
+            de += 0.5 * pegrad._grad_from_operator(mol, v_exci, g1_exci_ao)
+        return de
+
 
 class PyScfOperatorIntegralProvider:
     def __init__(self, scfres):

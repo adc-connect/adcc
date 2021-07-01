@@ -57,6 +57,8 @@ def orbital_response_rhs(hf, g1a, g2a):
         + 2.0 * einsum("jika,jk->ia", hf.ooov, g1a.oo)
         + 2.0 * einsum("icab,bc->ia", hf.ovvv, g1a.vv)
     )
+    if hf.environment == "pe":
+        ret += -2.0 * hf.operators.pe_induction_elec(g1a).ov
     return ret
 
 
@@ -97,6 +99,8 @@ def energy_weighted_density_matrix(hf, g1o, g2a):
         - einsum("jkia,ka->ij", hf.ooov, g1o.ov)
         - einsum("jaib,ab->ij", hf.ovov, g1o.vv)
     )
+    if hf.environment == "pe":
+        w.oo -= hf.operators.pe_induction_elec(g1o).oo
     w.vv = gi_vv - einsum("ac,cb->ab", g1o.vv, hf.fvv)
     return evaluate(w)
 
@@ -124,7 +128,6 @@ class OrbitalResponseMatrix:
         )
         # TODO: generalize once other solvent methods are available
         if self.hf.environment == "pe":
-            # PE contribution to the orbital Hessian
             ops = self.hf.operators
             dm = OneParticleOperator(self.hf, is_symmetric=True)
             dm.ov = l_ov
