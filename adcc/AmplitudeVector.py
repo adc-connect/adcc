@@ -230,7 +230,7 @@ class AmplitudeVector(dict):
 class QED_AmplitudeVector:
 
     #def __init__(self, gs=None, elec=None, gs1=None, phot=None):
-    def __init__(self, gs=None, ph=None, pphh=None, gs1=None, ph1=None, pphh1=None):
+    def __init__(self, gs=None, ph=None, pphh=None, gs1=None, ph1=None, pphh1=None):#, gs2=None, ph2=None, pphh2=None):
         #if (elec is None and gs is None) and (phot is None and gs1 is None):
         #    raise ValueError("Either electronic or photonic part must be given.")
 
