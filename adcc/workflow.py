@@ -505,11 +505,11 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
     for guess_index in np.arange(len(guesses_elec)): # build QED_AmplitudeVectors from AmplitudeVector guesses
         #if hasattr(guesses_elec[0], "pphh"):
         if contains_doubles: 
-            print("doubles guesses are set up")
+            #print("doubles guesses are set up")
             guesses_tmp.append(QED_AmplitudeVector(guess_elec0[guess_index], guesses_elec[guess_index].ph, guesses_elec[guess_index].pphh,
                             guess_phot0[guess_index], guesses_phot[guess_index].ph, guesses_phot[guess_index].pphh))
         else:
-            print("singles guesses are set up")
+            #print("singles guesses are set up")
             guesses_tmp.append(QED_AmplitudeVector(guess_elec0[guess_index], guesses_elec[guess_index].ph, None,
                             guess_phot0[guess_index], guesses_phot[guess_index].ph, None))
 

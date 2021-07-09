@@ -210,6 +210,52 @@ class AdcMatrix(AdcMatrixlike):
             #self.__init_space_data_0(self.__diagonal_1)
             """
 
+            if method.base_method.name == "adc2":
+                self.phot2 = AdcMatrix_submatrix(method, hf_or_mp, "phot2")
+
+                self.blocks_ph_22 = {  # TODO Rename to self.block in 0.16.0
+                    block: ppmatrix.block(self.ground_state, block.split("_"),
+                                        order=str(order) + "_phot2", intermediates=self.intermediates,
+                                        variant=variant)
+                    for block, order in block_orders.items() if order is not None
+                }
+
+                self.elec_couple_inner = AdcMatrix_submatrix(method, hf_or_mp, "elec_couple_inner")
+
+                self.blocks_ph_21 = {  # TODO Rename to self.block in 0.16.0
+                    block: ppmatrix.block(self.ground_state, block.split("_"),
+                                        order=str(order) + "_couple_inner", intermediates=self.intermediates,
+                                        variant=variant)
+                    for block, order in block_orders.items() if order is not None
+                }
+
+                self.elec_couple_edge = AdcMatrix_submatrix(method, hf_or_mp, "elec_couple_edge")
+
+                self.blocks_ph_20 = {  # TODO Rename to self.block in 0.16.0
+                    block: ppmatrix.block(self.ground_state, block.split("_"),
+                                        order=str(order) + "_couple_edge", intermediates=self.intermediates,
+                                        variant=variant)
+                    for block, order in block_orders.items() if order is not None
+                }
+
+                self.phot_couple_inner = AdcMatrix_submatrix(method, hf_or_mp, "phot_couple_inner")
+
+                self.blocks_ph_12 = {  # TODO Rename to self.block in 0.16.0
+                    block: ppmatrix.block(self.ground_state, block.split("_"),
+                                        order=str(order) + "_phot_couple_inner", intermediates=self.intermediates,
+                                        variant=variant)
+                    for block, order in block_orders.items() if order is not None
+                }
+
+                self.phot_couple_edge = AdcMatrix_submatrix(method, hf_or_mp, "phot_couple_edge")
+
+                self.blocks_ph_02 = {  # TODO Rename to self.block in 0.16.0
+                    block: ppmatrix.block(self.ground_state, block.split("_"),
+                                        order=str(order) + "_phot_couple_edge", intermediates=self.intermediates,
+                                        variant=variant)
+                    for block, order in block_orders.items() if order is not None
+                }
+
             # build QED_AmplitudeVector
             
             self.blocks_ph_1_temp = {}
@@ -221,10 +267,17 @@ class AdcMatrix(AdcMatrixlike):
                 self.blocks_ph_1_temp[key + "_phot"] = self.blocks_ph_11[key]
             self.blocks_ph = {**self.blocks_ph_00, **self.blocks_ph_1_temp}
 
-            self.__diagonal_gs = sum(self.blocks_ph[block].diagonal for block in self.blocks_ph
-                                    if "gs_gs" in block and not block.endswith("phot")) # coupling gs_gs blocks have diagonal = 0
+            self.__diagonal_gs = 0 #sum(self.blocks_ph[block].diagonal for block in self.blocks_ph
+                                   #  if "ph_gs" in block and not block.endswith("phot")) # coupling gs_gs blocks have diagonal = 0
             self.__diagonal_gs1 = sum(self.blocks_ph[block].diagonal for block in self.blocks_ph
-                                    if "gs_gs" in block and block.endswith("phot"))
+                                    if "ph_gs" in block and block.endswith("phot"))
+
+            #print("following should be the blocks, that make up the diagonal for gs_gs")
+            #for block in self.blocks_ph:
+            #    if "ph_gs" in block and block.endswith("phot"):
+            #        print("this is the block ", block)
+            #print(self.__diagonal_gs)
+            #print(self.__diagonal_gs1)
             #self.blocks_ph = {**self.elec.blocks_ph, **self.blocks_ph_1_temp}
             #self.blocks_ph = QED_AmplitudeVector(0, self.elec.blocks_ph, 0, self.phot.blocks_ph)
             #self.__diagonal = QED_AmplitudeVector(0, self.elec.diagonal, 0, self.phot.diagonal)
@@ -273,7 +326,7 @@ class AdcMatrix(AdcMatrixlike):
             # since the guesses need the whole matrix object as input, istead of just the diagonals, it is useful to define
             # self.elec and self.phot as the the corresponding original matrices
             # this is done in one class, since we also require the full matrix for the solver
-            
+       
 
     def __init_space_data_qed(self, diagonal0):
         self.__init_space_data(diagonal0)
@@ -894,6 +947,41 @@ class AdcMatrix_submatrix(AdcMatrixlike):
                 self.blocks_ph = {  # TODO Rename to self.block in 0.16.0
                     block: ppmatrix.block(self.ground_state, block.split("_"),
                                         order=str(order) + "_phot", intermediates=self.intermediates,
+                                        variant=variant)
+                    for block, order in block_orders.items() if order is not None
+                }
+            elif subblock == "phot2":
+                self.blocks_ph = {  # TODO Rename to self.block in 0.16.0
+                    block: ppmatrix.block(self.ground_state, block.split("_"),
+                                        order=str(order) + "_phot2", intermediates=self.intermediates,
+                                        variant=variant)
+                    for block, order in block_orders.items() if order is not None
+                }
+            elif subblock == "phot_couple_inner":
+                self.blocks_ph = {  # TODO Rename to self.block in 0.16.0
+                    block: ppmatrix.block(self.ground_state, block.split("_"),
+                                        order=str(order) + "_phot_couple_inner", intermediates=self.intermediates,
+                                        variant=variant)
+                    for block, order in block_orders.items() if order is not None
+                }
+            elif subblock == "phot_couple_edge":
+                self.blocks_ph = {  # TODO Rename to self.block in 0.16.0
+                    block: ppmatrix.block(self.ground_state, block.split("_"),
+                                        order=str(order) + "_phot_couple_edge", intermediates=self.intermediates,
+                                        variant=variant)
+                    for block, order in block_orders.items() if order is not None
+                }
+            elif subblock == "elec_couple_inner":
+                self.blocks_ph = {  # TODO Rename to self.block in 0.16.0
+                    block: ppmatrix.block(self.ground_state, block.split("_"),
+                                        order=str(order) + "_couple_inner", intermediates=self.intermediates,
+                                        variant=variant)
+                    for block, order in block_orders.items() if order is not None
+                }
+            elif subblock == "elec_couple_edge":
+                self.blocks_ph = {  # TODO Rename to self.block in 0.16.0
+                    block: ppmatrix.block(self.ground_state, block.split("_"),
+                                        order=str(order) + "_couple_edge", intermediates=self.intermediates,
                                         variant=variant)
                     for block, order in block_orders.items() if order is not None
                 }
