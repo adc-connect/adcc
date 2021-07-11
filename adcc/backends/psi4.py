@@ -249,7 +249,7 @@ def import_scf(wfn):
 
 
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
-           conv_tol_grad=1e-8, max_iter=150, pe_options=None):
+           conv_tol_grad=1e-8, max_iter=150, pe_options=None, pcm=None):
     basissets = {
         "sto3g": "sto-3g",
         "def2tzvp": "def2-tzvp",
@@ -277,6 +277,16 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
     if pe_options:
         psi4.set_options({"pe": "true"})
         psi4.set_module_options("pe", {"potfile": pe_options["potfile"]})
+
+    if pcm:
+        psi4.set_options({"pcm": True, "pcm_scf_type": "total"})
+        psi4.pcm_helper("""
+        Units = AU
+        Cavity {Type = Gepol
+                Area = 0.3}
+        Medium {Solvertype = IEFPCM
+                Nonequilibrium = True
+                Solvent = Water}""")
 
     if multiplicity != 1:
         psi4.set_options({

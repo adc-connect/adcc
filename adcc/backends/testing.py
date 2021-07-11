@@ -178,7 +178,7 @@ def operator_import_from_ao_test(scfres, ao_dict, operator="electric_dipole"):
 
 
 def cached_backend_hf(backend, molecule, basis, multiplicity=1, conv_tol=1e-12,
-                      pe_options=None):
+                      pe_options=None, pcm=None):
     """
     Run the SCF for a backend and a particular test case (if not done)
     and return the result.
@@ -195,7 +195,7 @@ def cached_backend_hf(backend, molecule, basis, multiplicity=1, conv_tol=1e-12,
                                      basis=basis, conv_tol=conv_tol,
                                      multiplicity=multiplicity,
                                      conv_tol_grad=conv_tol_grad,
-                                     pe_options=pe_options)
+                                     pe_options=pe_options, pcm=pcm)
         return adcc.backends.import_scf_results(hfres)
 
     # For reasons not clear to me (mfh), caching does not work
@@ -203,7 +203,11 @@ def cached_backend_hf(backend, molecule, basis, multiplicity=1, conv_tol=1e-12,
     if backend == "pyscf":
         return payload()
 
-    key = (backend, molecule, basis, str(multiplicity))
+    # otherwise PE and PCM share the same key
+    if pcm:
+        key = (backend, molecule, basis, str(multiplicity), "pcm")
+    else:
+        key = (backend, molecule, basis, str(multiplicity))
     try:
         return __cache_cached_backend_hf[key]
     except NameError:
