@@ -256,6 +256,7 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
         "ccpvdz": "cc-pvdz",
     }
 
+    psi4.core.clean_options()
     mol = psi4.geometry(f"""
         {charge} {multiplicity}
         {xyz}
