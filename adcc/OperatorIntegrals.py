@@ -202,26 +202,6 @@ class OperatorIntegrals:
         return self.__import_density_dependent_operator(callback)
 
     @property
-    def density_dependent_operators(self):
-        if not hasattr(self.provider_ao, "density_dependent_operators"):
-            return {}
-        ret = {}
-        for op in self.provider_ao.density_dependent_operators:
-            ao_callback = self.provider_ao.density_dependent_operators[op]
-
-            def process_operator(dm, callback=ao_callback):
-                dm_ao = sum(dm.to_ao_basis())
-                v_ao = callback(dm_ao)
-                v_bb = replicate_ao_block(self.mospaces, v_ao, is_symmetric=True)
-                v_ff = OneParticleOperator(self.mospaces, is_symmetric=True)
-                transform_operator_ao2mo(
-                    v_bb, v_ff, self.__coefficients, self.__conv_tol
-                )
-                return v_ff
-            ret[op] = process_operator
-        return ret
-
-    @property
     def timer(self):
         ret = Timer()
         ret.attach(self._import_timer, subtree="import")
