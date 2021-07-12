@@ -178,7 +178,7 @@ def operator_import_from_ao_test(scfres, ao_dict, operator="electric_dipole"):
 
 
 def cached_backend_hf(backend, molecule, basis, multiplicity=1, conv_tol=1e-12,
-                      pe_options=None, pcm=None):
+                      env=(None, None)):
     """
     Run the SCF for a backend and a particular test case (if not done)
     and return the result.
@@ -188,6 +188,14 @@ def cached_backend_hf(backend, molecule, basis, multiplicity=1, conv_tol=1e-12,
     from adcc.testdata import static_data
 
     global __cache_cached_backend_hf
+
+    # so you can only assign one of them.
+    pe_options = None
+    pcm = None
+    if env[0] == "pcm":
+        pcm = env[1]
+    elif env[0] == "pe":
+        pe_options = env[1]
 
     def payload():
         conv_tol_grad = 10 * conv_tol
@@ -204,8 +212,8 @@ def cached_backend_hf(backend, molecule, basis, multiplicity=1, conv_tol=1e-12,
         return payload()
 
     # otherwise PE and PCM share the same key
-    if pcm:
-        key = (backend, molecule, basis, str(multiplicity), "pcm")
+    if env[0]:
+        key = (backend, molecule, basis, str(multiplicity), env[0])
     else:
         key = (backend, molecule, basis, str(multiplicity))
     try:

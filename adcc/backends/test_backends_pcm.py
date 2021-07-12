@@ -30,7 +30,7 @@ class TestPCM(unittest.TestCase):
         basename = f"formaldehyde_{basis}_pcm_{method}"
         psi_result = psi_data[basename]
         scfres = cached_backend_hf(backend, "formaldehyde", basis,
-                                   pcm=True)
+                                   env=("pcm", True))
         assert_allclose(scfres.energy_scf, psi_result["energy_scf"], atol=1e-8)
 
         matrix = adcc.AdcMatrix(method, scfres)
