@@ -140,7 +140,14 @@ def lincomb(coefficients, tensors, evaluate=False):
         elec_part = lincomb(coefficients, elec_list, evaluate=evaluate)
         phot_part = lincomb(coefficients, phot_list, evaluate=evaluate)
         if "pphh" in elec_part.blocks_ph:
-            return QED_AmplitudeVector(gs_part, elec_part.ph, elec_part.pphh, gs1_part, phot_part.ph, phot_part.pphh)
+            gs2_part = 0
+            phot2_list = []
+            for coeff_ind, ten in enumerate(tensors):
+                gs2_part += coefficients[coeff_ind] * ten.gs2
+                phot2_list.append(ten.phot2)
+            phot2_part = lincomb(coefficients, phot2_list, evaluate=evaluate)
+            return QED_AmplitudeVector(gs_part, elec_part.ph, elec_part.pphh, gs1_part, phot_part.ph, phot_part.pphh,
+                                        gs2_part, phot2_part.ph, phot2_part.pphh)
         else:
             return QED_AmplitudeVector(gs_part, elec_part.ph, None, gs1_part, phot_part.ph, None)
         #print(qed_vec.ph)

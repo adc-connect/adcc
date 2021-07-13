@@ -70,7 +70,7 @@ class JacobiPreconditioner:
                                 "to a single vector if shifts is "
                                 "only a single number.")
             return invecs / (self.diagonal - self.shifts)
-        elif isinstance(invecs, QED_AmplitudeVector): # i dont think this is used anywhere
+        elif isinstance(invecs, QED_AmplitudeVector): # I dont think this is used anywhere
             if not isinstance(self.shifts, (float, np.number)):
                 raise TypeError("Can only apply JacobiPreconditioner "
                                 "to a single vector if shifts is "
