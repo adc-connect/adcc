@@ -262,7 +262,7 @@ def import_scf(scfres):
 
 
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
-           conv_tol_grad=1e-9, max_iter=150, pe_options=None, pcm=None):
+           conv_tol_grad=1e-9, max_iter=150, pe_options=None):
     mol = gto.M(
         atom=xyz,
         basis=basis,

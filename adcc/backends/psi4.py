@@ -70,7 +70,8 @@ class Psi4OperatorIntegralProvider:
             def pcm_potential_elec_ao(dm):
                 return psi4.core.PCM.compute_V(
                     self.wfn.get_PCM(),
-                    psi4.core.Matrix.from_array(dm.to_ndarray()))
+                    psi4.core.Matrix.from_array(dm.to_ndarray())
+                )
             return pcm_potential_elec_ao
 
 
@@ -137,7 +138,7 @@ class Psi4HFProvider(HartreeFockProvider):
         ret = None
         if hasattr(self.wfn, "pe_state"):
             ret = "pe"
-        if self.wfn.PCM_enabled():
+        elif self.wfn.PCM_enabled():
             ret = "pcm"
         return ret
 
@@ -249,13 +250,14 @@ def import_scf(wfn):
 
 
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
-           conv_tol_grad=1e-8, max_iter=150, pe_options=None, pcm=None):
+           conv_tol_grad=1e-8, max_iter=150, pe_options=None):
     basissets = {
         "sto3g": "sto-3g",
         "def2tzvp": "def2-tzvp",
         "ccpvdz": "cc-pvdz",
     }
 
+    # needed for PE and PCM tests
     psi4.core.clean_options()
     mol = psi4.geometry(f"""
         {charge} {multiplicity}
@@ -278,16 +280,6 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
     if pe_options:
         psi4.set_options({"pe": "true"})
         psi4.set_module_options("pe", {"potfile": pe_options["potfile"]})
-
-    if pcm:
-        psi4.set_options({"pcm": True, "pcm_scf_type": "total"})
-        psi4.pcm_helper("""
-        Units = AU
-        Cavity {Type = Gepol
-                Area = 0.3}
-        Medium {Solvertype = IEFPCM
-                Nonequilibrium = True
-                Solvent = Water}""")
 
     if multiplicity != 1:
         psi4.set_options({

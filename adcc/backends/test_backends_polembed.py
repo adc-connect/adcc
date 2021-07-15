@@ -61,7 +61,7 @@ class TestPolarizableEmbedding(unittest.TestCase):
         qc_result = qchem_data[basename]
         pe_options = {"potfile": pe_potentials["fa_6w"]}
         scfres = cached_backend_hf(backend, "formaldehyde", basis,
-                                   env=("pe", pe_options))
+                                   pe_options=pe_options)
         state = adcc.run_adc(scfres, method=method,
                              n_singlets=5, conv_tol=1e-10,
                              environment=["ptlr", "ptss"])
@@ -96,7 +96,7 @@ class TestPolarizableEmbedding(unittest.TestCase):
         tm_result = tmole_data[basename]
         pe_options = {"potfile": pe_potentials["fa_6w"]}
         scfres = cached_backend_hf(backend, "formaldehyde", basis,
-                                   env=("pe", pe_options))
+                                   pe_options=pe_options)
         assert_allclose(scfres.energy_scf, tm_result["energy_scf"], atol=1e-8)
 
         matrix = adcc.AdcMatrix(method, scfres)
