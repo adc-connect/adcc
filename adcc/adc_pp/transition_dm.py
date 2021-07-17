@@ -150,7 +150,8 @@ def transition_dm(method, ground_state, amplitude, intermediates=None):
             print("norm squared of amplitude.elec", ampl_elec_norm)
             print("norm squared of amplitude", amplitude @ amplitude)
             print("beware, that we normalize .elec, before giving it to the oscillator strength routine")
-            print("amplitude.gs is {} and amplitude.gs1 is {}".format(amplitude.gs.as_float(), amplitude.gs1.as_float()))
+            print("amplitude.gs is {}, amplitude.gs1 is {} and amplitude.gs2 is {}".format(amplitude.gs.as_float(),
+                                                                amplitude.gs1.as_float(), amplitude.gs2.as_float()))
             normalized_ampl = amplitude.elec / sqrt(ampl_elec_norm)
             ret = DISPATCH[method.name](ground_state, normalized_ampl, intermediates)
         else:

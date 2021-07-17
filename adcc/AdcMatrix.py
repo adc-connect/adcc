@@ -210,7 +210,7 @@ class AdcMatrix(AdcMatrixlike):
             #self.__init_space_data_0(self.__diagonal_1)
             """
 
-            if method.base_method.name == "adc2":
+            if method.base_method.name == "adc2" or method.base_method.name == "adc1":
                 self.phot2 = AdcMatrix_submatrix(method, hf_or_mp, "phot2")
 
                 self.blocks_ph_22 = {  # TODO Rename to self.block in 0.16.0
@@ -266,23 +266,25 @@ class AdcMatrix(AdcMatrixlike):
             for key in self.blocks_ph_11:
                 self.blocks_ph_1_temp[key + "_phot"] = self.blocks_ph_11[key]
 
-            if hasattr(self.elec.diagonal(), "pphh"):
-                for key in self.blocks_ph_20:
-                    self.blocks_ph_1_temp[key + "_couple_edge"] = self.blocks_ph_20[key]
-                for key in self.blocks_ph_21:
-                    self.blocks_ph_1_temp[key + "_couple_inner"] = self.blocks_ph_21[key]
-                for key in self.blocks_ph_02:
-                    self.blocks_ph_1_temp[key + "_phot_couple_edge"] = self.blocks_ph_02[key]
-                for key in self.blocks_ph_12:
-                    self.blocks_ph_1_temp[key + "_phot_couple_inner"] = self.blocks_ph_12[key]
-                for key in self.blocks_ph_22:
-                    self.blocks_ph_1_temp[key + "_phot2"] = self.blocks_ph_22[key]
+            #if hasattr(self.elec.diagonal(), "pphh"):
+            for key in self.blocks_ph_20:
+                self.blocks_ph_1_temp[key + "_couple_edge"] = self.blocks_ph_20[key]
+            for key in self.blocks_ph_21:
+                self.blocks_ph_1_temp[key + "_couple_inner"] = self.blocks_ph_21[key]
+            for key in self.blocks_ph_02:
+                self.blocks_ph_1_temp[key + "_phot_couple_edge"] = self.blocks_ph_02[key]
+            for key in self.blocks_ph_12:
+                self.blocks_ph_1_temp[key + "_phot_couple_inner"] = self.blocks_ph_12[key]
+            for key in self.blocks_ph_22:
+                self.blocks_ph_1_temp[key + "_phot2"] = self.blocks_ph_22[key]
             self.blocks_ph = {**self.blocks_ph_00, **self.blocks_ph_1_temp}
 
             self.__diagonal_gs = 0 #sum(self.blocks_ph[block].diagonal for block in self.blocks_ph
                                    #  if "ph_gs" in block and not block.endswith("phot")) # coupling gs_gs blocks have diagonal = 0
             self.__diagonal_gs1 = sum(self.blocks_ph[block].diagonal for block in self.blocks_ph
                                     if "ph_gs" in block and block.endswith("phot"))
+            self.__diagonal_gs2 = sum(self.blocks_ph[block].diagonal for block in self.blocks_ph
+                                    if "ph_gs" in block and block.endswith("phot2"))
             
 
             #print("following should be the blocks, that make up the diagonal for gs_gs")
@@ -298,8 +300,8 @@ class AdcMatrix(AdcMatrixlike):
             if hasattr(self.elec.diagonal(), "pphh"): # this needs to be adapted, so that the diagonals for gs and gs1 are actually those from matrix.py,
             # but if this is only for the guesses, this should only be a perfomance issue and not relevant for the precision
                 #print("from adcmatrix init diagonal has pphh part")
-                self.__diagonal_gs2 = sum(self.blocks_ph[block].diagonal for block in self.blocks_ph
-                                    if "ph_gs" in block and block.endswith("phot2"))
+                #self.__diagonal_gs2 = sum(self.blocks_ph[block].diagonal for block in self.blocks_ph
+                #                    if "ph_gs" in block and block.endswith("phot2"))
 
                 self.__diagonal = QED_AmplitudeVector(self.__diagonal_gs, self.elec.diagonal().ph, self.elec.diagonal().pphh,
                                                     self.__diagonal_gs1, self.phot.diagonal().ph, self.phot.diagonal().pphh,
@@ -307,7 +309,8 @@ class AdcMatrix(AdcMatrixlike):
             else:
                 #print("from adcmatrix init diagonal has no pphh part!!!!!!!!!!!!!!!!!!!")
                 self.__diagonal = QED_AmplitudeVector(self.__diagonal_gs, self.elec.diagonal().ph, None,
-                                                    self.__diagonal_gs1, self.phot.diagonal().ph, None)
+                                                    self.__diagonal_gs1, self.phot.diagonal().ph, None,
+                                                    self.__diagonal_gs2, self.phot2.diagonal().ph, None)
             self.__init_space_data_qed(self.elec.diagonal()) # here we need to adapt the attributes, defined via this function
             # namely self.axis_spaces, self.axis_lengths, self.shape
             self.__diagonal.evaluate()
@@ -350,10 +353,11 @@ class AdcMatrix(AdcMatrixlike):
         axis_spaces0 = self.axis_spaces # this (and the following) will be assigned in the submatrix class as well
         axis_lengths0 = self.axis_lengths
         shape0 = self.shape
-        if hasattr(diagonal0, "pphh"):
-            self.shape = ((shape0[0]+1) * 3, (shape0[0]+1) * 3)
-        else:
-            self.shape = ((shape0[0]+1) * 2, (shape0[0]+1) * 2)
+        #if hasattr(diagonal0, "pphh"):
+        #    self.shape = ((shape0[0]+1) * 3, (shape0[0]+1) * 3)
+        #else:
+        #    self.shape = ((shape0[0]+1) * 2, (shape0[0]+1) * 2)
+        self.shape = ((shape0[0]+1) * 3, (shape0[0]+1) * 3)
         self.axis_spaces["gs"] = ["o0", "v0"] 
         self.axis_lengths["gs"] = 1
         # axis_spaces and axis_lengths both are dicts, referring to "ph", "pphh" as a key, so either make extra blocks here, or probably better
@@ -489,13 +493,23 @@ class AdcMatrix(AdcMatrixlike):
         #print("shape of phot couple edge", self.phot_couple_edge, type(self.phot_couple_edge))
         #print("shape of phot couple inner", self.phot_couple_inner.matvec(v), type(self.phot_couple_inner.matvec(v)))
 
-        phot_couple_edge_with_doubles = AmplitudeVector(ph=self.phot_couple_edge.matvec(v), pphh=v.pphh.zeros_like())
-        elec_couple_edge_with_doubles = AmplitudeVector(ph=self.elec_couple_edge.matvec(v), pphh=v.pphh.zeros_like())
+        
 
-        elec_part = self.elec.matvec(v) + self.phot_couple.matvec(v) + phot_couple_edge_with_doubles #self.phot_couple_edge.matvec(v)
         phot_part = self.elec_couple.matvec(v) + self.phot.matvec(v) + self.phot_couple_inner.matvec(v)
-        #phot2_part = self.elec_couple_edge.matvec(v) + self.elec_couple_inner.matvec(v) + self.phot2.matvec(v)
-        phot2_part = elec_couple_edge_with_doubles + self.elec_couple_inner.matvec(v) + self.phot2.matvec(v)
+
+        if "pphh" in phot_part.blocks_ph:
+            phot_couple_edge_with_doubles = AmplitudeVector(ph=self.phot_couple_edge.matvec(v), pphh=v.pphh.zeros_like())
+            elec_couple_edge_with_doubles = AmplitudeVector(ph=self.elec_couple_edge.matvec(v), pphh=v.pphh.zeros_like())
+            elec_part = self.elec.matvec(v) + self.phot_couple.matvec(v) + phot_couple_edge_with_doubles #self.phot_couple_edge.matvec(v)
+            #phot_part = self.elec_couple.matvec(v) + self.phot.matvec(v) + self.phot_couple_inner.matvec(v)
+            #phot2_part = self.elec_couple_edge.matvec(v) + self.elec_couple_inner.matvec(v) + self.phot2.matvec(v)
+            phot2_part = elec_couple_edge_with_doubles + self.elec_couple_inner.matvec(v) + self.phot2.matvec(v)
+        else:
+            #phot_couple_edge_with_singles = AmplitudeVector(ph=v.ph.zeros_like())
+            #elec_couple_edge_with_singles = AmplitudeVector(ph=v.ph.zeros_like())
+            elec_part = self.elec.matvec(v) + self.phot_couple.matvec(v)
+            phot2_part = self.elec_couple_inner.matvec(v) + self.phot2.matvec(v)
+
         gs_part = 0
         gs1_part = 0
         gs2_part = 0
@@ -518,25 +532,35 @@ class AdcMatrix(AdcMatrixlike):
 
         for block in self.blocks_ph:
             if "gs" in block and not block.startswith("gs"):
+                #print(block)
                 #print(block, type(self.blocks_ph[block].apply(v)), self.blocks_ph[block].apply(v))
-                if "pphh" in elec_part.blocks_ph:
-                    if "phot2" in block:
-                        gs2_part += self.blocks_ph[block].apply(v)
-                    if "phot_couple_edge" in block:
-                        gs_part += self.blocks_ph[block].apply(v)
-                    if "phot_couple_inner" in block:
-                        gs1_part += self.blocks_ph[block].apply(v)
-                    if "couple_edge" in block:
-                        gs2_part += self.blocks_ph[block].apply(v)
-                    if "couple_inner" in block:
-                        gs2_part += self.blocks_ph[block].apply(v)
-                if "phot_couple" in block:
-                    gs_part += self.blocks_ph[block].apply(v) # check whether the if statements always grant the correct blocks!!!!!!!!!!!!!!!!!!!!!!!!!
-                elif "phot" in block:
+                #if "pphh" in elec_part.blocks_ph:
+                if block.endswith("phot2"):
+                    #print("phot2")
+                    gs2_part += self.blocks_ph[block].apply(v)
+                elif block.endswith("phot_couple_edge"):
+                    #print("phot_couple_edge")
+                    gs_part += self.blocks_ph[block].apply(v)
+                elif block.endswith("phot_couple_inner"):
+                    #print("phot_couple_inner")
                     gs1_part += self.blocks_ph[block].apply(v)
-                elif "couple" in block:
+                elif block.endswith("couple_edge"):
+                    #print("couple_edge")
+                    gs2_part += self.blocks_ph[block].apply(v)
+                elif block.endswith("couple_inner"):
+                    #print("couple_inner")
+                    gs2_part += self.blocks_ph[block].apply(v)
+                elif block.endswith("phot_couple"):
+                    #print("phot_couple")
+                    gs_part += self.blocks_ph[block].apply(v)
+                elif block.endswith("phot"):
+                    #print("phot")
+                    gs1_part += self.blocks_ph[block].apply(v)
+                elif block.endswith("couple"):
+                    #print("couple")
                     gs1_part += self.blocks_ph[block].apply(v)
                 else: # elec
+                    #print("elec")
                     gs_part += self.blocks_ph[block].apply(v)
         """
             elif "gs" in block and block.startswith("gs"):
@@ -650,7 +674,7 @@ class AdcMatrix(AdcMatrixlike):
             return QED_AmplitudeVector(gs_part, elec_part.ph, elec_part.pphh, gs1_part, phot_part.ph, phot_part.pphh,
                                          gs2_part, phot2_part.ph, phot2_part.pphh)
         else:
-            return QED_AmplitudeVector(gs_part, elec_part.ph, None, gs1_part, phot_part.ph, None)
+            return QED_AmplitudeVector(gs_part, elec_part.ph, None, gs1_part, phot_part.ph, None, gs2_part, phot2_part.ph, None)
 
         
 

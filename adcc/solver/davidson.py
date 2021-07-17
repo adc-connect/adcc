@@ -397,7 +397,10 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
     if not max_subspace:
         # TODO Arnoldi uses this:
         # max_subspace = max(2 * n_ep + 1, 20)
-        max_subspace = max(6 * n_ep, 20, 5 * len(guesses))
+        # max_subspace = max(6 * n_ep, 20, 5 * len(guesses)) # original
+        print("for qed-adc we use double the standard max_subspace, due to convergence problems,"
+        "if the doubly excited photonic space contributes to the states")
+        max_subspace = max(12 * n_ep, 20, 10 * len(guesses))
 
     def convergence_test(state):
         state.residuals_converged = state.residual_norms < conv_tol

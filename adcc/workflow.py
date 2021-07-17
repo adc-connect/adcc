@@ -487,6 +487,7 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
     # require the matrix (AdcMatrix), instead of just the diagonal, which is a QED_Amplitude
     guesses_elec = obtain_guesses_by_inspection(matrix.elec, n_guesses, kind, n_guesses_doubles) 
     guesses_phot = obtain_guesses_by_inspection(matrix.phot, n_guesses, kind, n_guesses_doubles)
+    guesses_phot2 = obtain_guesses_by_inspection(matrix.phot2, n_guesses, kind, n_guesses_doubles)
     #print("this is from obtain_guess_qed from workflow: guesses_elec[0].pphh", guesses_elec[0].pphh)
     if len(guesses_elec) != len(guesses_phot):
         raise InputError("amount of guesses for electronic and photonic must be equal, but are"
@@ -495,13 +496,14 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
     print("groundstate guesses are still zero, see workflow.py func obtain_guesses_by_inspection_qed")
     guess_gs = np.zeros(len(guesses_elec))
     guess_gs1 = np.zeros(len(guesses_phot)) # using omega (actual diagonal 1st order) results in strange behaviour of davidson solver
+    guess_gs2 = np.zeros(len(guesses_phot2)) 
     guesses_tmp = []
     try:
         dummy_var = guesses_elec[0].pphh
         #print(dummy_var)
         contains_doubles = True
-        guesses_phot2 = obtain_guesses_by_inspection(matrix.phot2, n_guesses, kind, n_guesses_doubles)
-        guess_gs2 = np.zeros(len(guesses_phot2))
+        #guesses_phot2 = obtain_guesses_by_inspection(matrix.phot2, n_guesses, kind, n_guesses_doubles)
+        #guess_gs2 = np.zeros(len(guesses_phot2))
     except AttributeError:
         contains_doubles = False
     for guess_index in np.arange(len(guesses_elec)): # build QED_AmplitudeVectors from AmplitudeVector guesses
@@ -514,7 +516,8 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
         else:
             #print("singles guesses are set up")
             guesses_tmp.append(QED_AmplitudeVector(guess_gs[guess_index], guesses_elec[guess_index].ph, None,
-                            guess_gs1[guess_index], guesses_phot[guess_index].ph, None))
+                                                    guess_gs1[guess_index], guesses_phot[guess_index].ph, None,
+                                                    guess_gs2[guess_index], guesses_phot2[guess_index].ph, None))
 
     # guesses_tmp needs to be normalized then
     #for vec in guesses_tmp:

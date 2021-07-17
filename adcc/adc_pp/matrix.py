@@ -452,6 +452,7 @@ def block_ph_gs_1_couple(hf, mp, intermediates):
     return AdcBlock(apply, 0)
     #return AdcBlock(lambda ampl: 0, 0)
 
+
 def block_ph_gs_1_phot2(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
     def apply(ampl):
@@ -469,6 +470,8 @@ def block_ph_gs_1_phot_couple_inner(hf, mp, intermediates):
     def apply(ampl):
         return (1 - sqrt(2)) * sqrt(0.5 * omega) * einsum("jb,jb->", mp.qed_t1_df(b.ov), ampl.ph2)
     return AdcBlock(apply, 0)
+
+
 
 
 
@@ -681,6 +684,8 @@ def block_ph_ph_1_couple_edge(hf, mp, intermediates):
 
 block_ph_ph_1_phot_couple_edge = block_ph_ph_1_couple_edge
 
+
+
 def block_ph_ph_1_couple_inner(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
     diagonal = AmplitudeVector(ph=mp.df(b.ov).zeros_like())
@@ -741,6 +746,7 @@ def block_ph_ph_1_phot2(hf, mp, intermediates):
     else:
         raise NotImplementedError("and not hasattr(hf, qed_hf)")
     return AdcBlock(apply, diagonal)
+
 
 
 
