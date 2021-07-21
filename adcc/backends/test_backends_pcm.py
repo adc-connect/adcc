@@ -18,7 +18,7 @@ from adcc.AdcMatrix import AdcExtraTerm
 # remove pyscf until implemented
 backends = [b for b in adcc.backends.available()
             if b not in ["molsturm", "veloxchem", "pyscf"]]
-basissets = ["sto3g", "ccpvdz"]
+basissets = ["sto-3g", "cc-pvdz"]
 methods = ["adc1", "adc2", "adc3"]
 
 

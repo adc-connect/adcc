@@ -89,8 +89,9 @@ def main():
         print(f"Dumped {key}.")
     # how to print the lists as lists, while keeping the rest of the output as is?
     # print just to some test file atm.
-    with open("generate_psi4_data_test.yml", 'w') as yamlfile:
-        yaml.safe_dump(psi4_results, yamlfile)
+    with open("psi4_dump.yml", 'w') as yamlfile:
+        yaml.safe_dump(psi4_results, yamlfile,
+                       sort_keys=False, default_flow_style=None)
 
 
 if __name__ == "__main__":
