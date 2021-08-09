@@ -87,8 +87,7 @@ def main():
         key, ret = dump_results("formaldehyde", basis, pcm_options=pcm_options)
         psi4_results[key] = ret
         print(f"Dumped {key}.")
-    # how to print the lists as lists, while keeping the rest of the output as is?
-    # print just to some test file atm.
+
     with open("psi4_dump.yml", 'w') as yamlfile:
         yaml.safe_dump(psi4_results, yamlfile,
                        sort_keys=False, default_flow_style=None)

@@ -3,7 +3,6 @@ import unittest
 import itertools
 import adcc
 import adcc.backends
-import psi4
 import os
 
 from adcc.misc import expand_test_templates
@@ -23,9 +22,9 @@ methods = ["adc1", "adc2", "adc3"]
 
 
 @pytest.mark.skipif(len(backends) == 0, reason="No backend found.")
-@expand_test_templates(list(itertools.product(basissets, methods, backends)))
-class TestPCM(unittest.TestCase):
-    def template_pcm_linear_response_formaldehyde(self, basis, method, backend):
+@expand_test_templates(list(itertools.product(basissets, methods)))
+class TestPCM_psi4(unittest.TestCase):
+    def template_pcm_linear_response_formaldehyde(self, basis, method):
         if method != "adc1":
             pytest.skip("Reference only exists for adc1.")
         basename = f"formaldehyde_{basis}_pcm_{method}"
@@ -34,14 +33,11 @@ class TestPCM(unittest.TestCase):
         # so you can adapt some options more easily if needed
         psi4_pcm_options = {"weight": 0.3, "pcm_method": "IEFPCM", "neq": True,
                             "solvent": "Water"}
-        pcm_options = {"psi4": psi4_pcm_options}
 
-        hf_name = f"{backend}_run_pcm_hf"
-        hf_function = globals()[hf_name]
-        scfres = hf_function(static_data.xyz["formaldehyde"], basis, charge=0,
-                             multiplicity=1, conv_tol=1e-12,
-                             conv_tol_grad=1e-11, max_iter=150,
-                             pcm_options=pcm_options[backend])
+        scfres = psi4_run_pcm_hf(static_data.xyz["formaldehyde"], basis, charge=0,
+                                 multiplicity=1, conv_tol=1e-12,
+                                 conv_tol_grad=1e-11, max_iter=150,
+                                 pcm_options=psi4_pcm_options)
 
         assert_allclose(scfres.energy_scf, psi4_result["energy_scf"], atol=1e-8)
 
@@ -93,6 +89,7 @@ def psi4_run_pcm_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
                     conv_tol_grad=1e-11, max_iter=150, pcm_options=None):
 
     # add something to check if pcm_options is defined and a dict?
+    import psi4
 
     basissets = {
         "sto3g": "sto-3g",
