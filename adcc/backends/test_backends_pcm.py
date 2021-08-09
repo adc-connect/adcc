@@ -14,17 +14,15 @@ from adcc.exceptions import InputError
 from adcc.adc_pp.environment import block_ph_ph_0_pcm
 from adcc.AdcMatrix import AdcExtraTerm
 
-# remove pyscf until implemented
-backends = [b for b in adcc.backends.available()
-            if b not in ["molsturm", "veloxchem", "pyscf"]]
 basissets = ["sto-3g", "cc-pvdz"]
 methods = ["adc1", "adc2", "adc3"]
 
 
-@pytest.mark.skipif(len(backends) == 0, reason="No backend found.")
+@pytest.mark.skipif("psi4" not in adcc.backends.available(),
+                    reason="Psi4 backend not found.")
 @expand_test_templates(list(itertools.product(basissets, methods)))
-class TestPCM_psi4(unittest.TestCase):
-    def template_pcm_linear_response_formaldehyde(self, basis, method):
+class TestPCM(unittest.TestCase):
+    def template_pcm_psi4_linear_response_formaldehyde(self, basis, method):
         if method != "adc1":
             pytest.skip("Reference only exists for adc1.")
         basename = f"formaldehyde_{basis}_pcm_{method}"
