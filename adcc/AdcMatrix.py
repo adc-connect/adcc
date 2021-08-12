@@ -735,6 +735,7 @@ class AdcMatrix(AdcMatrixlike):
         Returns a dictionary block identifier -> function
         """
         ret = {}
+        print("antisymm function is used in QED_Amplitudevector part of AdcMatrix function")
         if self.is_core_valence_separated:
             # CVS doubles part is antisymmetric wrt. (i,K,a,b) <-> (i,K,b,a)
             ret["pphh"] = lambda v: v.antisymmetrise([(2, 3)])
@@ -742,9 +743,11 @@ class AdcMatrix(AdcMatrixlike):
             def symmetrise_generic_adc_doubles(invec):
                 # doubles part is antisymmetric wrt. (i,j,a,b) <-> (i,j,b,a)
                 scratch = invec.antisymmetrise([(2, 3)])
+                #print(type(invec), invec)
                 # doubles part is symmetric wrt. (i,j,a,b) <-> (j,i,b,a)
                 return scratch.symmetrise([(0, 1), (2, 3)])
             ret["pphh"] = symmetrise_generic_adc_doubles
+        print(ret)
         return ret
 
     def dense_basis(self, axis_blocks=None, ordering="adcc"):
@@ -1327,6 +1330,7 @@ class AdcMatrix_submatrix(AdcMatrixlike):
         Returns a dictionary block identifier -> function
         """
         ret = {}
+        print("antisymm function is used in Amplitudevector part of AdcMatrix function")
         if self.is_core_valence_separated:
             # CVS doubles part is antisymmetric wrt. (i,K,a,b) <-> (i,K,b,a)
             ret["pphh"] = lambda v: v.antisymmetrise([(2, 3)])

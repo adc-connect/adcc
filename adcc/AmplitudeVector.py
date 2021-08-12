@@ -407,17 +407,21 @@ class QED_AmplitudeVector: # it seems all operations, without further specificat
 
     def evaluate(self):
         #print(self.elec0, self.elec, self.phot0, self.phot)
+        #print(type(self.elec), type(self.phot), type(self.phot2))
         self.elec.evaluate()
         self.phot.evaluate()
         self.phot2.evaluate()
-        try:
-            self.gs.evaluate()
-            self.gs1.evaluate()
-            self.gs2.evaluate()
-        except:
-            self.gs
-            self.gs1
-            self.gs2
+        self.gs.as_float()
+        self.gs1.as_float()
+        self.gs2.as_float()
+        #try:
+        #    self.gs.evaluate()
+        #    self.gs1.evaluate()
+        #    self.gs2.evaluate()
+        #except:
+        #    self.gs
+        #    self.gs1
+        #    self.gs2
         #if "pphh" in self.elec.blocks_ph:
         #    self.phot2.evaluate()
         #    try:
@@ -485,6 +489,9 @@ class gs_vec:
             return self.val / scalar
 
     def as_float(self):
+        return self.val
+
+    def evaluate(self):
         return self.val
 
     

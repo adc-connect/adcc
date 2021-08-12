@@ -23,7 +23,8 @@
 from libadcc import amplitude_vector_enforce_spin_kind
 
 from adcc import evaluate
-from adcc.AmplitudeVector import AmplitudeVector, QED_AmplitudeVector
+from adcc.AmplitudeVector import AmplitudeVector, QED_AmplitudeVector, gs_vec
+import numpy as np
 
 # TODO
 #    This interface is not that great and leads to duplicate information
@@ -63,6 +64,7 @@ class IndexSymmetrisation():
             for b in vec.blocks_ph:
                 if b not in self.symmetrisation_functions:
                     continue
+                #print(b)
                 vec[b] = evaluate(self.symmetrisation_functions[b](vec[b]))
             return vec
 
@@ -70,9 +72,44 @@ class IndexSymmetrisation():
             return self.symmetrise([new_vectors])[0]
         elif isinstance(new_vectors[0], QED_AmplitudeVector):
             # we dont have to symmetrise the gs blocks...actually only the pphh blocks are symmetrised here
-            for vec in new_vectors:
-                vec.elec = symm_subroutine(vec.elec)
-                vec.phot = symm_subroutine(vec.phot)
+            if "pphh" in new_vectors[0].elec.blocks_ph:
+                test_list = new_vectors
+                for ind, vec in enumerate(new_vectors):
+                    #if vec.elec.pphh != evaluate(self.symmetrisation_functions["pphh"](vec.elec.pphh)): #vec.elec.pphh != symm_subroutine(vec.elec).pphh:
+                    #    print("something changed")
+                    #else:
+                    #    print("nothing changed")
+                    #vec = QED_AmplitudeVector(gs=vec.gs, ph=vec.elec.ph, pphh=evaluate(self.symmetrisation_functions["pphh"](vec.elec.pphh)), 
+                    #                        gs1=vec.gs1, ph1=vec.phot.ph, pphh1=evaluate(self.symmetrisation_functions["pphh"](vec.phot.pphh)),
+                    #                        gs2=vec.gs2, ph2=vec.phot2.ph, pphh2=evaluate(self.symmetrisation_functions["pphh"](vec.phot2.pphh)))
+                    test_list[ind].elec = symm_subroutine(vec.elec) #evaluate(self.symmetrisation_functions["pphh"](vec.elec.pphh))
+                    test_list[ind].phot = symm_subroutine(vec.phot) #evaluate(self.symmetrisation_functions["pphh"](vec.phot.pphh))
+                    test_list[ind].phot2 = symm_subroutine(vec.phot2) #evaluate(self.symmetrisation_functions["pphh"](vec.phot2.pphh))
+                if test_list[0].elec.pphh == new_vectors[0].elec.pphh:
+                    print("in symm nothing changed")
+                    if new_vectors[0].elec.pphh != evaluate(self.symmetrisation_functions["pphh"](test_list[0].elec.pphh)):
+                        print("but something changed for the symmetrization, which was not passed to the QED_AmplitudeVector")
+                else:
+                    print("in symm something changed")
+                #if vec.elec.pphh == evaluate(self.symmetrisation_functions["pphh"](vec.elec.pphh)):
+                #    print("symm still yields no change")
+                #print(type(evaluate(self.symmetrisation_functions["pphh"](vec.elec.pphh))), evaluate(self.symmetrisation_functions["pphh"](vec.elec.pphh)).shape)
+                #if new_vec.elec == symm_subroutine(vec.elec):
+                #    print("correctly changed in symmetrise function")
+                #elif new_vec.elec == vec.elec:
+                #    print("nothing changed in symmetrise function")
+                #else:
+                #    print("not correctly changed in symmetrise function")
+                #    diff = new_vec.elec - symm_subroutine(vec.elec)
+                #    print("squared norm of difference with symmetrise = ", np.sqrt(diff @ diff))
+                #    diff2 = new_vec.elec - vec.elec
+                #    print("squared norm of difference without symmetrise = ", np.sqrt(diff2 @ diff2))
+                #    diff3 = vec.elec - symm_subroutine(vec.elec)
+                #    print("squared norm of difference between no symmetrise and symmetrise = ", np.sqrt(diff3 @ diff3)) # why is this zero??????????
+                #    #print(type(new_vec.elec.pphh), type(symm_subroutine(vec.elec).pphh))
+                #vec.elec = symm_subroutine(vec.elec)
+                #vec.phot = symm_subroutine(vec.phot)
+                #vec.phot2 = symm_subroutine(vec.phot2)
         elif isinstance(new_vectors[0], AmplitudeVector):
             for vec in new_vectors:
                 vec = symm_subroutine(vec)

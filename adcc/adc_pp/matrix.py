@@ -976,6 +976,7 @@ def block_pphh_ph_1_phot_couple_inner(hf, mp, intermediates):
     return AdcBlock(apply, 0)
 
 
+
 def block_pphh_ph_1_couple_edge(hf, mp, intermediates):
     #def apply(ampl):
     #    return AmplitudeVector(pphh=mp.t2oo.zeros_like())
@@ -991,6 +992,10 @@ def block_ph_pphh_1_couple_edge(hf, mp, intermediates):
     return AdcBlock(lambda ampl: 0, 0)
 
 block_ph_pphh_1_phot_couple_edge = block_ph_pphh_1_couple_edge
+
+
+#block_pphh_ph_1_couple = block_pphh_ph_1_couple_inner = block_pphh_ph_1_phot_couple = block_pphh_ph_1_phot_couple_inner = block_pphh_ph_1_couple_edge
+#block_ph_pphh_1_couple = block_ph_pphh_1_couple_inner = block_ph_pphh_1_phot_couple = block_ph_pphh_1_phot_couple_inner = block_ph_pphh_1_couple_edge
 
 
 
@@ -1262,6 +1267,7 @@ def block_ph_ph_2(hf, mp, intermediates):
                 - einsum("ka,ikia->ia", mp.qed_t0(b.ov), hf.ooov)
                 - einsum("ic,iaac->ia", mp.qed_t0(b.ov), hf.ovvv)
                 + (1/2) * direct_sum("i-a->ia", einsum("ii->i", mp.qed_t0_df(b.oo)), einsum("aa->a", mp.qed_t0_df(b.vv))) # 1. order
+
                 #- (omega/2) * einsum("ia,ia->", mp.qed_t1(b.ov), mp.qed_t1_df(b.ov)) # reintroduced (actually canceled from -E_0 (2))
                 #- (1/4) * einsum("ia,ia->", mp.qed_t0(b.ov), mp.qed_t0_df(b.ov))
                 #- (1/4) * einsum("ijab,ijab->", mp.td2(b.oovv), einsum("ia,jb->ijab", mp.qed_t1_df(b.ov), mp.qed_t1_df(b.ov)) - einsum("ib,ja->ijab", mp.qed_t1_df(b.ov), mp.qed_t1_df(b.ov)))

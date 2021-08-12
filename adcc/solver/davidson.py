@@ -192,6 +192,8 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         with state.timer.record("residuals"):
             # Form residuals, A * SS * v - λ * SS * v = Ax * v + SS * (-λ*v)
             def form_residual(rval, rvec):
+                #print("norm of residual vector = ", np.sqrt(rvec @ rvec))
+                #rvec = rvec / np.sqrt(rvec @ rvec)
                 coefficients = np.hstack((rvec, -rval * rvec))
                 #print(type(coefficients), coefficients)
                 #print(type(SS), SS)
@@ -212,6 +214,7 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
                                   if i in epair_mask]
             for eigv in eigenvecs:
                 print("norm of eigenvector", np.sqrt(eigv @ eigv))
+                #print("eigenvector.ph = ", eigv.ph)
             # TODO This is misleading ... actually residual_norms contains
             #      the norms squared. That's also the used e.g. in adcman to
             #      check for convergence, so using the norm squared is fine,
@@ -282,7 +285,35 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
                 #if isinstance(preconds[0], QED_AmplitudeVector):
                 #    
                 #else:
+                #if "pphh" in preconds[0].elec.blocks_ph:
+                #    explicit_symmetrisation.symmetrise.
+                #    for ind, vec in enumerate(preconds):
+                #        preconds[ind] = QED_AmplitudeVector(gs=vec.gs, ph=vec.elec.ph, pphh=evaluate(self.symmetrisation_functions["pphh"](vec.elec.pphh)), 
+                #                            gs1=vec.gs1, ph1=vec.phot.ph, pphh1=evaluate(self.symmetrisation_functions["pphh"](vec.phot.pphh)),
+                #                            gs2=vec.gs2, ph2=vec.phot2.ph, pphh2=evaluate(self.symmetrisation_functions["pphh"](vec.phot2.pphh)))
+
+                    #temp = preconds
+                    #explicit_symmetrisation.symmetrise(preconds)
+                    #new_temp = explicit_symmetrisation.symmetrise(temp)
+                    #if new_temp[0].elec.pphh == preconds[0].elec.pphh:
+                    #    print("in davidson symmetrise yields no change in elec")
+                    #else:
+                    #    print("in davidson symmetrise yields a change in elec")
+                #else: # this is unnecessary, since symmetrization only applies for double excitation space
+                #tmp = preconds
+                #explicit_symmetrisation.symmetrise(tmp)
+                #if tmp[0].elec.pphh == preconds[0].elec.pphh:
+                #    print("nothing changed")
+                #else:
+                #    print("something changed")
+                #tmp2 = preconds[0].elec
+                #explicit_symmetrisation.symmetrise(tmp2)
+                #if tmp2.pphh == preconds[0].elec.pphh:
+                #    print("nothing changed for elec only")
+                #else:
+                #    print("something changed for elec only")
                 explicit_symmetrisation.symmetrise(preconds)
+
 
         # Project the components of the preconditioned vectors away
         # which are already contained in the subspace.

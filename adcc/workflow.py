@@ -495,8 +495,12 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
     # for now we make gs guess zero
     print("groundstate guesses are still zero, see workflow.py func obtain_guesses_by_inspection_qed")
     guess_gs = np.zeros(len(guesses_elec))
-    guess_gs1 = np.zeros(len(guesses_phot)) # using omega (actual diagonal 1st order) results in strange behaviour of davidson solver
-    guess_gs2 = np.zeros(len(guesses_phot2)) 
+    guess_gs1 = np.zeros(len(guesses_phot)) 
+    guess_gs2 = np.zeros(len(guesses_phot2))
+    # these guesses need a manual option, because if the gs1 state is close to a state it couples with, the gs1 guess needs to be smaller, than for a
+    # decoupled state. For gs2 this is a little less important, because the coupling is weaker.
+    guess_gs1[0] = 0#2 # giving these two electronic ground/ photonic excited states a small value, they will only slowly appear in the convergence,
+    guess_gs2[1] = 0#5 # which in fact leads to a lot of numerical issues. Furthermore, they dont have to match the exact state number later...The solver takes care of that.
     guesses_tmp = []
     try:
         dummy_var = guesses_elec[0].pphh
@@ -528,8 +532,13 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
     #print("from workflow guess_qed...guesses_tmp[0].pphh = ", guesses_tmp[0].pphh)
     #normalized_guesses = [vec / np.sqrt(vec @ vec) for vec in guesses_tmp]
     #print("after normalization guesses[0].pphh is ", normalized_guesses[0].pphh)
+    
+    for guess in guesses_tmp:
+        print(guess.gs1.as_float(), guess.gs2.as_float())
     return [vec / np.sqrt(vec @ vec) for vec in guesses_tmp]
-    #return guesses
+    #for vec in guesses_tmp:
+    #    print("norm of guess vector = ", np.sqrt(vec @ vec))
+    #return guesses_tmp
 
 def setup_solver_printing(solmethod_name, matrix, kind, default_print,
                           output=None):
