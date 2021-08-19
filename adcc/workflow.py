@@ -492,15 +492,13 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
     if len(guesses_elec) != len(guesses_phot):
         raise InputError("amount of guesses for electronic and photonic must be equal, but are"
                          "{} electronic and {} photonic guesses".format(len(guesses_elec), len(guesses_phot)))
-    # for now we make gs guess zero
-    print("groundstate guesses are still zero, see workflow.py func obtain_guesses_by_inspection_qed")
     guess_gs = np.zeros(len(guesses_elec))
     guess_gs1 = np.zeros(len(guesses_phot)) 
     guess_gs2 = np.zeros(len(guesses_phot2))
     # these guesses need a manual option, because if the gs1 state is close to a state it couples with, the gs1 guess needs to be smaller, than for a
     # decoupled state. For gs2 this is a little less important, because the coupling is weaker.
-    guess_gs1[0] = 0#2 # giving these two electronic ground/ photonic excited states a small value, they will only slowly appear in the convergence,
-    guess_gs2[1] = 0#5 # which in fact leads to a lot of numerical issues. Furthermore, they dont have to match the exact state number later...The solver takes care of that.
+    guess_gs1[0] = 2 # giving these two electronic ground/ photonic excited states a small value, they will only slowly appear in the convergence,
+    guess_gs2[1] = 5 # which in fact leads to a lot of numerical issues. Furthermore, they dont have to match the exact state number later...The solver takes care of that.
     guesses_tmp = []
     try:
         dummy_var = guesses_elec[0].pphh

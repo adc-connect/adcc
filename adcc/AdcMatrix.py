@@ -747,7 +747,7 @@ class AdcMatrix(AdcMatrixlike):
                 # doubles part is symmetric wrt. (i,j,a,b) <-> (j,i,b,a)
                 return scratch.symmetrise([(0, 1), (2, 3)])
             ret["pphh"] = symmetrise_generic_adc_doubles
-        print(ret)
+        #print(ret)
         return ret
 
     def dense_basis(self, axis_blocks=None, ordering="adcc"):
@@ -1173,8 +1173,8 @@ class AdcMatrix_submatrix(AdcMatrixlike):
             self.axis_lengths[block] = np.prod([
                 self.mospaces.n_orbs(sp) for sp in self.axis_spaces[block]
             ])
-        self.axis_spaces["gs"] = ["o0", "v0"] 
-        self.axis_lengths["gs"] = 1
+        #self.axis_spaces["gs"] = ["o0", "v0"] 
+        #self.axis_lengths["gs"] = 1
         self.shape = (sum(self.axis_lengths.values()),
                       sum(self.axis_lengths.values()))
         
@@ -1208,7 +1208,7 @@ class AdcMatrix_submatrix(AdcMatrixlike):
                       "will be removed in 0.16.0. "
                       "Use `matrix.axis_spaces[block]` in the future.")
         return {
-            "g": self.axis_spaces.get("gs", None),
+            #"g": self.axis_spaces.get("gs", None),
             "s": self.axis_spaces.get("ph", None),
             "d": self.axis_spaces.get("pphh", None),
             "t": self.axis_spaces.get("ppphhh", None),
@@ -1232,8 +1232,8 @@ class AdcMatrix_submatrix(AdcMatrixlike):
         if block is not None:
             warnings.warn("Support for the block argument will be dropped "
                           "in 0.16.0.")
-            if block == "g":
-                return self.__diagonal.gs #this is just a float, but it could be e.g. omega, for which I dont know if required data is given in this function
+            #if block == "g":
+            #    return self.__diagonal.gs #this is just a float, but it could be e.g. omega, for which I dont know if required data is given in this function
             if block == "s":
                 return self.__diagonal.ph
             if block == "d":

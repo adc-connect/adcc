@@ -46,6 +46,7 @@ class IndexSymmetrisation():
         # for the respective block
         self.symmetrisation_functions = \
             matrix.construct_symmetrisation_for_blocks()
+        print("index symm class init is used")
 
     def symmetrise(self, new_vectors):
         """
@@ -131,6 +132,7 @@ class IndexSpinSymmetrisation(IndexSymmetrisation):
     def __init__(self, matrix, enforce_spin_kind="singlet"):
         super().__init__(matrix)
         self.enforce_spin_kind = enforce_spin_kind
+        print("index spin symm class is used")
 
     def symmetrise(self, new_vectors):
         if isinstance(new_vectors, AmplitudeVector):

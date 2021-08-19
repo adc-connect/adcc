@@ -364,10 +364,13 @@ class ExcitedStates(ElectronicTransition):
             to index relative on the HOMO / LUMO / HOCO orbitals.
             If ``None`` an automatic selection will be made.
         """
-        eV = constants.value("Hartree energy in eV")
-        vector_format = FormatExcitationVector(self.matrix, tolerance=tolerance,
+        eV = constants.value("Hartree energy in eV") 
+        vector_format = FormatExcitationVector(self.matrix.elec, tolerance=tolerance, # here self.matrix.elec, due to qed
                                                index_format=index_format)
 
+        #for qed
+        for i, vec in enumerate(self.excitation_vector):
+            self.excitation_vector[i] = vec.elec
         # Optimise the formatting by pre-inspecting all tensors
         for tensor in self.excitation_vector:
             vector_format.optimise_formatting(tensor)

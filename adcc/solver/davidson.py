@@ -214,6 +214,8 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
                                   if i in epair_mask]
             for eigv in eigenvecs:
                 print("norm of eigenvector", np.sqrt(eigv @ eigv))
+            #print("orthogonality check 2,3 , 2,4 and 3,4", np.sqrt(eigenvecs[1] @ eigenvecs[2]),
+            #                                                 np.sqrt(eigenvecs[1] @ eigenvecs[3]), np.sqrt(eigenvecs[2] @ eigenvecs[3]))
                 #print("eigenvector.ph = ", eigv.ph)
             # TODO This is misleading ... actually residual_norms contains
             #      the norms squared. That's also the used e.g. in adcman to
