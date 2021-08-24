@@ -512,6 +512,10 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
         #if hasattr(guesses_elec[0], "pphh"):
         if contains_doubles: 
             #print("doubles guesses are set up")
+            # what if this is not ok without restricting singlets/triplets only, because e.g. phot could be singlet and elec triplet ... doesnt seem to matter
+            #guesses_tmp.append(QED_AmplitudeVector(guess_gs[guess_index], guesses_elec[guess_index].ph, guesses_elec[guess_index].pphh,
+            #                guess_gs1[guess_index], guesses_phot[guess_index].ph, guesses_phot[guess_index].pphh,
+            #                guess_gs2[guess_index], guesses_phot2[guess_index].ph, guesses_phot2[guess_index].pphh))
             guesses_tmp.append(QED_AmplitudeVector(guess_gs[guess_index], guesses_elec[guess_index].ph, guesses_elec[guess_index].pphh,
                             guess_gs1[guess_index], guesses_phot[guess_index].ph, guesses_phot[guess_index].pphh,
                             guess_gs2[guess_index], guesses_phot2[guess_index].ph, guesses_phot2[guess_index].pphh))

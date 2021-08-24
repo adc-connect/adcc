@@ -23,6 +23,7 @@
 import sys
 import warnings
 import numpy as np
+from numpy.lib.function_base import blackman
 import scipy.linalg as la
 import scipy.sparse.linalg as sla
 
@@ -284,6 +285,18 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
 
             # Explicitly symmetrise the new vectors if requested
             if explicit_symmetrisation:
+                #tmp_list = []
+                #tmp2 = []
+                #for vec in preconds:
+                #    tmp_list.append(vec.elec)
+                #    tmp_list.append(vec.phot)
+                #    tmp_list.append(vec.phot2)
+                #explicit_symmetrisation.symmetrise(tmp_list)
+                #for i, vec in enumerate(preconds):
+                #    tmp2.append(QED_AmplitudeVector(gs=vec.gs, ph=vec.elec.ph, pphh=tmp_list[3*i].pphh, 
+                #                            gs1=vec.gs1, ph1=vec.phot.ph, pphh1=tmp_list[3*i + 1].pphh,
+                #                            gs2=vec.gs2, ph2=vec.phot2.ph, pphh2=tmp_list[3*i + 2].pphh))
+                #preconds = tmp2
                 #if isinstance(preconds[0], QED_AmplitudeVector):
                 #    
                 #else:
