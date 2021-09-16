@@ -314,13 +314,13 @@ class AdcMatrix(AdcMatrixlike):
             self.__init_space_data_qed(self.elec.diagonal()) # here we need to adapt the attributes, defined via this function
             # namely self.axis_spaces, self.axis_lengths, self.shape
             self.__diagonal.evaluate()
-            print(self.elec.blocks_ph)
-            print(self.blocks_ph)
-            print(self.axis_spaces)
-            print(self.axis_lengths)
-            print(self.shape)
-            print(self.elec.axis_lengths)
-            print(self.elec.shape)
+            #print(self.elec.blocks_ph)
+            #print(self.blocks_ph)
+            #print(self.axis_spaces)
+            #print(self.axis_lengths)
+            #print(self.shape)
+            #print(self.elec.axis_lengths)
+            #print(self.elec.shape)
             #print("matvec has to be corrected, since .gs and .gs1 parts are not yet included, also remaining blocks have to included")
             
 

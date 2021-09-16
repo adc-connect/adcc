@@ -488,17 +488,22 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
     guesses_elec = obtain_guesses_by_inspection(matrix.elec, n_guesses, kind, n_guesses_doubles) 
     guesses_phot = obtain_guesses_by_inspection(matrix.phot, n_guesses, kind, n_guesses_doubles)
     guesses_phot2 = obtain_guesses_by_inspection(matrix.phot2, n_guesses, kind, n_guesses_doubles)
+    n_guess = len(guesses_elec)
+    for i in np.arange(n_guess):
+        guesses_phot[i] *= 0.02
+        guesses_phot2[i] *= 0.001
     #print("this is from obtain_guess_qed from workflow: guesses_elec[0].pphh", guesses_elec[0].pphh)
-    if len(guesses_elec) != len(guesses_phot):
+    if n_guess != len(guesses_phot):
         raise InputError("amount of guesses for electronic and photonic must be equal, but are"
                          "{} electronic and {} photonic guesses".format(len(guesses_elec), len(guesses_phot)))
-    guess_gs = np.zeros(len(guesses_elec))
-    guess_gs1 = np.zeros(len(guesses_phot)) 
-    guess_gs2 = np.zeros(len(guesses_phot2))
+    guess_gs = np.zeros(n_guess)
+    guess_gs1 = np.zeros(n_guess) 
+    guess_gs2 = np.zeros(n_guess)
     # these guesses need a manual option, because if the gs1 state is close to a state it couples with, the gs1 guess needs to be smaller, than for a
     # decoupled state. For gs2 this is a little less important, because the coupling is weaker.
-    guess_gs1[0] = 2 # giving these two electronic ground/ photonic excited states a small value, they will only slowly appear in the convergence,
-    guess_gs2[1] = 5 # which in fact leads to a lot of numerical issues. Furthermore, they dont have to match the exact state number later...The solver takes care of that.
+    guess_gs[n_guess - 3] = 100
+    guess_gs1[n_guess - 2] = 2 # giving these two electronic ground/ photonic excited states a small value, they will only slowly appear in the convergence,
+    guess_gs2[n_guess - 1] = 5 # which in fact leads to a lot of numerical issues. Furthermore, they dont have to match the exact state number later...The solver takes care of that.
     guesses_tmp = []
     try:
         dummy_var = guesses_elec[0].pphh
@@ -508,7 +513,7 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
         #guess_gs2 = np.zeros(len(guesses_phot2))
     except AttributeError:
         contains_doubles = False
-    for guess_index in np.arange(len(guesses_elec)): # build QED_AmplitudeVectors from AmplitudeVector guesses
+    for guess_index in np.arange(n_guess): # build QED_AmplitudeVectors from AmplitudeVector guesses
         #if hasattr(guesses_elec[0], "pphh"):
         if contains_doubles: 
             #print("doubles guesses are set up")

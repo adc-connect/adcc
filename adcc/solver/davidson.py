@@ -285,6 +285,7 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
 
             # Explicitly symmetrise the new vectors if requested
             if explicit_symmetrisation:
+                #print(explicit_symmetrisation)
                 #tmp_list = []
                 #tmp2 = []
                 #for vec in preconds:

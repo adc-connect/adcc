@@ -146,8 +146,9 @@ def transition_dm(method, ground_state, amplitude, intermediates=None):
             # for QED_result we are interested in .elec part only, which grants the electronic transitions.
             # We also dont need .gs since it should be zero...this has to be checked!!!
             ampl_elec_norm = amplitude.elec @ amplitude.elec
+            ampl_phot_norm = amplitude.phot @ amplitude.phot
             print("care, that .gs is not used for transition_dm, but only .elec (check transition_dm.py)")
-            print("norm squared of amplitude.elec", ampl_elec_norm)
+            print("norm squared of amplitude.elec", ampl_elec_norm, " norm squared phot", ampl_phot_norm)
             print("norm squared of amplitude", amplitude @ amplitude)
             print("beware, that we normalize .elec, before giving it to the oscillator strength routine")
             print("amplitude.gs is {}, amplitude.gs1 is {} and amplitude.gs2 is {}".format(amplitude.gs.as_float(),

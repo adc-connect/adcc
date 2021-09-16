@@ -69,11 +69,11 @@ class IndexSymmetrisation():
                 vec[b] = evaluate(self.symmetrisation_functions[b](vec[b]))
             return vec
 
-        if isinstance(new_vectors, AmplitudeVector):
+        if isinstance(new_vectors, (AmplitudeVector, QED_AmplitudeVector)):
             return self.symmetrise([new_vectors])[0]
         elif isinstance(new_vectors[0], QED_AmplitudeVector):
             # we dont have to symmetrise the gs blocks...actually only the pphh blocks are symmetrised here
-            if "pphh" in new_vectors[0].elec.blocks_ph:
+            if "pphh" in new_vectors[0].elec.blocks_ph:  # not sure if this is necessary, since symm should only be requested for doubles after all
                 #print("non explicit symm for qed vec is called")
                 for vec in new_vectors:
                     vec.elec = self.symmetrise([vec.elec])[0]
@@ -143,7 +143,7 @@ class IndexSpinSymmetrisation(IndexSymmetrisation):
         #print("index spin symm class is used")
 
     def symmetrise(self, new_vectors):
-        if isinstance(new_vectors, AmplitudeVector):
+        if isinstance(new_vectors, (AmplitudeVector, QED_AmplitudeVector)):
             return self.symmetrise([new_vectors])[0]
 
         new_vectors = super().symmetrise(new_vectors)
