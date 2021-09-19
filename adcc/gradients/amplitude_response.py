@@ -63,6 +63,47 @@ def ampl_relaxed_dms_adc1(exci):
     g2a.ovov = -1.0 * einsum("ja,ib->iajb", u.ph, u.ph)
     return g1a, g2a
 
+def ampl_relaxed_dms_adc0(exci):
+    hf = exci.reference_state
+    u = exci.excitation_vector
+    g1a = OneParticleOperator(hf)
+    g2a = TwoParticleDensityMatrix(hf)
+    # g2a is not required for the adc0 gradient,
+    # but expected by amplitude_relaxed_densities
+    g1a.oo = -1.0 * einsum("ia,ja->ij", u.ph, u.ph)
+    g1a.vv = +1.0 * einsum("ia,ib->ab", u.ph, u.ph)
+    return g1a, g2a
+
+def ampl_relaxed_dms_cvs_adc0(exci):
+    hf = exci.reference_state
+    u = exci.excitation_vector
+    g1a = OneParticleOperator(hf)
+    g2a = TwoParticleDensityMatrix(hf)
+    # g2a is not required for cvs-adc0 gradient,
+    # but expected by amplitude_relaxed_densities
+    g1a.cc = -1.0 * einsum("Ia,Ja->IJ", u.ph, u.ph)
+    g1a.vv = +1.0 * einsum("Ia,Ib->ab", u.ph, u.ph)
+    return g1a, g2a
+
+def ampl_relaxed_dms_cvs_adc1(exci):
+    hf = exci.reference_state
+    u = exci.excitation_vector
+    g1a = OneParticleOperator(hf)
+    g2a = TwoParticleDensityMatrix(hf)
+    g2a.cvcv = -1.0 * einsum("Ja,Ib->IaJb", u.ph, u.ph)
+    g1a.cc = -1.0 * einsum("Ia,Ja->IJ", u.ph, u.ph)
+
+    # Pre-requisites for the OC block of the
+    # orbital response Lagrange multipliers:
+    fc = hf.fock(b.cc).diagonal()
+    fo = hf.fock(b.oo).diagonal()
+    fco = 0.5*direct_sum("-j+I->jI", fc, fo).evaluate()
+    # These are the multipliers:
+    g1a.co = -0.5 * einsum('JbKc,ibKc->Ji', g2a.cvcv, hf.ovcv) / fco
+    print("L multipliers CO block:\n", g1a.co.evaluate().T)
+    g1a.vv = +1.0 * einsum("Ia,Ib->ab", u.ph, u.ph)
+    return g1a, g2a
+
 
 def ampl_relaxed_dms_adc2(exci):
     u = exci.excitation_vector
@@ -112,8 +153,11 @@ def ampl_relaxed_dms_mp2(mp):
 
 DISPATCH = {
     "mp2":  ampl_relaxed_dms_mp2,
+    "adc0": ampl_relaxed_dms_adc0,
     "adc1": ampl_relaxed_dms_adc1,
     "adc2": ampl_relaxed_dms_adc2,
+    "cvs-adc0": ampl_relaxed_dms_cvs_adc0,
+    "cvs-adc1": ampl_relaxed_dms_cvs_adc1,
 }
 
 
