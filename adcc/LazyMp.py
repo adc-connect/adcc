@@ -319,6 +319,7 @@ class LazyMp:
                     print("full qed MP2 energy correction (standard hf) " 
                     + str(mp2_correction + qed_mp2_correction_1 + qed_mp2_correction_0))
                     print("qed-mp1 correction, due to standard hf input " + str(qed_mp1_correction))
+                    print("new qed-mp2 correction compared to qed-hf " + str(qed_mp2_correction_0))
         elif level == 2 and is_cvs:
             terms = [(1.0, hf.oovv, self.t2oo),
                      (2.0, hf.ocvv, self.t2oc),
