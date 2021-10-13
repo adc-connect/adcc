@@ -109,7 +109,7 @@ class LanczosIterator:
             # Initialise Lanczos subspace
             v = self.ortho.orthogonalise(self.residual)
             self.lanczos_subspace = v
-            print(v)
+            #print(v)
             r = evaluate(self.matrix @ v)
             alpha = np.empty((self.n_block, self.n_block))
             for p in range(self.n_block):
