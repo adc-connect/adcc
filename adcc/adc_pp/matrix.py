@@ -113,7 +113,7 @@ def block(ground_state, spaces, order, variant=None, intermediates=None):
 # (original 4 blocks + ph_gs and pphh_gs) per "ADC submatrix"
 # maybe return float from ph/pphh_gs blocks, instead of QED_AmplitudeVector.gs/.gs1
 
-# For QED-ADC(2) we then require also the 2 photon block, so we introduce the naming convention:
+# For QED-ADC(2) we then require also the double energy photon block, so we introduce the naming convention:
 # elec              phot_couple         phot_couple_outer
 # elec_couple       phot                phot_couple_inner
 # elec_couple_edge  elec_couple_inner   phot2
@@ -743,8 +743,29 @@ def block_ph_ph_1_phot2(hf, mp, intermediates):
                 #+ (1/2) * einsum("ia,ia->", mp.qed_t1_df(b.ov), mp.qed_t1_df(b.ov)) * ampl.ph #reintroduced (actually canceled from -E_0 (1)
                 + 2 * omega * ampl.ph2
             ))
-    else:
-        raise NotImplementedError("and not hasattr(hf, qed_hf)")
+    elif hasattr(hf, "coupling") and hasattr(hf, "qed_hf"):
+        omega = float(ReferenceState.get_qed_omega(hf))
+
+        # Build two Kronecker deltas
+        d_oo = zeros_like(hf.foo)
+        d_vv = zeros_like(hf.fvv)
+        d_oo.set_mask("ii", 1.0)
+        d_vv.set_mask("aa", 1.0)
+
+        diagonal = AmplitudeVector(ph=(
+            + direct_sum("a-i->ia", hf.fvv.diagonal(), fCC.diagonal())  # order 0
+            - einsum("IaIa->Ia", CvCv)  # order 1
+            + einsum("ii,aa->ia", d_oo, d_vv) * omega * 2
+        ))
+        #np.insert(diagonal, 0, omega)
+
+        def apply(ampl):
+            return AmplitudeVector(ph=(                 # PT order
+                + einsum("ib,ab->ia", ampl.ph2, hf.fvv)  # 0
+                - einsum("IJ,Ja->Ia", fCC, ampl.ph2)     # 0
+                - einsum("JaIb,Jb->Ia", CvCv, ampl.ph2)  # 1
+                + 2 * omega * ampl.ph2
+            ))
     return AdcBlock(apply, diagonal)
 
 
