@@ -52,6 +52,20 @@ def t2bar_oovv_adc2(exci, g1a_adc0):
     )
     return t2bar
 
+def t2bar_oovv_cvs_adc2(exci, g1a_adc0):
+    mp = exci.ground_state
+    hf = mp.reference_state
+    u = exci.excitation_vector
+    df_ia = mp.df(b.ov)
+    t2bar = 0.5*(
+        - einsum("ijcb,ac->ijab", hf.oovv, g1a_adc0.vv).antisymmetrise((2, 3))
+        ) / (
+            direct_sum("ia+jb->ijab", df_ia, df_ia).symmetrise((0, 1))
+        )
+
+    #TODO: remove print("T2bar:\n",t2bar.evaluate())
+    return t2bar
+
 
 def ampl_relaxed_dms_adc1(exci):
     hf = exci.reference_state
@@ -97,11 +111,213 @@ def ampl_relaxed_dms_cvs_adc1(exci):
     # orbital response Lagrange multipliers:
     fc = hf.fock(b.cc).diagonal()
     fo = hf.fock(b.oo).diagonal()
-    fco = 0.5*direct_sum("-j+I->jI", fc, fo).evaluate()
+    fco = direct_sum("-j+I->jI", fc, fo).evaluate()
     # These are the multipliers:
-    g1a.co = -0.5 * einsum('JbKc,ibKc->Ji', g2a.cvcv, hf.ovcv) / fco
-    print("L multipliers CO block:\n", g1a.co.evaluate().T)
+    g1a.co = - einsum('JbKc,ibKc->Ji', g2a.cvcv, hf.ovcv) / fco
+    # TODO: print("L multipliers CO block:\n", g1a.co.evaluate().T)
     g1a.vv = +1.0 * einsum("Ia,Ib->ab", u.ph, u.ph)
+    return g1a, g2a
+
+def ampl_relaxed_dms_cvs_adc2(exci):
+    hf = exci.reference_state
+    mp = exci.ground_state
+    u = exci.excitation_vector
+    g1a = OneParticleOperator(hf)
+    g2a = TwoParticleDensityMatrix(hf)
+
+    # Determine the t-amplitudes and multipliers:
+    t2oovv = mp.t2(b.oovv)
+    t2ccvv = mp.t2(b.ccvv)
+    t2ocvv = mp.t2(b.ocvv)
+    g1a_cvs0, g2a_cvs0 = ampl_relaxed_dms_cvs_adc0(exci)
+    t2bar = t2bar_oovv_cvs_adc2(exci, g1a_cvs0).evaluate()
+
+    g1a.cc = (
+        - einsum("Ia,Ja->IJ", u.ph, u.ph)
+        - einsum("kJba,kIba->IJ", u.pphh, u.pphh)
+        - 0.5 * einsum('IKab,JKab->IJ', t2ccvv, t2ccvv)
+        - 0.5 * einsum('kIab,kJab->IJ', t2ocvv, t2ocvv)
+    )
+
+    g1a.oo = ( 
+        - einsum("jKba,iKba->ij", u.pphh, u.pphh)
+        - einsum("ikab,jkab->ij", t2bar, t2oovv) # TODO:
+        - einsum('jkab,ikab->ij', t2oovv, t2bar) # use antisymmetrize
+        - 0.5 * einsum('iKab,jKab->ij', t2ocvv, t2ocvv)
+        - 0.5 * einsum('ikab,jkab->ij', t2oovv, t2oovv)
+    )
+
+    # Pre-requisites for the OC block of the
+    # orbital response Lagrange multipliers:
+    fc = hf.fock(b.cc).diagonal()
+    fo = hf.fock(b.oo).diagonal()
+    fco = direct_sum("-j+I->jI", fc, fo).evaluate()
+
+    #print("L multipliers CO block:\n", g1a.co.evaluate().T)
+    g1a.vv = (
+          einsum("Ia,Ib->ab", u.ph, u.ph)
+        + 2.0 * einsum('jIcb,jIca->ab', u.pphh, u.pphh)
+        + einsum('ijac,ijbc->ab', t2bar, t2oovv)
+        + einsum('ijbc,ijac->ab', t2bar, t2oovv)
+        + 0.5 * einsum('IJac,IJbc->ab', t2ccvv, t2ccvv)
+        + 0.5 * einsum('ijac,ijbc->ab', t2oovv, t2oovv)
+        + einsum('iJac,iJbc->ab', t2ocvv, t2ocvv)
+    )
+
+    g2a.cvcv = (
+        - einsum("Ja,Ib->IaJb", u.ph, u.ph)
+    )
+
+    # 0.7071067811865475 is 1/sqrt(2); is there a better way to do this?
+    # This factor is needed because of the scaling used in adcc
+    # for the ph-pphh blocks
+    g2a.occv  = 0.7071067811865475 * (
+          einsum('Ib,kJba->kJIa', u.ph, u.pphh) # TODO: use antisymm
+        - einsum('Ib,kJab->kJIa', u.ph, u.pphh)
+    )
+
+    g2a.oovv = (
+         0.5 * einsum('ijcb,ca->ijab', t2oovv, g1a_cvs0.vv)
+        -0.5 * einsum('ijca,cb->ijab', t2oovv, g1a_cvs0.vv)
+        -t2oovv
+        -2.0 * t2bar
+    )
+
+    # 1.414213562373095 is 2/sqrt(2); 
+    # This factor is necessary because of the wa that the ph-pphh is scaled
+    g2a.ovvv = (
+        1.414213562373095 * einsum('Ja,iJcb->iabc', u.ph, u.pphh)
+    )
+    
+    g2a.ccvv = -t2ccvv 
+    
+    g2a.ocvv = -t2ocvv
+
+    # These are the OC multipliers:
+    g1a.co = (
+        - einsum('JbKc,ibKc->Ji', g2a.cvcv, hf.ovcv) 
+        -0.5 * einsum('JKab,iKab->Ji', g2a.ccvv, hf.ocvv)
+        + einsum('kJLa,ikLa->Ji', g2a.occv, hf.oocv)
+        + 0.5 * einsum('kJab,ikab->Ji', g2a.ocvv, hf.oovv)
+        - einsum('kLJa,kLia->Ji', g2a.occv, hf.ocov)
+        + einsum('iKLa,JKLa->Ji', g2a.occv, hf.cccv)
+        + 0.5 * einsum('iKab,JKab->Ji', g2a.ocvv, hf.ccvv)
+        - 0.5 * einsum('ikab,kJab->Ji', g2a.oovv, hf.ocvv)
+        + 0.5 * einsum('iabc,Jabc->Ji', g2a.ovvv, hf.cvvv)
+    ) / fco
+
+    #print("Lambda CO:\n", g1a.co.evaluate().T)
+
+    return g1a, g2a
+
+def ampl_relaxed_dms_cvs_adc2x(exci):
+    hf = exci.reference_state
+    mp = exci.ground_state
+    u = exci.excitation_vector
+    g1a = OneParticleOperator(hf)
+    g2a = TwoParticleDensityMatrix(hf)
+
+    # Determine the t-amplitudes and multipliers:
+    t2oovv = mp.t2(b.oovv)
+    t2ccvv = mp.t2(b.ccvv)
+    t2ocvv = mp.t2(b.ocvv)
+    g1a_cvs0, g2a_cvs0 = ampl_relaxed_dms_cvs_adc0(exci)
+    t2bar = t2bar_oovv_cvs_adc2(exci, g1a_cvs0).evaluate()
+
+    g1a.cc = (
+        - einsum("Ia,Ja->IJ", u.ph, u.ph)
+        - einsum("kJba,kIba->IJ", u.pphh, u.pphh)
+        - 0.5 * einsum('IKab,JKab->IJ', t2ccvv, t2ccvv)
+        - 0.5 * einsum('kIab,kJab->IJ', t2ocvv, t2ocvv)
+    )
+
+    g1a.oo = ( 
+        - einsum("jKba,iKba->ij", u.pphh, u.pphh)
+        - einsum("ikab,jkab->ij", t2bar, t2oovv) # TODO:
+        - einsum('jkab,ikab->ij', t2oovv, t2bar) # use antisymmetrize
+        - 0.5 * einsum('iKab,jKab->ij', t2ocvv, t2ocvv)
+        - 0.5 * einsum('ikab,jkab->ij', t2oovv, t2oovv)
+    )
+
+    # Pre-requisites for the OC block of the
+    # orbital response Lagrange multipliers:
+    fc = hf.fock(b.cc).diagonal()
+    fo = hf.fock(b.oo).diagonal()
+    fco = direct_sum("-j+I->jI", fc, fo).evaluate()
+
+    #print("L multipliers CO block:\n", g1a.co.evaluate().T)
+    g1a.vv = (
+          einsum("Ia,Ib->ab", u.ph, u.ph)
+        + 2.0 * einsum('jIcb,jIca->ab', u.pphh, u.pphh)
+        + einsum('ijac,ijbc->ab', t2bar, t2oovv)
+        + einsum('ijbc,ijac->ab', t2bar, t2oovv)
+        + 0.5 * einsum('IJac,IJbc->ab', t2ccvv, t2ccvv)
+        + 0.5 * einsum('ijac,ijbc->ab', t2oovv, t2oovv)
+        + einsum('iJac,iJbc->ab', t2ocvv, t2ocvv)
+    )
+
+    g2a.cvcv = (
+        - einsum("Ja,Ib->IaJb", u.ph, u.ph)
+        - 0.5 * einsum('kIbc,kJac->IaJb', u.pphh, u.pphh) # TODO: use antisymm
+        - 0.5 * einsum('kIcb,kJca->IaJb', u.pphh, u.pphh) # TODO: use antisymm
+        + 0.5 * einsum('kIcb,kJac->IaJb', u.pphh, u.pphh) # TODO: use antisymm
+        + 0.5 * einsum('kIbc,kJca->IaJb', u.pphh, u.pphh) # TODO: use antisymm
+    )
+
+    # 0.7071067811865475 is 1/sqrt(2); is there a better way to do this?
+    # This factor is needed because of the scaling used in adcc
+    # for the ph-pphh blocks
+    g2a.occv  = 0.7071067811865475 * (
+          einsum('Ib,kJba->kJIa', u.ph, u.pphh) # TODO: use antisymm
+        - einsum('Ib,kJab->kJIa', u.ph, u.pphh)
+    )
+
+    g2a.oovv = (
+         0.5 * einsum('ijcb,ca->ijab', t2oovv, g1a_cvs0.vv)
+        -0.5 * einsum('ijca,cb->ijab', t2oovv, g1a_cvs0.vv)
+        -t2oovv
+        -2.0 * t2bar
+    )
+
+    # 1.414213562373095 is 2/sqrt(2); 
+    # This factor is necessary because of the wa that the ph-pphh is scaled
+    g2a.ovvv = (
+        1.414213562373095 * einsum('Ja,iJcb->iabc', u.ph, u.pphh)
+    )
+
+    g2a.ovov = 0.5 * (
+        - einsum("iKbc,jKac->iajb", u.pphh, u.pphh)
+        - einsum("iKcb,jKca->iajb", u.pphh, u.pphh)
+        + einsum("iKcb,jKac->iajb", u.pphh, u.pphh)
+        + einsum("iKbc,jKca->iajb", u.pphh, u.pphh)
+    )
+    
+    g2a.ccvv = -t2ccvv 
+    
+    g2a.ocvv = -t2ocvv
+
+    g2a.ococ = einsum("iJab,kLab->iJkL", u.pphh, u.pphh)
+
+    g2a.vvvv = 2.0 * einsum("iJcd,iJab->abcd", u.pphh, u.pphh)
+
+    # These are the OC multipliers:
+    g1a.co = (
+        - einsum('JbKc,ibKc->Ji', g2a.cvcv, hf.ovcv) 
+        -0.5 * einsum('JKab,iKab->Ji', g2a.ccvv, hf.ocvv)
+        + einsum('kJLa,ikLa->Ji', g2a.occv, hf.oocv)
+        + 0.5 * einsum('kJab,ikab->Ji', g2a.ocvv, hf.oovv)
+        - einsum('kLJa,kLia->Ji', g2a.occv, hf.ocov)
+        + einsum('iKLa,JKLa->Ji', g2a.occv, hf.cccv)
+        + 0.5 * einsum('iKab,JKab->Ji', g2a.ocvv, hf.ccvv)
+        - 0.5 * einsum('ikab,kJab->Ji', g2a.oovv, hf.ocvv)
+        + 0.5 * einsum('iabc,Jabc->Ji', g2a.ovvv, hf.cvvv)
+        + einsum('kJmL,ikmL->Ji', g2a.ococ, hf.oooc) 
+        - einsum('iKlM,JKMl->Ji', g2a.ococ, hf.ccco)
+        + einsum('iakb,kbJa->Ji', g2a.ovov, hf.ovcv)
+    ) / fco
+
+    #print("OC:\n", g1a.co.evaluate().T)
+
     return g1a, g2a
 
 
@@ -158,6 +374,8 @@ DISPATCH = {
     "adc2": ampl_relaxed_dms_adc2,
     "cvs-adc0": ampl_relaxed_dms_cvs_adc0,
     "cvs-adc1": ampl_relaxed_dms_cvs_adc1,
+    "cvs-adc2": ampl_relaxed_dms_cvs_adc2,
+    "cvs-adc2x": ampl_relaxed_dms_cvs_adc2x, 
 }
 
 

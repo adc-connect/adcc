@@ -215,8 +215,6 @@ class OneParticleOperator:
         return ret
 
     def __transform_to_ao(self, refstate_or_coefficients):
-        #Iulia print:
-        print("HERE:\n",dir(self))
         if not len(self.blocks_nonzero):
             raise ValueError("At least one non-zero block is needed to "
                              "transform the OneParticleOperator.")
