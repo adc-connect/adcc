@@ -98,18 +98,29 @@ def nuclear_gradient(excitation_or_mp):
             # No idea why we need a 0.25 in front of the oooo block...
             g2_oresp = TwoParticleDensityMatrix(hf)
             g2_oresp.cccc = einsum("IK,JL->IJKL", delta_IJ, g1o.cc+delta_IJ)
-            g2_oresp.ococ = einsum("ik,JL->iJkL", delta_ij, g1o.cc+2*delta_IJ)
-            g2_oresp.oooo = 0.25*einsum("ik,jl->ijkl", delta_ij, delta_ij)
+            g2_oresp.ococ = ( 
+                 einsum("ik,JL->iJkL", delta_ij, g1o.cc+2*delta_IJ)
+                + einsum("ik,JL->iJkL", g1o.oo, delta_IJ)
+            )
+            g2_oresp.oooo = 0.25 * (
+                einsum("ik,jl->ijkl", delta_ij, g1o.oo+delta_ij)
+            )
             g2_oresp.ovov = einsum("ij,ab->iajb", delta_ij, g1o.vv)
             g2_oresp.cvcv = einsum("IJ,ab->IaJb", delta_IJ, g1o.vv)
             g2_oresp.ocov = 2*einsum("ik,Ja->iJka", delta_ij, g1o.cv)
             g2_oresp.cccv = 2*einsum("IK,Ja->IJKa", delta_IJ, g1o.cv)
-
             g2_oresp.ooov = 2*einsum("ik,ja->ijka", delta_ij, g1o.ov)
             g2_oresp.cocv = 2*einsum("IK,ja->IjKa", delta_IJ, g1o.ov)
             g2_oresp.ocoo = 2*einsum("ik,Jl->iJkl", delta_ij, g1o.co)
             g2_oresp.ccco = 2*einsum("IK,Jl->IJKl", delta_IJ, g1o.co)
-            
+
+            # scale for contraction with integrals
+            g2a.oovv *= 0.5
+            g2a.ccvv *= 0.5
+            g2a.occv *= 2.0
+            g2a.vvvv *= 0.25 # Scalin twice is really strange... but the only 
+            g2a.vvvv *= 0.25 # way it works...
+
             g2_total = evaluate(g2_hf + g2a + g2_oresp)
         else:
             delta_ij = hf.density.oo
