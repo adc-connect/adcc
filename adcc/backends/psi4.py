@@ -116,6 +116,14 @@ class Psi4HFProvider(HartreeFockProvider):
                                                         elec_only=elec_only)
         return e_pe
 
+    def pcm_energy(self, dm):
+        psi_dm = psi4.core.Matrix.from_array(dm.to_ndarray())
+        V_pcm = psi4.core.PCM.compute_V(self.wfn.get_PCM(), psi_dm).to_array()
+        # either tranform both to np array and use np.einsum
+        # or tranform V_pcm to libadcc.Tensor
+        # numpy seems to be easier for now
+        return np.einsum("uv,uv->", dm.to_ndarray(), V_pcm)
+
     @property
     def excitation_energy_corrections(self):
         ret = []
@@ -131,6 +139,14 @@ class Psi4HFProvider(HartreeFockProvider):
                                             elec_only=True)
             )
             ret.extend([ptlr, ptss])
+        if self.environment == "pcm":
+            # for the correction the correct transition_dm has to be used?
+            # <I|V|0><J|Qf|0>
+            ptlr = EnergyCorrection(
+                "pcm_ptlr_correction",
+                lambda view: self.pcm_energy(view.transition_dm_ao)
+            )
+            ret.extend([ptlr])
         return {ec.name: ec for ec in ret}
 
     @property
