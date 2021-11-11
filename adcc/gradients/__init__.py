@@ -63,18 +63,13 @@ def nuclear_gradient(excitation_or_mp):
 
     with timer.record("orbital_response"):
         rhs = orbital_response_rhs(hf, g1a, g2a).evaluate()
-        l_ov = orbital_response(hf, rhs)
+        l = orbital_response(hf, rhs)
 
     # orbital-relaxed OPDM (without reference state)
     g1o = g1a.copy()
+    g1o.ov = 0.5 * l.ov
     if hf.has_core_occupied_space:
-        # For CVS, the solution is stored in an Amplitude
-        # Vector object with th OV block stored in pphh
-        # and the CV block stored in ph
-        g1o.ov = 0.5 * l_ov['pphh']
-        g1o.cv = 0.5 * l_ov['ph'] 
-    else:
-        g1o.ov = 0.5 * l_ov
+        g1o.cv = 0.5 * l.cv 
     # orbital-relaxed OPDM (including reference state)
     g1 = g1o.copy()
     g1 += hf.density
@@ -89,13 +84,10 @@ def nuclear_gradient(excitation_or_mp):
             delta_IJ = hf.density.cc
             g2_hf = TwoParticleDensityMatrix(hf)
 
-            # I don't understand wy 0.25 is necessary for oooo, but 0.5 for cccc
-            # Doesn't make sense...; TODO: figure it out.
             g2_hf.oooo = -0.25 * ( einsum("ik,jl->ijkl", delta_ij, delta_ij))
             g2_hf.cccc = -0.5 * ( einsum("IK,JL->IJKL", delta_IJ, delta_IJ))
             g2_hf.ococ = -1.0 * ( einsum("ik,JL->iJkL", delta_ij, delta_IJ))
 
-            # No idea why we need a 0.25 in front of the oooo block...
             g2_oresp = TwoParticleDensityMatrix(hf)
             g2_oresp.cccc = einsum("IK,JL->IJKL", delta_IJ, g1o.cc+delta_IJ)
             g2_oresp.ococ = ( 
@@ -118,8 +110,8 @@ def nuclear_gradient(excitation_or_mp):
             g2a.oovv *= 0.5
             g2a.ccvv *= 0.5
             g2a.occv *= 2.0
-            g2a.vvvv *= 0.25 # Scalin twice is really strange... but the only 
-            g2a.vvvv *= 0.25 # way it works...
+            g2a.vvvv *= 0.25 # Scaling twice! 
+            g2a.vvvv *= 0.25 # it's the only way it works...
 
             g2_total = evaluate(g2_hf + g2a + g2_oresp)
         else:
