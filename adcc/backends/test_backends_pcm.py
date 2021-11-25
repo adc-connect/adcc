@@ -22,13 +22,47 @@ methods = ["adc1", "adc2", "adc3"]
                     reason="Psi4 backend not found.")
 @expand_test_templates(list(itertools.product(basissets, methods)))
 class TestPCM(unittest.TestCase):
+    def template_pcm_psi4_ptlr_formaldehyde(self, basis, method):
+        if method != "adc1":
+            pytest.skip("Data only available for adc1.")
+        basename = f"formaldehyde_{basis}_pcm_{method}"
+        psi4_pcm_options = {"weight": 0.3, "pcm_method": "IEFPCM", "neq": True,
+                            "solvent": "Water"}
+        scfres = psi4_run_pcm_hf(static_data.xyz["formaldehyde"], basis, charge=0,
+                                 multiplicity=1, conv_tol=1e-12,
+                                 conv_tol_grad=1e-11, max_iter=150,
+                                 pcm_options=psi4_pcm_options)
+
+        psi4_result = psi4_data[basename]
+        assert_allclose(scfres.energy_scf, psi4_result["energy_scf"], atol=1e-8)
+
+        state = adcc.run_adc(scfres, method=method, n_singlets=5,
+                             conv_tol=1e-7, environment="ptlr")
+        # is it possible to perform a PTE calculation with PSI4? Don't find anything
+        # environment related in the tdscf code
+        # Add comparison of uncorrected zeroth order excitation energies.
+
+        # compare ptLR result to LR data
+        # usually agrees up to third significant figure for energies in Hartree
+        # However formaldehyde seems to show a slightly larger discrepancy
+        assert_allclose(state.excitation_energy,
+                        psi4_result["lr_excitation_energy"], atol=5 * 1e-3)
+
+        # Consistency check with values obtained with ADCc
+        assert_allclose(state.excitation_energy,
+                        psi4_result["ptlr_adcc_excitation_energy"], atol=1e-5)
+
+        # remove cavity files from PSI4 PCM calculations
+        for cavityfile in os.listdir(os.getcwd()):
+            if cavityfile.startswith(("cavity.off_", "PEDRA.OUT_")):
+                os.remove(cavityfile)
+
     def template_pcm_psi4_linear_response_formaldehyde(self, basis, method):
         if method != "adc1":
             pytest.skip("Reference only exists for adc1.")
         basename = f"formaldehyde_{basis}_pcm_{method}"
         psi4_result = psi4_data[basename]
 
-        # so you can adapt some options more easily if needed
         psi4_pcm_options = {"weight": 0.3, "pcm_method": "IEFPCM", "neq": True,
                             "solvent": "Water"}
 
@@ -49,14 +83,14 @@ class TestPCM(unittest.TestCase):
                              environment=False)
         assert_allclose(
             state.excitation_energy_uncorrected,
-            psi4_result["excitation_energy"],
+            psi4_result["lr_excitation_energy"],
             atol=1e-5
         )
 
         state_cis = adcc.ExcitedStates(state, property_method="adc0")
         assert_allclose(
             state_cis.oscillator_strength,
-            psi4_result["osc_strength"], atol=1e-3
+            psi4_result["lr_osc_strength"], atol=1e-3
         )
 
         # invalid combination
@@ -73,7 +107,7 @@ class TestPCM(unittest.TestCase):
                              conv_tol=1e-7, environment="linear_response")
         assert_allclose(
             state.excitation_energy_uncorrected,
-            psi4_result["excitation_energy"],
+            psi4_result["lr_excitation_energy"],
             atol=1e-5
         )
 
@@ -85,15 +119,7 @@ class TestPCM(unittest.TestCase):
 
 def psi4_run_pcm_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
                     conv_tol_grad=1e-11, max_iter=150, pcm_options=None):
-
-    # add something to check if pcm_options is defined and a dict?
     import psi4
-
-    basissets = {
-        "sto3g": "sto-3g",
-        "def2tzvp": "def2-tzvp",
-        "ccpvdz": "cc-pvdz",
-    }
 
     # needed for PE and PCM tests
     psi4.core.clean_options()
@@ -108,7 +134,7 @@ def psi4_run_pcm_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
 
     psi4.core.be_quiet()
     psi4.set_options({
-        'basis': basissets.get(basis, basis),
+        'basis': basis,
         'scf_type': 'pk',
         'e_convergence': conv_tol,
         'd_convergence': conv_tol_grad,
@@ -120,10 +146,10 @@ def psi4_run_pcm_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
     psi4.pcm_helper(f"""
         Units = AU
         Cavity {{Type = Gepol
-                Area = {pcm_options["weight"]}}}
-        Medium {{Solvertype = {pcm_options["pcm_method"]}
-                Nonequilibrium = {pcm_options["neq"]}
-                Solvent = {pcm_options["solvent"]}}}""")
+                Area = {pcm_options.get("weight", 0.3)}}}
+        Medium {{Solvertype = {pcm_options.get("pcm_method", "IEFPCM")}
+                Nonequilibrium = {pcm_options.get("neq", True)}
+                Solvent = {pcm_options.get("solvent", "Water")}}}""")
 
     if multiplicity != 1:
         psi4.set_options({

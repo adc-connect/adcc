@@ -1,4 +1,5 @@
 import psi4
+import adcc
 from psi4.driver.procrouting.response.scf_response import tdscf_excitations
 from adcc.testdata import static_data
 import yaml
@@ -32,12 +33,12 @@ def run_psi4_tdscf(xyz, basis, charge=0, multiplicity=1,
             Units = AU
             Cavity {{
                 Type = Gepol
-                Area = {pcm_options["weight"]}
+                Area = {pcm_options.get("weight", 0.3)}
             }}
             Medium {{
-                Solvertype = {pcm_options["pcm_method"]}
-                Solvent = {pcm_options["solvent"]}
-                Nonequilibrium = {pcm_options["neq"]}
+                Solvertype = {pcm_options.get("pcm_method", "IEFPCM")}
+                Solvent = {pcm_options.get("solvent", "Water")}
+                Nonequilibrium = {pcm_options.get("neq", True)}
             }}
         """)
     psi4.core.be_quiet()
@@ -52,6 +53,12 @@ def run_psi4_tdscf(xyz, basis, charge=0, multiplicity=1,
             if cavityfile.startswith(("cavity.off_", "PEDRA.OUT_")):
                 os.remove(cavityfile)
     return wfn, res
+
+
+def run_adcc_ptlr(wfn):
+    state = adcc.run_adc(wfn, method="adc1", n_singlets=5,
+                         conv_tol=1e-7, environment="ptlr")
+    return state
 
 
 def dump_results(molecule, basis, **kwargs):
@@ -71,10 +78,16 @@ def dump_results(molecule, basis, **kwargs):
 
     ret["energy_scf"] = wfn.energy()
     # yaml safe_dump doesn't like np.floats
-    ret["excitation_energy"] = [round(float(r["EXCITATION ENERGY"]), 5)
-                                for r in res]
-    ret["osc_strength"] = [round(float(r["OSCILLATOR STRENGTH (LEN)"]), 4)
-                           for r in res]
+    ret["lr_excitation_energy"] = [round(float(r["EXCITATION ENERGY"]), 5)
+                                   for r in res]
+    ret["lr_osc_strength"] = [round(float(r["OSCILLATOR STRENGTH (LEN)"]), 4)
+                              for r in res]
+
+    if pcm_options:
+        state = run_adcc_ptlr(wfn)
+        ret["ptlr_adcc_excitation_energy"] = [
+            round(float(e), 5) for e in state.excitation_energy
+        ]
     return name, ret
 
 

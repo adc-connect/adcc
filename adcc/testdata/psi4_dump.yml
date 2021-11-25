@@ -3,12 +3,14 @@ formaldehyde_sto-3g_pcm_adc1:
   method: adc1
   molecule: formaldehyde
   energy_scf: -112.35458302984613
-  excitation_energy: [0.16467, 0.3609, 0.46549, 0.50874, 0.69386]
-  osc_strength: [0.0, 0.0107, 0.3434, 0.0, 0.3586]
+  lr_excitation_energy: [0.16467, 0.3609, 0.46549, 0.50874, 0.69386]
+  lr_osc_strength: [0.0, 0.0107, 0.3434, 0.0, 0.3586]
+  ptlr_adcc_excitation_energy: [0.16468, 0.36093, 0.46758, 0.50874, 0.69447]
 formaldehyde_cc-pvdz_pcm_adc1:
   basis: cc-pvdz
   method: adc1
   molecule: formaldehyde
   energy_scf: -113.88427067069416
-  excitation_energy: [0.179, 0.38177, 0.38802, 0.39216, 0.43544]
-  osc_strength: [0.0, 0.0001, 0.2487, 0.2349, 0.0]
+  lr_excitation_energy: [0.179, 0.38177, 0.38802, 0.39216, 0.43544]
+  lr_osc_strength: [0.0, 0.0001, 0.2487, 0.2349, 0.0]
+  ptlr_adcc_excitation_energy: [0.17902, 0.38185, 0.38958, 0.39259, 0.43546]
