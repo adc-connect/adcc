@@ -78,15 +78,15 @@ def dump_results(molecule, basis, **kwargs):
 
     ret["energy_scf"] = wfn.energy()
     # yaml safe_dump doesn't like np.floats
-    ret["lr_excitation_energy"] = [round(float(r["EXCITATION ENERGY"]), 5)
+    ret["lr_excitation_energy"] = [round(float(r["EXCITATION ENERGY"]), 9)
                                    for r in res]
-    ret["lr_osc_strength"] = [round(float(r["OSCILLATOR STRENGTH (LEN)"]), 4)
+    ret["lr_osc_strength"] = [round(float(r["OSCILLATOR STRENGTH (LEN)"]), 5)
                               for r in res]
 
     if pcm_options:
         state = run_adcc_ptlr(wfn)
         ret["ptlr_adcc_excitation_energy"] = [
-            round(float(e), 5) for e in state.excitation_energy
+            round(float(e), 9) for e in state.excitation_energy
         ]
     return name, ret
 

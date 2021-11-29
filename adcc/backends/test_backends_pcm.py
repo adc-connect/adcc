@@ -38,19 +38,14 @@ class TestPCM(unittest.TestCase):
 
         state = adcc.run_adc(scfres, method=method, n_singlets=5,
                              conv_tol=1e-7, environment="ptlr")
-        # is it possible to perform a PTE calculation with PSI4? Don't find anything
-        # environment related in the tdscf code
-        # Add comparison of uncorrected zeroth order excitation energies.
 
         # compare ptLR result to LR data
-        # usually agrees up to third significant figure for energies in Hartree
-        # However formaldehyde seems to show a slightly larger discrepancy
         assert_allclose(state.excitation_energy,
                         psi4_result["lr_excitation_energy"], atol=5 * 1e-3)
 
         # Consistency check with values obtained with ADCc
         assert_allclose(state.excitation_energy,
-                        psi4_result["ptlr_adcc_excitation_energy"], atol=1e-5)
+                        psi4_result["ptlr_adcc_excitation_energy"], atol=1e-6)
 
         # remove cavity files from PSI4 PCM calculations
         for cavityfile in os.listdir(os.getcwd()):
