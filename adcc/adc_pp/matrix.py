@@ -462,14 +462,14 @@ def block_ph_gs_1_phot2(hf, mp, intermediates):
 def block_ph_gs_1_couple_inner(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
     def apply(ampl):
-        return (-1) * sqrt(omega) * einsum("jb,jb->", mp.qed_t1_df(b.ov), ampl.ph1)
+        return (-1) * sqrt(omega    / 2) * einsum("jb,jb->", mp.qed_t1_df(b.ov), ampl.ph1)
     return AdcBlock(apply, 0)
 
 def block_ph_gs_1_phot_couple_inner(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
-    def apply(ampl):
-        return (1 - sqrt(2)) * sqrt(0.5 * omega) * einsum("jb,jb->", mp.qed_t1_df(b.ov), ampl.ph2)
-    return AdcBlock(apply, 0)
+    #def apply(ampl):
+    #    return (1 - sqrt(2)) * sqrt(0.5 * omega) * einsum("jb,jb->", mp.qed_t1_df(b.ov), ampl.ph2)
+    return AdcBlock(lambda ampl: 0, 0)
 
 
 
@@ -692,9 +692,9 @@ def block_ph_ph_1_couple_inner(hf, mp, intermediates):
     if hasattr(hf, "coupling"):# and not hasattr(hf, "qed_hf"):
         def apply(ampl):
             return AmplitudeVector(ph=(
-                sqrt(omega) * (- einsum("ib,ab->ia", ampl.ph1, mp.qed_t1_df(b.vv))
+                sqrt(omega    / 2) * (- einsum("ib,ab->ia", ampl.ph1, mp.qed_t1_df(b.vv))
                                         + einsum("ij,ja->ia", mp.qed_t1_df(b.oo), ampl.ph1))
-                + (1 - sqrt(2)) * sqrt(omega / 2) * mp.qed_t1_df(b.ov) * ampl.gs1.as_float() # gs part
+                #+ (1 - sqrt(2)) * sqrt(omega / 2) * mp.qed_t1_df(b.ov) * ampl.gs1.as_float() # gs part
             ))
     return AdcBlock(apply, diagonal)
 
@@ -704,7 +704,7 @@ def block_ph_ph_1_phot_couple_inner(hf, mp, intermediates):
     if hasattr(hf, "coupling"):# and not hasattr(hf, "qed_hf"):
         def apply(ampl):
             return AmplitudeVector(ph=(
-                sqrt(omega) * ( - einsum("ib,ab->ia", ampl.ph2, mp.qed_t1_df(b.vv))
+                sqrt(omega    / 2) * ( - einsum("ib,ab->ia", ampl.ph2, mp.qed_t1_df(b.vv))
                                     + einsum("ij,ja->ia", mp.qed_t1_df(b.oo), ampl.ph2)
                                     - mp.qed_t1_df(b.ov) * ampl.gs2.as_float()) # gs_ph block 
             ))
@@ -913,7 +913,7 @@ def block_ph_pphh_1_couple_inner(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
     def apply(ampl):
         return AmplitudeVector(ph=(
-            -4 * sqrt(omega) * einsum("kc,ikac->ia", mp.qed_t1_df(b.ov), ampl.pphh1)
+            -4 * sqrt(omega    / 2) * einsum("kc,ikac->ia", mp.qed_t1_df(b.ov), ampl.pphh1)
                             #+ einsum("jb,jiba->ia", mp.qed_t1_df(b.ov), ampl.pphh)
                             #- einsum("kb,ikba->ia", mp.qed_t1_df(b.ov), ampl.pphh)
                             #- einsum("jc,jiac->ia", mp.qed_t1_df(b.ov), ampl.pphh))
@@ -921,6 +921,8 @@ def block_ph_pphh_1_couple_inner(hf, mp, intermediates):
     return AdcBlock(apply, 0)
 
 
+block_pphh_ph_1_couple = block_pphh_ph_1_couple_inner = block_pphh_ph_0_couple
+"""
 def block_pphh_ph_1_couple(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
     def apply(ampl):
@@ -931,8 +933,8 @@ def block_pphh_ph_1_couple(hf, mp, intermediates):
                             #- einsum("ib,ja,ja->ijab", mp.qed_t1(b.ov), mp.df(b.ov), ampl.ph))
         ))
     return AdcBlock(apply, 0)
-
-
+"""
+"""
 def block_pphh_ph_1_couple_inner(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
     def apply(ampl):
@@ -944,9 +946,11 @@ def block_pphh_ph_1_couple_inner(hf, mp, intermediates):
                             #- einsum("ib,ja,ja->ijab", mp.qed_t1(b.ov), mp.df(b.ov), ampl.ph))
         ))
     return AdcBlock(apply, 0)
+"""
 
+block_ph_pphh_1_phot_couple = block_ph_pphh_1_phot_couple_inner = block_ph_pphh_0_phot_couple
 
-
+"""
 def block_ph_pphh_1_phot_couple(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
     def apply(ampl):
@@ -957,8 +961,8 @@ def block_ph_pphh_1_phot_couple(hf, mp, intermediates):
                             - einsum("jc,ia,jiac->ia", mp.qed_t1(b.ov), mp.df(b.ov), ampl.pphh1)
         ))
     return AdcBlock(apply, 0)
-
-
+"""
+"""
 def block_ph_pphh_1_phot_couple_inner(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
     def apply(ampl):
@@ -970,7 +974,7 @@ def block_ph_pphh_1_phot_couple_inner(hf, mp, intermediates):
             + 4 * (1 - sqrt(2)) * sqrt(omega/2) * einsum("kc,ikac->ia", mp.qed_t1_df(b.ov), ampl.pphh2)
         ))
     return AdcBlock(apply, 0)
-
+"""
 
 
 def block_pphh_ph_1_phot_couple(hf, mp, intermediates):
@@ -989,7 +993,7 @@ def block_pphh_ph_1_phot_couple_inner(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
     def apply(ampl):
         return AmplitudeVector(pphh=(
-            -4 * sqrt(omega) * einsum("jb,ia->ijab", mp.qed_t1_df(b.ov), ampl.ph2).antisymmetrise(0,1).antisymmetrise(2,3) 
+            -4 * sqrt(omega    / 2) * einsum("jb,ia->ijab", mp.qed_t1_df(b.ov), ampl.ph2).antisymmetrise(0,1).antisymmetrise(2,3) 
                             #+ einsum("ia,jb->ijab", mp.qed_t1_df(b.ov), ampl.ph1)
                             #- einsum("ja,ib->ijab", mp.qed_t1_df(b.ov), ampl.ph1)
                             #- einsum("ib,ja->ijab", mp.qed_t1_df(b.ov), ampl.ph1))
@@ -1098,7 +1102,7 @@ def block_ph_gs_2_phot(hf, mp, intermediates):
     d_oo.set_mask("ii", 1.0)
     d_vv.set_mask("aa", 1.0)
                                                                                                 # 1. order
-    diagonal = - omega * (sqrt(2) - 1) * einsum("kc,kc->", mp.qed_t1_df(b.ov), mp.qed_t1(b.ov)) + omega 
+    diagonal = omega #- omega * (sqrt(2) - 1) * einsum("kc,kc->", mp.qed_t1_df(b.ov), mp.qed_t1(b.ov)) + omega 
     def apply(ampl):
         return (einsum("jb,jb->", (
                         + 0.5 * omega * mp.qed_t0(b.ov)
@@ -1129,7 +1133,7 @@ def block_ph_gs_2_phot2(hf, mp, intermediates):
     d_oo.set_mask("ii", 1.0)
     d_vv.set_mask("aa", 1.0)
                                                                                                 # 1. order
-    diagonal = - omega * (sqrt(3) - 1) * einsum("kc,kc->", mp.qed_t1_df(b.ov), mp.qed_t1(b.ov)) + 2 * omega
+    diagonal = 2 * omega #- omega * (sqrt(3) - 1) * einsum("kc,kc->", mp.qed_t1_df(b.ov), mp.qed_t1(b.ov)) + 2 * omega
     def apply(ampl):
         return (einsum("jb,jb->", (
                         + omega * mp.qed_t0(b.ov)
@@ -1166,9 +1170,9 @@ def block_ph_gs_2_phot_couple_inner(hf, mp, intermediates):
                         #+ 0.5 * einsum("jc,bc->jb", mp.qed_t0(b.ov), d_vv * mp.qed_t1_df(b.vv))
                         + 0.5 * sqrt(2) * einsum("kb,jk->jb", mp.qed_t0(b.ov), mp.qed_t1_df(b.oo) - d_oo * mp.qed_t1_df(b.oo))
                         #- 0.5 * einsum("kb,jk->jb", mp.qed_t0(b.ov), d_oo * mp.qed_t1_df(b.oo))
-                        + sqrt(2) * einsum("jkbc,kc->jb", mp.t2oo, mp.qed_t1_df(b.ov))),
+                        + einsum("jkbc,kc->jb", mp.t2oo, mp.qed_t1_df(b.ov))), #* sqrt(2)
                         ampl.ph2)
-                        + (1 - sqrt(2)) * sqrt(0.5 * omega) * einsum("jb,jb->", mp.qed_t1_df(b.ov), ampl.ph2)) # 1. order
+                        )#+ (1 - sqrt(2)) * sqrt(0.5 * omega) * einsum("jb,jb->", mp.qed_t1_df(b.ov), ampl.ph2)) # 1. order
     return AdcBlock(apply, diagonal)
 
 
@@ -1198,10 +1202,10 @@ def block_ph_gs_2_couple_inner(hf, mp, intermediates):
 def block_ph_gs_2_phot_couple_edge(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
 
-    diagonal = - 0.5 * omega * sqrt(2) * einsum("kc,kc->", mp.qed_t1_df(b.ov), mp.qed_t1(b.ov))
+    diagonal = - 0.5 * omega * (1/sqrt(2)) * einsum("kc,kc->", mp.qed_t1_df(b.ov), mp.qed_t1(b.ov))
 
     def apply(ampl):
-        return (- 0.5 * omega * sqrt(2) * (einsum("jc,bc,jb->", mp.qed_t1(b.ov), mp.qed_t1_df(b.vv), ampl.ph2)
+        return (- 0.5 * omega * (1/sqrt(2)) * (einsum("jc,bc,jb->", mp.qed_t1(b.ov), mp.qed_t1_df(b.vv), ampl.ph2)
                                          - einsum("kb,jk,jb", mp.qed_t1(b.ov), mp.qed_t1_df(b.oo), ampl.ph2)))
 
     return AdcBlock(apply, diagonal)
@@ -1209,7 +1213,7 @@ def block_ph_gs_2_phot_couple_edge(hf, mp, intermediates):
 def block_ph_gs_2_couple_edge(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
 
-    diagonal = - 0.5 * omega * sqrt(2) * einsum("kc,kc->", mp.qed_t1_df(b.ov), mp.qed_t1(b.ov))
+    diagonal = - 0.5 * omega * (1/sqrt(2)) * einsum("kc,kc->", mp.qed_t1_df(b.ov), mp.qed_t1(b.ov))
 
     return AdcBlock(lambda ampl: 0, diagonal)
 
@@ -1518,13 +1522,13 @@ def block_ph_ph_2_phot(hf, mp, intermediates): #one could cash some of the terms
                 + direct_sum("a-i->ia", i1.diagonal(), i2.diagonal())
                 - einsum("IaIa->Ia", hf.ovov)
                 - einsum("ikac,ikac->ia", mp.t2oo, hf.oovv)
-                + (-omega/2) * (sqrt(2) - 0.5) * ( 
+                + (-omega/2) * (sqrt(2) - 0.5) * ( # correct for factor ???????????????????????????????????????????????
                 - 2 * direct_sum("a+i->ia", qed_i1.diagonal(), qed_i2.diagonal())
                 + 2 * einsum("ia,ia->ia", mp.qed_t1(b.ov), mp.qed_t1_df(b.ov)))
                 + direct_sum("a+i->ia", qed_i1_0.diagonal(), qed_i2_0.diagonal())
                 - einsum("ka,ikia->ia", mp.qed_t0(b.ov), hf.ooov)
                 - einsum("ic,iaac->ia", mp.qed_t0(b.ov), hf.ovvv)
-                + (1 - sqrt(2)) * omega * einsum("kc,kc->", mp.qed_t1(b.ov), mp.qed_t1_df(b.ov)) * einsum("ii,aa->ia", d_oo, d_vv)
+                #+ (1 - sqrt(2)) * omega * einsum("kc,kc->", mp.qed_t1(b.ov), mp.qed_t1_df(b.ov)) * einsum("ii,aa->ia", d_oo, d_vv)
                 + (1/2) * direct_sum("i-a->ia", einsum("ii->i", mp.qed_t0_df(b.oo)), einsum("aa->a", mp.qed_t0_df(b.vv))) # 1. order
                 + einsum("ii,aa->ia", d_oo, d_vv) * omega # 1. order
                 #- (omega/2) * einsum("ia,ia->", mp.qed_t1(b.ov), mp.qed_t1_df(b.ov)) # reintroduced (actually canceled from -E_0 (2))
@@ -1540,7 +1544,7 @@ def block_ph_ph_2_phot(hf, mp, intermediates): #one could cash some of the terms
                     - einsum("ij,ja->ia", i2, ampl.ph1)
                     - einsum("jaib,jb->ia", hf.ovov, ampl.ph1)    # 1
                     - 0.5 * einsum("ikac,kc->ia", term_t2_eri, ampl.ph1)  # 2
-                    + (-omega/2) * (sqrt(2) - 0.5) * ( 
+                    + (-omega/2) * (sqrt(2) - 0.5) * ( # correct for factor ???????????????????????????????????????????????
                     - 2 * einsum("ib,ab->ia", ampl.ph1, qed_i1)
                     - 2 * einsum("ij,ja->ia", qed_i2, ampl.ph1)
                     + (mp.qed_t1(b.ov) * mp.qed_t1_df(b.ov).dot(ampl.ph1) 
@@ -1553,7 +1557,7 @@ def block_ph_ph_2_phot(hf, mp, intermediates): #one could cash some of the terms
                     #        + einsum("jc,iabc,jb->ia", mp.qed_t0(b.ov), hf.ovvv, ampl.ph1))
                     + einsum("ijab,jb->ia", einsum("jkib,ka->ijab", hf.ooov, mp.qed_t0(b.ov)).symmetrise(2, 3)
                                             + einsum("ic,jabc->ijab", mp.qed_t0(b.ov), hf.ovvv).symmetrise(0, 1), ampl.ph1)
-                    + (1 - sqrt(2)) * omega * einsum("kc,kc->", mp.qed_t1(b.ov), mp.qed_t1_df(b.ov)) * ampl.ph1 
+                    #+ (1 - sqrt(2)) * omega * einsum("kc,kc->", mp.qed_t1(b.ov), mp.qed_t1_df(b.ov)) * ampl.ph1 
                     #+ omega * einsum("ii,aa->ia", d_oo, d_vv) * ampl.gs1.as_float() #this (and following) is from the gs_ph contribution
                     #- (omega / 2) * (sqrt(2) - 1) * (einsum("ic,ac->ia", mp.qed_t1(b.ov), mp.qed_t1_df(b.vv))
                     #                                - einsum("ic,ac->ia", mp.qed_t1(b.ov), d_vv * mp.qed_t1_df(b.vv)) 
@@ -1607,13 +1611,13 @@ def block_ph_ph_2_phot2(hf, mp, intermediates): #one could cash some of the term
                 + direct_sum("a-i->ia", i1.diagonal(), i2.diagonal())
                 - einsum("IaIa->Ia", hf.ovov)
                 - einsum("ikac,ikac->ia", mp.t2oo, hf.oovv)
-                + (-omega/2) * (sqrt(3) - 0.5) * ( 
+                + (-omega/2) * (sqrt(3) - 0.5) * ( # correct for factor ???????????????????????????????????????????????
                 - 2 * direct_sum("a+i->ia", qed_i1.diagonal(), qed_i2.diagonal())
                 + 2 * einsum("ia,ia->ia", mp.qed_t1(b.ov), mp.qed_t1_df(b.ov)))
                 + direct_sum("a+i->ia", qed_i1_0.diagonal(), qed_i2_0.diagonal())
                 - einsum("ka,ikia->ia", mp.qed_t0(b.ov), hf.ooov)
                 - einsum("ic,iaac->ia", mp.qed_t0(b.ov), hf.ovvv)
-                + (1 - sqrt(3)) * omega * einsum("kc,kc->", mp.qed_t1(b.ov), mp.qed_t1_df(b.ov)) * einsum("ii,aa->ia", d_oo, d_vv)
+                #+ (1 - sqrt(3)) * omega * einsum("kc,kc->", mp.qed_t1(b.ov), mp.qed_t1_df(b.ov)) * einsum("ii,aa->ia", d_oo, d_vv)
                 + (1/2) * direct_sum("i-a->ia", einsum("ii->i", mp.qed_t0_df(b.oo)), einsum("aa->a", mp.qed_t0_df(b.vv))) # 1. order
                 + einsum("ii,aa->ia", d_oo, d_vv) * omega * 2 # 1. order
         ))
@@ -1624,7 +1628,7 @@ def block_ph_ph_2_phot2(hf, mp, intermediates): #one could cash some of the term
                     - einsum("ij,ja->ia", i2, ampl.ph2)
                     - einsum("jaib,jb->ia", hf.ovov, ampl.ph2)    # 1
                     - 0.5 * einsum("ikac,kc->ia", term_t2_eri, ampl.ph2)  # 2
-                    + (-omega/2) * (sqrt(3) - 0.5) * ( 
+                    + (-omega/2) * (sqrt(3) - 0.5) * ( # correct for factor ???????????????????????????????????????????????
                     - 2 * einsum("ib,ab->ia", ampl.ph2, qed_i1)
                     - 2 * einsum("ij,ja->ia", qed_i2, ampl.ph2)
                     + (mp.qed_t1(b.ov) * mp.qed_t1_df(b.ov).dot(ampl.ph2) 
@@ -1633,7 +1637,7 @@ def block_ph_ph_2_phot2(hf, mp, intermediates): #one could cash some of the term
                     + einsum("ij,ja->ia", qed_i2_0, ampl.ph2)
                     + einsum("ijab,jb->ia", einsum("jkib,ka->ijab", hf.ooov, mp.qed_t0(b.ov)).symmetrise(2, 3)
                                             + einsum("ic,jabc->ijab", mp.qed_t0(b.ov), hf.ovvv).symmetrise(0, 1), ampl.ph2)
-                    + (1 - sqrt(3)) * omega * einsum("kc,kc->", mp.qed_t1(b.ov), mp.qed_t1_df(b.ov)) * ampl.ph2 
+                    #+ (1 - sqrt(3)) * omega * einsum("kc,kc->", mp.qed_t1(b.ov), mp.qed_t1_df(b.ov)) * ampl.ph2 
                     + gs_part * ampl.gs2.as_float()
                     + (1/2) * einsum("ij,ja->ia", mp.qed_t0_df(b.oo), ampl.ph2) # 1. order
                     - (1/2) * einsum("ib,ab->ia", ampl.ph2, mp.qed_t0_df(b.vv)) # 1. order
@@ -1673,19 +1677,19 @@ def block_ph_ph_2_couple_inner(hf, mp, intermediates): #one could cash some of t
                                     + einsum("ka,jkib,jb->ia", mp.qed_t1(b.ov), hf.ooov, ampl.ph1)
                                     + einsum("ic,jabc,jb->ia", mp.qed_t1(b.ov), hf.ovvv, ampl.ph1))
                 + gs_part * ampl.gs1.as_float()
-                + (sqrt(2) - 1) * 0.5 * sqrt(omega/2) * einsum("jb,jb->", mp.qed_t0(b.ov), ampl.ph1) * mp.qed_t1_df(b.ov)
-                - (sqrt(2) - 1) * 0.5 * sqrt(omega/2) * (
-                    (einsum("kc,kc->", mp.qed_t1_df(b.ov), mp.qed_t0(b.ov)) + einsum("kc,kc->", mp.qed_t1(b.ov), mp.qed_t0_df(b.ov))) * ampl.ph1
-                    - einsum("kb,ka,ib->ia", mp.qed_t0(b.ov), mp.qed_t1_df(b.ov), ampl.ph1)
-                    - einsum("kb,ka,ib->ia", mp.qed_t0_df(b.ov), mp.qed_t1(b.ov), ampl.ph1)
-                    - einsum("jc,ic,ja->ia", mp.qed_t0(b.ov), mp.qed_t1_df(b.ov), ampl.ph1)
-                    - einsum("jc,ic,ja->ia", mp.qed_t0_df(b.ov), mp.qed_t1(b.ov), ampl.ph1)
-                    + einsum("jb,jb->", mp.qed_t0(b.ov), ampl.ph1) * mp.qed_t1_df(b.ov)
-                    + einsum("jb,jb->", mp.qed_t0_df(b.ov), ampl.ph1) * mp.qed_t1(b.ov)
-                )
+                #+ (sqrt(2) - 1) * 0.5 * sqrt(omega/2) * einsum("jb,jb->", mp.qed_t0(b.ov), ampl.ph1) * mp.qed_t1_df(b.ov)
+                #- (sqrt(2) - 1) * 0.5 * sqrt(omega/2) * (
+                #    (einsum("kc,kc->", mp.qed_t1_df(b.ov), mp.qed_t0(b.ov)) + einsum("kc,kc->", mp.qed_t1(b.ov), mp.qed_t0_df(b.ov))) * ampl.ph1
+                #    - einsum("kb,ka,ib->ia", mp.qed_t0(b.ov), mp.qed_t1_df(b.ov), ampl.ph1)
+                #    - einsum("kb,ka,ib->ia", mp.qed_t0_df(b.ov), mp.qed_t1(b.ov), ampl.ph1)
+                #    - einsum("jc,ic,ja->ia", mp.qed_t0(b.ov), mp.qed_t1_df(b.ov), ampl.ph1)
+                #    - einsum("jc,ic,ja->ia", mp.qed_t0_df(b.ov), mp.qed_t1(b.ov), ampl.ph1)
+                #    + einsum("jb,jb->", mp.qed_t0(b.ov), ampl.ph1) * mp.qed_t1_df(b.ov)
+                #    + einsum("jb,jb->", mp.qed_t0_df(b.ov), ampl.ph1) * mp.qed_t1(b.ov)
+                #)
                 + sqrt(omega) * (- einsum("ib,ab->ia", ampl.ph1, mp.qed_t1_df(b.vv)) # 1. order
                                         + einsum("ij,ja->ia", mp.qed_t1_df(b.oo), ampl.ph1)) # 1. order
-                + (1 - sqrt(2)) * sqrt(omega / 2) * mp.qed_t1_df(b.ov) * ampl.gs1.as_float() # gs part # 1. order
+                #+ (1 - sqrt(2)) * sqrt(omega / 2) * mp.qed_t1_df(b.ov) * ampl.gs1.as_float() # gs part # 1. order
         ))
     return AdcBlock(apply, diagonal)
 
@@ -1737,16 +1741,16 @@ def block_ph_ph_2_phot_couple_inner(hf, mp, intermediates): #one could cash some
                 #        - 0.5 * einsum("ka,ik->ia", mp.qed_t0(b.ov), d_oo * mp.qed_t1_df(b.oo))
                 #        + einsum("ikac,kc->ia", mp.t2oo, mp.qed_t1_df(b.ov)))
                 #        * ampl.gs1.as_float()
-                + (sqrt(2) - 1) * 0.5 * sqrt(omega/2) * einsum("jb,jb->", mp.qed_t1_df(b.ov), ampl.ph2) * mp.qed_t0(b.ov)
-                - (sqrt(2) - 1) * 0.5 * sqrt(omega/2) * (
-                    (einsum("kc,kc->", mp.qed_t1_df(b.ov), mp.qed_t0(b.ov)) + einsum("kc,kc->", mp.qed_t1(b.ov), mp.qed_t0_df(b.ov))) * ampl.ph2
-                    - einsum("ka,kb,ib->ia", mp.qed_t0(b.ov), mp.qed_t1_df(b.ov), ampl.ph2)
-                    - einsum("ka,kb,ib->ia", mp.qed_t0_df(b.ov), mp.qed_t1(b.ov), ampl.ph2)
-                    - einsum("ic,jc,ja->ia", mp.qed_t0(b.ov), mp.qed_t1_df(b.ov), ampl.ph2)
-                    - einsum("ic,jc,ja->ia", mp.qed_t0_df(b.ov), mp.qed_t1(b.ov), ampl.ph2)
-                    + einsum("jb,jb->", mp.qed_t1_df(b.ov), ampl.ph2) * mp.qed_t0(b.ov)
-                    + einsum("jb,jb->", mp.qed_t1(b.ov), ampl.ph2) * mp.qed_t0_df(b.ov)
-                )
+                #+ (sqrt(2) - 1) * 0.5 * sqrt(omega/2) * einsum("jb,jb->", mp.qed_t1_df(b.ov), ampl.ph2) * mp.qed_t0(b.ov)
+                #- (sqrt(2) - 1) * 0.5 * sqrt(omega/2) * (
+                #    (einsum("kc,kc->", mp.qed_t1_df(b.ov), mp.qed_t0(b.ov)) + einsum("kc,kc->", mp.qed_t1(b.ov), mp.qed_t0_df(b.ov))) * ampl.ph2
+                #    - einsum("ka,kb,ib->ia", mp.qed_t0(b.ov), mp.qed_t1_df(b.ov), ampl.ph2)
+                #    - einsum("ka,kb,ib->ia", mp.qed_t0_df(b.ov), mp.qed_t1(b.ov), ampl.ph2)
+                #    - einsum("ic,jc,ja->ia", mp.qed_t0(b.ov), mp.qed_t1_df(b.ov), ampl.ph2)
+                #    - einsum("ic,jc,ja->ia", mp.qed_t0_df(b.ov), mp.qed_t1(b.ov), ampl.ph2)
+                #    + einsum("jb,jb->", mp.qed_t1_df(b.ov), ampl.ph2) * mp.qed_t0(b.ov)
+                #    + einsum("jb,jb->", mp.qed_t1(b.ov), ampl.ph2) * mp.qed_t0_df(b.ov)
+                #)
                 + sqrt(omega) * ( - einsum("ib,ab->ia", ampl.ph2, mp.qed_t1_df(b.vv)) # 1. order
                                     + einsum("ij,ja->ia", mp.qed_t1_df(b.oo), ampl.ph2) # 1. order
                                     - mp.qed_t1_df(b.ov) * ampl.gs2.as_float()) # gs_ph block # 1. order
