@@ -30,7 +30,7 @@ class Molecule:
     charge: int = 0
     multiplicity: int = 1
     core_orbitals: int = 1
-    
+
     @property
     def xyz(self):
         return xyz[self.name]

@@ -20,7 +20,6 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from collections import namedtuple
 import itertools
 import adcc
 import numpy as np
@@ -37,8 +36,9 @@ lib.num_threads(8)
 
 # prefactors_5p = np.array([1.0, -8.0, 8.0, -1.0]) / 12.0
 # multipliers_5p = [-2, -1, 1, 2]
-prefactors_9p = [1./280., -4./105., 1./5., -4./5., 4./5., -1./5., 4./105., -1./280.]
-multipliers_9p = [-4., -3., -2., -1., 1., 2., 3., 4.]
+prefactors_9p = [1. / 280., -4. / 105., 1. / 5., -4. / 5.,
+                 4. / 5., -1. / 5., 4. / 105., -1. / 280.]
+multipliers_9p = [-4., -3., - 2., -1., 1., 2., 3., 4.]
 coords_label = ["x", "y", "z"]
 
 

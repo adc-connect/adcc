@@ -49,11 +49,6 @@ class PyScfGradientProvider:
         Gradient["TEI"] = np.zeros((natoms, 3))
         Gradient["Total"] = np.zeros((natoms, 3))
 
-        # Iulia added variables; TODO: remove
-        #ovlp_iulia = np.zeros((natoms, 3))
-        #hcore_iulia = np.zeros((natoms, 3))
-        #eri_iulia = np.zeros((natoms, 3))
-
         # TODO: does RHF/UHF matter here?
         gradient = grad.RHF(self.scfres)
         hcore_deriv = gradient.hcore_generator()
@@ -72,13 +67,10 @@ class PyScfGradientProvider:
             Sx_a[:, k0:k1] = Sx[:, k0:k1]
             Sx_a += Sx_a.transpose(0, 2, 1)
             Gradient["S"][ia] += np.einsum("xpq,pq->x", Sx_a, w_ao)
-            #ovlp_iulia[ia] += np.einsum("xpq,pq->x", Sx_a, w_ao)
-
 
             # derivative of the core Hamiltonian
             Hx_a = hcore_deriv(ia)
             Gradient["T+V"][ia] += np.einsum("xpq,pq->x", Hx_a, g1_ao)
-            #hcore_iulia[ia] += np.einsum("xpq,pq->x", Hx_a, g1_ao)
 
             # derivatives of the ERIs
             ERIx_a = np.zeros_like(ERIx)
@@ -94,23 +86,6 @@ class PyScfGradientProvider:
             Gradient["TEI"][ia] -= np.einsum(
                 "pqrs,xpsqr->x", g2_ao_2, ERIx_a, optimize=True
             )
-            #eri_iulia[ia] += (
-            #      np.einsum("pqrs,xprqs->x", g2_ao_1, ERIx_a, optimize=True)
-            #    - np.einsum("pqrs,xpsqr->x", g2_ao_2, ERIx_a, optimize=True)
-            #)
-
-
-        # Iulia print TODO:remove
-        #print("2PDM_1 in AO:\n", g2_ao_1)
-        #print("Hcore contribution to the gradient:")
-        #print(hcore_iulia)
-        #print()
-        #print("Overlp contribution to the gradient:")
-        #print(ovlp_iulia)
-        #print()
-        #print("ERI contribution to the gradient:")
-        #print(eri_iulia)
-        #print()
 
         Gradient["N"] = gradient.grad_nuc()
         Gradient["OEI"] = Gradient["T+V"] + Gradient["S"]

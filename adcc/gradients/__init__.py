@@ -63,13 +63,13 @@ def nuclear_gradient(excitation_or_mp):
 
     with timer.record("orbital_response"):
         rhs = orbital_response_rhs(hf, g1a, g2a).evaluate()
-        l = orbital_response(hf, rhs)
+        lam = orbital_response(hf, rhs)
 
     # orbital-relaxed OPDM (without reference state)
     g1o = g1a.copy()
-    g1o.ov = 0.5 * l.ov
+    g1o.ov = 0.5 * lam.ov
     if hf.has_core_occupied_space:
-        g1o.cv = 0.5 * l.cv 
+        g1o.cv = 0.5 * lam.cv
     # orbital-relaxed OPDM (including reference state)
     g1 = g1o.copy()
     g1 += hf.density
@@ -84,34 +84,34 @@ def nuclear_gradient(excitation_or_mp):
             delta_IJ = hf.density.cc
             g2_hf = TwoParticleDensityMatrix(hf)
 
-            g2_hf.oooo = -0.25 * ( einsum("ik,jl->ijkl", delta_ij, delta_ij))
-            g2_hf.cccc = -0.5 * ( einsum("IK,JL->IJKL", delta_IJ, delta_IJ))
-            g2_hf.ococ = -1.0 * ( einsum("ik,JL->iJkL", delta_ij, delta_IJ))
+            g2_hf.oooo = -0.25 * einsum("ik,jl->ijkl", delta_ij, delta_ij)
+            g2_hf.cccc = -0.5 * einsum("IK,JL->IJKL", delta_IJ, delta_IJ)
+            g2_hf.ococ = -1.0 * einsum("ik,JL->iJkL", delta_ij, delta_IJ)
 
             g2_oresp = TwoParticleDensityMatrix(hf)
-            g2_oresp.cccc = einsum("IK,JL->IJKL", delta_IJ, g1o.cc+delta_IJ)
-            g2_oresp.ococ = ( 
-                 einsum("ik,JL->iJkL", delta_ij, g1o.cc+2*delta_IJ)
+            g2_oresp.cccc = einsum("IK,JL->IJKL", delta_IJ, g1o.cc + delta_IJ)
+            g2_oresp.ococ = (
+                + einsum("ik,JL->iJkL", delta_ij, g1o.cc + 2.0 * delta_IJ)
                 + einsum("ik,JL->iJkL", g1o.oo, delta_IJ)
             )
             g2_oresp.oooo = 0.25 * (
-                einsum("ik,jl->ijkl", delta_ij, g1o.oo+delta_ij)
+                einsum("ik,jl->ijkl", delta_ij, g1o.oo + delta_ij)
             )
             g2_oresp.ovov = einsum("ij,ab->iajb", delta_ij, g1o.vv)
             g2_oresp.cvcv = einsum("IJ,ab->IaJb", delta_IJ, g1o.vv)
-            g2_oresp.ocov = 2*einsum("ik,Ja->iJka", delta_ij, g1o.cv)
-            g2_oresp.cccv = 2*einsum("IK,Ja->IJKa", delta_IJ, g1o.cv)
-            g2_oresp.ooov = 2*einsum("ik,ja->ijka", delta_ij, g1o.ov)
-            g2_oresp.cocv = 2*einsum("IK,ja->IjKa", delta_IJ, g1o.ov)
-            g2_oresp.ocoo = 2*einsum("ik,Jl->iJkl", delta_ij, g1o.co)
-            g2_oresp.ccco = 2*einsum("IK,Jl->IJKl", delta_IJ, g1o.co)
+            g2_oresp.ocov = 2 * einsum("ik,Ja->iJka", delta_ij, g1o.cv)
+            g2_oresp.cccv = 2 * einsum("IK,Ja->IJKa", delta_IJ, g1o.cv)
+            g2_oresp.ooov = 2 * einsum("ik,ja->ijka", delta_ij, g1o.ov)
+            g2_oresp.cocv = 2 * einsum("IK,ja->IjKa", delta_IJ, g1o.ov)
+            g2_oresp.ocoo = 2 * einsum("ik,Jl->iJkl", delta_ij, g1o.co)
+            g2_oresp.ccco = 2 * einsum("IK,Jl->IJKl", delta_IJ, g1o.co)
 
             # scale for contraction with integrals
             g2a.oovv *= 0.5
             g2a.ccvv *= 0.5
             g2a.occv *= 2.0
-            g2a.vvvv *= 0.25 # Scaling twice! 
-            g2a.vvvv *= 0.25 # it's the only way it works...
+            g2a.vvvv *= 0.25  # Scaling twice!
+            g2a.vvvv *= 0.25  # it's the only way it works...
 
             g2_total = evaluate(g2_hf + g2a + g2_oresp)
         else:
@@ -119,13 +119,13 @@ def nuclear_gradient(excitation_or_mp):
             g2_hf = TwoParticleDensityMatrix(hf)
             g2_hf.oooo = 0.25 * (- einsum("li,jk->ijkl", delta_ij, delta_ij)
                                  + einsum("ki,jl->ijkl", delta_ij, delta_ij))
-    
+
             g2_oresp = TwoParticleDensityMatrix(hf)
             g2_oresp.oooo = einsum("ij,kl->kilj", delta_ij, g1o.oo)
             g2_oresp.ovov = einsum("ij,ab->iajb", delta_ij, g1o.vv)
             g2_oresp.ooov = (- einsum("kj,ia->ijka", delta_ij, g1o.ov)
                              + einsum("ki,ja->ijka", delta_ij, g1o.ov))
-    
+
             # scale for contraction with integrals
             g2a.oovv *= 0.5
             g2_total = evaluate(g2_hf + g2a + g2_oresp)

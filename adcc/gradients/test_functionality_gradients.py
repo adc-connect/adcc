@@ -22,7 +22,6 @@
 ## ---------------------------------------------------------------------
 import unittest
 import itertools
-import numpy as np
 
 import adcc
 import adcc.backends
@@ -53,7 +52,7 @@ class TestNuclearGradients(unittest.TestCase):
         grad_ref = gradient_data[molecule][basis][method]
 
         energy_ref = grad_ref["energy"]
-        grad_fdiff = grad_ref["gradient"] 
+        grad_fdiff = grad_ref["gradient"]
         kwargs = grad_ref["config"]
         conv_tol = kwargs["conv_tol"]
 
@@ -61,12 +60,13 @@ class TestNuclearGradients(unittest.TestCase):
         if "adc" in method:
             # TODO: convergence needs to be very very tight...
             # so we want to make sure all vectors are tightly converged
-            n_limit = 2 # kwargs["n_singlets"]
+            n_limit = 2  # kwargs["n_singlets"]
             kwargs["n_singlets"] = kwargs["n_singlets"] + 2
             state = adcc.run_adc(scfres, method=method, **kwargs)
             for ee in state.excitations[:n_limit]:
                 grad = adcc.nuclear_gradient(ee)
-                assert_allclose(energy_ref[ee.index], ee.total_energy, atol=conv_tol)
+                assert_allclose(energy_ref[ee.index], ee.total_energy,
+                                atol=conv_tol)
                 assert_allclose(
                     grad_fdiff[ee.index], grad["Total"], atol=1e-7,
                     err_msg=f'Gradient for state {ee.index} wrong.'
