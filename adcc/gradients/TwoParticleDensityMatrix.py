@@ -39,8 +39,6 @@ class TwoParticleDensityMatrix:
             self.mospaces = spaces.mospaces
         else:
             self.mospaces = spaces
-#        if self.mospaces.has_core_occupied_space:
-#            raise NotImplementedError("TPDM not implemented for CVS.")
         # Set reference_state if possible
         if isinstance(spaces, libadcc.ReferenceState):
             self.reference_state = spaces
