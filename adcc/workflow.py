@@ -406,6 +406,13 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
             warnings.warn("Ignoring n_guesses_doubles parameter, since guesses "
                           "are explicitly provided.")
 
+    nguess_found = len(guesses)
+    if n_states > nguess_found:
+        warnings.warn(f"More states requested ({n_states}) than "
+                      f"guesses available ({nguess_found}). "
+                      "Reducing number of eigenstates to number of guesses.")
+        n_states = nguess_found
+
     solverargs.setdefault("which", "SA")
     return run_eigensolver(matrix, guesses, n_ep=n_states, conv_tol=conv_tol,
                            callback=callback,
@@ -485,8 +492,8 @@ def obtain_guesses_by_inspection(matrix, n_guesses, kind, n_guesses_doubles=None
 
     total_guesses = singles_guesses + doubles_guesses
     if len(total_guesses) < n_guesses:
-        raise InputError("Less guesses found than requested: {} found, "
-                         "{} requested".format(len(total_guesses), n_guesses))
+        warnings.warn("Less guesses found than requested: "
+                      f"{len(total_guesses)} found, {n_guesses} requested.")
     return total_guesses
 
 
