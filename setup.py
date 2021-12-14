@@ -516,7 +516,6 @@ adccsetup(
         "Intended Audience :: Science/Research",
         "Topic :: Scientific/Engineering :: Chemistry",
         "Topic :: Education",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
@@ -529,7 +528,7 @@ adccsetup(
     zip_safe=False,
     #
     platforms=["Linux", "Mac OS-X"],
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     setup_requires=["pybind11 >= 2.6"],
     install_requires=[
         "opt_einsum >= 3.0",
