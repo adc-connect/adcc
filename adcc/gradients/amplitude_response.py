@@ -109,7 +109,7 @@ def ampl_relaxed_dms_cvs_adc1(exci):
     g1a.cc = - 1.0 * einsum("Ia,Ja->IJ", u.ph, u.ph)
     g1a.vv = + 1.0 * einsum("Ia,Ib->ab", u.ph, u.ph)
 
-    # Pre-requisites for the OC block of the
+    # Prerequisites for the OC block of the
     # orbital response Lagrange multipliers:
     fc = hf.fock(b.cc).diagonal()
     fo = hf.fock(b.oo).diagonal()

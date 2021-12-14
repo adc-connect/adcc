@@ -22,6 +22,7 @@
 ## ---------------------------------------------------------------------
 import unittest
 import itertools
+
 import adcc
 import adcc.backends
 
@@ -36,9 +37,11 @@ from adcc.testdata.cache import gradient_data
 
 backends = [b for b in adcc.backends.available()
             if b not in ["molsturm", "veloxchem"]]
-molecules = ["h2o"]
-basissets = ["sto3g", "ccpvdz"]
-methods = ["mp2", "adc1", "adc2"]
+
+molecules = gradient_data["molecules"]
+basissets = gradient_data["basissets"]
+methods = gradient_data["methods"]
+
 combinations = list(itertools.product(molecules, basissets, methods, backends))
 
 
@@ -50,19 +53,19 @@ class TestNuclearGradients(unittest.TestCase):
 
         energy_ref = grad_ref["energy"]
         grad_fdiff = grad_ref["gradient"]
+        
+        kwargs = grad_ref["config"]
 
         scfres = cached_backend_hf(backend, molecule, basis, conv_tol=1e-13)
         if "adc" in method:
             # TODO: convergence needs to be very very tight...
             # so we want to make sure all vectors are tightly converged
-            n_limit = 5
-            state = adcc.run_adc(scfres, method=method,
-                                 n_singlets=10, conv_tol=1e-11)
-            for ee in state.excitations[:n_limit]:
+            state = adcc.run_adc(scfres, method=method, **kwargs)
+            for i, ee in enumerate(state.excitations):
                 grad = adcc.nuclear_gradient(ee)
                 assert_allclose(energy_ref[ee.index], ee.total_energy, atol=1e-10)
                 assert_allclose(
-                    grad_fdiff[ee.index], grad["Total"], atol=1e-7
+                    grad_fdiff[ee.index], grad["Total"], atol=1e-7, err_msg=f'State {i} wrong.'
                 )
         else:
             # MP2 gradients
