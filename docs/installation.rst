@@ -34,7 +34,7 @@ using the `adcc <https://anaconda.org/adcc/>`_ channel:
    conda install -c adcc adcc
 
 This should work on a recent Debian, Ubuntu or macOS
-and with python 3.6, 3.7, 3.8 or 3.9.
+and with python 3.7, 3.8 or 3.9.
 
 
 .. _install-pip-debian:

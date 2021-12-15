@@ -20,7 +20,6 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import sys
 
 
 def __getattr__(attr):
@@ -32,11 +31,3 @@ def __getattr__(attr):
         raise AttributeError
     mapping = {"o": "o1", "v": "v1", "c": "o2"}
     return "".join(mapping[c] for c in attr)
-
-
-# Dirty hack to support __getattr__ in python 3.6
-if sys.version_info <= (3, 7):
-    class GetAttr:
-        def __getattr__(self, attr):
-            return __getattr__(attr)
-    sys.modules[__name__] = GetAttr()
