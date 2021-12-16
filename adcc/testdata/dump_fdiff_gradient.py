@@ -20,6 +20,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+from dataclasses import dataclass
 import itertools
 import adcc
 import numpy as np
@@ -28,18 +29,42 @@ from tqdm import tqdm
 
 from pyscf import gto, lib
 
-from static_data import molecules
-
 adcc.set_n_threads(8)
 lib.num_threads(8)
 
 
-# prefactors_5p = np.array([1.0, -8.0, 8.0, -1.0]) / 12.0
-# multipliers_5p = [-2, -1, 1, 2]
-prefactors_9p = [1. / 280., -4. / 105., 1. / 5., -4. / 5.,
-                 4. / 5., -1. / 5., 4. / 105., -1. / 280.]
-multipliers_9p = [-4., -3., - 2., -1., 1., 2., 3., 4.]
+prefactors_5p = np.array([1.0, -8.0, 8.0, -1.0]) / 12.0
+multipliers_5p = [-2, -1, 1, 2]
+# prefactors_9p = [1. / 280., -4. / 105., 1. / 5., -4. / 5.,
+#                  4. / 5., -1. / 5., 4. / 105., -1. / 280.]
+# multipliers_9p = [-4., -3., - 2., -1., 1., 2., 3., 4.]
 coords_label = ["x", "y", "z"]
+
+
+@dataclass
+class Molecule:
+    name: str
+    charge: int = 0
+    multiplicity: int = 1
+    core_orbitals: int = 1
+
+    @property
+    def xyz(self):
+        return xyz[self.name]
+
+
+molecules = [
+    Molecule("h2o", 0, 1),
+]
+
+# all coordinates in Bohr (perturbed)
+xyz = {
+    "h2o": """
+    O 0 0 0
+    H 0 0 1.895239827225189
+    H 1.693194615993441 0 -0.599043184453037
+    """,
+}
 
 
 def _molstring(elems, coords):
@@ -88,13 +113,15 @@ def fdiff_gradient(molecule, method, basis, step=1e-4, **kwargs):
     grad = np.zeros((ngrad, natoms, 3))
     at_c = list(itertools.product(range(natoms), range(3)))
     for i, c in tqdm(at_c):
-        for f, p in zip(multipliers_9p, prefactors_9p):
+        for f, p in zip(multipliers_5p, prefactors_5p):
             coords_p = coords.copy()
             coords_p[i, c] += f * step
             geom_p = _molstring(elements, coords_p)
             scfres = adcc.backends.run_hf(
-                'pyscf', geom_p, basis, conv_tol=conv_tol, conv_tol_grad=conv_tol,
-                charge=molecule.charge, multiplicity=molecule.multiplicity
+                'pyscf', geom_p, basis, conv_tol=conv_tol,
+                conv_tol_grad=conv_tol * 10,
+                charge=molecule.charge, multiplicity=molecule.multiplicity,
+                max_iter=500,
             )
             if "adc" in method:
                 en_pert = adc_energy(scfres, method, **kwargs)
@@ -117,11 +144,10 @@ def main():
         "cvs-adc0",
         "cvs-adc1",
         "cvs-adc2",
-        # "cvs-adc2x",
+        # "cvs-adc2x",  # TODO: broken
     ]
     molnames = [
         "h2o",
-        "h2s",
     ]
     mols = [m for m in molecules if m.name in molnames]
     ret = {
@@ -157,6 +183,7 @@ def main():
                     "config": kwargs,
                 }
                 ret[molname][basis][method] = cont
+        ret[molname]["xyz"] = molecule.xyz
     with open("grad_dump.yml", "w") as yamlout:
         yaml.safe_dump(ret, yamlout)
 
