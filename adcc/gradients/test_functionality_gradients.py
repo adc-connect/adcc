@@ -56,12 +56,19 @@ class TestNuclearGradients(unittest.TestCase):
         kwargs = grad_ref["config"]
         conv_tol = kwargs["conv_tol"]
 
-        scfres = cached_backend_hf(backend, molecule, basis, conv_tol=1e-13)
+        # scfres = cached_backend_hf(backend, molecule, basis, conv_tol=1e-13)
+
+        scfres = adcc.backends.run_hf(
+            backend, gradient_data[molecule]["xyz"], basis, conv_tol=1e-13,
+            conv_tol_grad=1e-12, max_iter=500
+            # charge=molecule.charge, multiplicity=molecule.multiplicity
+        )
         if "adc" in method:
             # TODO: convergence needs to be very very tight...
             # so we want to make sure all vectors are tightly converged
             n_limit = 2  # kwargs["n_singlets"]
             kwargs["n_singlets"] = kwargs["n_singlets"] + 2
+            # kwargs["n_triplets"] = kwargs["n_triplets"] + 5
             state = adcc.run_adc(scfres, method=method, **kwargs)
             for ee in state.excitations[:n_limit]:
                 grad = adcc.nuclear_gradient(ee)
