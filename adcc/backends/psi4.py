@@ -121,8 +121,20 @@ class Psi4HFProvider(HartreeFockProvider):
         threshold = max(10 * conv_tol, conv_tol_grad)
         return threshold
 
+    #def get_restricted(self):
+    #    return isinstance(self.wfn, (psi4.core.RHF, psi4.core.ROHF))
     def get_restricted(self):
-        return isinstance(self.wfn, (psi4.core.RHF, psi4.core.ROHF))
+        if isinstance(self.wfn, (psi4.core.RHF, psi4.core.ROHF)):
+            return True
+        elif isinstance(self.wfn, (psi4.core.Wavefunction)):
+            orben_a = np.asarray(self.wfn.epsilon_a())
+            orben_b = np.asarray(self.wfn.epsilon_b())
+            if all(orben_a == orben_b):
+                print("This is a restricted calculation")
+                return True
+            else:
+                print("This is an unrestricted calculation")
+                return False
 
     def get_energy_scf(self):
         return self.wfn.energy()
