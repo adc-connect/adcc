@@ -21,7 +21,7 @@
 ##
 ## ---------------------------------------------------------------------
 from math import sqrt
-from collections import namedtuple
+from dataclasses import dataclass
 
 from adcc import block as b
 from adcc.functions import direct_sum, einsum, zeros_like
@@ -42,12 +42,16 @@ __all__ = ["block"]
 #
 # Dispatch routine
 #
-"""
-`apply` is a function mapping an AmplitudeVector to the contribution of this
-block to the result of applying the ADC matrix. `diagonal` is an `AmplitudeVector`
-containing the expression to the diagonal of the ADC matrix from this block.
-"""
-AdcBlock = namedtuple("AdcBlock", ["apply", "diagonal"])
+@dataclass
+class AdcBlock:
+    """
+    `apply` is a function mapping an AmplitudeVector to the contribution of this
+    block to the result of applying the ADC matrix. `diagonal` is an
+    `AmplitudeVector` containing the expression to the diagonal of the ADC matrix
+    from this block.
+    """
+    apply: callable
+    diagonal: AmplitudeVector
 
 
 def block(ground_state, spaces, order, variant=None, intermediates=None):
