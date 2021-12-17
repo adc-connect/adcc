@@ -20,6 +20,8 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+from dataclasses import dataclass
+from typing import Dict, Union, Optional
 import numpy as np
 
 from adcc.LazyMp import LazyMp
@@ -27,7 +29,7 @@ from adcc.Excitation import Excitation
 from adcc.timings import Timer
 from adcc.functions import einsum, evaluate
 
-from adcc.OneParticleOperator import product_trace
+from adcc.OneParticleOperator import OneParticleOperator, product_trace
 from .TwoParticleDensityMatrix import TwoParticleDensityMatrix
 from .orbital_response import (
     orbital_response, orbital_response_rhs, energy_weighted_density_matrix
@@ -35,17 +37,87 @@ from .orbital_response import (
 from .amplitude_response import amplitude_relaxed_densities
 
 
-class NuclearGradientResult:
-    def __init__(self, excitation_or_mp, g1, g2):
-        self.g1, self.g2 = g1, g2
+@dataclass(frozen=True)
+class GradientComponents:
+    natoms: int
+    nuc: np.ndarray
+    overlap: np.ndarray
+    hcore: np.ndarray
+    two_electron: np.ndarray
+    custom: Optional[Dict[str, np.ndarray]] = None
 
     @property
-    def relaxed_dipole_moment(self):
+    def total(self):
+        """Returns the total gradient"""
+        ret = sum([self.nuc, self.overlap, self.hcore, self.two_electron])
+        if self.custom is None:
+            return ret
+        for c in self.custom:
+            ret += self.custom[c]
+
+    @property
+    def one_electron(self):
+        """Returns the one-electron gradient"""
+        return sum([self.nuc, self.overlap, self.hcore])
+
+
+@dataclass(frozen=True)
+class GradientResult:
+    excitation_or_mp: Union[LazyMp, Excitation]
+    components: GradientComponents
+    g1: OneParticleOperator
+    g2: TwoParticleDensityMatrix
+    timer: Timer
+    g1a: Optional[OneParticleOperator] = None
+    g2a: Optional[TwoParticleDensityMatrix] = None
+
+    @property
+    def reference_state(self):
+        return self.excitation_or_mp.reference_state
+
+    @property
+    def _energy(self):
+        """Compute energy based on density matrices
+        for testing purposes"""
+        if self.g1a is None:
+            raise ValueError("No unrelaxed one-particle "
+                             "density available.")
+        if self.g2a is None:
+            raise ValueError("No unrelaxed two-particle "
+                             "density available.")
+        ret = 0.0
+        hf = self.reference_state
+        for b in self.g1a.blocks_nonzero:
+            ret += self.g1a[b].dot(hf.fock(b))
+        for b in self.g2a.blocks_nonzero:
+            ret += self.g2a[b].dot(hf.eri(b))
+        return ret
+
+    @property
+    def dipole_moment_relaxed(self):
+        """Returns the orbital-relaxed electric dipole moment"""
+        return self.__dipole_moment_electric(self.g1)
+
+    @property
+    def dipole_moment_unrelaxed(self):
+        """Returns the unrelaxed electric dipole moment"""
+        if self.g1a is None:
+            raise ValueError("No unrelaxed one-particle "
+                             "density available.")
+        hf = self.reference_state
+        return self.__dipole_moment_electric(self.g1a + hf.density)
+
+    @property
+    def total(self):
+        """Returns the total gradient"""
+        return self.components.total
+
+    def __dipole_moment_electric(self, dm):
+        dips = self.reference_state.operators.electric_dipole
         elec_dip = -1.0 * np.array(
-            [product_trace(self.g1, dip)
-             for dip in self.hf.operators.electric_dipole]
+            [product_trace(dm, dip) for dip in dips]
         )
-        return self.hf.nuclear_dipole + elec_dip
+        return elec_dip + self.reference_state.nuclear_dipole
 
 
 def nuclear_gradient(excitation_or_mp):
@@ -54,7 +126,8 @@ def nuclear_gradient(excitation_or_mp):
     elif isinstance(excitation_or_mp, Excitation):
         mp = excitation_or_mp.ground_state
     else:
-        raise TypeError("")
+        raise TypeError("Gradient can only be computed for "
+                        "Excitation or LazyMp object.")
 
     timer = Timer()
     hf = mp.reference_state
@@ -79,16 +152,16 @@ def nuclear_gradient(excitation_or_mp):
 
     # build two-particle density matrices for contraction with TEI
     with timer.record("form_tpdm"):
+        g2_hf = TwoParticleDensityMatrix(hf)
+        g2_oresp = TwoParticleDensityMatrix(hf)
+        delta_ij = hf.density.oo
         if hf.has_core_occupied_space:
-            delta_ij = hf.density.oo
             delta_IJ = hf.density.cc
-            g2_hf = TwoParticleDensityMatrix(hf)
 
             g2_hf.oooo = -0.25 * einsum("ik,jl->ijkl", delta_ij, delta_ij)
             g2_hf.cccc = -0.5 * einsum("IK,JL->IJKL", delta_IJ, delta_IJ)
             g2_hf.ococ = -1.0 * einsum("ik,JL->iJkL", delta_ij, delta_IJ)
 
-            g2_oresp = TwoParticleDensityMatrix(hf)
             g2_oresp.cccc = einsum("IK,JL->IJKL", delta_IJ, g1o.cc + delta_IJ)
             g2_oresp.ococ = (
                 + einsum("ik,JL->iJkL", delta_ij, g1o.cc + 2.0 * delta_IJ)
@@ -115,12 +188,9 @@ def nuclear_gradient(excitation_or_mp):
 
             g2_total = evaluate(g2_hf + g2a + g2_oresp)
         else:
-            delta_ij = hf.density.oo
-            g2_hf = TwoParticleDensityMatrix(hf)
             g2_hf.oooo = 0.25 * (- einsum("li,jk->ijkl", delta_ij, delta_ij)
                                  + einsum("ki,jl->ijkl", delta_ij, delta_ij))
 
-            g2_oresp = TwoParticleDensityMatrix(hf)
             g2_oresp.oooo = einsum("ij,kl->kilj", delta_ij, g1o.oo)
             g2_oresp.ovov = einsum("ij,ab->iajb", delta_ij, g1o.vv)
             g2_oresp.ooov = (- einsum("kj,ia->ijka", delta_ij, g1o.ov)
@@ -137,8 +207,10 @@ def nuclear_gradient(excitation_or_mp):
         w_ao = sum(w.to_ao_basis(hf)).to_ndarray()
 
     with timer.record("contract_integral_derivatives"):
-        Gradient = hf.gradient_provider.correlated_gradient(
+        grad = hf.gradient_provider.correlated_gradient(
             g1_ao, w_ao, g2_ao_1, g2_ao_2
         )
-    Gradient["timer"] = timer
-    return Gradient
+
+    ret = GradientResult(excitation_or_mp, grad, g1, g2_total,
+                         timer, g1a=g1a, g2a=g2a)
+    return ret

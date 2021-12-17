@@ -32,7 +32,6 @@ from adcc.functions import einsum
 class TwoParticleDensityMatrix:
     """
     Two-particle density matrix (TPDM) used for gradient evaluations
-    Limited functionality: CVS not supported!
     """
     def __init__(self, spaces):
         if hasattr(spaces, "mospaces"):
@@ -69,7 +68,7 @@ class TwoParticleDensityMatrix:
     @property
     def shape(self):
         """
-        Returns the shape tuple of the OneParticleOperator
+        Returns the shape tuple of the TwoParticleDensityMatrix
         """
         size = self.mospaces.n_orbs("f")
         return 4 * (size,)
@@ -77,7 +76,7 @@ class TwoParticleDensityMatrix:
     @property
     def size(self):
         """
-        Returns the number of elements of the OneParticleOperator
+        Returns the number of elements of the TwoParticleDensityMatrix
         """
         return np.prod(self.shape)
 
@@ -171,7 +170,7 @@ class TwoParticleDensityMatrix:
     def __transform_to_ao(self, refstate_or_coefficients):
         if not len(self.blocks_nonzero):
             raise ValueError("At least one non-zero block is needed to "
-                             "transform the OneParticleOperator.")
+                             "transform the TwoParticleDensityMatrix.")
         if isinstance(refstate_or_coefficients, libadcc.ReferenceState):
             hf = refstate_or_coefficients
             coeff_map = {}
@@ -249,7 +248,7 @@ class TwoParticleDensityMatrix:
 
     def __isub__(self, other):
         if self.mospaces != other.mospaces:
-            raise ValueError("Cannot subtract OneParticleOperators with "
+            raise ValueError("Cannot subtract TwoParticleDensityMatrix with "
                              "differing mospaces.")
 
         for bl in other.blocks_nonzero:
