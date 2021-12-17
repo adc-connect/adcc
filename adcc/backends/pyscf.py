@@ -24,6 +24,7 @@ import numpy as np
 
 from libadcc import HartreeFockProvider
 from adcc.misc import cached_property
+from adcc.gradients import GradientComponents
 
 from .EriBuilder import EriBuilder
 from ..exceptions import InvalidReference
@@ -86,11 +87,11 @@ class PyScfGradientProvider:
             Gradient["TEI"][ia] -= np.einsum(
                 "pqrs,xpsqr->x", g2_ao_2, ERIx_a, optimize=True
             )
-
-        Gradient["N"] = gradient.grad_nuc()
-        Gradient["OEI"] = Gradient["T+V"] + Gradient["S"]
-        Gradient["Total"] = Gradient["OEI"] + Gradient["TEI"] + Gradient["N"]
-        return Gradient
+        ret = GradientComponents(
+            natoms, gradient.grad_nuc(), Gradient["S"],
+            Gradient["T+V"], Gradient["TEI"]
+        )
+        return ret
 
 
 class PyScfOperatorIntegralProvider:

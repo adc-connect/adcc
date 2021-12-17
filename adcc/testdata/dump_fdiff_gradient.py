@@ -29,16 +29,16 @@ from tqdm import tqdm
 
 from pyscf import gto, lib
 
+from static_data import xyz
+
 adcc.set_n_threads(8)
 lib.num_threads(8)
-
 
 prefactors_5p = np.array([1.0, -8.0, 8.0, -1.0]) / 12.0
 multipliers_5p = [-2, -1, 1, 2]
 # prefactors_9p = [1. / 280., -4. / 105., 1. / 5., -4. / 5.,
 #                  4. / 5., -1. / 5., 4. / 105., -1. / 280.]
 # multipliers_9p = [-4., -3., - 2., -1., 1., 2., 3., 4.]
-coords_label = ["x", "y", "z"]
 
 
 @dataclass
@@ -56,15 +56,6 @@ class Molecule:
 molecules = [
     Molecule("h2o", 0, 1),
 ]
-
-# all coordinates in Bohr (perturbed)
-xyz = {
-    "h2o": """
-    O 0 0 0
-    H 0 0 1.895239827225189
-    H 1.693194615993441 0 -0.599043184453037
-    """,
-}
 
 
 def _molstring(elems, coords):

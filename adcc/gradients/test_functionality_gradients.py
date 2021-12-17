@@ -56,26 +56,28 @@ class TestNuclearGradients(unittest.TestCase):
         kwargs = grad_ref["config"]
         conv_tol = kwargs["conv_tol"]
 
-        # scfres = cached_backend_hf(backend, molecule, basis, conv_tol=1e-13)
+        scfres = cached_backend_hf(backend, molecule, basis, conv_tol=1e-13)
 
-        scfres = adcc.backends.run_hf(
-            backend, gradient_data[molecule]["xyz"], basis, conv_tol=1e-13,
-            conv_tol_grad=1e-12, max_iter=500
-            # charge=molecule.charge, multiplicity=molecule.multiplicity
-        )
         if "adc" in method:
             # TODO: convergence needs to be very very tight...
             # so we want to make sure all vectors are tightly converged
-            n_limit = 2  # kwargs["n_singlets"]
+            n_limit = 2
             kwargs["n_singlets"] = kwargs["n_singlets"] + 2
-            # kwargs["n_triplets"] = kwargs["n_triplets"] + 5
             state = adcc.run_adc(scfres, method=method, **kwargs)
             for ee in state.excitations[:n_limit]:
                 grad = adcc.nuclear_gradient(ee)
                 assert_allclose(energy_ref[ee.index], ee.total_energy,
                                 atol=conv_tol)
+                # check energy computed with unrelaxed densities
+                gs_corr = 0.0
+                if ee.method.level > 0:
+                    gs_corr = ee.ground_state.energy_correction(ee.method.level)
                 assert_allclose(
-                    grad_fdiff[ee.index], grad["Total"], atol=1e-7,
+                    gs_corr + ee.excitation_energy,
+                    grad._energy, atol=1e-8
+                )
+                assert_allclose(
+                    grad_fdiff[ee.index], grad.total, atol=1e-7,
                     err_msg=f'Gradient for state {ee.index} wrong.'
                 )
         else:
@@ -84,6 +86,10 @@ class TestNuclearGradients(unittest.TestCase):
             mp = adcc.LazyMp(refstate)
             grad = adcc.nuclear_gradient(mp)
             assert_allclose(energy_ref, mp.energy(2), atol=1e-8)
+            # check energy computed with unrelaxed densities
             assert_allclose(
-                grad_fdiff, grad["Total"], atol=1e-8
+                mp.energy_correction(2), grad._energy, atol=1e-8
+            )
+            assert_allclose(
+                grad_fdiff, grad.total, atol=1e-8
             )

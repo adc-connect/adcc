@@ -21,29 +21,6 @@
 ##
 ## ---------------------------------------------------------------------
 import os
-from dataclasses import dataclass
-
-
-@dataclass
-class Molecule:
-    name: str
-    charge: int = 0
-    multiplicity: int = 1
-    core_orbitals: int = 1
-
-    @property
-    def xyz(self):
-        return xyz[self.name]
-
-
-molecules = [
-    Molecule("h2o", 0, 1),
-    Molecule("h2s", 0, 1),
-    # Molecule("cn", 0, 2),
-    # "ch2nh2",
-    # Molecule("hf", 0, 1),
-    # Molecule("formaldehyde", 0, 1),
-]
 
 
 # all coordinates in Bohr

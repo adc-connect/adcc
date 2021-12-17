@@ -24,6 +24,7 @@ import numpy as np
 
 from libadcc import HartreeFockProvider
 from adcc.misc import cached_property
+from adcc.gradients import GradientComponents
 
 import psi4
 
@@ -91,9 +92,11 @@ class Psi4GradientProvider:
                 Gradient["TEI"][atom, p] -= np.einsum(
                     'pqrs,psqr->', g2_ao_2, deriv2_np, optimize=True
                 )
-        # Build total gradient
-        Gradient["Total"] = Gradient["OEI"] + Gradient["TEI"] + Gradient["N"]
-        return Gradient
+        ret = GradientComponents(
+            natoms, Gradient["N"], Gradient["S"],
+            Gradient["T"] + Gradient["V"], Gradient["TEI"]
+        )
+        return ret
 
 
 class Psi4OperatorIntegralProvider:
