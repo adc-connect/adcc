@@ -86,7 +86,7 @@ def orbital_response_rhs(hf, g1a, g2a):
         # matrix when lambda_ov multipliers are zero
         w_ov = 0.5 * (
             + 1.0 * einsum("ijkl,klja->ia", hf.oooo, g2a.ooov)  # not in cvs-adc
-            # - 1.0 * einsum("ibcd,abcd->ia", hf.ovvv, g2a.vvvv)
+            - 1.0 * einsum("ibcd,abcd->ia", hf.ovvv, g2a.vvvv)
             - 1.0 * einsum("jkib,jkab->ia", hf.ooov, g2a.oovv)
             + 2.0 * einsum("ijkb,jakb->ia", hf.ooov, g2a.ovov)
             + 1.0 * einsum("ijbc,jabc->ia", hf.oovv, g2a.ovvv)
@@ -96,7 +96,7 @@ def orbital_response_rhs(hf, g1a, g2a):
 
         ret_ov = -1.0 * (
             2.0 * w_ov
-            # - 1.0 * einsum("klja,ijkl->ia", hf.ooov, g2a.oooo)
+            - 1.0 * einsum("klja,ijkl->ia", hf.ooov, g2a.oooo)
             + 1.0 * einsum("abcd,ibcd->ia", hf.vvvv, g2a.ovvv)
             - 2.0 * einsum("jakb,ijkb->ia", hf.ovov, g2a.ooov)  # not in cvs-adc
             + 1.0 * einsum("jkab,jkib->ia", hf.oovv, g2a.ooov)  # not in cvs-adc
@@ -220,7 +220,7 @@ def energy_weighted_density_matrix(hf, g1o, g2a):
         )
     else:
         gi_oo = -0.5 * (
-            # + 1.0 * einsum("jklm,iklm->ij", hf.oooo, g2a.oooo)
+            + 1.0 * einsum("jklm,iklm->ij", hf.oooo, g2a.oooo)
             + 1.0 * einsum("jabc,iabc->ij", hf.ovvv, g2a.ovvv)
             + 1.0 * einsum("klja,klia->ij", hf.ooov, g2a.ooov)
             + 2.0 * einsum("jkla,ikla->ij", hf.ooov, g2a.ooov)
@@ -229,7 +229,7 @@ def energy_weighted_density_matrix(hf, g1o, g2a):
         )
         gi_vv = -0.5 * (
             + 1.0 * einsum("kjib,kjia->ab", hf.ooov, g2a.ooov)
-            # + einsum("bcde,acde->ab", hf.vvvv, g2a.vvvv)
+            + einsum("bcde,acde->ab", hf.vvvv, g2a.vvvv)
             + 1.0 * einsum("ijcb,ijca->ab", hf.oovv, g2a.oovv)
             + 2.0 * einsum("jcib,jcia->ab", hf.ovov, g2a.ovov)
             + 1.0 * einsum("ibcd,iacd->ab", hf.ovvv, g2a.ovvv)
@@ -241,7 +241,7 @@ def energy_weighted_density_matrix(hf, g1o, g2a):
         w.ov = 0.5 * (
             - 2.0 * einsum("ij,ja->ia", hf.foo, g1o.ov)
             + 1.0 * einsum("ijkl,klja->ia", hf.oooo, g2a.ooov)
-            # - 1.0 * einsum("ibcd,abcd->ia", hf.ovvv, g2a.vvvv)
+            - 1.0 * einsum("ibcd,abcd->ia", hf.ovvv, g2a.vvvv)
             - 1.0 * einsum("jkib,jkab->ia", hf.ooov, g2a.oovv)
             + 2.0 * einsum("ijkb,jakb->ia", hf.ooov, g2a.ovov)
             + 1.0 * einsum("ijbc,jabc->ia", hf.oovv, g2a.ovvv)

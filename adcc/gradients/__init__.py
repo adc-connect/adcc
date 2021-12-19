@@ -151,6 +151,7 @@ def nuclear_gradient(excitation_or_mp):
         w = energy_weighted_density_matrix(hf, g1o, g2a)
 
     # build two-particle density matrices for contraction with TEI
+    # prefactors see eqs 17 and A4 in 10.1063/1.5085117
     with timer.record("form_tpdm"):
         g2_hf = TwoParticleDensityMatrix(hf)
         g2_oresp = TwoParticleDensityMatrix(hf)
@@ -183,8 +184,7 @@ def nuclear_gradient(excitation_or_mp):
             g2a.oovv *= 0.5
             g2a.ccvv *= 0.5
             g2a.occv *= 2.0
-            g2a.vvvv *= 0.25  # Scaling twice!
-            g2a.vvvv *= 0.25  # it's the only way it works...
+            g2a.vvvv *= 0.25
 
             g2_total = evaluate(g2_hf + g2a + g2_oresp)
         else:
@@ -198,6 +198,8 @@ def nuclear_gradient(excitation_or_mp):
 
             # scale for contraction with integrals
             g2a.oovv *= 0.5
+            g2a.oooo *= 0.25
+            g2a.vvvv *= 0.25
             g2_total = evaluate(g2_hf + g2a + g2_oresp)
 
     with timer.record("transform_ao"):
