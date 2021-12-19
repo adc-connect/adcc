@@ -62,7 +62,7 @@ class TestNuclearGradients(unittest.TestCase):
             # TODO: convergence needs to be very very tight...
             # so we want to make sure all vectors are tightly converged
             n_limit = 2
-            kwargs["n_singlets"] = kwargs["n_singlets"] + 2
+            kwargs["n_singlets"] = kwargs["n_singlets"] + 6
             state = adcc.run_adc(scfres, method=method, **kwargs)
             for ee in state.excitations[:n_limit]:
                 grad = adcc.nuclear_gradient(ee)

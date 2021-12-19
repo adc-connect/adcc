@@ -114,7 +114,6 @@ def ampl_relaxed_dms_cvs_adc1(exci):
     fc = hf.fock(b.cc).diagonal()
     fo = hf.fock(b.oo).diagonal()
     fco = direct_sum("-j+I->jI", fc, fo).evaluate()
-    # These are the multipliers:
     g1a.co = - 1.0 * einsum('JbKc,ibKc->Ji', g2a.cvcv, hf.ovcv) / fco
     return g1a, g2a
 
@@ -215,7 +214,7 @@ def ampl_relaxed_dms_cvs_adc2x(exci):
     t2oovv = mp.t2(b.oovv)
     t2ccvv = mp.t2(b.ccvv)
     t2ocvv = mp.t2(b.ocvv)
-    g1a_cvs0, g2a_cvs0 = ampl_relaxed_dms_cvs_adc0(exci)
+    g1a_cvs0, _ = ampl_relaxed_dms_cvs_adc0(exci)
     t2bar = t2bar_oovv_cvs_adc2(exci, g1a_cvs0).evaluate()
 
     g1a.cc = (
@@ -279,7 +278,11 @@ def ampl_relaxed_dms_cvs_adc2x(exci):
     g2a.ccvv = - 1.0 * t2ccvv
     g2a.ocvv = - 1.0 * t2ocvv
     g2a.ococ = 1.0 * einsum("iJab,kLab->iJkL", u.pphh, u.pphh)
-    g2a.vvvv = 2.0 * einsum("iJcd,iJab->abcd", u.pphh, u.pphh)
+    g2a.vvvv = 1.0 * einsum("iJcd,iJab->abcd", u.pphh, u.pphh)
+
+    # TODO: remove
+    # g2a.ococ *= 0.0
+    # g2a.vvvv *= 0.0
 
     g1a.co = (
         - 1.0 * einsum('JbKc,ibKc->Ji', g2a.cvcv, hf.ovcv)
@@ -334,6 +337,17 @@ def ampl_relaxed_dms_adc2(exci):
     return g1a, g2a
 
 
+def ampl_relaxed_dms_adc2x(exci):
+    u = exci.excitation_vector
+    g1a, g2a = ampl_relaxed_dms_adc2(exci)
+
+    g2a.ovov += -4.0 * einsum("ikbc,jkac->iajb", u.pphh, u.pphh)
+    g2a.oooo = 2.0 * einsum('ijab,klab->ijkl', u.pphh, u.pphh)
+    g2a.vvvv = 2.0 * einsum('ijcd,ijab->abcd', u.pphh, u.pphh)
+
+    return g1a, g2a
+
+
 def ampl_relaxed_dms_mp2(mp):
     hf = mp.reference_state
     t2 = mp.t2(b.oovv)
@@ -350,6 +364,7 @@ DISPATCH = {
     "adc0": ampl_relaxed_dms_adc0,
     "adc1": ampl_relaxed_dms_adc1,
     "adc2": ampl_relaxed_dms_adc2,
+    "adc2x": ampl_relaxed_dms_adc2x,
     "cvs-adc0": ampl_relaxed_dms_cvs_adc0,
     "cvs-adc1": ampl_relaxed_dms_cvs_adc1,
     "cvs-adc2": ampl_relaxed_dms_cvs_adc2,
