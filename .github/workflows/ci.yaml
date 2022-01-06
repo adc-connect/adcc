@@ -125,7 +125,8 @@ jobs:
         run: |
           conda info
           conda list
-          python setup.py test -a '-k "h2o_sto3g and Psi4"'
+          pip install pyscf
+          python setup.py test -a '-k "psi4 or CrossReference"'
 
   #
   # Test source code formatting

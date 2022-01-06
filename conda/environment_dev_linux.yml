@@ -19,3 +19,5 @@ dependencies:
   - opt_einsum
   - pybind11
   - psi4
+  - pyscf::pyscf
+  - conda-forge::cppe
