@@ -100,6 +100,33 @@ jobs:
           coveralls --service=github --merge=coverage.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  #
+  # Test Conda Python w/ Psi4
+  #
+  test_conda:
+    name: Conda Python ${{ matrix.version }} - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {version: '3.9', os: ubuntu-latest, documentation: False}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: adcc-dev
+          environment-file: conda/environment_dev_linux.yml
+          python-version: ${{ matrix.version }}
+          auto-activate-base: false
+      - name: Build adcc
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+          python setup.py test -a '-k "h2o_sto3g and Psi4"'
+
   #
   # Test source code formatting
   #

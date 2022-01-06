@@ -1,0 +1,21 @@
+name: adcc-dev
+channels:
+  - defaults
+  - adcc
+  - psi4
+dependencies:
+  - mkl
+  - mkl-devel
+  - python
+  - gcc_linux-64
+  - gxx_linux-64
+  - numpy
+  - scipy
+  - matplotlib
+  - tqdm
+  - pandas
+  - libtensorlight
+  - h5py
+  - opt_einsum
+  - pybind11
+  - psi4
