@@ -100,6 +100,59 @@ jobs:
           coveralls --service=github --merge=coverage.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  #
+  # Test Conda Python
+  #
+  test_conda:
+    name: Conda Python ${{ matrix.version }} - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {version: '3.9', os: ubuntu-latest, documentation: False}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: adcc-dev
+          environment-file: conda/environment_dev_linux.yml
+          python-version: ${{ matrix.version }}
+          auto-activate-base: false
+      - name: Dump siteconfig with coverage flags for C++
+        run: |
+          mkdir $HOME/.adcc/
+          echo 'coverage = True' > $HOME/.adcc/siteconfig.py
+      - name: Build and test adcc
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+          pip install pyscf
+          # python -c "import psi4"
+          python setup.py test -a '--cov=adcc'
+          python setup.py cpptest -v
+      #
+      - name: Upload coverage to codecov
+        run: |
+          pip install codecov
+          codecov -X gcov
+          lcov --directory . --capture --output-file coverage.info
+          lcov --remove coverage.info '/opt/*' '/Applications/*' '/Library/*' '/usr/*' "${HOME}"'/.cache/*' "${HOME}"'/.local/*' "${PWD}"'/build/*' "${PWD}"'/libadcc/tests/*' --output-file coverage.info
+          lcov --list coverage.info
+          codecov -X gcov -f coverage.info
+      #
+      - name: Upload coverage to coveralls
+        # Note: Needs to be after the above step, because it parses the coverage.info
+        run: |
+          pip install coveralls
+          sudo gem install coveralls-lcov
+          coveralls-lcov -v -n coverage.info > coverage.json
+          coveralls --service=github --merge=coverage.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   #
   # Test source code formatting
   #

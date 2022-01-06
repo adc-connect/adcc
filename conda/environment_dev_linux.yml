@@ -1,0 +1,25 @@
+name: adcc-dev
+channels:
+  - conda-forge
+dependencies:
+  # Build
+  - mkl
+  - mkl-devel
+  - python
+  - gcc_linux-64 =9.4
+  - gxx_linux-64 =9.4
+  - libtensorlight
+  - pybind11
+  # Run
+  - numpy
+  - scipy
+  - tqdm
+  - h5py
+  - opt_einsum
+  # Tests
+  - pandas
+  - cppe
+  - pytest
+  - pytest-cov
+  - pyyaml
+  - lcov
