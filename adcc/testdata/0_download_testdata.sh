@@ -116,8 +116,15 @@ download() {
 
 download $(for file in ${DATAFILES[@]}; do echo $SOURCE/$file; done)
 
+# check which files exist
+while read line; do
+	list=($line)
+	fname=${list[1]}
+	[ -f "${fname}" ] && echo "$line" >> SHA256SUMS.filtered
+done < SHA256SUMS
 if which sha256sum &> /dev/null; then
-	sha256sum --ignore-missing -c SHA256SUMS || exit 1
+	sha256sum -c SHA256SUMS.filtered || exit 1
 fi
+rm SHA256SUMS.filtered
 
 exit 0
