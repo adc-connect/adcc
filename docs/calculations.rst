@@ -324,6 +324,10 @@ obtained using the function ``adcc.get_n_threads()``.
 Plotting spectra
 ----------------
 
+.. note::
+     For plotting spectra, `Matplotlib <https://matplotlib.org>`_
+     needs to be installed. See :ref:`optional-dependencies` for details.
+
 Having computed a set of ADC excited states as discussed in the
 previous sections, these can be visualised
 in a simulated absorption spectrum

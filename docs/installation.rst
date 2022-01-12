@@ -18,6 +18,9 @@ Please get in touch
 by `opening an issue <https://github.com/adc-connect/adcc/issues>`_
 if you cannot get adcc to work.
 
+Some specialty features of adcc require extra dependencies (Pandas and
+Matplotlib), see :ref:`optional-dependencies` for details.
+
 Installing adcc
 ---------------
 
@@ -153,6 +156,20 @@ to adcc, even the better! In this case we hope
 the :ref:`devnotes` will provide
 you with some useful pointers to get started.
 
+
+.. _optional-dependencies:
+
+Optional dependencies for analysis features
+-------------------------------------------
+
+Special functionality, i.e., plotting spectra (:func:`adcc.ExcitedStates.plot_spectrum`)
+relies on Matplotlib, which is not installed by default along with adcc due to
+its heavy dependencies. Similarly, export of excited states data to `pandas.DataFrame`
+requires Pandas (:func:`adcc.ExcitedStates.to_dataframe`). If you want to include these
+dependencies directly while installing adcc, you can run ``pip install adcc[analysis]''.
+Manual installation via ``pip install matplotlib'' or ``conda install matplotlib''
+is of course also possible. Note that all other core features of adcc still work without
+these packages installed.
 
 
 .. _troubleshooting:
