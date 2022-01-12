@@ -14,6 +14,7 @@ mol = gto.M(
 scfres = scf.UHF(mol)
 scfres.conv_tol = 1e-14
 scfres.conv_tol_grad = 1e-10
+scfres.max_cycle = 500
 scfres.kernel()
 
 # Run solver and print results

@@ -5,20 +5,16 @@ import numpy as np
 
 from pyscf import gto, scf
 from adcc.solver.preconditioner import JacobiPreconditioner
-from adcc.AmplitudeVector import AmplitudeVector
 from adcc.solver import IndexSymmetrisation
 from adcc.solver.conjugate_gradient import conjugate_gradient, default_print
-from adcc.modified_transition_moments import compute_modified_transition_moments
+from adcc.adc_pp.modified_transition_moments import modified_transition_moments
 
 
 class ShiftedMat(adcc.AdcMatrix):
     def __init__(self, method, mp_results, omega=0.0):
         self.omega = omega
         super().__init__(method, mp_results)
-        diagonal = AmplitudeVector(*tuple(
-            self.diagonal(block) for block in self.blocks
-        ))
-        self.omegamat = adcc.ones_like(diagonal) * omega
+        self.omegamat = adcc.ones_like(self.diagonal()) * omega
 
     def __matmul__(self, other):
         return super().__matmul__(other) - self.omegamat * other
@@ -39,9 +35,8 @@ scfres.kernel()
 
 refstate = adcc.ReferenceState(scfres)
 matrix = ShiftedMat("adc3", refstate, omega=0.0)
-rhs = compute_modified_transition_moments(
-    matrix, refstate.operators.electric_dipole[0], "adc2"
-)
+rhs = modified_transition_moments("adc2", matrix.ground_state,
+                                  refstate.operators.electric_dipole[0])
 preconditioner = JacobiPreconditioner(matrix)
 freq = 0.0
 preconditioner.update_shifts(freq)

@@ -14,7 +14,7 @@ mol = psi4.geometry("""
     no_com
     """)
 
-psi4.set_num_threads(adcc.thread_pool.n_cores)
+psi4.set_num_threads(adcc.get_n_threads())
 psi4.core.be_quiet()
 psi4.set_options({'basis': "6-31g",
                   'e_convergence': 1e-14,

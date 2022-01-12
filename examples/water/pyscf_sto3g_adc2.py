@@ -17,12 +17,6 @@ scfres.conv_tol = 1e-14
 scfres.conv_tol_grad = 1e-10
 scfres.kernel()
 
-# Explicitly initialise ADC virtual memory pool to (256 MiB)
-# (if this call is missing than only RAM is used. This allows
-#  to dump data to disk as well such that maximally up to the
-#  specified amount of data (in bytes) will reside in RAM)
-adcc.memory_pool.initialise(max_memory=256 * 1024 * 1024)
-
 # Run an adc2 calculation:
 singlets = adcc.adc2(scfres, n_singlets=5)
 triplets = adcc.adc2(singlets.matrix, n_triplets=3)
