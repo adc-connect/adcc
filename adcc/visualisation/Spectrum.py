@@ -23,7 +23,7 @@
 import numpy as np
 
 from . import shapefctns
-from matplotlib import pyplot as plt
+from ..misc import requires_module
 
 
 class Spectrum:
@@ -127,6 +127,7 @@ class Spectrum:
         cpy.ylabel = self.ylabel
         return cpy
 
+    @requires_module("matplotlib")
     def plot(self, *args, style=None, **kwargs):
         """Plot the Spectrum represented by this class.
 
@@ -139,6 +140,7 @@ class Spectrum:
             types of spectra commonly plotted. Valid are "discrete" and
             "continuous". By default no special style is chosen.
         """
+        from matplotlib import pyplot as plt
         if style == "discrete":
             p = plt.plot(self.x, self.y, "x", *args, **kwargs)
             plt.vlines(self.x, 0, self.y, linestyle="dashed",
