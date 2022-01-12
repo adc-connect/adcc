@@ -1,23 +1,25 @@
 name: adcc-dev
 channels:
+  - conda-forge
   - defaults
-  - adcc
-  - psi4
 dependencies:
   - mkl
   - mkl-devel
   - python
-  - gcc_linux-64
-  - gxx_linux-64
+  - gcc_linux-64 =9.4
+  - gxx_linux-64 =9.4
   - numpy
   - scipy
-  - matplotlib
   - tqdm
   - pandas
-  - libtensorlight
+  - matplotlib-base
   - h5py
   - opt_einsum
   - pybind11
-  - psi4
-  - pyscf::pyscf
+  - conda-forge::libtensorlight
+  - psi4::psi4
   - conda-forge::cppe
+  - pytest
+  - pytest-cov
+  - pyyaml
+  - lcov
