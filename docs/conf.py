@@ -222,6 +222,9 @@ napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = True
 
+# __init__ docstring appears in documentation
+autoclass_content = "init"
+
 # Breathe settings
 libadcc_doc_dir = (
     os.path.abspath(os.path.dirname(__file__))

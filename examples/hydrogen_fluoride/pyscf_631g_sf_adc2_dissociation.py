@@ -26,7 +26,7 @@ def run_spin_flip(distance):
     states = adcc.adc2(scfres, n_spin_flip=1)
 
     ene = scfres.energy_tot() + states.ground_state.energy_correction(2)
-    return ene + states.eigenvalues[0]
+    return ene + states.excitation_energy[0]
 
 
 def run_progression(outfile="631g_adc2_dissociation.nptxt"):

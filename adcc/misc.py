@@ -20,8 +20,10 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import warnings
 import numpy as np
 from functools import wraps
+from pkg_resources import parse_version
 
 
 def cached_property(f):
@@ -113,6 +115,54 @@ def expand_test_templates(arguments, template_prefix="template_"):
                 setattr(cls, newname, caller)
         return cls
     return inner_decorator
+
+
+def is_module_available(module, min_version=None):
+    """Check using importlib if a module is available."""
+    import importlib
+
+    try:
+        mod = importlib.import_module(module)
+    except ImportError:
+        return False
+
+    if not min_version:  # No version check
+        return True
+
+    if not hasattr(mod, "__version__"):
+        warnings.warn(
+            f"Could not check module {module} minimal version, "
+            "since __version__ tag not found. Proceeding anyway."
+        )
+        return True
+
+    if parse_version(mod.__version__) < parse_version(min_version):
+        warnings.warn(
+            f"Found module {module}, but its version {mod.__version__} is below "
+            f"the least required (== {min_version}). This module will be ignored."
+        )
+        return False
+    return True
+
+
+def requires_module(name, min_version=None):
+    """
+    Decorator to check if the module 'name' is available,
+    throw ModuleNotFoundError on call if not.
+    """
+    def inner(function):
+        def wrapper(*args, **kwargs):
+            fname = function.__name__
+            if not is_module_available(name, min_version):
+                raise ModuleNotFoundError(
+                    f"Function '{fname}' needs module {name}, but it was "
+                    f"not found. Solve by running 'pip install {name}' or "
+                    f"'conda install {name}' on your system."
+                )
+            return function(*args, **kwargs)
+        wrapper.__doc__ = function.__doc__
+        return wrapper
+    return inner
 
 
 def assert_allclose_signfix(actual, desired, atol=0, **kwargs):

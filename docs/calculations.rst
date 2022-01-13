@@ -324,6 +324,10 @@ obtained using the function ``adcc.get_n_threads()``.
 Plotting spectra
 ----------------
 
+.. note::
+     For plotting spectra, `Matplotlib <https://matplotlib.org>`_
+     needs to be installed. See :ref:`optional-dependencies` for details.
+
 Having computed a set of ADC excited states as discussed in the
 previous sections, these can be visualised
 in a simulated absorption spectrum
@@ -354,7 +358,7 @@ as shown in the next example.
    state.plot_spectrum()
    plt.show()
 
-This code uses the :func:`adcc.ExcitedStates.plot_spectrum`
+This code uses the :func:`adcc.ElectronicTransition.plot_spectrum`
 function and the `Matplotlib <https://matplotlib.org>`_ package
 to produce a plot such as
 
@@ -364,13 +368,13 @@ In this image crosses represent the actual computed value
 for the absorption cross section for the obtained excited states.
 To form the actual spectrum (solid blue line) these discrete
 peaks are artificially broadened with an empirical broadening parameter.
-Notice, that the :func:`adcc.ExcitedStates.plot_spectrum`
+Notice, that the :func:`adcc.ElectronicTransition.plot_spectrum`
 function does only prepare the spectrum inside Matplotlib,
 such that ``plt.show()`` needs to be called in order to actuall *see* the plot.
 This allows to *simulaneously* plot the spectrum from multiple
 calculations in one figure if desired.
 
-The :func:`adcc.ExcitedStates.plot_spectrum` function takes a number
+The :func:`adcc.ElectronicTransition.plot_spectrum` function takes a number
 of parameters to alter the default plotting behaviour:
 
 - **Broadening parameters**: The default broadening can be completely disabled
@@ -401,7 +405,7 @@ of parameters to alter the default plotting behaviour:
   See the `Matplotlib documentation <https://matplotlib.org/api/_as_gen/matplotlib.pyplot.plot.html>`_ for details.
 
 In the same manner, one can model the ECD spectrum of chiral molecules
-with the :func:`adcc.ExcitedStates.plot_spectrum` function. An example
+with the :func:`adcc.ElectronicTransition.plot_spectrum` function. An example
 script for obtaining the ECD spectrum of (R)- and (S)-2-methyloxirane with ADC(2) can be
 found in the `examples folder <https://code.adc-connect.org/tree/master/examples/methyloxirane>`_.
 The only difference to plotting a UV/Vis spectrum as shown above is to specify

@@ -534,15 +534,14 @@ adccsetup(
         "opt_einsum >= 3.0",
         "numpy >= 1.14",
         "scipy >= 1.2",
-        "matplotlib >= 3.0",
         "h5py >= 2.9",
         "tqdm >= 4.30",
-        "pandas >= 0.25.0",
     ],
-    tests_require=["pytest", "pytest-cov", "pyyaml"],
+    tests_require=["pytest", "pytest-cov", "pyyaml", "pandas >= 0.25.0"],
     extras_require={
         "build_docs": ["sphinx>=2", "breathe", "sphinxcontrib-bibtex",
                        "sphinx-automodapi", "sphinx-rtd-theme"],
+        "analysis": ["matplotlib >= 3.0", "pandas >= 0.25.0"],
     },
     #
     cmdclass={"build_ext": build_ext, "pytest": PyTest,

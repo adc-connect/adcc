@@ -24,39 +24,9 @@ import os
 import h5py
 import warnings
 
-from pkg_resources import parse_version
+from ..misc import is_module_available
 
 __all__ = ["import_scf_results", "run_hf", "have_backend", "available"]
-
-
-def is_module_available(module, min_version=None):
-    """Check using importlib if a module is available."""
-    import importlib
-
-    try:
-        mod = importlib.import_module(module)
-    except ImportError:
-        return False
-
-    if not min_version:  # No version check
-        return True
-
-    if not hasattr(mod, "__version__"):
-        warnings.warn(
-            "Could not check host program {} minimal version, "
-            "since __version__ tag not found. Proceeding anyway."
-            "".format(module)
-        )
-        return True
-
-    if parse_version(mod.__version__) < parse_version(min_version):
-        warnings.warn(
-            "Found host program module {}, but its version {} is below "
-            "the least required (== {}). This host program will be ignored."
-            "".format(module, mod.__version__, min_version)
-        )
-        return False
-    return True
 
 
 # Cache for the list of available backends ... cannot be filled right now,
