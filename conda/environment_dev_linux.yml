@@ -6,7 +6,7 @@ dependencies:
   - python
   - gcc_linux-64 =9.4
   - gxx_linux-64 =9.4
-  - libtensorlight >=3.0.1
+  - libtensorlight =3.0.1=hc894906_1
   - pybind11 >=2.6
   # Run
   - numpy >=1.14

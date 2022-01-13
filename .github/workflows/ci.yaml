@@ -112,6 +112,9 @@ jobs:
       matrix:
         include:
           - {version: '3.9', os: ubuntu-latest, documentation: False}
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -125,7 +128,6 @@ jobs:
           mkdir $HOME/.adcc/
           echo 'coverage = True' > $HOME/.adcc/siteconfig.py
       - name: Build and test adcc
-        shell: bash -l {0}
         run: |
           conda info
           conda list
