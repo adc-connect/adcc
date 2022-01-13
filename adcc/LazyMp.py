@@ -36,7 +36,7 @@ from . import block as b
 class LazyMp:
     def __init__(self, hf):
         """
-        Initialise the class dealing with the M/oller-Plesset ground state.
+        Initialise the class dealing with the Møller-Plesset ground state.
         """
         if isinstance(hf, libadcc.HartreeFockSolution_i):
             hf = ReferenceState(hf)

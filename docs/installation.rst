@@ -162,19 +162,19 @@ you with some useful pointers to get started.
 Optional dependencies for analysis features
 -------------------------------------------
 
-- **Matplotlib**: Plotting spectra with :func:`adcc.ExcitedStates.plot_spectrum`.
+- **Matplotlib**: Plotting spectra with :func:`adcc.ElectronicTransition.plot_spectrum`
 
 
-- **Pandas**: Export to `pandas.DataFrame` via :func:`adcc.ExcitedStates.to_dataframe`.
+- **Pandas**: Export to `pandas.DataFrame` via :func:`adcc.ExcitedStates.to_dataframe`
 
 
 Installation of optional packages
 .................................
 
 - Using pip: Either install optional dependencies directly with adcc via
-  ``pip install adcc[analysis]'' or run manually for each package, e.g., ``pip install matplotlib''
+  ``pip install adcc[analysis]`` or run manually for each package, e.g., ``pip install matplotlib``
 
-- Using conda: Install each package manually, e.g., ``conda install matplotlib''.
+- Using conda: Install each package manually, e.g., ``conda install matplotlib``.
 
 Note that all other core features of adcc still work without
 these packages installed.

@@ -160,6 +160,7 @@ def requires_module(name, min_version=None):
                     f"'conda install {name}' on your system."
                 )
             return function(*args, **kwargs)
+        wrapper.__doc__ = function.__doc__
         return wrapper
     return inner
 
