@@ -73,13 +73,15 @@ class TestSmoke(unittest.TestCase):
     conv_tol = 1e-7
 
     def _run_scf_h2o_sto3g(self):
+        # NOTE: cached_backend_hf not used because adcc.testdata
+        # is not included in installation
         scfres = adcc.backends.run_hf(
             "pyscf", xyz="""
             O 0 0 0
             H 0 0 1.795239827225189
             H 1.693194615993441 0 -0.599043184453037""",
-            basis="sto-3g", conv_tol=1e-12,
-            conv_tol_grad=1e-10
+            basis="sto-3g", conv_tol=self.conv_tol / 100,
+            conv_tol_grad=self.conv_tol / 10
         )
         return scfres
 
