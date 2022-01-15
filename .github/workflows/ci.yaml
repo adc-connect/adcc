@@ -131,7 +131,6 @@ jobs:
         run: |
           conda info
           conda list
-          pip install pyscf
           # python -c "import psi4"
           python setup.py test -a '--cov=adcc'
           python setup.py cpptest -v

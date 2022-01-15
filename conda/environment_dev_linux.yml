@@ -21,3 +21,5 @@ dependencies:
   - pytest-cov
   - pyyaml
   - lcov
+  - pip:
+    - pyscf
