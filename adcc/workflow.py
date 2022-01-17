@@ -501,7 +501,7 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
     guess_gs2 = np.zeros(n_guess)
     # these guesses need a manual option, because if the gs1 state is close to a state it couples with, the gs1 guess needs to be smaller, than for a
     # decoupled state. For gs2 this is a little less important, because the coupling is weaker.
-    #guess_gs[n_guess - 3] = 100
+    guess_gs[n_guess - 3] = 0
     guess_gs1[n_guess - 2] = 2 # giving these two electronic ground/ photonic excited states a small value, they will only slowly appear in the convergence,
     guess_gs2[n_guess - 1] = 5 # which in fact leads to a lot of numerical issues. Furthermore, they dont have to match the exact state number later...The solver takes care of that.
     guesses_tmp = []
@@ -516,7 +516,7 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
     for guess_index in np.arange(n_guess): # build QED_AmplitudeVectors from AmplitudeVector guesses
         #if hasattr(guesses_elec[0], "pphh"):
         if contains_doubles: 
-            guess_gs[n_guess - 3] = 100
+            #guess_gs[n_guess - 3] = 1e+8
             #print("doubles guesses are set up")
             # what if this is not ok without restricting singlets/triplets only, because e.g. phot could be singlet and elec triplet ... doesnt seem to matter
             #guesses_tmp.append(QED_AmplitudeVector(guess_gs[guess_index], guesses_elec[guess_index].ph, guesses_elec[guess_index].pphh,
@@ -526,7 +526,7 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
                             guess_gs1[guess_index], guesses_phot[guess_index].ph, guesses_phot[guess_index].pphh,
                             guess_gs2[guess_index], guesses_phot2[guess_index].ph, guesses_phot2[guess_index].pphh))
         else:
-            guess_gs[n_guess - 3] = 0#10**7
+            #guess_gs[n_guess - 3] = 1e+7
             #print("singles guesses are set up")
             guesses_tmp.append(QED_AmplitudeVector(guess_gs[guess_index], guesses_elec[guess_index].ph, None,
                                                     guess_gs1[guess_index], guesses_phot[guess_index].ph, None,
