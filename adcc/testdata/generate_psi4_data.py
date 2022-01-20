@@ -56,9 +56,8 @@ def run_psi4_tdscf(xyz, basis, charge=0, multiplicity=1,
 
 
 def run_adcc_ptlr(wfn):
-    state = adcc.run_adc(wfn, method="adc1", n_singlets=5,
-                         conv_tol=1e-7, environment="ptlr")
-    return state
+    return adcc.run_adc(wfn, method="adc1", n_singlets=5,
+                        conv_tol=1e-7, environment="ptlr")
 
 
 def dump_results(molecule, basis, **kwargs):
