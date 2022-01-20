@@ -17,31 +17,24 @@ from adcc.AdcMatrix import AdcExtraTerm
 backends = [b for b in adcc.backends.available()
             if b in ["psi4", "pyscf"]]
 basissets = ["sto-3g", "cc-pvdz"]
-methods = ["adc1", "adc2", "adc3"]
+methods = ["adc1"]
 
 
-@pytest.mark.skipif(len(backends) == 0, reason="Psi4 and Pyscf backends not found.")
+@pytest.mark.skipif(len(backends) == 0, reason="No backend for PCM available.")
 @expand_test_templates(list(itertools.product(basissets, methods, backends)))
 class TestPCM(unittest.TestCase):
     def template_pcm_ptlr_formaldehyde(self, basis, method, backend):
         if method != "adc1":
             pytest.skip("Data only available for adc1.")
 
-        if backend == "psi4":
-            data = psi4_data
-            run_hf = psi4_run_pcm_hf
-            pcm_options = {"weight": 0.3, "pcm_method": "IEFPCM", "neq": True,
-                           "solvent": "Water"}
-        elif backend == "pyscf":
-            data = pyscf_data
-            run_hf = pyscf_run_pcm_hf
-            pcm_options = {"eps": 78.3553, "eps_opt": 1.78}
+        c = config[backend]
         basename = f"formaldehyde_{basis}_pcm_{method}"
-        result = data[basename]
+        result = c["data"][basename]
 
+        run_hf = c["run_hf"]
         scfres = run_hf(static_data.xyz["formaldehyde"], basis, charge=0,
                         multiplicity=1, conv_tol=1e-12, conv_tol_grad=1e-11,
-                        max_iter=150, pcm_options=pcm_options)
+                        max_iter=150, pcm_options=c["pcm_options"])
 
         assert_allclose(scfres.energy_scf, result["energy_scf"], atol=1e-8)
 
@@ -50,37 +43,28 @@ class TestPCM(unittest.TestCase):
 
         # compare ptLR result to LR data
         assert_allclose(state.excitation_energy,
-                        result["lr_excitation_energy"], atol=5 * 1e-3)
+                        result["lr_excitation_energy"], atol=5e-3)
 
         # Consistency check with values obtained with ADCc
         assert_allclose(state.excitation_energy,
                         result["ptlr_adcc_excitation_energy"], atol=1e-6)
 
-        # remove cavity files from PSI4 PCM calculations
         if backend == "psi4":
-            for cavityfile in os.listdir(os.getcwd()):
-                if cavityfile.startswith(("cavity.off_", "PEDRA.OUT_")):
-                    os.remove(cavityfile)
+            # remove cavity files from PSI4 PCM calculations
+            remove_cavity_psi4()
 
     def template_pcm_linear_response_formaldehyde(self, basis, method, backend):
         if method != "adc1":
             pytest.skip("Reference only exists for adc1.")
 
-        if backend == "psi4":
-            data = psi4_data
-            run_hf = psi4_run_pcm_hf
-            pcm_options = {"weight": 0.3, "pcm_method": "IEFPCM", "neq": True,
-                           "solvent": "Water"}
-        elif backend == "pyscf":
-            data = pyscf_data
-            run_hf = pyscf_run_pcm_hf
-            pcm_options = {"eps": 78.3553, "eps_opt": 1.78}
+        c = config[backend]
         basename = f"formaldehyde_{basis}_pcm_{method}"
-        result = data[basename]
+        result = c["data"][basename]
 
+        run_hf = c["run_hf"]
         scfres = run_hf(static_data.xyz["formaldehyde"], basis, charge=0,
                         multiplicity=1, conv_tol=1e-12, conv_tol_grad=1e-11,
-                        max_iter=150, pcm_options=pcm_options)
+                        max_iter=150, pcm_options=c["pcm_options"])
 
         assert_allclose(scfres.energy_scf, result["energy_scf"], atol=1e-8)
 
@@ -124,9 +108,14 @@ class TestPCM(unittest.TestCase):
 
         if backend == "psi4":
             # remove cavity files from PSI4 PCM calculations
-            for cavityfile in os.listdir(os.getcwd()):
-                if cavityfile.startswith(("cavity.off_", "PEDRA.OUT_")):
-                    os.remove(cavityfile)
+            remove_cavity_psi4()
+
+
+def remove_cavity_psi4():
+    # removes cavity files from PSI4 PCM calculations
+    for cavityfile in os.listdir(os.getcwd()):
+        if cavityfile.startswith(("cavity.off_", "PEDRA.OUT_")):
+            os.remove(cavityfile)
 
 
 def psi4_run_pcm_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
@@ -204,3 +193,12 @@ def pyscf_run_pcm_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
     # replace eps with eps_opt for the ADC calculation
     mf.with_solvent.eps = pcm_options.get("eps_opt")
     return adcc.backends.import_scf_results(mf)
+
+
+config = {
+    "psi4": {"data": psi4_data, "run_hf": psi4_run_pcm_hf,
+             "pcm_options": {"weight": 0.3, "pcm_method": "IEFPCM",
+                             "neq": True, "solvent": "Water"}},
+    "pyscf": {"data": pyscf_data, "run_hf": pyscf_run_pcm_hf,
+              "pcm_options": {"eps": 78.3553, "eps_opt": 1.78}}
+}
