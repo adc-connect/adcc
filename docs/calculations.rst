@@ -27,7 +27,8 @@ to be applied. Arbitrary combinations of these variants,
 e.g. applying **both** CVS and FC approximations are supported as well.
 See :ref:`frozen-spaces` for details.
 
-Calculations with :ref:`polarisable_embedding` and :ref:`polarisable_continuum` are also supported.
+Calculations with :ref:`polarisable_embedding` and the :ref:`polarisable_continuum`
+for implicit solvation are also supported.
 
 General ADC(n) calculations
 ---------------------------
@@ -842,8 +843,80 @@ There are different options available to include environment effects in ADC exci
 The schemes can be selected as described for :ref:`polarisable_embedding`. Note that 
 ``environment=True`` does not work for PCM, because the ``"ptss"`` correction is not implemented.
 
-The following example computes the PCM-ADC(2) excited states of para-nitroaniline in water with the
-perturbative linear response scheme.
+.. warning::
+
+   If using the PySCF backend for PCM-ADC calculations, the dielectric constant needs to be adjusted
+   to the value of the optical dielectric constant before performing the ADC calculation.
+   (See example below)
+
+The following two examples compute the PCM-ADC(2) excited states of para-nitroaniline in water with
+a) the linear response scheme (PySCF backend) and
+b) the perturbative linear response scheme (Psi4 backend).
+
+.. code-block:: python
+
+   import adcc
+   from pyscf import gto, scf
+   from pyscf.solvent import ddCOSMO
+
+   # Run PCM SCF in pyscf
+   mol = gto.M(
+      atom="""
+      C          8.64800        1.07500       -1.71100
+      C          9.48200        0.43000       -0.80800
+      C          9.39600        0.75000        0.53800
+      C          8.48200        1.71200        0.99500
+      C          7.65300        2.34500        0.05500
+      C          7.73200        2.03100       -1.29200
+      H         10.18300       -0.30900       -1.16400
+      H         10.04400        0.25200        1.24700
+      H          6.94200        3.08900        0.38900
+      H          7.09700        2.51500       -2.01800
+      N          8.40100        2.02500        2.32500
+      N          8.73400        0.74100       -3.12900
+      O          7.98000        1.33100       -3.90100
+      O          9.55600       -0.11000       -3.46600
+      H          7.74900        2.71100        2.65200
+      H          8.99100        1.57500        2.99500
+      """,
+      basis='sto-3g', symmetry=0, charge=0, spin=0,
+      unit="Angström"
+   )
+
+   mf = ddCOSMO(scf.RHF(mol))
+   # set the dielectric constant
+   mf.with_solvent.eps = 78.36
+   mf.conv_tol = 1e-8
+   mf.conv_tol_grad = 1e-7
+   mf.max_cycle = 150
+
+   mf.kernel()
+
+   # Run ADC2 with with linear-response for the solvent
+
+   # first the dielectric constant needs to be adjusted to
+   # the corresponding optical dielectric constant.
+   # This is also necessary for the ptlr scheme.
+   mf.with_solvent.eps = 1.78
+   state = adcc.adc2(mf, n_singlets=5, conv_tol=1e-6,
+                     environment="linear_response")
+   print(state.describe())
+
+
+The output of the last line is::
+
+   +--------------------------------------------------------------+
+   | adc2                                    singlet ,  converged |
+   +--------------------------------------------------------------+
+   |  #        excitation energy     osc str    |v1|^2    |v2|^2  |
+   |          (au)           (eV)                                 |
+   |  0     0.1423507       3.87356   0.0000    0.9185   0.08152  |
+   |  1     0.1546455      4.208118   0.0000    0.9188   0.08123  |
+   |  2     0.2080581      5.661548   0.0304    0.8979    0.1021  |
+   |  3      0.225907      6.147241   0.6892    0.9019   0.09807  |
+   |  4     0.2676251      7.282449   0.1102    0.9014   0.09864  |
+   +--------------------------------------------------------------+
+
 
 .. code-block:: python
 
@@ -901,7 +974,22 @@ perturbative linear response scheme.
    print(state.describe())
 
 
+The last line gives::
 
+   +--------------------------------------------------------------+
+   | adc2                                    singlet ,  converged |
+   +--------------------------------------------------------------+
+   |  #        excitation energy     osc str    |v1|^2    |v2|^2  |
+   |          (au)           (eV)                                 |
+   |  0     0.1427662      3.884866   0.0000    0.9187   0.08134  |
+   |  1       0.15495      4.216404   0.0000     0.919   0.08096  |
+   |  2     0.2082633      5.667132   0.0238    0.8977    0.1023  |
+   |  3     0.2258655      6.146114   0.6134    0.9001   0.09993  |
+   |  4      0.270592      7.363184   0.0774    0.8997    0.1003  |
+   +--------------------------------------------------------------+
+   |  Excitation energy includes these corrections:               |
+   |    - pcm_ptlr_correction                                     |
+   +--------------------------------------------------------------+
 
 Further examples and details
 ----------------------------

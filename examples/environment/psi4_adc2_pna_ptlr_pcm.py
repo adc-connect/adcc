@@ -52,6 +52,5 @@ psi4.core.set_num_threads(4)
 scf_e, wfn = psi4.energy('scf', return_wfn=True)
 
 # Run an ADC2 calculation with ptLR
-state = adcc.adc2(wfn, n_singlets=5, conv_tol=1e-8,
-                  environment="ptlr")
+state = adcc.adc2(wfn, n_singlets=5, conv_tol=1e-8, environment="ptlr")
 print(state.describe())

@@ -14,8 +14,7 @@ from adcc.exceptions import InputError
 from adcc.adc_pp.environment import block_ph_ph_0_pcm
 from adcc.AdcMatrix import AdcExtraTerm
 
-backends = [b for b in adcc.backends.available()
-            if b in ["psi4", "pyscf"]]
+backends = [b for b in adcc.backends.available() if b in ["psi4", "pyscf"]]
 basissets = ["sto-3g", "ccpvdz"]
 methods = ["adc1"]
 
