@@ -27,7 +27,7 @@ to be applied. Arbitrary combinations of these variants,
 e.g. applying **both** CVS and FC approximations are supported as well.
 See :ref:`frozen-spaces` for details.
 
-Calculations with :ref:`environment` are also supported.
+Calculations with :ref:`polarisable_embedding` and :ref:`polarisable_continuum` are also supported.
 
 General ADC(n) calculations
 ---------------------------
@@ -691,7 +691,7 @@ In fact all three may be combined jointly with any available ADC method,
 if desired.
 
 
-.. _`environment`:
+.. _`polarisable_embedding`:
 
 Polarisable Embedding
 ---------------------
@@ -809,6 +809,98 @@ The output of the last two lines is::
    |  3     0.2378427       6.47203   0.6266    0.9034   0.09663  |
    |  4     0.2698889       7.34405   0.0805     0.898     0.102  |
    +--------------------------------------------------------------+
+
+
+.. _`polarisable_continuum`:
+
+Polarisable Continuum Model
+---------------------------
+
+ADC calculations with the Polarisable Continuum Model (PCM) are supported
+for the PySCF and Psi4 backends. In the PCM model, the surrouding solvent molecules, 
+the environment, are modeled implicitly as dielectric polarisable continuum that is
+represented as discrete charge distribution on the suface of the cavity the solute is
+embedded in. The solvent-solute interaction is modeled as the purely electrostatic
+interaction between the solute's charge density and the discrete charge distribution.
+A general introduction of PCM is e.g. available in the review :cite:`Mennucci2012`.
+
+There are different options available to include environment effects in ADC excited state calculations:
+
++------------------------------------------------+-----------------------+--------------------------------------------------------------------------+-----------------------------------------------+
+| Name                                           | ``environment``       | Comment                                                                  | Reference                                     |
++================================================+=======================+==========================================================================+===============================================+
+| coupling through reference state only          | ``False``             | only couple via the 'solvated' orbitals of the SCF reference state,      | :cite:`Cammi2005`                             |
+|                                                |                       | no additional matrix terms or corrections are used                       |                                               |
++------------------------------------------------+-----------------------+--------------------------------------------------------------------------+-----------------------------------------------+
+| perturbative linear-response correction (ptLR) | ``"ptlr"``            | computed from the transition density between                             | :cite:`Cammi2005`                             |
+|                                                |                       | the ground and excited state                                             |                                               |
++------------------------------------------------+-----------------------+--------------------------------------------------------------------------+-----------------------------------------------+
+| linear response iterative coupling             | ``"linear_response"`` | iterative coupling to the solvent via a CIS-like coupling density,       | :cite:`Lunkenheimer2013`, :cite:`Marefat2018` |
+|                                                |                       | the additional term is added to the ADC matrix                           |                                               |
++------------------------------------------------+-----------------------+--------------------------------------------------------------------------+-----------------------------------------------+
+
+The schemes can be selected as described for :ref:`polarisable_embedding`. Note that 
+``environment=True`` does not work for PCM, because the ``"ptss"`` correction is not implemented.
+
+The following example computes the PCM-ADC(2) excited states of para-nitroaniline in water with the
+perturbative linear response scheme.
+
+.. code-block:: python
+
+   import adcc
+   import psi4
+
+   # Run a PCM HF calculation with Psi4
+   mol = psi4.geometry("""
+      C          8.64800        1.07500       -1.71100
+      C          9.48200        0.43000       -0.80800
+      C          9.39600        0.75000        0.53800
+      C          8.48200        1.71200        0.99500
+      C          7.65300        2.34500        0.05500
+      C          7.73200        2.03100       -1.29200
+      H         10.18300       -0.30900       -1.16400
+      H         10.04400        0.25200        1.24700
+      H          6.94200        3.08900        0.38900
+      H          7.09700        2.51500       -2.01800
+      N          8.40100        2.02500        2.32500
+      N          8.73400        0.74100       -3.12900
+      O          7.98000        1.33100       -3.90100
+      O          9.55600       -0.11000       -3.46600
+      H          7.74900        2.71100        2.65200
+      H          8.99100        1.57500        2.99500
+      symmetry c1
+      """)
+
+   psi4.set_options({
+      'basis': "sto-3g",
+      'scf_type': 'pk',
+      'e_convergence': 1e-10,
+      'd_convergence': 1e-10,
+      'pcm': True,
+      'pcm_scf_type': "total"
+   })
+   psi4.pcm_helper("""
+      Units = AU
+      Cavity {
+         Type = GePol
+      }
+      Medium {
+         SolverType = IEFPCM
+         Solvent = Water
+         Nonequilibrium = True
+      }
+   """)
+
+   psi4.core.set_num_threads(4)
+
+   scf_e, wfn = psi4.energy('scf', return_wfn=True)
+
+   # Run a ADC2 calculation with ptLR
+   state = adcc.adc2(wfn, n_singlets=5, conv_tol=1e-8,
+                     environment="ptlr")
+   print(state.describe())
+
+
 
 
 Further examples and details
