@@ -64,6 +64,16 @@ class Psi4OperatorIntegralProvider:
                 )[1]
             return pe_induction_elec_ao
 
+    @property
+    def pcm_potential_elec(self):
+        if self.wfn.PCM_enabled():
+            def pcm_potential_elec_ao(dm):
+                return psi4.core.PCM.compute_V(
+                    self.wfn.get_PCM(),
+                    psi4.core.Matrix.from_array(dm.to_ndarray())
+                )
+            return pcm_potential_elec_ao
+
 
 class Psi4EriBuilder(EriBuilder):
     def __init__(self, wfn, n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted):
@@ -106,6 +116,14 @@ class Psi4HFProvider(HartreeFockProvider):
                                                         elec_only=elec_only)
         return e_pe
 
+    def pcm_energy(self, dm):
+        psi_dm = psi4.core.Matrix.from_array(dm.to_ndarray())
+        # computes the Fock matrix contribution.
+        # By contraction with the tdm, the electronic energy contribution is
+        # calculated.
+        V_pcm = psi4.core.PCM.compute_V(self.wfn.get_PCM(), psi_dm).to_array()
+        return np.einsum("uv,uv->", dm.to_ndarray(), V_pcm)
+
     @property
     def excitation_energy_corrections(self):
         ret = []
@@ -121,6 +139,12 @@ class Psi4HFProvider(HartreeFockProvider):
                                             elec_only=True)
             )
             ret.extend([ptlr, ptss])
+        if self.environment == "pcm":
+            ptlr = EnergyCorrection(
+                "pcm_ptlr_correction",
+                lambda view: self.pcm_energy(view.transition_dm_ao)
+            )
+            ret.extend([ptlr])
         return {ec.name: ec for ec in ret}
 
     @property
@@ -128,6 +152,8 @@ class Psi4HFProvider(HartreeFockProvider):
         ret = None
         if hasattr(self.wfn, "pe_state"):
             ret = "pe"
+        elif self.wfn.PCM_enabled():
+            ret = "pcm"
         return ret
 
     def get_backend(self):
@@ -245,6 +271,8 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
         "ccpvdz": "cc-pvdz",
     }
 
+    # needed for PE and PCM tests
+    psi4.core.clean_options()
     mol = psi4.geometry(f"""
         {charge} {multiplicity}
         {xyz}

@@ -258,3 +258,5 @@ def read_yaml_data(fname):
 
 qchem_data = read_yaml_data("qchem_dump.yml")
 tmole_data = read_yaml_data("tmole_dump.yml")
+psi4_data = read_yaml_data("psi4_dump.yml")
+pyscf_data = read_yaml_data("pyscf_dump.yml")

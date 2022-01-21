@@ -69,7 +69,7 @@ __all__ = ["run_adc", "InputError", "AdcMatrix", "AdcBlockView",
 __version__ = "0.15.11"
 __license__ = "GPL v3"
 __url__ = "https://adc-connect.org"
-__authors__ = ["Michael F. Herbst", "Maximilian Scheurer"]
+__authors__ = ["Michael F. Herbst", "Maximilian Scheurer", "Jonas Leitner"]
 __email__ = "developers@adc-connect.org"
 __contributors__ = []
 
