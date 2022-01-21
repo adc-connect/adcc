@@ -16,7 +16,7 @@ from adcc.AdcMatrix import AdcExtraTerm
 
 backends = [b for b in adcc.backends.available()
             if b in ["psi4", "pyscf"]]
-basissets = ["sto-3g", "cc-pvdz"]
+basissets = ["sto-3g", "ccpvdz"]
 methods = ["adc1"]
 
 
