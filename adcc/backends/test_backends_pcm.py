@@ -15,7 +15,7 @@ from adcc.adc_pp.environment import block_ph_ph_0_pcm
 from adcc.AdcMatrix import AdcExtraTerm
 
 backends = [b for b in adcc.backends.available() if b in ["psi4", "pyscf"]]
-basissets = ["sto-3g", "ccpvdz"]
+basissets = ["sto3g", "ccpvdz"]
 methods = ["adc1"]
 
 
@@ -119,6 +119,10 @@ def remove_cavity_psi4():
 
 def psi4_run_pcm_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
                     conv_tol_grad=1e-11, max_iter=150, pcm_options=None):
+    basis_map = {
+        "sto3g": "sto-3g",
+        "ccpvdz": "cc-pvdz",
+    }
     import psi4
 
     # needed for PE and PCM tests
@@ -134,7 +138,7 @@ def psi4_run_pcm_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
 
     psi4.core.be_quiet()
     psi4.set_options({
-        'basis': basis,
+        'basis': basis_map[basis],
         'scf_type': 'pk',
         'e_convergence': conv_tol,
         'd_convergence': conv_tol_grad,
