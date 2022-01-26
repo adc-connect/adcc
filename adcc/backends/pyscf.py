@@ -59,12 +59,10 @@ class PyScfOperatorIntegralProvider:
 
     @property
     def pe_induction_elec(self):
-        if not hasattr(self.scfres, "with_solvent"):
-            raise ValueError("Cannot compute PE induction for "
-                             "an SCF state without solvent.")
-        if not hasattr(self.scfres.with_solvent, "cppe_state"):
-            raise ValueError("Cannot compute PE induction for "
-                             "an SCF state without PE.")
+        try:
+            self.scfres.with_solvent.cppe_state
+        except AttributeError:
+            return None
 
         def pe_induction_elec_ao(dm):
             return self.scfres.with_solvent._exec_cppe(
@@ -75,11 +73,9 @@ class PyScfOperatorIntegralProvider:
     @property
     def pcm_potential_elec(self):
         if not hasattr(self.scfres, "with_solvent"):
-            raise ValueError("Cannot compute PCM potential for "
-                             "an SCF state without solvent.")
+            return None
         if not isinstance(self.scfres.with_solvent, ddcosmo.DDCOSMO):
-            raise ValueError("Cannot compute PCM potential for "
-                             "an SCF state without PCM.")
+            return None
 
         def pcm_potential_elec_ao(dm):
             # Since eps (dielectric constant) is the only solvent parameter
