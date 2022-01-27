@@ -6,6 +6,13 @@ import yaml
 import os
 
 
+basis_remap = {
+    "sto3g": "sto-3g",
+    "def2tzvp": "def2-tzvp",
+    "ccpvdz": "cc-pvdz",
+}
+
+
 def run_psi4_tdscf(xyz, basis, charge=0, multiplicity=1,
                    conv_tol=1e-12, conv_tol_grad=1e-11, max_iter=150,
                    pcm_options=None):
@@ -16,7 +23,7 @@ def run_psi4_tdscf(xyz, basis, charge=0, multiplicity=1,
         symmetry c1
     """)
     psi4.set_options({
-        'basis': basis,
+        'basis': basis_remap[basis],
         'scf_type': "pK",
         'e_convergence': conv_tol,
         'd_convergence': conv_tol_grad,
@@ -91,7 +98,7 @@ def dump_results(molecule, basis, **kwargs):
 
 
 def main():
-    basis_set = ["sto-3g", "cc-pvdz"]
+    basis_set = ["sto3g", "ccpvdz"]
     pcm_options = {"weight": 0.3, "pcm_method": "IEFPCM", "neq": True,
                    "solvent": "Water"}
     psi4_results = {}

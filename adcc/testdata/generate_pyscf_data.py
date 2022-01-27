@@ -77,7 +77,7 @@ def dump_results(molecule, basis, **kwargs):
 
 
 def main():
-    basis_set = ["sto-3g", "cc-pvdz"]
+    basis_set = ["sto3g", "ccpvdz"]
     pcm_options = {"eps": 78.3553, "eps_opt": 1.78}
     pyscf_results = {}
     for basis in basis_set:

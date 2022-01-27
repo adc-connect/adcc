@@ -30,7 +30,7 @@ from ..exceptions import InvalidReference
 from ..ExcitedStates import EnergyCorrection
 
 from pyscf import ao2mo, gto, scf
-from pyscf.solvent import pol_embed, ddcosmo
+from pyscf.solvent import ddcosmo
 
 
 class PyScfOperatorIntegralProvider:
@@ -59,28 +59,34 @@ class PyScfOperatorIntegralProvider:
 
     @property
     def pe_induction_elec(self):
-        if hasattr(self.scfres, "with_solvent"):
-            if isinstance(self.scfres.with_solvent, pol_embed.PolEmbed):
-                def pe_induction_elec_ao(dm):
-                    return self.scfres.with_solvent._exec_cppe(
-                        dm.to_ndarray(), elec_only=True
-                    )[1]
-                return pe_induction_elec_ao
+        try:
+            self.scfres.with_solvent.cppe_state
+        except AttributeError:
+            return None
+
+        def pe_induction_elec_ao(dm):
+            return self.scfres.with_solvent._exec_cppe(
+                dm.to_ndarray(), elec_only=True
+            )[1]
+        return pe_induction_elec_ao
 
     @property
     def pcm_potential_elec(self):
-        if hasattr(self.scfres, "with_solvent"):
-            if isinstance(self.scfres.with_solvent, ddcosmo.DDCOSMO):
-                def pcm_potential_elec_ao(dm):
-                    # Since eps (dielectric constant) is the only solvent parameter
-                    # in pyscf and there is no solvent data available in the
-                    # program, the user needs to adjust scfres.with_solvent.eps
-                    # manually to the optical dielectric constant (if non
-                    # equilibrium solvation is desired).
-                    return self.scfres.with_solvent._B_dot_x(
-                        dm.to_ndarray()
-                    )
-                return pcm_potential_elec_ao
+        if not hasattr(self.scfres, "with_solvent"):
+            return None
+        if not isinstance(self.scfres.with_solvent, ddcosmo.DDCOSMO):
+            return None
+
+        def pcm_potential_elec_ao(dm):
+            # Since eps (dielectric constant) is the only solvent parameter
+            # in pyscf and there is no solvent data available in the
+            # program, the user needs to adjust scfres.with_solvent.eps
+            # manually to the optical dielectric constant (if non
+            # equilibrium solvation is desired).
+            return self.scfres.with_solvent._B_dot_x(
+                dm.to_ndarray()
+            )
+        return pcm_potential_elec_ao
 
 
 # TODO: refactor ERI builder to be more general
@@ -177,7 +183,7 @@ class PyScfHFProvider(HartreeFockProvider):
     def environment(self):
         ret = None
         if hasattr(self.scfres, "with_solvent"):
-            if isinstance(self.scfres.with_solvent, pol_embed.PolEmbed):
+            if hasattr(self.scfres.with_solvent, "cppe_state"):
                 ret = "pe"
             elif isinstance(self.scfres.with_solvent, ddcosmo.DDCOSMO):
                 ret = "pcm"

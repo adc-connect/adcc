@@ -162,6 +162,9 @@ class OperatorIntegrals:
         is_symmetric : bool, optional
             if the imported operator is symmetric, by default True
         """
+        if not callable(ao_callback):
+            raise TypeError("ao_callback must be callable.")
+
         def process_operator(dm, callback=ao_callback, is_symmetric=is_symmetric):
             dm_ao = sum(dm.to_ao_basis())
             v_ao = callback(dm_ao)
