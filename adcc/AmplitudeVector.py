@@ -230,10 +230,10 @@ class AmplitudeVector(dict):
 class QED_AmplitudeVector: # it seems all operations, without further specification of pphh part, are unused and can be omitted
 
     #def __init__(self, gs=None, elec=None, gs1=None, phot=None):
-    def __init__(self, gs=None, ph=None, pphh=None, gs1=None, ph1=None, pphh1=None, gs2=None, ph2=None, pphh2=None): # also write this class with *args, **kwargs
+    def __init__(self, ph=None, pphh=None, gs1=None, ph1=None, pphh1=None, gs2=None, ph2=None, pphh2=None): # also write this class with *args, **kwargs
         # maybe do this via a list e.g. ph=[ph, ph1, ph2]
 
-        self.gs = gs_vec(gs)
+        #self.gs = gs_vec(0)#gs)
         self.gs1 = gs_vec(gs1)   
 
         self.gs2 = gs_vec(gs2)     
@@ -298,11 +298,11 @@ class QED_AmplitudeVector: # it seems all operations, without further specificat
     def dot(self, invec):
         def dot_(self, invec):
             if "pphh" in self.elec.blocks_ph:
-                return (self.gs * invec.gs + self.elec.ph.dot(invec.elec.ph) + self.elec.pphh.dot(invec.elec.pphh)
+                return (self.elec.ph.dot(invec.elec.ph) + self.elec.pphh.dot(invec.elec.pphh)
                         + self.gs1 * invec.gs1 + self.phot.ph.dot(invec.phot.ph) + self.phot.pphh.dot(invec.phot.pphh)
                         + self.gs2 * invec.gs2 + self.phot2.ph.dot(invec.phot2.ph) + self.phot2.pphh.dot(invec.phot2.pphh))
             else:
-                return (self.gs * invec.gs + self.elec.ph.dot(invec.elec.ph) + self.gs1 * invec.gs1 + self.phot.ph.dot(invec.phot.ph)
+                return (self.elec.ph.dot(invec.elec.ph) + self.gs1 * invec.gs1 + self.phot.ph.dot(invec.phot.ph)
                         + self.gs2 * invec.gs2 + self.phot2.ph.dot(invec.phot2.ph) )
         if isinstance(invec, list):
             list_temp = [] # to return a np.array with different dimensions (gs,ph,pphh), we have to fill them into a list and then convert the list ???
@@ -342,22 +342,23 @@ class QED_AmplitudeVector: # it seems all operations, without further specificat
 
     def __sub__(self, invec):
         if isinstance(invec, QED_AmplitudeVector):
-            return QED_AmplitudeVector(self.gs - invec.gs, self.elec.__sub__(invec.elec), self.gs1 - invec.gs1, self.phot.__sub__(invec.phot))
+            return QED_AmplitudeVector(self.elec.__sub__(invec.elec), self.gs1 - invec.gs1, self.phot.__sub__(invec.phot),
+                                         self.gs2 - invec.gs2, self.phot2.__sub__(invec.phot2))
         elif isinstance(invec, (float, int)): # for diagonal - shift in preconditioner.py
             # this results in a scalar in block pphh, if pphh is originally None
             if "pphh" in self.elec.blocks_ph:
-                return QED_AmplitudeVector(gs=self.gs - invec, ph=self.elec.ph.__sub__(invec), pphh=self.elec.pphh.__sub__(invec),
+                return QED_AmplitudeVector(ph=self.elec.ph.__sub__(invec), pphh=self.elec.pphh.__sub__(invec),
                                              gs1=self.gs1 - invec, ph1=self.phot.ph.__sub__(invec), pphh1=self.phot.pphh.__sub__(invec),
                                              gs2=self.gs2 - invec, ph2=self.phot2.ph.__sub__(invec), pphh2=self.phot2.pphh.__sub__(invec))
             else:
-                return QED_AmplitudeVector(gs=self.gs - invec, ph=self.elec.ph.__sub__(invec), gs1=self.gs1 - invec, ph1=self.phot.ph.__sub__(invec),
+                return QED_AmplitudeVector(ph=self.elec.ph.__sub__(invec), gs1=self.gs1 - invec, ph1=self.phot.ph.__sub__(invec),
                                             gs2=self.gs2 - invec, ph2=self.phot2.ph.__sub__(invec))
 
     def __mul__(self, scalar):
-        return QED_AmplitudeVector(scalar * self.gs, self.elec.__mul__(scalar), scalar * self.gs1, self.phot.__mul__(scalar))
+        return QED_AmplitudeVector(self.elec.__mul__(scalar), scalar * self.gs1, self.phot.__mul__(scalar))
 
     def __rmul__(self, scalar):
-        return QED_AmplitudeVector(scalar * self.gs, self.elec.__rmul__(scalar), scalar * self.gs1, self.phot.__rmul__(scalar))
+        return QED_AmplitudeVector(self.elec.__rmul__(scalar), scalar * self.gs1, self.phot.__rmul__(scalar))
 
     def __truediv__(self, other):
         #print(type(self.elec), self.elec.ph)
@@ -368,42 +369,42 @@ class QED_AmplitudeVector: # it seems all operations, without further specificat
         #else:
         if isinstance(other, QED_AmplitudeVector):
             if "pphh" in self.elec.blocks_ph:
-                return QED_AmplitudeVector(gs=self.gs / other.gs, ph=self.elec.ph.__truediv__(other.elec.ph), pphh=self.elec.pphh.__truediv__(other.elec.pphh),
+                return QED_AmplitudeVector(ph=self.elec.ph.__truediv__(other.elec.ph), pphh=self.elec.pphh.__truediv__(other.elec.pphh),
                                             gs1=self.gs1 / other.gs1, ph1=self.phot.ph.__truediv__(other.phot.ph), pphh1=self.phot.pphh.__truediv__(other.phot.pphh),
                                             gs2=self.gs2 / other.gs2, ph2=self.phot2.ph.__truediv__(other.phot2.ph), pphh2=self.phot2.pphh.__truediv__(other.phot2.pphh))
             else:
-                return QED_AmplitudeVector(gs=self.gs / other.gs, ph=self.elec.ph.__truediv__(other.elec.ph), 
+                return QED_AmplitudeVector(ph=self.elec.ph.__truediv__(other.elec.ph), 
                                             gs1=self.gs1 / other.gs1, ph1=self.phot.ph.__truediv__(other.phot.ph),
                                             gs2=self.gs2 / other.gs2, ph2=self.phot2.ph.__truediv__(other.phot2.ph))
         elif isinstance(other, (float, int)):
             #return QED_AmplitudeVector(gs=self.elec0 / other, ph=self.elec.ph.__truediv__(other), 
             #                            gs1=self.phot0 / other, ph1=self.phot.ph.__truediv__(other))
             if "pphh" in self.elec.blocks_ph:
-                return QED_AmplitudeVector(gs=self.gs / other, ph=self.elec.ph.__truediv__(other), pphh=self.elec.pphh.__truediv__(other),
+                return QED_AmplitudeVector(ph=self.elec.ph.__truediv__(other), pphh=self.elec.pphh.__truediv__(other),
                                             gs1=self.gs1 / other, ph1=self.phot.ph.__truediv__(other), pphh1=self.phot.pphh.__truediv__(other),
                                             gs2=self.gs2 / other, ph2=self.phot2.ph.__truediv__(other), pphh2=self.phot2.pphh.__truediv__(other))
             else:
-                return QED_AmplitudeVector(gs=self.gs / other, ph=self.elec.ph.__truediv__(other), 
+                return QED_AmplitudeVector(ph=self.elec.ph.__truediv__(other), 
                                             gs1=self.gs1 / other, ph1=self.phot.ph.__truediv__(other),
                                             gs2=self.gs2 / other, ph2=self.phot2.ph.__truediv__(other))
 
     def zeros_like(self):
         if "pphh" in self.elec.blocks_ph:
-            return QED_AmplitudeVector(0, self.elec.zeros_like(), 0, self.phot.zeros_like(), 0, self.phot2.zeros_like())
+            return QED_AmplitudeVector(self.elec.zeros_like(), gs_vec(0), self.phot.zeros_like(), gs_vec(0), self.phot2.zeros_like())
         else:
-            return QED_AmplitudeVector(0, self.elec.zeros_like(), 0, self.phot.zeros_like())
+            return QED_AmplitudeVector(self.elec.zeros_like(), 0, self.phot.zeros_like())
 
     def empty_like(self):
         if "pphh" in self.elec.blocks_ph:
-            return QED_AmplitudeVector([], self.elec.empty_like(), [], self.phot.empty_like(), [], self.phot2.empty_like())
+            return QED_AmplitudeVector(self.elec.empty_like(), [], self.phot.empty_like(), [], self.phot2.empty_like())
         else:
-            return QED_AmplitudeVector([], self.elec.empty_like(), [], self.phot.empty_like())
+            return QED_AmplitudeVector(self.elec.empty_like(), [], self.phot.empty_like())
 
     def copy(self):
-        if "pphh" in self.elec.blocks_ph:
-            return QED_AmplitudeVector(self.gs, self.elec.copy(), self.gs1, self.phot.copy(), self.gs2, self.phot2.copy())
-        else:
-            return QED_AmplitudeVector(self.gs, self.elec.copy(), self.gs1, self.phot.copy())
+        #if "pphh" in self.elec.blocks_ph:
+        return QED_AmplitudeVector(self.elec.copy(), gs_vec(self.gs1.as_float()), self.phot.copy(), gs_vec(self.gs2.as_float()), self.phot2.copy())
+        #else:
+        #    return QED_AmplitudeVector(self.elec.copy(), self.gs1, self.phot.copy(), self.gs2, self.phot2.copy())
 
     def evaluate(self):
         #print(self.elec0, self.elec, self.phot0, self.phot)
@@ -411,7 +412,7 @@ class QED_AmplitudeVector: # it seems all operations, without further specificat
         self.elec.evaluate()
         self.phot.evaluate()
         self.phot2.evaluate()
-        self.gs.as_float()
+        #self.gs.as_float()
         self.gs1.as_float()
         self.gs2.as_float()
         #try:
@@ -466,7 +467,7 @@ class gs_vec:
         else:
             #print("uses add gs_vec", self.val, scalar)
             #print(type(self.val))
-            return self.val + scalar
+            return gs_vec(self.val + scalar)
 
     def __radd__(self, scalar):
         return self.__add__(scalar)

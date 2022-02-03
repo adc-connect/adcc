@@ -1448,10 +1448,10 @@ def block_ph_ph_2_couple(hf, mp, intermediates): #one could cash some of the ter
                 #- 0.5 * sqrt(omega / 2) * einsum("kc,kc->", mp.qed_t0(b.ov), mp.qed_t1_df(b.ov)) * ampl.ph
                                         #- einsum("ka,kb,ib->ia", mp.qed_t0(b.ov), mp.qed_t1_df(b.ov), ampl.ph) # could be cashed
                                         #- einsum("ic,jc,ja->ia", mp.qed_t0(b.ov), mp.qed_t1_df(b.ov), ampl.ph)) # could be cashed
-                - sqrt(omega / 2) * (#einsum("kc,kjic,ja->ia", mp.qed_t1(b.ov), hf.ooov, ampl.ph) # could be cashed
+                #- sqrt(omega / 2) * (#einsum("kc,kjic,ja->ia", mp.qed_t1(b.ov), hf.ooov, ampl.ph) # could be cashed
                                     #+ einsum("kc,kacb,ib->ia", mp.qed_t1(b.ov), hf.ovvv, ampl.ph) # could be cashed
-                                    + einsum("ka,jkib,jb->ia", mp.qed_t1(b.ov), hf.ooov, ampl.ph)
-                                    + einsum("ic,jabc,jb->ia", mp.qed_t1(b.ov), hf.ovvv, ampl.ph))
+                                    #+ einsum("ka,jkib,jb->ia", mp.qed_t1(b.ov), hf.ooov, ampl.ph) # electric H_1 term
+                                    #+ einsum("ic,jabc,jb->ia", mp.qed_t1(b.ov), hf.ovvv, ampl.ph)) # electric H_1 term
                                     #+ einsum("ijab,jb->ia",
                                     #couple_inter,
                                     #einsum("ka,jkib->ijab", mp.qed_t1(b.ov), hf.ooov)
@@ -1509,10 +1509,10 @@ def block_ph_ph_2_phot_couple(hf, mp, intermediates): #one could cash some of th
                 #- 0.5 * sqrt(omega / 2) * einsum("kc,kc->", mp.qed_t0(b.ov), mp.qed_t1_df(b.ov)) * ampl.ph1
                                         #- einsum("kb,ka,ib->ia", mp.qed_t0(b.ov), mp.qed_t1_df(b.ov), ampl.ph1)
                                         #- einsum("jc,ic,ja->ia", mp.qed_t0(b.ov), mp.qed_t1_df(b.ov), ampl.ph1))
-                - sqrt(omega / 2) * (#einsum("kc,kijc,ja->ia", mp.qed_t1(b.ov), hf.ooov, ampl.ph1)
+                #- sqrt(omega / 2) * (#einsum("kc,kijc,ja->ia", mp.qed_t1(b.ov), hf.ooov, ampl.ph1)
                                     #+ einsum("kc,kbca,ib->ia", mp.qed_t1(b.ov), hf.ovvv, ampl.ph1)
-                                    + einsum("kb,ikja,jb->ia", mp.qed_t1(b.ov), hf.ooov, ampl.ph1)
-                                    + einsum("jc,ibac,jb->ia", mp.qed_t1(b.ov), hf.ovvv, ampl.ph1))
+                                    #+ einsum("kb,ikja,jb->ia", mp.qed_t1(b.ov), hf.ooov, ampl.ph1) # electric H_1 term
+                                    #+ einsum("jc,ibac,jb->ia", mp.qed_t1(b.ov), hf.ovvv, ampl.ph1)) # electric H_1 term
                                     #+ einsum("ijab,jb->ia",
                                     #einsum("kb,ikja->ijab", mp.qed_t1(b.ov), hf.ooov)
                                     #+ einsum("jc,ibac->ijab", mp.qed_t1(b.ov), hf.ovvv),
@@ -1732,10 +1732,10 @@ def block_ph_ph_2_couple_inner(hf, mp, intermediates): #one could cash some of t
                 #- 0.5 * sqrt(omega) * einsum("kc,kc->", mp.qed_t0(b.ov), mp.qed_t1_df(b.ov)) * ampl.ph1
                                         #- einsum("ka,kb,ib->ia", mp.qed_t0(b.ov), mp.qed_t1_df(b.ov), ampl.ph) # could be cashed
                                         #- einsum("ic,jc,ja->ia", mp.qed_t0(b.ov), mp.qed_t1_df(b.ov), ampl.ph)) # could be cashed
-                - sqrt(omega) * (#einsum("kc,kjic,ja->ia", mp.qed_t1(b.ov), hf.ooov, ampl.ph) # could be cashed
+                #- sqrt(omega) * (#einsum("kc,kjic,ja->ia", mp.qed_t1(b.ov), hf.ooov, ampl.ph) # could be cashed
                                     #+ einsum("kc,kacb,ib->ia", mp.qed_t1(b.ov), hf.ovvv, ampl.ph) # could be cashed
-                                    + einsum("ka,jkib,jb->ia", mp.qed_t1(b.ov), hf.ooov, ampl.ph1)
-                                    + einsum("ic,jabc,jb->ia", mp.qed_t1(b.ov), hf.ovvv, ampl.ph1))
+                                    #+ einsum("ka,jkib,jb->ia", mp.qed_t1(b.ov), hf.ooov, ampl.ph1) # electric H_1 term
+                                    #+ einsum("ic,jabc,jb->ia", mp.qed_t1(b.ov), hf.ovvv, ampl.ph1)) # electric H_1 term
                 #+ gs_part * ampl.gs1.as_float()
                 #+ (sqrt(2) - 1) * 0.5 * sqrt(omega/2) * einsum("jb,jb->", mp.qed_t0(b.ov), ampl.ph1) * mp.qed_t1_df(b.ov)
                 #- (sqrt(2) - 1) * 0.5 * sqrt(omega/2) * (
@@ -1788,10 +1788,10 @@ def block_ph_ph_2_phot_couple_inner(hf, mp, intermediates): #one could cash some
                 #- 0.5 * sqrt(omega / 2) * einsum("kc,kc->", mp.qed_t0(b.ov), mp.qed_t1_df(b.ov)) * ampl.ph2
                                         #- einsum("kb,ka,ib->ia", mp.qed_t0(b.ov), mp.qed_t1_df(b.ov), ampl.ph1)
                                         #- einsum("jc,ic,ja->ia", mp.qed_t0(b.ov), mp.qed_t1_df(b.ov), ampl.ph1))
-                - sqrt(omega) * (#einsum("kc,kijc,ja->ia", mp.qed_t1(b.ov), hf.ooov, ampl.ph1)
+                #- sqrt(omega) * (#einsum("kc,kijc,ja->ia", mp.qed_t1(b.ov), hf.ooov, ampl.ph1)
                                     #+ einsum("kc,kbca,ib->ia", mp.qed_t1(b.ov), hf.ovvv, ampl.ph1)
-                                    + einsum("kb,ikja,jb->ia", mp.qed_t1(b.ov), hf.ooov, ampl.ph2)
-                                    + einsum("jc,ibac,jb->ia", mp.qed_t1(b.ov), hf.ovvv, ampl.ph2))
+                                    #+ einsum("kb,ikja,jb->ia", mp.qed_t1(b.ov), hf.ooov, ampl.ph2) # electric H_1 term
+                                    #+ einsum("jc,ibac,jb->ia", mp.qed_t1(b.ov), hf.ovvv, ampl.ph2)) # electric H_1 term
                 #- sqrt(omega / 2) * einsum("kc,ikac->ia", mp.qed_t1(b.ov), hf.oovv) * ampl.gs1.as_float() #gs_ph part
                 + gs_part * ampl.gs2.as_float()
                 #+ sqrt(omega / 2) * ( #gs_ph part

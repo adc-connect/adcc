@@ -128,14 +128,14 @@ def lincomb(coefficients, tensors, evaluate=False):
         # give .elec and .phot to lin_comb_strict via AmplitudeVector instance
         # then coeff[0] * .gs[from first tensor/vector] + coeff[1] * .gs[from second tensor/vector] + ...
         # same for .gs1
-        gs_part = 0
+        #gs_part = 0
         gs1_part = 0
         gs2_part = 0
         phot2_list = []
         elec_list = []
         phot_list = []
         for coeff_ind, ten in enumerate(tensors):
-            gs_part += coefficients[coeff_ind] * ten.gs
+            #gs_part += coefficients[coeff_ind] * ten.gs
             gs1_part += coefficients[coeff_ind] * ten.gs1
             gs2_part += coefficients[coeff_ind] * ten.gs2
             elec_list.append(ten.elec)
@@ -151,10 +151,10 @@ def lincomb(coefficients, tensors, evaluate=False):
         #        gs2_part += coefficients[coeff_ind] * ten.gs2
         #        phot2_list.append(ten.phot2)
         #    phot2_part = lincomb(coefficients, phot2_list, evaluate=evaluate)
-            return QED_AmplitudeVector(gs_part, elec_part.ph, elec_part.pphh, gs1_part, phot_part.ph, phot_part.pphh,
+            return QED_AmplitudeVector(elec_part.ph, elec_part.pphh, gs1_part, phot_part.ph, phot_part.pphh,
                                         gs2_part, phot2_part.ph, phot2_part.pphh)
         else:
-            return QED_AmplitudeVector(gs_part, elec_part.ph, None, gs1_part, phot_part.ph, None, gs2_part, phot2_part.ph, None)
+            return QED_AmplitudeVector(elec_part.ph, None, gs1_part, phot_part.ph, None, gs2_part, phot2_part.ph, None)
         #print(qed_vec.ph)
         #print(coefficients)
         #print(tensors[0][block])

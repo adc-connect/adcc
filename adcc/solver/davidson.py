@@ -22,6 +22,7 @@
 ## ---------------------------------------------------------------------
 import sys
 import warnings
+from attr import has
 import numpy as np
 from numpy.lib.function_base import blackman
 import scipy.linalg as la
@@ -167,6 +168,46 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
 
         assert len(SS) >= n_block
         assert len(SS) <= max_subspace
+        """
+        if len(SS) == max_subspace:
+            print("subspace reached full matrix dimension -> starting to diagonalize full matrix from already obtained SS")
+            # just copy paste of some of the davidson functions
+            converged = False
+            while not converged:
+                Ass = Ass_cont[:n_ss_vec, :n_ss_vec]  # Increase the work view size
+                for i in range(n_block):
+                    #print(type(Ax[-n_block + i]), Ax[-n_block + i])
+                    #print(type(SS), SS)
+                    Ass[:, -n_block + i] = Ax[-n_block + i] @ SS
+                Ass[-n_block:, :] = np.transpose(Ass[:, -n_block:])
+
+                rvals, rvecs = la.eigh(Ass)
+
+                def form_residual(rval, rvec):
+                    coefficients = np.hstack((rvec, -rval * rvec))
+                    return lincomb(coefficients, Ax + SS, evaluate=True)
+
+                residuals = [form_residual(rvals[i], v)
+                            for i, v in enumerate(np.transpose(rvecs))]
+                residual_norms = np.array([r @ r for r in residuals])
+
+                residual_converged = residual_norms < 1e-9 # same as for davidson
+                converged = np.all(residual_converged)
+
+                if converged:
+                    print("converged eigenvalues = ", rvals)
+                    break
+                else:
+                    print("intermediate eigenvalues = ", rvals)
+                    #for i in np.arange(max_subspace):
+                        #print("rvec ", rvecs[i])
+                        #print("residual", residuals[i])
+                    new_guesses_tmp = [rvecs[i] - residuals[i] for i in np.arange(max_subspace)]
+                    new_guesses = [vec / np.sqrt(vec @ vec) for vec in new_guesses_tmp]
+                    Ax = evaluate(matrix @ new_guesses)
+        """
+
+
 
         # Project A onto the subspace, keeping in mind
         # that the values Ass[:-n_block, :-n_block] are already valid,
@@ -183,11 +224,18 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         # and the associated ritz vector as well as residual
         with state.timer.record("rayleigh_ritz"):
             if Ass.shape == (n_block, n_block):
+                #print("davidson eigh", la.eigh(Ass)[0])
                 rvals, rvecs = la.eigh(Ass)  # Do a full diagonalisation
+                print("davidson eigh", rvals)
+                eigenvecs = [lincomb(v, SS, evaluate=True)
+                                  for v in np.transpose(rvecs)]
+            for eigv in eigenvecs:
+                print("norm of eigenvector", np.sqrt(eigv @ eigv))
             else:
                 # TODO Maybe play with precision a little here
                 # TODO Maybe use previous vectors somehow
                 v0 = None
+                print("davidson eigh", la.eigh(Ass)[0])
                 rvals, rvecs = sla.eigsh(Ass, k=n_block, which=which, v0=v0)
 
         with state.timer.record("residuals"):
@@ -447,7 +495,10 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
         # max_subspace = max(6 * n_ep, 20, 5 * len(guesses)) # original
         print("for qed-adc we use double the standard max_subspace, due to convergence problems,"
         "if the doubly excited photonic space contributes to the states")
-        max_subspace = max(12 * n_ep, 20, 10 * len(guesses))
+        if hasattr(matrix.reference_state, "full_diagonalization"):
+            max_subspace = len(guesses)
+        else:
+            max_subspace = max(12 * n_ep, 20, 10 * len(guesses))
 
     def convergence_test(state):
         state.residuals_converged = state.residual_norms < conv_tol
