@@ -84,9 +84,11 @@ def tbar_TD_oovv_adc3(exci, g1a_adc0):
     tbarD.evaluate()
     ret = 2.0 * 4.0 * (
         + 2.0 * einsum("ikac,jckb->ijab", tbarD, hf.ovov)
-        - 1.0 * einsum("ijcd,abcd->ijab", tbarD, hf.vvvv)
-        - 1.0 * einsum("klab,ijkl->ijab", tbarD, hf.oooo)
     ).antisymmetrise(0, 1).antisymmetrise(2, 3)
+    ret += 2.0 * (
+        - 1.0 * einsum("ijcd,cdab->ijab", tbarD, hf.vvvv)
+        - 1.0 * einsum("klab,klij->ijab", tbarD, hf.oooo)
+    )
     return ret
 
 
@@ -160,28 +162,30 @@ def t2bar_oovv_adc3(exci, g1a_adc0, g2a_adc1):
     # TODO: intermediate x_lc t_jlbd?
     ttilde4 = (
         + 1.0 * 2.0 * (
-            - 2.0 * einsum("jkab,ickd,cd->ijab", t2, hf.ovov, g1a_adc0.vv) #1 k
-            - 2.0 * einsum("klab,ickd,jcld->ijab", t2, g2a_adc1.ovov, hf.ovov)
-            + 1.0 * einsum("ic,jkab,ld,lckd->ijab", u.ph, t2, u.ph, hf.ovov)
-            + 1.0 * einsum("jkab,kc,ld,lcid->ijab", t2, u.ph, u.ph, hf.ovov)
+            - 2.0 * einsum("jkab,ickd,cd->ijab", t2, hf.ovov, g1a_adc0.vv) #1 ok
+            # - 2.0 * einsum("klab,ickd,jcld->ijab", t2, g2a_adc1.ovov, hf.ovov)
+            - 2.0 * einsum("ic,kd,jcld,klab->ijab", u.ph, u.ph, hf.ovov, t2) #18 anners
+            + 1.0 * einsum("ic,jkab,ld,lckd->ijab", u.ph, t2, u.ph, hf.ovov) #13 ok
+            + 1.0 * einsum("jkab,kc,ld,lcid->ijab", t2, u.ph, u.ph, hf.ovov) #14 ok
         ).antisymmetrise(0, 1)
         + 1.0 * 2.0 * (
-            - 2.0 * einsum("ijcb,kalc,kl->ijab", t2, hf.ovov, g1a_adc0.oo) #2 k
-            - 2.0 * einsum("ijcd,kalc,kbld->ijab", t2, g2a_adc1.ovov, hf.ovov)
-            + 1.0 * einsum("ka,ijbc,ld,kdlc->ijab", u.ph, t2, u.ph, hf.ovov)
-            + 1.0 * einsum("ijbc,kc,ld,kdla->ijab", t2, u.ph, u.ph, hf.ovov)
+            - 2.0 * einsum("ijcb,kalc,kl->ijab", t2, hf.ovov, g1a_adc0.oo) #2 ok
+            # - 2.0 * einsum("ijcd,kalc,kbld->ijab", t2, g2a_adc1.ovov, hf.ovov)
+            - 2.0 * einsum("ka,lc,kbld,ijcd->ijab", u.ph, u.ph, hf.ovov, t2) # 17 anners
+            + 1.0 * einsum("ka,ijbc,ld,kdlc->ijab", u.ph, t2, u.ph, hf.ovov) #11 ok
+            + 1.0 * einsum("ijbc,kc,ld,kdla->ijab", t2, u.ph, u.ph, hf.ovov) #12 ok
         ).antisymmetrise(2, 3)
         + 1.0 * 4.0 * (
-            + 1.0 * einsum("ac,jdkc,ikbd->ijab", g1a_adc0.vv, hf.ovov, t2) #3 k
-            - 1.0 * einsum("jckb,ikad,cd->ijab", hf.ovov, t2, g1a_adc0.vv) #4 k
-            - 1.0 * einsum("ik,kclb,jlac->ijab", g1a_adc0.oo, hf.ovov, t2) #5 k
-            + 1.0 * einsum("jckb,ilac,lk->ijab", hf.ovov, t2, g1a_adc0.oo) #6 k
-            - 1.0 * einsum("ic,jckb,ka->ijab", u.ph, hf.ovov, rx)
-            - 1.0 * einsum("jb,kc,lcid,klad->ijab", u.ph, u.ph, hf.ovov, t2)
-            - 1.0 * einsum("ka,jckb,ic->ijab", u.ph, hf.ovov, rx)
-            - 1.0 * einsum("jb,kc,lakd,ilcd->ijab", u.ph, u.ph, hf.ovov, t2)
-            + 2.0 * einsum("ka,ickd,ld,jlbc->ijab", u.ph, hf.ovov, u.ph, t2)
-            + 2.0 * einsum("ic,kcla,kd,jlbd->ijab", u.ph, hf.ovov, u.ph, t2)
+            + 1.0 * einsum("ac,jdkc,ikbd->ijab", g1a_adc0.vv, hf.ovov, t2) #3 ok
+            - 1.0 * einsum("jckb,ikad,cd->ijab", hf.ovov, t2, g1a_adc0.vv) #4 ok
+            - 1.0 * einsum("ik,kclb,jlac->ijab", g1a_adc0.oo, hf.ovov, t2) #5 ok
+            + 1.0 * einsum("jckb,ilac,lk->ijab", hf.ovov, t2, g1a_adc0.oo) #6 ok
+            - 1.0 * einsum("ic,jckb,ka->ijab", u.ph, hf.ovov, rx) #7 ok
+            - 1.0 * einsum("jb,kc,lcid,klad->ijab", u.ph, u.ph, hf.ovov, t2) #8 ok
+            - 1.0 * einsum("ka,jckb,ic->ijab", u.ph, hf.ovov, rx) #9 ok
+            - 1.0 * einsum("jb,kc,lakd,ilcd->ijab", u.ph, u.ph, hf.ovov, t2) #10 ok
+            + 2.0 * einsum("ka,ickd,ld,jlbc->ijab", u.ph, hf.ovov, u.ph, t2) #15 ok
+            + 2.0 * einsum("ic,kcla,kd,jlbd->ijab", u.ph, hf.ovov, u.ph, t2) #15 ok
         ).antisymmetrise(0, 1).antisymmetrise(2, 3)
     )
     ttilde4.evaluate()
