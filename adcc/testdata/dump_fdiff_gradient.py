@@ -133,10 +133,11 @@ def main():
         "adc1",
         "adc2",
         "adc2x",
+        "adc3",
         "cvs-adc0",
         "cvs-adc1",
         "cvs-adc2",
-        "cvs-adc2x",  # TODO: broken
+        # "cvs-adc2x",  # TODO: broken
     ]
     molnames = [
         "h2o",

@@ -71,10 +71,13 @@ class TestNuclearGradients(unittest.TestCase):
                 # check energy computed with unrelaxed densities
                 gs_corr = 0.0
                 if ee.method.level > 0:
-                    gs_corr = ee.ground_state.energy_correction(ee.method.level)
+                    # compute the ground state contribution
+                    # to the correlation energy
+                    gs_energy = ee.ground_state.energy(ee.method.level)
+                    gs_corr = gs_energy - ee.reference_state.energy_scf
                 assert_allclose(
                     gs_corr + ee.excitation_energy,
-                    grad._energy, atol=1e-8
+                    grad._energy, atol=1e-10
                 )
                 assert_allclose(
                     grad_fdiff[ee.index], grad.total, atol=1e-7,
