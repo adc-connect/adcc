@@ -9,8 +9,8 @@ adcc: Seamlessly connect your program to ADC
    :target: https://github.com/adc-connect/adcc/actions
 .. image:: https://img.shields.io/pypi/v/adcc
    :target: https://pypi.org/project/adcc
-.. image:: https://anaconda.org/adcc/adcc/badges/version.svg
-   :target: https://anaconda.org/adcc/adcc
+.. image:: https://anaconda.org/conda-forge/adcc/badges/version.svg
+   :target: https://anaconda.org/conda-forge/adcc
 .. image:: https://img.shields.io/pypi/l/adcc
    :target: https://github.com/adc-connect/adcc/blob/master/LICENSE
 

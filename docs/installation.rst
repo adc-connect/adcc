@@ -30,14 +30,20 @@ Using conda (on Debian/Ubuntu and macOS)
 ........................................
 
 The `conda <https://conda.io>`_ binary packages can be installed
-using the `adcc <https://anaconda.org/adcc/>`_ channel:
+using the `conda-forge <https://anaconda.org/conda-forge/>`_ channel:
 
 .. code-block:: shell
 
-   conda install -c adcc adcc
+   conda install -c conda-forge adcc
 
 This should work on a recent Debian, Ubuntu or macOS
 and with python 3.7, 3.8 or 3.9.
+
+.. warning::
+
+   As of version 0.15.13, adcc is deployed via conda-forge. Before that,
+   we maintained our own Anaconda channel, which is now discontinued. Thus,
+   we highly recommend you use the conda-forge version from now on.
 
 
 .. _install-pip-debian:
