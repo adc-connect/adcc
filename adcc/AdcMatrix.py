@@ -46,9 +46,9 @@ class AdcMatrix(AdcMatrixlike):
     default_block_orders = {
         #             ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),
         #"adc0":  dict(gs_gs=0, gs_ph=0, ph_gs=0, ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
-        "adc0":  dict(ph_gs=0, ph_ph=0, pphh_gs=None, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
-        "adc1":  dict(ph_gs=1, ph_ph=1, pphh_gs=None, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
-        "adc2":  dict(ph_gs=2, ph_ph=2, pphh_gs=1   , ph_pphh=1,    pphh_ph=1,    pphh_pphh=0),     # noqa: E501
+        "adc0":  dict(ph_gs=0, ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
+        "adc1":  dict(ph_gs=1, ph_ph=1, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
+        "adc2":  dict(ph_gs=2, ph_ph=2, ph_pphh=1,    pphh_ph=1,    pphh_pphh=0),     # noqa: E501
         "adc2x": dict(ph_ph=2, ph_pphh=1,    pphh_ph=1,    pphh_pphh=1),     # noqa: E501
         "adc3":  dict(ph_ph=3, ph_pphh=2,    pphh_ph=2,    pphh_pphh=1),     # noqa: E501
     }
@@ -90,6 +90,11 @@ class AdcMatrix(AdcMatrixlike):
 
         if method.base_method.name == "adc2x" or method.base_method.name == "adc3":
             NotImplementedError("Neither adc2x nor adc3 are implemented for QED-ADC")
+
+        if method.base_method.name == "adc2" and hasattr(self.reference_state, "first_order_coupling"):
+            # this way we only need to include the separate case in the ph_ph=1 blocks, 
+            # and the 4 non-zero coupling blocks
+            self.default_block_orders["adc2"] = dict(ph_gs=1, ph_ph=1, ph_pphh=1,    pphh_ph=1,    pphh_pphh=0)
 
 
         self.intermediates = intermediates
@@ -494,16 +499,19 @@ class AdcMatrix(AdcMatrixlike):
         #print("shape of phot couple inner", self.phot_couple_inner.matvec(v), type(self.phot_couple_inner.matvec(v)))
 
         
-
+        
         phot_part = self.elec_couple.matvec(v) + self.phot.matvec(v) + self.phot_couple_inner.matvec(v)
 
-        if "pphh" in phot_part.blocks_ph:
+        if "pphh" in phot_part.blocks_ph and not hasattr(self.reference_state, "first_order_coupling"):
             phot_couple_edge_with_doubles = AmplitudeVector(ph=self.phot_couple_edge.matvec(v), pphh=v.pphh.zeros_like())
             elec_couple_edge_with_doubles = AmplitudeVector(ph=self.elec_couple_edge.matvec(v), pphh=v.pphh.zeros_like())
             elec_part = self.elec.matvec(v) + self.phot_couple.matvec(v) + phot_couple_edge_with_doubles #self.phot_couple_edge.matvec(v)
             #phot_part = self.elec_couple.matvec(v) + self.phot.matvec(v) + self.phot_couple_inner.matvec(v)
             #phot2_part = self.elec_couple_edge.matvec(v) + self.elec_couple_inner.matvec(v) + self.phot2.matvec(v)
             phot2_part = elec_couple_edge_with_doubles + self.elec_couple_inner.matvec(v) + self.phot2.matvec(v)
+        elif "pphh" in phot_part.blocks_ph and hasattr(self.reference_state, "first_order_coupling"):
+            elec_part = self.elec.matvec(v) + self.phot_couple.matvec(v)
+            phot2_part = self.elec_couple_inner.matvec(v) + self.phot2.matvec(v)
         else:
             #phot_couple_edge_with_singles = AmplitudeVector(ph=v.ph.zeros_like())
             #elec_couple_edge_with_singles = AmplitudeVector(ph=v.ph.zeros_like())
@@ -544,10 +552,12 @@ class AdcMatrix(AdcMatrixlike):
                     pass
                 elif block.endswith("phot_couple_inner"):
                     #print("phot_couple_inner")
-                    gs1_part += self.blocks_ph[block].apply(v)
+                    #gs1_part += self.blocks_ph[block].apply(v)
+                    pass
                 elif block.endswith("couple_edge"):
                     #print("couple_edge")
-                    gs2_part += self.blocks_ph[block].apply(v)
+                    #gs2_part += self.blocks_ph[block].apply(v)
+                    pass
                 elif block.endswith("couple_inner"):
                     #print("couple_inner")
                     gs2_part += self.blocks_ph[block].apply(v)
