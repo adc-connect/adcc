@@ -790,7 +790,6 @@ def block_ph_ph_1_phot2(hf, mp, intermediates):
         d_vv.set_mask("aa", 1.0)
 
         if hasattr(hf, "first_order_coupling"):
-            print("correct block chosen")
             i1 = intermediates.adc2_i1
             i2 = intermediates.adc2_i2
             term_t2_eri = intermediates.term_t2_eri
