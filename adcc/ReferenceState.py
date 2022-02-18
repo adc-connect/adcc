@@ -228,7 +228,7 @@ class ReferenceState(libadcc.ReferenceState):
             return ds[block]
 
     def eri(self, block):
-        if hasattr(self, "coupling"):
+        if hasattr(self, "coupling") and not hasattr(self, "first_order_coupling") :
             from . import block as b
             from .functions import einsum
             ds_init = OneParticleOperator(self.mospaces, is_symmetric=True) #Since there is no TwoParticleOperator we do this
