@@ -23,14 +23,13 @@
 [lgtm-img]: https://img.shields.io/lgtm/grade/python/github/adc-connect/adcc?label=code%20quality
 [lgtm-url]: https://lgtm.com/projects/g/adc-connect/adcc/context:python
 
-adcc (**ADC-connect**) is a python-based framework for performing
-the calculation of molecular spectra and electronically excited states
-based upon the algebraic-diagrammatic construction (ADC) approach.
+adcc (**ADC-connect**) is a Python-based framework for calculating molecular spectra and electronically excited states
+with the algebraic-diagrammatic construction (ADC) approach.
 
 Arbitrary host programs may be used to supply a
 self-consistent field (SCF) reference to start off the ADC calculation.
-Currently adcc comes with ready-to-use interfaces to four programs,
-namely pyscf, psi4, VeloxChem or molsturm. Adding other SCF codes or
+Currently adcc comes with ready-to-use interfaces to four programs: PySCF, Psi4, VeloxChem and molsturm.
+Adding other SCF codes or
 starting a calculation from
 statically computed data can be easily achieved.
 
