@@ -962,7 +962,7 @@ def block_ph_pphh_1_couple(hf, mp, intermediates):
     def apply(ampl):
         return AmplitudeVector(ph=(
             # usually this would be factor 4, but additional factor 2, due to normalization of pphh vector
-            -4 * sqrt(omega/2) * einsum("kc,ikac->ia", mp.qed_t1_df(b.ov), ampl.pphh)
+            -2 * sqrt(omega/2) * einsum("kc,ikac->ia", mp.qed_t1_df(b.ov), ampl.pphh)
                             #+ einsum("jb,jiba->ia", mp.qed_t1_df(b.ov), ampl.pphh)
                             #- einsum("kb,ikba->ia", mp.qed_t1_df(b.ov), ampl.pphh)
                             #- einsum("jc,jiac->ia", mp.qed_t1_df(b.ov), ampl.pphh))
@@ -978,7 +978,7 @@ def block_ph_pphh_1_couple_inner(hf, mp, intermediates):
     def apply(ampl):
         return AmplitudeVector(ph=(
             # usually this would be factor 4, but additional factor 2, due to normalization of pphh vector
-            -4 * sqrt(omega) * einsum("kc,ikac->ia", mp.qed_t1_df(b.ov), ampl.pphh1)
+            -2 * sqrt(omega) * einsum("kc,ikac->ia", mp.qed_t1_df(b.ov), ampl.pphh1)
                             #+ einsum("jb,jiba->ia", mp.qed_t1_df(b.ov), ampl.pphh)
                             #- einsum("kb,ikba->ia", mp.qed_t1_df(b.ov), ampl.pphh)
                             #- einsum("jc,jiac->ia", mp.qed_t1_df(b.ov), ampl.pphh))
@@ -1050,7 +1050,7 @@ def block_pphh_ph_1_phot_couple(hf, mp, intermediates):
     def apply(ampl):
         return AmplitudeVector(pphh=(
             # usually this would be factor 4, but additional factor 1/2, due to normalization of pphh vector
-            -4 * sqrt(omega/2) * einsum("jb,ia->ijab", mp.qed_t1_df(b.ov), ampl.ph1).antisymmetrise(0,1).antisymmetrise(2,3) 
+            -2 * sqrt(omega/2) * einsum("jb,ia->ijab", mp.qed_t1_df(b.ov), ampl.ph1).antisymmetrise(0,1).antisymmetrise(2,3) 
                             #+ einsum("ia,jb->ijab", mp.qed_t1_df(b.ov), ampl.ph1)
                             #- einsum("ja,ib->ijab", mp.qed_t1_df(b.ov), ampl.ph1)
                             #- einsum("ib,ja->ijab", mp.qed_t1_df(b.ov), ampl.ph1))
@@ -1066,7 +1066,7 @@ def block_pphh_ph_1_phot_couple_inner(hf, mp, intermediates):
     def apply(ampl):
         return AmplitudeVector(pphh=(
             # usually this would be factor 4, but additional factor 1/2, due to normalization of pphh vector
-            -4 * sqrt(omega) * einsum("jb,ia->ijab", mp.qed_t1_df(b.ov), ampl.ph2).antisymmetrise(0,1).antisymmetrise(2,3) 
+            -2 * sqrt(omega) * einsum("jb,ia->ijab", mp.qed_t1_df(b.ov), ampl.ph2).antisymmetrise(0,1).antisymmetrise(2,3) 
                             #+ einsum("ia,jb->ijab", mp.qed_t1_df(b.ov), ampl.ph1)
                             #- einsum("ja,ib->ijab", mp.qed_t1_df(b.ov), ampl.ph1)
                             #- einsum("ib,ja->ijab", mp.qed_t1_df(b.ov), ampl.ph1))
