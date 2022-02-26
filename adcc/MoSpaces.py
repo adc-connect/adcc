@@ -48,7 +48,14 @@ def split_spaces(spacestr):
         raise ValueError(f"Invalid space string '{spacestr}'.")
 
 
-def expand_spaceargs(hfdata, **spaceargs):
+def expand_spaceargs(hfdata_or_n_orbs, **spaceargs):
+    if isinstance(hfdata_or_n_orbs, tuple):
+        (noa, nob) = hfdata_or_n_orbs
+    else:
+        hfdata = hfdata_or_n_orbs
+        noa = hfdata.n_orbs_alpha
+        nob = hfdata.n_orbs_beta
+
     if isinstance(spaceargs.get("frozen_core", None), bool) \
        and spaceargs.get("frozen_core", None):
         # Determine number of frozen core electrons automatically
@@ -93,7 +100,6 @@ def expand_spaceargs(hfdata, **spaceargs):
                                      "core_orbitals, frozen_virtual is an "
                                      "iterable, all must be.")
 
-    noa = hfdata.n_orbs_alpha
     n_orbs = [0, 0]
     for key in ["frozen_core", "core_orbitals"]:
         if key not in spaceargs or not spaceargs[key]:
@@ -110,7 +116,7 @@ def expand_spaceargs(hfdata, **spaceargs):
     if key in spaceargs and spaceargs[key]:
         spaceargs[key] = np.concatenate((
             expand_to_list(key, spaceargs[key][0], from_max=noa),
-            expand_to_list(key, spaceargs[key][1], from_max=noa) + noa
+            expand_to_list(key, spaceargs[key][1], from_max=nob) + noa
         )).tolist()
     return spaceargs
 

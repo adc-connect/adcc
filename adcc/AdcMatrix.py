@@ -28,6 +28,7 @@ from .LazyMp import LazyMp
 from .adc_pp import matrix as ppmatrix
 from .timings import Timer, timed_member_call
 from .AdcMethod import AdcMethod
+from .functions import ones_like
 from .Intermediates import Intermediates
 from .AmplitudeVector import AmplitudeVector
 
@@ -355,7 +356,7 @@ class AdcMatrix(AdcMatrixlike):
             #      data structure as the AdcMatrix class as these block
             #      are inherently different than an AdcMatrix (no Hermiticity
             #      for example) and basically they only need to support some
-            #      form of matrix-vector product and some stastics like
+            #      form of matrix-vector product and some statistics like
             #      spaces and sizes etc.
         block_orders = {bl: None for bl in self.block_orders.keys()}
         block_orders[block] = self.block_orders[block]
@@ -628,3 +629,90 @@ class AdcMatrixShifted(AdcMatrix):
                                   "shifted ADC matrices.")
         # TODO The way to implement this is to ask the inner matrix to
         #      a block_view and then wrap that in an AdcMatrixShifted.
+
+
+class AdcMatrixProjected(AdcMatrix):
+    def __init__(self, matrix, excitation_blocks, core_orbitals=None,
+                 outer_virtuals=None):
+        """
+        Initialise a projected ADC matrix, i.e. represents the expression
+        ``P @ M @ P`` where ``P`` is a projector onto a subset of
+        ``excitation_blocks``.
+
+        The ``excitation_blocks`` are defined by partitioning the ``o1`` occupied
+        and ``v1`` virtual space of the ``matrix.mospaces`` into a core-occupied
+        ``c``, valence-occupied ``o``, inner-virtual ``v`` and outer-virtual ``w``.
+        This matrix will only keep selected blocks in the amplitudes non-zero, which
+        are selected in the ``excitation_blocks`` list
+        (e.g. ``["cv", "ccvv", "ocvv"]``).
+
+        For details on the option how to select the spaces, see the documentation
+        in :py:`adcc.ReferenceState.__init__` (``outer_virtuals`` follows the same
+        rules as ``frozen_virtuals``).
+
+        Parameters
+        ----------
+        matrix : AdcMatrix
+            Matrix which is projected
+        excitation_blocks : list
+            Excitation blocks to keep in the Amplitudes.
+        core_orbitals : int or list or tuple, optional
+            The orbitals to be put into the ``c`` core space.
+        outer_virtuals : int or list or tuple, optional
+            The virtuals to be put into the ``w`` outer-virtual space.
+        """
+        from .projection import Projector, SubspacePartitioning
+
+        for sp in excitation_blocks:
+            if not any(len(sp) == len(ax_sp)
+                       for ax_sp in matrix.axis_spaces.values()):
+                raise ValueError(f"Invalid partition block {sp}.")
+
+        super().__init__(matrix.method, matrix.ground_state,
+                         block_orders=matrix.block_orders,
+                         intermediates=matrix.intermediates)
+        partitioning = SubspacePartitioning(matrix.mospaces, core_orbitals,
+                                            outer_virtuals)
+
+        projectors = {}
+        for block in matrix.axis_spaces.keys():
+            block_partitions = [sp for sp in excitation_blocks
+                                if len(sp) == len(matrix.axis_spaces[block])]
+            projectors[block] = Projector(matrix.axis_spaces[block],
+                                          partitioning, block_partitions)
+        self.projectors = projectors
+
+    def apply_projection(self, in_ampl):
+        return AmplitudeVector(**{
+            block: self.projectors[block] @ in_ampl[block]
+            for block in in_ampl.keys()
+        })
+
+    def matvec(self, in_ampl):
+        in_proj = self.apply_projection(in_ampl)
+        out = super().matvec(in_proj)
+        return self.apply_projection(out)
+
+    def block_apply(self, block, in_vec):
+        inblock, outblock = block.split("_")
+        in_proj = self.projectors[inblock].apply(in_vec)
+        ret = super().block_apply(block, in_proj)
+        return self.projectors[outblock].apply(ret)
+
+    def diagonal(self):
+        blocks = {}
+        for (block, diagblock) in super().diagonal().items():
+            # On the diagonal don't set the ignored amplitudes to zero,
+            # but instead set them to a very large value to (a) avoid these being
+            # selected for the initial guess and (b) ensure the preconditioning
+            # naturally reduces components along this direction.
+            P = self.projectors[block]
+            one = ones_like(diagblock)
+            blocks[block] = P @ diagblock + 100000 * (one - P @ one)
+        return AmplitudeVector(**blocks)
+
+    def block_view(self, block):
+        raise NotImplementedError("Block-view not yet implemented for "
+                                  "projected ADC matrices.")
+        # TODO The way to implement this is to ask the inner matrix to
+        #      a block_view and then wrap that in an AdcMatrixProjected.
