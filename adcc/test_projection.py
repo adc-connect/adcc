@@ -25,11 +25,15 @@ import adcc
 import unittest
 import itertools
 
-from adcc.projection import Projector, SubspacePartitioning
+from adcc.projection import (Projector, SubspacePartitioning,
+                             transfer_cvs_to_full)
 from adcc.testdata.cache import cache
 
 import numpy as np
 
+from numpy.testing import assert_allclose
+
+from .misc import expand_test_templates
 from .HfCounterData import HfCounterData
 
 
@@ -195,5 +199,45 @@ class TestProjector(unittest.TestCase):
     def test_h2o_sto3g_triplet(self):
         self.base_test("h2o_sto3g", "triplet", n_core=1, n_virt=1)
 
-    def test_cn_sto3g_triplet(self):
+    def test_cn_sto3g(self):
         self.base_test("cn_sto3g", "state", n_core=2, n_virt=1)
+
+    def test_h2o_def2tzvp_singlet(self):
+        self.base_test("h2o_def2tzvp", "singlet", n_core=2, n_virt=5)
+
+    def test_h2o_def2tzvp_triplet(self):
+        self.base_test("h2o_def2tzvp", "triplet", n_core=1, n_virt=3)
+
+    def test_cn_ccpvdz(self):
+        self.base_test("cn_ccpvdz", "state", n_core=2, n_virt=4)
+
+
+testcases = [("h2o_sto3g", "singlet"), ("h2o_sto3g", "triplet"),
+             ("cn_sto3g", "any"), ("h2o_def2tzvp", "singlet"),
+             ("h2o_def2tzvp", "triplet"), ("cn_ccpvdz", "any")]
+
+
+@expand_test_templates(testcases)
+class TestCvsTransfer(unittest.TestCase):
+    def template_high_level(self, case, kind):
+        kindkey = kind if kind != "any" else "state"
+        print(cache.adc_states[case]["cvs-adc2x"].keys())
+        state_cvs = cache.adc_states[case]["cvs-adc2x"][kindkey]
+        matrix = adcc.AdcMatrix("adc2x", cache.refstate[case])
+
+        orth = np.array([[v @ w for v in state_cvs.excitation_vector]
+                         for w in state_cvs.excitation_vector])
+        fullvecs = transfer_cvs_to_full(state_cvs, matrix)
+        orthfull = np.array([[v @ w for v in fullvecs] for w in fullvecs])
+        assert_allclose(orth, orthfull, atol=1e-16)
+
+    def template_random(self, case, kind):
+        kindkey = kind if kind != "any" else "state"
+        state_cvs = cache.adc_states[case]["cvs-adc2x"][kindkey]
+        vectors = [v.copy().set_random() for v in state_cvs.excitation_vector]
+        matrix = adcc.AdcMatrix("adc2x", cache.refstate[case])
+
+        orth = np.array([[v @ w for v in vectors] for w in vectors])
+        fullvecs = transfer_cvs_to_full(state_cvs.matrix, matrix, vectors, kind)
+        orthfull = np.array([[v @ w for v in fullvecs] for w in fullvecs])
+        assert_allclose(orth, orthfull, atol=1e-16)

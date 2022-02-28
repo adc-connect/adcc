@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 import adcc
+import adcc.projection
 
 from pyscf import gto, scf
 from adcc.AdcMatrix import AdcMatrixProjected
@@ -39,3 +40,7 @@ print(state_proj.describe())
 # For comparison we also run a standard CVS-ADC(2)-x calculation:
 state_cvs = adcc.cvs_adc2x(scfres, n_singlets=7, conv_tol=1e-8, core_orbitals=1)
 print(state_cvs.describe())
+
+# Note that this calculation could also be used as an initial guess:
+guesses = adcc.projection.transfer_cvs_to_full(state_cvs, pmatrix)
+state_proj2 = adcc.run_adc(pmatrix, n_singlets=7, conv_tol=1e-8, guesses=guesses)
