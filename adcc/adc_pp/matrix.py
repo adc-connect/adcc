@@ -546,7 +546,7 @@ def block_ph_ph_1(hf, mp, intermediates):
             term_t2_eri = intermediates.term_t2_eri
             diagonal = AmplitudeVector(ph=(
                 + direct_sum("a-i->ia", i1.diagonal(), i2.diagonal())
-                - einsum("IaIa->Ia", hf.ovov + hf.qed_D_object(b.ovov))
+                - einsum("IaIa->Ia", hf.ovov)
                 - einsum("ikac,ikac->ia", mp.t2oo, hf.oovv)
             ))
 
@@ -554,7 +554,7 @@ def block_ph_ph_1(hf, mp, intermediates):
                 return AmplitudeVector(ph=(
                     + einsum("ib,ab->ia", ampl.ph, i1)
                     - einsum("ij,ja->ia", i2, ampl.ph)
-                    - einsum("jaib,jb->ia", hf.ovov + hf.qed_D_object(b.ovov), ampl.ph)    # 1
+                    - einsum("jaib,jb->ia", hf.ovov, ampl.ph)    # 1
                     - 0.5 * einsum("ikac,kc->ia", term_t2_eri, ampl.ph)  # 2
                 ))
         else:
@@ -642,7 +642,7 @@ def block_ph_ph_1_phot(hf, mp, intermediates):
             term_t2_eri = intermediates.term_t2_eri
             diagonal = AmplitudeVector(ph=(
                 + direct_sum("a-i->ia", i1.diagonal(), i2.diagonal())
-                - einsum("IaIa->Ia", hf.ovov + hf.qed_D_object(b.ovov))
+                - einsum("IaIa->Ia", hf.ovov)
                 - einsum("ikac,ikac->ia", mp.t2oo, hf.oovv)
                 + einsum("ii,aa->ia", d_oo, d_vv) * omega
             ))
@@ -651,7 +651,7 @@ def block_ph_ph_1_phot(hf, mp, intermediates):
                 return AmplitudeVector(ph=(
                     + einsum("ib,ab->ia", ampl.ph1, i1)
                     - einsum("ij,ja->ia", i2, ampl.ph1)
-                    - einsum("jaib,jb->ia", hf.ovov + hf.qed_D_object(b.ovov), ampl.ph1)    # 1
+                    - einsum("jaib,jb->ia", hf.ovov, ampl.ph1)    # 1
                     - 0.5 * einsum("ikac,kc->ia", term_t2_eri, ampl.ph1)  # 2
                     + omega * ampl.ph1
                 ))
@@ -795,7 +795,7 @@ def block_ph_ph_1_phot2(hf, mp, intermediates):
             term_t2_eri = intermediates.term_t2_eri
             diagonal = AmplitudeVector(ph=(
                 + direct_sum("a-i->ia", i1.diagonal(), i2.diagonal())
-                - einsum("IaIa->Ia", hf.ovov + hf.qed_D_object(b.ovov))
+                - einsum("IaIa->Ia", hf.ovov)
                 - einsum("ikac,ikac->ia", mp.t2oo, hf.oovv)
                 + einsum("ii,aa->ia", d_oo, d_vv) * omega * 2
             ))
@@ -804,7 +804,7 @@ def block_ph_ph_1_phot2(hf, mp, intermediates):
                 return AmplitudeVector(ph=(
                     + einsum("ib,ab->ia", ampl.ph2, i1)
                     - einsum("ij,ja->ia", i2, ampl.ph2)
-                    - einsum("jaib,jb->ia", hf.ovov + hf.qed_D_object(b.ovov), ampl.ph2)    # 1
+                    - einsum("jaib,jb->ia", hf.ovov, ampl.ph2)    # 1
                     - 0.5 * einsum("ikac,kc->ia", term_t2_eri, ampl.ph2)  # 2
                     + 2 * omega * ampl.ph2
                 ))
@@ -962,7 +962,7 @@ def block_ph_pphh_1_couple(hf, mp, intermediates):
     def apply(ampl):
         return AmplitudeVector(ph=(
             # usually this would be factor 4, but additional factor 2, due to normalization of pphh vector
-            -2 * sqrt(omega/2) * einsum("kc,ikac->ia", mp.qed_t1_df(b.ov), ampl.pphh)
+            2 * sqrt(omega/2) * einsum("kc,ikac->ia", mp.qed_t1_df(b.ov), ampl.pphh)
                             #+ einsum("jb,jiba->ia", mp.qed_t1_df(b.ov), ampl.pphh)
                             #- einsum("kb,ikba->ia", mp.qed_t1_df(b.ov), ampl.pphh)
                             #- einsum("jc,jiac->ia", mp.qed_t1_df(b.ov), ampl.pphh))
@@ -978,7 +978,7 @@ def block_ph_pphh_1_couple_inner(hf, mp, intermediates):
     def apply(ampl):
         return AmplitudeVector(ph=(
             # usually this would be factor 4, but additional factor 2, due to normalization of pphh vector
-            -2 * sqrt(omega) * einsum("kc,ikac->ia", mp.qed_t1_df(b.ov), ampl.pphh1)
+            2 * sqrt(omega) * einsum("kc,ikac->ia", mp.qed_t1_df(b.ov), ampl.pphh1)
                             #+ einsum("jb,jiba->ia", mp.qed_t1_df(b.ov), ampl.pphh)
                             #- einsum("kb,ikba->ia", mp.qed_t1_df(b.ov), ampl.pphh)
                             #- einsum("jc,jiac->ia", mp.qed_t1_df(b.ov), ampl.pphh))
@@ -1050,7 +1050,7 @@ def block_pphh_ph_1_phot_couple(hf, mp, intermediates):
     def apply(ampl):
         return AmplitudeVector(pphh=(
             # usually this would be factor 4, but additional factor 1/2, due to normalization of pphh vector
-            -2 * sqrt(omega/2) * einsum("jb,ia->ijab", mp.qed_t1_df(b.ov), ampl.ph1).antisymmetrise(0,1).antisymmetrise(2,3) 
+            2 * sqrt(omega/2) * einsum("jb,ia->ijab", mp.qed_t1_df(b.ov), ampl.ph1).antisymmetrise(0,1).antisymmetrise(2,3) 
                             #+ einsum("ia,jb->ijab", mp.qed_t1_df(b.ov), ampl.ph1)
                             #- einsum("ja,ib->ijab", mp.qed_t1_df(b.ov), ampl.ph1)
                             #- einsum("ib,ja->ijab", mp.qed_t1_df(b.ov), ampl.ph1))
@@ -1066,7 +1066,7 @@ def block_pphh_ph_1_phot_couple_inner(hf, mp, intermediates):
     def apply(ampl):
         return AmplitudeVector(pphh=(
             # usually this would be factor 4, but additional factor 1/2, due to normalization of pphh vector
-            -2 * sqrt(omega) * einsum("jb,ia->ijab", mp.qed_t1_df(b.ov), ampl.ph2).antisymmetrise(0,1).antisymmetrise(2,3) 
+            2 * sqrt(omega) * einsum("jb,ia->ijab", mp.qed_t1_df(b.ov), ampl.ph2).antisymmetrise(0,1).antisymmetrise(2,3) 
                             #+ einsum("ia,jb->ijab", mp.qed_t1_df(b.ov), ampl.ph1)
                             #- einsum("ja,ib->ijab", mp.qed_t1_df(b.ov), ampl.ph1)
                             #- einsum("ib,ja->ijab", mp.qed_t1_df(b.ov), ampl.ph1))
