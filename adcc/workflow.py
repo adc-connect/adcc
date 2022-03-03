@@ -490,9 +490,10 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
     guesses_phot = obtain_guesses_by_inspection(matrix.phot, n_guesses, kind, n_guesses_doubles)
     guesses_phot2 = obtain_guesses_by_inspection(matrix.phot2, n_guesses, kind, n_guesses_doubles)
     n_guess = len(guesses_elec)
-    for i in np.arange(n_guess):
-        guesses_phot[i] *= 1#0.02
-        guesses_phot2[i] *= 1#0.001
+    if not hasattr(matrix.reference_state, "full_diagonalization"):
+        for i in np.arange(n_guess):
+            guesses_phot[i] *= 0.02
+            guesses_phot2[i] *= 0.001
     #print("this is from obtain_guess_qed from workflow: guesses_elec[0].pphh", guesses_elec[0].pphh)
     if n_guess != len(guesses_phot):
         raise InputError("amount of guesses for electronic and photonic must be equal, but are"
@@ -550,8 +551,11 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
             #tmp_elec_vec *= 1
             #tmp_elec_vec.ph *= 5
             #tmp_elec_vec.pphh *= 5
-            vec = QED_AmplitudeVector(tmp_elec_vec.ph, tmp_elec_vec.pphh, 0, tmp_phot_vec.ph, tmp_phot_vec.pphh,
+            if contains_doubles:
+                vec = QED_AmplitudeVector(tmp_elec_vec.ph, tmp_elec_vec.pphh, 0, tmp_phot_vec.ph, tmp_phot_vec.pphh,
                                         0, tmp_phot2_vec.ph, tmp_phot2_vec.pphh)
+            else:
+                vec = QED_AmplitudeVector(tmp_elec_vec.ph, None, 0, tmp_phot_vec.ph, None, 0, tmp_phot2_vec.ph, None)
             full_guess.append(vec)
         for qed_vec in guesses_tmp:
             tmp_elec_vec = qed_vec.elec.zeros_like()
@@ -564,7 +568,11 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
             tmp_phot_vec *= 1e+10
             #tmp_elec_vec.ph *= 5
             #tmp_elec_vec.pphh *= 5
-            vec = QED_AmplitudeVector(tmp_elec_vec.ph, tmp_elec_vec.pphh, 0, tmp_phot_vec.ph, tmp_phot_vec.pphh, 0, tmp_phot2_vec.ph, tmp_phot2_vec.pphh)
+            if contains_doubles:
+                vec = QED_AmplitudeVector(tmp_elec_vec.ph, tmp_elec_vec.pphh, 0, tmp_phot_vec.ph, tmp_phot_vec.pphh,
+                                         0, tmp_phot2_vec.ph, tmp_phot2_vec.pphh)
+            else:
+                vec = QED_AmplitudeVector(tmp_elec_vec.ph, None, 0, tmp_phot_vec.ph, None, 0, tmp_phot2_vec.ph, None)
             full_guess.append(vec)
             #tmp_vec = qed_vec.copy()
             #print(type(tmp_vec.phot.ph))
@@ -582,7 +590,11 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
             tmp_phot2_vec *= 1e+10
             #tmp_elec_vec.ph *= 5
             #tmp_elec_vec.pphh *= 5
-            vec = QED_AmplitudeVector(tmp_elec_vec.ph, tmp_elec_vec.pphh, 0, tmp_phot_vec.ph, tmp_phot_vec.pphh, 0, tmp_phot2_vec.ph, tmp_phot2_vec.pphh)
+            if contains_doubles:
+                vec = QED_AmplitudeVector(tmp_elec_vec.ph, tmp_elec_vec.pphh, 0, tmp_phot_vec.ph, tmp_phot_vec.pphh,
+                                         0, tmp_phot2_vec.ph, tmp_phot2_vec.pphh)
+            else:
+                vec = QED_AmplitudeVector(tmp_elec_vec.ph, None, 0, tmp_phot_vec.ph, None, 0, tmp_phot2_vec.ph, None)
             full_guess.append(vec)
             #tmp_vec = qed_vec.copy()
             #print(type(tmp_vec.phot2.ph))
@@ -598,9 +610,14 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
         tmp_phot_vec2 = guesses_tmp[0].phot.zeros_like()
         tmp_phot2_vec2 = guesses_tmp[0].phot2.zeros_like()
 
-        vec = QED_AmplitudeVector(tmp_elec_vec.ph, tmp_elec_vec.pphh, 0, tmp_phot_vec.ph, tmp_phot_vec.pphh, 0, tmp_phot2_vec.ph, tmp_phot2_vec.pphh)
-        vec2 = QED_AmplitudeVector(tmp_elec_vec2.ph, tmp_elec_vec2.pphh, 0, tmp_phot_vec2.ph, tmp_phot_vec2.pphh, 0, tmp_phot2_vec2.ph, tmp_phot2_vec2.pphh)
-
+        if contains_doubles:
+            vec = QED_AmplitudeVector(tmp_elec_vec.ph, tmp_elec_vec.pphh, 0, tmp_phot_vec.ph, tmp_phot_vec.pphh,
+                                     0, tmp_phot2_vec.ph, tmp_phot2_vec.pphh)
+            vec2 = QED_AmplitudeVector(tmp_elec_vec2.ph, tmp_elec_vec2.pphh, 0, tmp_phot_vec2.ph, tmp_phot_vec2.pphh,
+                                     0, tmp_phot2_vec2.ph, tmp_phot2_vec2.pphh)
+        else:
+            vec = QED_AmplitudeVector(tmp_elec_vec.ph, None, 0, tmp_phot_vec.ph, None, 0, tmp_phot2_vec.ph, None)
+            vec2 = QED_AmplitudeVector(tmp_elec_vec2.ph, None, 0, tmp_phot_vec2.ph, None, 0, tmp_phot2_vec2.ph, None)
         #full_guess.append(guesses_tmp[0].copy())
         #full_guess.append(guesses_tmp[1].copy())
 

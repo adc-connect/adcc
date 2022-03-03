@@ -389,16 +389,16 @@ class QED_AmplitudeVector: # it seems all operations, without further specificat
                                             gs2=self.gs2 / other, ph2=self.phot2.ph.__truediv__(other))
 
     def zeros_like(self):
-        if "pphh" in self.elec.blocks_ph:
-            return QED_AmplitudeVector(self.elec.zeros_like(), gs_vec(0), self.phot.zeros_like(), gs_vec(0), self.phot2.zeros_like())
-        else:
-            return QED_AmplitudeVector(self.elec.zeros_like(), 0, self.phot.zeros_like())
+        #if "pphh" in self.elec.blocks_ph:
+        return QED_AmplitudeVector(self.elec.zeros_like(), gs_vec(0), self.phot.zeros_like(), gs_vec(0), self.phot2.zeros_like())
+        #else:
+        #    return QED_AmplitudeVector(self.elec.zeros_like(), gs_vec(0), self.phot.zeros_like())
 
     def empty_like(self):
-        if "pphh" in self.elec.blocks_ph:
-            return QED_AmplitudeVector(self.elec.empty_like(), [], self.phot.empty_like(), [], self.phot2.empty_like())
-        else:
-            return QED_AmplitudeVector(self.elec.empty_like(), [], self.phot.empty_like())
+        #if "pphh" in self.elec.blocks_ph:
+        return QED_AmplitudeVector(self.elec.empty_like(), [], self.phot.empty_like(), [], self.phot2.empty_like())
+        #else:
+        #    return QED_AmplitudeVector(self.elec.empty_like(), [], self.phot.empty_like())
 
     def copy(self):
         #if "pphh" in self.elec.blocks_ph:
