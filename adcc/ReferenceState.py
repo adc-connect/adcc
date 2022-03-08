@@ -210,7 +210,7 @@ class ReferenceState(libadcc.ReferenceState):
             from . import block as b
             from .functions import einsum
             total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
-            omega = ReferenceState.get_qed_omega(self)
+            #omega = ReferenceState.get_qed_omega(self)
             total_dip.oo = ReferenceState.get_qed_total_dip(self, b.oo)
             total_dip.ov = ReferenceState.get_qed_total_dip(self, b.ov)
             total_dip.vv = ReferenceState.get_qed_total_dip(self, b.vv)

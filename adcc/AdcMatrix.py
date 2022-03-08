@@ -509,9 +509,9 @@ class AdcMatrix(AdcMatrixlike):
             #phot_part = self.elec_couple.matvec(v) + self.phot.matvec(v) + self.phot_couple_inner.matvec(v)
             #phot2_part = self.elec_couple_edge.matvec(v) + self.elec_couple_inner.matvec(v) + self.phot2.matvec(v)
             phot2_part = elec_couple_edge_with_doubles + self.elec_couple_inner.matvec(v) + self.phot2.matvec(v)
-        elif "pphh" in phot_part.blocks_ph and hasattr(self.reference_state, "first_order_coupling"):
-            elec_part = self.elec.matvec(v) + self.phot_couple.matvec(v)
-            phot2_part = self.elec_couple_inner.matvec(v) + self.phot2.matvec(v)
+        #elif "pphh" in phot_part.blocks_ph and hasattr(self.reference_state, "first_order_coupling"):
+        #    elec_part = self.elec.matvec(v) + self.phot_couple.matvec(v)
+        #    phot2_part = self.elec_couple_inner.matvec(v) + self.phot2.matvec(v)
         else:
             #phot_couple_edge_with_singles = AmplitudeVector(ph=v.ph.zeros_like())
             #elec_couple_edge_with_singles = AmplitudeVector(ph=v.ph.zeros_like())

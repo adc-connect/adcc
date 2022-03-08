@@ -548,7 +548,7 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
             #print("phot part", type(qed_vec.phot.ph))
             #print("elec copy from ampl vec", type(tmp_elec_vec.ph))
             #print("phot copy from ampl vec", type(tmp_phot_vec.ph))
-            #tmp_elec_vec *= 1
+            tmp_elec_vec *= 10
             #tmp_elec_vec.ph *= 5
             #tmp_elec_vec.pphh *= 5
             if contains_doubles:
@@ -565,7 +565,7 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
             #print("phot part", type(qed_vec.phot.ph))
             #print("elec copy from ampl vec", type(tmp_elec_vec.ph))
             #print("phot copy from ampl vec", type(tmp_phot_vec.ph))
-            tmp_phot_vec *= 1e+10
+            tmp_phot_vec *= 10
             #tmp_elec_vec.ph *= 5
             #tmp_elec_vec.pphh *= 5
             if contains_doubles:
@@ -587,7 +587,7 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
             #print("phot part", type(qed_vec.phot.ph))
             #print("elec copy from ampl vec", type(tmp_elec_vec.ph))
             #print("phot copy from ampl vec", type(tmp_phot_vec.ph))
-            tmp_phot2_vec *= 1e+10
+            tmp_phot2_vec *= 10
             #tmp_elec_vec.ph *= 5
             #tmp_elec_vec.pphh *= 5
             if contains_doubles:

@@ -359,6 +359,23 @@ def diagonal_pphh_pphh_0(hf):
     return AmplitudeVector(pphh=res.symmetrise(2, 3))
 
 
+def diagonal_pphh_pphh_0_qed(hf, n_omega):
+    # Note: adcman similarly does not symmetrise the occupied indices
+    #       (for both CVS and general ADC)
+    omega = float(ReferenceState.get_qed_omega(hf))
+    #d_oo = zeros_like(hf.foo)
+    #d_vv = zeros_like(hf.fvv)
+    #d_oo.set_mask("ii", 1.0)
+    #d_vv.set_mask("aa", 1.0)
+    qed = n_omega * omega
+
+    fCC = hf.fcc if hf.has_core_occupied_space else hf.foo
+    res = direct_sum("-i-J+a+b->iJab",
+                     hf.foo.diagonal() + qed, fCC.diagonal() + qed,
+                     hf.fvv.diagonal() + qed, hf.fvv.diagonal() + qed)
+    return AmplitudeVector(pphh=res.symmetrise(2, 3))
+
+
 def block_pphh_pphh_0(hf, mp, intermediates):
     def apply(ampl):
         return AmplitudeVector(pphh=(
@@ -378,12 +395,14 @@ block_pphh_pphh_0_phot_couple_edge = block_pphh_pphh_0_phot_couple_inner = block
 block_pphh_pphh_0_couple_edge = block_pphh_pphh_0_couple_inner = block_pphh_pphh_0_couple
 
 def block_pphh_pphh_0_phot(hf, mp, intermediates):
+    omega = float(ReferenceState.get_qed_omega(hf))
     def apply(ampl):
         return AmplitudeVector(pphh=(
             + 2 * einsum("ijac,bc->ijab", ampl.pphh1, hf.fvv).antisymmetrise(2, 3)
             - 2 * einsum("ik,kjab->ijab", hf.foo, ampl.pphh1).antisymmetrise(0, 1)
+            + 2 * omega * ampl.pphh1
         ))
-    return AdcBlock(apply, diagonal_pphh_pphh_0(hf))
+    return AdcBlock(apply, diagonal_pphh_pphh_0_qed(hf, 1))
 
 
 def block_cvs_pphh_pphh_0(hf, mp, intermediates):
@@ -397,12 +416,14 @@ def block_cvs_pphh_pphh_0(hf, mp, intermediates):
 
 
 def block_pphh_pphh_0_phot2(hf, mp, intermediates):
+    omega = float(ReferenceState.get_qed_omega(hf))
     def apply(ampl):
         return AmplitudeVector(pphh=(
             + 2 * einsum("ijac,bc->ijab", ampl.pphh2, hf.fvv).antisymmetrise(2, 3)
             - 2 * einsum("ik,kjab->ijab", hf.foo, ampl.pphh2).antisymmetrise(0, 1)
+            + 4 * omega * ampl.pphh2
         ))
-    return AdcBlock(apply, diagonal_pphh_pphh_0(hf))
+    return AdcBlock(apply, diagonal_pphh_pphh_0_qed(hf, 2))
 
 
 #
@@ -734,6 +755,7 @@ def block_ph_ph_1_couple_inner(hf, mp, intermediates):
                 #+ (1 - sqrt(2)) * sqrt(omega / 2) * mp.qed_t1_df(b.ov) * ampl.gs1.as_float() # gs part
             ))
     return AdcBlock(apply, diagonal)
+    
 
 def block_ph_ph_1_phot_couple_inner(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
