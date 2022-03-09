@@ -989,10 +989,10 @@ def block_ph_pphh_1_couple(hf, mp, intermediates):
                             #- einsum("kb,ikba->ia", mp.qed_t1_df(b.ov), ampl.pphh)
                             #- einsum("jc,jiac->ia", mp.qed_t1_df(b.ov), ampl.pphh))
         ))
-    if hasattr(hf, "first_order_coupling"):
-        return AdcBlock(lambda ampl: 0, 0)
-    else:
-        return AdcBlock(apply, 0)
+    #if hasattr(hf, "first_order_coupling"):
+    #    return AdcBlock(lambda ampl: 0, 0)
+    #else:
+    return AdcBlock(apply, 0)
 
 
 def block_ph_pphh_1_couple_inner(hf, mp, intermediates):
@@ -1005,10 +1005,10 @@ def block_ph_pphh_1_couple_inner(hf, mp, intermediates):
                             #- einsum("kb,ikba->ia", mp.qed_t1_df(b.ov), ampl.pphh)
                             #- einsum("jc,jiac->ia", mp.qed_t1_df(b.ov), ampl.pphh))
         ))
-    if hasattr(hf, "first_order_coupling"):
-        return AdcBlock(lambda ampl: 0, 0)
-    else:
-        return AdcBlock(apply, 0)
+    #if hasattr(hf, "first_order_coupling"):
+    #    return AdcBlock(lambda ampl: 0, 0)
+    #else:
+    return AdcBlock(apply, 0)
 
 
 block_pphh_ph_1_couple = block_pphh_ph_1_couple_inner = block_pphh_ph_0_couple
@@ -1077,10 +1077,10 @@ def block_pphh_ph_1_phot_couple(hf, mp, intermediates):
                             #- einsum("ja,ib->ijab", mp.qed_t1_df(b.ov), ampl.ph1)
                             #- einsum("ib,ja->ijab", mp.qed_t1_df(b.ov), ampl.ph1))
         ))
-    if hasattr(hf, "first_order_coupling"):
-        return AdcBlock(lambda ampl: 0, 0)
-    else:
-        return AdcBlock(apply, 0)
+    #if hasattr(hf, "first_order_coupling"):
+    #    return AdcBlock(lambda ampl: 0, 0)
+    #else:
+    return AdcBlock(apply, 0)
 
 
 def block_pphh_ph_1_phot_couple_inner(hf, mp, intermediates):
@@ -1093,10 +1093,10 @@ def block_pphh_ph_1_phot_couple_inner(hf, mp, intermediates):
                             #- einsum("ja,ib->ijab", mp.qed_t1_df(b.ov), ampl.ph1)
                             #- einsum("ib,ja->ijab", mp.qed_t1_df(b.ov), ampl.ph1))
         ))
-    if hasattr(hf, "first_order_coupling"):
-        return AdcBlock(lambda ampl: 0, 0)
-    else:
-        return AdcBlock(apply, 0)
+    #if hasattr(hf, "first_order_coupling"):
+    #    return AdcBlock(lambda ampl: 0, 0)
+    #else:
+    return AdcBlock(apply, 0)
 
 
 """
