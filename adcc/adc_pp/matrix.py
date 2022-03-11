@@ -400,7 +400,7 @@ def block_pphh_pphh_0_phot(hf, mp, intermediates):
         return AmplitudeVector(pphh=(
             + 2 * einsum("ijac,bc->ijab", ampl.pphh1, hf.fvv).antisymmetrise(2, 3)
             - 2 * einsum("ik,kjab->ijab", hf.foo, ampl.pphh1).antisymmetrise(0, 1)
-            + 2 * omega * ampl.pphh1
+            + omega * ampl.pphh1
         ))
     return AdcBlock(apply, diagonal_pphh_pphh_0_qed(hf, 1))
 
@@ -421,7 +421,7 @@ def block_pphh_pphh_0_phot2(hf, mp, intermediates):
         return AmplitudeVector(pphh=(
             + 2 * einsum("ijac,bc->ijab", ampl.pphh2, hf.fvv).antisymmetrise(2, 3)
             - 2 * einsum("ik,kjab->ijab", hf.foo, ampl.pphh2).antisymmetrise(0, 1)
-            + 4 * omega * ampl.pphh2
+            + 2 * omega * ampl.pphh2
         ))
     return AdcBlock(apply, diagonal_pphh_pphh_0_qed(hf, 2))
 
