@@ -983,7 +983,7 @@ def block_ph_pphh_1_couple(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
     def apply(ampl):
         return AmplitudeVector(ph=(
-            # usually this would be factor 4, but additional factor 2, due to normalization of pphh vector
+            # usually this would be factor 1, but additional factor 2, due to normalization of pphh vector
             2 * sqrt(omega/2) * einsum("kc,ikac->ia", mp.qed_t1_df(b.ov), ampl.pphh)
                             #+ einsum("jb,jiba->ia", mp.qed_t1_df(b.ov), ampl.pphh)
                             #- einsum("kb,ikba->ia", mp.qed_t1_df(b.ov), ampl.pphh)
@@ -999,7 +999,7 @@ def block_ph_pphh_1_couple_inner(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
     def apply(ampl):
         return AmplitudeVector(ph=(
-            # usually this would be factor 4, but additional factor 2, due to normalization of pphh vector
+            # usually this would be factor 1, but additional factor 2, due to normalization of pphh vector
             2 * sqrt(omega) * einsum("kc,ikac->ia", mp.qed_t1_df(b.ov), ampl.pphh1)
                             #+ einsum("jb,jiba->ia", mp.qed_t1_df(b.ov), ampl.pphh)
                             #- einsum("kb,ikba->ia", mp.qed_t1_df(b.ov), ampl.pphh)
