@@ -119,7 +119,11 @@ def block(ground_state, spaces, order, variant=None, intermediates=None):
 # elec_couple       phot                phot_couple_inner
 # elec_couple_edge  elec_couple_inner   phot2
 
-
+# The implementations for QED-ADC(1) and QED-ADC(2) are tested by constructing the original non-QED-ADC matrix
+# of the corresponding order with the transformed ERIs, and using those eigenvectors to construct the remaining
+# contributions as properties. Those are mostly dipole operator terms, but one term also provides the two electron
+# term from the original H_1 perturbation from MP. With those properties the same matrix can be build in the basis
+# of the eigenvectors of the non-QED-ADC matrix, yielding the same eigenvalues upon diagonalization.
 
 
 #
