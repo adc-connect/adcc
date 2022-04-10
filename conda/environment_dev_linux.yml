@@ -1,7 +1,6 @@
 name: adcc-dev
 channels:
   - conda-forge
-  - defaults
 dependencies:
   - mkl
   - mkl-devel
@@ -16,9 +15,8 @@ dependencies:
   - h5py
   - opt_einsum
   - pybind11
-  - conda-forge::libtensorlight
-  - psi4::psi4
-  - conda-forge::cppe
+  - libtensorlight
+  - cppe
   - pytest
   - pytest-cov
   - pyyaml
