@@ -134,7 +134,8 @@ jobs:
         run: |
           conda info
           conda list
-          conda activate --stack auxenv
+          conda activate auxenv
+          conda activate --stack adcc-dev
           python -c "import psi4"
           python setup.py test -a '--cov=adcc'
           python setup.py cpptest -v
