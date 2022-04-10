@@ -107,6 +107,9 @@ jobs:
   test_conda:
     name: Conda Python ${{ matrix.version }} - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -l {0}
     strategy:
       fail-fast: false
       matrix:
@@ -124,11 +127,14 @@ jobs:
         run: |
           mkdir $HOME/.adcc/
           echo 'coverage = True' > $HOME/.adcc/siteconfig.py
+      - name: Install Psi4 in auxiliary environment
+        run: |
+          conda create -n auxenv psi4 python=${{ matrix.version }} -c psi4/label/dev -c defaults --override-channels
       - name: Build adcc
-        shell: bash -l {0}
         run: |
           conda info
           conda list
+          conda activate --stack auxenv
           pip install pyscf
           python -c "import psi4"
           python setup.py test -a '--cov=adcc'
