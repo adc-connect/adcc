@@ -130,7 +130,7 @@ jobs:
       - name: Install Psi4 in auxiliary environment
         run: |
           conda create -n auxenv psi4 python=${{ matrix.version }} -c psi4/label/dev -c defaults --override-channels
-      - name: Build adcc
+      - name: Build and test adcc
         run: |
           conda info
           conda list

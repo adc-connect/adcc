@@ -102,7 +102,8 @@ class OperatorIntegrals:
             "electric_dipole",
             "magnetic_dipole",
             "nabla",
-            "pe_induction_elec"
+            "pe_induction_elec",
+            "pcm_potential_elec"
         )
         return [integral for integral in integrals
                 if hasattr(self.provider_ao, integral)]
@@ -161,6 +162,9 @@ class OperatorIntegrals:
         is_symmetric : bool, optional
             if the imported operator is symmetric, by default True
         """
+        if not callable(ao_callback):
+            raise TypeError("ao_callback must be callable.")
+
         def process_operator(dm, callback=ao_callback, is_symmetric=is_symmetric):
             dm_ao = sum(dm.to_ao_basis())
             v_ao = callback(dm_ao)
@@ -185,6 +189,19 @@ class OperatorIntegrals:
                                       "not implemented "
                                       f"in {self.provider_ao.backend} backend.")
         callback = self.provider_ao.pe_induction_elec
+        return self.__import_density_dependent_operator(callback)
+
+    @property
+    def pcm_potential_elec(self):
+        """
+        Returns a function to obtain the (density-dependent)
+        electronic PCM potential operator in the molecular orbital basis
+        """
+        if "pcm_potential_elec" not in self.available:
+            raise NotImplementedError("Electronic PCM potential operator "
+                                      "not implemented "
+                                      f"in {self.provider_ao.backend} backend.")
+        callback = self.provider_ao.pcm_potential_elec
         return self.__import_density_dependent_operator(callback)
 
     @property

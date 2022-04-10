@@ -20,16 +20,7 @@ scfres.max_cycle = 100
 scfres.verbose = 4
 scfres.kernel()
 
-# Explicitly initialise ADC virtual memory pool to (256 MiB)
-# (if this call is missing than only RAM is used. This allows
-#  to dump data to disk as well such that maximally up to the
-#  specified amount of data (in bytes) will reside in RAM)
-adcc.memory_pool.initialise(max_memory=256 * 1024 * 1024)
-
 # Run an adc2 calculation:
 singlets = adcc.adc2(scfres, n_states=5)
-# triplets = adcc.adc2(singlets.matrix, n_triplets=3)
 
 print(singlets.describe())
-print()
-# print(triplets.describe())

@@ -16,15 +16,6 @@ scfres = scf.RHF(mol)
 scfres.conv_tol = 1e-13
 scfres.kernel()
 
-#
-# Some more advanced memory tampering options
-#
-# Initialise ADC memory (512 MiB)
-# Use a tensor block size parameter of 16 and
-# a specific allocator (in this case std::allocator)
-adcc.memory_pool.initialise(max_memory=512 * 1024 * 1024,
-                            tensor_block_size=12, allocator="standard")
-
 # Run an adc3 calculation:
 singlets = adcc.adc3(scfres, frozen_virtual=3, n_singlets=3)
 triplets = adcc.adc3(singlets.matrix, n_triplets=3)

@@ -18,6 +18,9 @@ Please get in touch
 by `opening an issue <https://github.com/adc-connect/adcc/issues>`_
 if you cannot get adcc to work.
 
+Some specialty features of adcc require extra dependencies (e.g., Pandas and
+Matplotlib), see :ref:`optional-dependencies` for details.
+
 Installing adcc
 ---------------
 
@@ -27,14 +30,20 @@ Using conda (on Debian/Ubuntu and macOS)
 ........................................
 
 The `conda <https://conda.io>`_ binary packages can be installed
-using the `adcc <https://anaconda.org/adcc/>`_ channel:
+using the `conda-forge <https://anaconda.org/conda-forge/>`_ channel:
 
 .. code-block:: shell
 
-   conda install -c adcc adcc
+   conda install -c conda-forge adcc
 
 This should work on a recent Debian, Ubuntu or macOS
 and with python 3.7, 3.8 or 3.9.
+
+.. warning::
+
+   As of version 0.15.13, adcc is deployed via conda-forge. Before that,
+   we maintained our own Anaconda channel, which is now discontinued. Thus,
+   we highly recommend you use the conda-forge version from now on.
 
 
 .. _install-pip-debian:
@@ -153,6 +162,28 @@ to adcc, even the better! In this case we hope
 the :ref:`devnotes` will provide
 you with some useful pointers to get started.
 
+
+.. _optional-dependencies:
+
+Optional dependencies for analysis features
+-------------------------------------------
+
+- **Matplotlib**: Plotting spectra with :func:`adcc.ElectronicTransition.plot_spectrum`
+
+
+- **Pandas**: Export to `pandas.DataFrame` via :func:`adcc.ExcitedStates.to_dataframe`
+
+
+Installation of optional packages
+.................................
+
+- Using pip: Either install optional dependencies directly with adcc via
+  ``pip install adcc[analysis]`` or run manually for each package, e.g., ``pip install matplotlib``
+
+- Using conda: Install each package manually, e.g., ``conda install matplotlib``.
+
+Note that all other core features of adcc still work without
+these packages installed.
 
 
 .. _troubleshooting:

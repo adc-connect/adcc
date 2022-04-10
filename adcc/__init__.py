@@ -28,6 +28,7 @@ from libadcc import HartreeFockProvider, get_n_threads, set_n_threads
 from .LazyMp import LazyMp
 from .Tensor import Tensor
 from .Symmetry import Symmetry
+from .MoSpaces import MoSpaces
 from .AdcMatrix import AdcBlockView, AdcMatrix
 from .AdcMethod import AdcMethod
 from .functions import (contract, copy, direct_sum, dot, einsum, empty_like,
@@ -36,6 +37,8 @@ from .functions import (contract, copy, direct_sum, dot, einsum, empty_like,
 from .memory_pool import memory_pool
 from .State2States import State2States
 from .ExcitedStates import ExcitedStates
+from .Excitation import Excitation
+from .ElectronicTransition import ElectronicTransition
 from .DataHfProvider import DataHfProvider, DictHfProvider
 from .ReferenceState import ReferenceState
 from .AmplitudeVector import AmplitudeVector
@@ -49,23 +52,24 @@ from .workflow import run_adc
 from .exceptions import InputError
 
 __all__ = ["run_adc", "InputError", "AdcMatrix", "AdcBlockView",
-           "AdcMethod", "Symmetry", "ReferenceState",
+           "AdcMethod", "Symmetry", "ReferenceState", "MoSpaces",
            "einsum", "contract", "copy", "dot", "empty_like", "evaluate",
            "lincomb", "nosym_like", "ones_like", "transpose",
            "linear_combination", "zeros_like", "direct_sum",
            "memory_pool", "set_n_threads", "get_n_threads", "AmplitudeVector",
            "HartreeFockProvider", "ExcitedStates", "State2States",
-           "Tensor", "DictHfProvider", "DataHfProvider", "OneParticleOperator",
+           "Excitation", "ElectronicTransition", "Tensor", "DictHfProvider",
+           "DataHfProvider", "OneParticleOperator",
            "guesses_singlet", "guesses_triplet", "guesses_any",
            "guess_symmetries", "guesses_spin_flip", "guess_zero", "LazyMp",
            "adc0", "cis", "adc1", "adc2", "adc2x", "adc3",
            "cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x", "cvs_adc3",
            "banner"]
 
-__version__ = "0.15.9"
+__version__ = "0.15.13"
 __license__ = "GPL v3"
 __url__ = "https://adc-connect.org"
-__authors__ = ["Michael F. Herbst", "Maximilian Scheurer"]
+__authors__ = ["Michael F. Herbst", "Maximilian Scheurer", "Jonas Leitner"]
 __email__ = "developers@adc-connect.org"
 __contributors__ = []
 

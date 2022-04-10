@@ -27,7 +27,8 @@ to be applied. Arbitrary combinations of these variants,
 e.g. applying **both** CVS and FC approximations are supported as well.
 See :ref:`frozen-spaces` for details.
 
-Calculations with :ref:`environment` are also supported.
+Calculations with :ref:`polarisable_embedding` and the :ref:`polarisable_continuum`
+for implicit solvation are also supported.
 
 General ADC(n) calculations
 ---------------------------
@@ -324,6 +325,10 @@ obtained using the function ``adcc.get_n_threads()``.
 Plotting spectra
 ----------------
 
+.. note::
+     For plotting spectra, `Matplotlib <https://matplotlib.org>`_
+     needs to be installed. See :ref:`optional-dependencies` for details.
+
 Having computed a set of ADC excited states as discussed in the
 previous sections, these can be visualised
 in a simulated absorption spectrum
@@ -354,7 +359,7 @@ as shown in the next example.
    state.plot_spectrum()
    plt.show()
 
-This code uses the :func:`adcc.ExcitedStates.plot_spectrum`
+This code uses the :func:`adcc.ElectronicTransition.plot_spectrum`
 function and the `Matplotlib <https://matplotlib.org>`_ package
 to produce a plot such as
 
@@ -364,13 +369,13 @@ In this image crosses represent the actual computed value
 for the absorption cross section for the obtained excited states.
 To form the actual spectrum (solid blue line) these discrete
 peaks are artificially broadened with an empirical broadening parameter.
-Notice, that the :func:`adcc.ExcitedStates.plot_spectrum`
+Notice, that the :func:`adcc.ElectronicTransition.plot_spectrum`
 function does only prepare the spectrum inside Matplotlib,
 such that ``plt.show()`` needs to be called in order to actuall *see* the plot.
 This allows to *simulaneously* plot the spectrum from multiple
 calculations in one figure if desired.
 
-The :func:`adcc.ExcitedStates.plot_spectrum` function takes a number
+The :func:`adcc.ElectronicTransition.plot_spectrum` function takes a number
 of parameters to alter the default plotting behaviour:
 
 - **Broadening parameters**: The default broadening can be completely disabled
@@ -401,7 +406,7 @@ of parameters to alter the default plotting behaviour:
   See the `Matplotlib documentation <https://matplotlib.org/api/_as_gen/matplotlib.pyplot.plot.html>`_ for details.
 
 In the same manner, one can model the ECD spectrum of chiral molecules
-with the :func:`adcc.ExcitedStates.plot_spectrum` function. An example
+with the :func:`adcc.ElectronicTransition.plot_spectrum` function. An example
 script for obtaining the ECD spectrum of (R)- and (S)-2-methyloxirane with ADC(2) can be
 found in the `examples folder <https://code.adc-connect.org/tree/master/examples/methyloxirane>`_.
 The only difference to plotting a UV/Vis spectrum as shown above is to specify
@@ -687,7 +692,7 @@ In fact all three may be combined jointly with any available ADC method,
 if desired.
 
 
-.. _`environment`:
+.. _`polarisable_embedding`:
 
 Polarisable Embedding
 ---------------------
@@ -806,6 +811,185 @@ The output of the last two lines is::
    |  4     0.2698889       7.34405   0.0805     0.898     0.102  |
    +--------------------------------------------------------------+
 
+
+.. _`polarisable_continuum`:
+
+Polarisable Continuum Model
+---------------------------
+
+ADC calculations with the Polarisable Continuum Model (PCM) are supported
+for the PySCF and Psi4 backends. In the PCM model, the surrouding solvent molecules, 
+the environment, are modeled implicitly as dielectric polarisable continuum that is
+represented as discrete charge distribution on the suface of the cavity the solute is
+embedded in. The solvent-solute interaction is modeled as the purely electrostatic
+interaction between the solute's charge density and the discrete charge distribution.
+A general introduction of PCM is e.g. available in the review :cite:`Mennucci2012`.
+
+There are different options available to include environment effects in ADC excited state calculations:
+
++------------------------------------------------+-----------------------+--------------------------------------------------------------------------+-----------------------------------------------+
+| Name                                           | ``environment``       | Comment                                                                  | Reference                                     |
++================================================+=======================+==========================================================================+===============================================+
+| coupling through reference state only          | ``False``             | only couple via the 'solvated' orbitals of the SCF reference state,      | :cite:`Cammi2005`                             |
+|                                                |                       | no additional matrix terms or corrections are used                       |                                               |
++------------------------------------------------+-----------------------+--------------------------------------------------------------------------+-----------------------------------------------+
+| perturbative linear-response correction (ptLR) | ``"ptlr"``            | computed from the transition density between                             | :cite:`Cammi2005`                             |
+|                                                |                       | the ground and excited state                                             |                                               |
++------------------------------------------------+-----------------------+--------------------------------------------------------------------------+-----------------------------------------------+
+| linear response iterative coupling             | ``"linear_response"`` | iterative coupling to the solvent via a CIS-like coupling density,       | :cite:`Lunkenheimer2013`, :cite:`Marefat2018` |
+|                                                |                       | the additional term is added to the ADC matrix                           |                                               |
++------------------------------------------------+-----------------------+--------------------------------------------------------------------------+-----------------------------------------------+
+
+The schemes can be selected as described for :ref:`polarisable_embedding`. Note that 
+``environment=True`` does not work for PCM, because the ``"ptss"`` correction is not implemented.
+
+.. warning::
+
+   If using the PySCF backend for PCM-ADC calculations, the dielectric constant needs to be adjusted
+   to the value of the optical dielectric constant before performing the ADC calculation.
+   (See example below)
+
+The following two examples compute the PCM-ADC(2) excited states of para-nitroaniline in water with
+a) the linear response scheme (PySCF backend) and
+b) the perturbative linear response scheme (Psi4 backend).
+
+.. code-block:: python
+
+   import adcc
+   from pyscf import gto, scf
+   from pyscf.solvent import ddCOSMO
+
+   # Run PCM SCF in pyscf
+   mol = gto.M(
+      atom="""
+      C          8.64800        1.07500       -1.71100
+      C          9.48200        0.43000       -0.80800
+      C          9.39600        0.75000        0.53800
+      C          8.48200        1.71200        0.99500
+      C          7.65300        2.34500        0.05500
+      C          7.73200        2.03100       -1.29200
+      H         10.18300       -0.30900       -1.16400
+      H         10.04400        0.25200        1.24700
+      H          6.94200        3.08900        0.38900
+      H          7.09700        2.51500       -2.01800
+      N          8.40100        2.02500        2.32500
+      N          8.73400        0.74100       -3.12900
+      O          7.98000        1.33100       -3.90100
+      O          9.55600       -0.11000       -3.46600
+      H          7.74900        2.71100        2.65200
+      H          8.99100        1.57500        2.99500
+      """,
+      basis='sto-3g', symmetry=0, charge=0, spin=0,
+      unit="Angström"
+   )
+
+   mf = ddCOSMO(scf.RHF(mol))
+   # set the dielectric constant
+   mf.with_solvent.eps = 78.36
+   mf.conv_tol = 1e-8
+   mf.conv_tol_grad = 1e-7
+   mf.max_cycle = 150
+
+   mf.kernel()
+
+   # Run ADC2 with with linear-response for the solvent
+
+   # first the dielectric constant needs to be adjusted to
+   # the corresponding optical dielectric constant.
+   # This is also necessary for the ptlr scheme.
+   mf.with_solvent.eps = 1.78
+   state = adcc.adc2(mf, n_singlets=5, conv_tol=1e-6,
+                     environment="linear_response")
+   print(state.describe())
+
+
+The output of the last line is::
+
+   +--------------------------------------------------------------+
+   | adc2                                    singlet ,  converged |
+   +--------------------------------------------------------------+
+   |  #        excitation energy     osc str    |v1|^2    |v2|^2  |
+   |          (au)           (eV)                                 |
+   |  0     0.1423507       3.87356   0.0000    0.9185   0.08152  |
+   |  1     0.1546455      4.208118   0.0000    0.9188   0.08123  |
+   |  2     0.2080581      5.661548   0.0304    0.8979    0.1021  |
+   |  3      0.225907      6.147241   0.6892    0.9019   0.09807  |
+   |  4     0.2676251      7.282449   0.1102    0.9014   0.09864  |
+   +--------------------------------------------------------------+
+
+
+.. code-block:: python
+
+   import adcc
+   import psi4
+
+   # Run a PCM HF calculation with Psi4
+   mol = psi4.geometry("""
+      C          8.64800        1.07500       -1.71100
+      C          9.48200        0.43000       -0.80800
+      C          9.39600        0.75000        0.53800
+      C          8.48200        1.71200        0.99500
+      C          7.65300        2.34500        0.05500
+      C          7.73200        2.03100       -1.29200
+      H         10.18300       -0.30900       -1.16400
+      H         10.04400        0.25200        1.24700
+      H          6.94200        3.08900        0.38900
+      H          7.09700        2.51500       -2.01800
+      N          8.40100        2.02500        2.32500
+      N          8.73400        0.74100       -3.12900
+      O          7.98000        1.33100       -3.90100
+      O          9.55600       -0.11000       -3.46600
+      H          7.74900        2.71100        2.65200
+      H          8.99100        1.57500        2.99500
+      symmetry c1
+      """)
+
+   psi4.set_options({
+      'basis': "sto-3g",
+      'scf_type': 'pk',
+      'e_convergence': 1e-10,
+      'd_convergence': 1e-10,
+      'pcm': True,
+      'pcm_scf_type': "total"
+   })
+   psi4.pcm_helper("""
+      Units = AU
+      Cavity {
+         Type = GePol
+      }
+      Medium {
+         SolverType = IEFPCM
+         Solvent = Water
+         Nonequilibrium = True
+      }
+   """)
+
+   psi4.core.set_num_threads(4)
+
+   scf_e, wfn = psi4.energy('scf', return_wfn=True)
+
+   # Run a ADC2 calculation with ptLR
+   state = adcc.adc2(wfn, n_singlets=5, conv_tol=1e-8,
+                     environment="ptlr")
+   print(state.describe())
+
+
+The last line gives::
+
+   +--------------------------------------------------------------+
+   | adc2                                    singlet ,  converged |
+   +--------------------------------------------------------------+
+   |  #        excitation energy     osc str    |v1|^2    |v2|^2  |
+   |          (au)           (eV)                                 |
+   |  0     0.1427662      3.884866   0.0000    0.9187   0.08134  |
+   |  1       0.15495      4.216404   0.0000     0.919   0.08096  |
+   |  2     0.2082633      5.667132   0.0238    0.8977    0.1023  |
+   |  3     0.2258655      6.146114   0.6134    0.9001   0.09993  |
+   |  4      0.270592      7.363184   0.0774    0.8997    0.1003  |
+   +--------------------------------------------------------------+
+   |  Excitation energy includes these corrections:               |
+   |    - pcm_ptlr_correction                                     |
+   +--------------------------------------------------------------+
 
 Further examples and details
 ----------------------------

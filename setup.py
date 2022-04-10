@@ -470,6 +470,7 @@ def adccsetup(*args, **kwargs):
         kwargs.pop("install_requires")
         kwargs.pop("setup_requires")
         kwargs.pop("tests_require")
+        kwargs.pop("extras_require")
     try:
         setup(*args, **kwargs)
     except Exception as e:
@@ -499,7 +500,7 @@ adccsetup(
         "spectroscopy",
     ],
     #
-    author="Michael F. Herbst, Maximilian Scheurer",
+    author="Michael F. Herbst, Maximilian Scheurer, Jonas Leitner",
     author_email="developers@adc-connect.org",
     license="GPL v3",
     url="https://adc-connect.org",
@@ -508,7 +509,7 @@ adccsetup(
         "Issues": "https://github.com/adc-connect/adcc/issues",
     },
     #
-    version="0.15.9",
+    version="0.15.13",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
@@ -534,15 +535,14 @@ adccsetup(
         "opt_einsum >= 3.0",
         "numpy >= 1.14",
         "scipy >= 1.2",
-        "matplotlib >= 3.0",
         "h5py >= 2.9",
         "tqdm >= 4.30",
-        "pandas >= 0.25.0",
     ],
-    tests_require=["pytest", "pytest-cov", "pyyaml"],
+    tests_require=["pytest", "pytest-cov", "pyyaml", "pandas >= 0.25.0"],
     extras_require={
         "build_docs": ["sphinx>=2", "breathe", "sphinxcontrib-bibtex",
                        "sphinx-automodapi", "sphinx-rtd-theme"],
+        "analysis": ["matplotlib >= 3.0", "pandas >= 0.25.0"],
     },
     #
     cmdclass={"build_ext": build_ext, "pytest": PyTest,

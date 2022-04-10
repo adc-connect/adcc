@@ -22,13 +22,12 @@
 ## ---------------------------------------------------------------------
 import warnings
 import numpy as np
-import pandas as pd
 
 from adcc import dot
 from scipy import constants
 
 from . import adc_pp
-from .misc import cached_property
+from .misc import cached_property, requires_module
 from .timings import timed_member_call
 from .Excitation import Excitation, mark_excitation_property
 from .FormatIndex import (FormatIndexAdcc, FormatIndexBase,
@@ -439,11 +438,13 @@ class ExcitedStates(ElectronicTransition):
                 ret += separator
         return ret[:-1]
 
+    @requires_module("pandas")
     def to_dataframe(self):
         """
         Exports the ExcitedStates object as :class:`pandas.DataFrame`.
         Atomic units are used for all values.
         """
+        import pandas as pd
         propkeys = self.excitation_property_keys
         propkeys.extend([k.name for k in self._excitation_energy_corrections])
         data = {
