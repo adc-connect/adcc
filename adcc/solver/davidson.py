@@ -226,16 +226,16 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             if Ass.shape == (n_block, n_block):
                 #print("davidson eigh", la.eigh(Ass)[0])
                 rvals, rvecs = la.eigh(Ass)  # Do a full diagonalisation
-                print("davidson eigh", rvals)
-                eigenvecs = [lincomb(v, SS, evaluate=True)
-                                  for v in np.transpose(rvecs)]
-            for eigv in eigenvecs:
-                print("norm of eigenvector", np.sqrt(eigv @ eigv))
+                #print("davidson eigh", rvals)
+                #eigenvecs = [lincomb(v, SS, evaluate=True)
+                #                  for v in np.transpose(rvecs)]
+            #for eigv in eigenvecs:
+                #print("norm of eigenvector", np.sqrt(eigv @ eigv))
             else:
                 # TODO Maybe play with precision a little here
                 # TODO Maybe use previous vectors somehow
                 v0 = None
-                print("davidson eigh", la.eigh(Ass)[0])
+                #print("davidson eigh", la.eigh(Ass)[0])
                 rvals, rvecs = sla.eigsh(Ass, k=n_block, which=which, v0=v0)
 
         with state.timer.record("residuals"):
