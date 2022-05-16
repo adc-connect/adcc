@@ -127,8 +127,11 @@ class Psi4HFProvider(HartreeFockProvider):
         if isinstance(self.wfn, (psi4.core.RHF, psi4.core.ROHF)):
             return True
         elif isinstance(self.wfn, (psi4.core.Wavefunction)):
-            orben_a = np.asarray(self.wfn.epsilon_a())
-            orben_b = np.asarray(self.wfn.epsilon_b())
+            #orben_a = np.asarray(self.wfn.epsilon_a())
+            #orben_b = np.asarray(self.wfn.epsilon_b())
+            orben_a = np.asarray(self.wfn.Fa()).diagonal()
+            orben_b = np.asarray(self.wfn.Fb()).diagonal()
+            print(orben_a)
             if all(orben_a == orben_b):
                 print("This is a restricted calculation")
                 return True
@@ -169,8 +172,10 @@ class Psi4HFProvider(HartreeFockProvider):
         )
 
     def fill_orben_f(self, out):
-        orben_a = np.asarray(self.wfn.epsilon_a())
-        orben_b = np.asarray(self.wfn.epsilon_b())
+        #orben_a = np.asarray(self.wfn.epsilon_a())
+        #orben_b = np.asarray(self.wfn.epsilon_b())
+        orben_a = np.asarray(self.wfn.Fa()).diagonal()
+        orben_b = np.asarray(self.wfn.Fb()).diagonal()
         out[:] = np.hstack((orben_a, orben_b))
 
     def fill_occupation_f(self, out):
