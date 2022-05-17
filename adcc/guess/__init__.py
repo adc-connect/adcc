@@ -28,6 +28,23 @@ __all__ = ["guess_zero", "guesses_from_diagonal",
            "guesses_spin_flip", "guess_symmetries"]
 
 
+def guess_kwargs_kind(kind):
+    """
+    Return the kwargs required to be passed to `guesses_from_diagonal` to
+    computed states of the passed excitation `kind`.
+    """
+    kwargsmap = dict(
+        singlet=dict(spin_block_symmetrisation="symmetric", spin_change=0),
+        triplet=dict(spin_block_symmetrisation="antisymmetric", spin_change=0),
+        spin_flip=dict(spin_block_symmetrisation="none", spin_change=-1),
+        any=dict(spin_block_symmetrisation="none", spin_change=0),
+    )
+    try:
+        return kwargsmap[kind]
+    except KeyError:
+        raise ValueError(f"Kind not known: {kind}")
+
+
 def guesses_singlet(matrix, n_guesses, block="ph", **kwargs):
     """
     Obtain guesses for computing singlet states by inspecting the passed
@@ -41,8 +58,7 @@ def guesses_singlet(matrix, n_guesses, block="ph", **kwargs):
     kwargs       Any other argument understood by guesses_from_diagonal.
     """
     return guesses_from_diagonal(matrix, n_guesses, block=block,
-                                 spin_block_symmetrisation="symmetric",
-                                 spin_change=0, **kwargs)
+                                 **guess_kwargs_kind("singlet"), **kwargs)
 
 
 def guesses_triplet(matrix, n_guesses, block="ph", **kwargs):
@@ -58,8 +74,7 @@ def guesses_triplet(matrix, n_guesses, block="ph", **kwargs):
     kwargs       Any other argument understood by guesses_from_diagonal.
     """
     return guesses_from_diagonal(matrix, n_guesses, block=block,
-                                 spin_block_symmetrisation="antisymmetric",
-                                 spin_change=0, **kwargs)
+                                 **guess_kwargs_kind("triplet"), **kwargs)
 
 
 # guesses for computing any state (singlet or triplet)
@@ -79,4 +94,4 @@ def guesses_spin_flip(matrix, n_guesses, block="ph", **kwargs):
     kwargs       Any other argument understood by guesses_from_diagonal.
     """
     return guesses_from_diagonal(matrix, n_guesses, block=block,
-                                 spin_change=-1, **kwargs)
+                                 **guess_kwargs_kind("spin_flip"), **kwargs)

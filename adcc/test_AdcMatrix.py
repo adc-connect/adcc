@@ -28,7 +28,7 @@ import numpy as np
 
 from numpy.testing import assert_allclose
 
-from adcc.AdcMatrix import AdcMatrixShifted, AdcExtraTerm
+from adcc.AdcMatrix import AdcExtraTerm, AdcMatrixProjected, AdcMatrixShifted
 from adcc.adc_pp.matrix import AdcBlock
 from adcc.testdata.cache import cache
 
@@ -319,4 +319,64 @@ class TestAdcMatrixShifted(unittest.TestCase):
         assert np.max(np.abs(diff_s.to_ndarray())) < 1e-12
         assert np.max(np.abs(diff_d.to_ndarray())) < 1e-12
 
-    # TODO Test to_dense_matrix, compute_apply
+    # TODO Test block_view, block_apply
+
+
+@expand_test_templates(testcases)
+class TestAdcMatrixProjected(unittest.TestCase):
+    def construct_matrices(self, case, n_core, n_virt):
+        from .test_projection import construct_nonzero_blocks
+
+        reference_state = cache.refstate[case]
+        ground_state = adcc.LazyMp(reference_state)
+        matrix = adcc.AdcMatrix("adc3", ground_state)
+
+        out = construct_nonzero_blocks(reference_state.mospaces, n_core, n_virt)
+        spaces, nonzero_blocks = out
+
+        excitation_blocks = spaces["ph"] + spaces["pphh"]
+        projected = AdcMatrixProjected(matrix, excitation_blocks,
+                                       core_orbitals=n_core,
+                                       outer_virtuals=n_virt)
+        return matrix, projected, nonzero_blocks
+
+    def template_diagonal(self, case):
+        from .test_projection import assert_nonzero_blocks
+
+        out = self.construct_matrices(case, n_core=2, n_virt=1)
+        matrix, projected, nonzeros = out
+
+        for block in ("ph", "pphh"):
+            odiag = matrix.diagonal()[block]
+            pdiag = projected.diagonal()[block]
+            assert_nonzero_blocks(odiag, pdiag, nonzeros[block], zero_value=100000)
+            # TODO Manually verified to be identical, however, string parsing
+            #      of the describe_symmetry output is not super reliable and so this
+            #      test does not pass in CI.
+            # assert_equal_symmetry(odiag, pdiag)
+
+    def template_matmul(self, case):
+        from .test_projection import (assert_equal_symmetry,
+                                      assert_nonzero_blocks)
+
+        out = self.construct_matrices(case, n_core=1, n_virt=1)
+        matrix, projected, nonzeros = out
+
+        spin_block_symmetrisation = "none"
+        if "h2o" in case:
+            spin_block_symmetrisation = "symmetric"
+        vec = adcc.guess_zero(matrix,
+                              spin_block_symmetrisation=spin_block_symmetrisation)
+        vec.set_random()
+        pvec = projected.apply_projection(vec.copy())  # only apply projection
+
+        pres = projected @ vec
+        ores = matrix @ pvec
+        res_for_sym = matrix @ vec
+
+        assert_equal_symmetry(res_for_sym.ph, pres.ph)
+        assert_equal_symmetry(res_for_sym.pphh, pres.pphh)
+        assert_nonzero_blocks(ores.ph, pres.ph, nonzeros["ph"], tol=1e-14)
+        assert_nonzero_blocks(ores.pphh, pres.pphh, nonzeros["pphh"], tol=1e-14)
+
+    # TODO Test block_view, block_apply

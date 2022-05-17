@@ -33,7 +33,7 @@ from .guess_zero import guess_zero
 
 def guesses_from_diagonal(matrix, n_guesses, block="ph", spin_change=0,
                           spin_block_symmetrisation="none",
-                          degeneracy_tolerance=1e-14):
+                          degeneracy_tolerance=1e-14, max_diagonal_value=1000):
     """
     Obtain guesses by inspecting a block of the diagonal of the passed ADC
     matrix. The symmetry of the returned vectors is already set-up properly.
@@ -59,6 +59,9 @@ def guesses_from_diagonal(matrix, n_guesses, block="ph", spin_change=0,
     degeneracy_tolerance
                  Tolerance for two entries of the diagonal to be considered
                  degenerate, i.e. identical.
+    max_diagonal_value
+                 Maximal diagonal value, which is considered as a valid candidate
+                 to form a guess.
     """
     if not isinstance(matrix, AdcMatrixlike):
         raise TypeError("matrix needs to be of type AdcMatrixlike")
@@ -88,7 +91,8 @@ def guesses_from_diagonal(matrix, n_guesses, block="ph", spin_change=0,
         raise ValueError(f"Don't know how to generate guesses for block {block}")
 
     return guessfunction(matrix, n_guesses, spin_change,
-                         spin_block_symmetrisation, degeneracy_tolerance)
+                         spin_block_symmetrisation, degeneracy_tolerance,
+                         max_diagonal_value)
 
 
 class TensorElement:
@@ -195,7 +199,8 @@ def find_smallest_matching_elements(predicate, tensor, motrans, n_elements,
 
 def guesses_from_diagonal_singles(matrix, n_guesses, spin_change=0,
                                   spin_block_symmetrisation="none",
-                                  degeneracy_tolerance=1e-14):
+                                  degeneracy_tolerance=1e-14,
+                                  max_diagonal_value=1000):
     motrans = MoIndexTranslation(matrix.mospaces, matrix.axis_spaces["ph"])
     if n_guesses == 0:
         return []
@@ -207,10 +212,13 @@ def guesses_from_diagonal_singles(matrix, n_guesses, spin_change=0,
 
     # Search of the smallest elements
     # This predicate checks an index is an allowed element for the singles
-    # part of the guess vectors and has the requested spin-change
+    # part of the guess vectors and has the requested spin-change.
+    # Also it filters out too large diagonal entries (which are essentially
+    # hopeless to give useful excitations)
     def pred_singles(telem):
         return (ret[0].ph.is_allowed(telem.index)
-                and telem.spin_change == spin_change)
+                and telem.spin_change == spin_change
+                and abs(telem.value) <= max_diagonal_value)
 
     elements = find_smallest_matching_elements(
         pred_singles, matrix.diagonal().ph, motrans, n_guesses,
@@ -265,7 +273,8 @@ def guesses_from_diagonal_singles(matrix, n_guesses, spin_change=0,
 
 def guesses_from_diagonal_doubles(matrix, n_guesses, spin_change=0,
                                   spin_block_symmetrisation="none",
-                                  degeneracy_tolerance=1e-14):
+                                  degeneracy_tolerance=1e-14,
+                                  max_diagonal_value=1000):
     if n_guesses == 0:
         return []
 
@@ -286,9 +295,14 @@ def guesses_from_diagonal_doubles(matrix, n_guesses, spin_change=0,
         guesses_d, matrix.mospaces, df02, df13,
         spin_change_twice, degeneracy_tolerance
     )
-
     # Resize in case less guesses found than requested
-    return ret[:n_found]
+    ret = ret[:n_found]
+
+    # Filter out elements above the noted diagonal value
+    diagonal_elements = [ret_d.pphh.dot(matrix.diagonal().pphh * ret_d.pphh)
+                         for ret_d in ret]
+    return [ret[i] for (i, elem) in enumerate(diagonal_elements)
+            if elem <= max_diagonal_value]
 
 # TODO Generic algorithm for forming orthogonal spin components of arbitrary
 #      size. Could be useful for the doubles guesses later on.

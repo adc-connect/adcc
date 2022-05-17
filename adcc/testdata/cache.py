@@ -47,7 +47,7 @@ def make_mock_adc_state(refstate, matmethod, kind, reference):
     state.method = matrix.method
     state.ground_state = ground_state
     state.reference_state = refstate
-    state.kind = kind
+    state.kind = kind if kind != "state" else "any"
     state.eigenvalues = reference[kind]["eigenvalues"][:n_full]
 
     spin_change = 0
