@@ -121,17 +121,12 @@ class Psi4HFProvider(HartreeFockProvider):
         threshold = max(10 * conv_tol, conv_tol_grad)
         return threshold
 
-    #def get_restricted(self):
-    #    return isinstance(self.wfn, (psi4.core.RHF, psi4.core.ROHF))
     def get_restricted(self):
         if isinstance(self.wfn, (psi4.core.RHF, psi4.core.ROHF)):
             return True
         elif isinstance(self.wfn, (psi4.core.Wavefunction)):
-            #orben_a = np.asarray(self.wfn.epsilon_a())
-            #orben_b = np.asarray(self.wfn.epsilon_b())
-            orben_a = np.asarray(self.wfn.Fa()).diagonal()
-            orben_b = np.asarray(self.wfn.Fb()).diagonal()
-            print(orben_a)
+            orben_a = np.asarray(self.wfn.epsilon_a())
+            orben_b = np.asarray(self.wfn.epsilon_b())
             if all(orben_a == orben_b):
                 print("This is a restricted calculation")
                 return True
@@ -172,11 +167,8 @@ class Psi4HFProvider(HartreeFockProvider):
         )
 
     def fill_orben_f(self, out):
-        print("orbital energies are currently taken from epsilon (not from F.diagonal")
         orben_a = np.asarray(self.wfn.epsilon_a())
         orben_b = np.asarray(self.wfn.epsilon_b())
-        #orben_a = np.asarray(self.wfn.Fa()).diagonal()
-        #orben_b = np.asarray(self.wfn.Fb()).diagonal()
         out[:] = np.hstack((orben_a, orben_b))
 
     def fill_occupation_f(self, out):
