@@ -198,6 +198,8 @@ class ElectronicTransition:
     @mark_excitation_property()
     def oscillator_strength(self):
         """List of oscillator strengths of all computed states"""
+        print("final TDMs", self.transition_dipole_moment)
+        print("final excitation energies", self.excitation_energy)
         return 2. / 3. * np.array([
             np.linalg.norm(tdm)**2 * np.abs(ev)
             for tdm, ev in zip(self.transition_dipole_moment,

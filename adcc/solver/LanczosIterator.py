@@ -26,7 +26,7 @@ import scipy.linalg as la
 
 from adcc import evaluate, lincomb
 from adcc.timings import Timer
-from adcc.AmplitudeVector import AmplitudeVector
+from adcc.AmplitudeVector import AmplitudeVector, QED_AmplitudeVector
 
 from .orthogonaliser import GramSchmidtOrthogonaliser
 
@@ -64,7 +64,7 @@ class LanczosIterator:
         if not isinstance(guesses, list):
             guesses = [guesses]
         for guess in guesses:
-            if not isinstance(guess, AmplitudeVector):
+            if not isinstance(guess, (AmplitudeVector, QED_AmplitudeVector)):
                 raise TypeError("One of the guesses is not an AmplitudeVector")
         n_block = len(guesses)  # Lanczos block size
 
@@ -109,6 +109,7 @@ class LanczosIterator:
             # Initialise Lanczos subspace
             v = self.ortho.orthogonalise(self.residual)
             self.lanczos_subspace = v
+            #print(v)
             r = evaluate(self.matrix @ v)
             alpha = np.empty((self.n_block, self.n_block))
             for p in range(self.n_block):

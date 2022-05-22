@@ -20,8 +20,10 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import enum
 import sys
 import warnings
+import numpy as np
 
 from libadcc import ReferenceState
 
@@ -38,6 +40,7 @@ from .solver.lanczos import lanczos
 from .solver.davidson import jacobi_davidson
 from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
+from .AmplitudeVector import QED_AmplitudeVector, gs_vec
 
 __all__ = ["run_adc"]
 
@@ -392,8 +395,11 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
     if guesses is None:
         if n_guesses is None:
             n_guesses = estimate_n_guesses(matrix, n_states, n_guesses_per_state)
-        guesses = obtain_guesses_by_inspection(matrix, n_guesses, kind,
+        #guesses = obtain_guesses_by_inspection(matrix, n_guesses, kind,             # guesses are obtained here
+        #                                       n_guesses_doubles)
+        guesses = obtain_guesses_by_inspection_qed(matrix, n_guesses, kind,             # guesses are obtained here
                                                n_guesses_doubles)
+        #print(guesses)
     else:
         if len(guesses) < n_states:
             raise InputError("Less guesses provided via guesses (== {}) "
@@ -406,6 +412,7 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
             warnings.warn("Ignoring n_guesses_doubles parameter, since guesses "
                           "are explicitly provided.")
 
+    #print("from workflow...guesses[0].pphh = ", guesses[0].pphh)
     solverargs.setdefault("which", "SA")
     return run_eigensolver(matrix, guesses, n_ep=n_states, conv_tol=conv_tol,
                            callback=callback,
@@ -466,6 +473,7 @@ def obtain_guesses_by_inspection(matrix, n_guesses, kind, n_guesses_doubles=None
     guess_function = {"any": guesses_any, "singlet": guesses_singlet,
                       "triplet": guesses_triplet,
                       "spin_flip": guesses_spin_flip}[kind]
+    
 
     # Determine number of singles guesses to request
     n_guess_singles = n_guesses
@@ -489,6 +497,192 @@ def obtain_guesses_by_inspection(matrix, n_guesses, kind, n_guesses_doubles=None
                          "{} requested".format(len(total_guesses), n_guesses))
     return total_guesses
 
+
+def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=None): # sadly we cannot do this, since later functions
+    # require the matrix (AdcMatrix), instead of just the diagonal, which is a QED_Amplitude
+    guesses_elec = obtain_guesses_by_inspection(matrix.elec, n_guesses, kind, n_guesses_doubles) 
+    guesses_phot = obtain_guesses_by_inspection(matrix.phot, n_guesses, kind, n_guesses_doubles)
+    guesses_phot2 = obtain_guesses_by_inspection(matrix.phot2, n_guesses, kind, n_guesses_doubles)
+    n_guess = len(guesses_elec)
+    if not hasattr(matrix.reference_state, "full_diagonalization"):
+        for i in np.arange(n_guess):
+            guesses_phot[i] *= 0.02
+            guesses_phot2[i] *= 0.001
+    #print("this is from obtain_guess_qed from workflow: guesses_elec[0].pphh", guesses_elec[0].pphh)
+    if n_guess != len(guesses_phot):
+        raise InputError("amount of guesses for electronic and photonic must be equal, but are"
+                         "{} electronic and {} photonic guesses".format(len(guesses_elec), len(guesses_phot)))
+    #guess_gs = np.zeros(n_guess)
+    guess_gs1 = np.zeros(n_guess) 
+    guess_gs2 = np.zeros(n_guess)
+    # these guesses need a manual option, because if the gs1 state is close to a state it couples with, the gs1 guess needs to be smaller, than for a
+    # decoupled state. For gs2 this is a little less important, because the coupling is weaker.
+    #guess_gs[n_guess - 3] = 0
+    """
+    guess_gs1[n_guess - 2] = 2 # giving these two electronic ground/ photonic excited states a small value, they will only slowly appear in the convergence,
+    guess_gs2[n_guess - 1] = 5 # which in fact leads to a lot of numerical issues. Furthermore, they dont have to match the exact state number later...The solver takes care of that.
+    """
+    guesses_tmp = []
+    try:
+        dummy_var = guesses_elec[0].pphh
+        #print(dummy_var)
+        contains_doubles = True
+        #guesses_phot2 = obtain_guesses_by_inspection(matrix.phot2, n_guesses, kind, n_guesses_doubles)
+        #guess_gs2 = np.zeros(len(guesses_phot2))
+    except AttributeError:
+        contains_doubles = False
+    for guess_index in np.arange(n_guess): # build QED_AmplitudeVectors from AmplitudeVector guesses
+        #if hasattr(guesses_elec[0], "pphh"):
+        if contains_doubles: 
+            #guess_gs[n_guess - 3] = 1e+12 #8
+            #print("doubles guesses are set up")
+            # what if this is not ok without restricting singlets/triplets only, because e.g. phot could be singlet and elec triplet ... doesnt seem to matter
+            #guesses_tmp.append(QED_AmplitudeVector(guess_gs[guess_index], guesses_elec[guess_index].ph, guesses_elec[guess_index].pphh,
+            #                guess_gs1[guess_index], guesses_phot[guess_index].ph, guesses_phot[guess_index].pphh,
+            #                guess_gs2[guess_index], guesses_phot2[guess_index].ph, guesses_phot2[guess_index].pphh))
+            guesses_tmp.append(QED_AmplitudeVector(guesses_elec[guess_index].ph, guesses_elec[guess_index].pphh,
+                            guess_gs1[guess_index], guesses_phot[guess_index].ph, guesses_phot[guess_index].pphh,
+                            guess_gs2[guess_index], guesses_phot2[guess_index].ph, guesses_phot2[guess_index].pphh))
+        else:
+            #guess_gs[n_guess - 3] = 1e+7
+            #print("singles guesses are set up")
+            guesses_tmp.append(QED_AmplitudeVector(guesses_elec[guess_index].ph, None,
+                                                    guess_gs1[guess_index], guesses_phot[guess_index].ph, None,
+                                                    guess_gs2[guess_index], guesses_phot2[guess_index].ph, None))
+
+
+    if hasattr(matrix.reference_state, "full_diagonalization"):
+        full_guess = []
+        for qed_vec in guesses_tmp:
+            tmp_vec = qed_vec.copy()
+            tmp_elec_vec = qed_vec.elec.copy()
+            tmp_phot_vec = qed_vec.phot.zeros_like()
+            tmp_phot2_vec = qed_vec.phot2.zeros_like()
+            #print("elec part", type(qed_vec.elec.ph))
+            #print("phot part", type(qed_vec.phot.ph))
+            #print("elec copy from ampl vec", type(tmp_elec_vec.ph))
+            #print("phot copy from ampl vec", type(tmp_phot_vec.ph))
+            tmp_elec_vec *= 10
+            #tmp_elec_vec.ph *= 5
+            #tmp_elec_vec.pphh *= 5
+            if contains_doubles:
+                vec = QED_AmplitudeVector(tmp_elec_vec.ph, tmp_elec_vec.pphh, 0, tmp_phot_vec.ph, tmp_phot_vec.pphh,
+                                        0, tmp_phot2_vec.ph, tmp_phot2_vec.pphh)
+            else:
+                vec = QED_AmplitudeVector(tmp_elec_vec.ph, None, 0, tmp_phot_vec.ph, None, 0, tmp_phot2_vec.ph, None)
+            full_guess.append(vec)
+        for qed_vec in guesses_tmp:
+            tmp_elec_vec = qed_vec.elec.zeros_like()
+            tmp_phot_vec = qed_vec.phot.copy()
+            tmp_phot2_vec = qed_vec.phot2.zeros_like()
+            #print("elec part", type(qed_vec.elec.ph))
+            #print("phot part", type(qed_vec.phot.ph))
+            #print("elec copy from ampl vec", type(tmp_elec_vec.ph))
+            #print("phot copy from ampl vec", type(tmp_phot_vec.ph))
+            tmp_phot_vec *= 10
+            #tmp_elec_vec.ph *= 5
+            #tmp_elec_vec.pphh *= 5
+            if contains_doubles:
+                vec = QED_AmplitudeVector(tmp_elec_vec.ph, tmp_elec_vec.pphh, 0, tmp_phot_vec.ph, tmp_phot_vec.pphh,
+                                         0, tmp_phot2_vec.ph, tmp_phot2_vec.pphh)
+            else:
+                vec = QED_AmplitudeVector(tmp_elec_vec.ph, None, 0, tmp_phot_vec.ph, None, 0, tmp_phot2_vec.ph, None)
+            full_guess.append(vec)
+            #tmp_vec = qed_vec.copy()
+            #print(type(tmp_vec.phot.ph))
+            #tmp_vec.phot.ph *= 5
+            #tmp_vec.phot.pphh *= 5
+            #full_guess.append(tmp_vec)
+        for qed_vec in guesses_tmp:
+            tmp_elec_vec = qed_vec.elec.zeros_like()
+            tmp_phot_vec = qed_vec.phot.zeros_like()
+            tmp_phot2_vec = qed_vec.phot2.copy()
+            #print("elec part", type(qed_vec.elec.ph))
+            #print("phot part", type(qed_vec.phot.ph))
+            #print("elec copy from ampl vec", type(tmp_elec_vec.ph))
+            #print("phot copy from ampl vec", type(tmp_phot_vec.ph))
+            tmp_phot2_vec *= 10
+            #tmp_elec_vec.ph *= 5
+            #tmp_elec_vec.pphh *= 5
+            if contains_doubles:
+                vec = QED_AmplitudeVector(tmp_elec_vec.ph, tmp_elec_vec.pphh, 0, tmp_phot_vec.ph, tmp_phot_vec.pphh,
+                                         0, tmp_phot2_vec.ph, tmp_phot2_vec.pphh)
+            else:
+                vec = QED_AmplitudeVector(tmp_elec_vec.ph, None, 0, tmp_phot_vec.ph, None, 0, tmp_phot2_vec.ph, None)
+            full_guess.append(vec)
+            #tmp_vec = qed_vec.copy()
+            #print(type(tmp_vec.phot2.ph))
+            #tmp_vec.phot2.ph *= 5
+            #tmp_vec.phot2.pphh *= 5
+            #full_guess.append(tmp_vec)
+
+        tmp_elec_vec = guesses_tmp[0].elec.zeros_like()
+        tmp_phot_vec = guesses_tmp[0].phot.zeros_like()
+        tmp_phot2_vec = guesses_tmp[0].phot2.zeros_like()
+
+        tmp_elec_vec2 = guesses_tmp[0].elec.zeros_like()
+        tmp_phot_vec2 = guesses_tmp[0].phot.zeros_like()
+        tmp_phot2_vec2 = guesses_tmp[0].phot2.zeros_like()
+
+        if contains_doubles:
+            vec = QED_AmplitudeVector(tmp_elec_vec.ph, tmp_elec_vec.pphh, 0, tmp_phot_vec.ph, tmp_phot_vec.pphh,
+                                     0, tmp_phot2_vec.ph, tmp_phot2_vec.pphh)
+            vec2 = QED_AmplitudeVector(tmp_elec_vec2.ph, tmp_elec_vec2.pphh, 0, tmp_phot_vec2.ph, tmp_phot_vec2.pphh,
+                                     0, tmp_phot2_vec2.ph, tmp_phot2_vec2.pphh)
+        else:
+            vec = QED_AmplitudeVector(tmp_elec_vec.ph, None, 0, tmp_phot_vec.ph, None, 0, tmp_phot2_vec.ph, None)
+            vec2 = QED_AmplitudeVector(tmp_elec_vec2.ph, None, 0, tmp_phot_vec2.ph, None, 0, tmp_phot2_vec2.ph, None)
+        #full_guess.append(guesses_tmp[0].copy())
+        #full_guess.append(guesses_tmp[1].copy())
+
+        full_guess.append(vec)
+        full_guess.append(vec2)
+
+        final_guesses = full_guess
+    else:
+        final_guesses = guesses_tmp
+        #guesses_tmp = full_guess
+        
+        """
+        guesses_tmp = np.concatenate((guesses_tmp, guesses_tmp, guesses_tmp, guesses_tmp[:2]))
+        for i, guess in enumerate(guesses_tmp):
+            if i <= 19:
+                guess.elec.ph = guess.elec.ph * 5
+                guess.elec.pphh = guess.elec.pphh * 5
+            elif i >= 20 and i <= 39:
+                guess.phot.ph = guess.phot.ph * 5
+                guess.phot.pphh = guess.phot.pphh * 5
+            elif i >= 40 and i <= 59:
+                guess.phot2.ph = guess.phot2.ph * 5
+                guess.phot2.pphh = guess.phot2.pphh * 5
+            else:
+                pass
+        """
+    #try:
+    final_guesses[len(final_guesses) - 2].gs1 += 2 #gs_vec(100)
+    final_guesses[len(final_guesses) - 1].gs2 += 5 #gs_vec(100)
+    #guesses_tmp = full_guess
+    #except:
+    #    guesses_tmp[len(guesses_tmp) - 2].gs1 += 100 #gs_vec(100)
+    #    guesses_tmp[len(guesses_tmp) - 1].gs2 += 100 #gs_vec(100)
+    
+#    
+    # guesses_tmp needs to be normalized then
+    #for vec in guesses_tmp:
+    #    print(type(vec.gs), vec.gs)
+    #    print(type(vec.ph), vec.ph)
+    #    print(type(vec.gs1), vec.gs1)
+    #    print(type(vec.ph1), vec.ph1)
+    #print("from workflow guess_qed...guesses_tmp[0].pphh = ", guesses_tmp[0].pphh)
+    #normalized_guesses = [vec / np.sqrt(vec @ vec) for vec in guesses_tmp]
+    #print("after normalization guesses[0].pphh is ", normalized_guesses[0].pphh)
+    
+    for guess in final_guesses:
+        print(guess.gs1.as_float(), guess.gs2.as_float())
+    return [vec / np.sqrt(vec @ vec) for vec in final_guesses]
+    #for vec in guesses_tmp:
+    #    print("norm of guess vector = ", np.sqrt(vec @ vec))
+    #return guesses_tmp
 
 def setup_solver_printing(solmethod_name, matrix, kind, default_print,
                           output=None):
