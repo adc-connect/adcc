@@ -179,7 +179,6 @@ class AdcMatrix(AdcMatrixlike):
                                       variant=variant)
                 for block, order in self.block_orders.items() if order is not None
             }
-<<<<<<< HEAD
             # TODO Rename to self.block in 0.16.0
             self.blocks_ph = {bl: blocks[bl].apply for bl in blocks}
             if diagonal_precomputed:
@@ -188,14 +187,6 @@ class AdcMatrix(AdcMatrixlike):
                 self.__diagonal = sum(bl.diagonal for bl in blocks.values()
                                       if bl.diagonal)
                 self.__diagonal.evaluate()
-=======
-            #for block, order in block_orders.items():
-            #    if order is not None:
-            #        print(block, order) 
-            self.__diagonal = sum(bl.diagonal for bl in self.blocks_ph.values()
-                                  if bl.diagonal)
-            self.__diagonal.evaluate()
->>>>>>> qed_adc
             self.__init_space_data(self.__diagonal)
             #print("following is self.__init_space_data(self.__diagonal)")
             #print(self.__init_space_data(self.__diagonal))
@@ -606,8 +597,6 @@ class AdcMatrix(AdcMatrixlike):
         #    print("god damn")
         #print("shape of phot couple edge", self.phot_couple_edge, type(self.phot_couple_edge))
         #print("shape of phot couple inner", self.phot_couple_inner.matvec(v), type(self.phot_couple_inner.matvec(v)))
-
-        
         
         phot_part = self.elec_couple.matvec(v) + self.phot.matvec(v) + self.phot_couple_inner.matvec(v)
 
@@ -1065,34 +1054,42 @@ class AdcMatrix_submatrix(AdcMatrixlike):
         "adc3":  dict(ph_ph=3, ph_pphh=2,    pphh_ph=2,    pphh_pphh=1),     # noqa: E501
     }
 
-    def __init__(self, method, hf_or_mp, subblock, block_orders=None, intermediates=None):
+    def __init__(self, method, hf_or_mp, subblock, block_orders=None, intermediates=None,
+                 diagonal_precomputed=None):
         """
         Initialise an ADC matrix.
-
         Parameters
         ----------
         method : str or AdcMethod
             Method to use.
         hf_or_mp : adcc.ReferenceState or adcc.LazyMp
             HF reference or MP ground state
-        elec_or_phot: string, either "elec" or "phot"
-            electronic or photonic part of qed-matrix, without groundstate
         block_orders : optional
             The order of perturbation theory to employ for each matrix block.
             If not set, defaults according to the selected ADC method are chosen.
         intermediates : adcc.Intermediates or NoneType
             Allows to pass intermediates to re-use to this class.
+        diagonal_precomputed: adcc.AmplitudeVector
+            Allows to pass a pre-computed diagonal, for internal use only.
         """
         if isinstance(hf_or_mp, (libadcc.ReferenceState,
                                  libadcc.HartreeFockSolution_i)):
             hf_or_mp = LazyMp(hf_or_mp)
         if not isinstance(hf_or_mp, LazyMp):
-            raise TypeError("mp_results is not a valid object. It needs to be "
+            raise TypeError("hf_or_mp is not a valid object. It needs to be "
                             "either a LazyMp, a ReferenceState or a "
                             "HartreeFockSolution_i.")
 
         if not isinstance(method, AdcMethod):
             method = AdcMethod(method)
+
+        if diagonal_precomputed:
+            if not isinstance(diagonal_precomputed, AmplitudeVector):
+                raise TypeError("diagonal_precomputed needs to be"
+                                " an AmplitudeVector.")
+            if diagonal_precomputed.needs_evaluation:
+                raise ValueError("diagonal_precomputed must already"
+                                 " be evaluated.")
 
         self.timer = Timer()
         self.method = method
@@ -1101,6 +1098,7 @@ class AdcMatrix_submatrix(AdcMatrixlike):
         self.mospaces = hf_or_mp.reference_state.mospaces
         self.is_core_valence_separated = method.is_core_valence_separated
         self.ndim = 2
+        self.extra_terms = []
 
         self.intermediates = intermediates
         if self.intermediates is None:
@@ -1116,7 +1114,7 @@ class AdcMatrix_submatrix(AdcMatrixlike):
 
         # Sanity checks on block_orders
         for block in block_orders.keys():
-            if block not in ("gs_gs", "gs_ph", "ph_gs" ,"ph_ph", "ph_pphh", "pphh_ph", "pphh_pphh"):
+            if block not in ("ph_ph", "ph_pphh", "pphh_ph", "pphh_pphh"):
                 raise ValueError(f"Invalid block order key: {block}")
         if block_orders["ph_pphh"] != block_orders["pphh_ph"]:
             raise ValueError("ph_pphh and pphh_ph should always have "
@@ -1132,65 +1130,65 @@ class AdcMatrix_submatrix(AdcMatrixlike):
             variant = None
             if method.is_core_valence_separated:
                 variant = "cvs"
-            self.blocks_ph = {}
+            #self.blocks_ph = {}
             if subblock == "elec":
-                self.blocks_ph = {  # TODO Rename to self.block in 0.16.0
+                blocks = {  # TODO Rename to self.block in 0.16.0
                     block: ppmatrix.block(self.ground_state, block.split("_"),
                                         order=order, intermediates=self.intermediates,
                                         variant=variant)
                     for block, order in block_orders.items() if order is not None
                 }
             elif subblock == "elec_couple":
-                self.blocks_ph = {  # TODO Rename to self.block in 0.16.0
+                blocks = {  # TODO Rename to self.block in 0.16.0
                     block: ppmatrix.block(self.ground_state, block.split("_"),
                                         order=str(order) + "_couple", intermediates=self.intermediates,
                                         variant=variant)
                     for block, order in block_orders.items() if order is not None
                 }
             elif subblock == "phot_couple":
-                self.blocks_ph = {  # TODO Rename to self.block in 0.16.0
+                blocks = {  # TODO Rename to self.block in 0.16.0
                     block: ppmatrix.block(self.ground_state, block.split("_"),
                                         order=str(order) + "_phot_couple", intermediates=self.intermediates,
                                         variant=variant)
                     for block, order in block_orders.items() if order is not None
                 }
             elif subblock == "phot":
-                self.blocks_ph = {  # TODO Rename to self.block in 0.16.0
+                blocks = {  # TODO Rename to self.block in 0.16.0
                     block: ppmatrix.block(self.ground_state, block.split("_"),
                                         order=str(order) + "_phot", intermediates=self.intermediates,
                                         variant=variant)
                     for block, order in block_orders.items() if order is not None
                 }
             elif subblock == "phot2":
-                self.blocks_ph = {  # TODO Rename to self.block in 0.16.0
+                blocks = {  # TODO Rename to self.block in 0.16.0
                     block: ppmatrix.block(self.ground_state, block.split("_"),
                                         order=str(order) + "_phot2", intermediates=self.intermediates,
                                         variant=variant)
                     for block, order in block_orders.items() if order is not None
                 }
             elif subblock == "phot_couple_inner":
-                self.blocks_ph = {  # TODO Rename to self.block in 0.16.0
+                blocks = {  # TODO Rename to self.block in 0.16.0
                     block: ppmatrix.block(self.ground_state, block.split("_"),
                                         order=str(order) + "_phot_couple_inner", intermediates=self.intermediates,
                                         variant=variant)
                     for block, order in block_orders.items() if order is not None
                 }
             elif subblock == "phot_couple_edge":
-                self.blocks_ph = {  # TODO Rename to self.block in 0.16.0
+                blocks = {  # TODO Rename to self.block in 0.16.0
                     block: ppmatrix.block(self.ground_state, block.split("_"),
                                         order=str(order) + "_phot_couple_edge", intermediates=self.intermediates,
                                         variant=variant)
                     for block, order in block_orders.items() if order is not None
                 }
             elif subblock == "elec_couple_inner":
-                self.blocks_ph = {  # TODO Rename to self.block in 0.16.0
+                blocks = {  # TODO Rename to self.block in 0.16.0
                     block: ppmatrix.block(self.ground_state, block.split("_"),
                                         order=str(order) + "_couple_inner", intermediates=self.intermediates,
                                         variant=variant)
                     for block, order in block_orders.items() if order is not None
                 }
             elif subblock == "elec_couple_edge":
-                self.blocks_ph = {  # TODO Rename to self.block in 0.16.0
+                blocks = {  # TODO Rename to self.block in 0.16.0
                     block: ppmatrix.block(self.ground_state, block.split("_"),
                                         order=str(order) + "_couple_edge", intermediates=self.intermediates,
                                         variant=variant)
@@ -1208,9 +1206,17 @@ class AdcMatrix_submatrix(AdcMatrixlike):
             #    print(bl.diagonal)
             #for bl in self.blocks_ph:
             #    print(bl)
-            self.__diagonal = sum(bl.diagonal for bl in self.blocks_ph.values()
-                                  if bl.diagonal)
-            self.__diagonal.evaluate()
+            #self.__diagonal = sum(bl.diagonal for bl in self.blocks_ph.values()
+            #                      if bl.diagonal)
+            #self.__diagonal.evaluate()
+            # TODO Rename to self.block in 0.16.0
+            self.blocks_ph = {bl: blocks[bl].apply for bl in blocks}
+            if diagonal_precomputed:
+                self.__diagonal = diagonal_precomputed
+            else:
+                self.__diagonal = sum(bl.diagonal for bl in blocks.values()
+                                      if bl.diagonal)
+                self.__diagonal.evaluate()
             self.__init_space_data(self.__diagonal)
             #print("following is self.__init_space_data(self.__diagonal)")
             #print(self.__init_space_data(self.__diagonal))
@@ -1286,6 +1292,56 @@ class AdcMatrix_submatrix(AdcMatrixlike):
         # also it seems, that self.axis_lengths is not further used, but shape[0] is rather used for that, so not necessary to build self.axis_lengths correctly
     """
 
+    def __iadd__(self, other):
+        """In-place addition of an :py:class:`AdcExtraTerm`
+        Parameters
+        ----------
+        other : AdcExtraTerm
+            the extra term to be added
+        """
+        if not isinstance(other, AdcExtraTerm):
+            return NotImplemented
+        if not all(k in self.blocks_ph for k in other.blocks):
+            raise ValueError("Can only add to blocks of"
+                             " AdcMatrix that already exist.")
+        for sp in other.blocks:
+            orig_app = self.blocks_ph[sp]
+            other_app = other.blocks[sp].apply
+
+            def patched_apply(ampl, original=orig_app, other=other_app):
+                return sum(app(ampl) for app in (original, other))
+            self.blocks_ph[sp] = patched_apply
+        other_diagonal = sum(bl.diagonal for bl in other.blocks.values()
+                             if bl.diagonal)
+        self.__diagonal = self.__diagonal + other_diagonal
+        self.__diagonal.evaluate()
+        self.extra_terms.append(other)
+        return self
+
+    def __add__(self, other):
+        """Addition of an :py:class:`AdcExtraTerm`, creating
+        a copy of self and adding the term to the new matrix
+        Parameters
+        ----------
+        other : AdcExtraTerm
+            the extra term to be added
+        Returns
+        -------
+        AdcMatrix
+            a copy of the AdcMatrix with the extra term added
+        """
+        if not isinstance(other, AdcExtraTerm):
+            return NotImplemented
+        ret = AdcMatrix(self.method, self.ground_state,
+                        block_orders=self.block_orders,
+                        intermediates=self.intermediates,
+                        diagonal_precomputed=self.diagonal())
+        ret += other
+        return ret
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
     def __init_space_data(self, diagonal):
         """Update the cached data regarding the spaces of the ADC matrix"""
         self.axis_spaces = {}
@@ -1295,15 +1351,8 @@ class AdcMatrix_submatrix(AdcMatrixlike):
             self.axis_lengths[block] = np.prod([
                 self.mospaces.n_orbs(sp) for sp in self.axis_spaces[block]
             ])
-        #self.axis_spaces["gs"] = ["o0", "v0"] 
-        #self.axis_lengths["gs"] = 1
         self.shape = (sum(self.axis_lengths.values()),
                       sum(self.axis_lengths.values()))
-        
-        #print(self.axis_spaces)
-        #print(self.axis_lengths)
-        #print(self.shape)
-
 
     def __repr__(self):
         ret = f"AdcMatrix({self.method.name}, "
@@ -1330,13 +1379,12 @@ class AdcMatrix_submatrix(AdcMatrixlike):
                       "will be removed in 0.16.0. "
                       "Use `matrix.axis_spaces[block]` in the future.")
         return {
-            #"g": self.axis_spaces.get("gs", None),
             "s": self.axis_spaces.get("ph", None),
             "d": self.axis_spaces.get("pphh", None),
             "t": self.axis_spaces.get("ppphhh", None),
         }[block]
 
-    @property #non-qed
+    @property
     def axis_blocks(self):
         """
         Return the blocks used along one of the axes of the ADC matrix
@@ -1344,18 +1392,11 @@ class AdcMatrix_submatrix(AdcMatrixlike):
         """
         return list(self.axis_spaces.keys())
 
-    #@property #qed
-    #def axis_blocks(self):
-        #print(list(self.axis_spaces.keys()) + list(self.axis_spaces.keys()))
-    #    return list(self.axis_spaces.keys()) + list(self.axis_spaces.keys())
-
     def diagonal(self, block=None):
         """Return the diagonal of the ADC matrix"""
         if block is not None:
             warnings.warn("Support for the block argument will be dropped "
                           "in 0.16.0.")
-            #if block == "g":
-            #    return self.__diagonal.gs #this is just a float, but it could be e.g. omega, for which I dont know if required data is given in this function
             if block == "s":
                 return self.__diagonal.ph
             if block == "d":
@@ -1365,11 +1406,10 @@ class AdcMatrix_submatrix(AdcMatrixlike):
     def compute_apply(self, block, tensor):
         warnings.warn("The compute_apply function is deprecated and "
                       "will be removed in 0.16.0.")
-        if block in ("gg", "gs", "sg" ,"ss", "sd", "ds", "dd"):
+        if block in ("ss", "sd", "ds", "dd"):
             warnings.warn("The singles-doubles interface is deprecated and "
                           "will be removed in 0.16.0.")
-            block = {"gg": "gs_gs", "gs": "gs_ph", "sg": "ph_gs",
-                     "ss": "ph_ph", "sd": "ph_pphh",
+            block = {"ss": "ph_ph", "sd": "ph_pphh",
                      "ds": "pphh_ph", "dd": "pphh_pphh"}[block]
         return self.block_apply(block, tensor)
 
@@ -1444,15 +1484,12 @@ class AdcMatrix_submatrix(AdcMatrixlike):
         applied to relevant blocks of an AmplitudeVector in order
         to symmetrise it to the right symmetry in order to be used
         with the various matrix-vector-products of this function.
-
         Most importantly the returned functions antisymmetrise
         the occupied and virtual parts of the doubles parts
         if this is sensible for the method behind this adcmatrix.
-
         Returns a dictionary block identifier -> function
         """
         ret = {}
-        print("antisymm function is used in Amplitudevector part of AdcMatrix function")
         if self.is_core_valence_separated:
             # CVS doubles part is antisymmetric wrt. (i,K,a,b) <-> (i,K,b,a)
             ret["pphh"] = lambda v: v.antisymmetrise([(2, 3)])
@@ -1469,7 +1506,6 @@ class AdcMatrix_submatrix(AdcMatrixlike):
         """
         Return the list of indices and their values
         of the dense basis representation
-
         ordering: adcc, spin, spatial
         """
         ret = []
@@ -1496,11 +1532,6 @@ class AdcMatrix_submatrix(AdcMatrixlike):
                            for i in range(len(idx))]
                 # Sort first by spatial, then by spin
                 return (spatial, is_beta)
-
-        if "gs" in axis_blocks:
-            ret_g = []
-            ret_g.append([(0, 0), 1])
-            ret.extend(ret_g)
 
         if "ph" in axis_blocks:
             ret_s = []
@@ -1554,29 +1585,25 @@ class AdcMatrix_submatrix(AdcMatrixlike):
             ret_d.sort(key=sortfctn)
             ret.extend(ret_d)
 
-        if any(b not in ("gs" ,"ph", "pphh") for b in self.axis_blocks):
-            raise NotImplementedError("Blocks other than gs, ph and pphh "
+        if any(b not in ("ph", "pphh") for b in self.axis_blocks):
+            raise NotImplementedError("Blocks other than ph and pphh "
                                       "not implemented")
         return ret
 
-    def to_ndarray(self, out=None): # this is not adapted to gs
+    def to_ndarray(self, out=None):
         """
         Return the ADC matrix object as a dense numpy array. Converts the sparse
         internal representation of the ADC matrix to a dense matrix and return
         as a numpy array.
-
         Notes
         -----
-
         This method is only intended to be used for debugging and
         visualisation purposes as it involves computing a large amount of
         matrix-vector products and the returned array consumes a considerable
         amount of memory.
-
         The resulting matrix has no spin symmetry imposed, which means that
         its eigenspectrum may contain non-physical excitations (e.g. with linear
         combinations of α->β and α->α components in the excitation vector).
-
         This function has not been sufficiently tested to be considered stable.
         """
         # TODO Update to ph / pphh
@@ -1645,7 +1672,6 @@ class AdcMatrix_submatrix(AdcMatrixlike):
         return out
 
 
-
 class AdcBlockView(AdcMatrix):
     def __init__(self, fullmatrix, block):
         warnings.warn("The AdcBlockView class got deprecated and will be "
@@ -1670,7 +1696,6 @@ class AdcMatrixShifted(AdcMatrix):
         """
         Initialise a shifted ADC matrix. Applying this class to a vector ``v``
         represents an efficient version of ``matrix @ v + shift * v``.
-
         Parameters
         ----------
         matrix : AdcMatrix
@@ -1719,18 +1744,15 @@ class AdcMatrixProjected(AdcMatrix):
         Initialise a projected ADC matrix, i.e. represents the expression
         ``P @ M @ P`` where ``P`` is a projector onto a subset of
         ``excitation_blocks``.
-
         The ``excitation_blocks`` are defined by partitioning the ``o1`` occupied
         and ``v1`` virtual space of the ``matrix.mospaces`` into a core-occupied
         ``c``, valence-occupied ``o``, inner-virtual ``v`` and outer-virtual ``w``.
         This matrix will only keep selected blocks in the amplitudes non-zero, which
         are selected in the ``excitation_blocks`` list
         (e.g. ``["cv", "ccvv", "ocvv"]``).
-
         For details on the option how to select the spaces, see the documentation
         in :py:`adcc.ReferenceState.__init__` (``outer_virtuals`` follows the same
         rules as ``frozen_virtuals``).
-
         Parameters
         ----------
         matrix : AdcMatrix
