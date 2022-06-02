@@ -23,8 +23,7 @@
 from libadcc import amplitude_vector_enforce_spin_kind
 
 from adcc import evaluate
-from adcc.AmplitudeVector import AmplitudeVector, QED_AmplitudeVector, gs_vec
-import numpy as np
+from adcc.AmplitudeVector import AmplitudeVector, QED_AmplitudeVector
 
 # TODO
 #    This interface is not that great and leads to duplicate information
@@ -65,70 +64,27 @@ class IndexSymmetrisation():
             for b in vec.blocks_ph:
                 if b not in self.symmetrisation_functions:
                     continue
-                #print(b)
                 vec[b] = evaluate(self.symmetrisation_functions[b](vec[b]))
             return vec
 
         if isinstance(new_vectors, (AmplitudeVector, QED_AmplitudeVector)):
             return self.symmetrise([new_vectors])[0]
         elif isinstance(new_vectors[0], QED_AmplitudeVector):
-            # we dont have to symmetrise the gs blocks...actually only the pphh blocks are symmetrised here
-            if "pphh" in new_vectors[0].elec.blocks_ph:  # not sure if this is necessary, since symm should only be requested for doubles after all
-                #print("non explicit symm for qed vec is called")
+            if "pphh" in new_vectors[0].elec.blocks_ph:
                 for vec in new_vectors:
                     vec.elec = self.symmetrise([vec.elec])[0]
                     vec.phot = self.symmetrise([vec.phot])[0]
                     vec.phot2 = self.symmetrise([vec.phot2])[0]
-                #test_list = new_vectors
-                #for ind, vec in enumerate(new_vectors):
-                    #if vec.elec.pphh != evaluate(self.symmetrisation_functions["pphh"](vec.elec.pphh)): #vec.elec.pphh != symm_subroutine(vec.elec).pphh:
-                    #    print("something changed")
-                    #else:
-                    #    print("nothing changed")
-                    #vec = QED_AmplitudeVector(gs=vec.gs, ph=vec.elec.ph, pphh=evaluate(self.symmetrisation_functions["pphh"](vec.elec.pphh)), 
-                    #                        gs1=vec.gs1, ph1=vec.phot.ph, pphh1=evaluate(self.symmetrisation_functions["pphh"](vec.phot.pphh)),
-                    #                        gs2=vec.gs2, ph2=vec.phot2.ph, pphh2=evaluate(self.symmetrisation_functions["pphh"](vec.phot2.pphh)))
-                #    test_list[ind].elec = self.symmetrise([vec.elec])[0] #evaluate(self.symmetrisation_functions["pphh"](vec.elec.pphh))
-                #    test_list[ind].phot = self.symmetrise([vec.phot])[0]
-                #    test_list[ind].phot2 = self.symmetrise([vec.phot2])[0]
-                    #test_list[ind].phot = symm_subroutine(vec.phot) #evaluate(self.symmetrisation_functions["pphh"](vec.phot.pphh))
-                    #test_list[ind].phot2 = symm_subroutine(vec.phot2) #evaluate(self.symmetrisation_functions["pphh"](vec.phot2.pphh))
-                #if test_list[0].elec.pphh == new_vectors[0].elec.pphh:
-                #    print("in symm nothing changed")
-                #    if new_vectors[0].elec.pphh != evaluate(self.symmetrisation_functions["pphh"](test_list[0].elec.pphh)):
-                #        print("but something changed for the symmetrization, which was not passed to the QED_AmplitudeVector")
-                #else:
-                #    print("in symm something changed")
-                #if vec.elec.pphh == evaluate(self.symmetrisation_functions["pphh"](vec.elec.pphh)):
-                #    print("symm still yields no change")
-                #print(type(evaluate(self.symmetrisation_functions["pphh"](vec.elec.pphh))), evaluate(self.symmetrisation_functions["pphh"](vec.elec.pphh)).shape)
-                #if new_vec.elec == symm_subroutine(vec.elec):
-                #    print("correctly changed in symmetrise function")
-                #elif new_vec.elec == vec.elec:
-                #    print("nothing changed in symmetrise function")
-                #else:
-                #    print("not correctly changed in symmetrise function")
-                #    diff = new_vec.elec - symm_subroutine(vec.elec)
-                #    print("squared norm of difference with symmetrise = ", np.sqrt(diff @ diff))
-                #    diff2 = new_vec.elec - vec.elec
-                #    print("squared norm of difference without symmetrise = ", np.sqrt(diff2 @ diff2))
-                #    diff3 = vec.elec - symm_subroutine(vec.elec)
-                #    print("squared norm of difference between no symmetrise and symmetrise = ", np.sqrt(diff3 @ diff3)) # why is this zero??????????
-                #    #print(type(new_vec.elec.pphh), type(symm_subroutine(vec.elec).pphh))
-                #vec.elec = symm_subroutine(vec.elec)
-                #vec.phot = symm_subroutine(vec.phot)
-                #vec.phot2 = symm_subroutine(vec.phot2)
         elif isinstance(new_vectors[0], AmplitudeVector):
-            #print("non explicit symm for ampl vec is called")
             for vec in new_vectors:
                 vec = symm_subroutine(vec)
-            #if not isinstance(vec, AmplitudeVector):
-            #    raise TypeError("new_vectors has to be an "
-            #                    "iterable of AmplitudeVector")
-            #for b in vec.blocks_ph:
-            #    if b not in self.symmetrisation_functions:
-            #        continue
-            #    vec[b] = evaluate(self.symmetrisation_functions[b](vec[b]))
+            if not isinstance(vec, AmplitudeVector):
+                raise TypeError("new_vectors has to be an "
+                                "iterable of AmplitudeVector")
+            for b in vec.blocks_ph:
+                if b not in self.symmetrisation_functions:
+                    continue
+                vec[b] = evaluate(self.symmetrisation_functions[b](vec[b]))
         return new_vectors
 
 
@@ -140,7 +96,6 @@ class IndexSpinSymmetrisation(IndexSymmetrisation):
     def __init__(self, matrix, enforce_spin_kind="singlet"):
         super().__init__(matrix)
         self.enforce_spin_kind = enforce_spin_kind
-        #print("index spin symm class is used")
 
     def symmetrise(self, new_vectors):
         if isinstance(new_vectors, (AmplitudeVector, QED_AmplitudeVector)):
@@ -153,7 +108,6 @@ class IndexSpinSymmetrisation(IndexSymmetrisation):
         for vec in new_vectors:
             if isinstance(vec, QED_AmplitudeVector):
                 if "pphh" in vec.elec.blocks_ph:
-                    #print("explicit symm for qed vec is called")
                     amplitude_vector_enforce_spin_kind(
                         vec.elec.pphh, "d", self.enforce_spin_kind
                     )
@@ -167,7 +121,6 @@ class IndexSpinSymmetrisation(IndexSymmetrisation):
             # the other blocks are not yet implemented
             # or nothing needs to be done ("ph" block)
             elif "pphh" in vec.blocks_ph:
-                #print("explicit symm for ampl vec is called")
                 # TODO: Note that the "d" is needed here because the C++ side
                 #       does not yet understand ph and pphh
                 amplitude_vector_enforce_spin_kind(

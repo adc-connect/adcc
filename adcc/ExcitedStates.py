@@ -35,6 +35,7 @@ from .FormatIndex import (FormatIndexAdcc, FormatIndexBase,
 from .OneParticleOperator import product_trace
 from .ElectronicTransition import ElectronicTransition
 from .FormatDominantElements import FormatDominantElements
+from .AmplitudeVector import QED_AmplitudeVector
 
 
 class EnergyCorrection:
@@ -411,7 +412,7 @@ class ExcitedStates(ElectronicTransition):
             If ``None`` an automatic selection will be made.
         """
         eV = constants.value("Hartree energy in eV") 
-        vector_format = FormatExcitationVector(self.matrix.elec, tolerance=tolerance, # here self.matrix.elec, due to qed
+        vector_format = FormatExcitationVector(self.matrix, tolerance=tolerance,
                                                index_format=index_format)
 
         #for qed
@@ -420,7 +421,9 @@ class ExcitedStates(ElectronicTransition):
         # which however is the standard output for the excitation vectors, so only the .elec vector is accessible this way
         # Optimise the formatting by pre-inspecting all tensors
         for tensor in self.excitation_vector:
-            vector_format.optimise_formatting(tensor.elec)
+            if isinstance(tensor, QED_AmplitudeVector):
+                tensor = tensor.elec
+            vector_format.optimise_formatting(tensor)
 
         # Determine width of a line
         lw = 2 + vector_format.linewidth
@@ -428,6 +431,8 @@ class ExcitedStates(ElectronicTransition):
 
         ret = separator
         for i, vec in enumerate(self.excitation_vector):
+            if isinstance(vec, QED_AmplitudeVector):
+                vec = vec.elec
             ene = self.excitation_energy[i]
             eev = ene * eV
             head = f"State {i:3d} , {ene:13.7g} au"
@@ -435,7 +440,7 @@ class ExcitedStates(ElectronicTransition):
                 head += f", {eev:13.7} eV"
             ret += "| " + head + (lw - len(head) - 2) * " " + " |\n"
             ret += separator
-            formatted = vector_format.format(vec.elec).replace("\n", " |\n| ")
+            formatted = vector_format.format(vec).replace("\n", " |\n| ")
             ret += "| " + formatted + " |\n"
             if i != len(self.excitation_vector) - 1:
                 ret += "\n"

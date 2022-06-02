@@ -22,9 +22,7 @@
 ## ---------------------------------------------------------------------
 import sys
 import warnings
-from attr import has
 import numpy as np
-from numpy.lib.function_base import blackman
 import scipy.linalg as la
 import scipy.sparse.linalg as sla
 
@@ -141,7 +139,6 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
 
     # The current subspace
     SS = state.subspace_vectors
-    #print("from davidson...SS[0].pphh", SS[0].pphh)
 
     # The matrix A projected into the subspace
     # as a continuous array. Only the view
@@ -155,9 +152,6 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
     callback(state, "start")
     state.timer.restart("iteration")
 
-    #print(matrix.shape)
-    #print(SS)
-
     with state.timer.record("projection"):
         # Initial application of A to the subspace
         Ax = evaluate(matrix @ SS)
@@ -168,46 +162,6 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
 
         assert len(SS) >= n_block
         assert len(SS) <= max_subspace
-        """
-        if len(SS) == max_subspace:
-            print("subspace reached full matrix dimension -> starting to diagonalize full matrix from already obtained SS")
-            # just copy paste of some of the davidson functions
-            converged = False
-            while not converged:
-                Ass = Ass_cont[:n_ss_vec, :n_ss_vec]  # Increase the work view size
-                for i in range(n_block):
-                    #print(type(Ax[-n_block + i]), Ax[-n_block + i])
-                    #print(type(SS), SS)
-                    Ass[:, -n_block + i] = Ax[-n_block + i] @ SS
-                Ass[-n_block:, :] = np.transpose(Ass[:, -n_block:])
-
-                rvals, rvecs = la.eigh(Ass)
-
-                def form_residual(rval, rvec):
-                    coefficients = np.hstack((rvec, -rval * rvec))
-                    return lincomb(coefficients, Ax + SS, evaluate=True)
-
-                residuals = [form_residual(rvals[i], v)
-                            for i, v in enumerate(np.transpose(rvecs))]
-                residual_norms = np.array([r @ r for r in residuals])
-
-                residual_converged = residual_norms < 1e-9 # same as for davidson
-                converged = np.all(residual_converged)
-
-                if converged:
-                    print("converged eigenvalues = ", rvals)
-                    break
-                else:
-                    print("intermediate eigenvalues = ", rvals)
-                    #for i in np.arange(max_subspace):
-                        #print("rvec ", rvecs[i])
-                        #print("residual", residuals[i])
-                    new_guesses_tmp = [rvecs[i] - residuals[i] for i in np.arange(max_subspace)]
-                    new_guesses = [vec / np.sqrt(vec @ vec) for vec in new_guesses_tmp]
-                    Ax = evaluate(matrix @ new_guesses)
-        """
-
-
 
         # Project A onto the subspace, keeping in mind
         # that the values Ass[:-n_block, :-n_block] are already valid,
@@ -215,8 +169,6 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         with state.timer.record("projection"):
             Ass = Ass_cont[:n_ss_vec, :n_ss_vec]  # Increase the work view size
             for i in range(n_block):
-                #print(type(Ax[-n_block + i]), Ax[-n_block + i])
-                #print(type(SS), SS)
                 Ass[:, -n_block + i] = Ax[-n_block + i] @ SS
             Ass[-n_block:, :] = np.transpose(Ass[:, -n_block:])
 
@@ -224,29 +176,17 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         # and the associated ritz vector as well as residual
         with state.timer.record("rayleigh_ritz"):
             if Ass.shape == (n_block, n_block):
-                #print("davidson eigh", la.eigh(Ass)[0])
                 rvals, rvecs = la.eigh(Ass)  # Do a full diagonalisation
-                #print("davidson eigh", rvals)
-                #eigenvecs = [lincomb(v, SS, evaluate=True)
-                #                  for v in np.transpose(rvecs)]
-            #for eigv in eigenvecs:
-                #print("norm of eigenvector", np.sqrt(eigv @ eigv))
             else:
                 # TODO Maybe play with precision a little here
                 # TODO Maybe use previous vectors somehow
                 v0 = None
-                #print("davidson eigh", la.eigh(Ass)[0])
                 rvals, rvecs = sla.eigsh(Ass, k=n_block, which=which, v0=v0)
 
         with state.timer.record("residuals"):
             # Form residuals, A * SS * v - λ * SS * v = Ax * v + SS * (-λ*v)
             def form_residual(rval, rvec):
-                #print("norm of residual vector = ", np.sqrt(rvec @ rvec))
-                #rvec = rvec / np.sqrt(rvec @ rvec)
                 coefficients = np.hstack((rvec, -rval * rvec))
-                #print(type(coefficients), coefficients)
-                #print(type(SS), SS)
-                #print(type(Ax), Ax)
                 return lincomb(coefficients, Ax + SS, evaluate=True)
             residuals = [form_residual(rvals[i], v)
                          for i, v in enumerate(np.transpose(rvecs))]
@@ -257,15 +197,13 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             state.eigenvalues = rvals[epair_mask]
             state.residuals = [residuals[i] for i in epair_mask]
             state.residual_norms = np.array([r @ r for r in state.residuals])
-            # building the eigenvectors here is just for debugging purposes
-            eigenvecs = [lincomb(v, SS, evaluate=True)
-                                  for i, v in enumerate(np.transpose(rvecs))
-                                  if i in epair_mask]
-            for eigv in eigenvecs:
-                print("norm of eigenvector", np.sqrt(eigv @ eigv))
-            #print("orthogonality check 2,3 , 2,4 and 3,4", np.sqrt(eigenvecs[1] @ eigenvecs[2]),
-            #                                                 np.sqrt(eigenvecs[1] @ eigenvecs[3]), np.sqrt(eigenvecs[2] @ eigenvecs[3]))
-                #print("eigenvector.ph = ", eigv.ph)
+            if hasattr(matrix.reference_state, "print_eigvec_norms"):
+                # building the eigenvectors here is just for debugging purposes
+                eigenvecs = [lincomb(v, SS, evaluate=True)
+                                    for i, v in enumerate(np.transpose(rvecs))
+                                    if i in epair_mask]
+                for eigv in eigenvecs:
+                    print("norm of eigenvector", np.sqrt(eigv @ eigv))
             # TODO This is misleading ... actually residual_norms contains
             #      the norms squared. That's also the used e.g. in adcman to
             #      check for convergence, so using the norm squared is fine,
@@ -333,49 +271,6 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
 
             # Explicitly symmetrise the new vectors if requested
             if explicit_symmetrisation:
-                #print(explicit_symmetrisation)
-                #tmp_list = []
-                #tmp2 = []
-                #for vec in preconds:
-                #    tmp_list.append(vec.elec)
-                #    tmp_list.append(vec.phot)
-                #    tmp_list.append(vec.phot2)
-                #explicit_symmetrisation.symmetrise(tmp_list)
-                #for i, vec in enumerate(preconds):
-                #    tmp2.append(QED_AmplitudeVector(gs=vec.gs, ph=vec.elec.ph, pphh=tmp_list[3*i].pphh, 
-                #                            gs1=vec.gs1, ph1=vec.phot.ph, pphh1=tmp_list[3*i + 1].pphh,
-                #                            gs2=vec.gs2, ph2=vec.phot2.ph, pphh2=tmp_list[3*i + 2].pphh))
-                #preconds = tmp2
-                #if isinstance(preconds[0], QED_AmplitudeVector):
-                #    
-                #else:
-                #if "pphh" in preconds[0].elec.blocks_ph:
-                #    explicit_symmetrisation.symmetrise.
-                #    for ind, vec in enumerate(preconds):
-                #        preconds[ind] = QED_AmplitudeVector(gs=vec.gs, ph=vec.elec.ph, pphh=evaluate(self.symmetrisation_functions["pphh"](vec.elec.pphh)), 
-                #                            gs1=vec.gs1, ph1=vec.phot.ph, pphh1=evaluate(self.symmetrisation_functions["pphh"](vec.phot.pphh)),
-                #                            gs2=vec.gs2, ph2=vec.phot2.ph, pphh2=evaluate(self.symmetrisation_functions["pphh"](vec.phot2.pphh)))
-
-                    #temp = preconds
-                    #explicit_symmetrisation.symmetrise(preconds)
-                    #new_temp = explicit_symmetrisation.symmetrise(temp)
-                    #if new_temp[0].elec.pphh == preconds[0].elec.pphh:
-                    #    print("in davidson symmetrise yields no change in elec")
-                    #else:
-                    #    print("in davidson symmetrise yields a change in elec")
-                #else: # this is unnecessary, since symmetrization only applies for double excitation space
-                #tmp = preconds
-                #explicit_symmetrisation.symmetrise(tmp)
-                #if tmp[0].elec.pphh == preconds[0].elec.pphh:
-                #    print("nothing changed")
-                #else:
-                #    print("something changed")
-                #tmp2 = preconds[0].elec
-                #explicit_symmetrisation.symmetrise(tmp2)
-                #if tmp2.pphh == preconds[0].elec.pphh:
-                #    print("nothing changed for elec only")
-                #else:
-                #    print("something changed for elec only")
                 explicit_symmetrisation.symmetrise(preconds)
 
 
@@ -474,8 +369,6 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
         raise TypeError("matrix is not of type AdcMatrixlike")
     for guess in guesses:
         if not isinstance(guess, (AmplitudeVector, QED_AmplitudeVector)):
-            #print(guess)
-            #print(guesses)
             raise TypeError("One of the guesses is not of type AmplitudeVector")
 
     if preconditioner is not None and isinstance(preconditioner, type):
@@ -492,13 +385,14 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
     if not max_subspace:
         # TODO Arnoldi uses this:
         # max_subspace = max(2 * n_ep + 1, 20)
-        # max_subspace = max(6 * n_ep, 20, 5 * len(guesses)) # original
-        print("for qed-adc we use double the standard max_subspace, due to convergence problems,"
-        "if the doubly excited photonic space contributes to the states")
         if hasattr(matrix.reference_state, "full_diagonalization"):
             max_subspace = len(guesses)
-        else:
+        elif hasattr(matrix.reference_state, "coupling") and not hasattr(matrix.reference_state, "approx"):
+            print("for qed-adc we use double the standard max_subspace")
+            #"if the doubly excited photonic space contributes to the states")
             max_subspace = max(12 * n_ep, 20, 10 * len(guesses))
+        else:
+            max_subspace = max(6 * n_ep, 20, 5 * len(guesses))
 
     def convergence_test(state):
         state.residuals_converged = state.residual_norms < conv_tol
@@ -513,7 +407,6 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
             "".format(conv_tol, matrix.shape[1] * np.finfo(float).eps)
         ))
 
-    #print("this is from davidson...guesses[0].pphh = ", guesses[0].pphh)
     state = DavidsonState(matrix, guesses)
     davidson_iterations(matrix, state, max_subspace, max_iter,
                         n_ep=n_ep, is_converged=convergence_test,
