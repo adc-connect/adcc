@@ -40,6 +40,7 @@ from .solver.davidson import jacobi_davidson
 from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
 from .AmplitudeVector import QED_AmplitudeVector
+from .qed_matrix_from_diag_adc import qed_matrix_from_diag_adc
 
 __all__ = ["run_adc"]
 
@@ -214,6 +215,19 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
 
     # add environment corrections to excited states
     exstates += env_energy_corrections
+
+    # Build QED (approximated) matrix from "standard" ADC matrix
+    # and expectation values.
+    if hasattr(matrix.reference_state, "approx"):
+        qed_matrix = qed_matrix_from_diag_adc(exstates, matrix.reference_state)
+        if method == "adc2" and not hasattr(matrix.reference_state, "first_order_coupling"):
+            qed_eigvals, qed_eigvecs = qed_matrix.second_order_coupling()
+        else:
+            qed_eigvals, qed_eigvecs = qed_matrix.first_order_coupling()
+
+        exstates.qed_excitation_energy = qed_eigvals
+        exstates.qed_excitation_vector = qed_eigvecs
+
     return exstates
 
 
@@ -519,8 +533,6 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
 
     for guess_index in np.arange(n_guess):
         if "pphh" in matrix.axis_blocks:
-            # what if this is not ok without restricting singlets/triplets only, 
-            # because e.g. phot could be singlet and elec triplet ... doesnt seem to matter
             guesses_tmp.append(QED_AmplitudeVector(guesses_elec[guess_index].ph, guesses_elec[guess_index].pphh,
                             0, guesses_phot[guess_index].ph, guesses_phot[guess_index].pphh,
                             0, guesses_phot2[guess_index].ph, guesses_phot2[guess_index].pphh))
@@ -569,7 +581,6 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
 
     
     for guess in final_guesses:
-        #print(guess.gs1.as_float(), guess.gs2.as_float())
         print(guess.gs1, guess.gs2)
     return [vec / np.sqrt(vec @ vec) for vec in final_guesses]
 

@@ -63,14 +63,13 @@ class JacobiPreconditioner:
         self.shifts = shifts
 
     def apply(self, invecs):
-        #print(invecs)
         if isinstance(invecs, AmplitudeVector):
             if not isinstance(self.shifts, (float, np.number)):
                 raise TypeError("Can only apply JacobiPreconditioner "
                                 "to a single vector if shifts is "
                                 "only a single number.")
             return invecs / (self.diagonal - self.shifts)
-        elif isinstance(invecs, QED_AmplitudeVector): # I dont think this is used anywhere
+        elif isinstance(invecs, QED_AmplitudeVector):
             if not isinstance(self.shifts, (float, np.number)):
                 raise TypeError("Can only apply JacobiPreconditioner "
                                 "to a single vector if shifts is "
@@ -82,13 +81,6 @@ class JacobiPreconditioner:
                                  "with number of shifts stored inside "
                                  "precoditioner. Update using the "
                                  "'update_shifts' method.")
-            #print(self.diagonal, self.shifts)
-            #for i, v in enumerate(invecs):
-            #test_temp = invecs[0].ph / (self.diagonal.ph - self.shifts[0])
-            #print("ph/ph", test_temp)
-            #print(invecs[0])
-            #print(self.diagonal.gs, self.diagonal.ph, self.diagonal.gs1)
-            #print("from precond invec.pphh is ", invecs[0].pphh)
             return [v / (self.diagonal - self.shifts[i])
                     for i, v in enumerate(invecs)]
         else:

@@ -194,7 +194,7 @@ class AdcMatrix(AdcMatrixlike):
             variant = None
             if method.is_core_valence_separated:
                 variant = "cvs"
-
+            # Build full QED-matrix
             if hasattr(self.reference_state, "coupling") and not hasattr(self.reference_state, "approx"):
                 blocks = {}
 
@@ -220,7 +220,7 @@ class AdcMatrix(AdcMatrixlike):
                                     self.__diagonal_gs2, blocks["ph_ph_phot2"].diagonal.evaluate().ph, None)
                 self.__init_space_data_qed(self.__diagonal.elec) 
                 #self.__diagonal.evaluate()
-            else:
+            else: # Build "standard" ADC-matrix
                 blocks = {
                     bl: get_pp_blocks("elec")[bl] for bl, order in block_orders.items() if order is not None
                 }
@@ -356,12 +356,6 @@ class AdcMatrix(AdcMatrixlike):
         (e.g. ['ph', 'pphh']).
         """
         return list(self.axis_spaces.keys())
-    """
-    @property
-    def axis_blocks(self): # this is only for debugging and has not been adapted yet
-        #print(list(self.axis_spaces.keys()) + list(self.axis_spaces.keys()))
-        return list(self.axis_spaces.keys()) + list(self.axis_spaces.keys())
-    """
 
     def diagonal(self, block=None):
         """Return the diagonal of the ADC matrix"""
@@ -454,7 +448,8 @@ class AdcMatrix(AdcMatrixlike):
                 return QED_AmplitudeVector(elec_part.ph, elec_part.pphh, gs1_part, phot_part.ph, phot_part.pphh,
                                             gs2_part, phot2_part.ph, phot2_part.pphh)
             else:
-                return QED_AmplitudeVector(elec_part.ph, None, gs1_part, phot_part.ph, None, gs2_part, phot2_part.ph, None)
+                #return QED_AmplitudeVector(elec_part.ph, None, gs1_part, phot_part.ph, None, gs2_part, phot2_part.ph, None)
+                return QED_AmplitudeVector(elec_part.ph, None, gs1_part, phot_part.ph, None, gs2_part, phot_part.ph * 0, None)
         else:
             TypeError("matvec needs to be invoked with AmplitudeVector or QED_AmplitudeVector")
 

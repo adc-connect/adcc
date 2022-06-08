@@ -283,8 +283,6 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
                 pvec = preconds[i]
                 # Project out the components of the current subspace
                 # That is form (1 - SS * SS^T) * pvec = pvec + SS * (-SS^T * pvec)
-                #print("pvec SS", pvec, SS)
-                #print(pvec.elec.ph, SS[0].elec.ph)
                 coefficients = np.hstack(([1], -(pvec @ SS)))
                 pvec = lincomb(coefficients, [pvec] + SS, evaluate=True)
                 pnorm = np.sqrt(pvec @ pvec)
@@ -389,7 +387,6 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
             max_subspace = len(guesses)
         elif hasattr(matrix.reference_state, "coupling") and not hasattr(matrix.reference_state, "approx"):
             print("for qed-adc we use double the standard max_subspace")
-            #"if the doubly excited photonic space contributes to the states")
             max_subspace = max(12 * n_ep, 20, 10 * len(guesses))
         else:
             max_subspace = max(6 * n_ep, 20, 5 * len(guesses))

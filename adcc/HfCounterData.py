@@ -115,7 +115,6 @@ class HfCounterData(HartreeFockProvider):
                   + self.get_b_range()[None, :])
 
     def fill_occupation_f(self, out):
-        print("HfCounterData.py is used")
         n_oa = self.__n_orbs_alpha
         out[:] = np.zeros(2 * n_oa)
         out[:self.__n_alpha] = 1.

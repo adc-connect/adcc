@@ -69,8 +69,6 @@ class LazyMp:
         s1, s2 = split_spaces(space)
         fC = hf.fock(s1 + s1).diagonal()
         fv = hf.fock(s2 + s2).diagonal()
-        #print("occupied orbital energies", fC)
-        #print("unoccupied orbital energies", fv)
         return direct_sum("-i+a->ia", fC, fv)
 
     @cached_member_function
@@ -130,18 +128,34 @@ class LazyMp:
     @timed_member_call(timer="timer")
     def mp2_diffdm(self):
         """
-        Return the MP2 differensce density in the MO basis.
+        Return the MP2 difference density in the MO basis.
         """
         hf = self.reference_state
         ret = OneParticleOperator(self.mospaces, is_symmetric=True)
         # NOTE: the following 3 blocks are equivalent to the cvs_p0 intermediates
         # defined at the end of this file
+        # the following terms including omega originate from the qed correction
         ret.oo = -0.5 * einsum("ikab,jkab->ij", self.t2oo, self.t2oo)
+                        #+ einsum("ia,ja->ij", self.qed_t1(b.ov), self.qed_t1(b.ov)) * omega)
         ret.ov = -0.5 * (
             + einsum("ijbc,jabc->ia", self.t2oo, hf.ovvv)
             + einsum("jkib,jkab->ia", hf.ooov, self.t2oo)
+            #- (einsum("ib,ab->ia", self.qed_t1(b.ov), hf.get_qed_total_dip(b.vv))
+            #    - einsum("ji,ja->ia", hf.get_qed_total_dip(b.oo), self.qed_t1(b.ov))) * omega
         ) / self.df(b.ov)
         ret.vv = 0.5 * einsum("ijac,ijbc->ab", self.t2oo, self.t2oo)
+                        #+ einsum("ia,ib->ab", self.qed_t1(b.ov), self.qed_t1(b.ov)) * omega)
+        if hasattr(hf, "coupling"):# and not hasattr(hf, "approx"):
+            print("mp2 diffdm has been adapted to qed")
+            omega = ReferenceState.get_qed_omega(hf)
+            
+            ret.oo -= 0.5 * einsum("ia,ja->ij", self.qed_t1(b.ov), self.qed_t1(b.ov)) * omega
+
+            ret.ov += 0.5 * (einsum("ib,ab->ia", self.qed_t1(b.ov), hf.get_qed_total_dip(b.vv))
+                    - einsum("ji,ja->ia", hf.get_qed_total_dip(b.oo), self.qed_t1(b.ov)) * omega
+                    ) / self.df(b.ov)
+
+            ret.vv += 0.5 * einsum("ia,ib->ab", self.qed_t1(b.ov), self.qed_t1(b.ov)) * omega
 
         if self.has_core_occupied_space:
             # additional terms to "revert" CVS for ground state density
@@ -177,37 +191,42 @@ class LazyMp:
         ret.reference_state = self.reference_state
         return evaluate(ret)
 
+    @cached_property
+    def mp1_diffdm_qed(self):
+        """
+        This does not really exist, but since the dipole operator also contains
+        the factor (b^{dagger} + b), there exists a term, which is required
+        in the evaluation for the corresponding dipole properties, which are
+        themselves needed, to perform the qed-adc(2) test
+        """
+        ret = OneParticleOperator(self.mospaces, is_symmetric=True)
+        hf = self.reference_state
+        omega = ReferenceState.get_qed_omega(hf)
+
+        ret.ov = self.qed_t1(b.ov) #* omega/2 #this is left out, since it is
+        #also left out for the s2s properties and reintroduced in the testing script
+
+        ret.reference_state = self.reference_state
+        return evaluate(ret)
+
     def density(self, level=2):
         """
         Return the MP density in the MO basis with all corrections
         up to the specified order of perturbation theory
         """
         if level == 1:
-            return self.reference_state.density
+            if hasattr(self.reference_state, "coupling"):
+                return self.reference_state.density# + self.mp1_diffdm_qed
+            else:
+                return self.reference_state.density
         elif level == 2:
             return self.reference_state.density + self.mp2_diffdm
         else:
             raise NotImplementedError("Only densities for level 1 and 2"
                                       " are implemented.")
 
-    def dipole_moment(self, level=2):
-        """
-        Return the MP dipole moment at the specified level of
-        perturbation theory.
-        """
-        if level == 1:
-            return self.reference_state.dipole_moment
-        elif level == 2:
-            return self.mp2_dipole_moment
-        else:
-            raise NotImplementedError("Only dipole moments for level 1 and 2"
-                                      " are implemented.")
-
     @cached_member_function
     def qed_t1_df(self, space):
-        #if space != b.ov:
-            #raise NotImplementedError("qed_t1 term not implemented "
-            #                          f"for space {space}.")
         total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
         if space == b.oo:
             total_dip.oo = self.get_qed_total_dip.oo
@@ -218,15 +237,17 @@ class LazyMp:
         elif space == b.vv:
             total_dip.vv = self.get_qed_total_dip.vv
             return total_dip.vv
-        #return total_dip.ov #/ self.df(b.ov)
 
     @cached_member_function
     def qed_t1(self, space):
-        """ Return new electronic singly excited amplitude in the first order correction to the wavefunction for qed for N=1 """
+        """ 
+        Return new electronic singly excited amplitude in the first order correction
+        to the wavefunction for qed
+        """
         if space != b.ov:
             raise NotImplementedError("qed_t1 term not implemented "
                                       f"for space {space}.")
-        return self.qed_t1_df(b.ov) / self.df(b.ov) #einsum("kc,kc->kc", self.qed_t1(b.ov), self.df(b.ov))
+        return self.qed_t1_df(b.ov) / self.df(b.ov)
 
     @cached_member_function
     def qed_t0_df(self, space):
@@ -237,9 +258,6 @@ class LazyMp:
         if space == b.ov:
             occ_sum = einsum("ka,ki->ia", total_dip.ov, total_dip.oo)
             virt_sum = einsum("ac,ic->ia", total_dip.vv, total_dip.ov)
-            #return einsum("ka,ki->ia", total_dip.ov, total_dip.oo) - einsum("ac,ic->ia", total_dip.vv, total_dip.ov)
-            #print(total_dip.ov)
-            #return einsum("ia,ia->ia", occ_sum, virt_sum)
         elif space == b.oo:
             occ_sum = einsum("ki,kj->ij", total_dip.oo, total_dip.oo)
             virt_sum = einsum("ic,jc->ij", total_dip.ov, total_dip.ov)
@@ -248,6 +266,7 @@ class LazyMp:
             virt_sum = einsum("ac,bc->ab", total_dip.vv, total_dip.vv)
         return occ_sum - virt_sum
 
+
     @cached_member_function
     def qed_t0(self, space):
         """ Return new electronic singly excited amplitude in the first order correction to the wavefunction for qed for N=0 """
@@ -255,6 +274,7 @@ class LazyMp:
             raise NotImplementedError("qed_t0 term not implemented "
                                       f"for space {space}.")
         return self.qed_t0_df(b.ov) / self.df(b.ov)
+
 
     @cached_member_function
     def diff_df(self, space):
@@ -266,7 +286,6 @@ class LazyMp:
             return einsum("ia,ja->ij", self.df(b.ov), - self.df(b.ov))
 
 
-
     @cached_member_function
     def energy_correction(self, level=2):
         """Obtain the MP energy correction at a particular level"""
@@ -274,7 +293,8 @@ class LazyMp:
         if level > 3:
             raise NotImplementedError(f"MP({level}) energy correction "
                                       "not implemented.")
-        if level < 2: #for qed_mp1 from non-qed-hf also first corrections come into play...for now done in mp2 part here
+        # For qed_mp1 from non-qed-hf also first corrections come into play...for now done in mp2 part here
+        if level < 2:
             return 0.0
         hf = self.reference_state
         is_cvs = self.has_core_occupied_space
@@ -285,8 +305,7 @@ class LazyMp:
                 for pref, eri, t2 in terms
             )
             if hasattr(hf, "coupling"):
-                print("mp2 energy with two electron qed perturbation " + str(mp2_correction))
-                #check if qed-hf (psi4.core.Wavefunction) input or non-qed-hf input (standard hf) is given
+                #print("mp2 energy with two electron qed perturbation " + str(mp2_correction))
                 total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
                 omega, total_dip.ov = ReferenceState.get_qed_omega(hf), self.get_qed_total_dip.ov
                 qed_terms = [(omega/2, total_dip.ov, self.qed_t1(b.ov))]
@@ -295,15 +314,8 @@ class LazyMp:
                     for pref, lambda_dip, qed_t in qed_terms
                 )
                 if hasattr(hf, "qed_hf"):
-                    print("full qed MP2 energy correction (qed-hf) " + str(mp2_correction + qed_mp2_correction_1))
+                    print("QED-MP(2) energy correction for QED-HF = " + str(mp2_correction + qed_mp2_correction_1))
                 else:
-                    #total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
-                    #omega, total_dip.ov = ReferenceState.get_qed_omega(hf), self.get_qed_total_dip.ov
-                    #qed_terms_1 = [(omega/2, total_dip.ov, self.qed_t1(b.ov))]
-                    #qed_mp2_correction_1 = sum(
-                    #    -pref * lambda_dip.dot(qed_t)
-                    #    for pref, lambda_dip, qed_t in qed_terms_1
-                    #)
                     qed_terms_0 = [(1.0, self.qed_t0(b.ov), self.qed_t0_df(b.ov))]
                     qed_mp2_correction_0 = sum(
                         -0.25 * pref * ampl_t0.dot(ampl_t0_df)
@@ -315,15 +327,10 @@ class LazyMp:
                         pref * lambda_dip.dot(lambda_dip)
                         for pref, lambda_dip in qed_mp1_additional_terms
                     )
-                    #print(self.qed_t0(b.ov))
-                    #print(self.qed_t0_df(b.ov))
-                    #print(qed_mp2_correction_0)
-                    print("full qed MP2 energy correction (standard hf) " 
-                    + str(mp2_correction + qed_mp2_correction_1 + qed_mp2_correction_0))
-                    print("qed-mp1 correction, due to standard hf input " + str(qed_mp1_correction))
-                    print("new qed-mp2 correction compared to qed-hf " + str(qed_mp2_correction_0))
-                    #print("transition dipoles * coupling * sqrt(2 * freq)", total_dip.ov)
-                    #print("orbital energy differences", self.df(b.ov))
+                    print("QED-MP(2) energy correction for standard HF (includes QED-MP(1) too) = " 
+                    + str(mp2_correction + qed_mp2_correction_1 + qed_mp2_correction_0 + qed_mp1_correction))
+                    #print("qed-mp1 correction, due to standard hf input " + str(qed_mp1_correction))
+                    #print("new qed-mp2 correction compared to qed-hf " + str(qed_mp2_correction_0))
         elif level == 2 and is_cvs:
             terms = [(1.0, hf.oovv, self.t2oo),
                      (2.0, hf.ocvv, self.t2oc),

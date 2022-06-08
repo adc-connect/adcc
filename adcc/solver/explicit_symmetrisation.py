@@ -45,7 +45,6 @@ class IndexSymmetrisation():
         # for the respective block
         self.symmetrisation_functions = \
             matrix.construct_symmetrisation_for_blocks()
-        print("index symm class init is used")
 
     def symmetrise(self, new_vectors):
         """

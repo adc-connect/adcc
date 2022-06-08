@@ -233,7 +233,6 @@ class DataHfProvider(HartreeFockProvider):
         return get_scalar_value(self.data, "threshold")
 
     def fill_occupation_f(self, out):
-        print("DataHfProvider.py is used")
         out[:] = self.data["occupation_f"]
 
     def fill_orbcoeff_fb(self, out):

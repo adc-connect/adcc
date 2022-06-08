@@ -178,32 +178,19 @@ class ReferenceState(libadcc.ReferenceState):
         if hasattr(self, "coupling"):
             from . import block as b
             dips = self.operators.electric_dipole
-            #import ctypes
-            #dips_id_int = int(dips, base=16)
-            #print(ctypes.cast(dips_id_int, ctypes.py_object).value)
-            #print(dips[block])
             couplings = self.coupling
             freqs = self.frequency
-            #test_el_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
-            #omega_square = x**2 for x in freqs
-            #omega = np.linalg.norm(freqs)
             total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
             for coupling, freq, dip in zip(couplings, freqs, dips):
                 total_dip += coupling * np.sqrt(2 * freq) * dip
-                #test_el_dip = dip
             total_dip.evaluate()
-            #test_el_dip.evaluate()
-            #print(str(block))
-            #print(test_el_dip[block])
-            #print(total_dip[block])
             return total_dip[block]
 
     @cached_member_function
     def get_qed_omega(self):
         if hasattr(self, "coupling"):
             freqs = self.frequency
-            omega = np.linalg.norm(freqs)
-            return omega
+            return np.linalg.norm(freqs)
 
     @cached_member_function
     def qed_D_object(self, block):
@@ -211,7 +198,6 @@ class ReferenceState(libadcc.ReferenceState):
             from . import block as b
             from .functions import einsum
             total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
-            #omega = ReferenceState.get_qed_omega(self)
             total_dip.oo = ReferenceState.get_qed_total_dip(self, b.oo)
             total_dip.ov = ReferenceState.get_qed_total_dip(self, b.ov)
             total_dip.vv = ReferenceState.get_qed_total_dip(self, b.vv)
@@ -229,10 +215,11 @@ class ReferenceState(libadcc.ReferenceState):
             return ds[block]
 
     def eri(self, block):
-        if hasattr(self, "coupling"):# and not hasattr(self, "first_order_coupling") :
+        if hasattr(self, "coupling"):
             from . import block as b
             from .functions import einsum
-            ds_init = OneParticleOperator(self.mospaces, is_symmetric=True) #Since there is no TwoParticleOperator we do this
+            # Since there is no TwoParticleOperator object, we initialize it like this
+            ds_init = OneParticleOperator(self.mospaces, is_symmetric=True)
             ds = {
                 b.oooo: einsum('ik,jl->ijkl', ds_init.oo, ds_init.oo),
                 b.ooov: einsum('ik,ja->ijka', ds_init.oo, ds_init.ov),

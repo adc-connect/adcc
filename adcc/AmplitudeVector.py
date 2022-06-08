@@ -273,14 +273,13 @@ class QED_AmplitudeVector:
         if isinstance(other, QED_AmplitudeVector):
             return self.dot(other)
         if isinstance(other, list):
-            #print("list given in QED matmul")
             if all(isinstance(elem, QED_AmplitudeVector) for elem in other):
                 return self.dot(other)
         return NotImplemented
     
 
     def __sub__(self, invec):
-        if isinstance(invec, (float, int)): # for diagonal - shift in preconditioner.py
+        if isinstance(invec, (float, int)):
             if "pphh" in self.elec.blocks_ph:
                 return QED_AmplitudeVector(ph=self.elec.ph.__sub__(invec), pphh=self.elec.pphh.__sub__(invec),
                                              gs1=self.gs1 - invec, ph1=self.phot.ph.__sub__(invec), pphh1=self.phot.pphh.__sub__(invec),
