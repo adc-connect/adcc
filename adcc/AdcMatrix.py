@@ -448,8 +448,8 @@ class AdcMatrix(AdcMatrixlike):
                 return QED_AmplitudeVector(elec_part.ph, elec_part.pphh, gs1_part, phot_part.ph, phot_part.pphh,
                                             gs2_part, phot2_part.ph, phot2_part.pphh)
             else:
-                #return QED_AmplitudeVector(elec_part.ph, None, gs1_part, phot_part.ph, None, gs2_part, phot2_part.ph, None)
-                return QED_AmplitudeVector(elec_part.ph, None, gs1_part, phot_part.ph, None, gs2_part, phot_part.ph * 0, None)
+                return QED_AmplitudeVector(elec_part.ph, None, gs1_part, phot_part.ph, None, gs2_part, phot2_part.ph, None)
+                #return QED_AmplitudeVector(elec_part.ph, None, gs1_part, phot_part.ph, None, gs2_part, phot_part.ph * 0, None)
         else:
             TypeError("matvec needs to be invoked with AmplitudeVector or QED_AmplitudeVector")
 
