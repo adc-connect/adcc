@@ -286,6 +286,20 @@ class LazyMp:
             return einsum("ia,ja->ij", self.df(b.ov), - self.df(b.ov))
 
 
+    def dipole_moment(self, level=2):
+        """
+        Return the MP dipole moment at the specified level of
+        perturbation theory.
+        """
+        if level == 1:
+            return self.reference_state.dipole_moment
+        elif level == 2:
+            return self.mp2_dipole_moment
+        else:
+            raise NotImplementedError("Only dipole moments for level 1 and 2"
+                                      " are implemented.")
+
+
     @cached_member_function
     def energy_correction(self, level=2):
         """Obtain the MP energy correction at a particular level"""
