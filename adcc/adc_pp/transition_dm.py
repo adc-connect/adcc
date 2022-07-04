@@ -117,7 +117,6 @@ def transition_dm(method, ground_state, amplitude, intermediates=None):
     """
     Compute the one-particle transition density matrix from ground to excited
     state in the MO basis.
-
     Parameters
     ----------
     method : str, AdcMethod
@@ -133,8 +132,8 @@ def transition_dm(method, ground_state, amplitude, intermediates=None):
         method = AdcMethod(method)
     if not isinstance(ground_state, LazyMp):
         raise TypeError("ground_state should be a LazyMp object.")
-    if not isinstance(amplitude, (AmplitudeVector, QED_AmplitudeVector)):
-        raise TypeError("amplitude should be an AmplitudeVector or QED_AmplitudeVector object.")
+    if not isinstance(amplitude, AmplitudeVector):
+        raise TypeError("amplitude should be an AmplitudeVector object.")
     if intermediates is None:
         intermediates = Intermediates(ground_state)
 
@@ -142,18 +141,8 @@ def transition_dm(method, ground_state, amplitude, intermediates=None):
         raise NotImplementedError("transition_dm is not implemented "
                                   f"for {method.name}.")
     else:
-        if isinstance(amplitude, QED_AmplitudeVector):
-            # for QED_result we are interested in .elec part only, which grants the electronic transitions.
-            # We also dont need .gs since it should be zero...this has to be checked!!!
-            ampl_elec_norm = amplitude.elec @ amplitude.elec
-            ampl_phot_norm = amplitude.phot @ amplitude.phot
-            print("care, that .gs is not used for transition_dm, but only .elec (check transition_dm.py)")
-            print("norm squared of amplitude.elec", ampl_elec_norm, " norm squared phot", ampl_phot_norm)
-            print("norm squared of amplitude", amplitude @ amplitude)
-            print("beware, that we normalize .elec, before giving it to the oscillator strength routine")
-            print("amplitude.gs1 is {} and amplitude.gs2 is {}".format(amplitude.gs1, amplitude.gs2))#.as_float(), amplitude.gs2.as_float()))
-            normalized_ampl = amplitude.elec / sqrt(ampl_elec_norm)
-            ret = DISPATCH[method.name](ground_state, normalized_ampl, intermediates)
+        if hasattr(ground_state, "tdm_contribution"):
+            ret = DISPATCH[ground_state.tdm_contribution](ground_state, amplitude, intermediates)
         else:
             ret = DISPATCH[method.name](ground_state, amplitude, intermediates)
         return ret.evaluate()
