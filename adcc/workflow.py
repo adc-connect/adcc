@@ -218,7 +218,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
 
     # Build QED (approximated) matrix from "standard" ADC matrix
     # and expectation values.
-    """
+    
     if hasattr(matrix.reference_state, "approx"):
         qed_matrix = qed_matrix_from_diag_adc(exstates, matrix.reference_state)
         if method == "adc2" and not hasattr(matrix.reference_state, "first_order_coupling"):
@@ -228,7 +228,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
 
         exstates.qed_excitation_energy = qed_eigvals
         exstates.qed_excitation_vector = qed_eigvecs
-    """
+    
     return exstates
 
 
