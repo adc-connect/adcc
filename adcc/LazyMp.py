@@ -314,10 +314,10 @@ class LazyMp:
         is_cvs = self.has_core_occupied_space
         if level == 2 and not is_cvs:
             terms = [(1.0, hf.oovv, self.t2oo)]
-            mp2_correction = sum(
-                -0.25 * pref * eri.dot(t2)
-                for pref, eri, t2 in terms
-            )
+            #mp2_correction = sum(
+            #    -0.25 * pref * eri.dot(t2)
+            #    for pref, eri, t2 in terms
+            #)
             if hasattr(hf, "coupling"):
                 #print("mp2 energy with two electron qed perturbation " + str(mp2_correction))
                 total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
@@ -328,7 +328,8 @@ class LazyMp:
                     for pref, lambda_dip, qed_t in qed_terms
                 )
                 if hasattr(hf, "qed_hf"):
-                    print("QED-MP(2) energy correction for QED-HF = " + str(mp2_correction + qed_mp2_correction_1))
+                    qed_mp2_correction = qed_mp2_correction_1
+                    #print("QED-MP(2) energy correction for QED-HF = " + str(mp2_correction + qed_mp2_correction_1))
                 else:
                     qed_terms_0 = [(1.0, self.qed_t0(b.ov), self.qed_t0_df(b.ov))]
                     qed_mp2_correction_0 = sum(
@@ -341,8 +342,9 @@ class LazyMp:
                         pref * lambda_dip.dot(lambda_dip)
                         for pref, lambda_dip in qed_mp1_additional_terms
                     )
-                    print("QED-MP(2) energy correction for standard HF (includes QED-MP(1) too) = " 
-                    + str(mp2_correction + qed_mp2_correction_1 + qed_mp2_correction_0 + qed_mp1_correction))
+                    #print("QED-MP(2) energy correction for standard HF (includes QED-MP(1) too) = " 
+                    #+ str(mp2_correction + qed_mp2_correction_1 + qed_mp2_correction_0 + qed_mp1_correction))
+                    qed_mp2_correction = qed_mp2_correction_1 + qed_mp2_correction_0 + qed_mp1_correction + qed_mp1_correction
                     #print("qed-mp1 correction, due to standard hf input " + str(qed_mp1_correction))
                     #print("new qed-mp2 correction compared to qed-hf " + str(qed_mp2_correction_0))
         elif level == 2 and is_cvs:
