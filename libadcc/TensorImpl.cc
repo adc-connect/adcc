@@ -928,6 +928,66 @@ TensorOrScalar TensorImpl<N>::tensordot(
     //
     // Instantiation generated from TensorImpl/instantiate_valid.py
     //
+    IF_DIMENSIONS_MATCH_EXECUTE_TENSORPROD(1, 1)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_TENSORPROD(1, 2)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_TENSORPROD(1, 3)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_TENSORPROD(2, 1)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_TENSORPROD(2, 2)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_TENSORPROD(3, 1)  //
+
+#undef IF_DIMENSIONS_MATCH_EXECUTE_TENSORPROD
+  } else {
+    // Other cases => normal contraction
+#define IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(N_CONTR_IDCS, DIMA, DIMB)                \
+  if (DIMA == label_first.size() && DIMB == label_second.size() &&                    \
+      N_CONTR_IDCS == label_contracted.size()) {                                      \
+    constexpr size_t DIMOUT = DIMB + DIMA - N_CONTR_IDCS - N_CONTR_IDCS;              \
+    static_assert((DIMOUT > 0 && DIMOUT < 100),                                       \
+                  "Internal error with DIMOUT computation");                          \
+    if (DIMOUT != label_result.size()) {                                              \
+      throw runtime_error(                                                            \
+            "Internal error: Inconsistency with DIMOUT and label_contracted.size()"); \
+    }                                                                                 \
+    return execute_tensordot_contract<DIMOUT, N_CONTR_IDCS, DIMA, DIMB>(              \
+          m_adcmem_ptr, label_result, label_contracted, label_first, label_second,    \
+          expr_first, expr_second, axes_result);                                      \
+  }
+
+    //
+    // Instantiation generated from TensorImpl/instantiate_valid.py
+    //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(1, 1, 2)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(1, 1, 3)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(1, 1, 4)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(1, 2, 1)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(1, 2, 2)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(1, 2, 3)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(1, 2, 4)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(1, 3, 1)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(1, 3, 2)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(1, 3, 3)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(1, 4, 1)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(1, 4, 2)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(2, 2, 3)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(2, 2, 4)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(2, 3, 2)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(2, 3, 3)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(2, 3, 4)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(2, 4, 2)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(2, 4, 3)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(2, 4, 4)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(3, 3, 4)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(3, 4, 3)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(3, 4, 4)  //
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(1, 4, 4)  // this one is just for triples test purposes
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(3, 4, 6)  // this one is just for triples test purposes
+    IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(3, 6, 4)  // this one is just for triples test purposes
+
+    
+/**
+    //
+    // Instantiation generated from TensorImpl/instantiate_valid.py
+    //
     IF_DIMENSIONS_MATCH_EXECUTE_TENSORPROD(1, 1) //
     IF_DIMENSIONS_MATCH_EXECUTE_TENSORPROD(1, 2) //
     IF_DIMENSIONS_MATCH_EXECUTE_TENSORPROD(1, 3) //
@@ -1140,7 +1200,7 @@ TensorOrScalar TensorImpl<N>::tensordot(
     IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(7, 7, 8) //
     IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(7, 8, 7) //
     IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT(7, 8, 8) //
-
+**/
 #undef IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT
   }
 
@@ -1657,8 +1717,10 @@ INSTANTIATE(1)
 INSTANTIATE(2)
 INSTANTIATE(3)
 INSTANTIATE(4)
-INSTANTIATE(5)
-INSTANTIATE(6)
+//INSTANTIATE(5)
+//INSTANTIATE(6)
+//INSTANTIATE(7)
+//INSTANTIATE(8)
 
 #undef INSTANTIATE
 

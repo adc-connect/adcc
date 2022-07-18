@@ -327,6 +327,7 @@ std::shared_ptr<Symmetry> make_symmetry_operator_basis(
   return sym;
 }
 
+/**
 std::shared_ptr<Symmetry> make_symmetry_triples(std::shared_ptr<const MoSpaces> mospaces_ptr,
 			const std::string& space) {
   auto sym = std::make_shared<Symmetry>(mospaces_ptr, space);
@@ -396,5 +397,6 @@ std::shared_ptr<Symmetry> make_symmetry_triples(std::shared_ptr<const MoSpaces> 
   }
   return sym;
 }
+**/
 
 }  // namespace libadcc
