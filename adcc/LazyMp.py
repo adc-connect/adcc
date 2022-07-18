@@ -96,10 +96,32 @@ class LazyMp:
     @cached_member_function
     def tt2(self, space):
         """Second prder triple amplitudes"""
+        hf = self.reference_state
+        p0 = self.mp2_diffdm
         t2 = self.t2(b.oovv)
+        td2 = self.td2(b.oovv)
+        denom = - direct_sum('ia,jb,kc->ijkabc', self.df(b.ov), self.df(b.ov), self.df(b.ov))
         amp = (
-            
+            + einsum('idbc,jkad->ijkabc', hf.ovvv, t2)
+            + einsum('idab,jkcd->ijkabc', hf.ovvv, t2)
+            - einsum('jdab,ikcd->ijkabc', hf.ovvv, t2)
+            + einsum('kdab,ijcd->ijkabc', hf.ovvv, t2)
+            - einsum('jdbc,ikad->ijkabc', hf.ovvv, t2)
+            + einsum('kdbc,ijad->ijkabc', hf.ovvv, t2)
+            - einsum('ijad,jkbd->ijkabc', hf.ovvv, t2)
+            + einsum('jdac,ikbd->ijkabc', hf.ovvv, t2)
+            - einsum('kdac,ijbd->ijkabc', hf.ovvv, t2)
+            + einsum('jkla,ilbc->ijkabc', hf.ooov, t2)
+            - einsum('ikla,jlbc->ijkabc', hf.ooov, t2)
+            + einsum('ijla,klbc->ijkabc', hf.ooov, t2)
+            + einsum('iklb,jlac->ijkabc', hf.ooov, t2)
+            - einsum('jklb,ilac->ijkabc', hf.ooov, t2)
+            - einsum('ijlb,klac->ijkabc', hf.ooov, t2)
+            - einsum('iklc,jlab->ijkabc', hf.ooov, t2)
+            + einsum('jklc,ilab->ijkabc', hf.ooov, t2)
+            + einsum('ijlc,klab->ijkabc', hf.ooov, t2)
             )
+        return amp/denom
 
     @cached_member_function
     def tq2(self, space):
