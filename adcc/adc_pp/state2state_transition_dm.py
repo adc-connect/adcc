@@ -139,13 +139,13 @@ def s2s_tdm_adc3(mp, amplitude_l, amplitude_r, intermediates):
         + 0.5 * einsum('jkcd,ikbd,ia,jc->ab', t2, td2, ul1, ur1)
         + einsum('jkac,ikbd,id,jc->ab', t2, td2, ul1, ur1)
         + 0.25 * einsum('klcd,klbc,ia,id->ab', td2, t2, ul1, ur1)
-        - 0.25 * einsum('klad,klcd,ic,ib->ab', td2, t2 ul1, ur1)
+        - 0.25 * einsum('klad,klcd,ic,ib->ab', td2, t2, ul1, ur1)
         - 0.5 * einsum('klad,klbc,ic,id->ab', td2, t2, ul1, ur1)
         + 0.25 * einsum('klac,klcd,id,ib->ab', t2, td2, ul1, ur1)
         - 0.25 * einsum('klcd,klbd,ia,ic->ab', t2, td2, ul1, ur1)
         - 0.5 * einsum('klac,klbd,id,ic->ab', t2, td2, ul1, ur1)
         - einsum('jkad,ikbd,ic,jc->ab', td2, t2, ul1, ur1)
-        - einsum('jkad,ikbd,ic,jc->ab' t2, td2, ul1, ur1)
+        - einsum('jkad,ikbd,ic,jc->ab', t2, td2, ul1, ur1)
         + 2 * einsum('ka,ic,ikbc->ab', p0, ul1, ur2)
         + 2 * einsum('jb,ijac,ic->ab', p0, ul2, ur1)
     )
@@ -193,7 +193,7 @@ def s2s_tdm_adc3(mp, amplitude_l, amplitude_r, intermediates):
         + einsum('ikab,kc,jc,jb->ai', t2, p0, ul1, ur1)
         - 0.5 * einsum('ijlbcd,klcd,ka,jb->ai', tt2, t2, ul1, ur1)
         - 0.5 * einsum('jklabd,klcd,ic,jb->ai', tt2, t2, ul1, ur1)
-        - einsum('ijkabc,klcd,ld,jb->ai', tt2, t2 ul1, ur1)
+        - einsum('ijkabc,klcd,ld,jb->ai', tt2, t2, ul1, ur1)
         + 0.25 * einsum('jklacd,klcd,ib,jb->ai', tt2, t2, ul1, ur1)
         - 0.5 * einsum('ijkacd,klcd,lb,jb->ai', tt2, t2, ul1, ur1)
         + 0.25 * einsum('iklbcd,klcd,ja,jb->ai', tt2, t2, ul1, ur1)
@@ -218,9 +218,9 @@ def s2s_tdm_adc3(mp, amplitude_l, amplitude_r, intermediates):
 # Ref: https://doi.org/10.1080/00268976.2013.859313
 DISPATCH = {"adc0": s2s_tdm_adc0,
             "adc1": s2s_tdm_adc0,       # same as ADC(0)
-            "adc2": s2s_tdm_adc2,
+            "adc2": s2s_tdm_adc3,
             "adc2x": s2s_tdm_adc2,      # same as ADC(2)
-            "adc3": s2s_tm_adc3,
+            "adc3": s2s_tdm_adc3,
             }
 
 

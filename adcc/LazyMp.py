@@ -100,7 +100,8 @@ class LazyMp:
         p0 = self.mp2_diffdm
         t2 = self.t2(b.oovv)
         td2 = self.td2(b.oovv)
-        denom = - direct_sum('ia,jb,kc->ijkabc', self.df(b.ov), self.df(b.ov), self.df(b.ov))
+        #denom = - direct_sum('ia,jb,kc->ijkabc', self.df(b.ov), self.df(b.ov), self.df(b.ov))
+        denom = - direct_sum('ia,jkbc->ijkabc', self.df(b.ov), direct_sum('jb,kc->jkbc', self.df(b.ov), self.df(b.ov)))
         amp = (
             + einsum('idbc,jkad->ijkabc', hf.ovvv, t2)
             + einsum('idab,jkcd->ijkabc', hf.ovvv, t2)
@@ -158,8 +159,9 @@ class LazyMp:
         denom = - self.df(b.ov)
         amp = (- einsum('jaib,jb->ia', hf.ovov, p0.ov)
             + 0.5 * einsum('jkib,jkab->ia', hf.ooov, td2)
-            + 0.5 * einsum('jabc,ijbc->ia', hf.ovvv, td2))
+            + 0.5 * einsum('jabc,ijbc->ia', hf.ovvv, td2)
             + 0.25 * einsum('jkbc,ijkabc->ia', hf.oovv, tt2)
+            )
         return amp/denom
     
     @cached_member_function
@@ -170,7 +172,7 @@ class LazyMp:
         t2 = self.t2(b.oovv)
         td2 = self.td2(b.oovv)
         tt2 = self.tt2(b.ooovvv)
-        tq2 = self.tq2(b.oooovvvv)
+        #tq2 = self.tq2(b.oooovvvv)
 
         denom = direct_sum('ia,jb->ijab',self.df(b.ov),self.df(b.ov))
         amp = (2 * einsum('jc,abic->ijab', p0, hf.vvov).antisymmetrise(0,1)
@@ -181,7 +183,7 @@ class LazyMp:
             + einsum('jklabc,klic->ijab', tt2, hf.ooov).antisymmetrise(0,1)
             + einsum('ijkbcd,kacd->ijab', tt2, hf.ovvv).antisymmetrise(2,3)
             #+ 0.25 * einsum('ijklabcd,klcd->ijab', tq2, hf.oovv)
-            - 0.25 * einsum('ijab,klcd,klcd->ijab', t2, t2, hf.oovv))
+            - 0.25 * einsum('ijab,klcd,klcd->ijab', t2, t2, hf.oovv)
             + 0.25 * einsum('ijab,klcd,klcd->ijab', t2, t2, t2)
             - 0.25 * einsum('ijac,klbd,klcd->ijab', t2, t2, t2)
             + 0.25 * einsum('ijad,klbc,klcd->ijab', t2, t2, t2)

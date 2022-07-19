@@ -711,9 +711,17 @@ std::shared_ptr<Tensor> TensorImpl<N>::direct_sum(std::shared_ptr<Tensor> other)
   IF_MATCHES_EXECUTE(1, 1)  //
   IF_MATCHES_EXECUTE(1, 2)  //
   IF_MATCHES_EXECUTE(1, 3)  //
+  IF_MATCHES_EXECUTE(1, 4)  //
+  IF_MATCHES_EXECUTE(1, 5)  //
   IF_MATCHES_EXECUTE(2, 1)  //
   IF_MATCHES_EXECUTE(2, 2)  //
-  IF_MATCHES_EXECUTE(3, 1)  //
+  IF_MATCHES_EXECUTE(2, 3)  //
+  IF_MATCHES_EXECUTE(2, 4)  //
+  IF_MATCHES_EXECUTE(3, 2)  //
+  IF_MATCHES_EXECUTE(3, 3)  //
+  IF_MATCHES_EXECUTE(4, 1)  //
+  IF_MATCHES_EXECUTE(4, 2)  //
+  IF_MATCHES_EXECUTE(5, 1)  //
 
   throw not_implemented_error(
         "Did not implement the case of a direct_sum of two tensors of dimension " +

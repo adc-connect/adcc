@@ -102,7 +102,7 @@ def tdm_adc2(mp, amplitude, intermediates):
 
 def tdm_adc3(mp, amplitude, intermediates):
     dm = tdm_adc2(mp, amplitude, intermediates)
-    check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
+    #check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
     u1 = amplitude.ph
     u2 = amplitude.pphh
 
@@ -131,12 +131,22 @@ def tdm_adc3(mp, amplitude, intermediates):
     )
     dm.ov += (
         - einsum('ijab,jb->ia', td3, u1)
-        - 0.25 * einsum('ijklabcd,klcd,jb->ia', tq2, t2, u1)
-        + 0.25 * einsum('klcd,klcd,ijab,jb->ia', t2, t2, t2, u1)
-        - 0.25 * einsum('ijab,klcd,jlcd,kb->ia', t2, t2, t2, u1)
-        - 0.25 * einsum('ijab,klcd,klbd,jc->ia', t2, t2, t2, u1)
-        + 0.5 * einsum('ijab,klcd,jlbd,kc->ia', t2, t2, t2, u1)
         - 0.5 * einsum('ijkabc,jkbc->ia', tt2, u2)
+        - 0.25 * einsum('ijbc,klad,klcd,jb->ai', t2, t2, t2, u1) #quadruples factorization and cancellation
+        + 0.25 * einsum('ijbd,klac,klcd,jb->ai', t2, t2, t2, u1)
+        - 0.25 * einsum('ijad,klbc,klcd,jb->ai', t2, t2, t2, u1)
+        - 0.25 * einsum('ijcd,klab,klcd,jb->ai', t2, t2, t2, u1)
+        - 0.25 * einsum('jkab,ilcd,klcd,jb->ai', t2, t2, t2, u1)
+        - 0.25 * einsum('jkbc,ilad,klcd,jb->ai', t2, t2, t2, u1)
+        + 0.25 * einsum('jkbd,ilac,klcd,jb->ai', t2, t2, t2, u1)
+        + 0.25 * einsum('jkac,ilbd,klcd,jb->ai', t2, t2, t2, u1)
+        - 0.25 * einsum('jkad,ilbc,klcd,jb->ai', t2, t2, t2, u1)
+        - 0.25 * einsum('jkcd,ilab,klcd,jb->ai', t2, t2, t2, u1)
+        + 0.25 * einsum('jlab,ikcd,klcd,jb->ai', t2, t2, t2, u1)
+        + 0.25 * einsum('jlbc,ikad,klcd,jb->ai', t2, t2, t2, u1)
+        - 0.25 * einsum('jlac,ikbd,klcd,jb->ai', t2, t2, t2, u1)
+        + 0.25 * einsum('jlad,ikbc,klcd,jb->ai', t2, t2, t2, u1)
+        + 0.25 * einsum('jlbd,ikac,klcd,jb->ai', t2, t2, t2, u1)
     )
     dm.vo += (
         - 0.25 * einsum('jkbc,ikbc,ja->ai', t2, td2, u1)
@@ -153,9 +163,9 @@ def tdm_adc3(mp, amplitude, intermediates):
 DISPATCH = {
     "adc0": tdm_adc0,
     "adc1": tdm_adc1,
-    "adc2": tdm_adc2,
+    "adc2": tdm_adc3,
     "adc2x": tdm_adc2,
-    "adc3": tdm_adc3
+    "adc3": tdm_adc3,
     "cvs-adc0": tdm_adc0,
     "cvs-adc1": tdm_adc0,  # No extra contribs for CVS-ADC(1)
     "cvs-adc2": tdm_cvs_adc2,
