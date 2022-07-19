@@ -153,13 +153,13 @@ class LazyMp:
         hf = self.reference_state
         p0 = self.mp2_diffdm #= t_{ia}^{(2)}
         td2 = self.td2(b.oovv)
-        #tt2 = self.tt2(b.ooovvv) 
+        tt2 = self.tt2(b.ooovvv) 
         
         denom = - self.df(b.ov)
         amp = (- einsum('jaib,jb->ia', hf.ovov, p0.ov)
             + 0.5 * einsum('jkib,jkab->ia', hf.ooov, td2)
             + 0.5 * einsum('jabc,ijbc->ia', hf.ovvv, td2))
-               # + 0.25 * einsum('jkbc,ijkabc->ia', hf.oovv, tt2)
+            + 0.25 * einsum('jkbc,ijkabc->ia', hf.oovv, tt2)
         return amp/denom
     
     @cached_member_function
@@ -169,8 +169,8 @@ class LazyMp:
         p0 = self.mp2_diffdm
         t2 = self.t2(b.oovv)
         td2 = self.td2(b.oovv)
-        #tt2 = self.tt2(b.ooovvv)
-        #tq2 = self.tq2(b.oooovvvv)
+        tt2 = self.tt2(b.ooovvv)
+        tq2 = self.tq2(b.oooovvvv)
 
         denom = direct_sum('ia,jb->ijab',self.df(b.ov),self.df(b.ov))
         amp = (2 * einsum('jc,abic->ijab', p0, hf.vvov).antisymmetrise(0,1)
@@ -178,10 +178,29 @@ class LazyMp:
             + 4 * einsum('jkac,kbjc->ijab', td2, hf.ovov).antisymmetrise(0,1).antisymmetrise(2,3)
             - 0.5 * einsum('ijcd,abcd->ijab', td2, hf.vvvv)
             - 0.5 * einsum('klab,klij->ijab', td2, hf.oooo)
-            #+ einsum('jklabc,klic->ijab', tt2, hf.ooov).antisymmetrise(0,1)
-            #+ einsum('ijkbcd,kacd->ijab', tt2, hf.ovvv).antisymmetrise(2,3)
+            + einsum('jklabc,klic->ijab', tt2, hf.ooov).antisymmetrise(0,1)
+            + einsum('ijkbcd,kacd->ijab', tt2, hf.ovvv).antisymmetrise(2,3)
             #+ 0.25 * einsum('ijklabcd,klcd->ijab', tq2, hf.oovv)
             - 0.25 * einsum('ijab,klcd,klcd->ijab', t2, t2, hf.oovv))
+            + 0.25 * einsum('ijab,klcd,klcd->ijab', t2, t2, t2)
+            - 0.25 * einsum('ijac,klbd,klcd->ijab', t2, t2, t2)
+            + 0.25 * einsum('ijad,klbc,klcd->ijab', t2, t2, t2)
+            + 0.25 * einsum('ijbc,klad,klcd->ijab', t2, t2, t2)
+            - 0.25 * einsum('ijbd,klac,klcd->ijab', t2, t2, t2)
+            + 0.25 * einsum('ijcd,klab,klcd->ijab', t2, t2, t2)
+            - 0.25 * einsum('ikab,jlcd,klcd->ijab', t2, t2, t2)
+            + 0.25 * einsum('ikac,jlbd,klcd->ijab', t2, t2, t2)
+            - 0.25 * einsum('ikad,jlbc,klcd->ijab', t2, t2, t2)
+            - 0.25 * einsum('ikbc,jlad,ijab->ijab', t2, t2, t2)
+            + 0.25 * einsum('ikbd,jlac,klcd->ijab', t2, t2, t2)
+            - 0.25 * einsum('ikcd,jlab,klcd->ijab', t2, t2, t2)
+            + 0.25 * einsum('ilab,jkcd,klcd->ijab', t2, t2, t2)
+            - 0.25 * einsum('ilac,jkbd,klcd->ijab', t2, t2, t2)
+            + 0.25 * einsum('ilad,jkbc,klcd->ijab', t2, t2, t2)
+            + 0.25 * einsum('ilbc,jkad,klcd->ijab', t2, t2, t2)
+            - 0.25 * einsum('ilbd,jkac,klcd->ijab', t2, t2, t2)
+            + 0.25 * einsum('ilcd,jkab,klcd->ijab', t2, t2, t2)
+            )
         return amp/denom
 
     @cached_member_function
