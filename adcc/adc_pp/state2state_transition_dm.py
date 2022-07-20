@@ -107,11 +107,12 @@ def s2s_tdm_adc3(mp, amplitude_l, amplitude_r, intermediates):
     ur1, ur2 = amplitude_r.ph, amplitude_r.pphh
 
     t2 = mp.t2(b.oovv)
-    p0 = mp.mp2_diffdm(b.ov)
-    td2 = mp.mp2_td2(b.oovv)
-    tt2 = mp.mp2_tt2(b.ooovvv)
-    tq2 = mp.mp2_tq2(b.oooovvvv)
-    ts3 = mp.mp2_ts3(b.ov)
+    p0_initial = mp.mp2_diffdm
+    p0 = p0_initial.ov
+    td2 = mp.td2(b.oovv)
+    tt2 = mp.tt2(b.ooovvv)
+    #tq2 = mp.tq2(b.oooovvvv)
+    ts3 = mp.ts3(b.ov)
 
     dm.oo += (
         - 0.5 * einsum('jlbc,klac,ka,ib->ij', td2, t2, ul1, ur1)

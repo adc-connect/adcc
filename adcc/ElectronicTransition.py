@@ -168,6 +168,22 @@ class ElectronicTransition:
     @cached_property
     @mark_excitation_property()
     @timed_member_call(timer="_property_timer")
+    def s2s_transition_dipole_moments(self):
+        """List of s2s transition dipole moments of all computed states"""
+        if self.property_method.level == 0:
+            warnings.warn("ADC(0) transition dipole moments are known to be "
+                          "faulty in some cases.")
+        dipole_integrals = self.operators.electric_dipole
+        #print(dipole_integrals[0].shape)
+        #print(self.s2s_transition_dm[0][0].shape)
+        return np.array([[
+            [product_trace(comp, tdm) for comp in dipole_integrals]
+            for tdm in tdm_tmp] for tdm_tmp in self.s2s_transition_dm
+        ])
+
+    @cached_property
+    @mark_excitation_property()
+    @timed_member_call(timer="_property_timer")
     def transition_dipole_moment_velocity(self):
         """List of transition dipole moments in the
         velocity gauge of all computed states"""

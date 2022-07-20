@@ -1469,6 +1469,8 @@ std::shared_ptr<ExpressionTree> as_expression(const std::shared_ptr<Tensor>& ten
     ret = std::static_pointer_cast<TensorImpl<3>>(tensor)->expression_ptr();
   } else if (tensor->ndim() == 4) {
     ret = std::static_pointer_cast<TensorImpl<4>>(tensor)->expression_ptr();
+  } else if (tensor->ndim() == 6) {
+    ret = std::static_pointer_cast<TensorImpl<6>>(tensor)->expression_ptr();
   } else {
     throw not_implemented_error("Only implemented for dimensionality <= 4.");
   }
@@ -1528,6 +1530,8 @@ std::shared_ptr<Tensor> make_tensor(std::shared_ptr<Symmetry> symmetry) {
     return make_tensor_inner<3>(symmetry);
   } else if (symmetry->ndim() == 4) {
     return make_tensor_inner<4>(symmetry);
+  } else if (symmetry->ndim() == 6) {
+    return make_tensor_inner<6>(symmetry);
   } else {
     throw not_implemented_error("Only implemented for dimensionality <= 4.");
   }
@@ -1543,6 +1547,8 @@ std::shared_ptr<Tensor> make_tensor(std::shared_ptr<const AdcMemory> adcmem_ptr,
     return std::make_shared<TensorImpl<3>>(adcmem_ptr, axes);
   } else if (axes.size() == 4) {
     return std::make_shared<TensorImpl<4>>(adcmem_ptr, axes);
+  } else if (axes.size() == 6) {
+    return std::make_shared<TensorImpl<6>>(adcmem_ptr, axes);
   } else {
     throw not_implemented_error("Only implemented for dimensionality <= 4.");
   }
@@ -1564,8 +1570,8 @@ INSTANTIATE(1)
 INSTANTIATE(2)
 INSTANTIATE(3)
 INSTANTIATE(4)
-//INSTANTIATE(5)
-//INSTANTIATE(6)
+INSTANTIATE(5)
+INSTANTIATE(6)
 //INSTANTIATE(7)
 //INSTANTIATE(8)
 
