@@ -97,9 +97,7 @@ class LazyMp:
     def tt2(self, space):
         """Second prder triple amplitudes"""
         hf = self.reference_state
-        p0 = self.mp2_diffdm
-        t2 = self.t2(b.oovv)
-        td2 = self.td2(b.oovv)
+        t2 = self.t2(b.oovv).evaluate()
         #denom = - direct_sum('ia,jb,kc->ijkabc', self.df(b.ov), self.df(b.ov), self.df(b.ov))
         denom = - direct_sum('ia,jkbc->ijkabc', self.df(b.ov), direct_sum('jb,kc->jkbc', self.df(b.ov), self.df(b.ov)))
         amp = (
@@ -165,7 +163,7 @@ class LazyMp:
         return amp/denom
     
     @cached_member_function
-    def td3(self, space):
+    def td3_raw(self, space):
         """Third order double amplitudes"""
         hf = self.reference_state
         p0 = self.mp2_diffdm
@@ -204,6 +202,49 @@ class LazyMp:
             + 0.25 * einsum('ilcd,jkab,klcd->ijab', t2, t2, hf.oovv)
             )
         return amp/denom
+
+    @cached_member_function
+    def td3(self, space):
+        """Third order double amplitudes"""
+        hf = self.reference_state
+        p0 = self.mp2_diffdm
+        t2 = self.t2(b.oovv).evaluate()
+        td2 = self.td2(b.oovv).evaluate()
+        tt2 = self.tt2(b.ooovvv).evaluate()
+        t2eri_vv = einsum('klbd,klcd->bc', t2, hf.oovv).evaluate()        
+        t2eri_oo = einsum('jlcd,klcd->jk', t2, hf.oovv).evaluate()
+        t2eri_oovv = einsum('jlbd,klcd->jkbc', t2, hf.oovv).evaluate()
+        
+
+
+        denom = direct_sum('ia,jb->ijab',self.df(b.ov),self.df(b.ov))
+        amp = (2 * einsum('jc,abic->ijab', p0.ov, hf.vvov).antisymmetrise(0,1)
+            + 2 * einsum('kb,kaij->ijab', p0.ov, hf.ovoo).antisymmetrise(2,3)
+            + 4 * einsum('ikac,kbjc->ijab', td2, hf.ovov).antisymmetrise(0,1).antisymmetrise(2,3)
+            - 0.5 * einsum('ijcd,abcd->ijab', td2, hf.vvvv)
+            - 0.5 * einsum('klab,klij->ijab', td2, hf.oooo)
+            + einsum('jklabc,klic->ijab', tt2, hf.ooov).antisymmetrise(0,1)
+            + einsum('ijkbcd,kacd->ijab', tt2, hf.ovvv).antisymmetrise(2,3)
+            - 0.25 * einsum('ijac,bc->ijab', t2, t2eri_vv)
+            - 0.25 * einsum('ijad,bd->ijab', t2, t2eri_vv)
+            + 0.25 * einsum('ijbc,ac->ijab', t2, t2eri_vv)
+            + 0.25 * einsum('ijbd,ad->ijab', t2, t2eri_vv)
+            + 0.25 * einsum('ijcd,klab,klcd->ijab', t2, t2, hf.oovv)
+            - 0.25 * einsum('ikab,jk->ijab', t2, t2eri_oo)
+            + 0.25 * einsum('ikac,jkbc->ijab', t2, t2eri_oovv)
+            + 0.25 * einsum('ikad,jkbd->ijab', t2, t2eri_oovv)
+            - 0.25 * einsum('ikbc,jkac->ijab', t2, t2eri_oovv)
+            - 0.25 * einsum('ikbd,jkad->ijab', t2, t2eri_oovv)
+            + 0.25 * einsum('il,jlab->ijab', t2eri_oo, t2)
+            - 0.25 * einsum('ilab,jl->ijab', t2, t2eri_oo)
+            + 0.25 * einsum('ilac,jlbc->ijab', t2, t2eri_oovv)
+            + 0.25 * einsum('ilad,jlbd->ijab', t2, t2eri_oovv)
+            - 0.25 * einsum('ilbc,jlac->ijab', t2, t2eri_oovv)
+            - 0.25 * einsum('ilbd,jlad->ijab', t2, t2eri_oovv)
+            + 0.25 * einsum('ik,jkab->ijab', t2eri_oo, t2)
+            )
+        return amp/denom
+
 
     @cached_member_function
     def t2eri(self, space, contraction):

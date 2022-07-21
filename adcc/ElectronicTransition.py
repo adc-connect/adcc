@@ -32,6 +32,7 @@ from .AdcMethod import AdcMethod
 from scipy import constants
 from .Excitation import mark_excitation_property
 from .solver.SolverStateBase import EigenSolverStateBase
+import time
 
 
 class ElectronicTransition:
@@ -156,14 +157,22 @@ class ElectronicTransition:
     @timed_member_call(timer="_property_timer")
     def transition_dipole_moment(self):
         """List of transition dipole moments of all computed states"""
+        start = time.perf_counter()
         if self.property_method.level == 0:
             warnings.warn("ADC(0) transition dipole moments are known to be "
                           "faulty in some cases.")
         dipole_integrals = self.operators.electric_dipole
-        return np.array([
+        ret =   np.array([
             [product_trace(comp, tdm) for comp in dipole_integrals]
             for tdm in self.transition_dm
         ])
+
+        end = time.perf_counter()
+        f = open('results/' + self.reference_state.timings_filename, 'a')
+        f.write("tdm time " + str(end - start) + " s \n")
+        f.close() 
+        print("tdm time", end - start) 
+        return ret
 
     @cached_property
     @mark_excitation_property()
