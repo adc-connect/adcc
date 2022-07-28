@@ -132,8 +132,10 @@ def transition_dm(method, ground_state, amplitude, intermediates=None):
         method = AdcMethod(method)
     if not isinstance(ground_state, LazyMp):
         raise TypeError("ground_state should be a LazyMp object.")
-    if not isinstance(amplitude, AmplitudeVector):
+    if not isinstance(amplitude, (AmplitudeVector, QED_AmplitudeVector)):
         raise TypeError("amplitude should be an AmplitudeVector object.")
+    if isinstance(amplitude, QED_AmplitudeVector):
+        amplitude = amplitude.elec
     if intermediates is None:
         intermediates = Intermediates(ground_state)
 
