@@ -50,7 +50,8 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
             n_guesses_doubles=None, output=sys.stdout, core_orbitals=None,
             frozen_core=None, frozen_virtual=None, method=None,
             n_singlets=None, n_triplets=None, n_spin_flip=None,
-            environment=None, **solverargs):
+            environment=None, coupl=None, freq=None, qed_hf=True,
+            qed_approx=False, qed_full_diag=False, **solverargs):
     """Run an ADC calculation.
 
     Main entry point to run an ADC calculation. The reference to build the ADC
@@ -136,6 +137,28 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         The keywords to specify how coupling to an environment model,
         e.g. PE, is treated. For details see :ref:`environment`.
 
+    coupl : list or tuple, optional
+        Specifies the coupling for a qed calculation as [x, y, z]
+
+    freq : list or tuple, optional
+        Specifies the photon energy corresponding to the coupling specified
+        in "coupl", which is required for a qed calculation, as [x, y, z]
+
+    qed_hf : bool, optional
+        Specifies, if the mean-field solution to the Pauli-Fierz Hamiltonian
+        is provided for the qed calculation. False expects the standard HF
+        solution.
+
+    qed_approx : bool, optional
+        Indicates whether the approximate solution for the qed method should
+        be calculated. (After paper is published, put link here)
+
+    qed_full_diag : bool, optional
+        If the full solution to the qed method is required, the performance
+        of the standard qed guess is very poor. In that case, this guess
+        performs much better.
+        
+
     Other parameters
     ----------------
     max_subspace : int, optional
@@ -181,11 +204,15 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     """
     matrix = construct_adcmatrix(
         data_or_matrix, core_orbitals=core_orbitals, frozen_core=frozen_core,
-        frozen_virtual=frozen_virtual, method=method)
+        frozen_virtual=frozen_virtual, method=method, coupl=coupl,
+        freq=freq, qed_hf=qed_hf, qed_approx=qed_approx, 
+        qed_full_diag=qed_full_diag)
 
     n_states, kind = validate_state_parameters(
         matrix.reference_state, n_states=n_states, n_singlets=n_singlets,
-        n_triplets=n_triplets, n_spin_flip=n_spin_flip, kind=kind)
+        n_triplets=n_triplets, n_spin_flip=n_spin_flip, kind=kind, coupl=coupl,
+        freq=freq, qed_hf=qed_hf, qed_approx=qed_approx, 
+        qed_full_diag=qed_full_diag)
 
     # Determine spin change during excitation. If guesses is not None,
     # i.e. user-provided, we cannot guarantee for obtaining a particular
@@ -236,7 +263,9 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
 # Individual steps
 #
 def construct_adcmatrix(data_or_matrix, core_orbitals=None, frozen_core=None,
-                        frozen_virtual=None, method=None):
+                        frozen_virtual=None, method=None, coupl=None, 
+                        freq=None, qed_hf=True, qed_approx=False, 
+                        qed_full_diag=False):
     """
     Use the provided data or AdcMatrix object to check consistency of the
     other passed parameters and construct the AdcMatrix object representing
@@ -265,6 +294,16 @@ def construct_adcmatrix(data_or_matrix, core_orbitals=None, frozen_core=None,
                                            frozen_virtual=frozen_virtual)
         except ValueError as e:
             raise InputError(str(e))  # In case of an issue with the spaces
+        # for now qchem keywords are requested as refstate attributes
+        if coupl != None:
+            refstate.coupling = coupl
+            refstate.frequency = freq
+        if qed_hf:
+            refstate.qed_hf = True
+        if qed_approx:
+            refstate.approx = True
+        if qed_full_diag:
+            refstate.full_diagonalization = True
         data_or_matrix = refstate
     elif core_orbitals is not None:
         mospaces = data_or_matrix.mospaces
@@ -300,7 +339,9 @@ def construct_adcmatrix(data_or_matrix, core_orbitals=None, frozen_core=None,
 
 
 def validate_state_parameters(reference_state, n_states=None, n_singlets=None,
-                              n_triplets=None, n_spin_flip=None, kind="any"):
+                              n_triplets=None, n_spin_flip=None, kind="any",
+                              coupl=None, freq=None, qed_hf=True,
+                              qed_approx=False, qed_full_diag=False):
     """
     Check the passed state parameters for consistency with itself and with
     the passed reference and normalise them. In the end return the number of
@@ -359,6 +400,18 @@ def validate_state_parameters(reference_state, n_states=None, n_singlets=None,
         raise InputError("kind==spin_flip is only valid for "
                          "ADC calculations in combination with an unrestricted "
                          "ground state.")
+
+    # qed sanity checks    
+    if coupl != None or freq != None:
+        if not (coupl != None and freq != None):
+            raise InputError("qed calculation requires coupl and freq")
+        if len(coupl) != 3 or len(freq) != 3:
+            raise InputError("freq and coupl must contain 3 elements,"
+                             "i.e. x, y, z")
+    if qed_hf == False:
+        raise InputError("QED-ADC of zeroth and first level are not yet,"
+                        "properly tested and second order is not implemented")
+    
     return n_states, kind
 
 
