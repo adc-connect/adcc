@@ -198,8 +198,8 @@ def tdm_adc3(mp, amplitude, intermediates):
         - 0.25 * einsum('kabc,ikbc->ai', t2u_ovvv, td2)
         - 0.25 * einsum('ib,jkbc,jkac->ai', u1, t2, td2)
         + 0.5 * einsum('jb,ijab->ai', t2u_ov, td2)
-        - 0.25 * einsum('ja,jkbc,ikbc->ai', u1, td2, t2)
-        - 0.25 * einsum('ib,jkbc,jkac->ai', u1, td2, t2)
+       - 0.25 * einsum('ja,jkbc,ikbc->ai', u1, td2, t2)
+       - 0.25 * einsum('ib,jkbc,jkac->ai', u1, td2, t2)
         + 0.5 * einsum('ijab,jkbc,kc->ai', t2, td2, u1)
     )
     dm.ov += (

@@ -98,7 +98,6 @@ class LazyMp:
         """Second prder triple amplitudes"""
         hf = self.reference_state
         t2 = self.t2(b.oovv).evaluate()
-        #denom = - direct_sum('ia,jb,kc->ijkabc', self.df(b.ov), self.df(b.ov), self.df(b.ov))
         denom = - direct_sum('ia,jkbc->ijkabc', self.df(b.ov), direct_sum('jb,kc->jkbc', self.df(b.ov), self.df(b.ov)))
         amp = (
             + einsum('idbc,jkad->ijkabc', hf.ovvv, t2)
@@ -277,6 +276,7 @@ class LazyMp:
         """
         Return the MP2 differensce density in the MO basis.
         """
+        print('mp2_diffdm')
         hf = self.reference_state
         ret = OneParticleOperator(self.mospaces, is_symmetric=True)
         # NOTE: the following 3 blocks are equivalent to the cvs_p0 intermediates
@@ -287,6 +287,10 @@ class LazyMp:
             + einsum("jkib,jkab->ia", hf.ooov, self.t2oo)
         ) / self.df(b.ov)
         ret.vv = 0.5 * einsum("ijac,ijbc->ab", self.t2oo, self.t2oo)
+        #ret.vo = -0.5 * (
+        #    + einsum('ijbc,jabc->ai', self.t2oo, hf.ovvv)
+        #    + einsum('jkik,jkab->ai', hf.ooov, self.t2oo)
+        #) / self.df(b.ov)
 
         if self.has_core_occupied_space:
             # additional terms to "revert" CVS for ground state density
@@ -321,6 +325,26 @@ class LazyMp:
             ) / self.df(b.cv)
         ret.reference_state = self.reference_state
         return evaluate(ret)
+        
+    @cached_property
+    @timed_member_call(timer="timer")
+    def mp3_diffdm(self):
+        """
+        Return the MP3 differensce density in the MO basis. mp2_diffdm is included
+        """
+        hf = self.reference_state
+        ts3 = self.ts3(b.ov)
+        ret = mp2_diffdm
+        
+        # NOTE: the following 3 blocks are equivalent to the cvs_p0 intermediate
+        # defined at the end of this file
+        ret.oo = -0.5 * einsum("ikab,jkab->ij", self.t2oo, self.t2oo)
+        ret.ov = -0.5 * (
+            + einsum("ijbc,jabc->ia", self.t2oo, hf.ovvv)
+            + einsum("jkib,jkab->ia", hf.ooov, self.t2oo)
+        ) / self.df(b.ov)
+        ret.vv = 0.5 * einsum("ijac,ijbc->ab", self.t2oo, self.t2oo)
+
 
     def density(self, level=2):
         """
@@ -331,6 +355,8 @@ class LazyMp:
             return self.reference_state.density
         elif level == 2:
             return self.reference_state.density + self.mp2_diffdm
+        #elif level ==3:
+        #    return self.reference_state.density + self.mp3_diffdm
         else:
             raise NotImplementedError("Only densities for level 1 and 2"
                                       " are implemented.")
@@ -344,6 +370,8 @@ class LazyMp:
             return self.reference_state.dipole_moment
         elif level == 2:
             return self.mp2_dipole_moment
+        #elif level == 3:
+        #    return self.mp3_dipole_moment
         else:
             raise NotImplementedError("Only dipole moments for level 1 and 2"
                                       " are implemented.")
@@ -427,6 +455,14 @@ class LazyMp:
                              for comp in dipole_integrals])
         return refstate.dipole_moment + mp2corr
 
+    @cached_property
+    def mp3_dipole_moment(self):
+        #MP2_diffdm is included in mp3corr
+        refstate = self.reference_state
+        dipole_integrals = refstate.operators.electric_dipole
+        mp3corr = -np.array([product_trace(comp, self.mp3_diffdm)
+                            for comp in dipole_integrals])
+        return refstate.dipole_moment + mp3corr
 
 #
 # Register cvs_p0 intermediate

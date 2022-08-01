@@ -264,9 +264,13 @@ class ExcitedStates(ElectronicTransition):
     @timed_member_call(timer="_property_timer")
     def s2s_transition_dm(self):
         "List of state2state dipole moments"""
-        return [[adc_pp.state2state_transition_dm(self.property_method, self.ground_state,
-                                     evec1, evec2, self.matrix.intermediates)
-                for evec1 in self.excitation_vector] for evec2 in self.excitation_vector]
+       # return [[adc_pp.state2state_transition_dm(self.property_method, self.ground_state,
+       #                              evec1, evec2, self.matrix.intermediates)
+       #         for evec1 in self.excitation_vector] for evec2 in self.excitation_vector]
+        mp_density = self.ground_state.density(self.property_method.level)
+        return [adc_pp.state2state_transition_dm(self.property_method, self.ground_state,
+                                     evec1, evec1, self.matrix.intermediates)
+                for evec1 in self.excitation_vector]
 
 
 

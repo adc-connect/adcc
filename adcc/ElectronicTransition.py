@@ -166,11 +166,10 @@ class ElectronicTransition:
             [product_trace(comp, tdm) for comp in dipole_integrals]
             for tdm in self.transition_dm
         ])
-
         end = time.perf_counter()
-        f = open('results/' + self.reference_state.timings_filename, 'a')
-        f.write("tdm time " + str(end - start) + " s \n")
-        f.close() 
+        #f = open('results/' + self.reference_state.timings_filename, 'a')
+        #f.write("tdm time " + str(end - start) + " s \n")
+        #f.close() 
         print("tdm time", end - start) 
         return ret
 
@@ -179,16 +178,23 @@ class ElectronicTransition:
     @timed_member_call(timer="_property_timer")
     def s2s_transition_dipole_moments(self):
         """List of s2s transition dipole moments of all computed states"""
+        start = time.perf_counter()
         if self.property_method.level == 0:
             warnings.warn("ADC(0) transition dipole moments are known to be "
                           "faulty in some cases.")
         dipole_integrals = self.operators.electric_dipole
-        #print(dipole_integrals[0].shape)
-        #print(self.s2s_transition_dm[0][0].shape)
-        return np.array([[
+        gs_dip_moment = self.ground_state.dipole_moment(self.property_method.level) 
+        ret = gs_dip_moment - np.array([
             [product_trace(comp, tdm) for comp in dipole_integrals]
-            for tdm in tdm_tmp] for tdm_tmp in self.s2s_transition_dm
+            for tdm in self.s2s_transition_dm
         ])
+        #ret = np.array([[
+        #    [product_trace(comp, tdm) for comp in dipole_integrals]
+        #    for tdm in tdm_tmp] for tdm_tmp in self.s2s_transition_dm
+        #])
+        end = time.perf_counter()
+        print("S2S dipole time", end - start)
+        return ret
 
     @cached_property
     @mark_excitation_property()
