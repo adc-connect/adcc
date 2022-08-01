@@ -43,6 +43,7 @@ def s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates):
 
 
 def s2s_tdm_adc2(mp, amplitude_l, amplitude_r, intermediates):
+    print('s2s_tdm_adc2')
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude_l, amplitude_r)
     dm = s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates)
 
@@ -218,6 +219,7 @@ def s2s_tdm_adc3_raw(mp, amplitude_l, amplitude_r, intermediates):
 
 
 def s2s_tdm_adc3(mp, amplitude_l, amplitude_r, intermediates):
+    print('s2s_tdm_adc3')
     dm = s2s_tdm_adc2(mp, amplitude_l, amplitude_r, intermediates)
 
     ul1, ul2 = amplitude_l.ph, amplitude_l.pphh

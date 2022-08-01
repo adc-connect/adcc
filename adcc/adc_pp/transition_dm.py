@@ -228,7 +228,7 @@ def tdm_adc3(mp, amplitude, intermediates):
 DISPATCH = {
     "adc0": tdm_adc0,
     "adc1": tdm_adc1,
-    "adc2": tdm_adc3,
+    "adc2": tdm_adc2,
     "adc2x": tdm_adc2,
     "adc3": tdm_adc3,
     "cvs-adc0": tdm_adc0,

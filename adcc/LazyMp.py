@@ -332,18 +332,27 @@ class LazyMp:
         """
         Return the MP3 differensce density in the MO basis. mp2_diffdm is included
         """
-        hf = self.reference_state
+        print('mp3_diffdm')
+        t2 = self.t2(b.oovv)
+        td2 = self.td2(b.oovv)
         ts3 = self.ts3(b.ov)
-        ret = mp2_diffdm
-        
-        # NOTE: the following 3 blocks are equivalent to the cvs_p0 intermediate
-        # defined at the end of this file
-        ret.oo = -0.5 * einsum("ikab,jkab->ij", self.t2oo, self.t2oo)
-        ret.ov = -0.5 * (
-            + einsum("ijbc,jabc->ia", self.t2oo, hf.ovvv)
-            + einsum("jkib,jkab->ia", hf.ooov, self.t2oo)
-        ) / self.df(b.ov)
-        ret.vv = 0.5 * einsum("ijac,ijbc->ab", self.t2oo, self.t2oo)
+        tt2 = self.tt2(b.ooovvv)
+        p0 = self.mp2_diffdm 
+        ret = self.mp2_diffdm
+
+        ret.oo = p0.oo -0.5 * (
+            + einsum('jkab,ikab->ij', t2, td2)
+            + einsum('ikab,jkab->ij', td2, t2)
+        )
+        ret.ov = p0.ov + ( ts3
+            - einsum('jb,ijab->ia', p0.ov, t2)
+            - 0.25 * einsum('jkbc,ijkabc->ia', t2, tt2)
+        )
+        ret.vv = p0.vv + 0.5 * (
+            + einsum('ijac,ijbc->ab', td2, t2)
+            + einsum('ijbc,ijac->ab', t2, td2)
+        )
+        return ret
 
 
     def density(self, level=2):
@@ -355,8 +364,8 @@ class LazyMp:
             return self.reference_state.density
         elif level == 2:
             return self.reference_state.density + self.mp2_diffdm
-        #elif level ==3:
-        #    return self.reference_state.density + self.mp3_diffdm
+        elif level ==3:
+            return self.reference_state.density + self.mp3_diffdm
         else:
             raise NotImplementedError("Only densities for level 1 and 2"
                                       " are implemented.")
@@ -370,8 +379,8 @@ class LazyMp:
             return self.reference_state.dipole_moment
         elif level == 2:
             return self.mp2_dipole_moment
-        #elif level == 3:
-        #    return self.mp3_dipole_moment
+        elif level == 3:
+            return self.mp3_dipole_moment
         else:
             raise NotImplementedError("Only dipole moments for level 1 and 2"
                                       " are implemented.")

@@ -47,7 +47,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
             n_guesses_doubles=None, output=sys.stdout, core_orbitals=None,
             frozen_core=None, frozen_virtual=None, method=None,
             n_singlets=None, n_triplets=None, n_spin_flip=None,
-            environment=None, **solverargs):
+            environment=None, properties_level=None, **solverargs):
     """Run an ADC calculation.
 
     Main entry point to run an ADC calculation. The reference to build the ADC
@@ -133,6 +133,11 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         The keywords to specify how coupling to an environment model,
         e.g. PE, is treated. For details see :ref:`environment`.
 
+    properties_level : str, optional
+        Because consistent third order properties are computationally demanding,
+        the properties level can be set manually. If not, consistent n-th order 
+        properties are computed.
+
     Other parameters
     ----------------
     max_subspace : int, optional
@@ -206,7 +211,10 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         matrix, n_states, kind, guesses=guesses, n_guesses=n_guesses,
         n_guesses_doubles=n_guesses_doubles, conv_tol=conv_tol, output=output,
         eigensolver=eigensolver, **solverargs)
-    exstates = ExcitedStates(diagres)
+    if properties_level != None:
+        exstates = ExcitedStates(diagres, property_method = properties_level)
+    else:
+        exstates = ExcitedStates(diagres)
     exstates.kind = kind
     exstates.spin_change = spin_change
 
