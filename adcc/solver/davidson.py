@@ -385,9 +385,9 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
         # max_subspace = max(2 * n_ep + 1, 20)
         if hasattr(matrix.reference_state, "full_diagonalization"):
             max_subspace = len(guesses)
-        elif hasattr(matrix.reference_state, "coupling") and not hasattr(matrix.reference_state, "approx"):
-            print("for qed-adc we use double the standard max_subspace")
-            max_subspace = max(12 * n_ep, 20, 10 * len(guesses))
+        #elif hasattr(matrix.reference_state, "coupling") and not hasattr(matrix.reference_state, "approx"):
+        #    print("for qed-adc we use double the standard max_subspace")
+        #    max_subspace = max(12 * n_ep, 20, 10 * len(guesses))
         else:
             max_subspace = max(6 * n_ep, 20, 5 * len(guesses))
 

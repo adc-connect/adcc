@@ -573,7 +573,7 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
     n_guess = len(guesses_elec)
 
     # Usually only few states are requested and most of them are close to pure electronic states,
-    # so we initialize the guess vectors as almost electric guesses.
+    # so we initialize the guess vectors as almost purely electric guesses.
     if not hasattr(matrix.reference_state, "full_diagonalization"):
         for i in np.arange(n_guess):
             # TODO: maybe these values should be accessible from the input file
@@ -633,9 +633,6 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
     final_guesses[len(final_guesses) - 2].gs1 += 5#2
     final_guesses[len(final_guesses) - 1].gs2 += 20#5
 
-    
-    for guess in final_guesses:
-        print(guess.gs1, guess.gs2)
     return [vec / np.sqrt(vec @ vec) for vec in final_guesses]
 
 def setup_solver_printing(solmethod_name, matrix, kind, default_print,

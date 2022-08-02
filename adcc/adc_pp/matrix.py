@@ -834,7 +834,6 @@ def block_ph_ph_2(hf, mp, intermediates):
                 - direct_sum("a+i->ia", qed_i1.diagonal(), qed_i2.diagonal())
                 + (1/2) * 2 * einsum("ia,ia->ia", mp.qed_t1(b.ov), mp.qed_t1_df(b.ov)))
             ))
-            print(mp.energy_correction(2))
             def apply(ampl):
                 return AmplitudeVector(ph=(
                     + einsum("ib,ab->ia", ampl.ph, i1)

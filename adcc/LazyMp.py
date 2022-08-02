@@ -279,7 +279,7 @@ class LazyMp:
     @cached_member_function
     def diff_df(self, space):
         if space == b.ov:
-            raise NotImplementedError("This would not make sense to construct!!!")
+            raise NotImplementedError("Request this space from df")
         elif space == b.vv: # this returns (eps_a - eps_b)
             return einsum("ia,ib->ab", self.df(b.ov), - self.df(b.ov))
         elif space == b.oo: # this returns (- eps_i + eps_j)
