@@ -276,7 +276,6 @@ class LazyMp:
         """
         Return the MP2 differensce density in the MO basis.
         """
-        print('mp2_diffdm')
         hf = self.reference_state
         ret = OneParticleOperator(self.mospaces, is_symmetric=True)
         # NOTE: the following 3 blocks are equivalent to the cvs_p0 intermediates
@@ -330,9 +329,8 @@ class LazyMp:
     @timed_member_call(timer="timer")
     def mp3_diffdm(self):
         """
-        Return the MP3 differensce density in the MO basis. mp2_diffdm is included
+        Return the MP3 difference density in the MO basis. mp2_diffdm is included
         """
-        print('mp3_diffdm')
         t2 = self.t2(b.oovv)
         td2 = self.td2(b.oovv)
         ts3 = self.ts3(b.ov)
@@ -342,7 +340,7 @@ class LazyMp:
 
         ret.oo = p0.oo -0.5 * (
             + einsum('jkab,ikab->ij', t2, td2)
-            + einsum('ikab,jkab->ij', td2, t2)
+            + einsum('jkab,ikab->ij', td2, t2)
         )
         ret.ov = p0.ov + ( ts3
             - einsum('jb,ijab->ia', p0.ov, t2)
@@ -350,9 +348,9 @@ class LazyMp:
         )
         ret.vv = p0.vv + 0.5 * (
             + einsum('ijac,ijbc->ab', td2, t2)
-            + einsum('ijbc,ijac->ab', t2, td2)
+            + einsum('ijac,ijbc->ab', t2, td2)
         )
-        return ret
+        return evaluate(ret)
 
 
     def density(self, level=2):

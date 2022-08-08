@@ -48,7 +48,6 @@ class AdcMethod:
             if self.__base_method == "adc2x":
                 self.level = 2
             else:
-                print('Base_method = ', self.__base_method, int(self.__base_method[-1]))
                 self.level = int(self.__base_method[-1])
         except ValueError:
             raise ValueError("Not a valid base method: " + self.__base_method)

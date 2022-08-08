@@ -43,7 +43,6 @@ def s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates):
 
 
 def s2s_tdm_adc2(mp, amplitude_l, amplitude_r, intermediates):
-    print('s2s_tdm_adc2')
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude_l, amplitude_r)
     dm = s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates)
 
@@ -101,6 +100,119 @@ def s2s_tdm_adc2(mp, amplitude_l, amplitude_r, intermediates):
     )
     return dm
 
+def s2s_tdm_adc3_from_gen(mp, amplitude_l, amplitude_r, intermediates):
+    dm = s2s_tdm_adc2(mp, amplitude_l, amplitude_r, intermediates)
+
+    ul1, ul2 = amplitude_l.ph, amplitude_l.pphh
+    ur1, ur2 = amplitude_r.ph, amplitude_r.pphh
+
+    t2 = mp.t2(b.oovv)
+    p0_initial = mp.mp2_diffdm
+    p0 = p0_initial.ov
+    td2 = mp.td2(b.oovv)
+    tt2 = mp.tt2(b.ooovvv)
+    ts3 = mp.ts3(b.ov)
+
+    dm.oo += (
+        + 2 * einsum('ia,ijab,kb->jk', ul1, ur2, p0)
+        + 2 * einsum('ijab,ia,kb->kj', ul2, ur1, p0)
+        - 0.25 * einsum('ia,ja,ikbc,klbc->jl', ul1, ur1, t2, td2)
+        - 0.25 * einsum('ia,ja,klbc,ikbc->jl', ul1, ur1, t2, td2)
+        + 0.25 * einsum('ia,ja,jlbc,klbc->ki', ul1, ur1, t2, td2)
+        + 0.25 * einsum('ia,ja,klbc,jlbc->ki', ul1, ur1, t2, td2)
+        + 0.5 * einsum('ia,ja,ikbc,jlbc->kl', ul1, ur1, t2, td2)
+        + 0.5 * einsum('ia,ja,jlbc,ikbc->kl', ul1, ur1, t2, td2)
+        + einsum('ia,ib,jlac,klbc->jk', ul1, ur1, t2, td2)
+        - einsum('ia,ib,klbc,jkac->jl', ul1, ur1, t2, td2)
+        - 0.5 * einsum('ia,jb,ilac,klbc->jk', ul1, ur1, t2, td2)
+        + 0.5 * einsum('ia,jb,klbc,ikac->jl', ul1, ur1, t2, td2)
+        - 0.5 * einsum('ia,jb,klac,jlbc->ki', ul1, ur1, t2, td2)
+        - 0.5 * einsum('ia,jb,jlbc,klac->ki', ul1, ur1, t2, td2)
+        - einsum('ia,jb,ikac,jlbc->kl', ul1, ur1, t2, td2)
+        - einsum('ia,jb,jlbc,ikac->kl', ul1, ur1, t2, td2)
+    )
+    dm.vv += (
+        - 2 * einsum('ia,ijab,jc->cb', ul1, ur2, p0)
+        + 2 * einsum('ijab,ja,ic->bc', ul2, ur1, p0)
+        - einsum('ia,ja,ikbc,jkbd->dc', ul1, ur1, t2, td2)
+        - einsum('ia,ja,jkbd,ikbc->dc', ul1, ur1, t2, td2)
+        - 0.25 * einsum('ia,ib,jkbd,jkcd->ac', ul1, ur1, t2, td2)
+        - 0.25 * einsum('ia,ib,jkcd,jkbd->ac', ul1, ur1, t2, td2)
+        - 0.25 * einsum('ia,ib,jkcd,jkad->cb', ul1, ur1, t2, td2)
+        + 0.25 * einsum('ia,ib,jkac,jkcd->db', ul1, ur1, t2, td2)
+        - 0.5 * einsum('ia,ib,jkac,jkbd->dc', ul1, ur1, t2, td2)
+        - 0.5 * einsum('ia,ib,jkbd,jkac->dc', ul1, ur1, t2, td2)
+        + 0.5 * einsum('ia,jb,jkbd,ikcd->ac', ul1, ur1, t2, td2)
+        + 0.5 * einsum('ia,jb,ikcd,jkbd->ac', ul1, ur1, t2, td2)
+        + 0.5 * einsum('ia,jb,jkcd,ikad->cb', ul1, ur1, t2, td2)
+        - 0.5 * einsum('ia,jb,ikac,jkcd->db', ul1, ur1, t2, td2)
+        + einsum('ia,jb,ikac,jkbd->dc', ul1, ur1, t2, td2)
+        + einsum('ia,jb,jkbd,ikac->dc', ul1, ur1, t2, td2)
+    )
+    dm.ov += (
+        + 0.5 * einsum('ia,ijab,klbd,klcd->jc', ul1, ur2, t2, t2)
+        + 0.5 * einsum('ia,ijab,jlcd,klcd->kb', ul1, ur2, t2, t2)
+        - einsum('ia,ijab,jlbd,klcd->kc', ul1, ur2, t2, t2)
+        + einsum('ia,jkab,klbd,ilcd->jc', ul1, ur2, t2, t2)
+        - 0.25 * einsum('ia,jkab,ilcd,jkcd->lb', ul1, ur2, t2, t2)
+        + 0.5 * einsum('ia,jkab,jkbd,ilcd->lc', ul1, ur2, t2, t2)
+        - einsum('ia,ijbc,klad,jlbd->kc', ul1, ur2, t2, t2)
+        + 0.5 * einsum('ia,ijbc,klad,jlbc->kd', ul1, ur2, t2, t2)
+        - 0.5 * einsum('ia,jkbc,ilad,klbc->jd', ul1, ur2, t2, t2)
+        + 0.5 * einsum('ia,jkbc,ilad,jkbd->lc', ul1, ur2, t2, t2)
+        - 0.25 * einsum('ia,ijbd,klac,klbd->jc', ul1, ur2, t2, t2)
+        - 2 * einsum('ijab,ja,ikbc->kc', ul2, ur1, td2)
+        - einsum('ijab,kb,ijac->kc', ul2, ur1, td2)
+        - einsum('ijab,jc,ikab->kc', ul2, ur1, td2)
+        + einsum('ia,ja,ikbc,kc->jb', ul1, ur1, t2, p0)
+        - einsum('ia,ja,ib->jb', ul1, ur1, ts3)
+        - 0.25 * einsum('ia,ja,klbd,iklbcd->jc', ul1, ur1, t2, tt2)
+        - einsum('ia,ja,ikbc,jc->kb', ul1, ur1, t2, p0)
+        - 0.5 * einsum('ia,ja,jlcd,iklbcd->kb', ul1, ur1, t2, tt2)
+        + einsum('ia,ib,jkac,kc->jb', ul1, ur1, t2, p0)
+        + 0.25 * einsum('ia,ib,klcd,jklacd->jb', ul1, ur1, t2, tt2)
+        - einsum('ia,ib,ja->jb', ul1, ur1, ts3)
+        - einsum('ia,ib,jkac,kb->jc', ul1, ur1, t2, p0)
+        - 0.5 * einsum('ia,ib,klbd,jklacd->jc', ul1, ur1, t2, tt2)
+        + einsum('ia,jb,ikac,kb->jc', ul1, ur1, t2, p0)
+        + 0.5 * einsum('ia,jb,klbd,iklacd->jc', ul1, ur1, t2, tt2)
+        + einsum('ia,jb,ikac,jc->kb', ul1, ur1, t2, p0)
+        + 0.5 * einsum('ia,kb,klcd,ijlacd->jb', ul1, ur1, t2, tt2)
+        - einsum('ia,kb,klbd,ijlacd->jc', ul1, ur1, t2, tt2)
+    )
+    dm.vo += (
+        + 2 * einsum('ia,ijab,jkbc->ck', ul1, ur2, td2)
+        + einsum('ia,jkab,jkbc->ci', ul1, ur2, td2)
+        + einsum('ia,ijbc,jkbc->ak', ul1, ur2, td2)
+        - 0.5 * einsum('ijab,ia,jkcd,klcd->bl', ul2, ur1, t2, t2)
+        - einsum('ijab,ia,jlbd,klcd->ck', ul2, ur1, t2, t2)
+        - 0.5 * einsum('ijab,ia,klbc,klcd->dj', ul2, ur1, t2, t2)
+        - 0.25 * einsum('ijab,ka,ijcd,klcd->bl', ul2, ur1, t2, t2)
+        - einsum('ijab,ka,ilbd,klcd->cj', ul2, ur1, t2, t2)
+        - 0.5 * einsum('ijab,ka,ijbc,klcd->dl', ul2, ur1, t2, t2)
+        - einsum('ijab,ic,jkbd,klcd->al', ul2, ur1, t2, t2)
+        - 0.25 * einsum('ijab,ic,klab,klcd->dj', ul2, ur1, t2, t2)
+        - 0.5 * einsum('ijab,ic,jkab,klcd->dl', ul2, ur1, t2, t2)
+        - 0.5 * einsum('ijab,kc,ijbd,klcd->al', ul2, ur1, t2, t2)
+        - 0.5 * einsum('ijab,kc,jlab,klcd->di', ul2, ur1, t2, t2)
+        - einsum('ia,ja,jb->bi', ul1, ur1, ts3)
+        - einsum('ia,ja,jkbc,kb->ci', ul1, ur1, t2, p0)
+        + einsum('ia,ja,jkbc,ib->ck', ul1, ur1, t2, p0)
+        + 0.25 * einsum('ia,ja,klbc,jklbcd->di', ul1, ur1, t2, tt2)
+        - 0.5 * einsum('ia,ja,ilbc,jklbcd->dk', ul1, ur1, t2, tt2)
+        + 0.25 * einsum('ia,ib,klcd,jklbcd->aj', ul1, ur1, t2, tt2)
+        - einsum('ia,ib,jb->aj', ul1, ur1, ts3)
+        - einsum('ia,ib,jkbc,jc->ak', ul1, ur1, t2, p0)
+        - einsum('ia,ib,jkbc,ka->cj', ul1, ur1, t2, p0)
+        + 0.5 * einsum('ia,ib,klac,jklbcd->dj', ul1, ur1, t2, tt2)
+        + einsum('ia,jb,jkbc,ic->ak', ul1, ur1, t2, p0)
+        + 0.5 * einsum('ia,jb,ilcd,jklbcd->ak', ul1, ur1, t2, tt2)
+        + einsum('ia,jb,jkbc,ka->ci', ul1, ur1, t2, p0)
+        - 0.5 * einsum('ia,jb,klac,jklbcd->di', ul1, ur1, t2, tt2)
+        + einsum('ia,jb,ilac,jklbcd->dk', ul1, ur1, t2, tt2)
+    )
+    return dm
+
 def s2s_tdm_adc3_raw(mp, amplitude_l, amplitude_r, intermediates):
     dm = s2s_tdm_adc2(mp, amplitude_l, amplitude_r, intermediates)
 
@@ -112,7 +224,6 @@ def s2s_tdm_adc3_raw(mp, amplitude_l, amplitude_r, intermediates):
     p0 = p0_initial.ov
     td2 = mp.td2(b.oovv)
     tt2 = mp.tt2(b.ooovvv)
-    #tq2 = mp.tq2(b.oooovvvv)
     ts3 = mp.ts3(b.ov)
 
     dm.oo += (
@@ -219,7 +330,6 @@ def s2s_tdm_adc3_raw(mp, amplitude_l, amplitude_r, intermediates):
 
 
 def s2s_tdm_adc3(mp, amplitude_l, amplitude_r, intermediates):
-    print('s2s_tdm_adc3')
     dm = s2s_tdm_adc2(mp, amplitude_l, amplitude_r, intermediates)
 
     ul1, ul2 = amplitude_l.ph, amplitude_l.pphh
@@ -279,7 +389,7 @@ def s2s_tdm_adc3(mp, amplitude_l, amplitude_r, intermediates):
         - einsum('jiab,ic,jc->ab', td2t2_oovv, ul1, ur1)
         - einsum('ijba,ic,jc->ab', td2t2_oovv, ul1, ur1)
         + einsum('ka,kb->ab', p0, p1_ov)
-        + 2 * einsum('jb,aj->ab', p0, p1_vo)
+        + einsum('jb,aj->ab', p0, p1_vo)
     )
     dm.ov += (
         - einsum('ib,jb,ja->ia', ts3, ul1, ur1)

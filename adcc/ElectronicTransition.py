@@ -184,7 +184,6 @@ class ElectronicTransition:
             warnings.warn("ADC(0) transition dipole moments are known to be "
                           "faulty in some cases.")
         dipole_integrals = self.operators.electric_dipole
-        print('Self.property_method.level = ', self.property_method.level)
         gs_dip_moment = self.ground_state.dipole_moment(self.property_method.level) 
         ret = gs_dip_moment - np.array([
             [product_trace(comp, tdm) for comp in dipole_integrals]
