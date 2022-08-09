@@ -33,7 +33,8 @@ from .guess_zero import guess_zero
 
 def guesses_from_diagonal(matrix, n_guesses, block="ph", spin_change=0,
                           spin_block_symmetrisation="none",
-                          degeneracy_tolerance=1e-14, max_diagonal_value=1000):
+                          degeneracy_tolerance=1e-14, max_diagonal_value=1000,
+                          qed_subblock=None):
     """
     Obtain guesses by inspecting a block of the diagonal of the passed ADC
     matrix. The symmetry of the returned vectors is already set-up properly.
@@ -90,7 +91,19 @@ def guesses_from_diagonal(matrix, n_guesses, block="ph", spin_change=0,
     else:
         raise ValueError(f"Don't know how to generate guesses for block {block}")
 
-    return guessfunction(matrix, n_guesses, spin_change,
+    if qed_subblock == None:
+        diag = matrix.diagonal()
+    elif qed_subblock == "elec":
+        diag = matrix.diagonal().elec
+    elif qed_subblock == "phot":
+        diag = matrix.diagonal().phot
+    elif qed_subblock == "phot2":
+        diag = matrix.diagonal().phot2
+    else:
+        KeyError("qed_subblock can only be None, elec, phot or phot2"
+                "for guesses from diagonal")
+
+    return guessfunction(matrix, n_guesses, diag, spin_change,
                          spin_block_symmetrisation, degeneracy_tolerance,
                          max_diagonal_value)
 
@@ -197,7 +210,7 @@ def find_smallest_matching_elements(predicate, tensor, motrans, n_elements,
         return res
 
 
-def guesses_from_diagonal_singles(matrix, n_guesses, spin_change=0,
+def guesses_from_diagonal_singles(matrix, n_guesses, diag, spin_change=0,
                                   spin_block_symmetrisation="none",
                                   degeneracy_tolerance=1e-14,
                                   max_diagonal_value=1000):
@@ -220,8 +233,9 @@ def guesses_from_diagonal_singles(matrix, n_guesses, spin_change=0,
                 and telem.spin_change == spin_change
                 and abs(telem.value) <= max_diagonal_value)
 
+
     elements = find_smallest_matching_elements(
-        pred_singles, matrix.diagonal().ph, motrans, n_guesses,
+        pred_singles, diag.ph, motrans, n_guesses,
         degeneracy_tolerance=degeneracy_tolerance
     )
     if len(elements) == 0:
@@ -271,7 +285,7 @@ def guesses_from_diagonal_singles(matrix, n_guesses, spin_change=0,
     return [evaluate(v / np.sqrt(v @ v)) for v in ret[:ivec]]
 
 
-def guesses_from_diagonal_doubles(matrix, n_guesses, spin_change=0,
+def guesses_from_diagonal_doubles(matrix, n_guesses, diag, spin_change=0,
                                   spin_block_symmetrisation="none",
                                   degeneracy_tolerance=1e-14,
                                   max_diagonal_value=1000):
@@ -299,7 +313,7 @@ def guesses_from_diagonal_doubles(matrix, n_guesses, spin_change=0,
     ret = ret[:n_found]
 
     # Filter out elements above the noted diagonal value
-    diagonal_elements = [ret_d.pphh.dot(matrix.diagonal().pphh * ret_d.pphh)
+    diagonal_elements = [ret_d.pphh.dot(diag.pphh * ret_d.pphh)
                          for ret_d in ret]
     return [ret[i] for (i, elem) in enumerate(diagonal_elements)
             if elem <= max_diagonal_value]

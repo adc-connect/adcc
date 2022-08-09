@@ -42,6 +42,84 @@ def s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates):
     return dm
 
 
+def s2s_tdm_qed_adc2_diag_part(mp, amplitude_l, amplitude_r, intermediates): 
+    dm = s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates)
+    ul1 = amplitude_l.ph
+    ur1 = amplitude_r.ph
+    p0_oo = dm.oo.evaluate()
+    p0_vv = dm.vv.evaluate()
+
+    dm_new = OneParticleOperator(mp, is_symmetric=False)
+
+    dm_new.ov = (
+            - einsum("kb,ab->ka", mp.qed_t1(b.ov), p0_vv)
+            + einsum("ji,ic->jc", p0_oo, mp.qed_t1(b.ov))
+            + ul1.dot(mp.qed_t1(b.ov)) * ur1
+    ) / 2
+
+    dm_new.vo = (
+            - einsum("kb,ba->ak", mp.qed_t1(b.ov), p0_vv)
+            + einsum("ij,ic->cj", p0_oo, mp.qed_t1(b.ov))
+            + ur1.dot(mp.qed_t1(b.ov)) * ul1.transpose() 
+    ) / 2
+
+    return dm_new
+
+def s2s_tdm_qed_adc2_edge_part_couple(mp, amplitude_l, amplitude_r, intermediates): 
+    dm = s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates)
+    ul1 = amplitude_l.ph
+    ur1 = amplitude_r.ph
+    p0_oo = dm.oo.evaluate()
+    p0_vv = dm.vv.evaluate()
+
+    dm_new = OneParticleOperator(mp, is_symmetric=False)
+
+    dm_new.ov = (mp.qed_t1(b.ov) * ul1.dot(ur1)
+            - einsum("kb,ab->ka", mp.qed_t1(b.ov), p0_vv)
+            + einsum("ji,ic->jc", p0_oo, mp.qed_t1(b.ov))
+    )
+
+    return dm_new
+
+def s2s_tdm_qed_adc2_edge_part_phot_couple(mp, amplitude_l, amplitude_r, intermediates): 
+    dm = s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates)
+    ul1 = amplitude_l.ph
+    ur1 = amplitude_r.ph
+    p0_oo = dm.oo.evaluate()
+    p0_vv = dm.vv.evaluate()
+
+    dm_new = OneParticleOperator(mp, is_symmetric=False)
+
+    dm_new.vo = (einsum("ia->ai", mp.qed_t1(b.ov)) * ul1.dot(ur1)
+            - einsum("kb,ba->ak", mp.qed_t1(b.ov), p0_vv)
+            + einsum("ij,ic->cj", p0_oo, mp.qed_t1(b.ov))
+    )
+
+    return dm_new
+
+
+def s2s_tdm_qed_adc2_ph_pphh_coupl_part(mp, amplitude_l, amplitude_r, intermediates):
+    ul1 = amplitude_l.ph
+    ur2 = amplitude_r.pphh
+
+    dm = OneParticleOperator(mp, is_symmetric=False)
+
+    dm.ov = -2 * einsum("jb,ijab->ia", ul1, ur2)
+
+    return dm
+
+
+def s2s_tdm_qed_adc2_pphh_ph_phot_coupl_part(mp, amplitude_l, amplitude_r, intermediates):
+    ul2 = amplitude_l.pphh
+    ur1 = amplitude_r.ph
+
+    dm = OneParticleOperator(mp, is_symmetric=False)
+
+    dm.vo = -2 * einsum("ijab,jb->ai", ul2, ur1)
+
+    return dm
+
+
 def s2s_tdm_adc2(mp, amplitude_l, amplitude_r, intermediates):
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude_l, amplitude_r)
     dm = s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates)
@@ -104,6 +182,13 @@ def s2s_tdm_adc2(mp, amplitude_l, amplitude_r, intermediates):
 # Ref: https://doi.org/10.1080/00268976.2013.859313
 DISPATCH = {"adc0": s2s_tdm_adc0,
             "adc1": s2s_tdm_adc0,       # same as ADC(0)
+            # The following qed terms are not the actual s2s densities,
+            # but those required for the approx function
+            "qed_adc2_diag": s2s_tdm_qed_adc2_diag_part,
+            "qed_adc2_edge_couple": s2s_tdm_qed_adc2_edge_part_couple,
+            "qed_adc2_edge_phot_couple": s2s_tdm_qed_adc2_edge_part_phot_couple,
+            "qed_adc2_ph_pphh": s2s_tdm_qed_adc2_ph_pphh_coupl_part,
+            "qed_adc2_pphh_ph": s2s_tdm_qed_adc2_pphh_ph_phot_coupl_part,
             "adc2": s2s_tdm_adc2,
             "adc2x": s2s_tdm_adc2,      # same as ADC(2)
             }
@@ -143,8 +228,12 @@ def state2state_transition_dm(method, ground_state, amplitude_from,
         raise NotImplementedError("state2state_transition_dm is not implemented "
                                   f"for {method.name}.")
     else:
-        # final state is on the bra side/left (complex conjugate)
-        # see ref https://doi.org/10.1080/00268976.2013.859313, appendix A2
-        ret = DISPATCH[method.name](ground_state, amplitude_to, amplitude_from,
-                                    intermediates)
+        if hasattr(ground_state, "s2s_contribution"):
+            ret = DISPATCH[ground_state.s2s_contribution](ground_state, amplitude_to,
+                                                          amplitude_from, intermediates)
+        else:
+            # final state is on the bra side/left (complex conjugate)
+            # see ref https://doi.org/10.1080/00268976.2013.859313, appendix A2
+            ret = DISPATCH[method.name](ground_state, amplitude_to, amplitude_from,
+                                        intermediates)
         return ret.evaluate()

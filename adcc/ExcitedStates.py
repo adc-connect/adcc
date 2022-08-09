@@ -35,6 +35,7 @@ from .FormatIndex import (FormatIndexAdcc, FormatIndexBase,
 from .OneParticleOperator import product_trace
 from .ElectronicTransition import ElectronicTransition
 from .FormatDominantElements import FormatDominantElements
+from .AmplitudeVector import QED_AmplitudeVector
 
 
 class EnergyCorrection:
@@ -410,12 +411,18 @@ class ExcitedStates(ElectronicTransition):
             to index relative on the HOMO / LUMO / HOCO orbitals.
             If ``None`` an automatic selection will be made.
         """
-        eV = constants.value("Hartree energy in eV")
+        eV = constants.value("Hartree energy in eV") 
         vector_format = FormatExcitationVector(self.matrix, tolerance=tolerance,
                                                index_format=index_format)
 
         # Optimise the formatting by pre-inspecting all tensors
         for tensor in self.excitation_vector:
+            if isinstance(tensor, QED_AmplitudeVector):
+                # TODO: Implement tdm and s2s_tdm for QED, so properties can also
+                # be evaluated for QED_AmplitudeVector objects. For now only
+                # use AmplitudeVector describing the electric part, so the
+                # formatting does not have to be adapted.
+                tensor = tensor.elec
             vector_format.optimise_formatting(tensor)
 
         # Determine width of a line
@@ -424,6 +431,13 @@ class ExcitedStates(ElectronicTransition):
 
         ret = separator
         for i, vec in enumerate(self.excitation_vector):
+            if isinstance(vec, QED_AmplitudeVector):
+                # TODO: Implement tdm and s2s_tdm for QED, so properties can also
+                # be evaluated for QED_AmplitudeVector objects. For now only
+                # use AmplitudeVector describing the electric part, since 
+                # most low-energy states are almost purely electric, so the
+                # formatting does not have to be adapted.
+                vec = vec.elec
             ene = self.excitation_energy[i]
             eev = ene * eV
             head = f"State {i:3d} , {ene:13.7g} au"

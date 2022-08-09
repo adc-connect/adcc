@@ -28,7 +28,7 @@ import scipy.sparse.linalg as sla
 
 from adcc import evaluate, lincomb
 from adcc.AdcMatrix import AdcMatrixlike
-from adcc.AmplitudeVector import AmplitudeVector
+from adcc.AmplitudeVector import AmplitudeVector, QED_AmplitudeVector
 
 from .common import select_eigenpairs
 from .preconditioner import JacobiPreconditioner
@@ -197,6 +197,13 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             state.eigenvalues = rvals[epair_mask]
             state.residuals = [residuals[i] for i in epair_mask]
             state.residual_norms = np.array([r @ r for r in state.residuals])
+            if hasattr(matrix.reference_state, "print_eigvec_norms"):
+                # building the eigenvectors here is just for debugging purposes
+                eigenvecs = [lincomb(v, SS, evaluate=True)
+                                    for i, v in enumerate(np.transpose(rvecs))
+                                    if i in epair_mask]
+                for eigv in eigenvecs:
+                    print("norm of eigenvector", np.sqrt(eigv @ eigv))
             # TODO This is misleading ... actually residual_norms contains
             #      the norms squared. That's also the used e.g. in adcman to
             #      check for convergence, so using the norm squared is fine,
@@ -265,6 +272,7 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             # Explicitly symmetrise the new vectors if requested
             if explicit_symmetrisation:
                 explicit_symmetrisation.symmetrise(preconds)
+
 
         # Project the components of the preconditioned vectors away
         # which are already contained in the subspace.
@@ -358,7 +366,7 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
     if not isinstance(matrix, AdcMatrixlike):
         raise TypeError("matrix is not of type AdcMatrixlike")
     for guess in guesses:
-        if not isinstance(guess, AmplitudeVector):
+        if not isinstance(guess, (AmplitudeVector, QED_AmplitudeVector)):
             raise TypeError("One of the guesses is not of type AmplitudeVector")
 
     if preconditioner is not None and isinstance(preconditioner, type):
@@ -375,7 +383,10 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
     if not max_subspace:
         # TODO Arnoldi uses this:
         # max_subspace = max(2 * n_ep + 1, 20)
-        max_subspace = max(6 * n_ep, 20, 5 * len(guesses))
+        if hasattr(matrix.reference_state, "full_diagonalization"):
+            max_subspace = len(guesses)
+        else:
+            max_subspace = max(6 * n_ep, 20, 5 * len(guesses))
 
     def convergence_test(state):
         state.residuals_converged = state.residual_norms < conv_tol
