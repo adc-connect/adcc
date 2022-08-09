@@ -136,7 +136,8 @@ class AdcMatrix(AdcMatrixlike):
 
         if hasattr(self.reference_state, "coupling"):
             if method.base_method.name == "adc2x" or method.base_method.name == "adc3":
-                NotImplementedError("Neither adc2x nor adc3 are implemented for QED-ADC")
+                raise NotImplementedError("Neither adc2x nor adc3 "
+                                          "are implemented for QED-ADC")
 
         if hasattr(self.reference_state, "first_order_coupling") and method.base_method.name == "adc2": # noqa: E501
             # this way we only need to include the separate case in the ph_ph=1 blocks, 
@@ -463,7 +464,8 @@ class AdcMatrix(AdcMatrixlike):
                 return QED_AmplitudeVector(elec_part.ph, None, gs1_part, phot_part.ph, None,
                                            gs2_part, phot2_part.ph, None)
         else:
-            TypeError("matvec needs to be invoked with AmplitudeVector or QED_AmplitudeVector")
+            raise TypeError("matvec needs to be invoked with "
+                            "AmplitudeVector or QED_AmplitudeVector")
 
     def rmatvec(self, v):
         # ADC matrix is symmetric
