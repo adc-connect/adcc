@@ -75,8 +75,6 @@ class AdcMatrixlike:
 class AdcMatrix(AdcMatrixlike):
     # Default perturbation-theory orders for the matrix blocks (== standard ADC-PP).
     default_block_orders = {
-        #             ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),
-        #"adc0":  dict(gs_gs=0, gs_ph=0, ph_gs=0, ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
         "adc0":  dict(ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
         "adc1":  dict(ph_ph=1, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
         "adc2":  dict(ph_ph=2, ph_pphh=1,    pphh_ph=1,    pphh_pphh=0),     # noqa: E501
@@ -140,10 +138,12 @@ class AdcMatrix(AdcMatrixlike):
             if method.base_method.name == "adc2x" or method.base_method.name == "adc3":
                 NotImplementedError("Neither adc2x nor adc3 are implemented for QED-ADC")
 
-        if hasattr(self.reference_state, "first_order_coupling") and method.base_method.name == "adc2":
+        if hasattr(self.reference_state, "first_order_coupling") and method.base_method.name == "adc2": # noqa: E501
             # this way we only need to include the separate case in the ph_ph=1 blocks, 
             # and the 4 non-zero coupling blocks
-            self.qed_default_block_orders["adc2"] = dict(ph_gs=1, ph_ph=1, ph_pphh=1,    pphh_ph=1,    pphh_pphh=0)
+            self.qed_default_block_orders["adc2"] = dict(ph_gs=1, ph_ph=1,
+                                                         ph_pphh=1,    pphh_ph=1,
+                                                         pphh_pphh=0)
 
         self.intermediates = intermediates
         if self.intermediates is None:
@@ -151,7 +151,7 @@ class AdcMatrix(AdcMatrixlike):
 
         # Determine orders of PT in the blocks
         if block_orders is None:
-            if hasattr(self.reference_state, "coupling") and not hasattr(self.reference_state, "approx"):
+            if hasattr(self.reference_state, "coupling") and not hasattr(self.reference_state, "approx"): # noqa: E501
                 block_orders = self.qed_default_block_orders[method.base_method.name]
             else:
                 block_orders = self.default_block_orders[method.base_method.name]
@@ -181,9 +181,16 @@ class AdcMatrix(AdcMatrixlike):
         }
 
         def get_pp_blocks(disp_str):
+            """
+            Extraction of blocks from the adc_pp matrix
+            ----------
+            disp_str : string
+                key specifying block to return
+            """
             return {  # TODO Rename to self.block in 0.16.0
                 block: ppmatrix.block(self.ground_state, block.split("_"),
-                                      order=str(order) + self.qed_dispatch_dict[disp_str], intermediates=self.intermediates,
+                                      order=str(order) + self.qed_dispatch_dict[disp_str],
+                                      intermediates=self.intermediates,
                                       variant=variant)
                 for block, order in block_orders.items() if order is not None
             }
@@ -195,7 +202,7 @@ class AdcMatrix(AdcMatrixlike):
             if method.is_core_valence_separated:
                 variant = "cvs"
             # Build full QED-matrix
-            if hasattr(self.reference_state, "coupling") and not hasattr(self.reference_state, "approx"):
+            if hasattr(self.reference_state, "coupling") and not hasattr(self.reference_state, "approx"): # noqa: E501
                 blocks = {}
 
                 if hasattr(hf_or_mp.reference_state, "coupling"):
@@ -211,18 +218,21 @@ class AdcMatrix(AdcMatrixlike):
                                         if "ph_gs" in block and block.endswith("phot2"))
                 
                 if "pphh_pphh_elec" in blocks:
-                    self.__diagonal = QED_AmplitudeVector(blocks["ph_ph_elec"].diagonal.evaluate().ph, blocks["pphh_pphh_elec"].diagonal.evaluate().pphh,
-                                    self.__diagonal_gs1, blocks["ph_ph_phot"].diagonal.evaluate().ph, blocks["pphh_pphh_phot"].diagonal.evaluate().pphh,
-                                    self.__diagonal_gs2, blocks["ph_ph_phot2"].diagonal.evaluate().ph, blocks["pphh_pphh_phot2"].diagonal.evaluate().pphh)
+                    self.__diagonal = QED_AmplitudeVector(blocks["ph_ph_elec"].diagonal.evaluate().ph, 
+                                    blocks["pphh_pphh_elec"].diagonal.evaluate().pphh,
+                                    self.__diagonal_gs1, blocks["ph_ph_phot"].diagonal.evaluate().ph, 
+                                    blocks["pphh_pphh_phot"].diagonal.evaluate().pphh,
+                                    self.__diagonal_gs2, blocks["ph_ph_phot2"].diagonal.evaluate().ph, 
+                                    blocks["pphh_pphh_phot2"].diagonal.evaluate().pphh)
                 else:
-                    self.__diagonal = QED_AmplitudeVector(blocks["ph_ph_elec"].diagonal.evaluate().ph, None,
-                                    self.__diagonal_gs1, blocks["ph_ph_phot"].diagonal.evaluate().ph, None,
-                                    self.__diagonal_gs2, blocks["ph_ph_phot2"].diagonal.evaluate().ph, None)
-                self.__init_space_data_qed(self.__diagonal.elec) 
-                #self.__diagonal.evaluate()
+                    self.__diagonal = QED_AmplitudeVector(blocks["ph_ph_elec"].diagonal.evaluate().ph, None, # noqa: E501
+                                    self.__diagonal_gs1, blocks["ph_ph_phot"].diagonal.evaluate().ph, None, # noqa: E501
+                                    self.__diagonal_gs2, blocks["ph_ph_phot2"].diagonal.evaluate().ph, None) # noqa: E501
+                self.__init_space_data(self.__diagonal.elec) 
             else: # Build "standard" ADC-matrix
                 blocks = {
-                    bl: get_pp_blocks("elec")[bl] for bl, order in block_orders.items() if order is not None
+                    bl: get_pp_blocks("elec")[bl] for bl, order in block_orders.items()
+                    if order is not None
                 }
 
                 if diagonal_precomputed:
@@ -237,20 +247,15 @@ class AdcMatrix(AdcMatrixlike):
             self.blocks_ph = {bl: blocks[bl].apply for bl in blocks}
 
 
-    def __init_space_data_qed(self, diagonal):
-        self.__init_space_data(diagonal)
-        shape0 = self.shape
-        self.shape = ((shape0[0]+1) * 3 - 1, (shape0[0]+1) * 3 - 1)
-        #self.axis_spaces["gs"] = ["o0", "v0"] 
-        #self.axis_lengths["gs"] = 1
-
-
     def qed_subblock(self, qed_disp_key):
         # These subblocks are "standard ADC matrices", so we can use the implemented functions.
         # This is useful e.g. in the matvec function
         """
         Extraction of subblocks from the full QED-ADC Matrix,
         without the ph_gs blocks
+        ----------
+        qed_disp_key : string
+            key specifying which block to return
         """
         return [bl for key, bl in self.blocks_ph.items() 
                 if not key.startswith("ph_gs") and key.endswith(qed_disp_key)]
@@ -317,6 +322,10 @@ class AdcMatrix(AdcMatrixlike):
             ])
         self.shape = (sum(self.axis_lengths.values()),
                       sum(self.axis_lengths.values()))
+        if hasattr(self.reference_state, "coupling") and not hasattr(self.reference_state, "approx"): # noqa: E501
+            # We leave out the the dimension with the purely electronic ground state,
+            # since by construction the coupling to it is always zero
+            self.shape = ((self.shape[0]+1) * 3 - 1, (self.shape[0]+1) * 3 - 1)
 
     def __repr__(self):
         ret = f"AdcMatrix({self.method.name}, "
@@ -373,11 +382,10 @@ class AdcMatrix(AdcMatrixlike):
     def compute_apply(self, block, tensor):
         warnings.warn("The compute_apply function is deprecated and "
                       "will be removed in 0.16.0.")
-        if block in ("sg" ,"ss", "sd", "ds", "dd"):
+        if block in ("ss", "sd", "ds", "dd"):
             warnings.warn("The singles-doubles interface is deprecated and "
                           "will be removed in 0.16.0.")
-            block = {"sg": "ph_gs",
-                     "ss": "ph_ph", "sd": "ph_pphh",
+            block = {"ss": "ph_ph", "sd": "ph_pphh",
                      "ds": "pphh_ph", "dd": "pphh_pphh"}[block]
         return self.block_apply(block, tensor)
 
@@ -392,7 +400,7 @@ class AdcMatrix(AdcMatrixlike):
 
         with self.timer.record(f"apply/{block}"):
             outblock, inblock = block.split("_")
-            ampl = QED_AmplitudeVector(**{inblock: tensor})
+            ampl = AmplitudeVector(**{inblock: tensor})
             ret = self.blocks_ph[block](ampl)
             return getattr(ret, outblock)
 
@@ -411,11 +419,14 @@ class AdcMatrix(AdcMatrixlike):
 
             phot_part = mv("elec_couple") + mv("phot") + mv("phot_couple_inner")
 
-            if "pphh_pphh_elec" in self.blocks_ph.keys() and not hasattr(self.reference_state, "first_order_coupling"):
-                phot_couple_edge_with_doubles = AmplitudeVector(ph=mv("phot_couple_edge"), pphh=v.pphh.zeros_like())
-                elec_couple_edge_with_doubles = AmplitudeVector(ph=mv("elec_couple_edge"), pphh=v.pphh.zeros_like())
+            if "pphh_pphh_elec" in self.blocks_ph.keys() and not hasattr(self.reference_state, "first_order_coupling"): # noqa: E501
+                phot_couple_edge_with_doubles = AmplitudeVector(ph=mv("phot_couple_edge"),
+                                                                pphh=v.pphh.zeros_like())
+                elec_couple_edge_with_doubles = AmplitudeVector(ph=mv("elec_couple_edge"), 
+                                                                pphh=v.pphh.zeros_like())
                 elec_part = mv("elec") + mv("phot_couple") + phot_couple_edge_with_doubles 
-                phot2_part = elec_couple_edge_with_doubles + mv("elec_couple_inner") + mv("phot2")
+                phot2_part = elec_couple_edge_with_doubles + \
+                             mv("elec_couple_inner") + mv("phot2")
             else:
                 elec_part = mv("elec") + mv("phot_couple")
                 phot2_part = mv("elec_couple_inner") + mv("phot2")
@@ -445,11 +456,12 @@ class AdcMatrix(AdcMatrixlike):
                         continue
             
             if "pphh_pphh_elec" in self.blocks_ph.keys():
-                return QED_AmplitudeVector(elec_part.ph, elec_part.pphh, gs1_part, phot_part.ph, phot_part.pphh,
+                return QED_AmplitudeVector(elec_part.ph, elec_part.pphh, 
+                                            gs1_part, phot_part.ph, phot_part.pphh,
                                             gs2_part, phot2_part.ph, phot2_part.pphh)
             else:
-                return QED_AmplitudeVector(elec_part.ph, None, gs1_part, phot_part.ph, None, gs2_part, phot2_part.ph, None)
-                #return QED_AmplitudeVector(elec_part.ph, None, gs1_part, phot_part.ph, None, gs2_part, phot_part.ph * 0, None)
+                return QED_AmplitudeVector(elec_part.ph, None, gs1_part, phot_part.ph, None,
+                                           gs2_part, phot2_part.ph, None)
         else:
             TypeError("matvec needs to be invoked with AmplitudeVector or QED_AmplitudeVector")
 

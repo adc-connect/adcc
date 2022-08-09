@@ -135,6 +135,8 @@ def transition_dm(method, ground_state, amplitude, intermediates=None):
     if not isinstance(amplitude, (AmplitudeVector, QED_AmplitudeVector)):
         raise TypeError("amplitude should be an AmplitudeVector object.")
     if isinstance(amplitude, QED_AmplitudeVector):
+        # TODO: Implement the actual transition densities for the qed methods,
+        # but for now just return the electric contribution
         amplitude = amplitude.elec
     if intermediates is None:
         intermediates = Intermediates(ground_state)
@@ -143,8 +145,5 @@ def transition_dm(method, ground_state, amplitude, intermediates=None):
         raise NotImplementedError("transition_dm is not implemented "
                                   f"for {method.name}.")
     else:
-        if hasattr(ground_state, "tdm_contribution"):
-            ret = DISPATCH[ground_state.tdm_contribution](ground_state, amplitude, intermediates)
-        else:
-            ret = DISPATCH[method.name](ground_state, amplitude, intermediates)
+        ret = DISPATCH[method.name](ground_state, amplitude, intermediates)
         return ret.evaluate()

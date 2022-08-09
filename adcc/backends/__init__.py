@@ -83,6 +83,8 @@ def import_scf_results(res):
         import psi4
         from . import psi4 as backend_psi4
 
+    # Here we also have to import the .core.Wavefunction object,
+    # since this is the one returned by the hilbert package
     if isinstance(res, (psi4.core.HF, psi4.core.Wavefunction)):
             return backend_psi4.import_scf(res)
 

@@ -31,12 +31,6 @@ from .EriBuilder import EriBuilder
 from ..exceptions import InvalidReference
 from ..ExcitedStates import EnergyCorrection
 
-#global qed_from_qed_hf_input
-#qed_from_qed_hf_input = False
-
-#if isinstance(wfn, psi4.core.Wavefunction):
-#    #We need this global variable later, to either perform QED-ADC from qed-hf input or standard non-qed-hf input
-#    qed_from_qed_hf_input = True
 
 class Psi4OperatorIntegralProvider:
     def __init__(self, wfn):
@@ -176,6 +170,9 @@ class Psi4HFProvider(HartreeFockProvider):
         if isinstance(self.wfn, (psi4.core.RHF, psi4.core.ROHF)):
             return True
         elif isinstance(self.wfn, (psi4.core.Wavefunction)):
+            # This is the object returned by the hilbert package, which does
+            # not provide a restricted indicator, so we determine it here
+            # and print the result
             orben_a = np.asarray(self.wfn.epsilon_a())
             orben_b = np.asarray(self.wfn.epsilon_b())
             if all(orben_a == orben_b):
@@ -274,7 +271,9 @@ def import_scf(wfn):
     #      the actual set of options ... theoretically they could differ
     scf_type = psi4.core.get_global_option('SCF_TYPE')
     # CD = Choleski, DF = density-fitting
-    unsupported_scf_types = ["CD"]#, "DISK_DF", "MEM_DF"]
+    unsupported_scf_types = ["CD"]
+    if not isinstance(wfn, psi4.core.Wavefunction): # hilbert package only uses DF
+        unsupported_scf_types += ["DISK_DF", "MEM_DF"]
     if scf_type in unsupported_scf_types:
         raise InvalidReference("Unsupported Psi4 SCF_TYPE, should not be one "
                                f"of {unsupported_scf_types}")

@@ -125,23 +125,22 @@ def lincomb(coefficients, tensors, evaluate=False):
     elif isinstance(tensors[0], QED_AmplitudeVector):
         gs1_part = 0
         gs2_part = 0
-        phot2_list = []
-        elec_list = []
-        phot_list = []
+        elec_list = [ten.elec for ten in tensors]
+        phot_list = [ten.phot for ten in tensors]
+        phot2_list = [ten.phot2 for ten in tensors]
         for coeff_ind, ten in enumerate(tensors):
             gs1_part += coefficients[coeff_ind] * ten.gs1
             gs2_part += coefficients[coeff_ind] * ten.gs2
-            elec_list.append(ten.elec)
-            phot_list.append(ten.phot)
-            phot2_list.append(ten.phot2)
         elec_part = lincomb(coefficients, elec_list, evaluate=evaluate)
         phot_part = lincomb(coefficients, phot_list, evaluate=evaluate)
         phot2_part = lincomb(coefficients, phot2_list, evaluate=evaluate)
         if "pphh" in elec_part.blocks_ph:
-            return QED_AmplitudeVector(elec_part.ph, elec_part.pphh, gs1_part, phot_part.ph, phot_part.pphh,
-                                        gs2_part, phot2_part.ph, phot2_part.pphh)
+            return QED_AmplitudeVector(elec_part.ph, elec_part.pphh, 
+                                       gs1_part, phot_part.ph, phot_part.pphh,
+                                       gs2_part, phot2_part.ph, phot2_part.pphh)
         else:
-            return QED_AmplitudeVector(elec_part.ph, None, gs1_part, phot_part.ph, None, gs2_part, phot2_part.ph, None)
+            return QED_AmplitudeVector(elec_part.ph, None, gs1_part, phot_part.ph, None, 
+                                       gs2_part, phot2_part.ph, None)
     elif not isinstance(tensors[0], libadcc.Tensor):
         raise TypeError("Tensor type not supported")
 

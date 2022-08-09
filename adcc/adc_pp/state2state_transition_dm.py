@@ -182,6 +182,8 @@ def s2s_tdm_adc2(mp, amplitude_l, amplitude_r, intermediates):
 # Ref: https://doi.org/10.1080/00268976.2013.859313
 DISPATCH = {"adc0": s2s_tdm_adc0,
             "adc1": s2s_tdm_adc0,       # same as ADC(0)
+            # The following qed terms are not the actual s2s densities,
+            # but those required for the approx function
             "qed_adc2_diag": s2s_tdm_qed_adc2_diag_part,
             "qed_adc2_edge_couple": s2s_tdm_qed_adc2_edge_part_couple,
             "qed_adc2_edge_phot_couple": s2s_tdm_qed_adc2_edge_part_phot_couple,
@@ -227,8 +229,8 @@ def state2state_transition_dm(method, ground_state, amplitude_from,
                                   f"for {method.name}.")
     else:
         if hasattr(ground_state, "s2s_contribution"):
-            ret = DISPATCH[ground_state.s2s_contribution](ground_state, amplitude_to, amplitude_from,
-                                    intermediates)
+            ret = DISPATCH[ground_state.s2s_contribution](ground_state, amplitude_to,
+                                                          amplitude_from, intermediates)
         else:
             # final state is on the bra side/left (complex conjugate)
             # see ref https://doi.org/10.1080/00268976.2013.859313, appendix A2

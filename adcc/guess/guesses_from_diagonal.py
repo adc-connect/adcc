@@ -88,10 +88,6 @@ def guesses_from_diagonal(matrix, n_guesses, block="ph", spin_change=0,
         guessfunction = guesses_from_diagonal_singles
     elif block == "pphh":
         guessfunction = guesses_from_diagonal_doubles
-    #elif block == "gs":
-    #    guessfunction = guesses_from_diagonal_gs
-    #elif block == "pphh_phot":
-    #    guessfunction = guesses_from_diagonal_doubles_phot
     else:
         raise ValueError(f"Don't know how to generate guesses for block {block}")
 
@@ -287,12 +283,6 @@ def guesses_from_diagonal_singles(matrix, n_guesses, diag, spin_change=0,
     # Resize in case less guesses found than requested
     # and normalise vectors
     return [evaluate(v / np.sqrt(v @ v)) for v in ret[:ivec]]
-
-
-#def guesses_from_diagonal_gs(matrix, n_guesses, diag, spin_change=0,
-#                                  spin_block_symmetrisation="none",
-#                                  degeneracy_tolerance=1e-14):
-#    return 0
 
 
 def guesses_from_diagonal_doubles(matrix, n_guesses, diag, spin_change=0,

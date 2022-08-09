@@ -39,7 +39,8 @@ import pytest
 # which keeps the matrix dimension low. This is important since we
 # build most of the matrix in the approx method from properties, so this
 # is very slow for a lot of states, compared to the standard method.
-# However, even this test case would take quite some time...
+# However, even this test case would take quite some time, so we leave
+# it out for now.
 
 testcases = ["methox_sto3g", "h2o_sto3g"]
 methods = ["adc2"]

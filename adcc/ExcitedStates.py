@@ -415,13 +415,13 @@ class ExcitedStates(ElectronicTransition):
         vector_format = FormatExcitationVector(self.matrix, tolerance=tolerance,
                                                index_format=index_format)
 
-        #for qed
-        #for i, vec in enumerate(self.excitation_vector):
-        #    self.excitation_vector[i] = vec.elec # using this leaves the excitation_vector object like this, 
-        # which however is the standard output for the excitation vectors, so only the .elec vector is accessible this way
         # Optimise the formatting by pre-inspecting all tensors
         for tensor in self.excitation_vector:
             if isinstance(tensor, QED_AmplitudeVector):
+                # TODO: Implement tdm and s2s_tdm for QED, so properties can also
+                # be evaluated for QED_AmplitudeVector objects. For now only
+                # use AmplitudeVector describing the electric part, so the
+                # formatting does not have to be adapted.
                 tensor = tensor.elec
             vector_format.optimise_formatting(tensor)
 
@@ -432,6 +432,11 @@ class ExcitedStates(ElectronicTransition):
         ret = separator
         for i, vec in enumerate(self.excitation_vector):
             if isinstance(vec, QED_AmplitudeVector):
+                # TODO: Implement tdm and s2s_tdm for QED, so properties can also
+                # be evaluated for QED_AmplitudeVector objects. For now only
+                # use AmplitudeVector describing the electric part, since 
+                # most low-energy states are almost purely electric, so the
+                # formatting does not have to be adapted.
                 vec = vec.elec
             ene = self.excitation_energy[i]
             eev = ene * eV
