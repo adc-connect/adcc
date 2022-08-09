@@ -717,6 +717,7 @@ std::shared_ptr<Tensor> TensorImpl<N>::direct_sum(std::shared_ptr<Tensor> other)
   IF_MATCHES_EXECUTE(2, 2)  //
   IF_MATCHES_EXECUTE(2, 3)  //
   IF_MATCHES_EXECUTE(2, 4)  //
+  IF_MATCHES_EXECUTE(3, 1)  //
   IF_MATCHES_EXECUTE(3, 2)  //
   IF_MATCHES_EXECUTE(3, 3)  //
   IF_MATCHES_EXECUTE(4, 1)  //
