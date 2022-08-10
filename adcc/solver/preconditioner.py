@@ -75,7 +75,7 @@ class JacobiPreconditioner:
                                 "to a single vector if shifts is "
                                 "only a single number.")
             return invecs / (self.diagonal - self.shifts)
-        elif isinstance(invecs, list): # either list of AmplitudeVectors or QED_AmplitudeVectors
+        elif isinstance(invecs, list):
             if len(self.shifts) != len(invecs):
                 raise ValueError("Number of vectors passed does not agree "
                                  "with number of shifts stored inside "

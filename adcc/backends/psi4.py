@@ -230,8 +230,8 @@ class Psi4HFProvider(HartreeFockProvider):
             out[:] = np.hstack((occ_array_a, occ_array_b))
         else:
             out[:] = np.hstack((
-            np.asarray(self.wfn.occupation_a()),
-            np.asarray(self.wfn.occupation_b())
+                np.asarray(self.wfn.occupation_a()),
+                np.asarray(self.wfn.occupation_b())
             ))
 
     def fill_fock_ff(self, slices, out):
@@ -265,14 +265,13 @@ def import_scf(wfn):
         raise InvalidReference("Right now only RHF and UHF references are "
                                "supported for Psi4.")
 
-
     # TODO This is not fully correct, because the core.Wavefunction object
     #      has an internal, but py-invisible Options structure, which contains
     #      the actual set of options ... theoretically they could differ
     scf_type = psi4.core.get_global_option('SCF_TYPE')
     # CD = Choleski, DF = density-fitting
     unsupported_scf_types = ["CD"]
-    if not isinstance(wfn, psi4.core.Wavefunction): # hilbert package only uses DF
+    if not isinstance(wfn, psi4.core.Wavefunction):  # hilbert package only uses DF
         unsupported_scf_types += ["DISK_DF", "MEM_DF"]
     if scf_type in unsupported_scf_types:
         raise InvalidReference("Unsupported Psi4 SCF_TYPE, should not be one "

@@ -48,7 +48,7 @@ class LazyMp:
         self.timer = Timer()
         self.has_core_occupied_space = hf.has_core_occupied_space
         # for qed mp
-        self.get_qed_total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
+        self.get_qed_total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)  # noqa: E501
         self.get_qed_total_dip.oo = hf.get_qed_total_dip(b.oo)
         self.get_qed_total_dip.ov = hf.get_qed_total_dip(b.ov)
         self.get_qed_total_dip.vv = hf.get_qed_total_dip(b.vv)
@@ -175,7 +175,6 @@ class LazyMp:
         ret.reference_state = self.reference_state
         return evaluate(ret)
 
-
     def density(self, level=2):
         """
         Return the MP density in the MO basis with all corrections
@@ -210,8 +209,8 @@ class LazyMp:
 
     @cached_member_function
     def qed_t1(self, space):
-        """ 
-        Return new electronic singly excited amplitude in the first 
+        """
+        Return new electronic singly excited amplitude in the first
         order correction to the wavefunction for qed
         """
         if space != b.ov:
@@ -239,11 +238,10 @@ class LazyMp:
             virt_sum = einsum("ac,bc->ab", total_dip.vv, total_dip.vv)
         return occ_sum - virt_sum
 
-
     @cached_member_function
     def qed_t0(self, space):
-        """ 
-        Return second new electronic singly excited amplitude in the first 
+        """
+        Return second new electronic singly excited amplitude in the first
         order correction to the wavefunction for qed from the standard
         HF reference
         """
@@ -251,7 +249,6 @@ class LazyMp:
             raise NotImplementedError("qed_t0 term not implemented "
                                       f"for space {space}.")
         return self.qed_t0_df(b.ov) / self.df(b.ov)
-
 
     def dipole_moment(self, level=2):
         """
@@ -265,7 +262,6 @@ class LazyMp:
         else:
             raise NotImplementedError("Only dipole moments for level 1 and 2"
                                       " are implemented.")
-
 
     @cached_member_function
     def energy_correction(self, level=2):
@@ -286,7 +282,7 @@ class LazyMp:
                 total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
                 omega = ReferenceState.get_qed_omega(hf)
                 total_dip.ov = self.get_qed_total_dip.ov
-                qed_terms = [(omega/2, total_dip.ov, self.qed_t1(b.ov))]
+                qed_terms = [(omega / 2, total_dip.ov, self.qed_t1(b.ov))]
                 qed_mp2_correction_1 = sum(
                     -pref * lambda_dip.dot(qed_t)
                     for pref, lambda_dip, qed_t in qed_terms
@@ -305,8 +301,10 @@ class LazyMp:
                         pref * lambda_dip.dot(lambda_dip)
                         for pref, lambda_dip in qed_mp1_additional_terms
                     )
-                    qed_mp2_correction = qed_mp2_correction_1 + qed_mp2_correction_0 +\
-                                         qed_mp1_correction + qed_mp1_correction
+                    qed_mp2_correction = qed_mp2_correction_1 +\
+                        qed_mp2_correction_0 +\
+                        qed_mp1_correction +\
+                        qed_mp1_correction
         elif level == 2 and is_cvs:
             terms = [(1.0, hf.oovv, self.t2oo),
                      (2.0, hf.ocvv, self.t2oc),

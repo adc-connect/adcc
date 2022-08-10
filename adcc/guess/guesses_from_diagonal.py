@@ -101,7 +101,7 @@ def guesses_from_diagonal(matrix, n_guesses, block="ph", spin_change=0,
         diag = matrix.diagonal().phot2
     else:
         raise KeyError("qed_subblock can only be None, elec, phot or phot2"
-                "for guesses from diagonal")
+                       "for guesses from diagonal")
 
     return guessfunction(matrix, n_guesses, diag, spin_change,
                          spin_block_symmetrisation, degeneracy_tolerance,
@@ -232,7 +232,6 @@ def guesses_from_diagonal_singles(matrix, n_guesses, diag, spin_change=0,
         return (ret[0].ph.is_allowed(telem.index)
                 and telem.spin_change == spin_change
                 and abs(telem.value) <= max_diagonal_value)
-
 
     elements = find_smallest_matching_elements(
         pred_singles, diag.ph, motrans, n_guesses,

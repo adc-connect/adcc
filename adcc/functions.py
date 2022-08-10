@@ -135,11 +135,12 @@ def lincomb(coefficients, tensors, evaluate=False):
         phot_part = lincomb(coefficients, phot_list, evaluate=evaluate)
         phot2_part = lincomb(coefficients, phot2_list, evaluate=evaluate)
         if "pphh" in elec_part.blocks_ph:
-            return QED_AmplitudeVector(elec_part.ph, elec_part.pphh, 
+            return QED_AmplitudeVector(elec_part.ph, elec_part.pphh,
                                        gs1_part, phot_part.ph, phot_part.pphh,
                                        gs2_part, phot2_part.ph, phot2_part.pphh)
         else:
-            return QED_AmplitudeVector(elec_part.ph, None, gs1_part, phot_part.ph, None, 
+            return QED_AmplitudeVector(elec_part.ph, None,
+                                       gs1_part, phot_part.ph, None,
                                        gs2_part, phot2_part.ph, None)
     elif not isinstance(tensors[0], libadcc.Tensor):
         raise TypeError("Tensor type not supported")

@@ -186,7 +186,6 @@ class ReferenceState(libadcc.ReferenceState):
         # hilbert package is currently the best in terms of performance, at
         # least to my knowledge, the factor should be included here.
         if hasattr(self, "coupling"):
-            from . import block as b
             dips = self.operators.electric_dipole
             couplings = self.coupling
             freqs = self.frequency
@@ -217,23 +216,24 @@ class ReferenceState(libadcc.ReferenceState):
             total_dip.oo = ReferenceState.get_qed_total_dip(self, b.oo)
             total_dip.ov = ReferenceState.get_qed_total_dip(self, b.ov)
             total_dip.vv = ReferenceState.get_qed_total_dip(self, b.vv)
-            # We have to define all the blocks from the 
+            # We have to define all the blocks from the
             # D_{pqrs} = d_{pr} d_{qs} - d_{ps} d_{qr} object, which has the
             # same symmetry properties as the ERI object
-            # Actually in b.ovov: second term: ib,ja would be ib,aj , but d_{ia} = d_{ai}
+            # Actually in b.ovov: second term: ib,ja would be ib,aj ,
+            # but d_{ia} = d_{ai}
             ds = {
-                b.oooo: einsum('ik,jl->ijkl', total_dip.oo, total_dip.oo) - \
-                    einsum('il,jk->ijkl', total_dip.oo, total_dip.oo),
-                b.ooov: einsum('ik,ja->ijka', total_dip.oo, total_dip.ov) - \
-                    einsum('ia,jk->ijka', total_dip.ov, total_dip.oo),
-                b.oovv: einsum('ia,jb->ijab', total_dip.ov, total_dip.ov) - \
-                    einsum('ib,ja->ijab', total_dip.ov, total_dip.ov),
-                b.ovvv: einsum('ib,ac->iabc', total_dip.ov, total_dip.vv) - \
-                    einsum('ic,ab->iabc', total_dip.ov, total_dip.vv),
-                b.ovov: einsum('ij,ab->iajb', total_dip.oo, total_dip.vv) - \
-                    einsum('ib,ja->iajb', total_dip.ov, total_dip.ov),
-                b.vvvv: einsum('ac,bd->abcd', total_dip.vv, total_dip.vv) - \
-                    einsum('ad,bc->abcd', total_dip.vv, total_dip.vv),
+                b.oooo: einsum('ik,jl->ijkl', total_dip.oo, total_dip.oo)
+                - einsum('il,jk->ijkl', total_dip.oo, total_dip.oo),
+                b.ooov: einsum('ik,ja->ijka', total_dip.oo, total_dip.ov)
+                - einsum('ia,jk->ijka', total_dip.ov, total_dip.oo),
+                b.oovv: einsum('ia,jb->ijab', total_dip.ov, total_dip.ov)
+                - einsum('ib,ja->ijab', total_dip.ov, total_dip.ov),
+                b.ovvv: einsum('ib,ac->iabc', total_dip.ov, total_dip.vv)
+                - einsum('ic,ab->iabc', total_dip.ov, total_dip.vv),
+                b.ovov: einsum('ij,ab->iajb', total_dip.oo, total_dip.vv)
+                - einsum('ib,ja->iajb', total_dip.ov, total_dip.ov),
+                b.vvvv: einsum('ac,bd->abcd', total_dip.vv, total_dip.vv)
+                - einsum('ad,bc->abcd', total_dip.vv, total_dip.vv),
             }
             return ds[block]
 
@@ -241,7 +241,8 @@ class ReferenceState(libadcc.ReferenceState):
         if hasattr(self, "coupling"):
             from . import block as b
             from .functions import einsum
-            # Since there is no TwoParticleOperator object, we initialize it like this
+            # Since there is no TwoParticleOperator object,
+            # we initialize it like this
             ds_init = OneParticleOperator(self.mospaces, is_symmetric=True)
             ds = {
                 b.oooo: einsum('ik,jl->ijkl', ds_init.oo, ds_init.oo),

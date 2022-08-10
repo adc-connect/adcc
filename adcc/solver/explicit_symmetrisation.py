@@ -58,8 +58,8 @@ class IndexSymmetrisation():
 
         def symm_subroutine(vec):
             if not isinstance(vec, AmplitudeVector):
-                    raise TypeError("new_vectors has to be an "
-                                    "iterable of AmplitudeVector")
+                raise TypeError("new_vectors has to be an "
+                                "iterable of AmplitudeVector")
             for b in vec.blocks_ph:
                 if b not in self.symmetrisation_functions:
                     continue

@@ -200,8 +200,8 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             if hasattr(matrix.reference_state, "print_eigvec_norms"):
                 # building the eigenvectors here is just for debugging purposes
                 eigenvecs = [lincomb(v, SS, evaluate=True)
-                                    for i, v in enumerate(np.transpose(rvecs))
-                                    if i in epair_mask]
+                             for i, v in enumerate(np.transpose(rvecs))
+                             if i in epair_mask]
                 for eigv in eigenvecs:
                     print("norm of eigenvector", np.sqrt(eigv @ eigv))
             # TODO This is misleading ... actually residual_norms contains
@@ -272,7 +272,6 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             # Explicitly symmetrise the new vectors if requested
             if explicit_symmetrisation:
                 explicit_symmetrisation.symmetrise(preconds)
-
 
         # Project the components of the preconditioned vectors away
         # which are already contained in the subspace.

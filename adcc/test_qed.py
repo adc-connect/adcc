@@ -31,7 +31,6 @@ from adcc.testdata.cache import cache
 from adcc.testdata.cache import qed_data
 
 import itertools
-import pytest
 
 # In principle one could also test the approx method against the full
 # method, by expanding them to the full matrix dimension. The smallest
@@ -45,6 +44,7 @@ import pytest
 testcases = ["methox_sto3g", "h2o_sto3g"]
 methods = ["adc2"]
 
+
 @expand_test_templates(list(itertools.product(testcases, methods)))
 class qed_test(unittest.TestCase):
     def set_refstate(self, case):
@@ -57,7 +57,7 @@ class qed_test(unittest.TestCase):
         self.set_refstate(case)
         self.refstate.approx = True
 
-        approx = adcc.adc2(self.refstate, n_singlets = 5, conv_tol = 1e-7)
+        approx = adcc.adc2(self.refstate, n_singlets=5, conv_tol=1e-7)
 
         ref_name = f"{case}_{method}_approx"
         approx_ref = qed_data[ref_name]["excitation_energy"]
@@ -68,7 +68,7 @@ class qed_test(unittest.TestCase):
     def template_full(self, case, method):
         self.set_refstate(case)
 
-        full = adcc.adc2(self.refstate, n_singlets = 3, conv_tol = 1e-7)
+        full = adcc.adc2(self.refstate, n_singlets=3, conv_tol=1e-7)
 
         ref_name = f"{case}_{method}_full"
         full_ref = qed_data[ref_name]["excitation_energy"]

@@ -411,7 +411,7 @@ class ExcitedStates(ElectronicTransition):
             to index relative on the HOMO / LUMO / HOCO orbitals.
             If ``None`` an automatic selection will be made.
         """
-        eV = constants.value("Hartree energy in eV") 
+        eV = constants.value("Hartree energy in eV")
         vector_format = FormatExcitationVector(self.matrix, tolerance=tolerance,
                                                index_format=index_format)
 
@@ -434,7 +434,7 @@ class ExcitedStates(ElectronicTransition):
             if isinstance(vec, QED_AmplitudeVector):
                 # TODO: Implement tdm and s2s_tdm for QED, so properties can also
                 # be evaluated for QED_AmplitudeVector objects. For now only
-                # use AmplitudeVector describing the electric part, since 
+                # use AmplitudeVector describing the electric part, since
                 # most low-energy states are almost purely electric, so the
                 # formatting does not have to be adapted.
                 vec = vec.elec

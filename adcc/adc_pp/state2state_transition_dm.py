@@ -42,7 +42,7 @@ def s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates):
     return dm
 
 
-def s2s_tdm_qed_adc2_diag_part(mp, amplitude_l, amplitude_r, intermediates): 
+def s2s_tdm_qed_adc2_diag_part(mp, amplitude_l, amplitude_r, intermediates):
     dm = s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates)
     ul1 = amplitude_l.ph
     ur1 = amplitude_r.ph
@@ -52,20 +52,21 @@ def s2s_tdm_qed_adc2_diag_part(mp, amplitude_l, amplitude_r, intermediates):
     dm_new = OneParticleOperator(mp, is_symmetric=False)
 
     dm_new.ov = (
-            - einsum("kb,ab->ka", mp.qed_t1(b.ov), p0_vv)
-            + einsum("ji,ic->jc", p0_oo, mp.qed_t1(b.ov))
-            + ul1.dot(mp.qed_t1(b.ov)) * ur1
+        - einsum("kb,ab->ka", mp.qed_t1(b.ov), p0_vv)
+        + einsum("ji,ic->jc", p0_oo, mp.qed_t1(b.ov))
+        + ul1.dot(mp.qed_t1(b.ov)) * ur1
     ) / 2
 
     dm_new.vo = (
-            - einsum("kb,ba->ak", mp.qed_t1(b.ov), p0_vv)
-            + einsum("ij,ic->cj", p0_oo, mp.qed_t1(b.ov))
-            + ur1.dot(mp.qed_t1(b.ov)) * ul1.transpose() 
+        - einsum("kb,ba->ak", mp.qed_t1(b.ov), p0_vv)
+        + einsum("ij,ic->cj", p0_oo, mp.qed_t1(b.ov))
+        + ur1.dot(mp.qed_t1(b.ov)) * ul1.transpose()
     ) / 2
 
     return dm_new
 
-def s2s_tdm_qed_adc2_edge_part_couple(mp, amplitude_l, amplitude_r, intermediates): 
+
+def s2s_tdm_qed_adc2_edge_part_couple(mp, amplitude_l, amplitude_r, intermediates):
     dm = s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates)
     ul1 = amplitude_l.ph
     ur1 = amplitude_r.ph
@@ -74,14 +75,16 @@ def s2s_tdm_qed_adc2_edge_part_couple(mp, amplitude_l, amplitude_r, intermediate
 
     dm_new = OneParticleOperator(mp, is_symmetric=False)
 
-    dm_new.ov = (mp.qed_t1(b.ov) * ul1.dot(ur1)
-            - einsum("kb,ab->ka", mp.qed_t1(b.ov), p0_vv)
-            + einsum("ji,ic->jc", p0_oo, mp.qed_t1(b.ov))
+    dm_new.ov = (
+        mp.qed_t1(b.ov) * ul1.dot(ur1)
+        - einsum("kb,ab->ka", mp.qed_t1(b.ov), p0_vv)
+        + einsum("ji,ic->jc", p0_oo, mp.qed_t1(b.ov))
     )
 
     return dm_new
 
-def s2s_tdm_qed_adc2_edge_part_phot_couple(mp, amplitude_l, amplitude_r, intermediates): 
+
+def s2s_tdm_qed_adc2_edge_part_phot_couple(mp, amplitude_l, amplitude_r, intermediates):  # noqa: E501
     dm = s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates)
     ul1 = amplitude_l.ph
     ur1 = amplitude_r.ph
@@ -90,15 +93,16 @@ def s2s_tdm_qed_adc2_edge_part_phot_couple(mp, amplitude_l, amplitude_r, interme
 
     dm_new = OneParticleOperator(mp, is_symmetric=False)
 
-    dm_new.vo = (einsum("ia->ai", mp.qed_t1(b.ov)) * ul1.dot(ur1)
-            - einsum("kb,ba->ak", mp.qed_t1(b.ov), p0_vv)
-            + einsum("ij,ic->cj", p0_oo, mp.qed_t1(b.ov))
+    dm_new.vo = (
+        einsum("ia->ai", mp.qed_t1(b.ov)) * ul1.dot(ur1)
+        - einsum("kb,ba->ak", mp.qed_t1(b.ov), p0_vv)
+        + einsum("ij,ic->cj", p0_oo, mp.qed_t1(b.ov))
     )
 
     return dm_new
 
 
-def s2s_tdm_qed_adc2_ph_pphh_coupl_part(mp, amplitude_l, amplitude_r, intermediates):
+def s2s_tdm_qed_adc2_ph_pphh_coupl_part(mp, amplitude_l, amplitude_r, intermediates):  # noqa: E501
     ul1 = amplitude_l.ph
     ur2 = amplitude_r.pphh
 
@@ -109,7 +113,7 @@ def s2s_tdm_qed_adc2_ph_pphh_coupl_part(mp, amplitude_l, amplitude_r, intermedia
     return dm
 
 
-def s2s_tdm_qed_adc2_pphh_ph_phot_coupl_part(mp, amplitude_l, amplitude_r, intermediates):
+def s2s_tdm_qed_adc2_pphh_ph_phot_coupl_part(mp, amplitude_l, amplitude_r, intermediates):  # noqa: E501
     ul2 = amplitude_l.pphh
     ur1 = amplitude_r.ph
 
@@ -229,8 +233,8 @@ def state2state_transition_dm(method, ground_state, amplitude_from,
                                   f"for {method.name}.")
     else:
         if hasattr(ground_state, "s2s_contribution"):
-            ret = DISPATCH[ground_state.s2s_contribution](ground_state, amplitude_to,
-                                                          amplitude_from, intermediates)
+            ret = DISPATCH[ground_state.s2s_contribution](
+                ground_state, amplitude_to, amplitude_from, intermediates)
         else:
             # final state is on the bra side/left (complex conjugate)
             # see ref https://doi.org/10.1080/00268976.2013.859313, appendix A2

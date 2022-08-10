@@ -169,7 +169,6 @@ class ElectronicTransition:
             for tdm in self.transition_dm
         ])
 
-    
     @cached_property
     @mark_excitation_property()
     @timed_member_call(timer="_property_timer")
@@ -182,21 +181,24 @@ class ElectronicTransition:
         if hasattr(self.reference_state, "approx"):
 
             dipole_integrals = self.operators.electric_dipole
+
             def tdm(i, prop_level):
                 self.ground_state.tdm_contribution = prop_level
-                return transition_dm(self.method, self.ground_state, 
+                return transition_dm(self.method, self.ground_state,
                                      self.excitation_vector[i])
 
             if hasattr(self.reference_state, "first_order_coupling"):
 
                 return np.array([
-                    [product_trace(comp, tdm(i, "adc0")) for comp in dipole_integrals]
+                    [product_trace(comp, tdm(i, "adc0"))
+                     for comp in dipole_integrals]
                     for i in np.arange(len(self.excitation_energy))
                 ])
             else:
                 prop_level = "adc" + str(self.property_method.level - 1)
                 return np.array([
-                    [product_trace(comp, tdm(i, prop_level)) for comp in dipole_integrals]
+                    [product_trace(comp, tdm(i, prop_level))
+                     for comp in dipole_integrals]
                     for i in np.arange(len(self.excitation_energy))
                 ])
         else:
@@ -214,28 +216,29 @@ class ElectronicTransition:
         """
         if hasattr(self.reference_state, "approx"):
             dipole_integrals = self.operators.electric_dipole
-            print("note, that only the z coordinate of the dipole integrals is calculated")
+            print("note, that only the z coordinate of the "
+                  "dipole integrals is calculated")
             n_states = len(self.excitation_energy)
 
             def s2s(i, f, s2s_contribution):
                 self.ground_state.s2s_contribution = s2s_contribution
                 vec = self.excitation_vector
-                return state2state_transition_dm(self.method, self.ground_state, 
+                return state2state_transition_dm(self.method, self.ground_state,
                                                  vec[i], vec[f])
 
             def final_block(name):
-                return np.array([[product_trace(dipole_integrals[2], s2s(i, j, name)) 
-                        for j in np.arange(n_states)] for i in np.arange(n_states)])
+                return np.array([[product_trace(dipole_integrals[2], s2s(i, j, name))  # noqa: E501
+                                  for j in np.arange(n_states)]
+                                 for i in np.arange(n_states)])
 
             block_dict = {}
 
             block_dict["qed_adc1_off_diag"] = final_block("adc1")
 
-            if self.method.name == "adc2" and not hasattr(self.reference_state, "first_order_coupling"): # noqa: E501
-                
-                block_dict["qed_adc2_diag"] = final_block("qed_adc2_diag")     
-                block_dict["qed_adc2_edge_couple"] = final_block("qed_adc2_edge_couple")
-                block_dict["qed_adc2_edge_phot_couple"] = final_block("qed_adc2_edge_phot_couple") # noqa: E501
+            if self.method.name == "adc2" and not hasattr(self.reference_state, "first_order_coupling"):  # noqa: E501
+                block_dict["qed_adc2_diag"] = final_block("qed_adc2_diag")
+                block_dict["qed_adc2_edge_couple"] = final_block("qed_adc2_edge_couple")  # noqa: E501
+                block_dict["qed_adc2_edge_phot_couple"] = final_block("qed_adc2_edge_phot_couple")  # noqa: E501
                 block_dict["qed_adc2_ph_pphh"] = final_block("qed_adc2_ph_pphh")
                 block_dict["qed_adc2_pphh_ph"] = final_block("qed_adc2_pphh_ph")
             return block_dict
@@ -255,31 +258,33 @@ class ElectronicTransition:
         """
         if hasattr(self.reference_state, "approx"):
             qed_t1 = self.ground_state.qed_t1(b.ov)
-            
+
             def couple(qed_t1, ul, ur):
                 return {
-                    b.ooov: einsum("kc,ia,ja->kjic", qed_t1, ul, ur) + \
-                            einsum("ka,ia,jb->jkib", qed_t1, ul, ur),
-                    b.ovvv: einsum("kc,ia,ib->kacb", qed_t1, ul, ur) + \
-                            einsum("ic,ia,jb->jabc", qed_t1, ul, ur) 
+                    b.ooov: einsum("kc,ia,ja->kjic", qed_t1, ul, ur)
+                    + einsum("ka,ia,jb->jkib", qed_t1, ul, ur),
+                    b.ovvv: einsum("kc,ia,ib->kacb", qed_t1, ul, ur)
+                    + einsum("ic,ia,jb->jabc", qed_t1, ul, ur)
                 }
 
             def phot_couple(qed_t1, ul, ur):
                 return {
-                    b.ooov: einsum("kc,ia,ja->kijc", qed_t1, ul, ur) + \
-                            einsum("kb,ia,jb->ikja", qed_t1, ul, ur),
-                    b.ovvv: einsum("kc,ia,ib->kbca", qed_t1, ul, ur) + \
-                            einsum("jc,ia,jb->ibac", qed_t1, ul, ur) 
+                    b.ooov: einsum("kc,ia,ja->kijc", qed_t1, ul, ur)
+                    + einsum("kb,ia,jb->ikja", qed_t1, ul, ur),
+                    b.ovvv: einsum("kc,ia,ib->kbca", qed_t1, ul, ur)
+                    + einsum("jc,ia,jb->ibac", qed_t1, ul, ur)
                 }
 
             def prod_sum(hf, two_p_op):
-                return + (einsum("ijka,ijka->", hf.ooov, two_p_op[b.ooov]) 
-                                + einsum("iabc,iabc->", hf.ovvv, two_p_op[b.ovvv]))
+                return (einsum("ijka,ijka->", hf.ooov, two_p_op[b.ooov])
+                        + einsum("iabc,iabc->", hf.ovvv, two_p_op[b.ovvv]))
 
             def final_block(func):
-                return np.array([[prod_sum(self.reference_state, func(qed_t1, i.ph, j.ph)) 
-                                for i in self.excitation_vector] for j in self.excitation_vector])
-                    
+                return np.array([
+                    [prod_sum(self.reference_state, func(qed_t1, i.ph, j.ph))
+                     for i in self.excitation_vector]
+                    for j in self.excitation_vector])
+
             block_dict = {}
             block_dict["couple"] = final_block(couple)
             block_dict["phot_couple"] = final_block(phot_couple)
