@@ -145,5 +145,10 @@ def transition_dm(method, ground_state, amplitude, intermediates=None):
         raise NotImplementedError("transition_dm is not implemented "
                                   f"for {method.name}.")
     else:
-        ret = DISPATCH[method.name](ground_state, amplitude, intermediates)
+        if hasattr(ground_state, "tdm_contribution"):
+            ret = DISPATCH[ground_state.tdm_contribution](
+                ground_state, amplitude, intermediates
+            )
+        else:
+            ret = DISPATCH[method.name](ground_state, amplitude, intermediates)
         return ret.evaluate()
