@@ -169,7 +169,6 @@ class LazyMp:
         t2 = self.t2(b.oovv)
         td2 = self.td2(b.oovv)
         tt2 = self.tt2(b.ooovvv)
-        #tq2 = self.tq2(b.oooovvvv)
 
         denom = direct_sum('ia,jb->ijab',self.df(b.ov),self.df(b.ov))
         amp = (2 * einsum('jc,abic->ijab', p0.ov, hf.vvov).antisymmetrise(0,1)
@@ -179,8 +178,6 @@ class LazyMp:
             - 0.5 * einsum('klab,klij->ijab', td2, hf.oooo)
             + einsum('jklabc,klic->ijab', tt2, hf.ooov).antisymmetrise(0,1)
             + einsum('ijkbcd,kacd->ijab', tt2, hf.ovvv).antisymmetrise(2,3)
-            #+ 0.25 * einsum('ijklabcd,klcd->ijab', tq2, hf.oovv)
-            #- 0.25 * einsum('ijab,klcd,klcd->ijab', t2, t2, hf.oovv)
             #+ 0.25 * einsum('ijab,klcd,klcd->ijab', t2, t2, hf.oovv)  #quadruples factorisation
             - 0.25 * einsum('ijac,klbd,klcd->ijab', t2, t2, hf.oovv)
             + 0.25 * einsum('ijad,klbc,klcd->ijab', t2, t2, hf.oovv)
