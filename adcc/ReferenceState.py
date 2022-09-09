@@ -38,7 +38,8 @@ __all__ = ["ReferenceState"]
 class ReferenceState(libadcc.ReferenceState):
     def __init__(self, hfdata, core_orbitals=None, frozen_core=None,
                  frozen_virtual=None, symmetry_check_on_import=False,
-                 import_all_below_n_orbs=10):
+                 import_all_below_n_orbs=10, qed=False, coupl=None,
+                 freq=None, qed_hf=True, qed_approx=False, qed_full_diag=False):
         """Construct a ReferenceState holding information about the employed
         SCF reference.
 
@@ -139,6 +140,13 @@ class ReferenceState(libadcc.ReferenceState):
         which would place the 2nd and 3rd alpha and the 1st and second
         beta orbital into the core space.
         """
+        self.qed = qed
+        self.coupling = coupl
+        self.frequency = freq
+        self.qed_hf = qed_hf
+        self.approx = qed_approx
+        self.full_diagonalization = qed_full_diag
+
         if not isinstance(hfdata, libadcc.HartreeFockSolution_i):
             hfdata = import_scf_results(hfdata)
 
@@ -185,7 +193,7 @@ class ReferenceState(libadcc.ReferenceState):
         # factor needs to be adjusted depending on the input, but since the
         # hilbert package is currently the best in terms of performance, at
         # least to my knowledge, the factor should be included here.
-        if hasattr(self, "coupling"):
+        if self.qed:
             dips = self.operators.electric_dipole
             couplings = self.coupling
             freqs = self.frequency
@@ -200,7 +208,7 @@ class ReferenceState(libadcc.ReferenceState):
         """
         Return the cavity frequency
         """
-        if hasattr(self, "coupling"):
+        if self.qed:
             freqs = self.frequency
             return np.linalg.norm(freqs)
 
@@ -209,7 +217,7 @@ class ReferenceState(libadcc.ReferenceState):
         """
         Return the object, which is added to the ERIs in a PT QED calculation
         """
-        if hasattr(self, "coupling"):
+        if self.qed:
             from . import block as b
             from .functions import einsum
             total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
@@ -238,7 +246,7 @@ class ReferenceState(libadcc.ReferenceState):
             return ds[block]
 
     def eri(self, block):
-        if hasattr(self, "coupling"):
+        if self.qed:
             from . import block as b
             from .functions import einsum
             # Since there is no TwoParticleOperator object,

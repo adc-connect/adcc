@@ -48,10 +48,13 @@ methods = ["adc2"]
 @expand_test_templates(list(itertools.product(testcases, methods)))
 class qed_test(unittest.TestCase):
     def set_refstate(self, case):
-        self.refstate = cache.refstate[case]
+        # Here we have to build the new refstate, instead of using the cached
+        # refstate, because otherwise the qed objects are not build
+        self.refstate = adcc.ReferenceState(cache.hfdata[case])
         self.refstate.coupling = [0.0, 0.0, 0.05]
         self.refstate.frequency = [0.0, 0.0, 0.5]
         self.refstate.qed_hf = True
+        self.refstate.qed = True
 
     def template_approx(self, case, method):
         self.set_refstate(case)

@@ -215,14 +215,6 @@ def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9
         #      again to give output in the same order of magnitude.
         state.residual_norms = state.residual_norms**2
 
-        if hasattr(iterator.matrix.reference_state, "print_eigvec_norms"):
-            tmp_state = amend_true_residuals(state, subspace, rvals,
-                                             rvecs, epair_mask)
-
-            print("norms of eigenvectors")
-            for vec in tmp_state.eigenvectors:
-                print(np.sqrt(vec @ vec))
-
         callback(state, "next_iter")
         state.timer.restart("iteration")
 

@@ -246,7 +246,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     # Build QED (approximated) matrix from "standard" ADC matrix
     # and expectation values, if requested.
 
-    if hasattr(matrix.reference_state, "approx"):
+    if matrix.reference_state.approx:
         qed_matrix = qed_matrix_from_diag_adc(exstates, matrix.reference_state)
         if method == "adc2" and not hasattr(matrix.reference_state, "first_order_coupling"):  # noqa: E501
             qed_eigvals, qed_eigvecs = qed_matrix.second_order_coupling()
@@ -293,24 +293,19 @@ def construct_adcmatrix(data_or_matrix, core_orbitals=None, frozen_core=None,
                              "to be specified via the parameter "
                              "core_orbitals.")
         try:
+            if coupl is not None:
+                qed = True
+            else:
+                qed = False
             refstate = adcc_ReferenceState(data_or_matrix,
                                            core_orbitals=core_orbitals,
                                            frozen_core=frozen_core,
-                                           frozen_virtual=frozen_virtual)
+                                           frozen_virtual=frozen_virtual,
+                                           qed=qed, coupl=coupl, qed_hf=qed_hf,
+                                           freq=freq, qed_approx=qed_approx,
+                                           qed_full_diag=qed_full_diag)
         except ValueError as e:
             raise InputError(str(e))  # In case of an issue with the spaces
-        # TODO: for now qed keywords are requested as refstate attributes, which
-        # should be forwarded to the adcc_ReferenceState via the above call, and
-        # maybe stored in a dict as e.g. refstate.qed_keys["approx"] = True
-        if coupl is not None:
-            refstate.coupling = coupl
-            refstate.frequency = freq
-        if qed_hf:
-            refstate.qed_hf = True
-        if qed_approx:
-            refstate.approx = True
-        if qed_full_diag:
-            refstate.full_diagonalization = True
         data_or_matrix = refstate
     elif core_orbitals is not None:
         mospaces = data_or_matrix.mospaces
@@ -416,7 +411,7 @@ def validate_state_parameters(reference_state, n_states=None, n_singlets=None,
             raise InputError("freq and coupl must contain 3 elements,"
                              "i.e. x, y, z")
     if not qed_hf:
-        raise InputError("QED-ADC of zeroth and first level are not yet,"
+        raise InputError("QED-ADC of zeroth and first level are not yet"
                          "properly tested and second order is not implemented")
 
     return n_states, kind
@@ -469,7 +464,7 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
     if guesses is None:
         if n_guesses is None:
             n_guesses = estimate_n_guesses(matrix, n_states, n_guesses_per_state)
-        if hasattr(matrix.reference_state, "coupling") and not hasattr(matrix.reference_state, "approx"):  # noqa: E501
+        if matrix.reference_state.qed and not matrix.reference_state.approx:
             guesses = obtain_guesses_by_inspection_qed(matrix, n_guesses, kind,
                                                        n_guesses_doubles)
         else:
@@ -590,7 +585,7 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
     # Usually only few states are requested and most of them are close
     # to pure electronic states, so we initialize the guess vectors
     # as almost purely electric guesses.
-    if not hasattr(matrix.reference_state, "full_diagonalization"):
+    if not matrix.reference_state.full_diagonalization:
         for i in np.arange(n_guess):
             # TODO: maybe make these values accessible by a keyword, since
             # they can tune the performance. From my experience these work
@@ -618,7 +613,7 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
                 0, guesses_phot2[guess_index].ph, None
             ))
 
-    if hasattr(matrix.reference_state, "full_diagonalization"):
+    if matrix.reference_state.full_diagonalization:
         full_guess = []
 
         for qed_vec in guesses_tmp:

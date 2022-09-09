@@ -41,8 +41,11 @@ class TestExcitationView(unittest.TestCase, Runners):
             for key in dir(exci):
                 if key.startswith("_"):
                     continue
+                # TODO: Remove qed from blacklist, if the function
+                # qed_second_order_ph_ph_couplings, is removed from
+                # @mark_excitation_property()
                 blacklist = ["__", "index", "_ao", "excitation_vector",
-                             "method", "parent_state"]
+                             "method", "parent_state", "qed"]
                 if any(b in key for b in blacklist):
                     continue
                 try:

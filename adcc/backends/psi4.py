@@ -181,6 +181,8 @@ class Psi4HFProvider(HartreeFockProvider):
             else:
                 print("This is an unrestricted calculation")
                 return False
+        else:
+            return False
 
     def get_energy_scf(self):
         return self.wfn.energy()
@@ -220,7 +222,7 @@ class Psi4HFProvider(HartreeFockProvider):
         out[:] = np.hstack((orben_a, orben_b))
 
     def fill_occupation_f(self, out):
-        if isinstance(self.wfn, psi4.core.Wavefunction):
+        if not hasattr(self.wfn, "occupation_a"):  # hilbert package
             num_of_orbs = self.wfn.nmo()
             nalpha_elec = self.wfn.nalpha()
             nbeta_elec = self.wfn.nbeta()

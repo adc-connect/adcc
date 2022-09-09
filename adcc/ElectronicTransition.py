@@ -178,7 +178,7 @@ class ElectronicTransition:
         to build the QED-matrix in the basis of the diagonal
         purely electric subblock
         """
-        if hasattr(self.reference_state, "approx"):
+        if self.reference_state.approx:
 
             dipole_integrals = self.operators.electric_dipole
 
@@ -214,7 +214,7 @@ class ElectronicTransition:
         to build the QED-matrix in the basis of the diagonal
         purely electric subblock
         """
-        if hasattr(self.reference_state, "approx"):
+        if self.reference_state.approx:
             dipole_integrals = self.operators.electric_dipole
             print("note, that only the z coordinate of the "
                   "dipole integrals is calculated")
@@ -256,7 +256,7 @@ class ElectronicTransition:
         to build the QED-matrix in the basis of the diagonal
         purely electric subblock
         """
-        if hasattr(self.reference_state, "approx"):
+        if self.reference_state.approx:
             qed_t1 = self.ground_state.qed_t1(b.ov)
 
             def couple(qed_t1, ul, ur):

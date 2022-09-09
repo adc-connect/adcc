@@ -134,8 +134,8 @@ class AdcMatrix(AdcMatrixlike):
         self.ndim = 2
         self.extra_terms = []
 
-        if hasattr(self.reference_state, "coupling"):
-            if method.base_method.name == "adc2x" or method.base_method.name == "adc3":  # noqa: E501
+        if self.reference_state.qed:
+            if method.base_method.name in ["adc2x", "adc3"]:
                 raise NotImplementedError("Neither adc2x nor adc3 "
                                           "are implemented for QED-ADC")
 
@@ -151,7 +151,7 @@ class AdcMatrix(AdcMatrixlike):
 
         # Determine orders of PT in the blocks
         if block_orders is None:
-            if hasattr(self.reference_state, "coupling") and not hasattr(self.reference_state, "approx"):  # noqa: E501
+            if self.reference_state.qed and not self.reference_state.approx:
                 block_orders = self.qed_default_block_orders[method.base_method.name]  # noqa: E501
             else:
                 block_orders = self.default_block_orders[method.base_method.name]
@@ -205,10 +205,10 @@ class AdcMatrix(AdcMatrixlike):
             if method.is_core_valence_separated:
                 variant = "cvs"
             # Build full QED-matrix
-            if hasattr(self.reference_state, "coupling") and not hasattr(self.reference_state, "approx"):  # noqa: E501
+            if self.reference_state.qed and not self.reference_state.approx:
                 blocks = {}
 
-                if hasattr(hf_or_mp.reference_state, "coupling"):
+                if hf_or_mp.reference_state.qed:
                     for key in self.qed_dispatch_dict:
                         for bl, order in block_orders.items():
                             if order is not None:
@@ -332,7 +332,7 @@ class AdcMatrix(AdcMatrixlike):
             ])
         self.shape = (sum(self.axis_lengths.values()),
                       sum(self.axis_lengths.values()))
-        if hasattr(self.reference_state, "coupling") and not hasattr(self.reference_state, "approx"):  # noqa: E501
+        if self.reference_state.qed and not self.reference_state.approx:
             # We leave out the the dimension with the
             # purely electronic ground state,
             # since by construction the coupling to it is always zero

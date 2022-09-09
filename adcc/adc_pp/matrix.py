@@ -118,7 +118,7 @@ block_ph_gs_0_couple = block_ph_gs_0_phot_couple = block_ph_gs_0_phot =\
 
 def block_ph_ph_0(hf, mp, intermediates):
     fCC = hf.fcc if hf.has_core_occupied_space else hf.foo
-    if hasattr(hf, "coupling"):
+    if hf.qed:
         diagonal = AmplitudeVector(ph=direct_sum("a-i->ia", hf.fvv.diagonal(),
                                                  fCC.diagonal()))
 
@@ -153,7 +153,7 @@ block_ph_ph_0_phot_couple = block_ph_ph_0_phot_couple_edge =\
 
 def block_ph_ph_0_phot(hf, mp, intermediates):
     fCC = hf.fcc if hf.has_core_occupied_space else hf.foo
-    if hasattr(hf, "coupling"):
+    if hf.qed:
         diagonal = AmplitudeVector(ph=direct_sum("a-i->ia", hf.fvv.diagonal(),
                                                  fCC.diagonal()))
 
@@ -331,7 +331,7 @@ def block_ph_gs_1_phot_couple_inner(hf, mp, intermediates):
 def block_ph_ph_1(hf, mp, intermediates):
     fCC = hf.fcc if hf.has_core_occupied_space else hf.foo
     CvCv = hf.cvcv if hf.has_core_occupied_space else hf.ovov
-    if hasattr(hf, "coupling") and not hasattr(hf, "qed_hf"):
+    if hf.qed and not hf.qed_hf:
         diagonal = AmplitudeVector(ph=(
             + direct_sum("a-i->ia", hf.fvv.diagonal(), fCC.diagonal())  # order 0
             - einsum("IaIa->Ia", CvCv)  # order 1
@@ -347,7 +347,7 @@ def block_ph_ph_1(hf, mp, intermediates):
                 + (1 / 2) * einsum("ij,ja->ia", mp.qed_t0_df(b.oo), ampl.ph)
                 - (1 / 2) * einsum("ib,ab->ia", ampl.ph, mp.qed_t0_df(b.vv))
             ))
-    elif hasattr(hf, "coupling") and hasattr(hf, "qed_hf"):
+    elif hf.qed and hf.qed_hf:
         if hasattr(hf, "first_order_coupling"):
             i1 = intermediates.adc2_i1
             i2 = intermediates.adc2_i2
@@ -399,7 +399,7 @@ block_cvs_ph_ph_1 = block_ph_ph_1
 def block_ph_ph_1_phot(hf, mp, intermediates):
     fCC = hf.fcc if hf.has_core_occupied_space else hf.foo
     CvCv = hf.cvcv if hf.has_core_occupied_space else hf.ovov
-    if hasattr(hf, "coupling") and not hasattr(hf, "qed_hf"):
+    if hf.qed and not hf.qed_hf:
         omega = float(ReferenceState.get_qed_omega(hf))
 
         diagonal = AmplitudeVector(ph=(
@@ -419,7 +419,7 @@ def block_ph_ph_1_phot(hf, mp, intermediates):
                 - (1 / 2) * einsum("ib,ab->ia", ampl.ph1, mp.qed_t0_df(b.vv))
                 + omega * ampl.ph1
             ))
-    elif hasattr(hf, "coupling") and hasattr(hf, "qed_hf"):
+    elif hf.qed and hf.qed_hf:
         omega = float(ReferenceState.get_qed_omega(hf))
 
         if hasattr(hf, "first_order_coupling"):
@@ -463,7 +463,7 @@ def block_ph_ph_1_phot(hf, mp, intermediates):
 
 def block_ph_ph_1_couple(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
-    if hasattr(hf, "coupling"):
+    if hf.qed:
         def apply(ampl):
             return AmplitudeVector(ph=(
                 sqrt(omega / 2) * (
@@ -475,7 +475,7 @@ def block_ph_ph_1_couple(hf, mp, intermediates):
 
 def block_ph_ph_1_phot_couple(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
-    if hasattr(hf, "coupling"):
+    if hf.qed:
         def apply(ampl):
             return AmplitudeVector(ph=(
                 sqrt(omega / 2) * (
@@ -495,7 +495,7 @@ block_ph_ph_1_phot_couple_edge = block_ph_ph_1_couple_edge
 
 def block_ph_ph_1_couple_inner(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
-    if hasattr(hf, "coupling"):
+    if hf.qed:
         def apply(ampl):
             return AmplitudeVector(ph=(
                 sqrt(omega) * (- einsum("ib,ab->ia", ampl.ph1, mp.qed_t1_df(b.vv))
@@ -506,7 +506,7 @@ def block_ph_ph_1_couple_inner(hf, mp, intermediates):
 
 def block_ph_ph_1_phot_couple_inner(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
-    if hasattr(hf, "coupling"):
+    if hf.qed:
         def apply(ampl):
             return AmplitudeVector(ph=(
                 sqrt(omega) * (- einsum("ib,ab->ia", ampl.ph2, mp.qed_t1_df(b.vv))
@@ -519,7 +519,7 @@ def block_ph_ph_1_phot_couple_inner(hf, mp, intermediates):
 def block_ph_ph_1_phot2(hf, mp, intermediates):
     fCC = hf.fcc if hf.has_core_occupied_space else hf.foo
     CvCv = hf.cvcv if hf.has_core_occupied_space else hf.ovov
-    if hasattr(hf, "coupling") and not hasattr(hf, "qed_hf"):
+    if hf.qed and not hf.qed_hf:
         omega = float(ReferenceState.get_qed_omega(hf))
 
         diagonal = AmplitudeVector(ph=(
@@ -539,7 +539,7 @@ def block_ph_ph_1_phot2(hf, mp, intermediates):
                 - (1 / 2) * einsum("ib,ab->ia", ampl.ph2, mp.qed_t0_df(b.vv))
                 + 2 * omega * ampl.ph2
             ))
-    elif hasattr(hf, "coupling") and hasattr(hf, "qed_hf"):
+    elif hf.qed and hf.qed_hf:
         omega = float(ReferenceState.get_qed_omega(hf))
 
         if hasattr(hf, "first_order_coupling"):
@@ -832,9 +832,9 @@ def block_ph_ph_2(hf, mp, intermediates):
 
     term_t2_eri = intermediates.term_t2_eri
 
-    if hasattr(hf, "coupling") and not hasattr(hf, "approx"):
+    if hf.qed and not hf.approx:
         omega = float(ReferenceState.get_qed_omega(hf))
-        if hasattr(hf, "qed_hf"):
+        if hf.qed_hf:
             qed_i1 = intermediates.adc2_qed_i1
             qed_i2 = intermediates.adc2_qed_i2
             diagonal = AmplitudeVector(ph=(

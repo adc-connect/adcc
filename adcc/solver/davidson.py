@@ -197,13 +197,6 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             state.eigenvalues = rvals[epair_mask]
             state.residuals = [residuals[i] for i in epair_mask]
             state.residual_norms = np.array([r @ r for r in state.residuals])
-            if hasattr(matrix.reference_state, "print_eigvec_norms"):
-                # building the eigenvectors here is just for debugging purposes
-                eigenvecs = [lincomb(v, SS, evaluate=True)
-                             for i, v in enumerate(np.transpose(rvecs))
-                             if i in epair_mask]
-                for eigv in eigenvecs:
-                    print("norm of eigenvector", np.sqrt(eigv @ eigv))
             # TODO This is misleading ... actually residual_norms contains
             #      the norms squared. That's also the used e.g. in adcman to
             #      check for convergence, so using the norm squared is fine,
@@ -382,7 +375,7 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
     if not max_subspace:
         # TODO Arnoldi uses this:
         # max_subspace = max(2 * n_ep + 1, 20)
-        if hasattr(matrix.reference_state, "full_diagonalization"):
+        if matrix.reference_state.full_diagonalization:
             max_subspace = len(guesses)
         else:
             max_subspace = max(6 * n_ep, 20, 5 * len(guesses))
