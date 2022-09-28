@@ -211,8 +211,15 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         matrix, n_states, kind, guesses=guesses, n_guesses=n_guesses,
         n_guesses_doubles=n_guesses_doubles, conv_tol=conv_tol, output=output,
         eigensolver=eigensolver, **solverargs)
+    
+    if method in ['adc0', 'adc1'] and properties_level in ['adc2', 'adc3']:
+        raise InputError("ADC(2) and ADC(3) properties are not compatible "
+                         "with ADC(0) and ADC(1) eigenvectors (missing "
+                         "doubles amplitude)")
     if properties_level != None:
         exstates = ExcitedStates(diagres, property_method = properties_level)
+    elif method == 'adc3':
+        exstates = ExcitedStates(diagres, property_method = 'adc2')
     else:
         exstates = ExcitedStates(diagres)
     exstates.kind = kind
