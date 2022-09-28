@@ -100,6 +100,7 @@ def tdm_adc2(mp, amplitude, intermediates):
     )
     return dm
 
+
 def tdm_adc3(mp, amplitude, intermediates):
     dm = tdm_adc2(mp, amplitude, intermediates)
     u1 = amplitude.ph
@@ -122,12 +123,12 @@ def tdm_adc3(mp, amplitude, intermediates):
         + einsum('ib,ia->ab', ts3, u1)
         - einsum('jabc,jc->ab', t2u_ovvv, p0.ov)
         - einsum('jb,ja->ab', t2u_ov, p0.ov)
-        - 0.5 * einsum('jkac,ijkbcd,id->ab',t2, tt2, u1)
+        - 0.5 * einsum('jkac,ijkbcd,id->ab', t2, tt2, u1)
         - 0.25 * einsum('ib,ia->ab', tt2t2_ov, u1)
         + einsum('ijbc,ijac->ab', td2, u2)
     )
     dm.oo += (
-        - einsum('ia,ja->ij',ts3, u1)
+        - einsum('ia,ja->ij', ts3, u1)
         + einsum('ib,jb->ij', t2u_ov, p0.ov)
         + einsum('ikab,kb,ja->ij', t2, p0.ov, u1)
         - 0.5 * einsum('jkbc,iklabc,la->ij', t2, tt2, u1)
@@ -138,8 +139,8 @@ def tdm_adc3(mp, amplitude, intermediates):
         - 0.25 * einsum('kabc,ikbc->ai', t2u_ovvv, td2)
         - 0.25 * einsum('ib,jkbc,jkac->ai', u1, t2, td2)
         + 0.5 * einsum('jb,ijab->ai', t2u_ov, td2)
-       - 0.25 * einsum('ja,jkbc,ikbc->ai', u1, td2, t2)
-       - 0.25 * einsum('ib,jkbc,jkac->ai', u1, td2, t2)
+        - 0.25 * einsum('ja,jkbc,ikbc->ai', u1, td2, t2)
+        - 0.25 * einsum('ib,jkbc,jkac->ai', u1, td2, t2)
         + 0.5 * einsum('ijab,jkbc,kc->ai', t2, td2, u1)
     )
     dm.ov += (
@@ -161,8 +162,7 @@ def tdm_adc3(mp, amplitude, intermediates):
         - einsum('ijab,jb->ia', td3, u1)
         - 0.5 * einsum('ijkabc,jkbc->ia', tt2, u2)
     )
-    return dm    
-
+    return dm
 
 
 DISPATCH = {

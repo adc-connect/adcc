@@ -94,6 +94,7 @@ def diffdm_adc2(mp, amplitude, intermediates):
     )
     return dm
 
+
 def diffdm_adc3(mp, amplitude, intermediates):
     dm = diffdm_adc2(mp, amplitude, intermediates)
     u1, u2 = amplitude.ph, amplitude.pphh
@@ -103,11 +104,8 @@ def diffdm_adc3(mp, amplitude, intermediates):
     td2 = mp.td2(b.oovv)
     tt2 = mp.tt2(b.ooovvv)
     ts3 = mp.ts3(b.ov)
-    td3 = mp.td3(b.oovv)
-    
+
     # Zeroth order doubles contributions
-    p2_oo = -einsum("ikab,jkab->ij", u2, u2)
-    p2_vv = einsum("ijac,ijbc->ab", u2, u2)
     p2_ov = -2 * einsum("jb,ijab->ia", u1, u2).evaluate()
 
     # ADC(2) ISR intermediate (TODO Move to intermediates)
@@ -165,6 +163,7 @@ def diffdm_adc3(mp, amplitude, intermediates):
         + 0.5 * einsum('jc,ijab,ikab,klcd->ld', u1, u2, t2, t2)
     )
     return dm
+
 
 def diffdm_cvs_adc2(mp, amplitude, intermediates):
     dm = diffdm_adc0(mp, amplitude, intermediates)  # Get ADC(1) result

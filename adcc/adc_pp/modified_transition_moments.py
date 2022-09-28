@@ -59,11 +59,12 @@ def mtm_adc2(mp, dipop, intermediates):
     )
     return AmplitudeVector(ph=f1, pphh=f2)
 
+
 def mtm_adc3(mp, dipop, intermediates):
     second_order = mtm_adc2(mp, dipop, intermediates)
     f1 = second_order.ph
     f2 = second_order.pphh
-    
+
     t2 = mp.t2(b.oovv)
     p0 = mp.mp2_diffdm
     td2 = mp.td2(b.oovv)
@@ -79,8 +80,8 @@ def mtm_adc3(mp, dipop, intermediates):
         + einsum('jkab,kb,ji->ia', t2, p0.ov, dipop.oo)
         - einsum('ijbc,jc,ab->ia', t2, p0.ov, dipop.vv)
         - einsum('ijab,jc,cb->ia', t2, p0.ov, dipop.vv)
-        - 0.25 *  einsum('ikbc,jkbc,ja->ia', t2, td2, dipop.ov)
-        - 0.25 *  einsum('jkac,jkbc,ib->ia', t2, td2, dipop.ov)
+        - 0.25 * einsum('ikbc,jkbc,ja->ia', t2, td2, dipop.ov)
+        - 0.25 * einsum('jkac,jkbc,ib->ia', t2, td2, dipop.ov)
         + 0.5 * einsum('ijab,jkbc,kc->ia', t2, td2, dipop.ov)
         - 0.25 * einsum('ikbc,jkbc,ja->ia', td2, t2, dipop.ov)
         - 0.25 * einsum('jkac,jkbc,ib->ia', td2, t2, dipop.ov)
@@ -106,8 +107,8 @@ def mtm_adc3(mp, dipop, intermediates):
         + 0.25 * einsum('ilbd,jkac,klcd,jb->ia', t2, t2, t2, dipop.ov)
     )
     f2 += (
-        - einsum('ijbc,ac->ijab', td2, dipop.vv).antisymmetrise(2,3)
-        - einsum('ikab,kj->ijab', td2, dipop.oo).antisymmetrise(0,1)
+        - einsum('ijbc,ac->ijab', td2, dipop.vv).antisymmetrise(2, 3)
+        - einsum('ikab,kj->ijab', td2, dipop.oo).antisymmetrise(0, 1)
         - 0.5 * einsum('ijkabc,kc->ijab', tt2, dipop.ov)
     )
     return AmplitudeVector(ph=f1, pphh=f2)

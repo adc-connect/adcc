@@ -100,6 +100,7 @@ def s2s_tdm_adc2(mp, amplitude_l, amplitude_r, intermediates):
     )
     return dm
 
+
 def s2s_tdm_adc3(mp, amplitude_l, amplitude_r, intermediates):
     dm = s2s_tdm_adc2(mp, amplitude_l, amplitude_r, intermediates)
 
@@ -112,8 +113,8 @@ def s2s_tdm_adc3(mp, amplitude_l, amplitude_r, intermediates):
     td2 = mp.td2(b.oovv)
     tt2 = mp.tt2(b.ooovvv)
     ts3 = mp.ts3(b.ov)
-    
-    #intermediates
+
+    # intermediates
     rul1 = einsum('ijab,jb->ia', t2, ul1).evaluate()
     rur1 = einsum('ijab,jb->ia', t2, ur1).evaluate()
     p1_ov = -2.0 * einsum("jb,ijab->ia", ul1, ur2).evaluate()
@@ -214,7 +215,7 @@ def s2s_tdm_adc3(mp, amplitude_l, amplitude_r, intermediates):
         + einsum('ikbc,la,klbc->ai', td2, ul1, ur2)
         - 0.25 * einsum('ij,aj->ai', t2t2_oo, p1_vo)
         - 0.25 * einsum('ab,bi->ai', t2t2_vv, p1_vo)
-        + 0.5 *  einsum('ijab,bj->ai', t2t2_oovv, p1_vo)
+        + 0.5 * einsum('ijab,bj->ai', t2t2_oovv, p1_vo)
         - einsum('ijcb,jkab,kc->ai', t2t2_oovv, ul2, ur1)
         - einsum('kjab,ijbc,kc->ai', t2t2_oovv, ul2, ur1)
         + 0.5 * einsum('ikad,jlbd,jlbc,kc->ai', t2, t2, ul2, ur1)
@@ -225,6 +226,7 @@ def s2s_tdm_adc3(mp, amplitude_l, amplitude_r, intermediates):
         - 0.5 * einsum('jlbd,ijbd,la->ai', t2, ul2, rur1)
     )
     return dm
+
 
 # Ref: https://doi.org/10.1080/00268976.2013.859313
 DISPATCH = {"adc0": s2s_tdm_adc0,
