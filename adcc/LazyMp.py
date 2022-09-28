@@ -122,30 +122,6 @@ class LazyMp:
         return amp/denom
 
     @cached_member_function
-    def tq2(self, space):
-        """Second order quadruple amplitudes"""
-        t2 = self.t2(b.oovv)
-        amp = (einsum('ijab,klcd->ijabklcd', t2, t2)
-            - einsum('ijac,klbd->ijacklbd', t2, t2)
-            + einsum('ijad,klbc->ijadklbc', t2, t2)
-            + einsum('ijbc,klad->ijbcklad', t2, t2)
-            - einsum('ijbd,klac->ijbdklac', t2, t2)
-            + einsum('ijcd,klab->ijcdklab', t2, t2)
-            - einsum('ikab,jlcd->ikabjlcd', t2, t2)
-            + einsum('ikac,jlbd->ikacjlbd', t2, t2)
-            - einsum('ikad,jlbc->ikadjlbc', t2, t2)
-            - einsum('ikbc,jlad->ikbcjlad', t2, t2)
-            + einsum('ikbd,jlac->ikbdjlac', t2, t2)
-            - einsum('ikcd,jlab->ikcdjlab', t2, t2)
-            + einsum('ilab,jkcd->ilabjkcd', t2, t2)
-            - einsum('ilac,jkbd->ilacjkbd', t2, t2)
-            + einsum('ilad,jkbc->iladjkbc', t2, t2)
-            + einsum('ilbc,jkad->ilbcjkad', t2, t2)
-            - einsum('ilbd,jkac->ilbdjkac', t2, t2)
-            + einsum('ilcd,jkab->ilcdjkab', t2, t2))
-        return amp
-    
-    @cached_member_function
     def ts3(self, space):
         """Third order single amplitudes"""
         hf = self.reference_state
@@ -161,44 +137,6 @@ class LazyMp:
             )
         return amp/denom
     
-    @cached_member_function
-    def td3_raw(self, space):
-        """Third order double amplitudes"""
-        hf = self.reference_state
-        p0 = self.mp2_diffdm
-        t2 = self.t2(b.oovv)
-        td2 = self.td2(b.oovv)
-        tt2 = self.tt2(b.ooovvv)
-
-        denom = direct_sum('ia,jb->ijab',self.df(b.ov),self.df(b.ov))
-        amp = (2 * einsum('jc,abic->ijab', p0.ov, hf.vvov).antisymmetrise(0,1)
-            + 2 * einsum('kb,kaij->ijab', p0.ov, hf.ovoo).antisymmetrise(2,3)
-            + 4 * einsum('ikac,kbjc->ijab', td2, hf.ovov).antisymmetrise(0,1).antisymmetrise(2,3)
-            - 0.5 * einsum('ijcd,abcd->ijab', td2, hf.vvvv)
-            - 0.5 * einsum('klab,klij->ijab', td2, hf.oooo)
-            + einsum('jklabc,klic->ijab', tt2, hf.ooov).antisymmetrise(0,1)
-            + einsum('ijkbcd,kacd->ijab', tt2, hf.ovvv).antisymmetrise(2,3)
-            #+ 0.25 * einsum('ijab,klcd,klcd->ijab', t2, t2, hf.oovv)  #quadruples factorisation
-            - 0.25 * einsum('ijac,klbd,klcd->ijab', t2, t2, hf.oovv)
-            + 0.25 * einsum('ijad,klbc,klcd->ijab', t2, t2, hf.oovv)
-            + 0.25 * einsum('ijbc,klad,klcd->ijab', t2, t2, hf.oovv)
-            - 0.25 * einsum('ijbd,klac,klcd->ijab', t2, t2, hf.oovv)
-            + 0.25 * einsum('ijcd,klab,klcd->ijab', t2, t2, hf.oovv)
-            - 0.25 * einsum('ikab,jlcd,klcd->ijab', t2, t2, hf.oovv)
-            + 0.25 * einsum('ikac,jlbd,klcd->ijab', t2, t2, hf.oovv)
-            - 0.25 * einsum('ikad,jlbc,klcd->ijab', t2, t2, hf.oovv)
-            - 0.25 * einsum('ikbc,jlad,klcd->ijab', t2, t2, hf.oovv)
-            + 0.25 * einsum('ikbd,jlac,klcd->ijab', t2, t2, hf.oovv)
-            - 0.25 * einsum('ikcd,jlab,klcd->ijab', t2, t2, hf.oovv)
-            + 0.25 * einsum('ilab,jkcd,klcd->ijab', t2, t2, hf.oovv)
-            - 0.25 * einsum('ilac,jkbd,klcd->ijab', t2, t2, hf.oovv)
-            + 0.25 * einsum('ilad,jkbc,klcd->ijab', t2, t2, hf.oovv)
-            + 0.25 * einsum('ilbc,jkad,klcd->ijab', t2, t2, hf.oovv)
-            - 0.25 * einsum('ilbd,jkac,klcd->ijab', t2, t2, hf.oovv)
-            + 0.25 * einsum('ilcd,jkab,klcd->ijab', t2, t2, hf.oovv)
-            )
-        return amp/denom
-
     @cached_member_function
     def td3(self, space):
         """Third order double amplitudes"""
