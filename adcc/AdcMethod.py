@@ -24,7 +24,7 @@
 
 def get_valid_methods():
     valid_prefixes = ["cvs"]
-    valid_bases = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+    valid_bases = ["adc0", "adc1", "adc2", "adc2x", "adc3", "ip_adc2"]
 
     ret = valid_bases + [p + "-" + m for p in valid_prefixes
                          for m in valid_bases]
@@ -40,8 +40,7 @@ class AdcMethod:
                              + ",".join(self.available_methods) + " are known.")
 
         split = method.split("-")
-        self.__base_method = split[-1]
-        split = split[:-1]
+        self.__base_method = split.pop()
         self.is_core_valence_separated = "cvs" in split
 
         try:

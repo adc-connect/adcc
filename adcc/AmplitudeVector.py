@@ -27,7 +27,8 @@ class AmplitudeVector(dict):
     def __init__(self, *args, **kwargs):
         """
         Construct an AmplitudeVector. Typical use cases are
-        ``AmplitudeVector(ph=tensor_singles, pphh=tensor_doubles)``.
+        ``AmplitudeVector(ph=tensor_singles, pphh=tensor_doubles)``. For IP-ADC
+        ``AmplitudeVector(h=tensor_singles, phh=tensor_doubles)`` 
         """
         if args:
             warnings.warn("Using the list interface of AmplitudeVector is "
@@ -54,11 +55,11 @@ class AmplitudeVector(dict):
     @property
     def blocks(self):
         warnings.warn("The blocks attribute will change behaviour in 0.16.0.")
-        if sorted(self.blocks_ph) == ["ph", "pphh"]:
+        if sorted(self.blocks_ph) == ["ph", "pphh"] or sorted(self.blocks_ph) == ["h", "phh"]:
             return ["s", "d"]
-        if sorted(self.blocks_ph) == ["pphh"]:
+        elif sorted(self.blocks_ph) == ["pphh"] or sorted(self.blocks_ph) == ["phh"]:
             return ["d"]
-        elif sorted(self.blocks_ph) == ["ph"]:
+        elif sorted(self.blocks_ph) == ["ph"] or sorted(self.blocks_ph) == ["h"]:
             return ["s"]
         elif sorted(self.blocks_ph) == []:
             return []

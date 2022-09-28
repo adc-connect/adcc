@@ -26,8 +26,8 @@ import warnings
 from libadcc import ReferenceState
 
 from . import solver
-from .guess import (guesses_any, guesses_singlet, guesses_spin_flip,
-                    guesses_triplet)
+from .guess import (guesses_any, guesses_singlet, guesses_doublet,
+                    guesses_spin_flip, guesses_triplet)
 from .LazyMp import LazyMp
 from .AdcMatrix import AdcMatrix, AdcMatrixlike, AdcExtraTerm
 from .AdcMethod import AdcMethod
@@ -46,8 +46,9 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
             eigensolver=None, guesses=None, n_guesses=None,
             n_guesses_doubles=None, output=sys.stdout, core_orbitals=None,
             frozen_core=None, frozen_virtual=None, method=None,
-            n_singlets=None, n_triplets=None, n_spin_flip=None,
-            environment=None, **solverargs):
+            n_singlets=None, n_doublets=None, n_triplets=None, 
+            n_spin_flip=None, n_alpha=None, n_beta=None, environment=None, 
+            **solverargs):
     """Run an ADC calculation.
 
     Main entry point to run an ADC calculation. The reference to build the ADC
@@ -70,17 +71,31 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     n_states : int, optional
     kind : str, optional
     n_singlets : int, optional
+    n_doublets : int, optional
     n_triplets : int, optional
     n_spin_flip : int, optional
         Specify the number and kind of states to be computed. Possible values
-        for kind are "singlet", "triplet", "spin_flip" and "any", which is
-        the default. For unrestricted references clamping spin-pure
+        for kind are "singlet", "doublet", "triplet", "spin_flip" and "any", 
+        which is the default. For unrestricted references clamping spin-pure
         singlets/triplets is currently not possible and kind has to remain as
-        "any". For restricted references `kind="singlets"` or `kind="triplets"`
-        may be employed to enforce a particular excited states manifold.
+        "any". For restricted references `kind="singlets"`, `kind="doublets"` 
+        or `kind="triplets"` may be employed to enforce a particular excited 
+        states manifold.
         Specifying `n_singlets` is equivalent to setting `kind="singlet"` and
-        `n_states=5`. Similarly for `n_triplets` and `n_spin_flip`.
-        `n_spin_flip` is only valid for unrestricted references.
+        `n_states=5`. Similarly for `n_doublets`, `n_triplets` and 
+        `n_spin_flip`. `n_spin_flip` is only valid for unrestricted references.
+    
+    n_alpha : int, optional
+    n_beta : int, optional
+        Specify the number of alpha and beta ionizations (i.e. states) to be 
+        computed. These parameters may only be employed for 
+        IP-ADC calculations. It is valid to specify only one or both 
+        parameters. If n_states or n_doublets is specified alongside, n_alpha 
+        and n_beta have to add up to the number of requested states. If only 
+        n_alpha or n_beta is specified, the other will be set to the difference
+        of the total requested states and the specified n_alpha/n_beta states.
+        Kind will always be set to "doublets" for IP-ADC calculations, since
+        quartets are not implemented.
 
     conv_tol : float, optional
         Convergence tolerance to employ in the iterative solver for obtaining
@@ -146,6 +161,8 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         An :class:`adcc.ExcitedStates` object containing the
         :class:`adcc.AdcMatrix`, the :class:`adcc.LazyMp` ground state and the
         :class:`adcc.ReferenceState` as well as computed eigenpairs.
+        A tuple is returned for IP-ADC calculations if alpha and beta states 
+        were requested: (ExcitedStates(alpha), ExcitedStates(beta))
 
     Examples
     --------
@@ -182,37 +199,75 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
 
     n_states, kind = validate_state_parameters(
         matrix.reference_state, n_states=n_states, n_singlets=n_singlets,
-        n_triplets=n_triplets, n_spin_flip=n_spin_flip, kind=kind)
+        n_doublets=n_doublets, n_triplets=n_triplets, n_spin_flip=n_spin_flip, 
+        kind=kind, n_alpha=n_alpha, n_beta=n_beta, 
+        method=matrix.method.base_method.name)
 
     # Determine spin change during excitation. If guesses is not None,
     # i.e. user-provided, we cannot guarantee for obtaining a particular
     # spin_change in case of a spin_flip calculation.
     spin_change = None
     if kind == "spin_flip" and guesses is None:
-        spin_change = -1
+        spin_change = [-1]
+    elif kind == "doublet" and guesses is None:
+        spin_change = []
+        if n_alpha is not None and n_alpha > 0:
+            spin_change.append(-0.5) # alpha ionization respectively
+        if n_beta is not None and n_beta > 0:
+            spin_change.append(+0.5) # beta ionization respectively
 
     # Select solver to run
     if eigensolver is None:
         eigensolver = "davidson"
 
     # Setup environment coupling terms and energy corrections
-    ret = setup_environment(matrix, environment)
-    env_matrix_term, env_energy_corrections = ret
+    env_matrix_term, env_energy_corrections = setup_environment(matrix, environment)
     # add terms to matrix
     if env_matrix_term:
         matrix += env_matrix_term
 
-    diagres = diagonalise_adcmatrix(
-        matrix, n_states, kind, guesses=guesses, n_guesses=n_guesses,
-        n_guesses_doubles=n_guesses_doubles, conv_tol=conv_tol, output=output,
-        eigensolver=eigensolver, **solverargs)
-    exstates = ExcitedStates(diagres)
-    exstates.kind = kind
-    exstates.spin_change = spin_change
+    exstates = []
+    if isinstance(n_states, dict):
+        # For an IP-ADC calculation, do the calculations for each spin, 
+        # i.e. alpha and beta
+        if n_states["alpha"] > 0:
+            diagres_alpha = diagonalise_adcmatrix(
+                matrix, n_states=n_states["alpha"], kind=kind, guesses=guesses, 
+                n_guesses=n_guesses, n_guesses_doubles=n_guesses_doubles, 
+                conv_tol=conv_tol, output=output, eigensolver=eigensolver, 
+                ion_type="alpha", **solverargs)
+            exstates.append(diagres_alpha)
+        if n_states["beta"] > 0:
+            diagres_beta = diagonalise_adcmatrix(
+                matrix, n_states=n_states["beta"], kind=kind, guesses=guesses, 
+                n_guesses=n_guesses, n_guesses_doubles=n_guesses_doubles, 
+                conv_tol=conv_tol, output=output, eigensolver=eigensolver, 
+                ion_type="beta", **solverargs)
+            exstates.append(diagres_beta)
+    else: 
+        # If n_states is an integer, i.e. a PP-ADC calculation
+        diagres = diagonalise_adcmatrix(
+            matrix, n_states, kind, guesses=guesses, n_guesses=n_guesses,
+            n_guesses_doubles=n_guesses_doubles, conv_tol=conv_tol, output=output,
+            eigensolver=eigensolver, **solverargs)
+        exstates.append(diagres)
 
-    # add environment corrections to excited states
-    exstates += env_energy_corrections
-    return exstates
+    
+    for i in range(len(exstates)):
+        exstates[i] = ExcitedStates(exstates[i])
+        exstates[i].kind = kind
+        if spin_change is not None:
+            exstates[i].spin_change = spin_change[i]
+        else:
+            exstates[i].spin_change = spin_change
+
+        # add environment corrections to excited states
+        exstates[i] += env_energy_corrections
+
+    if len(exstates) == 1:
+        return exstates[0]
+    else:
+        return tuple(exstates)
 
 
 #
@@ -283,17 +338,19 @@ def construct_adcmatrix(data_or_matrix, core_orbitals=None, frozen_core=None,
 
 
 def validate_state_parameters(reference_state, n_states=None, n_singlets=None,
-                              n_triplets=None, n_spin_flip=None, kind="any"):
+                              n_doublets=None, n_triplets=None, 
+                              n_spin_flip=None, kind="any", n_alpha=None, 
+                              n_beta=None, method=None):
     """
     Check the passed state parameters for consistency with itself and with
     the passed reference and normalise them. In the end return the number of
     states and the corresponding kind parameter selected.
     Internal function called from run_adc.
     """
-    if sum(nst is not None for nst in [n_states, n_singlets,
+    if sum(nst is not None for nst in [n_states, n_singlets, n_doublets, 
                                        n_triplets, n_spin_flip]) > 1:
         raise InputError("One may only specify one out of n_states, "
-                         "n_singlets, n_triplets and n_spin_flip")
+                         "n_singlets, n_doublets, n_triplets and n_spin_flip")
 
     if n_singlets is not None:
         if not reference_state.restricted:
@@ -304,6 +361,12 @@ def validate_state_parameters(reference_state, n_states=None, n_singlets=None,
                              "with n_singlets > 0")
         kind = "singlet"
         n_states = n_singlets
+    if n_doublets is not None:
+        if kind not in ["doublet", "any"]:
+            raise InputError(f"Kind parameter {kind} not compatible "
+                             "with n_doublets > 0")
+        kind = "doublet"
+        n_states = n_doublets
     if n_triplets is not None:
         if not reference_state.restricted:
             raise InputError("The n_triplets parameter may only be employed "
@@ -322,22 +385,66 @@ def validate_state_parameters(reference_state, n_states=None, n_singlets=None,
                              "with n_spin_flip > 0")
         kind = "spin_flip"
         n_states = n_spin_flip
+    
+    # Check if it is an IP-ADC calculation is applied and if the input is valid
+    if n_alpha is None and n_beta is None:
+        if "ip" in method:
+            raise InputError("For IP-ADC calculations, at least one of "
+                             "n_alpha or n_beta has to be > 0")
+    else:
+        if "ip" not in method:
+            raise InputError("The n_alpha and n_beta parameters may only be "
+                             "employed for IP-ADC calculations")
+        if kind not in ["doublet", "any"]:
+            raise InputError(f"Kind parameter {kind} not compatible "
+                             "with IP-ADC calculations.")
+        n_alpha = n_alpha if n_alpha is not None else 0
+        n_beta = n_beta if n_beta is not None else 0
+        if n_alpha + n_beta == 0:
+            raise InputError("No excited states to be computed. Specify at "
+                             "least one of n_alpha or n_beta")
+        if n_alpha < 0 or n_beta < 0:
+            raise InputError("Only positive values for n_alpha and n_beta are "
+                             "allowed")
+        if n_states is not None:
+            if n_alpha == 0 and n_beta < n_states:
+                n_alpha = n_states - n_beta
+            if n_beta == 0 and n_alpha < n_states:
+                n_beta = n_states - n_alpha
+            if n_states != n_alpha + n_beta:
+                raise InputError("If n_states or n_doublets were requested,"
+                                 "n_alpha and n_beta have to add up to the "
+                                 "requested states for the IP-ADC calculation."
+                                 "If only n_alpha or n_beta was specified, "
+                                 "the number must be <= the requested states")
+        if reference_state.restricted:
+            n_alpha = max(n_alpha, n_beta)
+            if n_beta > 0:
+                warnings.warn("Only alpha states will be computed for "
+                              f"restricted references. {n_alpha} states will "
+                              "be computed.")
+            n_beta = 0
+        kind = "doublet"
+        n_states = {"alpha": n_alpha, "beta": n_beta}
+        
 
     # Check if there are states to be computed
     if n_states is None or n_states == 0:
         raise InputError("No excited states to be computed. Specify at least "
-                         "one of n_states, n_singlets, n_triplets, "
-                         "or n_spin_flip")
-    if n_states < 0:
+                         "one of n_states, n_singlets, n_doublets, "
+                         "n_triplets, or n_spin_flip. Alternatively "
+                         "n_alpha and/or n_beta for IP-ADC calculations.")
+    if isinstance(n_states, int) and n_states < 0:
         raise InputError("n_states needs to be positive")
 
-    if kind not in ["any", "spin_flip", "singlet", "triplet"]:
+    if kind not in ["any", "spin_flip", "singlet", "doublet", "triplet"]:
         raise InputError("The kind parameter may only take the values 'any', "
-                         "'singlet', 'triplet' or 'spin_flip'")
-    if kind in ["singlet", "triplet"] and not reference_state.restricted:
-        raise InputError("kind==singlet and kind==triplet are only valid for "
-                         "ADC calculations in combination with a restricted "
-                         "ground state.")
+                         "'singlet', 'doublet', 'triplet' or 'spin_flip'")
+    if (kind in ["singlet", "triplet"] 
+        and not reference_state.restricted):
+        raise InputError("kind==singlet and kind==triplet are "
+                         "only valid for ADC calculations in combination with "
+                         "a restricted ground state.")
     if kind in ["spin_flip"] and reference_state.restricted:
         raise InputError("kind==spin_flip is only valid for "
                          "ADC calculations in combination with an unrestricted "
@@ -347,7 +454,8 @@ def validate_state_parameters(reference_state, n_states=None, n_singlets=None,
 
 def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
                           guesses=None, n_guesses=None, n_guesses_doubles=None,
-                          conv_tol=None, output=sys.stdout, **solverargs):
+                          conv_tol=None, output=sys.stdout, ion_type=None,
+                          **solverargs):
     """
     This function seeks appropriate guesses and afterwards proceeds to
     diagonalise the ADC matrix using the specified eigensolver.
@@ -367,7 +475,7 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
 
     # Determine explicit_symmetrisation
     explicit_symmetrisation = IndexSymmetrisation
-    if kind in ["singlet", "triplet"]:
+    if kind in ["singlet", "doublet", "triplet"]:
         explicit_symmetrisation = IndexSpinSymmetrisation(
             matrix, enforce_spin_kind=kind
         )
@@ -376,14 +484,14 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
     if eigensolver == "davidson":
         n_guesses_per_state = 2
         callback = setup_solver_printing(
-            "Jacobi-Davidson", matrix, kind, solver.davidson.default_print,
-            output=output)
+            "Jacobi-Davidson", matrix, kind, solver.davidson.default_print, 
+            ion_type=ion_type, output=output)
         run_eigensolver = jacobi_davidson
     elif eigensolver == "lanczos":
         n_guesses_per_state = 1
         callback = setup_solver_printing(
             "Lanczos", matrix, kind, solver.lanczos.default_print,
-            output=output)
+            ion_type=ion_type, output=output)
         run_eigensolver = lanczos
     else:
         raise InputError(f"Solver {eigensolver} unknown, try 'davidson'.")
@@ -393,7 +501,7 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
         if n_guesses is None:
             n_guesses = estimate_n_guesses(matrix, n_states, n_guesses_per_state)
         guesses = obtain_guesses_by_inspection(matrix, n_guesses, kind,
-                                               n_guesses_doubles)
+                                               n_guesses_doubles, ion_type)
     else:
         if len(guesses) < n_states:
             raise InputError("Less guesses provided via guesses (== {}) "
@@ -448,7 +556,8 @@ def estimate_n_guesses(matrix, n_states, singles_only=True,
     return max(n_states, n_guesses)
 
 
-def obtain_guesses_by_inspection(matrix, n_guesses, kind, n_guesses_doubles=None):
+def obtain_guesses_by_inspection(matrix, n_guesses, kind, 
+                                 n_guesses_doubles=None, ion_type=None):
     """
     Obtain guesses by inspecting the diagonal matrix elements.
     If n_guesses_doubles is not None, this is number is always adhered to.
@@ -457,31 +566,34 @@ def obtain_guesses_by_inspection(matrix, n_guesses, kind, n_guesses_doubles=None
     Internal function called from run_adc.
     """
     if n_guesses_doubles is not None and n_guesses_doubles > 0 \
-       and "pphh" not in matrix.axis_blocks:
+       and not set(["phh", "pphh"]) & set(matrix.axis_blocks):
         raise InputError("n_guesses_doubles > 0 is only sensible if the ADC "
                          "method has a doubles block (i.e. it is *not* ADC(0), "
                          "ADC(1) or a variant thereof.")
 
     # Determine guess function
     guess_function = {"any": guesses_any, "singlet": guesses_singlet,
-                      "triplet": guesses_triplet,
+                      "doublet": guesses_doublet, "triplet": guesses_triplet,
                       "spin_flip": guesses_spin_flip}[kind]
 
     # Determine number of singles guesses to request
     n_guess_singles = n_guesses
     if n_guesses_doubles is not None:
         n_guess_singles = n_guesses - n_guesses_doubles
-    singles_guesses = guess_function(matrix, n_guess_singles, block="ph")
+    singles_guesses = guess_function(matrix, n_guess_singles, 
+                                     block=matrix.axis_blocks[0], 
+                                     ion_type=ion_type)
 
     doubles_guesses = []
-    if "pphh" in matrix.axis_blocks:
+    if set(["phh", "pphh"]) & set(matrix.axis_blocks):
         # Determine number of doubles guesses to request if not
         # explicitly specified
         if n_guesses_doubles is None:
             n_guesses_doubles = n_guesses - len(singles_guesses)
         if n_guesses_doubles > 0:
-            doubles_guesses = guess_function(matrix, n_guesses_doubles,
-                                             block="pphh")
+            doubles_guesses = guess_function(matrix, n_guesses_doubles, 
+                                             block=matrix.axis_blocks[1],
+                                             ion_type=ion_type)
 
     total_guesses = singles_guesses + doubles_guesses
     if len(total_guesses) < n_guesses:
@@ -490,8 +602,8 @@ def obtain_guesses_by_inspection(matrix, n_guesses, kind, n_guesses_doubles=None
     return total_guesses
 
 
-def setup_solver_printing(solmethod_name, matrix, kind, default_print,
-                          output=None):
+def setup_solver_printing(solmethod_name, matrix, kind, default_print, 
+                          ion_type=None, output=None):
     """
     Setup default printing for solvers. Internal function called from run_adc.
     """
@@ -503,8 +615,13 @@ def setup_solver_printing(solmethod_name, matrix, kind, default_print,
         method_name = matrix.method.name
 
     if output is not None:
-        print(f"Starting {method_name}{kstr} {solmethod_name} ...",
-              file=output)
+        if ion_type is not None:
+            print(f"Starting {ion_type} {method_name}{kstr} "
+                  f"{solmethod_name} ...",
+                  file=output)
+        else:
+            print(f"Starting {method_name}{kstr} {solmethod_name} ...",
+                  file=output)
 
         def inner_callback(state, identifier):
             default_print(state, identifier, output)

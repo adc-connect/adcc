@@ -112,6 +112,11 @@ def adc3(*args, **kwargs):
 
 
 @with_runadc_doc
+def ip_adc2(*args, **kwargs):
+    return run_adc(*args, **kwargs, method="ip_adc2")
+
+
+@with_runadc_doc
 def cvs_adc0(*args, **kwargs):
     return run_adc(*args, **kwargs, method="cvs-adc0")
 
