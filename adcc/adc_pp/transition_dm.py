@@ -100,122 +100,6 @@ def tdm_adc2(mp, amplitude, intermediates):
     )
     return dm
 
-def tdm_adc3_code_gen(mp, amplitude, intermediates):
-    dm = tdm_adc2(mp, amplitude, intermediates)
-    u1 = amplitude.ph
-    u2 = amplitude.pphh
-
-    t2 = mp.t2(b.oovv)
-    td2 = mp.td2(b.oovv)
-    p0 = mp.mp2_diffdm
-    tt2 = mp.tt2(b.ooovvv)
-    ts3 = mp.ts3(b.ov)
-    td3 = mp.td3(b.oovv)
-    
-    dm.vv += (
-        - einsum('ijbc,jc,ia->ab', t2, p0.ov, u1)
-        + einsum('ib,ia->ab', ts3, u1)
-        + 0.25 * einsum('ijkbcd,jkbd,ia->ac', tt2, t2, u1)
-        - einsum('jc,ijab,ia->cb', p0.ov, t2, u1)
-        - 0.5 * einsum('ijkabd,jkcd,ia->cb', tt2, t2, u1)
-        - einsum('ijbc,ijab->ac', td2, u2)
-    )
-    dm.oo += (
-        + 0.25 * einsum('jklabc,klbc,ia->ji', tt2, t2, u1)
-        - einsum('ja,ia->ji', ts3, u1)
-        + einsum('kb,ijab,ia->jk', p0.ov, t2, u1)
-        - einsum('jb,jkab,ia->ki', p0.ov, t2, u1)
-        + 0.5 * einsum('ijkabc,jlbc,ia->kl', tt2, t2, u1)
-        - einsum('ikab,ijab->kj', td2, u2)
-    )
-    dm.vo += (
-        - 0.25 * einsum('jkbc,ikbc,ia->aj', td2, t2, u1)
-        + 0.25 * einsum('ijbc,jkbc,ia->ak', td2, t2, u1)
-        + 0.25 * einsum('jkbc,jkab,ia->ci', td2, t2, u1)
-        + 0.25 * einsum('jkab,jkbc,ia->ci', td2, t2, u1)
-        - 0.5 * einsum('jkbc,ikab,ia->cj', td2, t2, u1)
-        - 0.5 * einsum('ikab,jkbc,ia->cj', td2, t2, u1)
-    )
-    dm.ov += (
-        - 0.5 * einsum('ijkabc,ijab->kc', tt2, u2)
-        - einsum('ijab,ia->jb', td3, u1)
-        + 0.25 * einsum('ijac,klbd,klcd,ia->jb', t2, t2, t2, u1)
-        - 0.25 * einsum('ijad,klbc,klcd,ia->jb', t2, t2, t2, u1)
-        + 0.25 * einsum('ijbd,klac,klcd,ia->jb', t2, t2, t2, u1)
-        - 0.25 * einsum('ijcd,klab,klcd,ia->jb', t2, t2, t2, u1)
-        + 0.25 * einsum('ikab,jlcd,klcd,ia->jb', t2, t2, t2, u1)
-        - 0.25 * einsum('ikac,jlbd,klcd,ia->jb', t2, t2, t2, u1)
-        + 0.25 * einsum('ikad,jlbc,klcd,ia->jb', t2, t2, t2, u1)
-        + 0.25 * einsum('ikbc,jlad,klcd,ia->jb', t2, t2, t2, u1)
-        - 0.25 * einsum('ikbd,jlac,klcd,ia->jb', t2, t2, t2, u1)
-        + 0.25 * einsum('ikcd,jlab,klcd,ia->jb', t2, t2, t2, u1)
-        - 0.25 * einsum('ilab,jkcd,klcd,ia->jb', t2, t2, t2, u1)
-        + 0.25 * einsum('ilac,jkbd,klcd,ia->jb', t2, t2, t2, u1)
-        + 0.25 * einsum('ilad,jkbc,klcd,ia->jb', t2, t2, t2, u1)
-        - 0.25 * einsum('ilbc,jkad,klcd,ia->jb', t2, t2, t2, u1)
-        + 0.25 * einsum('ilbd,jkac,klcd,ia->jb', t2, t2, t2, u1)
-    )
-    return dm
-
-
-def tdm_adc3_raw(mp, amplitude, intermediates):
-    dm = tdm_adc2(mp, amplitude, intermediates)
-    u1 = amplitude.ph
-    u2 = amplitude.pphh
-
-    t2 = mp.t2(b.oovv)
-    td2 = mp.td2(b.oovv)
-    p0 = mp.mp2_diffdm
-    tt2 = mp.tt2(b.ooovvv)
-    ts3 = mp.ts3(b.ov)
-    td3 = mp.td3(b.oovv)
-
-    dm.vv += (
-        + einsum('ib,ia->ab', ts3, u1)
-        - einsum('ijbc,jc,ia->ab', t2, p0.ov, u1)
-        + einsum('ijbc,ja,ic->ab', t2, p0.ov, u1)
-        - 0.5 * einsum('ijkbcd,jkac,id->ab', tt2, t2, u1)
-        - 0.25 * einsum('ijkbcd,jkcd,ia->ab', tt2, t2, u1)
-        + einsum('ijbc,ijac->ab', td2, u2)
-    )
-    dm.oo += (
-        - einsum('ia,ja->ij',ts3, u1)
-        - einsum('ikab,jb,ka->ij', t2, p0.ov, u1)
-        + einsum('ikab,kb,ja->ij', t2, p0.ov, u1)
-        - 0.5 * einsum('iklabc,jkbc,la->ij', tt2, t2, u1)
-        + 0.25 * einsum('iklabc,klbc,ja->ij', tt2, t2, u1)
-        - einsum('ikab,jkab->ij', td2, u2)
-    )
-    dm.vo += (
-        - 0.25 * einsum('jkbc,ikbc,ja->ai', t2, td2, u1)
-        - 0.25 * einsum('jkbc,jkac,ib->ai', t2, td2, u1)
-        + 0.5 * einsum('jkbc,ijab,kc->ai', t2, td2, u1)
-        - 0.25 * einsum('jkbc,ikbc,ja->ai', td2, t2, u1)
-        - 0.25 * einsum('jkbc,jkac,ib->ai', td2, t2, u1)
-        + 0.5 * einsum('jkbc,ijab,kc->ai', td2, t2, u1)
-    )
-    dm.ov += (
-        - 0.25 * einsum('ijbc,klad,klcd,jb->ia', t2, t2, t2, u1) #quadruples factorization and cancellation
-        + 0.25 * einsum('ijbd,klac,klcd,jb->ia', t2, t2, t2, u1)
-        - 0.25 * einsum('ijad,klbc,klcd,jb->ia', t2, t2, t2, u1)
-        - 0.25 * einsum('ijcd,klab,klcd,jb->ia', t2, t2, t2, u1)
-        - 0.25 * einsum('jkab,ilcd,klcd,jb->ia', t2, t2, t2, u1)
-        - 0.25 * einsum('jkbc,ilad,klcd,jb->ia', t2, t2, t2, u1)
-        + 0.25 * einsum('jkbd,ilac,klcd,jb->ia', t2, t2, t2, u1)
-        + 0.25 * einsum('jkac,ilbd,klcd,jb->ia', t2, t2, t2, u1)
-        - 0.25 * einsum('jkad,ilbc,klcd,jb->ia', t2, t2, t2, u1)
-        - 0.25 * einsum('jkcd,ilab,klcd,jb->ia', t2, t2, t2, u1)
-        + 0.25 * einsum('jlab,ikcd,klcd,jb->ia', t2, t2, t2, u1)
-        + 0.25 * einsum('jlbc,ikad,klcd,jb->ia', t2, t2, t2, u1)
-        - 0.25 * einsum('jlac,ikbd,klcd,jb->ia', t2, t2, t2, u1)
-        + 0.25 * einsum('jlad,ikbc,klcd,jb->ia', t2, t2, t2, u1)
-        + 0.25 * einsum('jlbd,ikac,klcd,jb->ia', t2, t2, t2, u1)
-        - einsum('ijab,jb->ia', td3, u1)
-        - 0.5 * einsum('ijkabc,jkbc->ia', tt2, u2)
-    )
-    return dm
-
-
 def tdm_adc3(mp, amplitude, intermediates):
     dm = tdm_adc2(mp, amplitude, intermediates)
     u1 = amplitude.ph
@@ -259,7 +143,7 @@ def tdm_adc3(mp, amplitude, intermediates):
         + 0.5 * einsum('ijab,jkbc,kc->ai', t2, td2, u1)
     )
     dm.ov += (
-        + 0.25 * einsum('ic,ac->ia', t2u_ov, t2t2_vv) #quadruples factorization and cancellation
+        + 0.25 * einsum('ic,ac->ia', t2u_ov, t2t2_vv)
         + 0.25 * einsum('id,ad->ia', t2u_ov, t2t2_vv)
         - 0.25 * einsum('ibad,bd->ia', t2u_ovvv, t2t2_vv)
         + 0.25 * einsum('ibcd,klab,klcd->ia', t2u_ovvv, t2, t2)

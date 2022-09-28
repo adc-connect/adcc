@@ -128,7 +128,6 @@ class LazyMp:
         p0 = self.mp2_diffdm #= t_{ia}^{(2)}
         td2 = self.td2(b.oovv)
         tt2 = self.tt2(b.ooovvv) 
-        
         denom = - self.df(b.ov)
         amp = (- einsum('jaib,jb->ia', hf.ovov, p0.ov)
             + 0.5 * einsum('jkib,jkab->ia', hf.ooov, td2)
@@ -148,9 +147,6 @@ class LazyMp:
         t2eri_vv = einsum('klbd,klcd->bc', t2, hf.oovv).evaluate()        
         t2eri_oo = einsum('jlcd,klcd->jk', t2, hf.oovv).evaluate()
         t2eri_oovv = einsum('jlbd,klcd->jkbc', t2, hf.oovv).evaluate()
-        
-
-
         denom = direct_sum('ia,jb->ijab',self.df(b.ov),self.df(b.ov))
         amp = (2 * einsum('jc,abic->ijab', p0.ov, hf.vvov).antisymmetrise(0,1)
             + 2 * einsum('kb,kaij->ijab', p0.ov, hf.ovoo).antisymmetrise(2,3)
