@@ -134,9 +134,9 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         e.g. PE, is treated. For details see :ref:`environment`.
 
     properties_level : str, optional
-        Because consistent third order properties are computationally demanding,
-        the properties level can be set manually. If not, consistent n-th order 
-        properties are computed.
+        The keyword to manually specify the ADC-method for the property calculations.
+        If none is given, the same as for the eigenvector calculations is used. The
+        default for ADC(3) are ADC(2) properties.
 
     Other parameters
     ----------------
@@ -216,12 +216,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         raise InputError("ADC(2) and ADC(3) properties are not compatible "
                          "with ADC(0) and ADC(1) eigenvectors (missing "
                          "doubles amplitude)")
-    if properties_level != None:
-        exstates = ExcitedStates(diagres, property_method = properties_level)
-    elif method == 'adc3':
-        exstates = ExcitedStates(diagres, property_method = 'adc2')
-    else:
-        exstates = ExcitedStates(diagres)
+    exstates = ExcitedStates(diagres, property_method = properties_level)
     exstates.kind = kind
     exstates.spin_change = spin_change
 

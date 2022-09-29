@@ -78,7 +78,11 @@ class ElectronicTransition:
         if not isinstance(self.method, AdcMethod):
             self.method = AdcMethod(self.method)
         if property_method is None:
-            property_method = self.method
+            if self.method.level == 3:
+                # Auto-select ADC(2) properties for ADC(3) calc
+                property_method = self.method.at_level(2)
+            else:
+                property_method = self.method
         #    if self.method.level < 3:
         #        property_method = self.method
         #    else:
