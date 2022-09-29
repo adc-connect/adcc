@@ -39,10 +39,38 @@ class HartreeFockProvider : public HartreeFockSolution_i {
   std::string backend() const override { return get_backend(); }
   size_t n_orbs_alpha() const override { return get_n_orbs_alpha(); }
   size_t n_bas() const override { return get_n_bas(); }
+  size_t n_atoms() const override { return get_n_atoms(); }
   real_type conv_tol() const override { return get_conv_tol(); }
   bool restricted() const override { return get_restricted(); }
   size_t spin_multiplicity() const override { return get_spin_multiplicity(); }
   real_type energy_scf() const override { return get_energy_scf(); }
+  void nuclear_masses(scalar_type* buffer, size_t size) const override{ 
+    py::array_t<scalar_type> ret = get_nuclear_masses(); 
+    if (static_cast<ssize_t>(size) != ret.size()) {
+      throw dimension_mismatch("Array size (==" + std::to_string(ret.size()) +
+                               ") does not agree with buffer size (" +
+                               std::to_string(size) + ").");
+    }
+    std::copy(ret.data(), ret.data()+ size, buffer);
+  } 
+  void nuclear_charges(scalar_type* buffer, size_t size) const override{ 
+    py::array_t<scalar_type> ret = get_nuclearcharges(); 
+    if (static_cast<ssize_t>(size) != ret.size()) {
+      throw dimension_mismatch("Array size (==" + std::to_string(ret.size()) +
+                               ") does not agree with buffer size (" +
+                               std::to_string(size) + ").");
+    }
+    std::copy(ret.data(), ret.data()+ size, buffer);
+  } 
+  void coordinates(scalar_type* buffer, size_t size) const override{
+    py::array_t<scalar_type> ret = get_coordinates();
+    if (static_cast<ssize_t>(size) != ret.size()) {
+      throw dimension_mismatch("Array size (==" + std::to_string(ret.size()) +
+                               ") does not agree with buffer size (" +
+                               std::to_string(size) + ").");
+    }
+    std::copy(ret.data(), ret.data()+ size, buffer);
+  }
 
   //
   // Translate C++-like interface to python-like interface
@@ -248,12 +276,16 @@ class HartreeFockProvider : public HartreeFockSolution_i {
   //
   virtual size_t get_n_orbs_alpha() const                                    = 0;
   virtual size_t get_n_bas() const                                           = 0;
+  virtual size_t get_n_atoms() const                                         = 0;
   virtual py::array_t<scalar_type> get_nuclear_multipole(size_t order) const = 0;
   virtual real_type get_conv_tol() const                                     = 0;
   virtual bool get_restricted() const                                        = 0;
   virtual size_t get_spin_multiplicity() const                               = 0;
   virtual real_type get_energy_scf() const                                   = 0;
   virtual std::string get_backend() const                                    = 0;
+  virtual py::array_t<scalar_type> get_nuclearcharges() const		     = 0;
+  virtual py::array_t<scalar_type> get_coordinates() const		     = 0;
+  virtual py::array_t<scalar_type> get_nuclear_masses() const		     = 0;
 
   virtual void fill_occupation_f(py::array out) const                         = 0;
   virtual void fill_orben_f(py::array out) const                              = 0;
@@ -276,9 +308,24 @@ class PyHartreeFockProvider : public HartreeFockProvider {
   size_t get_n_bas() const override {
     PYBIND11_OVERLOAD_PURE(size_t, HartreeFockProvider, get_n_bas, );
   }
+  size_t get_n_atoms() const override {
+    PYBIND11_OVERLOAD_PURE(size_t, HartreeFockProvider, get_n_atoms, );
+  }
   py::array_t<scalar_type> get_nuclear_multipole(size_t order) const override {
     PYBIND11_OVERLOAD_PURE(py::array_t<scalar_type>, HartreeFockProvider,
                            get_nuclear_multipole, order);
+  }
+  py::array_t<scalar_type> get_nuclearcharges() const override{
+    PYBIND11_OVERLOAD_PURE(py::array_t<scalar_type>, HartreeFockProvider,
+		    	   get_nuclearcharges, );
+  }
+  py::array_t<scalar_type> get_nuclear_masses() const override{
+    PYBIND11_OVERLOAD_PURE(py::array_t<scalar_type>, HartreeFockProvider,
+		    	   get_nuclear_masses, );
+  }
+  py::array_t<scalar_type> get_coordinates() const override{
+    PYBIND11_OVERLOAD_PURE(py::array_t<scalar_type>, HartreeFockProvider,
+		    	   get_coordinates, );
   }
   real_type get_conv_tol() const override {
     PYBIND11_OVERLOAD_PURE(real_type, HartreeFockProvider, get_conv_tol, );
@@ -433,10 +480,18 @@ void export_HartreeFockProvider(py::module& m) {
         .def("get_n_bas", &HartreeFockProvider::get_n_bas,
              "Returns the number of *spatial* one-electron basis functions. This value "
              "is abbreviated by `nb` in the documentation.")
+	.def("get_n_atoms", &HartreeFockProvider::get_n_atoms,
+	     "Returns the number of atoms.")
         .def("get_nuclear_multipole", &HartreeFockProvider::get_nuclear_multipole,
              "Returns the nuclear multipole of the requested order. For `0` returns the "
              "total nuclear charge as an array of size 1, for `1` returns the nuclear "
              "dipole moment as an array of size 3.")
+	.def("get_nuclearcharges", &HartreeFockProvider::get_nuclearcharges,
+	     "Returns nuclear charges of SCF reference, array size 3")
+	.def("get_coordinates", &HartreeFockProvider::get_coordinates,
+	     "Returns coordinates of SCF REfernece State in Bohr")
+	.def("get_nuclear_masses", &HartreeFockProvider::get_nuclear_masses,
+	     "Returns the nuclear masses")
         //
         .def("fill_occupation_f", &HartreeFockProvider::fill_orben_f,
              "Fill the passed numpy array of size `(2 * nf, )` with the occupation "

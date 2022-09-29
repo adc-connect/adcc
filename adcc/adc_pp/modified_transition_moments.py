@@ -28,7 +28,7 @@ from adcc.AdcMethod import AdcMethod
 from adcc.functions import einsum, evaluate
 from adcc.Intermediates import Intermediates
 from adcc.AmplitudeVector import AmplitudeVector
-
+import numpy as np
 
 def mtm_adc0(mp, dipop, intermediates):
     return AmplitudeVector(ph=dipop.ov)
@@ -118,12 +118,20 @@ def modified_transition_moments(method, ground_state, dipole_operator=None,
     elif not isinstance(dipole_operator, list):
         unpack = True
         dipole_operator = [dipole_operator]
+    dipole_op = np.array(dipole_operator) #test dimensionen of operator
     if method.name not in DISPATCH:
         raise NotImplementedError("modified_transition_moments is not "
                                   f"implemented for {method.name}.")
-
-    ret = [DISPATCH[method.name](ground_state, dipop, intermediates)
-           for dipop in dipole_operator]
+    if dipole_op.ndim == 1:
+        ret = [DISPATCH[method.name](ground_state, dipop, intermediates)
+            for dipop in dipole_operator]
+    elif dipole_op.ndim == 2: #allow quadrupol like operators
+        ret = [0, 0, 0] #don't know how to this more cleanly
+        for i in range(3):
+            ret[i] = [DISPATCH[method.name](ground_state, dipop, intermediates)
+            for dipop in dipole_operator[i]]
+    else: 
+        raise NotImplementedError(f"modified_transition_moments are not implemented for {dipole_op.ndim}-dimensional operators. Only 1 and 2-dimensional operators are available.")
     if unpack:
         assert len(ret) == 1
         ret = ret[0]

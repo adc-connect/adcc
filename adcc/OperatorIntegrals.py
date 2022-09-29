@@ -78,7 +78,6 @@ def replicate_ao_block(mospaces, tensor, is_symmetric=True):
     ]), 1e-14)
     return result
 
-
 class OperatorIntegrals:
     def __init__(self, provider, mospaces, coefficients, conv_tol):
         self.__provider_ao = provider
@@ -102,6 +101,11 @@ class OperatorIntegrals:
             "electric_dipole",
             "magnetic_dipole",
             "nabla",
+            "r_quadr",
+            "r_r",
+            "diag_mag",
+            'electric_quadrupole',
+            "electric_quadrupole_traceless",
             "pe_induction_elec",
             "pcm_potential_elec"
         )
@@ -125,6 +129,24 @@ class OperatorIntegrals:
             dipoles.append(dip_ff)
         return dipoles
 
+
+    def import_scalar(self, integral, is_symmetric=True):
+        if integral not in self.available:
+            raise NotImplementedError(f"{integral.replace('_', ' ')} operator "
+                                      "not implemented "
+                                      f"in {self.provider_ao.backend} backend.")
+
+        scalar = []
+        scalar_backend = getattr(self.provider_ao, integral)
+        scalar_bb = replicate_ao_block(self.mospaces, scalar_backend,
+                                    is_symmetric=is_symmetric)
+        scalar_ff = OneParticleOperator(self.mospaces, is_symmetric=is_symmetric)
+        transform_operator_ao2mo(scalar_bb, scalar_ff, self.__coefficients,
+                                    self.__conv_tol)
+        scalar.append(scalar_ff)
+        return scalar
+
+
     @property
     @timed_member_call("_import_timer")
     def electric_dipole(self):
@@ -147,6 +169,55 @@ class OperatorIntegrals:
         in the molecular orbital basis.
         """
         return self.import_dipole_like_operator("nabla", is_symmetric=False)
+
+    def import_quadrupole_like_operator(self, integral, is_symmetric=True):
+        if integral not in self.available:
+            raise NotImplementedError(f"{integral.replace('_', ' ')} operator "
+                                      "not implemented "
+                                      f"in {self.provider_ao.backend} backend.")
+        op_integrals = getattr(self.provider_ao, integral)
+        quad = [] 
+        quadrupoles = []
+        for i, component in enumerate(["xx", "xy", "xz" , 'yx', 'yy', 'yz', 'zx', 'zy', 'zz']):
+            quad_backend = getattr(self.provider_ao, integral)[i]
+            quad_bb = replicate_ao_block(self.mospaces, quad_backend,
+                                    is_symmetric=is_symmetric)
+            quad_ff = OneParticleOperator(self.mospaces, is_symmetric=is_symmetric)
+            transform_operator_ao2mo(quad_bb, quad_ff, self.__coefficients, self.__conv_tol)
+            quad.append(quad_ff)
+        quadrupoles.append(quad[:3])
+        quadrupoles.append(quad[3:6])
+        quadrupoles.append(quad[6:])
+        return quadrupoles
+
+    @property
+    @timed_member_call("_import_timer")
+    def r_r(self):
+        return self.import_quadrupole_like_operator("r_r",
+                                                is_symmetric=True)
+
+    @property
+    @timed_member_call("_import_timer")
+    def electric_quadrupole_traceless(self):
+        return self.import_quadrupole_like_operator("electric_quadrupole_traceless",
+                                                is_symmetric=True)
+
+    @property
+    @timed_member_call("_import_timer")
+    def electric_quadrupole(self):
+        return self.import_quadrupole_like_operator("electric_quadrupole",
+                                                is_symmetric=True)
+
+    @property
+    @timed_member_call("_import_timer")
+    def diag_mag(self):
+        return self.import_quadrupole_like_operator("diag_mag",
+                                                is_symmetric=True)
+
+    @property
+    @timed_member_call("_import_timer")
+    def r_quadr(self):
+        return self.import_scalar("r_quadr", is_symmetric=True)
 
     def __import_density_dependent_operator(self, ao_callback, is_symmetric=True):
         """Returns a function that imports a density-dependent operator.
