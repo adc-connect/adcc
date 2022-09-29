@@ -40,8 +40,7 @@ from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
 
 __all__ = ["run_adc"]
-
-
+blabla
 def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
             eigensolver=None, guesses=None, n_guesses=None,
             n_guesses_doubles=None, output=sys.stdout, core_orbitals=None,
