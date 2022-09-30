@@ -62,6 +62,9 @@ class TestOscillatorStrengths(unittest.TestCase, Runners):
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
 
+        if method == 'adc3':
+            state._property_method = state.method.at_level(3)
+        
         res_oscs = state.oscillator_strength
         ref_tdms = refdata[method][kind]["transition_dipole_moments"]
         refevals = refdata[method][kind]["eigenvalues"]
@@ -70,7 +73,7 @@ class TestOscillatorStrengths(unittest.TestCase, Runners):
             assert state.excitation_energy[i] == refevals[i]
             ref_tdm_norm = np.sum(ref_tdms[i] * ref_tdms[i])
             assert res_oscs[i] == approx(2. / 3. * ref_tdm_norm * refevals[i])
-
+        
 
 class TestStateDipoleMoments(unittest.TestCase, Runners):
     def base_test(self, system, method, kind):
