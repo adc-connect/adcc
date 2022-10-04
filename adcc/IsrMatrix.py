@@ -2,7 +2,7 @@
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2018 by the adcc authors
+## Copyright (C) 2022 by the adcc authors
 ##
 ## This file is part of adcc.
 ##
@@ -27,6 +27,7 @@ from .LazyMp import LazyMp
 from .adc_pp import bmatrix as ppbmatrix
 from .timings import Timer, timed_member_call
 from .AdcMethod import AdcMethod
+from .OneParticleOperator import OneParticleOperator
 from .AmplitudeVector import AmplitudeVector
 
 
@@ -41,7 +42,7 @@ class IsrMatrix(AdcMatrixlike):
         "adc3":  dict(ph_ph=3, ph_pphh=2,    pphh_ph=2,    pphh_pphh=1),     # noqa: E501
     }
 
-    def __init__(self, method, hf_or_mp, dips, block_orders=None):
+    def __init__(self, method, hf_or_mp, operators, block_orders=None):
         """
         Initialise an ISR matrix of a given one-particle operator
         for the provided ADC method.
@@ -52,8 +53,9 @@ class IsrMatrix(AdcMatrixlike):
             Method to use.
         hf_or_mp : adcc.ReferenceState or adcc.LazyMp
             HF reference or MP ground state.
-        dips : adcc.OneParticleOperator or list of adcc.OneParticleOperator objects
-            One-particle matrix elements associated with the dipole operator.
+        operators : adcc.OneParticleOperator or list of adcc.OneParticleOperator
+                    objects
+            One-particle matrix elements associated with a one-particle operator.
         block_orders : optional
             The order of perturbation theory to employ for each matrix block.
             If not set, defaults according to the selected ADC method are chosen.
@@ -69,10 +71,14 @@ class IsrMatrix(AdcMatrixlike):
         if not isinstance(method, AdcMethod):
             method = AdcMethod(method)
 
-        if not isinstance(dips, list):
-            self.dips = [dips]
+        if not isinstance(operators, list):
+            self.operators = [operators]
         else:
-            self.dips = dips
+            self.operators = operators
+        if not all(isinstance(op, OneParticleOperator) for op in self.operators):
+            raise TypeError("operators is not a valid object. It needs to be "
+                            "either an OneParticleOperator or a list of "
+                            "OneParticleOperator objects.")
 
         self.timer = Timer()
         self.method = method
@@ -109,10 +115,11 @@ class IsrMatrix(AdcMatrixlike):
             if self.is_core_valence_separated:
                 variant = "cvs"
             blocks = [{
-                block: ppbmatrix.block(self.ground_state, dip, block.split("_"),
-                                       order=order, variant=variant)
+                block: ppbmatrix.block(self.ground_state, operator,
+                                       block.split("_"), order=order,
+                                       variant=variant)
                 for block, order in self.block_orders.items() if order is not None
-            } for dip in self.dips]
+            } for operator in self.operators]
             # TODO Rename to self.block in 0.16.0
             self.blocks_ph = [{
                 b: bl[b].apply for b in bl
@@ -123,6 +130,9 @@ class IsrMatrix(AdcMatrixlike):
         """
         Compute the matrix-vector product of the ISR one-particle
         operator and return the result.
+
+        If a list of OneParticleOperator objects was passed to the class
+        instantiation operator, a list of AmplitudeVector objects is returned.
         """
         ret = [
             sum(block(v) for block in bl_ph.values())
@@ -135,10 +145,10 @@ class IsrMatrix(AdcMatrixlike):
 
     def rmatvec(self, v):
         # Hermitian operators
-        if all(dip.is_symmetric for dip in self.dips):
+        if all(op.is_symmetric for op in self.operators):
             return self.matvec(v)
         else:
-            diffv = [dip.ov + dip.vo.transpose((1, 0)) for dip in self.dips]
+            diffv = [op.ov + op.vo.transpose((1, 0)) for op in self.operators]
             # anti-Hermitian operators
             if all(dv.dot(dv) < 1e-12 for dv in diffv):
                 return [
@@ -150,6 +160,14 @@ class IsrMatrix(AdcMatrixlike):
                 return NotImplemented
 
     def __matmul__(self, other):
+        """
+        If the matrix-vector product is to be calculated with multiple vectors,
+        a list of AmplitudeVector objects is returned.
+
+        Consequently, applying the ISR matrix with multiple operators to multiple
+        vectors results in an N_vectors x N_operators 2D list of AmplitudeVector
+        objects.
+        """
         if isinstance(other, AmplitudeVector):
             return self.matvec(other)
         if isinstance(other, list):
