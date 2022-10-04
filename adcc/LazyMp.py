@@ -303,7 +303,6 @@ class LazyMp:
                     )
                     qed_mp2_correction = qed_mp2_correction_1 +\
                         qed_mp2_correction_0 +\
-                        qed_mp1_correction +\
                         qed_mp1_correction
         elif level == 2 and is_cvs:
             terms = [(1.0, hf.oovv, self.t2oo),
