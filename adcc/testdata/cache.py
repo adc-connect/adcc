@@ -49,6 +49,10 @@ def make_mock_adc_state(refstate, matmethod, kind, reference):
     state.reference_state = refstate
     state.kind = kind if kind != "state" else "any"
     state.eigenvalues = reference[kind]["eigenvalues"][:n_full]
+    if state.method == state.method.at_level(3):
+        prop_method = state.method.at_level(3)
+    else:
+        prop_method = None
 
     spin_change = 0
     if refstate.restricted and kind == "singlet":
@@ -73,7 +77,7 @@ def make_mock_adc_state(refstate, matmethod, kind, reference):
         evec.ph.set_from_ndarray(vec_singles[i])
         if has_doubles:
             evec.pphh.set_from_ndarray(vec_doubles[i], 1e-14)
-    return ExcitedStates(state)
+    return ExcitedStates(state, property_method = prop_method)
 
 
 def fullfile(fn):

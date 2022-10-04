@@ -33,7 +33,7 @@ import h5py
 
 sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
 
-import adcctestdata as atd  # noqa: E402
+#import adcctestdata as atd  # noqa: E402
 
 
 def dump_all(case, kwargs, kwargs_overwrite={}, spec="gen", generator="atd"):
@@ -48,20 +48,25 @@ def dump_method(case, method, kwargs, spec, generator="atd"):
     if not os.path.isfile(h5file):
         raise ValueError("HfData not found: " + h5file)
 
-    if generator == "atd":
-        dumpfunction = atd.dump_reference
-        hfdata = atd.HdfProvider(h5file)
-    else:
-        dumpfunction = dump_reference_adcc
-        hfdata = adcc.DataHfProvider(h5py.File(h5file, "r"))
+    #if generator == "atd":
+    #    dumpfunction = atd.dump_reference
+    #    hfdata = atd.HdfProvider(h5file)
+    #else:
+    #    dumpfunction = dump_reference_adcc
+    #    hfdata = adcc.DataHfProvider(h5py.File(h5file, "r"))
+    dumpfunction = dump_reference_adcc
+    hfdata = adcc.DataHfProvider(h5py.File(h5file, "r"))
+
+
 
     # Get dictionary of parameters for the reference cases.
     refcases = ast.literal_eval(hfdata.data["reference_cases"][()])
     kwargs = dict(kwargs)
-    if generator == "atd":
-        kwargs.update(expand_spaceargs(hfdata, **refcases[spec]))
-    else:
-        kwargs.update(refcases[spec])
+    #if generator == "atd":
+    #    kwargs.update(expand_spaceargs(hfdata, **refcases[spec]))
+    #else:
+    #    kwargs.update(refcases[spec])
+    kwargs.update(refcases[spec])
 
     fullmethod = method
     if "cvs" in spec:
