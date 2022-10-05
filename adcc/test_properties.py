@@ -22,7 +22,7 @@
 ## ---------------------------------------------------------------------
 import unittest
 import numpy as np
-#import adcc
+import adcc
 
 from numpy.testing import assert_allclose
 
@@ -42,8 +42,8 @@ class TestTransitionDipoleMoments(unittest.TestCase, Runners):
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
         
-        if method == 'adc3':
-            state._property_method = state.method.at_level(3)
+        #if method == 'adc3':
+        #    state._property_method = state.method.at_level(3)
 
 
         res_tdms = state.transition_dipole_moment
@@ -66,13 +66,28 @@ class TestOscillatorStrengths(unittest.TestCase, Runners):
 
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
-
-        if method == 'adc3':
+        
+        #if method == 'adc3':            
         #    n_ref = len(state.excitation_vector)
         #    refstate = adcc.ReferenceState(cache.hfdata[system])
-        #    state = adcc.adc3(refstate, n_singlets = n_ref)
-            state._property_method = state.method.at_level(3)
-        
+        #    if kind == 'singlet':
+        #        state2 = adcc.adc3(refstate, n_singlets = n_ref, properties_level='adc3', conv_tol = 1e-8)
+        #    elif kind == 'triplet':
+        #        state2 = adcc.adc3(refstate, n_triplets = n_ref, properties_level='adc3', conv_tol = 1e-8)
+        #    elif kind == 'state':
+        #        state2 = adcc.adc3(refstate, n_states = n_ref, properties_level='adc3', conv_tol = 1e-8)
+        #    elif kind == 'spin_flip':
+        #        state2 = adcc.adc3(refstate, n_spin_flip = n_ref, properties_level='adc3', conv_tol = 1e-8)
+
+        #    res_oscs = state2.oscillator_strength
+        #    ref_tdms = refdata[method][kind]["transition_dipole_moments"]
+        #    refevals = refdata[method][kind]["eigenvalues"]
+        #    n_ref = len(state2.excitation_vector)
+        #    for i in range(n_ref):
+        #        assert state2.excitation_energy[i] == refevals[i]
+        #        ref_tdm_norm = np.sum(ref_tdms[i] * ref_tdms[i])
+        #        assert res_oscs[i] == approx(2. / 3. * ref_tdm_norm * refevals[i])
+        #else:
         res_oscs = state.oscillator_strength
         ref_tdms = refdata[method][kind]["transition_dipole_moments"]
         refevals = refdata[method][kind]["eigenvalues"]
@@ -91,8 +106,8 @@ class TestStateDipoleMoments(unittest.TestCase, Runners):
         state = cache.adc_states[system][method][kind]
 
 
-        if method == 'adc3':
-            state._property_method = state.method.at_level(3)
+        #if method == 'adc3':
+        #    state._property_method = state.method.at_level(3)
 
 
         res_dms = state.state_dipole_moment
@@ -111,8 +126,8 @@ class TestState2StateTransitionDipoleMoments(unittest.TestCase, Runners):
         state = cache.adc_states[system][method][kind]
         
 
-        if method == 'adc3':
-            state._property_method = state.method.at_level(3)
+        #if method == 'adc3':
+        #    state._property_method = state.method.at_level(3)
 
 
         state_to_state = refdata[method][kind]["state_to_state"]
