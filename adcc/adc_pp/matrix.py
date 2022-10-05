@@ -489,7 +489,9 @@ def adc3_m11(hf, mp, intermediates):
         # + 0.5 * einsum("icjd,klac,klbd->iajb", hf.ovov, mp.t2oo, mp.t2oo)
         + 0.5 * einsum("icjd,acbd->iajb", hf.ovov,
                        einsum("klac,klbd->acbd", mp.t2oo, mp.t2oo))
-        + 0.5 * einsum("ikcd,jlcd,kalb->iajb", mp.t2oo, mp.t2oo, hf.ovov)
+        # + 0.5 * einsum("ikcd,jlcd,kalb->iajb", mp.t2oo, mp.t2oo, hf.ovov)
+        + 0.5 * einsum("ikjl,kalb->iajb",
+                       einsum("ikcd,jlcd->ikjl", mp.t2oo, mp.t2oo), hf.ovov)
         - einsum("iljk,kalb->iajb", hf.oooo, t2sq)
         - einsum("idjc,acbd->iajb", t2sq, hf.vvvv)
     )
