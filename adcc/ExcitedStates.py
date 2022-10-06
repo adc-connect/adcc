@@ -259,18 +259,9 @@ class ExcitedStates(ElectronicTransition):
             for ddm in self.state_diffdm
         ])
 
-    @cached_property
-    @mark_excitation_property()
-    @timed_member_call(timer="_property_timer")
-    def s2s_transition_dm(self):
-        "List of state2state dipole moments"""
-        return [adc_pp.state2state_transition_dm(self.property_method,
-                self.ground_state, evec1, evec1, self.matrix.intermediates)
-                for evec1 in self.excitation_vector]
-
     def describe(self, oscillator_strengths=True, rotatory_strengths=False,
                  state_dipole_moments=False, transition_dipole_moments=False,
-                 block_norms=True, s2s_transition_dipole_moments=False):
+                 block_norms=True):
         """
         Return a string providing a human-readable description of the class
 

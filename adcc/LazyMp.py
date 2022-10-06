@@ -95,7 +95,7 @@ class LazyMp:
 
     @cached_member_function
     def tt2(self, space):
-        """Second prder triple amplitudes"""
+        """Second order triples amplitudes"""
         hf = self.reference_state
         t2 = self.t2(b.oovv).evaluate()
         denom = - direct_sum('ia,jkbc->ijkabc', self.df(b.ov),
@@ -125,7 +125,7 @@ class LazyMp:
 
     @cached_member_function
     def ts3(self, space):
-        """Third order single amplitudes"""
+        """Third order singles amplitudes"""
         hf = self.reference_state
         p0 = self.mp2_diffdm
         td2 = self.td2(b.oovv)
@@ -141,7 +141,7 @@ class LazyMp:
 
     @cached_member_function
     def td3(self, space):
-        """Third order double amplitudes"""
+        """Third order doubles amplitudes"""
         hf = self.reference_state
         p0 = self.mp2_diffdm
         t2 = self.t2(b.oovv).evaluate()

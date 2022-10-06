@@ -55,8 +55,6 @@ def dump_method(case, method, kwargs, spec, generator="atd"):
         dumpfunction = dump_reference_adcc
         hfdata = adcc.DataHfProvider(h5py.File(h5file, "r"))
 
-
-
     # Get dictionary of parameters for the reference cases.
     refcases = ast.literal_eval(hfdata.data["reference_cases"][()])
     kwargs = dict(kwargs)

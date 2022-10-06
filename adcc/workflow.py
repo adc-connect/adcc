@@ -134,9 +134,10 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         e.g. PE, is treated. For details see :ref:`environment`.
 
     properties_level : str, optional
-        The keyword to manually specify the ADC-method for the property calculations.
-        If none is given, the same as for the eigenvector calculations is used. The
-        default for ADC(3) are ADC(2) properties.
+        The keyword to manually specify the ADC-method for the property
+        calculations. If none is given, the same as for the eigenvector
+        calculations is used. The default for ADC(3) are ADC(2)
+        properties.
 
     Other parameters
     ----------------
@@ -211,12 +212,12 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         matrix, n_states, kind, guesses=guesses, n_guesses=n_guesses,
         n_guesses_doubles=n_guesses_doubles, conv_tol=conv_tol, output=output,
         eigensolver=eigensolver, **solverargs)
-    
+
     if method in ['adc0', 'adc1'] and properties_level in ['adc2', 'adc3']:
         raise InputError("ADC(2) and ADC(3) properties are not compatible "
                          "with ADC(0) and ADC(1) eigenvectors (missing "
                          "doubles amplitude)")
-    exstates = ExcitedStates(diagres, property_method = properties_level)
+    exstates = ExcitedStates(diagres, property_method=properties_level)
     exstates.kind = kind
     exstates.spin_change = spin_change
 
