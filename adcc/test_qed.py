@@ -53,6 +53,7 @@ class qed_test(unittest.TestCase):
         self.refstate = adcc.ReferenceState(cache.hfdata[case])
         self.refstate.coupling = [0.0, 0.0, 0.05]
         self.refstate.frequency = [0.0, 0.0, 0.5]
+        self.refstate.freq_with_loss = self.refstate.frequency
         self.refstate.qed_hf = True
         self.refstate.qed = True
 
