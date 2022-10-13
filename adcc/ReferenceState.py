@@ -142,7 +142,8 @@ class ReferenceState(libadcc.ReferenceState):
         """
         self.qed = qed
         self.coupling = coupl
-        self.frequency = freq
+        self.frequency = np.real(freq)
+        self.freq_with_loss = freq
         self.qed_hf = qed_hf
         self.approx = qed_approx
         self.full_diagonalization = qed_full_diag

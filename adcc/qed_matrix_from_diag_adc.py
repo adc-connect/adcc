@@ -31,6 +31,7 @@ class qed_matrix_from_diag_adc:
         self.h1 = exstates.qed_second_order_ph_ph_couplings
         self.coupl = refstate.coupling[2]
         self.freq = refstate.frequency[2]
+        self.full_freq = refstate.freq_with_loss[2]
         self.n_adc = len(exstates.excitation_energy)
         self.exc_en = exstates.excitation_energy
 
@@ -46,6 +47,9 @@ class qed_matrix_from_diag_adc:
         s2s_block = - np.sqrt(self.freq / 2) * self.coupl *\
             np.sqrt(2 * self.freq) * self.s2s["qed_adc1_off_diag"]
         tdm_block = - np.sqrt(self.freq / 2) * tdm_block
+
+        if np.iscomplex(self.full_freq):
+            self.freq = self.full_freq
 
         elec_block = np.diag(self.exc_en)
         phot_block = np.diag(self.exc_en + self.freq)
@@ -63,7 +67,10 @@ class qed_matrix_from_diag_adc:
                             matrix_middle.reshape((len(matrix_middle), 1)),
                             matrix_lower))
 
-        return sp.eigh(matrix)
+        if np.iscomplex(self.full_freq):
+            return sp.eig(matrix)
+        else:
+            return sp.eigh(matrix)
 
     def second_order_coupling(self):
 
@@ -111,6 +118,9 @@ class qed_matrix_from_diag_adc:
 
         # build the blocks of the matrix
 
+        if np.iscomplex(self.full_freq):
+            self.freq = self.full_freq
+
         single_excitation_states = np.ones(self.n_adc)
 
         elec_block = np.diag(self.exc_en) + qed_adc2_diag_block
@@ -150,4 +160,7 @@ class qed_matrix_from_diag_adc:
                             matrix_3, matrix_4.reshape((len(matrix_4), 1)),
                             matrix_5))
 
-        return sp.eigh(matrix)
+        if np.iscomplex(self.full_freq):
+            return sp.eig(matrix)
+        else:
+            return sp.eigh(matrix)
