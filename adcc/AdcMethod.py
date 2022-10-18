@@ -24,10 +24,12 @@
 
 def get_valid_methods():
     valid_prefixes = ["cvs"]
-    valid_bases = ["adc0", "adc1", "adc2", "adc2x", "adc3", "ip_adc2"]
+    valid_bases = ["adc0", "adc1", "adc2", "adc2x", "adc3",
+                   "ip_adc0", "ip_adc1", "ip_adc2"]
 
+    # CVS-IP calculations not yet implemented
     ret = valid_bases + [p + "-" + m for p in valid_prefixes
-                         for m in valid_bases]
+                         for m in valid_bases[0:4]] 
     return ret
 
 

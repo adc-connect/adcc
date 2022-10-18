@@ -23,10 +23,13 @@
 import warnings
 import numpy as np
 
+from math import sqrt
+
 from adcc import dot
 from scipy import constants
 
 from . import adc_pp
+from . import adc_ip
 from .misc import cached_property, requires_module
 from .timings import timed_member_call
 from .Excitation import Excitation, mark_excitation_property
@@ -119,6 +122,10 @@ class FormatExcitationVector:
             nblk = 2
         elif self.matrix.axis_blocks == ["ph", "pphh"]:
             nblk = 4
+        elif self.matrix.axis_blocks == ["h"]:
+            nblk = 1
+        elif self.matrix.axis_blocks == ["h", "phh"]:
+            nblk = 3
         else:
             raise NotImplementedError("Unknown ADC matrix structure")
         width_indices = nblk * (self.index_format.max_n_characters + 1) + 2
@@ -128,7 +135,7 @@ class FormatExcitationVector:
 
     def format(self, vector):
         idxgap = self.index_format.max_n_characters * " "
-        # TODO This assumes a PP ADC matrix
+        # TODO This assumes a PP or IP ADC matrix
         if self.matrix.axis_blocks == ["ph"]:
             formats = {"ov": "{0} -> {1}  {2}->{3}", }
         elif self.matrix.axis_blocks == ["ph", "pphh"]:
@@ -136,6 +143,12 @@ class FormatExcitationVector:
                 "ov":   "{0} " + idxgap + " -> {1} " + idxgap + "  {2} ->{3} ",
                 "oovv": "{0} {1} -> {2} {3}  {4}{5}->{6}{7}",
             }
+        elif self.matrix.axis_blocks == ["h"]:
+            formats = {"o": "{0}  {1}", }
+        elif self.matrix.axis_blocks == ["h", "phh"]:
+            formats = {
+                "o":   "{0} " + 2 * idxgap  + idxgap[:-3] + "  {1}" + 4 * " ",
+                "oov": "{0} {1} -> {2}  {3}{4}->{5}"}
         else:
             raise NotImplementedError("Unknown ADC matrix structure")
 
@@ -229,11 +242,30 @@ class ExcitedStates(ElectronicTransition):
     @cached_property
     @mark_excitation_property(transform_to_ao=True)
     @timed_member_call(timer="_property_timer")
+    def pole_strengths(self):
+        """List of pole_strengths of all computed states"""
+        return [adc_ip.pole_strength(self.property_method,
+                                                self.ground_state, evec,
+                                                self.matrix.intermediates)
+                for evec in self.excitation_vector]
+
+    @cached_property
+    @mark_excitation_property(transform_to_ao=True)
+    @timed_member_call(timer="_property_timer")
     def state_diffdm(self):
         """List of difference density matrices of all computed states"""
-        return [adc_pp.state_diffdm(self.property_method, self.ground_state,
-                                    evec, self.matrix.intermediates)
-                for evec in self.excitation_vector]
+        if "ip" in self.method.name:
+            # IP-ADC
+            return [adc_ip.state_diffdm(self.property_method, 
+                                        self.ground_state, evec,
+                                        self.matrix.intermediates)
+                    for evec in self.excitation_vector]
+        else:
+            # PP-ADC
+            return [adc_pp.state_diffdm(self.property_method,
+                                        self.ground_state, evec, 
+                                        self.matrix.intermediates)
+                    for evec in self.excitation_vector]
 
     @property
     @mark_excitation_property(transform_to_ao=True)
@@ -277,7 +309,7 @@ class ExcitedStates(ElectronicTransition):
             Show state dipole moments, by default ``False``.
 
         transition_dipole_moments : bool, optional
-            Show state dipole moments, by default ``False``.
+            Show transition dipole moments, by default ``False``.
 
         block_norms : bool, optional
             Show the norms of the (1p1h, 2p2h, ...) blocks of the excited states,
@@ -301,6 +333,12 @@ class ExcitedStates(ElectronicTransition):
             opt["tdmx"] = lambda i, vec: self.transition_dipole_moment[i][0]
             opt["tdmy"] = lambda i, vec: self.transition_dipole_moment[i][1]
             opt["tdmz"] = lambda i, vec: self.transition_dipole_moment[i][2]
+        if "ip" in self.method.name:
+            # IP-ADC
+            oscillator_strengths = False
+            opt_body += "{pole:8.4f} "
+            opt_thead += " pole str "
+            opt["pole"] = lambda i, vec: self.pole_strengths[i]
         if has_dipole and oscillator_strengths:
             opt_body += "{osc:8.4f} "
             opt_thead += " osc str "
@@ -309,20 +347,31 @@ class ExcitedStates(ElectronicTransition):
             opt_body += "{rot:8.4f} "
             opt_thead += " rot str "
             opt["rot"] = lambda i, vec: self.rotatory_strength[i]
-        if "ph" in self.matrix.axis_blocks and block_norms:
-            opt_body += "{v1:9.4g} "
+        if (set(["h", "p", "ph"]) & set(self.matrix.axis_blocks) 
+            and block_norms):
+            opt_body += "{v1:9.4f} "
             opt_thead += "   |v1|^2 "
-            opt["v1"] = lambda i, vec: dot(vec.ph, vec.ph)
-        if "pphh" in self.matrix.axis_blocks and block_norms:
-            opt_body += "{v2:9.4g} "
+            opt["v1"] = lambda i, vec: dot(vec.get(sorted(vec.keys())[0]),
+                                           vec.get(sorted(vec.keys())[0]))
+        if (set(["phh", "pph", "pphh"]) & set(self.matrix.axis_blocks) 
+            and block_norms):
+            opt_body += "{v2:9.4f} "
             opt_thead += "   |v2|^2 "
-            opt["v2"] = lambda i, vec: dot(vec.pphh, vec.pphh)
+            opt["v2"] = lambda i, vec: dot(vec.get(sorted(vec.keys())[1]),
+                                           vec.get(sorted(vec.keys())[1]))
         if has_dipole and state_dipole_moments:
             opt_body += " {dmx:8.4f} {dmy:8.4f} {dmz:8.4f}"
             opt_thead += "     state dipole moment   "
             opt["dmx"] = lambda i, vec: self.state_dipole_moment[i][0]
             opt["dmy"] = lambda i, vec: self.state_dipole_moment[i][1]
             opt["dmz"] = lambda i, vec: self.state_dipole_moment[i][2]
+            opt_body += " {dmtot:8.4f}"
+            opt_thead += " total dm (D)"
+            opt["dmtot"] = lambda i, vec: (sqrt(
+                                          +self.state_dipole_moment[i][0] ** 2
+                                          +self.state_dipole_moment[i][1] ** 2
+                                          +self.state_dipole_moment[i][2] ** 2)
+                                          * 2.54174695) # au2debye conversion
 
         # Heading of the table
         kind = ""
@@ -371,8 +420,9 @@ class ExcitedStates(ElectronicTransition):
             fields = {}
             for k, compute in opt.items():
                 fields[k] = compute(i, vec)
-            text += body.format(i=i, ene=self.excitation_energy[i],
+            tmp = body.format(i=i, ene=self.excitation_energy[i],
                                 ev=self.excitation_energy[i] * eV, **fields)
+            text += tmp[:-3] + (len(separator) - len(tmp) + 1) * " " + tmp[-3:]
         text += separator + "\n"
         if len(self._excitation_energy_corrections):
             head_corr = "|  Excitation energy includes these corrections:"
@@ -510,17 +560,28 @@ class ExcitedStates(ElectronicTransition):
         }
 
         if properties:
-            qcvars.update({
-                # Transition properties
-                f"{name} TRANSITION DIPOLES (LEN)": self.transition_dipole_moment,
-                f"{name} TRANSITION DIPOLES (VEL)": self.transition_dipole_moment_velocity,  # noqa: E501
-                f"{name} OSCILLATOR STRENGTHS (LEN)": self.oscillator_strength,
-                f"{name} OSCILLATOR STRENGTHS (VEL)": self.oscillator_strength_velocity,  # noqa: E501
-                f"{name} ROTATIONAL STRENGTHS (VEL)": self.rotatory_strength,
-                #
-                # State properties
-                f"{name} STATE DIPOLES": self.state_dipole_moment
-            })
+            if "ip" in self.method.name:
+                # IP-ADC
+                qcvars.update({
+                    # Transition properties
+                    f"{name} POLE STRENGTHS (LEN)": self.pole_strengths,
+                    #
+                    # State properties
+                    f"{name} STATE DIPOLES": self.state_dipole_moment
+                })
+            else:
+                # PP-ADC
+                qcvars.update({
+                    # Transition properties
+                    f"{name} TRANSITION DIPOLES (LEN)": self.transition_dipole_moment,
+                    f"{name} TRANSITION DIPOLES (VEL)": self.transition_dipole_moment_velocity,  # noqa: E501
+                    f"{name} OSCILLATOR STRENGTHS (LEN)": self.oscillator_strength,
+                    f"{name} OSCILLATOR STRENGTHS (VEL)": self.oscillator_strength_velocity,  # noqa: E501
+                    f"{name} ROTATIONAL STRENGTHS (VEL)": self.rotatory_strength,
+                    #
+                    # State properties
+                    f"{name} STATE DIPOLES": self.state_dipole_moment
+                })
 
         if recurse:
             mpvars = self.ground_state.to_qcvars(properties, recurse=True,

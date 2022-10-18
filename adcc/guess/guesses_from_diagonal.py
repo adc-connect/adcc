@@ -31,8 +31,9 @@ from ..AdcMatrix import AdcMatrixlike
 from .guess_zero import guess_zero
 
 
-def guesses_from_diagonal(matrix, n_guesses, block="ph", ion_type=None, 
-                          spin_change=0, spin_block_symmetrisation="none",
+def guesses_from_diagonal(matrix, n_guesses, block="ph", kind=None,
+                          is_alpha=None, spin_change=0, 
+                          spin_block_symmetrisation="none",
                           degeneracy_tolerance=1e-14, max_diagonal_value=1000):
     """
     Obtain guesses by inspecting a block of the diagonal of the passed ADC
@@ -45,7 +46,8 @@ def guesses_from_diagonal(matrix, n_guesses, block="ph", ion_type=None,
                  vectors are returned if this many could not be found.
     block        Diagonal block to use for obtaining the guesses
                  (typically "ph" or "pphh").
-    ion_type     For IP-ADC, whether alpha or beta ionization is computed.
+    is_alpha     Is the detached/attached electron alpha spin for the 
+                 respective IP-/EA-ADC calculation.
     spin_change  The spin change to enforce in an excitation.
                  Typical values are 0 (singlet/triplet/any) and -1 (spin-flip).
     spin_block_symmetrisation
@@ -84,14 +86,15 @@ def guesses_from_diagonal(matrix, n_guesses, block="ph", ion_type=None,
     if n_guesses == 0:
         return []
 
-    if block in ["h", "ph"]:
+    if block in ["h", "p", "ph"]:
         guessfunction = guesses_from_diagonal_singles
-    elif block in ["phh", "pphh"]:
+    elif block in ["phh", "pph", "pphh"]:
         guessfunction = guesses_from_diagonal_doubles
     else:
-        raise ValueError(f"Don't know how to generate guesses for block {block}")
+        raise ValueError("Don't know how to generate guesses for block "
+                         f"{block}")
 
-    return guessfunction(matrix, n_guesses, block, ion_type, spin_change,
+    return guessfunction(matrix, n_guesses, block, kind, is_alpha, spin_change,
                          spin_block_symmetrisation, degeneracy_tolerance,
                          max_diagonal_value)
 
@@ -198,8 +201,8 @@ def find_smallest_matching_elements(predicate, tensor, motrans, n_elements,
         return res
 
 
-def guesses_from_diagonal_singles(matrix, n_guesses, block="ph", ion_type=None,
-                                  spin_change=0,
+def guesses_from_diagonal_singles(matrix, n_guesses, block="ph", kind=None,
+                                  is_alpha=None, spin_change=0,
                                   spin_block_symmetrisation="none",
                                   degeneracy_tolerance=1e-14,
                                   max_diagonal_value=1000):
@@ -208,7 +211,7 @@ def guesses_from_diagonal_singles(matrix, n_guesses, block="ph", ion_type=None,
         return []
 
     # Create a result vector of zero vectors with appropriate symmetry setup
-    ret = [guess_zero(matrix, ion_type=ion_type, spin_change=spin_change,
+    ret = [guess_zero(matrix, is_alpha=is_alpha, spin_change=spin_change,
                       spin_block_symmetrisation=spin_block_symmetrisation)
            for _ in range(n_guesses)]
 
@@ -218,30 +221,14 @@ def guesses_from_diagonal_singles(matrix, n_guesses, block="ph", ion_type=None,
     # Also it filters out too large diagonal entries (which are essentially
     # hopeless to give useful excitations)
     def pred_singles(telem):
-        if block == "ph": 
-            # PP-ADC
-            return (ret[0].ph.is_allowed(telem.index)
-                and telem.spin_change == spin_change
-                and abs(telem.value) <= max_diagonal_value)
-        else:
-            # IP-ADC
-            return (ret[0].h.is_allowed(telem.index)
+        return (ret[0].get(block).is_allowed(telem.index)
                 and telem.spin_change == spin_change
                 and abs(telem.value) <= max_diagonal_value)
             
-
-    if block == "ph":
-        # PP-ADC
-        elements = find_smallest_matching_elements(
-            pred_singles, matrix.diagonal().ph, motrans, n_guesses,
-            degeneracy_tolerance=degeneracy_tolerance
-        )
-    else:
-        # IP-ADC
-        elements = find_smallest_matching_elements(
-            pred_singles, matrix.diagonal().h, motrans, n_guesses,
-            degeneracy_tolerance=degeneracy_tolerance
-        )
+    elements = find_smallest_matching_elements(
+        pred_singles, matrix.diagonal().get(block), motrans, n_guesses,
+        degeneracy_tolerance=degeneracy_tolerance
+    )
     if len(elements) == 0:
         return []
 
@@ -263,41 +250,22 @@ def guesses_from_diagonal_singles(matrix, n_guesses, block="ph", ion_type=None,
 
         group = list(group)
         if len(group) == 1:  # Just add the single vector
-            if block == "ph":
-                # PP-ADC Vector
-                ret[ivec].ph[group[0].index] = 1.0
-            else:
-                # IP-ADC Vector
-                ret[ivec].h[group[0].index] = 1.0
+            ret[ivec].get(block)[group[0].index] = 1.0
             ivec += 1
         elif len(group) == 2:
             # Since these two are grouped together, their
             # spatial parts must be identical.
             
-            if block == "ph":
-                # PP-ADC Vector
-                # Add the positive linear combination ...
-                ret[ivec].ph[group[0].index] = 1
-                ret[ivec].ph[group[1].index] = 1
-                ivec += 1
+            # Add the positive linear combination ...
+            ret[ivec].get(block)[group[0].index] = 1
+            ret[ivec].get(block)[group[1].index] = 1
+            ivec += 1
 
-                # ... and the negative linear combination
-                if ivec < n_guesses:
-                    ret[ivec].ph[group[0].index] = +1
-                    ret[ivec].ph[group[1].index] = -1
-                    ivec += 1
-            else:
-                # IP-ADC Vector
-                # Add the positive linear combination ...
-                ret[ivec].h[group[0].index] = 1
-                ret[ivec].h[group[1].index] = 1
+            # ... and the negative linear combination
+            if ivec < n_guesses:
+                ret[ivec].get(block)[group[0].index] = +1
+                ret[ivec].get(block)[group[1].index] = -1
                 ivec += 1
-
-                # ... and the negative linear combination
-                if ivec < n_guesses:
-                    ret[ivec].h[group[0].index] = +1
-                    ret[ivec].h[group[1].index] = -1
-                    ivec += 1
         else:
             raise AssertionError("group size > 3 should not occur "
                                  "when setting up single guesses.")
@@ -308,8 +276,8 @@ def guesses_from_diagonal_singles(matrix, n_guesses, block="ph", ion_type=None,
     return [evaluate(v / np.sqrt(v @ v)) for v in ret[:ivec]]
 
 
-def guesses_from_diagonal_doubles(matrix, n_guesses, block="pphh", 
-                                  ion_type=None, spin_change=0,
+def guesses_from_diagonal_doubles(matrix, n_guesses, block="pphh", kind=None,
+                                  is_alpha=None, spin_change=0,
                                   spin_block_symmetrisation="none",
                                   degeneracy_tolerance=1e-14,
                                   max_diagonal_value=1000):
@@ -317,16 +285,16 @@ def guesses_from_diagonal_doubles(matrix, n_guesses, block="pphh",
         return []
 
     # Create a result vector of zero vectors with appropriate symmetry setup
-    ret = [guess_zero(matrix, spin_change=spin_change,
+    ret = [guess_zero(matrix, is_alpha=is_alpha, spin_change=spin_change,  
                       spin_block_symmetrisation=spin_block_symmetrisation)
            for _ in range(n_guesses)]
 
-    # Build delta-Fock matrices
     spin_change_twice = int(spin_change * 2)
     assert spin_change_twice / 2 == spin_change
     if block == "pphh":
         # PP-ADC
         spaces_d = matrix.axis_spaces[block]
+        # Build delta-Fock matrices
         df02 = matrix.ground_state.df(spaces_d[0] + spaces_d[2])
         df13 = matrix.ground_state.df(spaces_d[1] + spaces_d[3])
         # Extract doubles parts
@@ -335,35 +303,30 @@ def guesses_from_diagonal_doubles(matrix, n_guesses, block="pphh",
             guesses_d, matrix.mospaces, df02, df13,
             spin_change_twice, degeneracy_tolerance
         )
-    else:
+    elif block == "phh":
         # IP-ADC
-        d_o = matrix.reference_state.foo.diagonal()
+        # Build Fock matrices and multiply occ. orbitals with -1 to invert the 
+        # order for simplicity in the C++ code
+        d_o = matrix.reference_state.foo.diagonal() * (-1)
         d_v = matrix.reference_state.fvv.diagonal()
         # Extract doubles parts
         guesses_d = [gv.phh for gv in ret] 
-        a_spin = True if ion_type == "alpha" else False
-        isRestricted = matrix.reference_state.restricted
+        doublet = (kind == "doublet")
+        is_restricted = matrix.reference_state.restricted
         n_found = libadcc.fill_ip_doubles_guesses(
-            guesses_d, matrix.mospaces, d_o, d_v, a_spin, isRestricted,
-            spin_change_twice, degeneracy_tolerance)
+            guesses_d, matrix.mospaces, d_o, d_v, is_alpha, is_restricted,
+            doublet, spin_change_twice, degeneracy_tolerance)
+    else:
+        # EA-ADC
+        pass
     
     
     # Resize in case less guesses found than requested
     ret = ret[:n_found]
     
-    for elem in ret: # Check double guesses
-        print(np.count_nonzero(elem.phh.to_ndarray()))
-        print((elem.phh.select_n_absmax(4)))
-    
     # Filter out elements above the noted diagonal value
-    if block == "pphh":
-        # PP-ADC
-        diagonal_elements = [ret_d.pphh.dot(matrix.diagonal().pphh * ret_d.pphh)
-                             for ret_d in ret]
-    else:
-        # IP-ADC
-        diagonal_elements = [ret_d.phh.dot(matrix.diagonal().phh * ret_d.phh)
-                             for ret_d in ret]
+    diagonal_elements = [ret_d.get(block).dot(matrix.diagonal().get(block) 
+                         * ret_d.get(block)) for ret_d in ret]
     return [ret[i] for (i, elem) in enumerate(diagonal_elements)
             if elem <= max_diagonal_value]
 

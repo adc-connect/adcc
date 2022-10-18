@@ -15,7 +15,7 @@ namespace libadcc {
     The spin states belonging to the index group can be added using the
     functions
     \code
-    void add(const libtensor::mask<4> &);
+    void add(const libtensor::mask<3> &);
     \endcode
     \code
     void add(size_t);

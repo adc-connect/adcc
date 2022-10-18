@@ -27,7 +27,8 @@ size_t fill_ip_doubles_guesses(std::vector<std::shared_ptr<Tensor>> guesses_d,
                                std::shared_ptr<const MoSpaces> mospaces,
                                std::shared_ptr<Tensor> d_o, 
                                std::shared_ptr<Tensor> d_v,
-                               bool a_spin, bool restricted, int spin_change_twice, 
+                               bool a_spin, bool restricted, bool doublet,
+                               int spin_change_twice, 
                                scalar_type degeneracy_tolerance) {
 
   size_t n_guesses = guesses_d.size();
@@ -72,7 +73,8 @@ size_t fill_ip_doubles_guesses(std::vector<std::shared_ptr<Tensor>> guesses_d,
   }
 
   return ip_adc_guess_d(guesspairs, asbt1(d_o), asbt1(d_v), sym_s, a_spin, 
-                     restricted, ab_d, spin_change_twice, degeneracy_tolerance);
+                     restricted, doublet, ab_d, spin_change_twice, 
+                     degeneracy_tolerance);
 }
 
 }  // namespace libadcc

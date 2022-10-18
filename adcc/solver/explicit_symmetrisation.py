@@ -94,6 +94,10 @@ class IndexSpinSymmetrisation(IndexSymmetrisation):
                 amplitude_vector_enforce_spin_kind(
                     vec.pphh, "d", self.enforce_spin_kind
                 )
+            elif "phh" in vec.blocks_ph:
+                amplitude_vector_enforce_spin_kind(
+                    vec.phh, "d", self.enforce_spin_kind
+                )
         return new_vectors
 
 

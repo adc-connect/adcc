@@ -91,15 +91,22 @@ def block(ground_state, spaces, order, variant=None, intermediates=None):
 #
 # 0th order main
 #
+def block_h_h_0(hf, mp, intermediates):
+    # M_{11}
+    def apply(ampl):
+        return AmplitudeVector(h=-einsum("ij,j->i", hf.foo, ampl.h))
+    diagonal = AmplitudeVector(h=-hf.foo.diagonal())
+    return AdcBlock(apply, diagonal)
+
+
 def diagonal_phh_phh_0(hf):
     fCC = hf.fcc if hf.has_core_occupied_space else hf.foo
     res = direct_sum("-i-J+a->iJa", 
                      hf.foo.diagonal(), fCC.diagonal(), hf.fvv.diagonal())
-    # Symmetrise like in PP-ADC?
     return AmplitudeVector(phh=res)
     
     
-def block_phh_phh_0(hf, mp ,intermediates):
+def block_phh_phh_0(hf, mp, intermediates):
     # M_{22}
     def apply(ampl):
         return AmplitudeVector(phh=(
@@ -107,6 +114,14 @@ def block_phh_phh_0(hf, mp ,intermediates):
             - 2 * einsum("ik,kja->ija", hf.foo, ampl.phh).antisymmetrise(0, 1)
         ))
     return AdcBlock(apply, diagonal_phh_phh_0(hf))
+
+
+#
+# 1st order main
+#
+def block_h_h_1(hf, mp, intermediates):
+    # M_{11}, same as ADC(0)
+    return block_h_h_0(hf, mp, intermediates)
 
 
 #

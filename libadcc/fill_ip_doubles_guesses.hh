@@ -22,7 +22,6 @@
 
 namespace libadcc {
 
-// TODO modify docstring
 
 /** Fill the passed vector of doubles blocks with doubles guesses using
  * the O and V matrices.
@@ -31,10 +30,11 @@ namespace libadcc {
  * guesses_d             Vectors of guesses, all elements are assumed to be initialised to zero
  *                       and the symmetry is assumed to be properly set up.
  * mospaces              Mospaces object
- * d_o                   Matrix to construct guesses from (occ.)
- * d_v                   Matrix to construct guesses from (virt.)
+ * d_o                   Fock matrix to construct guesses from (occ.)
+ * d_v                   Fock matrix to construct guesses from (virt.)
  * a_spin                If alpha ionization (false: beta)
  * restricted            Is this a restricted calculation
+ * doublet               Doublet or quartet states (only in case of restricted calculation)
  * spin_change_twice     Twice the value of the spin change to enforce in an excitation.
  * degeneracy_tolerance  Tolerance for two entries of the diagonal to be considered
  *                       degenerate, i.e. identical.
@@ -46,7 +46,8 @@ size_t fill_ip_doubles_guesses(std::vector<std::shared_ptr<Tensor>> guesses_d,
                                std::shared_ptr<const MoSpaces> mospaces,
                                std::shared_ptr<Tensor> d_o, 
                                std::shared_ptr<Tensor> d_v,
-                               bool a_spin, bool restricted, int spin_change_twice, 
+                               bool a_spin, bool restricted, bool doublet, 
+                               int spin_change_twice, 
                                scalar_type degeneracy_tolerance);
 
 }  // namespace libadcc

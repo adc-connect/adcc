@@ -33,8 +33,8 @@ void export_adc_ip(py::module& m) {
         "an amplitude vector consist of components for a particular spin kind only.");
 
   m.def("fill_ip_doubles_guesses", &fill_ip_doubles_guesses, "guesses_d"_a, 
-        "mospaces"_a, "d_o"_a, "d_v"_a, "a_spin"_a, "restricted"_a, 
-        "spin_change_twice"_a, "degeneracy_tolerance"_a,
+        "mospaces"_a, "d_o"_a, "d_v"_a, "a_spin"_a, "restricted"_a,
+        "doublet"_a, "spin_change_twice"_a, "degeneracy_tolerance"_a,
         "Fill the passed vector of doubles blocks with doubles guesses using "
         "the O and V matrices., which are the two Fock matrices "
         "involved in the doubles block.\n\nguesses_d    Vectors of guesses, "
@@ -44,6 +44,8 @@ void export_adc_ip(py::module& m) {
         "\nd_v                   Matrix to construct guesses from (virt.)"
         "\na_spin                If alpha ionization (false: beta)"
         "\nrestricted            Is this a restricted calculation"
+        "\ndoublet               Doublet or quartet states (only in case of"
+        "restricted calculation)"
         "\nspin_change_twice   Twice the value of the spin change to enforce "
         "in an excitation.\ndegeneracy_tolerance  Tolerance for two entries of "
         "the diagonal to be considered degenerate, i.e. identical."
