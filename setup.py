@@ -500,7 +500,8 @@ adccsetup(
         "spectroscopy",
     ],
     #
-    author="Michael F. Herbst, Maximilian Scheurer, Jonas Leitner",
+    author=("Michael F. Herbst, Maximilian Scheurer, Jonas Leitner, "
+            "Antonia Papapostolou"),
     author_email="developers@adc-connect.org",
     license="GPL v3",
     url="https://adc-connect.org",
