@@ -33,75 +33,75 @@ from adcc.OneParticleOperator import OneParticleOperator
 from .util import check_doubles_amplitudes, check_singles_amplitudes
 
 
-def s2s_tdm_ip_adc0(mp, amplitude_l, amplitude_r, intermediates):
-    check_singles_amplitudes([b.o], amplitude_l, amplitude_r)
-    ul1 = amplitude_l.h
-    ur1 = amplitude_r.h
+def s2s_tdm_ea_adc0(mp, amplitude_l, amplitude_r, intermediates):
+    check_singles_amplitudes([b.v], amplitude_l, amplitude_r)
+    ul1 = amplitude_l.p
+    ur1 = amplitude_r.p
 
     dm = OneParticleOperator(mp, is_symmetric=False)
-    dm.oo = -einsum("j,i->ij", ul1, ur1)
+    dm.vv = einsum("a,b->ab", ul1, ur1)
     return dm
 
 
-def s2s_tdm_ip_adc2(mp, amplitude_l, amplitude_r, intermediates):
-    check_doubles_amplitudes([b.o, b.o, b.v], amplitude_l, amplitude_r)
-    dm = s2s_tdm_ip_adc0(mp, amplitude_l, amplitude_r, intermediates)
+def s2s_tdm_ea_adc2(mp, amplitude_l, amplitude_r, intermediates):
+    check_doubles_amplitudes([b.o, b.v, b.v], amplitude_l, amplitude_r)
+    dm = s2s_tdm_ea_adc0(mp, amplitude_l, amplitude_r, intermediates)
 
-    ul1, ul2 = amplitude_l.h, amplitude_l.phh
-    ur1, ur2 = amplitude_r.h, amplitude_r.phh
+    ul1, ul2 = amplitude_l.p, amplitude_l.pph
+    ur1, ur2 = amplitude_r.p, amplitude_r.pph
 
     t2 = mp.t2(b.oovv)
     p0 = mp.mp2_diffdm
-    p1_oo = dm.oo.evaluate()  # ADC(1) diffdm
+    p1_vv = dm.vv.evaluate()  # ADC(1) diffdm
     
     # Zeroth order doubles contributions
-    p2_oo = 2 * einsum("kja,ika->ij", ul2, ur2)
-    p2_vv = einsum("ija,ijb->ab", ul2, ur2)
-    p_ov = sqrt(2) * einsum("j,ija->ia", ul1, ur2)
-    p_vo = sqrt(2) * einsum("ija,j->ai", ul2, ur1)
+    p2_oo = -einsum("jab,iab->ij", ul2, ur2)
+    p2_vv = 2 * einsum("iac,ibc->ab", ul2, ur2)
+    p_ov = sqrt(2) * einsum("b,iba->ia", ul1, ur2)
+    p_vo = sqrt(2) * einsum("iba,b->ai", ul2, ur1)
     
     # ADC(2) ISR intermediate (TODO Move to intermediates)
 #    ru1 = einsum("i,ijab->jab", u1, t2).evaluate()
 
     # Compute second-order contributions to the density matrix
-    dm.oo = (  # ip_adc2_p_oo
-        + p1_oo + p2_oo 
-        - 0.5 * einsum("k,jk,i->ij", ul1, p0.oo, ur1)
-        - 0.5 * einsum("j,ki,k->ij", ul1, p0.oo, ur1)
-        + 0.5 * einsum("iab,jab->ij", einsum("k,kiab->iab", ul1, t2), 
-                       einsum("l,ljab->jab", ur1, t2))
+    dm.oo = (  # ea_adc2_p_oo
+        + p2_oo 
+        + einsum("ikc,jkc->ij", einsum("a,ikac->ikc", ul1, t2),
+                 einsum("b,jkbc->jkc", ur1, t2))
     )
 
-    dm.vv = (  # ip_adc2_p_vv
-        + p2_vv 
-        - einsum("kcb,kca->ab", einsum("i,kicb->kcb", ul1, t2), 
-                 einsum("j,kjca->kca", ur1, t2))
+    dm.vv = (  # ea_adc2_p_vv
+        + p1_vv + p2_vv 
+        - 0.5 * einsum("c,ac,b->ab", ul1, p0.vv, ur1)
+        - 0.5 * einsum("a,bc,b->ab", ul1, p0.vv, ur1)
+        + 0.5 * einsum("ijb,ija->ab", einsum("c,ijcb->ijb", ul1, t2), 
+                       einsum("d,ijad->ija", ur1, t2))
     )
 
-    dm.ov = (  # ip_adc2_p_ov
+    dm.ov = (  # ea_adc2_p_ov
         + p_ov
         + 1/sqrt(2) * (
-            + einsum("klb,klba,i->ia", ul2, t2, ur1)
-            + 2 * einsum("kb,ikba->ia", einsum("klb,l->kb", ul2, ur1), t2))
-        - einsum("k,ka,i->ia", ul1, p0.ov, ur1)
+            + einsum("jbc,ijbc,a->ia", ul2, t2, ur1)
+            + 2 * einsum("jc,ijac->ia", einsum("jcb,b->jc", ul2, ur1), t2))
+        - einsum("b,ib,a->ia", ul1, p0.ov, ur1)
     )
     
-    dm.vo = (  # ip_adc2_p_vo
+    dm.vo = (  # ea_adc2_p_vo
         + p_vo
         + 1/sqrt(2) * (
-            + einsum("i,klba,klb->ai", ul1, t2, ur2)
-            + 2 * einsum("lb,liba->ai", einsum("k,klb->lb", ul1, ur2), t2))
-        - einsum("k,ka,i->ai", ur1, p0.ov, ul1) 
+            + einsum("a,ijbc,jbc->ai", ul1, t2, ur2)
+            + 2 * einsum("jc,ijac->ai", einsum("b,jcb->jc", ul1, ur2), t2))
+        - einsum("b,ib,a->ai", ur1, p0.ov, ul1)
         # switched indices because p0_ov is used instead of p0_vo
     )
     return dm
 
 
 # Ref: https://doi.org/10.1080/00268976.2013.859313
-DISPATCH = {"ip_adc0": s2s_tdm_ip_adc0,
-            "ip_adc1": s2s_tdm_ip_adc0,       # same as ADC(0)
-            "ip_adc2": s2s_tdm_ip_adc2,
-            "ip_adc2x": s2s_tdm_ip_adc2,      # same as ADC(2)
+DISPATCH = {"ea_adc0": s2s_tdm_ea_adc0,
+            "ea_adc1": s2s_tdm_ea_adc0,       # same as ADC(0)
+            "ea_adc2": s2s_tdm_ea_adc2,
+            "ea_adc2x": s2s_tdm_ea_adc2,      # same as ADC(2)
             }
 
 

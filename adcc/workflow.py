@@ -224,7 +224,6 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     # add terms to matrix
     if env_matrix_term:
         matrix += env_matrix_term
-
     diagres = diagonalise_adcmatrix(
         matrix, n_states, kind, guesses=guesses, n_guesses=n_guesses,
         n_guesses_doubles=n_guesses_doubles, conv_tol=conv_tol, output=output,
@@ -232,7 +231,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         spin_change=spin_change, **solverargs)
     exstates = ExcitedStates(diagres)
     exstates.kind = kind
-    exstates.spin_change = spin_change if kind != "any" else None
+    exstates.spin_change = spin_change
 
     # add environment corrections to excited states
     exstates += env_energy_corrections
@@ -365,6 +364,8 @@ def validate_state_parameters(matrix, n_states=None, n_singlets=None,
                              "calculations")
     else:
         if is_alpha is None or reference_state.restricted:
+            # Per default set to True and for restricted references, only alpha
+            # states will be computed (beta states are identical)
             is_alpha = True
         if not isinstance(is_alpha, bool):
             raise InputError("is_alpha has to be a boolean or None.")
@@ -494,9 +495,9 @@ def estimate_n_guesses(matrix, n_states, n_guesses_per_state=2,
         # Estimate for PP-ADC, is adjusted for IP- and EA-ADC calculations
         estimate = n_occ_a * n_virt_a
         if matrix.type == "ip":
-            estimate /= n_virt_a
+            estimate = n_occ_a
         elif matrix.type == "ea":
-            estimate /= n_occ_a
+            estimate = n_virt_a
         n_guesses = min(n_guesses, estimate)
 
     # Adjust if we overshoot the maximal number of sensible singles block

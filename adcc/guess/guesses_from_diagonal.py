@@ -211,7 +211,7 @@ def guesses_from_diagonal_singles(matrix, n_guesses, block="ph", kind=None,
         return []
 
     # Create a result vector of zero vectors with appropriate symmetry setup
-    ret = [guess_zero(matrix, is_alpha=is_alpha, spin_change=spin_change,
+    ret = [guess_zero(matrix, spin_change=spin_change,
                       spin_block_symmetrisation=spin_block_symmetrisation)
            for _ in range(n_guesses)]
 
@@ -285,41 +285,38 @@ def guesses_from_diagonal_doubles(matrix, n_guesses, block="pphh", kind=None,
         return []
 
     # Create a result vector of zero vectors with appropriate symmetry setup
-    ret = [guess_zero(matrix, is_alpha=is_alpha, spin_change=spin_change,  
+    ret = [guess_zero(matrix, spin_change=spin_change,  
                       spin_block_symmetrisation=spin_block_symmetrisation)
            for _ in range(n_guesses)]
 
     spin_change_twice = int(spin_change * 2)
     assert spin_change_twice / 2 == spin_change
-    if block == "pphh":
+    # Extract doubles parts
+    guesses_d = [gv.get(block) for gv in ret] 
+    
+    if matrix.type == "pp":
         # PP-ADC
         spaces_d = matrix.axis_spaces[block]
         # Build delta-Fock matrices
         df02 = matrix.ground_state.df(spaces_d[0] + spaces_d[2])
-        df13 = matrix.ground_state.df(spaces_d[1] + spaces_d[3])
-        # Extract doubles parts
-        guesses_d = [gv.pphh for gv in ret]  
+        df13 = matrix.ground_state.df(spaces_d[1] + spaces_d[3]) 
         n_found = libadcc.fill_pp_doubles_guesses(
             guesses_d, matrix.mospaces, df02, df13,
             spin_change_twice, degeneracy_tolerance
         )
-    elif block == "phh":
-        # IP-ADC
+    else:
+        # IP- and EA-ADC
         # Build Fock matrices and multiply occ. orbitals with -1 to invert the 
         # order for simplicity in the C++ code
         d_o = matrix.reference_state.foo.diagonal() * (-1)
         d_v = matrix.reference_state.fvv.diagonal()
-        # Extract doubles parts
-        guesses_d = [gv.phh for gv in ret] 
         doublet = (kind == "doublet")
         is_restricted = matrix.reference_state.restricted
-        n_found = libadcc.fill_ip_doubles_guesses(
-            guesses_d, matrix.mospaces, d_o, d_v, is_alpha, is_restricted,
-            doublet, spin_change_twice, degeneracy_tolerance)
-    else:
-        # EA-ADC
-        pass
-    
+        double_func = {"ip": libadcc.fill_ip_doubles_guesses,
+                       "ea": libadcc.fill_ea_doubles_guesses}
+        n_found = double_func[matrix.type](guesses_d, matrix.mospaces, d_o, 
+            d_v, is_alpha, is_restricted, doublet, spin_change_twice, 
+            degeneracy_tolerance)
     
     # Resize in case less guesses found than requested
     ret = ret[:n_found]

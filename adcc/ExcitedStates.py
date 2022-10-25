@@ -30,6 +30,7 @@ from scipy import constants
 
 from . import adc_pp
 from . import adc_ip
+from . import adc_ea
 from .misc import cached_property, requires_module
 from .timings import timed_member_call
 from .Excitation import Excitation, mark_excitation_property
@@ -117,38 +118,37 @@ class FormatExcitationVector:
         """
         The width of an amplitude line if a tensor is formatted with this class
         """
-        # TODO This assumes a PP ADC matrix
-        if self.matrix.axis_blocks == ["ph"]:
-            nblk = 2
-        elif self.matrix.axis_blocks == ["ph", "pphh"]:
-            nblk = 4
-        elif self.matrix.axis_blocks == ["h"]:
-            nblk = 1
-        elif self.matrix.axis_blocks == ["h", "phh"]:
-            nblk = 3
-        else:
+        valid_blocks = ["h", "p", "ph", "phh", "pph", "pphh"]
+        if self.matrix.axis_blocks[-1] not in valid_blocks:
             raise NotImplementedError("Unknown ADC matrix structure")
+        
+        nblk = len(self.matrix.axis_blocks[-1])
         width_indices = nblk * (self.index_format.max_n_characters + 1) + 2
         width_spins = nblk + 2
         width_value = len(self.value_format.format(0))
-        return width_indices + width_spins + width_value + 5
+        return width_indices + width_spins + width_value + 8
 
     def format(self, vector):
         idxgap = self.index_format.max_n_characters * " "
-        # TODO This assumes a PP or IP ADC matrix
         if self.matrix.axis_blocks == ["ph"]:
-            formats = {"ov": "{0} -> {1}  {2}->{3}", }
+            formats = {"ov": "{0} -> {1}  {2}->{3}" + 3 * " ", }
         elif self.matrix.axis_blocks == ["ph", "pphh"]:
             formats = {
                 "ov":   "{0} " + idxgap + " -> {1} " + idxgap + "  {2} ->{3} ",
                 "oovv": "{0} {1} -> {2} {3}  {4}{5}->{6}{7}",
             }
         elif self.matrix.axis_blocks == ["h"]:
-            formats = {"o": "{0}  {1}", }
+            formats = {"o": "{0} ->" + 5 * " " + "{1}->" , }
         elif self.matrix.axis_blocks == ["h", "phh"]:
             formats = {
                 "o":   "{0} " + 2 * idxgap  + idxgap[:-3] + "  {1}" + 4 * " ",
                 "oov": "{0} {1} -> {2}  {3}{4}->{5}"}
+        elif self.matrix.axis_blocks == ["p"]:
+            formats = {"v": "-> {0}     ->{1}", }
+        elif self.matrix.axis_blocks == ["p", "pph"]:
+            formats = {
+                "v":   idxgap + " -> {0} " + idxgap + "    ->{1}",
+                "ovv": "{0} -> {1} {2}  {3}{4}->{5}"}
         else:
             raise NotImplementedError("Unknown ADC matrix structure")
 
@@ -244,9 +244,9 @@ class ExcitedStates(ElectronicTransition):
     @timed_member_call(timer="_property_timer")
     def pole_strengths(self):
         """List of pole_strengths of all computed states"""
-        return [adc_ip.pole_strength(self.property_method,
-                                                self.ground_state, evec,
-                                                self.matrix.intermediates)
+        adc_type = {"ip": adc_ip, "ea": adc_ea}
+        return [adc_type[self.matrix.type].pole_strength(self.property_method,
+                    self.ground_state, evec, self.matrix.intermediates)
                 for evec in self.excitation_vector]
 
     @cached_property
@@ -254,18 +254,10 @@ class ExcitedStates(ElectronicTransition):
     @timed_member_call(timer="_property_timer")
     def state_diffdm(self):
         """List of difference density matrices of all computed states"""
-        if "ip" in self.method.name:
-            # IP-ADC
-            return [adc_ip.state_diffdm(self.property_method, 
-                                        self.ground_state, evec,
-                                        self.matrix.intermediates)
-                    for evec in self.excitation_vector]
-        else:
-            # PP-ADC
-            return [adc_pp.state_diffdm(self.property_method,
-                                        self.ground_state, evec, 
-                                        self.matrix.intermediates)
-                    for evec in self.excitation_vector]
+        adc_type = {"pp": adc_pp, "ip": adc_ip, "ea": adc_ea}
+        return [adc_type[self.matrix.type].state_diffdm(self.property_method, 
+                    self.ground_state, evec, self.matrix.intermediates)
+                for evec in self.excitation_vector]
 
     @property
     @mark_excitation_property(transform_to_ao=True)
@@ -286,6 +278,11 @@ class ExcitedStates(ElectronicTransition):
             gs_dip_moment = self.ground_state.dipole_moment(pmethod.level)
 
         dipole_integrals = self.operators.electric_dipole
+        
+        if self.matrix.type != "pp":
+            warnings.warn("Dipole moments of charged species are gauge "
+                          "dependent.")
+        
         return gs_dip_moment - np.array([
             [product_trace(comp, ddm) for comp in dipole_integrals]
             for ddm in self.state_diffdm
@@ -333,8 +330,8 @@ class ExcitedStates(ElectronicTransition):
             opt["tdmx"] = lambda i, vec: self.transition_dipole_moment[i][0]
             opt["tdmy"] = lambda i, vec: self.transition_dipole_moment[i][1]
             opt["tdmz"] = lambda i, vec: self.transition_dipole_moment[i][2]
-        if "ip" in self.method.name:
-            # IP-ADC
+        if self.matrix.type != "pp":
+            # IP- or EA-ADC
             oscillator_strengths = False
             opt_body += "{pole:8.4f} "
             opt_thead += " pole str "
@@ -461,7 +458,8 @@ class ExcitedStates(ElectronicTransition):
             If ``None`` an automatic selection will be made.
         """
         eV = constants.value("Hartree energy in eV")
-        vector_format = FormatExcitationVector(self.matrix, tolerance=tolerance,
+        vector_format = FormatExcitationVector(self.matrix, 
+                                               tolerance=tolerance,
                                                index_format=index_format)
 
         # Optimise the formatting by pre-inspecting all tensors
@@ -560,8 +558,8 @@ class ExcitedStates(ElectronicTransition):
         }
 
         if properties:
-            if "ip" in self.method.name:
-                # IP-ADC
+            if self.matrix.type != "pp":
+                # IP- or EA-ADC
                 qcvars.update({
                     # Transition properties
                     f"{name} POLE STRENGTHS (LEN)": self.pole_strengths,

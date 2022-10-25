@@ -27,6 +27,7 @@ import numpy as np
 from .LazyMp import LazyMp
 from .adc_pp import matrix as ppmatrix
 from .adc_ip import matrix as ipmatrix
+from .adc_ea import matrix as eamatrix
 from .timings import Timer, timed_member_call
 from .AdcMethod import AdcMethod
 from .functions import ones_like
@@ -178,7 +179,7 @@ class AdcMatrix(AdcMatrixlike):
             variant = None
             if self.is_core_valence_separated:
                 variant = "cvs"
-            matrix = {"pp": ppmatrix, "ip": ipmatrix, "ea": "eamatrix"}
+            matrix = {"pp": ppmatrix, "ip": ipmatrix, "ea": eamatrix}
             blocks = {
                 block: matrix[self.type].block(self.ground_state, 
                             block.split("_"), order=order, 
