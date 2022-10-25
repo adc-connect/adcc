@@ -17,13 +17,13 @@
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include "fill_ip_doubles_guesses.hh"
+#include "fill_ea_doubles_guesses.hh"
 #include "TensorImpl.hh"
-#include "guess/ip_adc_guess_d.hh"
+#include "guess/ea_adc_guess_d.hh"
 
 namespace libadcc {
 
-size_t fill_ip_doubles_guesses(std::vector<std::shared_ptr<Tensor>> guesses_d,
+size_t fill_ea_doubles_guesses(std::vector<std::shared_ptr<Tensor>> guesses_d,
                                std::shared_ptr<const MoSpaces> mospaces,
                                std::shared_ptr<Tensor> d_o, 
                                std::shared_ptr<Tensor> d_v,
@@ -70,7 +70,7 @@ size_t fill_ip_doubles_guesses(std::vector<std::shared_ptr<Tensor>> guesses_d,
       std::to_string(spin_change_twice) + " has not been tested.");
   }
 
-  return ip_adc_guess_d(guesspairs, asbt1(d_o), asbt1(d_v), sym_s, a_spin, 
+  return ea_adc_guess_d(guesspairs, asbt1(d_o), asbt1(d_v), sym_s, a_spin, 
                         restricted, doublet, ab_d, spin_change_twice, 
                         degeneracy_tolerance);
 }

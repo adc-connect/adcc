@@ -1,6 +1,6 @@
 #pragma once
 
-#include "index_group_p2h.hh"
+#include "index_group_h2p.hh"
 
 namespace libadcc {
 
@@ -23,7 +23,7 @@ namespace libadcc {
 
       \return Number of guess vectors created
  **/
-size_t ip_adc_guess_d(std::list<std::pair<libtensor::btensor<3, double>*, double>>& va,
+size_t ea_adc_guess_d(std::list<std::pair<libtensor::btensor<3, double>*, double>>& va,
                       libtensor::btensor_i<1, double>& d_o,
                       libtensor::btensor_i<1, double>& d_v,
                       const libtensor::symmetry<3, double>& sym,

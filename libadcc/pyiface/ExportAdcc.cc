@@ -29,6 +29,7 @@ namespace libadcc {
 void export_AdcMemory(py::module& m);
 void export_adc_pp(py::module& m);
 void export_adc_ip(py::module& m);
+void export_adc_ea(py::module& m);
 void export_HartreeFockProvider(py::module& m);
 void export_MoIndexTranslation(py::module& m);
 void export_MoSpaces(py::module& m);
@@ -43,6 +44,7 @@ PYBIND11_MODULE(libadcc, m) {
   libadcc::export_AdcMemory(m);
   libadcc::export_adc_pp(m);
   libadcc::export_adc_ip(m);
+  libadcc::export_adc_ea(m);
   libadcc::export_HartreeFockProvider(m);
   libadcc::export_MoIndexTranslation(m);
   libadcc::export_MoSpaces(m);

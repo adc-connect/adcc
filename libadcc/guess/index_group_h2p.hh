@@ -21,7 +21,7 @@ namespace libadcc {
     void add(size_t);
     \endcode
  **/
-class index_group_p2h {
+class index_group_h2p {
  public:
   typedef std::set<size_t>::const_iterator iterator;
 
@@ -46,7 +46,7 @@ class index_group_p2h {
       \param spidx Spatial block index.
       \param idx In-block index
    **/
-  index_group_p2h(const libtensor::index<3>& spidx, const libtensor::index<3>& idx)
+  index_group_h2p(const libtensor::index<3>& spidx, const libtensor::index<3>& idx)
         : m_spidx(spidx), m_idx(idx) {}
 
   /** \brief Add spin state to index group
@@ -107,25 +107,25 @@ class index_group_p2h {
 };
 
 /** \brief Map of (value, index group) pairs
-     \sa ip_adc_guess_d, ip_adc_guess_d
+     \sa ea_adc_guess_d, ea_adc_guess_d
  **/
-class index_group_map_p2h {
+class index_group_map_h2p {
  public:
-  typedef std::multimap<double, index_group_p2h>::const_iterator iterator;
+  typedef std::multimap<double, index_group_h2p>::const_iterator iterator;
 
  private:
-  bool m_sym_o;         //!< Permutational anti-symmetry of occ indices
+  bool m_sym_v;         //!< Permutational anti-symmetry of virt indices
   double m_thresh;      //!< Threshold for identical values
 
-  std::multimap<double, index_group_p2h> m_idxmap;
+  std::multimap<double, index_group_h2p> m_idxmap;
 
  public:
   /** \brief Constructor
       \param thresh Threshold for identical values
-      \param sym_o Occ. indices have perm. anti-symmetry
+      \param sym_v Virt. indices have perm. anti-symmetry
    */
-  index_group_map_p2h(double thresh, bool sym_o = true)
-        : m_sym_o(sym_o), m_thresh(thresh) {}
+  index_group_map_h2p(double thresh, bool sym_v = true)
+        : m_sym_v(sym_v), m_thresh(thresh) {}
 
   /** \brief Remove all elements from list
    **/
@@ -154,7 +154,7 @@ class index_group_map_p2h {
 
   /** \brief Return the index group at the current position
    **/
-  const index_group_p2h& get_group(iterator it) const { return it->second; }
+  const index_group_h2p& get_group(iterator it) const { return it->second; }
 
  private:
   void find_canonical_index(libtensor::mask<3>& m, libtensor::index<3>& spidx,

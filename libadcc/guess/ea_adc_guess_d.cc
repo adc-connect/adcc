@@ -1,4 +1,4 @@
-#include "ip_adc_guess_d.hh"
+#include "ea_adc_guess_d.hh"
 #include "../exceptions.hh"
 
 // Change visibility of libtensor singletons to public
@@ -117,9 +117,9 @@ typedef libtensor::btod_select<3, compare_t>::list_type list3d_t;
 typedef std::list<std::pair<libtensor::btensor<3, double>*, double>> list_t;
 
 /** Determine if occupied indices should be symmetrized */
-void determine_sym(const symmetry<3, double>& sym, bool& sym_o) {
+void determine_sym(const symmetry<3, double>& sym, bool& sym_v) {
 
-  sym_o = false;
+  sym_v = false;
   for (symmetry<3, double>::iterator it1 = sym.begin(); it1 != sym.end(); it1++) {
 
     const symmetry_element_set<3, double>& set = sym.get_subset(it1);
@@ -136,7 +136,7 @@ void determine_sym(const symmetry<3, double>& sym, bool& sym_o) {
       const se_perm<3, double>& el = ad.get_elem(it2);
 
       const permutation<3>& p = el.get_perm();
-      sym_o |= (p[0] == 1 && p[1] == 0);
+      sym_v |= (p[1] == 2 && p[2] == 1);
     }
   }
 }
@@ -154,12 +154,12 @@ unsigned determine_spin(bool restricted, bool doublet) {
 
 /** Transfers the elements of a 1D list to a 3D list */
 void transfer_elements(const list1d_t& o, const list1d_t& v, 
-                       index_group_map_p2h& to, const libtensor::symmetry<3, 
+                       index_group_map_h2p& to, const libtensor::symmetry<3, 
                        double>& sym, const index_handler<3>& base, int dm_s) {
 
   // Determine symmetry
-  bool sym_o;  // Are the two occupied indices identical
-  determine_sym(sym, sym_o);
+  bool sym_v;  // Are the two virtual indices identical
+  determine_sym(sym, sym_v);
 
   to.clear();
 
@@ -167,7 +167,7 @@ void transfer_elements(const list1d_t& o, const list1d_t& v,
 
   for (list1d_t::const_iterator ita = o.begin(); ita != o.end(); ita++) {
 
-    for (list1d_t::const_iterator itb = o.begin(); itb != o.end(); itb++) {
+    for (list1d_t::const_iterator itb = v.begin(); itb != v.end(); itb++) {
 
       for (list1d_t::const_iterator itc = v.begin(); itc != v.end(); itc++) {
 
@@ -180,7 +180,7 @@ void transfer_elements(const list1d_t& o, const list1d_t& v,
       const index<1>& bidxc = itc->get_block_index();
       const index<1>& idxc  = itc->get_in_block_index();
 
-      if (sym_o && bidxa[0] == bidxb[0] && idxa[0] == idxb[0]) continue;
+      if (sym_v && bidxb[0] == bidxc[0] && idxb[0] == idxc[0]) continue;
 
       double value = ita->get_value() + itb->get_value() + itc->get_value();
 
@@ -192,17 +192,16 @@ void transfer_elements(const list1d_t& o, const list1d_t& v,
       idx[1]  = idxb[0];
       idx[2]  = idxc[0];
 
-      if (sym_o && bidx[0] > bidx[1]) {
-        std::swap(bidx[0], bidx[1]);
-        std::swap(idx[0], idx[1]);
-      } else if (sym_o && bidx[0] == bidx[1] && idx[0] > idx[1]) {
-        std::swap(idx[0], idx[1]);
+      if (sym_v && bidx[1] > bidx[2]) {
+        std::swap(bidx[1], bidx[2]);
+        std::swap(idx[1], idx[2]);
+      } else if (sym_v && bidx[1] == bidx[2] && idx[1] > idx[2]) {
+        std::swap(idx[1], idx[2]);
       }
 
       // Ignore blocks where the targeted spin_change is not achieved
       mask<3> orb_type;
       orb_type[0] = true;
-      orb_type[1] = true;
       if (base.get_spin_proj(orb_type, bidx) != dm_s) continue;
 
       // Check if the block is allowed in the symmetry of the guess
@@ -228,16 +227,16 @@ void transfer_elements(const list1d_t& o, const list1d_t& v,
 }
 
 size_t build_guesses(list_t::iterator& cur_guess, list_t::iterator end,
-                     const index_group_p2h& ig, double value,
+                     const index_group_h2p& ig, double value,
                      const symmetry<3, double>& sym, bool a_spin, 
                      bool restricted, bool doublet, index_handler<3>& base) {
-  bool sym_o;  // Are the two occupied indices identical
-  determine_sym(sym, sym_o);
+  bool sym_v;  // Are the two occupied indices identical
+  determine_sym(sym, sym_v);
   const unsigned spin = determine_spin(restricted, doublet);  // Spin of the symmetry
 
   if (cur_guess == end) return 0;
 
-  int ms = a_spin ? -1 : 1;
+  int ms = a_spin ? 1 : -1;
 
   const index<3>& spidx = ig.get_spatial_bidx();
   const index<3>& idx   = ig.get_idx();
@@ -252,7 +251,7 @@ size_t build_guesses(list_t::iterator& cur_guess, list_t::iterator end,
     // Reform full block indices
     size_t i = 0;
     std::vector<index<3>> bidx(ig.size());
-    for (index_group_p2h::iterator it = ig.begin(); it != ig.end(); it++, i++) {
+    for (index_group_h2p::iterator it = ig.begin(); it != ig.end(); it++, i++) {
       base.merge_block_index(ig.get_spin_mask(it), spidx, bidx[i]);
     }
 
@@ -265,20 +264,20 @@ size_t build_guesses(list_t::iterator& cur_guess, list_t::iterator end,
       }
     } else if (ig.size() == 3) {
       static const double coeff[3][3] = {
-                // in case of ms == -1 (alpha ionization)
-                // aaa   abb   bab
-                // and in case of ms == 1 (beta ionization)
-                // bbb   baa   aba
+                // in case of ms == 1 (alpha attachment)
+                // aaa   bab   bba
+                // and in case of ms == -1 (beta attachment)
+                // bbb   aba   aab
                 {  1.0, -1.0, -1.0},  // quartet
                 {  0.0, -1.0,  1.0},  // doublet 1
                 { -2.0, -1.0, -1.0}}; // doublet 2
 
-        if (ms == -1) { // alpha ionization
+        if (ms == 1) { // alpha attachment
           for (size_t i = 0; i < 3; i++) {
             for (size_t j = 0; j < 3; j++) 
               lv[i].push_back(guess_element<3>(bidx[j], idx, coeff[i][j])); 
           }   
-        } else { // beta ionization
+        } else { // beta attachment
           for (size_t i = 0; i < 3; i++) {
             for (size_t j = 0; j < 3; j++)
               lv[i].push_back(guess_element<3>(bidx[2-j], idx, coeff[i][j]));
@@ -294,7 +293,7 @@ size_t build_guesses(list_t::iterator& cur_guess, list_t::iterator end,
     // Reform full block indices
     size_t i = 0;
     std::vector<index<3>> bidx(ig.size());
-    for (index_group_p2h::iterator it = ig.begin(); it != ig.end(); it++, i++) {
+    for (index_group_h2p::iterator it = ig.begin(); it != ig.end(); it++, i++) {
       base.merge_block_index(ig.get_spin_mask(it), spidx, bidx[i]);
     }
 
@@ -310,19 +309,19 @@ size_t build_guesses(list_t::iterator& cur_guess, list_t::iterator end,
       lv.resize(2);
 
       static const double coeff[2][3] = {
-                // in case of ms == -1 (alpha ionization)
-                // aaa   abb   bab
-                // and in case of ms == 1 (beta ionization)
-                // bbb   baa   aba
+                // in case of ms == 1 (alpha attachment)
+                // aaa   bab   bba
+                // and in case of ms == -1 (beta attachment)
+                // bbb   aba   aab
                 {  0.0, -1.0,  1.0},  // doublet 1
                 { -2.0, -1.0, -1.0}}; // doublet 2
 
-      if (ms == -1) { // alpha ionization
+      if (ms == 1) { // alpha attachment
         for (size_t i = 0; i < 2; i++) {
           for (size_t j = 0; j < 3; j++) 
             lv[i].push_back(guess_element<3>(bidx[j], idx, coeff[i][j])); 
         }   
-      } else { // beta ionization
+      } else { // beta attachment
         for (size_t i = 0; i < 2; i++) {
           for (size_t j = 0; j < 3; j++)
             lv[i].push_back(guess_element<3>(bidx[2-j], idx, coeff[i][j]));
@@ -339,7 +338,7 @@ size_t build_guesses(list_t::iterator& cur_guess, list_t::iterator end,
     // Reform full block indices
     size_t i = 0;
     std::vector<index<3>> bidx(ig.size());
-    for (index_group_p2h::iterator it = ig.begin(); it != ig.end(); it++, i++) {
+    for (index_group_h2p::iterator it = ig.begin(); it != ig.end(); it++, i++) {
       base.merge_block_index(ig.get_spin_mask(it), spidx, bidx[i]);
     }
 
@@ -347,18 +346,18 @@ size_t build_guesses(list_t::iterator& cur_guess, list_t::iterator end,
       lv.resize(1);
 
       static const double coeff[1][3] = {
-                // in case of ms == -1 (alpha ionization)
-                // aaa   abb   bab
-                // and in case of ms == 1 (beta ionization)
-                // bbb   baa   aba
+                // in case of ms == 1 (alpha attachment)
+                // aaa   bab   bba
+                // and in case of ms == -1 (beta attachment)
+                // bbb   aba   aab
                 {  1.0, -1.0,  -1.0}}; // quartet
 
-      if (ms == -1) { // alpha ionization
+      if (ms == 1) { // alpha attachment
         for (size_t i = 0; i < 1; i++) {
           for (size_t j = 0; j < 3; j++) 
             lv[i].push_back(guess_element<3>(bidx[j], idx, coeff[i][j])); 
         }   
-      } else { // beta ionization
+      } else { // beta attachment
         for (size_t i = 0; i < 1; i++) {
           for (size_t j = 0; j < 3; j++)
             lv[i].push_back(guess_element<3>(bidx[2-j], idx, coeff[i][j]));
@@ -402,7 +401,7 @@ size_t build_guesses(list_t::iterator& cur_guess, list_t::iterator end,
 
 }  // namespace
 
-size_t ip_adc_guess_d(std::list<std::pair<libtensor::btensor<3, double>*, double>>& va,
+size_t ea_adc_guess_d(std::list<std::pair<libtensor::btensor<3, double>*, double>>& va,
                       libtensor::btensor_i<1, double>& d_o,
                       libtensor::btensor_i<1, double>& d_v,
                       const libtensor::symmetry<3, double>& sym,
@@ -413,14 +412,14 @@ size_t ip_adc_guess_d(std::list<std::pair<libtensor::btensor<3, double>*, double
   size_t nguesses = va.size();
   if (nguesses == 0) return 0;
 
-  // TODO sym_o should be stored in an adc_guess_base-like object
+  // TODO sym_v should be stored in an adc_guess_base-like object
   // Determine symmetry and spin
-  bool sym_o;  // Are the two occupied indices identical
-  determine_sym(sym, sym_o);
+  bool sym_v;  // Are the two occupied indices identical
+  determine_sym(sym, sym_v);
   const unsigned spin = determine_spin(restricted, doublet);  // Spin of the symmetry
 
   size_t ns = nguesses;
-  index_group_map_p2h igm(degeneracy_tolerance, sym_o);
+  index_group_map_h2p igm(degeneracy_tolerance, sym_v);
 
   bool max_reached = false;
   // Create empty 1d symmetry to use with btod_select
@@ -448,11 +447,11 @@ size_t ip_adc_guess_d(std::list<std::pair<libtensor::btensor<3, double>*, double
     //size++; // we want to have the real size of the index group guesses
     // Count the number of elements
     if (spin == 0) {
-      for (index_group_map_p2h::iterator it = igm.begin(); it != igm.end(); it++) {
+      for (index_group_map_h2p::iterator it = igm.begin(); it != igm.end(); it++) {
         size += igm.get_group(it).size();
       } 
     } else if (spin == 2) {
-      for (index_group_map_p2h::iterator it = igm.begin(); it != igm.end(); it++) {
+      for (index_group_map_h2p::iterator it = igm.begin(); it != igm.end(); it++) {
         if (igm.get_group(it).size() == 3) {
             size += 2; // two doublets, one quartet
         } else if (igm.get_group(it).size() == 1) {
@@ -460,7 +459,7 @@ size_t ip_adc_guess_d(std::list<std::pair<libtensor::btensor<3, double>*, double
         }
       }
     } else if (spin == 4) {
-      for (index_group_map_p2h::iterator it = igm.begin(); it != igm.end(); it++) {
+      for (index_group_map_h2p::iterator it = igm.begin(); it != igm.end(); it++) {
         if (igm.get_group(it).size() == 3) {
             size += 1; // one quartet
         }
@@ -473,7 +472,7 @@ size_t ip_adc_guess_d(std::list<std::pair<libtensor::btensor<3, double>*, double
 
   list_t::iterator guess = va.begin();
   // Loop until list is empty or we have constructed all guesses
-  index_group_map_p2h::iterator it = igm.begin();
+  index_group_map_h2p::iterator it = igm.begin();
   while (it != igm.end() && guess != va.end()) {
     index_handler<3> base(ab);
     nguesses +=

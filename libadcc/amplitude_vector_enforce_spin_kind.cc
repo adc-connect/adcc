@@ -31,7 +31,8 @@ namespace libadcc {
 namespace lt = libtensor;
 
 void amplitude_vector_enforce_spin_kind(std::shared_ptr<Tensor> doubles_tensor,
-                                        std::string block, std::string spin_kind) {
+                                        std::string block,
+                                        std::string spin_kind, bool is_ip) {
   // Nothing to do for singles block
   if (block == "s") return;
 
@@ -111,16 +112,29 @@ void amplitude_vector_enforce_spin_kind(std::shared_ptr<Tensor> doubles_tensor,
       // Get the index tuple of the canonical block of (alpha, alpha, alpha)
       const lt::index<3>& ci = orbi.get_cindex();
 
-      // set i1 to (alpha, beta, beta) equivalent of the canonical index
-      //  pinned by ai and orbi
       lt::index<3> i1(ci);
-      i1[1] += bidims_alpha[1];
-      i1[2] += bidims_alpha[2];
-
-      // set i2 to (beta, alpha, beta)
       lt::index<3> i2(ci);
-      i2[0] += bidims_alpha[0];
-      i2[2] += bidims_alpha[2];
+
+      if (is_ip) { // IP-ADC calculation
+        // set i1 to (alpha, beta, beta) equivalent of the canonical index
+        //  pinned by ai and orbi
+        i1[1] += bidims_alpha[1];
+        i1[2] += bidims_alpha[2];
+
+        // set i2 to (beta, alpha, beta)
+        i2[0] += bidims_alpha[0];
+        i2[2] += bidims_alpha[2];
+
+      } else { // EA-ADC calculation
+        // set i1 to (beta, alpha, beta) equivalent of the canonical index
+        //  pinned by ai and orbi
+        i1[0] += bidims_alpha[0];
+        i1[2] += bidims_alpha[2];
+
+        // set i2 to (beta, beta, alpha)
+        i2[0] += bidims_alpha[0];
+        i2[1] += bidims_alpha[1];
+      }
 
       //
       // What the following code does is that it keeps the spin projection (S^2)
@@ -131,15 +145,18 @@ void amplitude_vector_enforce_spin_kind(std::shared_ptr<Tensor> doubles_tensor,
       //
 
       lt::orbit<3, scalar_type> orb1(sym, i1, false), orb2(sym, i2, false);
-      const lt::index<3>& ci1 = orb1.get_cindex();  // Canonical block of (a, b, b)
-      const lt::index<3>& ci2 = orb2.get_cindex();  // Canonical block of (b, a, b)
+      // Canonical block of (a, b, b) for IP-ADC or (b, a, b) for EA-ADC
+      const lt::index<3>& ci1 = orb1.get_cindex();
+      // Canonical block of (b, a, b) for IP-ADC or (b, b, a) for EA-ADC
+      const lt::index<3>& ci2 = orb2.get_cindex();
       bool zero1              = ctrl.req_is_zero_block(ci1);
       bool zero2              = ctrl.req_is_zero_block(ci2);
       if (zero1 && zero2) {
         // Set (alpha, alpha, alpha) to zero
         // This effectively filters out the quartet components with zero blocks
-        // in (alpha, beta, beta) and (beta, alpha, beta) erroneously
-        // introduced due to numerical errors.
+        // in (alpha, beta, beta) and (beta, alpha, beta) (IP-ADC) erroneously
+        // introduced due to numerical errors. (beta, alpha, beta) and 
+        // (beta, beta, alpha) blocks for EA-ADC.
         ctrl.req_zero_block(ci);
         continue;
       }
@@ -147,15 +164,18 @@ void amplitude_vector_enforce_spin_kind(std::shared_ptr<Tensor> doubles_tensor,
       // Get block corresponding to canonical index of (alpha, alpha, alpha)
       lt::dense_tensor_wr_i<3, scalar_type>& blk = ctrl.req_block(ci);
 
-      if (!zero1) {  // (alpha, beta, beta) is not zero
+      if (!zero1) {
+        // IP: (alpha, beta, beta) / EA: (beta, alpha, beta) is not zero
         lt::dense_tensor_rd_i<3, scalar_type>& blk1 = ctrl.req_const_block(ci1);
         lt::tod_copy<3>(blk1, orb1.get_transf(i1)).perform(/* assign= */ true, blk);
         ctrl.ret_const_block(ci1);
       }
-      if (!zero2) {  // (beta, alpha, beta) is not zero
+      if (!zero2) {
+        // IP: (beta, alpha, beta) / EA: (beta, beta, alpha) is not zero
         lt::dense_tensor_rd_i<3, scalar_type>& blk2 = ctrl.req_const_block(ci2);
 
-        // Assign if (alpha, beta, beta) is zero, else +=
+        // Assign if (alpha, beta, beta) for IP- and (beta, alpha, beta) for 
+        // EA-ADC is zero, else +=
         lt::tod_copy<3>(blk2, orb2.get_transf(i2)).perform(zero1, blk);
         ctrl.ret_const_block(ci2);
       }
