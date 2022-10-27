@@ -24,7 +24,7 @@ import sys
 import warnings
 import numpy as np
 
-from libadcc import ReferenceState
+from libadcc import ReferenceState, set_lt_scalar
 
 from . import solver
 from .guess import (guesses_any, guesses_singlet, guesses_spin_flip,
@@ -39,7 +39,7 @@ from .solver.lanczos import lanczos
 from .solver.davidson import jacobi_davidson
 from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
-from .AmplitudeVector import QED_AmplitudeVector
+from .AmplitudeVector import AmplitudeVector
 from .qed_matrix_from_diag_adc import qed_matrix_from_diag_adc
 
 __all__ = ["run_adc"]
@@ -588,12 +588,16 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
     Internal function called from run_adc.
     """
     guesses_elec = obtain_guesses_by_inspection(
-        matrix, n_guesses, kind, n_guesses_doubles, qed_subblock="elec")
+        matrix, n_guesses, kind, n_guesses_doubles, qed_subblock=None)
     guesses_phot = obtain_guesses_by_inspection(
         matrix, n_guesses, kind, n_guesses_doubles, qed_subblock="phot")
     guesses_phot2 = obtain_guesses_by_inspection(
         matrix, n_guesses, kind, n_guesses_doubles, qed_subblock="phot2")
     n_guess = len(guesses_elec)
+    #omega = matrix.reference_state.get_qed_omega()
+    #guesses_phot = guesses_elec.ph.copy() + omega
+    #guesses_phot2 = guesses_elec.ph.copy() + 2 * omega
+
 
     # Usually only few states are requested and most of them are close
     # to pure electronic states, so we initialize the guess vectors
@@ -610,22 +614,29 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
                          "equal, but are {} electronic and {} photonic "
                          "guesses".format(len(guesses_elec), len(guesses_phot)))
 
-    guesses_tmp = []
+    #final_guesses = []
+    zero = set_lt_scalar(0.0)
 
-    for guess_index in np.arange(n_guess):
-        if "pphh" in matrix.axis_blocks:
-            guesses_tmp.append(QED_AmplitudeVector(
-                guesses_elec[guess_index].ph, guesses_elec[guess_index].pphh,
-                0, guesses_phot[guess_index].ph, guesses_phot[guess_index].pphh,
-                0, guesses_phot2[guess_index].ph, guesses_phot2[guess_index].pphh
-            ))
-        else:
-            guesses_tmp.append(QED_AmplitudeVector(
-                guesses_elec[guess_index].ph, None,
-                0, guesses_phot[guess_index].ph, None,
-                0, guesses_phot2[guess_index].ph, None
-            ))
+    if hasattr(guesses_elec[0], "pphh"):
+        final_guesses = [AmplitudeVector(**{
+            "ph": guesses_elec[guess_index].ph,
+            "pphh": guesses_elec[guess_index].pphh,
+            "gs1": zero.copy(), "ph1": guesses_phot[guess_index].ph,
+            "pphh1": guesses_phot[guess_index].pphh,
+            "gs2": zero.copy(), "ph2": guesses_phot2[guess_index].ph,
+            "pphh2": guesses_phot2[guess_index].pphh
+        }) for guess_index in np.arange(n_guess)]
+    else:
+        final_guesses = [AmplitudeVector(**{
+            "ph": guesses_elec[guess_index].ph,
+            "gs1": zero.copy(), "ph1": guesses_phot[guess_index].ph,
+            "gs2": zero.copy(), "ph2": guesses_phot2[guess_index].ph
+        }) for guess_index in np.arange(n_guess)]
 
+    #for vec in final_guesses:
+    #    vec.gs1.set_from_ndarray(np.array([0]))
+    #    vec.gs2.set_from_ndarray(np.array([0]))
+    """
     if matrix.reference_state.full_diagonalization:
         full_guess = []
 
@@ -669,6 +680,7 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
         final_guesses = full_guess
     else:
         final_guesses = guesses_tmp
+    """
 
     # TODO: maybe make these values accessible by a keyword, since
     # they can tune the performance. From my experience these work
@@ -676,10 +688,10 @@ def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=
     # to the single photon dispersion mode and how many states one
     # requests, adjusting these values can significantly increase the
     # convergence rate
-    final_guesses[len(final_guesses) - 2].gs1 += 5   # for stronger coupling e.g. 2
-    final_guesses[len(final_guesses) - 1].gs2 += 20  # for stronger coupling e.g. 5
+    final_guesses[len(final_guesses) - 2].gs1.set_from_ndarray(np.array([5]))   # for stronger coupling e.g. 2
+    final_guesses[len(final_guesses) - 1].gs2.set_from_ndarray(np.array([20]))  # for stronger coupling e.g. 5
 
-    return [vec / np.sqrt(vec @ vec) for vec in final_guesses]
+    return [vec / (np.sqrt(vec @ vec)) for vec in final_guesses]
 
 
 def setup_solver_printing(solmethod_name, matrix, kind, default_print,

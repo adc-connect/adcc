@@ -143,12 +143,20 @@ class AmplitudeVector(dict):
         or the dot products with a list of AmplitudeVectors.
         In the latter case a np.ndarray is returned.
         """
+        # __forward_to_blocks cannot handle int and float
+        #gs_keys = ("gs1", "gs2")
         if isinstance(other, list):
             # Make a list where the first index is all singles parts,
             # the second is all doubles parts and so on
             return sum(self[b].dot([av[b] for av in other]) for b in self.keys())
+            #           if b not in gs_keys)
+            #        + sum(self[b] * [av[b] for av in other]
+            #           for b in self.keys() if b in gs_keys))
         else:
             return sum(self[b].dot(other[b]) for b in self.keys())
+            #           if b not in gs_keys)
+            #        + sum(self[b] * other[b] for b in self.keys()
+            #           if b in gs_keys))
 
     def __matmul__(self, other):
         if isinstance(other, AmplitudeVector):
@@ -157,6 +165,16 @@ class AmplitudeVector(dict):
             if all(isinstance(elem, AmplitudeVector) for elem in other):
                 return self.dot(other)
         return NotImplemented
+
+    #def __forward_to_blocks_scalar(self, fname, other, scalar_keys):
+    #    if isinstance(other, AmplitudeVector):
+    #        if sorted(other.blocks_ph) != sorted(self.blocks_ph):
+    #            raise ValueError("Blocks of both AmplitudeVector objects "
+    #                             f"need to agree to perform {fname}")
+    #        ret = {k: getattr(tensor, fname)(other[k])
+    #               for k, tensor in self.items()}
+    #    else:
+    #        ret = {k: getattr(tensor, fname)(other) for k, tensor in self.items()}
 
     def __forward_to_blocks(self, fname, other):
         if isinstance(other, AmplitudeVector):
@@ -168,6 +186,8 @@ class AmplitudeVector(dict):
         else:
             ret = {k: getattr(tensor, fname)(other) for k, tensor in self.items()}
         if any(r == NotImplemented for r in ret.values()):
+            #if "gs1" in self.blocks_ph:
+            #    scalar_keys = [k for k in ret.keys() if ret[k] == NotImplemented]   
             return NotImplemented
         else:
             return AmplitudeVector(**ret)
