@@ -27,7 +27,7 @@ from adcc.LazyMp import LazyMp
 from adcc.AdcMethod import AdcMethod
 from adcc.functions import einsum
 from adcc.Intermediates import Intermediates
-from adcc.AmplitudeVector import AmplitudeVector, QED_AmplitudeVector
+from adcc.AmplitudeVector import AmplitudeVector
 from adcc.OneParticleOperator import OneParticleOperator
 
 from .util import check_doubles_amplitudes, check_singles_amplitudes
@@ -132,12 +132,8 @@ def transition_dm(method, ground_state, amplitude, intermediates=None):
         method = AdcMethod(method)
     if not isinstance(ground_state, LazyMp):
         raise TypeError("ground_state should be a LazyMp object.")
-    if not isinstance(amplitude, (AmplitudeVector, QED_AmplitudeVector)):
+    if not isinstance(amplitude, AmplitudeVector):
         raise TypeError("amplitude should be an AmplitudeVector object.")
-    if isinstance(amplitude, QED_AmplitudeVector):
-        # TODO: Implement the actual transition densities for the qed methods,
-        # but for now just return the electric contribution
-        amplitude = amplitude.elec
     if intermediates is None:
         intermediates = Intermediates(ground_state)
 

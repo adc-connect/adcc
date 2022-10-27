@@ -29,6 +29,7 @@ from itertools import groupby
 
 from ..AdcMatrix import AdcMatrixlike
 from .guess_zero import guess_zero
+from ..AmplitudeVector import AmplitudeVector
 
 
 def guesses_from_diagonal(matrix, n_guesses, block="ph", spin_change=0,
@@ -91,19 +92,16 @@ def guesses_from_diagonal(matrix, n_guesses, block="ph", spin_change=0,
     else:
         raise ValueError(f"Don't know how to generate guesses for block {block}")
 
-    diag = matrix.diagonal().copy()
+    diag = matrix.diagonal()
 
     if qed_subblock == "phot":
-        diag.ph = diag.ph1
-        if block == "pphh":
-            diag.pphh = diag.pphh1
+        diag = AmplitudeVector(**{"ph": diag.ph1, "pphh": diag.pphh1})
+        #if block == "pphh":
+        #    diag.pphh = diag.pphh1
     elif qed_subblock == "phot2":
-        diag.ph = diag.ph2
-        if block == "pphh":
-            diag.pphh = diag.pphh2
-    #else:
-    #    raise KeyError("qed_subblock can only be None, elec, phot or phot2"
-    #                   "for guesses from diagonal")
+        diag = AmplitudeVector(**{"ph": diag.ph2, "pphh": diag.pphh2})
+        #if block == "pphh":
+        #    diag.pphh = diag.pphh2
 
     return guessfunction(matrix, n_guesses, diag, spin_change,
                          spin_block_symmetrisation, degeneracy_tolerance,

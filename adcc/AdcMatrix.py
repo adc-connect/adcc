@@ -30,7 +30,7 @@ from .timings import Timer, timed_member_call
 from .AdcMethod import AdcMethod
 from .functions import ones_like
 from .Intermediates import Intermediates
-from .AmplitudeVector import QED_AmplitudeVector, AmplitudeVector
+from .AmplitudeVector import AmplitudeVector
 
 
 class AdcExtraTerm:
@@ -82,12 +82,6 @@ class AdcMatrix(AdcMatrixlike):
         "adc3":  dict(ph_ph=3, ph_pphh=2,    pphh_ph=2,    pphh_pphh=1),     # noqa: E501
     }
 
-    qed_default_block_orders = {
-        "adc0":  dict(ph_gs=0, ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
-        "adc1":  dict(ph_gs=1, ph_ph=1, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
-        "adc2":  dict(ph_gs=2, ph_ph=2, ph_pphh=1,    pphh_ph=1,    pphh_pphh=0),     # noqa: E501
-    }
-
     def __init__(self, method, hf_or_mp, block_orders=None, intermediates=None,
                  diagonal_precomputed=None):
         """
@@ -134,16 +128,10 @@ class AdcMatrix(AdcMatrixlike):
         self.ndim = 2
         self.extra_terms = []
 
-        if self.reference_state.qed:
-            if method.base_method.name in ["adc2x", "adc3"]:
-                raise NotImplementedError("Neither adc2x nor adc3 "
+        if self.reference_state.is_qed:
+            if method.base_method.name in ["adc2x", "adc3"] or self.is_core_valence_separated:  # noqa: E501
+                raise NotImplementedError("Neither adc2x and adc3 nor cvs methods "
                                           "are implemented for QED-ADC")
-
-        if hasattr(self.reference_state, "first_order_coupling") and method.base_method.name == "adc2":  # noqa: E501
-            # this way we only need to include the separate case
-            # in the ph_ph=1 blocks, and the 4 non-zero coupling blocks
-            self.qed_default_block_orders["adc2"] = dict(
-                ph_gs=1, ph_ph=1, ph_pphh=1, pphh_ph=1, pphh_pphh=0)
 
         self.intermediates = intermediates
         if self.intermediates is None:
@@ -151,10 +139,9 @@ class AdcMatrix(AdcMatrixlike):
 
         # Determine orders of PT in the blocks
         if block_orders is None:
-            if self.reference_state.qed and not self.reference_state.approx:
-                block_orders = self.qed_default_block_orders[method.base_method.name]  # noqa: E501
-            else:
-                block_orders = self.default_block_orders[method.base_method.name]
+            block_orders = self.default_block_orders[method.base_method.name]
+            if self.reference_state.is_qed and not self.reference_state.approx:
+                block_orders["ph_gs"] = block_orders["ph_ph"]
         else:
             tmp_orders = self.default_block_orders[method.base_method.name].copy()
             tmp_orders.update(block_orders)
@@ -205,19 +192,13 @@ class AdcMatrix(AdcMatrixlike):
             if method.is_core_valence_separated:
                 variant = "cvs"
             # Build full QED-matrix
-            if self.reference_state.qed and not self.reference_state.approx:
+            if self.reference_state.is_qed and not self.reference_state.approx:
                 blocks = {
                     bl + "_" + key: get_pp_blocks(key)[bl]
                     for bl, order in block_orders.items()
                     if order is not None
                     for key in self.qed_dispatch_dict
                 }
-
-                #if hf_or_mp.reference_state.qed:
-                #for key in self.qed_dispatch_dict:
-                #    for bl, order in block_orders.items():
-                #        if order is not None:
-                #            blocks[bl + "_" + key] = get_pp_blocks(key)[bl]
             else:  # Build "standard" ADC-matrix
                 blocks = {
                     bl: get_pp_blocks("elec")[bl]
@@ -229,7 +210,7 @@ class AdcMatrix(AdcMatrixlike):
                 self.__diagonal = diagonal_precomputed
             else:
                 self.__diagonal = sum(bl.diagonal for bl in blocks.values()
-                                        if bl.diagonal)
+                                      if bl.diagonal)
                 self.__diagonal.evaluate()
             self.__init_space_data(self.__diagonal)
 

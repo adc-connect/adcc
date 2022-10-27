@@ -127,6 +127,8 @@ block_ph_gs_0_couple = block_ph_gs_0_phot_couple =\
     block_ph_gs_0_couple_inner = block_ph_gs_0_phot_couple_inner =\
     block_ph_gs_0
 
+block_cvs_ph_gs_0 = block_cvs_ph_gs_1 = block_cvs_ph_gs_2 = block_ph_gs_0
+
 
 #
 # 0th order main
@@ -134,7 +136,7 @@ block_ph_gs_0_couple = block_ph_gs_0_phot_couple =\
 
 def block_ph_ph_0(hf, mp, intermediates):
     fCC = hf.fcc if hf.has_core_occupied_space else hf.foo
-    if hf.qed:
+    if hf.is_qed:
         diagonal = AmplitudeVector(ph=direct_sum("a-i->ia", hf.fvv.diagonal(),
                                                  fCC.diagonal()))
 
@@ -169,9 +171,9 @@ block_ph_ph_0_phot_couple = block_ph_ph_0_phot_couple_edge =\
 
 def block_ph_ph_0_phot(hf, mp, intermediates):
     fCC = hf.fcc if hf.has_core_occupied_space else hf.foo
-    if hf.qed:
+    if hf.is_qed:
         diagonal = AmplitudeVector(ph1=direct_sum("a-i->ia", hf.fvv.diagonal(),
-                                                 fCC.diagonal()))
+                                                  fCC.diagonal()))
 
         def apply(ampl):
             return AmplitudeVector(ph1=(
@@ -187,7 +189,7 @@ def block_ph_ph_0_phot(hf, mp, intermediates):
 def block_ph_ph_0_phot2(hf, mp, intermediates):
     fCC = hf.fcc if hf.has_core_occupied_space else hf.foo
     diagonal = AmplitudeVector(ph2=direct_sum("a-i->ia", hf.fvv.diagonal(),
-                                             fCC.diagonal()))
+                                              fCC.diagonal()))
 
     def apply(ampl):
         return AmplitudeVector(ph2=(
@@ -296,21 +298,13 @@ block_ph_pphh_0_couple = block_ph_pphh_0_phot_couple = block_ph_pphh_0_phot =\
 # 1st order gs blocks
 #
 
-def block_ph_gs_1(hf, mp, intermediates):
-    return AdcBlock(lambda ampl: 0, 0)
-
-
-def block_ph_gs_1_phot(hf, mp, intermediates):
-    omega = float(ReferenceState.get_qed_omega(hf))
-
-    def apply(ampl):
-        return AmplitudeVector(gs1=omega * ampl.gs1)
-    return AdcBlock(apply, AmplitudeVector(gs1=set_lt_scalar(omega)))
+block_ph_gs_1_phot = block_ph_gs_0_phot
+block_ph_gs_1_phot2 = block_ph_gs_0_phot2
 
 
 block_ph_gs_1_phot_couple = block_ph_gs_1_phot_couple_edge =\
     block_ph_gs_1_couple_edge = block_ph_gs_1_phot_couple_inner =\
-    block_ph_gs_1
+    block_ph_gs_1 = block_ph_gs_0
 
 
 def block_ph_gs_1_couple(hf, mp, intermediates):
@@ -323,14 +317,6 @@ def block_ph_gs_1_couple(hf, mp, intermediates):
     return AdcBlock(apply, 0)
 
 
-def block_ph_gs_1_phot2(hf, mp, intermediates):
-    omega = float(ReferenceState.get_qed_omega(hf))
-
-    def apply(ampl):
-        return AmplitudeVector(gs2=2 * omega * ampl.gs2)
-    return AdcBlock(apply, AmplitudeVector(gs2=set_lt_scalar(2 * omega)))
-
-
 def block_ph_gs_1_couple_inner(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
 
@@ -341,10 +327,6 @@ def block_ph_gs_1_couple_inner(hf, mp, intermediates):
     return AdcBlock(apply, 0)
 
 
-#def block_ph_gs_1_phot_couple_inner(hf, mp, intermediates):
-#    return AdcBlock(lambda ampl: 0, 0)
-
-
 #
 # 1st order main
 #
@@ -352,7 +334,7 @@ def block_ph_gs_1_couple_inner(hf, mp, intermediates):
 def block_ph_ph_1(hf, mp, intermediates):
     fCC = hf.fcc if hf.has_core_occupied_space else hf.foo
     CvCv = hf.cvcv if hf.has_core_occupied_space else hf.ovov
-    if hf.qed and not hf.qed_hf:
+    if hf.is_qed and not hf.qed_hf:
         diagonal = AmplitudeVector(ph=(
             + direct_sum("a-i->ia", hf.fvv.diagonal(), fCC.diagonal())  # order 0
             - einsum("IaIa->Ia", CvCv)  # order 1
@@ -368,36 +350,18 @@ def block_ph_ph_1(hf, mp, intermediates):
                 + (1 / 2) * einsum("ij,ja->ia", mp.qed_t0_df(b.oo), ampl.ph)
                 - (1 / 2) * einsum("ib,ab->ia", ampl.ph, mp.qed_t0_df(b.vv))
             ))
-    elif hf.qed and hf.qed_hf:
-        if hasattr(hf, "first_order_coupling"):
-            i1 = intermediates.adc2_i1
-            i2 = intermediates.adc2_i2
-            term_t2_eri = intermediates.term_t2_eri
-            diagonal = AmplitudeVector(ph=(
-                + direct_sum("a-i->ia", i1.diagonal(), i2.diagonal())
-                - einsum("IaIa->Ia", hf.ovov)
-                - einsum("ikac,ikac->ia", mp.t2oo, hf.oovv)
-            ))
+    elif hf.is_qed and hf.qed_hf:
+        diagonal = AmplitudeVector(ph=(
+            + direct_sum("a-i->ia", hf.fvv.diagonal(), fCC.diagonal())  # 0
+            - einsum("IaIa->Ia", CvCv)  # 1
+        ))
 
-            def apply(ampl):
-                return AmplitudeVector(ph=(
-                    + einsum("ib,ab->ia", ampl.ph, i1)
-                    - einsum("ij,ja->ia", i2, ampl.ph)
-                    - einsum("jaib,jb->ia", hf.ovov, ampl.ph)    # 1
-                    - 0.5 * einsum("ikac,kc->ia", term_t2_eri, ampl.ph)  # 2
-                ))
-        else:
-            diagonal = AmplitudeVector(ph=(
-                + direct_sum("a-i->ia", hf.fvv.diagonal(), fCC.diagonal())  # 0
-                - einsum("IaIa->Ia", CvCv)  # 1
+        def apply(ampl):
+            return AmplitudeVector(ph=(                 # PT order
+                + einsum("ib,ab->ia", ampl.ph, hf.fvv)  # 0
+                - einsum("IJ,Ja->Ia", fCC, ampl.ph)     # 0
+                - einsum("JaIb,Jb->Ia", CvCv, ampl.ph)  # 1
             ))
-
-            def apply(ampl):
-                return AmplitudeVector(ph=(                 # PT order
-                    + einsum("ib,ab->ia", ampl.ph, hf.fvv)  # 0
-                    - einsum("IJ,Ja->Ia", fCC, ampl.ph)     # 0
-                    - einsum("JaIb,Jb->Ia", CvCv, ampl.ph)  # 1
-                ))
 
     else:
         diagonal = AmplitudeVector(ph=(
@@ -420,7 +384,7 @@ block_cvs_ph_ph_1 = block_ph_ph_1
 def block_ph_ph_1_phot(hf, mp, intermediates):
     fCC = hf.fcc if hf.has_core_occupied_space else hf.foo
     CvCv = hf.cvcv if hf.has_core_occupied_space else hf.ovov
-    if hf.qed and not hf.qed_hf:
+    if hf.is_qed and not hf.qed_hf:
         omega = float(ReferenceState.get_qed_omega(hf))
 
         diagonal = AmplitudeVector(ph1=(
@@ -440,42 +404,22 @@ def block_ph_ph_1_phot(hf, mp, intermediates):
                 - (1 / 2) * einsum("ib,ab->ia", ampl.ph1, mp.qed_t0_df(b.vv))
                 + omega * ampl.ph1
             ))
-    elif hf.qed and hf.qed_hf:
+    elif hf.is_qed and hf.qed_hf:
         omega = float(ReferenceState.get_qed_omega(hf))
 
-        if hasattr(hf, "first_order_coupling"):
-            i1 = intermediates.adc2_i1
-            i2 = intermediates.adc2_i2
-            term_t2_eri = intermediates.term_t2_eri
-            diagonal = AmplitudeVector(ph1=(
-                + direct_sum("a-i->ia", i1.diagonal(), i2.diagonal())
-                - einsum("IaIa->Ia", hf.ovov)
-                - einsum("ikac,ikac->ia", mp.t2oo, hf.oovv)
-                + intermediates.delta_ia_omega
-            ))
+        diagonal = AmplitudeVector(ph1=(
+            + direct_sum("a-i->ia", hf.fvv.diagonal(), fCC.diagonal())  # 0
+            - einsum("IaIa->Ia", CvCv)  # 1
+            + intermediates.delta_ia_omega
+        ))
 
-            def apply(ampl):
-                return AmplitudeVector(ph1=(
-                    + einsum("ib,ab->ia", ampl.ph1, i1)
-                    - einsum("ij,ja->ia", i2, ampl.ph1)
-                    - einsum("jaib,jb->ia", hf.ovov, ampl.ph1)    # 1
-                    - 0.5 * einsum("ikac,kc->ia", term_t2_eri, ampl.ph1)  # 2
-                    + omega * ampl.ph1
-                ))
-        else:
-            diagonal = AmplitudeVector(ph1=(
-                + direct_sum("a-i->ia", hf.fvv.diagonal(), fCC.diagonal())  # 0
-                - einsum("IaIa->Ia", CvCv)  # 1
-                + intermediates.delta_ia_omega
+        def apply(ampl):
+            return AmplitudeVector(ph1=(                  # PT order
+                + einsum("ib,ab->ia", ampl.ph1, hf.fvv)  # 0
+                - einsum("IJ,Ja->Ia", fCC, ampl.ph1)     # 0
+                - einsum("JaIb,Jb->Ia", CvCv, ampl.ph1)  # 1
+                + omega * ampl.ph1
             ))
-
-            def apply(ampl):
-                return AmplitudeVector(ph1=(                  # PT order
-                    + einsum("ib,ab->ia", ampl.ph1, hf.fvv)  # 0
-                    - einsum("IJ,Ja->Ia", fCC, ampl.ph1)     # 0
-                    - einsum("JaIb,Jb->Ia", CvCv, ampl.ph1)  # 1
-                    + omega * ampl.ph1
-                ))
     else:
         raise NotImplementedError("block_ph_ph_1_phot is requested, "
                                   "but ReferenceState has no coupling attribute")
@@ -484,7 +428,7 @@ def block_ph_ph_1_phot(hf, mp, intermediates):
 
 def block_ph_ph_1_couple(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
-    if hf.qed:
+    if hf.is_qed:
         def apply(ampl):
             return AmplitudeVector(ph1=(
                 sqrt(omega / 2) * (
@@ -496,7 +440,7 @@ def block_ph_ph_1_couple(hf, mp, intermediates):
 
 def block_ph_ph_1_phot_couple(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
-    if hf.qed:
+    if hf.is_qed:
         def apply(ampl):
             return AmplitudeVector(ph=(
                 sqrt(omega / 2) * (
@@ -516,7 +460,7 @@ block_ph_ph_1_phot_couple_edge = block_ph_ph_1_couple_edge
 
 def block_ph_ph_1_couple_inner(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
-    if hf.qed:
+    if hf.is_qed:
         def apply(ampl):
             return AmplitudeVector(ph2=(
                 sqrt(omega) * (- einsum("ib,ab->ia", ampl.ph1, mp.qed_t1_df(b.vv))
@@ -527,7 +471,7 @@ def block_ph_ph_1_couple_inner(hf, mp, intermediates):
 
 def block_ph_ph_1_phot_couple_inner(hf, mp, intermediates):
     omega = float(ReferenceState.get_qed_omega(hf))
-    if hf.qed:
+    if hf.is_qed:
         def apply(ampl):
             return AmplitudeVector(ph1=(
                 sqrt(omega) * (- einsum("ib,ab->ia", ampl.ph2, mp.qed_t1_df(b.vv))
@@ -540,7 +484,7 @@ def block_ph_ph_1_phot_couple_inner(hf, mp, intermediates):
 def block_ph_ph_1_phot2(hf, mp, intermediates):
     fCC = hf.fcc if hf.has_core_occupied_space else hf.foo
     CvCv = hf.cvcv if hf.has_core_occupied_space else hf.ovov
-    if hf.qed and not hf.qed_hf:
+    if hf.is_qed and not hf.qed_hf:
         omega = float(ReferenceState.get_qed_omega(hf))
 
         diagonal = AmplitudeVector(ph2=(
@@ -560,42 +504,25 @@ def block_ph_ph_1_phot2(hf, mp, intermediates):
                 - (1 / 2) * einsum("ib,ab->ia", ampl.ph2, mp.qed_t0_df(b.vv))
                 + 2 * omega * ampl.ph2
             ))
-    elif hf.qed and hf.qed_hf:
+    elif hf.is_qed and hf.qed_hf:
         omega = float(ReferenceState.get_qed_omega(hf))
 
-        if hasattr(hf, "first_order_coupling"):
-            i1 = intermediates.adc2_i1
-            i2 = intermediates.adc2_i2
-            term_t2_eri = intermediates.term_t2_eri
-            diagonal = AmplitudeVector(ph2=(
-                + direct_sum("a-i->ia", i1.diagonal(), i2.diagonal())
-                - einsum("IaIa->Ia", hf.ovov)
-                - einsum("ikac,ikac->ia", mp.t2oo, hf.oovv)
-                + intermediates.delta_ia_omega * 2
-            ))
+        diagonal = AmplitudeVector(ph2=(
+            + direct_sum("a-i->ia", hf.fvv.diagonal(), fCC.diagonal())  # 0
+            - einsum("IaIa->Ia", CvCv)  # 1
+            + intermediates.delta_ia_omega * 2
+        ))
 
-            def apply(ampl):
-                return AmplitudeVector(ph2=(
-                    + einsum("ib,ab->ia", ampl.ph2, i1)
-                    - einsum("ij,ja->ia", i2, ampl.ph2)
-                    - einsum("jaib,jb->ia", hf.ovov, ampl.ph2)    # 1
-                    - 0.5 * einsum("ikac,kc->ia", term_t2_eri, ampl.ph2)  # 2
-                    + 2 * omega * ampl.ph2
-                ))
-        else:
-            diagonal = AmplitudeVector(ph2=(
-                + direct_sum("a-i->ia", hf.fvv.diagonal(), fCC.diagonal())  # 0
-                - einsum("IaIa->Ia", CvCv)  # 1
-                + intermediates.delta_ia_omega * 2
+        def apply(ampl):
+            return AmplitudeVector(ph2=(                  # PT order
+                + einsum("ib,ab->ia", ampl.ph2, hf.fvv)  # 0
+                - einsum("IJ,Ja->Ia", fCC, ampl.ph2)     # 0
+                - einsum("JaIb,Jb->Ia", CvCv, ampl.ph2)  # 1
+                + 2 * omega * ampl.ph2
             ))
-
-            def apply(ampl):
-                return AmplitudeVector(ph2=(                  # PT order
-                    + einsum("ib,ab->ia", ampl.ph2, hf.fvv)  # 0
-                    - einsum("IJ,Ja->Ia", fCC, ampl.ph2)     # 0
-                    - einsum("JaIb,Jb->Ia", CvCv, ampl.ph2)  # 1
-                    + 2 * omega * ampl.ph2
-                ))
+    else:
+        raise NotImplementedError("block_ph_ph_1_phot2 is requested, "
+                                  "but ReferenceState has no coupling attribute")
     return AdcBlock(apply, diagonal)
 
 
@@ -786,13 +713,9 @@ def block_pphh_ph_1_phot_couple_inner(hf, mp, intermediates):
 # 2nd order gs blocks
 #
 
-def block_ph_gs_2(hf, mp, intermediates):
-    return AdcBlock(lambda ampl: 0, 0)
-
-
 block_ph_gs_2_phot_couple = block_ph_gs_2_phot_couple_edge =\
     block_ph_gs_2_couple_edge = block_ph_gs_2_phot_couple_inner =\
-    block_ph_gs_2
+    block_ph_gs_2 = block_ph_gs_0
 
 
 def block_ph_gs_2_couple(hf, mp, intermediates):
@@ -805,21 +728,8 @@ def block_ph_gs_2_couple(hf, mp, intermediates):
     return AdcBlock(apply, 0)
 
 
-def block_ph_gs_2_phot(hf, mp, intermediates):
-    omega = float(ReferenceState.get_qed_omega(hf))
-
-    def apply(ampl):
-        return AmplitudeVector(gs1=(omega * ampl.gs1))  # 0. order
-
-    return AdcBlock(apply, AmplitudeVector(gs1=set_lt_scalar(omega)))
-
-
-def block_ph_gs_2_phot2(hf, mp, intermediates):
-    omega = float(ReferenceState.get_qed_omega(hf))
-
-    def apply(ampl):
-        return AmplitudeVector(gs2=(2 * omega * ampl.gs2))  # 0. order
-    return AdcBlock(apply, AmplitudeVector(gs2=set_lt_scalar(2 * omega)))
+block_ph_gs_2_phot = block_ph_gs_0_phot
+block_ph_gs_2_phot2 = block_ph_gs_0_phot2
 
 
 def block_ph_gs_2_couple_inner(hf, mp, intermediates):
@@ -842,7 +752,7 @@ def block_ph_ph_2(hf, mp, intermediates):
 
     term_t2_eri = intermediates.term_t2_eri
 
-    if hf.qed and not hf.approx:
+    if hf.is_qed and not hf.approx:
         omega = float(ReferenceState.get_qed_omega(hf))
         if hf.qed_hf:
             qed_i1 = intermediates.adc2_qed_i1
@@ -946,7 +856,7 @@ def block_ph_ph_2_phot_couple(hf, mp, intermediates):
             + sqrt(omega / 2) * (
                 - einsum("ib,ab->ia", ampl.ph1, mp.qed_t1_df(b.vv))  # 1. order
                 + einsum("ij,ja->ia", mp.qed_t1_df(b.oo), ampl.ph1)  # 1. order
-                - mp.qed_t1_df(b.ov) * ampl.gs1.to_ndarray())  # gs_ph block  1. order
+                - mp.qed_t1_df(b.ov) * ampl.gs1.to_ndarray())        # 1. order
         ))
     return AdcBlock(apply, 0)
 
@@ -1063,7 +973,7 @@ def block_ph_ph_2_phot_couple_inner(hf, mp, intermediates):
             + sqrt(omega) * (
                 - einsum("ib,ab->ia", ampl.ph2, mp.qed_t1_df(b.vv))  # 1. order
                 + einsum("ij,ja->ia", mp.qed_t1_df(b.oo), ampl.ph2)  # 1. order
-                - mp.qed_t1_df(b.ov) * ampl.gs2.to_ndarray())  # gs_ph block # 1. order
+                - mp.qed_t1_df(b.ov) * ampl.gs2.to_ndarray())        # 1. order
         ))
     return AdcBlock(apply, 0)
 

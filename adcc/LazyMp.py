@@ -181,7 +181,7 @@ class LazyMp:
         up to the specified order of perturbation theory
         """
         if level == 1:
-            if self.reference_state.qed:
+            if self.reference_state.is_qed:
                 return self.reference_state.density
             else:
                 return self.reference_state.density
@@ -278,7 +278,7 @@ class LazyMp:
         qed_mp2_correction = 0
         if level == 2 and not is_cvs:
             terms = [(1.0, hf.oovv, self.t2oo)]
-            if hf.qed:
+            if hf.is_qed:
                 total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
                 omega = ReferenceState.get_qed_omega(hf)
                 total_dip.ov = self.get_qed_total_dip.ov

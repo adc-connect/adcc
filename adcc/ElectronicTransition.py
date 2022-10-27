@@ -187,20 +187,12 @@ class ElectronicTransition:
                 return transition_dm(self.method, self.ground_state,
                                      self.excitation_vector[i])
 
-            if hasattr(self.reference_state, "first_order_coupling"):
-
-                return np.array([
-                    [product_trace(comp, tdm(i, "adc0"))
-                     for comp in dipole_integrals]
-                    for i in np.arange(len(self.excitation_energy))
-                ])
-            else:
-                prop_level = "adc" + str(self.property_method.level - 1)
-                return np.array([
-                    [product_trace(comp, tdm(i, prop_level))
-                     for comp in dipole_integrals]
-                    for i in np.arange(len(self.excitation_energy))
-                ])
+            prop_level = "adc" + str(self.property_method.level - 1)
+            return np.array([
+                [product_trace(comp, tdm(i, prop_level))
+                    for comp in dipole_integrals]
+                for i in np.arange(len(self.excitation_energy))
+            ])
         else:
             return ("transition_dipole_moments_qed are only calculated,"
                     "if reference_state contains 'approx' attribute")
@@ -235,7 +227,7 @@ class ElectronicTransition:
 
             block_dict["qed_adc1_off_diag"] = final_block("adc1")
 
-            if self.method.name == "adc2" and not hasattr(self.reference_state, "first_order_coupling"):  # noqa: E501
+            if self.method.name == "adc2":
                 block_dict["qed_adc2_diag"] = final_block("qed_adc2_diag")
                 block_dict["qed_adc2_edge_couple"] = final_block("qed_adc2_edge_couple")  # noqa: E501
                 block_dict["qed_adc2_edge_phot_couple"] = final_block("qed_adc2_edge_phot_couple")  # noqa: E501

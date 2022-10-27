@@ -23,7 +23,7 @@
 from libadcc import amplitude_vector_enforce_spin_kind
 
 from adcc import evaluate
-from adcc.AmplitudeVector import AmplitudeVector, QED_AmplitudeVector
+from adcc.AmplitudeVector import AmplitudeVector
 
 # TODO
 #    This interface is not that great and leads to duplicate information
@@ -49,34 +49,13 @@ class IndexSymmetrisation():
     def symmetrise(self, new_vectors):
         """
         Symmetrise a set of new vectors to be added to the subspace.
-
         new_vectors          Vectors to symmetrise (updated in-place)
-
         Returns:
             The updated new_vectors
         """
-
-        def symm_subroutine(vec):
-            if not isinstance(vec, AmplitudeVector):
-                raise TypeError("new_vectors has to be an "
-                                "iterable of AmplitudeVector")
-            for b in vec.blocks_ph:
-                if b not in self.symmetrisation_functions:
-                    continue
-                vec[b] = evaluate(self.symmetrisation_functions[b](vec[b]))
-            return vec
-
-        if isinstance(new_vectors, (AmplitudeVector, QED_AmplitudeVector)):
+        if isinstance(new_vectors, AmplitudeVector):
             return self.symmetrise([new_vectors])[0]
-        elif isinstance(new_vectors[0], QED_AmplitudeVector):
-            if "pphh" in new_vectors[0].elec.blocks_ph:
-                for vec in new_vectors:
-                    vec.elec = self.symmetrise([vec.elec])[0]
-                    vec.phot = self.symmetrise([vec.phot])[0]
-                    vec.phot2 = self.symmetrise([vec.phot2])[0]
-        elif isinstance(new_vectors[0], AmplitudeVector):
-            for vec in new_vectors:
-                vec = symm_subroutine(vec)
+        for vec in new_vectors:
             if not isinstance(vec, AmplitudeVector):
                 raise TypeError("new_vectors has to be an "
                                 "iterable of AmplitudeVector")
@@ -97,29 +76,17 @@ class IndexSpinSymmetrisation(IndexSymmetrisation):
         self.enforce_spin_kind = enforce_spin_kind
 
     def symmetrise(self, new_vectors):
-        if isinstance(new_vectors, (AmplitudeVector, QED_AmplitudeVector)):
+        if isinstance(new_vectors, AmplitudeVector):
             return self.symmetrise([new_vectors])[0]
-
         new_vectors = super().symmetrise(new_vectors)
 
         # Enforce singlet (or other spin_kind) spin in the doubles block
         # of all amplitude vectors
         for vec in new_vectors:
-            if isinstance(vec, QED_AmplitudeVector):
-                if "pphh" in vec.elec.blocks_ph:
-                    amplitude_vector_enforce_spin_kind(
-                        vec.elec.pphh, "d", self.enforce_spin_kind
-                    )
-                    amplitude_vector_enforce_spin_kind(
-                        vec.phot.pphh, "d", self.enforce_spin_kind
-                    )
-                    amplitude_vector_enforce_spin_kind(
-                        vec.phot2.pphh, "d", self.enforce_spin_kind
-                    )
             # Only work on the doubles part
             # the other blocks are not yet implemented
             # or nothing needs to be done ("ph" block)
-            elif "pphh" in vec.blocks_ph:
+            if "pphh" in vec.blocks_ph:
                 # TODO: Note that the "d" is needed here because the C++ side
                 #       does not yet understand ph and pphh
                 amplitude_vector_enforce_spin_kind(

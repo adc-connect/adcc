@@ -55,7 +55,7 @@ class qed_test(unittest.TestCase):
         self.refstate.frequency = [0.0, 0.0, 0.5]
         self.refstate.freq_with_loss = self.refstate.frequency
         self.refstate.qed_hf = True
-        self.refstate.qed = True
+        self.refstate.is_qed = True
 
     def template_approx(self, case, method):
         self.set_refstate(case)
