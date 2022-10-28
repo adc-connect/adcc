@@ -28,7 +28,7 @@ import scipy.sparse.linalg as sla
 
 from adcc import evaluate, lincomb
 from adcc.AdcMatrix import AdcMatrixlike
-from adcc.AmplitudeVector import AmplitudeVector, QED_AmplitudeVector
+from adcc.AmplitudeVector import AmplitudeVector
 
 from .common import select_eigenpairs
 from .preconditioner import JacobiPreconditioner
@@ -358,7 +358,7 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
     if not isinstance(matrix, AdcMatrixlike):
         raise TypeError("matrix is not of type AdcMatrixlike")
     for guess in guesses:
-        if not isinstance(guess, (AmplitudeVector, QED_AmplitudeVector)):
+        if not isinstance(guess, AmplitudeVector):
             raise TypeError("One of the guesses is not of type AmplitudeVector")
 
     if preconditioner is not None and isinstance(preconditioner, type):
@@ -375,10 +375,7 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
     if not max_subspace:
         # TODO Arnoldi uses this:
         # max_subspace = max(2 * n_ep + 1, 20)
-        if matrix.reference_state.full_diagonalization:
-            max_subspace = len(guesses)
-        else:
-            max_subspace = max(6 * n_ep, 20, 5 * len(guesses))
+        max_subspace = max(6 * n_ep, 20, 5 * len(guesses))
 
     def convergence_test(state):
         state.residuals_converged = state.residual_norms < conv_tol

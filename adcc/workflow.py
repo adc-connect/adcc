@@ -24,7 +24,7 @@ import sys
 import warnings
 import numpy as np
 
-from libadcc import ReferenceState
+from libadcc import ReferenceState, set_lt_scalar
 
 from . import solver
 from .guess import (guesses_any, guesses_singlet, guesses_spin_flip,
@@ -39,7 +39,7 @@ from .solver.lanczos import lanczos
 from .solver.davidson import jacobi_davidson
 from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
-from .AmplitudeVector import QED_AmplitudeVector
+from .AmplitudeVector import AmplitudeVector
 from .qed_matrix_from_diag_adc import qed_matrix_from_diag_adc
 
 __all__ = ["run_adc"]
@@ -51,7 +51,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
             frozen_core=None, frozen_virtual=None, method=None,
             n_singlets=None, n_triplets=None, n_spin_flip=None,
             environment=None, coupl=None, freq=None, qed_hf=True,
-            qed_approx=False, qed_full_diag=False, **solverargs):
+            qed_approx=False, **solverargs):
     """Run an ADC calculation.
 
     Main entry point to run an ADC calculation. The reference to build the ADC
@@ -153,11 +153,6 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         Indicates whether the approximate solution for the qed method should
         be calculated. (After paper is published, put link here)
 
-    qed_full_diag : bool, optional
-        If the full solution to the qed method is required, the performance
-        of the standard qed guess is very poor. In that case, this guess
-        performs much better.
-
 
     Other parameters
     ----------------
@@ -205,14 +200,12 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     matrix = construct_adcmatrix(
         data_or_matrix, core_orbitals=core_orbitals, frozen_core=frozen_core,
         frozen_virtual=frozen_virtual, method=method, coupl=coupl,
-        freq=freq, qed_hf=qed_hf, qed_approx=qed_approx,
-        qed_full_diag=qed_full_diag)
+        freq=freq, qed_hf=qed_hf, qed_approx=qed_approx)
 
     n_states, kind = validate_state_parameters(
         matrix.reference_state, n_states=n_states, n_singlets=n_singlets,
         n_triplets=n_triplets, n_spin_flip=n_spin_flip, kind=kind, coupl=coupl,
-        freq=freq, qed_hf=qed_hf, qed_approx=qed_approx,
-        qed_full_diag=qed_full_diag)
+        freq=freq, qed_hf=qed_hf, qed_approx=qed_approx)
 
     # Determine spin change during excitation. If guesses is not None,
     # i.e. user-provided, we cannot guarantee for obtaining a particular
@@ -244,11 +237,10 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     exstates += env_energy_corrections
 
     # Build QED (approximated) matrix from "standard" ADC matrix
-    # and expectation values, if requested.
-
+    # and expectation values, if requested
     if matrix.reference_state.approx:
         qed_matrix = qed_matrix_from_diag_adc(exstates, matrix.reference_state)
-        if method == "adc2" and not hasattr(matrix.reference_state, "first_order_coupling"):  # noqa: E501
+        if method == "adc2":
             qed_eigvals, qed_eigvecs = qed_matrix.second_order_coupling()
         else:
             qed_eigvals, qed_eigvecs = qed_matrix.first_order_coupling()
@@ -269,8 +261,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
 #
 def construct_adcmatrix(data_or_matrix, core_orbitals=None, frozen_core=None,
                         frozen_virtual=None, method=None, coupl=None,
-                        freq=None, qed_hf=True, qed_approx=False,
-                        qed_full_diag=False):
+                        freq=None, qed_hf=True, qed_approx=False):
     """
     Use the provided data or AdcMatrix object to check consistency of the
     other passed parameters and construct the AdcMatrix object representing
@@ -294,16 +285,16 @@ def construct_adcmatrix(data_or_matrix, core_orbitals=None, frozen_core=None,
                              "core_orbitals.")
         try:
             if coupl is not None:
-                qed = True
+                is_qed = True
             else:
-                qed = False
+                is_qed = False
             refstate = adcc_ReferenceState(data_or_matrix,
                                            core_orbitals=core_orbitals,
                                            frozen_core=frozen_core,
                                            frozen_virtual=frozen_virtual,
-                                           qed=qed, coupl=coupl, qed_hf=qed_hf,
-                                           freq=freq, qed_approx=qed_approx,
-                                           qed_full_diag=qed_full_diag)
+                                           is_qed=is_qed, coupl=coupl,
+                                           qed_hf=qed_hf, freq=freq,
+                                           qed_approx=qed_approx)
         except ValueError as e:
             raise InputError(str(e))  # In case of an issue with the spaces
         data_or_matrix = refstate
@@ -343,7 +334,7 @@ def construct_adcmatrix(data_or_matrix, core_orbitals=None, frozen_core=None,
 def validate_state_parameters(reference_state, n_states=None, n_singlets=None,
                               n_triplets=None, n_spin_flip=None, kind="any",
                               coupl=None, freq=None, qed_hf=True,
-                              qed_approx=False, qed_full_diag=False):
+                              qed_approx=False):
     """
     Check the passed state parameters for consistency with itself and with
     the passed reference and normalise them. In the end return the number of
@@ -420,12 +411,9 @@ def validate_state_parameters(reference_state, n_states=None, n_singlets=None,
             else:
                 raise Warning("polarizations of the cavity photon different from "
                               "z polarization have not been thoroughly tested yet")
-    if not qed_hf:
-        raise InputError("QED-ADC of zeroth and first level are not yet "
-                         "properly tested and second order is not implemented")
-    if qed_full_diag:
-        raise Warning("Care to only request qed_full_diag=True, if you ask for "
-                      "the maximum number of states possible")
+    if not qed_hf and qed_approx:
+        raise InputError("Approximate QED ADC method is only available for "
+                         "QED-HF reference")
 
     return n_states, kind
 
@@ -477,12 +465,11 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
     if guesses is None:
         if n_guesses is None:
             n_guesses = estimate_n_guesses(matrix, n_states, n_guesses_per_state)
-        if matrix.reference_state.qed and not matrix.reference_state.approx:
-            guesses = obtain_guesses_by_inspection_qed(matrix, n_guesses, kind,
-                                                       n_guesses_doubles)
+        if matrix.reference_state.is_qed and not matrix.reference_state.approx:
+            guess_function = obtain_guesses_by_inspection_qed
         else:
-            guesses = obtain_guesses_by_inspection(matrix, n_guesses, kind,
-                                                   n_guesses_doubles)
+            guess_function = obtain_guesses_by_inspection
+        guesses = guess_function(matrix, n_guesses, kind, n_guesses_doubles)
     else:
         if len(guesses) < n_states:
             raise InputError("Less guesses provided via guesses (== {}) "
@@ -583,101 +570,59 @@ def obtain_guesses_by_inspection(matrix, n_guesses, kind, n_guesses_doubles=None
 
 def obtain_guesses_by_inspection_qed(matrix, n_guesses, kind, n_guesses_doubles=None):  # noqa: E501
     """
-    Obtain guesses for QED_AmplitudeVectors, by pushing the subblocks
+    Obtain guesses for full qed method, by pushing the subblocks
     into obtain_guesses_by_inspection.
     Internal function called from run_adc.
     """
     guesses_elec = obtain_guesses_by_inspection(
-        matrix, n_guesses, kind, n_guesses_doubles, qed_subblock="elec")
+        matrix, n_guesses, kind, n_guesses_doubles, qed_subblock=None)
     guesses_phot = obtain_guesses_by_inspection(
         matrix, n_guesses, kind, n_guesses_doubles, qed_subblock="phot")
     guesses_phot2 = obtain_guesses_by_inspection(
         matrix, n_guesses, kind, n_guesses_doubles, qed_subblock="phot2")
-    n_guess = len(guesses_elec)
 
     # Usually only few states are requested and most of them are close
     # to pure electronic states, so we initialize the guess vectors
     # as almost purely electric guesses.
-    if not matrix.reference_state.full_diagonalization:
-        for i in np.arange(n_guess):
-            # TODO: maybe make these values accessible by a keyword, since
-            # they can tune the performance. From my experience these work
-            # very well though
-            guesses_phot[i] *= 0.02
-            guesses_phot2[i] *= 0.001
-    if n_guess != len(guesses_phot):
+    for i in np.arange(n_guesses):
+        # TODO: maybe make these values accessible by a keyword, since
+        # they can tune the performance. From my experience these work
+        # very well though
+        guesses_phot[i] *= 0.02
+        guesses_phot2[i] *= 0.001
+    if n_guesses != len(guesses_phot):
         raise InputError("amount of guesses for electronic and photonic must be "
                          "equal, but are {} electronic and {} photonic "
                          "guesses".format(len(guesses_elec), len(guesses_phot)))
 
-    guesses_tmp = []
+    zero = set_lt_scalar(0.0)
 
-    for guess_index in np.arange(n_guess):
-        if "pphh" in matrix.axis_blocks:
-            guesses_tmp.append(QED_AmplitudeVector(
-                guesses_elec[guess_index].ph, guesses_elec[guess_index].pphh,
-                0, guesses_phot[guess_index].ph, guesses_phot[guess_index].pphh,
-                0, guesses_phot2[guess_index].ph, guesses_phot2[guess_index].pphh
-            ))
-        else:
-            guesses_tmp.append(QED_AmplitudeVector(
-                guesses_elec[guess_index].ph, None,
-                0, guesses_phot[guess_index].ph, None,
-                0, guesses_phot2[guess_index].ph, None
-            ))
-
-    if matrix.reference_state.full_diagonalization:
-        full_guess = []
-
-        for qed_vec in guesses_tmp:
-            tmp_elec_vec = qed_vec.elec.copy() * 10
-            tmp_phot_vec = qed_vec.phot.copy() * 10
-            tmp_phot2_vec = qed_vec.phot2.copy() * 10
-
-            tmp_zero_vec = qed_vec.elec.zeros_like()
-
-            if "pphh" in matrix.axis_blocks:
-                full_guess.append(QED_AmplitudeVector(
-                    tmp_elec_vec.ph, tmp_elec_vec.pphh,
-                    0, tmp_zero_vec.ph, tmp_zero_vec.pphh,
-                    0, tmp_zero_vec.ph, tmp_zero_vec.pphh))
-                full_guess.append(QED_AmplitudeVector(
-                    tmp_zero_vec.ph, tmp_zero_vec.pphh,
-                    0, tmp_phot_vec.ph, tmp_phot_vec.pphh,
-                    0, tmp_zero_vec.ph, tmp_zero_vec.pphh))
-                full_guess.append(QED_AmplitudeVector(
-                    tmp_zero_vec.ph, tmp_zero_vec.pphh,
-                    0, tmp_zero_vec.ph, tmp_zero_vec.pphh,
-                    0, tmp_phot2_vec.ph, tmp_phot2_vec.pphh))
-            else:
-                full_guess.append(QED_AmplitudeVector(
-                    tmp_elec_vec.ph, None,
-                    0, tmp_zero_vec.ph, None,
-                    0, tmp_zero_vec.ph, None))
-                full_guess.append(QED_AmplitudeVector(
-                    tmp_zero_vec.ph, None,
-                    0, tmp_phot_vec.ph, None,
-                    0, tmp_zero_vec.ph, None))
-                full_guess.append(QED_AmplitudeVector(
-                    tmp_zero_vec.ph, None,
-                    0, tmp_zero_vec.ph, None,
-                    0, tmp_phot2_vec.ph, None))
-
-        full_guess.append(guesses_tmp[0].zeros_like())
-        full_guess.append(guesses_tmp[0].zeros_like())
-
-        final_guesses = full_guess
+    if hasattr(guesses_elec[0], "pphh"):
+        final_guesses = [AmplitudeVector(**{
+            "ph": guesses_elec[guess_index].ph,
+            "pphh": guesses_elec[guess_index].pphh,
+            "gs1": zero.copy(), "ph1": guesses_phot[guess_index].ph,
+            "pphh1": guesses_phot[guess_index].pphh,
+            "gs2": zero.copy(), "ph2": guesses_phot2[guess_index].ph,
+            "pphh2": guesses_phot2[guess_index].pphh
+        }) for guess_index in np.arange(n_guesses)]
     else:
-        final_guesses = guesses_tmp
+        final_guesses = [AmplitudeVector(**{
+            "ph": guesses_elec[guess_index].ph,
+            "gs1": zero.copy(), "ph1": guesses_phot[guess_index].ph,
+            "gs2": zero.copy(), "ph2": guesses_phot2[guess_index].ph
+        }) for guess_index in np.arange(n_guesses)]
 
     # TODO: maybe make these values accessible by a keyword, since
     # they can tune the performance. From my experience these work
-    # very well though, but depending on how strong a state couples
+    # quite well though, but depending on how strong a state couples
     # to the single photon dispersion mode and how many states one
-    # requests, adjusting these values can significantly increase the
+    # requests, adjusting these values can increase the
     # convergence rate
-    final_guesses[len(final_guesses) - 2].gs1 += 5   # for stronger coupling e.g. 2
-    final_guesses[len(final_guesses) - 1].gs2 += 20  # for stronger coupling e.g. 5
+    # for stronger coupling e.g. 2
+    final_guesses[n_guesses - 2].gs1.set_from_ndarray(np.array([5]))
+    # for stronger coupling e.g. 5
+    final_guesses[n_guesses - 1].gs2.set_from_ndarray(np.array([20]))
 
     return [vec / np.sqrt(vec @ vec) for vec in final_guesses]
 

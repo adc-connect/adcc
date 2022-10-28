@@ -169,20 +169,15 @@ class Psi4HFProvider(HartreeFockProvider):
     def get_restricted(self):
         if isinstance(self.wfn, (psi4.core.RHF, psi4.core.ROHF)):
             return True
-        elif isinstance(self.wfn, (psi4.core.Wavefunction)):
-            # This is the object returned by the hilbert package, which does
+        elif isinstance(self.wfn, psi4.core.UHF):
+            return False
+        else:
+            # The hilbert package returns a more basic object, which does
             # not provide a restricted indicator, so we determine it here
-            # and print the result
             orben_a = np.asarray(self.wfn.epsilon_a())
             orben_b = np.asarray(self.wfn.epsilon_b())
-            if all(orben_a == orben_b):
-                print("This is a restricted calculation")
-                return True
-            else:
-                print("This is an unrestricted calculation")
-                return False
-        else:
-            return False
+            # TODO Maybe give a small tolerance here
+            return all(orben_a == orben_b)
 
     def get_energy_scf(self):
         return self.wfn.energy()

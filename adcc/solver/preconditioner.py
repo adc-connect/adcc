@@ -23,7 +23,7 @@
 import numpy as np
 
 from adcc.AdcMatrix import AdcMatrixlike
-from adcc.AmplitudeVector import AmplitudeVector, QED_AmplitudeVector
+from adcc.AmplitudeVector import AmplitudeVector
 
 
 class PreconditionerIdentity:
@@ -64,12 +64,6 @@ class JacobiPreconditioner:
 
     def apply(self, invecs):
         if isinstance(invecs, AmplitudeVector):
-            if not isinstance(self.shifts, (float, np.number)):
-                raise TypeError("Can only apply JacobiPreconditioner "
-                                "to a single vector if shifts is "
-                                "only a single number.")
-            return invecs / (self.diagonal - self.shifts)
-        elif isinstance(invecs, QED_AmplitudeVector):
             if not isinstance(self.shifts, (float, np.number)):
                 raise TypeError("Can only apply JacobiPreconditioner "
                                 "to a single vector if shifts is "

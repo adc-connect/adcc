@@ -91,17 +91,16 @@ def guesses_from_diagonal(matrix, n_guesses, block="ph", spin_change=0,
     else:
         raise ValueError(f"Don't know how to generate guesses for block {block}")
 
-    if qed_subblock is None:
-        diag = matrix.diagonal()
-    elif qed_subblock == "elec":
-        diag = matrix.diagonal().elec
-    elif qed_subblock == "phot":
-        diag = matrix.diagonal().phot
+    diag = matrix.diagonal()
+
+    if qed_subblock == "phot":
+        diag.ph = diag.ph1
+        if block == "pphh":
+            diag.pphh = diag.pphh1
     elif qed_subblock == "phot2":
-        diag = matrix.diagonal().phot2
-    else:
-        raise KeyError("qed_subblock can only be None, elec, phot or phot2"
-                       "for guesses from diagonal")
+        diag.ph = diag.ph2
+        if block == "pphh":
+            diag.pphh = diag.pphh2
 
     return guessfunction(matrix, n_guesses, diag, spin_change,
                          spin_block_symmetrisation, degeneracy_tolerance,
