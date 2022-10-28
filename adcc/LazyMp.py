@@ -181,10 +181,7 @@ class LazyMp:
         up to the specified order of perturbation theory
         """
         if level == 1:
-            if self.reference_state.is_qed:
-                return self.reference_state.density
-            else:
-                return self.reference_state.density
+            return self.reference_state.density
         elif level == 2:
             return self.reference_state.density + self.mp2_diffdm
         else:

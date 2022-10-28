@@ -132,6 +132,9 @@ class AdcMatrix(AdcMatrixlike):
             if method.base_method.name in ["adc2x", "adc3"] or self.is_core_valence_separated:  # noqa: E501
                 raise NotImplementedError("Neither adc2x and adc3 nor cvs methods "
                                           "are implemented for QED-ADC")
+            elif method.base_method.name == "adc2" and not self.reference_state.qed_hf:  # noqa: E501
+                raise NotImplementedError("QED-ADC(2) is only available for a "
+                                          "QED-HF reference")
 
         self.intermediates = intermediates
         if self.intermediates is None:

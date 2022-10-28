@@ -29,7 +29,6 @@ from itertools import groupby
 
 from ..AdcMatrix import AdcMatrixlike
 from .guess_zero import guess_zero
-from ..AmplitudeVector import AmplitudeVector
 
 
 def guesses_from_diagonal(matrix, n_guesses, block="ph", spin_change=0,
@@ -95,13 +94,13 @@ def guesses_from_diagonal(matrix, n_guesses, block="ph", spin_change=0,
     diag = matrix.diagonal()
 
     if qed_subblock == "phot":
-        diag = AmplitudeVector(**{"ph": diag.ph1, "pphh": diag.pphh1})
-        #if block == "pphh":
-        #    diag.pphh = diag.pphh1
+        diag.ph = diag.ph1
+        if block == "pphh":
+            diag.pphh = diag.pphh1
     elif qed_subblock == "phot2":
-        diag = AmplitudeVector(**{"ph": diag.ph2, "pphh": diag.pphh2})
-        #if block == "pphh":
-        #    diag.pphh = diag.pphh2
+        diag.ph = diag.ph2
+        if block == "pphh":
+            diag.pphh = diag.pphh2
 
     return guessfunction(matrix, n_guesses, diag, spin_change,
                          spin_block_symmetrisation, degeneracy_tolerance,

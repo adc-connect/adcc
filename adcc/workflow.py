@@ -411,9 +411,9 @@ def validate_state_parameters(reference_state, n_states=None, n_singlets=None,
             else:
                 raise Warning("polarizations of the cavity photon different from "
                               "z polarization have not been thoroughly tested yet")
-    if not qed_hf:
-        raise InputError("QED-ADC of zeroth and first level are not yet "
-                         "properly tested and second order is not implemented")
+    if not qed_hf and qed_approx:
+        raise InputError("Approximate QED ADC method is only available for "
+                         "QED-HF reference")
 
     return n_states, kind
 

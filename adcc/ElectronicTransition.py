@@ -223,16 +223,14 @@ class ElectronicTransition:
                                   for j in np.arange(n_states)]
                                  for i in np.arange(n_states)])
 
-            block_dict = {}
-
-            block_dict["qed_adc1_off_diag"] = final_block("adc1")
+            block_dict = {"qed_adc1_off_diag": final_block("adc1")}
 
             if self.method.name == "adc2":
-                block_dict["qed_adc2_diag"] = final_block("qed_adc2_diag")
-                block_dict["qed_adc2_edge_couple"] = final_block("qed_adc2_edge_couple")  # noqa: E501
-                block_dict["qed_adc2_edge_phot_couple"] = final_block("qed_adc2_edge_phot_couple")  # noqa: E501
-                block_dict["qed_adc2_ph_pphh"] = final_block("qed_adc2_ph_pphh")
-                block_dict["qed_adc2_pphh_ph"] = final_block("qed_adc2_pphh_ph")
+                keys = ("qed_adc2_diag", "qed_adc2_edge_couple",
+                        "qed_adc2_edge_phot_couple", "qed_adc2_ph_pphh",
+                        "qed_adc2_pphh_ph")
+                for key in keys:
+                    block_dict[key] = final_block(key)
             return block_dict
         else:
             return ("s2s_dipole_moments_qed are only calculated,"
