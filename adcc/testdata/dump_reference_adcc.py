@@ -108,19 +108,16 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
 
     # Compute matvec and block-wise apply
     matvec = states[0].matrix.compute_matvec(random_vector)
-    result = {"ss": adcc.copy(random_vector["s"]), }
-    states[0].matrix.compute_apply("ss", random_vector["s"], result["ss"])
+    result = {}
+    result["ss"] = states[0].matrix.block_apply("ph_ph", random_vector.ph)
     if "d" in random_vector.blocks:
         if not ("cvs" in method and "adc3" in method):
-            result["ds"] = adcc.copy(random_vector["d"])
-            states[0].matrix.compute_apply("ds", random_vector["s"], result["ds"])
-            result["sd"] = adcc.copy(random_vector["s"])
-            states[0].matrix.compute_apply("sd", random_vector["d"], result["sd"])
+            result["ds"] = states[0].matrix.block_apply("pphh_ph", random_vector["ph"])
+            result["sd"] = states[0].matrix.block_apply("ph_pphh", random_vector["pphh"])
 
         # TODO CVS-ADC(2)-x and CVS-ADC(3) compute_apply("dd") is not implemented
         if not ("cvs" in method and ("adc2x" in method or "adc3" in method)):
-            result["dd"] = adcc.copy(random_vector["d"])
-            states[0].matrix.compute_apply("dd", random_vector["d"], result["dd"])
+            result["dd"] = states[0].matrix.block_apply("pphh_pphh", random_vector["pphh"])
 
     gmatrix["random_singles"] = random_vector["s"].to_ndarray()
     gmatrix["diagonal_singles"] = states[0].matrix.diagonal("s").to_ndarray()

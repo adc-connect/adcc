@@ -56,7 +56,7 @@ def dump_method(case, method, kwargs, spec, generator="atd"):
         hfdata = adcc.DataHfProvider(h5py.File(h5file, "r"))
 
     # Get dictionary of parameters for the reference cases.
-    refcases = ast.literal_eval(hfdata.data["reference_cases"][()])
+    refcases = ast.literal_eval(hfdata.data["reference_cases"][()].decode())
     kwargs = dict(kwargs)
     if generator == "atd":
         kwargs.update(expand_spaceargs(hfdata, **refcases[spec]))

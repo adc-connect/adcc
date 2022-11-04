@@ -74,10 +74,10 @@ def mtm_cvs_adc2(mp, op, intermediates):
     op_oc = op.co.transpose() if op.is_symmetric else op.oc
     f1 = (
         + op_vc.transpose()
-        - einsum("bI,ab->Ia", op_vc, intermediates.cvs_p0.vv) # prefactor?
+        - einsum("bI,ab->Ia", op_vc, intermediates.cvs_p0.vv)
         - einsum("jI,ja->Ia", op_oc, intermediates.cvs_p0.ov)
     )
-    f2 = (1 / sqrt(2)) * einsum("kI,kjab->jIab", op_oc, mp.t2(b.oovv)) # prefactor?
+    f2 = (1 / sqrt(2)) * einsum("kI,kjab->jIab", op_oc, mp.t2(b.oovv))
     return AmplitudeVector(ph=f1, pphh=f2)
 
 
