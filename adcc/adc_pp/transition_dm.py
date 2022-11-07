@@ -69,7 +69,7 @@ def tdm_cvs_adc2(mp, amplitude, intermediates):
     )
 
     # cvs_adc2_dp0_vc
-    dm.vc -= einsum("ab,Ib->aI", p0.vv, u1)
+    dm.vc -= 0.5 * einsum("ab,Ib->aI", p0.vv, u1)
     return dm
 
 
