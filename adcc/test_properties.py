@@ -124,13 +124,13 @@ class TestMagneticTransitionDipoleMoments(unittest.TestCase):
         """
         basis = "sto-3g"
         scfres = run_hf(backend, xyz, basis)
-        
+
         if "cvs" in method:
             state = run_adc(scfres, method=method, n_singlets=5, core_orbitals=2)
         else:
             state = run_adc(scfres, method=method, n_singlets=10)
         tdms = state.transition_magnetic_dipole_moment
-        
+
         # for linear molecules lying on the z-axis, the z-component must be zero
         for tdm in tdms:
             assert tdm[2] < 1e-10
