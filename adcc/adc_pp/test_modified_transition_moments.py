@@ -29,7 +29,7 @@ from .modified_transition_moments import modified_transition_moments
 from adcc.misc import expand_test_templates
 from adcc.testdata.cache import cache
 
-from pytest import approx
+from pytest import skip, approx
 
 # The methods to test
 basemethods = ["adc0", "adc1", "adc2"]
@@ -51,7 +51,7 @@ class TestModifiedTransitionMoments(unittest.TestCase):
             dips = state.reference_state.operators.magnetic_dipole
             ref_tdm = state.transition_magnetic_dipole_moment
         else:
-            raise NotImplementedError(
+            skip(
                 "Tests are only implemented for"
                 "electric and magnetic dipole operators."
             )

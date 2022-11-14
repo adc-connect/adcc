@@ -29,6 +29,7 @@ from adcc.testdata.cache import cache
 from adcc.OneParticleOperator import product_trace
 from adcc.adc_pp.state2state_transition_dm import state2state_transition_dm
 from adcc.misc import expand_test_templates
+from pytest import skip
 
 
 testcases = [("h2o_sto3g", "singlet"), ("cn_sto3g", "state")]
@@ -47,7 +48,7 @@ class TestIsrMatrix(unittest.TestCase):
         elif op_kind == "magnetic":  # example of an asymmetric operator
             dips = state.reference_state.operators.magnetic_dipole
         else:
-            raise NotImplementedError(
+            skip(
                 "Tests are only implemented for"
                 "electric and magnetic dipole operators."
             )

@@ -42,7 +42,7 @@ class IsrMatrix(AdcMatrixlike):
         "adc3":  dict(ph_ph=3, ph_pphh=2,    pphh_ph=2,    pphh_pphh=1),     # noqa: E501
     }
 
-    def __init__(self, method, hf_or_mp, operators, block_orders=None):
+    def __init__(self, method, hf_or_mp, operator, block_orders=None):
         """
         Initialise an ISR matrix of a given one-particle operator
         for the provided ADC method.
@@ -53,7 +53,7 @@ class IsrMatrix(AdcMatrixlike):
             Method to use.
         hf_or_mp : adcc.ReferenceState or adcc.LazyMp
             HF reference or MP ground state.
-        operators : adcc.OneParticleOperator or list of adcc.OneParticleOperator
+        operator : adcc.OneParticleOperator or list of adcc.OneParticleOperator
                     objects
             One-particle matrix elements associated with a one-particle operator.
         block_orders : optional
@@ -71,12 +71,12 @@ class IsrMatrix(AdcMatrixlike):
         if not isinstance(method, AdcMethod):
             method = AdcMethod(method)
 
-        if not isinstance(operators, list):
-            self.operators = [operators]
+        if not isinstance(operator, list):
+            self.operator = [operator]
         else:
-            self.operators = operators.copy()
-        if not all(isinstance(op, OneParticleOperator) for op in self.operators):
-            raise TypeError("operators is not a valid object. It needs to be "
+            self.operator = operator.copy()
+        if not all(isinstance(op, OneParticleOperator) for op in self.operator):
+            raise TypeError("operator is not a valid object. It needs to be "
                             "either an OneParticleOperator or a list of "
                             "OneParticleOperator objects.")
 
@@ -115,11 +115,11 @@ class IsrMatrix(AdcMatrixlike):
             if self.is_core_valence_separated:
                 variant = "cvs"
             blocks = [{
-                block: ppbmatrix.block(self.ground_state, operator,
+                block: ppbmatrix.block(self.ground_state, op,
                                        block.split("_"), order=order,
                                        variant=variant)
                 for block, order in self.block_orders.items() if order is not None
-            } for operator in self.operators]
+            } for op in self.operator]
             # TODO Rename to self.block in 0.16.0
             self.blocks_ph = [{
                 b: bl[b].apply for b in bl
@@ -145,10 +145,10 @@ class IsrMatrix(AdcMatrixlike):
 
     def rmatvec(self, v):
         # Hermitian operators
-        if all(op.is_symmetric for op in self.operators):
+        if all(op.is_symmetric for op in self.operator):
             return self.matvec(v)
         else:
-            diffv = [op.ov + op.vo.transpose((1, 0)) for op in self.operators]
+            diffv = [op.ov + op.vo.transpose((1, 0)) for op in self.operator]
             # anti-Hermitian operators
             if all(dv.dot(dv) < 1e-12 for dv in diffv):
                 return [
