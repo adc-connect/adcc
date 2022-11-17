@@ -25,7 +25,7 @@ from math import sqrt
 from adcc import block as b
 from adcc.LazyMp import LazyMp
 from adcc.AdcMethod import AdcMethod
-from adcc.functions import einsum, direct_sum
+from adcc.functions import einsum
 from adcc.Intermediates import Intermediates
 from adcc.AmplitudeVector import AmplitudeVector
 from adcc.OneParticleOperator import OneParticleOperator
@@ -36,7 +36,7 @@ from .util import check_doubles_amplitudes, check_singles_amplitudes
 def diffdm_ea_adc0(mp, amplitude, intermediates):
     check_singles_amplitudes([b.v], amplitude)
     u1 = amplitude.p
-    
+
     dm = OneParticleOperator(mp, is_symmetric=True)
     dm.vv = einsum("a,b->ab", u1, u1)
     return dm
@@ -46,31 +46,31 @@ def diffdm_ea_adc2(mp, amplitude, intermediates):
     dm = diffdm_ea_adc0(mp, amplitude, intermediates)  # Get ADC(0/1) result
     check_doubles_amplitudes([b.o, b.v, b.v], amplitude)
     u1, u2 = amplitude.p, amplitude.pph
-    
+
     t2 = mp.t2(b.oovv)
     p0 = mp.mp2_diffdm
     p1_vv = dm.vv.evaluate()  # ADC(1) diffdm
-    
+
     # Zeroth order doubles contributions
     p2_oo = -einsum("jab,iab->ij", u2, u2)
     p2_vv = 2 * einsum("iac,ibc->ab", u2, u2)
     p_ov = sqrt(2) * einsum("b,iba->ia", u1, u2)
-    
+
     # ADC(2) ISR intermediate (TODO Move to intermediates)
     # ru1 = einsum("i,ijab->jab", u1, t2).evaluate()
 
     # Compute second-order contributions to the density matrix
     dm.oo = (  # ea_adc2_p_oo
-        + p2_oo 
+        + p2_oo
         + einsum("ikc,jkc->ij", einsum("a,ikac->ikc", u1, t2),
                  einsum("b,jkbc->jkc", u1, t2))
     )
 
     dm.vv = (  # ea_adc2_p_vv
-        + p1_vv + p2_vv 
+        + p1_vv + p2_vv
         - 0.5 * einsum("c,ac,b->ab", u1, p0.vv, u1)
         - 0.5 * einsum("a,bc,c->ab", u1, p0.vv, u1)
-        + 0.5 * einsum("ijb,ija->ab", einsum("c,ijcb->ijb", u1, t2), 
+        + 0.5 * einsum("ijb,ija->ab", einsum("c,ijcb->ijb", u1, t2),
                        einsum("d,ijad->ija", u1, t2))
     )
 

@@ -22,7 +22,7 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
-from . import adc_pp
+from . import adc_pp, adc_ip, adc_ea
 from .misc import cached_property
 from .timings import timed_member_call
 
@@ -78,8 +78,9 @@ class State2States(ElectronicTransition):
         List of transition density matrices from
         initial state to final state/s
         """
+        adc_type = {"pp": adc_pp, "ip": adc_ip, "ea": adc_ea}
         return [
-            adc_pp.state2state_transition_dm(
+            adc_type[self.matrix.type].state2state_transition_dm(
                 self.property_method, self.ground_state,
                 self.excitation_vector[self.initial],
                 self.excitation_vector[final],

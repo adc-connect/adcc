@@ -26,8 +26,7 @@
 from math import sqrt
 from collections import namedtuple
 
-from adcc import block as b
-from adcc.functions import direct_sum, einsum, zeros_like
+from adcc.functions import direct_sum, einsum
 from adcc.Intermediates import Intermediates, register_as_intermediate
 from adcc.AmplitudeVector import AmplitudeVector
 
@@ -47,8 +46,9 @@ __all__ = ["block"]
 #
 """
 `apply` is a function mapping an AmplitudeVector to the contribution of this
-block to the result of applying the ADC matrix. `diagonal` is an `AmplitudeVector`
-containing the expression to the diagonal of the ADC matrix from this block.
+block to the result of applying the ADC matrix. `diagonal` is an
+`AmplitudeVector` containing the expression to the diagonal of the ADC matrix
+from this block.
 """
 AdcBlock = namedtuple("AdcBlock", ["apply", "diagonal"])
 
@@ -59,9 +59,9 @@ def block(ground_state, spaces, order, variant=None, intermediates=None):
     and the perturbation theory order for the block,
     variant is "cvs" or sth like that.
 
-    It is assumed largely, that CVS is equivalent to mp.has_core_occupied_space,
-    while one would probably want in the long run that one can have an "o2" space,
-    but not do CVS.
+    It is assumed largely, that CVS is equivalent to
+    mp.has_core_occupied_space, while one would probably want in the long run
+    that one can have an "o2" space, but not do CVS.
     """
     if isinstance(variant, str):
         variant = [variant]
@@ -72,12 +72,12 @@ def block(ground_state, spaces, order, variant=None, intermediates=None):
         intermediates = Intermediates(ground_state)
 
     if ground_state.has_core_occupied_space and "cvs" not in variant:
-        raise ValueError("Cannot run a general (non-core-valence approximated) "
-                         "ADC method on top of a ground state with a "
+        raise ValueError("Cannot run a general (non-core-valence approximated)"
+                         " ADC method on top of a ground state with a "
                          "core-valence separation.")
     if not ground_state.has_core_occupied_space and "cvs" in variant:
-        raise ValueError("Cannot run a core-valence approximated ADC method on "
-                         "top of a ground state without a "
+        raise ValueError("Cannot run a core-valence approximated ADC method on"
+                         " top of a ground state without a "
                          "core-valence separation.")
 
     fn = "_".join(["block"] + variant + spaces + [str(order)])
@@ -100,11 +100,11 @@ def block_p_p_0(hf, mp, intermediates):
 
 
 def diagonal_pph_pph_0(hf):
-    res = direct_sum("-i+a+b->iab", 
+    res = direct_sum("-i+a+b->iab",
                      hf.foo.diagonal(), hf.fvv.diagonal(), hf.fvv.diagonal())
     return AmplitudeVector(pph=res.symmetrise(1, 2))
-    
-    
+
+
 def block_pph_pph_0(hf, mp, intermediates):
     # M_{22}
     def apply(ampl):
@@ -118,7 +118,7 @@ def block_pph_pph_0(hf, mp, intermediates):
 #
 # 1st order main
 #
-def block_h_h_1(hf, mp, intermediates):
+def block_p_p_1(hf, mp, intermediates):
     # M_{11}, same as ADC(0)
     return block_p_p_0(hf, mp, intermediates)
 
@@ -149,6 +149,7 @@ def block_p_p_2(hf, mp, intermediates):
     # M_{11}
     i1 = intermediates.adc2_ea_i1
     diagonal = AmplitudeVector(p=i1.diagonal())
+
     def apply(ampl):
         return AmplitudeVector(p=einsum("ab,b->a", i1, ampl.p))
     return AdcBlock(apply, diagonal)
@@ -160,5 +161,5 @@ def block_p_p_2(hf, mp, intermediates):
 
 @register_as_intermediate
 def adc2_ea_i1(hf, mp, intermediates):
-    return hf.fvv + 0.5 * einsum("ijac,ijbc->ab", 
-                                   mp.t2oo, hf.oovv).symmetrise()
+    return hf.fvv + 0.5 * einsum("ijac,ijbc->ab",
+                                 mp.t2oo, hf.oovv).symmetrise()

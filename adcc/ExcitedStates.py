@@ -28,9 +28,7 @@ from math import sqrt
 from adcc import dot
 from scipy import constants
 
-from . import adc_pp
-from . import adc_ip
-from . import adc_ea
+from . import adc_pp, adc_ip, adc_ea
 from .misc import cached_property, requires_module
 from .timings import timed_member_call
 from .Excitation import Excitation, mark_excitation_property
@@ -121,7 +119,7 @@ class FormatExcitationVector:
         valid_blocks = ["h", "p", "ph", "phh", "pph", "pphh"]
         if self.matrix.axis_blocks[-1] not in valid_blocks:
             raise NotImplementedError("Unknown ADC matrix structure")
-        
+
         nblk = len(self.matrix.axis_blocks[-1])
         width_indices = nblk * (self.index_format.max_n_characters + 1) + 2
         width_spins = nblk + 2
@@ -138,10 +136,10 @@ class FormatExcitationVector:
                 "oovv": "{0} {1} -> {2} {3}  {4}{5}->{6}{7}",
             }
         elif self.matrix.axis_blocks == ["h"]:
-            formats = {"o": "{0} ->" + 5 * " " + "{1}->" , }
+            formats = {"o": "{0} ->" + 5 * " " + "{1}->", }
         elif self.matrix.axis_blocks == ["h", "phh"]:
             formats = {
-                "o":   "{0} " + 2 * idxgap  + idxgap[:-3] + "  {1}" + 4 * " ",
+                "o":   "{0} " + 2 * idxgap + idxgap[:-3] + "  {1}" + 4 * " ",
                 "oov": "{0} {1} -> {2}  {3}{4}->{5}"}
         elif self.matrix.axis_blocks == ["p"]:
             formats = {"v": "-> {0}     ->{1}", }
@@ -157,7 +155,8 @@ class FormatExcitationVector:
             # Strip numbers for the lookup into formats above
             stripped = "".join(c for c in "".join(spaces) if c.isalpha())
 
-            formatted = self.tensor_format.format_as_list(spaces, vector[block])
+            formatted = self.tensor_format.format_as_list(spaces,
+                                                          vector[block])
             for indices, spins, value in formatted:
                 ret.append(formats[stripped].format(*indices, *spins)
                            + "   " + self.value_format.format(value))
@@ -245,8 +244,9 @@ class ExcitedStates(ElectronicTransition):
     def pole_strengths(self):
         """List of pole_strengths of all computed states"""
         adc_type = {"ip": adc_ip, "ea": adc_ea}
-        return [adc_type[self.matrix.type].pole_strength(self.property_method,
-                    self.ground_state, evec, self.matrix.intermediates)
+        return [adc_type[self.matrix.type].pole_strength(
+            self.property_method, self.ground_state, evec,
+            self.matrix.intermediates)
                 for evec in self.excitation_vector]
 
     @cached_property
@@ -255,8 +255,9 @@ class ExcitedStates(ElectronicTransition):
     def state_diffdm(self):
         """List of difference density matrices of all computed states"""
         adc_type = {"pp": adc_pp, "ip": adc_ip, "ea": adc_ea}
-        return [adc_type[self.matrix.type].state_diffdm(self.property_method, 
-                    self.ground_state, evec, self.matrix.intermediates)
+        return [adc_type[self.matrix.type].state_diffdm(
+            self.property_method, self.ground_state, evec,
+            self.matrix.intermediates)
                 for evec in self.excitation_vector]
 
     @property
@@ -278,11 +279,11 @@ class ExcitedStates(ElectronicTransition):
             gs_dip_moment = self.ground_state.dipole_moment(pmethod.level)
 
         dipole_integrals = self.operators.electric_dipole
-        
+
         if self.matrix.type != "pp":
             warnings.warn("Dipole moments of charged species are gauge "
                           "dependent.")
-        
+
         return gs_dip_moment - np.array([
             [product_trace(comp, ddm) for comp in dipole_integrals]
             for ddm in self.state_diffdm
@@ -309,8 +310,8 @@ class ExcitedStates(ElectronicTransition):
             Show transition dipole moments, by default ``False``.
 
         block_norms : bool, optional
-            Show the norms of the (1p1h, 2p2h, ...) blocks of the excited states,
-            by default ``True``.
+            Show the norms of the (1p1h, 2p2h, ...) blocks of the excited
+            states, by default ``True``.
         """
         # TODO This function is quite horrible and definitely needs some
         #      refactoring, also it assumes ADC-PP everywhere
@@ -344,14 +345,14 @@ class ExcitedStates(ElectronicTransition):
             opt_body += "{rot:8.4f} "
             opt_thead += " rot str "
             opt["rot"] = lambda i, vec: self.rotatory_strength[i]
-        if (set(["h", "p", "ph"]) & set(self.matrix.axis_blocks) 
-            and block_norms):
+        if (set(["h", "p", "ph"]) & set(self.matrix.axis_blocks)
+                and block_norms):
             opt_body += "{v1:9.4f} "
             opt_thead += "   |v1|^2 "
             opt["v1"] = lambda i, vec: dot(vec.get(sorted(vec.keys())[0]),
                                            vec.get(sorted(vec.keys())[0]))
-        if (set(["phh", "pph", "pphh"]) & set(self.matrix.axis_blocks) 
-            and block_norms):
+        if (set(["phh", "pph", "pphh"]) & set(self.matrix.axis_blocks)
+                and block_norms):
             opt_body += "{v2:9.4f} "
             opt_thead += "   |v2|^2 "
             opt["v2"] = lambda i, vec: dot(vec.get(sorted(vec.keys())[1]),
@@ -365,10 +366,10 @@ class ExcitedStates(ElectronicTransition):
             opt_body += " {dmtot:8.4f}"
             opt_thead += " total dm (D)"
             opt["dmtot"] = lambda i, vec: (sqrt(
-                                          +self.state_dipole_moment[i][0] ** 2
-                                          +self.state_dipole_moment[i][1] ** 2
-                                          +self.state_dipole_moment[i][2] ** 2)
-                                          * 2.54174695) # au2debye conversion
+                                          + self.state_dipole_moment[i][0] ** 2
+                                          + self.state_dipole_moment[i][1] ** 2
+                                          + self.state_dipole_moment[i][2] ** 2
+                                          ) * 2.54174695)  # au2debye conv.
 
         # Heading of the table
         kind = ""
@@ -380,6 +381,10 @@ class ExcitedStates(ElectronicTransition):
         if kind.strip() == "spin_flip" and hasattr(self, "spin_change") and \
                 self.spin_change is not None and self.spin_change != -1:
             spin_change = "(ΔMS={:+2d})".format(self.spin_change)
+
+        spin_type = ""
+        if self.is_alpha is not None:
+            spin_type = ",  alpha" if self.is_alpha else ",  beta"
 
         conv = ""
         if hasattr(self, "converged"):
@@ -393,7 +398,7 @@ class ExcitedStates(ElectronicTransition):
 
         head = "| {0:18s}  {1:>" + str(11 + len(opt_thead)) + "s} |\n"
         delim = ",  " if kind else ""
-        headtext = head.format(self.method.name + propname,
+        headtext = head.format(self.method.name + propname + spin_type,
                                kind + spin_change + delim + conv)
 
         extra = len(headtext) - len(opt_thead) - 36
@@ -418,7 +423,7 @@ class ExcitedStates(ElectronicTransition):
             for k, compute in opt.items():
                 fields[k] = compute(i, vec)
             tmp = body.format(i=i, ene=self.excitation_energy[i],
-                                ev=self.excitation_energy[i] * eV, **fields)
+                              ev=self.excitation_energy[i] * eV, **fields)
             text += tmp[:-3] + (len(separator) - len(tmp) + 1) * " " + tmp[-3:]
         text += separator + "\n"
         if len(self._excitation_energy_corrections):
@@ -458,7 +463,7 @@ class ExcitedStates(ElectronicTransition):
             If ``None`` an automatic selection will be made.
         """
         eV = constants.value("Hartree energy in eV")
-        vector_format = FormatExcitationVector(self.matrix, 
+        vector_format = FormatExcitationVector(self.matrix,
                                                tolerance=tolerance,
                                                index_format=index_format)
 
@@ -545,8 +550,8 @@ class ExcitedStates(ElectronicTransition):
 
     def to_qcvars(self, properties=False, recurse=False):
         """
-        Return a dictionary with property keys compatible to a Psi4 wavefunction
-        or a QCEngine Atomicresults object.
+        Return a dictionary with property keys compatible to a Psi4
+        wavefunction or a QCEngine Atomicresults object.
         """
         name = self.method.name.upper()
 
@@ -571,11 +576,16 @@ class ExcitedStates(ElectronicTransition):
                 # PP-ADC
                 qcvars.update({
                     # Transition properties
-                    f"{name} TRANSITION DIPOLES (LEN)": self.transition_dipole_moment,
-                    f"{name} TRANSITION DIPOLES (VEL)": self.transition_dipole_moment_velocity,  # noqa: E501
-                    f"{name} OSCILLATOR STRENGTHS (LEN)": self.oscillator_strength,
-                    f"{name} OSCILLATOR STRENGTHS (VEL)": self.oscillator_strength_velocity,  # noqa: E501
-                    f"{name} ROTATIONAL STRENGTHS (VEL)": self.rotatory_strength,
+                    f"{name} TRANSITION DIPOLES (LEN)":
+                        self.transition_dipole_moment,
+                    f"{name} TRANSITION DIPOLES (VEL)":
+                        self.transition_dipole_moment_velocity,  # noqa: E501
+                    f"{name} OSCILLATOR STRENGTHS (LEN)":
+                        self.oscillator_strength,
+                    f"{name} OSCILLATOR STRENGTHS (VEL)":
+                        self.oscillator_strength_velocity,  # noqa: E501
+                    f"{name} ROTATIONAL STRENGTHS (VEL)":
+                        self.rotatory_strength,
                     #
                     # State properties
                     f"{name} STATE DIPOLES": self.state_dipole_moment

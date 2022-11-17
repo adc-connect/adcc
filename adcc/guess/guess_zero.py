@@ -34,14 +34,14 @@ def guess_zero(matrix, spin_change=0, spin_block_symmetrisation="none"):
     spin_change  The spin change to enforce in an excitation.
                  Typical values are 0 (singlet/triplet/any) and -1 (spin-flip).
     spin_block_symmetrisation
-                 Symmetrisation to enforce between equivalent spin blocks, which
-                 all yield the desired spin_change. E.g. if spin_change == 0,
-                 then both the alpha->alpha and beta->beta blocks of the singles
-                 part of the excitation vector achieve a spin change of 0.
-                 The symmetry specified with this parameter will then be imposed
-                 between the a-a and b-b blocks. Valid values are "none",
-                 "symmetric" and "antisymmetric", where "none" enforces
-                 no particular symmetry.
+                 Symmetrisation to enforce between equivalent spin blocks,
+                 which all yield the desired spin_change. E.g. if
+                 spin_change == 0, then both the alpha->alpha and beta->beta
+                 blocks of the singles part of the excitation vector achieve a
+                 spin change of 0. The symmetry specified with this parameter
+                 will then be imposed between the a-a and b-b blocks. Valid
+                 values are "none", "symmetric" and "antisymmetric", where
+                 "none" enforces no particular symmetry.
     """
     return AmplitudeVector(**{
         block: Tensor(sym) for block, sym in guess_symmetries(
@@ -60,14 +60,14 @@ def guess_symmetries(matrix, spin_change=0, spin_block_symmetrisation="none"):
     spin_change  The spin change to enforce in an excitation.
                  Typical values are 0 (singlet/triplet/any) and -1 (spin-flip).
     spin_block_symmetrisation
-                 Symmetrisation to enforce between equivalent spin blocks, which
-                 all yield the desired spin_change. E.g. if spin_change == 0,
-                 then both the alpha->alpha and beta->beta blocks of the singles
-                 part of the excitation vector achieve a spin change of 0.
-                 The symmetry specified with this parameter will then be imposed
-                 between the a-a and b-b blocks. Valid values are "none",
-                 "symmetric" and "antisymmetric", where "none" enforces
-                 no particular symmetry.
+                 Symmetrisation to enforce between equivalent spin blocks,
+                 which all yield the desired spin_change. E.g. if
+                 spin_change == 0, then both the alpha->alpha and beta->beta
+                 blocks of the singles part of the excitation vector achieve a
+                 spin change of 0. The symmetry specified with this parameter
+                 will then be imposed between the a-a and b-b blocks. Valid
+                 values are "none", "symmetric" and "antisymmetric", where
+                 "none" enforces no particular symmetry.
     """
     if not isinstance(matrix, AdcMatrixlike):
         raise TypeError("matrix needs to be of type AdcMatrixlike")
@@ -80,8 +80,8 @@ def guess_symmetries(matrix, spin_change=0, spin_block_symmetrisation="none"):
                          "ADC calculations on top of restricted reference "
                          "states.")
     if int(spin_change * 2) / 2 != spin_change:
-        raise ValueError("Only integer or half-integer spin_change is allowed. "
-                         "You passed {}".format(spin_change))
+        raise ValueError("Only integer or half-integer spin_change is allowed."
+                         " You passed {}".format(spin_change))
 
     max_spin_change = 0
     if "pphh" in matrix.axis_blocks:
@@ -101,7 +101,7 @@ def guess_symmetries(matrix, spin_change=0, spin_block_symmetrisation="none"):
     if set(["h", "p", "ph"]) & set(matrix.axis_blocks):
         block = matrix.axis_blocks[0]
         symmetries[block] = guess_symmetry_singles(
-            matrix, spin_change=spin_change, 
+            matrix, spin_change=spin_change,
             spin_block_symmetrisation=spin_block_symmetrisation, block=block
         )
     if set(["phh", "pph", "pphh"]) & set(matrix.axis_blocks):
@@ -117,24 +117,24 @@ def guess_symmetry_singles(matrix, spin_change=0,
                            spin_block_symmetrisation="none", block="ph"):
     symmetry = Symmetry(matrix.mospaces, "".join(matrix.axis_spaces[block]))
     symmetry.irreps_allowed = ["A"]
-    
+
     if spin_change != 0 and spin_block_symmetrisation != "none":
         raise NotImplementedError("spin_symmetrisation != 'none' only "
                                   "implemented for spin_change == 0")
-    
+
     if spin_block_symmetrisation in ("symmetric", "antisymmetric"):
         # PP-ADC
         fac = 1 if spin_block_symmetrisation == "symmetric" else -1
         symmetry.spin_block_maps = [("aa", "bb", fac)]
         symmetry.spin_blocks_forbidden = ["ab", "ba"]
-        
-    elif matrix.type != "pp"and matrix.reference_state.restricted:
+
+    elif matrix.type != "pp" and matrix.reference_state.restricted:
         # IP- and EA-ADC
         # attach/detach alpha electron
-        # forbidden beta blocks (["a"]) not needed because for a 
+        # forbidden beta blocks (["a"]) not needed because for a
         # restricted reference only alpha states will be computed
         symmetry.spin_blocks_forbidden = ["b"]
-            
+
     return symmetry
 
 
@@ -177,16 +177,16 @@ def guess_symmetry_doubles(matrix, spin_change=0,
             permutations.append("-ijba")
         if len(permutations) > 1:
             symmetry.permutations = permutations
-                
+
     elif matrix.type == "ip":
         # IP-ADC
         # No spin mapping between blocks
         symmetry.spin_block_maps = []
 
         # Mark blocks which change spin incorrectly as forbidden
-        if matrix.reference_state.restricted: # kind=doublet
+        if matrix.reference_state.restricted:  # kind=doublet
             # detach alpha electron
-            # forbidden beta ionization blocks not needed because for a 
+            # forbidden beta ionization blocks not needed because for a
             # restricted reference only alpha states will be computed
             symmetry.spin_blocks_forbidden = ["aab",  # spin_change -3/2
                                               "bba",  # spin_change +3/2
@@ -200,16 +200,16 @@ def guess_symmetry_doubles(matrix, spin_change=0,
             permutations.append("-jia")
         if len(permutations) > 1:
             symmetry.permutations = permutations
-            
+
     else:
         # EA-ADC
         # No spin mapping between blocks
         symmetry.spin_block_maps = []
 
         # Mark blocks which change spin incorrectly as forbidden
-        if matrix.reference_state.restricted: # kind=doublet
+        if matrix.reference_state.restricted:  # kind=doublet
             # attach alpha electron
-            # forbidden beta attachment blocks not needed because for a 
+            # forbidden beta attachment blocks not needed because for a
             # restricted reference only alpha states will be computed
             symmetry.spin_blocks_forbidden = ["baa",  # spin_change +3/2
                                               "abb",  # spin_change -3/2

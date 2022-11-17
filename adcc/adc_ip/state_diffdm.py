@@ -25,7 +25,7 @@ from math import sqrt
 from adcc import block as b
 from adcc.LazyMp import LazyMp
 from adcc.AdcMethod import AdcMethod
-from adcc.functions import einsum, direct_sum
+from adcc.functions import einsum
 from adcc.Intermediates import Intermediates
 from adcc.AmplitudeVector import AmplitudeVector
 from adcc.OneParticleOperator import OneParticleOperator
@@ -36,7 +36,7 @@ from .util import check_doubles_amplitudes, check_singles_amplitudes
 def diffdm_ip_adc0(mp, amplitude, intermediates):
     check_singles_amplitudes([b.o], amplitude)
     u1 = amplitude.h
-    
+
     dm = OneParticleOperator(mp, is_symmetric=True)
     dm.oo = -einsum("j,i->ij", u1, u1)
     return dm
@@ -46,16 +46,16 @@ def diffdm_ip_adc2(mp, amplitude, intermediates):
     dm = diffdm_ip_adc0(mp, amplitude, intermediates)  # Get ADC(0/1) result
     check_doubles_amplitudes([b.o, b.o, b.v], amplitude)
     u1, u2 = amplitude.h, amplitude.phh
-    
+
     t2 = mp.t2(b.oovv)
     p0 = mp.mp2_diffdm
     p1_oo = dm.oo.evaluate()  # ADC(1) diffdm
-    
+
     # Zeroth order doubles contributions
     p2_oo = 2 * einsum("kja,ika->ij", u2, u2)
     p2_vv = einsum("ija,ijb->ab", u2, u2)
     p_ov = sqrt(2) * einsum("j,ija->ia", u1, u2)
-    
+
     # ADC(2) ISR intermediate (TODO Move to intermediates)
     # ru1 = einsum("i,ijab->jab", u1, t2).evaluate()
 
@@ -64,13 +64,13 @@ def diffdm_ip_adc2(mp, amplitude, intermediates):
         + p1_oo + p2_oo
         - 0.5 * einsum("k,jk,i->ij", u1, p0.oo, u1)
         - 0.5 * einsum("j,ki,k->ij", u1, p0.oo, u1)
-        + 0.5 * einsum("iab,jab->ij", einsum("k,kiab->iab", u1, t2), 
+        + 0.5 * einsum("iab,jab->ij", einsum("k,kiab->iab", u1, t2),
                        einsum("l,ljab->jab", u1, t2))
     )
 
     dm.vv = (  # ip_adc2_p_vv
-        + p2_vv 
-        - einsum("kcb,kca->ab", einsum("i,kicb->kcb", u1, t2), 
+        + p2_vv
+        - einsum("kcb,kca->ab", einsum("i,kicb->kcb", u1, t2),
                  einsum("j,kjca->kca", u1, t2))
     )
 

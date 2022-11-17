@@ -25,7 +25,7 @@ from math import sqrt
 from adcc import block as b
 from adcc.LazyMp import LazyMp
 from adcc.AdcMethod import AdcMethod
-from adcc.functions import einsum, direct_sum
+from adcc.functions import einsum
 from adcc.Intermediates import Intermediates
 from adcc.AmplitudeVector import AmplitudeVector
 from adcc.OneParticleOperator import OneParticleOperator
@@ -53,28 +53,28 @@ def s2s_tdm_ip_adc2(mp, amplitude_l, amplitude_r, intermediates):
     t2 = mp.t2(b.oovv)
     p0 = mp.mp2_diffdm
     p1_oo = dm.oo.evaluate()  # ADC(1) diffdm
-    
+
     # Zeroth order doubles contributions
     p2_oo = 2 * einsum("kja,ika->ij", ul2, ur2)
     p2_vv = einsum("ija,ijb->ab", ul2, ur2)
     p_ov = sqrt(2) * einsum("j,ija->ia", ul1, ur2)
     p_vo = sqrt(2) * einsum("ija,j->ai", ul2, ur1)
-    
+
     # ADC(2) ISR intermediate (TODO Move to intermediates)
 #    ru1 = einsum("i,ijab->jab", u1, t2).evaluate()
 
     # Compute second-order contributions to the density matrix
     dm.oo = (  # ip_adc2_p_oo
-        + p1_oo + p2_oo 
+        + p1_oo + p2_oo
         - 0.5 * einsum("k,jk,i->ij", ul1, p0.oo, ur1)
         - 0.5 * einsum("j,ki,k->ij", ul1, p0.oo, ur1)
-        + 0.5 * einsum("iab,jab->ij", einsum("k,kiab->iab", ul1, t2), 
+        + 0.5 * einsum("iab,jab->ij", einsum("k,kiab->iab", ul1, t2),
                        einsum("l,ljab->jab", ur1, t2))
     )
 
     dm.vv = (  # ip_adc2_p_vv
-        + p2_vv 
-        - einsum("kcb,kca->ab", einsum("i,kicb->kcb", ul1, t2), 
+        + p2_vv
+        - einsum("kcb,kca->ab", einsum("i,kicb->kcb", ul1, t2),
                  einsum("j,kjca->kca", ur1, t2))
     )
 
@@ -85,13 +85,13 @@ def s2s_tdm_ip_adc2(mp, amplitude_l, amplitude_r, intermediates):
             + 2 * einsum("kb,ikba->ia", einsum("klb,l->kb", ul2, ur1), t2))
         - einsum("k,ka,i->ia", ul1, p0.ov, ur1)
     )
-    
+
     dm.vo = (  # ip_adc2_p_vo
         + p_vo
         + 1/sqrt(2) * (
             + einsum("i,klba,klb->ai", ul1, t2, ur2)
             + 2 * einsum("lb,liba->ai", einsum("k,klb->lb", ul1, ur2), t2))
-        - einsum("k,ka,i->ai", ur1, p0.ov, ul1) 
+        - einsum("k,ka,i->ai", ur1, p0.ov, ul1)
         # switched indices because p0_ov is used instead of p0_vo
     )
     return dm
@@ -135,8 +135,8 @@ def state2state_transition_dm(method, ground_state, amplitude_from,
         intermediates = Intermediates(ground_state)
 
     if method.name not in DISPATCH:
-        raise NotImplementedError("state2state_transition_dm is not implemented "
-                                  f"for {method.name}.")
+        raise NotImplementedError("state2state_transition_dm is not "
+                                  f"implemented for {method.name}.")
     else:
         # final state is on the bra side/left (complex conjugate)
         # see ref https://doi.org/10.1080/00268976.2013.859313, appendix A2

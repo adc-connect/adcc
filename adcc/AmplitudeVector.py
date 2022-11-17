@@ -28,13 +28,14 @@ class AmplitudeVector(dict):
         """
         Construct an AmplitudeVector. Typical use cases are
         ``AmplitudeVector(ph=tensor_singles, pphh=tensor_doubles)``. For IP-ADC
-        ``AmplitudeVector(h=tensor_singles, phh=tensor_doubles)`` 
+        ``AmplitudeVector(h=tensor_singles, phh=tensor_doubles)``, and for
+        EA-ADC ``AmplitudeVector(p=tensor_singles, pph=tensor_doubles)``
         """
         if args:
             warnings.warn("Using the list interface of AmplitudeVector is "
-                          "deprecated and will be removed in version 0.16.0. Use "
-                          "AmplitudeVector(ph=tensor_singles, pphh=tensor_doubles) "
-                          "instead.")
+                          "deprecated and will be removed in version 0.16.0. "
+                          "Use AmplitudeVector(ph=tensor_singles, "
+                          "pphh=tensor_doubles) instead.")
             if len(args) == 1:
                 super().__init__(ph=args[0])
             elif len(args) == 2:
@@ -77,8 +78,8 @@ class AmplitudeVector(dict):
     def __getitem__(self, index):
         if index in (0, 1, "s", "d"):
             warnings.warn("Using the list interface of AmplitudeVector is "
-                          "deprecated and will be removed in version 0.16.0. Use "
-                          "block labels like 'ph', 'pphh' instead.")
+                          "deprecated and will be removed in version 0.16.0. "
+                          "Use block labels like 'ph', 'pphh' instead.")
             if index in (0, "s"):
                 return self.__getitem__("ph")
             elif index in (1, "d"):
@@ -91,8 +92,8 @@ class AmplitudeVector(dict):
     def __setitem__(self, index, item):
         if index in (0, 1, "s", "d"):
             warnings.warn("Using the list interface of AmplitudeVector is "
-                          "deprecated and will be removed in version 0.16.0. Use "
-                          "block labels like 'ph', 'pphh' instead.")
+                          "deprecated and will be removed in version 0.16.0. "
+                          "Use block labels like 'ph', 'pphh' instead.")
             if index in (0, "s"):
                 return self.__setitem__("ph", item)
             elif index in (1, "d"):
@@ -145,7 +146,8 @@ class AmplitudeVector(dict):
         if isinstance(other, list):
             # Make a list where the first index is all singles parts,
             # the second is all doubles parts and so on
-            return sum(self[b].dot([av[b] for av in other]) for b in self.keys())
+            return sum(self[b].dot([av[b] for av in other])
+                       for b in self.keys())
         else:
             return sum(self[b].dot(other[b]) for b in self.keys())
 
@@ -165,7 +167,8 @@ class AmplitudeVector(dict):
             ret = {k: getattr(tensor, fname)(other[k])
                    for k, tensor in self.items()}
         else:
-            ret = {k: getattr(tensor, fname)(other) for k, tensor in self.items()}
+            ret = {k: getattr(tensor, fname)(other)
+                   for k, tensor in self.items()}
         if any(r == NotImplemented for r in ret.values()):
             return NotImplemented
         else:

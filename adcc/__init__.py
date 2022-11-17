@@ -126,6 +126,7 @@ def ea_adc1(*args, **kwargs):
 def ea_adc2(*args, **kwargs):
     return run_adc(*args, **kwargs, method="ea_adc2")
 
+
 @with_runadc_doc
 def ip_adc0(*args, **kwargs):
     return run_adc(*args, **kwargs, method="ip_adc0")
@@ -195,7 +196,8 @@ def banner(colour=sys.stdout.isatty()):
     ).replace("adcc", "adc" + yellow + "c" + white)
     string += "+" + 70 * "-" + "+\n"
     string += empty
-    string += "|     version     " + green + f"{__version__:<52}" + white + " |\n"
+    string += "|     version     " + green + f"{__version__:<52}" + white \
+              + " |\n"
 
     # Print authors as groups
     groups = []

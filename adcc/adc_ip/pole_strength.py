@@ -27,7 +27,6 @@ from adcc.LazyMp import LazyMp
 from adcc.AdcMethod import AdcMethod
 from adcc.functions import einsum, zeros_like, dot
 from adcc.Intermediates import Intermediates, register_as_intermediate
-from adcc.AmplitudeVector import AmplitudeVector
 
 from .util import check_doubles_amplitudes, check_singles_amplitudes
 
@@ -39,10 +38,10 @@ def pole_strength_ip_adc0(mp, amplitude, intermediates):
     d_oo = zeros_like(hf.foo)
     d_oo.set_mask("ii", 1.0)
     f11 = d_oo
-    
+
     # Calculate the spectroscopic amplitude x
     xi = einsum("j,ji->i", amplitude.h, f11)
-    
+
     return dot(xi, xi)
 
 
@@ -50,11 +49,11 @@ def pole_strength_ip_adc2(mp, amplitude, intermediates):
     check_singles_amplitudes([b.o], amplitude)
     check_doubles_amplitudes([b.o, b.o, b.v], amplitude)
     u1, u2 = amplitude.h, amplitude.phh
-    
+
     f11 = intermediates.ip_adc2_f11
-    f12 = intermediates.ip_adc2_f12
+    f12 = mp.mp2_diffdm.ov          # t_ia
     f22 = intermediates.ip_adc2_f22
-    
+
     # Calculate the spectroscopic amplitude x
     xi = einsum("j,ji->i", u1, f11)
     xa = einsum("j,ja->a", u1, f12) + einsum("ijb,ijba->a", u2, f22)
@@ -72,22 +71,12 @@ def ip_adc2_f11(hf, mp, intermediates):
     # Build Kronecker delta
     d_oo = zeros_like(hf.foo)
     d_oo.set_mask("ii", 1.0)
-    
+
     t2 = mp.t2(b.oovv)
-    
+
     return d_oo - 0.25 * einsum("ilab,jlab->ij", t2, t2)
 
 
-@register_as_intermediate
-def ip_adc2_f12(hf, mp, intermediates):
-    # effective transition moments, ov part f_ia
-    t2 = mp.t2(b.oovv)
-    df1 = mp.df(b.ov)
-    
-    return -0.5 * (+ einsum("jabc,ijbc->ia", hf.ovvv, t2) 
-                   + einsum("jkib,jkab->ia", hf.ooov, t2)) / df1
-    
-    
 @register_as_intermediate
 def ip_adc2_f22(hf, mp, intermediates):
     # effective transition moments, oovv part f_ijab
@@ -101,9 +90,8 @@ DISPATCH = {
 }
 
 
-def pole_strength(method, ground_state, amplitude,
-                            intermediates=None):
-    """Compute the pole strength of the ionized state for the 
+def pole_strength(method, ground_state, amplitude, intermediates=None):
+    """Compute the pole strength of the ionized state for the
     provided ADC method from the spectroscopic amplitude x.
 
     Parameters

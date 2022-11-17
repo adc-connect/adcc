@@ -31,8 +31,8 @@ __all__ = ["guess_zero", "guesses_from_diagonal",
 def guess_kwargs_kind(kind):
     """
     Return the kwargs required to be passed to `guesses_from_diagonal` to
-    computed states of the passed excitation `kind`. In case of IP-ADC 
-    calculations, it is also passed whether it is alpha or beta ionization for 
+    computed states of the passed excitation `kind`. In case of IP-ADC
+    calculations, it is also passed whether it is alpha or beta ionization for
     the correct spin-change.
     """
     kwargsmap = dict(
@@ -58,7 +58,7 @@ def guesses_singlet(matrix, n_guesses, block="ph", **kwargs):
                 vectors are returned if this many could not be found.
     block       Diagonal block to use for obtaining the guesses
                 (typically "ph" or "pphh").
-    is_alpha    Is the detached/attached electron alpha spin for the respective 
+    is_alpha    Is the detached/attached electron alpha spin for the respective
                 IP-/EA-ADC calculation.
     kwargs      Any other argument understood by guesses_from_diagonal.
     """
@@ -76,14 +76,15 @@ def guesses_doublet(matrix, n_guesses, block="h", is_alpha=None, **kwargs):
                 vectors are returned if this many could not be found.
     block       Diagonal block to use for obtaining the guesses
                 (typically "ph" or "pphh").
-    is_alpha    Is the detached/attached electron alpha spin for the respective 
+    is_alpha    Is the detached/attached electron alpha spin for the respective
                 IP-/EA-ADC calculation.
     kwargs      Any other argument understood by guesses_from_diagonal.
     """
-    return guesses_from_diagonal(matrix, n_guesses, block=block, 
+    return guesses_from_diagonal(matrix, n_guesses, block=block,
                                  is_alpha=is_alpha,
-                                 **guess_kwargs_kind("doublet"), 
+                                 **guess_kwargs_kind("doublet"),
                                  **kwargs)
+
 
 def guesses_triplet(matrix, n_guesses, block="ph", **kwargs):
     """
@@ -95,7 +96,7 @@ def guesses_triplet(matrix, n_guesses, block="ph", **kwargs):
                 vectors are returned if this many could not be found.
     block       Diagonal block to use for obtaining the guesses
                 (typically "ph" or "pphh").
-    is_alpha    Is the detached/attached electron alpha spin for the respective 
+    is_alpha    Is the detached/attached electron alpha spin for the respective
                 IP-/EA-ADC calculation.
     kwargs      Any other argument understood by guesses_from_diagonal.
     """
@@ -117,7 +118,7 @@ def guesses_spin_flip(matrix, n_guesses, block="ph", **kwargs):
                 vectors are returned if this many could not be found.
     block       Diagonal block to use for obtaining the guesses
                 (typically "ph" or "pphh").
-    is_alpha    Is the detached/attached electron alpha spin for the respective 
+    is_alpha    Is the detached/attached electron alpha spin for the respective
                 IP-/EA-ADC calculation.
     kwargs      Any other argument understood by guesses_from_diagonal.
     """

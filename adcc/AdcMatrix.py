@@ -75,7 +75,8 @@ class AdcMatrixlike:
 
 
 class AdcMatrix(AdcMatrixlike):
-    # Default perturbation-theory orders for the matrix blocks (== standard ADC-PP).
+    # Default perturbation-theory orders for the matrix blocks
+    # (== standard ADC-PP).
     default_block_orders = {
         #             ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),
         "adc0":     dict(ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
@@ -104,7 +105,8 @@ class AdcMatrix(AdcMatrixlike):
             HF reference or MP ground state
         block_orders : optional
             The order of perturbation theory to employ for each matrix block.
-            If not set, defaults according to the selected ADC method are chosen.
+            If not set, defaults according to the selected ADC method are
+            chosen.
         intermediates : adcc.Intermediates or NoneType
             Allows to pass intermediates to re-use to this class.
         diagonal_precomputed: adcc.AmplitudeVector
@@ -163,13 +165,13 @@ class AdcMatrix(AdcMatrixlike):
         for block in block_orders.keys():
             if block not in valid_blocks[self.type]:
                 raise ValueError(f"Invalid block order key: {block}")
-        if (block_orders[valid_blocks[self.type][1]] 
-            != block_orders[valid_blocks[self.type][2]]):
-                raise ValueError(f"{valid_blocks[self.type][1]} and "
-                                 f"{valid_blocks[self.type][2]} should always "
-                                 "have the same order")
+        if (block_orders[valid_blocks[self.type][1]]
+                != block_orders[valid_blocks[self.type][2]]):
+            raise ValueError(f"{valid_blocks[self.type][1]} and "
+                             f"{valid_blocks[self.type][2]} should always "
+                             "have the same order")
         if block_orders[valid_blocks[self.type][1]] is not None \
-            and block_orders[valid_blocks[self.type][3]] is None:
+                and block_orders[valid_blocks[self.type][3]] is None:
             raise ValueError(f"{valid_blocks[self.type][3]} cannot be None if "
                              f"{valid_blocks[self.type][1]} isn't.")
         self.block_orders = block_orders
@@ -181,10 +183,11 @@ class AdcMatrix(AdcMatrixlike):
                 variant = "cvs"
             matrix = {"pp": ppmatrix, "ip": ipmatrix, "ea": eamatrix}
             blocks = {
-                block: matrix[self.type].block(self.ground_state, 
-                            block.split("_"), order=order, 
-                            intermediates=self.intermediates, variant=variant)
-                for block, order in self.block_orders.items() if order is not None
+                block: matrix[self.type].block(
+                    self.ground_state, block.split("_"), order=order,
+                    intermediates=self.intermediates, variant=variant)
+                for block, order in self.block_orders.items()
+                if order is not None
             }
             # TODO Rename to self.block in 0.16.0
             self.blocks_ph = {bl: blocks[bl].apply for bl in blocks}
