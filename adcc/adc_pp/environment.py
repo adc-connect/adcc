@@ -60,3 +60,22 @@ def block_ph_ph_0_pcm(hf, mp, intermediates):
         vpcm = op.pcm_potential_elec(tdm)
         return AmplitudeVector(ph=vpcm.ov)
     return AdcBlock(apply, 0)
+
+
+def block_ph_ph_0_ddx(hf, mp, intermediates):
+    """
+    Constructs an :py:class:`AdcBlock` that describes the
+    linear response coupling to the polarizable environment
+    from DDX via a CIS-like transition density as described
+    in 10.1021/ct300763v, eq 63. Since the contribution
+    depends on the input amplitude itself,
+    a diagonal term cannot be formulated.
+    """
+    op = hf.operators
+
+    def apply(ampl):
+        tdm = OneParticleOperator(mp, is_symmetric=False)
+        tdm.vo = ampl.ph.transpose()
+        vpcm = op.ddx_potential_elec(tdm)
+        return AmplitudeVector(ph=vpcm.ov)
+    return AdcBlock(apply, 0)

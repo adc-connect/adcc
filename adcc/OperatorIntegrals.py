@@ -103,7 +103,8 @@ class OperatorIntegrals:
             "magnetic_dipole",
             "nabla",
             "pe_induction_elec",
-            "pcm_potential_elec"
+            "pcm_potential_elec",
+            "ddx_potential_elec",
         )
         return [integral for integral in integrals
                 if hasattr(self.provider_ao, integral)]
@@ -202,6 +203,19 @@ class OperatorIntegrals:
                                       "not implemented "
                                       f"in {self.provider_ao.backend} backend.")
         callback = self.provider_ao.pcm_potential_elec
+        return self.__import_density_dependent_operator(callback)
+
+    @property
+    def ddx_potential_elec(self):
+        """
+        Returns a function to obtain the (density-dependent)
+        electronic DDX potential operator in the molecular orbital basis
+        """
+        if "ddx_potential_elec" not in self.available:
+            raise NotImplementedError("Electronic DDX potential operator "
+                                      "not implemented "
+                                      f"in {self.provider_ao.backend} backend.")
+        callback = self.provider_ao.ddx_potential_elec
         return self.__import_density_dependent_operator(callback)
 
     @property
