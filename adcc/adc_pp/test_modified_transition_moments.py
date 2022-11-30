@@ -41,15 +41,16 @@ operator_kinds = ["electric", "magnetic"]
 @expand_test_templates(list(itertools.product(methods, operator_kinds)))
 class TestModifiedTransitionMoments(unittest.TestCase):
     def base_test(self, system, method, kind, op_kind):
-        state = cache.adc_states[system][method][kind]
+        state = cache.adcc_states[system][method][kind]
+        ref = cache.adcc_reference_data[system][method][kind]
         n_ref = len(state.excitation_vector)
 
         if op_kind == "electric":
             dips = state.reference_state.operators.electric_dipole
-            ref_tdm = state.transition_dipole_moment
+            ref_tdm = ref["transition_dipole_moments"]
         elif op_kind == "magnetic":
             dips = state.reference_state.operators.magnetic_dipole
-            ref_tdm = state.transition_magnetic_dipole_moment
+            ref_tdm = ref["transition_magnetic_dipole_moments"]
         else:
             skip(
                 "Tests are only implemented for"
@@ -58,7 +59,7 @@ class TestModifiedTransitionMoments(unittest.TestCase):
         mtms = modified_transition_moments(method, state.ground_state, dips)
 
         for i in range(n_ref):
-            # computing the scalar product of the eigenvector
+            # Computing the scalar product of the eigenvector
             # and the modified transition moments yields
             # the transition dipole moment (doi.org/10.1063/1.1752875)
             excivec = state.excitation_vector[i]
@@ -86,7 +87,7 @@ class TestModifiedTransitionMoments(unittest.TestCase):
         self.base_test("h2o_def2tzvp", method, "triplet", op_kind)
 
     def template_cn_sto3g(self, method, op_kind):
-        self.base_test("cn_sto3g", method, "state", op_kind)
+        self.base_test("cn_sto3g", method, "any", op_kind)
 
     def template_cn_ccpvdz(self, method, op_kind):
-        self.base_test("cn_ccpvdz", method, "state", op_kind)
+        self.base_test("cn_ccpvdz", method, "any", op_kind)
