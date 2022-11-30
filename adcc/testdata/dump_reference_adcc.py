@@ -95,7 +95,9 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
         if blk in ground_state.mp2_diffdm.blocks:
             mp.create_dataset("mp2/" + block, compression=8,
                               data=ground_state.mp2_diffdm[blk].to_ndarray())
-    dm_bb_a, dm_bb_b = ground_state.mp2_diffdm.to_ao_basis(ground_state.reference_state)
+    dm_bb_a, dm_bb_b = ground_state.mp2_diffdm.to_ao_basis(
+        ground_state.reference_state
+    )
     mp.create_dataset("mp2/dm_bb_a", compression=8, data=dm_bb_a.to_ndarray())
     mp.create_dataset("mp2/dm_bb_b", compression=8, data=dm_bb_b.to_ndarray())
 
@@ -208,13 +210,18 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
 
                 for j, ito in enumerate(range(ifrom + 1, n_states)):
                     if ito <= n_states_extract and ifrom <= n_states_extract:
-                        bb_a, bb_b = state2state.transition_dm[j].to_ao_basis(state.reference_state)
+                        bb_a, bb_b = state2state.transition_dm[j].to_ao_basis(
+                            state.reference_state
+                        )
                         tdm_bb_a.append(bb_a.to_ndarray())
                         tdm_bb_b.append(bb_b.to_ndarray())
-                    transition_dipoles.append(state2state.transition_dipole_moment[j])
+                    transition_dipoles.append(
+                        state2state.transition_dipole_moment[j]
+                    )
 
                 s2s_from = s2s.create_group(f"from_{ifrom}")
-                s2s_from["transition_dipole_moments"] = np.asarray(transition_dipoles)
+                s2s_from["transition_dipole_moments"] = \
+                    np.asarray(transition_dipoles)
                 if tdm_bb_a and tdm_bb_b:
                     s2s_from["state_to_excited_tdm_bb_a"] = np.asarray(tdm_bb_a)
                     s2s_from["state_to_excited_tdm_bb_b"] = np.asarray(tdm_bb_b)
