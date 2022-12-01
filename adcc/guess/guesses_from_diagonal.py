@@ -49,7 +49,8 @@ def guesses_from_diagonal(matrix, n_guesses, block="ph", kind=None,
     is_alpha     Is the detached/attached electron alpha spin for the
                  respective IP-/EA-ADC calculation.
     spin_change  The spin change to enforce in an excitation.
-                 Typical values are 0 (singlet/triplet/any) and -1 (spin-flip).
+                 Typical values are 0 (singlet/triplet/any), +/- 0.5 (doublet)
+                 and -1 (spin-flip).
     spin_block_symmetrisation
                  Symmetrisation to enforce between equivalent spin blocks,
                  which all yield the desired spin_change. E.g. if

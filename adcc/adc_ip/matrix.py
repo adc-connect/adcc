@@ -1,6 +1,3 @@
-# Matrix vector products for IP-ADC(2)
-
-
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
@@ -26,7 +23,6 @@
 from math import sqrt
 from collections import namedtuple
 
-from adcc import block as b
 from adcc.functions import direct_sum, einsum
 from adcc.Intermediates import Intermediates, register_as_intermediate
 from adcc.AmplitudeVector import AmplitudeVector
@@ -131,16 +127,16 @@ def block_h_h_1(hf, mp, intermediates):
 def block_h_phh_1(hf, mp, intermediates):
     # M_{12}
     def apply(ampl):
-        return AmplitudeVector(h=
-           + 1 / sqrt(2) * einsum("jkib,jkb->i", hf.ooov, ampl.phh))
+        return AmplitudeVector(h=(
+           + 1 / sqrt(2) * einsum("jkib,jkb->i", hf.ooov, ampl.phh)))
     return AdcBlock(apply, 0)
 
 
 def block_phh_h_1(hf, mp, intermediates):
     # M_{21}
     def apply(ampl):
-        return AmplitudeVector(phh=
-            + 1 / sqrt(2) * einsum("ijka,k->ija", hf.ooov, ampl.h))
+        return AmplitudeVector(phh=(
+            + 1 / sqrt(2) * einsum("ijka,k->ija", hf.ooov, ampl.h)))
     return AdcBlock(apply, 0)
 
 

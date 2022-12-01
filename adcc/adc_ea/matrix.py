@@ -1,6 +1,3 @@
-# Matrix vector products for IP-ADC(2)
-
-
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
@@ -129,16 +126,16 @@ def block_p_p_1(hf, mp, intermediates):
 def block_p_pph_1(hf, mp, intermediates):
     # M_{12}
     def apply(ampl):
-        return AmplitudeVector(p=
-           - 1 / sqrt(2) * einsum("jabc,jbc->a", hf.ovvv, ampl.pph))
+        return AmplitudeVector(p=(
+           - 1 / sqrt(2) * einsum("jabc,jbc->a", hf.ovvv, ampl.pph)))
     return AdcBlock(apply, 0)
 
 
 def block_pph_p_1(hf, mp, intermediates):
     # M_{21}
     def apply(ampl):
-        return AmplitudeVector(pph=
-            - 1 / sqrt(2) * einsum("icab,c->iab", hf.ovvv, ampl.p))
+        return AmplitudeVector(pph=(
+            - 1 / sqrt(2) * einsum("icab,c->iab", hf.ovvv, ampl.p)))
     return AdcBlock(apply, 0)
 
 

@@ -184,14 +184,25 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     ...
     ... state = adcc.cvs_adc3(mf, core_orbitals=1, n_singlets=3)
 
-    Run an IP-ADC(2) calculation of hydrogen fluoride with a detached alpha
+    Run an IP-ADC(2) calculation of water with a detached alpha
     electron
 
-    >>> from pyscf import gto, scf
-    ... mol = gto.mole.M(atom="H 0 0 0; F 0 0 1.1", basis="sto-3g")
-    ... mf = scf.RHF(mol)
-    ... mf.conv_tol_grad = 1e-8
-    ... mf.kernel()
+    >>> import psi4
+    ... import adcc
+    ... # Run SCF in Psi4
+    ... mol = psi4.geometry('''
+    ... 0 1
+    ... O       0.0000000000     0.0000000000     0.0000000000
+    ... H       0.0000000000     0.0000000000     0.9570000000
+    ... H       0.9270000000     0.0000000000    -0.2400000000
+    ... symmetry c1
+    ... units Angstrom
+    ... ''')
+    ... psi4.core.be_quiet()
+    ... psi4.set_options({'basis': "6-31++G(d)", 'e_convergence': 1e-13,
+    ...                   'd_convergence': 1e-7, 'reference': "uhf",
+    ...                   'scf_type': "direct"})
+    ... scf_e, wfn = psi4.energy('SCF', return_wfn=True)
     ...
     ... state = adcc.ip_adc2(wfn, n_doublets=3, is_alpha=True)
 """
@@ -313,7 +324,8 @@ def validate_state_parameters(matrix, n_states=None, n_singlets=None,
     """
     Check the passed state parameters for consistency with itself and with
     the passed reference and normalise them. In the end return the number of
-    states and the corresponding kind parameter selected.
+    states, the corresponding kind parameter selected and is_alpha which will
+    only be set to a Boolean for IP- and EA-ADC calculations.
     Internal function called from run_adc.
     """
     reference_state = matrix.reference_state
@@ -370,7 +382,7 @@ def validate_state_parameters(matrix, n_states=None, n_singlets=None,
             # states will be computed (beta states are identical)
             is_alpha = True
         if not isinstance(is_alpha, bool):
-            raise InputError("is_alpha has to be a boolean or None.")
+            raise InputError("is_alpha has to be a Boolean or None.")
 
     # Check if there are states to be computed
     if n_states is None or n_states == 0:
@@ -544,6 +556,7 @@ def obtain_guesses_by_inspection(matrix, n_guesses, kind,
         if n_guesses_doubles > 0:
             doubles_guesses = guess_function(matrix, n_guesses_doubles,
                                              block=matrix.axis_blocks[1],
+                                             kind=kind,
                                              is_alpha=is_alpha,
                                              spin_change=spin_change)
 
@@ -583,6 +596,10 @@ def setup_environment(matrix, environment):
     Setup environment matrix terms and/or energy corrections.
     Internal function called from run_adc.
     """
+    if environment and matrix.type != "pp":
+        raise NotImplementedError("Environment for IP- and EA-ADC calculations"
+                                  " not implemented.")
+
     valid_envs = ["ptss", "ptlr", "linear_response"]
     hf = matrix.reference_state
     if hf.environment and environment is None:

@@ -31,9 +31,7 @@ __all__ = ["guess_zero", "guesses_from_diagonal",
 def guess_kwargs_kind(kind):
     """
     Return the kwargs required to be passed to `guesses_from_diagonal` to
-    computed states of the passed excitation `kind`. In case of IP-ADC
-    calculations, it is also passed whether it is alpha or beta ionization for
-    the correct spin-change.
+    computed states of the passed excitation `kind`.
     """
     kwargsmap = dict(
         singlet=dict(spin_block_symmetrisation="symmetric"),
