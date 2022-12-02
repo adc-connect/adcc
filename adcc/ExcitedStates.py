@@ -241,7 +241,7 @@ class ExcitedStates(ElectronicTransition):
     @cached_property
     @mark_excitation_property(transform_to_ao=True)
     @timed_member_call(timer="_property_timer")
-    def pole_strengths(self):
+    def pole_strength(self):
         """List of pole_strengths of all computed states"""
         adc_type = {"ip": adc_ip, "ea": adc_ea}
         return [adc_type[self.matrix.type].pole_strength(
@@ -289,9 +289,9 @@ class ExcitedStates(ElectronicTransition):
             for ddm in self.state_diffdm
         ])
 
-    def describe(self, oscillator_strengths=True, rotatory_strengths=False,
-                 state_dipole_moments=False, transition_dipole_moments=False,
-                 block_norms=True):
+    def describe(self, oscillator_strengths=True, pole_strengths=True,
+                 rotatory_strengths=False, state_dipole_moments=False,
+                 transition_dipole_moments=False, block_norms=True):
         """
         Return a string providing a human-readable description of the class
 
@@ -299,6 +299,9 @@ class ExcitedStates(ElectronicTransition):
         ----------
         oscillator_strengths : bool optional
             Show oscillator strengths, by default ``True``.
+
+        pole_strengths : bool optional
+            Show pole strengths, by default ``False``.
 
         rotatory_strengths : bool optional
            Show rotatory strengths, by default ``False``.
@@ -331,13 +334,13 @@ class ExcitedStates(ElectronicTransition):
             opt["tdmx"] = lambda i, vec: self.transition_dipole_moment[i][0]
             opt["tdmy"] = lambda i, vec: self.transition_dipole_moment[i][1]
             opt["tdmz"] = lambda i, vec: self.transition_dipole_moment[i][2]
-        if self.matrix.type != "pp":
+        if pole_strengths and self.matrix.type != "pp":
             # IP- or EA-ADC
-            oscillator_strengths = False
             opt_body += "{pole:8.4f} "
             opt_thead += " pole str "
-            opt["pole"] = lambda i, vec: self.pole_strengths[i]
-        if has_dipole and oscillator_strengths:
+            opt["pole"] = lambda i, vec: self.pole_strength[i]
+        if has_dipole and oscillator_strengths and self.matrix.type == "pp":
+            # PP-ADC
             opt_body += "{osc:8.4f} "
             opt_thead += " osc str "
             opt["osc"] = lambda i, vec: self.oscillator_strength[i]
