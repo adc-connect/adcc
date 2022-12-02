@@ -34,7 +34,7 @@ size_t fill_ea_doubles_guesses(std::vector<std::shared_ptr<Tensor>> guesses_d,
   size_t n_guesses = guesses_d.size();
   if (n_guesses == 0) return 0;
 
-  // Make a copy of the singles symmetry
+  // Make a copy of the doubles symmetry
   libtensor::block_tensor_ctrl<3, scalar_type> ctrl(asbt3(guesses_d[0]));
   libtensor::symmetry<3, scalar_type> sym_s(ctrl.req_const_symmetry().get_bis());
   libtensor::so_copy<3, scalar_type>(ctrl.req_const_symmetry()).perform(sym_s);
