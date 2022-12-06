@@ -48,10 +48,8 @@ class TestIsrMatrix(unittest.TestCase):
         elif op_kind == "magnetic":  # example of an asymmetric operator
             dips = state.reference_state.operators.magnetic_dipole
         else:
-            skip(
-                "Tests are only implemented for"
-                "electric and magnetic dipole operators."
-            )
+            skip("Tests are only implemented for electric "
+                 "and magnetic dipole operators.")
 
         # computing Y_m @ B @ Y_n yields the state-to-state
         # transition dipole moments (n->m) (for n not equal to m)

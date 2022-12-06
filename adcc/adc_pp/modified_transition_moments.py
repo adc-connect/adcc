@@ -31,13 +31,15 @@ from adcc.AmplitudeVector import AmplitudeVector
 
 
 def mtm_adc0(mp, op, intermediates):
-    return AmplitudeVector(ph=op.ov) if op.is_symmetric \
-        else AmplitudeVector(ph=op.vo.transpose())
+    if op.is_symmetric:
+        return AmplitudeVector(ph=op.ov)
+    else:
+        return AmplitudeVector(ph=op.vo.transpose())
 
 
 def mtm_adc1(mp, op, intermediates):
-    f1 = op.ov if op.is_symmetric else op.vo.transpose()  # zeroth order
-    f1 -= einsum("ijab,jb->ia", mp.t2(b.oovv), op.ov)  # first order
+    f1 = op.ov if op.is_symmetric else op.vo.transpose()
+    f1 -= einsum("ijab,jb->ia", mp.t2(b.oovv), op.ov)
     return AmplitudeVector(ph=f1)
 
 
@@ -65,8 +67,10 @@ def mtm_adc2(mp, op, intermediates):
 
 
 def mtm_cvs_adc0(mp, op, intermediates):
-    return AmplitudeVector(ph=op.cv) if op.is_symmetric \
-        else AmplitudeVector(ph=op.vc.transpose())
+    if op.is_symmetric:
+        return AmplitudeVector(ph=op.cv)
+    else:
+        return AmplitudeVector(ph=op.vc.transpose())
 
 
 def mtm_cvs_adc2(mp, op, intermediates):

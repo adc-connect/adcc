@@ -52,10 +52,9 @@ class TestModifiedTransitionMoments(unittest.TestCase):
             dips = state.reference_state.operators.magnetic_dipole
             ref_tdm = ref["transition_magnetic_dipole_moments"]
         else:
-            skip(
-                "Tests are only implemented for"
-                "electric and magnetic dipole operators."
-            )
+            skip("Tests are only implemented for electric "
+                 "and magnetic dipole operators.")
+
         mtms = modified_transition_moments(method, state.ground_state, dips)
 
         for i in range(n_ref):
