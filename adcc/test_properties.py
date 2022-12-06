@@ -36,16 +36,19 @@ from .test_state_densities import Runners
 from pytest import approx, skip
 
 
-basemethods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
-methods = [m for bm in basemethods for m in [bm, "cvs_" + bm]]
-
-
 class TestTransitionDipoleMoments(unittest.TestCase, Runners):
     def base_test(self, system, method, kind):
         method = method.replace("_", "-")
 
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
+
+        # For CVS, only consistency tests are performed because
+        # the reference data are erroneous
+        if "cvs" in method:
+            kind = "any" if kind == "state" else kind
+            refdata = cache.adcc_reference_data[system]
+            state = cache.adcc_states[system][method][kind]
 
         res_tdms = state.transition_dipole_moment
         ref_tdms = refdata[method][kind]["transition_dipole_moments"]
@@ -67,6 +70,13 @@ class TestOscillatorStrengths(unittest.TestCase, Runners):
 
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
+
+        # For CVS, only consistency tests are performed because
+        # the reference data are erroneous
+        if "cvs" in method:
+            kind = "any" if kind == "state" else kind
+            refdata = cache.adcc_reference_data[system]
+            state = cache.adcc_states[system][method][kind]
 
         res_oscs = state.oscillator_strength
         ref_tdms = refdata[method][kind]["transition_dipole_moments"]
@@ -113,6 +123,10 @@ class TestState2StateTransitionDipoleMoments(unittest.TestCase, Runners):
                                         fromi_ref[ii], atol=1e-4)
 
 
+basemethods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+methods = [m for bm in basemethods for m in [bm, "cvs_" + bm]]
+
+
 @expand_test_templates(methods)
 class TestMagneticTransitionDipoleMoments(unittest.TestCase):
     def template_linear_molecule(self, method):
@@ -131,6 +145,6 @@ class TestMagneticTransitionDipoleMoments(unittest.TestCase):
             state = run_adc(scfres, method=method, n_singlets=10)
         tdms = state.transition_magnetic_dipole_moment
 
-        # for linear molecules lying on the z-axis, the z-component must be zero
+        # For linear molecules lying on the z-axis, the z-component must be zero
         for tdm in tdms:
             assert tdm[2] < 1e-10
