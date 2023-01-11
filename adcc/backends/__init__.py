@@ -52,7 +52,7 @@ def have_backend(backend):
     return backend in available()
 
 
-def import_scf_results(res):
+def import_scf_results(res, gauge_origin):
     """
     Import an scf_result from an SCF program. Tries to be smart
     and guess what the host program was and how to import it.
@@ -62,7 +62,7 @@ def import_scf_results(res):
         from pyscf import scf
 
         if isinstance(res, scf.hf.SCF):
-            return backend_pyscf.import_scf(res)
+            return backend_pyscf.import_scf(res, gauge_origin)
 
     if have_backend("molsturm"):
         from . import molsturm as backend_molsturm

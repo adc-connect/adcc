@@ -21,6 +21,7 @@
 ##
 ## ---------------------------------------------------------------------
 import numpy as np
+import warnings
 
 from libadcc import HartreeFockProvider
 from adcc.misc import cached_property
@@ -34,113 +35,77 @@ from pyscf.solvent import ddcosmo
 
 
 class PyScfOperatorIntegralProvider:
-    def __init__(self, scfres):
+    def __init__(self, scfres, gauge_origin):
         self.scfres = scfres
         self.backend = "pyscf"
+        coords = scfres.mol.atom_coords()
+        mass = scfres.mol.atom_mass_list()
+        charges = scfres.mol.atom_charges()
+        if gauge_origin == "mass_center":
+            self.gauge_origin = np.einsum("i,ij->j", mass, coords)/mass.sum()
+        elif gauge_origin == "charge_center":
+            self.gauge_origin = np.einsum ("i,ij->j", charges, coords)/charges.sum()
+        elif gauge_origin =="origin":
+            self.gauge_origin = [0.0, 0.0, 0.0]
+        elif type(gauge_origin) == list:
+            self.gauge_origin = gauge_origin
+        else:
+            raise NotImplementedError("Gauge origin has to be defined either by using the keywords mass_center, charge_center or origin. Or as a list eg. [x, y, z]")
+        if isinstance(gauge_origin, str):
+            print(f"gauge origin is selected as: {gauge_origin}", self.gauge_origin)
+        else:
+            print(f"gauge origin is selected as: {gauge_origin}")
+        warnings.warn("Gauge origin selection is not tested")
     
     @cached_property
     def electric_dipole(self):
         return list(self.scfres.mol.intor_symmetric('int1e_r', comp=3))
 
-    #        center of mass:
-    #        coords = self.scfres.mol.atom_coords()
-    #        mass = self.scfres.mol.atom_mass_list()
-    #        mass_center = np.einsum('i,ij->j', mass, coords)/mass.sum()
-    #        origin = mass_center
-
-    
-
-
     @cached_property
     def magnetic_dipole(self):
-        # TODO: Gauge origin?
-        coords = self.scfres.mol.atom_coords()
-        mass = self.scfres.mol.atom_mass_list()
-        charges = self.scfres.mol.atom_charges()
-        charge_center = np.einsum ('i, ij -> j ', charges, coords)/charges.sum()
-        mass_center = np.einsum('i,ij->j', mass, coords)/mass.sum()
-        #origin = charge_center
-        origin = mass_center
-        #origin = [0.0, 0.0, 0.0]
-        with self.scfres.mol.with_common_orig(origin): #gauge origin!
+        with self.scfres.mol.with_common_orig(self.gauge_origin): #gauge origin!
             return list(
                 0.5 * self.scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
             )
 
     @cached_property
     def nabla(self):
-        with self.scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
+        with self.scfres.mol.with_common_orig(self.gauge_origin):
             return list(
                 -1.0 * self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
             )
 
     @cached_property
-    def r_quadr(self):
-        r_quadr = self.scfres.mol.intor_symmetric('int1e_r2', comp = 1)
-        return r_quadr
-
-    @cached_property
-    def r_r(self):
-        r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp =9)
-        return list(r_r) 
-
-    @cached_property
     def diag_mag(self):
-        #define center of mass:
-        coords = self.scfres.mol.atom_coords()
-        mass = self.scfres.mol.atom_mass_list()
-        mass_center = np.einsum('i,ij->j', mass, coords)/mass.sum()
-        origin = mass_center
-        #origin = [0.0, 0.0, 0.0]
-        with  self.scfres.mol.with_common_orig(origin):
-            r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp =9)
-            r_r = np.reshape(r_r, (3,3,r_r.shape[1],r_r.shape[1]))
-            r_quadr = self.scfres.mol.intor_symmetric('int1e_r2', comp = 1)
-            r_quadr_matrix = np.zeros((3,3,r_quadr.shape[0], r_quadr.shape[0]))
+        with  self.scfres.mol.with_common_orig(self.gauge_origin):
+            r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
+            r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
+            r_quadr = self.scfres.mol.intor_symmetric('int1e_r2', comp=1)
+            r_quadr_matrix = np.zeros((3, 3, r_quadr.shape[0], r_quadr.shape[0]))
             for i in range(3):
                 r_quadr_matrix[i][i] = r_quadr
-            term = r_quadr_matrix - r_r
-            term = np.reshape(term, (9, r_quadr.shape[0],r_quadr.shape[0]))
-            return list(-1/4 * term)
+            term = -0.25 * (r_quadr_matrix - r_r)
+            term = np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
+            return list(term)
 
     @cached_property
     def electric_quadrupole_traceless(self):
-        coords = self.scfres.mol.atom_coords()
-        mass = self.scfres.mol.atom_mass_list()
-        mass_center = np.einsum('i,ij->j', mass, coords)/mass.sum()
-        origin = mass_center
-        #origin = [0.0,0.0,0.0]
-        with  self.scfres.mol.with_common_orig(origin):
+        with  self.scfres.mol.with_common_orig(self.gauge_origin):
             r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp =9)
-            r_r = np.reshape(r_r, (3,3,r_r.shape[1],r_r.shape[1]))
+            r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
             r_quadr = self.scfres.mol.intor_symmetric('int1e_r2', comp = 1)
-            r_quadr_matrix = np.zeros((3,3,r_quadr.shape[0], r_quadr.shape[0]))
-            r_quadr_matrix[0][0] = r_quadr
-            r_quadr_matrix[1][1] = r_quadr
-            r_quadr_matrix[2][2] = r_quadr
-            term = 1/2 * (3 * r_r - r_quadr_matrix)
-            term = np.reshape(term, (9, r_quadr.shape[0],r_quadr.shape[0]))
-        return list(term)
+            r_quadr_matrix = np.zeros((3, 3, r_quadr.shape[0], r_quadr.shape[0]))
+            for i in range(3):
+                r_quadr_matrix[i][i] = r_quadr
+            term = 0.5 * (3 * r_r - r_quadr_matrix)
+            term = np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
+            return list(term)
 
     @cached_property
     def electric_quadrupole(self):
-        coords = self.scfres.mol.atom_coords()
-        mass = self.scfres.mol.atom_mass_list()
-        mass_center = np.einsum('i,ij->j', mass, coords)/mass.sum()
-        origin = mass_center
-        #origin = [0.0,0.0,0.0]
-        with  self.scfres.mol.with_common_orig(origin):
-            r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp =9)
-            #r_r = np.reshape(r_r, (3,3,r_r.shape[1],r_r.shape[1]))
-            #r_quadr = self.scfres.mol.intor_symmetric('int1e_r2', comp = 1)
-            #r_quadr = self.scfres.mol.intor_symmetric('int1e_r2', comp = 1)
-            #r_quadr_matrix = np.zeros((3,3,r_quadr.shape[0], r_quadr.shape[0]))
-            #r_quadr_matrix[0][0] = r_quadr
-            #r_quadr_matrix[1][1] = r_quadr
-            #r_quadr_matrix[2][2] = r_quadr
-            #term =1/2*(3 * r_r - r_quadr_matrix)
-            #term = np.reshape(term, (9, r_quadr.shape[0],r_quadr.shape[0]))
-        return list(r_r)
+        with  self.scfres.mol.with_common_orig(self.gauge_origin):
+            r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
+            return list(r_r)
 
     @property
     def pe_induction_elec(self):
@@ -211,17 +176,18 @@ class PyScfHFProvider(HartreeFockProvider):
         This implementation is only valid
         if no orbital reordering is required.
     """
-    def __init__(self, scfres ):
+    def __init__(self, scfres, gauge_origin):
         # Do not forget the next line,
         # otherwise weird errors result
         super().__init__()
         self.scfres = scfres
+        self.gauge_origin = gauge_origin
         n_alpha, n_beta = scfres.mol.nelec
         self.eri_builder = PyScfEriBuilder(self.scfres, self.n_orbs,
                                            self.n_orbs_alpha, n_alpha,
                                            n_beta, self.restricted)
         self.operator_integral_provider = PyScfOperatorIntegralProvider(
-            self.scfres
+            self.scfres, gauge_origin
         )
         if not self.restricted:
             assert self.scfres.mo_coeff[0].shape[1] == \
@@ -341,16 +307,20 @@ class PyScfHFProvider(HartreeFockProvider):
             # electric quadrupole Q_jk = sum_i (q_i *  r_ij *r_ik )
             coords = self.scfres.mol.atom_coords()
             mass = self.scfres.mol.atom_mass_list()
-            mass_center = np.einsum('i,ij->j', mass, coords)/mass.sum()
-            coords = coords - mass_center
-            r_r = np.einsum('ij, ik  -> ijk' ,coords, coords) 
-            #r_quadr_matrix = np.zeros((len(mass), 3,3))
-            #for i in range(len(mass)):
-            #    for j in range(3):
-            #        for k in range(3):
-            #            if j ==k:
-            #                r_quadr_matrix[i][j][k] = np.trace(r_r[i])
-            res =  np.einsum('i, ijk -> jk', charges, r_r)
+            if self.gauge_origin == 'mass_center':
+                mass_center = np.einsum('i,ij->j', mass, coords)/mass.sum()
+                coords = coords - mass_center
+            elif self.gauge_origin == 'charge_center':
+                charge_center = np.einsum ('i,ij->j', charges, coords)/charges.sum()
+                coords = coords - charge_center
+            elif self.gauge_origin == 'origin':
+                coords = coords
+            elif type(self.gauge_origin) == list:
+                coords = coords - self.gauge_origin
+            else:
+                raise NotImplementedError()
+            r_r = np.einsum('ij,ik->ijk' ,coords, coords) 
+            res =  np.einsum('i,ijk->jk', charges, r_r)
             res =  np.array([res[0][0], res[0][1], res[0][2], res[1][1], res[1][2], res[2][2]]) #matrix is symmetrical, only the six different values.
             return  res
         else:
@@ -400,7 +370,7 @@ class PyScfHFProvider(HartreeFockProvider):
         self.eri_builder.flush_cache()
 
 
-def import_scf(scfres):
+def import_scf(scfres, gauge_origin):
     # TODO The error messages here could be a bit more verbose
 
     if not isinstance(scfres, scf.hf.SCF):
@@ -415,7 +385,7 @@ def import_scf(scfres):
     # TODO Check for point-group symmetry,
     #      check for density-fitting or choleski
 
-    return PyScfHFProvider(scfres)
+    return PyScfHFProvider(scfres, gauge_origin)
 
 
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
