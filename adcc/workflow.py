@@ -40,13 +40,12 @@ from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
 
 __all__ = ["run_adc"]
-blabla
 def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
             eigensolver=None, guesses=None, n_guesses=None,
             n_guesses_doubles=None, output=sys.stdout, core_orbitals=None,
             frozen_core=None, frozen_virtual=None, method=None,
             n_singlets=None, n_triplets=None, n_spin_flip=None,
-            environment=None, **solverargs):
+            environment=None, gauge_origin ="mass_center", **solverargs):
     """Run an ADC calculation.
 
     Main entry point to run an ADC calculation. The reference to build the ADC
@@ -132,6 +131,11 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         The keywords to specify how coupling to an environment model,
         e.g. PE, is treated. For details see :ref:`environment`.
 
+    gauge_origin: list or str, optional
+        Define the gauge origin, either by specifying a list directly ([x,y,z])
+        or by using one of the keywords ('mass_center', 'charge_center', 'origin').
+        Default: 'mass_center'
+
     Other parameters
     ----------------
     max_subspace : int, optional
@@ -177,7 +181,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     """
     matrix = construct_adcmatrix(
         data_or_matrix, core_orbitals=core_orbitals, frozen_core=frozen_core,
-        frozen_virtual=frozen_virtual, method=method)
+        frozen_virtual=frozen_virtual, method=method, gauge_origin=gauge_origin)
 
     n_states, kind = validate_state_parameters(
         matrix.reference_state, n_states=n_states, n_singlets=n_singlets,
@@ -218,7 +222,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
 # Individual steps
 #
 def construct_adcmatrix(data_or_matrix, core_orbitals=None, frozen_core=None,
-                        frozen_virtual=None, method=None):
+                        frozen_virtual=None, method=None, gauge_origin='mass_center'):
     """
     Use the provided data or AdcMatrix object to check consistency of the
     other passed parameters and construct the AdcMatrix object representing
@@ -244,7 +248,8 @@ def construct_adcmatrix(data_or_matrix, core_orbitals=None, frozen_core=None,
             refstate = adcc_ReferenceState(data_or_matrix,
                                            core_orbitals=core_orbitals,
                                            frozen_core=frozen_core,
-                                           frozen_virtual=frozen_virtual)
+                                           frozen_virtual=frozen_virtual,
+                                           gauge_origin=gauge_origin)
         except ValueError as e:
             raise InputError(str(e))  # In case of an issue with the spaces
         data_or_matrix = refstate

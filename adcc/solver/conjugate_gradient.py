@@ -161,7 +161,11 @@ def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
         Apk = matrix @ pk
         state.n_applies += 1
         res_dot_zk = dot(state.residual, zk)
-        ak = float(res_dot_zk / dot(pk, Apk))
+        x = dot(pk,Apk)
+        if dot(pk,Apk) == 0:
+            x = 1e-5
+        #ak = float(res_dot_zk / dot(pk, Apk))
+        ak = float(res_dot_zk / x)
         state.solution = evaluate(state.solution + ak * pk)
 
         residual_old = state.residual
