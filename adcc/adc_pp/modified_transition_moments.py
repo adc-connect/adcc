@@ -28,34 +28,62 @@ from adcc.AdcMethod import AdcMethod
 from adcc.functions import einsum, evaluate
 from adcc.Intermediates import Intermediates
 from adcc.AmplitudeVector import AmplitudeVector
-import numpy as np
+
 
 def mtm_adc0(mp, dipop, intermediates):
-    return AmplitudeVector(ph=dipop.ov)
+    #return AmplitudeVector(ph=dipop.ov)
+    if dipop.is_symmetric:
+        dipop_vo = dipop.ov.transpose((1, 0))
+    else:
+        dipop_vo = dipop.vo.copy()
+    return AmplitudeVector(ph=dipop_vo.transpose((1, 0)))
 
 
 def mtm_adc1(mp, dipop, intermediates):
-    f1 = dipop.ov - einsum("ijab,jb->ia", mp.t2(b.oovv), dipop.ov)
+    if dipop.is_symmetric:
+        dipop_vo = dipop.ov.transpose((1, 0))
+    else:
+        dipop_vo = dipop.vo.copy()
+    f1 = dipop_vo.transpose((1, 0)) + einsum("rkjs,rs->kj", mp.t2(b.oovv), dipop.ov)
     return AmplitudeVector(ph=f1)
 
 
 def mtm_adc2(mp, dipop, intermediates):
     t2 = mp.t2(b.oovv)
     p0 = mp.mp2_diffdm
-
+    hf = mp.reference_state
+    if dipop.is_symmetric:
+        dipop_vo = dipop.ov.transpose((1, 0))
+    else:
+        dipop_vo = dipop.vo.copy()
     f1 = (
-        + dipop.ov
-        - einsum("ijab,jb->ia", t2,
-                 + dipop.ov - 0.5 * einsum("jkbc,kc->jb", t2, dipop.ov))
-        + 0.5 * einsum("ij,ja->ia", p0.oo, dipop.ov)
-        - 0.5 * einsum("ib,ab->ia", dipop.ov, p0.vv)
-        + einsum("ib,ab->ia", p0.ov, dipop.vv)
-        - einsum("ij,ja->ia", dipop.oo, p0.ov)
+        dipop_vo.transpose((1, 0))
+        + einsum("rkjs,rs->kj", mp.t2(b.oovv), dipop.ov)
+        
+        # antonia 1:
+        #- einsum("krjs,rs->kj", t2, dipop.ov)
+        -0.25 * einsum("nvjr,nvsr,sk->kj", t2, t2, dipop_vo)
+        -0.25 * einsum("knrs,vnrs,jv->kj", t2, t2, dipop_vo)
+        +0.5 * einsum("knjr,vnsr,sv->kj", t2, t2, dipop_vo)
+        -1.0 * einsum("vk,vj->kj", dipop.oo, p0.ov)
+        +1.0 * einsum("jr,kr->kj", dipop.vv, p0.ov)
         - einsum("ijab,jb->ia", mp.td2(b.oovv), dipop.ov)
+        # adcc:
+        # - einsum("ijab,jb->ia", t2,
+        #          + dipop.ov - 0.5 * einsum("jkbc,kc->jb", t2, dipop.ov))
+        # + 0.5 * einsum("ij,ja->ia", p0.oo, dipop.ov)
+        # - 0.5 * einsum("ib,ab->ia", dipop.ov, p0.vv)
+        # + einsum("ib,ab->ia", p0.ov, dipop.vv)
+        # - einsum("ij,ja->ia", dipop.oo, p0.ov)
+        # - einsum("ijab,jb->ia", mp.td2(b.oovv), dipop.ov)
     )
-    f2 = (
-        + einsum("ijac,bc->ijab", t2, dipop.vv).antisymmetrise(2, 3)
-        - einsum("ik,kjab->ijab", dipop.oo, t2).antisymmetrise(0, 1)
+    f2 = 0.5*(
+        - 2*einsum("vlij,vk->klij", t2, dipop.oo).antisymmetrise(0, 1)
+        # + einsum("vkij,vl->klij", t2, dipop.oo)
+        + 2*einsum("klsj,is->klij", t2, dipop.vv).antisymmetrise(2, 3)
+        # - einsum("klsi,js->klij", t2, dipop.vv)
+        # + einsum("ijac,bc->ijab", t2, dipop.vv).antisymmetrise(2, 3)
+        # - einsum("ik,kjab->ijab", dipop.oo, t2).antisymmetrise(0, 1)
     )
     return AmplitudeVector(ph=f1, pphh=f2)
 
@@ -78,6 +106,7 @@ DISPATCH = {
     "adc0": mtm_adc0,
     "adc1": mtm_adc1,
     "adc2": mtm_adc2,
+    "adc2x": mtm_adc2, # Identical to ADC(2)
     "cvs-adc0": mtm_cvs_adc0,
     "cvs-adc1": mtm_cvs_adc0,  # Identical to CVS-ADC(0)
     "cvs-adc2": mtm_cvs_adc2,
@@ -118,20 +147,12 @@ def modified_transition_moments(method, ground_state, dipole_operator=None,
     elif not isinstance(dipole_operator, list):
         unpack = True
         dipole_operator = [dipole_operator]
-    dipole_op = np.array(dipole_operator) #test dimensionen of operator
     if method.name not in DISPATCH:
         raise NotImplementedError("modified_transition_moments is not "
                                   f"implemented for {method.name}.")
-    if dipole_op.ndim == 1:
-        ret = [DISPATCH[method.name](ground_state, dipop, intermediates)
-            for dipop in dipole_operator]
-    elif dipole_op.ndim == 2: #allow quadrupol like operators
-        ret = [0, 0, 0] #don't know how to this more cleanly
-        for i in range(3):
-            ret[i] = [DISPATCH[method.name](ground_state, dipop, intermediates)
-            for dipop in dipole_operator[i]]
-    else: 
-        raise NotImplementedError(f"modified_transition_moments are not implemented for {dipole_op.ndim}-dimensional operators. Only 1 and 2-dimensional operators are available.")
+
+    ret = [DISPATCH[method.name](ground_state, dipop, intermediates)
+               for dipop in dipole_operator]
     if unpack:
         assert len(ret) == 1
         ret = ret[0]
