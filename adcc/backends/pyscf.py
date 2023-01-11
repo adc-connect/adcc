@@ -50,7 +50,10 @@ class PyScfOperatorIntegralProvider:
         elif type(gauge_origin) == list:
             self.gauge_origin = gauge_origin
         else:
-            raise NotImplementedError("Gauge origin has to be defined either by using the keywords mass_center, charge_center or origin. Or as a list eg. [x, y, z]")
+            raise NotImplementedError("Gauge origin has to be defined either by" 
+                                      "using one of the keywords" 
+                                      "mass_center, charge_center or origin."
+                                      "Or by declaring a list eg. [x, y, z]")
         if isinstance(gauge_origin, str):
             print(f"gauge origin is selected as: {gauge_origin}", self.gauge_origin)
         else:
@@ -321,7 +324,8 @@ class PyScfHFProvider(HartreeFockProvider):
                 raise NotImplementedError()
             r_r = np.einsum('ij,ik->ijk' ,coords, coords) 
             res =  np.einsum('i,ijk->jk', charges, r_r)
-            res =  np.array([res[0][0], res[0][1], res[0][2], res[1][1], res[1][2], res[2][2]]) #matrix is symmetrical, only the six different values.
+            res =  np.array([res[0][0], res[0][1], res[0][2], 
+                             res[1][1], res[1][2], res[2][2]]) 
             return  res
         else:
             raise NotImplementedError("get_nuclear_multipole with order > 2")
