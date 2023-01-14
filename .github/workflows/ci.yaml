@@ -64,7 +64,7 @@ jobs:
       #
       - name: Run python tests with std allocator
         run: |
-          python setup.py test -a '--cov=adcc' -k "test_backends_polembed" -v -s
+          python setup.py test -a '--cov=adcc -k "test_backends_polembed" -v -s'
       - name: Run reduced python tests with libxm
         run: |
           python setup.py test -a '--allocator=libxm -k "TestFunctionality and h2o_sto3g"'
