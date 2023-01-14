@@ -168,7 +168,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install flake8
-          sudo apt-get install clang-format-9
+          sudo apt-get install clang-format
       - run: flake8
       - name: Checking C++ files with clang-format
         working-directory: libadcc
