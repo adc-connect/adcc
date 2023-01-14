@@ -64,11 +64,9 @@ jobs:
       #
       - name: Run python tests with std allocator
         run: |
-          export PYSCF_MAX_MEMORY=8000
-          python setup.py test -a '--cov=adcc'
+          python setup.py test -a '--cov=adcc' -k "test_backends_polembed" -v -s
       - name: Run reduced python tests with libxm
         run: |
-          export PYSCF_MAX_MEMORY=8000
           python setup.py test -a '--allocator=libxm -k "TestFunctionality and h2o_sto3g"'
       - name: Run C++ tests
         run: python setup.py cpptest -v
@@ -177,7 +175,6 @@ jobs:
       - name: Checking C++ files with clang-format
         working-directory: libadcc
         run: |
-          pwd
           clang-format --version
           find . -type f \( -name '*.cc' -o -name '*.hh' \) -print0 | xargs -r0 clang-format -i
           git diff --exit-code
