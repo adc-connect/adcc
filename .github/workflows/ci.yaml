@@ -177,5 +177,7 @@ jobs:
       - name: Checking C++ files with clang-format
         working-directory: libadcc
         run: |
+          pwd
+          clang-format --version
           find . -type f \( -name '*.cc' -o -name '*.hh' \) -print0 | xargs -r0 clang-format -i
           git diff --exit-code
