@@ -357,7 +357,8 @@ def libadcc_extension():
 
     if sys.platform == "darwin" and is_conda_build():
         flags["extra_compile_args"] += ["-Wno-unused-command-line-argument",
-                                        "-Wno-undefined-var-template"]
+                                        "-Wno-undefined-var-template",
+                                        "-Wno-bitwise-instead-of-logical"]
 
     platform_autoinstall = (
         sys.platform.startswith("linux") or sys.platform.startswith("darwin")

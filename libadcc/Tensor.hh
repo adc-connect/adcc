@@ -51,10 +51,10 @@ class Tensor {
    */
   Tensor(std::shared_ptr<const AdcMemory> adcmem_ptr, std::vector<AxisInfo> axes);
 
-  Tensor(Tensor&&) = default;
-  Tensor& operator=(Tensor&&) = default;
-  virtual ~Tensor()           = default;
-  Tensor(const Tensor&)       = default;
+  Tensor(Tensor&&)                 = default;
+  Tensor& operator=(Tensor&&)      = default;
+  virtual ~Tensor()                = default;
+  Tensor(const Tensor&)            = default;
   Tensor& operator=(const Tensor&) = default;
 
   //@{
