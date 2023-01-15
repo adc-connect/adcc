@@ -146,7 +146,7 @@ class CppTest(Command):
         if not os.path.isfile(output_dir + "/catch2/catch.hpp"):
             os.makedirs(output_dir + "/catch2", exist_ok=True)
             base = "https://github.com/catchorg/Catch2/releases/download/"
-            request_urllib(base + "v3.2.1/catch.hpp",
+            request_urllib(base + "v2.13.9/catch.hpp",
                            output_dir + "/catch2/catch.hpp")
 
         # Adapt stuff from libadcc extension
