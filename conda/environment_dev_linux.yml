@@ -9,7 +9,7 @@ dependencies:
   - libtensorlight =3.0.1=hc894906_1
   - pybind11 >=2.6
   # Run
-  - numpy >=1.14
+  - numpy >=1.14,<1.24 # problems with PE in pyscf for 1.24
   - scipy >=1.2
   - tqdm >=4.30
   - h5py >=2.9
