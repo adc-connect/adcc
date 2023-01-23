@@ -63,9 +63,11 @@ jobs:
           python -m pip install --user -r requirements.txt -v
       #
       - name: Run python tests with std allocator
-        run: python setup.py test -a '--cov=adcc'
+        run: |
+          python setup.py test -a '--cov=adcc'
       - name: Run reduced python tests with libxm
-        run: python setup.py test -a '--allocator=libxm -k "TestFunctionality and h2o_sto3g"'
+        run: |
+          python setup.py test -a '--allocator=libxm -k "TestFunctionality and h2o_sto3g"'
       - name: Run C++ tests
         run: python setup.py cpptest -v
       #
@@ -168,10 +170,11 @@ jobs:
       - name: Install dependencies
         run: |
           pip install flake8
-          sudo apt-get install clang-format-9
+          sudo apt-get install clang-format
       - run: flake8
       - name: Checking C++ files with clang-format
         working-directory: libadcc
         run: |
+          clang-format --version
           find . -type f \( -name '*.cc' -o -name '*.hh' \) -print0 | xargs -r0 clang-format -i
           git diff --exit-code

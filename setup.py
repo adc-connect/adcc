@@ -146,7 +146,7 @@ class CppTest(Command):
         if not os.path.isfile(output_dir + "/catch2/catch.hpp"):
             os.makedirs(output_dir + "/catch2", exist_ok=True)
             base = "https://github.com/catchorg/Catch2/releases/download/"
-            request_urllib(base + "v2.7.0/catch.hpp",
+            request_urllib(base + "v2.13.9/catch.hpp",
                            output_dir + "/catch2/catch.hpp")
 
         # Adapt stuff from libadcc extension
@@ -357,7 +357,8 @@ def libadcc_extension():
 
     if sys.platform == "darwin" and is_conda_build():
         flags["extra_compile_args"] += ["-Wno-unused-command-line-argument",
-                                        "-Wno-undefined-var-template"]
+                                        "-Wno-undefined-var-template",
+                                        "-Wno-bitwise-instead-of-logical"]
 
     platform_autoinstall = (
         sys.platform.startswith("linux") or sys.platform.startswith("darwin")
@@ -534,7 +535,7 @@ adccsetup(
     setup_requires=["pybind11 >= 2.6"],
     install_requires=[
         "opt_einsum >= 3.0",
-        "numpy >= 1.14",
+        "numpy >= 1.14, < 1.24",  # problems with PE in pyscf for 1.24
         "scipy >= 1.2",
         "h5py >= 2.9",
         "tqdm >= 4.30",
