@@ -267,9 +267,9 @@ def import_scf(wfn):
     #      the actual set of options ... theoretically they could differ
     scf_type = psi4.core.get_global_option('SCF_TYPE')
     # CD = Choleski, DF = density-fitting
-    unsupported_scf_types = ["CD"]
+    unsupported_scf_types = []
     if not isinstance(wfn, psi4.core.Wavefunction):  # hilbert package only uses DF
-        unsupported_scf_types += ["DISK_DF", "MEM_DF"]
+        unsupported_scf_types += ["DISK_DF", "MEM_DF", "CD"]
     if scf_type in unsupported_scf_types:
         raise InvalidReference("Unsupported Psi4 SCF_TYPE, should not be one "
                                f"of {unsupported_scf_types}")

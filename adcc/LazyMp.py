@@ -52,7 +52,7 @@ class LazyMp:
         self.get_qed_total_dip.oo = hf.get_qed_total_dip(b.oo)
         self.get_qed_total_dip.ov = hf.get_qed_total_dip(b.ov)
         self.get_qed_total_dip.vv = hf.get_qed_total_dip(b.vv)
-        self.get_qed_omega = hf.get_qed_omega
+        self.omega = hf.get_qed_omega()
 
     def __getattr__(self, attr):
         # Shortcut some quantities, which are needed most often
@@ -191,7 +191,7 @@ class LazyMp:
     @cached_member_function
     def qed_t1_df(self, space):
         """
-        qed_t1 amplitude times df
+        qed_t1 amplitude times (df+omega)
         """
         total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
         if space == b.oo:
@@ -213,7 +213,8 @@ class LazyMp:
         if space != b.ov:
             raise NotImplementedError("qed_t1 term not implemented "
                                       f"for space {space}.")
-        return self.qed_t1_df(b.ov) / self.df(b.ov)
+        omega = ReferenceState.get_qed_omega(self.reference_state)
+        return self.qed_t1_df(b.ov) / (self.df(b.ov) + omega)
 
     @cached_member_function
     def qed_t0_df(self, space):
