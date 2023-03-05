@@ -95,6 +95,76 @@ def diffdm_adc2(mp, amplitude, intermediates):
     return dm
 
 
+def diffdm_adc3(mp, amplitude, intermediates):
+    dm = diffdm_adc2(mp, amplitude, intermediates)
+    u1, u2 = amplitude.ph, amplitude.pphh
+
+    t2 = mp.t2(b.oovv)
+    p0 = mp.mp2_diffdm
+    td2 = mp.td2(b.oovv)
+    tt2 = mp.tt2(b.ooovvv)
+    ts3 = mp.ts3(b.ov)
+
+    # Zeroth order doubles contributions
+    p2_ov = -2 * einsum("jb,ijab->ia", u1, u2).evaluate()
+
+    # ADC(2) ISR intermediate (TODO Move to intermediates)
+    ru1 = einsum("ijab,jb->ia", t2, u1).evaluate()
+
+    dm.vv += (
+        - 2.0 * einsum('ia,ka,jkcd,ijbc->db', u1, u1, t2, td2)
+        + 0.5 * einsum('ia,ib,jkac,jkcd->db', u1, u1, t2, td2)
+        + 0.5 * einsum('ia,ib,jkcd,jkac->db', u1, u1, t2, td2)
+        - 1.0 * einsum('ia,ib,jkbd,jkac->dc', u1, u1, t2, td2)
+        + 1.0 * einsum('ia,jd,ijcd->ca', u1, ru1, td2)
+        - 1.0 * einsum('ia,kb,jkcd,ijad->cb', u1, u1, t2, td2)
+        + 2.0 * einsum('ia,jd,ijac->dc', u1, ru1, td2)
+        + 2.0 * einsum('ib,ic->cb', p2_ov, p0.ov)
+    )
+    dm.oo += (
+        + 0.5 * einsum('ia,ja,klbc,jlbc->ki', u1, u1, t2, td2)
+        - 0.5 * einsum('ia,la,klbc,jkbc->ji', u1, u1, t2, td2)
+        - 1.0 * einsum('ia,la,ijbc,klbc->kj', u1, u1, t2, td2)
+        - 2.0 * einsum('ia,ib,klbc,jkac->lj', u1, u1, t2, td2)
+        - 1.0 * einsum('ia,jb,klac,jlbc->ki', u1, u1, t2, td2)
+        - 1.0 * einsum('ia,lc,klac->ki', u1, ru1, td2)
+        - 2.0 * einsum('ia,lc,ijac->lj', u1, ru1, td2)
+        - 2.0 * einsum('ib,kb->ki', p2_ov, p0.ov)
+    )
+    dm.ov += (
+        - 1.0 * einsum('ia,ja,jb->ib', u1, u1, ts3)
+        + 1.0 * einsum('ia,ja,jkbc,ib->kc', u1, u1, t2, p0.ov)
+        - 0.5 * einsum('ia,ja,ilbc,jklbcd->kd', u1, u1, t2, tt2)
+        + 1.0 * einsum('ia,ka,jkbc,jb->ic', u1, u1, t2, p0.ov)
+        - 0.25 * einsum('ia,ka,jlbc,jklbcd->id', u1, u1, t2, tt2)
+        - 1.0 * einsum('ia,ib,jb->ja', u1, u1, ts3)
+        - 0.5 * einsum('ia,ib,klbd,jklacd->jc', u1, u1, t2, tt2)
+        - 1.0 * einsum('ia,ib,jkbc,jc->ka', u1, u1, t2, p0.ov)
+        - 0.25 * einsum('ia,ib,jlcd,jklacd->kb', u1, u1, t2, tt2)
+        + 1.0 * einsum('ia,ib,jkbc,ja->kc', u1, u1, t2, p0.ov)
+        - 0.5 * einsum('ia,jb,klbc,iklacd->jd', u1, u1, t2, tt2)
+        + 1.0 * einsum('ia,kc,ic->ka', u1, ru1, p0.ov)
+        + 1.0 * einsum('ia,jc,ja->ic', u1, ru1, p0.ov)
+        - 0.5 * einsum('ia,lb,klcd,ijkacd->jb', u1, u1, t2, tt2)
+        + 1.0 * einsum('ia,kc,ijkacd->jd', u1, ru1, tt2)
+        + 0.5 * einsum('jb,jlbd,klcd->kc', p2_ov, t2, t2)
+        - 1.0 * einsum('jb,jkbc->kc', p2_ov, td2)
+        - 0.25 * einsum('kb,jlcd,klcd->jb', p2_ov, t2, t2)
+        + 1.0 * einsum('ia,jkab,jkbc->ic', u1, u2, td2)
+        - 0.25 * einsum('ia,klab,ijcd,klcd->jb', u1, u2, t2, t2)
+        - 0.25 * einsum('jc,klbd,klcd->jb', p2_ov, t2, t2)
+        + 1.0 * einsum('ia,jkac,ilbd,klcd->jb', u1, u2, t2, t2)
+        + 0.5 * einsum('ia,klac,ijbd,klcd->jb', u1, u2, t2, t2)
+        + 1.0 * einsum('ia,ijbc,jkbc->ka', u1, u2, td2)
+        - 1.0 * einsum('ia,ijbc,klad,jlbd->kc', u1, u2, t2, t2)
+        - 0.5 * einsum('klbc,jd,klcd->jb', u2, ru1, t2)
+        - 0.25 * einsum('ia,ijbd,klac,klbd->jc', u1, u2, t2, t2)
+        - 0.5 * einsum('jkbd,lc,klbd->jc', u2, ru1, t2)
+        + 0.5 * einsum('jc,ijab,ikab,klcd->ld', u1, u2, t2, t2)
+    )
+    return dm
+
+
 def diffdm_cvs_adc2(mp, amplitude, intermediates):
     dm = diffdm_adc0(mp, amplitude, intermediates)  # Get ADC(1) result
     check_doubles_amplitudes([b.o, b.c, b.v, b.v], amplitude)
@@ -137,6 +207,7 @@ DISPATCH = {
     "adc1": diffdm_adc0,       # same as ADC(0)
     "adc2": diffdm_adc2,
     "adc2x": diffdm_adc2,
+    "adc3": diffdm_adc3,
     "cvs-adc0": diffdm_adc0,
     "cvs-adc1": diffdm_adc0,   # same as ADC(0)
     "cvs-adc2": diffdm_cvs_adc2,

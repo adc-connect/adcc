@@ -327,4 +327,76 @@ std::shared_ptr<Symmetry> make_symmetry_operator_basis(
   return sym;
 }
 
+/**
+std::shared_ptr<Symmetry> make_symmetry_triples(std::shared_ptr<const MoSpaces> mospaces_ptr,
+			const std::string& space) {
+  auto sym = std::make_shared<Symmetry>(mospaces_ptr, space);
+
+  //const std::vector<std::string>& ss = sym->subspaces();
+  //const MoSpaces& mo		     = *mospaces_ptr;
+  if (sym->ndim() != 6) {
+    throw invalid_argument("Expected exactly a six dimensional space string, not " +
+		                       space + ".");
+  }
+
+  //std::vector<std::string> permutations{"ijklmn"};
+  //if (ss[0] == ss[1]) permutations.push_back("-jiklmn");
+  //if (ss[0] == ss[2]) permutations.push_back("-kjilmn");
+  //if (ss[1] == ss[2]) permutations.push_back("-ikjlmn");
+  //if (ss[0] == ss[1] && ss[0] == ss[2]) {
+  //  permutations.insert(permutations.end(), {"jkilmn", "kijlmn"});
+  //}
+  //if (ss[3] == ss[4]) permutations.push_back("-ijkmln");
+  //if (ss[3] == ss[5]) permutations.push_back("-ijknml");
+  //if (ss[4] == ss[5]) permutations.push_back("-ijklnm");
+  //if (ss[3] == ss[4] && ss[3] == ss[5]) {
+  //  permutations.insert(permutations.end(), {"ijknlm", "ijkmnl"});
+  //}
+  //if (permutations.size() > 1) sym->set_permutations(permutations);
+
+  // Set point-group symmetry: no idea what is correct here.
+  //sym->set_irreps_allowed({mo.irrep_totsym()});
+
+  // Set spin symmetry:
+  if (mospaces_ptr->restricted) {
+    // Note: Libtensor assumes for the spin block mappings that there are
+    //       an even number of blocks along the spin axis. We explicitly check
+    //       for this in in as_lt_symmetry and ignore the spin symmetry if this
+    //       is not the case, but it has to be properly tested if this does
+    //       the trick. Notice that e.g. adcman does it like it is coded here
+    //       and ignores all symmetry between the spin blocks in the case of
+    //       an unrestricted reference. Technically speaking this is not
+    //       completely necessary and as for example the next statement of
+    //       forbidden blocks should actually be shifted one up out of the if.
+
+    // what about the permutations of blocks that are non-zero?
+    // If integrating directly they are zero, however due to the permutations
+    // non-zero results are possible.
+
+    // forbidden spin blocks and spin block map according to 6 index integral.
+    sym->set_spin_blocks_forbidden({"aaaaab", "aaaaba", "aaabaa", "aabaaa", "abaaaa",
+                                    "baaaaa", //
+                                    "bbaaaa", "babaaa", "abbaaa", "aaabba", "aaabab",
+                                    "aaaabb", "baaaba", "baaaab", "ababaa", "abaaab",
+                                    "aababa", "aabbaa", //
+                                    "aaabbb", "bbbaaa", "abbbaa", "abbaba", "abbaab",
+                                    "babbaa", "bababa", "babaab", "bbabaa", "bbaaba",
+                                    "bbaaab", "baaabb", "baabab", "baabba", "abaabb",
+                                    "ababab", "ababba", "aababb", "aabbab", "aabbba", //
+                                    "bbbbaa", "bbbaba", "bbbaab", "aabbbb", "ababbb",
+                                    "baabbb", "abbbab", "abbbba", "bababb", "babbba",
+                                    "bbaabb", "bbabab", //
+                                    "bbbbba", "bbbbab", "bbbabb", "bbabbb", "babbbb",
+                                    "abbbbb"});
+    sym->set_spin_block_maps({
+          {"aaaaaa", "bbbbbb", 1.},
+          {"baabaa", "abbabb", 1.},
+          {"abaaba", "babbab", 1.},
+          {"aabaab", "bbabba", 1.},
+    });
+  }
+  return sym;
+}
+**/
+
 }  // namespace libadcc

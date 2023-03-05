@@ -3,7 +3,7 @@
 # Generate valid IF_DIMENSIONS_MATCH_EXECUTE_CONTRACT lines for TensorImpl.cc
 
 # The maximal tensor dimensionality
-maxdim = 4
+maxdim = 6
 
 
 def is_valid(n_contr_idcs, dima, dimb, dimout):

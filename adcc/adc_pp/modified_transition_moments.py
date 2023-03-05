@@ -60,6 +60,60 @@ def mtm_adc2(mp, dipop, intermediates):
     return AmplitudeVector(ph=f1, pphh=f2)
 
 
+def mtm_adc3(mp, dipop, intermediates):
+    second_order = mtm_adc2(mp, dipop, intermediates)
+    f1 = second_order.ph
+    f2 = second_order.pphh
+
+    t2 = mp.t2(b.oovv)
+    p0 = mp.mp2_diffdm
+    td2 = mp.td2(b.oovv)
+    tt2 = mp.tt2(b.ooovvv)
+    ts3 = mp.ts3(b.ov)
+    td3 = mp.td3(b.oovv)
+
+    f1 += (
+        + 1.0 * einsum('ib,ab->ia', ts3, dipop.vv)
+        - 1.0 * einsum('ja,ji->ia', ts3, dipop.oo)
+        - 1.0 * einsum('ijab,jb->ia', td3, dipop.ov)
+        + 1.0 * einsum('ijab,kb,jk->ia', t2, p0.ov, dipop.oo)
+        + 1.0 * einsum('jkab,kb,ji->ia', t2, p0.ov, dipop.oo)
+        - 1.0 * einsum('ijbc,jc,ab->ia', t2, p0.ov, dipop.vv)
+        - 1.0 * einsum('ijab,jc,cb->ia', t2, p0.ov, dipop.vv)
+        - 0.25 * einsum('ikbc,jkbc,ja->ia', t2, td2, dipop.ov)
+        - 0.25 * einsum('jkac,jkbc,ib->ia', t2, td2, dipop.ov)
+        + 0.5 * einsum('ijab,jkbc,kc->ia', t2, td2, dipop.ov)
+        - 0.25 * einsum('ikbc,jkbc,ja->ia', td2, t2, dipop.ov)
+        - 0.25 * einsum('jkac,jkbc,ib->ia', td2, t2, dipop.ov)
+        + 0.5 * einsum('ijab,jkbc,kc->ia', td2, t2, dipop.ov)
+        + 0.5 * einsum('ijkabc,jkcd,db->ia', tt2, t2, dipop.vv)
+        - 0.25 * einsum('ijkbcd,jkcd,ab->ia', tt2, t2, dipop.vv)
+        + 0.5 * einsum('ijkabc,klbc,jl->ia', tt2, t2, dipop.oo)
+        + 0.25 * einsum('jklabc,klbc,ji->ia', tt2, t2, dipop.oo)
+        + 0.25 * einsum('ijac,klbd,klcd,jb->ia', t2, t2, t2, dipop.ov)
+        - 0.25 * einsum('ijad,klbc,klcd,jb->ia', t2, t2, t2, dipop.ov)
+        + 0.25 * einsum('ijbd,klac,klcd,jb->ia', t2, t2, t2, dipop.ov)
+        - 0.25 * einsum('ijcd,klab,klcd,jb->ia', t2, t2, t2, dipop.ov)
+        + 0.25 * einsum('ikab,jlcd,klcd,jb->ia', t2, t2, t2, dipop.ov)
+        - 0.25 * einsum('ikac,jlbd,klcd,jb->ia', t2, t2, t2, dipop.ov)
+        + 0.25 * einsum('ikad,jlbc,klcd,jb->ia', t2, t2, t2, dipop.ov)
+        + 0.25 * einsum('ikbc,jlad,klcd,jb->ia', t2, t2, t2, dipop.ov)
+        - 0.25 * einsum('ikbd,jlac,klcd,jb->ia', t2, t2, t2, dipop.ov)
+        + 0.25 * einsum('ikcd,jlab,klcd,jb->ia', t2, t2, t2, dipop.ov)
+        - 0.25 * einsum('ilab,jkcd,klcd,jb->ia', t2, t2, t2, dipop.ov)
+        + 0.25 * einsum('ilac,jkbd,klcd,jb->ia', t2, t2, t2, dipop.ov)
+        + 0.25 * einsum('ilad,jkbc,klcd,jb->ia', t2, t2, t2, dipop.ov)
+        - 0.25 * einsum('ilbc,jkad,klcd,jb->ia', t2, t2, t2, dipop.ov)
+        + 0.25 * einsum('ilbd,jkac,klcd,jb->ia', t2, t2, t2, dipop.ov)
+    )
+    f2 += (
+        - 1.0 * einsum('ijbc,ac->ijab', td2, dipop.vv).antisymmetrise(2, 3)
+        - 1.0 * einsum('ikab,kj->ijab', td2, dipop.oo).antisymmetrise(0, 1)
+        - 0.5 * einsum('ijkabc,kc->ijab', tt2, dipop.ov)
+    )
+    return AmplitudeVector(ph=f1, pphh=f2)
+
+
 def mtm_cvs_adc0(mp, dipop, intermediates):
     return AmplitudeVector(ph=dipop.cv)
 
@@ -78,6 +132,7 @@ DISPATCH = {
     "adc0": mtm_adc0,
     "adc1": mtm_adc1,
     "adc2": mtm_adc2,
+    "adc3": mtm_adc3,
     "cvs-adc0": mtm_cvs_adc0,
     "cvs-adc1": mtm_cvs_adc0,  # Identical to CVS-ADC(0)
     "cvs-adc2": mtm_cvs_adc2,

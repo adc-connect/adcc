@@ -94,6 +94,93 @@ class LazyMp:
         ) / denom
 
     @cached_member_function
+    def tt2(self, space):
+        """Second order triples amplitudes"""
+        hf = self.reference_state
+        t2 = self.t2(b.oovv).evaluate()
+        denom = - direct_sum('ia,jkbc->ijkabc', self.df(b.ov),
+                             direct_sum('jb,kc->jkbc', self.df(b.ov),
+                             self.df(b.ov)))
+        amp = (
+            + einsum('idbc,jkad->ijkabc', hf.ovvv, t2)
+            + einsum('idab,jkcd->ijkabc', hf.ovvv, t2)
+            - einsum('jdab,ikcd->ijkabc', hf.ovvv, t2)
+            + einsum('kdab,ijcd->ijkabc', hf.ovvv, t2)
+            - einsum('jdbc,ikad->ijkabc', hf.ovvv, t2)
+            + einsum('kdbc,ijad->ijkabc', hf.ovvv, t2)
+            - einsum('idac,jkbd->ijkabc', hf.ovvv, t2)
+            + einsum('jdac,ikbd->ijkabc', hf.ovvv, t2)
+            - einsum('kdac,ijbd->ijkabc', hf.ovvv, t2)
+            + einsum('jkla,ilbc->ijkabc', hf.ooov, t2)
+            - einsum('ikla,jlbc->ijkabc', hf.ooov, t2)
+            + einsum('ijla,klbc->ijkabc', hf.ooov, t2)
+            + einsum('iklb,jlac->ijkabc', hf.ooov, t2)
+            - einsum('jklb,ilac->ijkabc', hf.ooov, t2)
+            - einsum('ijlb,klac->ijkabc', hf.ooov, t2)
+            - einsum('iklc,jlab->ijkabc', hf.ooov, t2)
+            + einsum('jklc,ilab->ijkabc', hf.ooov, t2)
+            + einsum('ijlc,klab->ijkabc', hf.ooov, t2)
+        )
+        return amp / denom
+
+    @cached_member_function
+    def ts3(self, space):
+        """Third order singles amplitudes"""
+        hf = self.reference_state
+        p0 = self.mp2_diffdm
+        td2 = self.td2(b.oovv)
+        tt2 = self.tt2(b.ooovvv)
+        denom = - self.df(b.ov)
+        amp = (
+            - einsum('jaib,jb->ia', hf.ovov, p0.ov)
+            + 0.5 * einsum('jkib,jkab->ia', hf.ooov, td2)
+            + 0.5 * einsum('jabc,ijbc->ia', hf.ovvv, td2)
+            + 0.25 * einsum('jkbc,ijkabc->ia', hf.oovv, tt2)
+        )
+        return amp / denom
+
+    @cached_member_function
+    def td3(self, space):
+        """Third order doubles amplitudes"""
+        hf = self.reference_state
+        p0 = self.mp2_diffdm
+        t2 = self.t2(b.oovv).evaluate()
+        td2 = self.td2(b.oovv).evaluate()
+        tt2 = self.tt2(b.ooovvv).evaluate()
+        t2eri_vv = einsum('klbd,klcd->bc', t2, hf.oovv).evaluate()
+        t2eri_oo = einsum('jlcd,klcd->jk', t2, hf.oovv).evaluate()
+        t2eri_oovv = einsum('jlbd,klcd->jkbc', t2, hf.oovv).evaluate()
+        denom = direct_sum('ia,jb->ijab', self.df(b.ov), self.df(b.ov))
+        amp = (
+            + 2 * einsum('jc,abic->ijab', p0.ov, hf.vvov).antisymmetrise(0, 1)
+            + 2 * einsum('kb,kaij->ijab', p0.ov, hf.ovoo).antisymmetrise(2, 3)
+            + 4 * einsum('ikac,kbjc->ijab', td2,
+                         hf.ovov).antisymmetrise(0, 1).antisymmetrise(2, 3)
+            - 0.5 * einsum('ijcd,abcd->ijab', td2, hf.vvvv)
+            - 0.5 * einsum('klab,klij->ijab', td2, hf.oooo)
+            + einsum('jklabc,klic->ijab', tt2, hf.ooov).antisymmetrise(0, 1)
+            + einsum('ijkbcd,kacd->ijab', tt2, hf.ovvv).antisymmetrise(2, 3)
+            - 0.25 * einsum('ijac,bc->ijab', t2, t2eri_vv)
+            - 0.25 * einsum('ijad,bd->ijab', t2, t2eri_vv)
+            + 0.25 * einsum('ijbc,ac->ijab', t2, t2eri_vv)
+            + 0.25 * einsum('ijbd,ad->ijab', t2, t2eri_vv)
+            + 0.25 * einsum('ijcd,klab,klcd->ijab', t2, t2, hf.oovv)
+            - 0.25 * einsum('ikab,jk->ijab', t2, t2eri_oo)
+            + 0.25 * einsum('ikac,jkbc->ijab', t2, t2eri_oovv)
+            + 0.25 * einsum('ikad,jkbd->ijab', t2, t2eri_oovv)
+            - 0.25 * einsum('ikbc,jkac->ijab', t2, t2eri_oovv)
+            - 0.25 * einsum('ikbd,jkad->ijab', t2, t2eri_oovv)
+            + 0.25 * einsum('il,jlab->ijab', t2eri_oo, t2)
+            - 0.25 * einsum('ilab,jl->ijab', t2, t2eri_oo)
+            + 0.25 * einsum('ilac,jlbc->ijab', t2, t2eri_oovv)
+            + 0.25 * einsum('ilad,jlbd->ijab', t2, t2eri_oovv)
+            - 0.25 * einsum('ilbc,jlac->ijab', t2, t2eri_oovv)
+            - 0.25 * einsum('ilbd,jlad->ijab', t2, t2eri_oovv)
+            + 0.25 * einsum('ik,jkab->ijab', t2eri_oo, t2)
+        )
+        return amp / denom
+
+    @cached_member_function
     def t2eri(self, space, contraction):
         """
         Return the T2 tensor with ERI tensor contraction intermediates.
@@ -169,6 +256,34 @@ class LazyMp:
         ret.reference_state = self.reference_state
         return evaluate(ret)
 
+    @cached_property
+    @timed_member_call(timer="timer")
+    def mp3_diffdm(self):
+        """
+        Return the MP3 difference density in the MO basis. mp2_diffdm is included
+        """
+        t2 = self.t2(b.oovv)
+        td2 = self.td2(b.oovv)
+        ts3 = self.ts3(b.ov)
+        tt2 = self.tt2(b.ooovvv)
+        p0 = self.mp2_diffdm
+        ret = self.mp2_diffdm
+
+        ret.oo = p0.oo - 0.5 * (
+            + einsum('jkab,ikab->ij', t2, td2)
+            + einsum('jkab,ikab->ij', td2, t2)
+        )
+        ret.ov = p0.ov + (
+            + ts3
+            - einsum('jb,ijab->ia', p0.ov, t2)
+            - 0.25 * einsum('jkbc,ijkabc->ia', t2, tt2)
+        )
+        ret.vv = p0.vv + 0.5 * (
+            + einsum('ijac,ijbc->ab', td2, t2)
+            + einsum('ijac,ijbc->ab', t2, td2)
+        )
+        return evaluate(ret)
+
     def density(self, level=2):
         """
         Return the MP density in the MO basis with all corrections
@@ -178,6 +293,8 @@ class LazyMp:
             return self.reference_state.density
         elif level == 2:
             return self.reference_state.density + self.mp2_diffdm
+        elif level == 3:
+            return self.reference_state.density + self.mp3_diffdm
         else:
             raise NotImplementedError("Only densities for level 1 and 2"
                                       " are implemented.")
@@ -191,6 +308,8 @@ class LazyMp:
             return self.reference_state.dipole_moment
         elif level == 2:
             return self.mp2_dipole_moment
+        elif level == 3:
+            return self.mp3_dipole_moment
         else:
             raise NotImplementedError("Only dipole moments for level 1 and 2"
                                       " are implemented.")
@@ -273,6 +392,15 @@ class LazyMp:
         mp2corr = -np.array([product_trace(comp, self.mp2_diffdm)
                              for comp in dipole_integrals])
         return refstate.dipole_moment + mp2corr
+
+    @cached_property
+    def mp3_dipole_moment(self):
+        # MP2_diffdm is included in mp3corr
+        refstate = self.reference_state
+        dipole_integrals = refstate.operators.electric_dipole
+        mp3corr = -np.array([product_trace(comp, self.mp3_diffdm)
+                            for comp in dipole_integrals])
+        return refstate.dipole_moment + mp3corr
 
 
 #

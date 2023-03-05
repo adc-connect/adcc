@@ -117,7 +117,7 @@ IdedBispace<3 * N> bispace_product(const IdedBispace<N>& x, const IdedBispace<N>
 
 template <size_t N>
 lt::bispace<N> make_sym_bispace_aux(std::vector<IdedBispace<1>>) {
-  throw not_implemented_error("Not implemented for N != 1, 2, 3, 4");
+  throw not_implemented_error("Not implemented for N != 1, 2, 3, 4, 5, 6");
 }
 
 template <>
@@ -141,6 +141,32 @@ lt::bispace<4> make_sym_bispace_aux(std::vector<IdedBispace<1>> spaces1d) {
   auto pair23 = bispace_product(spaces1d[2], spaces1d[3]);
   return bispace_product(pair01, pair23);
 }
+
+// not sure where one would use this space
+//template <>
+//lt::bispace<5> make_sym_bispace_aux(std::vector<IdedBispace<1>> spaces1d) {
+//  return bispace_product(spaces1d[0], spaces1d[1], spaces1d[2], spaces1d[3], spaces1d[4]);
+//}
+
+template <>
+lt::bispace<6> make_sym_bispace_aux(std::vector<IdedBispace<1>> spaces1d) {
+  auto pair012 = bispace_product(spaces1d[0], spaces1d[1], spaces1d[2]);
+  auto pair345= bispace_product(spaces1d[3], spaces1d[4], spaces1d[5]);
+  return bispace_product(pair012, pair345);
+}
+
+/**
+template <>
+lt::bispace<8> make_sym_bispace_aux(std::vector<IdedBispace<1>> spaces1d) {
+  auto pair01 = bispace_product(spaces1d[0], spaces1d[1]);
+  auto pair23= bispace_product(spaces1d[2], spaces1d[3]);
+  auto pair45 = bispace_product(spaces1d[4], spaces1d[5]);
+  auto pair67= bispace_product(spaces1d[6], spaces1d[7]);
+  auto pair0123 = bispace_product(pair01, pair23);
+  auto pair4567 = bispace_product(pair45, pair67);
+  return bispace_product(pair0123, pair4567);
+}
+**/
 
 }  // namespace
 
@@ -169,6 +195,10 @@ INSTANTIATE(1)
 INSTANTIATE(2)
 INSTANTIATE(3)
 INSTANTIATE(4)
+INSTANTIATE(5)
+INSTANTIATE(6)
+//INSTANTIATE(7)
+//INSTANTIATE(8)
 
 #undef INSTANTIATE
 
