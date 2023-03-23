@@ -141,12 +141,12 @@ class Psi4HFProvider(HartreeFockProvider):
         # By contraction with the tdm, the electronic energy contribution is
         # calculated.
         if self.environment_implementation == "ddx":
-            V_pcm = self.wfn.ddx.get_solvation_contributions(psi_dm, elec_only,
-                                                             nonequilibrium=True)[1]
-            V_pcm = V_pcm.to_array()
+            V_pcm = self.wfn.ddx.get_solvation_contributions(
+                psi_dm, elec_only=elec_only, nonequilibrium=True
+            )[1]
         elif self.environment_implementation == "pcmsolver":
-            V_pcm = psi4.core.PCM.compute_V(self.wfn.get_PCM(), psi_dm).to_array()
-        return np.einsum("uv,uv->", dm.to_ndarray(), V_pcm)
+            V_pcm = psi4.core.PCM.compute_V(self.wfn.get_PCM(), psi_dm)
+        return np.einsum("uv,uv->", dm.to_ndarray(), V_pcm.to_array())
 
     @property
     def excitation_energy_corrections(self):
