@@ -66,6 +66,13 @@ class Psi4OperatorIntegralProvider:
 
     @property
     def pcm_potential_elec(self):
+        if hasattr(self.wfn, "ddx"):
+            def ddx_potential_elec_ao(dm):
+                return self.wfn.ddx.get_solvation_contributions(
+                    psi4.core.Matrix.from_array(dm.to_ndarray()),
+                    elec_only=True, nonequilibrium=True
+                )[1]
+            return ddx_potential_elec_ao
         if self.wfn.PCM_enabled():
             def pcm_potential_elec_ao(dm):
                 return psi4.core.PCM.compute_V(
@@ -73,16 +80,6 @@ class Psi4OperatorIntegralProvider:
                     psi4.core.Matrix.from_array(dm.to_ndarray())
                 )
             return pcm_potential_elec_ao
-
-    @property
-    def ddx_potential_elec(self):
-        if hasattr(self.wfn, "ddx_state"):
-            def ddx_induction_elec_ao(dm):
-                return self.wfn.ddx_state.get_solvation_contributions(
-                    psi4.core.Matrix.from_array(dm.to_ndarray()),
-                    elec_only=True
-                )[1]
-            return ddx_induction_elec_ao
 
 
 class Psi4EriBuilder(EriBuilder):
@@ -120,28 +117,35 @@ class Psi4HFProvider(HartreeFockProvider):
                                           self.restricted)
         self.operator_integral_provider = Psi4OperatorIntegralProvider(self.wfn)
 
+        self.environment = None
+        self.environment_implementation = None
+        if hasattr(self.wfn, "pe_state"):
+            self.environment = "pe"
+            self.environment_implementation = "cppe"
+        elif hasattr(self.wfn, "ddx"):
+            self.environment = "pcm"
+            self.environment_implementation = "ddx"
+        elif self.wfn.PCM_enabled():
+            self.environment = "pcm"
+            self.environment_implementation = "pcmsolver"
+
     def pe_energy(self, dm, elec_only=True):
         density_psi = psi4.core.Matrix.from_array(dm.to_ndarray())
         e_pe, _ = self.wfn.pe_state.get_pe_contribution(density_psi,
                                                         elec_only=elec_only)
         return e_pe
 
-    def pcm_energy(self, dm):
+    def pcm_energy(self, dm, elec_only=True):
         psi_dm = psi4.core.Matrix.from_array(dm.to_ndarray())
         # computes the Fock matrix contribution.
         # By contraction with the tdm, the electronic energy contribution is
         # calculated.
-        V_pcm = psi4.core.PCM.compute_V(self.wfn.get_PCM(), psi_dm).to_array()
-        return np.einsum("uv,uv->", dm.to_ndarray(), V_pcm)
-
-    def ddx_energy(self, dm, elec_only=True):
-        psi_dm = psi4.core.Matrix.from_array(dm.to_ndarray())
-        # computes the Fock matrix contribution.
-        # By contraction with the tdm, the electronic energy contribution is
-        # calculated.
-        _, V_pcm = self.wfn.ddx_state.get_solvation_contributions(
-            psi_dm, elec_only=elec_only
-        )
+        if self.environment_implementation == "ddx":
+            V_pcm = self.wfn.ddx.get_solvation_contributions(psi_dm, elec_only,
+                                                             nonequilibrium=True)[1]
+            V_pcm = V_pcm.to_array()
+        elif self.environment_implementation == "pcmsolver":
+            V_pcm = psi4.core.PCM.compute_V(self.wfn.get_PCM(), psi_dm).to_array()
         return np.einsum("uv,uv->", dm.to_ndarray(), V_pcm)
 
     @property
@@ -162,28 +166,11 @@ class Psi4HFProvider(HartreeFockProvider):
         if self.environment == "pcm":
             ptlr = EnergyCorrection(
                 "pcm_ptlr_correction",
-                lambda view: self.pcm_energy(view.transition_dm_ao)
-            )
-            ret.extend([ptlr])
-        if self.environment == "ddx":
-            ptlr = EnergyCorrection(
-                "ddx_ptlr_correction",
-                lambda view: self.ddx_energy(view.transition_dm_ao,
+                lambda view: self.pcm_energy(view.transition_dm_ao,
                                              elec_only=True)
             )
             ret.extend([ptlr])
         return {ec.name: ec for ec in ret}
-
-    @property
-    def environment(self):
-        ret = None
-        if hasattr(self.wfn, "pe_state"):
-            ret = "pe"
-        elif self.wfn.PCM_enabled():
-            ret = "pcm"
-        elif hasattr(self.wfn, "ddx_state"):
-            ret = "ddx"
-        return ret
 
     def get_backend(self):
         return "psi4"

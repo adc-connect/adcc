@@ -142,6 +142,16 @@ class PyScfHFProvider(HartreeFockProvider):
             assert self.scfres.mo_coeff[0].shape[1] == \
                 self.scfres.mo_coeff[1].shape[1]
 
+        self.environment = None
+        self.environment_implementation = None
+        if hasattr(self.scfres, "with_solvent"):
+            if hasattr(self.scfres.with_solvent, "cppe_state"):
+                self.environment = "pe"
+                self.environment_implementation = "cppe"
+            elif isinstance(self.scfres.with_solvent, ddcosmo.DDCOSMO):
+                self.environment = "pcm"
+                self.environment_implementation = "ddcosmo"
+
     def pe_energy(self, dm, elec_only=True):
         pe_state = self.scfres.with_solvent
         e_pe, _ = pe_state.kernel(dm.to_ndarray(), elec_only=elec_only)
@@ -178,16 +188,6 @@ class PyScfHFProvider(HartreeFockProvider):
             )
             ret.extend([ptlr])
         return {ec.name: ec for ec in ret}
-
-    @property
-    def environment(self):
-        ret = None
-        if hasattr(self.scfres, "with_solvent"):
-            if hasattr(self.scfres.with_solvent, "cppe_state"):
-                ret = "pe"
-            elif isinstance(self.scfres.with_solvent, ddcosmo.DDCOSMO):
-                ret = "pcm"
-        return ret
 
     def get_backend(self):
         return "pyscf"
