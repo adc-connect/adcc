@@ -535,7 +535,7 @@ adccsetup(
     setup_requires=["pybind11 >= 2.6"],
     install_requires=[
         "opt_einsum >= 3.0",
-        "numpy >= 1.14, < 1.24",  # problems with PE in pyscf for 1.24
+        "numpy >= 1.14",
         "scipy >= 1.2",
         "h5py >= 2.9",
         "tqdm >= 4.30",

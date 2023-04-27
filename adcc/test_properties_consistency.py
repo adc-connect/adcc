@@ -26,28 +26,17 @@ import numpy as np
 from numpy.testing import assert_allclose
 from adcc.testdata.cache import cache
 
-from .misc import expand_test_templates
+from .test_state_densities import Runners
 from pytest import approx
 
-basemethods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
-methods = [m for bm in basemethods for m in [bm, "cvs_" + bm]]
 
-
-@expand_test_templates(methods)
-class RunnersConsistency:
-    def base_test(self, *args, **kwargs):
-        raise NotImplementedError
-
-    def template_methox_sto3g_singlet(self, method):
-        self.base_test("methox_sto3g", method, "singlet")
-
-
-class TestMagneticTransitionDipoleMoments(unittest.TestCase, RunnersConsistency):
+class TestMagneticTransitionDipoleMoments(unittest.TestCase, Runners):
     def base_test(self, system, method, kind):
         method = method.replace("_", "-")
+        kind = "any" if kind == "state" else kind
 
-        refdata = cache.reference_data[system]
-        state = cache.adc_states[system][method][kind]
+        refdata = cache.adcc_reference_data[system]
+        state = cache.adcc_states[system][method][kind]
 
         res_dms = state.transition_magnetic_dipole_moment
         ref = refdata[method][kind]
@@ -57,12 +46,13 @@ class TestMagneticTransitionDipoleMoments(unittest.TestCase, RunnersConsistency)
         )
 
 
-class TestTransitionDipoleMomentsVelocity(unittest.TestCase, RunnersConsistency):
+class TestTransitionDipoleMomentsVelocity(unittest.TestCase, Runners):
     def base_test(self, system, method, kind):
         method = method.replace("_", "-")
+        kind = "any" if kind == "state" else kind
 
-        refdata = cache.reference_data[system]
-        state = cache.adc_states[system][method][kind]
+        refdata = cache.adcc_reference_data[system]
+        state = cache.adcc_states[system][method][kind]
 
         res_dms = state.transition_dipole_moment_velocity
         ref = refdata[method][kind]
@@ -72,12 +62,13 @@ class TestTransitionDipoleMomentsVelocity(unittest.TestCase, RunnersConsistency)
         )
 
 
-class TestRotatoryStrengths(unittest.TestCase, RunnersConsistency):
+class TestRotatoryStrengths(unittest.TestCase, Runners):
     def base_test(self, system, method, kind):
         method = method.replace("_", "-")
+        kind = "any" if kind == "state" else kind
 
-        refdata = cache.reference_data[system]
-        state = cache.adc_states[system][method][kind]
+        refdata = cache.adcc_reference_data[system]
+        state = cache.adcc_states[system][method][kind]
 
         res_rots = state.rotatory_strength
         ref_tmdm = refdata[method][kind]["transition_magnetic_dipole_moments"]

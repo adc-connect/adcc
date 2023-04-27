@@ -122,9 +122,9 @@ block_ph_ph_1 = block_ph_ph_0
 #
 def block_ph_pphh_1(ground_state, op):
     if op.is_symmetric:
-        op_vo = op.ov.transpose((1, 0))
+        op_vo = op.ov.transpose()
     else:
-        op_vo = op.vo.copy()
+        op_vo = op.vo
     t2 = ground_state.t2(b.oovv)
 
     def apply(ampl):
@@ -141,9 +141,9 @@ def block_ph_pphh_1(ground_state, op):
 
 def block_pphh_ph_1(ground_state, op):
     if op.is_symmetric:
-        op_vo = op.ov.transpose((1, 0))
+        op_vo = op.ov.transpose()
     else:
-        op_vo = op.vo.copy()
+        op_vo = op.vo
     t2 = ground_state.t2(b.oovv)
 
     def apply(ampl):
@@ -175,9 +175,9 @@ def block_pphh_ph_1(ground_state, op):
 #
 def block_ph_ph_2(ground_state, op):
     if op.is_symmetric:
-        op_vo = op.ov.transpose((1, 0))
+        op_vo = op.ov.transpose()
     else:
-        op_vo = op.vo.copy()
+        op_vo = op.vo
     p0 = ground_state.mp2_diffdm
     t2 = ground_state.t2(b.oovv)
 
