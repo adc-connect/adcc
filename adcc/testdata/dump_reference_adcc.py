@@ -21,6 +21,7 @@
 ##
 ## ---------------------------------------------------------------------
 import adcc
+from adcc.State2States import State2States
 import numpy as np
 
 import h5py
@@ -35,9 +36,8 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
     else:
         raise TypeError("Unknown type for out, only HDF5 file and str supported.")
 
-    # TODO: spin-flip, etc.
     states = []
-    if "n_states" in kwargs:
+    if "n_states" in kwargs or "n_spin_flip" in kwargs:
         state = adcc.run_adc(data, method=method, **kwargs)
         states.append(state)
     else:
@@ -90,12 +90,16 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
                           data=ground_state.df("o2v1").to_ndarray(),
                           compression=8)
 
-    for block in ["dm_o1o1", "dm_o1v1", "dm_v1v1", "dm_bb_a", "dm_bb_b",
-                  "dm_o2o1", "dm_o2o2", "dm_o2v1"]:
+    for block in ["dm_o1o1", "dm_o1v1", "dm_v1v1", "dm_o2o1", "dm_o2o2", "dm_o2v1"]:
         blk = block.split("_")[-1]
         if blk in ground_state.mp2_diffdm.blocks:
             mp.create_dataset("mp2/" + block, compression=8,
                               data=ground_state.mp2_diffdm[blk].to_ndarray())
+    dm_bb_a, dm_bb_b = ground_state.mp2_diffdm.to_ao_basis(
+        ground_state.reference_state
+    )
+    mp.create_dataset("mp2/dm_bb_a", compression=8, data=dm_bb_a.to_ndarray())
+    mp.create_dataset("mp2/dm_bb_b", compression=8, data=dm_bb_b.to_ndarray())
 
     #
     # ADC
@@ -107,32 +111,28 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
     random_vector = adcc.copy(states[0].excitation_vector[0]).set_random()
 
     # Compute matvec and block-wise apply
-    matvec = states[0].matrix.compute_matvec(random_vector)
-    result = {"ss": adcc.copy(random_vector["s"]), }
-    states[0].matrix.compute_apply("ss", random_vector["s"], result["ss"])
-    if "d" in random_vector.blocks:
-        if not ("cvs" in method and "adc3" in method):
-            result["ds"] = adcc.copy(random_vector["d"])
-            states[0].matrix.compute_apply("ds", random_vector["s"], result["ds"])
-            result["sd"] = adcc.copy(random_vector["s"])
-            states[0].matrix.compute_apply("sd", random_vector["d"], result["sd"])
+    matvec = states[0].matrix.matvec(random_vector)
+    result = {}
+    result["ss"] = states[0].matrix.block_apply("ph_ph", random_vector.ph)
+    if "pphh" in random_vector.keys():
+        result["ds"] = states[0].matrix.block_apply("pphh_ph",
+                                                    random_vector.ph)
+        result["sd"] = states[0].matrix.block_apply("ph_pphh",
+                                                    random_vector.pphh)
+        result["dd"] = states[0].matrix.block_apply("pphh_pphh",
+                                                    random_vector.pphh)
 
-        # TODO CVS-ADC(2)-x and CVS-ADC(3) compute_apply("dd") is not implemented
-        if not ("cvs" in method and ("adc2x" in method or "adc3" in method)):
-            result["dd"] = adcc.copy(random_vector["d"])
-            states[0].matrix.compute_apply("dd", random_vector["d"], result["dd"])
-
-    gmatrix["random_singles"] = random_vector["s"].to_ndarray()
-    gmatrix["diagonal_singles"] = states[0].matrix.diagonal("s").to_ndarray()
-    gmatrix["matvec_singles"] = matvec["s"].to_ndarray()
+    gmatrix["random_singles"] = random_vector.ph.to_ndarray()
+    gmatrix["diagonal_singles"] = states[0].matrix.diagonal().ph.to_ndarray()
+    gmatrix["matvec_singles"] = matvec.ph.to_ndarray()
     gmatrix["result_ss"] = result["ss"].to_ndarray()
-    if 'd' in random_vector.blocks:
+    if "pphh" in random_vector.keys():
         gmatrix.create_dataset("random_doubles", compression=8,
-                               data=random_vector["d"].to_ndarray())
+                               data=random_vector.pphh.to_ndarray())
         gmatrix.create_dataset("diagonal_doubles", compression=8,
-                               data=states[0].matrix.diagonal("d").to_ndarray())
+                               data=states[0].matrix.diagonal().pphh.to_ndarray())
         gmatrix.create_dataset("matvec_doubles", compression=8,
-                               data=matvec["d"].to_ndarray())
+                               data=matvec.pphh.to_ndarray())
         if "ds" in result:
             gmatrix.create_dataset("result_ds", compression=8,
                                    data=result["ds"].to_ndarray())
@@ -169,11 +169,11 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
             tdm_bb_b.append(bb_b.to_ndarray())
 
             eigenvectors_singles.append(
-                state.excitation_vector[i]['s'].to_ndarray()
+                state.excitation_vector[i].ph.to_ndarray()
             )
-            if 'd' in state.excitation_vector[i].blocks:
+            if "pphh" in state.excitation_vector[i].keys():
                 eigenvectors_doubles.append(
-                    state.excitation_vector[i]['d'].to_ndarray()
+                    state.excitation_vector[i].pphh.to_ndarray()
                 )
             else:
                 eigenvectors_doubles.clear()
@@ -199,10 +199,36 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
                                compression=8,
                                data=np.asarray(eigenvectors_doubles))
 
+        # TODO State-to-state properties not implemented for CVS
+        if "cvs" not in method:
+            s2s = adc.create_group(kind + "/state_to_state")
+            for ifrom in range(n_states - 1):
+                state2state = State2States(state, initial=ifrom)
+                tdm_bb_a = []
+                tdm_bb_b = []
+                transition_dipoles = []
+
+                for j, ito in enumerate(range(ifrom + 1, n_states)):
+                    if ito <= n_states_extract and ifrom <= n_states_extract:
+                        bb_a, bb_b = state2state.transition_dm[j].to_ao_basis(
+                            state.reference_state
+                        )
+                        tdm_bb_a.append(bb_a.to_ndarray())
+                        tdm_bb_b.append(bb_b.to_ndarray())
+                    transition_dipoles.append(
+                        state2state.transition_dipole_moment[j]
+                    )
+
+                s2s_from = s2s.create_group(f"from_{ifrom}")
+                s2s_from["transition_dipole_moments"] = \
+                    np.asarray(transition_dipoles)
+                if tdm_bb_a and tdm_bb_b:
+                    s2s_from["state_to_excited_tdm_bb_a"] = np.asarray(tdm_bb_a)
+                    s2s_from["state_to_excited_tdm_bb_b"] = np.asarray(tdm_bb_b)
+
     # Store which kinds are available
     out.create_dataset("available_kinds", shape=(len(available_kinds), ),
                        data=np.array(available_kinds,
                                      dtype=h5py.special_dtype(vlen=str)))
 
-    # TODO: dump state2state once in master
     return out

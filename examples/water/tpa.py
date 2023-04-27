@@ -11,8 +11,7 @@ from adcc.solver.preconditioner import JacobiPreconditioner
 from adcc.solver import IndexSymmetrisation
 from adcc.solver.conjugate_gradient import conjugate_gradient, default_print
 from adcc.adc_pp.modified_transition_moments import modified_transition_moments
-from adcc.adc_pp.state2state_transition_dm import state2state_transition_dm
-from adcc.OneParticleOperator import product_trace
+from adcc.IsrMatrix import IsrMatrix
 
 
 class ShiftedMat(adcc.AdcMatrix):
@@ -44,6 +43,7 @@ state = adcc.adc2(scfres, n_singlets=1, conv_tol=1e-8)
 # setup modified transition moments
 dips = state.reference_state.operators.electric_dipole
 rhss = modified_transition_moments("adc2", state.ground_state, dips)
+isrmatrix = IsrMatrix("adc2", state.ground_state, dips)
 
 S = np.zeros((len(state.excitation_energy), 3, 3))
 for f, ee in enumerate(state.excitation_energy):
@@ -63,20 +63,13 @@ for f, ee in enumerate(state.excitation_energy):
             explicit_symmetrisation=explicit_symmetrisation
         )
         response.append(res)
+    right_vec = isrmatrix @ state.excitation_vector[f]
     for mu in range(3):
         for nu in range(mu, 3):
-            tdm_mu_f = state2state_transition_dm(
-                "adc2", matrix.ground_state, response[mu].solution,
-                state.excitation_vector[f]
-            )
-            tdm_nu_f = state2state_transition_dm(
-                "adc2", matrix.ground_state, response[nu].solution,
-                state.excitation_vector[f]
-            )
             # compute the matrix element
             S[f, mu, nu] = (
-                product_trace(tdm_mu_f, dips[nu])
-                + product_trace(tdm_nu_f, dips[mu])
+                response[mu].solution @ right_vec[nu]
+                + response[nu].solution @ right_vec[mu]
             )
             S[f, nu, mu] = S[f, mu, nu]
     print("Two-Photon Matrix for state", f)

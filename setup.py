@@ -146,7 +146,7 @@ class CppTest(Command):
         if not os.path.isfile(output_dir + "/catch2/catch.hpp"):
             os.makedirs(output_dir + "/catch2", exist_ok=True)
             base = "https://github.com/catchorg/Catch2/releases/download/"
-            request_urllib(base + "v2.7.0/catch.hpp",
+            request_urllib(base + "v2.13.9/catch.hpp",
                            output_dir + "/catch2/catch.hpp")
 
         # Adapt stuff from libadcc extension
@@ -357,7 +357,8 @@ def libadcc_extension():
 
     if sys.platform == "darwin" and is_conda_build():
         flags["extra_compile_args"] += ["-Wno-unused-command-line-argument",
-                                        "-Wno-undefined-var-template"]
+                                        "-Wno-undefined-var-template",
+                                        "-Wno-bitwise-instead-of-logical"]
 
     platform_autoinstall = (
         sys.platform.startswith("linux") or sys.platform.startswith("darwin")
@@ -500,7 +501,8 @@ adccsetup(
         "spectroscopy",
     ],
     #
-    author="Michael F. Herbst, Maximilian Scheurer, Jonas Leitner",
+    author=("Michael F. Herbst, Maximilian Scheurer, Jonas Leitner, "
+            "Antonia Papapostolou"),
     author_email="developers@adc-connect.org",
     license="GPL v3",
     url="https://adc-connect.org",
