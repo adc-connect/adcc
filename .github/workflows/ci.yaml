@@ -128,16 +128,16 @@ jobs:
           miniforge-version: latest
           python-version: ${{ matrix.version }}
           auto-activate-base: false
-      - name: Dump siteconfig with coverage flags for C++
-        run: |
-          mkdir $HOME/.adcc/
-          echo 'coverage = True' > $HOME/.adcc/siteconfig.py
+      # - name: Dump siteconfig with coverage flags for C++
+      #   run: |
+      #     mkdir $HOME/.adcc/
+      #     echo 'coverage = True' > $HOME/.adcc/siteconfig.py
       - name: Build and test adcc
         run: |
           conda info
           conda list
           # python -c "import psi4"
-          python setup.py test # -a '--cov=adcc'
+          python setup.py test
           python setup.py cpptest -v
       #
       # - name: Upload coverage to codecov
