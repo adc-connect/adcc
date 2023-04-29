@@ -359,6 +359,9 @@ def libadcc_extension():
         flags["extra_compile_args"] += ["-Wno-unused-command-line-argument",
                                         "-Wno-undefined-var-template",
                                         "-Wno-bitwise-instead-of-logical"]
+    if sys.platform.startswith("linux"):
+        # otherwise fails with -O3 on gcc>=12
+        flags["extra_compile_args"] += ["-Wno-array-bounds"]
 
     platform_autoinstall = (
         sys.platform.startswith("linux") or sys.platform.startswith("darwin")
