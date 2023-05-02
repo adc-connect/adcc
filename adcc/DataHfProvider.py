@@ -69,7 +69,7 @@ class DataOperatorIntegralProvider:
 
 
 class DataHfProvider(HartreeFockProvider):
-    def __init__(self, data):
+    def __init__(self, data, gauge_origin = 'origin'):
         """
         Initialise the DataHfProvider class with the `data` being a supported
         data container (currently python dictionary or HDF5 file).
@@ -204,20 +204,48 @@ class DataHfProvider(HartreeFockProvider):
                                  + str(mmp["elec_1"].shape))
             opprov.electric_dipole = np.asarray(mmp["elec_1"])
         magm = data.get("magnetic_moments", {})
-        if "mag_1" in magm:
-            if magm["mag_1"].shape != (3, nb, nb):
-                raise ValueError("magnetic_moments/mag_1 is expected to have "
-                                 "shape " + str((3, nb, nb)) + " not "
-                                 + str(magm["mag_1"].shape))
-            opprov.magnetic_dipole = np.asarray(magm["mag_1"])
         derivs = data.get("derivatives", {})
-        if "nabla" in derivs:
-            if derivs["nabla"].shape != (3, nb, nb):
-                raise ValueError("derivatives/nabla is expected to "
-                                 "have shape "
-                                 + str((3, nb, nb)) + " not "
-                                 + str(derivs["nabla"].shape))
-            opprov.nabla = np.asarray(derivs["nabla"])
+        if gauge_origin == 'origin':
+            if "elec_2" in mmp:
+                if mmp["elec_2"].shape != (9, nb, nb):
+                    raise ValueError("multipoles/elec_2 is expected to have "
+                                     "shape " + str((9, nb, nb)) + " not "
+                                     + str(mmp["elec_2"].shape))
+                opprov.electric_quadrupole = np.asarray(mmp["elec_2"])
+            if "mag_1" in magm:
+                if magm["mag_1"].shape != (3, nb, nb):
+                    raise ValueError("magnetic_moments/mag_1 is expected to have "
+                                     "shape " + str((3, nb, nb)) + " not "
+                                     + str(magm["mag_1"].shape))
+                opprov.magnetic_dipole = np.asarray(magm["mag_1"])
+            if "nabla" in derivs:
+                print("Helau")
+                if derivs["nabla"].shape != (3, nb, nb):
+                    raise ValueError("derivatives/nabla is expected to "
+                                     "have shape "
+                                     + str((3, nb, nb)) + " not "
+                                     + str(derivs["nabla"].shape))
+                opprov.nabla = np.asarray(derivs["nabla"])
+        else:
+            if f"elec_2_{gauge_origin}" in mmp:
+                if mmp["elec_2"].shape != (9, nb, nb):
+                    raise ValueError(f"multipoles/elec_2_{gauge_origin} is expected to have "
+                                     "shape " + str((9, nb, nb)) + " not "
+                                     + str(mmp[f"elec_2_{gauge_origin}"].shape))
+                opprov.electric_quadrupole = np.asarray(mmp["elec_2"])
+            if f"mag_1_{gauge_origin}" in magm:
+                if magm[f"mag_1_{gauge_origin}"].shape != (3, nb, nb):
+                    raise ValueError(f"magnetic_moments/mag_1_{gauge_origin} is expected to have "
+                                     "shape " + str((3, nb, nb)) + " not "
+                                     + str(magm[f"mag_1_{gauge_origin}"].shape))
+                opprov.magnetic_dipole = np.asarray(magm[f"mag_1_{gauge_origin}"])
+            if f"nabla_mass_center_{gauge_origin}" in derivs:
+                if derivs[f"nabla_{gauge_origin}"].shape != (3, nb, nb):
+                    raise ValueError(f"derivatives/nabla_{gauge_origin} is expected to "
+                                     "have shape "
+                                     + str((3, nb, nb)) + " not "
+                                     + str(derivs[f"nabla_{gauge_origin}"].shape))
+                opprov.nabla = np.asarray(derivs[f"nabla_{gauge_origin}"])
         self.operator_integral_provider = opprov
 
     #

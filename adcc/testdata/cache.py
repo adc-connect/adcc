@@ -155,18 +155,22 @@ class TestdataCache():
                 ret[k] = hdf5io.load(datafile)
         return ret
 
-    def read_reference_data(self, refname):
+    def read_reference_data(self, refname, read_gauge = False):
         prefixes = ["", "cvs", "fc", "fv", "fc_cvs",
                     "fv_cvs", "fc_fv", "fc_fv_cvs"]
         raws = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
         methods = raws + ["_".join([p, r]) for p in prefixes
                           for r in raws if p != ""]
-
+        gauge_origin = ["origin", "mass_center", "charge_center"]
         ret = {}
         for k in self.testcases:
             fulldict = {}
             for m in methods:
-                datafile = fullfile(k + "_" + refname + "_" + m + ".hdf5")
+                if read_gauge:
+                    for g in gauge_origin:
+                        datafile = fullfile(k + "_" + refname + "_" + m + g + ".hdf5")
+                else:
+                    datafile = fullfile(k + "_" + refname + "_" + m + ".hdf5")
                 if datafile is None or not os.path.isfile(datafile):
                     continue
                 fulldict.update(hdf5io.load(datafile))
@@ -179,8 +183,8 @@ class TestdataCache():
         return self.read_reference_data("reference")
 
     @cached_property
-    def adcc_reference_data(self):
-        return self.read_reference_data("adcc_reference")
+    def adcc_reference_data(self, read_gauge = False):
+        return self.read_reference_data("adcc_reference", read_gauge)
 
     def construct_adc_states(self, refdata):
         """

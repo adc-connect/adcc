@@ -54,7 +54,7 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
 
     if not len(states):
         raise ValueError("No excited states obtained.")
-
+    print("hello")
     #
     # MP
     #

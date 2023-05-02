@@ -31,9 +31,9 @@ from adcc.MoSpaces import expand_spaceargs
 
 import h5py
 
-sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
+#sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
 
-import adcctestdata as atd  # noqa: E402
+#import adcctestdata as atd  # noqa: E402
 
 
 def dump_all(case, kwargs, kwargs_overwrite={}, spec="gen", generator="adcc"):
@@ -43,8 +43,9 @@ def dump_all(case, kwargs, kwargs_overwrite={}, spec="gen", generator="adcc"):
         dump_method(case, method, kw, spec, generator=generator)
 
 
-def dump_method(case, method, kwargs, spec, generator="adcc"):
+def dump_method(case, method, kwargs, spec, generator="adcc", dump_gauge_origin = 'origin'):
     h5file = case + "_hfdata.hdf5"
+    #h5file = case + "_hfdata_old.hdf5"
     if not os.path.isfile(h5file):
         raise ValueError("HfData not found: " + h5file)
 
@@ -53,8 +54,7 @@ def dump_method(case, method, kwargs, spec, generator="adcc"):
         hfdata = atd.HdfProvider(h5file)
     else:
         dumpfunction = dump_reference_adcc
-        hfdata = adcc.DataHfProvider(h5py.File(h5file, "r"))
-
+        hfdata = adcc.DataHfProvider(h5py.File(h5file, "r"), gauge_origin = dump_gauge_origin)
     # Get dictionary of parameters for the reference cases.
     refcases = ast.literal_eval(hfdata.data["reference_cases"][()].decode())
     kwargs = dict(kwargs)
@@ -77,7 +77,9 @@ def dump_method(case, method, kwargs, spec, generator="adcc"):
         dumpfile = "{}_reference_{}{}.hdf5".format(case, prefix, method)
     else:
         dumpfile = "{}_adcc_reference_{}{}.hdf5".format(case, prefix, method)
-    if not os.path.isfile(dumpfile):
+        print("hola")
+    # if not os.path.isfile(dumpfile):
+    if os.path.isfile(dumpfile):
         dumpfunction(hfdata, fullmethod, dumpfile, mp_tree=mp_tree,
                      adc_tree=adc_tree, n_states_full=2, **kwargs)
 
@@ -181,4 +183,12 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    #main()
+
+    dump_method(
+            "h2o_sto3g",
+            "adc1",
+            kwargs = {"n_singlets": 10, "n_triplets": 10},
+            spec="gen",
+            generator = "adcc"
+    )
