@@ -21,27 +21,23 @@
 ##
 ## ---------------------------------------------------------------------
 import unittest
-import itertools
 import numpy as np
 
 from numpy.testing import assert_allclose
 from adcc.testdata.cache import cache
 
-from .misc import expand_test_templates
 from .test_state_densities import Runners
 from pytest import approx
 
-gauge_origins = [ 
-        'mass_center', 
-        'charge_center'
-        ]
+gauge_origins = ['mass_center', 'charge_center']
+
 
 class TestMagneticTransitionDipoleMoments(unittest.TestCase, Runners):
     def base_test(self, system, method, kind):
         method = method.replace("_", "-")
         systems_gauge_origin = [system] + [system + "_" + g for g in gauge_origins]
         kind = "any" if kind == "state" else kind
-        for system in systems_gauge_origin:       
+        for system in systems_gauge_origin:
             refdata = cache.adcc_reference_data[system]
             state = cache.adcc_states[system][method][kind]
 
@@ -49,7 +45,8 @@ class TestMagneticTransitionDipoleMoments(unittest.TestCase, Runners):
             ref = refdata[method][kind]
             n_ref = len(state.excitation_vector)
             assert_allclose(
-                res_dms, ref["transition_magnetic_dipole_moments"][:n_ref], atol=1e-4
+                res_dms, ref["transition_magnetic_dipole_moments"][:n_ref],
+                atol=1e-4
             )
 
 
@@ -58,7 +55,7 @@ class TestTransitionDipoleMomentsVelocity(unittest.TestCase, Runners):
         method = method.replace("_", "-")
         systems_gauge_origin = [system] + [system + "_" + g for g in gauge_origins]
         kind = "any" if kind == "state" else kind
-        for system in systems_gauge_origin:       
+        for system in systems_gauge_origin:
             refdata = cache.adcc_reference_data[system]
             state = cache.adcc_states[system][method][kind]
 
@@ -66,7 +63,8 @@ class TestTransitionDipoleMomentsVelocity(unittest.TestCase, Runners):
             ref = refdata[method][kind]
             n_ref = len(state.excitation_vector)
             assert_allclose(
-                res_dms, ref["transition_dipole_moments_velocity"][:n_ref], atol=1e-4
+                res_dms, ref["transition_dipole_moments_velocity"][:n_ref],
+                atol=1e-4
             )
 
 
@@ -87,13 +85,12 @@ class TestTransitionQuadrupoleMoments(unittest.TestCase, Runners):
             )
 
 
-
 class TestRotatoryStrengths(unittest.TestCase, Runners):
     def base_test(self, system, method, kind):
         method = method.replace("_", "-")
         systems_gauge_origin = [system] + [system + "_" + g for g in gauge_origins]
         kind = "any" if kind == "state" else kind
-        for system in systems_gauge_origin:       
+        for system in systems_gauge_origin:
             refdata = cache.adcc_reference_data[system]
             state = cache.adcc_states[system][method][kind]
 

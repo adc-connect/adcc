@@ -78,6 +78,7 @@ def replicate_ao_block(mospaces, tensor, is_symmetric=True):
     ]), 1e-14)
     return result
 
+
 class OperatorIntegrals:
     def __init__(self, provider, mospaces, coefficients, conv_tol):
         self.__provider_ao = provider
@@ -155,18 +156,18 @@ class OperatorIntegrals:
             raise NotImplementedError(f"{integral.replace('_', ' ')} operator "
                                       "not implemented "
                                       f"in {self.provider_ao.backend} backend.")
-        quad = [] 
+        quad = []
         quadrupoles = []
-        for i, component in enumerate(["xx", "xy", "xz", 
-                                       "yx", "yy", "yz", 
+        for i, component in enumerate(["xx", "xy", "xz",
+                                       "yx", "yy", "yz",
                                        "zx", "zy", "zz"]):
             quad_backend = getattr(self.provider_ao, integral)[i]
             quad_bb = replicate_ao_block(self.mospaces, quad_backend,
                                          is_symmetric=is_symmetric)
-            quad_ff = OneParticleOperator(self.mospaces, 
+            quad_ff = OneParticleOperator(self.mospaces,
                                           is_symmetric=is_symmetric)
-            transform_operator_ao2mo(quad_bb, quad_ff, 
-                                     self.__coefficients, 
+            transform_operator_ao2mo(quad_bb, quad_ff,
+                                     self.__coefficients,
                                      self.__conv_tol)
             quad.append(quad_ff)
         quadrupoles.append(quad[:3])
@@ -178,31 +179,31 @@ class OperatorIntegrals:
     @timed_member_call("_import_timer")
     def electric_quadrupole_traceless(self):
         """
-        Return the traceless electric quadrupole integrals 
+        Return the traceless electric quadrupole integrals
         in the molecular orbital basis.
         """
         return self.import_quadrupole_like_operator("electric_quadrupole_traceless",
-                                                     is_symmetric=True)
+                                                    is_symmetric=True)
 
     @property
     @timed_member_call("_import_timer")
     def electric_quadrupole(self):
         """
-        Return the traced electric quadrupole integrals 
+        Return the traced electric quadrupole integrals
         in the molecular orbital basis.
         """
         return self.import_quadrupole_like_operator("electric_quadrupole",
-                                                     is_symmetric=True)
+                                                    is_symmetric=True)
 
     @property
     @timed_member_call("_import_timer")
     def diag_mag(self):
         """
-        Return the diamagnetic magnetizability integrals 
+        Return the diamagnetic magnetizability integrals
         in the molecular orbital basis.
         """
         return self.import_quadrupole_like_operator("diag_mag",
-                                                     is_symmetric=True)
+                                                    is_symmetric=True)
 
     def __import_density_dependent_operator(self, ao_callback, is_symmetric=True):
         """Returns a function that imports a density-dependent operator.

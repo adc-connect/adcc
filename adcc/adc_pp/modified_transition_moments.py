@@ -29,6 +29,7 @@ from adcc.functions import einsum, evaluate
 from adcc.Intermediates import Intermediates
 from adcc.AmplitudeVector import AmplitudeVector
 
+
 def mtm_adc0(mp, op, intermediates):
     f1 = op.ov if op.is_symmetric else op.vo.transpose()
     return AmplitudeVector(ph=f1)
@@ -84,7 +85,7 @@ DISPATCH = {
     "adc0": mtm_adc0,
     "adc1": mtm_adc1,
     "adc2": mtm_adc2,
-    "adc2x": mtm_adc2, # Identical to ADC(2)
+    "adc2x": mtm_adc2,  # Identical to ADC(2)
     "cvs-adc0": mtm_cvs_adc0,
     "cvs-adc1": mtm_cvs_adc0,  # Identical to CVS-ADC(0)
     "cvs-adc2": mtm_cvs_adc2,

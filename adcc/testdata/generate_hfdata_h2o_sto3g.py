@@ -27,9 +27,9 @@ from static_data import xyz
 from os.path import dirname, join
 from adcc.testdata.dump_pyscf import dump_pyscf
 
-#sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
+# sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
 
-#import adcctestdata as atd  # noqa: E402
+# import adcctestdata as atd  # noqa: E402
 
 # Run SCF in pyscf and converge super-tight using an EDIIS
 mol = gto.M(

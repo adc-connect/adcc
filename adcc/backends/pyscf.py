@@ -42,31 +42,34 @@ class PyScfOperatorIntegralProvider:
         mass = scfres.mol.atom_mass_list()
         charges = scfres.mol.atom_charges()
         if gauge_origin == "mass_center":
-            self.gauge_origin = np.einsum("i,ij->j", mass, coords)/mass.sum()
+            self.gauge_origin = np.einsum("i,ij->j", mass, coords) / mass.sum()
         elif gauge_origin == "charge_center":
-            self.gauge_origin = np.einsum ("i,ij->j", charges, coords)/charges.sum()
-        elif gauge_origin =="origin":
+            self.gauge_origin = np.einsum("i,ij->j", charges, coords) / \
+                charges.sum()
+        elif gauge_origin == "origin":
             self.gauge_origin = [0.0, 0.0, 0.0]
         elif type(gauge_origin) == list:
             self.gauge_origin = gauge_origin
         else:
-            raise NotImplementedError("Gauge origin has to be defined either by" 
-                                      "using one of the keywords" 
+            raise NotImplementedError("Gauge origin has to be defined either by"
+                                      "using one of the keywords"
                                       "mass_center, charge_center or origin."
                                       "Or by declaring a list eg. [x, y, z]")
         if isinstance(gauge_origin, str):
-            print(f"gauge origin is selected as: {gauge_origin}", self.gauge_origin)
+            print(f"Gauge origin for operator integrals is selected as: \
+{gauge_origin}:", self.gauge_origin)
         else:
-            print(f"gauge origin is selected as: {gauge_origin}")
+            print(f"Gauge origin for operator integrals is selected as: \
+                    {gauge_origin}")
         warnings.warn("Gauge origin selection is not tested")
-    
+
     @cached_property
     def electric_dipole(self):
         return list(self.scfres.mol.intor_symmetric('int1e_r', comp=3))
 
     @cached_property
     def magnetic_dipole(self):
-        with self.scfres.mol.with_common_orig(self.gauge_origin): #gauge origin!
+        with self.scfres.mol.with_common_orig(self.gauge_origin):
             return list(
                 0.5 * self.scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
             )
@@ -80,7 +83,7 @@ class PyScfOperatorIntegralProvider:
 
     @cached_property
     def diag_mag(self):
-        with  self.scfres.mol.with_common_orig(self.gauge_origin):
+        with self.scfres.mol.with_common_orig(self.gauge_origin):
             r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
             r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
             r_quadr = self.scfres.mol.intor_symmetric('int1e_r2', comp=1)
@@ -93,10 +96,10 @@ class PyScfOperatorIntegralProvider:
 
     @cached_property
     def electric_quadrupole_traceless(self):
-        with  self.scfres.mol.with_common_orig(self.gauge_origin):
-            r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp =9)
+        with self.scfres.mol.with_common_orig(self.gauge_origin):
+            r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
             r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
-            r_quadr = self.scfres.mol.intor_symmetric('int1e_r2', comp = 1)
+            r_quadr = self.scfres.mol.intor_symmetric('int1e_r2', comp=1)
             r_quadr_matrix = np.zeros((3, 3, r_quadr.shape[0], r_quadr.shape[0]))
             for i in range(3):
                 r_quadr_matrix[i][i] = r_quadr
@@ -106,7 +109,7 @@ class PyScfOperatorIntegralProvider:
 
     @cached_property
     def electric_quadrupole(self):
-        with  self.scfres.mol.with_common_orig(self.gauge_origin):
+        with self.scfres.mol.with_common_orig(self.gauge_origin):
             r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
             return list(r_r)
 
@@ -268,7 +271,7 @@ class PyScfHFProvider(HartreeFockProvider):
         n_atoms = self.scfres.mol.natm
         return n_atoms
 
-    def get_nuclearcharges(self):
+    def get_nuclear_charges(self):
         charges = self.scfres.mol.atom_charges()
         return charges
 
@@ -311,10 +314,11 @@ class PyScfHFProvider(HartreeFockProvider):
             coords = self.scfres.mol.atom_coords()
             mass = self.scfres.mol.atom_mass_list()
             if self.gauge_origin == 'mass_center':
-                mass_center = np.einsum('i,ij->j', mass, coords)/mass.sum()
+                mass_center = np.einsum('i,ij->j', mass, coords) / mass.sum()
                 coords = coords - mass_center
             elif self.gauge_origin == 'charge_center':
-                charge_center = np.einsum ('i,ij->j', charges, coords)/charges.sum()
+                charge_center = np.einsum('i,ij->j', charges, coords) / \
+                    charges.sum()
                 coords = coords - charge_center
             elif self.gauge_origin == 'origin':
                 coords = coords
@@ -322,11 +326,11 @@ class PyScfHFProvider(HartreeFockProvider):
                 coords = coords - self.gauge_origin
             else:
                 raise NotImplementedError()
-            r_r = np.einsum('ij,ik->ijk' ,coords, coords) 
-            res =  np.einsum('i,ijk->jk', charges, r_r)
-            res =  np.array([res[0][0], res[0][1], res[0][2], 
-                             res[1][1], res[1][2], res[2][2]]) 
-            return  res
+            r_r = np.einsum('ij,ik->ijk', coords, coords)
+            res = np.einsum('i,ijk->jk', charges, r_r)
+            res = np.array([res[0][0], res[0][1], res[0][2],
+                            res[1][1], res[1][2], res[2][2]])
+            return res
         else:
             raise NotImplementedError("get_nuclear_multipole with order > 2")
 

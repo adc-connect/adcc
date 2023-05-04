@@ -40,12 +40,14 @@ from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
 
 __all__ = ["run_adc"]
+
+
 def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
             eigensolver=None, guesses=None, n_guesses=None,
             n_guesses_doubles=None, output=sys.stdout, core_orbitals=None,
             frozen_core=None, frozen_virtual=None, method=None,
             n_singlets=None, n_triplets=None, n_spin_flip=None,
-            environment=None, gauge_origin ="origin", **solverargs):
+            environment=None, gauge_origin="origin", **solverargs):
     """Run an ADC calculation.
 
     Main entry point to run an ADC calculation. The reference to build the ADC

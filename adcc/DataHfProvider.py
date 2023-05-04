@@ -69,7 +69,7 @@ class DataOperatorIntegralProvider:
 
 
 class DataHfProvider(HartreeFockProvider):
-    def __init__(self, data, gauge_origin = 'origin'):
+    def __init__(self, data, gauge_origin='origin'):
         """
         Initialise the DataHfProvider class with the `data` being a supported
         data container (currently python dictionary or HDF5 file).
@@ -201,7 +201,6 @@ class DataHfProvider(HartreeFockProvider):
 
         # Setup integral data
         opprov = DataOperatorIntegralProvider(self.__backend)
-        #print(gauge_origin)
         mmp = data.get("multipoles", {})
         if "elec_1" in mmp:
             if mmp["elec_1"].shape != (3, nb, nb):
@@ -234,20 +233,22 @@ class DataHfProvider(HartreeFockProvider):
         else:
             if f"elec_2_{gauge_origin}" in mmp:
                 if mmp["elec_2"].shape != (9, nb, nb):
-                    raise ValueError(f"multipoles/elec_2_{gauge_origin} is expected to have "
-                                     "shape " + str((9, nb, nb)) + " not "
+                    raise ValueError(f"multipoles/elec_2_{gauge_origin}"
+                                     " is expected to have shape "
+                                     + str((9, nb, nb)) + " not "
                                      + str(mmp[f"elec_2_{gauge_origin}"].shape))
                 opprov.electric_quadrupole = np.asarray(mmp["elec_2"])
             if f"mag_1_{gauge_origin}" in magm:
                 if magm[f"mag_1_{gauge_origin}"].shape != (3, nb, nb):
-                    raise ValueError(f"magnetic_moments/mag_1_{gauge_origin} is expected to have "
-                                     "shape " + str((3, nb, nb)) + " not "
+                    raise ValueError(f"magnetic_moments/mag_1_{gauge_origin}"
+                                     " is expected to have shape "
+                                     + str((3, nb, nb)) + " not "
                                      + str(magm[f"mag_1_{gauge_origin}"].shape))
                 opprov.magnetic_dipole = np.asarray(magm[f"mag_1_{gauge_origin}"])
             if f"nabla_{gauge_origin}" in derivs:
                 if derivs[f"nabla_{gauge_origin}"].shape != (3, nb, nb):
-                    raise ValueError(f"derivatives/nabla_{gauge_origin} is expected to "
-                                     "have shape "
+                    raise ValueError(f"derivatives/nabla_{gauge_origin}"
+                                     " is expected to have shape "
                                      + str((3, nb, nb)) + " not "
                                      + str(derivs[f"nabla_{gauge_origin}"].shape))
                 opprov.nabla = np.asarray(derivs[f"nabla_{gauge_origin}"])

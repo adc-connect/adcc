@@ -54,7 +54,7 @@ class HartreeFockProvider : public HartreeFockSolution_i {
     std::copy(ret.data(), ret.data()+ size, buffer);
   } 
   void nuclear_charges(scalar_type* buffer, size_t size) const override{ 
-    py::array_t<scalar_type> ret = get_nuclearcharges(); 
+    py::array_t<scalar_type> ret = get_nuclear_charges(); 
     if (static_cast<ssize_t>(size) != ret.size()) {
       throw dimension_mismatch("Array size (==" + std::to_string(ret.size()) +
                                ") does not agree with buffer size (" +
@@ -283,7 +283,7 @@ class HartreeFockProvider : public HartreeFockSolution_i {
   virtual size_t get_spin_multiplicity() const                               = 0;
   virtual real_type get_energy_scf() const                                   = 0;
   virtual std::string get_backend() const                                    = 0;
-  virtual py::array_t<scalar_type> get_nuclearcharges() const		     = 0;
+  virtual py::array_t<scalar_type> get_nuclear_charges() const		     = 0;
   virtual py::array_t<scalar_type> get_coordinates() const		     = 0;
   virtual py::array_t<scalar_type> get_nuclear_masses() const		     = 0;
 
@@ -315,9 +315,9 @@ class PyHartreeFockProvider : public HartreeFockProvider {
     PYBIND11_OVERLOAD_PURE(py::array_t<scalar_type>, HartreeFockProvider,
                            get_nuclear_multipole, order);
   }
-  py::array_t<scalar_type> get_nuclearcharges() const override{
+  py::array_t<scalar_type> get_nuclear_charges() const override{
     PYBIND11_OVERLOAD_PURE(py::array_t<scalar_type>, HartreeFockProvider,
-		    	   get_nuclearcharges, );
+		    	   get_nuclear_charges, );
   }
   py::array_t<scalar_type> get_nuclear_masses() const override{
     PYBIND11_OVERLOAD_PURE(py::array_t<scalar_type>, HartreeFockProvider,
@@ -486,7 +486,7 @@ void export_HartreeFockProvider(py::module& m) {
              "Returns the nuclear multipole of the requested order. For `0` returns the "
              "total nuclear charge as an array of size 1, for `1` returns the nuclear "
              "dipole moment as an array of size 3.")
-	.def("get_nuclearcharges", &HartreeFockProvider::get_nuclearcharges,
+	.def("get_nuclear_charges", &HartreeFockProvider::get_nuclear_charges,
 	     "Returns nuclear charges of SCF reference, array size 3")
 	.def("get_coordinates", &HartreeFockProvider::get_coordinates,
 	     "Returns coordinates of SCF REfernece State in Bohr")

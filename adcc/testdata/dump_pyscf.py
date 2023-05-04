@@ -211,9 +211,9 @@ def dump_pyscf(scfres, out):
     mass = scfres.mol.atom_mass_list()
     charges = scfres.mol.atom_charges()
     coords = scfres.mol.atom_coords()
-    mass_center = np.einsum('i,ij->j', mass, coords)/mass.sum()
+    mass_center = np.einsum('i,ij->j', mass, coords) / mass.sum()
     print(mass_center)
-    charge_center = np.einsum ('i,ij->j', charges, coords)/charges.sum()
+    charge_center = np.einsum('i,ij->j', charges, coords) / charges.sum()
 
     # Compute electric and nuclear multipole moments
     mmp = data.create_group("multipoles")
@@ -224,14 +224,14 @@ def dump_pyscf(scfres, out):
                        data=scfres.mol.intor_symmetric("int1e_r", comp=3))
     with scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
         mmp.create_dataset("elec_2",
-                       data=scfres.mol.intor_symmetric('int1e_rr', comp=9))
+                           data=scfres.mol.intor_symmetric('int1e_rr', comp=9))
     with scfres.mol.with_common_orig(mass_center):
         mmp.create_dataset("elec_2_mass_center",
-                       data=scfres.mol.intor_symmetric('int1e_rr', comp=9))
+                           data=scfres.mol.intor_symmetric('int1e_rr', comp=9))
     with scfres.mol.with_common_orig(charge_center):
         mmp.create_dataset("elec_2_charge_center",
-                       data=scfres.mol.intor_symmetric('int1e_rr', comp=9))
-    
+                           data=scfres.mol.intor_symmetric('int1e_rr', comp=9))
+
     magm = data.create_group("magnetic_moments")
     derivs = data.create_group("derivatives")
     with scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
@@ -261,7 +261,6 @@ def dump_pyscf(scfres, out):
             "nabla_charge_center",
             data=-1.0 * scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
         )
-
 
     data.attrs["backend"] = "pyscf"
     return data

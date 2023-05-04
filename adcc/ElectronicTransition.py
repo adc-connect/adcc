@@ -209,7 +209,6 @@ class ElectronicTransition:
             for tdm in self.transition_dm
         ])
 
-
     @cached_property
     @mark_excitation_property()
     def oscillator_strength(self):

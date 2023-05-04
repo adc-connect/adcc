@@ -128,6 +128,7 @@ basemethods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 methods = [m for bm in basemethods for m in [bm, "cvs_" + bm]]
 gauge_origins = ["origin", "mass_center", "charge_center"]
 
+
 @expand_test_templates(list(itertools.product(methods, gauge_origins)))
 class TestMagneticTransitionDipoleMoments(unittest.TestCase):
     def template_linear_molecule(self, method, gauge_origin):
@@ -139,14 +140,15 @@ class TestMagneticTransitionDipoleMoments(unittest.TestCase):
         """
         basis = "sto-3g"
         scfres = run_hf(backend, xyz, basis)
-
+        
         if "cvs" in method:
-            state = run_adc(scfres, method=method, n_singlets=5, core_orbitals=2, gauge_origin=gauge_origin)
+            state = run_adc(scfres, method=method, n_singlets=5, core_orbitals=2,
+                            gauge_origin=gauge_origin)
         else:
-            state = run_adc(scfres, method=method, n_singlets=10, gauge_origin=gauge_origin)
+            state = run_adc(scfres, method=method, n_singlets=10,
+                            gauge_origin=gauge_origin)
         tdms = state.transition_magnetic_dipole_moment
 
         # For linear molecules lying on the z-axis, the z-component must be zero
         for tdm in tdms:
             assert tdm[2] < 1e-10
-

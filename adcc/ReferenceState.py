@@ -103,7 +103,7 @@ class ReferenceState(libadcc.ReferenceState):
 
         gauge_origin : str or list, optional
             Select the gauge origin for operator integrals.
-            Either by specifying a list [x,y,z] or by choosing one of the 
+            Either by specifying a list [x,y,z] or by choosing one of the
             keywords (mass_center, charge_center, origin)
             default: origin
 
@@ -160,7 +160,7 @@ class ReferenceState(libadcc.ReferenceState):
             hfdata.operator_integral_provider, self._mospaces,
             self.orbital_coefficients, self.conv_tol
         )
-        
+
         self._gauge_origin = gauge_origin
 
         self.environment = None  # no environment attached by default
@@ -236,7 +236,7 @@ class ReferenceState(libadcc.ReferenceState):
     @cached_property
     def gauge_origin(self):
         """
-        Return the selected gauge origin used for operators integrals. 
+        Return the selected gauge origin used for operators integrals.
         Until now only available for the PySCF backend
         """
         return self._gauge_origin
