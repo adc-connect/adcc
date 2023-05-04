@@ -196,6 +196,22 @@ class ElectronicTransition:
 
     @cached_property
     @mark_excitation_property()
+    @timed_member_call(timer="_property_timer")
+    def transition_quadrupole_moment(self):
+        """List of transition quadrupole moments of all computed states"""
+        if self.property_method.level == 0:
+            warnings.warn("ADC(0) transition dipole moments are known to be "
+                          "faulty in some cases.")
+        operator_integrals = np.array(self.operators.electric_quadrupole)
+        return np.array([
+            [[product_trace(quad1, tdm)
+                for quad1 in quad] for quad in operator_integrals]
+            for tdm in self.transition_dm
+        ])
+
+
+    @cached_property
+    @mark_excitation_property()
     def oscillator_strength(self):
         """List of oscillator strengths of all computed states"""
         return 2. / 3. * np.array([

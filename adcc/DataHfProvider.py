@@ -158,6 +158,11 @@ class DataHfProvider(HartreeFockProvider):
         data : dict or h5py.File
             Dictionary containing the HartreeFock data to use. For the required
             keys see details above.
+
+        gauge_origin : str
+            Selection of the gauge origin for opertaor integrals.
+            Choose from the keywords: mass_center, charge_center, origin
+            default: origin
         """
 
         # Do not forget the next line, otherwise weird errors result
@@ -196,6 +201,7 @@ class DataHfProvider(HartreeFockProvider):
 
         # Setup integral data
         opprov = DataOperatorIntegralProvider(self.__backend)
+        #print(gauge_origin)
         mmp = data.get("multipoles", {})
         if "elec_1" in mmp:
             if mmp["elec_1"].shape != (3, nb, nb):
@@ -219,7 +225,6 @@ class DataHfProvider(HartreeFockProvider):
                                      + str(magm["mag_1"].shape))
                 opprov.magnetic_dipole = np.asarray(magm["mag_1"])
             if "nabla" in derivs:
-                print("Helau")
                 if derivs["nabla"].shape != (3, nb, nb):
                     raise ValueError("derivatives/nabla is expected to "
                                      "have shape "
@@ -239,7 +244,7 @@ class DataHfProvider(HartreeFockProvider):
                                      "shape " + str((3, nb, nb)) + " not "
                                      + str(magm[f"mag_1_{gauge_origin}"].shape))
                 opprov.magnetic_dipole = np.asarray(magm[f"mag_1_{gauge_origin}"])
-            if f"nabla_mass_center_{gauge_origin}" in derivs:
+            if f"nabla_{gauge_origin}" in derivs:
                 if derivs[f"nabla_{gauge_origin}"].shape != (3, nb, nb):
                     raise ValueError(f"derivatives/nabla_{gauge_origin} is expected to "
                                      "have shape "

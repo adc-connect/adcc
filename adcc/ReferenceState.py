@@ -37,7 +37,7 @@ __all__ = ["ReferenceState"]
 class ReferenceState(libadcc.ReferenceState):
     def __init__(self, hfdata, core_orbitals=None, frozen_core=None,
                  frozen_virtual=None, symmetry_check_on_import=False,
-                 import_all_below_n_orbs=10, gauge_origin='mass_center'):
+                 import_all_below_n_orbs=10, gauge_origin='origin'):
         """Construct a ReferenceState holding information about the employed
         SCF reference.
 
@@ -100,6 +100,12 @@ class ReferenceState(libadcc.ReferenceState):
             advantageous. Below the number of orbitals specified by this
             parameter, the class will thus automatically import all ERI tensor
             and Fock matrix blocks.
+
+        gauge_origin : str or list, optional
+            Select the gauge origin for operator integrals.
+            Either by specifying a list [x,y,z] or by choosing one of the 
+            keywords (mass_center, charge_center, origin)
+            default: origin
 
         Examples
         --------

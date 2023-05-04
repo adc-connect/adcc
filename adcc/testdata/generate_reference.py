@@ -39,8 +39,9 @@ import h5py
 def dump_all(case, kwargs, kwargs_overwrite={}, spec="gen", generator="adcc"):
     assert spec in ["gen", "cvs"]
     for method in ["adc0", "adc1", "adc2", "adc2x", "adc3"]:
-        kw = kwargs_overwrite.get(method, kwargs)
-        dump_method(case, method, kw, spec, generator=generator)
+        for gauge_origin in ["origin", "mass_center", "charge_center"]:
+            kw = kwargs_overwrite.get(method, kwargs)
+            dump_method(case, method, kw, spec, generator=generator, dump_gauge_origin = gauge_origin)
 
 
 def dump_method(case, method, kwargs, spec, generator="adcc", dump_gauge_origin = 'origin'):
@@ -75,9 +76,10 @@ def dump_method(case, method, kwargs, spec, generator="adcc", dump_gauge_origin 
 
     if generator == "atd":
         dumpfile = "{}_reference_{}{}.hdf5".format(case, prefix, method)
-    else:
+    elif generator == "adcc" and dump_gauge_origin == 'origin':
         dumpfile = "{}_adcc_reference_{}{}.hdf5".format(case, prefix, method)
-        print("hola")
+    else:
+        dumpfile = "{}_{}_adcc_reference_{}{}.hdf5".format(case, dump_gauge_origin, prefix, method)
     # if not os.path.isfile(dumpfile):
     if os.path.isfile(dumpfile):
         dumpfunction(hfdata, fullmethod, dumpfile, mp_tree=mp_tree,
@@ -104,10 +106,11 @@ def dump_h2o_sto3g():  # H2O restricted
 
     case = "h2o_sto3g"  # Just ADC(2) and ADC(2)-x
     kwargs = {"n_singlets": 3, "n_triplets": 3}
-    dump_method(case, "adc2", kwargs, spec="fc")
-    dump_method(case, "adc2", kwargs, spec="fc-fv")
-    dump_method(case, "adc2x", kwargs, spec="fv")
-    dump_method(case, "adc2x", kwargs, spec="fv-cvs")
+    for gauge_origin in ["origin", "mass_center", "charge_center"]:
+        dump_method(case, "adc2", kwargs, spec="fc", dump_gauge_origin = gauge_origin)
+        dump_method(case, "adc2", kwargs, spec="fc-fv", dump_gauge_origin = gauge_origin)
+        dump_method(case, "adc2x", kwargs, spec="fv", dump_gauge_origin = gauge_origin)
+        dump_method(case, "adc2x", kwargs, spec="fv-cvs", dump_gauge_origin = gauge_origin)
 
 
 def dump_h2o_def2tzvp():  # H2O restricted
@@ -173,22 +176,23 @@ def dump_methox_sto3g():  # (R)-2-methyloxirane
 
 def main():
     dump_h2o_sto3g()
-    dump_h2o_def2tzvp()
-    dump_cn_sto3g()
-    dump_cn_ccpvdz()
-    dump_hf3_631g()
-    dump_h2s_sto3g()
-    dump_h2s_6311g()
-    dump_methox_sto3g()
+    #dump_h2o_def2tzvp()
+    #dump_cn_sto3g()
+    #dump_cn_ccpvdz()
+    #dump_hf3_631g()
+    #dump_h2s_sto3g()
+    #dump_h2s_6311g()
+    #dump_methox_sto3g()
 
 
 if __name__ == "__main__":
-    #main()
+    main()
 
-    dump_method(
-            "h2o_sto3g",
-            "adc1",
-            kwargs = {"n_singlets": 10, "n_triplets": 10},
-            spec="gen",
-            generator = "adcc"
-    )
+    #dump_method(
+    #        "h2o_sto3g",
+    #        "adc1",
+    #        kwargs = {"n_singlets": 10, "n_triplets": 10},
+    #        spec="gen",
+    #        generator = "adcc",
+    #        dump_gauge_origin = 'charge_center'
+    #)

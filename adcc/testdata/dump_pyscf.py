@@ -212,6 +212,7 @@ def dump_pyscf(scfres, out):
     charges = scfres.mol.atom_charges()
     coords = scfres.mol.atom_coords()
     mass_center = np.einsum('i,ij->j', mass, coords)/mass.sum()
+    print(mass_center)
     charge_center = np.einsum ('i,ij->j', charges, coords)/charges.sum()
 
     # Compute electric and nuclear multipole moments

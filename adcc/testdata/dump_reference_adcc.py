@@ -190,6 +190,8 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
             state.transition_dipole_moment_velocity
         adc[kind + "/transition_magnetic_dipole_moments"] = \
             state.transition_magnetic_dipole_moment
+        adc[kind + "/transition_quadrupole_moments"] = \
+            state.transition_quadrupole_moment
         adc[kind + "/eigenvalues"] = state.excitation_energy
         adc[kind + "/eigenvectors_singles"] = np.asarray(
             eigenvectors_singles)

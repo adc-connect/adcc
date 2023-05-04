@@ -52,7 +52,7 @@ def have_backend(backend):
     return backend in available()
 
 
-def import_scf_results(res, gauge_origin):
+def import_scf_results(res, gauge_origin = 'origin'):
     """
     Import an scf_result from an SCF program. Tries to be smart
     and guess what the host program was and how to import it.
@@ -92,12 +92,12 @@ def import_scf_results(res, gauge_origin):
 
     if isinstance(res, (dict, h5py.File)):
         from adcc.DataHfProvider import DataHfProvider
-        return DataHfProvider(res)
+        return DataHfProvider(res, gauge_origin)
 
     if isinstance(res, str):
         if os.path.isfile(res) and (res.endswith(".h5")
                                     or res.endswith(".hdf5")):
-            return import_scf_results(h5py.File(res, "r"))
+            return import_scf_results(h5py.File(res, "r"), gauge_origin)
         else:
             raise ValueError("Unrecognised path or file extension: {}"
                              "".format(res))
