@@ -84,8 +84,8 @@ def dump_method(case, method, kwargs, spec, generator="adcc",
         dumpfile = "{}_{}_adcc_reference_{}{}.hdf5".format(case, dump_gauge_origin,
                                                            prefix, method)
     # if not os.path.isfile(dumpfile):
-    if os.path.isfile(dumpfile):
-        dumpfunction(hfdata, fullmethod, dumpfile, mp_tree=mp_tree,
+    # if os.path.isfile(dumpfile):
+    dumpfunction(hfdata, fullmethod, dumpfile, mp_tree=mp_tree,
                      adc_tree=adc_tree, n_states_full=2, **kwargs)
 
 
@@ -181,7 +181,7 @@ def dump_methox_sto3g():  # (R)-2-methyloxirane
 
 
 def main():
-    dump_h2o_sto3g()
+    # dump_h2o_sto3g()
     # dump_h2o_def2tzvp()
     # dump_cn_sto3g()
     # dump_cn_ccpvdz()

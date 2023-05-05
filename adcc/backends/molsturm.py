@@ -29,8 +29,8 @@ from adcc.DataHfProvider import DataHfProvider
 def convert_scf_to_dict(scfres):
     if not isinstance(scfres, State):
         raise TypeError("Unsupported type for backends.molsturm.import_scf.")
-    warnings.warn("Gauge origin selection only available in PySCF"
-                  "not in Molsturm."
+    warnings.warn("Gauge origin selection only available in PySCF "
+                  "not in Molsturm. "
                   "The gauge origin is selected as [0, 0, 0]")
 
     n_alpha = scfres["n_alpha"]

@@ -25,10 +25,11 @@ import sys
 from pyscf import gto, scf
 from static_data import xyz
 from os.path import dirname, join
+from adcc.testdata.dump_pyscf import dump_pyscf
 
-sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
+# sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
 
-import adcctestdata as atd  # noqa: E402
+# import adcctestdata as atd  # noqa: E402
 
 # Run SCF in pyscf and converge super-tight using an EDIIS
 mol = gto.M(
@@ -43,7 +44,7 @@ mf.diis = scf.EDIIS()
 mf.diis_space = 3
 mf.max_cycle = 500
 mf.kernel()
-h5f = atd.dump_pyscf(mf, "h2o_def2tzvp_hfdata.hdf5")
+h5f = dump_pyscf(mf, "h2o_def2tzvp_hfdata.hdf5")
 
 # Store configuration parameters for interesting cases to generate
 # reference data for. The data is stored as a stringified dict.

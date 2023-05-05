@@ -78,6 +78,8 @@ def default_print(state, identifier, file=sys.stdout):
     elif identifier == "is_converged":
         print("=== Converged ===", file=file)
         print("    Number of matrix applies:   ", state.n_applies)
+    elif identifier == "is_zero":
+        print("=== Is Zero, Converged ===", file=file)
 
 
 def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
@@ -161,11 +163,17 @@ def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
         Apk = matrix @ pk
         state.n_applies += 1
         res_dot_zk = dot(state.residual, zk)
-        x = dot(pk,Apk)
-        if dot(pk,Apk) == 0:
-            x = 1e-5
-        #ak = float(res_dot_zk / dot(pk, Apk))
-        ak = float(res_dot_zk / x)
+
+        # if rhs is zero (for example, mtms of z components 
+        # magnetic dipole moments of linear molecules)
+        # no iterations are needed. 
+        if res_dot_zk == 0:  
+            if is_converged(state):
+                state.converged = True
+                callback(state, "is_zero")
+                return state
+
+        ak = float(res_dot_zk / dot(pk, Apk))
         state.solution = evaluate(state.solution + ak * pk)
 
         residual_old = state.residual
