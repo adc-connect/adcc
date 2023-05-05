@@ -132,12 +132,14 @@ def dump_cn_sto3g():  # CN unrestricted
 
     # Just ADC(2) and ADC(2)-x for the other methods
     case = "cn_sto3g"
-    dump_method(case, "adc2", {"n_states": 4, "n_guess_singles": 12,
-                               "max_subspace": 30}, spec="fc")
-    dump_method(case, "adc2", {"n_states": 4, "n_guess_singles": 14,
-                               "max_subspace": 30}, spec="fc-fv")
-    dump_method(case, "adc2x", {"n_states": 4, "n_guess_singles": 8}, spec="fv")
-    dump_method(case, "adc2x", {"n_states": 4}, spec="fv-cvs")
+    for gauge_origin in ["origin", "mass_center", "charge_center"]:
+        dump_method(case, "adc2", {"n_states": 4, "n_guess_singles": 12,
+                                   "max_subspace": 30}, spec="fc", dump_gauge_origin = gauge_origin)
+        dump_method(case, "adc2", {"n_states": 4, "n_guess_singles": 14,
+                                   "max_subspace": 30}, spec="fc-fv", dump_gauge_origin = gauge_origin)
+        dump_method(case, "adc2x", {"n_states": 4, "n_guess_singles": 8}, spec="fv",
+                    dump_gauge_origin = gauge_origin)
+        dump_method(case, "adc2x", {"n_states": 4}, spec="fv-cvs", dump_gauge_origin = gauge_origin)
 
 
 def dump_cn_ccpvdz():  # CN unrestricted
@@ -155,23 +157,27 @@ def dump_h2s_sto3g():
     case = "h2s_sto3g"
     kwargs = {"n_singlets": 3, "n_triplets": 3}
 
-    dump_method(case, "adc2", kwargs, spec="fc-cvs")
-    dump_method(case, "adc2x", kwargs, spec="fc-fv-cvs")
+    for gauge_origin in ["origin", "mass_center", "charge_center"]:
+        dump_method(case, "adc2", kwargs, spec="fc-cvs", dump_gauge_origin = gauge_origin)
+        dump_method(case, "adc2x", kwargs, spec="fc-fv-cvs", dump_gauge_origin = gauge_origin)
 
 
 def dump_h2s_6311g():
     case = "h2s_6311g"
     kwargs = {"n_singlets": 3, "n_triplets": 3}
     for spec in ["gen", "fc", "fv", "fc-fv"]:
-        dump_method(case, "adc2", kwargs, spec=spec)
+        for gauge_origin in ["origin", "mass_center", "charge_center"]:
+            dump_method(case, "adc2", kwargs, spec=spec, dump_gauge_origin = gauge_origin)
 
     kwargs = {"n_singlets": 3, "n_triplets": 3, "n_guess_singles": 6,
               "max_subspace": 60}
     for spec in ["fv-cvs", "fc-cvs", "fc-fv-cvs"]:
-        dump_method(case, "adc2x", kwargs, spec=spec)
+        for gauge_origin in ["origin", "mass_center", "charge_center"]:
+            dump_method(case, "adc2x", kwargs, spec=spec, dump_gauge_origin = gauge_origin)
 
     kwargs["n_guess_singles"] = 8
-    dump_method(case, "adc2x", kwargs, spec="cvs")
+    for gauge_origin in ["origin", "mass_center", "charge_center"]:
+        dump_method(case, "adc2x", kwargs, spec="cvs", dump_gauge_origin = gauge_origin)
 
 
 def dump_methox_sto3g():  # (R)-2-methyloxirane
@@ -187,7 +193,7 @@ def main():
     # dump_cn_ccpvdz()
     # dump_hf3_631g()
     # dump_h2s_sto3g()
-    # dump_h2s_6311g()
+    dump_h2s_6311g()
     # dump_methox_sto3g()
 
 

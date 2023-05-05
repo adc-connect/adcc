@@ -51,14 +51,14 @@ class Runners():
     def template_h2o_def2tzvp_triplet(self, method):
         self.base_test("h2o_def2tzvp", method, "triplet")
 
-#    def template_cn_sto3g(self, method):
-#        self.base_test("cn_sto3g", method, "state")
-#
-#    def template_cn_ccpvdz(self, method):
-#        self.base_test("cn_ccpvdz", method, "state")
-#
-#    def template_hf3_631g_spin_flip(self, method):
-#        self.base_test("hf3_631g", method, "spin_flip")
+    def template_cn_sto3g(self, method):
+        self.base_test("cn_sto3g", method, "state")
+
+    def template_cn_ccpvdz(self, method):
+        self.base_test("cn_ccpvdz", method, "state")
+
+    def template_hf3_631g_spin_flip(self, method):
+        self.base_test("hf3_631g", method, "spin_flip")
 
     #
     # Other runners (to test that FC and FV work as they should)
@@ -69,40 +69,40 @@ class Runners():
     def test_h2o_sto3g_fv_adc2x_singlets(self):
         self.base_test("h2o_sto3g", "fv_adc2x", "singlet")
 
-#    def test_cn_sto3g_fc_adc2_states(self):
-#        self.base_test("cn_sto3g", "fc_adc2", "state")
-#
-#    def test_cn_sto3g_fv_adc2x_states(self):
-#        self.base_test("cn_sto3g", "fv_adc2x", "state")
-#
-#    def test_cn_sto3g_fv_cvs_adc2x_states(self):
-#        self.base_test("cn_sto3g", "fv_cvs_adc2x", "state")
-#
-#    def test_h2s_sto3g_fc_cvs_adc2_singlets(self):
-#        self.base_test("h2s_sto3g", "fc_cvs_adc2", "singlet")
-#
-#    def test_h2s_6311g_fc_adc2_singlets(self):
-#        self.base_test("h2s_6311g", "fc_adc2", "singlet")
-#
-#    def test_h2s_6311g_fv_adc2_singlets(self):
-#        self.base_test("h2s_6311g", "fv_adc2", "singlet")
-#
-#    def test_h2s_6311g_fc_cvs_adc2x_singlets(self):
-#        self.base_test("h2s_6311g", "fc_cvs_adc2x", "singlet")
-#
-#    def test_h2s_6311g_fv_cvs_adc2x_singlets(self):
-#        self.base_test("h2s_6311g", "fv_cvs_adc2x", "singlet")
-#
-#
-## Return combinations not tested so far:
-##     The rationale is that cvs-spin-flip as a method do not make
-##     that much sense and probably the routines are anyway covered
-##     by the other testing we do.
-#delattr(Runners, "test_hf3_631g_spin_flip_cvs_adc0")
-#delattr(Runners, "test_hf3_631g_spin_flip_cvs_adc1")
-#delattr(Runners, "test_hf3_631g_spin_flip_cvs_adc2")
-#delattr(Runners, "test_hf3_631g_spin_flip_cvs_adc2x")
-#delattr(Runners, "test_hf3_631g_spin_flip_cvs_adc3")
+    def test_cn_sto3g_fc_adc2_states(self):
+        self.base_test("cn_sto3g", "fc_adc2", "state")
+
+    def test_cn_sto3g_fv_adc2x_states(self):
+        self.base_test("cn_sto3g", "fv_adc2x", "state")
+
+    def test_cn_sto3g_fv_cvs_adc2x_states(self):
+        self.base_test("cn_sto3g", "fv_cvs_adc2x", "state")
+
+    def test_h2s_sto3g_fc_cvs_adc2_singlets(self):
+        self.base_test("h2s_sto3g", "fc_cvs_adc2", "singlet")
+
+    def test_h2s_6311g_fc_adc2_singlets(self):
+        self.base_test("h2s_6311g", "fc_adc2", "singlet")
+
+    def test_h2s_6311g_fv_adc2_singlets(self):
+        self.base_test("h2s_6311g", "fv_adc2", "singlet")
+
+    def test_h2s_6311g_fc_cvs_adc2x_singlets(self):
+        self.base_test("h2s_6311g", "fc_cvs_adc2x", "singlet")
+
+    def test_h2s_6311g_fv_cvs_adc2x_singlets(self):
+        self.base_test("h2s_6311g", "fv_cvs_adc2x", "singlet")
+
+
+# Return combinations not tested so far:
+#     The rationale is that cvs-spin-flip as a method do not make
+#     that much sense and probably the routines are anyway covered
+#     by the other testing we do.
+delattr(Runners, "test_hf3_631g_spin_flip_cvs_adc0")
+delattr(Runners, "test_hf3_631g_spin_flip_cvs_adc1")
+delattr(Runners, "test_hf3_631g_spin_flip_cvs_adc2")
+delattr(Runners, "test_hf3_631g_spin_flip_cvs_adc2x")
+delattr(Runners, "test_hf3_631g_spin_flip_cvs_adc3")
 
 
 class TestStateDiffDm(unittest.TestCase, Runners):
