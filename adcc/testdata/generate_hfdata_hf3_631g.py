@@ -26,10 +26,10 @@ from pyscf import gto, scf
 from os.path import dirname, join
 
 from static_data import xyz
-from adcc.testdata.dump_pyscf import dump_pyscf
-# sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
 
-# import adcctestdata as atd  # noqa: E402
+sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
+
+import adcctestdata as atd  # noqa: E402
 
 # Run SCF in pyscf and converge super-tight using an EDIIS
 mol = gto.M(
@@ -46,7 +46,7 @@ mf.conv_tol_grad = 1e-12
 mf.diis_space = 3
 mf.max_cycle = 500
 mf.kernel()
-h5f = dump_pyscf(mf, "hf3_631g_hfdata.hdf5")
+h5f = atd.dump_pyscf(mf, "hf3_631g_hfdata.hdf5")
 
 h5f["reference_cases"] = str({
     "gen":   {},

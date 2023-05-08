@@ -26,10 +26,9 @@ from pyscf import gto, scf
 from static_data import xyz
 from os.path import dirname, join
 
-#sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
+sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
 
-#import adcctestdata as atd  # noqa: E402
-from adcc.testdata.dump_pyscf import dump_pyscf
+import adcctestdata as atd  # noqa: E402
 
 # Run SCF in pyscf and converge super-tight using an EDIIS
 mol = gto.M(
@@ -45,7 +44,7 @@ mf.diis = scf.EDIIS()
 mf.diis_space = 3
 mf.max_cycle = 100
 mf.kernel()
-h5f = dump_pyscf(mf, "h2s_6311g_hfdata.hdf5")
+h5f = atd.dump_pyscf(mf, "h2s_6311g_hfdata.hdf5")
 
 core = "core_orbitals"
 fc = "frozen_core"
