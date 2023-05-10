@@ -52,7 +52,7 @@ def have_backend(backend):
     return backend in available()
 
 
-def import_scf_results(res, gauge_origin='origin'):
+def import_scf_results(res, gauge_origin="origin"):
     """
     Import an scf_result from an SCF program. Tries to be smart
     and guess what the host program was and how to import it.

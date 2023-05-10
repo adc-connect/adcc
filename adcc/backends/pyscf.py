@@ -52,12 +52,13 @@ class PyScfOperatorIntegralProvider:
             self.gauge_origin = gauge_origin
         else:
             raise NotImplementedError("Gauge origin has to be defined either by"
-                                      "using one of the keywords"
-                                      "mass_center, charge_center or origin."
-                                      "Or by declaring a list eg. [x, y, z]")
+                                      " using one of the keywords"
+                                      " mass_center, charge_center or origin."
+                                      " Or by declaring a list eg. [x, y, z]"
+                                      " in atomic units.")
         if isinstance(gauge_origin, str):
-            print(f"Gauge origin for operator integrals is selected as: \
-{gauge_origin}:", self.gauge_origin)
+            print("Gauge origin for operator integrals is selected as:"
+                  f" {self.gauge_origin}, ({gauge_origin.replace('_',' ')})")
         else:
             print(f"Gauge origin for operator integrals is selected as: \
                     {gauge_origin}")
@@ -308,26 +309,26 @@ class PyScfHFProvider(HartreeFockProvider):
             return np.array([np.sum(charges)])
         elif order == 1:
             coords = self.scfres.mol.atom_coords()
-            return np.einsum('i,ix->x', charges, coords)
+            return np.einsum("i,ix->x", charges, coords)
         elif order == 2:
             # electric quadrupole Q_jk = sum_i (q_i *  r_ij *r_ik )
             coords = self.scfres.mol.atom_coords()
             mass = self.scfres.mol.atom_mass_list()
-            if self.gauge_origin == 'mass_center':
-                mass_center = np.einsum('i,ij->j', mass, coords) / mass.sum()
+            if self.gauge_origin == "mass_center":
+                mass_center = np.einsum("i,ij->j", mass, coords) / mass.sum()
                 coords = coords - mass_center
-            elif self.gauge_origin == 'charge_center':
-                charge_center = np.einsum('i,ij->j', charges, coords) / \
+            elif self.gauge_origin == "charge_center":
+                charge_center = np.einsum("i,ij->j", charges, coords) / \
                     charges.sum()
                 coords = coords - charge_center
-            elif self.gauge_origin == 'origin':
+            elif self.gauge_origin == "origin":
                 coords = coords
             elif type(self.gauge_origin) == list:
                 coords = coords - self.gauge_origin
             else:
                 raise NotImplementedError()
-            r_r = np.einsum('ij,ik->ijk', coords, coords)
-            res = np.einsum('i,ijk->jk', charges, r_r)
+            r_r = np.einsum("ij,ik->ijk", coords, coords)
+            res = np.einsum("i,ijk->jk", charges, r_r)
             res = np.array([res[0][0], res[0][1], res[0][2],
                             res[1][1], res[1][2], res[2][2]])
             return res

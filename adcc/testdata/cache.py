@@ -109,7 +109,8 @@ class TestdataCache():
     @property
     def testcases_gauge_origin(self):
         """
-        The definition of the test cases: Data generator and reference file
+        The definition of additional gauge origin dependent
+        test cases: Data generator and reference file
         """
 
         return [k + "_" + g for k in TestdataCache.cases
@@ -123,7 +124,7 @@ class TestdataCache():
         """
         ret = {}
         for k in self.testcases + self.testcases_gauge_origin:
-            hf_k = k.replace('_mass_center', "").replace("_charge_center", "")
+            hf_k = k.replace("_mass_center", "").replace("_charge_center", "")
             datafile = fullfile(hf_k + "_hfdata.hdf5")
             # TODO This could be made a plain HDF5.File
             ret[k] = hdf5io.load(datafile)
@@ -138,14 +139,14 @@ class TestdataCache():
         for k in self.testcases + self.testcases_gauge_origin:
             if k in self.testcases:
                 ret[k] = cache_eri(adcc.ReferenceState(self.hfdata[k],
-                                   gauge_origin='origin'))
+                                   gauge_origin="origin"))
             else:
                 if k.endswith("mass_center"):
                     ret[k] = cache_eri(adcc.ReferenceState(self.hfdata[k],
-                                       gauge_origin='mass_center'))
+                                       gauge_origin="mass_center"))
                 else:
                     ret[k] = cache_eri(adcc.ReferenceState(self.hfdata[k],
-                                       gauge_origin='charge_center'))
+                                       gauge_origin="charge_center"))
         return ret
 
         # return {k: cache_eri(adcc.ReferenceState(self.hfdata[k]))

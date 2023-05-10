@@ -485,13 +485,18 @@ void export_HartreeFockProvider(py::module& m) {
         .def("get_nuclear_multipole", &HartreeFockProvider::get_nuclear_multipole,
              "Returns the nuclear multipole of the requested order. For `0` returns the "
              "total nuclear charge as an array of size 1, for `1` returns the nuclear "
-             "dipole moment as an array of size 3.")
+             "dipole moment as an array of size 3, for `2` returns the nuclear "
+	     "quadrupole moment as an array of the 6 unique entries "
+	     "(xx, xy, xz, yy, yz, zz) dependent on the selected gauge origin." )
 	.def("get_nuclear_charges", &HartreeFockProvider::get_nuclear_charges,
-	     "Returns nuclear charges of SCF reference, array size 3")
+	     "Returns nuclear charges of SCF reference, "
+	     "array of size of number of atoms.")
 	.def("get_coordinates", &HartreeFockProvider::get_coordinates,
-	     "Returns coordinates of SCF REfernece State in Bohr")
+	     "Returns coordinates of SCF referece state in Bohr, array of "
+	     "size 3 * number of atoms.")
 	.def("get_nuclear_masses", &HartreeFockProvider::get_nuclear_masses,
-	     "Returns the nuclear masses")
+	     "Returns the nuclear masses of the SCF reference, "
+	     "array of size of number of atoms.")
         //
         .def("fill_occupation_f", &HartreeFockProvider::fill_orben_f,
              "Fill the passed numpy array of size `(2 * nf, )` with the occupation "

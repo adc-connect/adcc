@@ -135,7 +135,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
 
     gauge_origin: list or str, optional
         Define the gauge origin for operator integrals.
-        Either by specifying a list directly ([x,y,z])
+        Either by specifying a list in atomic units directly ([x,y,z])
         or by using one of the keywords (mass_center, charge_center, origin).
         Default: origin
 
@@ -225,7 +225,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
 # Individual steps
 #
 def construct_adcmatrix(data_or_matrix, core_orbitals=None, frozen_core=None,
-                        frozen_virtual=None, method=None, gauge_origin='origin'):
+                        frozen_virtual=None, method=None, gauge_origin="origin"):
     """
     Use the provided data or AdcMatrix object to check consistency of the
     other passed parameters and construct the AdcMatrix object representing

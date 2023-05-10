@@ -69,7 +69,7 @@ class DataOperatorIntegralProvider:
 
 
 class DataHfProvider(HartreeFockProvider):
-    def __init__(self, data, gauge_origin='origin'):
+    def __init__(self, data, gauge_origin="origin"):
         """
         Initialise the DataHfProvider class with the `data` being a supported
         data container (currently python dictionary or HDF5 file).
@@ -210,7 +210,7 @@ class DataHfProvider(HartreeFockProvider):
             opprov.electric_dipole = np.asarray(mmp["elec_1"])
         magm = data.get("magnetic_moments", {})
         derivs = data.get("derivatives", {})
-        if gauge_origin == 'origin':
+        if gauge_origin == "origin":
             if "elec_2" in mmp:
                 if mmp["elec_2"].shape != (9, nb, nb):
                     raise ValueError("multipoles/elec_2 is expected to have "

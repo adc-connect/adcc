@@ -140,7 +140,7 @@ class TestMagneticTransitionDipoleMoments(unittest.TestCase):
         """
         basis = "sto-3g"
 
-        if backend != 'pyscf' and gauge_origin != 'origin':
+        if backend != "pyscf" and gauge_origin != "origin":
             skip("Gauge origin selection is only implemented "
                  "for pyscf backend")
         scfres = run_hf(backend, xyz, basis)

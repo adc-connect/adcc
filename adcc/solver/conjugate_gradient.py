@@ -164,10 +164,10 @@ def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
         state.n_applies += 1
         res_dot_zk = dot(state.residual, zk)
 
-        # if rhs is zero (for example, mtms of z components 
+        # if rhs is zero (for example, mtms of z components
         # magnetic dipole moments of linear molecules)
-        # no iterations are needed. 
-        if res_dot_zk == 0:  
+        # no iterations are needed.
+        if res_dot_zk == 0:
             if is_converged(state):
                 state.converged = True
                 callback(state, "is_zero")

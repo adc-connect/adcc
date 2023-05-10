@@ -126,13 +126,16 @@ void export_ReferenceState(py::module& m) {
                                  return res;
                                })
 	.def_property_readonly("nuclear_charges", &ReferenceState::nuclear_charges,
-			       "Nuclear chages")	
+			       "Returns the nuclear charges of the SCF reference "
+			       "as a list of the size of number of atoms.")	
 	.def_property_readonly("nuclear_masses", &ReferenceState::nuclear_masses,
-			       "Nuclear masses")
+			       "Returns the nuclear masses of the SCF reference "
+			       "as a list of the size of number of atoms.")	
 	.def_property_readonly("coordinates", &ReferenceState::coordinates,
-			       "Returns coordinates of the SCF Reference as list e.g. [x1, y1, z1, x2, y2, z2,...]")
+			       "Returns coordinates of the SCF reference as list "
+			       "of size 3 * number of atoms in atomic units.")
 	.def_property_readonly("n_atoms", &ReferenceState::n_atoms,
-			       "Returns the number of atoms")
+			       "Returns the number of atoms.")
         .def_property_readonly("conv_tol", &ReferenceState::conv_tol,
                                "SCF convergence tolererance")
         .def_property_readonly("energy_scf", &ReferenceState::energy_scf,

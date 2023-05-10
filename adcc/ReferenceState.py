@@ -37,7 +37,7 @@ __all__ = ["ReferenceState"]
 class ReferenceState(libadcc.ReferenceState):
     def __init__(self, hfdata, core_orbitals=None, frozen_core=None,
                  frozen_virtual=None, symmetry_check_on_import=False,
-                 import_all_below_n_orbs=10, gauge_origin='origin'):
+                 import_all_below_n_orbs=10, gauge_origin="origin"):
         """Construct a ReferenceState holding information about the employed
         SCF reference.
 
@@ -103,8 +103,8 @@ class ReferenceState(libadcc.ReferenceState):
 
         gauge_origin : str or list, optional
             Select the gauge origin for operator integrals.
-            Either by specifying a list [x,y,z] or by choosing one of the
-            keywords (mass_center, charge_center, origin)
+            Either by specifying a list in atomics units [x,y,z] or by choosing
+            one of the keywords (mass_center, charge_center, origin)
             default: origin
 
         Examples
@@ -236,8 +236,8 @@ class ReferenceState(libadcc.ReferenceState):
     @cached_property
     def gauge_origin(self):
         """
-        Return the selected gauge origin used for operators integrals.
-        Until now only available for the PySCF backend
+        Return the selected gauge origin used for operators integrals in
+        atomic units. Until now only available for the PySCF backend.
         """
         return self._gauge_origin
 
