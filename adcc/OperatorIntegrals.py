@@ -104,7 +104,7 @@ class OperatorIntegrals:
             "nabla",
             "electric_quadrupole_traceless",
             "electric_quadrupole",
-            "diag_mag",
+            "dia_magnet",
             "pe_induction_elec",
             "pcm_potential_elec"
         )
@@ -197,12 +197,12 @@ class OperatorIntegrals:
 
     @property
     @timed_member_call("_import_timer")
-    def diag_mag(self):
+    def dia_magnet(self):
         """
         Return the diamagnetic magnetizability integrals
         in the molecular orbital basis.
         """
-        return self.import_quadrupole_like_operator("diag_mag",
+        return self.import_quadrupole_like_operator("dia_magnet",
                                                     is_symmetric=True)
 
     def __import_density_dependent_operator(self, ao_callback, is_symmetric=True):

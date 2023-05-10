@@ -160,7 +160,7 @@ class DataHfProvider(HartreeFockProvider):
             keys see details above.
 
         gauge_origin : str
-            Selection of the gauge origin for opertaor integrals.
+            Selection of the gauge origin for operator integrals.
             Choose from the keywords: mass_center, charge_center, origin
             default: origin
         """

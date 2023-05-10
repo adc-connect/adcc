@@ -83,7 +83,7 @@ class PyScfOperatorIntegralProvider:
             )
 
     @cached_property
-    def diag_mag(self):
+    def dia_magnet(self):
         with self.scfres.mol.with_common_orig(self.gauge_origin):
             r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
             r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
