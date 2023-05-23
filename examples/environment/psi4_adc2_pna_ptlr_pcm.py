@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-import adcc
 
+import adcc
 import psi4
+
 
 # Run PCM SCF in psi4
 mol = psi4.geometry("""
@@ -24,7 +25,6 @@ mol = psi4.geometry("""
     symmetry c1
     no_reorient
     no_com
-    units angstrom
     """)
 
 psi4.set_options({
@@ -39,9 +39,6 @@ psi4.pcm_helper("""
     Units = AU
     Cavity {
         Type = GePol
-        radiiset = uff
-        Scaling = True
-        Area = 0.3
     }
     Medium {
         SolverType = IEFPCM
