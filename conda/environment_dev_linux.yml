@@ -1,6 +1,7 @@
 name: adcc-dev
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
   # Build
   - python
