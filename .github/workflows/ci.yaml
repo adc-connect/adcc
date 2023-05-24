@@ -132,7 +132,7 @@ jobs:
       #   run: |
       #     mkdir $HOME/.adcc/
       #     echo 'coverage = True' > $HOME/.adcc/siteconfig.py
-      - name: Install Psi4 from c-f and pcmsolver
+      - name: Install Psi4 from c-f
         run: |
           mamba install psi4 -c conda-forge -c conda-forge/label/libint_dev
           psi4 --version
