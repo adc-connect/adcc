@@ -87,7 +87,6 @@ def adc0(*args, **kwargs):
 
 @with_runadc_doc
 def cis(*args, **kwargs):
-    warnings.warn("CIS is a hardly tested feature. Use with caution.")
     state = run_adc(*args, **kwargs, method="adc1")
     return ExcitedStates(state, property_method="adc0")
 
