@@ -1,10 +1,10 @@
+import os
 import pytest
 import unittest
 import itertools
 import numpy as np
 import adcc
 import adcc.backends
-import os
 
 from scipy import constants
 from numpy.testing import assert_allclose
@@ -12,9 +12,9 @@ from numpy.testing import assert_allclose
 from adcc.misc import expand_test_templates
 from adcc.testdata import static_data
 from adcc.testdata.cache import psi4_data, pyscf_data
+from adcc.AdcMatrix import AdcExtraTerm
 from adcc.exceptions import InputError
 from adcc.adc_pp.environment import block_ph_ph_0_pcm
-from adcc.AdcMatrix import AdcExtraTerm
 
 backends = [b for b in ["psi4", "pyscf"] if b in adcc.backends.available()]
 basissets = ["sto3g", "ccpvdz"]
@@ -126,7 +126,8 @@ class TestPCM(unittest.TestCase):
                        environment="linear_response")
 
         scfres_ief = psi4_run_pcm_hf(**scfargs, options=dict(pcm=True, **psiopts),
-                                     pcm_options=dict(pcm_method="IEFPCM", solvent="Water",
+                                     pcm_options=dict(pcm_method="IEFPCM",
+                                                      solvent="Water",
                                                       radiiset="UFF"))
         state_ief = adcc.run_adc(scfres_ief, **adcopts)
 
@@ -138,7 +139,8 @@ class TestPCM(unittest.TestCase):
         state_dd = adcc.run_adc(scfres_dd, **adcopts)
 
         assert_allclose(scfres_ief.energy_scf, scfres_dd.energy_scf, atol=1e-4)
-        assert_allclose(state_ief.excitation_energy, state_dd.excitation_energy, atol=5e-4)
+        assert_allclose(state_ief.excitation_energy, state_dd.excitation_energy,
+                        atol=5e-4)
 
     def test_comparison_gaussian(self):
         scfres = psi4_run_pcm_hf(
@@ -149,8 +151,8 @@ class TestPCM(unittest.TestCase):
             max_iter=150,
             options=dict(
                 ddx=True, ddx_model="cosmo", ddx_solvent_epsilon=2.0,
-                ddx_solvent_epsilon_optical=2.0, ddx_radii_set="uff", ddx_radii_scaling=1.1,
-                ddx_lmax=10, ddx_n_lebedev=590,
+                ddx_solvent_epsilon_optical=2.0, ddx_radii_set="uff",
+                ddx_radii_scaling=1.1, ddx_lmax=10, ddx_n_lebedev=590,
                 scf_type="direct"
             )
         )
@@ -158,9 +160,10 @@ class TestPCM(unittest.TestCase):
                          environment="linear_response")
 
         eV = constants.value("Hartree energy in eV")
-        ref_gaussian = np.array([ 9.2735, 11.2083, 11.2083, 15.2852, 15.2852,
+        ref_gaussian = np.array([9.2735, 11.2083, 11.2083, 15.2852, 15.2852,
                                  17.6378, 17.9519]) / eV
         assert_allclose(state.excitation_energy, ref_gaussian, atol=5e-4)
+
 
 def remove_cavity_psi4():
     # removes cavity files from PSI4 PCM calculations

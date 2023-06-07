@@ -21,7 +21,6 @@
 ##
 ## ---------------------------------------------------------------------
 import sys
-import warnings
 
 from libadcc import HartreeFockProvider, get_n_threads, set_n_threads
 
