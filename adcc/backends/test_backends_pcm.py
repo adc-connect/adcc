@@ -232,7 +232,8 @@ def psi4_run_pcm_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
 
 
 def pyscf_run_pcm_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
-                     conv_tol_grad=1e-10, max_iter=150, pcm_options=None):
+                     conv_tol_grad=1e-10, max_iter=150, pcm_options=None,
+                     options=None):
 
     from pyscf import gto, scf
     from pyscf.solvent import ddCOSMO
