@@ -14,7 +14,7 @@ from adcc.exceptions import InputError
 from adcc.adc_pp.environment import block_ph_ph_0_pcm
 from adcc.AdcMatrix import AdcExtraTerm
 
-backends = [b for b in adcc.backends.available() if b in ["psi4", "pyscf"]]
+backends = [b for b in ["psi4", "pyscf"] if b in adcc.backends.available()]
 basissets = ["sto3g", "ccpvdz"]
 methods = ["adc1"]
 
@@ -33,7 +33,8 @@ class TestPCM(unittest.TestCase):
         run_hf = c["run_hf"]
         scfres = run_hf(static_data.xyz["formaldehyde"], basis, charge=0,
                         multiplicity=1, conv_tol=1e-12, conv_tol_grad=1e-11,
-                        max_iter=150, pcm_options=c["pcm_options"])
+                        max_iter=150, pcm_options=c["pcm_options"],
+                        options=c["options"])
 
         assert_allclose(scfres.energy_scf, result["energy_scf"], atol=1e-8)
 
@@ -63,7 +64,8 @@ class TestPCM(unittest.TestCase):
         run_hf = c["run_hf"]
         scfres = run_hf(static_data.xyz["formaldehyde"], basis, charge=0,
                         multiplicity=1, conv_tol=1e-12, conv_tol_grad=1e-11,
-                        max_iter=150, pcm_options=c["pcm_options"])
+                        max_iter=150, pcm_options=c["pcm_options"],
+                        options=c["options"])
 
         assert_allclose(scfres.energy_scf, result["energy_scf"], atol=1e-8)
 
@@ -109,6 +111,37 @@ class TestPCM(unittest.TestCase):
             # remove cavity files from PSI4 PCM calculations
             remove_cavity_psi4()
 
+    def test_comparison_dd_pcmsolver(self):
+        scfargs = dict(
+            xyz=static_data.xyz["nh3"],
+            basis="3-21g",
+            charge=0, multiplicity=1,
+            conv_tol=1e-12, conv_tol_grad=1e-11,
+            max_iter=150,
+        )
+        psiopts = dict(
+            scf_type="direct",
+        )
+        adcopts = dict(method="adc2", n_singlets=5, conv_tol=1e-7,
+                       environment="linear_response")
+
+        scfres_ief = psi4_run_pcm_hf(**scfargs, options=dict(pcm=True, **psiopts),
+                                     pcm_options=dict(pcm_method="IEFPCM", solvent="Water",
+                                                      radiiset="UFF"))
+        state_ief = adcc.run_adc(scfres_ief, **adcopts)
+
+        scfres_dd = psi4_run_pcm_hf(**scfargs, options=dict(
+            ddx=True, ddx_model="pcm", ddx_solvent="water",
+            ddx_radii_set="uff", ddx_radii_scaling=1.2,
+            ddx_lmax=10, # ddx_solvent_epsilon=2.0,
+            # ddx_solvent_epsilon_optical=2.0,
+            **psiopts,
+        ))
+        state_dd = adcc.run_adc(scfres_dd, **adcopts)
+
+        assert_allclose(scfres_ief.energy_scf, scfres_dd.energy_scf, atol=1e-4)
+        assert_allclose(state_ief.excitation_energy, state_dd.excitation_energy, atol=1e-4)
+
 
 def remove_cavity_psi4():
     # removes cavity files from PSI4 PCM calculations
@@ -118,11 +151,13 @@ def remove_cavity_psi4():
 
 
 def psi4_run_pcm_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
-                    conv_tol_grad=1e-11, max_iter=150, pcm_options=None):
+                    conv_tol_grad=1e-11, max_iter=150, options=None,
+                    pcm_options=None):
     basis_map = {
         "sto3g": "sto-3g",
         "ccpvdz": "cc-pvdz",
     }
+
     import psi4
 
     # needed for PE and PCM tests
@@ -138,22 +173,29 @@ def psi4_run_pcm_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
 
     psi4.core.be_quiet()
     psi4.set_options({
-        'basis': basis_map[basis],
+        'basis': basis_map.get(basis, basis),
         'scf_type': 'pk',
         'e_convergence': conv_tol,
         'd_convergence': conv_tol_grad,
         'maxiter': max_iter,
         'reference': "RHF",
-        "pcm": True,
-        "pcm_scf_type": "total",
     })
-    psi4.pcm_helper(f"""
-        Units = AU
-        Cavity {{Type = Gepol
-                Area = {pcm_options.get("weight", 0.3)}}}
-        Medium {{Solvertype = {pcm_options.get("pcm_method", "IEFPCM")}
-                Nonequilibrium = {pcm_options.get("neq", True)}
-                Solvent = {pcm_options.get("solvent", "Water")}}}""")
+    psi4.set_options(options)
+
+    if options.get("pcm", False):
+        psi4.set_options({"pcm_scf_type": "total"})
+        pcm_options = pcm_options.copy()
+
+        psi4.pcm_helper(f"""
+            Units = AU
+            Cavity {{Type = Gepol
+                    Area = {pcm_options.get("area", 0.3)}
+                    RadiiSet = {pcm_options.get("radiiset", "Bondi")}}}
+            Medium {{
+                Solvertype = {pcm_options.get("pcm_method", "IEFPCM")}
+                Nonequilibrium = {pcm_options.get("nonequilibrium", True)}
+                Solvent = {pcm_options.get("solvent", "Water")}
+            }}""")
 
     if multiplicity != 1:
         psi4.set_options({
@@ -169,7 +211,8 @@ def psi4_run_pcm_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
 
 def pyscf_run_pcm_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
                      conv_tol_grad=1e-10, max_iter=150, pcm_options=None):
-    from pyscf import scf, gto
+
+    from pyscf import gto, scf
     from pyscf.solvent import ddCOSMO
 
     mol = gto.M(
@@ -200,8 +243,9 @@ def pyscf_run_pcm_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
 
 config = {
     "psi4": {"data": psi4_data, "run_hf": psi4_run_pcm_hf,
-             "pcm_options": {"weight": 0.3, "pcm_method": "IEFPCM",
-                             "neq": True, "solvent": "Water"}},
+             "options": {"pcm": True, },
+             "pcm_options": {"pcm_method": "IEFPCM", "solvent": "Water"}},
     "pyscf": {"data": pyscf_data, "run_hf": pyscf_run_pcm_hf,
+              "options": {},
               "pcm_options": {"eps": 78.3553, "eps_opt": 1.78}}
 }
