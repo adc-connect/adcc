@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-
 import adcc
-import psi4
 
+import psi4
 
 # Run PCM SCF in psi4
 mol = psi4.geometry("""
@@ -25,7 +24,6 @@ mol = psi4.geometry("""
     symmetry c1
     no_reorient
     no_com
-    units angstrom
     """)
 
 psi4.set_options({

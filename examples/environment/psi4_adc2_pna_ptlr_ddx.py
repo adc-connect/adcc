@@ -24,7 +24,6 @@ mol = psi4.geometry("""
     symmetry c1
     no_reorient
     no_com
-    units angstrom
     """)
 
 psi4.set_options({
