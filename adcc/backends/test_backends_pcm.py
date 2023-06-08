@@ -114,7 +114,8 @@ class TestPCM(unittest.TestCase):
             remove_cavity_psi4()
 
 
-@pytest.mark.skipif("psi4" not in adcc.backends.available(), reason="Psi4 not available")
+@pytest.mark.skipif("psi4" not in adcc.backends.available(),
+                    reason="Psi4 not available")
 class TestPCMcomparison(unittest.TestCase):
     def test_comparison_dd_pcmsolver(self):
         scfargs = dict(
