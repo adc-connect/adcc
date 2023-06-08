@@ -134,7 +134,7 @@ jobs:
       #     echo 'coverage = True' > $HOME/.adcc/siteconfig.py
       - name: Install Psi4 from c-f
         run: |
-          mamba install psi4 -c conda-forge -c conda-forge/label/libint_dev
+          mamba install psi4 pyddx -c conda-forge -c conda-forge/label/libint_dev
           psi4 --version
           python -c "import psi4"
       - name: Build and test adcc

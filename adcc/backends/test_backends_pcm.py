@@ -113,6 +113,9 @@ class TestPCM(unittest.TestCase):
             # remove cavity files from PSI4 PCM calculations
             remove_cavity_psi4()
 
+
+@pytest.mark.skipif("psi4" not in adcc.backends.available(), reason="Psi4 not available")
+class TestPCMcomparison(unittest.TestCase):
     def test_comparison_dd_pcmsolver(self):
         scfargs = dict(
             xyz=static_data.xyz["nh3"],
@@ -141,6 +144,7 @@ class TestPCM(unittest.TestCase):
         assert_allclose(scfres_ief.energy_scf, scfres_dd.energy_scf, atol=1e-4)
         assert_allclose(state_ief.excitation_energy, state_dd.excitation_energy,
                         atol=5e-4)
+        remove_cavity_psi4()
 
     def test_comparison_gaussian(self):
         scfres = psi4_run_pcm_hf(
