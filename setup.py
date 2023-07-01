@@ -539,7 +539,7 @@ adccsetup(
     install_requires=[
         "opt_einsum >= 3.0",
         "numpy >= 1.14",
-        "scipy >= 1.2",
+        "scipy >= 1.2,<1.11",  # TODO: pyscf problem with sym_pos, remove later
         "h5py >= 2.9",
         "tqdm >= 4.30",
     ],
