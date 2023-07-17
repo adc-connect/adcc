@@ -55,7 +55,7 @@ def make_mock_adc_state(refstate, matmethod, kind, reference):
         symm = "symmetric"
     elif refstate.restricted and kind == "triplet":
         symm = "antisymmetric"
-    elif kind in ["state", "spin_flip"]:
+    elif kind in ["state", "spin_flip", "any"]:
         symm = "none"
     else:
         raise ValueError("Unknown kind: {}".format(kind))
@@ -155,8 +155,7 @@ class TestdataCache():
                 ret[k] = hdf5io.load(datafile)
         return ret
 
-    @cached_property
-    def reference_data(self):
+    def read_reference_data(self, refname):
         prefixes = ["", "cvs", "fc", "fv", "fc_cvs",
                     "fv_cvs", "fc_fv", "fc_fv_cvs"]
         raws = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
@@ -167,7 +166,7 @@ class TestdataCache():
         for k in self.testcases:
             fulldict = {}
             for m in methods:
-                datafile = fullfile(k + "_reference_" + m + ".hdf5")
+                datafile = fullfile(k + "_" + refname + "_" + m + ".hdf5")
                 if datafile is None or not os.path.isfile(datafile):
                     continue
                 fulldict.update(hdf5io.load(datafile))
@@ -176,34 +175,40 @@ class TestdataCache():
         return ret
 
     @cached_property
-    def adc_states(self):
+    def reference_data(self):
+        return self.read_reference_data("reference")
+
+    @cached_property
+    def adcc_reference_data(self):
+        return self.read_reference_data("adcc_reference")
+
+    def construct_adc_states(self, refdata):
         """
         Construct a hierachy of dicts, which contains a mock adc state
         for all test cases, all methods and all kinds (singlet, triplet)
         """
         res = {}
         for case in self.testcases:
-            if case not in self.reference_data:
+            if case not in refdata:
                 continue
-            available_kinds = self.reference_data[case]["available_kinds"]
+            available_kinds = refdata[case]["available_kinds"]
             res_case = {}
             for method in ["adc0", "adc1", "adc2", "adc2x", "adc3"]:
-                if method not in self.reference_data[case]:
+                if method not in refdata[case]:
                     continue
                 res_case[method] = {
                     kind: make_mock_adc_state(self.refstate[case], method, kind,
-                                              self.reference_data[case][method])
+                                              refdata[case][method])
                     for kind in available_kinds
                 }
 
             for method in ["cvs-adc0", "cvs-adc1", "cvs-adc2",
                            "cvs-adc2x", "cvs-adc3"]:
-                if method not in self.reference_data[case]:
+                if method not in refdata[case]:
                     continue
                 res_case[method] = {
                     kind: make_mock_adc_state(self.refstate_cvs[case],
-                                              method, kind,
-                                              self.reference_data[case][method])
+                                              method, kind, refdata[case][method])
                     for kind in available_kinds
                 }
 
@@ -220,17 +225,25 @@ class TestdataCache():
                     fspec = spec
                 # The full method (including "spec" like "fc")
                 method = spec + "-" + matmethod
-                if method not in self.reference_data[case]:
+                if method not in refdata[case]:
                     continue
                 res_case[method] = {
                     kind: make_mock_adc_state(
                         self.refstate_nocache(case, fspec), matmethod, kind,
-                        self.reference_data[case][method])
+                        refdata[case][method])
                     for kind in available_kinds
                 }
 
             res[case] = res_case
         return res
+
+    @cached_property
+    def adc_states(self):
+        return self.construct_adc_states(self.reference_data)
+
+    @cached_property
+    def adcc_states(self):
+        return self.construct_adc_states(self.adcc_reference_data)
 
 
 # Setup cache object

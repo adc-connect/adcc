@@ -125,12 +125,15 @@ class TestStateDiffDm(unittest.TestCase, Runners):
             assert dm_ao_b.to_ndarray() == approx(refdens_b[i])
 
 
+# For the ground-to-excited state tdm, only consistency tests are
+# performed due to the changes in transition_dm.py
 class TestStateGroundToExcitedTdm(unittest.TestCase, Runners):
     def base_test(self, system, method, kind):
         method = method.replace("_", "-")
 
-        refdata = cache.reference_data[system]
-        state = cache.adc_states[system][method][kind]
+        kind = "any" if kind == "state" else kind
+        refdata = cache.adcc_reference_data[system]
+        state = cache.adcc_states[system][method][kind]
 
         refdens_a = refdata[method][kind]["ground_to_excited_tdm_bb_a"]
         refdens_b = refdata[method][kind]["ground_to_excited_tdm_bb_b"]

@@ -68,7 +68,7 @@ class RecordTime {
     timer.start(task);
   }
   ~RecordTime() { timer.stop(task); }
-  RecordTime(const RecordTime&) = delete;
+  RecordTime(const RecordTime&)            = delete;
   RecordTime& operator=(const RecordTime&) = delete;
 
   Timer& timer;      //!< Timer object, which is managed

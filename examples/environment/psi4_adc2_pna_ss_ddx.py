@@ -24,6 +24,7 @@ mol = psi4.geometry("""
     symmetry c1
     no_reorient
     no_com
+    units angstrom
     """)
 
 psi4.set_options({
@@ -31,28 +32,17 @@ psi4.set_options({
     'scf_type': 'pk',
     'e_convergence': 1e-10,
     'd_convergence': 1e-10,
-    'pcm': True,
-    'pcm_scf_type': "total"
+    'ddx': True,
+    'ddx_model': "pcm",
+    'ddx_solvent': "water",
+    'ddx_radii_set': 'uff',
+    'ddx_radii_scaling': 1.2,
+    'ddx_solvation_convergence': 1e-10,
 })
-psi4.pcm_helper("""
-    Units = AU
-    Cavity {
-        Type = GePol
-        radiiset = uff
-        Scaling = True
-        Area = 0.3
-    }
-    Medium {
-        SolverType = IEFPCM
-        Solvent = Water
-        Nonequilibrium = True
-    }
-""")
-
 psi4.core.set_num_threads(4)
 
 scf_e, wfn = psi4.energy('scf', return_wfn=True)
 
 # Run an ADC2 calculation with ptLR
-state = adcc.adc2(wfn, n_singlets=5, conv_tol=1e-8, environment="ptlr")
+state = adcc.adc2(wfn, n_singlets=5, conv_tol=1e-8, environment="linear_response")
 print(state.describe())

@@ -57,7 +57,7 @@ class ThreadPool {
   size_t n_total() const { return m_n_total; }
 
   // Avoid copying or copy-assinging
-  ThreadPool(const ThreadPool&) = delete;
+  ThreadPool(const ThreadPool&)            = delete;
   ThreadPool& operator=(const ThreadPool&) = delete;
 
   ~ThreadPool();

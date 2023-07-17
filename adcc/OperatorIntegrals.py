@@ -103,7 +103,7 @@ class OperatorIntegrals:
             "magnetic_dipole",
             "nabla",
             "pe_induction_elec",
-            "pcm_potential_elec"
+            "pcm_potential_elec",
         )
         return [integral for integral in integrals
                 if hasattr(self.provider_ao, integral)]

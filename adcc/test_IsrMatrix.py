@@ -26,12 +26,12 @@ import numpy as np
 
 from adcc.IsrMatrix import IsrMatrix
 from adcc.testdata.cache import cache
-from adcc.OneParticleOperator import product_trace
-from adcc.adc_pp.state2state_transition_dm import state2state_transition_dm
+from adcc.State2States import State2States
 from adcc.misc import expand_test_templates
+from pytest import skip
 
 
-testcases = [("h2o_sto3g", "singlet"), ("cn_sto3g", "state")]
+testcases = [("h2o_sto3g", "singlet"), ("cn_sto3g", "any")]
 methods = ["adc0", "adc1", "adc2"]
 operator_kinds = ["electric", "magnetic"]
 
@@ -40,17 +40,16 @@ operator_kinds = ["electric", "magnetic"]
 class TestIsrMatrix(unittest.TestCase):
     def template_matrix_vector_product(self, case, method, op_kind):
         (system, kind) = case
-        state = cache.adc_states[system][method][kind]
+        state = cache.adcc_states[system][method][kind]
+        n_ref = len(state.excitation_vector)
         mp = state.ground_state
         if op_kind == "electric":  # example of a symmetric operator
             dips = state.reference_state.operators.electric_dipole
         elif op_kind == "magnetic":  # example of an asymmetric operator
             dips = state.reference_state.operators.magnetic_dipole
         else:
-            raise NotImplementedError(
-                "Tests are only implemented for"
-                "electric and magnetic dipole operators."
-            )
+            skip("Tests are only implemented for electric "
+                 "and magnetic dipole operators.")
 
         # computing Y_m @ B @ Y_n yields the state-to-state
         # transition dipole moments (n->m) (for n not equal to m)
@@ -59,17 +58,17 @@ class TestIsrMatrix(unittest.TestCase):
         # (the second method serves as a reference here)
 
         matrix = IsrMatrix(method, mp, dips)
-        for excitation1 in state.excitations:
-            resv = matrix @ excitation1.excitation_vector
-            for excitation2 in state.excitations:
-                s2s_tdm = [excitation2.excitation_vector @ v for v in resv]
-                tdm = state2state_transition_dm(
-                    state.property_method, mp,
-                    excitation1.excitation_vector,
-                    excitation2.excitation_vector,
-                    state.matrix.intermediates
-                )
-                s2s_tdm_ref = np.array([product_trace(tdm, dip) for dip in dips])
+        for ifrom in range(n_ref - 1):
+            B_Yn = matrix @ state.excitations[ifrom].excitation_vector
+            state2state = State2States(state, initial=ifrom)
+            for j, ito in enumerate(range(ifrom + 1, n_ref)):
+                s2s_tdm = [state.excitations[ito].excitation_vector @ vec
+                           for vec in B_Yn]
+
+                if op_kind == "electric":
+                    s2s_tdm_ref = state2state.transition_dipole_moment[j]
+                else:
+                    s2s_tdm_ref = state2state.transition_magnetic_dipole_moment[j]
                 np.testing.assert_allclose(s2s_tdm, s2s_tdm_ref, atol=1e-12)
 
 
