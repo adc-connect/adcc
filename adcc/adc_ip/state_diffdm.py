@@ -88,7 +88,8 @@ def diffdm_ip_adc2(mp, amplitude, intermediates):
 DISPATCH = {
     "ip_adc0": diffdm_ip_adc0,
     "ip_adc1": diffdm_ip_adc0,       # same as ADC(0)
-    "ip_adc2": diffdm_ip_adc2
+    "ip_adc2": diffdm_ip_adc2,
+    "ip_adc2x": diffdm_ip_adc2,      # same as ADC(2)
 }
 
 

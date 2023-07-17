@@ -139,7 +139,7 @@ class FormatExcitationVector:
             formats = {"o": "{0} ->" + 5 * " " + "{1}->", }
         elif self.matrix.axis_blocks == ["h", "phh"]:
             formats = {
-                "o":   "{0} " + 2 * idxgap + idxgap[:-3] + "  {1}" + 4 * " ",
+                "o":   idxgap + " {0} ->" + 2 * idxgap + "  {1}-> ",
                 "oov": "{0} {1} -> {2}  {3}{4}->{5}"}
         elif self.matrix.axis_blocks == ["p"]:
             formats = {"v": "-> {0}     ->{1}", }
@@ -301,7 +301,7 @@ class ExcitedStates(ElectronicTransition):
             Show oscillator strengths, by default ``True``.
 
         pole_strengths : bool optional
-            Show pole strengths, by default ``False``.
+            Show pole strengths, by default ``True``.
 
         rotatory_strengths : bool optional
            Show rotatory strengths, by default ``False``.

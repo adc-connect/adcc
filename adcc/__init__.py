@@ -128,6 +128,11 @@ def ea_adc2(*args, **kwargs):
 
 
 @with_runadc_doc
+def ea_adc3(*args, **kwargs):
+    return run_adc(*args, **kwargs, method="ea_adc3")
+
+
+@with_runadc_doc
 def ip_adc0(*args, **kwargs):
     return run_adc(*args, **kwargs, method="ip_adc0")
 
@@ -140,6 +145,11 @@ def ip_adc1(*args, **kwargs):
 @with_runadc_doc
 def ip_adc2(*args, **kwargs):
     return run_adc(*args, **kwargs, method="ip_adc2")
+
+
+@with_runadc_doc
+def ip_adc3(*args, **kwargs):
+    return run_adc(*args, **kwargs, method="ip_adc3")
 
 
 @with_runadc_doc

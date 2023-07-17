@@ -97,7 +97,6 @@ def s2s_tdm_ea_adc2(mp, amplitude_l, amplitude_r, intermediates):
     return dm
 
 
-# Ref: https://doi.org/10.1080/00268976.2013.859313
 DISPATCH = {"ea_adc0": s2s_tdm_ea_adc0,
             "ea_adc1": s2s_tdm_ea_adc0,       # same as ADC(0)
             "ea_adc2": s2s_tdm_ea_adc2,

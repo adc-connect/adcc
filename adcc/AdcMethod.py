@@ -25,8 +25,8 @@
 def get_valid_methods():
     valid_prefixes = ["cvs"]
     valid_bases = ["adc0", "adc1", "adc2", "adc2x", "adc3",
-                   "ip_adc0", "ip_adc1", "ip_adc2",
-                   "ea_adc0", "ea_adc1", "ea_adc2"]
+                   "ip_adc0", "ip_adc1", "ip_adc2", "ip_adc3",
+                   "ea_adc0", "ea_adc1", "ea_adc2", "ea_adc3"]
 
     # CVS-IP calculations not yet implemented
     ret = valid_bases + [p + "-" + m for p in valid_prefixes
@@ -60,10 +60,13 @@ class AdcMethod:
         Return an equivalent method, where only the level is changed
         (e.g. calling this on a CVS method returns a CVS method)
         """
-        if self.is_core_valence_separated:
-            return AdcMethod("cvs-adc" + str(newlevel))
-        else:
-            return AdcMethod("adc" + str(newlevel))
+        try:
+            int(self.name[-1])
+        except ValueError:
+            raise NotImplementedError("This method is not implemented for ADC "
+                                      "methods that do not end with a number "
+                                      "like 'adc2x'.")
+        return AdcMethod(self.name[:-1] + str(newlevel))
 
     @property
     def name(self):

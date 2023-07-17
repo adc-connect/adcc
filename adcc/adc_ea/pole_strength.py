@@ -25,7 +25,7 @@ from math import sqrt
 from adcc import block as b
 from adcc.LazyMp import LazyMp
 from adcc.AdcMethod import AdcMethod
-from adcc.functions import einsum, zeros_like, dot
+from adcc.functions import einsum, zeros_like, dot, direct_sum
 from adcc.Intermediates import Intermediates, register_as_intermediate
 
 from .util import check_doubles_amplitudes, check_singles_amplitudes
@@ -61,6 +61,22 @@ def pole_strength_ea_adc2(mp, amplitude, intermediates):
     return dot(xi, xi) + dot(xa, xa)
 
 
+def pole_strength_ea_adc3(mp, amplitude, intermediates):
+    check_singles_amplitudes([b.v], amplitude)
+    check_doubles_amplitudes([b.o, b.v, b.v], amplitude)
+    u1, u2 = amplitude.p, amplitude.pph
+
+    f11 = intermediates.ea_adc3_f11
+    f12 = intermediates.ea_adc3_f12
+    f22 = intermediates.ea_adc3_f22
+
+    # Calculate the spectroscopic amplitude x
+    xi = einsum("ia,a->i", f12, u1) + einsum("ijab,jab->i", f22, u2)
+    xa = einsum("b,ba->a", u1, f11)
+
+    return dot(xi, xi) + dot(xa, xa)
+
+
 #
 # Intermediates
 #
@@ -83,10 +99,63 @@ def ea_adc2_f22(hf, mp, intermediates):
     return 1/sqrt(2) * mp.t2(b.oovv)
 
 
+@register_as_intermediate
+def ea_adc3_f11(hf, mp, intermediates):
+    # effective transition moments, vv part f_ab
+    # Build Kronecker delta
+    d_vv = zeros_like(hf.fvv)
+    d_vv.set_mask("aa", 1.0)
+
+    df = mp.df(b.o + b.v)
+    df2 = direct_sum("ib+jc->ijbc", df, df).symmetrise((2, 3))
+
+    t2 = mp.t2(b.oovv)
+
+    return (d_vv
+            - 0.25 * einsum("ijbc,ijac->ab", t2, t2)
+            + (+ 0.25 * einsum("ijac,ijbc->ab", t2,
+                               mp.t2eri(b.oovv, b.vv) / df2)
+               + 0.25 * einsum("ijac,ijbc->ab", t2,
+                               mp.t2eri(b.oovv, b.oo) / df2)
+               + einsum("ijac,ijbc->ab", t2, mp.t2eri(b.oovv, b.ov) / df2)
+               - einsum("ijac,jibc->ab", t2, mp.t2eri(b.oovv, b.ov) / df2))
+            )
+
+
+@register_as_intermediate
+def ea_adc3_f12(hf, mp, intermediates):
+    # effective transition moments, ov part f_ia
+    return - mp.mp2_diffdm.ov + (intermediates.sigma_ov
+                                 + intermediates.m_3_plus
+                                 + intermediates.m_3_minus
+                                 ) / mp.df(b.o + b.v)
+
+
+@register_as_intermediate
+def ea_adc3_f22(hf, mp, intermediates):
+    # effective transition moments, oovv part f_ijab
+
+    df = mp.df(b.o + b.v)
+    df2 = direct_sum("ia+jb->ijab", df, df).symmetrise((2, 3))
+
+    return (1/sqrt(2) * mp.t2(b.oovv)
+            + 1/sqrt(2) * (0.5 * (mp.t2eri(b.oovv, b.oo)
+                           + mp.t2eri(b.oovv, b.vv))
+                           + ((mp.t2eri(b.oovv, b.ov)
+                               ).antisymmetrise(2, 3)).antisymmetrise(0, 1)
+                           ) / df2
+            )
+
+
+# Further intermediates (sigma_ov, m_3_plus, m_3_minus) can be found in
+# /adcc/adc_ip/pole_strength.py
+
+
 DISPATCH = {
     "ea_adc0": pole_strength_ea_adc0,
     "ea_adc1": pole_strength_ea_adc0,
-    "ea_adc2": pole_strength_ea_adc2
+    "ea_adc2": pole_strength_ea_adc2,
+    "ea_adc3": pole_strength_ea_adc3,
 }
 
 
@@ -116,7 +185,7 @@ def pole_strength(method, ground_state, amplitude, intermediates=None):
     if intermediates is None:
         intermediates = Intermediates(ground_state)
     if method.name not in DISPATCH:
-        raise NotImplementedError("spectroscopic_amplitude is not "
+        raise NotImplementedError("pole_strength is not "
                                   f"implemented for {method.name}.")
 
     ret = DISPATCH[method.name](ground_state, amplitude, intermediates)

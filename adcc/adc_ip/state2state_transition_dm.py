@@ -97,7 +97,6 @@ def s2s_tdm_ip_adc2(mp, amplitude_l, amplitude_r, intermediates):
     return dm
 
 
-# Ref: https://doi.org/10.1080/00268976.2013.859313
 DISPATCH = {"ip_adc0": s2s_tdm_ip_adc0,
             "ip_adc1": s2s_tdm_ip_adc0,       # same as ADC(0)
             "ip_adc2": s2s_tdm_ip_adc2,

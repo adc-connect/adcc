@@ -88,7 +88,8 @@ def diffdm_ea_adc2(mp, amplitude, intermediates):
 DISPATCH = {
     "ea_adc0": diffdm_ea_adc0,
     "ea_adc1": diffdm_ea_adc0,       # same as ADC(0)
-    "ea_adc2": diffdm_ea_adc2
+    "ea_adc2": diffdm_ea_adc2,
+    "ea_adc2x": diffdm_ea_adc2,      # same as ADC(2)
 }
 
 
