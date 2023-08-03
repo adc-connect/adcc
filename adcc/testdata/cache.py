@@ -89,6 +89,7 @@ def fullfile(fn):
 class TestdataCache():
     cases = ["h2o_sto3g", "cn_sto3g", "hf3_631g", "h2s_sto3g", "ch2nh2_sto3g",
              "methox_sto3g"]
+    gauge_origins = ["mass_center", "charge_center"]
     mode_full = False
 
     @staticmethod
@@ -105,14 +106,26 @@ class TestdataCache():
         return [k for k in TestdataCache.cases
                 if os.path.isfile(fullfile(k + "_hfdata.hdf5"))]
 
+    @property
+    def testcases_gauge_origin(self):
+        """
+        The definition of additional gauge origin dependent
+        test cases: Data generator and reference file
+        """
+
+        return [k + "_" + g for k in TestdataCache.cases
+                for g in TestdataCache.gauge_origins
+                if os.path.isfile(fullfile(k + "_hfdata.hdf5"))]
+
     @cached_property
     def hfdata(self):
         """
         The HF data a testcase is based upon
         """
         ret = {}
-        for k in self.testcases:
-            datafile = fullfile(k + "_hfdata.hdf5")
+        for k in self.testcases + self.testcases_gauge_origin:
+            hf_k = k.replace("_mass_center", "").replace("_charge_center", "")
+            datafile = fullfile(hf_k + "_hfdata.hdf5")
             # TODO This could be made a plain HDF5.File
             ret[k] = hdf5io.load(datafile)
         return ret
@@ -122,21 +135,46 @@ class TestdataCache():
         def cache_eri(refstate):
             refstate.import_all()
             return refstate
-        return {k: cache_eri(adcc.ReferenceState(self.hfdata[k]))
-                for k in self.testcases}
+        ret = {}
+        for k in self.testcases + self.testcases_gauge_origin:
+            if k in self.testcases:
+                ret[k] = cache_eri(adcc.ReferenceState(self.hfdata[k],
+                                   gauge_origin="origin"))
+            else:
+                if k.endswith("mass_center"):
+                    ret[k] = cache_eri(adcc.ReferenceState(self.hfdata[k],
+                                       gauge_origin="mass_center"))
+                else:
+                    ret[k] = cache_eri(adcc.ReferenceState(self.hfdata[k],
+                                       gauge_origin="charge_center"))
+        return ret
+
+        # return {k: cache_eri(adcc.ReferenceState(self.hfdata[k]))
+        #         for k in self.testcases + self.testcases_gauge_origin }
 
     @cached_property
     def refstate_cvs(self):
         ret = {}
-        for case in self.testcases:
+        for case in self.testcases + self.testcases_gauge_origin:
             # TODO once hfdata is an HDF5 file
             # refcases = ast.literal_eval(
             #                        self.hfdata[case]["reference_cases"][()])
             refcases = ast.literal_eval(self.hfdata[case]["reference_cases"])
             if "cvs" not in refcases:
                 continue
-            ret[case] = adcc.ReferenceState(self.hfdata[case],
-                                            **refcases["cvs"])
+            if case in self.testcases:
+                ret[case] = adcc.ReferenceState(self.hfdata[case],
+                                                **refcases["cvs"],
+                                                gauge_origin="origin")
+            else:
+                if case.endswith("mass_center"):
+                    ret[case] = adcc.ReferenceState(self.hfdata[case],
+                                                    **refcases["cvs"],
+                                                    gauge_origin="mass_center")
+                else:
+                    ret[case] = adcc.ReferenceState(self.hfdata[case],
+                                                    **refcases["cvs"],
+                                                    gauge_origin="charge_center")
             ret[case].import_all()
         return ret
 
@@ -144,7 +182,18 @@ class TestdataCache():
         # TODO once hfdata is an HDF5 file
         # refcases = ast.literal_eval(self.hfdata[case]["reference_cases"][()])
         refcases = ast.literal_eval(self.hfdata[case]["reference_cases"])
-        return adcc.ReferenceState(self.hfdata[case], **refcases[spec])
+        if case in self.testcases:
+            return adcc.ReferenceState(self.hfdata[case], **refcases[spec],
+                                       gauge_origin="origin")
+        else:
+            if case.endswith("mass_center"):
+                return adcc.ReferenceState(self.hfdata[case],
+                                           **refcases[spec],
+                                           gauge_origin="mass_center")
+            else:
+                return adcc.ReferenceState(self.hfdata[case],
+                                           **refcases[spec],
+                                           gauge_origin="charge_center")
 
     @cached_property
     def hfimport(self):
@@ -155,15 +204,14 @@ class TestdataCache():
                 ret[k] = hdf5io.load(datafile)
         return ret
 
-    def read_reference_data(self, refname):
+    def read_reference_data(self, refname, read_gauge=False):
         prefixes = ["", "cvs", "fc", "fv", "fc_cvs",
                     "fv_cvs", "fc_fv", "fc_fv_cvs"]
         raws = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
         methods = raws + ["_".join([p, r]) for p in prefixes
                           for r in raws if p != ""]
-
         ret = {}
-        for k in self.testcases:
+        for k in self.testcases + self.testcases_gauge_origin:
             fulldict = {}
             for m in methods:
                 datafile = fullfile(k + "_" + refname + "_" + m + ".hdf5")
@@ -188,7 +236,7 @@ class TestdataCache():
         for all test cases, all methods and all kinds (singlet, triplet)
         """
         res = {}
-        for case in self.testcases:
+        for case in self.testcases + self.testcases_gauge_origin:
             if case not in refdata:
                 continue
             available_kinds = refdata[case]["available_kinds"]

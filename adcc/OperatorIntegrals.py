@@ -102,6 +102,9 @@ class OperatorIntegrals:
             "electric_dipole",
             "magnetic_dipole",
             "nabla",
+            "electric_quadrupole_traceless",
+            "electric_quadrupole",
+            "dia_magnet",
             "pe_induction_elec",
             "pcm_potential_elec",
         )
@@ -147,6 +150,60 @@ class OperatorIntegrals:
         in the molecular orbital basis.
         """
         return self.import_dipole_like_operator("nabla", is_symmetric=False)
+
+    def import_quadrupole_like_operator(self, integral, is_symmetric=True):
+        if integral not in self.available:
+            raise NotImplementedError(f"{integral.replace('_', ' ')} operator "
+                                      "not implemented "
+                                      f"in {self.provider_ao.backend} backend.")
+        quad = []
+        quadrupoles = []
+        for i, component in enumerate(["xx", "xy", "xz",
+                                       "yx", "yy", "yz",
+                                       "zx", "zy", "zz"]):
+            quad_backend = getattr(self.provider_ao, integral)[i]
+            quad_bb = replicate_ao_block(self.mospaces, quad_backend,
+                                         is_symmetric=is_symmetric)
+            quad_ff = OneParticleOperator(self.mospaces,
+                                          is_symmetric=is_symmetric)
+            transform_operator_ao2mo(quad_bb, quad_ff,
+                                     self.__coefficients,
+                                     self.__conv_tol)
+            quad.append(quad_ff)
+        quadrupoles.append(quad[:3])
+        quadrupoles.append(quad[3:6])
+        quadrupoles.append(quad[6:])
+        return quadrupoles
+
+    @property
+    @timed_member_call("_import_timer")
+    def electric_quadrupole_traceless(self):
+        """
+        Return the traceless electric quadrupole integrals
+        in the molecular orbital basis.
+        """
+        return self.import_quadrupole_like_operator("electric_quadrupole_traceless",
+                                                    is_symmetric=True)
+
+    @property
+    @timed_member_call("_import_timer")
+    def electric_quadrupole(self):
+        """
+        Return the traced electric quadrupole integrals
+        in the molecular orbital basis.
+        """
+        return self.import_quadrupole_like_operator("electric_quadrupole",
+                                                    is_symmetric=True)
+
+    @property
+    @timed_member_call("_import_timer")
+    def dia_magnet(self):
+        """
+        Return the diamagnetic magnetizability integrals
+        in the molecular orbital basis.
+        """
+        return self.import_quadrupole_like_operator("dia_magnet",
+                                                    is_symmetric=True)
 
     def __import_density_dependent_operator(self, ao_callback, is_symmetric=True):
         """Returns a function that imports a density-dependent operator.
