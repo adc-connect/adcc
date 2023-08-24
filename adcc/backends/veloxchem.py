@@ -44,9 +44,9 @@ class VeloxChemOperatorIntegralProvider:
     def __init__(self, scfdrv):
         self.scfdrv = scfdrv
         self.backend = "veloxchem"
-        warnings.warn("Gauge origin selection only available in PySCF "
-                      f"not in {self.backend}. "
-                      "The gauge origin is selected as [0, 0, 0]")
+        warnings.warn("Gauge origin selection not available "
+                      f"in {self.backend}. "
+                      "The gauge origin is selected as [0, 0, 0].")
 
     @cached_property
     def electric_dipole(self):

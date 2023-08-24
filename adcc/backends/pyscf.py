@@ -56,13 +56,6 @@ class PyScfOperatorIntegralProvider:
                                       " mass_center, charge_center or origin."
                                       " Or by declaring a list eg. [x, y, z]"
                                       " in atomic units.")
-        if isinstance(gauge_origin, str):
-            print("Gauge origin for operator integrals is selected as:"
-                  f" {self.gauge_origin}, ({gauge_origin.replace('_',' ')})")
-        else:
-            print(f"Gauge origin for operator integrals is selected as: \
-                    {gauge_origin}")
-        warnings.warn("Gauge origin selection is not tested")
 
     @cached_property
     def electric_dipole(self):

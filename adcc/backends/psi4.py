@@ -39,9 +39,9 @@ class Psi4OperatorIntegralProvider:
         self.wfn = wfn
         self.backend = "psi4"
         self.mints = psi4.core.MintsHelper(self.wfn)
-        warnings.warn("Gauge origin selection only available in PySCF "
-                      f"not in {self.backend}. "
-                      "The gauge origin is selected as [0, 0, 0]")
+        warnings.warn("Gauge origin selection not available in "
+                      f"{self.backend}. "
+                      "The gauge origin is selected as [0, 0, 0].")
 
     @cached_property
     def electric_dipole(self):
