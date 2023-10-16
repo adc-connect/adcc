@@ -73,7 +73,7 @@ def s2s_tdm_ea_adc2(mp, amplitude_l, amplitude_r, intermediates):
     dm.vv = (  # ea_adc2_p_vv
         + p1_vv + p2_vv
         - 0.5 * einsum("c,ac,b->ab", ul1, p0.vv, ur1)
-        - 0.5 * einsum("a,bc,b->ab", ul1, p0.vv, ur1)
+        - 0.5 * einsum("a,bc,c->ab", ul1, p0.vv, ur1)
         + 0.5 * einsum("ijb,ija->ab", einsum("c,ijcb->ijb", ul1, t2),
                        einsum("d,ijad->ija", ur1, t2))
     )
