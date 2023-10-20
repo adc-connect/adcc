@@ -30,18 +30,25 @@ from adcc.testdata.cache import cache
 
 
 class TestWorkflow:
-    def test_validate_state_parameters_rhf(self):
+    def test_validate_state_parameters_rhf_pp(self):
         from adcc.workflow import validate_state_parameters
+        from adcc.AdcMatrix import AdcMatrixlike
 
-        refstate = cache.refstate["h2o_sto3g"]
+        # Build empty AdcMatrixlike object and assign ref_state and type
+        matrix = AdcMatrixlike()
+        matrix.reference_state = cache.refstate["h2o_sto3g"]
+        matrix.type = "pp"
 
-        assert 3, "any" == validate_state_parameters(refstate, n_states=3)
-        assert 4, "singlet" == validate_state_parameters(refstate, n_states=4,
-                                                         kind="singlet")
-        assert 2, "triplet" == validate_state_parameters(refstate, n_states=2,
-                                                         kind="triplet")
-        assert 2, "triplet" == validate_state_parameters(refstate, n_triplets=2)
-        assert 6, "singlet" == validate_state_parameters(refstate, n_singlets=6)
+        assert (3, "any", None) == validate_state_parameters(
+            matrix, n_states=3)
+        assert (4, "singlet", None) == validate_state_parameters(
+            matrix, n_states=4, kind="singlet")
+        assert (2, "triplet", None) == validate_state_parameters(
+            matrix, n_states=2, kind="triplet")
+        assert (2, "triplet", None) == validate_state_parameters(
+            matrix, n_triplets=2)
+        assert (6, "singlet", None) == validate_state_parameters(
+            matrix, n_singlets=6)
 
         invalid_cases = [
             dict(),                # No states requested
@@ -52,22 +59,71 @@ class TestWorkflow:
             dict(n_triplets=2, n_singlets=2),    # States of two sorts
             dict(n_states=2, n_spin_flip=2),     # States of two sorts
             dict(n_triplets=2, kind="singlet"),  # kind and n_ do not agree
-            dict(n_states=2, kind="bla"),      # Kind invaled
+            dict(n_states=2, kind="bla"),      # Kind invalid
+            dict(n_states=2, kind="doublet"),  # Kind invalid for PP-ADC
+            dict(n_states=2, is_alpha=True),   # Parameter only for IP/EA-ADC
+
         ]
         for case in invalid_cases:
             with pytest.raises(InputError):
-                validate_state_parameters(refstate, **case)
+                validate_state_parameters(matrix, **case)
 
-    def test_validate_state_parameters_uhf(self):
+    def test_validate_state_parameters_rhf_ip_ea(self):
         from adcc.workflow import validate_state_parameters
+        from adcc.AdcMatrix import AdcMatrixlike
 
-        refstate = cache.refstate["cn_sto3g"]
+        # Build empty AdcMatrixlike object and assign ref_state and type
+        matrix = AdcMatrixlike()
+        matrix.reference_state = cache.refstate["h2o_sto3g"]
+        matrix.type = "ip"  # Does not matter if "ip" or "ea"
 
-        assert 3, "any" == validate_state_parameters(refstate, n_states=3,
-                                                     kind="any")
-        assert 3, "any" == validate_state_parameters(refstate, n_states=3)
-        assert 2, "spin_flip" == validate_state_parameters(refstate,
-                                                           n_spin_flip=2)
+        assert (3, "any", True) == (validate_state_parameters(
+            matrix, n_states=3))
+        assert (3, "any", True) == (validate_state_parameters(
+            matrix, n_states=3, is_alpha=True))
+        assert (3, "any", True) == (validate_state_parameters(
+            matrix, n_states=3, is_alpha=False))  # restricted always alpha
+        assert (2, "doublet", True) == (validate_state_parameters(
+            matrix, n_states=2, kind="doublet"))
+        assert (2, "doublet", True) == (validate_state_parameters(
+            matrix, n_doublets=2))
+        assert (6, "doublet", True) == (validate_state_parameters(
+            matrix, n_doublets=6, is_alpha=False))
+
+        invalid_cases = [
+            dict(),                # No states requested
+            dict(n_states=0),      # No states requested
+            dict(n_doublets=-2),   # Negative number of states requested
+            dict(n_states=2, kind="bla"),  # Kind invalid
+            dict(n_singlets=2),    # Kind invalid for IP/EA-ADC
+            dict(n_triplets=2),    # Kind invalid for IP/EA-ADC
+            dict(n_spin_flip=2),   # Kind invalid for IP/EA-ADC
+            dict(n_states=2, is_alpha="yes"),    # is_alpha not boolean
+            dict(n_states=2, is_alpha=1),        # is_alpha not boolean
+            dict(n_states=2, n_spin_flip=2),     # States of two sorts
+            dict(n_doublets=2, kind="singlet"),  # kind and n_ do not agree
+
+        ]
+        for case in invalid_cases:
+            print(case)
+            with pytest.raises(InputError):
+                validate_state_parameters(matrix, **case)
+
+    def test_validate_state_parameters_uhf_pp(self):
+        from adcc.workflow import validate_state_parameters
+        from adcc.AdcMatrix import AdcMatrixlike
+
+        # Build empty AdcMatrixlike object and assign ref_state and type
+        matrix = AdcMatrixlike()
+        matrix.reference_state = cache.refstate["cn_sto3g"]
+        matrix.type = "pp"
+
+        assert (3, "any", None) == validate_state_parameters(
+            matrix, n_states=3, kind="any")
+        assert (3, "any", None) == validate_state_parameters(
+            matrix, n_states=3)
+        assert (2, "spin_flip", None) == validate_state_parameters(
+            matrix, n_spin_flip=2)
 
         invalid_cases = [
             dict(),                # No states requested
@@ -86,7 +142,40 @@ class TestWorkflow:
         ]
         for case in invalid_cases:
             with pytest.raises(InputError):
-                validate_state_parameters(refstate, **case)
+                validate_state_parameters(matrix, **case)
+
+    def test_validate_state_parameters_uhf_ip_ea(self):
+        from adcc.workflow import validate_state_parameters
+        from adcc.AdcMatrix import AdcMatrixlike
+
+        # Build empty AdcMatrixlike object and assign ref_state and type
+        matrix = AdcMatrixlike()
+        matrix.reference_state = cache.refstate["cn_sto3g"]
+        matrix.type = "ip"  # Does not matter if "ip" or "ea"
+
+        assert (3, "any", True) == validate_state_parameters(
+            matrix, n_states=3, kind="any")
+        assert (3, "any", True) == validate_state_parameters(
+            matrix, n_states=3, is_alpha=True)
+        assert (3, "any", False) == validate_state_parameters(
+            matrix, n_states=3, is_alpha=False)
+
+        invalid_cases = [
+            dict(),                # No states requested
+            dict(n_states=0),      # No states requested
+            dict(n_states=-2),     # Negative number of states requested
+            dict(n_states=2, kind="bla"),  # Kind invalid
+            dict(n_doublets=2),  # UHF with doublets
+            dict(n_states=2, kind="doublet"),  # UHF with doublets
+            dict(n_singlets=2),    # Kind invalid for IP/EA-ADC and UHF
+            dict(n_triplets=2),    # Kind invalid for IP/EA-ADC and UHF
+            dict(n_spin_flip=2),   # Kind invalid for IP/EA-ADC and UHF
+            dict(n_states=2, is_alpha="yes"),    # is_alpha not boolean
+            dict(n_states=2, is_alpha=1),        # is_alpha not boolean
+        ]
+        for case in invalid_cases:
+            with pytest.raises(InputError):
+                validate_state_parameters(matrix, **case)
 
     def test_construct_adcmatrix(self):
         from adcc.workflow import construct_adcmatrix

@@ -377,12 +377,12 @@ def validate_state_parameters(matrix, n_states=None, n_singlets=None,
             raise InputError("is_alpha may only be set for IP- and EA-ADC "
                              "calculations")
     else:
+        if not isinstance(is_alpha, bool) and is_alpha is not None:
+            raise InputError("is_alpha has to be a Boolean or None.")
         if is_alpha is None or reference_state.restricted:
             # Per default set to True and for restricted references, only alpha
             # states will be computed (beta states are identical)
             is_alpha = True
-        if not isinstance(is_alpha, bool):
-            raise InputError("is_alpha has to be a Boolean or None.")
 
     # Check if there are states to be computed
     if n_states is None or n_states == 0:
@@ -404,6 +404,14 @@ def validate_state_parameters(matrix, n_states=None, n_singlets=None,
         raise InputError("kind==spin_flip is only valid for "
                          "ADC calculations in combination with an unrestricted"
                          " ground state.")
+    if kind in ["spin_flip", "singlet", "triplet"] and matrix.type != "pp":
+        raise InputError("kind==singlet, kind==triplet and kind==spin_flip are"
+                         " only valid for PP-ADC calculations in combination "
+                         "with a restricted ground state.")
+    if kind == "doublet" and matrix.type == "pp":
+        raise InputError("kind==doublet is only valid for IP/EA-ADC "
+                         "calculations in combination with a restricted "
+                         "ground state.")
     return n_states, kind, is_alpha
 
 
