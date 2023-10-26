@@ -43,12 +43,17 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
     else:
         n_singlets = kwargs.pop("n_singlets", 0)
         n_triplets = kwargs.pop("n_triplets", 0)
+        n_doublets = kwargs.pop("n_doublets", 0)
         if n_singlets:
             state = adcc.run_adc(data, method=method, n_singlets=n_singlets,
                                  n_guesses=n_guess_singles, **kwargs)
             states.append(state)
         if n_triplets:
             state = adcc.run_adc(data, method=method, n_triplets=n_triplets,
+                                 n_guesses=n_guess_singles, **kwargs)
+            states.append(state)
+        if n_doublets:
+            state = adcc.run_adc(data, method=method, n_doublets=n_doublets,
                                  n_guesses=n_guess_singles, **kwargs)
             states.append(state)
 
@@ -113,26 +118,38 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
     # Compute matvec and block-wise apply
     matvec = states[0].matrix.matvec(random_vector)
     result = {}
-    result["ss"] = states[0].matrix.block_apply("ph_ph", random_vector.ph)
-    if "pphh" in random_vector.keys():
-        result["ds"] = states[0].matrix.block_apply("pphh_ph",
-                                                    random_vector.ph)
-        result["sd"] = states[0].matrix.block_apply("ph_pphh",
-                                                    random_vector.pphh)
-        result["dd"] = states[0].matrix.block_apply("pphh_pphh",
-                                                    random_vector.pphh)
+    # Use tuple unpacking to obtain intersection element
+    blocks_matrix = set(states[0].matrix.axis_blocks)
+    block_singles, = set(["h", "p", "ph"]) & blocks_matrix
+    block_doubles = False
+    if len(blocks_matrix) == 2:
+        block_doubles, = set(["phh", "pph", "pphh"]) & blocks_matrix
+    result["ss"] = states[0].matrix.block_apply(
+        "_".join([block_singles] * 2), random_vector.get(block_singles))
+    if block_doubles:
+        result["ds"] = states[0].matrix.block_apply(
+            "_".join([block_doubles, block_singles]),
+            random_vector.get(block_singles))
+        result["sd"] = states[0].matrix.block_apply(
+            "_".join([block_singles, block_doubles]),
+            random_vector.get(block_doubles))
+        result["dd"] = states[0].matrix.block_apply(
+            "_".join([block_doubles] * 2), random_vector.get(block_doubles))
 
-    gmatrix["random_singles"] = random_vector.ph.to_ndarray()
-    gmatrix["diagonal_singles"] = states[0].matrix.diagonal().ph.to_ndarray()
-    gmatrix["matvec_singles"] = matvec.ph.to_ndarray()
+    gmatrix["random_singles"] = random_vector.get(block_singles).to_ndarray()
+    gmatrix["diagonal_singles"] = states[0].matrix.diagonal().get(
+        block_singles).to_ndarray()
+    gmatrix["matvec_singles"] = matvec.get(block_singles).to_ndarray()
     gmatrix["result_ss"] = result["ss"].to_ndarray()
-    if "pphh" in random_vector.keys():
+    if block_doubles:
         gmatrix.create_dataset("random_doubles", compression=8,
-                               data=random_vector.pphh.to_ndarray())
+                               data=random_vector.get(
+                                   block_doubles).to_ndarray())
         gmatrix.create_dataset("diagonal_doubles", compression=8,
-                               data=states[0].matrix.diagonal().pphh.to_ndarray())
+                               data=states[0].matrix.diagonal().get(
+                                   block_doubles).to_ndarray())
         gmatrix.create_dataset("matvec_doubles", compression=8,
-                               data=matvec.pphh.to_ndarray())
+                               data=matvec.get(block_doubles).to_ndarray())
         if "ds" in result:
             gmatrix.create_dataset("result_ds", compression=8,
                                    data=result["ds"].to_ndarray())
@@ -164,16 +181,18 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
             bb_a, bb_b = state.state_diffdm[i].to_ao_basis(state.reference_state)
             dm_bb_a.append(bb_a.to_ndarray())
             dm_bb_b.append(bb_b.to_ndarray())
-            bb_a, bb_b = state.transition_dm[i].to_ao_basis(state.reference_state)
-            tdm_bb_a.append(bb_a.to_ndarray())
-            tdm_bb_b.append(bb_b.to_ndarray())
+            # tdm only for PP-ADC
+            if state.matrix.type == "pp":
+                bb_a, bb_b = state.transition_dm[i].to_ao_basis(state.reference_state)
+                tdm_bb_a.append(bb_a.to_ndarray())
+                tdm_bb_b.append(bb_b.to_ndarray())
 
             eigenvectors_singles.append(
-                state.excitation_vector[i].ph.to_ndarray()
+                state.excitation_vector[i].get(block_singles).to_ndarray()
             )
-            if "pphh" in state.excitation_vector[i].keys():
+            if block_doubles:
                 eigenvectors_doubles.append(
-                    state.excitation_vector[i].pphh.to_ndarray()
+                    state.excitation_vector[i].get(block_doubles).to_ndarray()
                 )
             else:
                 eigenvectors_doubles.clear()
@@ -182,17 +201,21 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
         # Transform to numpy array
         adc[kind + "/state_diffdm_bb_a"] = np.asarray(dm_bb_a)
         adc[kind + "/state_diffdm_bb_b"] = np.asarray(dm_bb_b)
-        adc[kind + "/ground_to_excited_tdm_bb_a"] = np.asarray(tdm_bb_a)
-        adc[kind + "/ground_to_excited_tdm_bb_b"] = np.asarray(tdm_bb_b)
         adc[kind + "/state_dipole_moments"] = state.state_dipole_moment
-        adc[kind + "/transition_dipole_moments"] = state.transition_dipole_moment
-        adc[kind + "/transition_dipole_moments_velocity"] = \
-            state.transition_dipole_moment_velocity
-        adc[kind + "/transition_magnetic_dipole_moments"] = \
-            state.transition_magnetic_dipole_moment
         adc[kind + "/eigenvalues"] = state.excitation_energy
         adc[kind + "/eigenvectors_singles"] = np.asarray(
             eigenvectors_singles)
+
+        # Properties that are only implemented for PP-ADC
+        if state.matrix.type == "pp":
+            adc[kind + "/ground_to_excited_tdm_bb_a"] = np.asarray(tdm_bb_a)
+            adc[kind + "/ground_to_excited_tdm_bb_b"] = np.asarray(tdm_bb_b)
+            adc[kind + "/transition_dipole_moments"] = (
+                state.transition_dipole_moment)
+            adc[kind + "/transition_dipole_moments_velocity"] = \
+                state.transition_dipole_moment_velocity
+            adc[kind + "/transition_magnetic_dipole_moments"] = \
+                state.transition_magnetic_dipole_moment
 
         if eigenvectors_doubles:  # For ADC(0) and ADC(1) there are no doubles
             adc.create_dataset(kind + "/eigenvectors_doubles",

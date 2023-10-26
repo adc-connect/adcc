@@ -159,8 +159,11 @@ class TestdataCache():
         prefixes = ["", "cvs", "fc", "fv", "fc_cvs",
                     "fv_cvs", "fc_fv", "fc_fv_cvs"]
         raws = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
-        methods = raws + ["_".join([p, r]) for p in prefixes
-                          for r in raws if p != ""]
+        methods = (raws
+                   + ["_".join([p, r]) for p in prefixes
+                      for r in raws if p != ""]
+                   + [kind + method for kind in ["ip_", "ea_"]
+                      for method in raws if method != "adc2x"])
 
         ret = {}
         for k in self.testcases:
