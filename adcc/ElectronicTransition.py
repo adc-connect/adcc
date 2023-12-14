@@ -219,7 +219,8 @@ class ElectronicTransition:
                                                  vec[i], vec[f])
 
             def final_block(name):
-                return np.array([[product_trace(dipole_integrals[2], s2s(i, j, name))  # noqa: E501
+                return np.array([[[product_trace(comp, s2s(i, j, name))
+                                   for comp in dipole_integrals]
                                   for j in np.arange(n_states)]
                                  for i in np.arange(n_states)])
 

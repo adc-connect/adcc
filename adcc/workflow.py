@@ -404,13 +404,6 @@ def validate_state_parameters(reference_state, n_states=None, n_singlets=None,
         if any(np.iscomplex(freq)) and not qed_approx:
             raise InputError("imaginary contribution to freq will only be "
                              "processed, if qed_approx=True")
-        if freq[0] != 0 or freq[1] != 0:
-            if qed_approx:
-                raise InputError("only request qed_approx=True with the cavity "
-                                 "photon polarized in z direction")
-            else:
-                raise Warning("polarizations of the cavity photon different from "
-                              "z polarization have not been thoroughly tested yet")
     if not qed_hf and qed_approx:
         raise InputError("Approximate QED ADC method is only available for "
                          "QED-HF reference")

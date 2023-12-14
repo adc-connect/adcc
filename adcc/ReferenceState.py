@@ -198,8 +198,9 @@ class ReferenceState(libadcc.ReferenceState):
             couplings = self.coupling
             freqs = self.frequency
             total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
-            for coupling, freq, dip in zip(couplings, freqs, dips):
-                total_dip += coupling * np.sqrt(2 * freq) * dip
+            for coupling, dip in zip(couplings, dips):
+                total_dip += coupling * dip
+            total_dip *= np.sqrt(2 * np.linalg.norm(freqs))
             total_dip.evaluate()
             return total_dip[block]
 

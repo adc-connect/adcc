@@ -29,11 +29,19 @@ class qed_matrix_from_diag_adc:
         self.s2s = exstates.s2s_dipole_moments_qed
         self.tdm = exstates.transition_dipole_moments_qed
         self.h1 = exstates.qed_second_order_ph_ph_couplings
-        self.coupl = refstate.coupling[2]
-        self.freq = refstate.frequency[2]
-        self.full_freq = refstate.freq_with_loss[2]
+        self.coupl = np.array(refstate.coupling)
+        self.freq = np.linalg.norm(refstate.frequency)
+        self.full_freq = np.linalg.norm(np.real(refstate.freq_with_loss)) +\
+            np.linalg.norm(np.imag(refstate.freq_with_loss)) * 1j
         self.n_adc = len(exstates.excitation_energy)
         self.exc_en = exstates.excitation_energy
+
+    def loop_helper(self, s2s_tensor):
+        ret = np.array([[self.coupl.dot(s2s)
+                        for s2s in s2s_block]
+                        for s2s_block in s2s_tensor])
+        ret *= - np.sqrt(self.freq / 2) * np.sqrt(2 * self.freq)
+        return ret
 
     def first_order_coupling(self):
 
@@ -42,11 +50,12 @@ class qed_matrix_from_diag_adc:
         tdm_block = np.empty(self.n_adc)
 
         for i, tdm in enumerate(self.tdm):
-            tdm_block[i] = self.coupl * np.sqrt(2 * self.freq) * tdm[2]
+            tdm_block[i] = self.coupl.dot(tdm)
+        tdm_block *= np.sqrt(2 * self.freq)
 
-        s2s_block = - np.sqrt(self.freq / 2) * self.coupl *\
-            np.sqrt(2 * self.freq) * self.s2s["qed_adc1_off_diag"]
-        tdm_block = - np.sqrt(self.freq / 2) * tdm_block
+        s2s_block = self.loop_helper(self.s2s["qed_adc1_off_diag"])
+
+        tdm_block *= - np.sqrt(self.freq / 2)
 
         if np.iscomplex(self.full_freq):
             self.freq = self.full_freq
@@ -79,42 +88,43 @@ class qed_matrix_from_diag_adc:
         qed_adc2_tdm_vec = np.empty(self.n_adc)
 
         for i, tdm in enumerate(self.tdm):
-            qed_adc2_tdm_vec[i] = - np.sqrt(self.freq / 2) * self.coupl *\
-                np.sqrt(2 * self.freq) * tdm[2]
+            qed_adc2_tdm_vec[i] = self.coupl.dot(tdm)
+        qed_adc2_tdm_vec *= - np.sqrt(self.freq / 2) * np.sqrt(2 * self.freq)
 
         # s2s_dipole parts of the ph_ph blocks
 
-        qed_adc1_off_diag_block = - np.sqrt(self.freq / 2) * self.coupl *\
-            np.sqrt(2 * self.freq) * self.s2s["qed_adc1_off_diag"]
+        qed_adc1_off_diag_block = self.loop_helper(self.s2s["qed_adc1_off_diag"])
 
-        qed_adc2_diag_block = - np.sqrt(self.freq / 2) * self.coupl *\
-            np.sqrt(2 * self.freq) * self.s2s["qed_adc2_diag"]
+        qed_adc2_diag_block = self.loop_helper(self.s2s["qed_adc2_diag"])
         # missing factor from state.s2s_dipole_moments_qed_adc2_diag
-        # TODO: commit to one way of defining these factors within the approx method
+        # TODO: commit to one way of defining these factors
+        # within the approx method
         qed_adc2_diag_block *= np.sqrt(self.freq / 2)
 
-        qed_adc2_edge_block_couple = - np.sqrt(self.freq / 2) * self.coupl *\
-            np.sqrt(2 * self.freq) * self.s2s["qed_adc2_edge_couple"]
+        qed_adc2_edge_block_couple = self.loop_helper(
+            self.s2s["qed_adc2_edge_couple"])
         # missing factor from state.s2s_dipole_moments_qed_adc2_edge
         qed_adc2_edge_block_couple *= np.sqrt(self.freq)
 
-        qed_adc2_edge_block_phot_couple = - np.sqrt(self.freq / 2) * self.coupl *\
-            np.sqrt(2 * self.freq) * self.s2s["qed_adc2_edge_phot_couple"]
+        qed_adc2_edge_block_phot_couple = self.loop_helper(
+            self.s2s["qed_adc2_edge_phot_couple"])
         # missing factor from state.s2s_dipole_moments_qed_adc2_edge
         qed_adc2_edge_block_phot_couple *= np.sqrt(self.freq)
 
         # s2s_dipole parts of the pphh_ph and ph_pphh blocks
 
-        qed_adc2_ph_pphh_couple_block = - np.sqrt(self.freq / 2) * self.coupl *\
-            np.sqrt(2 * self.freq) * self.s2s["qed_adc2_ph_pphh"]
+        qed_adc2_ph_pphh_couple_block = self.loop_helper(
+            self.s2s["qed_adc2_ph_pphh"])
 
-        qed_adc2_pphh_ph_phot_couple_block = - np.sqrt(self.freq / 2) *\
-            self.coupl * np.sqrt(2 * self.freq) * self.s2s["qed_adc2_pphh_ph"]
+        qed_adc2_pphh_ph_phot_couple_block = self.loop_helper(
+            self.s2s["qed_adc2_pphh_ph"])
 
         # we still need the H_1 expectation value "as property"
 
-        qed_adc2_couple_block = np.sqrt(self.freq / 2) * self.h1["couple"]
-        qed_adc2_phot_couple_block = np.sqrt(self.freq / 2) * self.h1["phot_couple"]
+        qed_adc2_couple_block = np.sqrt(self.freq / 2) *\
+            self.h1["couple"]
+        qed_adc2_phot_couple_block = np.sqrt(self.freq / 2) *\
+            self.h1["phot_couple"]
 
         # build the blocks of the matrix
 
@@ -140,7 +150,7 @@ class qed_matrix_from_diag_adc:
 
         # build the matrix
 
-        matrix_1 = np.vstack((elec_block, qed_adc2_tdm_vec.reshape((1, self.n_adc)),
+        matrix_1 = np.vstack((elec_block, qed_adc2_tdm_vec.reshape((1, self.n_adc)),  # noqa: E501
                               phot_couple_block, np.zeros((1, self.n_adc)),
                               qed_adc2_edge_block_phot_couple))
         matrix_2 = np.concatenate((qed_adc2_tdm_vec, np.array([self.freq]),
