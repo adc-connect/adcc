@@ -49,9 +49,7 @@ class IndexSymmetrisation():
     def symmetrise(self, new_vectors):
         """
         Symmetrise a set of new vectors to be added to the subspace.
-
         new_vectors          Vectors to symmetrise (updated in-place)
-
         Returns:
             The updated new_vectors
         """

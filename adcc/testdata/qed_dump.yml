@@ -1,0 +1,28 @@
+h2o_sto3g_adc2_full:
+  basis: sto3g
+  method: adc2
+  molecule: h2o
+  approx: False
+  excitation_energy: [0.469789, 0.496679, 0.571507]
+h2o_sto3g_adc2_approx:
+  basis: sto3g
+  method: adc2
+  molecule: h2o
+  approx: True
+  excitation_energy: [0.469793, 0.496957, 0.571511, 0.593613, 0.712661, 0.844501,
+              0.970428, 0.993996, 1.0714  , 1.094744, 1.212892, 1.346747,
+              1.47356 , 1.574525, 1.597913, 1.716008, 1.841888]
+methox_sto3g_adc2_full:
+  basis: sto3g
+  method: adc2
+  molecule: cn
+  approx: False
+  excitation_energy: [0.341541, 0.415104, 0.486678]
+methox_sto3g_adc2_approx:
+  basis: sto3g
+  method: adc2
+  molecule: cn
+  approx: True
+  excitation_energy: [0.341774, 0.41538 , 0.491732, 0.501357, 0.511708, 0.546447,
+              0.842004, 0.915563, 0.990758, 1.002418, 1.011967, 1.046802,
+              1.342381, 1.416067, 1.493567, 1.512128, 1.54733]

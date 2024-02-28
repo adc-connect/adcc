@@ -75,7 +75,6 @@ class JacobiPreconditioner:
                                  "with number of shifts stored inside "
                                  "precoditioner. Update using the "
                                  "'update_shifts' method.")
-
             return [v / (self.diagonal - self.shifts[i])
                     for i, v in enumerate(invecs)]
         else:

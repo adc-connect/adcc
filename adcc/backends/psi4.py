@@ -183,7 +183,17 @@ class Psi4HFProvider(HartreeFockProvider):
         return threshold
 
     def get_restricted(self):
-        return isinstance(self.wfn, (psi4.core.RHF, psi4.core.ROHF))
+        if isinstance(self.wfn, (psi4.core.RHF, psi4.core.ROHF)):
+            return True
+        elif isinstance(self.wfn, psi4.core.UHF):
+            return False
+        else:
+            # The hilbert package returns a more basic object, which does
+            # not provide a restricted indicator, so we determine it here
+            orben_a = np.asarray(self.wfn.epsilon_a())
+            orben_b = np.asarray(self.wfn.epsilon_b())
+            # TODO Maybe give a small tolerance here
+            return all(orben_a == orben_b)
 
     def get_energy_scf(self):
         return self.wfn.energy()
@@ -217,16 +227,25 @@ class Psi4HFProvider(HartreeFockProvider):
             np.hstack((mo_coeff[0], mo_coeff[1]))
         )
 
-    def fill_occupation_f(self, out):
-        out[:] = np.hstack((
-            np.asarray(self.wfn.occupation_a()),
-            np.asarray(self.wfn.occupation_b())
-        ))
-
     def fill_orben_f(self, out):
         orben_a = np.asarray(self.wfn.epsilon_a())
         orben_b = np.asarray(self.wfn.epsilon_b())
         out[:] = np.hstack((orben_a, orben_b))
+
+    def fill_occupation_f(self, out):
+        if not hasattr(self.wfn, "occupation_a"):  # hilbert package
+            num_of_orbs = self.wfn.nmo()
+            nalpha_elec = self.wfn.nalpha()
+            nbeta_elec = self.wfn.nbeta()
+            occ_array_a = occ_array_b = np.zeros(num_of_orbs)
+            np.put(occ_array_a, np.arange(nalpha_elec), 1)
+            np.put(occ_array_b, np.arange(nbeta_elec), 1)
+            out[:] = np.hstack((occ_array_a, occ_array_b))
+        else:
+            out[:] = np.hstack((
+                np.asarray(self.wfn.occupation_a()),
+                np.asarray(self.wfn.occupation_b())
+            ))
 
     def fill_fock_ff(self, slices, out):
         diagonal = np.empty(self.n_orbs)
@@ -247,7 +266,7 @@ class Psi4HFProvider(HartreeFockProvider):
 
 
 def import_scf(wfn):
-    if not isinstance(wfn, psi4.core.HF):
+    if not isinstance(wfn, (psi4.core.HF, psi4.core.Wavefunction)):
         raise InvalidReference(
             "Only psi4.core.HF and its subtypes are supported references in "
             "backends.psi4.import_scf. This indicates that you passed an "
@@ -255,7 +274,7 @@ def import_scf(wfn):
             "unrestricted HF calculation."
         )
 
-    if not isinstance(wfn, (psi4.core.RHF, psi4.core.UHF)):
+    if not isinstance(wfn, (psi4.core.RHF, psi4.core.UHF, psi4.core.Wavefunction)):
         raise InvalidReference("Right now only RHF and UHF references are "
                                "supported for Psi4.")
 
@@ -264,7 +283,9 @@ def import_scf(wfn):
     #      the actual set of options ... theoretically they could differ
     scf_type = psi4.core.get_global_option('SCF_TYPE')
     # CD = Choleski, DF = density-fitting
-    unsupported_scf_types = ["CD", "DISK_DF", "MEM_DF"]
+    unsupported_scf_types = []
+    if not isinstance(wfn, psi4.core.Wavefunction):  # hilbert package only uses DF
+        unsupported_scf_types += ["DISK_DF", "MEM_DF", "CD"]
     if scf_type in unsupported_scf_types:
         raise InvalidReference("Unsupported Psi4 SCF_TYPE, should not be one "
                                f"of {unsupported_scf_types}")

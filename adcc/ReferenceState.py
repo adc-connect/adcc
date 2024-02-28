@@ -28,6 +28,7 @@ from .MoSpaces import MoSpaces
 from .backends import import_scf_results
 from .OperatorIntegrals import OperatorIntegrals
 from .OneParticleOperator import OneParticleOperator, product_trace
+from .misc import cached_member_function
 
 import libadcc
 
@@ -37,7 +38,8 @@ __all__ = ["ReferenceState"]
 class ReferenceState(libadcc.ReferenceState):
     def __init__(self, hfdata, core_orbitals=None, frozen_core=None,
                  frozen_virtual=None, symmetry_check_on_import=False,
-                 import_all_below_n_orbs=10):
+                 import_all_below_n_orbs=10, is_qed=False, coupl=None,
+                 freq=None, qed_hf=True, qed_approx=False):
         """Construct a ReferenceState holding information about the employed
         SCF reference.
 
@@ -138,6 +140,13 @@ class ReferenceState(libadcc.ReferenceState):
         which would place the 2nd and 3rd alpha and the 1st and second
         beta orbital into the core space.
         """
+        self.is_qed = is_qed
+        self.coupling = coupl
+        self.frequency = np.real(freq)
+        self.freq_with_loss = freq
+        self.qed_hf = qed_hf
+        self.approx = qed_approx
+
         if not isinstance(hfdata, libadcc.HartreeFockSolution_i):
             hfdata = import_scf_results(hfdata)
 
@@ -165,8 +174,97 @@ class ReferenceState(libadcc.ReferenceState):
 
         if attr.startswith("f"):
             return self.fock(b.__getattr__(attr[1:]))
+        elif attr.startswith("get_qed_total_dip"):
+            return self.get_qed_total_dip(b.__getattr__(attr))
+        elif attr.startswith("get_qed_omega"):
+            return self.get_qed_omega
         else:
             return self.eri(b.__getattr__(attr))
+
+    @cached_member_function
+    def get_qed_total_dip(self, block):
+        """
+        Return qed coupling strength times dipole operator
+        """
+        # TODO: Here we always multiply with sqrt(2 * omega), since this
+        # eases up the Hamiltonian and is required if you provide a hilbert
+        # package QED-HF input. This can differ between QED-HF implementations,
+        # e.g. the psi4numpy QED-RHF helper does not do that. Therefore, this
+        # factor needs to be adjusted depending on the input, but since the
+        # hilbert package is currently the best in terms of performance, at
+        # least to my knowledge, the factor should be included here.
+        if self.is_qed:
+            dips = self.operators.electric_dipole
+            couplings = self.coupling
+            freqs = self.frequency
+            total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
+            for coupling, dip in zip(couplings, dips):
+                total_dip += coupling * dip
+            total_dip *= np.sqrt(2 * np.linalg.norm(freqs))
+            total_dip.evaluate()
+            return total_dip[block]
+
+    @cached_member_function
+    def get_qed_omega(self):
+        """
+        Return the cavity frequency
+        """
+        if self.is_qed:
+            freqs = self.frequency
+            return np.linalg.norm(freqs)
+
+    @cached_member_function
+    def qed_D_object(self, block):
+        """
+        Return the object, which is added to the ERIs in a PT QED calculation
+        """
+        if self.is_qed:
+            from . import block as b
+            from .functions import einsum
+            total_dip = OneParticleOperator(self.mospaces, is_symmetric=True)
+            total_dip.oo = ReferenceState.get_qed_total_dip(self, b.oo)
+            total_dip.ov = ReferenceState.get_qed_total_dip(self, b.ov)
+            total_dip.vv = ReferenceState.get_qed_total_dip(self, b.vv)
+            # We have to define all the blocks from the
+            # D_{pqrs} = d_{pr} d_{qs} - d_{ps} d_{qr} object, which has the
+            # same symmetry properties as the ERI object
+            # Actually in b.ovov: second term: ib,ja would be ib,aj ,
+            # but d_{ia} = d_{ai}
+            ds = {
+                b.oooo: einsum('ik,jl->ijkl', total_dip.oo, total_dip.oo)
+                - einsum('il,jk->ijkl', total_dip.oo, total_dip.oo),
+                b.ooov: einsum('ik,ja->ijka', total_dip.oo, total_dip.ov)
+                - einsum('ia,jk->ijka', total_dip.ov, total_dip.oo),
+                b.oovv: einsum('ia,jb->ijab', total_dip.ov, total_dip.ov)
+                - einsum('ib,ja->ijab', total_dip.ov, total_dip.ov),
+                b.ovvv: einsum('ib,ac->iabc', total_dip.ov, total_dip.vv)
+                - einsum('ic,ab->iabc', total_dip.ov, total_dip.vv),
+                b.ovov: einsum('ij,ab->iajb', total_dip.oo, total_dip.vv)
+                - einsum('ib,ja->iajb', total_dip.ov, total_dip.ov),
+                b.vvvv: einsum('ac,bd->abcd', total_dip.vv, total_dip.vv)
+                - einsum('ad,bc->abcd', total_dip.vv, total_dip.vv),
+            }
+            return ds[block]
+
+    def eri(self, block):
+        if self.is_qed:
+            from . import block as b
+            from .functions import einsum
+            # Since there is no TwoParticleOperator object,
+            # we initialize it like this
+            ds_init = OneParticleOperator(self.mospaces, is_symmetric=True)
+            ds = {
+                b.oooo: einsum('ik,jl->ijkl', ds_init.oo, ds_init.oo),
+                b.ooov: einsum('ik,ja->ijka', ds_init.oo, ds_init.ov),
+                b.oovv: einsum('ia,jb->ijab', ds_init.ov, ds_init.ov),
+                b.ovvv: einsum('ib,ac->iabc', ds_init.ov, ds_init.vv),
+                b.ovov: einsum('ij,ab->iajb', ds_init.oo, ds_init.vv),
+                b.vvvv: einsum('ac,bd->abcd', ds_init.vv, ds_init.vv),
+            }
+            ds[block] = ReferenceState.qed_D_object(self, block)
+            return super().eri(block) + ds[block]
+        else:
+            return super().eri(block)
 
     @property
     def mospaces(self):

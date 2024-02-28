@@ -75,7 +75,6 @@ class AdcMatrixlike:
 class AdcMatrix(AdcMatrixlike):
     # Default perturbation-theory orders for the matrix blocks (== standard ADC-PP).
     default_block_orders = {
-        #             ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),
         "adc0":  dict(ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
         "adc1":  dict(ph_ph=1, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
         "adc2":  dict(ph_ph=2, ph_pphh=1,    pphh_ph=1,    pphh_pphh=0),     # noqa: E501
@@ -87,7 +86,6 @@ class AdcMatrix(AdcMatrixlike):
                  diagonal_precomputed=None):
         """
         Initialise an ADC matrix.
-
         Parameters
         ----------
         method : str or AdcMethod
@@ -130,6 +128,14 @@ class AdcMatrix(AdcMatrixlike):
         self.ndim = 2
         self.extra_terms = []
 
+        if self.reference_state.is_qed:
+            if method.base_method.name in ["adc2x", "adc3"] or self.is_core_valence_separated:  # noqa: E501
+                raise NotImplementedError("Neither adc2x and adc3 nor cvs methods "
+                                          "are implemented for QED-ADC")
+            elif method.base_method.name == "adc2" and not self.reference_state.qed_hf:  # noqa: E501
+                raise NotImplementedError("QED-ADC(2) is only available for a "
+                                          "QED-HF reference")
+
         self.intermediates = intermediates
         if self.intermediates is None:
             self.intermediates = Intermediates(self.ground_state)
@@ -137,6 +143,8 @@ class AdcMatrix(AdcMatrixlike):
         # Determine orders of PT in the blocks
         if block_orders is None:
             block_orders = self.default_block_orders[method.base_method.name]
+            if self.reference_state.is_qed and not self.reference_state.approx:
+                block_orders["ph_gs"] = block_orders["ph_ph"]
         else:
             tmp_orders = self.default_block_orders[method.base_method.name].copy()
             tmp_orders.update(block_orders)
@@ -144,7 +152,7 @@ class AdcMatrix(AdcMatrixlike):
 
         # Sanity checks on block_orders
         for block in block_orders.keys():
-            if block not in ("ph_ph", "ph_pphh", "pphh_ph", "pphh_pphh"):
+            if block not in ("ph_gs", "ph_ph", "ph_pphh", "pphh_ph", "pphh_pphh"):
                 raise ValueError(f"Invalid block order key: {block}")
         if block_orders["ph_pphh"] != block_orders["pphh_ph"]:
             raise ValueError("ph_pphh and pphh_ph should always have "
@@ -154,19 +162,53 @@ class AdcMatrix(AdcMatrixlike):
             raise ValueError("pphh_pphh cannot be None if ph_pphh isn't.")
         self.block_orders = block_orders
 
+        self.qed_dispatch_dict = {
+            "elec": "",
+            "elec_couple": "_couple", "phot_couple": "_phot_couple",
+            "phot": "_phot", "phot2": "_phot2",
+            "elec_couple_inner": "_couple_inner",
+            "elec_couple_edge": "_couple_edge",
+            "phot_couple_inner": "_phot_couple_inner",
+            "phot_couple_edge": "_phot_couple_edge"
+        }
+
+        def get_pp_blocks(disp_str):
+            """
+            Extraction of blocks from the adc_pp matrix
+            ----------
+            disp_str : string
+                key specifying block to return
+            """
+            return {  # TODO Rename to self.block in 0.16.0
+                block: ppmatrix.block(self.ground_state, block.split("_"),
+                                      order=str(order) +\
+                                      self.qed_dispatch_dict[disp_str],
+                                      intermediates=self.intermediates,
+                                      variant=variant)
+                for block, order in block_orders.items() if order is not None
+            }
+
         # Build the blocks and diagonals
+
         with self.timer.record("build"):
             variant = None
-            if self.is_core_valence_separated:
+            if method.is_core_valence_separated:
                 variant = "cvs"
-            blocks = {
-                block: ppmatrix.block(self.ground_state, block.split("_"),
-                                      order=order, intermediates=self.intermediates,
-                                      variant=variant)
-                for block, order in self.block_orders.items() if order is not None
-            }
-            # TODO Rename to self.block in 0.16.0
-            self.blocks_ph = {bl: blocks[bl].apply for bl in blocks}
+            # Build full QED-matrix
+            if self.reference_state.is_qed and not self.reference_state.approx:
+                blocks = {
+                    bl + "_" + key: get_pp_blocks(key)[bl]
+                    for bl, order in block_orders.items()
+                    if order is not None
+                    for key in self.qed_dispatch_dict
+                }
+            else:  # Build "standard" ADC-matrix
+                blocks = {
+                    bl: get_pp_blocks("elec")[bl]
+                    for bl, order in block_orders.items()
+                    if order is not None
+                }
+
             if diagonal_precomputed:
                 self.__diagonal = diagonal_precomputed
             else:
@@ -175,9 +217,11 @@ class AdcMatrix(AdcMatrixlike):
                 self.__diagonal.evaluate()
             self.__init_space_data(self.__diagonal)
 
+            # TODO Rename to self.block in 0.16.0
+            self.blocks_ph = {bl: blocks[bl].apply for bl in blocks}
+
     def __iadd__(self, other):
         """In-place addition of an :py:class:`AdcExtraTerm`
-
         Parameters
         ----------
         other : AdcExtraTerm
@@ -205,12 +249,10 @@ class AdcMatrix(AdcMatrixlike):
     def __add__(self, other):
         """Addition of an :py:class:`AdcExtraTerm`, creating
         a copy of self and adding the term to the new matrix
-
         Parameters
         ----------
         other : AdcExtraTerm
             the extra term to be added
-
         Returns
         -------
         AdcMatrix
@@ -233,10 +275,17 @@ class AdcMatrix(AdcMatrixlike):
         self.axis_spaces = {}
         self.axis_lengths = {}
         for block in diagonal.blocks_ph:
-            self.axis_spaces[block] = getattr(diagonal, block).subspaces
-            self.axis_lengths[block] = np.prod([
-                self.mospaces.n_orbs(sp) for sp in self.axis_spaces[block]
-            ])
+            if "gs" in block:
+                # Either include g1 in whole libadcc backend, or use this
+                # approach for now, which is only required for functionalities,
+                # which should not be used with the full qed matrix yet anyway
+                self.axis_spaces[block] = ['g1']
+                self.axis_lengths[block] = 1
+            else:
+                self.axis_spaces[block] = getattr(diagonal, block).subspaces
+                self.axis_lengths[block] = np.prod([
+                    self.mospaces.n_orbs(sp) for sp in self.axis_spaces[block]
+                ])
         self.shape = (sum(self.axis_lengths.values()),
                       sum(self.axis_lengths.values()))
 
@@ -339,7 +388,7 @@ class AdcMatrix(AdcMatrixlike):
         if isinstance(other, AmplitudeVector):
             return self.matvec(other)
         if isinstance(other, list):
-            if all(isinstance(elem, AmplitudeVector) for elem in other):
+            if all(isinstance(elem, AmplitudeVector) for elem in other):  # noqa: E501
                 return [self.matvec(ov) for ov in other]
         return NotImplemented
 
@@ -370,11 +419,9 @@ class AdcMatrix(AdcMatrixlike):
         applied to relevant blocks of an AmplitudeVector in order
         to symmetrise it to the right symmetry in order to be used
         with the various matrix-vector-products of this function.
-
         Most importantly the returned functions antisymmetrise
         the occupied and virtual parts of the doubles parts
         if this is sensible for the method behind this adcmatrix.
-
         Returns a dictionary block identifier -> function
         """
         ret = {}
@@ -394,7 +441,6 @@ class AdcMatrix(AdcMatrixlike):
         """
         Return the list of indices and their values
         of the dense basis representation
-
         ordering: adcc, spin, spatial
         """
         ret = []
@@ -484,19 +530,15 @@ class AdcMatrix(AdcMatrixlike):
         Return the ADC matrix object as a dense numpy array. Converts the sparse
         internal representation of the ADC matrix to a dense matrix and return
         as a numpy array.
-
         Notes
         -----
-
         This method is only intended to be used for debugging and
         visualisation purposes as it involves computing a large amount of
         matrix-vector products and the returned array consumes a considerable
         amount of memory.
-
         The resulting matrix has no spin symmetry imposed, which means that
         its eigenspectrum may contain non-physical excitations (e.g. with linear
         combinations of α->β and α->α components in the excitation vector).
-
         This function has not been sufficiently tested to be considered stable.
         """
         # TODO Update to ph / pphh
@@ -589,7 +631,6 @@ class AdcMatrixShifted(AdcMatrix):
         """
         Initialise a shifted ADC matrix. Applying this class to a vector ``v``
         represents an efficient version of ``matrix @ v + shift * v``.
-
         Parameters
         ----------
         matrix : AdcMatrix
@@ -638,18 +679,15 @@ class AdcMatrixProjected(AdcMatrix):
         Initialise a projected ADC matrix, i.e. represents the expression
         ``P @ M @ P`` where ``P`` is a projector onto a subset of
         ``excitation_blocks``.
-
         The ``excitation_blocks`` are defined by partitioning the ``o1`` occupied
         and ``v1`` virtual space of the ``matrix.mospaces`` into a core-occupied
         ``c``, valence-occupied ``o``, inner-virtual ``v`` and outer-virtual ``w``.
         This matrix will only keep selected blocks in the amplitudes non-zero, which
         are selected in the ``excitation_blocks`` list
         (e.g. ``["cv", "ccvv", "ocvv"]``).
-
         For details on the option how to select the spaces, see the documentation
         in :py:`adcc.ReferenceState.__init__` (``outer_virtuals`` follows the same
         rules as ``frozen_virtuals``).
-
         Parameters
         ----------
         matrix : AdcMatrix
