@@ -21,7 +21,7 @@
 ##
 ## ---------------------------------------------------------------------
 import numpy as np
-import scipy.linalg as sp
+#import scipy.linalg as sp
 
 
 class qed_matrix_from_diag_adc:
@@ -76,10 +76,11 @@ class qed_matrix_from_diag_adc:
                             matrix_middle.reshape((len(matrix_middle), 1)),
                             matrix_lower))
 
-        if np.iscomplex(self.full_freq):
-            return sp.eig(matrix)
-        else:
-            return sp.eigh(matrix)
+        #if np.iscomplex(self.full_freq):
+        #    return sp.eig(matrix)
+        #else:
+        #    return sp.eigh(matrix)
+        return matrix
 
     def second_order_coupling(self):
 
@@ -170,7 +171,8 @@ class qed_matrix_from_diag_adc:
                             matrix_3, matrix_4.reshape((len(matrix_4), 1)),
                             matrix_5))
 
-        if np.iscomplex(self.full_freq):
-            return sp.eig(matrix)
-        else:
-            return sp.eigh(matrix)
+        #if np.iscomplex(self.full_freq):
+        #    return sp.eig(matrix)
+        #else:
+        #    return sp.eigh(matrix)
+        return matrix

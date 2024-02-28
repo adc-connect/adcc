@@ -23,6 +23,7 @@
 import sys
 import warnings
 import numpy as np
+import scipy.linalg as sp
 
 from libadcc import ReferenceState, set_lt_scalar
 
@@ -241,15 +242,22 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     if matrix.reference_state.approx:
         qed_matrix = qed_matrix_from_diag_adc(exstates, matrix.reference_state)
         if method == "adc2":
-            qed_eigvals, qed_eigvecs = qed_matrix.second_order_coupling()
+            #qed_eigvals, qed_eigvecs = qed_matrix.second_order_coupling()
+            qed_approx_matrix = qed_matrix.second_order_coupling()
         else:
-            qed_eigvals, qed_eigvecs = qed_matrix.first_order_coupling()
+            #qed_eigvals, qed_eigvecs = qed_matrix.first_order_coupling()
+            qed_approx_matrix = qed_matrix.first_order_coupling()
         # TODO: This is a bad solution, but filtering out the final excitation
         # vectors and properly feeding them back into the corresponding libtensor is
         # usually just unnecessary, especially since consistent qed properties
         # are not implemented yet. This way the user is at least provided with
         # the ADC result without polaritonic coupling between the states and can
         # then request the energies and vectors from the exstates object.
+        exstates.qed_approx_matrix = qed_approx_matrix
+        if any(np.iscomplex(freq)):
+            qed_eigvals, qed_eigvecs = sp.eig(qed_approx_matrix)
+        else:
+            qed_eigvals, qed_eigvecs = sp.eigh(qed_approx_matrix)
         exstates.qed_excitation_energy = qed_eigvals
         exstates.qed_excitation_vector = qed_eigvecs
 
@@ -398,7 +406,7 @@ def validate_state_parameters(reference_state, n_states=None, n_singlets=None,
     if coupl is not None or freq is not None:
         if not (coupl is not None and freq is not None):
             raise InputError("qed calculation requires coupl and freq")
-        if len(coupl) != 3 or len(freq) != 3:
+        if len(coupl) != 3:  # or len(freq) != 3:
             raise InputError("freq and coupl must contain 3 elements, "
                              "i.e. x, y, z")
         if any(np.iscomplex(freq)) and not qed_approx:
