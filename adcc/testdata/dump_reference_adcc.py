@@ -250,7 +250,7 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
                     s2s_from["state_to_excited_tdm_bb_b"] = np.asarray(tdm_bb_b)
 
     # Store which kinds are available
-    out.create_dataset("available_kinds", shape=(len(available_kinds), ),
+    adc.create_dataset("available_kinds", shape=(len(available_kinds), ),
                        data=np.array(available_kinds,
                                      dtype=h5py.special_dtype(vlen=str)))
 

@@ -107,17 +107,16 @@ def dump_h2o_sto3g():  # H2O restricted
     dump_method(case, "adc2x", kwargs, spec="fv")
     dump_method(case, "adc2x", kwargs, spec="fv-cvs")
 
-
-def dump_h2o_sto3g_ip_ea():
+    # IP-ADC
     base_methods = ["adc0", "adc1", "adc2", "adc3"]
-    methods = [kind + method for kind in ["ip_", "ea_"]
-               for method in base_methods]
-    for method in methods:
-        if "0" in method or "1" in method:
-            kwargs = {"n_doublets": 2}
-        else:
-            kwargs = {"n_doublets": 3}
-        dump_method("h2o_sto3g", method, kwargs, spec="gen")
+    kwargs = {"n_doublets": 3}
+    for method in base_methods:
+        dump_method("h2o_sto3g", "ip_" + method, kwargs, spec="gen")
+
+    # EA-ADC
+    kwargs = {"n_doublets": 2}
+    for method in base_methods:
+        dump_method("h2o_sto3g", "ea_" + method, kwargs, spec="gen")
 
 
 def dump_h2o_def2tzvp():  # H2O restricted
@@ -190,7 +189,6 @@ def main():
     dump_h2s_sto3g()
     dump_h2s_6311g()
     dump_methox_sto3g()
-    dump_h2o_sto3g_ip_ea()
 
 
 if __name__ == "__main__":
