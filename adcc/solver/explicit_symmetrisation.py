@@ -89,12 +89,13 @@ class IndexSpinSymmetrisation(IndexSymmetrisation):
             # Only work on the doubles part
             # the other blocks are not yet implemented
             # or nothing needs to be done ("ph"/"h"/"p" block)
-            block = sorted(vec.keys())[1]
-            # TODO: Note that the "d" is needed here because the C++ side
-            #       does not yet understand ph/h/p and pphh/phh/pph
-            amplitude_vector_enforce_spin_kind(
-                    vec.get(block), "d", self.enforce_spin_kind, self.is_ip
-            )
+            if len(vec.keys()) > 1:
+                block = sorted(vec.keys())[1]
+                # TODO: Note that the "d" is needed here because the C++ side
+                #       does not yet understand ph/h/p and pphh/phh/pph
+                amplitude_vector_enforce_spin_kind(
+                        vec.get(block), "d", self.enforce_spin_kind, self.is_ip
+                )
 
         return new_vectors
 
