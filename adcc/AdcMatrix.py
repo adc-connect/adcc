@@ -87,10 +87,12 @@ class AdcMatrix(AdcMatrixlike):
         "ip_adc0":  dict(h_h=0,   h_phh=None,   phh_h=None,   phh_phh=None),
         "ip_adc1":  dict(h_h=1,   h_phh=None,   phh_h=None,   phh_phh=None),
         "ip_adc2":  dict(h_h=2,   h_phh=1,      phh_h=1,      phh_phh=0),
+        "ip_adc2x": dict(h_h=2,   h_phh=1,      phh_h=1,      phh_phh=1),
         "ip_adc3":  dict(h_h=3,   h_phh=2,      phh_h=2,      phh_phh=1),
         "ea_adc0":  dict(p_p=0,   p_pph=None,   pph_p=None,   pph_pph=None),
         "ea_adc1":  dict(p_p=1,   p_pph=None,   pph_p=None,   pph_pph=None),
         "ea_adc2":  dict(p_p=2,   p_pph=1,      pph_p=1,      pph_pph=0),
+        "ea_adc2x": dict(p_p=2,   p_pph=1,      pph_p=1,      pph_pph=1),
         "ea_adc3":  dict(p_p=3,   p_pph=2,      pph_p=2,      pph_pph=1),
     }
 

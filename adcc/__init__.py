@@ -63,8 +63,8 @@ __all__ = ["run_adc", "InputError", "AdcMatrix", "AdcBlockView",
            "guesses_any", "guess_symmetries", "guesses_spin_flip", "guess_zero",
            "LazyMp", "adc0", "cis", "adc1", "adc2", "adc2x", "adc3",
            "cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x", "cvs_adc3",
-           "ip_adc0", "ip_adc1", "ip_adc2", "ip_adc3",
-           "ea_adc0", "ea_adc1", "ea_adc2", "ea_adc3",
+           "ip_adc0", "ip_adc1", "ip_adc2", "ip_adc2x", "ip_adc3",
+           "ea_adc0", "ea_adc1", "ea_adc2", "ea_adc2x", "ea_adc3",
            "banner"]
 
 __version__ = "0.15.17"
@@ -128,6 +128,11 @@ def ea_adc2(*args, **kwargs):
 
 
 @with_runadc_doc
+def ea_adc2x(*args, **kwargs):
+    return run_adc(*args, **kwargs, method="ea_adc2x")
+
+
+@with_runadc_doc
 def ea_adc3(*args, **kwargs):
     return run_adc(*args, **kwargs, method="ea_adc3")
 
@@ -145,6 +150,11 @@ def ip_adc1(*args, **kwargs):
 @with_runadc_doc
 def ip_adc2(*args, **kwargs):
     return run_adc(*args, **kwargs, method="ip_adc2")
+
+
+@with_runadc_doc
+def ip_adc2x(*args, **kwargs):
+    return run_adc(*args, **kwargs, method="ip_adc2x")
 
 
 @with_runadc_doc
