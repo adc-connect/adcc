@@ -105,7 +105,6 @@ class TestWorkflow:
 
         ]
         for case in invalid_cases:
-            print(case)
             with pytest.raises(InputError):
                 validate_state_parameters(matrix, **case)
 

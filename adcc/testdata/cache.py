@@ -202,7 +202,7 @@ class TestdataCache():
                 continue
             available_kinds = refdata[case].get("available_kinds", None)
 
-            # Flag to check 'available_kinds' method dependently if required
+            # Flag to check 'available_kinds' method-dependently if required
             method_dependent_kinds = True if available_kinds is None else False
 
             res_case = {}
