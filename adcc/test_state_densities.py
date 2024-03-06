@@ -26,12 +26,14 @@ import numpy as np
 from adcc.State2States import State2States
 from adcc.testdata.cache import cache
 
-from .misc import expand_test_templates
+from misc import expand_test_templates
 from pytest import approx, skip
 
 # The methods to test
 basemethods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 methods = [m for bm in basemethods for m in [bm, "cvs_" + bm]]
+ip_ea_methods = [variant + method for variant in ["ip_", "ea_"]
+                 for method in ["adc0", "adc1", "adc2", "adc3"]]
 
 
 @expand_test_templates(methods)
@@ -92,6 +94,15 @@ class Runners():
 
     def test_h2s_6311g_fv_cvs_adc2x_singlets(self):
         self.base_test("h2s_6311g", "fv_cvs_adc2x", "singlet")
+
+
+# @expand_test_templates(ip_ea_methods)
+# class Runners_IP_EA():
+#     def base_test(self, *args, **kwargs):
+#         raise NotImplementedError
+
+#     def template_h2o_sto3g_doublet(self, method):
+#         self.base_test("h2o_sto3g", method, "doublet")
 
 
 # Return combinations not tested so far:
@@ -175,3 +186,6 @@ class TestStateExcitedToExcitedTdm(unittest.TestCase, Runners):
                                            dm_ao_a.to_ndarray(), atol=1e-4)
                 np.testing.assert_allclose(fromi_ref_b[ii],
                                            dm_ao_b.to_ndarray(), atol=1e-4)
+
+x = TestStateGroundToExcitedTdm()
+x.test_h2o_sto3g_fc_adc2_singlets()

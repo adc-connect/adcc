@@ -161,13 +161,11 @@ class TestdataCache():
 
     def read_reference_data(self, refname):
         prefixes = ["", "cvs", "fc", "fv", "fc_cvs",
-                    "fv_cvs", "fc_fv", "fc_fv_cvs"]
+                    "fv_cvs", "fc_fv", "fc_fv_cvs", "ip", "ea"]
         raws = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
         methods = (raws
                    + ["_".join([p, r]) for p in prefixes
-                      for r in raws if p != ""]
-                   + [variant + method for variant in ["ip_", "ea_"]
-                      for method in raws if method != "adc2x"])
+                      for r in raws if p != ""])
 
         ret = {}
         for k in self.testcases:
@@ -192,28 +190,35 @@ class TestdataCache():
     def construct_adc_states(self, refdata):
         """
         Construct a hierachy of dicts, which contains a mock adc state
-        for all test cases, all methods and all kinds (singlet, triplet)
+        for all test cases, all methods and all kinds (singlet, triplet) for PP
+        and doublet for IP/EA
         """
         res = {}
+        raws = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+        methods = (raws + ["_".join([p, r]) for p in ["ip", "ea"]
+                           for r in raws])
         for case in self.testcases:
             if case not in refdata:
                 continue
-            res_case = {}
-            for method in ["adc0", "adc1", "adc2", "adc2x", "adc3"]:
-                if method not in refdata[case]:
-                    continue
-                available_kinds = refdata[case][method]["available_kinds"]
-                res_case[method] = {
-                    kind: make_mock_adc_state(self.refstate[case], method, kind,
-                                              refdata[case][method])
-                    for kind in available_kinds
-                }
+            available_kinds = refdata[case].get("available_kinds", None)
 
-            for method in [variant + method for variant in ["ip_", "ea_"]
-                           for method in ["adc0", "adc1", "adc2", "adc3"]]:
+            # Flag to check 'available_kinds' method dependently if required
+            method_dependent_kinds = True if available_kinds is None else False
+
+            res_case = {}
+            for method in methods:
                 if method not in refdata[case]:
                     continue
-                available_kinds = refdata[case][method]["available_kinds"]
+
+                # adcc ref data has 'available_kinds' within the 'method' key
+                # while normal ref data has it one level higher ('case')
+                # thus, it is tried to first get 'avaialble_kinds' from the
+                # normal ref data and returns 'None' if the key does not exist
+                # and looks up 'available_kinds' for each method individually
+                # if it is still 'None'. Throws 'KeyError' otherwise.
+                if method_dependent_kinds:
+                    available_kinds = refdata[case][method]["available_kinds"]
+
                 res_case[method] = {
                     kind: make_mock_adc_state(self.refstate[case], method, kind,
                                               refdata[case][method])
@@ -224,7 +229,8 @@ class TestdataCache():
                            "cvs-adc2x", "cvs-adc3"]:
                 if method not in refdata[case]:
                     continue
-                available_kinds = refdata[case][method]["available_kinds"]
+                if method_dependent_kinds:
+                    available_kinds = refdata[case][method]["available_kinds"]
                 res_case[method] = {
                     kind: make_mock_adc_state(self.refstate_cvs[case],
                                               method, kind, refdata[case][method])
@@ -246,7 +252,8 @@ class TestdataCache():
                 method = spec + "-" + matmethod
                 if method not in refdata[case]:
                     continue
-                available_kinds = refdata[case][method]["available_kinds"]
+                if method_dependent_kinds:
+                    available_kinds = refdata[case][method]["available_kinds"]
                 res_case[method] = {
                     kind: make_mock_adc_state(
                         self.refstate_nocache(case, fspec), matmethod, kind,

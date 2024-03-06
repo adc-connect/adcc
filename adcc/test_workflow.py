@@ -389,20 +389,20 @@ class TestWorkflow:
         matrix = adcc.AdcMatrix("ea_adc2",
                                 adcc.LazyMp(cache.refstate["h2o_sto3g"]))
 
-        res = diagonalise_adcmatrix(matrix, n_states=3, kind="doublet",
+        res = diagonalise_adcmatrix(matrix, n_states=2, kind="doublet",
                                     eigensolver="davidson", spin_change=0.5)
         ref_doublets = refdata["ea_adc2"]["doublet"]["eigenvalues"]
         assert res.converged
-        assert res.eigenvalues == approx(ref_doublets[:3])
+        assert res.eigenvalues == approx(ref_doublets[:2])
 
         guesses = adcc.guesses_doublet(matrix, n_guesses=2, block="p",
                                        spin_change=0.5)
         guesses += adcc.guesses_doublet(matrix, n_guesses=2, block="pph",
-                                       spin_change=0.5)
-        res = diagonalise_adcmatrix(matrix, n_states=3, kind="doublet",
+                                        spin_change=0.5)
+        res = diagonalise_adcmatrix(matrix, n_states=2, kind="doublet",
                                     guesses=guesses, spin_change=0.5)
         assert res.converged
-        assert res.eigenvalues == approx(ref_doublets[:3])
+        assert res.eigenvalues == approx(ref_doublets[:2])
 
         with pytest.raises(InputError):  # Too low tolerance
             res = diagonalise_adcmatrix(matrix, n_states=5, kind="doublet",

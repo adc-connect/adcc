@@ -33,7 +33,7 @@ import h5py
 
 sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
 
-import adcctestdata as atd  # noqa: E402
+# import adcctestdata as atd  # noqa: E402
 
 
 def dump_all(case, kwargs, kwargs_overwrite={}, spec="gen", generator="adcc"):
@@ -108,7 +108,7 @@ def dump_h2o_sto3g():  # H2O restricted
     dump_method(case, "adc2x", kwargs, spec="fv-cvs")
 
     # IP-ADC
-    base_methods = ["adc0", "adc1", "adc2", "adc3"]
+    base_methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
     kwargs = {"n_doublets": 3}
     for method in base_methods:
         dump_method("h2o_sto3g", "ip_" + method, kwargs, spec="gen")
