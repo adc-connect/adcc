@@ -239,7 +239,7 @@ class ExcitedStates(ElectronicTransition):
                 for evec in self.excitation_vector]
 
     @cached_property
-    @mark_excitation_property(transform_to_ao=True)
+    @mark_excitation_property()
     @timed_member_call(timer="_property_timer")
     def pole_strength(self):
         """List of pole_strengths of all computed states"""
