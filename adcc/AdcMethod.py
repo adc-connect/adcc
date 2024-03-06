@@ -48,7 +48,7 @@ class AdcMethod:
         self.is_core_valence_separated = "cvs" in split
 
         try:
-            if self.__base_method == "adc2x":
+            if self.__base_method in ["adc2x", "ip_adc2x", "ea_adc2x"]:
                 self.level = 2
             else:
                 self.level = int(self.__base_method[-1])
