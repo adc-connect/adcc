@@ -243,11 +243,11 @@ def adc3_ip_i1(hf, mp, intermediates):
 
 @register_as_intermediate
 def adc3_ip_i2(hf, mp, intermediates):
-    return hf.ooov - intermediates.adc3_pia.antisymmetrise(0, 1)
+    return hf.ooov - intermediates.adc3_pia_ip.antisymmetrise(0, 1)
 
 
 @register_as_intermediate
-def adc3_pia(hf, mp, intermediates):
+def adc3_pia_ip(hf, mp, intermediates):
     return (2 * mp.t2eri(b.ooov, b.ov).antisymmetrise(0, 1)
             + 0.5 * mp.t2eri(b.ooov, b.vv))
 

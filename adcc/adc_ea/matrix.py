@@ -228,11 +228,11 @@ def adc3_ea_i1(hf, mp, intermediates):
 
 @register_as_intermediate
 def adc3_ea_i2(hf, mp, intermediates):
-    return - hf.ovvv - intermediates.adc3_pib.antisymmetrise(2, 3)
+    return - hf.ovvv - intermediates.adc3_pib_ea.antisymmetrise(2, 3)
 
 
 @register_as_intermediate
-def adc3_pib(hf, mp, intermediates):
+def adc3_pib_ea(hf, mp, intermediates):
     return (2 * mp.t2eri(b.ovvv, b.ov).antisymmetrise(2, 3)
             - 0.5 * mp.t2eri(b.ovvv, b.oo))
 
