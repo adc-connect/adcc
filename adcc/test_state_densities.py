@@ -26,7 +26,7 @@ import numpy as np
 from adcc.State2States import State2States
 from adcc.testdata.cache import cache
 
-from misc import expand_test_templates
+from .misc import expand_test_templates
 from pytest import approx, skip
 
 # The methods to test
@@ -214,7 +214,6 @@ class TestStateExcitedToExcitedTdmIpEa(unittest.TestCase, Runners_IP_EA):
         state = cache.adcc_states[system][method][kind]
         state_to_state = refdata[method][kind]["state_to_state"]
         refevals = refdata[method][kind]["eigenvalues"]
-
 
         for i, exci in enumerate(state.excitations):
             # Check that we are talking about the same state when
