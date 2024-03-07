@@ -42,7 +42,7 @@ class TestExcitationView(unittest.TestCase, Runners):
                 if key.startswith("_"):
                     continue
                 blacklist = ["__", "index", "_ao", "excitation_vector",
-                             "method", "parent_state"]
+                             "method", "parent_state", "pole_strength"]
                 if any(b in key for b in blacklist):
                     continue
                 try:
@@ -96,6 +96,9 @@ class TestCustomExcitationEnergyCorrections(unittest.TestCase, Runners):
             corr = state.excitation_energy[i] ** 2 + 2.0 - 42.0
             assert_allclose(state.excitation_energy[i] + corr,
                             state_corrected2.excitation_energy[i])
+
+        # Make this a PP test only, so 'is_alpha = None' for 'describe()'
+        state_corrected2.is_alpha = None
         state_corrected2.describe()
 
 
