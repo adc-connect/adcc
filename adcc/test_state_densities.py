@@ -104,6 +104,9 @@ class Runners_IP_EA():
     def template_h2o_sto3g_doublet(self, method):
         self.base_test("h2o_sto3g", method, "doublet")
 
+    def template_cn_sto3g(self, method):
+        self.base_test("cn_sto3g", method, "any")
+
 
 # Return combinations not tested so far:
 #     The rationale is that cvs-spin-flip as a method do not make
@@ -220,7 +223,8 @@ class TestStateExcitedToExcitedTdmIpEa(unittest.TestCase, Runners_IP_EA):
             # comparing reference and computed
 
             # Stop if s2s objects are exhausted
-            # (necessary since h2o_sto3g ea_adc0/1 calc. only yield 2 excs.)
+            # (necessary since EA-ADC(0/1) calculations have very few states,
+            # especially with minimal bases)
             if i >= len(state_to_state):
                 return None
 

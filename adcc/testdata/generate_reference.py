@@ -111,12 +111,12 @@ def dump_h2o_sto3g():  # H2O restricted
     base_methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
     kwargs = {"n_doublets": 3}
     for method in base_methods:
-        dump_method("h2o_sto3g", "ip_" + method, kwargs, spec="gen")
+        dump_method(case, "ip_" + method, kwargs, spec="gen")
 
     # EA-ADC
     kwargs = {"n_doublets": 2}
     for method in base_methods:
-        dump_method("h2o_sto3g", "ea_" + method, kwargs, spec="gen")
+        dump_method(case, "ea_" + method, kwargs, spec="gen")
 
 
 def dump_h2o_def2tzvp():  # H2O restricted
@@ -138,6 +138,19 @@ def dump_cn_sto3g():  # CN unrestricted
                                "max_subspace": 30}, spec="fc-fv")
     dump_method(case, "adc2x", {"n_states": 4, "n_guess_singles": 8}, spec="fv")
     dump_method(case, "adc2x", {"n_states": 4}, spec="fv-cvs")
+
+    # IP-ADC
+    base_methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+    kwargs1 = {"n_states": 3}
+    kwargs2 = {"n_states": 3, "is_alpha": False}
+    for method in base_methods:
+        dump_method(case, "ip_" + method, kwargs1, spec="gen")
+        dump_method(case, "ip_" + method, kwargs2, spec="gen")
+
+    # EA-ADC
+    for method in base_methods:
+        dump_method(case, "ea_" + method, kwargs1, spec="gen")
+        dump_method(case, "ea_" + method, kwargs2, spec="gen")
 
 
 def dump_cn_ccpvdz():  # CN unrestricted
