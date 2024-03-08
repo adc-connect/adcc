@@ -43,7 +43,7 @@ def dump_all(case, kwargs, kwargs_overwrite={}, spec="gen", generator="adcc"):
         dump_method(case, method, kw, spec, generator=generator)
 
 
-def dump_method(case, method, kwargs, spec, generator="adcc"):
+def dump_method(case, method, kwargs, spec, generator="adcc", is_alpha=None):
     h5file = case + "_hfdata.hdf5"
     if not os.path.isfile(h5file):
         raise ValueError("HfData not found: " + h5file)
@@ -70,6 +70,10 @@ def dump_method(case, method, kwargs, spec, generator="adcc"):
     prefix = ""
     if spec != "gen":
         prefix = spec.replace("-", "_") + "_"
+
+    # For unrestricted IP/EA ref. data, generate one alpha and one beta file
+    if is_alpha is not None:
+        prefix += "alpha_" if is_alpha else "beta_"
     adc_tree = prefix.replace("_", "-") + method
     mp_tree = prefix.replace("_", "-") + "mp"
 
@@ -141,16 +145,16 @@ def dump_cn_sto3g():  # CN unrestricted
 
     # IP-ADC
     base_methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
-    kwargs1 = {"n_states": 3}
+    kwargs1 = {"n_states": 3, "is_alpha": True}
     kwargs2 = {"n_states": 3, "is_alpha": False}
     for method in base_methods:
-        dump_method(case, "ip_" + method, kwargs1, spec="gen")
-        dump_method(case, "ip_" + method, kwargs2, spec="gen")
+        dump_method(case, "ip_" + method, kwargs1, spec="gen", is_alpha=True)
+        dump_method(case, "ip_" + method, kwargs2, spec="gen", is_alpha=False)
 
     # EA-ADC
     for method in base_methods:
-        dump_method(case, "ea_" + method, kwargs1, spec="gen")
-        dump_method(case, "ea_" + method, kwargs2, spec="gen")
+        dump_method(case, "ea_" + method, kwargs1, spec="gen", is_alpha=True)
+        dump_method(case, "ea_" + method, kwargs2, spec="gen", is_alpha=False)
 
 
 def dump_cn_ccpvdz():  # CN unrestricted

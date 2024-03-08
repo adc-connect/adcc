@@ -167,6 +167,7 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
         dm_bb_b = []
         tdm_bb_a = []
         tdm_bb_b = []
+        pole_strengths = []
         eigenvectors_singles = []
         eigenvectors_doubles = []
         n_states = state.excitation_energy.size
@@ -216,6 +217,12 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
                 state.transition_dipole_moment_velocity
             adc[kind + "/transition_magnetic_dipole_moments"] = \
                 state.transition_magnetic_dipole_moment
+
+        # Properties that ore only implemented for IP/EA-ADC
+        # Pole strengths for IP/EA-ADC(2x) are not (yet) implemented
+        else:
+            if "adc2x" not in method:
+                adc[kind + "/pole_strengths"] = state.pole_strength
 
         if eigenvectors_doubles:  # For ADC(0) and ADC(1) there are no doubles
             adc.create_dataset(kind + "/eigenvectors_doubles",

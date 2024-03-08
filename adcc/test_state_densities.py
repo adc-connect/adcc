@@ -26,7 +26,7 @@ import numpy as np
 from adcc.State2States import State2States
 from adcc.testdata.cache import cache
 
-from .misc import expand_test_templates
+from misc import expand_test_templates
 from pytest import approx, skip
 
 # The methods to test
@@ -104,8 +104,11 @@ class Runners_IP_EA():
     def template_h2o_sto3g_doublet(self, method):
         self.base_test("h2o_sto3g", method, "doublet")
 
-    def template_cn_sto3g(self, method):
-        self.base_test("cn_sto3g", method, "any")
+    def template_cn_sto3g_alpha(self, method):
+        self.base_test("cn_sto3g", "alpha-" + method, "any")
+
+    def template_cn_sto3g_beta(self, method):
+        self.base_test("cn_sto3g", "beta-" + method, "any")
 
 
 # Return combinations not tested so far:

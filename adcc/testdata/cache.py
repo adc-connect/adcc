@@ -160,8 +160,10 @@ class TestdataCache():
         return ret
 
     def read_reference_data(self, refname):
-        prefixes = ["", "cvs", "fc", "fv", "fc_cvs",
-                    "fv_cvs", "fc_fv", "fc_fv_cvs", "ip", "ea"]
+        prefixes = (["", "cvs", "fc", "fv", "fc_cvs",
+                    "fv_cvs", "fc_fv", "fc_fv_cvs"]
+                    + [s + var for s in ["", "alpha_", "beta_"]
+                       for var in ["ip", "ea"]])
         raws = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
         methods = (raws
                    + ["_".join([p, r]) for p in prefixes
@@ -195,8 +197,8 @@ class TestdataCache():
         """
         res = {}
         raws = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
-        methods = (raws + ["_".join([p, r]) for p in ["ip", "ea"]
-                           for r in raws])
+        ip_ea_methods = ["_".join([p, r]) for p in ["ip", "ea"] for r in raws]
+        methods = raws + ip_ea_methods
         for case in self.testcases:
             if case not in refdata:
                 continue
@@ -236,6 +238,22 @@ class TestdataCache():
                                               method, kind, refdata[case][method])
                     for kind in available_kinds
                 }
+
+            for matmethod in ip_ea_methods:
+                for spin in ["alpha-", "beta-"]:
+                    method = spin + matmethod
+                    if method not in refdata[case]:
+                        continue
+
+                    available_kinds = refdata[case][method]["available_kinds"]
+
+                    res_case[method] = {
+                        kind: make_mock_adc_state(self.refstate[case],
+                                                  matmethod, kind,
+                                                  refdata[case][method])
+                        for kind in available_kinds
+                    }
+
 
             other_methods = [(spec, cvs, basemethod) for spec in ["fc", "fv"]
                              for cvs in ["", "cvs"]
