@@ -26,7 +26,7 @@ import numpy as np
 from adcc.State2States import State2States
 from adcc.testdata.cache import cache
 
-from misc import expand_test_templates
+from .misc import expand_test_templates
 from pytest import approx, skip
 
 # The methods to test

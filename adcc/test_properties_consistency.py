@@ -26,7 +26,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 from adcc.testdata.cache import cache
 
-from test_state_densities import Runners, Runners_IP_EA
+from .test_state_densities import Runners, Runners_IP_EA
 import pytest
 
 
