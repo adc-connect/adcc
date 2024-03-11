@@ -173,7 +173,8 @@ def block_phh_h_1(hf, mp, intermediates):
 #
 def block_h_h_2(hf, mp, intermediates):
     # M_{11}
-    i1 = intermediates.adc2_ip_i1
+    # Intermediate can be cound in adc_pp/matrix.py
+    i1 = - intermediates.adc2_i2
     diagonal = AmplitudeVector(h=i1.diagonal())
 
     def apply(ampl):
@@ -186,7 +187,8 @@ def block_h_h_2(hf, mp, intermediates):
 #
 def block_h_phh_2(hf, mp, intermediates):
     # M_{12}
-    i2 = intermediates.adc3_ip_i2
+    # Intermediate can be cound in adc_pp/matrix.py
+    i2 = intermediates.adc3_pia
 
     def apply(ampl):
         return AmplitudeVector(h=(
@@ -196,7 +198,8 @@ def block_h_phh_2(hf, mp, intermediates):
 
 def block_phh_h_2(hf, mp, intermediates):
     # M_{21}
-    i2 = intermediates.adc3_ip_i2
+    # Intermediate can be cound in adc_pp/matrix.py
+    i2 = intermediates.adc3_pia
 
     def apply(ampl):
         return AmplitudeVector(phh=(
@@ -222,12 +225,6 @@ def block_h_h_3(hf, mp, intermediates):
 #
 
 @register_as_intermediate
-def adc2_ip_i1(hf, mp, intermediates):
-    return - hf.foo + 0.5 * einsum("ikab,jkab->ij",
-                                   mp.t2oo, hf.oovv).symmetrise()
-
-
-@register_as_intermediate
 def adc3_ip_i1(hf, mp, intermediates):
     return (
         - hf.foo + (
@@ -239,17 +236,6 @@ def adc3_ip_i1(hf, mp, intermediates):
         ).symmetrise()
         - intermediates.sigma_oo
     )
-
-
-@register_as_intermediate
-def adc3_ip_i2(hf, mp, intermediates):
-    return hf.ooov - intermediates.adc3_pia_ip.antisymmetrise(0, 1)
-
-
-@register_as_intermediate
-def adc3_pia_ip(hf, mp, intermediates):
-    return (2 * mp.t2eri(b.ooov, b.ov).antisymmetrise(0, 1)
-            + 0.5 * mp.t2eri(b.ooov, b.vv))
 
 
 @register_as_intermediate
