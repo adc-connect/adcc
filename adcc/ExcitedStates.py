@@ -537,8 +537,17 @@ class ExcitedStates(ElectronicTransition):
         as excitation property with :func:`mark_excitation_property`.
         """
         ret = []
+        blacklist = ["excitations"]
+        if self.matrix.type == "pp":
+            blacklist.append("pole_strength")
+        else:
+            blacklist.append("transition_dipole_moment",
+                             "transition_dipole_moment_velocity",
+                             "oscillator_strength",
+                             "oscillator_strength_velocity",
+                             "rotatory_strength")
         for key in dir(self):
-            if key == "excitations":
+            if key in blacklist:
                 continue
             if "__" in key or key.startswith("_"):
                 continue  # skip "private" fields
@@ -570,7 +579,7 @@ class ExcitedStates(ElectronicTransition):
                 # IP- or EA-ADC
                 qcvars.update({
                     # Transition properties
-                    f"{name} POLE STRENGTHS (LEN)": self.pole_strengths,
+                    f"{name} POLE STRENGTHS (LEN)": self.pole_strength,
                     #
                     # State properties
                     f"{name} STATE DIPOLES": self.state_dipole_moment
