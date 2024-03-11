@@ -541,11 +541,11 @@ class ExcitedStates(ElectronicTransition):
         if self.matrix.type == "pp":
             blacklist.append("pole_strength")
         else:
-            blacklist.append("transition_dipole_moment",
-                             "transition_dipole_moment_velocity",
-                             "oscillator_strength",
-                             "oscillator_strength_velocity",
-                             "rotatory_strength")
+            blacklist.extend(["transition_dipole_moment",
+                              "transition_dipole_moment_velocity",
+                              "oscillator_strength",
+                              "oscillator_strength_velocity",
+                              "rotatory_strength"])
         for key in dir(self):
             if key in blacklist:
                 continue

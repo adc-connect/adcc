@@ -33,7 +33,7 @@ from pytest import approx, skip
 basemethods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 methods = [m for bm in basemethods for m in [bm, "cvs_" + bm]]
 ip_ea_methods = [variant + method for variant in ["ip_", "ea_"]
-                 for method in ["adc0", "adc1", "adc2", "adc3"]]
+                 for method in ["adc0", "adc1", "adc2", "adc2x", "adc3"]]
 
 
 @expand_test_templates(methods)
