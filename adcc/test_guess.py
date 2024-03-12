@@ -509,3 +509,431 @@ class TestGuess(unittest.TestCase):
                  [0.5, -0.5, -0.5, 0.5]),
             ],
         }
+
+
+@expand_test_templates(methods)
+class TestGuessIpEa(unittest.TestCase):
+    def assert_symmetry_ip_ea(self, matrix, guess, block, is_alpha=True):
+        """
+        Assert a guess vector has the correct symmetry.
+        Alpha ionization/electron attachment is assumed if the reference is
+        restricted.
+        For an alpha attachment/detachment, all corresponding beta blocks
+        should be unpopulated and vice versa.
+        """
+        # Extract useful quantities
+        mospaces = matrix.mospaces
+        noa = mospaces.n_orbs_alpha("o1")
+        nob = mospaces.n_orbs_beta("o1")
+        nva = mospaces.n_orbs_alpha("v1")
+        nvb = mospaces.n_orbs_beta("v1")
+        blocks = sorted(guess.keys())
+        assert blocks[0] in ["p", "h"]
+        if len(blocks) == 2:
+            assert blocks[1] in ["pph", "phh"]
+        is_ip = matrix.type == "ip"
+
+        # Singles
+        gts = guess.get(blocks[0]).to_ndarray()
+        gts_shape = (noa + nob,) if is_ip else (nva + nvb,)
+        assert gts.shape == gts_shape
+        if is_ip:
+            if is_alpha:
+                assert np.max(np.abs(gts[noa:])) == 0
+            else:
+                assert np.max(np.abs(gts[:noa])) == 0
+        # EA-ADC
+        else:
+            if is_alpha:
+                assert np.max(np.abs(gts[nva:])) == 0
+            else:
+                assert np.max(np.abs(gts[:nva])) == 0
+
+        # Doubles
+        if len(blocks) != 2:
+            return
+
+        gtd = guess.get(blocks[1]).to_ndarray()
+        if is_ip:
+            gtd_shape = (noa + nob, noa + nob, nva + nvb)
+        # EA-ADC
+        else:
+            gtd_shape = (noa + nob, nva + nvb, nva + nvb)
+        assert gtd.shape == gtd_shape
+
+        # Make sure the wrong attached/detached spins are unpopulated
+        if is_ip:
+            if is_alpha:
+                assert np.max(np.abs(gtd[:noa, noa:, :nva])) == 0  # ab->a
+                assert np.max(np.abs(gtd[noa:, :noa, :nva])) == 0  # ba->a
+                assert np.max(np.abs(gtd[noa:, noa:, nva:])) == 0  # bb->b
+                assert np.max(np.abs(gtd[noa:, noa:, :nva])) == 0  # bb->a
+            else:
+                assert np.max(np.abs(gtd[:noa, noa:, nva:])) == 0  # ab->b
+                assert np.max(np.abs(gtd[noa:, :noa, nva:])) == 0  # ba->b
+                assert np.max(np.abs(gtd[:noa, :noa, :nva])) == 0  # aa->a
+                assert np.max(np.abs(gtd[:noa, :noa, nva:])) == 0  # aa->b
+
+        # EA-ADC
+        else:
+            if is_alpha:
+                assert np.max(np.abs(gtd[:noa, :nva, nva:])) == 0  # a->ab
+                assert np.max(np.abs(gtd[:noa, nva:, :nva])) == 0  # a->ba
+                assert np.max(np.abs(gtd[noa:, nva:, nva:])) == 0  # b->bb
+                assert np.max(np.abs(gtd[:noa, nva:, nva:])) == 0  # a->bb
+            else:
+                assert np.max(np.abs(gtd[noa:, :nva, nva:])) == 0  # b->ab
+                assert np.max(np.abs(gtd[noa:, nva:, :nva])) == 0  # b->ba
+                assert np.max(np.abs(gtd[:noa, :nva, :nva])) == 0  # a->aa
+                assert np.max(np.abs(gtd[noa:, :nva, :nva])) == 0  # b->aa
+
+        if matrix.reference_state.restricted:
+            # Restricted automatically means alpha ionization/electron
+            # attachment. Additionally forbid spin-flip blocks with right spin.
+            if is_ip:
+                assert np.max(np.abs(gtd[:noa, :noa, nva:])) == 0  # aa->b
+            # EA-ADC
+            else:
+                assert np.max(np.abs(gtd[:noa, nva:, nva:])) == 0  # a->bb
+
+        if is_ip:
+            assert_array_equal(gtd.transpose((1, 0, 2)), -gtd)
+        else:
+            assert_array_equal(gtd.transpose((0, 2, 1)), -gtd)
+
+        if block in ["h", "p"]:
+            if is_ip:
+                if is_alpha:
+                    assert np.max(np.abs(gtd[:noa, noa:, nva:])) == 0  # ab->b
+                    assert np.max(np.abs(gtd[noa:, :noa, nva:])) == 0  # ba->b
+                    assert np.max(np.abs(gtd[:noa, :noa, :nva])) == 0  # aa->a
+
+                    assert np.max(np.abs(gts[:noa])) > 0  # has_alpha
+                else:
+                    assert np.max(np.abs(gtd[:noa, noa:, :nva])) == 0  # ab->a
+                    assert np.max(np.abs(gtd[noa:, :noa, :nva])) == 0  # ba->a
+                    assert np.max(np.abs(gtd[noa:, noa:, nva:])) == 0  # bb->b
+
+                    assert np.max(np.abs(gts[noa:])) > 0  # has_beta
+            # EA-ADC
+            else:
+                if is_alpha:
+                    assert np.max(np.abs(gtd[noa:, :nva, nva:])) == 0  # b->ab
+                    assert np.max(np.abs(gtd[noa:, nva:, :nva])) == 0  # b->ba
+                    assert np.max(np.abs(gtd[:noa, :nva, :nva])) == 0  # a->aa
+
+                    assert np.max(np.abs(gts[:nva])) > 0  # has_alpha
+                else:
+                    assert np.max(np.abs(gtd[:noa, :nva, nva:])) == 0  # a->ab
+                    assert np.max(np.abs(gtd[:noa, nva:, :nva])) == 0  # a->ba
+                    assert np.max(np.abs(gtd[noa:, nva:, nva:])) == 0  # b->bb
+
+                    assert np.max(np.abs(gts[nva:])) > 0  # has_beta
+
+        elif block in ["pph", "phh"]:
+            if is_ip:
+                if is_alpha:
+                    assert np.max(np.abs(gts[:noa])) == 0
+                    has_aaa = np.max(np.abs(gtd[:noa, :noa, :nva])) > 0
+                    has_abb = np.max(np.abs(gtd[:noa, noa:, nva:])) > 0
+                    has_bab = np.max(np.abs(gtd[noa:, :noa, nva:])) > 0
+                    assert has_aaa or has_abb or has_bab
+                else:
+                    assert np.max(np.abs(gts[noa:])) == 0
+                    has_aba = np.max(np.abs(gtd[:noa, noa:, :nva])) > 0
+                    has_baa = np.max(np.abs(gtd[noa:, :noa, :nva])) > 0
+                    has_bbb = np.max(np.abs(gtd[noa:, noa:, nva:])) > 0
+                    assert has_aba or has_baa or has_bbb
+            # EA-ADC
+            else:
+                if is_alpha:
+                    assert np.max(np.abs(gts[:nva])) == 0
+                    has_aaa = np.max(np.abs(gtd[:noa, :nva, :nva])) > 0
+                    has_bab = np.max(np.abs(gtd[noa:, :nva, nva:])) > 0
+                    has_bba = np.max(np.abs(gtd[noa:, nva:, :nva])) > 0
+                    assert has_aaa or has_bab or has_bba
+                else:
+                    assert np.max(np.abs(gts[nva:])) == 0
+                    has_aab = np.max(np.abs(gtd[:noa, :nva, nva:])) > 0
+                    has_aba = np.max(np.abs(gtd[:noa, nva:, :nva])) > 0
+                    has_bbb = np.max(np.abs(gtd[noa:, nva:, nva:])) > 0
+                    assert has_aab or has_aba or has_bbb
+
+    def assert_orthonormal(self, guesses):
+        for (i, gi) in enumerate(guesses):
+            for (j, gj) in enumerate(guesses):
+                ref = 1 if i == j else 0
+                assert adcc.dot(gi, gj) == approx(ref)
+
+    def assert_guess_values(self, matrix, block, guesses, is_alpha):
+        """
+        Assert that the guesses correspond to the smallest
+        diagonal values.
+        """
+        # Extract useful quantities
+        mospaces = matrix.mospaces
+        noa = mospaces.n_orbs_alpha("o1")
+        nva = mospaces.n_orbs_alpha("v1")
+
+        # Make a list of diagonal indices, ordered by the corresponding
+        # diagonal values
+        sidcs = None
+        diagonal = matrix.diagonal().get(block).to_ndarray()
+        # Build list of indices, which would sort the diagonal
+        sidcs = np.dstack(np.unravel_index(np.argsort(diagonal.ravel()),
+                                           diagonal.shape))
+        assert sidcs.shape[0] == 1
+
+        if block == "h":
+            # IP-ADC singles
+            if is_alpha:
+                sidcs = [idx for idx in sidcs[0] if idx[0] < noa]
+            else:
+                sidcs = [idx for idx in sidcs[0] if idx[0] >= noa]
+        elif block == "p":
+            # EA-ADC singles
+            if is_alpha:
+                sidcs = [idx for idx in sidcs[0] if idx[0] < nva]
+            else:
+                sidcs = [idx for idx in sidcs[0] if idx[0] >= nva]
+        elif block == "phh":
+            # IP-ADC doubles
+            if is_alpha:
+                sidcs = [idx for idx in sidcs[0] if any(
+                    (idx[0]  < noa and idx[1]  < noa and idx[2]  < nva,
+                     idx[0]  < noa and idx[1] >= noa and idx[2] >= nva,
+                     idx[0] >= noa and idx[1]  < noa and idx[2] >= nva))]
+            else:
+                sidcs = [idx for idx in sidcs[0] if any(
+                    (idx[0]  < noa and idx[1] >= noa and idx[2]  < nva,
+                     idx[0] >= noa and idx[1]  < noa and idx[2]  < nva,
+                     idx[0] >= noa and idx[1] >= noa and idx[2] >= nva))]
+            sidcs = [idx for idx in sidcs if idx[0] != idx[1]]
+        elif block == "pph":
+            # EA-ADC doubles
+            if is_alpha:
+                sidcs = [idx for idx in sidcs[0] if any(
+                    (idx[0]  < noa and idx[1]  < nva and idx[2]  < nva,
+                     idx[0] >= noa and idx[1]  < nva and idx[2] >= nva,
+                     idx[0] >= noa and idx[1] >= nva and idx[2]  < nva))]
+            else:
+                sidcs = [idx for idx in sidcs[0] if any(
+                    (idx[0]  < noa and idx[1]  < nva and idx[2] >= nva,
+                     idx[0]  < noa and idx[1] >= nva and idx[2]  < nva,
+                     idx[0] >= noa and idx[1] >= nva and idx[2] >= nva))]
+            sidcs = [idx for idx in sidcs if idx[1] != idx[2]]
+
+        # Group the indices by corresponding diagonal value
+        def grouping(x):
+            return np.round(diagonal[tuple(x)], decimals=12)
+        gidcs = [[tuple(gitem) for gitem in group]
+                 for key, group in itertools.groupby(sidcs, grouping)]
+        igroup = 0  # The current diagonal value group we are in
+        for (i, guess) in enumerate(guesses):
+            # Extract indices of non-zero elements
+            nonzeros = np.dstack(np.where(guess[block].to_ndarray() != 0))
+            assert nonzeros.shape[0] == 1
+            nonzeros = [tuple(nzitem) for nzitem in nonzeros[0]]
+            if i > 0 and igroup + 1 < len(gidcs):
+                if nonzeros[0] in gidcs[igroup + 1]:
+                    igroup += 1
+            for nz in nonzeros:
+                assert nz in gidcs[igroup]
+
+    def base_test_ip_ea(self, case, method, block, is_alpha, max_guesses=3):
+        ground_state = adcc.LazyMp(cache.refstate[case])
+        matmethod = method.split("-")[-1]
+        matrix = adcc.AdcMatrix(matmethod, ground_state)
+
+        is_ip = "ip" in method
+        # Only spin changes of +- 0.5
+        spin_change = -0.5 if is_ip else +0.5
+        if not is_alpha:
+            spin_change *= -1
+
+        for n_guesses in range(1, max_guesses + 1):
+            guesses = adcc.guess.guesses_from_diagonal(
+                matrix, n_guesses, block=block, spin_change=spin_change,
+                spin_block_symmetrisation="none"
+            )
+            assert len(guesses) == n_guesses
+            for gs in guesses:
+                self.assert_symmetry_ip_ea(matrix, gs, block, is_alpha)
+            self.assert_orthonormal(guesses)
+            self.assert_guess_values(matrix, block, guesses, is_alpha)
+
+    def template_singles_h2o_ip_alpha(self, method):
+        self.base_test_ip_ea("h2o_sto3g", "ip_" + method, "h", True)
+
+    def template_singles_h2o_ea_alpha(self, method):
+        self.base_test_ip_ea("h2o_sto3g", "ea_" + method, "p", True,
+                             max_guesses=2)
+
+    def template_singles_cn_ip_alpha(self, method):
+        self.base_test_ip_ea("cn_sto3g", "alpha-ip_" + method, "h", True)
+
+    def template_singles_cn_ip_beta(self, method):
+        self.base_test_ip_ea("cn_sto3g", "beta-ip_" + method, "h", False)
+
+    def template_singles_cn_ea_alpha(self, method):
+        self.base_test_ip_ea("cn_sto3g", "alpha-ea_" + method, "p", True)
+
+    def template_singles_cn_ea_beta(self, method):
+        self.base_test_ip_ea("cn_sto3g", "beta-ea_" + method, "p", False)
+
+    #
+    # Tests against reference values
+    #
+    def base_reference(self, matrix, ref, is_alpha=True):
+        is_ip = matrix.type == "ip"
+        # Only spin changes of +- 0.5
+        spin_change = -0.5 if is_ip else +0.5
+        if not is_alpha:
+            spin_change *= -1
+        for block in matrix.axis_blocks:
+            ref_sb = ref[(block, is_alpha)]
+            guesses = adcc.guess.guesses_from_diagonal(
+                matrix, len(ref_sb), block, spin_change=spin_change,
+                spin_block_symmetrisation="none"
+            )
+            assert len(guesses) == len(ref_sb)
+            for gs in guesses:
+                self.assert_symmetry_ip_ea(matrix, gs, block, is_alpha)
+            self.assert_orthonormal(guesses)
+
+            for (i, guess) in enumerate(guesses):
+                guess_b = guess[block].to_ndarray()
+                nonzeros = np.dstack(np.where(guess_b != 0))
+                assert nonzeros.shape[0] == 1
+                nonzeros = [tuple(nzitem) for nzitem in nonzeros[0]]
+                values = guess_b[guess_b != 0]
+                assert nonzeros == ref_sb[i][0]
+                assert_array_equal(values, np.array(ref_sb[i][1]))
+
+    def test_reference_h2o_ip_adc2(self):
+        ground_state = adcc.LazyMp(cache.refstate["h2o_sto3g"])
+        matrix = adcc.AdcMatrix("ip_adc2", ground_state)
+        self.base_reference(matrix, self.get_ref_h2o_ip_ea())
+
+    def test_reference_h2o_ea_adc3(self):
+        ground_state = adcc.LazyMp(cache.refstate["h2o_sto3g"])
+        matrix = adcc.AdcMatrix("ea_adc3", ground_state)
+        self.base_reference(matrix, self.get_ref_h2o_ip_ea())
+
+    def test_reference_cn_ip_adc2_alpha(self):
+        ground_state = adcc.LazyMp(cache.refstate["cn_sto3g"])
+        matrix = adcc.AdcMatrix("ip_adc2", ground_state)
+        self.base_reference(matrix, self.get_ref_cn_ip_ea())
+
+    def test_reference_cn_ip_adc3_beta(self):
+        ground_state = adcc.LazyMp(cache.refstate["cn_sto3g"])
+        matrix = adcc.AdcMatrix("ip_adc2", ground_state)
+        self.base_reference(matrix, self.get_ref_cn_ip_ea(), False)
+
+    def test_reference_cn_ea_adc2_alpha(self):
+        ground_state = adcc.LazyMp(cache.refstate["cn_sto3g"])
+        matrix = adcc.AdcMatrix("ea_adc2", ground_state)
+        self.base_reference(matrix, self.get_ref_cn_ip_ea())
+
+    def test_reference_cn_ea_adc3_beta(self):
+        ground_state = adcc.LazyMp(cache.refstate["cn_sto3g"])
+        matrix = adcc.AdcMatrix("ea_adc3", ground_state)
+        self.base_reference(matrix, self.get_ref_cn_ip_ea(), False)
+
+    def get_ref_h2o_ip_ea(self):
+        sq6 = 1 / np.sqrt(6)
+        asymm = [1 / np.sqrt(2), -1 / np.sqrt(2)]
+        return {
+            ("h", True): [
+                ([(4, )], [1]),
+                ([(3, )], [1]),
+                ([(2, )], [1]),
+                ([(1, )], [1]),
+                ([(0, )], [1])
+            ],
+            ("p", True): [
+                ([(0, )], [1]),
+                ([(1, )], [1])
+            ],
+            ("phh", True): [
+                ([(4, 9, 2), (9, 4, 2)], asymm),
+                ([(3, 4, 0), (3, 9, 2), (4, 3, 0),
+                  (4, 8, 2), (8, 4, 2), (9, 3, 2)],
+                 [-sq6, -sq6, sq6, -sq6, sq6, sq6]),
+                ([(3, 8, 2), (8, 3, 2)], asymm),
+                ([(4, 9, 3), (9, 4, 3)], asymm),
+                ([(3, 4, 1), (3, 9, 3), (4, 3, 1),
+                  (4, 8, 3), (8, 4, 3), (9, 3, 3)],
+                 [-sq6, -sq6, sq6, -sq6, sq6, sq6])
+            ],
+            ("pph", True): [
+                ([(9, 0, 2), (9, 2, 0)], asymm),
+                ([(8, 0, 2), (8, 2, 0)], asymm),
+                ([(4, 0, 1), (4, 1, 0), (9, 0, 3),
+                  (9, 1, 2), (9, 2, 1), (9, 3, 0)],
+                 [-sq6, sq6, -sq6, -sq6, sq6, sq6]),
+                ([(3, 0, 1), (3, 1, 0), (8, 0, 3),
+                  (8, 1, 2), (8, 2, 1), (8, 3, 0)],
+                 [-sq6, sq6, -sq6, -sq6, sq6, sq6]),
+                ([(7, 0, 2), (7, 2, 0)], asymm)
+            ],
+        }
+
+    def get_ref_cn_ip_ea(self):
+        asymm = [1 / np.sqrt(2), -1 / np.sqrt(2)]
+        asymm1 = [-1 / np.sqrt(2), 1 / np.sqrt(2)]
+        return {
+            ("h", True): [
+                ([(6, )], [1]),
+                ([(4, )], [1]),  # occ. 4 and 5 are degenerate
+                ([(5, )], [1]),  # occ. 4 and 5 are degenerate
+                ([(3, )], [1]),
+                ([(2, )], [1])
+            ],
+            ("h", False): [
+                ([(11, )], [1]),
+                ([(12, )], [1]),
+                ([(10, )], [1]),
+                ([(9, )],  [1]),
+                ([(8, )],  [1])
+            ],
+            ("p", True): [
+                ([(0, )], [1]),
+                ([(1, )], [1]),
+                ([(2, )], [1])
+            ],
+            ("p", False): [
+                ([(3, )], [1]),
+                ([(4, )], [1]),
+                ([(5, )], [1]),
+                ([(6, )], [1])
+            ],
+            ("phh", True): [
+                ([(6, 11, 3), (11, 6, 3)], asymm1),
+                ([(6, 12, 3), (12, 6, 3)], asymm1),
+                ([(4, 11, 3), (11, 4, 3)], asymm),
+                ([(4, 12, 3), (12, 4, 3)], asymm),
+                ([(5, 11, 3), (11, 5, 3)], asymm1)
+            ],
+            ("phh", False): [
+                ([(11, 12, 3), (12, 11, 3)], asymm),
+                ([(10, 11, 3), (11, 10, 3)], asymm),
+                ([(10, 12, 3), (12, 10, 3)], asymm),
+                ([(6, 11, 0), (11, 6, 0)], asymm1),
+                ([(6, 12, 0), (12, 6, 0)], asymm1)
+            ],
+            ("pph", True): [
+                ([(11, 0, 3), (11, 3, 0)], asymm),
+                ([(12, 0, 3), (12, 3, 0)], asymm),
+                ([(11, 1, 3), (11, 3, 1)], asymm1),
+                ([(12, 1, 3), (12, 3, 1)], asymm1),
+                ([(10, 0, 3), (10, 3, 0)], asymm)
+            ],
+            ("pph", False): [
+                ([(6, 0, 3), (6, 3, 0)], asymm),
+                ([(6, 1, 3), (6, 3, 1)], asymm1),
+                ([(4, 0, 3), (4, 3, 0)], asymm),  # occ. 4 and 5 are degenerate
+                ([(5, 0, 3), (5, 3, 0)], asymm),  # occ. 4 and 5 are degenerate
+                ([(4, 1, 3), (4, 3, 1)], asymm1)
+            ],
+        }
