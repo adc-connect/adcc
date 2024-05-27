@@ -531,7 +531,7 @@ class TestWorkflow:
             obtain_guesses_by_inspection(matrix1, n_guesses=2, kind="any",
                                          n_guesses_doubles=2, spin_change=-0.5)
 
-    def test_obtain_guesses_by_inspection_ep(self):
+    def test_obtain_guesses_by_inspection_ea(self):
         from adcc.workflow import obtain_guesses_by_inspection
 
         refstate = cache.refstate["h2o_sto3g"]
