@@ -36,14 +36,14 @@ sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
 import adcctestdata as atd  # noqa: E402
 
 
-def dump_all(case, kwargs, kwargs_overwrite={}, spec="gen", generator="atd"):
+def dump_all(case, kwargs, kwargs_overwrite={}, spec="gen", generator="adcc"):
     assert spec in ["gen", "cvs"]
     for method in ["adc0", "adc1", "adc2", "adc2x", "adc3"]:
         kw = kwargs_overwrite.get(method, kwargs)
         dump_method(case, method, kw, spec, generator=generator)
 
 
-def dump_method(case, method, kwargs, spec, generator="atd"):
+def dump_method(case, method, kwargs, spec, generator="adcc"):
     h5file = case + "_hfdata.hdf5"
     if not os.path.isfile(h5file):
         raise ValueError("HfData not found: " + h5file)
@@ -56,7 +56,7 @@ def dump_method(case, method, kwargs, spec, generator="atd"):
         hfdata = adcc.DataHfProvider(h5py.File(h5file, "r"))
 
     # Get dictionary of parameters for the reference cases.
-    refcases = ast.literal_eval(hfdata.data["reference_cases"][()])
+    refcases = ast.literal_eval(hfdata.data["reference_cases"][()].decode())
     kwargs = dict(kwargs)
     if generator == "atd":
         kwargs.update(expand_spaceargs(hfdata, **refcases[spec]))
@@ -73,7 +73,10 @@ def dump_method(case, method, kwargs, spec, generator="atd"):
     adc_tree = prefix.replace("_", "-") + method
     mp_tree = prefix.replace("_", "-") + "mp"
 
-    dumpfile = "{}_reference_{}{}.hdf5".format(case, prefix, method)
+    if generator == "atd":
+        dumpfile = "{}_reference_{}{}.hdf5".format(case, prefix, method)
+    else:
+        dumpfile = "{}_adcc_reference_{}{}.hdf5".format(case, prefix, method)
     if not os.path.isfile(dumpfile):
         dumpfunction(hfdata, fullmethod, dumpfile, mp_tree=mp_tree,
                      adc_tree=adc_tree, n_states_full=2, **kwargs)

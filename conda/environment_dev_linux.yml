@@ -1,16 +1,18 @@
 name: adcc-dev
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
   # Build
   - python
-  - gcc_linux-64 =9.4
-  - gxx_linux-64 =9.4
-  - libtensorlight =3.0.1=hc894906_1
+  - gcc_linux-64 >=12
+  - gxx_linux-64 >=12
+  - libtensorlight =3.0.1=h3cb4726_2
   - pybind11 >=2.6
+  - pip
   # Run
-  - numpy >=1.14,<1.24 # problems with PE in pyscf for 1.24
-  - scipy >=1.2
+  - numpy >=1.14
+  - scipy >=1.2,<1.11  # TODO: pyscf problems with sym_pos kwarg, remove at some point
   - tqdm >=4.30
   - h5py >=2.9
   - opt_einsum >=3.0

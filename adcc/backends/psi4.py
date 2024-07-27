@@ -66,6 +66,13 @@ class Psi4OperatorIntegralProvider:
 
     @property
     def pcm_potential_elec(self):
+        if hasattr(self.wfn, "ddx"):
+            def ddx_potential_elec_ao(dm):
+                return self.wfn.ddx.get_solvation_contributions(
+                    psi4.core.Matrix.from_array(dm.to_ndarray()),
+                    elec_only=True, nonequilibrium=True
+                )[1]
+            return ddx_potential_elec_ao
         if self.wfn.PCM_enabled():
             def pcm_potential_elec_ao(dm):
                 return psi4.core.PCM.compute_V(
@@ -110,19 +117,36 @@ class Psi4HFProvider(HartreeFockProvider):
                                           self.restricted)
         self.operator_integral_provider = Psi4OperatorIntegralProvider(self.wfn)
 
+        self.environment = None
+        self.environment_implementation = None
+        if hasattr(self.wfn, "pe_state"):
+            self.environment = "pe"
+            self.environment_implementation = "cppe"
+        elif hasattr(self.wfn, "ddx"):
+            self.environment = "pcm"
+            self.environment_implementation = "ddx"
+        elif self.wfn.PCM_enabled():
+            self.environment = "pcm"
+            self.environment_implementation = "pcmsolver"
+
     def pe_energy(self, dm, elec_only=True):
         density_psi = psi4.core.Matrix.from_array(dm.to_ndarray())
         e_pe, _ = self.wfn.pe_state.get_pe_contribution(density_psi,
                                                         elec_only=elec_only)
         return e_pe
 
-    def pcm_energy(self, dm):
+    def pcm_energy(self, dm, elec_only=True):
         psi_dm = psi4.core.Matrix.from_array(dm.to_ndarray())
         # computes the Fock matrix contribution.
         # By contraction with the tdm, the electronic energy contribution is
         # calculated.
-        V_pcm = psi4.core.PCM.compute_V(self.wfn.get_PCM(), psi_dm).to_array()
-        return np.einsum("uv,uv->", dm.to_ndarray(), V_pcm)
+        if self.environment_implementation == "ddx":
+            V_pcm = self.wfn.ddx.get_solvation_contributions(
+                psi_dm, elec_only=elec_only, nonequilibrium=True
+            )[1]
+        elif self.environment_implementation == "pcmsolver":
+            V_pcm = psi4.core.PCM.compute_V(self.wfn.get_PCM(), psi_dm)
+        return np.einsum("uv,uv->", dm.to_ndarray(), V_pcm.to_array())
 
     @property
     def excitation_energy_corrections(self):
@@ -142,19 +166,11 @@ class Psi4HFProvider(HartreeFockProvider):
         if self.environment == "pcm":
             ptlr = EnergyCorrection(
                 "pcm_ptlr_correction",
-                lambda view: self.pcm_energy(view.transition_dm_ao)
+                lambda view: self.pcm_energy(view.transition_dm_ao,
+                                             elec_only=True)
             )
             ret.extend([ptlr])
         return {ec.name: ec for ec in ret}
-
-    @property
-    def environment(self):
-        ret = None
-        if hasattr(self.wfn, "pe_state"):
-            ret = "pe"
-        elif self.wfn.PCM_enabled():
-            ret = "pcm"
-        return ret
 
     def get_backend(self):
         return "psi4"
@@ -264,7 +280,7 @@ def import_scf(wfn):
 
 
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
-           conv_tol_grad=1e-8, max_iter=150, pe_options=None):
+           conv_tol_grad=1e-9, max_iter=150, pe_options=None):
     basissets = {
         "sto3g": "sto-3g",
         "def2tzvp": "def2-tzvp",

@@ -359,6 +359,9 @@ def libadcc_extension():
         flags["extra_compile_args"] += ["-Wno-unused-command-line-argument",
                                         "-Wno-undefined-var-template",
                                         "-Wno-bitwise-instead-of-logical"]
+    if sys.platform.startswith("linux"):
+        # otherwise fails with -O3 on gcc>=12
+        flags["extra_compile_args"] += ["-Wno-array-bounds"]
 
     platform_autoinstall = (
         sys.platform.startswith("linux") or sys.platform.startswith("darwin")
@@ -511,7 +514,7 @@ adccsetup(
         "Issues": "https://github.com/adc-connect/adcc/issues",
     },
     #
-    version="0.15.14",
+    version="0.15.17",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
@@ -535,8 +538,8 @@ adccsetup(
     setup_requires=["pybind11 >= 2.6"],
     install_requires=[
         "opt_einsum >= 3.0",
-        "numpy >= 1.14, < 1.24",  # problems with PE in pyscf for 1.24
-        "scipy >= 1.2",
+        "numpy >= 1.14",
+        "scipy >= 1.2,<1.11",  # TODO: pyscf problem with sym_pos, remove later
         "h5py >= 2.9",
         "tqdm >= 4.30",
     ],

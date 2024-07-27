@@ -21,7 +21,6 @@
 ##
 ## ---------------------------------------------------------------------
 import sys
-import warnings
 
 from libadcc import HartreeFockProvider, get_n_threads, set_n_threads
 
@@ -68,7 +67,7 @@ __all__ = ["run_adc", "InputError", "AdcMatrix", "AdcBlockView",
            "banner", "validate_state_parameters", "estimate_n_guesses",
            "diagonalise_adcmatrix", "obtain_guesses_by_inspection"]
 
-__version__ = "0.15.14"
+__version__ = "0.15.17"
 __license__ = "GPL v3"
 __url__ = "https://adc-connect.org"
 __authors__ = ["Michael F. Herbst", "Maximilian Scheurer", "Jonas Leitner",
@@ -89,7 +88,6 @@ def adc0(*args, **kwargs):
 
 @with_runadc_doc
 def cis(*args, **kwargs):
-    warnings.warn("CIS is a hardly tested feature. Use with caution.")
     state = run_adc(*args, **kwargs, method="adc1")
     return ExcitedStates(state, property_method="adc0")
 

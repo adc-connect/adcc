@@ -1,11 +1,25 @@
 #!/bin/bash
 
-SOURCE="https://get.adc-connect.org/testdata/0.4.0/"
+SOURCE="https://q-chem.de/adcc_testdata/0.5.0/"
 DATAFILES=(
 	ch2nh2_sto3g_hfdata.hdf5
 	ch2nh2_sto3g_hfimport.hdf5
 	cn_sto3g_hfdata.hdf5
 	cn_sto3g_hfimport.hdf5
+	cn_sto3g_adcc_reference_adc0.hdf5
+	cn_sto3g_adcc_reference_adc1.hdf5
+	cn_sto3g_adcc_reference_adc2.hdf5
+	cn_sto3g_adcc_reference_adc2x.hdf5
+	cn_sto3g_adcc_reference_adc3.hdf5
+	cn_sto3g_adcc_reference_cvs_adc0.hdf5
+	cn_sto3g_adcc_reference_cvs_adc1.hdf5
+	cn_sto3g_adcc_reference_cvs_adc2.hdf5
+	cn_sto3g_adcc_reference_cvs_adc2x.hdf5
+	cn_sto3g_adcc_reference_cvs_adc3.hdf5
+	cn_sto3g_adcc_reference_fc_adc2.hdf5
+	cn_sto3g_adcc_reference_fc_fv_adc2.hdf5
+	cn_sto3g_adcc_reference_fv_adc2x.hdf5
+	cn_sto3g_adcc_reference_fv_cvs_adc2x.hdf5
 	cn_sto3g_reference_adc0.hdf5
 	cn_sto3g_reference_adc1.hdf5
 	cn_sto3g_reference_adc2.hdf5
@@ -22,6 +36,20 @@ DATAFILES=(
 	cn_sto3g_reference_fv_cvs_adc2x.hdf5
 	h2o_sto3g_hfdata.hdf5
 	h2o_sto3g_hfimport.hdf5
+	h2o_sto3g_adcc_reference_adc0.hdf5
+	h2o_sto3g_adcc_reference_adc1.hdf5
+	h2o_sto3g_adcc_reference_adc2.hdf5
+	h2o_sto3g_adcc_reference_adc2x.hdf5
+	h2o_sto3g_adcc_reference_adc3.hdf5
+	h2o_sto3g_adcc_reference_cvs_adc0.hdf5
+	h2o_sto3g_adcc_reference_cvs_adc1.hdf5
+	h2o_sto3g_adcc_reference_cvs_adc2.hdf5
+	h2o_sto3g_adcc_reference_cvs_adc2x.hdf5
+	h2o_sto3g_adcc_reference_cvs_adc3.hdf5
+	h2o_sto3g_adcc_reference_fc_adc2.hdf5
+	h2o_sto3g_adcc_reference_fc_fv_adc2.hdf5
+	h2o_sto3g_adcc_reference_fv_adc2x.hdf5
+	h2o_sto3g_adcc_reference_fv_cvs_adc2x.hdf5
 	h2o_sto3g_reference_adc0.hdf5
 	h2o_sto3g_reference_adc1.hdf5
 	h2o_sto3g_reference_adc2.hdf5
@@ -37,15 +65,32 @@ DATAFILES=(
 	h2o_sto3g_reference_fv_adc2x.hdf5
 	h2o_sto3g_reference_fv_cvs_adc2x.hdf5
 	h2s_sto3g_hfdata.hdf5
+	h2s_sto3g_adcc_reference_fc_cvs_adc2.hdf5
+	h2s_sto3g_adcc_reference_fc_fv_cvs_adc2x.hdf5
 	h2s_sto3g_reference_fc_cvs_adc2.hdf5
 	h2s_sto3g_reference_fc_fv_cvs_adc2x.hdf5
 	hf3_631g_hfdata.hdf5
+	hf3_631g_adcc_reference_adc0.hdf5
+	hf3_631g_adcc_reference_adc1.hdf5
+	hf3_631g_adcc_reference_adc2.hdf5
+	hf3_631g_adcc_reference_adc2x.hdf5
+	hf3_631g_adcc_reference_adc3.hdf5
 	hf3_631g_reference_adc0.hdf5
 	hf3_631g_reference_adc1.hdf5
 	hf3_631g_reference_adc2.hdf5
 	hf3_631g_reference_adc2x.hdf5
 	hf3_631g_reference_adc3.hdf5
 	methox_sto3g_hfdata.hdf5
+	methox_sto3g_adcc_reference_adc0.hdf5
+	methox_sto3g_adcc_reference_adc1.hdf5
+	methox_sto3g_adcc_reference_adc2.hdf5
+	methox_sto3g_adcc_reference_adc2x.hdf5
+	methox_sto3g_adcc_reference_adc3.hdf5
+	methox_sto3g_adcc_reference_cvs_adc0.hdf5
+	methox_sto3g_adcc_reference_cvs_adc1.hdf5
+	methox_sto3g_adcc_reference_cvs_adc2.hdf5
+	methox_sto3g_adcc_reference_cvs_adc2x.hdf5
+	methox_sto3g_adcc_reference_cvs_adc3.hdf5
 	methox_sto3g_reference_adc0.hdf5
 	methox_sto3g_reference_adc1.hdf5
 	methox_sto3g_reference_adc2.hdf5
@@ -70,8 +115,28 @@ DATAFILES_FULL=(
 	cn_ccpvdz_reference_cvs_adc2.hdf5
 	cn_ccpvdz_reference_cvs_adc2x.hdf5
 	cn_ccpvdz_reference_cvs_adc3.hdf5
+	cn_ccpvdz_adcc_reference_adc0.hdf5
+	cn_ccpvdz_adcc_reference_adc1.hdf5
+	cn_ccpvdz_adcc_reference_adc2.hdf5
+	cn_ccpvdz_adcc_reference_adc2x.hdf5
+	cn_ccpvdz_adcc_reference_adc3.hdf5
+	cn_ccpvdz_adcc_reference_cvs_adc0.hdf5
+	cn_ccpvdz_adcc_reference_cvs_adc1.hdf5
+	cn_ccpvdz_adcc_reference_cvs_adc2.hdf5
+	cn_ccpvdz_adcc_reference_cvs_adc2x.hdf5
+	cn_ccpvdz_adcc_reference_cvs_adc3.hdf5
 	h2o_def2tzvp_hfdata.hdf5
 	h2o_def2tzvp_hfimport.hdf5
+	h2o_def2tzvp_adcc_reference_adc0.hdf5
+	h2o_def2tzvp_adcc_reference_adc1.hdf5
+	h2o_def2tzvp_adcc_reference_adc2.hdf5
+	h2o_def2tzvp_adcc_reference_adc2x.hdf5
+	h2o_def2tzvp_adcc_reference_adc3.hdf5
+	h2o_def2tzvp_adcc_reference_cvs_adc0.hdf5
+	h2o_def2tzvp_adcc_reference_cvs_adc1.hdf5
+	h2o_def2tzvp_adcc_reference_cvs_adc2.hdf5
+	h2o_def2tzvp_adcc_reference_cvs_adc2x.hdf5
+	h2o_def2tzvp_adcc_reference_cvs_adc3.hdf5
 	h2o_def2tzvp_reference_adc0.hdf5
 	h2o_def2tzvp_reference_adc1.hdf5
 	h2o_def2tzvp_reference_adc2.hdf5
@@ -83,6 +148,14 @@ DATAFILES_FULL=(
 	h2o_def2tzvp_reference_cvs_adc2x.hdf5
 	h2o_def2tzvp_reference_cvs_adc3.hdf5
 	h2s_6311g_hfdata.hdf5
+	h2s_6311g_adcc_reference_adc2.hdf5
+	h2s_6311g_adcc_reference_cvs_adc2x.hdf5
+	h2s_6311g_adcc_reference_fc_adc2.hdf5
+	h2s_6311g_adcc_reference_fc_cvs_adc2x.hdf5
+	h2s_6311g_adcc_reference_fc_fv_adc2.hdf5
+	h2s_6311g_adcc_reference_fc_fv_cvs_adc2x.hdf5
+	h2s_6311g_adcc_reference_fv_adc2.hdf5
+	h2s_6311g_adcc_reference_fv_cvs_adc2x.hdf5
 	h2s_6311g_reference_adc2.hdf5
 	h2s_6311g_reference_cvs_adc2x.hdf5
 	h2s_6311g_reference_fc_adc2.hdf5

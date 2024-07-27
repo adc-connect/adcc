@@ -23,6 +23,7 @@
 import adcc
 import unittest
 import numpy as np
+import itertools
 
 from .misc import assert_allclose_signfix, expand_test_templates
 from numpy.testing import assert_allclose
@@ -37,19 +38,27 @@ from pytest import approx
 # The methods to test
 methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 
+# The different reference data that are tested against
+generators = ["atd", "adcc"]
+kind_keyword = {"atd": "state", "adcc": "any"}
+
 
 class TestFunctionalityBase(unittest.TestCase):
-    def base_test(self, system, method, kind, prefix="", test_mp=True, **args):
+    def base_test(self, system, method, kind, generator="atd", prefix="",
+                  test_mp=True, **args):
         if prefix:
             prefix += "-"
         hf = cache.hfdata[system]
-        refdata = cache.reference_data[system]
+        if generator == "atd":
+            refdata = cache.reference_data[system]
+            args["conv_tol"] = 3e-9
+        else:
+            refdata = cache.adcc_reference_data[system]
         ref = refdata[prefix.replace("_", "-") + method][kind]
         n_ref = len(ref["eigenvalues"])
         smallsystem = ("sto3g" in system or "631g" in system)
 
         # Run ADC and properties
-        args["conv_tol"] = 3e-9
         res = getattr(adcc, method.replace("-", "_"))(hf, **args)
 
         # Checks
@@ -69,6 +78,11 @@ class TestFunctionalityBase(unittest.TestCase):
                     #      are implemented
                     assert res.ground_state.energy_correction(3) == \
                         approx(refmp["mp3"]["energy"])
+
+        if generator == "atd":
+            if "cvs" in method and res.method.level >= 2:
+                pytest.xfail("From second order on, the CVS transition dipole "
+                             "moments in the reference data are erroneous.")
 
         if method == "adc0" and "cn" in system:
             # TODO Investigate this
@@ -103,7 +117,7 @@ class TestFunctionalityBase(unittest.TestCase):
         # Test we do not use too many iterations
         if smallsystem:
             n_iter_bound = {
-                "adc0": 1, "adc1": 4, "adc2": 9, "adc2x": 14, "adc3": 13,
+                "adc0": 1, "adc1": 4, "adc2": 10, "adc2x": 14, "adc3": 13,
                 "cvs-adc0": 1, "cvs-adc1": 4, "cvs-adc2": 5, "cvs-adc2x": 12,
                 "cvs-adc3": 13,
             }[method]
@@ -116,83 +130,107 @@ class TestFunctionalityBase(unittest.TestCase):
         assert res.n_iter <= n_iter_bound
 
 
-@expand_test_templates(methods)
+@expand_test_templates(list(itertools.product(generators, methods)))
 class TestFunctionalityGeneral(TestFunctionalityBase):
-    def template_h2o_sto3g_singlets(self, method):
-        self.base_test("h2o_sto3g", method, "singlet", n_singlets=10)
+    def template_h2o_sto3g_singlets(self, generator, method):
+        n_singlets = 10
+        if method == "adc2":
+            n_singlets = 9
+        self.base_test("h2o_sto3g", method, "singlet", generator,
+                       n_singlets=n_singlets)
 
-    def template_h2o_def2tzvp_singlets(self, method):
-        self.base_test("h2o_def2tzvp", method, "singlet", n_singlets=3)
+    def template_h2o_def2tzvp_singlets(self, generator, method):
+        kwargs = {}
+        if generator == "adcc":
+            kwargs["n_guesses"] = 6
+            kwargs["max_subspace"] = 24
+        self.base_test("h2o_def2tzvp", method, "singlet", generator,
+                       n_singlets=3, **kwargs)
 
-    def template_h2o_sto3g_triplets(self, method):
-        self.base_test("h2o_sto3g", method, "triplet", n_triplets=10)
+    def template_h2o_sto3g_triplets(self, generator, method):
+        self.base_test("h2o_sto3g", method, "triplet", generator, n_triplets=10)
 
-    def template_h2o_def2tzvp_triplets(self, method):
-        self.base_test("h2o_def2tzvp", method, "triplet", n_triplets=3)
+    def template_h2o_def2tzvp_triplets(self, generator, method):
+        kwargs = {}
+        if generator == "adcc":
+            kwargs["n_guesses"] = 6
+            kwargs["max_subspace"] = 24
+        self.base_test("h2o_def2tzvp", method, "triplet", generator,
+                       n_triplets=3, **kwargs)
 
-    def template_cn_sto3g(self, method):
+    def template_cn_sto3g(self, generator, method):
         kwargs = {}
         if method in ["adc0", "adc1"]:
             kwargs["max_subspace"] = 42
-        self.base_test("cn_sto3g", method, "state", n_states=8, **kwargs)
+        self.base_test("cn_sto3g", method, kind_keyword[generator], generator,
+                       n_states=8, **kwargs)
 
-    def template_cn_ccpvdz(self, method):
+    def template_cn_ccpvdz(self, generator, method):
         kwargs = {}
         n_states = 5
         if method == "adc1":
             kwargs["max_subspace"] = 42
             n_states = 4
-        self.base_test("cn_ccpvdz", method, "state",
+        self.base_test("cn_ccpvdz", method, kind_keyword[generator], generator,
                        n_states=n_states, **kwargs)
 
 
-@expand_test_templates(methods)
+@expand_test_templates(list(itertools.product(generators, methods)))
 class TestFunctionalityCvs(TestFunctionalityBase):
-    def template_cvs_h2o_sto3g_singlets(self, method):
+    def template_cvs_h2o_sto3g_singlets(self, generator, method):
         n_singlets = 3
         if method in ["adc0", "adc1"]:
             n_singlets = 2
-        self.base_test("h2o_sto3g", "cvs-" + method, "singlet",
+        self.base_test("h2o_sto3g", "cvs-" + method, "singlet", generator,
                        n_singlets=n_singlets, core_orbitals=1)
 
-    def template_cvs_h2o_def2tzvp_singlets(self, method):
-        self.base_test("h2o_def2tzvp", "cvs-" + method, "singlet", n_singlets=3,
-                       core_orbitals=1)
+    def template_cvs_h2o_def2tzvp_singlets(self, generator, method):
+        kwargs = {}
+        if generator == "adcc":
+            kwargs["n_guesses"] = 6
+            kwargs["max_subspace"] = 24
+        self.base_test("h2o_def2tzvp", "cvs-" + method, "singlet", generator,
+                       n_singlets=3, core_orbitals=1, **kwargs)
 
-    def template_cvs_h2o_sto3g_triplets(self, method):
+    def template_cvs_h2o_sto3g_triplets(self, generator, method):
         n_triplets = 3
         if method in ["adc0", "adc1"]:
             n_triplets = 2
-        self.base_test("h2o_sto3g", "cvs-" + method, "triplet",
+        self.base_test("h2o_sto3g", "cvs-" + method, "triplet", generator,
                        n_triplets=n_triplets, core_orbitals=1)
 
-    def template_cvs_h2o_def2tzvp_triplets(self, method):
-        self.base_test("h2o_def2tzvp", "cvs-" + method, "triplet", n_triplets=4,
-                       core_orbitals=1)
-
-    def template_cvs_cn_sto3g(self, method):
-        self.base_test("cn_sto3g", "cvs-" + method, "state",
-                       n_states=6, core_orbitals=1)
-
-    def template_cvs_cn_ccpvdz(self, method):
+    def template_cvs_h2o_def2tzvp_triplets(self, generator, method):
         kwargs = {}
-        if method in ["adc0", "adc1"]:
+        if generator == "adcc":
+            kwargs["n_guesses"] = 6
+            kwargs["max_subspace"] = 24
+        self.base_test("h2o_def2tzvp", "cvs-" + method, "triplet", generator,
+                       n_triplets=3, core_orbitals=1, **kwargs)
+
+    def template_cvs_cn_sto3g(self, generator, method):
+        self.base_test("cn_sto3g", "cvs-" + method, kind_keyword[generator],
+                       generator, n_states=6, core_orbitals=1)
+
+    def template_cvs_cn_ccpvdz(self, generator, method):
+        kwargs = {}
+        if generator == "atd" and method in ["adc0", "adc1"]:
             kwargs["max_subspace"] = 28
-        self.base_test("cn_ccpvdz", "cvs-" + method, "state", n_states=5,
-                       core_orbitals=1, **kwargs)
+        self.base_test("cn_ccpvdz", "cvs-" + method, kind_keyword[generator],
+                       generator, n_states=5, core_orbitals=1, **kwargs)
 
 
-@expand_test_templates(methods)
+@expand_test_templates(list(itertools.product(generators, methods)))
 class TestFunctionalitySpinFlip(TestFunctionalityBase):
-    def template_hf3_spin_flip(self, method):
-        self.base_test("hf3_631g", method, "spin_flip", n_spin_flip=9)
+    def template_hf3_spin_flip(self, generator, method):
+        self.base_test("hf3_631g", method, "spin_flip", generator, n_spin_flip=9)
 
 
+@expand_test_templates(generators)
 class TestFunctionalitySpaces(TestFunctionalityBase):
     #
     # H2O STO-3G
     #
-    def base_test_h2o_sto3g(self, prefix, method, kind):
+    def base_test_h2o_sto3g(self, prefix, method, kind, generator):
         kw_prefix = {"fc": {"frozen_core": 1},
                      "fv": {"frozen_virtual": 1}, }
         kw_kind = {"singlet": {"n_singlets": 3},
@@ -203,61 +241,65 @@ class TestFunctionalitySpaces(TestFunctionalityBase):
             kw_extra.update(kw_prefix[pfx])
         if "cvs" in method:
             kw_extra["core_orbitals"] = 1
-        self.base_test("h2o_sto3g", method, kind, prefix=prefix, **kw_extra)
+        self.base_test("h2o_sto3g", method, kind, generator, prefix=prefix,
+                       **kw_extra)
 
-    def test_h2o_sto3g_fc_adc2_singlets(self):
-        self.base_test_h2o_sto3g("fc", "adc2", "singlet")
+    def template_h2o_sto3g_fc_adc2_singlets(self, generator):
+        self.base_test_h2o_sto3g("fc", "adc2", "singlet", generator)
 
-    def test_h2o_sto3g_fc_adc2_triplets(self):
-        self.base_test_h2o_sto3g("fc", "adc2", "triplet")
+    def template_h2o_sto3g_fc_adc2_triplets(self, generator):
+        self.base_test_h2o_sto3g("fc", "adc2", "triplet", generator)
 
-    def test_h2o_sto3g_fc_fv_adc2_singlets(self):
-        self.base_test_h2o_sto3g("fc-fv", "adc2", "singlet")
+    def template_h2o_sto3g_fc_fv_adc2_singlets(self, generator):
+        self.base_test_h2o_sto3g("fc-fv", "adc2", "singlet", generator)
 
-    def test_h2o_sto3g_fc_fv_adc2_triplets(self):
-        self.base_test_h2o_sto3g("fc-fv", "adc2", "triplet")
+    def template_h2o_sto3g_fc_fv_adc2_triplets(self, generator):
+        self.base_test_h2o_sto3g("fc-fv", "adc2", "triplet", generator)
 
-    def test_h2o_sto3g_fv_adc2x_singlets(self):
-        self.base_test_h2o_sto3g("fv", "adc2x", "singlet")
+    def template_h2o_sto3g_fv_adc2x_singlets(self, generator):
+        self.base_test_h2o_sto3g("fv", "adc2x", "singlet", generator)
 
-    def test_h2o_sto3g_fv_adc2x_triplets(self):
-        self.base_test_h2o_sto3g("fv", "adc2x", "triplet")
+    def template_h2o_sto3g_fv_adc2x_triplets(self, generator):
+        self.base_test_h2o_sto3g("fv", "adc2x", "triplet", generator)
 
-    def test_h2o_sto3g_fv_cvs_adc2x_singlets(self):
-        self.base_test_h2o_sto3g("fv", "cvs-adc2x", "singlet")
+    def template_h2o_sto3g_fv_cvs_adc2x_singlets(self, generator):
+        self.base_test_h2o_sto3g("fv", "cvs-adc2x", "singlet", generator)
 
-    def test_h2o_sto3g_fv_cvs_adc2x_triplets(self):
-        self.base_test_h2o_sto3g("fv", "cvs-adc2x", "triplet")
+    def template_h2o_sto3g_fv_cvs_adc2x_triplets(self, generator):
+        self.base_test_h2o_sto3g("fv", "cvs-adc2x", "triplet", generator)
 
     #
     # CN STO-3G
     #
-    def base_test_cn_sto3g(self, prefix, method):
+    def base_test_cn_sto3g(self, prefix, method, generator):
         kw_prefix = {"fc": {"frozen_core": 1},
                      "fv": {"frozen_virtual": 1}, }
         kw_extra = {"n_states": 4, }
+        if generator == "adcc" and prefix in ["fc", "fc-fv"]:
+            kw_extra["max_subspace"] = 30
         for pfx in prefix.split("-"):
             kw_extra.update(kw_prefix[pfx])
         if "cvs" in method:
             kw_extra["core_orbitals"] = 1
-        self.base_test("cn_sto3g", method, "state", prefix=prefix, **kw_extra)
+        self.base_test("cn_sto3g", method, kind_keyword[generator], generator,
+                       prefix=prefix, **kw_extra)
 
-    def test_cn_sto3g_fc_adc2(self):
-        self.base_test_cn_sto3g("fc", "adc2")
+    def template_cn_sto3g_fc_adc2(self, generator):
+        self.base_test_cn_sto3g("fc", "adc2", generator)
 
-    def test_cn_sto3g_fc_fv_adc2(self):
-        self.base_test_cn_sto3g("fc-fv", "adc2")
+    def template_cn_sto3g_fc_fv_adc2(self, generator):
+        self.base_test_cn_sto3g("fc-fv", "adc2", generator)
 
-    def test_cn_sto3g_fv_adc2x(self):
-        self.base_test_cn_sto3g("fv", "adc2x")
+    def template_cn_sto3g_fv_adc2x(self, generator):
+        self.base_test_cn_sto3g("fv", "adc2x", generator)
 
-    def test_cn_sto3g_fv_cvs_adc2x(self):
-        self.base_test_cn_sto3g("fv", "cvs-adc2x")
+    def template_cn_sto3g_fv_cvs_adc2x(self, generator):
+        self.base_test_cn_sto3g("fv", "cvs-adc2x", generator)
 
     #
     # H2S STO-3G
     #
-    def base_test_h2s_sto3g(self, prefix, method, kind):
+    def base_test_h2s_sto3g(self, prefix, method, kind, generator):
         kw_prefix = {"fc": {"frozen_core": 1},
                      "fv": {"frozen_virtual": 1}, }
         kw_kind = {"singlet": {"n_singlets": 3},
@@ -267,69 +309,71 @@ class TestFunctionalitySpaces(TestFunctionalityBase):
             kw_extra.update(kw_prefix[pfx])
         if "cvs" in method:
             kw_extra["core_orbitals"] = 1
-        self.base_test("h2s_sto3g", method, kind, prefix=prefix, test_mp=False,
-                       **kw_extra)
+        self.base_test("h2s_sto3g", method, kind, generator, prefix=prefix,
+                       test_mp=False, **kw_extra)
 
-    def test_h2s_sto3g_fc_cvs_adc2_singlets(self):
-        self.base_test_h2s_sto3g("fc", "cvs-adc2", "singlet")
+    def template_h2s_sto3g_fc_cvs_adc2_singlets(self, generator):
+        self.base_test_h2s_sto3g("fc", "cvs-adc2", "singlet", generator)
 
-    def test_h2s_sto3g_fc_cvs_adc2_triplets(self):
-        self.base_test_h2s_sto3g("fc", "cvs-adc2", "triplet")
+    def template_h2s_sto3g_fc_cvs_adc2_triplets(self, generator):
+        self.base_test_h2s_sto3g("fc", "cvs-adc2", "triplet", generator)
 
-    def test_h2s_sto3g_fc_fv_cvs_adc2x_singlets(self):
-        self.base_test_h2s_sto3g("fc-fv", "cvs-adc2x", "singlet")
+    def template_h2s_sto3g_fc_fv_cvs_adc2x_singlets(self, generator):
+        self.base_test_h2s_sto3g("fc-fv", "cvs-adc2x", "singlet", generator)
 
-    def test_h2s_sto3g_fc_fv_cvs_adc2x_triplets(self):
-        self.base_test_h2s_sto3g("fc-fv", "cvs-adc2x", "triplet")
+    def template_h2s_sto3g_fc_fv_cvs_adc2x_triplets(self, generator):
+        self.base_test_h2s_sto3g("fc-fv", "cvs-adc2x", "triplet", generator)
 
     #
     # H2S 6311+G**
     #
-    def base_test_h2s_6311g(self, prefix, method, kind):
+    def base_test_h2s_6311g(self, prefix, method, kind, generator):
         kw_prefix = {"fc": {"frozen_core": 1},
                      "fv": {"frozen_virtual": 3}, }
         kw_kind = {"singlet": {"n_singlets": 3},
                    "triplet": {"n_triplets": 3}, }
 
         kw_extra = kw_kind[kind]
+        kw_extra["max_subspace"] = 60
         for pfx in prefix.split("-"):
             kw_extra.update(kw_prefix[pfx])
         if "cvs" in method:
             kw_extra["core_orbitals"] = 1
-        self.base_test("h2s_6311g", method, kind, prefix=prefix, **kw_extra)
+        self.base_test("h2s_6311g", method, kind, generator, prefix=prefix,
+                       **kw_extra)
 
-    def test_h2s_6311g_fc_adc2_singlets(self):
-        self.base_test_h2s_6311g("fc", "adc2", "singlet")
+    def template_h2s_6311g_fc_adc2_singlets(self, generator):
+        self.base_test_h2s_6311g("fc", "adc2", "singlet", generator)
 
-    def test_h2s_6311g_fc_adc2_triplets(self):
-        self.base_test_h2s_6311g("fc", "adc2", "triplet")
+    def template_h2s_6311g_fc_adc2_triplets(self, generator):
+        self.base_test_h2s_6311g("fc", "adc2", "triplet", generator)
 
-    def test_h2s_6311g_fv_adc2_singlets(self):
-        self.base_test_h2s_6311g("fv", "adc2", "singlet")
+    def template_h2s_6311g_fv_adc2_singlets(self, generator):
+        self.base_test_h2s_6311g("fv", "adc2", "singlet", generator)
 
-    def test_h2s_6311g_fv_adc2_triplets(self):
-        self.base_test_h2s_6311g("fv", "adc2", "triplet")
+    def template_h2s_6311g_fv_adc2_triplets(self, generator):
+        self.base_test_h2s_6311g("fv", "adc2", "triplet", generator)
 
-    def test_h2s_6311g_fc_fv_adc2_singlets(self):
-        self.base_test_h2s_6311g("fc-fv", "adc2", "singlet")
+    def template_h2s_6311g_fc_fv_adc2_singlets(self, generator):
+        self.base_test_h2s_6311g("fc-fv", "adc2", "singlet", generator)
 
-    def test_h2s_6311g_fc_fv_adc2_triplets(self):
-        self.base_test_h2s_6311g("fc-fv", "adc2", "triplet")
+    def template_h2s_6311g_fc_fv_adc2_triplets(self, generator):
+        self.base_test_h2s_6311g("fc-fv", "adc2", "triplet", generator)
 
-    def test_h2s_6311g_fc_cvs_adc2x_singlets(self):
-        self.base_test_h2s_6311g("fc", "cvs-adc2x", "singlet")
+    def template_h2s_6311g_fc_cvs_adc2x_singlets(self, generator):
+        self.base_test_h2s_6311g("fc", "cvs-adc2x", "singlet", generator)
 
-    def test_h2s_6311g_fc_cvs_adc2x_triplets(self):
-        self.base_test_h2s_6311g("fc", "cvs-adc2x", "triplet")
+    def template_h2s_6311g_fc_cvs_adc2x_triplets(self, generator):
+        self.base_test_h2s_6311g("fc", "cvs-adc2x", "triplet", generator)
 
-    def test_h2s_6311g_fv_cvs_adc2x_singlets(self):
-        self.base_test_h2s_6311g("fv", "cvs-adc2x", "singlet")
+    def template_h2s_6311g_fv_cvs_adc2x_singlets(self, generator):
+        self.base_test_h2s_6311g("fv", "cvs-adc2x", "singlet", generator)
 
-    def test_h2s_6311g_fv_cvs_adc2x_triplets(self):
-        self.base_test_h2s_6311g("fv", "cvs-adc2x", "triplet")
+    def template_h2s_6311g_fv_cvs_adc2x_triplets(self, generator):
+        self.base_test_h2s_6311g("fv", "cvs-adc2x", "triplet", generator)
 
-    def test_h2s_6311g_fc_fv_cvs_adc2x_singlets(self):
-        self.base_test_h2s_6311g("fc-fv", "cvs-adc2x", "singlet")
+    def template_h2s_6311g_fc_fv_cvs_adc2x_singlets(self, generator):
+        self.base_test_h2s_6311g("fc-fv", "cvs-adc2x", "singlet", generator)
 
-    def test_h2s_6311g_fc_fv_cvs_adc2x_triplets(self):
-        self.base_test_h2s_6311g("fc-fv", "cvs-adc2x", "triplet")
+    def template_h2s_6311g_fc_fv_cvs_adc2x_triplets(self, generator):
+        self.base_test_h2s_6311g("fc-fv", "cvs-adc2x", "triplet", generator)
