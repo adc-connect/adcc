@@ -48,7 +48,8 @@ from .opt_einsum_integration import register_with_opt_einsum
 # This has to be the last set of import
 from .guess import (guess_symmetries, guess_zero, guesses_any, guesses_singlet,
                     guesses_spin_flip, guesses_triplet)
-from .workflow import run_adc
+from .workflow import (run_adc, validate_state_parameters, estimate_n_guesses,
+                       diagonalise_adcmatrix, obtain_guesses_by_inspection)
 from .exceptions import InputError
 
 __all__ = ["run_adc", "InputError", "AdcMatrix", "AdcBlockView",
@@ -64,7 +65,8 @@ __all__ = ["run_adc", "InputError", "AdcMatrix", "AdcBlockView",
            "guess_symmetries", "guesses_spin_flip", "guess_zero", "LazyMp",
            "adc0", "cis", "adc1", "adc2", "adc2x", "adc3",
            "cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x", "cvs_adc3",
-           "banner"]
+           "banner", "validate_state_parameters", "estimate_n_guesses",
+           "diagonalise_adcmatrix", "obtain_guesses_by_inspection"]
 
 __version__ = "0.15.14"
 __license__ = "GPL v3"

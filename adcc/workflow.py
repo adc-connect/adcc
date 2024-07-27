@@ -39,8 +39,8 @@ from .solver.davidson import jacobi_davidson
 from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
 
-__all__ = ["run_adc"]
-
+__all__ = ["run_adc", "validate_state_parameters", "estimate_n_guesses",
+           "obtain_guesses_by_inspection", "diagonalise_adcmatrix"]
 
 def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
             eigensolver=None, guesses=None, n_guesses=None,

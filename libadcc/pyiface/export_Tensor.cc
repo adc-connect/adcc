@@ -23,6 +23,9 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <sstream>
+#include <libtensor/expr/bispace/bispace.h>
+#include "../AdcMemory.hh"
+#include "../tests/wrap_libtensor.hh"
 
 namespace libadcc {
 
@@ -346,6 +349,17 @@ static py::object Tensor___repr__(const Tensor& self) {
   return Tensor___str__(self);
 }
 
+static ten_ptr set_lt_scalar(const py::float_ n) {
+  auto adcmem_ptr = std::shared_ptr<AdcMemory>(new AdcMemory());
+  libtensor::bispace<1> bis(1);
+  std::vector<AxisInfo> ax{{"x", 1}};
+  double vector[] = {n};
+  auto v_ptr = std::make_shared<libtensor::btensor<1>>(bis);
+  libtensor::btod_import_raw<1>(vector, bis.get_bis().get_dims()).perform(*v_ptr);
+  std::shared_ptr<Tensor> tensor_ptr = wrap_libtensor(adcmem_ptr, ax, v_ptr);
+  return tensor_ptr;
+}
+
 //
 // Operations with a scalar
 //
@@ -540,6 +554,9 @@ void export_Tensor(py::module& m) {
   m.def("trace", &Tensor_trace_2, "tensor"_a);
   m.def("linear_combination_strict", &linear_combination_strict, "coefficients"_a,
         "tensors"_a);
+  // This is necessary for smooth handling of ground state contributions
+  // in AmplitudeVectors
+  m.def("set_lt_scalar", &set_lt_scalar, "a"_a);
 }
 
 }  // namespace libadcc
