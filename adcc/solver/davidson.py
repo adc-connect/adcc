@@ -196,15 +196,7 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             epair_mask = select_eigenpairs(rvals, n_ep, which)
             state.eigenvalues = rvals[epair_mask]
             state.residuals = [residuals[i] for i in epair_mask]
-            state.residual_norms = np.array([r @ r for r in state.residuals])
-            # TODO This is misleading ... actually residual_norms contains
-            #      the norms squared. That's also the used e.g. in adcman to
-            #      check for convergence, so using the norm squared is fine,
-            #      in theory ... it should just be consistent. I think it is
-            #      better to go for the actual norm (no squared) inside the code
-            #
-            #      If this adapted, also change the conv_tol to tol conversion
-            #      inside the Lanczos procedure.
+            state.residual_norms = np.array([np.sqrt(r @ r) for r in state.residuals])
 
         callback(state, "next_iter")
         state.timer.restart("iteration")
@@ -330,7 +322,7 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
     max_subspace : int or NoneType, optional
         Maximal subspace size
     conv_tol : float, optional
-        Convergence tolerance on the l2 norm squared of residuals to consider
+        Convergence tolerance on the l2 norm of residuals to consider
         them converged
     which : str, optional
         Which eigenvectors to converge to (e.g. LM, LA, SM, SA)
