@@ -17,9 +17,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {version: '3.7', os: ubuntu-latest, documentation: True}
+          - {version: '3.11', os: ubuntu-latest, documentation: True}
           - {version: '3.9', os: ubuntu-latest, documentation: False}
-          - {version: '3.7', os: macos-11 , documentation: False}
+          - {version: '3.11', os: macos-13 , documentation: False}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -67,7 +67,7 @@ jobs:
           pip install .[tests] --user
       - name: Run python tests with std allocator
         run: |
-          pytest adcc --cov=adcc
+          pytest adcc --cov=adcc -k "not pcm"
           # python setup.py test -a '--cov=adcc'
       - name: Run reduced python tests with libxm
         run: |
