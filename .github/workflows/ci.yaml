@@ -66,10 +66,10 @@ jobs:
           pip install --user .[tests]
       - name: Run python tests with std allocator
         run: |
-          pytest adcc --cov=adcc -k "not pcm"
+          python -m pytest adcc --cov=adcc
       - name: Run reduced python tests with libxm
         run: |
-          pytest adcc --allocator=libxm -k "TestFunctionality and h2o_sto3g"
+          python -m pytest adcc --allocator=libxm -k "TestFunctionality and h2o_sto3g"
       - name: Run C++ tests
         run: python setup.py cpptest -v
       #
