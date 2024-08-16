@@ -438,7 +438,6 @@ def adccsetup(*args, **kwargs):
     if is_conda_build():
         kwargs.pop("install_requires")
         kwargs.pop("setup_requires")
-        kwargs.pop("tests_require")
         kwargs.pop("extras_require")
     try:
         setup(*args, **kwargs)
