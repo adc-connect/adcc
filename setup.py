@@ -503,11 +503,10 @@ adccsetup(
     install_requires=[
         "opt_einsum >= 3.0",
         "numpy >= 1.14",
-        "scipy >= 1.2,<1.11",  # TODO: pyscf problem with sym_pos, remove later
+        "scipy >= 1.2",
         "h5py >= 2.9",
         "tqdm >= 4.30",
     ],
-    # tests_require=["pytest", "pytest-cov", "pyyaml", "pandas >= 0.25.0"],
     extras_require={
         "tests": ["pytest", "pytest-cov", "pyyaml", "pandas >= 0.25.0"],
         "build_docs": ["sphinx>=2", "breathe", "sphinxcontrib-bibtex",

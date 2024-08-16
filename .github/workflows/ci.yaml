@@ -63,7 +63,7 @@ jobs:
       #
       - name: Install package
         run: |
-          pip install .[tests] --user
+          pip install --user .[tests]
       - name: Run python tests with std allocator
         run: |
           pytest adcc --cov=adcc -k "not pcm"
