@@ -320,7 +320,7 @@ def libadcc_extension():
         libtensor_url=None,
     )
 
-    if sys.platform == "darwin" and is_conda_build():
+    if sys.platform == "darwin":
         flags["extra_compile_args"] += ["-Wno-unused-command-line-argument",
                                         "-Wno-undefined-var-template",
                                         "-Wno-bitwise-instead-of-logical"]

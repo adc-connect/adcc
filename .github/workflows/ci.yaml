@@ -60,7 +60,6 @@ jobs:
           export PATH="/usr/local/opt/ccache/libexec:$PATH"
           export PATH="/usr/lib/ccache:$PATH"
           python -m pip install --user pyscf cppe wheel
-          python -m pip install --user -r requirements.txt -v
       #
       - name: Install package
         run: |
@@ -68,11 +67,9 @@ jobs:
       - name: Run python tests with std allocator
         run: |
           pytest adcc --cov=adcc -k "not pcm"
-          # python setup.py test -a '--cov=adcc'
       - name: Run reduced python tests with libxm
         run: |
           pytest adcc --allocator=libxm -k "TestFunctionality and h2o_sto3g"
-          # python setup.py test -a '--allocator=libxm -k "TestFunctionality and h2o_sto3g"'
       - name: Run C++ tests
         run: python setup.py cpptest -v
       #
@@ -149,8 +146,7 @@ jobs:
           # NOTE: pcmsolver not 'linked' with Psi4 1.8
           pip install .[tests] --user
           pytest adcc -k "not pcm"
-          # python setup.py test -a '-k "not pcm"'
-          python setup.py cpptest -v
+          # python setup.py cpptest -v  # TODO: currently doesn't compile...
       #
       # - name: Upload coverage to codecov
       #   run: |
