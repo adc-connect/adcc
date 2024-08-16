@@ -64,7 +64,7 @@ jobs:
       #
       - name: Install package
         run: |
-          pip install .
+          pip install .[tests] --user
       - name: Run python tests with std allocator
         run: |
           pytest adcc --cov=adcc
@@ -147,7 +147,7 @@ jobs:
           conda info
           conda list
           # NOTE: pcmsolver not 'linked' with Psi4 1.8
-          pip install .
+          pip install .[tests] --user
           pytest adcc -k "not pcm"
           # python setup.py test -a '-k "not pcm"'
           python setup.py cpptest -v

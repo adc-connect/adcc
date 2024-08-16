@@ -509,6 +509,7 @@ adccsetup(
     ],
     # tests_require=["pytest", "pytest-cov", "pyyaml", "pandas >= 0.25.0"],
     extras_require={
+        "tests": ["pytest", "pytest-cov", "pyyaml", "pandas >= 0.25.0"],
         "build_docs": ["sphinx>=2", "breathe", "sphinxcontrib-bibtex",
                        "sphinx-automodapi", "sphinx-rtd-theme"],
         "analysis": ["matplotlib >= 3.0", "pandas >= 0.25.0"],
