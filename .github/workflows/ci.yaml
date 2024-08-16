@@ -62,12 +62,17 @@ jobs:
           python -m pip install --user pyscf cppe wheel
           python -m pip install --user -r requirements.txt -v
       #
+      - name: Install package
+        run: |
+          pip install .
       - name: Run python tests with std allocator
         run: |
-          python setup.py test -a '--cov=adcc'
+          pytest adcc --cov=adcc
+          # python setup.py test -a '--cov=adcc'
       - name: Run reduced python tests with libxm
         run: |
-          python setup.py test -a '--allocator=libxm -k "TestFunctionality and h2o_sto3g"'
+          pytest adcc --allocator=libxm -k "TestFunctionality and h2o_sto3g"
+          # python setup.py test -a '--allocator=libxm -k "TestFunctionality and h2o_sto3g"'
       - name: Run C++ tests
         run: python setup.py cpptest -v
       #
@@ -142,7 +147,9 @@ jobs:
           conda info
           conda list
           # NOTE: pcmsolver not 'linked' with Psi4 1.8
-          python setup.py test -a '-k "not pcm"'
+          pip install .
+          pytest adcc -k "not pcm"
+          # python setup.py test -a '-k "not pcm"'
           python setup.py cpptest -v
       #
       # - name: Upload coverage to codecov
