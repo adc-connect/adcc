@@ -53,8 +53,7 @@ try:
     from sphinx.setup_command import BuildDoc as SphinxBuildDoc
 
     have_sphinx = True
-except ImportError as e:
-    print(e)
+except ImportError:
     have_sphinx = False
 
 #

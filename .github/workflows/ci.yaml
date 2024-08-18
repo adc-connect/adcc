@@ -96,6 +96,7 @@ jobs:
           lcov --remove coverage.info '/opt/*' '/Applications/*' '/Library/*' '/usr/*' "${HOME}"'/.cache/*' "${HOME}"'/.local/*' "${PWD}"'/build/*' "${PWD}"'/libadcc/tests/*' --output-file coverage.info
           lcov --list coverage.info
           codecov -X gcov -f coverage.info
+        if: contains(matrix.os, 'ubuntu')
 
       - name: Upload coverage to coveralls
         # Note: Needs to be after the above step, because it parses the coverage.info
@@ -106,6 +107,7 @@ jobs:
           coveralls --service=github --merge=coverage.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: contains(matrix.os, 'ubuntu')
 
   #
   # Test Conda Python
@@ -179,7 +181,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
-          python-version: '3.9'
+          python-version: '3.11'
       - name: Install dependencies
         run: |
           pip install flake8
