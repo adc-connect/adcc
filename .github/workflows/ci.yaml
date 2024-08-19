@@ -17,9 +17,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {version: '3.7', os: ubuntu-latest, documentation: True}
+          - {version: '3.11', os: ubuntu-latest, documentation: True}
           - {version: '3.9', os: ubuntu-latest, documentation: False}
-          - {version: '3.7', os: macos-11 , documentation: False}
+          - {version: '3.11', os: macos-13 , documentation: False}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -60,29 +60,33 @@ jobs:
           export PATH="/usr/local/opt/ccache/libexec:$PATH"
           export PATH="/usr/lib/ccache:$PATH"
           python -m pip install --user pyscf cppe wheel
-          python -m pip install --user -r requirements.txt -v
       #
+      - name: Install package
+        run: |
+          pip install --user .[tests]
       - name: Run python tests with std allocator
         run: |
-          python setup.py test -a '--cov=adcc'
+          python -m pytest adcc --cov=adcc
       - name: Run reduced python tests with libxm
         run: |
-          python setup.py test -a '--allocator=libxm -k "TestFunctionality and h2o_sto3g"'
+          python -m pytest adcc --allocator=libxm -k "TestFunctionality and h2o_sto3g"
       - name: Run C++ tests
         run: python setup.py cpptest -v
       #
-      - name: Dependencies for documentation
-        run: python -m pip install --user .[build_docs]
-        if: matrix.documentation
-      - name: Build documentation
-        run: python setup.py build_docs
-        if: matrix.documentation
-      - name: Upload documentation artefact
-        uses: actions/upload-artifact@v2
-        with:
-          name: documentation
-          path: build/sphinx/html
-        if: matrix.documentation
+      # TODO: sphinx.setup_command does not exist anymore,
+      # need to build docs differently
+      # - name: Dependencies for documentation
+      #   run: python -m pip install --user .[build_docs]
+      #   if: matrix.documentation
+      # - name: Build documentation
+      #   run: python setup.py build_docs
+      #   if: matrix.documentation
+      # - name: Upload documentation artefact
+      #   uses: actions/upload-artifact@v2
+      #   with:
+      #     name: documentation
+      #     path: build/sphinx/html
+      #   if: matrix.documentation
       #
       - name: Upload coverage to codecov
         run: |
@@ -92,6 +96,7 @@ jobs:
           lcov --remove coverage.info '/opt/*' '/Applications/*' '/Library/*' '/usr/*' "${HOME}"'/.cache/*' "${HOME}"'/.local/*' "${PWD}"'/build/*' "${PWD}"'/libadcc/tests/*' --output-file coverage.info
           lcov --list coverage.info
           codecov -X gcov -f coverage.info
+        if: contains(matrix.os, 'ubuntu')
 
       - name: Upload coverage to coveralls
         # Note: Needs to be after the above step, because it parses the coverage.info
@@ -102,6 +107,7 @@ jobs:
           coveralls --service=github --merge=coverage.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: contains(matrix.os, 'ubuntu')
 
   #
   # Test Conda Python
@@ -142,8 +148,9 @@ jobs:
           conda info
           conda list
           # NOTE: pcmsolver not 'linked' with Psi4 1.8
-          python setup.py test -a '-k "not pcm"'
-          python setup.py cpptest -v
+          pip install .[tests] --user
+          pytest adcc -k "not pcm"
+          # python setup.py cpptest -v  # TODO: currently doesn't compile...
       #
       # - name: Upload coverage to codecov
       #   run: |
@@ -174,7 +181,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
-          python-version: '3.9'
+          python-version: '3.11'
       - name: Install dependencies
         run: |
           pip install flake8
