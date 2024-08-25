@@ -359,7 +359,7 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
     if conv_tol is None:
         conv_tol = max(10 * reference_state.conv_tol, 1e-6)
     if reference_state.conv_tol > conv_tol:
-        raise InputError(
+        warnings.warn(
             "Convergence tolerance of SCF results "
             f"(== {reference_state.conv_tol}) needs to be lower than ADC "
             f"convergence tolerance parameter conv_tol (== {conv_tol})."
