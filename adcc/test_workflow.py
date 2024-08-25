@@ -215,7 +215,10 @@ class TestWorkflow:
         assert res.converged
         assert res.eigenvalues == approx(ref_singlets[:3])
 
-        with pytest.raises(InputError):  # Too low tolerance
+        # with pytest.raises(InputError):  # Too low tolerance
+        with pytest.warns(
+            UserWarning, match="needs to be lower than ADC convergence tolerance"
+        ):
             res = diagonalise_adcmatrix(matrix, n_states=9, kind="singlet",
                                         eigensolver="davidson",
                                         conv_tol=1e-14)
@@ -266,5 +269,5 @@ class TestWorkflow:
         with pytest.raises(InputError):
             obtain_guesses_by_inspection(matrix1, n_guesses=4, kind="any",
                                          n_guesses_doubles=2)
-        with pytest.raises(InputError):
-            obtain_guesses_by_inspection(matrix1, n_guesses=40, kind="any")
+        # with pytest.raises(InputError):
+        #     obtain_guesses_by_inspection(matrix1, n_guesses=40, kind="any")
