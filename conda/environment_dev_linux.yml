@@ -12,7 +12,7 @@ dependencies:
   - pip
   # Run
   - numpy >=1.14
-  - scipy >=1.2,<1.11  # TODO: pyscf problems with sym_pos kwarg, remove at some point
+  - scipy >=1.2
   - tqdm >=4.30
   - h5py >=2.9
   - opt_einsum >=3.0
