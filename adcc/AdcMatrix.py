@@ -716,3 +716,55 @@ class AdcMatrixProjected(AdcMatrix):
                                   "projected ADC matrices.")
         # TODO The way to implement this is to ask the inner matrix to
         #      a block_view and then wrap that in an AdcMatrixProjected.
+
+
+class AdcMatrixFolded(AdcMatrix):
+    def __init__(self, matrix):
+        """
+        Initialise a ADC(2) matrix when using doubles-folding.
+
+        Parameters
+        ----------
+        matrix : AdcMatrix
+           ADC(2) matrix
+        """
+        super().__init__(matrix.method, matrix.ground_state,
+                         block_orders=matrix.block_orders,
+                         intermediates=matrix.intermediates)
+
+    def update_omega(self, omega):
+        self.omega = omega
+
+    def diagonal(self):
+        """
+        Return the approximate diagonal of the ADC(2) matrix with doubles-folding.
+        """
+        return AmplitudeVector(ph=super().diagonal().ph)
+
+    def matvec(self, other):
+        """
+        Compute the doubles-folded matrix-vector product of the singles vector with
+        an effective ADC matrix which depends on the eigenvalue ω.
+        """
+        diag = super().diagonal().pphh
+        e = diag.ones_like()
+        u2 = self.block_apply("pphh_ph", other.ph) / (e * self.omega - diag)
+        return AmplitudeVector(ph=self.block_apply("ph_ph", other.ph)
+                               + self.block_apply("ph_pphh", u2))
+
+    def __matmul__(self, other):
+        if isinstance(other, AmplitudeVector):
+            return self.matvec(other)
+        if isinstance(other, list):
+            if all(isinstance(elem, AmplitudeVector) for elem in other):
+                return [self.matvec(v) for v in other]
+        return NotImplemented
+
+    def unfold(self, u1):
+        """
+        recompute the doubles component and return the complete vector.
+        """
+        diag = super().diagonal().pphh
+        e = diag.ones_like()
+        u2 = self.block_apply("pphh_ph", u1.ph) / (e * self.omega - diag)
+        return AmplitudeVector(ph=u1.ph, pphh=u2)

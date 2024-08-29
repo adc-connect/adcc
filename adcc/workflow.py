@@ -35,7 +35,7 @@ from .exceptions import InputError
 from .ExcitedStates import ExcitedStates
 from .ReferenceState import ReferenceState as adcc_ReferenceState
 from .solver.lanczos import lanczos
-from .solver.davidson import jacobi_davidson
+from .solver.davidson import jacobi_davidson, davidson_folded_DIIS
 from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
                                              IndexSymmetrisation)
 
@@ -47,7 +47,8 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
             n_guesses_doubles=None, output=sys.stdout, core_orbitals=None,
             frozen_core=None, frozen_virtual=None, method=None,
             n_singlets=None, n_triplets=None, n_spin_flip=None,
-            environment=None, **solverargs):
+            environment=None, fold=None, guesses_fold=None,
+            omegas=None, **solverargs):
     """Run an ADC calculation.
 
     Main entry point to run an ADC calculation. The reference to build the ADC
@@ -133,12 +134,29 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         The keywords to specify how coupling to an environment model,
         e.g. PE, is treated. For details see :ref:`environment`.
 
+    fold : bool, optional
+        Perfom modified Davidson algorithm when using doubles-folded ADC(2) matrix.
+
+    guesses_fold: str, optional
+        There is one more option for the initial guess vectors of the modified
+        Davidson solver, i.e., "adc1" takes initial guess vectors and guess
+        eigenvalues as eigenvalues and eigenvectors of adc(1) matrix.
+
     Other parameters
     ----------------
     max_subspace : int, optional
         Maximal subspace size
     max_iter : int, optional
         Maximal number of iterations
+    macro_conv_tol : float, optional
+        Convergence tolerance on the l2 norm squared of residuals to consider
+        them converged during macro iterations.
+    macro_max_iter : int, optional
+        Maximal number of macro iterations
+    num_diis_vecs: int, optional (default=50)
+        Maximal number of DIIS vectors to keep
+    diis_max_iter : int, optional
+        Maximal number of DIIS iterations
 
     Returns
     -------
@@ -202,10 +220,17 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     if env_matrix_term:
         matrix += env_matrix_term
 
+    if fold and guesses_fold == "adc1" and guesses is None:
+        fold_initial = run_adc(data_or_matrix, method="adc1",
+                               kind=kind, n_states=n_states)
+        omegas = fold_initial.excitation_energy_uncorrected
+        guesses = fold_initial.excitation_vector
+
     diagres = diagonalise_adcmatrix(
         matrix, n_states, kind, guesses=guesses, n_guesses=n_guesses,
         n_guesses_doubles=n_guesses_doubles, conv_tol=conv_tol, output=output,
-        eigensolver=eigensolver, **solverargs)
+        eigensolver=eigensolver, fold=fold, guesses_fold=guesses_fold,
+        omegas=omegas, **solverargs)
     exstates = ExcitedStates(diagres)
     exstates.kind = kind
     exstates.spin_change = spin_change
@@ -347,7 +372,8 @@ def validate_state_parameters(reference_state, n_states=None, n_singlets=None,
 
 def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
                           guesses=None, n_guesses=None, n_guesses_doubles=None,
-                          conv_tol=None, output=sys.stdout, **solverargs):
+                          conv_tol=None, output=sys.stdout, fold=None,
+                          guesses_fold=None, omegas=None, **solverargs):
     """
     This function seeks appropriate guesses and afterwards proceeds to
     diagonalise the ADC matrix using the specified eigensolver.
@@ -375,10 +401,16 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
     # Set some solver-specific parameters
     if eigensolver == "davidson":
         n_guesses_per_state = 2
-        callback = setup_solver_printing(
-            "Jacobi-Davidson", matrix, kind, solver.davidson.default_print,
-            output=output)
-        run_eigensolver = jacobi_davidson
+        if fold:
+            callback = setup_solver_printing(
+                "Jacobi-Davidson using doubles-folding", matrix, kind,
+                solver.davidson.default_print, output=output)
+            run_eigensolver = davidson_folded_DIIS
+        else:
+            callback = setup_solver_printing(
+                "Jacobi-Davidson", matrix, kind, solver.davidson.default_print,
+                output=output)
+            run_eigensolver = jacobi_davidson
     elif eigensolver == "lanczos":
         n_guesses_per_state = 1
         callback = setup_solver_printing(
@@ -407,10 +439,16 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
                           "are explicitly provided.")
 
     solverargs.setdefault("which", "SA")
-    return run_eigensolver(matrix, guesses, n_ep=n_states, conv_tol=conv_tol,
-                           callback=callback,
-                           explicit_symmetrisation=explicit_symmetrisation,
-                           **solverargs)
+    if fold and guesses_fold == "adc1":
+        return run_eigensolver(matrix, guesses=guesses, omegas=omegas,
+                               n_ep=n_states, conv_tol=conv_tol, callback=callback,
+                               explicit_symmetrisation=explicit_symmetrisation,
+                               **solverargs)
+    else:
+        return run_eigensolver(matrix, guesses, n_ep=n_states, conv_tol=conv_tol,
+                               callback=callback,
+                               explicit_symmetrisation=explicit_symmetrisation,
+                               **solverargs)
 
 
 def estimate_n_guesses(matrix, n_states, singles_only=True,
