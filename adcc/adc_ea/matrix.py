@@ -25,8 +25,9 @@ from collections import namedtuple
 
 from adcc import block as b
 from adcc.functions import direct_sum, einsum
-from adcc.Intermediates import Intermediates, register_as_intermediate
+from adcc.Intermediates import register_as_intermediate
 from adcc.AmplitudeVector import AmplitudeVector
+from adcc.adc_pp.matrix import get_block_prereqs
 
 __all__ = ["block"]
 
@@ -52,33 +53,8 @@ AdcBlock = namedtuple("AdcBlock", ["apply", "diagonal"])
 
 
 def block(ground_state, spaces, order, variant=None, intermediates=None):
-    """
-    Gets ground state, potentially intermediates, spaces (ph, pphh and so on)
-    and the perturbation theory order for the block,
-    variant is "cvs" or sth like that.
-
-    It is assumed largely, that CVS is equivalent to
-    mp.has_core_occupied_space, while one would probably want in the long run
-    that one can have an "o2" space, but not do CVS.
-    """
-    if isinstance(variant, str):
-        variant = [variant]
-    elif variant is None:
-        variant = []
-    reference_state = ground_state.reference_state
-    if intermediates is None:
-        intermediates = Intermediates(ground_state)
-
-    if ground_state.has_core_occupied_space and "cvs" not in variant:
-        raise ValueError("Cannot run a general (non-core-valence approximated)"
-                         " ADC method on top of a ground state with a "
-                         "core-valence separation.")
-    if not ground_state.has_core_occupied_space and "cvs" in variant:
-        raise ValueError("Cannot run a core-valence approximated ADC method on"
-                         " top of a ground state without a "
-                         "core-valence separation.")
-
-    fn = "_".join(["block"] + variant + spaces + [str(order)])
+    fn, reference_state = get_block_prereqs(
+        ground_state, spaces, order, variant, intermediates)
 
     if fn not in globals():
         raise ValueError("Could not dispatch: "
