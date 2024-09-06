@@ -34,10 +34,11 @@ def guess_kwargs_kind(kind):
     computed states of the passed excitation `kind`.
     """
     kwargsmap = dict(
-        singlet=dict(spin_block_symmetrisation="symmetric", spin_change=0),
-        triplet=dict(spin_block_symmetrisation="antisymmetric", spin_change=0),
-        spin_flip=dict(spin_block_symmetrisation="none", spin_change=-1),
-        any=dict(spin_block_symmetrisation="none", spin_change=0),
+        singlet=dict(spin_block_symmetrisation="symmetric"),
+        doublet=dict(spin_block_symmetrisation="none"),
+        triplet=dict(spin_block_symmetrisation="antisymmetric"),
+        spin_flip=dict(spin_block_symmetrisation="none"),
+        any=dict(spin_block_symmetrisation="none"),
     )
     try:
         return kwargsmap[kind]
@@ -50,15 +51,37 @@ def guesses_singlet(matrix, n_guesses, block="ph", **kwargs):
     Obtain guesses for computing singlet states by inspecting the passed
     ADC matrix.
 
-    matrix       The matrix for which guesses are to be constructed
-    n_guesses    The number of guesses to be searched for. Less number of
-                 vectors are returned if this many could not be found.
-    block        Diagonal block to use for obtaining the guesses
-                 (typically "ph" or "pphh").
-    kwargs       Any other argument understood by guesses_from_diagonal.
+    matrix      The matrix for which guesses are to be constructed
+    n_guesses   The number of guesses to be searched for. Less number of
+                vectors are returned if this many could not be found.
+    block       Diagonal block to use for obtaining the guesses
+                (typically "ph" or "pphh").
+    is_alpha    Is the detached/attached electron alpha spin for the respective
+                IP-/EA-ADC calculation.
+    kwargs      Any other argument understood by guesses_from_diagonal.
     """
     return guesses_from_diagonal(matrix, n_guesses, block=block,
                                  **guess_kwargs_kind("singlet"), **kwargs)
+
+
+def guesses_doublet(matrix, n_guesses, block="h", is_alpha=None, **kwargs):
+    """
+    Obtain guesses for computing doublet states by inspecting the passed
+    ADC matrix.
+
+    matrix      The matrix for which guesses are to be constructed
+    n_guesses   The number of guesses to be searched for. Less number of
+                vectors are returned if this many could not be found.
+    block       Diagonal block to use for obtaining the guesses
+                (typically "ph" or "pphh").
+    is_alpha    Is the detached/attached electron alpha spin for the respective
+                IP-/EA-ADC calculation.
+    kwargs      Any other argument understood by guesses_from_diagonal.
+    """
+    return guesses_from_diagonal(matrix, n_guesses, block=block,
+                                 is_alpha=is_alpha,
+                                 **guess_kwargs_kind("doublet"),
+                                 **kwargs)
 
 
 def guesses_triplet(matrix, n_guesses, block="ph", **kwargs):
@@ -66,18 +89,20 @@ def guesses_triplet(matrix, n_guesses, block="ph", **kwargs):
     Obtain guesses for computing triplet states by inspecting the passed
     ADC matrix.
 
-    matrix       The matrix for which guesses are to be constructed
-    n_guesses    The number of guesses to be searched for. Less number of
-                 vectors are returned if this many could not be found.
-    block        Diagonal block to use for obtaining the guesses
-                 (typically "ph" or "pphh").
-    kwargs       Any other argument understood by guesses_from_diagonal.
+    matrix      The matrix for which guesses are to be constructed
+    n_guesses   The number of guesses to be searched for. Less number of
+                vectors are returned if this many could not be found.
+    block       Diagonal block to use for obtaining the guesses
+                (typically "ph" or "pphh").
+    is_alpha    Is the detached/attached electron alpha spin for the respective
+                IP-/EA-ADC calculation.
+    kwargs      Any other argument understood by guesses_from_diagonal.
     """
     return guesses_from_diagonal(matrix, n_guesses, block=block,
                                  **guess_kwargs_kind("triplet"), **kwargs)
 
 
-# guesses for computing any state (singlet or triplet)
+# guesses for computing any state (excluding spin-flip states)
 guesses_any = guesses_from_diagonal
 
 
@@ -86,12 +111,14 @@ def guesses_spin_flip(matrix, n_guesses, block="ph", **kwargs):
     Obtain guesses for computing spin-flip states by inspecting the passed
     ADC matrix.
 
-    matrix       The matrix for which guesses are to be constructed
-    n_guesses    The number of guesses to be searched for. Less number of
-                 vectors are returned if this many could not be found.
-    block        Diagonal block to use for obtaining the guesses
-                 (typically "ph" or "pphh").
-    kwargs       Any other argument understood by guesses_from_diagonal.
+    matrix      The matrix for which guesses are to be constructed
+    n_guesses   The number of guesses to be searched for. Less number of
+                vectors are returned if this many could not be found.
+    block       Diagonal block to use for obtaining the guesses
+                (typically "ph" or "pphh").
+    is_alpha    Is the detached/attached electron alpha spin for the respective
+                IP-/EA-ADC calculation.
+    kwargs      Any other argument understood by guesses_from_diagonal.
     """
     return guesses_from_diagonal(matrix, n_guesses, block=block,
                                  **guess_kwargs_kind("spin_flip"), **kwargs)

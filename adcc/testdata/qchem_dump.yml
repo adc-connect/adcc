@@ -88,3 +88,31 @@ formaldehyde_sto3g_pe_adc3:
     -8.268597558192297e-06, -0.0005279040174374771]
   pe_ptss_correction: [-0.00013505376011714086, -0.00017312605820730628, -0.0005722971989943495,
     -7.313115173690076e-05, -0.00012597667746436976]
+h2o_sto3g_ip_adc2:
+  basis: sto3g
+  excitation_energy: [0.3026127863, 0.3845883455, 0.6156711154]
+  geometry: "O 0 0 0\n    H 0 0 1.795239827225189\n    H 1.693194615993441 0 -0.599043184453037"
+  method: ip_adc2
+  molecule: h2o
+  pole_strength: [0.943305, 0.953641, 0.974272]
+h2o_sto3g_ip_adc3:
+  basis: sto3g
+  excitation_energy: [0.3143012822, 0.3916248393, 0.6203758705]
+  geometry: "O 0 0 0\n    H 0 0 1.795239827225189\n    H 1.693194615993441 0 -0.599043184453037"
+  method: ip_adc2
+  molecule: h2o
+  pole_strength: [0.93845, 0.9456, 0.968541]
+h2o_sto3g_ea_adc2:
+  basis: sto3g
+  excitation_energy: [0.5983072662, 0.7527166698, 1.5933238541]
+  geometry: "O 0 0 0\n    H 0 0 1.795239827225189\n    H 1.693194615993441 0 -0.599043184453037"
+  method: ea_adc2
+  molecule: h2o
+  pole_strength: [0.979551, 0.96947, 0.000388]
+h2o_sto3g_ea_adc3:
+  basis: sto3g
+  excitation_energy: [0.5967619581, 0.7446276782, 1.0088705481]
+  geometry: "O 0 0 0\n    H 0 0 1.795239827225189\n    H 1.693194615993441 0 -0.599043184453037"
+  method: ea_adc2
+  molecule: h2o
+  pole_strength: [0.969832, 0.944075, 0.000208]

@@ -30,18 +30,25 @@ from adcc.testdata.cache import cache
 
 
 class TestWorkflow:
-    def test_validate_state_parameters_rhf(self):
+    def test_validate_state_parameters_rhf_pp(self):
         from adcc.workflow import validate_state_parameters
+        from adcc.AdcMatrix import AdcMatrixlike
 
-        refstate = cache.refstate["h2o_sto3g"]
+        # Build empty AdcMatrixlike object and assign ref_state and type
+        matrix = AdcMatrixlike()
+        matrix.reference_state = cache.refstate["h2o_sto3g"]
+        matrix.type = "pp"
 
-        assert 3, "any" == validate_state_parameters(refstate, n_states=3)
-        assert 4, "singlet" == validate_state_parameters(refstate, n_states=4,
-                                                         kind="singlet")
-        assert 2, "triplet" == validate_state_parameters(refstate, n_states=2,
-                                                         kind="triplet")
-        assert 2, "triplet" == validate_state_parameters(refstate, n_triplets=2)
-        assert 6, "singlet" == validate_state_parameters(refstate, n_singlets=6)
+        assert (3, "any", None) == validate_state_parameters(
+            matrix, n_states=3)
+        assert (4, "singlet", None) == validate_state_parameters(
+            matrix, n_states=4, kind="singlet")
+        assert (2, "triplet", None) == validate_state_parameters(
+            matrix, n_states=2, kind="triplet")
+        assert (2, "triplet", None) == validate_state_parameters(
+            matrix, n_triplets=2)
+        assert (6, "singlet", None) == validate_state_parameters(
+            matrix, n_singlets=6)
 
         invalid_cases = [
             dict(),                # No states requested
@@ -52,22 +59,70 @@ class TestWorkflow:
             dict(n_triplets=2, n_singlets=2),    # States of two sorts
             dict(n_states=2, n_spin_flip=2),     # States of two sorts
             dict(n_triplets=2, kind="singlet"),  # kind and n_ do not agree
-            dict(n_states=2, kind="bla"),      # Kind invaled
+            dict(n_states=2, kind="bla"),      # Kind invalid
+            dict(n_states=2, kind="doublet"),  # Kind invalid for PP-ADC
+            dict(n_states=2, is_alpha=True),   # Parameter only for IP/EA-ADC
+
         ]
         for case in invalid_cases:
             with pytest.raises(InputError):
-                validate_state_parameters(refstate, **case)
+                validate_state_parameters(matrix, **case)
 
-    def test_validate_state_parameters_uhf(self):
+    def test_validate_state_parameters_rhf_ip_ea(self):
         from adcc.workflow import validate_state_parameters
+        from adcc.AdcMatrix import AdcMatrixlike
 
-        refstate = cache.refstate["cn_sto3g"]
+        # Build empty AdcMatrixlike object and assign ref_state and type
+        matrix = AdcMatrixlike()
+        matrix.reference_state = cache.refstate["h2o_sto3g"]
+        matrix.type = "ip"  # Does not matter if "ip" or "ea"
 
-        assert 3, "any" == validate_state_parameters(refstate, n_states=3,
-                                                     kind="any")
-        assert 3, "any" == validate_state_parameters(refstate, n_states=3)
-        assert 2, "spin_flip" == validate_state_parameters(refstate,
-                                                           n_spin_flip=2)
+        assert (3, "any", True) == (validate_state_parameters(
+            matrix, n_states=3))
+        assert (3, "any", True) == (validate_state_parameters(
+            matrix, n_states=3, is_alpha=True))
+        assert (3, "any", True) == (validate_state_parameters(
+            matrix, n_states=3, is_alpha=False))  # restricted always alpha
+        assert (2, "doublet", True) == (validate_state_parameters(
+            matrix, n_states=2, kind="doublet"))
+        assert (2, "doublet", True) == (validate_state_parameters(
+            matrix, n_doublets=2))
+        assert (6, "doublet", True) == (validate_state_parameters(
+            matrix, n_doublets=6, is_alpha=False))
+
+        invalid_cases = [
+            dict(),                # No states requested
+            dict(n_states=0),      # No states requested
+            dict(n_doublets=-2),   # Negative number of states requested
+            dict(n_states=2, kind="bla"),  # Kind invalid
+            dict(n_singlets=2),    # Kind invalid for IP/EA-ADC
+            dict(n_triplets=2),    # Kind invalid for IP/EA-ADC
+            dict(n_spin_flip=2),   # Kind invalid for IP/EA-ADC
+            dict(n_states=2, is_alpha="yes"),    # is_alpha not boolean
+            dict(n_states=2, is_alpha=1),        # is_alpha not boolean
+            dict(n_states=2, n_spin_flip=2),     # States of two sorts
+            dict(n_doublets=2, kind="singlet"),  # kind and n_ do not agree
+
+        ]
+        for case in invalid_cases:
+            with pytest.raises(InputError):
+                validate_state_parameters(matrix, **case)
+
+    def test_validate_state_parameters_uhf_pp(self):
+        from adcc.workflow import validate_state_parameters
+        from adcc.AdcMatrix import AdcMatrixlike
+
+        # Build empty AdcMatrixlike object and assign ref_state and type
+        matrix = AdcMatrixlike()
+        matrix.reference_state = cache.refstate["cn_sto3g"]
+        matrix.type = "pp"
+
+        assert (3, "any", None) == validate_state_parameters(
+            matrix, n_states=3, kind="any")
+        assert (3, "any", None) == validate_state_parameters(
+            matrix, n_states=3)
+        assert (2, "spin_flip", None) == validate_state_parameters(
+            matrix, n_spin_flip=2)
 
         invalid_cases = [
             dict(),                # No states requested
@@ -86,7 +141,40 @@ class TestWorkflow:
         ]
         for case in invalid_cases:
             with pytest.raises(InputError):
-                validate_state_parameters(refstate, **case)
+                validate_state_parameters(matrix, **case)
+
+    def test_validate_state_parameters_uhf_ip_ea(self):
+        from adcc.workflow import validate_state_parameters
+        from adcc.AdcMatrix import AdcMatrixlike
+
+        # Build empty AdcMatrixlike object and assign ref_state and type
+        matrix = AdcMatrixlike()
+        matrix.reference_state = cache.refstate["cn_sto3g"]
+        matrix.type = "ip"  # Does not matter if "ip" or "ea"
+
+        assert (3, "any", True) == validate_state_parameters(
+            matrix, n_states=3, kind="any")
+        assert (3, "any", True) == validate_state_parameters(
+            matrix, n_states=3, is_alpha=True)
+        assert (3, "any", False) == validate_state_parameters(
+            matrix, n_states=3, is_alpha=False)
+
+        invalid_cases = [
+            dict(),                # No states requested
+            dict(n_states=0),      # No states requested
+            dict(n_states=-2),     # Negative number of states requested
+            dict(n_states=2, kind="bla"),  # Kind invalid
+            dict(n_doublets=2),  # UHF with doublets
+            dict(n_states=2, kind="doublet"),  # UHF with doublets
+            dict(n_singlets=2),    # Kind invalid for IP/EA-ADC and UHF
+            dict(n_triplets=2),    # Kind invalid for IP/EA-ADC and UHF
+            dict(n_spin_flip=2),   # Kind invalid for IP/EA-ADC and UHF
+            dict(n_states=2, is_alpha="yes"),    # is_alpha not boolean
+            dict(n_states=2, is_alpha=1),        # is_alpha not boolean
+        ]
+        for case in invalid_cases:
+            with pytest.raises(InputError):
+                validate_state_parameters(matrix, **case)
 
     def test_construct_adcmatrix(self):
         from adcc.workflow import construct_adcmatrix
@@ -102,6 +190,8 @@ class TestWorkflow:
         assert res.mospaces.core_orbitals == []
         assert res.mospaces.frozen_core == []
         assert res.mospaces.frozen_virtual == []
+        assert res.type == "pp"
+        assert ["ph", "pphh"] == res.axis_blocks
 
         res = construct_adcmatrix(hfdata, method="cvs-adc3", core_orbitals=1)
         assert isinstance(res, adcc.AdcMatrix)
@@ -109,22 +199,48 @@ class TestWorkflow:
         assert res.mospaces.core_orbitals == [0, 7]
         assert res.mospaces.frozen_core == []
         assert res.mospaces.frozen_virtual == []
+        assert res.type == "pp"
+        assert ["ph", "pphh"] == res.axis_blocks
 
         res = construct_adcmatrix(hfdata, method="adc2", frozen_core=1)
         assert res.mospaces.core_orbitals == []
         assert res.mospaces.frozen_core == [0, 7]
         assert res.mospaces.frozen_virtual == []
+        assert res.type == "pp"
+        assert ["ph", "pphh"] == res.axis_blocks
 
         res = construct_adcmatrix(hfdata, method="adc2", frozen_virtual=1)
         assert res.mospaces.core_orbitals == []
         assert res.mospaces.frozen_core == []
         assert res.mospaces.frozen_virtual == [6, 13]
+        assert res.type == "pp"
+        assert ["ph", "pphh"] == res.axis_blocks
 
         res = construct_adcmatrix(hfdata, method="adc2", frozen_virtual=1,
                                   frozen_core=1)
         assert res.mospaces.core_orbitals == []
         assert res.mospaces.frozen_core == [0, 7]
         assert res.mospaces.frozen_virtual == [6, 13]
+        assert res.type == "pp"
+        assert ["ph", "pphh"] == res.axis_blocks
+
+        res = construct_adcmatrix(hfdata, method="ip_adc3")
+        assert isinstance(res, adcc.AdcMatrix)
+        assert res.method == adcc.AdcMethod("ip_adc3")
+        assert res.mospaces.core_orbitals == []
+        assert res.mospaces.frozen_core == []
+        assert res.mospaces.frozen_virtual == []
+        assert res.type == "ip"
+        assert ["h", "phh"] == res.axis_blocks
+
+        res = construct_adcmatrix(hfdata, method="ea_adc2")
+        assert isinstance(res, adcc.AdcMatrix)
+        assert res.method == adcc.AdcMethod("ea_adc2")
+        assert res.mospaces.core_orbitals == []
+        assert res.mospaces.frozen_core == []
+        assert res.mospaces.frozen_virtual == []
+        assert res.type == "ea"
+        assert ["p", "pph"] == res.axis_blocks
 
         invalid_cases = [
             dict(),                   # Missing method
@@ -152,6 +268,7 @@ class TestWorkflow:
             res = construct_adcmatrix(obj, method="adc2")
             assert isinstance(res, adcc.AdcMatrix)
             assert res.method == adcc.AdcMethod("adc2")
+            assert res.type == "pp"
 
             with pytest.raises(InputError,
                                match=r"Cannot run a core-valence"):
@@ -196,21 +313,22 @@ class TestWorkflow:
                           match=r"^Ignored frozen_virtual parameter"):
             construct_adcmatrix(mtx_cvs, frozen_virtual=1)
 
-    def test_diagonalise_adcmatrix(self):
+    def test_diagonalise_adcmatrix_pp(self):
         from adcc.workflow import diagonalise_adcmatrix
 
         refdata = cache.reference_data["h2o_sto3g"]
         matrix = adcc.AdcMatrix("adc2", adcc.LazyMp(cache.refstate["h2o_sto3g"]))
 
         res = diagonalise_adcmatrix(matrix, n_states=3, kind="singlet",
-                                    eigensolver="davidson")
+                                    eigensolver="davidson", spin_change=0)
         ref_singlets = refdata["adc2"]["singlet"]["eigenvalues"]
         assert res.converged
         assert res.eigenvalues == approx(ref_singlets[:3])
 
-        guesses = adcc.guesses_singlet(matrix, n_guesses=6, block="ph")
+        guesses = adcc.guesses_singlet(matrix, n_guesses=6, block="ph",
+                                       spin_change=0)
         res = diagonalise_adcmatrix(matrix, n_states=3, kind="singlet",
-                                    guesses=guesses)
+                                    guesses=guesses, spin_change=0)
         ref_singlets = refdata["adc2"]["singlet"]["eigenvalues"]
         assert res.converged
         assert res.eigenvalues == approx(ref_singlets[:3])
@@ -229,7 +347,77 @@ class TestWorkflow:
                                         eigensolver="davidson",
                                         guesses=guesses)
 
-    def test_estimate_n_guesses(self):
+    def test_diagonalise_adcmatrix_ip(self):
+        from adcc.workflow import diagonalise_adcmatrix
+
+        refdata = cache.adcc_reference_data["h2o_sto3g"]
+        matrix = adcc.AdcMatrix("ip_adc2",
+                                adcc.LazyMp(cache.refstate["h2o_sto3g"]))
+
+        res = diagonalise_adcmatrix(matrix, n_states=3, kind="doublet",
+                                    eigensolver="davidson", spin_change=-0.5)
+        ref_doublets = refdata["ip_adc2"]["doublet"]["eigenvalues"]
+        assert res.converged
+        assert res.eigenvalues == approx(ref_doublets[:3])
+
+        guesses = adcc.guesses_doublet(matrix, n_guesses=5, block="h",
+                                       spin_change=-0.5)
+        res = diagonalise_adcmatrix(matrix, n_states=3, kind="doublet",
+                                    guesses=guesses, spin_change=-0.5)
+        assert res.converged
+        assert res.eigenvalues == approx(ref_doublets[:3])
+
+        with pytest.raises(InputError):  # Too low tolerance
+            res = diagonalise_adcmatrix(matrix, n_states=5, kind="doublet",
+                                        eigensolver="davidson",
+                                        conv_tol=1e-14, spin_change=-0.5)
+
+        with pytest.raises(InputError):  # Wrong solver method
+            res = diagonalise_adcmatrix(matrix, n_states=5, kind="doublet",
+                                        eigensolver="blubber", spin_change=-0.5)
+
+        with pytest.raises(InputError):  # Too few guesses
+            res = diagonalise_adcmatrix(matrix, n_states=6, kind="doublet",
+                                        eigensolver="davidson",
+                                        guesses=guesses, spin_change=-0.5)
+
+    def test_diagonalise_adcmatrix_ea(self):
+        from adcc.workflow import diagonalise_adcmatrix
+
+        refdata = cache.adcc_reference_data["h2o_sto3g"]
+        matrix = adcc.AdcMatrix("ea_adc2",
+                                adcc.LazyMp(cache.refstate["h2o_sto3g"]))
+
+        res = diagonalise_adcmatrix(matrix, n_states=2, kind="doublet",
+                                    eigensolver="davidson", spin_change=0.5)
+        ref_doublets = refdata["ea_adc2"]["doublet"]["eigenvalues"]
+        assert res.converged
+        assert res.eigenvalues == approx(ref_doublets[:2])
+
+        guesses = adcc.guesses_doublet(matrix, n_guesses=2, block="p",
+                                       spin_change=0.5)
+        guesses += adcc.guesses_doublet(matrix, n_guesses=2, block="pph",
+                                        spin_change=0.5)
+        res = diagonalise_adcmatrix(matrix, n_states=2, kind="doublet",
+                                    guesses=guesses, spin_change=0.5)
+        assert res.converged
+        assert res.eigenvalues == approx(ref_doublets[:2])
+
+        with pytest.raises(InputError):  # Too low tolerance
+            res = diagonalise_adcmatrix(matrix, n_states=5, kind="doublet",
+                                        eigensolver="davidson",
+                                        conv_tol=1e-14, spin_change=0.5)
+
+        with pytest.raises(InputError):  # Wrong solver method
+            res = diagonalise_adcmatrix(matrix, n_states=5, kind="doublet",
+                                        eigensolver="blubber", spin_change=0.5)
+
+        with pytest.raises(InputError):  # Too few guesses
+            res = diagonalise_adcmatrix(matrix, n_states=6, kind="doublet",
+                                        eigensolver="davidson",
+                                        guesses=guesses, spin_change=0.5)
+
+    def test_estimate_n_guesses_pp(self):
         from adcc.workflow import estimate_n_guesses
 
         refstate = cache.refstate["h2o_sto3g"]
@@ -241,9 +429,52 @@ class TestWorkflow:
         assert 4 == estimate_n_guesses(matrix, n_states=1, singles_only=True)
         assert 4 == estimate_n_guesses(matrix, n_states=2, singles_only=True)
         for i in range(3, 20):
-            assert i <= estimate_n_guesses(matrix, n_states=i, singles_only=True)
+            assert i <= estimate_n_guesses(matrix, n_states=i,
+                                           singles_only=True)
 
-    def test_obtain_guesses_by_inspection(self):
+    def test_estimate_n_guesses_ip(self):
+        from adcc.workflow import estimate_n_guesses
+
+        refstate = cache.refstate["h2o_sto3g"]
+        ground_state = adcc.LazyMp(refstate)
+        matrix = adcc.AdcMatrix("ip_adc2", ground_state)
+
+        # Check minimal number of guesses is 4 and at some point
+        # we get more than four guesses
+        assert 4 == estimate_n_guesses(matrix, n_states=1, singles_only=True)
+        assert 4 == estimate_n_guesses(matrix, n_states=2, singles_only=True)
+        for i in range(3, 20):
+            assert i <= estimate_n_guesses(matrix, n_states=i,
+                                           singles_only=True)
+
+        # Test different behaviour for IP-ADC(0/1)
+        matrix = adcc.AdcMatrix("ip_adc0", ground_state)
+        assert 4 == estimate_n_guesses(matrix, n_states=2, singles_only=True)
+        assert 5 == estimate_n_guesses(matrix, n_states=5, singles_only=True)
+        assert 10 == estimate_n_guesses(matrix, n_states=10, singles_only=True)
+
+    def test_estimate_n_guesses_ea(self):
+        from adcc.workflow import estimate_n_guesses
+
+        refstate = cache.refstate["h2o_sto3g"]
+        ground_state = adcc.LazyMp(refstate)
+        matrix = adcc.AdcMatrix("ea_adc2", ground_state)
+
+        # Check minimal number of guesses is 4 and at some point
+        # we get more than four guesses
+        assert 4 == estimate_n_guesses(matrix, n_states=1, singles_only=True)
+        assert 4 == estimate_n_guesses(matrix, n_states=2, singles_only=True)
+        for i in range(3, 20):
+            assert i <= estimate_n_guesses(matrix, n_states=i,
+                                           singles_only=True)
+
+        # Test different behaviour for EA-ADC(0/1)
+        matrix = adcc.AdcMatrix("ea_adc1", ground_state)
+        assert 2 == estimate_n_guesses(matrix, n_states=1, singles_only=True)
+        assert 2 == estimate_n_guesses(matrix, n_states=2, singles_only=True)
+        assert 3 == estimate_n_guesses(matrix, n_states=3, singles_only=True)
+
+    def test_obtain_guesses_by_inspection_pp(self):
         from adcc.workflow import obtain_guesses_by_inspection
 
         refstate = cache.refstate["h2o_sto3g"]
@@ -255,16 +486,75 @@ class TestWorkflow:
         for mat in [matrix1, matrix2]:
             for i in range(4, 9):
                 res = obtain_guesses_by_inspection(mat, n_guesses=i,
-                                                   kind="singlet")
+                                                   kind="singlet",
+                                                   spin_change=0)
                 assert len(res) == i
 
         for i in range(4, 9):
             res = obtain_guesses_by_inspection(
-                matrix2, n_guesses=i, kind="triplet", n_guesses_doubles=2)
+                matrix2, n_guesses=i, kind="triplet", n_guesses_doubles=2,
+                spin_change=0)
             assert len(res) == i
 
         with pytest.raises(InputError):
             obtain_guesses_by_inspection(matrix1, n_guesses=4, kind="any",
-                                         n_guesses_doubles=2)
+                                         n_guesses_doubles=2, spin_change=0)
         with pytest.raises(InputError):
-            obtain_guesses_by_inspection(matrix1, n_guesses=40, kind="any")
+            obtain_guesses_by_inspection(matrix1, n_guesses=40, kind="any",
+                                         spin_change=0)
+
+    def test_obtain_guesses_by_inspection_ip(self):
+        from adcc.workflow import obtain_guesses_by_inspection
+
+        refstate = cache.refstate["h2o_sto3g"]
+        ground_state = adcc.LazyMp(refstate)
+        matrix2 = adcc.AdcMatrix("ip_adc2", ground_state)
+        matrix1 = adcc.AdcMatrix("ip_adc1", ground_state)
+
+        # Test that the right number of guesses is returned
+        for i in range(4, 9):
+            res = obtain_guesses_by_inspection(matrix2, n_guesses=i,
+                                               kind="doublet",
+                                               spin_change=-0.5)
+            assert len(res) == i
+
+        for i in range(2, 5):
+            res = obtain_guesses_by_inspection(
+                matrix1, n_guesses=i, kind="doublet",
+                spin_change=-0.5)
+            assert len(res) == i
+
+        with pytest.raises(InputError):
+            obtain_guesses_by_inspection(matrix1, n_guesses=6, kind="any",
+                                         spin_change=-0.5)
+        with pytest.raises(InputError):
+            obtain_guesses_by_inspection(matrix1, n_guesses=2, kind="any",
+                                         n_guesses_doubles=2, spin_change=-0.5)
+
+    def test_obtain_guesses_by_inspection_ea(self):
+        from adcc.workflow import obtain_guesses_by_inspection
+
+        refstate = cache.refstate["h2o_sto3g"]
+        ground_state = adcc.LazyMp(refstate)
+        matrix2 = adcc.AdcMatrix("ea_adc2", ground_state)
+        matrix1 = adcc.AdcMatrix("ea_adc1", ground_state)
+
+        # Test that the right number of guesses is returned
+        for i in range(4, 9):
+            res = obtain_guesses_by_inspection(matrix2, n_guesses=i,
+                                               kind="doublet",
+                                               spin_change=0.5)
+            assert len(res) == i
+
+        for i in range(1, 2):
+            res = obtain_guesses_by_inspection(
+                matrix1, n_guesses=i, kind="doublet",
+                spin_change=0.5)
+            assert len(res) == i
+
+        with pytest.raises(InputError):
+            obtain_guesses_by_inspection(matrix1, n_guesses=3, kind="any",
+                                         spin_change=0.5)
+        with pytest.raises(InputError):
+            obtain_guesses_by_inspection(matrix1, n_guesses=2, kind="any",
+                                         n_guesses_doubles=2, spin_change=0.5)

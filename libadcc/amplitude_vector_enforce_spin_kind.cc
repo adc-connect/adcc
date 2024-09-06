@@ -31,7 +31,8 @@ namespace libadcc {
 namespace lt = libtensor;
 
 void amplitude_vector_enforce_spin_kind(std::shared_ptr<Tensor> doubles_tensor,
-                                        std::string block, std::string spin_kind) {
+                                        std::string block,
+                                        std::string spin_kind, bool is_ip) {
   // Nothing to do for singles block
   if (block == "s") return;
 
@@ -64,10 +65,130 @@ void amplitude_vector_enforce_spin_kind(std::shared_ptr<Tensor> doubles_tensor,
     return;
   }
 
+  if (spin_kind == "doublet") {
+    auto& u2 = asbt3(doubles_tensor);
+    lt::block_tensor_ctrl<3, scalar_type> ctrl(u2);
+    const lt::symmetry<3, scalar_type>& sym = ctrl.req_const_symmetry();
+
+    // Extract the number of blocks per dimension
+    const lt::block_index_space<3>& bis = sym.get_bis();
+    lt::dimensions<3> bidims(bis.get_block_index_dims());
+
+    // Setup i1 to point to 0,0,0 and i2 to the half of the
+    // full number of blocks, i.e. to the alpha blocks in each
+    // dimension only.
+    lt::index<3> i1, i2;
+    for (size_t i = 0; i < 3; i++) i2[i] = bidims[i] / 2 - 1;
+
+    // Index range over all alpha-alpha-alpha blocks
+    // in all point group symmetries
+    const lt::index_range<3> index_range_alpha(i1, i2);
+
+    // This dimensions object contains the number of alpha blocks per dimension
+    lt::dimensions<3> bidims_alpha(index_range_alpha);
+
+    // Iterate over all alpha-alpha-alpha blocks
+    lt::abs_index<3> ai(bidims_alpha);
+    do {
+      // This gives the block index tuple
+      const lt::index<3>& ii = ai.get_index();
+
+      // Construct the orbit corresponding to this index (i.e. the iterator
+      // running over all elements equivalent by symmetry
+      // Ignore spin-forbidden, i.e. zero orbits
+      lt::short_orbit<3, scalar_type> orbi(sym, ii, /* compute_if_allowed_orbit = */ true);
+      if (!orbi.is_allowed()) continue;
+
+      // get_acindex -> get absolute canonical index
+      // Continue if our current index is larger than the canonical index
+      if (orbi.get_acindex() < ai.get_abs_index()) continue;
+
+      // TODO This might be wrong ... think about it and talk to Adrian
+      //      the point is that orbi might have other strides than bidims_alpha
+      //      Continue if the canonical index is already past the
+      //      alpha-alpha-alpha block
+      if (orbi.get_acindex() > bidims_alpha.get_size()) continue;
+
+      // Get the index tuple of the canonical block of (alpha, alpha, alpha)
+      const lt::index<3>& ci = orbi.get_cindex();
+
+      lt::index<3> i1(ci);
+      lt::index<3> i2(ci);
+
+      if (is_ip) { // IP-ADC calculation
+        // set i1 to (alpha, beta, beta) equivalent of the canonical index
+        //  pinned by ai and orbi
+        i1[1] += bidims_alpha[1];
+        i1[2] += bidims_alpha[2];
+
+        // set i2 to (beta, alpha, beta)
+        i2[0] += bidims_alpha[0];
+        i2[2] += bidims_alpha[2];
+
+      } else { // EA-ADC calculation
+        // set i1 to (beta, alpha, beta) equivalent of the canonical index
+        //  pinned by ai and orbi
+        i1[0] += bidims_alpha[0];
+        i1[2] += bidims_alpha[2];
+
+        // set i2 to (beta, beta, alpha)
+        i2[0] += bidims_alpha[0];
+        i2[1] += bidims_alpha[1];
+      }
+
+      //
+      // What the following code does is that it keeps the spin projection (S^2)
+      // properly, provided that the symmetry setup is done as in
+      // contrib/adc_pp/adc_guess_d.C. It assumes the coefficients as setup in
+      // contrib/adc_pp/adc_guess_d.C adc_guess_d::build_guesses in order to preserve
+      // S^2 value setup in the guess.
+      //
+
+      lt::orbit<3, scalar_type> orb1(sym, i1, false), orb2(sym, i2, false);
+      // Canonical block of (a, b, b) for IP-ADC or (b, a, b) for EA-ADC
+      const lt::index<3>& ci1 = orb1.get_cindex();
+      // Canonical block of (b, a, b) for IP-ADC or (b, b, a) for EA-ADC
+      const lt::index<3>& ci2 = orb2.get_cindex();
+      bool zero1              = ctrl.req_is_zero_block(ci1);
+      bool zero2              = ctrl.req_is_zero_block(ci2);
+      if (zero1 && zero2) {
+        // Set (alpha, alpha, alpha) to zero
+        // This effectively filters out the quartet components with zero blocks
+        // in (alpha, beta, beta) and (beta, alpha, beta) (IP-ADC) erroneously
+        // introduced due to numerical errors. (beta, alpha, beta) and 
+        // (beta, beta, alpha) blocks for EA-ADC.
+        ctrl.req_zero_block(ci);
+        continue;
+      }
+
+      // Get block corresponding to canonical index of (alpha, alpha, alpha)
+      lt::dense_tensor_wr_i<3, scalar_type>& blk = ctrl.req_block(ci);
+
+      if (!zero1) {
+        // IP: (alpha, beta, beta) / EA: (beta, alpha, beta) is not zero
+        lt::dense_tensor_rd_i<3, scalar_type>& blk1 = ctrl.req_const_block(ci1);
+        lt::tod_copy<3>(blk1, orb1.get_transf(i1)).perform(/* assign= */ true, blk);
+        ctrl.ret_const_block(ci1);
+      }
+      if (!zero2) {
+        // IP: (beta, alpha, beta) / EA: (beta, beta, alpha) is not zero
+        lt::dense_tensor_rd_i<3, scalar_type>& blk2 = ctrl.req_const_block(ci2);
+
+        // Assign if (alpha, beta, beta) for IP- and (beta, alpha, beta) for 
+        // EA-ADC is zero, else +=
+        lt::tod_copy<3>(blk2, orb2.get_transf(i2)).perform(zero1, blk);
+        ctrl.ret_const_block(ci2);
+      }
+      ctrl.ret_block(ci);
+
+    } while (ai.inc());
+    return;
+  }
+
   if (spin_kind != "singlet") {
     throw not_implemented_error(
-          "Only implemented for spin_kind == 'singlet' and spin_kind == "
-          "'triplet'.");
+          "Only implemented for spin_kind == 'singlet', spin_kind == "
+          "'triplet' or spin_kind == 'doublet'.");
   }
 
   auto& u2 = asbt4(doubles_tensor);
