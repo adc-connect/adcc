@@ -83,24 +83,8 @@ def block(ground_state, spaces, order, variant=None, intermediates=None):
     while one would probably want in the long run that one can have an "o2" space,
     but not do CVS.
     """
-    if isinstance(variant, str):
-        variant = [variant]
-    elif variant is None:
-        variant = []
-    reference_state = ground_state.reference_state
-    if intermediates is None:
-        intermediates = Intermediates(ground_state)
-
-    if ground_state.has_core_occupied_space and "cvs" not in variant:
-        raise ValueError("Cannot run a general (non-core-valence approximated) "
-                         "ADC method on top of a ground state with a "
-                         "core-valence separation.")
-    if not ground_state.has_core_occupied_space and "cvs" in variant:
-        raise ValueError("Cannot run a core-valence approximated ADC method on "
-                         "top of a ground state without a "
-                         "core-valence separation.")
-
-    fn = "_".join(["block"] + variant + spaces + [str(order)])
+    fn, reference_state = get_block_prereqs(
+        ground_state, spaces, order, variant, intermediates)
 
     if fn not in globals():
         raise ValueError("Could not dispatch: "
