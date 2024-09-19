@@ -209,7 +209,6 @@ class DataHfProvider(HartreeFockProvider):
                 if gauge_origin != 'origin':
                     integral_string = f'{integral_string}_{gauge_origin}'
                 return np.asarray(mmp[integral_string])
-            print('hello')
             if mmp["elec_2"].shape != (9, nb, nb):
                 raise ValueError("multipoles/elec_2 is expected to have "
                                  "shape " + str((9, nb, nb)) + " not "
