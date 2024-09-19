@@ -150,7 +150,14 @@ def operator_import_from_ao_test(scfres, ao_dict, operator="electric_dipole"):
     virta = refstate.orbital_coefficients_alpha("v1b").to_ndarray()
     virtb = refstate.orbital_coefficients_beta("v1b").to_ndarray()
 
-    dip_imported = getattr(refstate.operators, operator)
+    if operator == 'magnetic_dipole':
+        callback = refstate.operators.magnetic_dipole
+        dip_imported = callback('origin')
+    elif operator == 'nabla':
+        callback = refstate.operators.nabla
+        dip_imported = callback('origin')
+    else:
+        dip_imported = getattr(refstate.operators, operator)
 
     for i, ao_component in enumerate(ao_dict):
         dip_oo = np.einsum('ib,ba,ja->ij', occa, ao_component, occa)
