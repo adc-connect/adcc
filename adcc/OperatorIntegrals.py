@@ -106,7 +106,7 @@ class OperatorIntegrals:
             "electric_quadrupole",
             "dia_magnet",
             "pe_induction_elec",
-            "pcm_potential_elec"
+            "pcm_potential_elec",
         )
         return [integral for integral in integrals
                 if hasattr(self.provider_ao, integral)]

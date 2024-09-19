@@ -1,13 +1,15 @@
 name: adcc-dev
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
   # Build
   - python
-  - gcc_linux-64 =9.4
-  - gxx_linux-64 =9.4
-  - libtensorlight =3.0.1=hc894906_1
+  - gcc_linux-64 >=12
+  - gxx_linux-64 >=12
+  - libtensorlight =3.0.1=h3cb4726_2
   - pybind11 >=2.6
+  - pip
   # Run
   - numpy >=1.14
   - scipy >=1.2

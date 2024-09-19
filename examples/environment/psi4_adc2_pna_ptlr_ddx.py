@@ -31,24 +31,13 @@ psi4.set_options({
     'scf_type': 'pk',
     'e_convergence': 1e-10,
     'd_convergence': 1e-10,
-    'pcm': True,
-    'pcm_scf_type': "total"
+    'ddx': True,
+    'ddx_model': "pcm",
+    'ddx_solvent': "water",
+    'ddx_radii_set': 'uff',
+    'ddx_radii_scaling': 1.2,
+    'ddx_solvation_convergence': 1e-10,
 })
-psi4.pcm_helper("""
-    Units = AU
-    Cavity {
-        Type = GePol
-        radiiset = uff
-        Scaling = True
-        Area = 0.3
-    }
-    Medium {
-        SolverType = IEFPCM
-        Solvent = Water
-        Nonequilibrium = True
-    }
-""")
-
 psi4.core.set_num_threads(4)
 
 scf_e, wfn = psi4.energy('scf', return_wfn=True)
