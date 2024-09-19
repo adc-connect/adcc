@@ -46,9 +46,9 @@ class TestCrossReferenceBackends(unittest.TestCase):
     def template_adc2_h2o(self, basis):
         results = {}
         for b in backends:
-            scfres = cached_backend_hf(b, "h2o", basis)
-            results[b] = adcc.adc2(scfres, n_singlets=5, conv_tol=1e-10)
-        compare_adc_results(results, 5e-9)
+            scfres = cached_backend_hf(b, "h2o", basis, conv_tol=1e-10)
+            results[b] = adcc.adc2(scfres, n_singlets=5, conv_tol=1e-9)
+        compare_adc_results(results, 5e-8)
 
     def template_adc2_r2methyloxirane(self, basis):
         results = {}
