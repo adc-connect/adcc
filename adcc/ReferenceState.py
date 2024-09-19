@@ -37,7 +37,7 @@ __all__ = ["ReferenceState"]
 class ReferenceState(libadcc.ReferenceState):
     def __init__(self, hfdata, core_orbitals=None, frozen_core=None,
                  frozen_virtual=None, symmetry_check_on_import=False,
-                 import_all_below_n_orbs=10, gauge_origin="origin"):
+                 import_all_below_n_orbs=10):
         """Construct a ReferenceState holding information about the employed
         SCF reference.
 
@@ -101,12 +101,6 @@ class ReferenceState(libadcc.ReferenceState):
             parameter, the class will thus automatically import all ERI tensor
             and Fock matrix blocks.
 
-        gauge_origin : str or list, optional
-            Select the gauge origin for operator integrals.
-            Either by specifying a list in atomics units [x,y,z] or by choosing
-            one of the keywords (mass_center, charge_center, origin)
-            default: origin
-
         Examples
         --------
         To start a calculation with the 2 lowest alpha and beta orbitals
@@ -145,7 +139,7 @@ class ReferenceState(libadcc.ReferenceState):
         beta orbital into the core space.
         """
         if not isinstance(hfdata, libadcc.HartreeFockSolution_i):
-            hfdata = import_scf_results(hfdata, gauge_origin)
+            hfdata = import_scf_results(hfdata)
 
         self._mospaces = MoSpaces(hfdata, frozen_core=frozen_core,
                                   frozen_virtual=frozen_virtual,
@@ -160,8 +154,6 @@ class ReferenceState(libadcc.ReferenceState):
             hfdata.operator_integral_provider, self._mospaces,
             self.orbital_coefficients, self.conv_tol
         )
-
-        self._gauge_origin = gauge_origin
 
         self.environment = None  # no environment attached by default
         for name in ["excitation_energy_corrections", "environment"]:
@@ -232,13 +224,5 @@ class ReferenceState(libadcc.ReferenceState):
         # Notice the negative sign due to the negative charge of the electrons
         return self.nuclear_dipole - np.array([product_trace(comp, self.density)
                                                for comp in dipole_integrals])
-
-    @cached_property
-    def gauge_origin(self):
-        """
-        Return the selected gauge origin used for operators integrals in
-        atomic units. Until now only available for the PySCF backend.
-        """
-        return self._gauge_origin
-
+    
 # TODO some nice describe method

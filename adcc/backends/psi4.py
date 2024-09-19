@@ -47,17 +47,25 @@ class Psi4OperatorIntegralProvider:
     def electric_dipole(self):
         return [-1.0 * np.asarray(comp) for comp in self.mints.ao_dipole()]
 
-    @cached_property
+    @property
     def magnetic_dipole(self):
-        # TODO: Gauge origin?
-        return [
-            0.5 * np.asarray(comp)
-            for comp in self.mints.ao_angular_momentum()
-        ]
+        def gauge_dependent_integrals(gauge_origin):
+            # TODO: Gauge origin?
+            if gauge_origin != 'origin':
+                raise NotImplementedError('Only origin can be selected.')
+            return [
+                0.5 * np.asarray(comp)
+                for comp in self.mints.ao_angular_momentum()
+            ]
+        return gauge_dependent_integrals
 
     @cached_property
     def nabla(self):
-        return [-1.0 * np.asarray(comp) for comp in self.mints.ao_nabla()]
+        def gauge_dependent_integrals(gauge_origin):
+            if gauge_origin != 'origin':
+                raise NotImplementedError('Only origin can be selected.')
+            return [-1.0 * np.asarray(comp) for comp in self.mints.ao_nabla()]
+        return gauge_dependent_integrals
 
     @property
     def pe_induction_elec(self):

@@ -128,6 +128,38 @@ class OperatorIntegrals:
             dipoles.append(dip_ff)
         return dipoles
 
+    def __import_gauge_dependent_dipole_like(self, callback, is_symmetric=True):
+        """Returns a function that imports a gauge-dependent dipole like
+        operator.
+        The returned function imports the operator and transforms it to the
+        molecular orbital basis.
+
+        Parameters
+        ----------
+        callback : callable
+            Function that computes the operator in atomic orbitals using
+            a the gauge-origin (str or list) as single argument
+        is_symmetric : bool, optional
+            if the imported operator is symmetric, by default True
+        """
+        if not callable(callback):
+            raise TypeError
+
+        def process_operator(gauge_origin, callback=callback,
+                             is_symmetric=is_symmetric):
+            dipoles = []
+            for i, component in enumerate(["x", "y", "z"]):
+                dip_backend = callback(gauge_origin)[i]
+                dip_bb = replicate_ao_block(self.mospaces, dip_backend,
+                                            is_symmetric=is_symmetric)
+                dip_ff = OneParticleOperator(self.mospaces,
+                                             is_symmetric=is_symmetric)
+                transform_operator_ao2mo(dip_bb, dip_ff, self.__coefficients,
+                                         self.__conv_tol)
+                dipoles.append(dip_ff)
+            return dipoles
+        return process_operator
+
     @property
     @timed_member_call("_import_timer")
     def electric_dipole(self):
@@ -138,72 +170,93 @@ class OperatorIntegrals:
     @property
     @timed_member_call("_import_timer")
     def magnetic_dipole(self):
-        """Return the magnetic dipole integrals in the molecular orbital basis."""
-        return self.import_dipole_like_operator("magnetic_dipole",
-                                                is_symmetric=False)
+        """
+        Returns a function to obtain magnetic dipole intergrals
+        in the molecular orbital basis dependent on the selected gauge origin.
+        """
+        callback = self.provider_ao.magnetic_dipole
+        return self.__import_gauge_dependent_dipole_like(callback,
+                                                         is_symmetric=False)
 
     @property
     @timed_member_call("_import_timer")
     def nabla(self):
         """
-        Return the momentum (nabla operator) integrals
-        in the molecular orbital basis.
+        Returns a function to obtain nabla intergrals
+        in the molecular orbital basis dependent on the selected gauge origin.
         """
-        return self.import_dipole_like_operator("nabla", is_symmetric=False)
+        callback = self.provider_ao.nabla
+        return self.__import_gauge_dependent_dipole_like(callback,
+                                                         is_symmetric=False)
 
-    def import_quadrupole_like_operator(self, integral, is_symmetric=True):
-        if integral not in self.available:
-            raise NotImplementedError(f"{integral.replace('_', ' ')} operator "
-                                      "not implemented "
-                                      f"in {self.provider_ao.backend} backend.")
-        quad = []
-        quadrupoles = []
-        for i, component in enumerate(["xx", "xy", "xz",
-                                       "yx", "yy", "yz",
-                                       "zx", "zy", "zz"]):
-            quad_backend = getattr(self.provider_ao, integral)[i]
-            quad_bb = replicate_ao_block(self.mospaces, quad_backend,
-                                         is_symmetric=is_symmetric)
-            quad_ff = OneParticleOperator(self.mospaces,
-                                          is_symmetric=is_symmetric)
-            transform_operator_ao2mo(quad_bb, quad_ff,
-                                     self.__coefficients,
-                                     self.__conv_tol)
-            quad.append(quad_ff)
-        quadrupoles.append(quad[:3])
-        quadrupoles.append(quad[3:6])
-        quadrupoles.append(quad[6:])
-        return quadrupoles
+    def __import_quadrupole_like_operator(self, callback, is_symmetric=True):
+        """Returns a function that imports a gauge-dependent quadrupole like
+        operator.
+        The returned function imports the operator and transforms it to the
+        molecular orbital basis.
+
+        Parameters
+        ----------
+        callback : callable
+            Function that computes the operator in atomic orbitals using
+            a the gauge-origin (str or list) as single argument
+        is_symmetric : bool, optional
+            if the imported operator is symmetric, by default True
+        """
+        if not callable(callback):
+            raise TypeError
+
+        def process_operator(gauge_origin, callback=callback,
+                             is_symmetric=is_symmetric):
+            quad = []
+            quadrupoles = []
+            for i, component in enumerate(["xx", "xy", "xz",
+                                           "yx", "yy", "yz",
+                                           "zx", "zy", "zz"]):
+                quad_backend = callback(gauge_origin)[i]
+                quad_bb = replicate_ao_block(self.mospaces, quad_backend,
+                                             is_symmetric=is_symmetric)
+                quad_ff = OneParticleOperator(self.mospaces,
+                                              is_symmetric=is_symmetric)
+                transform_operator_ao2mo(quad_bb, quad_ff,
+                                         self.__coefficients,
+                                         self.__conv_tol)
+                quad.append(quad_ff)
+            quadrupoles.append(quad[:3])
+            quadrupoles.append(quad[3:6])
+            quadrupoles.append(quad[6:])
+            return quadrupoles
+        return process_operator
 
     @property
     @timed_member_call("_import_timer")
     def electric_quadrupole_traceless(self):
         """
-        Return the traceless electric quadrupole integrals
-        in the molecular orbital basis.
+        Returns a function to obtain traceless electric quadrupole integrals
+        in the molecular orbital basis dependent on the selected gauge origin.
         """
-        return self.import_quadrupole_like_operator("electric_quadrupole_traceless",
-                                                    is_symmetric=True)
+        callback = self.provider_ao.electric_quadrupole_traceless
+        return self.__import_quadrupole_like_operator(callback, is_symmetric=False)
 
     @property
     @timed_member_call("_import_timer")
     def electric_quadrupole(self):
         """
-        Return the traced electric quadrupole integrals
-        in the molecular orbital basis.
+        Returns a function to obtain electric quadrupole integrals
+        in the molecular orbital basis dependent on the selected gauge origin.
         """
-        return self.import_quadrupole_like_operator("electric_quadrupole",
-                                                    is_symmetric=True)
+        callback = self.provider_ao.electric_quadrupole
+        return self.__import_quadrupole_like_operator(callback, is_symmetric=False)
 
     @property
     @timed_member_call("_import_timer")
     def dia_magnet(self):
         """
-        Return the diamagnetic magnetizability integrals
-        in the molecular orbital basis.
+        Returns a function to obtain diamagnetic magnetizability integrals
+        in the molecular orbital basis dependent on the selected gauge origin.
         """
-        return self.import_quadrupole_like_operator("dia_magnet",
-                                                    is_symmetric=True)
+        callback = self.provider_ao.dia_magnet
+        return self.__import_gauge_dependent(callback, is_symmetric=False)
 
     def __import_density_dependent_operator(self, ao_callback, is_symmetric=True):
         """Returns a function that imports a density-dependent operator.

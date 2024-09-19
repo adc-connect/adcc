@@ -46,7 +46,7 @@ class TestIsrMatrix(unittest.TestCase):
         if op_kind == "electric":  # example of a symmetric operator
             dips = state.reference_state.operators.electric_dipole
         elif op_kind == "magnetic":  # example of an asymmetric operator
-            dips = state.reference_state.operators.magnetic_dipole
+            dips = state.reference_state.operators.magnetic_dipole('origin')
         else:
             skip("Tests are only implemented for electric "
                  "and magnetic dipole operators.")
@@ -68,7 +68,7 @@ class TestIsrMatrix(unittest.TestCase):
                 if op_kind == "electric":
                     s2s_tdm_ref = state2state.transition_dipole_moment[j]
                 else:
-                    s2s_tdm_ref = state2state.transition_magnetic_dipole_moment[j]
+                    s2s_tdm_ref = state2state.transition_magnetic_dipole_moment('origin')[j]
                 np.testing.assert_allclose(s2s_tdm, s2s_tdm_ref, atol=1e-12)
 
 
@@ -81,7 +81,7 @@ class TestIsrMatrixInterface(unittest.TestCase):
         state = cache.adc_states[system][method][kind]
         mp = state.ground_state
         dips = state.reference_state.operators.electric_dipole
-        magdips = state.reference_state.operators.magnetic_dipole
+        magdips = state.reference_state.operators.magnetic_dipole('origin')
         vecs = [exc.excitation_vector for exc in state.excitations[:2]]
 
         matrix_ref = IsrMatrix(method, mp, dips)

@@ -51,6 +51,10 @@ class TestExcitationView(unittest.TestCase, Runners):
                 except NotImplementedError:
                     # nabla, etc. not implemented in dict backend
                     continue
+                except TypeError:
+                    # gauge origin dependent properties are collables
+                    ref = getattr(state, key)()[i]
+                    res = getattr(exci, key)()
                 if isinstance(ref, OneParticleOperator):
                     assert ref.blocks == res.blocks
                     for b in ref.blocks:

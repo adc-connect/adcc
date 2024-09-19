@@ -78,7 +78,7 @@ class TestOscillatorStrengths(unittest.TestCase, Runners):
             kind = "any" if kind == "state" else kind
             refdata = cache.adcc_reference_data[system]
             state = cache.adcc_states[system][method][kind]
-
+        
         res_oscs = state.oscillator_strength
         ref_tdms = refdata[method][kind]["transition_dipole_moments"]
         refevals = refdata[method][kind]["eigenvalues"]
@@ -127,13 +127,13 @@ class TestState2StateTransitionDipoleMoments(unittest.TestCase, Runners):
 basemethods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 methods = [m for bm in basemethods for m in [bm, "cvs_" + bm]]
 gauge_origins = ["origin", "mass_center", "charge_center"]
+backends = ['pyscf']
 
-
-@expand_test_templates(list(itertools.product(methods, gauge_origins)))
+@expand_test_templates(list(itertools.product(backends, methods, gauge_origins)))
 class TestMagneticTransitionDipoleMoments(unittest.TestCase):
-    def template_linear_molecule(self, method, gauge_origin):
+    def template_linear_molecule(self, backend, method, gauge_origin):
         method = method.replace("_", "-")
-        backend = available()[0]
+        
         xyz = """
             C 0 0 0
             O 0 0 2.7023
@@ -146,12 +146,10 @@ class TestMagneticTransitionDipoleMoments(unittest.TestCase):
         scfres = run_hf(backend, xyz, basis)
 
         if "cvs" in method:
-            state = run_adc(scfres, method=method, n_singlets=5, core_orbitals=2,
-                            gauge_origin=gauge_origin)
+            state = run_adc(scfres, method=method, n_singlets=5, core_orbitals=2)
         else:
-            state = run_adc(scfres, method=method, n_singlets=10,
-                            gauge_origin=gauge_origin)
-        tdms = state.transition_magnetic_dipole_moment
+            state = run_adc(scfres, method=method, n_singlets=10)
+        tdms = state.transition_magnetic_dipole_moment(gauge_origin)
 
         # For linear molecules lying on the z-axis, the z-component must be zero
         for tdm in tdms:

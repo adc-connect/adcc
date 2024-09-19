@@ -58,20 +58,30 @@ class VeloxChemOperatorIntegralProvider:
 
     @cached_property
     def magnetic_dipole(self):
-        # TODO: Gauge origin?
-        task = self.scfdrv.task
-        angmom_drv = AngularMomentumIntegralsDriver(task.mpi_comm)
-        angmom_mats = angmom_drv.compute(task.molecule, task.ao_basis)
-        return (0.5 * angmom_mats.x_to_numpy(), 0.5 * angmom_mats.y_to_numpy(),
-                0.5 * angmom_mats.z_to_numpy())
+        def gauge_dependent_integrals(gauge_origin):
+            # TODO: Gauge origin?
+            if gauge_origin != 'origin':
+                raise NotImplementedError('Only origin can be selected.')
+            # TODO: Gauge origin?
+            task = self.scfdrv.task
+            angmom_drv = AngularMomentumIntegralsDriver(task.mpi_comm)
+            angmom_mats = angmom_drv.compute(task.molecule, task.ao_basis)
+            return (0.5 * angmom_mats.x_to_numpy(), 0.5 * angmom_mats.y_to_numpy(),
+                    0.5 * angmom_mats.z_to_numpy())
+        return gauge_dependent_integrals
 
     @cached_property
     def nabla(self):
-        task = self.scfdrv.task
-        linmom_drv = LinearMomentumIntegralsDriver(task.mpi_comm)
-        linmom_mats = linmom_drv.compute(task.molecule, task.ao_basis)
-        return (-1.0 * linmom_mats.x_to_numpy(), -1.0 * linmom_mats.y_to_numpy(),
-                -1.0 * linmom_mats.z_to_numpy())
+        def gauge_dependent_integrals(gauge_origin):
+            # TODO: Gauge origin?
+            if gauge_origin != 'origin':
+                raise NotImplementedError('Only origin can be selected.')
+            task = self.scfdrv.task
+            linmom_drv = LinearMomentumIntegralsDriver(task.mpi_comm)
+            linmom_mats = linmom_drv.compute(task.molecule, task.ao_basis)
+            return (-1.0 * linmom_mats.x_to_numpy(), -1.0 * linmom_mats.y_to_numpy(),
+                    -1.0 * linmom_mats.z_to_numpy())
+        return gauge_dependent_integrals
 
 
 # VeloxChem is a special case... not using coefficients at all

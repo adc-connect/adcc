@@ -35,77 +35,101 @@ from pyscf.solvent import ddcosmo
 
 
 class PyScfOperatorIntegralProvider:
-    def __init__(self, scfres, gauge_origin):
+    def __init__(self, scfres):
         self.scfres = scfres
         self.backend = "pyscf"
-        coords = scfres.mol.atom_coords()
-        mass = scfres.mol.atom_mass_list()
-        charges = scfres.mol.atom_charges()
-        if gauge_origin == "mass_center":
-            self.gauge_origin = np.einsum("i,ij->j", mass, coords) / mass.sum()
-        elif gauge_origin == "charge_center":
-            self.gauge_origin = np.einsum("i,ij->j", charges, coords) / \
-                charges.sum()
-        elif gauge_origin == "origin":
-            self.gauge_origin = [0.0, 0.0, 0.0]
-        elif type(gauge_origin) == list:
-            self.gauge_origin = gauge_origin
+
+
+    def _update_gauge_origin(self, gauge_origin_string):
+        coords = self.scfres.mol.atom_coords()
+        mass = self.scfres.mol.atom_mass_list()
+        charges = self.scfres.mol.atom_charges()
+        if gauge_origin_string == "mass_center":
+            gauge_origin = list(np.einsum("i,ij->j", mass, coords) / \
+                mass.sum())
+        elif gauge_origin_string == "charge_center":
+            gauge_origin = list(np.einsum("i,ij->j", charges, coords) / \
+                charges.sum())
+        elif gauge_origin_string == "origin":
+            gauge_origin = [0.0, 0.0, 0.0]
+        elif type(gauge_origin_string) == list:
+            gauge_origin = gauge_origin_string
         else:
             raise NotImplementedError("Gauge origin has to be defined either by"
                                       " using one of the keywords"
                                       " mass_center, charge_center or origin."
                                       " Or by declaring a list eg. [x, y, z]"
                                       " in atomic units.")
+        return gauge_origin
 
     @cached_property
     def electric_dipole(self):
         return list(self.scfres.mol.intor_symmetric('int1e_r', comp=3))
 
-    @cached_property
+    @property
     def magnetic_dipole(self):
-        with self.scfres.mol.with_common_orig(self.gauge_origin):
-            return list(
-                0.5 * self.scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
-            )
+        def magnetic_dipole_gauge(gauge_string):
+            gauge_origin = self._update_gauge_origin(gauge_string)
+            with self.scfres.mol.with_common_orig(gauge_origin):
+                return list(
+                    0.5 * self.scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
+                )
+        return magnetic_dipole_gauge
 
-    @cached_property
+    @property
     def nabla(self):
-        with self.scfres.mol.with_common_orig(self.gauge_origin):
-            return list(
-                -1.0 * self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
-            )
+        def nabla_gauge(gauge_string):
+            gauge_origin = self._update_gauge_origin(gauge_string)
+            with self.scfres.mol.with_common_orig(gauge_origin):
+        # with self.scfres.mol.with_common_orig(self.gauge_origin):
+                return list(
+                    -1.0 * self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
+                )
+        return nabla_gauge
 
-    @cached_property
+    @property
     def dia_magnet(self):
-        with self.scfres.mol.with_common_orig(self.gauge_origin):
-            r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
-            r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
-            r_quadr = self.scfres.mol.intor_symmetric('int1e_r2', comp=1)
-            r_quadr_matrix = np.zeros((3, 3, r_quadr.shape[0], r_quadr.shape[0]))
-            for i in range(3):
-                r_quadr_matrix[i][i] = r_quadr
-            term = -0.25 * (r_quadr_matrix - r_r)
-            term = np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
-            return list(term)
+        def dia_magnet_gauge(gauge_string):
+            gauge_origin = self._update_gauge_origin(gauge_string)
+            with self.scfres.mol.with_common_orig(gauge_origin):
+        # with self.scfres.mol.with_common_orig(self.gauge_origin):
+                r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
+                r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
+                r_quadr = self.scfres.mol.intor_symmetric('int1e_r2', comp=1)
+                r_quadr_matrix = np.zeros((3, 3, r_quadr.shape[0], r_quadr.shape[0]))
+                for i in range(3):
+                    r_quadr_matrix[i][i] = r_quadr
+                term = -0.25 * (r_quadr_matrix - r_r)
+                term = np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
+                return list(term)
+        return dia_magnet_gauge
 
-    @cached_property
+    @property
     def electric_quadrupole_traceless(self):
-        with self.scfres.mol.with_common_orig(self.gauge_origin):
-            r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
-            r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
-            r_quadr = self.scfres.mol.intor_symmetric('int1e_r2', comp=1)
-            r_quadr_matrix = np.zeros((3, 3, r_quadr.shape[0], r_quadr.shape[0]))
-            for i in range(3):
-                r_quadr_matrix[i][i] = r_quadr
-            term = 0.5 * (3 * r_r - r_quadr_matrix)
-            term = np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
-            return list(term)
+        def electric_quadrupole_traceless_gauge(gauge_string):
+            gauge_origin = self._update_gauge_origin(gauge_string)
+            with self.scfres.mol.with_common_orig(gauge_origin):
+        # with self.scfres.mol.with_common_orig(self.gauge_origin):
+                r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
+                r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
+                r_quadr = self.scfres.mol.intor_symmetric('int1e_r2', comp=1)
+                r_quadr_matrix = np.zeros((3, 3, r_quadr.shape[0], r_quadr.shape[0]))
+                for i in range(3):
+                    r_quadr_matrix[i][i] = r_quadr
+                term = 0.5 * (3 * r_r - r_quadr_matrix)
+                term = np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
+                return list(term)
+        return electric_quadrupole_traceless_gauge
 
-    @cached_property
+    @property
     def electric_quadrupole(self):
-        with self.scfres.mol.with_common_orig(self.gauge_origin):
-            r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
-            return list(r_r)
+        def electric_quadrupole_gauge(gauge_string):
+            gauge_origin = self._update_gauge_origin(gauge_string)
+            with self.scfres.mol.with_common_orig(gauge_origin):
+        # with self.scfres.mol.with_common_orig(self.gauge_origin):
+                r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
+                return list(r_r)
+        return electric_quadrupole_gauge
 
     @property
     def pe_induction_elec(self):
@@ -176,18 +200,17 @@ class PyScfHFProvider(HartreeFockProvider):
         This implementation is only valid
         if no orbital reordering is required.
     """
-    def __init__(self, scfres, gauge_origin):
+    def __init__(self, scfres):
         # Do not forget the next line,
         # otherwise weird errors result
         super().__init__()
         self.scfres = scfres
-        self.gauge_origin = gauge_origin
         n_alpha, n_beta = scfres.mol.nelec
         self.eri_builder = PyScfEriBuilder(self.scfres, self.n_orbs,
                                            self.n_orbs_alpha, n_alpha,
                                            n_beta, self.restricted)
         self.operator_integral_provider = PyScfOperatorIntegralProvider(
-            self.scfres, gauge_origin
+            self.scfres
         )
         if not self.restricted:
             assert self.scfres.mo_coeff[0].shape[1] == \
@@ -307,19 +330,19 @@ class PyScfHFProvider(HartreeFockProvider):
             # electric quadrupole Q_jk = sum_i (q_i *  r_ij *r_ik )
             coords = self.scfres.mol.atom_coords()
             mass = self.scfres.mol.atom_mass_list()
-            if self.gauge_origin == "mass_center":
-                mass_center = np.einsum("i,ij->j", mass, coords) / mass.sum()
-                coords = coords - mass_center
-            elif self.gauge_origin == "charge_center":
-                charge_center = np.einsum("i,ij->j", charges, coords) / \
-                    charges.sum()
-                coords = coords - charge_center
-            elif self.gauge_origin == "origin":
-                coords = coords
-            elif type(self.gauge_origin) == list:
-                coords = coords - self.gauge_origin
-            else:
-                raise NotImplementedError()
+            # if self.gauge_origin == "mass_center":
+            #     mass_center = np.einsum("i,ij->j", mass, coords) / mass.sum()
+            #     coords = coords - mass_center
+            # elif self.gauge_origin == "charge_center":
+            #     charge_center = np.einsum("i,ij->j", charges, coords) / \
+            #         charges.sum()
+            #     coords = coords - charge_center
+            # elif self.gauge_origin == "origin":
+            #     coords = coords
+            # elif type(self.gauge_origin) == list:
+            #     coords = coords - self.gauge_origin
+            # else:
+            #     raise NotImplementedError()
             r_r = np.einsum("ij,ik->ijk", coords, coords)
             res = np.einsum("i,ijk->jk", charges, r_r)
             res = np.array([res[0][0], res[0][1], res[0][2],
@@ -372,7 +395,7 @@ class PyScfHFProvider(HartreeFockProvider):
         self.eri_builder.flush_cache()
 
 
-def import_scf(scfres, gauge_origin):
+def import_scf(scfres):
     # TODO The error messages here could be a bit more verbose
 
     if not isinstance(scfres, scf.hf.SCF):
@@ -387,7 +410,7 @@ def import_scf(scfres, gauge_origin):
     # TODO Check for point-group symmetry,
     #      check for density-fitting or choleski
 
-    return PyScfHFProvider(scfres, gauge_origin)
+    return PyScfHFProvider(scfres)
 
 
 def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,

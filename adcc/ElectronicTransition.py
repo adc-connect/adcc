@@ -165,44 +165,45 @@ class ElectronicTransition:
             for tdm in self.transition_dm
         ])
 
-    @cached_property
+    # @property
     @mark_excitation_property()
     @timed_member_call(timer="_property_timer")
-    def transition_dipole_moment_velocity(self):
+    def transition_dipole_moment_velocity(self, gauge_string):
         """List of transition dipole moments in the
         velocity gauge of all computed states"""
         if self.property_method.level == 0:
             warnings.warn("ADC(0) transition velocity dipole moments "
                           "are known to be faulty in some cases.")
-        dipole_integrals = self.operators.nabla
+        dipole_integrals = self.operators.nabla(gauge_string)
         return np.array([
             [product_trace(comp, tdm) for comp in dipole_integrals]
             for tdm in self.transition_dm
         ])
 
-    @cached_property
+    # @cached_property
     @mark_excitation_property()
     @timed_member_call(timer="_property_timer")
-    def transition_magnetic_dipole_moment(self):
+    def transition_magnetic_dipole_moment(self, gauge_string):
         """List of transition magnetic dipole moments of all computed states"""
         if self.property_method.level == 0:
             warnings.warn("ADC(0) transition magnetic dipole moments "
                           "are known to be faulty in some cases.")
-        mag_dipole_integrals = self.operators.magnetic_dipole
+        mag_dipole_integrals = self.operators.magnetic_dipole(gauge_string)
         return np.array([
             [product_trace(comp, tdm) for comp in mag_dipole_integrals]
             for tdm in self.transition_dm
         ])
 
-    @cached_property
+    # @cached_property
     @mark_excitation_property()
     @timed_member_call(timer="_property_timer")
-    def transition_quadrupole_moment(self):
+    def transition_quadrupole_moment(self, gauge_string):
         """List of transition quadrupole moments of all computed states"""
         if self.property_method.level == 0:
             warnings.warn("ADC(0) transition dipole moments are known to be "
                           "faulty in some cases.")
-        operator_integrals = np.array(self.operators.electric_quadrupole)
+        operator_integrals = np.array(self.operators.electric_quadrupole(gauge_string))
+        print(operator_integrals[0])
         return np.array([
             [[product_trace(quad1, tdm)
                 for quad1 in quad] for quad in operator_integrals]
@@ -219,25 +220,25 @@ class ElectronicTransition:
                                self.excitation_energy)
         ])
 
-    @cached_property
+    # @cached_property
     @mark_excitation_property()
-    def oscillator_strength_velocity(self):
+    def oscillator_strength_velocity(self, gauge_string):
         """List of oscillator strengths in
         velocity gauge of all computed states"""
         return 2. / 3. * np.array([
             np.linalg.norm(tdm)**2 / np.abs(ev)
-            for tdm, ev in zip(self.transition_dipole_moment_velocity,
+            for tdm, ev in zip(self.transition_dipole_moment_velocity(gauge_string),
                                self.excitation_energy)
         ])
 
-    @cached_property
+    # @property
     @mark_excitation_property()
-    def rotatory_strength(self):
+    def rotatory_strength(self, gauge_string):
         """List of rotatory strengths of all computed states"""
         return np.array([
             np.dot(tdm, magmom) / ee
-            for tdm, magmom, ee in zip(self.transition_dipole_moment_velocity,
-                                       self.transition_magnetic_dipole_moment,
+            for tdm, magmom, ee in zip(self.transition_dipole_moment_velocity(gauge_string),
+                                       self.transition_magnetic_dipole_moment(gauge_string),
                                        self.excitation_energy)
         ])
 
