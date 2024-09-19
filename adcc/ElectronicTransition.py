@@ -165,7 +165,6 @@ class ElectronicTransition:
             for tdm in self.transition_dm
         ])
 
-    # @property
     @mark_excitation_property()
     @timed_member_call(timer="_property_timer")
     def transition_dipole_moment_velocity(self, gauge_string):
@@ -180,7 +179,6 @@ class ElectronicTransition:
             for tdm in self.transition_dm
         ])
 
-    # @cached_property
     @mark_excitation_property()
     @timed_member_call(timer="_property_timer")
     def transition_magnetic_dipole_moment(self, gauge_string):
@@ -194,7 +192,6 @@ class ElectronicTransition:
             for tdm in self.transition_dm
         ])
 
-    # @cached_property
     @mark_excitation_property()
     @timed_member_call(timer="_property_timer")
     def transition_quadrupole_moment(self, gauge_string):
@@ -202,8 +199,8 @@ class ElectronicTransition:
         if self.property_method.level == 0:
             warnings.warn("ADC(0) transition dipole moments are known to be "
                           "faulty in some cases.")
-        operator_integrals = np.array(self.operators.electric_quadrupole(gauge_string))
-        print(operator_integrals[0])
+        operator_integrals = np.array(
+            self.operators.electric_quadrupole(gauge_string))
         return np.array([
             [[product_trace(quad1, tdm)
                 for quad1 in quad] for quad in operator_integrals]
@@ -220,7 +217,6 @@ class ElectronicTransition:
                                self.excitation_energy)
         ])
 
-    # @cached_property
     @mark_excitation_property()
     def oscillator_strength_velocity(self, gauge_string):
         """List of oscillator strengths in
@@ -231,15 +227,15 @@ class ElectronicTransition:
                                self.excitation_energy)
         ])
 
-    # @property
     @mark_excitation_property()
     def rotatory_strength(self, gauge_string):
         """List of rotatory strengths of all computed states"""
         return np.array([
             np.dot(tdm, magmom) / ee
-            for tdm, magmom, ee in zip(self.transition_dipole_moment_velocity(gauge_string),
-                                       self.transition_magnetic_dipole_moment(gauge_string),
-                                       self.excitation_energy)
+            for tdm, magmom, ee in zip(
+                self.transition_dipole_moment_velocity(gauge_string),
+                self.transition_magnetic_dipole_moment(gauge_string),
+                self.excitation_energy)
         ])
 
     @property

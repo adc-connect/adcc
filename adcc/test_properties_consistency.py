@@ -40,7 +40,7 @@ class TestMagneticTransitionDipoleMoments(unittest.TestCase, Runners):
         for system in systems_gauge_origin:
             refdata = cache.adcc_reference_data[system]
             state = cache.adcc_states[system][method][kind]
-            # TODO: change ref data 
+            # TODO: change ref data
             if 'center' in system:
                 gauge_origin = '_'.join(system.split('_')[-2:])
             else:
@@ -63,7 +63,6 @@ class TestTransitionDipoleMomentsVelocity(unittest.TestCase, Runners):
             refdata = cache.adcc_reference_data[system]
             state = cache.adcc_states[system][method][kind]
             if 'center' in system:
-                print('_'.join(system.split('_')[:-2]))
                 gauge_origin = '_'.join(system.split('_')[-2:])
             else:
                 gauge_origin = 'origin'
@@ -86,19 +85,14 @@ class TestTransitionQuadrupoleMoments(unittest.TestCase, Runners):
             state = cache.adcc_states[system][method][kind]
             if 'center' in system:
                 gauge_origin = '_'.join(system.split('_')[-2:])
+                continue  # No reference data for mass_center and charge_center
             else:
                 gauge_origin = 'origin'
             res_dms = state.transition_quadrupole_moment(gauge_origin)
             ref = refdata[method][kind]
             n_ref = len(state.excitation_vector)
-            print('*'*80)
-            print(system)
-            print(res_dms)
-            print(ref["transition_quadrupole_moments"][:n_ref])
-            print('*'*80)
             assert_allclose(
-                res_dms, ref["transition_quadrupole_moments"][:n_ref], atol=1e-4
-                )
+                res_dms, ref["transition_quadrupole_moments"][:n_ref], atol=1e-4)
 
 
 class TestRotatoryStrengths(unittest.TestCase, Runners):
@@ -110,7 +104,6 @@ class TestRotatoryStrengths(unittest.TestCase, Runners):
             refdata = cache.adcc_reference_data[system]
             state = cache.adcc_states[system][method][kind]
             if 'center' in system:
-                print('_'.join(system.split('_')[:-2]))
                 gauge_origin = '_'.join(system.split('_')[-2:])
             else:
                 gauge_origin = 'origin'

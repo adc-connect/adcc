@@ -28,7 +28,7 @@ from numpy.testing import assert_allclose
 
 from adcc.State2States import State2States
 from adcc.testdata.cache import cache
-from adcc.backends import run_hf, available
+from adcc.backends import run_hf
 from adcc import run_adc
 
 from .misc import assert_allclose_signfix, expand_test_templates
@@ -78,7 +78,7 @@ class TestOscillatorStrengths(unittest.TestCase, Runners):
             kind = "any" if kind == "state" else kind
             refdata = cache.adcc_reference_data[system]
             state = cache.adcc_states[system][method][kind]
-        
+
         res_oscs = state.oscillator_strength
         ref_tdms = refdata[method][kind]["transition_dipole_moments"]
         refevals = refdata[method][kind]["eigenvalues"]
@@ -129,11 +129,12 @@ methods = [m for bm in basemethods for m in [bm, "cvs_" + bm]]
 gauge_origins = ["origin", "mass_center", "charge_center"]
 backends = ['pyscf']
 
+
 @expand_test_templates(list(itertools.product(backends, methods, gauge_origins)))
 class TestMagneticTransitionDipoleMoments(unittest.TestCase):
     def template_linear_molecule(self, backend, method, gauge_origin):
         method = method.replace("_", "-")
-        
+
         xyz = """
             C 0 0 0
             O 0 0 2.7023

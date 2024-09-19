@@ -52,7 +52,7 @@ class TestExcitationView(unittest.TestCase, Runners):
                     # nabla, etc. not implemented in dict backend
                     continue
                 except TypeError:
-                    # gauge origin dependent properties are collables
+                    # gauge origin dependent properties are callables
                     ref = getattr(state, key)()[i]
                     res = getattr(exci, key)()
                 if isinstance(ref, OneParticleOperator):

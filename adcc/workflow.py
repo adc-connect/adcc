@@ -133,7 +133,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         The keywords to specify how coupling to an environment model,
         e.g. PE, is treated. For details see :ref:`environment`.
 
-        Other parameters
+    Other parameters
     ----------------
     max_subspace : int, optional
         Maximal subspace size
