@@ -38,25 +38,26 @@ class PyScfOperatorIntegralProvider:
         self.scfres = scfres
         self.backend = "pyscf"
 
-    def _update_gauge_origin(self, gauge_origin_string):
+    def _update_gauge_origin(self, gauge_origin):
         coords = self.scfres.mol.atom_coords()
-        mass = self.scfres.mol.atom_mass_list()
+        masses = self.scfres.mol.atom_mass_list()
         charges = self.scfres.mol.atom_charges()
-        if gauge_origin_string == "mass_center":
-            gauge_origin = list(np.einsum("i,ij->j", mass, coords) / mass.sum())
-        elif gauge_origin_string == "charge_center":
+        if gauge_origin == "mass_center":
+            gauge_origin = list(np.einsum("i,ij->j", masses, coords) / masses.sum())
+        elif gauge_origin == "charge_center":
             gauge_origin = list(np.einsum("i,ij->j", charges, coords)
                                 / charges.sum())
-        elif gauge_origin_string == "origin":
+        elif gauge_origin == "origin":
             gauge_origin = [0.0, 0.0, 0.0]
-        elif isinstance(gauge_origin_string, list):
-            gauge_origin = gauge_origin_string
+        elif isinstance(gauge_origin, list):
+            gauge_origin = gauge_origin
         else:
             raise NotImplementedError("Gauge origin has to be defined either by"
                                       " using one of the keywords"
                                       " mass_center, charge_center or origin."
                                       " Or by declaring a list eg. [x, y, z]"
                                       " in atomic units.")
+        print(gauge_origin)                              
         return gauge_origin
 
     @cached_property
@@ -65,8 +66,8 @@ class PyScfOperatorIntegralProvider:
 
     @property
     def magnetic_dipole(self):
-        def magnetic_dipole_gauge(gauge_string):
-            gauge_origin = self._update_gauge_origin(gauge_string)
+        def magnetic_dipole_gauge(gauge_origin):
+            gauge_origin = self._update_gauge_origin(gauge_origin)
             with self.scfres.mol.with_common_orig(gauge_origin):
                 return list(
                     0.5 * self.scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
@@ -75,8 +76,8 @@ class PyScfOperatorIntegralProvider:
 
     @property
     def nabla(self):
-        def nabla_gauge(gauge_string):
-            gauge_origin = self._update_gauge_origin(gauge_string)
+        def nabla_gauge(gauge_origin):
+            gauge_origin = self._update_gauge_origin(gauge_origin)
             with self.scfres.mol.with_common_orig(gauge_origin):
                 return list(
                     -1.0 * self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
@@ -85,8 +86,8 @@ class PyScfOperatorIntegralProvider:
 
     @property
     def dia_magnet(self):
-        def dia_magnet_gauge(gauge_string):
-            gauge_origin = self._update_gauge_origin(gauge_string)
+        def dia_magnet_gauge(gauge_origin):
+            gauge_origin = self._update_gauge_origin(gauge_origin)
             with self.scfres.mol.with_common_orig(gauge_origin):
                 r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
                 r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
@@ -102,8 +103,8 @@ class PyScfOperatorIntegralProvider:
 
     @property
     def electric_quadrupole_traceless(self):
-        def electric_quadrupole_traceless_gauge(gauge_string):
-            gauge_origin = self._update_gauge_origin(gauge_string)
+        def electric_quadrupole_traceless_gauge(gauge_origin):
+            gauge_origin = self._update_gauge_origin(gauge_origin)
             with self.scfres.mol.with_common_orig(gauge_origin):
                 r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
                 r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
@@ -119,8 +120,8 @@ class PyScfOperatorIntegralProvider:
 
     @property
     def electric_quadrupole(self):
-        def electric_quadrupole_gauge(gauge_string):
-            gauge_origin = self._update_gauge_origin(gauge_string)
+        def electric_quadrupole_gauge(gauge_origin):
+            gauge_origin = self._update_gauge_origin(gauge_origin)
             with self.scfres.mol.with_common_orig(gauge_origin):
                 r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
                 return list(r_r)

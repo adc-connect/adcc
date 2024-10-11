@@ -60,9 +60,9 @@ class VeloxChemOperatorIntegralProvider:
     def magnetic_dipole(self):
         def gauge_dependent_integrals(gauge_origin):
             # TODO: Gauge origin?
-            if gauge_origin != 'origin':
-                raise NotImplementedError('Only origin can be selected.')
-            # TODO: Gauge origin?
+            if gauge_origin != [0.0, 0.0, 0.0]:
+                raise NotImplementedError('Only [0.0, 0.0, 0.0] can be selected as'
+                                          ' gauge origin.')
             task = self.scfdrv.task
             angmom_drv = AngularMomentumIntegralsDriver(task.mpi_comm)
             angmom_mats = angmom_drv.compute(task.molecule, task.ao_basis)
@@ -74,8 +74,9 @@ class VeloxChemOperatorIntegralProvider:
     def nabla(self):
         def gauge_dependent_integrals(gauge_origin):
             # TODO: Gauge origin?
-            if gauge_origin != 'origin':
-                raise NotImplementedError('Only origin can be selected.')
+            if gauge_origin != [0.0, 0.0, 0.0]:
+                raise NotImplementedError('Only [0.0, 0.0, 0.0] can be selected as'
+                                          ' gauge origin.')
             task = self.scfdrv.task
             linmom_drv = LinearMomentumIntegralsDriver(task.mpi_comm)
             linmom_mats = linmom_drv.compute(task.molecule, task.ao_basis)

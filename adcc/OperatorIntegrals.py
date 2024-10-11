@@ -138,14 +138,14 @@ class OperatorIntegrals:
         ----------
         callback : callable
             Function that computes the operator in atomic orbitals using
-            a the gauge-origin (str or list) as single argument
+            the gauge-origin (str or list) as single argument
         is_symmetric : bool, optional
             if the imported operator is symmetric, by default True
         """
         if not callable(callback):
             raise TypeError
 
-        def process_operator(gauge_origin, callback=callback,
+        def process_operator(gauge_origin = [0.0, 0.0, 0.0], callback=callback,
                              is_symmetric=is_symmetric):
             dipoles = []
             for i, component in enumerate(["x", "y", "z"]):
@@ -173,6 +173,7 @@ class OperatorIntegrals:
         """
         Returns a function to obtain magnetic dipole intergrals
         in the molecular orbital basis dependent on the selected gauge origin.
+        The default gauge origin is set to [0.0, 0.0, 0.0].
         """
         callback = self.provider_ao.magnetic_dipole
         return self.__import_gauge_dependent_dipole_like(callback,
@@ -184,6 +185,7 @@ class OperatorIntegrals:
         """
         Returns a function to obtain nabla intergrals
         in the molecular orbital basis dependent on the selected gauge origin.
+        The default gauge origin is set to [0.0, 0.0, 0.0].
         """
         callback = self.provider_ao.nabla
         return self.__import_gauge_dependent_dipole_like(callback,
@@ -206,7 +208,7 @@ class OperatorIntegrals:
         if not callable(callback):
             raise TypeError
 
-        def process_operator(gauge_origin, callback=callback,
+        def process_operator(gauge_origin = [0.0, 0.0, 0.0], callback=callback,
                              is_symmetric=is_symmetric):
             quad = []
             quadrupoles = []
@@ -234,6 +236,7 @@ class OperatorIntegrals:
         """
         Returns a function to obtain traceless electric quadrupole integrals
         in the molecular orbital basis dependent on the selected gauge origin.
+        The default gauge origin is set to [0.0, 0.0, 0.0].
         """
         callback = self.provider_ao.electric_quadrupole_traceless
         return self.__import_quadrupole_like_operator(callback, is_symmetric=False)
@@ -244,6 +247,7 @@ class OperatorIntegrals:
         """
         Returns a function to obtain electric quadrupole integrals
         in the molecular orbital basis dependent on the selected gauge origin.
+        The default gauge origin is set to [0.0, 0.0, 0.0].
         """
         callback = self.provider_ao.electric_quadrupole
         return self.__import_quadrupole_like_operator(callback, is_symmetric=False)
@@ -254,9 +258,10 @@ class OperatorIntegrals:
         """
         Returns a function to obtain diamagnetic magnetizability integrals
         in the molecular orbital basis dependent on the selected gauge origin.
+        The default gauge origin is set to [0.0, 0.0, 0.0].
         """
         callback = self.provider_ao.dia_magnet
-        return self.__import_gauge_dependent(callback, is_symmetric=False)
+        return self.__import_quadrupole_like_operator(callback, is_symmetric=False)
 
     def __import_density_dependent_operator(self, ao_callback, is_symmetric=True):
         """Returns a function that imports a density-dependent operator.

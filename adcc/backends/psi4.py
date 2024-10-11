@@ -51,8 +51,9 @@ class Psi4OperatorIntegralProvider:
     def magnetic_dipole(self):
         def gauge_dependent_integrals(gauge_origin):
             # TODO: Gauge origin?
-            if gauge_origin != 'origin':
-                raise NotImplementedError('Only origin can be selected.')
+            if gauge_origin != [0.0, 0.0, 0.0]:
+                raise NotImplementedError('Only [0.0, 0.0, 0.0] can be selected as'
+                                          ' gauge origin.')
             return [
                 0.5 * np.asarray(comp)
                 for comp in self.mints.ao_angular_momentum()
@@ -62,8 +63,9 @@ class Psi4OperatorIntegralProvider:
     @cached_property
     def nabla(self):
         def gauge_dependent_integrals(gauge_origin):
-            if gauge_origin != 'origin':
-                raise NotImplementedError('Only origin can be selected.')
+            if gauge_origin != [0.0, 0.0, 0.0]:
+                raise NotImplementedError('Only [0.0, 0.0, 0.0] can be selected as'
+                                          ' gauge origin.')
             return [-1.0 * np.asarray(comp) for comp in self.mints.ao_nabla()]
         return gauge_dependent_integrals
 
