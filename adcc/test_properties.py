@@ -127,12 +127,11 @@ class TestState2StateTransitionDipoleMoments(unittest.TestCase, Runners):
 basemethods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 methods = [m for bm in basemethods for m in [bm, "cvs_" + bm]]
 gauge_origins = ["origin", "mass_center", "charge_center"]
-backends = ['pyscf']
 
 
-@expand_test_templates(list(itertools.product(backends, methods, gauge_origins)))
+@expand_test_templates(list(itertools.product(methods)))
 class TestMagneticTransitionDipoleMoments(unittest.TestCase):
-    def template_linear_molecule(self, backend, method, gauge_origin):
+    def template_linear_molecule(self, method):
         method = method.replace("_", "-")
 
         xyz = """
@@ -140,18 +139,16 @@ class TestMagneticTransitionDipoleMoments(unittest.TestCase):
             O 0 0 2.7023
         """
         basis = "sto-3g"
+        backend = "pyscf"
+        for gauge_origin in gauge_origins:
+            scfres = run_hf(backend, xyz, basis)
 
-        if backend != "pyscf" and gauge_origin != "origin":
-            skip("Gauge origin selection is only implemented "
-                 "for pyscf backend")
-        scfres = run_hf(backend, xyz, basis)
+            if "cvs" in method:
+                state = run_adc(scfres, method=method, n_singlets=5, core_orbitals=2)
+            else:
+                state = run_adc(scfres, method=method, n_singlets=10)
+            tdms = state.transition_magnetic_dipole_moment(gauge_origin)
 
-        if "cvs" in method:
-            state = run_adc(scfres, method=method, n_singlets=5, core_orbitals=2)
-        else:
-            state = run_adc(scfres, method=method, n_singlets=10)
-        tdms = state.transition_magnetic_dipole_moment(gauge_origin)
-
-        # For linear molecules lying on the z-axis, the z-component must be zero
-        for tdm in tdms:
-            assert tdm[2] < 1e-10
+            # For linear molecules lying on the z-axis, the z-component must be zero
+            for tdm in tdms:
+                assert tdm[2] < 1e-10

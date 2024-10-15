@@ -36,7 +36,7 @@ basemethods = ["adc0", "adc1", "adc2"]
 methods = [m for bm in basemethods for m in [bm, "cvs-" + bm]]
 
 operator_kinds = ["electric", "magnetic"]
-
+gauge_origins = ["origin", "mass_center", "charge_center"]
 
 @expand_test_templates(list(itertools.product(methods, operator_kinds)))
 class TestModifiedTransitionMoments(unittest.TestCase):
@@ -49,8 +49,9 @@ class TestModifiedTransitionMoments(unittest.TestCase):
             dips = state.reference_state.operators.electric_dipole
             ref_tdm = ref["transition_dipole_moments"]
         elif op_kind == "magnetic":
-            dips = state.reference_state.operators.magnetic_dipole('origin')
-            ref_tdm = ref["transition_magnetic_dipole_moments"]
+            for gauge_origin in gauge_origins:
+                dips = state.reference_state.operators.magnetic_dipole(gauge_origin)
+                ref_tdm = ref[f"transition_magnetic_dipole_moments_{gauge_origin}"]
         else:
             skip("Tests are only implemented for electric "
                  "and magnetic dipole operators.")

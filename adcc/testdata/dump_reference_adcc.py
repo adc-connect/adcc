@@ -185,12 +185,25 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
         adc[kind + "/ground_to_excited_tdm_bb_b"] = np.asarray(tdm_bb_b)
         adc[kind + "/state_dipole_moments"] = state.state_dipole_moment
         adc[kind + "/transition_dipole_moments"] = state.transition_dipole_moment
-        adc[kind + "/transition_dipole_moments_velocity"] = \
-            state.transition_dipole_moment_velocity
-        adc[kind + "/transition_magnetic_dipole_moments"] = \
-            state.transition_magnetic_dipole_moment
-        adc[kind + "/transition_quadrupole_moments"] = \
-            state.transition_quadrupole_moment
+        # gauge origin dependent
+        adc[kind + "/transition_dipole_moments_velocity_origin"] = \
+            state.transition_dipole_moment_velocity("origin")
+        adc[kind + "/transition_dipole_moments_velocity_mass_center"] = \
+            state.transition_dipole_moment_velocity("mass_center")
+        adc[kind + "/transition_dipole_moments_velocity_charge_center"] = \
+            state.transition_dipole_moment_velocity("charge_center")
+        adc[kind + "/transition_magnetic_dipole_moments_origin"] = \
+            state.transition_magnetic_dipole_moment("origin")
+        adc[kind + "/transition_magnetic_dipole_moments_mass_center"] = \
+            state.transition_magnetic_dipole_moment("mass_center")
+        adc[kind + "/transition_magnetic_dipole_moments_charge_center"] = \
+            state.transition_magnetic_dipole_moment("charge_center")
+        adc[kind + "/transition_quadrupole_moments_origin"] = \
+            state.transition_quadrupole_moment("origin")
+        adc[kind + "/transition_quadrupole_moments_mass_center"] = \
+            state.transition_quadrupole_moment("mass_center")
+        adc[kind + "/transition_quadrupole_moments_charge_center"] = \
+            state.transition_quadrupole_moment("charge_center")
         adc[kind + "/eigenvalues"] = state.excitation_energy
         adc[kind + "/eigenvectors_singles"] = np.asarray(
             eigenvectors_singles)

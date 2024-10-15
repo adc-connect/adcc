@@ -60,7 +60,7 @@ class VeloxChemOperatorIntegralProvider:
     def magnetic_dipole(self):
         def gauge_dependent_integrals(gauge_origin):
             # TODO: Gauge origin?
-            if gauge_origin != [0.0, 0.0, 0.0]:
+            if gauge_origin != [0.0, 0.0, 0.0] and gauge_origin != "origin":
                 raise NotImplementedError('Only [0.0, 0.0, 0.0] can be selected as'
                                           ' gauge origin.')
             task = self.scfdrv.task
@@ -74,7 +74,7 @@ class VeloxChemOperatorIntegralProvider:
     def nabla(self):
         def gauge_dependent_integrals(gauge_origin):
             # TODO: Gauge origin?
-            if gauge_origin != [0.0, 0.0, 0.0]:
+            if gauge_origin != [0.0, 0.0, 0.0] and gauge_origin != "origin":
                 raise NotImplementedError('Only [0.0, 0.0, 0.0] can be selected as'
                                           ' gauge origin.')
             task = self.scfdrv.task

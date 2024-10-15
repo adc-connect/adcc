@@ -79,11 +79,11 @@ def dump_imported(key, dump_cvs=True):
 def main():
     # H2O restricted
     dump_imported("h2o_sto3g")
-    dump_imported("h2o_def2tzvp")
+    # dump_imported("h2o_def2tzvp")
 
     # CN unrestricted
     dump_imported("cn_sto3g")
-    dump_imported("cn_ccpvdz")
+    # dump_imported("cn_ccpvdz")
 
     # CH2NH2 unrestricted (no symmetries)
     dump_imported("ch2nh2_sto3g")
