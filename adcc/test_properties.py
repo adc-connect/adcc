@@ -144,7 +144,8 @@ class TestMagneticTransitionDipoleMoments(unittest.TestCase):
             scfres = run_hf(backend, xyz, basis)
 
             if "cvs" in method:
-                state = run_adc(scfres, method=method, n_singlets=5, core_orbitals=2)
+                state = run_adc(scfres, method=method, n_singlets=5,
+                                core_orbitals=2)
             else:
                 state = run_adc(scfres, method=method, n_singlets=10)
             tdms = state.transition_magnetic_dipole_moment(gauge_origin)

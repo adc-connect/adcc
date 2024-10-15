@@ -70,7 +70,7 @@ class HartreeFockSolution_i {
   virtual size_t n_bas() const = 0;
   ///@}
   //
-  //returns number of atoms
+  // returns number of atoms
   virtual size_t n_atoms() const = 0;
 
   /** \name Access to HF SCF results */
@@ -79,14 +79,14 @@ class HartreeFockSolution_i {
    *  SCF program used to provide the data */
   virtual std::string backend() const = 0;
 
-  //nuclear charges
-  virtual void nuclear_charges(scalar_type* buffer,  size_t size) const = 0;
+  // nuclear charges
+  virtual void nuclear_charges(scalar_type* buffer, size_t size) const = 0;
 
-  //nuclear masses
-  virtual void nuclear_masses(scalar_type* buffer,  size_t size) const = 0;
-  //coordinates
-  virtual void coordinates(scalar_type* buffer,  size_t size) const = 0;
-	  
+  // nuclear masses
+  virtual void nuclear_masses(scalar_type* buffer, size_t size) const = 0;
+  // coordinates
+  virtual void coordinates(scalar_type* buffer, size_t size) const = 0;
+
   /** SCF convergence threshold */
   virtual real_type conv_tol() const = 0;
 

@@ -57,7 +57,6 @@ class PyScfOperatorIntegralProvider:
                                       " mass_center, charge_center or origin."
                                       " Or by declaring a list eg. [x, y, z]"
                                       " in atomic units.")
-        print(gauge_origin)                              
         return gauge_origin
 
     @cached_property

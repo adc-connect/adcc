@@ -33,7 +33,7 @@ import h5py
 
 sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
 
-# import adcctestdata as atd  # noqa: E402
+import adcctestdata as atd  # noqa: E402
 
 
 def dump_all(case, kwargs, kwargs_overwrite={}, spec="gen",
@@ -77,7 +77,7 @@ def dump_method(case, method, kwargs, spec, generator="adcc"):
         dumpfile = "{}_reference_{}{}.hdf5".format(case, prefix, method)
     else:
         dumpfile = "{}_adcc_reference_{}{}.hdf5".format(case, prefix, method)
-    
+
     if not os.path.isfile(dumpfile):
         dumpfunction(hfdata, fullmethod, dumpfile, mp_tree=mp_tree,
                      adc_tree=adc_tree, n_states_full=2, **kwargs)
@@ -158,7 +158,7 @@ def dump_h2s_6311g():
     kwargs = {"n_singlets": 3, "n_triplets": 3, "n_guess_singles": 6,
               "max_subspace": 60}
     for spec in ["fv-cvs", "fc-cvs", "fc-fv-cvs"]:
-            dump_method(case, "adc2x", kwargs, spec=spec)
+        dump_method(case, "adc2x", kwargs, spec=spec)
 
     kwargs["n_guess_singles"] = 8
     dump_method(case, "adc2x", kwargs, spec="cvs")

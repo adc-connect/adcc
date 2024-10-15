@@ -167,7 +167,7 @@ class ElectronicTransition:
 
     @mark_excitation_property()
     @timed_member_call(timer="_property_timer")
-    def transition_dipole_moment_velocity(self, gauge_origin = [0.0, 0.0, 0.0]):
+    def transition_dipole_moment_velocity(self, gauge_origin=[0.0, 0.0, 0.0]):
         """List of transition dipole moments in the
         velocity gauge of all computed states"""
         if self.property_method.level == 0:
@@ -181,7 +181,7 @@ class ElectronicTransition:
 
     @mark_excitation_property()
     @timed_member_call(timer="_property_timer")
-    def transition_magnetic_dipole_moment(self, gauge_origin = [0.0, 0.0, 0.0]):
+    def transition_magnetic_dipole_moment(self, gauge_origin=[0.0, 0.0, 0.0]):
         """List of transition magnetic dipole moments of all computed states"""
         if self.property_method.level == 0:
             warnings.warn("ADC(0) transition magnetic dipole moments "
@@ -194,7 +194,7 @@ class ElectronicTransition:
 
     @mark_excitation_property()
     @timed_member_call(timer="_property_timer")
-    def transition_quadrupole_moment(self, gauge_origin = [0.0, 0.0, 0.0]):
+    def transition_quadrupole_moment(self, gauge_origin=[0.0, 0.0, 0.0]):
         """List of transition quadrupole moments of all computed states"""
         if self.property_method.level == 0:
             warnings.warn("ADC(0) transition quadrupole moments are known to be "
@@ -217,7 +217,7 @@ class ElectronicTransition:
         ])
 
     @mark_excitation_property()
-    def oscillator_strength_velocity(self, gauge_origin = [0.0, 0.0, 0.0]):
+    def oscillator_strength_velocity(self, gauge_origin=[0.0, 0.0, 0.0]):
         """List of oscillator strengths in
         velocity gauge of all computed states"""
         return 2. / 3. * np.array([
@@ -227,7 +227,7 @@ class ElectronicTransition:
         ])
 
     @mark_excitation_property()
-    def rotatory_strength(self, gauge_origin = [0.0, 0.0, 0.0]):
+    def rotatory_strength(self, gauge_origin=[0.0, 0.0, 0.0]):
         """List of rotatory strengths of all computed states"""
         return np.array([
             np.dot(tdm, magmom) / ee

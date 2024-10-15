@@ -89,13 +89,14 @@ class TestRotatoryStrengths(unittest.TestCase, Runners):
     def base_test(self, system, method, kind):
         method = method.replace("_", "-")
         kind = "any" if kind == "state" else kind
-        refdata = cache.adcc_reference_data[system]
+        refdata = cache.adcc_reference_data[system][method][kind]
         state = cache.adcc_states[system][method][kind]
         for gauge_origin in gauge_origins:
             res_rots = state.rotatory_strength(gauge_origin)
-            ref_tmdm = refdata[method][kind][f"transition_magnetic_dipole_moments_{gauge_origin}"]
-            ref_tdmvel = refdata[method][kind][f"transition_dipole_moments_velocity_{gauge_origin}"]
-            refevals = refdata[method][kind]["eigenvalues"]
+            ref_tmdm = refdata[f"transition_magnetic_dipole_moments_{gauge_origin}"]
+            ref_tdmvel = \
+                refdata[f"transition_dipole_moments_velocity_{gauge_origin}"]
+            refevals = refdata["eigenvalues"]
             n_ref = len(state.excitation_vector)
             for i in range(n_ref):
                 assert state.excitation_energy[i] == refevals[i]

@@ -38,6 +38,7 @@ methods = [m for bm in basemethods for m in [bm, "cvs-" + bm]]
 operator_kinds = ["electric", "magnetic"]
 gauge_origins = ["origin", "mass_center", "charge_center"]
 
+
 @expand_test_templates(list(itertools.product(methods, operator_kinds)))
 class TestModifiedTransitionMoments(unittest.TestCase):
     def base_test(self, system, method, kind, op_kind):

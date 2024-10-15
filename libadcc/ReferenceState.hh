@@ -96,15 +96,14 @@ class ReferenceState {
    *  (in standard ordering, i.e. xx, xy, xz, yy, yz, zz) of the given order. */
   std::vector<scalar_type> nuclear_multipole(size_t order) const;
 
-  //nuclear charges
+  // nuclear charges
   std::vector<scalar_type> nuclear_charges() const;
 
-  //coordinates
+  // coordinates
   std::vector<scalar_type> coordinates() const;
 
-  //nuclear masses
+  // nuclear masses
   std::vector<scalar_type> nuclear_masses() const;
-
 
   /** Return the SCF convergence tolerance */
   double conv_tol() const { return m_hfsoln_ptr->conv_tol(); }

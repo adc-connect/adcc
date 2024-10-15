@@ -145,7 +145,7 @@ class OperatorIntegrals:
         if not callable(callback):
             raise TypeError
 
-        def process_operator(gauge_origin = [0.0, 0.0, 0.0], callback=callback,
+        def process_operator(gauge_origin=[0.0, 0.0, 0.0], callback=callback,
                              is_symmetric=is_symmetric):
             dipoles = []
             for i, component in enumerate(["x", "y", "z"]):
@@ -208,7 +208,7 @@ class OperatorIntegrals:
         if not callable(callback):
             raise TypeError
 
-        def process_operator(gauge_origin = [0.0, 0.0, 0.0], callback=callback,
+        def process_operator(gauge_origin=[0.0, 0.0, 0.0], callback=callback,
                              is_symmetric=is_symmetric):
             quad = []
             quadrupoles = []

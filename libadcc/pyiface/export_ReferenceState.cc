@@ -118,24 +118,24 @@ void export_ReferenceState(py::module& m) {
                                  std::copy(res.begin(), res.end(), ret.mutable_data());
                                  return res;
                                })
-	.def_property_readonly("nuclear_dipole",
+        .def_property_readonly("nuclear_dipole",
                                [](const ReferenceState& ref) {
                                  py::array_t<scalar_type> ret(std::vector<ssize_t>{3});
                                  auto res = ref.nuclear_multipole(1);
                                  std::copy(res.begin(), res.end(), ret.mutable_data());
                                  return res;
                                })
-	.def_property_readonly("nuclear_charges", &ReferenceState::nuclear_charges,
-			       "Returns the nuclear charges of the SCF reference "
-			       "as a list of the size of number of atoms.")	
-	.def_property_readonly("nuclear_masses", &ReferenceState::nuclear_masses,
-			       "Returns the nuclear masses of the SCF reference "
-			       "as a list of the size of number of atoms.")	
-	.def_property_readonly("coordinates", &ReferenceState::coordinates,
-			       "Returns coordinates of the SCF reference as list "
-			       "of size 3 * number of atoms in atomic units.")
-	.def_property_readonly("n_atoms", &ReferenceState::n_atoms,
-			       "Returns the number of atoms.")
+        .def_property_readonly("nuclear_charges", &ReferenceState::nuclear_charges,
+                               "Returns the nuclear charges of the SCF reference "
+                               "as a list of the size of number of atoms.")
+        .def_property_readonly("nuclear_masses", &ReferenceState::nuclear_masses,
+                               "Returns the nuclear masses of the SCF reference "
+                               "as a list of the size of number of atoms.")
+        .def_property_readonly("coordinates", &ReferenceState::coordinates,
+                               "Returns coordinates of the SCF reference as list "
+                               "of size 3 * number of atoms in atomic units.")
+        .def_property_readonly("n_atoms", &ReferenceState::n_atoms,
+                               "Returns the number of atoms.")
         .def_property_readonly("conv_tol", &ReferenceState::conv_tol,
                                "SCF convergence tolererance")
         .def_property_readonly("energy_scf", &ReferenceState::energy_scf,
