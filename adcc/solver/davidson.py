@@ -196,7 +196,8 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             epair_mask = select_eigenpairs(rvals, n_ep, which)
             state.eigenvalues = rvals[epair_mask]
             state.residuals = [residuals[i] for i in epair_mask]
-            state.residual_norms = np.array([np.sqrt(r @ r) for r in state.residuals])
+            state.residual_norms = np.array([np.sqrt(r @ r)
+                                             for r in state.residuals])
 
         callback(state, "next_iter")
         state.timer.restart("iteration")
