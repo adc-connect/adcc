@@ -21,7 +21,6 @@
 ##
 ## ---------------------------------------------------------------------
 import libadcc
-import warnings
 import numpy as np
 
 from .LazyMp import LazyMp

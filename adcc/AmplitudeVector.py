@@ -20,7 +20,6 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import warnings
 
 
 class AmplitudeVector(dict):
