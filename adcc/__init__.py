@@ -28,7 +28,7 @@ from .LazyMp import LazyMp
 from .Tensor import Tensor
 from .Symmetry import Symmetry
 from .MoSpaces import MoSpaces
-from .AdcMatrix import AdcBlockView, AdcMatrix
+from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod
 from .functions import (contract, copy, direct_sum, dot, einsum, empty_like,
                         evaluate, lincomb, linear_combination, nosym_like,
