@@ -256,7 +256,6 @@ class AdcMatrix(AdcMatrixlike):
         """
         return list(self.axis_spaces.keys())
 
-    @property
     def diagonal(self):
         """Return the diagonal of the ADC matrix"""
         return self.__diagonal
