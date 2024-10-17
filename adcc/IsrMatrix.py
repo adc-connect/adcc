@@ -120,8 +120,7 @@ class IsrMatrix(AdcMatrixlike):
                                        variant=variant)
                 for block, order in self.block_orders.items() if order is not None
             } for op in self.operator]
-            # TODO Rename to self.block in 0.16.0
-            self.blocks_ph = [{
+            self.blocks = [{
                 b: bl[b].apply for b in bl
             } for bl in blocks]
 
@@ -136,7 +135,7 @@ class IsrMatrix(AdcMatrixlike):
         """
         ret = [
             sum(block(v) for block in bl_ph.values())
-            for bl_ph in self.blocks_ph
+            for bl_ph in self.blocks
         ]
         if len(ret) == 1:
             return ret[0]

@@ -61,7 +61,7 @@ class IndexSymmetrisation():
             if not isinstance(vec, AmplitudeVector):
                 raise TypeError("new_vectors has to be an "
                                 "iterable of AmplitudeVector")
-            for b in vec.blocks_ph:
+            for b in vec.blocks:
                 if b not in self.symmetrisation_functions:
                     continue
                 vec[b] = evaluate(self.symmetrisation_functions[b](vec[b]))
@@ -88,7 +88,7 @@ class IndexSpinSymmetrisation(IndexSymmetrisation):
             # Only work on the doubles part
             # the other blocks are not yet implemented
             # or nothing needs to be done ("ph" block)
-            if "pphh" in vec.blocks_ph:
+            if "pphh" in vec.blocks:
                 # TODO: Note that the "d" is needed here because the C++ side
                 #       does not yet understand ph and pphh
                 amplitude_vector_enforce_spin_kind(

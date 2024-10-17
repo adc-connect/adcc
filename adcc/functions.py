@@ -120,7 +120,7 @@ def lincomb(coefficients, tensors, evaluate=False):
         return AmplitudeVector(**{
             block: lincomb(coefficients, [ten[block] for ten in tensors],
                            evaluate=evaluate)
-            for block in tensors[0].blocks_ph
+            for block in tensors[0].blocks
         })
     elif not isinstance(tensors[0], libadcc.Tensor):
         raise TypeError("Tensor type not supported")
