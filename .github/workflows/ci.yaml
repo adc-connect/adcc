@@ -119,16 +119,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {version: '3.9', os: ubuntu-latest, documentation: False}
+          - {version: '3.11', os: ubuntu-latest, documentation: False}
+          - {version: '3.11', os: macos-13 , documentation: False}
     defaults:
       run:
         shell: bash -l {0}
     steps:
       - uses: actions/checkout@v4
+      - name: Patch compiler in Conda environment file
+        if: contains( matrix.os, 'macos')
+        run: |
+          sed -E -i.bak "s;gcc_linux-64;clang_osx-64;g" conda/environment.yml
+          sed -E -i.bak "s;gxx_linux-64;clangxx_osx-64;g" conda/environment.yml
       - uses: conda-incubator/setup-miniconda@v3
         with:
           activate-environment: adcc-dev
-          environment-file: conda/environment_dev_linux.yml
+          environment-file: conda/environment.yml
           miniforge-variant: Mambaforge
           use-mamba: true
           miniforge-version: latest
