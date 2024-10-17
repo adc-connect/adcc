@@ -552,8 +552,8 @@ class AdcMatrixShifted(AdcMatrix):
             ret += self.shift * in_vec
         return ret
 
-    def diagonal(self, block=None):
-        out = super().diagonal(block)
+    def diagonal(self):
+        out = super().diagonal()
         out = out + self.shift  # Shift the diagonal
         return out
 
