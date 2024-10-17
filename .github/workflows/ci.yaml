@@ -153,8 +153,9 @@ jobs:
         run: |
           conda info
           conda list
-          # NOTE: pcmsolver not 'linked' with Psi4 1.8
+          CXXFLAGS="$(echo $CXXFLAGS | sed 's/-fvisibility-inlines-hidden //g')"
           pip install .[tests] --user
+          # NOTE: pcmsolver not 'linked' with Psi4 1.8
           pytest adcc -k "not pcm"
           # python setup.py cpptest -v  # TODO: currently doesn't compile...
       #
