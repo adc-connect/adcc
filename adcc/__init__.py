@@ -50,7 +50,7 @@ from .guess import (guess_symmetries, guess_zero, guesses_any, guesses_singlet,
 from .workflow import run_adc
 from .exceptions import InputError
 
-__all__ = ["run_adc", "InputError", "AdcMatrix", "AdcBlockView",
+__all__ = ["run_adc", "InputError", "AdcMatrix",
            "AdcMethod", "Symmetry", "ReferenceState", "MoSpaces",
            "einsum", "contract", "copy", "dot", "empty_like", "evaluate",
            "lincomb", "nosym_like", "ones_like", "transpose",

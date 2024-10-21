@@ -72,21 +72,21 @@ jobs:
           python -m pytest adcc --allocator=libxm -k "TestFunctionality and h2o_sto3g"
       - name: Run C++ tests
         run: python setup.py cpptest -v
-      #
-      # TODO: sphinx.setup_command does not exist anymore,
-      # need to build docs differently
-      # - name: Dependencies for documentation
-      #   run: python -m pip install --user .[build_docs]
-      #   if: matrix.documentation
-      # - name: Build documentation
-      #   run: python setup.py build_docs
-      #   if: matrix.documentation
-      # - name: Upload documentation artefact
-      #   uses: actions/upload-artifact@v2
-      #   with:
-      #     name: documentation
-      #     path: build/sphinx/html
-      #   if: matrix.documentation
+      # Documentation build
+      - name: Dependencies for documentation
+        run: python -m pip install --user .[build_docs]
+        if: matrix.documentation
+      - name: Build documentation
+        run: |
+          cd docs && doxygen && cd ..
+          sphinx-build -M html docs build/sphinx
+        if: matrix.documentation
+      - name: Upload documentation artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: documentation
+          path: build/sphinx/html
+        if: matrix.documentation
       #
       - name: Upload coverage to codecov
         run: |
@@ -109,6 +109,22 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: contains(matrix.os, 'ubuntu')
 
+  deploy_documentation:
+    needs: test
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+    # Deploy to the github-pages environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    # Specify runner + deployment step
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
   #
   # Test Conda Python
   #
