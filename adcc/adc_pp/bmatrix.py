@@ -104,12 +104,32 @@ def block_pphh_pphh_0(ground_state, op):
 # 0th order coupling
 #
 def block_ph_pphh_0(ground_state, op):
-    return AdcBlock(lambda ampl: 0, 0)
-
+    def apply(ampl):
+        return AmplitudeVector(ph=0.5 * (
+            # zeroth order
+            - 2.0 * einsum('ilad,ld->ia', ampl.pphh, op.ov)
+            + 2.0 * einsum('ilca,lc->ia', ampl.pphh, op.ov)
+        ))
+    return AdcBlock(apply)
 
 def block_pphh_ph_0(ground_state, op):
-    return AdcBlock(lambda ampl: 0, 0)
+    if op.is_symmetric:
+        op_vo = op.ov.transpose()
+    else:
+        op_vo = op.vo
+    t2 = ground_state.t2(b.oovv)
 
+    def apply(ampl):
+        return AmplitudeVector(pphh=0.5 * (
+            (
+                # zeroth order
+                - 1.0 * einsum('ia,bj->ijab', ampl.ph, op_vo)
+                + 1.0 * einsum('ja,bi->ijab', ampl.ph, op_vo)
+                + 1.0 * einsum('ib,aj->ijab', ampl.ph, op_vo)
+                - 1.0 * einsum('jb,ai->ijab', ampl.ph, op_vo)
+            ).antisymmetrise(0, 1).antisymmetrise(2, 3)
+        ))
+    return AdcBlock(apply)
 
 #
 # 1st order main
@@ -129,9 +149,11 @@ def block_ph_pphh_1(ground_state, op):
 
     def apply(ampl):
         return AmplitudeVector(ph=0.5 * (
+            # zeroth order
             - 2.0 * einsum('ilad,ld->ia', ampl.pphh, op.ov)
-            + 2.0 * einsum('ilad,lndf,fn->ia', ampl.pphh, t2, op_vo)
             + 2.0 * einsum('ilca,lc->ia', ampl.pphh, op.ov)
+            # first order
+            + 2.0 * einsum('ilad,lndf,fn->ia', ampl.pphh, t2, op_vo)
             - 2.0 * einsum('ilca,lncf,fn->ia', ampl.pphh, t2, op_vo)
             - 2.0 * einsum('klad,kled,ei->ia', ampl.pphh, t2, op_vo)
             - 2.0 * einsum('ilcd,nlcd,an->ia', ampl.pphh, t2, op_vo)
@@ -149,13 +171,15 @@ def block_pphh_ph_1(ground_state, op):
     def apply(ampl):
         return AmplitudeVector(pphh=0.5 * (
             (
+                # zeroth order
                 - 1.0 * einsum('ia,bj->ijab', ampl.ph, op_vo)
-                + 1.0 * einsum('ia,jnbf,nf->ijab', ampl.ph, t2, op.ov)
                 + 1.0 * einsum('ja,bi->ijab', ampl.ph, op_vo)
-                - 1.0 * einsum('ja,inbf,nf->ijab', ampl.ph, t2, op.ov)
                 + 1.0 * einsum('ib,aj->ijab', ampl.ph, op_vo)
-                - 1.0 * einsum('ib,jnaf,nf->ijab', ampl.ph, t2, op.ov)
                 - 1.0 * einsum('jb,ai->ijab', ampl.ph, op_vo)
+                # first order
+                + 1.0 * einsum('ia,jnbf,nf->ijab', ampl.ph, t2, op.ov)
+                - 1.0 * einsum('ja,inbf,nf->ijab', ampl.ph, t2, op.ov)
+                - 1.0 * einsum('ib,jnaf,nf->ijab', ampl.ph, t2, op.ov)
                 + 1.0 * einsum('jb,inaf,nf->ijab', ampl.ph, t2, op.ov)
             ).antisymmetrise(0, 1).antisymmetrise(2, 3)
             + (
