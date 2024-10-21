@@ -110,6 +110,7 @@ jobs:
         if: contains(matrix.os, 'ubuntu')
 
   deploy_documentation:
+    if: github.ref == 'refs/heads/master'
     needs: test
     # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
     permissions:
