@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SOURCE="https://q-chem.de/adcc_testdata/0.5.0/"
+SOURCE="https://q-chem.de/adcc_testdata/0.6.0/"
 DATAFILES=(
 	ch2nh2_sto3g_hfdata.hdf5
 	ch2nh2_sto3g_hfimport.hdf5
