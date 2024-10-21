@@ -82,7 +82,7 @@ jobs:
           sphinx-build -M html docs build/sphinx
         if: matrix.documentation
       - name: Upload documentation artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: documentation
           path: build/sphinx/html
@@ -125,6 +125,8 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: documentation
   #
   # Test Conda Python
   #
