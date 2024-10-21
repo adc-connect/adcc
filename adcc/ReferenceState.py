@@ -161,7 +161,7 @@ class ReferenceState(libadcc.ReferenceState):
                 setattr(self, name, getattr(hfdata, name))
 
     @property
-    def nuclear_charge(self):
+    def nuclear_total_charge(self):
         return self.hfdata.get_nuclear_multipole(0)
 
     @property
