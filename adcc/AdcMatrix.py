@@ -164,7 +164,6 @@ class AdcMatrix(AdcMatrixlike):
                                       variant=variant)
                 for block, order in self.block_orders.items() if order is not None
             }
-            # TODO Rename to self.block in 0.16.0
             self.blocks = {bl: blocks[bl].apply for bl in blocks}
             if diagonal_precomputed:
                 self.__diagonal = diagonal_precomputed

@@ -217,19 +217,3 @@ def einsum(subscripts, *operands, optimise="auto"):
     """
     return opt_einsum.contract(subscripts, *operands, optimize=optimise,
                                backend="libadcc")
-
-
-def contract(subscripts, a, b):
-    """
-    Form a single, einsum-like contraction, that is contract
-    tensor a and be to form out via a contraction defined
-    by the first argument string, e.g. "ab,bc->ac"
-    or "abc,bcd->ad".
-
-    Note: The contract function is deprecated. It will disappear in 0.16.
-    """
-    import warnings
-
-    warnings.warn(DeprecationWarning("contract is deprecated and will "
-                                     "be removed in 0.16. Use einsum."))
-    return einsum(subscripts, a, b)
