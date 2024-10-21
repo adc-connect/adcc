@@ -90,21 +90,6 @@ class ReferenceState {
   /** Return the number of beta electrons */
   size_t n_beta() const { return m_n_beta; }
 
-  size_t n_atoms() const;
-
-  /** Return the nuclear contribution to the cartesian multipole moment
-   *  (in standard ordering, i.e. xx, xy, xz, yy, yz, zz) of the given order. */
-  std::vector<scalar_type> nuclear_multipole(size_t order) const;
-
-  // nuclear charges
-  std::vector<scalar_type> nuclear_charges() const;
-
-  // coordinates
-  std::vector<scalar_type> coordinates() const;
-
-  // nuclear masses
-  std::vector<scalar_type> nuclear_masses() const;
-
   /** Return the SCF convergence tolerance */
   double conv_tol() const { return m_hfsoln_ptr->conv_tol(); }
 

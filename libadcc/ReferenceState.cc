@@ -350,35 +350,6 @@ std::string ReferenceState::irreducible_representation() const {
   throw not_implemented_error("Only C1 is implemented.");
 }
 
-size_t ReferenceState::n_atoms() const { return m_hfsoln_ptr->n_atoms(); }
-
-std::vector<scalar_type> ReferenceState::nuclear_multipole(size_t order) const {
-  std::vector<scalar_type> ret((order + 2) * (order + 1) / 2);
-  m_hfsoln_ptr->nuclear_multipole(order, ret.data(), ret.size());
-  return ret;
-}
-
-std::vector<scalar_type> ReferenceState::nuclear_charges() const {
-  size_t n_atoms = ReferenceState::n_atoms();
-  std::vector<scalar_type> ret(n_atoms);
-  m_hfsoln_ptr->nuclear_charges(ret.data(), ret.size());
-  return ret;
-}
-
-std::vector<scalar_type> ReferenceState::nuclear_masses() const {
-  size_t n_atoms = ReferenceState::n_atoms();
-  std::vector<scalar_type> ret(n_atoms);
-  m_hfsoln_ptr->nuclear_masses(ret.data(), ret.size());
-  return ret;
-}
-
-std::vector<scalar_type> ReferenceState::coordinates() const {
-  size_t n_atoms = ReferenceState::n_atoms();
-  std::vector<scalar_type> ret(3 * n_atoms);
-  m_hfsoln_ptr->coordinates(ret.data(), ret.size());
-  return ret;
-}
-
 //
 // Tensor data
 //

@@ -313,7 +313,7 @@ class PyScfHFProvider(HartreeFockProvider):
     def get_n_bas(self):
         return int(self.scfres.mol.nao_nr())
 
-    def get_nuclear_multipole(self, order):
+    def get_nuclear_multipole(self, order, gauge_origin=[0.0, 0.0, 0.0]):
         charges = self.scfres.mol.atom_charges()
         if order == 0:
             # The function interface needs to be a np.array on return
@@ -322,12 +322,11 @@ class PyScfHFProvider(HartreeFockProvider):
             coords = self.scfres.mol.atom_coords()
             return np.einsum("i,ix->x", charges, coords)
         elif order == 2:
-            # TODO: gauge-origin
-            coords = self.scfres.mol.atom_coords()
+            gauge_origin = \
+                self.operator_integral_provider._update_gauge_origin(gauge_origin)
+            coords = self.scfres.mol.atom_coords() - gauge_origin
             r_r = np.einsum("ij,ik->ijk", coords, coords)
             res = np.einsum("i,ijk->jk", charges, r_r)
-            res = np.array([res[0][0], res[0][1], res[0][2],
-                            res[1][1], res[1][2], res[2][2]])
             return res
         else:
             raise NotImplementedError("get_nuclear_multipole with order > 2")
