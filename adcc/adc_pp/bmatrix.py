@@ -112,12 +112,12 @@ def block_ph_pphh_0(ground_state, op):
         ))
     return AdcBlock(apply)
 
+
 def block_pphh_ph_0(ground_state, op):
     if op.is_symmetric:
         op_vo = op.ov.transpose()
     else:
         op_vo = op.vo
-    t2 = ground_state.t2(b.oovv)
 
     def apply(ampl):
         return AmplitudeVector(pphh=0.5 * (
@@ -130,6 +130,7 @@ def block_pphh_ph_0(ground_state, op):
             ).antisymmetrise(0, 1).antisymmetrise(2, 3)
         ))
     return AdcBlock(apply)
+
 
 #
 # 1st order main
