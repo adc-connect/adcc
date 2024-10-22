@@ -51,7 +51,6 @@ class TestFunctionalityBase(unittest.TestCase):
         hf = cache.hfdata[system]
         if generator == "atd":
             refdata = cache.reference_data[system]
-            args["conv_tol"] = 3e-9
         else:
             refdata = cache.adcc_reference_data[system]
         ref = refdata[prefix.replace("_", "-") + method][kind]
@@ -117,7 +116,7 @@ class TestFunctionalityBase(unittest.TestCase):
         # Test we do not use too many iterations
         if smallsystem:
             n_iter_bound = {
-                "adc0": 1, "adc1": 7, "adc2": 20, "adc2x": 25, "adc3": 22,
+                "adc0": 1, "adc1": 6, "adc2": 20, "adc2x": 18, "adc3": 15,
                 "cvs-adc0": 1, "cvs-adc1": 4, "cvs-adc2": 5, "cvs-adc2x": 18,
                 "cvs-adc3": 17,
             }[method]
