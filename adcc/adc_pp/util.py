@@ -33,14 +33,14 @@ def check_doubles_amplitudes(spaces, *amplitudes):
 
 
 def check_have_singles_block(*amplitudes):
-    if any("ph" not in amplitude.blocks_ph for amplitude in amplitudes):
+    if any("ph" not in amplitude.blocks for amplitude in amplitudes):
         raise ValueError("ADC(0) level and "
                          "beyond expects an excitation amplitude with a "
                          "singles part.")
 
 
 def check_have_doubles_block(*amplitudes):
-    if any("pphh" not in amplitude.blocks_ph for amplitude in amplitudes):
+    if any("pphh" not in amplitude.blocks for amplitude in amplitudes):
         raise ValueError("ADC(2) level and "
                          "beyond expects an excitation amplitude with a "
                          "singles and a doubles part.")
