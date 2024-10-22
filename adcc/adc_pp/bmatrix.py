@@ -106,7 +106,6 @@ def block_pphh_pphh_0(ground_state, op):
 def block_ph_pphh_0(ground_state, op):
     def apply(ampl):
         return AmplitudeVector(ph=0.5 * (
-            # zeroth order
             - 2.0 * einsum('ilad,ld->ia', ampl.pphh, op.ov)
             + 2.0 * einsum('ilca,lc->ia', ampl.pphh, op.ov)
         ))
@@ -122,7 +121,6 @@ def block_pphh_ph_0(ground_state, op):
     def apply(ampl):
         return AmplitudeVector(pphh=0.5 * (
             (
-                # zeroth order
                 - 1.0 * einsum('ia,bj->ijab', ampl.ph, op_vo)
                 + 1.0 * einsum('ja,bi->ijab', ampl.ph, op_vo)
                 + 1.0 * einsum('ib,aj->ijab', ampl.ph, op_vo)
