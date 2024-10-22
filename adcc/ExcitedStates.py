@@ -537,32 +537,3 @@ class ExcitedStates(ElectronicTransition):
         excitations = [Excitation(self, index=i, method=self.method)
                        for i in range(self.size)]
         return excitations
-
-
-# deprecated property names of ExcitedStates
-deprecated = {
-    "excitation_energies": "excitation_energy",
-    "transition_dipole_moments": "transition_dipole_moment",
-    "transition_dms": "transition_dm",
-    "transition_dipole_moments_velocity":
-        "transition_dipole_moment_velocity",
-    "transition_magnetic_dipole_moments":
-        "transition_magnetic_dipole_moment",
-    "state_dipole_moments": "state_dipole_moment",
-    "state_dms": "state_dm",
-    "state_diffdms": "state_diffdm",
-    "oscillator_strengths": "oscillator_strength",
-    "oscillator_stenths_velocity": "oscillator_strength_velocity",
-    "rotatory_strengths": "rotatory_strength",
-    "excitation_vectors": "excitation_vector",
-}
-
-for dep_property in deprecated:
-    new_key = deprecated[dep_property]
-
-    def deprecated_property(self, key=new_key, old_key=dep_property):
-        warnings.warn(f"Property '{old_key}' is deprecated "
-                      " and will be removed in version 0.16.0."
-                      f" Please use '{key}' instead.")
-        return getattr(self, key)
-    setattr(ExcitedStates, dep_property, property(deprecated_property))
