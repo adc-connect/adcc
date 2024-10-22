@@ -5,9 +5,9 @@ channels:
 dependencies:
   # Build
   - python
-  - gcc_linux-64 >=12
-  - gxx_linux-64 >=12
-  - libtensorlight =3.0.1=h3cb4726_2
+  - gcc_linux-64
+  - gxx_linux-64
+  - libtensorlight >=3.0.1
   - pybind11 >=2.6
   - pip
   # Run
