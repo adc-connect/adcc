@@ -66,26 +66,6 @@ The ``setup.py`` script of adcc is a largely a typical setuptools script,
 but has a few additional commands and features worth knowing:
 
 - ``setup.py build_ext``: Build the C++ part of adcc in the current directory.
-- ``setup.py test``: Run the adcc unit tests via
-  `pytest <https://docs.pytest.org>`_. Implies ``build_ext``.
-  This command has a few useful options:
-
-    - ``-m full``: Run the full test suite not only the fast tests
-    - ``-s``: Skip updating the testdata
-    - ``-a``: Pass additional arguments to ``pytest``
-      (`See pytest documentation <https://docs.pytest.org/en/latest/usage.html>`_).
-      This is extremely valuable in combination with the ``-k`` and ``-s`` flags
-      of ``pytest``.
-      For example
-
-      .. code-block:: shell
-
-         ./setup.py test -a "-k 'functionality and adc2'"
-
-      will run only the tests, which have the keywords "functionality" and
-      "adc2" in their description.
-- ``setup.py build_docs``: Build the documentation locally using
-  Doxygen and Sphinx. See the section below for details.
 - ``setup.py cpptests``: Build and run the C++ tests for ``libadcc``
 
 Documentation, documentation, documentation

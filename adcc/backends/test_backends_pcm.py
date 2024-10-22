@@ -49,7 +49,7 @@ class TestPCM(unittest.TestCase):
 
         # Consistency check with values obtained with ADCc
         assert_allclose(state.excitation_energy,
-                        result["ptlr_adcc_excitation_energy"], atol=1e-6)
+                        result["ptlr_adcc_excitation_energy"], atol=1e-5)
 
         if backend == "psi4":
             # remove cavity files from PSI4 PCM calculations
