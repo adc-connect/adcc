@@ -40,8 +40,8 @@ class TestPCM(unittest.TestCase):
 
         assert_allclose(scfres.energy_scf, result["energy_scf"], atol=1e-8)
 
-        state = adcc.run_adc(scfres, method=method, n_singlets=5,
-                             conv_tol=1e-7, environment="ptlr")
+        state = adcc.run_adc(scfres, method=method, n_singlets=5, conv_tol=1e-7,
+                             max_subspace=24, environment="ptlr")
 
         # compare ptLR result to LR data
         assert_allclose(state.excitation_energy,
@@ -78,7 +78,7 @@ class TestPCM(unittest.TestCase):
         assert len(matrix.extra_terms)
 
         state = adcc.run_adc(matrix, n_singlets=5, conv_tol=1e-7,
-                             environment=False)
+                             max_subspace=24, environment=False)
         assert_allclose(
             state.excitation_energy_uncorrected,
             result["lr_excitation_energy"],
@@ -101,8 +101,8 @@ class TestPCM(unittest.TestCase):
             adcc.run_adc(scfres, method=method, n_singlets=5)
 
         # automatically add coupling term
-        state = adcc.run_adc(scfres, method=method, n_singlets=5,
-                             conv_tol=1e-7, environment="linear_response")
+        state = adcc.run_adc(scfres, method=method, n_singlets=5, conv_tol=1e-7,
+                             max_subspace=24, environment="linear_response")
         assert_allclose(
             state.excitation_energy_uncorrected,
             result["lr_excitation_energy"],
