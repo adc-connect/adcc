@@ -122,8 +122,8 @@ class TestFunctionalityBase(unittest.TestCase):
             }[method]
         else:
             n_iter_bound = {
-                "adc0": 1, "adc1": 15, "adc2": 32, "adc2x": 35, "adc3": 39,
-                "cvs-adc0": 1, "cvs-adc1": 13, "cvs-adc2": 27, "cvs-adc2x": 31,
+                "adc0": 1, "adc1": 10, "adc2": 20, "adc2x": 25, "adc3": 25,
+                "cvs-adc0": 1, "cvs-adc1": 9, "cvs-adc2": 27, "cvs-adc2x": 31,
                 "cvs-adc3": 19,
             }[method]
         assert res.n_iter <= n_iter_bound
