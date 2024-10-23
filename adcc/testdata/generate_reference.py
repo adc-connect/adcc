@@ -116,7 +116,10 @@ def dump_h2o_def2tzvp():  # H2O restricted
 
 
 def dump_cn_sto3g():  # CN unrestricted
-    dump_all("cn_sto3g", {"n_states": 8, "n_guess_singles": 10}, spec="gen")
+    kwargs = {"n_states": 8, "n_guess_singles": 10, "max_subspace": None}
+    overwrite = {"adc1": {"n_states": 8, "n_guess_singles": 10,
+                 "max_subspace": 42}, }
+    dump_all("cn_sto3g", kwargs, overwrite, spec="gen")
     dump_all("cn_sto3g", {"n_states": 6, "n_guess_singles": 7}, spec="cvs")
 
     # Just ADC(2) and ADC(2)-x for the other methods
