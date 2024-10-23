@@ -194,7 +194,7 @@ class Psi4HFProvider(HartreeFockProvider):
         conv_tol = psi4.core.get_option("SCF", "E_CONVERGENCE")
         # RMS value of the orbital gradient
         conv_tol_grad = psi4.core.get_option("SCF", "D_CONVERGENCE")
-        threshold = max(10 * conv_tol, conv_tol_grad)
+        threshold = max(conv_tol, conv_tol_grad)
         return threshold
 
     def get_restricted(self):

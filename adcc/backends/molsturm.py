@@ -57,7 +57,7 @@ def convert_scf_to_dict(scfres):
     data["occupation_f"][n_oa:n_oa + n_beta] = 1.
 
     data["energy_scf"] = scfres["energy_ground_state"]
-    data["conv_tol"] = 10 * scfres["final_error_norm"]
+    data["conv_tol"] = scfres["final_error_norm"]
     data["orbcoeff_fb"] = scfres["orbcoeff_bf"].transpose().copy()
 
     # Compute electric and nuclear multipole moments

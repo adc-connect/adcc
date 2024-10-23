@@ -37,6 +37,7 @@ sizes = ["0004", "0050", "0200", "1000"]
 @expand_test_templates(sizes)
 class TestPowerMethod(unittest.TestCase):
     def template_random_matrix(self, size):
+        np.random.seed(42)
         size = int(size)
         conv_tol = 1e-10
         ev = np.random.randn(size)

@@ -263,10 +263,9 @@ class PyScfHFProvider(HartreeFockProvider):
 
     def get_conv_tol(self):
         if self.scfres.conv_tol_grad is None:
-            conv_tol_grad = np.sqrt(self.scfres.conv_tol)
+            conv_tol = self.scfres.conv_tol
         else:
-            conv_tol_grad = self.scfres.conv_tol_grad
-        conv_tol = max(10 * self.scfres.conv_tol, conv_tol_grad)
+            conv_tol = max(self.scfres.conv_tol, self.scfres.conv_tol_grad**2)
         return conv_tol
 
     def get_restricted(self):
