@@ -38,24 +38,93 @@ class PyScfOperatorIntegralProvider:
         self.scfres = scfres
         self.backend = "pyscf"
 
+    def _update_gauge_origin(self, gauge_origin):
+        coords = self.scfres.mol.atom_coords()
+        masses = self.scfres.mol.atom_mass_list()
+        charges = self.scfres.mol.atom_charges()
+        if gauge_origin == "mass_center":
+            gauge_origin = list(np.einsum("i,ij->j", masses, coords) / masses.sum())
+        elif gauge_origin == "charge_center":
+            gauge_origin = list(np.einsum("i,ij->j", charges, coords)
+                                / charges.sum())
+        elif gauge_origin == "origin":
+            gauge_origin = [0.0, 0.0, 0.0]
+        elif isinstance(gauge_origin, list):
+            gauge_origin = gauge_origin
+        else:
+            raise NotImplementedError("Gauge origin has to be defined either by"
+                                      " using one of the keywords"
+                                      " mass_center, charge_center or origin."
+                                      " Or by declaring a list eg. [x, y, z]"
+                                      " in atomic units.")
+        return gauge_origin
+
     @cached_property
     def electric_dipole(self):
         return list(self.scfres.mol.intor_symmetric('int1e_r', comp=3))
 
-    @cached_property
+    @property
     def magnetic_dipole(self):
-        # TODO: Gauge origin?
-        with self.scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
-            return list(
-                0.5 * self.scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
-            )
+        def magnetic_dipole_gauge(gauge_origin):
+            gauge_origin = self._update_gauge_origin(gauge_origin)
+            with self.scfres.mol.with_common_orig(gauge_origin):
+                return list(
+                    0.5 * self.scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
+                )
+        return magnetic_dipole_gauge
 
-    @cached_property
+    @property
     def nabla(self):
-        with self.scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
-            return list(
-                -1.0 * self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
-            )
+        def nabla_gauge(gauge_origin):
+            gauge_origin = self._update_gauge_origin(gauge_origin)
+            with self.scfres.mol.with_common_orig(gauge_origin):
+                return list(
+                    -1.0 * self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
+                )
+        return nabla_gauge
+
+    @property
+    def dia_magnet(self):
+        def dia_magnet_gauge(gauge_origin):
+            gauge_origin = self._update_gauge_origin(gauge_origin)
+            with self.scfres.mol.with_common_orig(gauge_origin):
+                r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
+                r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
+                r_quadr = self.scfres.mol.intor_symmetric('int1e_r2', comp=1)
+                r_quadr_matrix = np.zeros((3, 3, r_quadr.shape[0],
+                                           r_quadr.shape[0]))
+                for i in range(3):
+                    r_quadr_matrix[i][i] = r_quadr
+                term = -0.25 * (r_quadr_matrix - r_r)
+                term = np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
+                return list(term)
+        return dia_magnet_gauge
+
+    @property
+    def electric_quadrupole_traceless(self):
+        def electric_quadrupole_traceless_gauge(gauge_origin):
+            gauge_origin = self._update_gauge_origin(gauge_origin)
+            with self.scfres.mol.with_common_orig(gauge_origin):
+                r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
+                r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
+                r_quadr = self.scfres.mol.intor_symmetric('int1e_r2', comp=1)
+                r_quadr_matrix = np.zeros((3, 3, r_quadr.shape[0],
+                                           r_quadr.shape[0]))
+                for i in range(3):
+                    r_quadr_matrix[i][i] = r_quadr
+                term = 0.5 * (3 * r_r - r_quadr_matrix)
+                term = np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
+                return list(term)
+        return electric_quadrupole_traceless_gauge
+
+    @property
+    def electric_quadrupole(self):
+        def electric_quadrupole_gauge(gauge_origin):
+            gauge_origin = self._update_gauge_origin(gauge_origin)
+            with self.scfres.mol.with_common_orig(gauge_origin):
+                r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
+                return list(r_r)
+        return electric_quadrupole_gauge
 
     @property
     def pe_induction_elec(self):
@@ -209,6 +278,23 @@ class PyScfHFProvider(HartreeFockProvider):
                                    "not determine restricted / unrestricted.")
         return restricted
 
+    def get_n_atoms(self):
+        n_atoms = self.scfres.mol.natm
+        return n_atoms
+
+    def get_nuclear_charges(self):
+        charges = self.scfres.mol.atom_charges()
+        return charges
+
+    def get_nuclear_masses(self):
+        masses = self.scfres.mol.atom_mass_list()
+        return masses
+
+    def get_coordinates(self):
+        coords = self.scfres.mol.atom_coords()
+        coords = np.reshape(coords, (3 * coords.shape[0]))
+        return coords
+
     def get_energy_scf(self):
         return float(self.scfres.e_tot)
 
@@ -226,16 +312,23 @@ class PyScfHFProvider(HartreeFockProvider):
     def get_n_bas(self):
         return int(self.scfres.mol.nao_nr())
 
-    def get_nuclear_multipole(self, order):
+    def get_nuclear_multipole(self, order, gauge_origin=[0.0, 0.0, 0.0]):
         charges = self.scfres.mol.atom_charges()
         if order == 0:
             # The function interface needs to be a np.array on return
             return np.array([np.sum(charges)])
         elif order == 1:
             coords = self.scfres.mol.atom_coords()
-            return np.einsum('i,ix->x', charges, coords)
+            return np.einsum("i,ix->x", charges, coords)
+        elif order == 2:
+            gauge_origin = \
+                self.operator_integral_provider._update_gauge_origin(gauge_origin)
+            coords = self.scfres.mol.atom_coords() - gauge_origin
+            r_r = np.einsum("ij,ik->ijk", coords, coords)
+            res = np.einsum("i,ijk->jk", charges, r_r)
+            return res
         else:
-            raise NotImplementedError("get_nuclear_multipole with order > 1")
+            raise NotImplementedError("get_nuclear_multipole with order > 2")
 
     def fill_occupation_f(self, out):
         if self.restricted:

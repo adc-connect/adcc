@@ -350,12 +350,6 @@ std::string ReferenceState::irreducible_representation() const {
   throw not_implemented_error("Only C1 is implemented.");
 }
 
-std::vector<scalar_type> ReferenceState::nuclear_multipole(size_t order) const {
-  std::vector<scalar_type> ret((order + 2) * (order + 1) / 2);
-  m_hfsoln_ptr->nuclear_multipole(order, ret.data(), ret.size());
-  return ret;
-}
-
 //
 // Tensor data
 //

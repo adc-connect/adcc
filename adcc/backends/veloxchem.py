@@ -23,6 +23,7 @@
 import os
 import tempfile
 import numpy as np
+import warnings
 
 from mpi4py import MPI
 from libadcc import HartreeFockProvider
@@ -43,6 +44,9 @@ class VeloxChemOperatorIntegralProvider:
     def __init__(self, scfdrv):
         self.scfdrv = scfdrv
         self.backend = "veloxchem"
+        warnings.warn("Gauge origin selection not available "
+                      f"in {self.backend}. "
+                      "The gauge origin is selected as [0, 0, 0].")
 
     @cached_property
     def electric_dipole(self):
@@ -54,20 +58,32 @@ class VeloxChemOperatorIntegralProvider:
 
     @cached_property
     def magnetic_dipole(self):
-        # TODO: Gauge origin?
-        task = self.scfdrv.task
-        angmom_drv = AngularMomentumIntegralsDriver(task.mpi_comm)
-        angmom_mats = angmom_drv.compute(task.molecule, task.ao_basis)
-        return (0.5 * angmom_mats.x_to_numpy(), 0.5 * angmom_mats.y_to_numpy(),
-                0.5 * angmom_mats.z_to_numpy())
+        def gauge_dependent_integrals(gauge_origin):
+            # TODO: Gauge origin?
+            if gauge_origin != [0.0, 0.0, 0.0] and gauge_origin != "origin":
+                raise NotImplementedError('Only [0.0, 0.0, 0.0] can be selected as'
+                                          ' gauge origin.')
+            task = self.scfdrv.task
+            angmom_drv = AngularMomentumIntegralsDriver(task.mpi_comm)
+            angmom_mats = angmom_drv.compute(task.molecule, task.ao_basis)
+            return (0.5 * angmom_mats.x_to_numpy(), 0.5 * angmom_mats.y_to_numpy(),
+                    0.5 * angmom_mats.z_to_numpy())
+        return gauge_dependent_integrals
 
     @cached_property
     def nabla(self):
-        task = self.scfdrv.task
-        linmom_drv = LinearMomentumIntegralsDriver(task.mpi_comm)
-        linmom_mats = linmom_drv.compute(task.molecule, task.ao_basis)
-        return (-1.0 * linmom_mats.x_to_numpy(), -1.0 * linmom_mats.y_to_numpy(),
-                -1.0 * linmom_mats.z_to_numpy())
+        def gauge_dependent_integrals(gauge_origin):
+            # TODO: Gauge origin?
+            if gauge_origin != [0.0, 0.0, 0.0] and gauge_origin != "origin":
+                raise NotImplementedError('Only [0.0, 0.0, 0.0] can be selected as'
+                                          ' gauge origin.')
+            task = self.scfdrv.task
+            linmom_drv = LinearMomentumIntegralsDriver(task.mpi_comm)
+            linmom_mats = linmom_drv.compute(task.molecule, task.ao_basis)
+            return (-1.0 * linmom_mats.x_to_numpy(),
+                    -1.0 * linmom_mats.y_to_numpy(),
+                    -1.0 * linmom_mats.z_to_numpy())
+        return gauge_dependent_integrals
 
 
 # VeloxChem is a special case... not using coefficients at all
