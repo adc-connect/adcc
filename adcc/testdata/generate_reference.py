@@ -36,8 +36,7 @@ sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
 import adcctestdata as atd  # noqa: E402
 
 
-def dump_all(case, kwargs, kwargs_overwrite={}, spec="gen",
-             generator="adcc"):
+def dump_all(case, kwargs, kwargs_overwrite={}, spec="gen", generator="adcc"):
     assert spec in ["gen", "cvs"]
     for method in ["adc0", "adc1", "adc2", "adc2x", "adc3"]:
         kw = kwargs_overwrite.get(method, kwargs)
@@ -55,6 +54,7 @@ def dump_method(case, method, kwargs, spec, generator="adcc"):
     else:
         dumpfunction = dump_reference_adcc
         hfdata = adcc.DataHfProvider(h5py.File(h5file, "r"))
+
     # Get dictionary of parameters for the reference cases.
     refcases = ast.literal_eval(hfdata.data["reference_cases"][()].decode())
     kwargs = dict(kwargs)
@@ -77,7 +77,6 @@ def dump_method(case, method, kwargs, spec, generator="adcc"):
         dumpfile = "{}_reference_{}{}.hdf5".format(case, prefix, method)
     else:
         dumpfile = "{}_adcc_reference_{}{}.hdf5".format(case, prefix, method)
-
     if not os.path.isfile(dumpfile):
         dumpfunction(hfdata, fullmethod, dumpfile, mp_tree=mp_tree,
                      adc_tree=adc_tree, n_states_full=2, **kwargs)
@@ -169,10 +168,8 @@ def dump_h2s_6311g():
 
 def dump_methox_sto3g():  # (R)-2-methyloxirane
     kwargs = {"n_singlets": 2}
-    dump_all("methox_sto3g", kwargs, spec="gen",
-             generator="adcc")
-    dump_all("methox_sto3g", kwargs, spec="cvs",
-             generator="adcc")
+    dump_all("methox_sto3g", kwargs, spec="gen", generator="adcc")
+    dump_all("methox_sto3g", kwargs, spec="cvs", generator="adcc")
 
 
 def main():

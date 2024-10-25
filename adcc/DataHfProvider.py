@@ -278,7 +278,7 @@ class DataHfProvider(HartreeFockProvider):
     def get_energy_scf(self):
         return get_scalar_value(self.data, "energy_scf", 0.0)
 
-    def get_nuclear_multipole(self, order):
+    def get_nuclear_multipole(self, order, gauge_origin):
         if order == 0:  # The function interface needs an np.array on return
             nuc_0 = get_scalar_value(self.data, "multipoles/nuclear_0", 0.0)
             return np.array([nuc_0])

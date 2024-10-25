@@ -52,7 +52,7 @@ class TestModifiedTransitionMoments(unittest.TestCase):
         elif op_kind == "magnetic":
             for gauge_origin in gauge_origins:
                 dips = state.reference_state.operators.magnetic_dipole(gauge_origin)
-                ref_tdm = ref[f"transition_magnetic_dipole_moments_{gauge_origin}"]
+                ref_tdm = ref["transition_magnetic_dipole_moments"][gauge_origin]
         else:
             skip("Tests are only implemented for electric "
                  "and magnetic dipole operators.")

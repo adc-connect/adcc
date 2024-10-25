@@ -45,7 +45,7 @@ class TestMagneticTransitionDipoleMoments(unittest.TestCase, Runners):
             n_ref = len(state.excitation_vector)
             assert_allclose(
                 res_dms,
-                ref[f"transition_magnetic_dipole_moments_{gauge_origin}"][:n_ref],
+                ref["transition_magnetic_dipole_moments"][gauge_origin][:n_ref],
                 atol=1e-4
             )
 
@@ -63,7 +63,7 @@ class TestTransitionDipoleMomentsVelocity(unittest.TestCase, Runners):
             n_ref = len(state.excitation_vector)
             assert_allclose(
                 res_dms,
-                ref[f"transition_dipole_moments_velocity_{gauge_origin}"][:n_ref],
+                ref["transition_dipole_moments_velocity"][gauge_origin][:n_ref],
                 atol=1e-4
             )
 
@@ -81,7 +81,7 @@ class TestTransitionQuadrupoleMoments(unittest.TestCase, Runners):
             n_ref = len(state.excitation_vector)
             assert_allclose(
                 res_dms,
-                ref[f"transition_quadrupole_moments_{gauge_origin}"][:n_ref],
+                ref["transition_quadrupole_moments"][gauge_origin][:n_ref],
                 atol=1e-4)
 
 
@@ -93,9 +93,9 @@ class TestRotatoryStrengths(unittest.TestCase, Runners):
         state = cache.adcc_states[system][method][kind]
         for gauge_origin in gauge_origins:
             res_rots = state.rotatory_strength(gauge_origin)
-            ref_tmdm = refdata[f"transition_magnetic_dipole_moments_{gauge_origin}"]
+            ref_tmdm = refdata["transition_magnetic_dipole_moments"][gauge_origin]
             ref_tdmvel = \
-                refdata[f"transition_dipole_moments_velocity_{gauge_origin}"]
+                refdata["transition_dipole_moments_velocity"][gauge_origin]
             refevals = refdata["eigenvalues"]
             n_ref = len(state.excitation_vector)
             for i in range(n_ref):

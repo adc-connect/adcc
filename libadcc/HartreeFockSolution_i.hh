@@ -21,6 +21,7 @@
 #include "config.hh"
 #include <cstddef>
 #include <string>
+#include <vector>
 
 namespace libadcc {
 /** Access to a Hartree-Fock solution where all quantities are
@@ -41,6 +42,18 @@ namespace libadcc {
  */
 class HartreeFockSolution_i {
  public:
+  /** \name System information */
+  ///@{
+  /** Fill a buffer with nuclear multipole data for the nuclear multipole of
+   *  given order. */
+  virtual void nuclear_multipole(size_t order, std::vector<scalar_type> gauge_origin,
+                                 scalar_type* buffer, size_t size) const = 0;
+  //@}
+
+  /** Determine the gauge origin. */
+  virtual std::vector<scalar_type> determine_gauge_origin(
+        std::string gauge_origin) const = 0;
+
   /** \name Sizes of the data */
   ///@{
   /** Return the number of HF *spin* molecular orbitals of alpha spin.
@@ -61,7 +74,6 @@ class HartreeFockSolution_i {
    * */
   virtual size_t n_bas() const = 0;
   ///@}
-  //
 
   /** \name Access to HF SCF results */
   ///@{

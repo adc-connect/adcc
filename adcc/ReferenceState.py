@@ -140,7 +140,7 @@ class ReferenceState(libadcc.ReferenceState):
         """
         if not isinstance(hfdata, libadcc.HartreeFockSolution_i):
             hfdata = import_scf_results(hfdata)
-        self.hfdata = hfdata
+
         self._mospaces = MoSpaces(hfdata, frozen_core=frozen_core,
                                   frozen_virtual=frozen_virtual,
                                   core_orbitals=core_orbitals)
@@ -159,20 +159,6 @@ class ReferenceState(libadcc.ReferenceState):
         for name in ["excitation_energy_corrections", "environment"]:
             if hasattr(hfdata, name):
                 setattr(self, name, getattr(hfdata, name))
-
-    @property
-    def nuclear_total_charge(self):
-        return self.hfdata.get_nuclear_multipole(0)
-
-    @property
-    def nuclear_dipole(self):
-        return self.hfdata.get_nuclear_multipole(1)
-
-    @property
-    def nuclear_quadrupole(self):
-        def gauge_dependent(gauge_origin=[0.0, 0.0, 0.0]):
-            return self.hfdata.get_nuclear_multipole(2, gauge_origin)
-        return gauge_dependent
 
     def __getattr__(self, attr):
         from . import block as b
@@ -238,5 +224,10 @@ class ReferenceState(libadcc.ReferenceState):
         # Notice the negative sign due to the negative charge of the electrons
         return self.nuclear_dipole - np.array([product_trace(comp, self.density)
                                                for comp in dipole_integrals])
+
+    def nuclear_quadrupole(self, gauge_origin="origin"):
+        if isinstance(gauge_origin, str):
+            gauge_origin = self.determine_gauge_origin(gauge_origin)
+        return super().nuclear_quadrupole(np.array(gauge_origin))
 
 # TODO some nice describe method

@@ -183,7 +183,7 @@ class VeloxChemHFProvider(HartreeFockProvider):
     def get_n_bas(self):
         return self.mol_orbs.number_aos()
 
-    def get_nuclear_multipole(self, order):
+    def get_nuclear_multipole(self, order, gauge_origin=[0, 0, 0]):
         mol = self.scfdrv.task.molecule
         nuc_charges = mol.elem_ids_to_numpy()
         if order == 0:
@@ -196,6 +196,9 @@ class VeloxChemHFProvider(HartreeFockProvider):
             return np.einsum('i,ix->x', nuc_charges, coords)
         else:
             raise NotImplementedError("get_nuclear_multipole with order > 1")
+
+    def get_gauge_origin(self, gauge_origin):
+        raise NotImplementedError("get_gauge_origin not implemented.")
 
     def fill_orbcoeff_fb(self, out):
         mo_coeff_a = self.mol_orbs.alpha_to_numpy()

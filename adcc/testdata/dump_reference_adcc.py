@@ -54,6 +54,7 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
 
     if not len(states):
         raise ValueError("No excited states obtained.")
+
     #
     # MP
     #
@@ -186,24 +187,14 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
         adc[kind + "/state_dipole_moments"] = state.state_dipole_moment
         adc[kind + "/transition_dipole_moments"] = state.transition_dipole_moment
         # gauge origin dependent
-        adc[kind + "/transition_dipole_moments_velocity_origin"] = \
-            state.transition_dipole_moment_velocity("origin")
-        adc[kind + "/transition_dipole_moments_velocity_mass_center"] = \
-            state.transition_dipole_moment_velocity("mass_center")
-        adc[kind + "/transition_dipole_moments_velocity_charge_center"] = \
-            state.transition_dipole_moment_velocity("charge_center")
-        adc[kind + "/transition_magnetic_dipole_moments_origin"] = \
-            state.transition_magnetic_dipole_moment("origin")
-        adc[kind + "/transition_magnetic_dipole_moments_mass_center"] = \
-            state.transition_magnetic_dipole_moment("mass_center")
-        adc[kind + "/transition_magnetic_dipole_moments_charge_center"] = \
-            state.transition_magnetic_dipole_moment("charge_center")
-        adc[kind + "/transition_quadrupole_moments_origin"] = \
-            state.transition_quadrupole_moment("origin")
-        adc[kind + "/transition_quadrupole_moments_mass_center"] = \
-            state.transition_quadrupole_moment("mass_center")
-        adc[kind + "/transition_quadrupole_moments_charge_center"] = \
-            state.transition_quadrupole_moment("charge_center")
+        gauge_origins = ["origin", "mass_center", "charge_center"]
+        for gauge_origin in gauge_origins:
+            adc[kind + "/transition_dipole_moments_velocity/" + gauge_origin] = \
+                state.transition_dipole_moment_velocity(gauge_origin)
+            adc[kind + "/transition_magnetic_dipole_moments/" + gauge_origin] = \
+                state.transition_magnetic_dipole_moment(gauge_origin)
+            adc[kind + "/transition_quadrupole_moments/" + gauge_origin] = \
+                state.transition_quadrupole_moment(gauge_origin)
         adc[kind + "/eigenvalues"] = state.excitation_energy
         adc[kind + "/eigenvectors_singles"] = np.asarray(
             eigenvectors_singles)

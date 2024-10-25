@@ -212,7 +212,7 @@ class Psi4HFProvider(HartreeFockProvider):
     def get_n_bas(self):
         return self.wfn.basisset().nbf()
 
-    def get_nuclear_multipole(self, order):
+    def get_nuclear_multipole(self, order, gauge_origin=[0, 0, 0]):
         molecule = self.wfn.molecule()
         if order == 0:
             # The function interface needs to be a np.array on return
@@ -223,6 +223,9 @@ class Psi4HFProvider(HartreeFockProvider):
             return np.array([dip_nuclear[0], dip_nuclear[1], dip_nuclear[2]])
         else:
             raise NotImplementedError("get_nuclear_multipole with order > 1")
+
+    def get_gauge_origin(self, gauge_origin):
+        raise NotImplementedError("get_gauge_origin not implemented.")
 
     def fill_orbcoeff_fb(self, out):
         mo_coeff_a = np.asarray(self.wfn.Ca())
