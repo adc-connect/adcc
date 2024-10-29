@@ -448,7 +448,7 @@ def _determine_gauge_origin(scfres, gauge_origin):
     elif isinstance(gauge_origin, list):
         gauge_origin = gauge_origin
     else:
-        raise NotImplementedError("Gauge origin has to be defined either by"
+        raise NotImplementedError("Gauge origin has to be defined by"
                                   " using one of the keywords"
                                   " mass_center, charge_center or origin.")
     return gauge_origin

@@ -119,7 +119,7 @@ void export_ReferenceState(py::module& m) {
                                  return res;
                                })
         .def("nuclear_quadrupole",
-             [](const ReferenceState& ref, py::array_t<scalar_type> gauge_origin) {
+             [](const ReferenceState& ref, py::list gauge_origin) {
                py::array_t<scalar_type> ret(std::vector<ssize_t>{6});
                auto res = ref.nuclear_multipole(
                      2, py::cast<std::vector<scalar_type>>(gauge_origin));

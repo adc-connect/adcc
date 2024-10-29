@@ -228,6 +228,6 @@ class ReferenceState(libadcc.ReferenceState):
     def nuclear_quadrupole(self, gauge_origin="origin"):
         if isinstance(gauge_origin, str):
             gauge_origin = self.determine_gauge_origin(gauge_origin)
-        return super().nuclear_quadrupole(np.array(gauge_origin))
+        return super().nuclear_quadrupole(gauge_origin)
 
 # TODO some nice describe method
