@@ -22,6 +22,7 @@
 ## ---------------------------------------------------------------------
 import warnings
 import numpy as np
+import inspect
 from functools import wraps
 from pkg_resources import parse_version
 
@@ -58,8 +59,26 @@ def cached_member_function(function):
     """
     fname = function.__name__
 
+    # get the function signature and ensure that we don't have any
+    # keyword only arguments:
+    # func(..., *, kwarg=None, ...) or func(..., **kwargs).
+    # If we want to support them we need to add them in a well defined
+    # order to the cache key (sort them by name)
+    func_signature = inspect.signature(function)
+    bad_arg_types = (inspect.Parameter.KEYWORD_ONLY, inspect.Parameter.VAR_KEYWORD)
+    if any(arg.kind in bad_arg_types for arg in func_signature.parameters.values()):
+        raise ValueError("Member functions with keyword only arguments can not be "
+                         "wrapped with the cached_member_function.")
+
     @wraps(function)
-    def wrapper(self, *args):
+    def wrapper(self, *args, **kwargs):
+        # convert all arguments to poisitonal arguments and add default arguments
+        # for not provided arguments
+        bound_args = func_signature.bind(self, *args, **kwargs)
+        bound_args.apply_defaults()
+        assert not bound_args.kwargs
+        args = bound_args.args[1:]  # remove self from args
+
         try:
             fun_cache = self._function_cache[fname]
         except AttributeError:
