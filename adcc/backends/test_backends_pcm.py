@@ -173,7 +173,7 @@ class TestPCMcomparison(unittest.TestCase):
 def remove_cavity_psi4():
     # removes cavity files from PSI4 PCM calculations
     for cavityfile in os.listdir(os.getcwd()):
-        if cavityfile.startswith(("cavity.off_", "PEDRA.OUT_")):
+        if cavityfile.startswith(("cavity.off_", "cavity.npz", "PEDRA.OUT_")):
             os.remove(cavityfile)
 
 
