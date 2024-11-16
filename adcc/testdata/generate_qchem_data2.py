@@ -128,7 +128,6 @@ def get_multiplicity(xyz, charge=0):
              for l in xyz.splitlines() if l.strip()]
     n_electrons = sum([getattr(periodictable, a).number for a in atoms])
     n_electrons -= charge
-    print(n_electrons)
     if n_electrons % 2 == 1:
         return 2
     else:

@@ -49,13 +49,15 @@ def get_qchem_formatted_basis(mol):
         for cgto in cgtos_by_atom[atom_number]:
             angular_momentum_name, primitive_gtos = cgto
             n_primitive_gtos = len(primitive_gtos)
-            qchem_formatted_basis.append("{:s}   {: >2d}   1.00".format(
-                                         angular_momentum_name,
-                                         n_primitive_gtos))
-            for exp, coeffs in primitive_gtos:
-                coeff = coeffs[0]
-                basis_line = "{: >20.8E}{: >20.8E}".format(exp, coeff)
-                qchem_formatted_basis.append(basis_line.replace("E", "D"))
+            n_cgtos = len(primitive_gtos[0][1])
+            for i in range(n_cgtos):
+                qchem_formatted_basis.append("{:s}   {: >2d}   1.00".format(
+                                             angular_momentum_name,
+                                             n_primitive_gtos))
+                for exp, coeffs in primitive_gtos:
+                    coeff = coeffs[i]
+                    basis_line = "{: >20.8E}{: >20.8E}".format(exp, coeff)
+                    qchem_formatted_basis.append(basis_line.replace("E", "D"))
         qchem_formatted_basis.append("****")
     return qchem_formatted_basis
 
@@ -147,7 +149,8 @@ def dump_pyscf(scfres, out):
     data.create_dataset("restricted", shape=(), data=restricted)
     data.create_dataset("conv_tol", shape=(), data=float(threshold))
 
-    if restricted:
+    #if restricted:
+    if True:
         # Note: In the pyscf world spin is 2S, so the multiplicity
         #       is spin + 1
         data.create_dataset(
