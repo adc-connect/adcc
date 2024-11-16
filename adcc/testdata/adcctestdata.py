@@ -26,6 +26,38 @@ from pyscf import ao2mo, scf
 
 import h5py
 
+def get_qchem_formatted_basis(mol):
+    L = {0: "S", 1: "P", 2: "D", 3: "F", 4: "G", 5: "H"}
+    cgtos_by_atom = {}
+    for cgto_number in range(mol.nbas):
+        atom_number = mol.bas_atom(cgto_number)
+        atom_name = mol.elements[atom_number]
+        cgto_exps = mol.bas_exp(cgto_number)
+        cgto_coeffs = mol.bas_ctr_coeff(cgto_number)
+        cgto_angular_momentum = mol.bas_angular(cgto_number)
+        cgto_angular_momentum_name = L[cgto_angular_momentum]
+        if not atom_number in cgtos_by_atom:
+            cgtos_by_atom[atom_number] = []
+        cur_basis_function = (cgto_angular_momentum_name,
+                              list(zip(cgto_exps, cgto_coeffs)))
+        cgtos_by_atom[atom_number].append(cur_basis_function)
+    qchem_formatted_basis = []
+    for atom_number in sorted(cgtos_by_atom):
+        atom_name = mol.elements[atom_number]
+        qchem_formatted_basis.append("{: <2s}    {: >3d}".format(
+                                     atom_name, atom_number+1))
+        for cgto in cgtos_by_atom[atom_number]:
+            angular_momentum_name, primitive_gtos = cgto
+            n_primitive_gtos = len(primitive_gtos)
+            qchem_formatted_basis.append("{:s}   {: >2d}   1.00".format(
+                                         angular_momentum_name,
+                                         n_primitive_gtos))
+            for exp, coeffs in primitive_gtos:
+                coeff = coeffs[0]
+                basis_line = "{: >20.8E}{: >20.8E}".format(exp, coeff)
+                qchem_formatted_basis.append(basis_line.replace("E", "D"))
+        qchem_formatted_basis.append("****")
+    return qchem_formatted_basis
 
 def dump_pyscf(scfres, out):
     """
@@ -103,9 +135,13 @@ def dump_pyscf(scfres, out):
         conv_tol_grad = scfres.conv_tol_grad
     threshold = max(10 * scfres.conv_tol, conv_tol_grad)
 
+    basis = get_qchem_formatted_basis(scfres.mol)
+
     #
     # Put basic data into HDF5 file
     #
+    data.create_dataset("qchem_formatted_basis", data=[basis, ],
+                        dtype=h5py.string_dtype())
     data.create_dataset("n_orbs_alpha", shape=(), data=int(n_orbs_alpha))
     data.create_dataset("energy_scf", shape=(), data=float(scfres.e_tot))
     data.create_dataset("restricted", shape=(), data=restricted)

@@ -25,6 +25,7 @@ import os
 import sh
 import struct
 import sys
+import periodictable
 #import tempfile
 #import yaml
 
@@ -41,7 +42,7 @@ eV = constants.value("Hartree energy in eV")
 _qchem_template = """
 $rem
 method                   {method}
-basis                    {basis}
+basis                    {basis}{purecart}
 mem_total                {memory}
 pe                       {pe}
 ee_singlets              {singlet_states}
@@ -78,6 +79,12 @@ potfile {potfile}
 $end
 """
 
+_basis_template = """
+$basis
+{basis_string}
+$end
+"""
+
 _method_dict = {
     "adc0": "adc(0)",
     "adc1": "adc(1)",
@@ -104,21 +111,35 @@ molecule_remap = {
     "hf3": "hf",
 }
 
+molecule_multiplicity_map = {
+    "hf3": 3,
+}
+
 basis_purecart_dict = {
     "sto3g": 111111, # doesn't matter since L_max=1
     "ccpvdz": 111111,
     "def2tzvp": 111111,
-    "6311g": 222222,
-    "631g": 222222,
+    "6311g": 1111111,
+    "631g": 1112,
 }
 
+def get_multiplicity(xyz, charge=0):
+    atoms = [l.strip().split()[0].capitalize()
+             for l in xyz.splitlines() if l.strip()]
+    n_electrons = sum([getattr(periodictable, a).number for a in atoms])
+    n_electrons -= charge
+    print(n_electrons)
+    if n_electrons % 2 == 1:
+        return 2
+    else:
+        return 1
 
 def clean_xyz(xyz):
     return "\n".join(x.strip() for x in xyz.splitlines())
 
 
-def generate_qchem_input_file(fname, method, basis, coords, potfile=None,
-                              charge=0, multiplicity=1, memory=8000,
+def generate_qchem_input_file(fname, method, basis, coords, basis_string=None,
+                              potfile=None, charge=0, multiplicity=1, memory=8000,
                               singlet_states=5, triplet_states=0, bohr=True,
                               maxiter=160, conv_tol=10, n_core_orbitals=0):
     nguess_singles = 2 * max(singlet_states, triplet_states)
@@ -126,9 +147,17 @@ def generate_qchem_input_file(fname, method, basis, coords, potfile=None,
     qsys_mem = "{:d}gb".format(max(memory // 1000, 1) + 5)
     qsys_vmem = qsys_mem
     pe = potfile is not None
+    if basis_string is not None:
+        purecart = "\npurecart                 {:d}".format(
+                    basis_purecart_dict[basis])
+        basis = "gen"
+    else:
+        purecart = ""
+        basis = basis_remap[basis]
     qci = _qchem_template.format(
         method=_method_dict[method],
-        basis=basis_remap[basis],
+        basis=basis,
+        purecart=purecart,
         memory=memory,
         singlet_states=singlet_states,
         triplet_states=triplet_states,
@@ -147,6 +176,8 @@ def generate_qchem_input_file(fname, method, basis, coords, potfile=None,
     )
     if pe:
         qci += _pe_template.format(potfile=potfile)
+    if basis_string is not None:
+        qci += _basis_template.format(basis_string=basis_string)
     qc_file = open(fname, "w")
     qc_file.write(qci)
     qc_file.close()
@@ -235,6 +266,8 @@ def generate_qchem_savedir(savedir, molecule, method, basis):
     except FileNotFoundError:
         run_dumper_script(pyscf_data_dumper_script, tmpdir)
     QchemSavedir(savedir, pyscf_hfdata_hdf5_filename, basis).write()
+    f = h5py.File(pyscf_hfdata_hdf5_filename)
+    return "\n".join(f["qchem_formatted_basis"].asstr()[0])
 
 def dump_qchem(molecule, method, basis, **kwargs):
     #with tempfile.TemporaryDirectory() as tmpdir:
@@ -249,6 +282,11 @@ def dump_qchem(molecule, method, basis, **kwargs):
         outfile = os.path.join(tmpdir, basename + ".out")
         savedir = os.path.join(tmpdir, basename + "_savedir")
         geom = xyz[molecule_remap.get(molecule, molecule)].strip()
+        charge = 0
+        multiplicity = molecule_multiplicity_map.get(molecule,
+                                                     get_multiplicity(geom,
+                                                     charge))
+        kwargs.update({"charge": charge, "multiplicity": multiplicity})
         """
         ret = {
             "molecule": molecule,
@@ -258,9 +296,10 @@ def dump_qchem(molecule, method, basis, **kwargs):
             "geometry": geom
         }
         """
+        basis_string = generate_qchem_savedir(savedir, molecule, method, basis)
+        kwargs["basis_string"] = basis_string
         generate_qchem_input_file(infile, method, basis,
                                   geom, **kwargs)
-        generate_qchem_savedir(savedir, molecule, method, basis)
         """
         # only works with my (ms) fork of cclib
         # github.com/maxscheurer/cclib, branch dev-qchem
