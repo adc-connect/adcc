@@ -55,6 +55,8 @@ adc_nguess_singles       {n_guesses}
 adc_davidson_maxsubspace {max_ss}
 adc_prop_es              true
 cc_rest_occ              {cc_rest_occ}
+thresh                   15
+s2thresh                 15
 
 ! scf stuff
 use_libqints             true
@@ -111,18 +113,6 @@ molecule_remap = {
     "hf3": "hf",
 }
 
-molecule_multiplicity_map = {
-    "hf3": 3,
-}
-
-basis_purecart_dict = {
-    "sto3g": 111111, # doesn't matter since L_max=1
-    "ccpvdz": 111111,
-    "def2tzvp": 111111,
-    "6311g": 1111111,
-    "631g": 1112,
-}
-
 def get_multiplicity(xyz, charge=0):
     atoms = [l.strip().split()[0].capitalize()
              for l in xyz.splitlines() if l.strip()]
@@ -138,6 +128,7 @@ def clean_xyz(xyz):
 
 
 def generate_qchem_input_file(fname, method, basis, coords, basis_string=None,
+                              purecart=None,
                               potfile=None, charge=0, multiplicity=1, memory=8000,
                               singlet_states=5, triplet_states=0, bohr=True,
                               maxiter=160, conv_tol=10, n_core_orbitals=0):
@@ -147,8 +138,8 @@ def generate_qchem_input_file(fname, method, basis, coords, basis_string=None,
     qsys_vmem = qsys_mem
     pe = potfile is not None
     if basis_string is not None:
-        purecart = "\npurecart                 {:d}".format(
-                    basis_purecart_dict[basis])
+        assert purecart is not None
+        purecart = "\npurecart                 {:d}".format(purecart)
         basis = "gen"
     else:
         purecart = ""
@@ -199,7 +190,6 @@ class QchemSavedir(object):
     def __init__(self, dirname, hdf5_filename, basis):
         self.hdf5_file = h5py.File(hdf5_filename, "r")
         self.savedir = mkdir(dirname)
-        self.purecart = basis_purecart_dict[basis]
 
     def write(self):
         self._write_mo_coeffs()
@@ -215,9 +205,11 @@ class QchemSavedir(object):
 
     def _write_dims(self):
         n_bas, n_orbs = np.array(self.hdf5_file["orbcoeff_fb"]).shape
+        cartesian = int(np.array(self.hdf5_file["cartesian_angular_functions"]))
+        purecart = 2222 if cartesian else 1111
         n_fragments = 0
         self._write_data(struct.pack("<iiii", n_bas, n_orbs,
-                         self.purecart, n_fragments), "dimensions")
+                         purecart, n_fragments), "dimensions")
 
     def _write_energy(self):
         scf_energy = float(np.array(self.hdf5_file["energy_scf"]))
@@ -266,7 +258,12 @@ def generate_qchem_savedir(savedir, molecule, method, basis):
         run_dumper_script(pyscf_data_dumper_script, tmpdir)
     QchemSavedir(savedir, pyscf_hfdata_hdf5_filename, basis).write()
     f = h5py.File(pyscf_hfdata_hdf5_filename)
-    return "\n".join(f["qchem_formatted_basis"].asstr()[0])
+    basis_string = "\n".join(f["qchem_formatted_basis"].asstr())
+    multiplicity = int(np.array(f["spin_multiplicity"]))
+    cartesian_angular_functions = bool(np.array(
+        f["cartesian_angular_functions"]))
+    charge = int(np.array(f["charge"]))
+    return basis_string, multiplicity, cartesian_angular_functions, charge
 
 def dump_qchem(molecule, method, basis, **kwargs):
     #with tempfile.TemporaryDirectory() as tmpdir:
@@ -281,11 +278,6 @@ def dump_qchem(molecule, method, basis, **kwargs):
         outfile = os.path.join(tmpdir, basename + ".out")
         savedir = os.path.join(tmpdir, basename + "_savedir")
         geom = xyz[molecule_remap.get(molecule, molecule)].strip()
-        charge = 0
-        multiplicity = molecule_multiplicity_map.get(molecule,
-                                                     get_multiplicity(geom,
-                                                     charge))
-        kwargs.update({"charge": charge, "multiplicity": multiplicity})
         """
         ret = {
             "molecule": molecule,
@@ -295,8 +287,16 @@ def dump_qchem(molecule, method, basis, **kwargs):
             "geometry": geom
         }
         """
-        basis_string = generate_qchem_savedir(savedir, molecule, method, basis)
-        kwargs["basis_string"] = basis_string
+
+        basis_string, multiplicity, cartesian_angular_functions, charge = generate_qchem_savedir(savedir, molecule, method, basis)
+        purecart = 2222 if cartesian_angular_functions else 1111
+        kwargs.update(
+            {"charge": charge,
+             "multiplicity": multiplicity,
+             "basis_string": basis_string,
+             "purecart": purecart,
+             "charge": charge}
+        )
         generate_qchem_input_file(infile, method, basis,
                                   geom, **kwargs)
         """

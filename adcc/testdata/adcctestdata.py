@@ -142,22 +142,21 @@ def dump_pyscf(scfres, out):
     #
     # Put basic data into HDF5 file
     #
-    data.create_dataset("qchem_formatted_basis", data=[basis, ],
+    data.create_dataset("qchem_formatted_basis", shape=len(basis), data=basis,
                         dtype=h5py.string_dtype())
     data.create_dataset("n_orbs_alpha", shape=(), data=int(n_orbs_alpha))
     data.create_dataset("energy_scf", shape=(), data=float(scfres.e_tot))
     data.create_dataset("restricted", shape=(), data=restricted)
     data.create_dataset("conv_tol", shape=(), data=float(threshold))
+    data.create_dataset("cartesian_angular_functions", shape=(),
+                        data=scfres.mol.cart)
+    data.create_dataset("charge", shape=(), data=int(scfres.mol.charge))
 
-    #if restricted:
-    if True:
-        # Note: In the pyscf world spin is 2S, so the multiplicity
-        #       is spin + 1
-        data.create_dataset(
-            "spin_multiplicity", shape=(), data=int(scfres.mol.spin) + 1
-        )
-    else:
-        data.create_dataset("spin_multiplicity", shape=(), data=0)
+    # Note: In the pyscf world spin is 2S, so the multiplicity
+    #       is spin + 1
+    data.create_dataset(
+        "spin_multiplicity", shape=(), data=int(scfres.mol.spin) + 1
+    )
 
     #
     # Orbital reordering
