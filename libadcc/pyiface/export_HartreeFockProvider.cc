@@ -47,14 +47,26 @@ class HartreeFockProvider : public HartreeFockSolution_i {
   //
   // Translate C++-like interface to python-like interface
   //
-  void nuclear_multipole(size_t order, scalar_type* buffer, size_t size) const override {
-    py::array_t<scalar_type> ret = get_nuclear_multipole(order);
+  void nuclear_multipole(size_t order, std::vector<scalar_type> gauge_origin,
+                         scalar_type* buffer, size_t size) const override {
+    py::array_t<scalar_type> ret = get_nuclear_multipole(order, py::cast(gauge_origin));
     if (static_cast<ssize_t>(size) != ret.size()) {
       throw dimension_mismatch("Array size (==" + std::to_string(ret.size()) +
                                ") does not agree with buffer size (" +
                                std::to_string(size) + ").");
     }
     std::copy(ret.data(), ret.data() + size, buffer);
+  }
+
+  std::vector<scalar_type> determine_gauge_origin(
+        std::string gauge_origin) const override {
+    std::vector<scalar_type> ret =
+          py::cast<std::vector<scalar_type>>(get_gauge_origin(py::cast(gauge_origin)));
+    if (ret.size() != 3) {
+      throw dimension_mismatch("Array size (==" + std::to_string(ret.size()) +
+                               ") needs to be 3.");
+    }
+    return ret;
   }
 
   void occupation_f(scalar_type* buffer, size_t size) const override {
@@ -246,14 +258,17 @@ class HartreeFockProvider : public HartreeFockSolution_i {
   //
   // Interface for the python world
   //
-  virtual size_t get_n_orbs_alpha() const                                    = 0;
-  virtual size_t get_n_bas() const                                           = 0;
-  virtual py::array_t<scalar_type> get_nuclear_multipole(size_t order) const = 0;
-  virtual real_type get_conv_tol() const                                     = 0;
-  virtual bool get_restricted() const                                        = 0;
-  virtual size_t get_spin_multiplicity() const                               = 0;
-  virtual real_type get_energy_scf() const                                   = 0;
-  virtual std::string get_backend() const                                    = 0;
+  virtual size_t get_n_orbs_alpha() const = 0;
+  virtual size_t get_n_bas() const        = 0;
+
+  virtual py::array_t<scalar_type> get_nuclear_multipole(
+        size_t order, py::array_t<scalar_type> gauge_origin) const = 0;
+  virtual py::list get_gauge_origin(py::str gauge_origin) const    = 0;
+  virtual real_type get_conv_tol() const                           = 0;
+  virtual bool get_restricted() const                              = 0;
+  virtual size_t get_spin_multiplicity() const                     = 0;
+  virtual real_type get_energy_scf() const                         = 0;
+  virtual std::string get_backend() const                          = 0;
 
   virtual void fill_occupation_f(py::array out) const                         = 0;
   virtual void fill_orben_f(py::array out) const                              = 0;
@@ -276,9 +291,14 @@ class PyHartreeFockProvider : public HartreeFockProvider {
   size_t get_n_bas() const override {
     PYBIND11_OVERLOAD_PURE(size_t, HartreeFockProvider, get_n_bas, );
   }
-  py::array_t<scalar_type> get_nuclear_multipole(size_t order) const override {
+  py::array_t<scalar_type> get_nuclear_multipole(
+        size_t order, py::array_t<scalar_type> gauge_origin) const override {
     PYBIND11_OVERLOAD_PURE(py::array_t<scalar_type>, HartreeFockProvider,
-                           get_nuclear_multipole, order);
+                           get_nuclear_multipole, order, gauge_origin);
+  }
+  py::list get_gauge_origin(py::str gauge_origin) const override {
+    PYBIND11_OVERLOAD_PURE(py::array_t<scalar_type>, HartreeFockProvider,
+                           get_gauge_origin, gauge_origin);
   }
   real_type get_conv_tol() const override {
     PYBIND11_OVERLOAD_PURE(real_type, HartreeFockProvider, get_conv_tol, );
@@ -437,6 +457,8 @@ void export_HartreeFockProvider(py::module& m) {
              "Returns the nuclear multipole of the requested order. For `0` returns the "
              "total nuclear charge as an array of size 1, for `1` returns the nuclear "
              "dipole moment as an array of size 3.")
+        .def("get_gauge_origin", &HartreeFockProvider::get_gauge_origin,
+             "Determines the gauge origin.")
         //
         .def("fill_occupation_f", &HartreeFockProvider::fill_orben_f,
              "Fill the passed numpy array of size `(2 * nf, )` with the occupation "

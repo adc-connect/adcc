@@ -27,6 +27,8 @@ from adcc.misc import cached_property
 
 import psi4
 
+import warnings
+
 from .EriBuilder import EriBuilder
 from ..exceptions import InvalidReference
 from ..ExcitedStates import EnergyCorrection
@@ -37,22 +39,35 @@ class Psi4OperatorIntegralProvider:
         self.wfn = wfn
         self.backend = "psi4"
         self.mints = psi4.core.MintsHelper(self.wfn)
+        warnings.warn("Gauge origin selection not available in "
+                      f"{self.backend}. "
+                      "The gauge origin is selected as [0, 0, 0].")
 
     @cached_property
     def electric_dipole(self):
         return [-1.0 * np.asarray(comp) for comp in self.mints.ao_dipole()]
 
-    @cached_property
+    @property
     def magnetic_dipole(self):
-        # TODO: Gauge origin?
-        return [
-            0.5 * np.asarray(comp)
-            for comp in self.mints.ao_angular_momentum()
-        ]
+        def gauge_dependent_integrals(gauge_origin):
+            # TODO: Gauge origin?
+            if gauge_origin != [0.0, 0.0, 0.0] and gauge_origin != "origin":
+                raise NotImplementedError('Only [0.0, 0.0, 0.0] can be selected as'
+                                          ' gauge origin.')
+            return [
+                0.5 * np.asarray(comp)
+                for comp in self.mints.ao_angular_momentum()
+            ]
+        return gauge_dependent_integrals
 
     @cached_property
     def nabla(self):
-        return [-1.0 * np.asarray(comp) for comp in self.mints.ao_nabla()]
+        def gauge_dependent_integrals(gauge_origin):
+            if gauge_origin != [0.0, 0.0, 0.0] and gauge_origin != "origin":
+                raise NotImplementedError('Only [0.0, 0.0, 0.0] can be selected as'
+                                          ' gauge origin.')
+            return [-1.0 * np.asarray(comp) for comp in self.mints.ao_nabla()]
+        return gauge_dependent_integrals
 
     @property
     def pe_induction_elec(self):
@@ -197,7 +212,7 @@ class Psi4HFProvider(HartreeFockProvider):
     def get_n_bas(self):
         return self.wfn.basisset().nbf()
 
-    def get_nuclear_multipole(self, order):
+    def get_nuclear_multipole(self, order, gauge_origin=[0, 0, 0]):
         molecule = self.wfn.molecule()
         if order == 0:
             # The function interface needs to be a np.array on return
@@ -208,6 +223,9 @@ class Psi4HFProvider(HartreeFockProvider):
             return np.array([dip_nuclear[0], dip_nuclear[1], dip_nuclear[2]])
         else:
             raise NotImplementedError("get_nuclear_multipole with order > 1")
+
+    def get_gauge_origin(self, gauge_origin):
+        raise NotImplementedError("get_gauge_origin not implemented.")
 
     def fill_orbcoeff_fb(self, out):
         mo_coeff_a = np.asarray(self.wfn.Ca())

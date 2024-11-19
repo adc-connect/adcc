@@ -203,21 +203,39 @@ class DataHfProvider(HartreeFockProvider):
                                  + str((3, nb, nb)) + " not "
                                  + str(mmp["elec_1"].shape))
             opprov.electric_dipole = np.asarray(mmp["elec_1"])
+        if "elec_2" in mmp:
+            def get_integral_quad(gauge_origin):
+                integral_string = "elec_2"
+                if gauge_origin != 'origin':
+                    integral_string = f'{integral_string}_{gauge_origin}'
+                return np.asarray(mmp[integral_string])
+            if mmp["elec_2"].shape != (9, nb, nb):
+                raise ValueError("multipoles/elec_2 is expected to have "
+                                 "shape " + str((9, nb, nb)) + " not "
+                                 + str(mmp["elec_2"].shape))
+            opprov.electric_quadrupole = get_integral_quad
         magm = data.get("magnetic_moments", {})
         if "mag_1" in magm:
+            def get_integral_magm(gauge_origin):
+                integral_string = "mag_1"
+                if gauge_origin != 'origin':
+                    integral_string = f'{integral_string}_{gauge_origin}'
+                return np.asarray(magm[integral_string])
             if magm["mag_1"].shape != (3, nb, nb):
                 raise ValueError("magnetic_moments/mag_1 is expected to have "
                                  "shape " + str((3, nb, nb)) + " not "
                                  + str(magm["mag_1"].shape))
-            opprov.magnetic_dipole = np.asarray(magm["mag_1"])
+            opprov.magnetic_dipole = get_integral_magm
         derivs = data.get("derivatives", {})
         if "nabla" in derivs:
+            def get_integral_deriv(gauge_origin):
+                return np.asarray(derivs["nabla"])
             if derivs["nabla"].shape != (3, nb, nb):
                 raise ValueError("derivatives/nabla is expected to "
                                  "have shape "
                                  + str((3, nb, nb)) + " not "
                                  + str(derivs["nabla"].shape))
-            opprov.nabla = np.asarray(derivs["nabla"])
+            opprov.nabla = get_integral_deriv
         self.operator_integral_provider = opprov
 
     #
@@ -260,7 +278,7 @@ class DataHfProvider(HartreeFockProvider):
     def get_energy_scf(self):
         return get_scalar_value(self.data, "energy_scf", 0.0)
 
-    def get_nuclear_multipole(self, order):
+    def get_nuclear_multipole(self, order, gauge_origin):
         if order == 0:  # The function interface needs an np.array on return
             nuc_0 = get_scalar_value(self.data, "multipoles/nuclear_0", 0.0)
             return np.array([nuc_0])

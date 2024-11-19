@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SOURCE="https://wwwagdreuw.iwr.uni-heidelberg.de/adcc_test_data/0.6.0/"
+SOURCE="https://wwwagdreuw.iwr.uni-heidelberg.de/adcc_test_data/0.7.0/"
 DATAFILES=(
 	ch2nh2_sto3g_hfdata.hdf5
 	ch2nh2_sto3g_hfimport.hdf5

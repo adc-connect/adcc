@@ -186,10 +186,15 @@ def dump_reference_adcc(data, method, dumpfile, mp_tree="mp", adc_tree="adc",
         adc[kind + "/ground_to_excited_tdm_bb_b"] = np.asarray(tdm_bb_b)
         adc[kind + "/state_dipole_moments"] = state.state_dipole_moment
         adc[kind + "/transition_dipole_moments"] = state.transition_dipole_moment
-        adc[kind + "/transition_dipole_moments_velocity"] = \
-            state.transition_dipole_moment_velocity
-        adc[kind + "/transition_magnetic_dipole_moments"] = \
-            state.transition_magnetic_dipole_moment
+        # gauge origin dependent
+        gauge_origins = ["origin", "mass_center", "charge_center"]
+        for gauge_origin in gauge_origins:
+            adc[kind + "/transition_dipole_moments_velocity/" + gauge_origin] = \
+                state.transition_dipole_moment_velocity(gauge_origin)
+            adc[kind + "/transition_magnetic_dipole_moments/" + gauge_origin] = \
+                state.transition_magnetic_dipole_moment(gauge_origin)
+            adc[kind + "/transition_quadrupole_moments/" + gauge_origin] = \
+                state.transition_quadrupole_moment(gauge_origin)
         adc[kind + "/eigenvalues"] = state.excitation_energy
         adc[kind + "/eigenvectors_singles"] = np.asarray(
             eigenvectors_singles)
