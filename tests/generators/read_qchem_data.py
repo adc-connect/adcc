@@ -37,13 +37,13 @@ def read_qchem_data(context_file: str, **kwargs: str) -> dict:
         raw_value = context[context_path]
         # import the object
         assert isinstance(raw_value, h5py.Dataset)
-        value = _extract_dataset(raw_value)
+        _, value = _extract_dataset(raw_value)
         # for numpy arrays we might have to reshape when we find a matching
         # dimension object
         dim_path = _dims_pref + context_path
         if isinstance(value, np.ndarray) and dim_path in context:
             # import the dimensions object
-            dims = _extract_dataset(dim_path)
+            _, dims = _extract_dataset(context[dim_path])
             value = value.reshape(dims)
         data[key] = value
     return data

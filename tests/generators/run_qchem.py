@@ -7,6 +7,7 @@ from adcc.hdf5io import emplace_dict
 from pathlib import Path
 import numpy as np
 import h5py
+import os
 import subprocess
 import tempfile
 
@@ -187,13 +188,35 @@ def get_xyz_geometry(pyscf_data: h5py.File) -> str:
     return pyscf_data["xyz"][()].decode(), pyscf_data["xyz_unit"][()].decode()
 
 
-def exec_qchem(infile: str, outfile: str, savedir: str) -> None:
+def execute_qchem(infile: str, outfile: str, savedir: str, workdir: str) -> None:
     """
-    Execute Qchem with the given infile by calling 'qchem' which needs
-    to be available in the path.
+    Execute Qchem by calling 'qchem' which needs to be some executable available in
+    the path. The 'qchem' script needs to set the QCAUX variable and call the
+    qchem executable.
+
+    Parameters
+    ----------
+    infile: str
+        Name of the input file.
+    outfile: str
+        Name of the output file.
+    savedir: str
+        Name of the directory that contains the SCF result to read in.
+    workdir: str
+        Directory in which infile, oufile and savedir are located.
     """
+    # modify the current working directory to workdir
+    cwd = Path.cwd().resolve()
+    os.chdir(workdir)
+    # set the QCSCRATCH environment variable for the command
+    env = os.environ.copy()
+    env["QCSCRATCH"] = workdir
     # check_returncode raises an error if the return code is not zero.
-    subprocess.run(["qchem", infile, outfile, savedir]).check_returncode()
+    subprocess.run(
+        ["qchem", infile, outfile, savedir], env=env
+    ).check_returncode()
+    # revert back to the original workdir
+    os.chdir(cwd)
 
 
 def open_pyscf_result(test_case: test_cases.TestCase) -> h5py.File:
@@ -219,11 +242,13 @@ def run_qchem(test_case: test_cases.TestCase, method: str) -> dict:
     # load the pyscf result from the hdf5 file
     hdf5_file = open_pyscf_result(test_case)
     # TODO: switch delete to True once everything works
+    # create a temporary directoy in the generators folder for the qchem calculation
     with tempfile.TemporaryDirectory(prefix=test_case.file_name,
                                      dir=Path(__file__).parent,
                                      delete=False) as tmpdir:
         # create the savedir in the temporary dir
-        savedir = Path(tmpdir) / "savedir"
+        tmpdir = Path(tmpdir)
+        savedir = tmpdir / "savedir"
         savedir.mkdir()
         generate_qchem_savedir(pyscf_data=hdf5_file, savedir=savedir)
         # extrac the relevant data from the pyscf data and write the qchem infile
@@ -231,8 +256,8 @@ def run_qchem(test_case: test_cases.TestCase, method: str) -> dict:
         xyz, xyz_unit = get_xyz_geometry(hdf5_file)
         bohr = xyz_unit.lower() == "bohr"
         purecart = determine_purecart(hdf5_file)
-        infile = Path(tmpdir) / f"{test_case.file_name}_{method}.in"
-        outfile = Path(tmpdir) / f"{test_case.file_name}_{method}.out"
+        infile = tmpdir / f"{test_case.file_name}_{method}.in"
+        outfile = f"{test_case.file_name}_{method}.out"
         generate_qchem_input_file(
             infile=infile, method=method, basis=test_case.basis, xyz=xyz,
             charge=test_case.charge, multiplicity=test_case.multiplicity,
@@ -240,14 +265,14 @@ def run_qchem(test_case: test_cases.TestCase, method: str) -> dict:
             bohr=bohr
         )
         # call qchem and wait for completion
-        exec_qchem(infile, outfile, savedir)
+        execute_qchem(infile.name, outfile, savedir.name, tmpdir.resolve())
         # after the calculation we should have the context file in the tmpdir
-        context_file = Path(tmpdir) / _qchem_context_file
+        context_file = tmpdir / _qchem_context_file
         if not context_file.exists():
             raise FileNotFoundError(f"Expected the qchem data in {context_file} "
                                     "after the qchem calculation.")
         # read the data for the MP ground state
-        mp_data = read_qchem_data(context_file.name, **mp_context_paths)
+        mp_data = read_qchem_data(context_file, **mp_context_paths)
     return mp_data
 
 
@@ -257,7 +282,7 @@ def dump_qchem_data(test_case: test_cases.TestCase, gs_data: dict,
     # dump the ground state data
     file = data_folder / f"{test_case.file_name}_adcman_{gs_type}data.hdf5"
     emplace_dict(
-        mp_data, h5py.File(file, "w"), compression="gzip", compression_opts=8
+        gs_data, h5py.File(file, "w"), compression="gzip", compression_opts=8
     )
 
 
