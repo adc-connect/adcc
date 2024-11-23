@@ -20,21 +20,22 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import sys
+from dump_pyscf import dump_pyscf
+import test_cases
+
+from pathlib import Path
 
 from pyscf import gto, scf
-from static_data import xyz
-from os.path import dirname, join
 
-sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
-
-import adcctestdata as atd  # noqa: E402
+data = test_cases.get(n_expected_cases=1, name="h2o", basis="sto-3g").pop()
+hdf5_file = Path(__file__).resolve().parent.parent / "data"
+hdf5_file /= f"{data.file_name}_hfdata.hdf5"
 
 # Run SCF in pyscf and converge super-tight using an EDIIS
 mol = gto.M(
-    atom=xyz["h2o"],
-    basis='def2-tzvp',
-    unit="Bohr"
+    atom=data.xyz,
+    basis=data.basis,
+    unit=data.unit
 )
 mf = scf.RHF(mol)
 mf.conv_tol = 1e-13
@@ -43,11 +44,15 @@ mf.diis = scf.EDIIS()
 mf.diis_space = 3
 mf.max_cycle = 500
 mf.kernel()
-h5f = atd.dump_pyscf(mf, "h2o_def2tzvp_hfdata.hdf5")
+h5f = dump_pyscf(mf, str(hdf5_file))
 
 # Store configuration parameters for interesting cases to generate
 # reference data for. The data is stored as a stringified dict.
 h5f["reference_cases"] = str({
     "gen":    {},
     "cvs":    {"core_orbitals":  1},
+    "fc":     {"frozen_core":    1},
+    "fv":     {"frozen_virtual": 1},
+    "fv-cvs": {"core_orbitals":  1, "frozen_virtual": 1},
+    "fc-fv":  {"frozen_core":    1, "frozen_virtual": 1},
 })

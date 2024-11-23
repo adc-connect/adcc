@@ -20,35 +20,35 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import sys
+from dump_pyscf import dump_pyscf
+import test_cases
+
+from pathlib import Path
 
 from pyscf import gto, scf
-from static_data import xyz
-from os.path import dirname, join
 
-sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
-
-import adcctestdata as atd  # noqa: E402
+data = test_cases.get(n_expected_cases=1, name="h2o", basis="def2-tzvp").pop()
+hdf5_file = Path(__file__).resolve().parent.parent / "data"
+hdf5_file /= f"{data.file_name}_hfdata.hdf5"
 
 # Run SCF in pyscf and converge super-tight using an EDIIS
 mol = gto.M(
-    atom=xyz["ch2nh2"],
-    basis='sto-3g',
-    unit="Bohr",
-    spin=1,  # =2S, ergo doublet
-    verbose=4
+    atom=data.xyz,
+    basis=data.basis,
+    unit=data.unit
 )
-mf = scf.UHF(mol)
-mf.diis = scf.EDIIS()
-mf.conv_tol = 1e-14
+mf = scf.RHF(mol)
+mf.conv_tol = 1e-13
 mf.conv_tol_grad = 1e-12
-mf.diis_space = 6
+mf.diis = scf.EDIIS()
+mf.diis_space = 3
 mf.max_cycle = 500
-mf = scf.addons.frac_occ(mf)
 mf.kernel()
-h5f = atd.dump_pyscf(mf, "ch2nh2_sto3g_hfdata.hdf5")
+h5f = dump_pyscf(mf, str(hdf5_file))
 
+# Store configuration parameters for interesting cases to generate
+# reference data for. The data is stored as a stringified dict.
 h5f["reference_cases"] = str({
     "gen":    {},
-    "cvs":    {"core_orbitals":  2},
+    "cvs":    {"core_orbitals":  1},
 })

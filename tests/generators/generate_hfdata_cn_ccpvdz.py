@@ -2,7 +2,7 @@
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2020 by the adcc authors
+## Copyright (C) 2018 by the adcc authors
 ##
 ## This file is part of adcc.
 ##
@@ -20,34 +20,48 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import sys
+from dump_pyscf import dump_pyscf
+import test_cases
+
+from pathlib import Path
+import numpy as np
 
 from pyscf import gto, scf
-from os.path import dirname, join
 
-from static_data import xyz
-
-sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
-
-import adcctestdata as atd  # noqa: E402
+data = test_cases.get(n_expected_cases=1, name="cn", basis="cc-pvdz").pop()
+hdf5_file = Path(__file__).resolve().parent.parent / "data"
+hdf5_file /= f"{data.file_name}_hfdata.hdf5"
 
 # Run SCF in pyscf and converge super-tight using an EDIIS
 mol = gto.M(
-    atom=xyz["r2methyloxirane"],
-    basis='sto-3g',
-    unit="Bohr",
+    atom=data.xyz,
+    basis=data.basis,
+    unit=data.unit,
+    spin=data.multiplicity - 1,
     verbose=4
 )
-mf = scf.RHF(mol)
-mf.diis = scf.EDIIS()
-mf.conv_tol = 1e-13
+mf = scf.UHF(mol)
+mf.conv_tol = 1e-12
 mf.conv_tol_grad = 1e-12
+mf.diis = scf.EDIIS()
 mf.diis_space = 3
-mf.max_cycle = 500
+mf.max_cycle = 600
+mf = scf.addons.frac_occ(mf)
 mf.kernel()
-h5f = atd.dump_pyscf(mf, "methox_sto3g_hfdata.hdf5")
+h5f = dump_pyscf(mf, str(hdf5_file))
 
 h5f["reference_cases"] = str({
-    "gen":   {},
+    "gen":    {},
     "cvs":    {"core_orbitals":  1},
+    "fc":     {"frozen_core":    1},
+    "fv":     {"frozen_virtual": 3},
 })
+
+# Since CN has some symmetry some energy levels are degenerate,
+# which can lead to all sort of inconsistencies. This code
+# adds a fudge value of 1e-14 to make them numerically distinguishable
+orben_f = h5f["orben_f"]
+for i in range(1, len(orben_f)):
+    if np.abs(orben_f[i - 1] - orben_f[i]) < 1e-14:
+        orben_f[i - 1] -= 1e-14
+        orben_f[i] += 1e-14

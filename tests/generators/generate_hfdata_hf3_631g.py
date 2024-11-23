@@ -2,7 +2,7 @@
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2019 by the adcc authors
+## Copyright (C) 2018 by the adcc authors
 ##
 ## This file is part of adcc.
 ##
@@ -20,42 +20,35 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import sys
+from dump_pyscf import dump_pyscf
+import test_cases
 
+from pathlib import Path
 from pyscf import gto, scf
-from static_data import xyz
-from os.path import dirname, join
 
-sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
-
-import adcctestdata as atd  # noqa: E402
+data = test_cases.get(n_expected_cases=1, name="hf", basis="6-31g").pop()
+hdf5_file = Path(__file__).resolve().parent.parent / "data"
+hdf5_file /= f"{data.file_name}_hfdata.hdf5"
 
 # Run SCF in pyscf and converge super-tight using an EDIIS
 mol = gto.M(
-    atom=xyz["h2s"],
-    basis='6311+g**',
-    unit="Bohr",
+    atom=data.xyz,
+    basis=data.basis,
+    unit=data.unit,
+    spin=data.multiplicity - 1,  # =2S, ergo triplet
     verbose=4
 )
-mf = scf.RHF(mol)
-mf.conv_tol = 1e-12
-mf.conv_tol_grad = 1e-12
+mf = scf.UHF(mol)
 mf.diis = scf.EDIIS()
+mf.conv_tol = 1e-14
+mf.conv_tol_grad = 1e-12
 mf.diis_space = 3
-mf.max_cycle = 100
+mf.max_cycle = 500
 mf.kernel()
-h5f = atd.dump_pyscf(mf, "h2s_6311g_hfdata.hdf5")
+h5f = dump_pyscf(mf, str(hdf5_file))
 
-core = "core_orbitals"
-fc = "frozen_core"
-fv = "frozen_virtual"
 h5f["reference_cases"] = str({
-    "gen":       {                     },  # noqa: E201, E202
-    "cvs":       {core: 1,             },  # noqa: E201, E202
-    "fc":        {         fc: 1,      },  # noqa: E201, E202
-    "fv":        {                fv: 3},  # noqa: E201, E202
-    "fc-cvs":    {core: 1, fc: 1       },  # noqa: E201, E202
-    "fv-cvs":    {core: 1,        fv: 3},  # noqa: E201, E202
-    "fc-fv":     {         fc: 1, fv: 3},  # noqa: E201, E202
-    "fc-fv-cvs": {core: 1, fc: 1, fv: 3},  # noqa: E201, E202
+    "gen":   {},
+    "fc":    {"frozen_core":    1},
+    "fv":    {"frozen_virtual": 3},
 })

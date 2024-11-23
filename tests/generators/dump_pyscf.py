@@ -22,46 +22,64 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
-from pyscf import ao2mo, scf
+from pyscf import ao2mo, scf, gto
 
 import h5py
 
-def get_qchem_formatted_basis(mol):
-    L = {0: "S", 1: "P", 2: "D", 3: "F", 4: "G", 5: "H"}
+
+def get_qchem_formatted_basis(mol: gto.Mole) -> str:
+    """
+    Extracts the basis information from the pyscf SCF result and converts the
+    data to string using the QChem basis set format.
+    """
+    # translate the angular momentums
+    angular_momentum_map = {0: "S", 1: "P", 2: "D", 3: "F", 4: "G", 5: "H"}
+    # iterate over the contracted gaussians and sort them according to their
+    # atom id (the index of the atom in the geometry).
     cgtos_by_atom = {}
     for cgto_number in range(mol.nbas):
-        atom_number = mol.bas_atom(cgto_number)
-        atom_name = mol.elements[atom_number]
-        cgto_exps = mol.bas_exp(cgto_number)
-        cgto_coeffs = mol.bas_ctr_coeff(cgto_number)
-        cgto_angular_momentum = mol.bas_angular(cgto_number)
-        cgto_angular_momentum_name = L[cgto_angular_momentum]
-        if not atom_number in cgtos_by_atom:
+        atom_number: int = mol.bas_atom(cgto_number)
+        atom_name: str = mol.elements[atom_number]
+        cgto_exps: np.ndarray = mol.bas_exp(cgto_number)
+        cgto_coeffs: np.ndarray = mol.bas_ctr_coeff(cgto_number)
+        cgto_angular_momentum: int = mol.bas_angular(cgto_number)
+        cgto_angular_momentum_name = angular_momentum_map[cgto_angular_momentum]
+        if atom_number not in cgtos_by_atom:
             cgtos_by_atom[atom_number] = []
         cur_basis_function = (cgto_angular_momentum_name,
                               list(zip(cgto_exps, cgto_coeffs)))
         cgtos_by_atom[atom_number].append(cur_basis_function)
-    qchem_formatted_basis = []
+    qchem_formatted_basis: list[str] = []
+    # sort the data to go through the atoms in ascending order
+    # (the order they are given in the geomtry)
     for atom_number in sorted(cgtos_by_atom):
-        atom_name = mol.elements[atom_number]
-        qchem_formatted_basis.append("{: <2s}    {: >3d}".format(
-                                     atom_name, atom_number+1))
+        atom_name: str = mol.elements[atom_number]
+        qchem_formatted_basis.append(
+            "{: <2s}    {: >3d}".format(atom_name, atom_number + 1)
+        )
         for cgto in cgtos_by_atom[atom_number]:
             angular_momentum_name, primitive_gtos = cgto
             n_primitive_gtos = len(primitive_gtos)
-            n_cgtos = len(primitive_gtos[0][1])
-            for i in range(n_cgtos):
-                qchem_formatted_basis.append("{:s}   {: >2d}   1.00".format(
-                                             angular_momentum_name,
-                                             n_primitive_gtos))
+            # each primitive GTO might have more than one coefficient, i.e.,
+            # each pgto might be used in more than one cgto.
+            n_cgtos_per_pgto = len(primitive_gtos[0][1])
+            assert all(len(coeffs) == n_cgtos_per_pgto
+                       for _, coeffs in primitive_gtos)
+            for coeff_i in range(n_cgtos_per_pgto):
+                qchem_formatted_basis.append(
+                    "{:s}   {: >2d}   1.00".format(angular_momentum_name,
+                                                   n_primitive_gtos)
+                )
                 for exp, coeffs in primitive_gtos:
-                    coeff = coeffs[i]
+                    coeff = coeffs[coeff_i]
                     basis_line = "{: >20.8E}{: >20.8E}".format(exp, coeff)
+                    # qchem expects the fortran scientific format
                     qchem_formatted_basis.append(basis_line.replace("E", "D"))
         qchem_formatted_basis.append("****")
-    return qchem_formatted_basis
+    return "\n".join(qchem_formatted_basis)
 
-def dump_pyscf(scfres, out):
+
+def dump_pyscf(scfres: scf.hf.SCF, out: str | h5py.File):
     """
     Convert pyscf SCF result to HDF5 file in adcc format
     """
@@ -132,22 +150,30 @@ def dump_pyscf(scfres, out):
 
     # conv_tol is energy convergence, conv_tol_grad is gradient convergence
     if scfres.conv_tol_grad is None:
-        conv_tol_grad = np.sqrt(scfres.conv_tol)
+        conv_tol = scfres.conv_tol
     else:
-        conv_tol_grad = scfres.conv_tol_grad
-    threshold = max(10 * scfres.conv_tol, conv_tol_grad)
+        conv_tol = max(scfres.conv_tol, scfres.conv_tol_grad**2)
 
-    basis = get_qchem_formatted_basis(scfres.mol)
+    # format the basis set in the qchem format
+    basis_bytes = get_qchem_formatted_basis(scfres.mol).encode()
+    # get the geometry of the system
+    # the coordinates are converted Bohr -> Angstrom during the export!
+    geom_bytes: bytes = scfres.mol.tostring().encode()
+    geom_unit = "angstrom".encode()
 
     #
     # Put basic data into HDF5 file
     #
-    data.create_dataset("qchem_formatted_basis", shape=len(basis), data=basis,
+    data.create_dataset("xyz", data=geom_bytes, shape=(),
+                        dtype=h5py.string_dtype())
+    data.create_dataset("xyz_unit", data=geom_unit, shape=(),
+                        dtype=h5py.string_dtype())
+    data.create_dataset("qchem_formatted_basis", data=basis_bytes, shape=(),
                         dtype=h5py.string_dtype())
     data.create_dataset("n_orbs_alpha", shape=(), data=int(n_orbs_alpha))
     data.create_dataset("energy_scf", shape=(), data=float(scfres.e_tot))
     data.create_dataset("restricted", shape=(), data=restricted)
-    data.create_dataset("conv_tol", shape=(), data=float(threshold))
+    data.create_dataset("conv_tol", shape=(), data=float(conv_tol))
     data.create_dataset("cartesian_angular_functions", shape=(),
                         data=scfres.mol.cart)
     data.create_dataset("charge", shape=(), data=int(scfres.mol.charge))
@@ -194,11 +220,14 @@ def dump_pyscf(scfres, out):
     fullfock_ff[n_orbs_alpha:, n_orbs_alpha:] = fock[1]
     data.create_dataset("fock_ff", data=fullfock_ff, compression=8)
 
-    fock_bf = np.hstack((fock_bb[0], fock_bb[1]))
-    data.create_dataset("fock_fb", data=fock_bf.transpose(), compression=8)
+    # fock matrix in ao basis
+    stacked_fock_bb = np.hstack((fock_bb[0], fock_bb[1]))
+    data.create_dataset(
+        "fock_bb", data=stacked_fock_bb.transpose(), compression=8
+    )
 
     non_canonical = np.max(np.abs(data["fock_ff"] - np.diag(data["orben_f"])))
-    if non_canonical > data["conv_tol"][()]:
+    if non_canonical > max(1e-12, data["conv_tol"][()]):
         raise ValueError("Running adcc on top of a non-canonical fock "
                          "matrix is not implemented.")
 
