@@ -1,8 +1,9 @@
+from import_qchem_data import import_excited_states
 from qchem_savedir import QchemSavedir
-from read_qchem_data import read_qchem_data, mp_context_paths
 import test_cases
 
-from adcc.hdf5io import emplace_dict
+from adcc.hdf5io import emplace_dict, _extract_dataset
+from adcc.AdcMethod import AdcMethod
 
 from pathlib import Path
 import numpy as np
@@ -136,10 +137,10 @@ def generate_qchem_savedir(pyscf_data: h5py.File, savedir: str) -> None:
     Writes the pyscf SCF result in the given savedir folder.
     """
     savedir_writer = QchemSavedir(savedir)
-    scf_energy = pyscf_data["energy_scf"][()]
-    mo_coeffs = np.array(pyscf_data["orbcoeff_fb"])
-    fock_ao = np.array(pyscf_data["fock_bb"])
-    orb_energies = np.array(pyscf_data["orben_f"])
+    _, scf_energy = _extract_dataset(pyscf_data["energy_scf"])
+    _, mo_coeffs = _extract_dataset(pyscf_data["orbcoeff_fb"])
+    _, fock_ao = _extract_dataset(pyscf_data["fock_bb"])
+    _, orb_energies = _extract_dataset(pyscf_data["orben_f"])
     # compute the density in the ao basis
     ao_density_aa, ao_density_bb = compute_ao_density(pyscf_data)
     purecart = determine_purecart(pyscf_data)
@@ -155,8 +156,8 @@ def compute_ao_density(pyscf_data: h5py.File) -> tuple[np.ndarray, np.ndarray]:
     Computes the SCF density matrix in the AO basis from the pyscf MO
     coefficients.
     """
-    n_orbs_alpha = pyscf_data["n_orbs_alpha"][()]
-    mo_coeffs = np.array(pyscf_data["orbcoeff_fb"])
+    _, n_orbs_alpha = _extract_dataset(pyscf_data["n_orbs_alpha"])
+    _, mo_coeffs = _extract_dataset(pyscf_data["orbcoeff_fb"])
     mo_coeffs_a = mo_coeffs[:n_orbs_alpha, :]
     mo_coeffs_b = mo_coeffs[n_orbs_alpha:, :]
     return mo_coeffs_a @ mo_coeffs_a.T, mo_coeffs_b @ mo_coeffs_b.T
@@ -167,32 +168,20 @@ def determine_purecart(pyscf_data: h5py.File) -> int:
     Checks the key "cartesian_angular_functions" in the pyscf data to determine
     the qchem purecart input variable.
     """
-    use_cart_angular_funcs = pyscf_data["cartesian_angular_functions"][()]
+    _, use_cart_angular_funcs = (
+        _extract_dataset(pyscf_data["cartesian_angular_functions"])
+    )
     return 2222 if use_cart_angular_funcs else 1111
-
-
-def get_qchem_formatted_basis(pyscf_data: h5py.File) -> str:
-    """
-    Checks the key "qchem_formatted_basis" in the pyscf data to get the
-    used basis in qchem format.
-    """
-    # decode the byte strings as utf8 string
-    return pyscf_data["qchem_formatted_basis"][()].decode()
-
-
-def get_xyz_geometry(pyscf_data: h5py.File) -> str:
-    """
-    Checks the key "xyz" in the pyscf data for the coordinates in xyz format.
-    """
-    # decode the byte strings as utf8 strings
-    return pyscf_data["xyz"][()].decode(), pyscf_data["xyz_unit"][()].decode()
 
 
 def execute_qchem(infile: str, outfile: str, savedir: str, workdir: str) -> None:
     """
     Execute Qchem by calling 'qchem' which needs to be some executable available in
-    the path. The 'qchem' script needs to set the QCAUX variable and call the
-    qchem executable.
+    the path. The function defines the QCSCRATCH environment variable to point to
+    the workdir folder. The QCAUX variable needs to be set either before calling the
+    function or inside the 'qchem' script.
+    The arguments 'infile', 'outfile' and 'savedir' are forwarded to the 'qchem'
+    executable/script.
 
     Parameters
     ----------
@@ -233,7 +222,8 @@ def open_pyscf_result(test_case: test_cases.TestCase) -> h5py.File:
     return h5py.File(hdf5_file, "r")
 
 
-def run_qchem(test_case: test_cases.TestCase, method: str) -> dict:
+def run_qchem(test_case: test_cases.TestCase, method: AdcMethod,
+              read_gs: bool = False) -> dict:
     """
     Run a qchem calculation for the given test case and method on top
     of the previously generated pyscf results. The results of the qchem
@@ -252,14 +242,15 @@ def run_qchem(test_case: test_cases.TestCase, method: str) -> dict:
         savedir.mkdir()
         generate_qchem_savedir(pyscf_data=hdf5_file, savedir=savedir)
         # extrac the relevant data from the pyscf data and write the qchem infile
-        basis_def = get_qchem_formatted_basis(hdf5_file)
-        xyz, xyz_unit = get_xyz_geometry(hdf5_file)
+        _, basis_def = _extract_dataset(hdf5_file["qchem_formatted_basis"])
+        _, xyz = _extract_dataset(hdf5_file["xyz"])
+        _, xyz_unit = _extract_dataset(hdf5_file["xyz_unit"])
         bohr = xyz_unit.lower() == "bohr"
         purecart = determine_purecart(hdf5_file)
-        infile = tmpdir / f"{test_case.file_name}_{method}.in"
-        outfile = f"{test_case.file_name}_{method}.out"
+        infile = tmpdir / f"{test_case.file_name}_{method.name}.in"
+        outfile = f"{test_case.file_name}_{method.name}.out"
         generate_qchem_input_file(
-            infile=infile, method=method, basis=test_case.basis, xyz=xyz,
+            infile=infile, method=method.name, basis=test_case.basis, xyz=xyz,
             charge=test_case.charge, multiplicity=test_case.multiplicity,
             basis_definition=basis_def, purecart=purecart, potfile=None,
             bohr=bohr
@@ -271,8 +262,12 @@ def run_qchem(test_case: test_cases.TestCase, method: str) -> dict:
         if not context_file.exists():
             raise FileNotFoundError(f"Expected the qchem data in {context_file} "
                                     "after the qchem calculation.")
-        # read the data for the MP ground state
-        mp_data = read_qchem_data(context_file, **mp_context_paths)
+        context_file = h5py.File(context_file, "r")
+        # import the excited state data to a nested dict {kind: {n: data}}
+        states = import_excited_states(context_file, method=method)
+        # We only need to dump the MP data once. This should happen at the highest
+        # adc order order we calculate to have as much MP data available as
+        # possible.
     return mp_data
 
 
@@ -287,7 +282,9 @@ def dump_qchem_data(test_case: test_cases.TestCase, gs_data: dict,
 
 
 if __name__ == "__main__":
-    cases = test_cases.get(n_expected_cases=2, name="h2o")
+    cases = test_cases.get(n_expected_cases=1, name="h2o", basis="sto-3g")
+    methods = [AdcMethod("adc0")]
     for case in cases:
-        mp_data = run_qchem(case, "adc2")
-        dump_qchem_data(case, gs_data=mp_data)
+        for method in methods:
+            mp_data = run_qchem(case, method)
+            dump_qchem_data(case, gs_data=mp_data)
