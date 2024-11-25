@@ -5,6 +5,26 @@ import numpy as np
 import h5py
 
 
+def import_groundstate(context: h5py.File, dims_pref: str = "dims/") -> dict:
+    """
+    Import the MP ground state.
+
+    Parameters
+    ----------
+    context: h5py.File
+        The hdf5 to import from.
+    dims_pref: str, optional
+        Since tensors are exported as flattened array, the dimensions of the
+        tensors are exported too. The dimensions can be found by adding the given
+        prefix to the context tree of the object.
+    """
+    # import all available ground state data
+    data_to_read = {
+        path: key for path, key in _mp_data.items() if path in context
+    }
+    return import_data(context, dims_pref=dims_pref, **data_to_read)
+
+
 def import_excited_states(context: h5py.File, method: AdcMethod,
                           import_nstates: int = None, dims_pref: str = "dims/"
                           ) -> dict:
@@ -15,7 +35,7 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
     Parameters
     ----------
     context: h5py.File
-        The hdf5 file to read from.
+        The hdf5 file to import from.
     method: AdcMethod
         The adc method, e.g., adc2 or adc3
     import_nstates: int, optional
@@ -29,7 +49,8 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
     state_kinds = {
         "pp": [
             ("singlets", True), ("triplets", True),  # restricted
-            ("any", False), ("spin_flip", False)  # unrestricted
+            # uhf and spin flip are located in the same ".../uhf/..." subtree
+            ("any_or_spinflip", False),  # unrestricted
         ]
     }
     # adc2 states are listed in the adc2s tree
@@ -63,7 +84,7 @@ def _import_excited_states(context: h5py.File, method: str, adc_type: str = "pp"
     Parameters
     ----------
     context: h5py.File
-        The hdf5 file to read from.
+        The hdf5 file to import from.
     method: str
         The adc method, e.g., adc2 or adc3
     adc_type: str, optional
@@ -72,7 +93,7 @@ def _import_excited_states(context: h5py.File, method: str, adc_type: str = "pp"
         Only import the first n states from the context.
     state_kind: str, optional
         The multiplicity of the states, e.g., singlet or triplet for restricted
-        calculations.
+        pp-adc calculations.
     restricted: bool, optional
         Whether the adc calculation is based on a restricted reference state.
     dims_pref: str, optional
@@ -168,7 +189,6 @@ def import_data(context: h5py.File, dims_pref: str = "dims/",
 # The tree paths are separated in required keys that have to be available and
 # optional keys that may not be available, because the objects are only
 # computed for certain methods.
-
 _excited_state_data = {
     "required": {
         "energy": "energy",
@@ -192,6 +212,29 @@ _excited_state_data = {
     }
 }
 
+# The available MP data depends on the adc method and order
+# -> treat all MP data as optional and import everything that is available
+_mp_data = {
+    # MP1
+    "mp1/df_o1v1": "mp1/df_o1v1",
+    "mp1/t_o1o1v1v1": "mp1/t_o1o1v1v1",
+    # MP2
+    "mp2/energy": "mp2/energy",
+    # MP2 density in the AO basis
+    "mp2/opdm/dm_bb_a": "mp2/dm_bb_a",
+    "mp2/opdm/dm_bb_b": "mp2/dm_bb_b",
+    # MP2 density in the MO basis
+    "mp2/opdm/dm_o1o1": "mp2/dm_o1o1",
+    "mp2/opdm/dm_o1v1": "mp2/dm_o1v1",
+    "mp2/opdm/dm_v1v1": "mp2/dm_v1v1",
+    # MP2 dipole vector
+    "mp2/prop/dipole": "mp2/dipole",
+    # MP2 doubles amplitudes
+    "mp2/td_o1o1v1v1": "mp2/td_o1o1v1v1",
+    # MP3
+    "mp3/energy": "mp3/energy",
+}
+
 
 if __name__ == "__main__":
     for method in ["adc0", "adc1", "adc2", "adc2x", "adc3"]:
@@ -201,4 +244,7 @@ if __name__ == "__main__":
         print(data.keys())
         print(data["singlets"].keys())
         print(data["singlets"][0].keys())
+        print("-" * 80)
+        gs_data = import_groundstate(context)
+        print(gs_data.keys())
         print("#" * 80)

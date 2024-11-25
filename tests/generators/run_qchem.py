@@ -1,4 +1,4 @@
-from import_qchem_data import import_excited_states
+from import_qchem_data import import_excited_states, import_groundstate
 from qchem_savedir import QchemSavedir
 import test_cases
 
@@ -223,7 +223,7 @@ def open_pyscf_result(test_case: test_cases.TestCase) -> h5py.File:
 
 
 def run_qchem(test_case: test_cases.TestCase, method: AdcMethod,
-              read_gs: bool = False) -> dict:
+              import_gs: bool = False) -> tuple[dict, dict | None]:
     """
     Run a qchem calculation for the given test case and method on top
     of the previously generated pyscf results. The results of the qchem
@@ -265,10 +265,11 @@ def run_qchem(test_case: test_cases.TestCase, method: AdcMethod,
         context_file = h5py.File(context_file, "r")
         # import the excited state data to a nested dict {kind: {n: data}}
         states = import_excited_states(context_file, method=method)
-        # We only need to dump the MP data once. This should happen at the highest
-        # adc order order we calculate to have as much MP data available as
-        # possible.
-    return mp_data
+        # import the ground state data as flat dict
+        gs_data = None
+        if import_gs:
+            gs_data = import_groundstate(context_file)
+    return states, gs_data
 
 
 def dump_qchem_data(test_case: test_cases.TestCase, gs_data: dict,
