@@ -47,10 +47,13 @@ def run_pyscf(test_case: test_cases.TestCase, restricted: bool, frac_occ: bool):
 
 def generate(test_case: test_cases.TestCase, restricted: bool,
              frac_occ: bool) -> h5py.File:
-    """Run Pyscf for the given test case and dump the result in the hdf5 file."""
+    """
+    Run Pyscf for the given test case and dump the result in the hdf5 file
+    if the file does not already exist.
+    """
     hdf5_file = hdf5_filename(test_case)
     if hdf5_file.exists():
-        print(f"hfdata already exists for {test_case.name} {test_case.basis}.")
+        print(f"Skipping {test_case.file_name}. hdata already exists.")
         return None
     mf = run_pyscf(test_case, restricted, frac_occ)
     return dump_pyscf(mf, str(hdf5_file))

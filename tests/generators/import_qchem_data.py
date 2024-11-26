@@ -234,17 +234,3 @@ _mp_data = {
     # MP3
     "mp3/energy": "mp3/energy",
 }
-
-
-if __name__ == "__main__":
-    for method in ["adc0", "adc1", "adc2", "adc2x", "adc3"]:
-        print("importing ", method)
-        context = h5py.File(f"contextfiles/{method}.hdf5")
-        data = import_excited_states(context, AdcMethod(method))
-        print(data.keys())
-        print(data["singlets"].keys())
-        print(data["singlets"][0].keys())
-        print("-" * 80)
-        gs_data = import_groundstate(context)
-        print(gs_data.keys())
-        print("#" * 80)
