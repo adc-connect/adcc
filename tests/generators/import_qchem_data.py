@@ -6,6 +6,10 @@ import numpy as np
 import h5py
 
 
+class NotConvergedError(ValueError):
+    pass
+
+
 def import_groundstate(context: h5py.File, dims_pref: str = "dims/") -> dict:
     """
     Import the MP ground state.
@@ -54,12 +58,12 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
             ("any_or_spinflip", False),  # unrestricted
         ]
     }
-    # adc2 states are listed in the adc2s tree
-    method_dict = {"adc2": "adc2s"}
+    method_name: str = method.name.replace("-", "_")  # cvs-adcn -> cvs_adcn
+    if method_name.endswith("adc2"):  # adc2 -> adc2s
+        method_name += "s"
     # go through the different possible state kinds and import the states.
     data = {}
     for kind, restricted in state_kinds[method.adc_type]:
-        method_name = method_dict.get(method.name, method.name)
         states = _import_excited_states(
             context, method=method_name, adc_type=method.adc_type,
             import_nstates=import_nstates, state_kind=kind, restricted=restricted,
@@ -69,7 +73,7 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
             continue
         data[kind] = states
     if not data:
-        raise RuntimeError(f"Could not find any states for {method} in "
+        raise RuntimeError(f"Could not find any states for {method.name} in "
                            f"{context.filename}.")
     return data
 
@@ -127,8 +131,8 @@ def _import_excited_states(context: h5py.File, method: str, adc_type: str = "pp"
         # ensure that the state is converged
         _, converged = _extract_dataset(context[f"{state_tree}/converged"])
         if not converged:
-            raise ValueError(f"State {n} of file {context.filename} is not "
-                             "converged.")
+            raise NotConvergedError(f"State {n} of file {context.filename} is not "
+                                    "converged.")
         data_to_read.update({
             f"{state_tree}/{path}": (n, key)
             for path, key in _excited_state_data["required"].items()
@@ -189,7 +193,7 @@ def import_data(context: h5py.File, dims_pref: str = "dims/",
 # computed for certain methods.
 _excited_state_data = {
     "required": {
-        "energy": "energy",
+        "energy": "eigenvalues",
         # diff dm in the AO basis
         "opdm/dm_bb_a": "state_diffdm_bb_a",
         "opdm/dm_bb_b": "state_diffdm_bb_b",

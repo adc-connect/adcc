@@ -50,9 +50,10 @@ class TestCase:
         assert source in ["adcc", "adcman"]
         return f"{self.file_name}_{source}_mpdata.hdf5"
 
-    def adcdata_file_name(self, adc_method: str) -> str:
+    def adcdata_file_name(self, source: str, adc_method: str) -> str:
         """Builds the file name for the adc data for the given method."""
-        raise NotImplementedError()
+        assert source in ["adcc", "adcman"]
+        return f"{self.file_name}_{source}_{adc_method}.hdf5"
 
     def asdict(self, *args: str, **kwargs: str) -> dict:
         """

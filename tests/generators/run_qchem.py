@@ -1,4 +1,6 @@
-from import_qchem_data import import_excited_states, import_groundstate
+from import_qchem_data import (
+    import_excited_states, import_groundstate, NotConvergedError
+)
 from qchem_savedir import QchemSavedir
 import test_cases
 
@@ -9,6 +11,7 @@ from pathlib import Path
 import numpy as np
 import h5py
 import os
+import shutil
 import subprocess
 import tempfile
 
@@ -44,15 +47,17 @@ def run_qchem(test_case: test_cases.TestCase, method: AdcMethod, case: str,
     tuple[dict | None, dict | None]
         Tuple containing the excited states and ground state data.
     """
-    # sanitize the input for cvs: method and case have to be compatible
-    # and get the number of core, frozen core and frozen virtual orbitals
+    # sanitize the input for cvs:
+    # add a cvs prefix to the method if necessary
+    if "cvs" in case and not method.is_core_valence_separated:
+        method = AdcMethod(f"cvs-{method.name}")
+    assert method.is_core_valence_separated == ("cvs" in case)
+    # cvs-adc0 is not available in qchem
+    if method.is_core_valence_separated and method.level == 0:
+        raise ValueError("CVS-ADC(0) is not available in adcman.")
+    # get the number of core, frozen core and frozen virtual orbitals
     # from the test case.
-    if method.is_core_valence_separated:
-        assert "cvs" in case and test_case.core_orbitals
-        n_core_orbitals = test_case.core_orbitals
-    else:
-        assert "cvs" not in case
-        n_core_orbitals = 0
+    n_core_orbitals = test_case.core_orbitals if "cvs" in case else 0
     n_frozen_core = test_case.frozen_core if "fc" in case else 0
     n_frozen_virtual = test_case.frozen_virtual if "fv" in case else 0
     # load the pyscf result from the hdf5 file
@@ -92,10 +97,16 @@ def run_qchem(test_case: test_cases.TestCase, method: AdcMethod, case: str,
             raise FileNotFoundError(f"Expected the qchem data in {context_file} "
                                     "after the qchem calculation.")
         context_file = h5py.File(context_file, "r")
-        # import the excited state data as nested dict {kind: {prop: list}}
-        states = None
-        if import_states:
-            states = import_excited_states(context_file, method=method)
+        try:
+            # import the excited state data as nested dict {kind: {prop: list}}
+            states = None
+            if import_states:
+                states = import_excited_states(context_file, method=method)
+        except NotConvergedError as e:
+            # one of the states is not converged
+            # copy the output file to the working directory and abort.
+            shutil.copy(tmpdir / outfile, Path.cwd())
+            raise e
         # import the ground state data as flat dict
         gs_data = None
         if import_gs:
@@ -186,9 +197,14 @@ def execute_qchem(infile: str, outfile: str, savedir: str, workdir: str) -> None
     env = os.environ.copy()
     env["QCSCRATCH"] = workdir
     # check_returncode raises an error if the return code is not zero.
-    subprocess.run(
+    code = subprocess.run(
         ["qchem", infile, outfile, savedir], env=env
-    ).check_returncode()
+    ).returncode
+    # qchem did not terminate normal -> copy the outputfile to the working directory
+    if code:
+        shutil.copy(outfile, cwd)
+        raise RuntimeError("Qchem calculation did finish with return code != 0."
+                           "Copied outputfile to the working directory.")
     # revert back to the original workdir
     os.chdir(cwd)
 

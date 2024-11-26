@@ -22,9 +22,46 @@ _methods = {
 _gs_data_method = "adc3"
 
 
-def generate(test_case: test_cases.TestCase,
-             method: AdcMethod) -> None:
-    states, _ = run_qchem(test_case, method, import_states=True, import_gs=False)
+def generate_adc(test_case: test_cases.TestCase, method: AdcMethod, case: str,
+                 n_singlets: int = 0, n_triplets: int = 0) -> None:
+    """
+    Generate and dump the excited state reference data for the given reference case
+    of the given test case if the data doesn't exist already.
+    """
+    datadir = Path(__file__).parent.parent / _testdata_dirname
+    datafile = datadir / test_case.adcdata_file_name("adcman", method.name)
+    hdf5_file = h5py.File(datafile, "a")  # Read/write if exists, create otherwise
+    if case in hdf5_file:
+        return None
+    # skip cvs-adc(0), since it is not available in qchem.
+    if case == "cvs" and method.level == 0:
+        return None
+    print(f"Generating {method.name} data for {case} {test_case.file_name}.")
+    state_data, _ = run_qchem(
+        test_case, method, case, import_states=True, import_gs=False,
+        n_singlets=n_singlets, n_triplets=n_triplets
+    )
+    # the data returned from run_qchem should have already been imported
+    # using the correct keys -> just dump them
+    case_group = hdf5_file.create_group(case)
+    emplace_dict(state_data, case_group, compression="gzip")
+
+
+def generate_adc_all(test_case: test_cases.TestCase, method: AdcMethod,
+                     n_singlets: int = 0, n_triplets: int = 0,
+                     states_per_case: dict[str, dict[str, int]] = None) -> None:
+    """
+    Generate and dump the excited state reference data for all relevant
+    reference cases of the given test case.
+    """
+    # go through all cases and generate the data
+    for case in test_case.filter_cases(method.adc_type):
+        if states_per_case is not None and case in states_per_case:
+            n_singlets = states_per_case[case].get(case, 0)
+            n_triplets = states_per_case[case].get(case, 0)
+        generate_adc(
+            test_case, method, case, n_singlets=n_singlets, n_triplets=n_triplets
+        )
 
 
 def generate_groundstate(test_case: test_cases.TestCase) -> None:
@@ -54,15 +91,19 @@ def generate_groundstate(test_case: test_cases.TestCase) -> None:
         emplace_dict(gs_data, case_group, compression="gzip")
 
 
-def generate_ch2nh2():
+def generate_ch2nh2():  # UHF, doublet
     case = test_cases.get(n_expected_cases=1, name="ch2nh2").pop()
     generate_groundstate(case)
+    for method in _methods["pp"]:
+        generate_adc_all(case, AdcMethod(method), n_singlets=3)
 
 
-def generate_cn():
+def generate_cn():  # UHF, doublet
     cases = test_cases.get(n_expected_cases=2, name="cn")
     for case in cases:
         generate_groundstate(case)
+        for method in _methods["pp"]:
+            generate_adc_all(case, AdcMethod(method), n_singlets=6)
 
 
 def generate_h2o():
