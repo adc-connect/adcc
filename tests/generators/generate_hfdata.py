@@ -30,7 +30,7 @@ def run_pyscf(test_case: test_cases.TestCase, restricted: bool, frac_occ: bool):
         basis=test_case.basis,
         unit=test_case.unit,
         spin=test_case.multiplicity - 1,  # =2S
-        verbose=4
+        verbose=0
     )
     mf = scf.RHF(mol) if restricted else scf.UHF(mol)
     mf.diis = scf.EDIIS()
@@ -53,8 +53,8 @@ def generate(test_case: test_cases.TestCase, restricted: bool,
     """
     hdf5_file = hdf5_filename(test_case)
     if hdf5_file.exists():
-        print(f"Skipping {test_case.file_name}. hdata already exists.")
         return None
+    print(f"Generating data for {test_case.file_name}.")
     mf = run_pyscf(test_case, restricted, frac_occ)
     return dump_pyscf(mf, str(hdf5_file))
 

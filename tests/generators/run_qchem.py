@@ -17,21 +17,43 @@ _testdata_dirname = "data"
 _qchem_context_file = "context.hdf5"
 
 
-def run_qchem(test_case: test_cases.TestCase, method: AdcMethod,
+def run_qchem(test_case: test_cases.TestCase, method: AdcMethod, case: str,
               import_states: bool = True,
               import_gs: bool = False) -> tuple[dict | None, dict | None]:
     """
     Run a qchem calculation for the given test case and method on top
-    of the previously generated pyscf results. The results of the qchem
-    calculation will are imported depending on the given parameters:
-    - if "import_states" is set, the excited states data will be imported.
-    - if "import_gs" is set, the ground state MP data will be imported.
+    of the previously generated pyscf results.
+
+    Parameters
+    ----------
+    test_case: test_case.TestCase
+        The test case to run qchem for.
+    method: AdcMethod
+        The adc method to run qchem with, e.g., adc2, or cvs-adc2.
+    case: str
+        The "adc-case" to run with qchem, e.g., "gen" for generic adcn, "cvs"
+        for cvs-adcn or "fc-cvs" for a frozen core cvs-adcn calculation.
+    import_states: bool, optional
+        Import the excited states data (default: True).
+    import_gs: bool, optional
+        Import the MP ground state data (default: False).
 
     Returns
     -------
     tuple[dict | None, dict | None]
         Tuple containing the excited states and ground state data.
     """
+    # sanitize the input for cvs: method and case have to be compatible
+    # and get the number of core, frozen core and frozen virtual orbitals
+    # from the test case.
+    if method.is_core_valence_separated:
+        assert "cvs" in case and test_case.core_orbitals
+        n_core_orbitals = test_case.core_orbitals
+    else:
+        assert "cvs" not in case
+        n_core_orbitals = 0
+    n_frozen_core = test_case.frozen_core if "fc" in case else 0
+    n_frozen_virtual = test_case.frozen_virtual if "fv" in case else 0
     # load the pyscf result from the hdf5 file
     hdf5_file = open_pyscf_result(test_case)
     # TODO: switch delete to True once everything works
@@ -53,10 +75,12 @@ def run_qchem(test_case: test_cases.TestCase, method: AdcMethod,
         infile = tmpdir / f"{test_case.file_name}_{method.name}.in"
         outfile = f"{test_case.file_name}_{method.name}.out"
         generate_qchem_input_file(
-            infile=infile, method=method.name, basis=test_case.basis, xyz=xyz,
-            charge=test_case.charge, multiplicity=test_case.multiplicity,
-            basis_definition=basis_def, purecart=purecart, potfile=None,
-            bohr=bohr
+            infile=infile, method=method.name,
+            basis=test_case.basis, basis_definition=basis_def, purecart=purecart,
+            xyz=xyz, bohr=bohr, charge=test_case.charge,
+            multiplicity=test_case.multiplicity,
+            n_core_orbitals=n_core_orbitals, n_frozen_core=n_frozen_core,
+            n_frozen_virtual=n_frozen_virtual, potfile=None
         )
         # call qchem and wait for completion
         execute_qchem(infile.name, outfile, savedir.name, tmpdir.resolve())
@@ -66,7 +90,7 @@ def run_qchem(test_case: test_cases.TestCase, method: AdcMethod,
             raise FileNotFoundError(f"Expected the qchem data in {context_file} "
                                     "after the qchem calculation.")
         context_file = h5py.File(context_file, "r")
-        # import the excited state data to a nested dict {kind: {n: data}}
+        # import the excited state data as nested dict {kind: {prop: list}}
         states = None
         if import_states:
             states = import_excited_states(context_file, method=method)
@@ -172,13 +196,14 @@ def clean_xyz(xyz: str):
 
 
 def generate_qchem_input_file(infile: str, method: str, basis: str, xyz: str,
-                              charge: int = 0, multiplicity: int = 1,
+                              charge: int, multiplicity: int,
                               basis_definition: str = None, purecart: int = None,
                               potfile: str = None, memory: int = 10000,  # in mb
                               bohr: bool = True,
-                              singlet_states: int = 5, triplet_states: int = 0,
+                              singlet_states: int = 0, triplet_states: int = 0,
                               maxiter: int = 160, conv_tol: int = 10,
-                              n_core_orbitals: int = 0) -> None:
+                              n_core_orbitals: int = 0, n_frozen_core: int = 0,
+                              n_frozen_virtual: int = 0) -> None:
     """
     Generates a qchem input file for the given test case and method.
     """
@@ -207,6 +232,8 @@ def generate_qchem_input_file(infile: str, method: str, basis: str, xyz: str,
         charge=charge,
         multiplicity=multiplicity,
         cc_rest_occ=n_core_orbitals,
+        n_frozen_core=n_frozen_core,
+        n_frozen_virtual=n_frozen_virtual,
         xyz=clean_xyz(xyz),
         pe=pe,
         qsys_mem=qsys_mem,
@@ -237,6 +264,8 @@ adc_nguess_singles       {n_guesses}
 adc_davidson_maxsubspace {max_ss}
 adc_prop_es              true
 cc_rest_occ              {cc_rest_occ}
+n_frozen_core            {n_frozen_core}
+n_frozen_virtual         {n_frozen_virtual}
 adc_print                3
 adc_export_test_data     2  ! exports the full context to context.hdf5
 

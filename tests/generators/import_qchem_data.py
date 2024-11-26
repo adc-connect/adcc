@@ -1,6 +1,7 @@
 from adcc.AdcMethod import AdcMethod
 from adcc.hdf5io import _extract_dataset
 
+from collections import defaultdict
 import numpy as np
 import h5py
 
@@ -80,6 +81,8 @@ def _import_excited_states(context: h5py.File, method: str, adc_type: str = "pp"
     """
     Import the excited states data (excitation energies, amplitude vectors, ...)
     from the context.
+    The data is restructured during import such that we have a list containing
+    the data for all states per imported property.
 
     Parameters
     ----------
@@ -100,12 +103,6 @@ def _import_excited_states(context: h5py.File, method: str, adc_type: str = "pp"
         Since tensors are exported as flattened array, the dimensions of the
         tensors are exported too. The dimensions can be found by adding the given
         prefix to the context tree of the object.
-
-    Returns
-    -------
-    The imported data in a nested dictionary, using the state number as key
-    in the outer dict.
-    If no states are available instead None is returned.
     """
     # build the path under which to find the exicted states
     tree = [f"adc_{adc_type}", method]
@@ -142,12 +139,13 @@ def _import_excited_states(context: h5py.File, method: str, adc_type: str = "pp"
             if f"{state_tree}/{path}" in context
         })
     # read and import the objects
-    flat_data = import_data(context, dims_pref=dims_pref, **data_to_read)
-    # convert to a nested data dict
-    data = {n: {} for n in range(n_states)}
-    for (n, key), val in flat_data.items():
-        data[n][key] = val
-    return data
+    raw_data = import_data(context, dims_pref=dims_pref, **data_to_read)
+    # collect the data for each property in a list
+    # sort the raw_data to ensure that we always start with the lowest state.
+    data = defaultdict(list)
+    for (_, key), val in sorted(raw_data.items()):
+        data[key].append(val)
+    return dict(data)
 
 
 def import_data(context: h5py.File, dims_pref: str = "dims/",

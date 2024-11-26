@@ -11,21 +11,6 @@ import h5py
 _testdata_dirname = "data"
 
 
-def dump_groundstate(test_case: test_cases.TestCase, gs_data: dict) -> None:
-    """
-    Dump the given ground state data to file. This function assumes that
-    the ground state data has been import with
-    "import_qchem_data.import_groundstate",
-    i.e., that the data is already imported using the correct keys.
-    """
-    assert all(key in _mp_data.values() for key in gs_data)
-    datadir = Path(__file__).parent.parent / _testdata_dirname
-    fname = datadir / f"{test_case.file_name}_adcman_mpdata.hdf5"
-    emplace_dict(
-        gs_data, h5py.File(fname, "w"), compression="gzip", compression_opts=8
-    )
-
-
 def dump_excited_states(test_case: test_cases.TestCase, method: AdcMethod,
                         state_data: dict) -> None:
     """

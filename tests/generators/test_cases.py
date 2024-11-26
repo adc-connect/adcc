@@ -20,7 +20,7 @@ _molname_to_fname = {
 class TestCase:
     name: str
     xyz: str
-    unit: str
+    unit: str  # unit of the xyz coordinates (bohr/angstrom)
     charge: int
     multiplicity: int  # = 2S+1
     basis: str
@@ -28,6 +28,8 @@ class TestCase:
     core_orbitals: int = None
     frozen_core: int = None
     frozen_virtual: int = None
+    # the different cases for which to generate mp/adc reference data
+    # generic, cvs, frozen core (fc), frozen virtual (fv), ...
     cases: tuple[str] = ("gen",)
 
     @property
@@ -37,6 +39,20 @@ class TestCase:
         if name in _molname_to_fname:
             name = _molname_to_fname[self.name]
         return f"{name}_{_basis_to_fname[self.basis]}"
+
+    @property
+    def hfdata_file_name(self) -> str:
+        """Builds the file name for the hfdata."""
+        return f"{self.file_name}_hfdata.hdf5"
+
+    def mpdata_file_name(self, source: str) -> str:
+        """Builds the file name for the mpdata."""
+        assert source in ["adcc", "adcman"]
+        return f"{self.file_name}_{source}_mpdata.hdf5"
+
+    def adcdata_file_name(self, adc_method: str) -> str:
+        """Builds the file name for the adc data for the given method."""
+        raise NotImplementedError()
 
     def asdict(self, *args: str, **kwargs: str) -> dict:
         """
@@ -56,6 +72,17 @@ class TestCase:
         for field, key in kwargs.items():
             ret[key] = getattr(self, field)
         return ret
+
+    def filter_cases(self, adc_type: str) -> tuple[str]:
+        """
+        Filter the available cases only returning cases that are relevant
+        for the given adc_type.
+        """
+        # since cvs is not (yet) implemented for IP/EA.
+        if adc_type == "pp":
+            return self.cases
+        raise NotImplementedError(f"Filtering for adc type {adc_type} not "
+                                  "implemented.")
 
     def validate_cases(self):
         """
@@ -191,7 +218,7 @@ def _init_test_cases() -> tuple[TestCase]:
     ))
     # Formaledhyde
     xyz, unit = _xyz["formaldehyde"]
-    pe_pot_file = Path(__file__).parent / "potentials/fa_6w.pot"
+    pe_pot_file = Path(__file__).resolve().parent / "potentials/fa_6w.pot"
     test_cases.append(TestCase(
         name="formaldehyde", xyz=xyz, unit=unit, charge=0, multiplicity=1,
         basis="sto-3g", pe_pot_file=str(pe_pot_file)
