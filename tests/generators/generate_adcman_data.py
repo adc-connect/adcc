@@ -39,17 +39,19 @@ def generate_groundstate(test_case: test_cases.TestCase) -> None:
     for case in test_case.cases:
         if case in hdf5_file:
             continue
+        # run a adc calculation for a single singlet state:
+        # we have to ask for a state for adcman to do sth...
         print(f"Generating MP data for {case} {test_case.file_name}.")
         method = f"cvs-{_gs_data_method}" if "cvs" in case else _gs_data_method
         method = AdcMethod(method)
-        # _, gs_data = run_qchem(
-        #     test_case, method, case, import_states=False, import_gs=True
-        # )
-        gs_data = {}
+        _, gs_data = run_qchem(
+            test_case, method, case, import_states=False, import_gs=True,
+            n_singlets=1
+        )
         # the data returned from run_qchem should already have been imported
         # such that the correct keys are used -> directly dump them.
         case_group = hdf5_file.create_group(case)
-        emplace_dict(gs_data, case_group, compression="gzip", compression_opts=8)
+        emplace_dict(gs_data, case_group, compression="gzip")
 
 
 def generate_ch2nh2():

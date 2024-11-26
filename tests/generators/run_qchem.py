@@ -19,7 +19,8 @@ _qchem_context_file = "context.hdf5"
 
 def run_qchem(test_case: test_cases.TestCase, method: AdcMethod, case: str,
               import_states: bool = True,
-              import_gs: bool = False) -> tuple[dict | None, dict | None]:
+              import_gs: bool = False, n_singlets: int = 0,
+              n_triplets: int = 0) -> tuple[dict | None, dict | None]:
     """
     Run a qchem calculation for the given test case and method on top
     of the previously generated pyscf results.
@@ -80,7 +81,8 @@ def run_qchem(test_case: test_cases.TestCase, method: AdcMethod, case: str,
             xyz=xyz, bohr=bohr, charge=test_case.charge,
             multiplicity=test_case.multiplicity,
             n_core_orbitals=n_core_orbitals, n_frozen_core=n_frozen_core,
-            n_frozen_virtual=n_frozen_virtual, potfile=None
+            n_frozen_virtual=n_frozen_virtual, potfile=None,
+            singlet_states=n_singlets, triplet_states=n_triplets
         )
         # call qchem and wait for completion
         execute_qchem(infile.name, outfile, savedir.name, tmpdir.resolve())
@@ -307,5 +309,10 @@ _method_dict = {
     "adc1": "adc(1)",
     "adc2": "adc(2)",
     "adc2x": "adc(2)-x",
-    "adc3": "adc(3)"
+    "adc3": "adc(3)",
+    "cvs-adc0": "cvs-adc(0)",
+    "cvs-adc1": "cvs-adc(1)",
+    "cvs-adc2": "cvs-adc(2)",
+    "cvs-adc2x": "cvs-adc(2)-x",
+    "cvs-adc3": "cvs-adc(3)"
 }
