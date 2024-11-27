@@ -2,12 +2,13 @@ from pathlib import Path
 import numpy as np
 import struct
 import warnings
+import h5py
 
 
 class QchemSavedir:
     """
     Generates a Qchem savedir containing the SCF solution
-    (MO coefficients, fock matrix in AO basis, ...)
+    (MO coefficients, Fock matrix in AO basis, ...)
     from numpy arrays such that another QChem calculation can
     read the data from the savedir as SCF guess.
     The numpy arrays are assumed to have the correct order, i.e.,
@@ -22,11 +23,12 @@ class QchemSavedir:
         name (or path) of the directory in which the files are written.
     """
     _filenames = {
-        "mo_coeffs":          53,
-        "density_matrix_ao":  54,
-        "fock_matrix_ao":     58,
-        "energies":           99,
-        "dimensions":        819,
+        "mo_coeffs":         (         53, "qchem_fortran_style"),
+        "density_matrix_ao": (         54, "qchem_fortran_style"),
+        "fock_matrix_ao":    (         58, "qchem_fortran_style"),
+        "energies":          (         99, "qchem_fortran_style"),
+        "dimensions":        (        819, "qchem_fortran_style"),
+        "integrals":         ("integrals", "hdf5"),
     }
 
     def __init__(self, savedir: str) -> None:
@@ -36,6 +38,7 @@ class QchemSavedir:
     def write(self, scf_energy: float, mo_coeffs: np.ndarray,
               fock_ao: np.ndarray, orb_energies: np.ndarray,
               ao_density_aa: np.ndarray, ao_density_bb: np.ndarray,
+              integrals: dict,
               purecart: int, n_basis: int = None,
               n_orbitals: int = None, n_fragments: int = 0):
         """
@@ -55,7 +58,11 @@ class QchemSavedir:
             alpha, alpha block of the (MO x MO) density matrix in the AO basis.
         ao_density_bb: np.ndarray
             beta, beta block of the (MO x MO) density matrix in the AO basis.
-        Indicates for which angular momentums cartesian angular functions
+        integrals: dict
+            dict mapping hdf5 paths to np.ndarrays to be written to hdf5 file
+            located in the savedir
+        purecart: int
+            Indicates for which angular momentums cartesian angular functions
             are used in the basis, i.e., if the 6 cartesian d-orbitals
             d_xx, d_xy, d_xz, d_yy, d_yz, d_zz
             are used or the 5 specircal harmonics
@@ -81,13 +88,14 @@ class QchemSavedir:
                 # we always have the same number of alpha and beta orbitals!
                 assert not n_orbs % 2
                 n_orbitals = n_orbs // 2
-        # write all data in the savedir
+        # write all data into savedir
         self.write_mo_coeffs(mo_coeffs=mo_coeffs, orb_energies=orb_energies)
         self.write_scf_energy(scf_energy)
         self.write_ao_density(density_aa=ao_density_aa, density_bb=ao_density_bb)
         self.write_ao_fock(fock_ao)
         self.write_dims(n_basis=n_basis, n_orbitals=n_orbitals,
                         purecart=purecart, n_fagments=n_fragments)
+        self.write_integrals(tensor_dict=integrals)
 
     def write_mo_coeffs(self, mo_coeffs: np.ndarray,
                         orb_energies: np.ndarray) -> None:
@@ -159,7 +167,7 @@ class QchemSavedir:
             Indicates for which angular momentums cartesian angular functions
             are used in the basis, i.e., if the 6 cartesian d-orbitals
             d_xx, d_xy, d_xz, d_yy, d_yz, d_zz
-            are used or the 5 specircal harmonics
+            are used or the 5 spherical harmonics
             d_xy, d_xz, d_xy, d_z^2, d_x^2-y^2.
             2222: use cartesian functions for h, g, f and d orbitals
             1111: use spherical harmonics for h, g, f and d orbitals
@@ -173,15 +181,36 @@ class QchemSavedir:
                 struct.pack("<4i", n_basis, n_orbitals, purecart, n_fagments)
             )
 
+    def write_integrals(self, tensor_dict: dict) -> None:
+        """
+        Write integral hdf5 file to savedir.
+
+        Parameters
+        ----------
+        tensor_dict: dict
+            Contains all tensors to be stored in a hdf5 file in the savedir.
+            Currently, anti-symmetrized ERIs and dipole vector AO matrices are
+            expected. Keys are used as hdf5 paths, values are expected to be
+            numpy arrays.
+        """
+        fname = self._get_filename("integrals")
+        f = h5py.File(fname, "w")
+        for key, tensor in tensor_dict.items():
+            f[key] = tensor.flatten()
+        f.close()
+
     def _get_filename(self, content: str) -> Path:
         """
         Get the file name in which to write the desired content.
         """
-        id = self._filenames.get(content, None)
+        id, file_type = self._filenames.get(content, (None, None))
         if id is None:
             raise ValueError(f"Unknown file content {content}. Can't determine "
                              "the file name.")
-        fpath = self.savedir / f"{id}.0"
+        if file_type == "hdf5":
+            fpath = self.savedir / f"{id}.hdf5"
+        else:
+            fpath = self.savedir / f"{id}.0"
         if fpath.exists():
             warnings.warn(f"The file {fpath} already exists.")
         return fpath

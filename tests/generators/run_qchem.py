@@ -6,6 +6,7 @@ import test_cases
 
 from adcc.hdf5io import _extract_dataset
 from adcc.AdcMethod import AdcMethod
+from adcc import ReferenceState
 
 from pathlib import Path
 import numpy as np
@@ -14,6 +15,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import itertools
 
 
 _testdata_dirname = "data"
@@ -139,12 +141,65 @@ def generate_qchem_savedir(pyscf_data: h5py.File, savedir: str) -> None:
     _, orb_energies = _extract_dataset(pyscf_data["orben_f"])
     # compute the density in the ao basis
     ao_density_aa, ao_density_bb = compute_ao_density(pyscf_data)
+    integrals = collect_integrals(pyscf_data)
     purecart = determine_purecart(pyscf_data)
     savedir_writer.write(
         scf_energy=scf_energy, mo_coeffs=mo_coeffs, fock_ao=fock_ao,
         orb_energies=orb_energies, ao_density_aa=ao_density_aa,
-        ao_density_bb=ao_density_bb, purecart=purecart
+        ao_density_bb=ao_density_bb, integrals=integrals,
+        purecart=purecart
     )
+
+
+def collect_integrals(pyscf_data: h5py.File) -> dict:
+    """
+    Collects integrals to be provided to Q-Chem via the savedir. Currently
+    expected are:
+    - dipole x, y, and z components as AO repesentations;
+      keys: ao/[dx|dy|dz]_bb
+    - anti-symmetrized ERI tensors;
+      keys: hf/i_xxxx with x being a combination of [o|v] and a space number,
+      e.g., hf_io1o1v1v1
+    """
+    tensor_dict = {}
+    # collect ERIs
+    all_spaces = {"o": "o1", "c": "o2", "v": "v1"}
+    refstate = ReferenceState(pyscf_data)
+    for i in itertools.product(all_spaces.keys(), repeat=4):
+        eri_block_name = "".join(i)
+        if not is_canonical_eri_block(eri_block_name, all_spaces):
+            continue
+        try:
+            tensor = getattr(refstate, eri_block_name).to_ndarray()
+            hdf5_key = "hf/i_" + "".join(
+                [all_spaces[sp] for sp in eri_block_name])
+            tensor_dict[hdf5_key] = tensor
+        except ValueError:
+            continue
+    # collect dipole matrices
+    dipole_tensors = np.array(pyscf_data["multipoles/elec_1"])
+    for ind, component in enumerate(["x", "y", "z"]):
+        hdf5_key = "ao/d{:s}_bb".format(component)
+        tensor = dipole_tensors[ind]
+        tensor_dict[hdf5_key] = tensor
+    return tensor_dict
+
+
+def is_canonical_eri_block(block: str, all_spaces: dict) -> bool:
+    """
+    Using the space definitions in all_spaces, checks if a given ERI block is
+    canonical.
+    """
+    bra = [all_spaces[block[0]], all_spaces[block[1]]]
+    ket = [all_spaces[block[2]], all_spaces[block[3]]]
+    bra_canonical = sorted(bra)
+    ket_canonical = sorted(ket)
+    if ket_canonical < bra_canonical:
+        ket_canonical, bra_canonical = bra_canonical, ket_canonical
+    if bra == bra_canonical and ket == ket_canonical:
+        return True
+    else:
+        return False
 
 
 def compute_ao_density(pyscf_data: h5py.File) -> tuple[np.ndarray, np.ndarray]:
@@ -285,7 +340,8 @@ cc_rest_occ              {cc_rest_occ}
 n_frozen_core            {n_frozen_core}
 n_frozen_virtual         {n_frozen_virtual}
 adc_print                3
-adc_export_test_data     2  ! exports the full context to context.hdf5
+adc_export_test_data     42  ! exports the full context to context.hdf5 +
+                             ! reads integrals from integrals.hdf5
 
 ! integral thresholds
 thresh                   15
