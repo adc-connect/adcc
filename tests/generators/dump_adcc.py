@@ -1,3 +1,5 @@
+from adcc.AdcMatrix import AdcMatrix
+from adcc.AmplitudeVector import AmplitudeVector
 from adcc.ExcitedStates import ExcitedStates
 from adcc.hdf5io import emplace_dict
 from adcc.LazyMp import LazyMp
@@ -125,3 +127,45 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group) -> None:
     # write the data to hdf5
     kind_group = hdf5_file.create_group(states.kind)
     emplace_dict(kind_data, kind_group, compression="gzip")
+
+
+def dump_matrix_testdata(matrix: AdcMatrix, trial_vec: AmplitudeVector,
+                         hdf5_file: h5py.Group) -> None:
+    """
+    Dump the testdata to test the adcmatrix equations.
+    trial_vec is a random amplitude vector.
+    """
+    blocks = matrix.axis_blocks  # [singles, doubles, ...]
+    singles_singles = "_".join(blocks[0], blocks[0])
+    data = {}
+    # compute the MVP for individual blocks of the secular matrix.
+    data["result_ss"] = matrix.block_apply(singles_singles, trial_vec[blocks[0]])
+    if len(blocks) > 1:  # we have doubles
+        assert blocks[1] in trial_vec
+        singles_doubles = "_".join(blocks[0], blocks[1])
+        data["result_sd"] = matrix.block_apply(
+            singles_doubles, trial_vec[blocks[1]]
+        )[blocks[0]].to_ndarray()
+        doubles_singles = "_".join(blocks[1], blocks[0])
+        data["result_ds"] = matrix.block_apply(
+            doubles_singles, trial_vec[blocks[0]]
+        )[blocks[1]].to_ndarray()
+        doubles_doubles = "_".join(blocks[1], blocks[1])
+        data["result_dd"] = matrix.block_apply(
+            doubles_doubles, trial_vec[blocks[1]]
+        )[blocks[1]].to_ndarray()
+    # compute the full mvp
+    matvec = matrix.matvec(trial_vec)
+    data["matvec_singles"] = matvec[blocks[0]].to_ndarray()
+    if len(blocks) > 1:
+        data["matvec_doubles"] = matvec[blocks[1]].to_ndarray()
+    # compute the diagonal
+    data["diagonal_singles"] = matrix.diagonal()[blocks[0]].to_ndarray()
+    if len(blocks) > 1:
+        data["diagonal_doubles"] = matrix.diagonal()[blocks[1]].to_ndarray()
+    # dump the trial vector
+    data["random_singles"] = trial_vec[blocks[0]].to_ndarray()
+    if len(blocks) > 1:
+        data["random_doubles"] = trial_vec[blocks[1]].to_ndarray()
+    # write the data to hdf5
+    emplace_dict(data, hdf5_file, compression="gzip")
