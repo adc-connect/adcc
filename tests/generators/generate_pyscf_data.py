@@ -2,7 +2,7 @@ import adcc
 from pyscf import gto, scf, tdscf
 from pyscf.solvent import ddCOSMO
 
-import test_cases
+import testcases
 
 from pathlib import Path
 import json
@@ -64,7 +64,7 @@ def run_adcc_ptlr(wfn) -> adcc.ExcitedStates:
                         max_iter=250, conv_tol=1e-7, environment="ptlr")
 
 
-def dump_results(test_case: test_cases.TestCase, pcm_options: dict = None
+def dump_results(test_case: testcases.TestCase, pcm_options: dict = None
                  ) -> tuple[str, dict]:
     name = test_case.file_name
     if pcm_options is not None:
@@ -93,7 +93,7 @@ def dump_results(test_case: test_cases.TestCase, pcm_options: dict = None
 
 
 def main():
-    cases = test_cases.get(n_expected_cases=2, name="formaldehyde")
+    cases = testcases.get(n_expected_cases=2, name="formaldehyde")
 
     pcm_options = {"eps": 78.3553, "eps_opt": 1.78}
     pyscf_results = {}

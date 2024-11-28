@@ -2,7 +2,7 @@ import psi4
 import adcc
 from psi4.driver.procrouting.response.scf_response import tdscf_excitations
 
-import test_cases
+import testcases
 
 from pathlib import Path
 import json
@@ -76,7 +76,7 @@ def run_adcc_ptlr(wfn) -> adcc.ExcitedStates:
                         max_iter=100, conv_tol=1e-7, environment="ptlr")
 
 
-def dump_results(test_case: test_cases.TestCase, pcm_options: dict = None
+def dump_results(test_case: testcases.TestCase, pcm_options: dict = None
                  ) -> tuple[str, dict]:
     """
     Performs a psi4 CIS calculation (potentially with PCM) and collects the
@@ -113,7 +113,7 @@ def dump_results(test_case: test_cases.TestCase, pcm_options: dict = None
 
 
 def main():
-    cases = test_cases.get(n_expected_cases=2, name="formaldehyde")
+    cases = testcases.get(n_expected_cases=2, name="formaldehyde")
     pcm_options = {"weight": 0.3, "pcm_method": "IEFPCM", "neq": True,
                    "solvent": "Water"}
     psi4_results = {}

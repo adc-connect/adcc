@@ -2,7 +2,7 @@ from import_qchem_data import (
     import_excited_states, import_groundstate, NotConvergedError
 )
 from qchem_savedir import QchemSavedir
-import test_cases
+import testcases
 
 from adcc.hdf5io import _extract_dataset
 from adcc.AdcMethod import AdcMethod
@@ -22,7 +22,7 @@ _testdata_dirname = "data"
 _qchem_context_file = "context.hdf5"
 
 
-def run_qchem(test_case: test_cases.TestCase, method: AdcMethod, case: str,
+def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
               import_states: bool = True,
               import_gs: bool = False, n_singlets: int = 0,
               n_triplets: int = 0) -> tuple[dict | None, dict | None]:
@@ -116,7 +116,7 @@ def run_qchem(test_case: test_cases.TestCase, method: AdcMethod, case: str,
     return states, gs_data
 
 
-def open_pyscf_result(test_case: test_cases.TestCase) -> h5py.File:
+def open_pyscf_result(test_case: testcases.TestCase) -> h5py.File:
     """
     Load the result of the dumped pyscf SCF calculation.
     """

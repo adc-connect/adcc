@@ -1,5 +1,5 @@
 from run_qchem import run_qchem
-import test_cases
+import testcases
 
 from adcc.AdcMethod import AdcMethod
 from adcc.hdf5io import emplace_dict
@@ -22,7 +22,7 @@ _methods = {
 _gs_data_method = "adc3"
 
 
-def generate_adc(test_case: test_cases.TestCase, method: AdcMethod, case: str,
+def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
                  n_singlets: int = 0, n_triplets: int = 0) -> None:
     """
     Generate and dump the excited state reference data for the given reference case
@@ -50,7 +50,7 @@ def generate_adc(test_case: test_cases.TestCase, method: AdcMethod, case: str,
     emplace_dict(state_data, case_group, compression="gzip")
 
 
-def generate_adc_all(test_case: test_cases.TestCase, method: AdcMethod,
+def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
                      n_singlets: int = 0, n_triplets: int = 0,
                      states_per_case: dict[str, dict[str, int]] = None) -> None:
     """
@@ -67,7 +67,7 @@ def generate_adc_all(test_case: test_cases.TestCase, method: AdcMethod,
         )
 
 
-def generate_groundstate(test_case: test_cases.TestCase) -> None:
+def generate_groundstate(test_case: testcases.TestCase) -> None:
     """
     Generate and dump the ground state data for the given test case.
     """
@@ -95,14 +95,14 @@ def generate_groundstate(test_case: test_cases.TestCase) -> None:
 
 
 def generate_ch2nh2():  # UHF, doublet
-    case = test_cases.get(n_expected_cases=1, name="ch2nh2").pop()
+    case = testcases.get(n_expected_cases=1, name="ch2nh2").pop()
     generate_groundstate(case)
     for method in _methods["pp"]:
         generate_adc_all(case, AdcMethod(method), n_singlets=3)
 
 
 def generate_cn():  # UHF, doublet
-    cases = test_cases.get(n_expected_cases=2, name="cn")
+    cases = testcases.get(n_expected_cases=2, name="cn")
     for case in cases:
         generate_groundstate(case)
         for method in _methods["pp"]:
@@ -110,24 +110,24 @@ def generate_cn():  # UHF, doublet
 
 
 def generate_h2o():
-    cases = test_cases.get(n_expected_cases=2, name="h2o")
+    cases = testcases.get(n_expected_cases=2, name="h2o")
     for case in cases:
         generate_groundstate(case)
 
 
 def generate_h2s():
-    cases = test_cases.get(n_expected_cases=2, name="h2s")
+    cases = testcases.get(n_expected_cases=2, name="h2s")
     for case in cases:
         generate_groundstate(case)
 
 
 def generate_hf():
-    case = test_cases.get(n_expected_cases=1, name="hf").pop()
+    case = testcases.get(n_expected_cases=1, name="hf").pop()
     generate_groundstate(case)
 
 
 def generate_methox():
-    case = test_cases.get(n_expected_cases=1, name="r2methyloxirane").pop()
+    case = testcases.get(n_expected_cases=1, name="r2methyloxirane").pop()
     generate_groundstate(case)
 
 

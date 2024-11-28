@@ -1,5 +1,5 @@
 from dump_pyscf import dump_pyscf
-import test_cases
+import testcases
 
 from pyscf import gto, scf
 
@@ -11,7 +11,7 @@ import h5py
 _testdata_dirname = "data"
 
 
-def hdf5_filename(test_case: test_cases.TestCase) -> Path:
+def hdf5_filename(test_case: testcases.TestCase) -> Path:
     """
     Build the absolute file name for the test case.
     """
@@ -20,7 +20,7 @@ def hdf5_filename(test_case: test_cases.TestCase) -> Path:
     return hdf5_file
 
 
-def run_pyscf(test_case: test_cases.TestCase, restricted: bool, frac_occ: bool):
+def run_pyscf(test_case: testcases.TestCase, restricted: bool, frac_occ: bool):
     """
     Runs the pyscf calculation for the given testcase.
     """
@@ -45,7 +45,7 @@ def run_pyscf(test_case: test_cases.TestCase, restricted: bool, frac_occ: bool):
     return mf
 
 
-def generate(test_case: test_cases.TestCase, restricted: bool,
+def generate(test_case: testcases.TestCase, restricted: bool,
              frac_occ: bool) -> h5py.File:
     """
     Run Pyscf for the given test case and dump the result in the hdf5 file
@@ -60,12 +60,12 @@ def generate(test_case: test_cases.TestCase, restricted: bool,
 
 
 def generate_ch2nh2():
-    cases = test_cases.get(n_expected_cases=1, name="ch2nh2").pop()
+    cases = testcases.get(n_expected_cases=1, name="ch2nh2").pop()
     generate(cases, restricted=False, frac_occ=True)
 
 
 def generate_cn():
-    cases = test_cases.get(n_expected_cases=2, name="cn")
+    cases = testcases.get(n_expected_cases=2, name="cn")
     for case in cases:
         hdf5_file = generate(case, restricted=False, frac_occ=True)
         if hdf5_file is None:
@@ -81,24 +81,24 @@ def generate_cn():
 
 
 def generate_h2o():
-    cases = test_cases.get(n_expected_cases=2, name="h2o")
+    cases = testcases.get(n_expected_cases=2, name="h2o")
     for case in cases:
         generate(case, restricted=True, frac_occ=False)
 
 
 def generate_h2s():
-    cases = test_cases.get(n_expected_cases=2, name="h2s")
+    cases = testcases.get(n_expected_cases=2, name="h2s")
     for case in cases:
         generate(case, restricted=True, frac_occ=False)
 
 
 def generate_hf():
-    case = test_cases.get(n_expected_cases=1, name="hf").pop()
+    case = testcases.get(n_expected_cases=1, name="hf").pop()
     generate(case, restricted=False, frac_occ=False)
 
 
 def generate_methox():
-    case = test_cases.get(n_expected_cases=1, name="r2methyloxirane").pop()
+    case = testcases.get(n_expected_cases=1, name="r2methyloxirane").pop()
     generate(case, restricted=True, frac_occ=False)
 
 
