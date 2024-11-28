@@ -24,6 +24,7 @@ class TestCase:
     charge: int
     multiplicity: int  # = 2S+1
     basis: str
+    only_full_mode: bool  # whether to run the test case only in full mode
     pe_pot_file: str = None
     core_orbitals: int = None
     frozen_core: int = None
@@ -162,7 +163,7 @@ def _init_test_cases() -> tuple[TestCase]:
     xyz, unit = _xyz["ch2nh2"]
     test_cases.append(TestCase(
         name="ch2nh2", xyz=xyz, unit=unit, charge=0, multiplicity=2,
-        basis="sto-3g", core_orbitals=2, cases=ref_cases
+        basis="sto-3g", core_orbitals=2, cases=ref_cases, only_full_mode=False
     ))
     # CN
     ref_cases = ("gen", "cvs", "fc", "fv")
@@ -170,63 +171,67 @@ def _init_test_cases() -> tuple[TestCase]:
     test_cases.append(TestCase(
         name="cn", xyz=xyz, unit=unit, charge=0, multiplicity=2,
         basis="cc-pvdz", core_orbitals=1, frozen_core=1, frozen_virtual=3,
-        cases=ref_cases
+        cases=ref_cases, only_full_mode=True
     ))
     ref_cases = ("gen", "cvs", "fc", "fv", "fv-cvs", "fc-fv")
     test_cases.append(TestCase(
         name="cn", xyz=xyz, unit=unit, charge=0, multiplicity=2,
-        basis="sto-3g", core_orbitals=1, frozen_core=1, frozen_virtual=1
+        basis="sto-3g", core_orbitals=1, frozen_core=1, frozen_virtual=1,
+        only_full_mode=False
     ))
     # H2O
     ref_cases = ("gen", "cvs")
     xyz, unit = _xyz["h2o"]
     test_cases.append(TestCase(
         name="h2o", xyz=xyz, unit=unit, charge=0, multiplicity=1,
-        basis="def2-tzvp", core_orbitals=1, cases=ref_cases
+        basis="def2-tzvp", core_orbitals=1, cases=ref_cases,
+        only_full_mode=True
     ))
     ref_cases = ("gen", "cvs", "fc", "fv", "fv-cvs", "fc-fv")
     test_cases.append(TestCase(
         name="h2o", xyz=xyz, unit=unit, charge=0, multiplicity=1,
         basis="sto-3g", core_orbitals=1, frozen_core=1, frozen_virtual=1,
-        cases=ref_cases
+        cases=ref_cases, only_full_mode=False
     ))
     # H2S
     ref_cases = ("gen", "cvs", "fc", "fv", "fc-cvs", "fv-cvs", "fc-fv", "fc-fv-cvs")
     xyz, unit = _xyz["h2s"]
     test_cases.append(TestCase(
         name="h2s", xyz=xyz, unit=unit, charge=0, multiplicity=1,
-        basis="6-311+g**", core_orbitals=1, frozen_core=1, frozen_virtual=3
+        basis="6-311+g**", core_orbitals=1, frozen_core=1, frozen_virtual=3,
+        only_full_mode=True
     ))
     ref_cases = ("gen", "cvs", "fc", "fv", "fc-cvs", "fv-cvs", "fc-fv", "fc-fv-cvs")
     test_cases.append(TestCase(
         name="h2s", xyz=xyz, unit=unit, charge=0, multiplicity=1,
         basis="sto-3g", core_orbitals=1, frozen_core=1, frozen_virtual=1,
-        cases=ref_cases
+        cases=ref_cases, only_full_mode=False
     ))
     # HF
     ref_cases = ("gen", "fc", "fv")
     xyz, unit = _xyz["hf"]
     test_cases.append(TestCase(
         name="hf", xyz=xyz, unit=unit, charge=0, multiplicity=3,
-        basis="6-31g", frozen_core=1, frozen_virtual=3, cases=ref_cases
+        basis="6-31g", frozen_core=1, frozen_virtual=3, cases=ref_cases,
+        only_full_mode=False
     ))
     # (R)-2-Methyloxirane
     ref_cases = ("gen", "cvs")
     xyz, unit = _xyz["r2methyloxirane"]
     test_cases.append(TestCase(
         name="r2methyloxirane", xyz=xyz, unit=unit, charge=0, multiplicity=1,
-        basis="sto-3g", core_orbitals=1, cases=ref_cases
+        basis="sto-3g", core_orbitals=1, cases=ref_cases, only_full_mode=False
     ))
     # Formaledhyde
     xyz, unit = _xyz["formaldehyde"]
     pe_pot_file = Path(__file__).resolve().parent / "potentials/fa_6w.pot"
     test_cases.append(TestCase(
         name="formaldehyde", xyz=xyz, unit=unit, charge=0, multiplicity=1,
-        basis="sto-3g", pe_pot_file=str(pe_pot_file)
+        basis="sto-3g", pe_pot_file=str(pe_pot_file), only_full_mode=False
     ))
     test_cases.append(TestCase(
         name="formaldehyde", xyz=xyz, unit=unit, charge=0, multiplicity=1,
-        basis="cc-pvdz", pe_pot_file=str(pe_pot_file)
+        basis="cc-pvdz", pe_pot_file=str(pe_pot_file), only_full_mode=True
     ))
     for case in test_cases:
         case.validate_cases()

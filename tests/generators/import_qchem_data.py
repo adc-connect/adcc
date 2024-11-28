@@ -1,7 +1,6 @@
 from adcc.AdcMethod import AdcMethod
 from adcc.hdf5io import _extract_dataset
 
-from collections import defaultdict
 import numpy as np
 import h5py
 
@@ -55,7 +54,7 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
         "pp": [
             ("singlets", True), ("triplets", True),  # restricted
             # uhf and spin flip are located in the same ".../uhf/..." subtree
-            ("any_or_spinflip", False),  # unrestricted
+            ("any", False),  # unrestricted
         ]
     }
     method_name: str = method.name.replace("-", "_")  # cvs-adcn -> cvs_adcn
@@ -81,7 +80,7 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
 def _import_excited_states(context: h5py.File, method: str, adc_type: str = "pp",
                            import_nstates: int = None, state_kind: str = None,
                            restricted: bool = True, dims_pref: str = "dims/"
-                           ) -> None | dict[int, dict]:
+                           ) -> None | dict[str, list]:
     """
     Import the excited states data (excitation energies, amplitude vectors, ...)
     from the context.
@@ -146,10 +145,12 @@ def _import_excited_states(context: h5py.File, method: str, adc_type: str = "pp"
     raw_data = import_data(context, dims_pref=dims_pref, **data_to_read)
     # collect the data for each property in a list
     # sort the raw_data to ensure that we always start with the lowest state.
-    data = defaultdict(list)
+    data: dict[str, list] = {}
     for (_, key), val in sorted(raw_data.items()):
+        if key not in data:
+            data[key] = []
         data[key].append(val)
-    return dict(data)
+    return data
 
 
 def import_data(context: h5py.File, dims_pref: str = "dims/",
@@ -220,6 +221,10 @@ _mp_data = {
     # MP1
     "mp1/df_o1v1": "mp1/df_o1v1",
     "mp1/t_o1o1v1v1": "mp1/t_o1o1v1v1",
+    # CVS-MP1
+    "mp1/df_o2v1": "mp1/df_o2v1",
+    "mp1/t_o1o2v1v1": "mp1/t_o1o2v1v1",
+    "mp1/t_o2o2v1v1": "mp1/t_o2o2v1v1",
     # MP2
     "mp2/energy": "mp2/energy",
     # MP2 density in the AO basis
@@ -229,6 +234,10 @@ _mp_data = {
     "mp2/opdm/dm_o1o1": "mp2/dm_o1o1",
     "mp2/opdm/dm_o1v1": "mp2/dm_o1v1",
     "mp2/opdm/dm_v1v1": "mp2/dm_v1v1",
+    # CVS-MP2 density in the MO basis (additional blocks)
+    "mp2/opdm/dm_o2o1": "mp2/dm_o2o1",
+    "mp2/opdm/dm_o2o2": "mp2/dm_o2o2",
+    "mp2/opdm/dm_o2v1": "mp2/dm_o2v1",
     # MP2 dipole vector
     "mp2/prop/dipole": "mp2/dipole",
     # MP2 doubles amplitudes

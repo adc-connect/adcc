@@ -27,6 +27,13 @@ from pyscf import ao2mo, scf, gto
 import h5py
 
 
+# TODO: extract the geometry directly from pyscf.gto.Mole
+# see their tostring member function code.
+# we probably need highly accurate coordinates to obtain matching integrals
+
+# TODO: move to ReferenceState? mo_coeffs can be obtained
+# ReferenceState.orbital_coefficients_alpha/beta(o1b/v1b/...)
+
 def get_qchem_formatted_basis(mol: gto.Mole) -> str:
     """
     Extracts the basis information from the pyscf SCF result and converts the
