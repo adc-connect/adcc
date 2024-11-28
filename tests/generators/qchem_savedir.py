@@ -80,12 +80,12 @@ class QchemSavedir:
             The anti-symmetric ERI blocks in the MO basis. Blocks of the form
             'ooov' or 'ococ' are expected. Written to a HDF5 located in the savedir.
             Reading the anti-symmetric ERI is only supported within adcman!
-            If not given, Qchem will compute the integrals durin the calculation.
+            If not given, Qchem will compute the integrals during the calculation.
         ao_integrals: dict[str, np.ndarray], optional
             Integral matrices in the AO basis. Currently the dipole matrices
             (expected names: 'dx', 'dy' and 'dz') are supported.
             Reading the ani-symmetric ERI is only supported within adcman!
-            If not given, Qchem will compute the integrals durin the calculation.
+            If not given, Qchem will compute the integrals during the calculation.
         """
         # determine n_basis and n_orbitals if not provided
         if n_basis is None or n_orbitals is None:

@@ -1,13 +1,17 @@
 from adcc.ExcitedStates import ExcitedStates
-from adcc.LazyMp import LazyMp
 from adcc.hdf5io import emplace_dict
+from adcc.LazyMp import LazyMp
+from adcc.State2States import State2States
 
+import numpy as np
 import h5py
 
 
 def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group) -> None:
     """
-    Dump the MP data to the given hdf5 file/group.
+    Dump the MP data to the given hdf5 file/group. Data is dumped sorted by the
+    perturbation theoretical orders of the quantity, e.g., mp1/t_o1o1v1v1 for
+    the first order doubles amplitudes.
     """
     gs = "mp"
 
@@ -47,6 +51,77 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group) -> None:
 
 def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group) -> None:
     """
-    Dump the excited states data to the given hdf5 file/group.
+    Dump the excited states data to the given hdf5 file/group. The excited state
+    data is dumped into a kind (singlet, triplet, any, ...) subgroup.
     """
-    raise NotImplementedError()
+    # TODO: add functionality to only import the first n states. In the original
+    # verion we had n_import_full: import all energies but only the first n
+    # statedms, tdms, ...
+    # TODO: add data for matrix tests (see original dump_reference_adcc.py)
+    assert states.converged
+    n_states = len(states.excitation_energy)
+    dm_bb_a = []  # State diffdm AO basis alpha part
+    dm_bb_b = []  # State diffdm AO basis beta part.
+    tdm_bb_a = []  # Ground to Excited state tdm AO basis alpha part
+    tdm_bb_b = []  # Ground to Excited state tdm AO basis beta part
+    # split the eigenvectors according to their excitation degree for all states
+    eigenvectors: dict[int, list] = {}
+    for n in range(n_states):
+        # densities
+        bb_a, bb_b = states.state_diffdm[n].to_ao_basis(states.reference_state)
+        dm_bb_a.append(bb_a.to_ndarray())
+        dm_bb_b.append(bb_b.to_ndarray())
+        bb_a, bb_b = states.transition_dm[n].to_ao_basis(states.reference_state)
+        tdm_bb_a.append(bb_a.to_ndarray())
+        tdm_bb_b.append(bb_b.to_ndarray())
+        # eigenvectors
+        for exdegree, block in enumerate(states.matrix.axis_blocks):
+            if exdegree + 1 not in eigenvectors:
+                eigenvectors[exdegree + 1] = []
+            eigenvectors[exdegree + 1].append(
+                getattr(states.excitation_vector[n], block).to_ndarray()
+            )
+    kind_data = {}
+    # eigenvalues
+    kind_data["eigenvalues"] = states.excitation_energy
+    # state and transition dipole moments
+    kind_data["state_dipole_moments"] = states.state_dipole_moment
+    kind_data["transition_dipole_moments"] = states.transition_dipole_moment
+    kind_data["transition_dipole_moments_velocity"] = (
+        states.transition_dipole_moment_velocity
+    )
+    kind_data["transition_magnetic_dipole_moments"] = (
+        states.transition_magnetic_dipole_moment
+    )
+    # state diffdm and ground to excited state tdm
+    kind_data["state_diffdm_bb_a"] = np.asarray(dm_bb_a)
+    kind_data["state_diffdm_bb_b"] = np.asarray(dm_bb_b)
+    kind_data["ground_to_excited_tdm_bb_a"] = np.asarray(tdm_bb_a)
+    kind_data["ground_to_excited_tdm_bb_b"] = np.asarray(tdm_bb_b)
+    # dump the eigenvectors
+    kind_data["eigenvectors_singles"] = np.asarray(eigenvectors[1])
+    if 2 in eigenvectors:
+        kind_data["eigenvectors_doubles"] = np.asarray(eigenvectors[2])
+    # state to state tdm: not implemented for CVS
+    if not states.method.is_core_valence_separated:
+        for ifrom in range(n_states - 1):
+            state2state = State2States(states, initial=ifrom)
+            # extract the tdms
+            tdm_bb_a = []
+            tdm_bb_b = []
+            for tdm in state2state.transition_dm:
+                bb_a, bb_b = tdm.to_ao_basis(states.reference_state)
+                tdm_bb_a.append(bb_a.to_ndarray())
+                tdm_bb_b.append(bb_b.to_ndarray())
+            kind_data[f"state_to_state/from_{ifrom}/transition_dipole_moments"] = (
+                state2state.transition_dipole_moment
+            )
+            kind_data[f"state_to_state/from_{ifrom}/state_to_excited_tdm_bb_a"] = (
+                np.asarray(tdm_bb_a)
+            )
+            kind_data[f"state_to_state/from_{ifrom}/state_to_excited_tdm_bb_b"] = (
+                np.asarray(tdm_bb_b)
+            )
+    # write the data to hdf5
+    kind_group = hdf5_file.create_group(states.kind)
+    emplace_dict(kind_data, kind_group, compression="gzip")

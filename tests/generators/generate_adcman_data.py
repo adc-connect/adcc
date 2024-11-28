@@ -28,6 +28,9 @@ def generate_adc(test_case: test_cases.TestCase, method: AdcMethod, case: str,
     Generate and dump the excited state reference data for the given reference case
     of the given test case if the data doesn't exist already.
     """
+    # TODO: maybe we only want to import the first n excited states?
+    # or we stay consistent with the existing adcc strategy to always dump
+    # all energies, etc, but only dump the dms, tms, ... for the first n states.
     datadir = Path(__file__).parent.parent / _testdata_dirname
     datafile = datadir / test_case.adcdata_file_name("adcman", method.name)
     hdf5_file = h5py.File(datafile, "a")  # Read/write if exists, create otherwise
@@ -129,6 +132,7 @@ def generate_methox():
 
 
 def main():
+    # TODO: decide which data to generate and how many states for which case
     generate_ch2nh2()
     generate_cn()
     generate_h2o()
