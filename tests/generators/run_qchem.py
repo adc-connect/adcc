@@ -141,65 +141,63 @@ def generate_qchem_savedir(pyscf_data: h5py.File, savedir: str) -> None:
     _, orb_energies = _extract_dataset(pyscf_data["orben_f"])
     # compute the density in the ao basis
     ao_density_aa, ao_density_bb = compute_ao_density(pyscf_data)
-    integrals = collect_integrals(pyscf_data)
+    eri_blocks = build_antisym_eri(pyscf_data)
+    ao_integrals = collect_ao_integrals(pyscf_data)
     purecart = determine_purecart(pyscf_data)
     savedir_writer.write(
         scf_energy=scf_energy, mo_coeffs=mo_coeffs, fock_ao=fock_ao,
         orb_energies=orb_energies, ao_density_aa=ao_density_aa,
-        ao_density_bb=ao_density_bb, integrals=integrals,
-        purecart=purecart
+        ao_density_bb=ao_density_bb, eri_blocks=eri_blocks,
+        ao_integrals=ao_integrals, purecart=purecart
     )
 
 
-def collect_integrals(pyscf_data: h5py.File) -> dict:
+def build_antisym_eri(pyscf_data: h5py.File) -> dict[str, np.ndarray]:
     """
-    Collects integrals to be provided to Q-Chem via the savedir. Currently
-    expected are:
-    - dipole x, y, and z components as AO repesentations;
-      keys: ao/[dx|dy|dz]_bb
-    - anti-symmetrized ERI tensors;
-      keys: hf/i_xxxx with x being a combination of [o|v] and a space number,
-      e.g., hf_io1o1v1v1
+    Builds all anti-symmetric ERI blocks (MO basis) from the pyscf data.
+    Returned using keys like "ooov" or "ococ".
     """
-    tensor_dict = {}
-    # collect ERIs
-    all_spaces = {"o": "o1", "c": "o2", "v": "v1"}
+    ret = {}
     refstate = ReferenceState(pyscf_data)
-    for i in itertools.product(all_spaces.keys(), repeat=4):
-        eri_block_name = "".join(i)
-        if not is_canonical_eri_block(eri_block_name, all_spaces):
+    for block in itertools.product("ocv", repeat=4):
+        block = "".join(block)
+        if not is_canonical_eri_block(block):
             continue
         try:
-            tensor = getattr(refstate, eri_block_name).to_ndarray()
-            hdf5_key = "hf/i_" + "".join(
-                [all_spaces[sp] for sp in eri_block_name])
-            tensor_dict[hdf5_key] = tensor
-        except ValueError:
-            continue
-    # collect dipole matrices
-    dipole_tensors = np.array(pyscf_data["multipoles/elec_1"])
-    for ind, component in enumerate(["x", "y", "z"]):
-        hdf5_key = "ao/d{:s}_bb".format(component)
-        tensor = dipole_tensors[ind]
-        tensor_dict[hdf5_key] = tensor
-    return tensor_dict
+            eri = getattr(refstate, block).to_ndarray()
+            ret[block] = eri
+        except ValueError as e:  # CVS block not available
+            if refstate.has_core_occupied_space:
+                raise e
+    return ret
 
 
-def is_canonical_eri_block(block: str, all_spaces: dict) -> bool:
-    """
-    Using the space definitions in all_spaces, checks if a given ERI block is
-    canonical.
-    """
-    bra = [all_spaces[block[0]], all_spaces[block[1]]]
-    ket = [all_spaces[block[2]], all_spaces[block[3]]]
+def is_canonical_eri_block(block: str | tuple[str]) -> bool:
+    """Checks if a given ERI block is canonical."""
+    assert len(block) == 4 and all(sp in "ocv" for sp in block)
+    space_ordering = {"o": 0, "c": 1, "v": 2}
+    bra = [space_ordering[sp] for sp in block[:2]]
+    ket = [space_ordering[sp] for sp in block[2:]]
     bra_canonical = sorted(bra)
     ket_canonical = sorted(ket)
-    if ket_canonical < bra_canonical:
-        ket_canonical, bra_canonical = bra_canonical, ket_canonical
+    if ket_canonical < bra_canonical:  # swap bra and ket
+        bra_canonical, ket_canonical = ket_canonical, bra_canonical
     if bra == bra_canonical and ket == ket_canonical:
         return True
-    else:
-        return False
+    return False
+
+
+def collect_ao_integrals(pyscf_data: h5py.File) -> dict:
+    """
+    Collects integral matrices in the AO basis from the pyscf data. Supported are
+    - dipole x, y and z components. Returned as dx, dy and dz.
+    """
+    ret = {}
+    # extract the dipole operator matrices in the AO basis.
+    _, dipole = _extract_dataset(pyscf_data["multipoles/elec_1"])
+    for tensor, comp in zip(dipole, ["x", "y", "z"]):
+        ret[f"d{comp}"] = tensor
+    return ret
 
 
 def compute_ao_density(pyscf_data: h5py.File) -> tuple[np.ndarray, np.ndarray]:

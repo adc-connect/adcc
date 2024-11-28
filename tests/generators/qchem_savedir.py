@@ -23,11 +23,11 @@ class QchemSavedir:
         name (or path) of the directory in which the files are written.
     """
     _filenames = {
-        "mo_coeffs":         (         53, "qchem_fortran_style"),
-        "density_matrix_ao": (         54, "qchem_fortran_style"),
-        "fock_matrix_ao":    (         58, "qchem_fortran_style"),
-        "energies":          (         99, "qchem_fortran_style"),
-        "dimensions":        (        819, "qchem_fortran_style"),
+        "mo_coeffs":         ("53",        "qchem_fortran_style"),
+        "density_matrix_ao": ("54",        "qchem_fortran_style"),
+        "fock_matrix_ao":    ("58",        "qchem_fortran_style"),
+        "energies":          ("99",        "qchem_fortran_style"),
+        "dimensions":        ("819",       "qchem_fortran_style"),
         "integrals":         ("integrals", "hdf5"),
     }
 
@@ -38,9 +38,10 @@ class QchemSavedir:
     def write(self, scf_energy: float, mo_coeffs: np.ndarray,
               fock_ao: np.ndarray, orb_energies: np.ndarray,
               ao_density_aa: np.ndarray, ao_density_bb: np.ndarray,
-              integrals: dict,
               purecart: int, n_basis: int = None,
-              n_orbitals: int = None, n_fragments: int = 0):
+              n_orbitals: int = None, n_fragments: int = 0,
+              eri_blocks: dict[str, np.ndarray] = None,
+              ao_integrals: dict[str, np.ndarray] = None):
         """
         Write all content in the savedir.
 
@@ -58,9 +59,6 @@ class QchemSavedir:
             alpha, alpha block of the (MO x MO) density matrix in the AO basis.
         ao_density_bb: np.ndarray
             beta, beta block of the (MO x MO) density matrix in the AO basis.
-        integrals: dict
-            dict mapping hdf5 paths to np.ndarrays to be written to hdf5 file
-            located in the savedir
         purecart: int
             Indicates for which angular momentums cartesian angular functions
             are used in the basis, i.e., if the 6 cartesian d-orbitals
@@ -78,6 +76,16 @@ class QchemSavedir:
         n_fragments: int, optional
             Probably related to the number of fragments generated for the SAD
             SCF Guess. Should not be relevant. The default value (0) seems to work.
+        eri_blocks: dict[str, np.ndarray], optional
+            The anti-symmetric ERI blocks in the MO basis. Blocks of the form
+            'ooov' or 'ococ' are expected. Written to a HDF5 located in the savedir.
+            Reading the anti-symmetric ERI is only supported within adcman!
+            If not given, Qchem will compute the integrals durin the calculation.
+        ao_integrals: dict[str, np.ndarray], optional
+            Integral matrices in the AO basis. Currently the dipole matrices
+            (expected names: 'dx', 'dy' and 'dz') are supported.
+            Reading the ani-symmetric ERI is only supported within adcman!
+            If not given, Qchem will compute the integrals durin the calculation.
         """
         # determine n_basis and n_orbitals if not provided
         if n_basis is None or n_orbitals is None:
@@ -95,7 +103,10 @@ class QchemSavedir:
         self.write_ao_fock(fock_ao)
         self.write_dims(n_basis=n_basis, n_orbitals=n_orbitals,
                         purecart=purecart, n_fagments=n_fragments)
-        self.write_integrals(tensor_dict=integrals)
+        if eri_blocks is not None:
+            self.write_antisym_eri(**eri_blocks)
+        if ao_integrals is not None:
+            self.write_ao_integrals(**ao_integrals)
 
     def write_mo_coeffs(self, mo_coeffs: np.ndarray,
                         orb_energies: np.ndarray) -> None:
@@ -181,36 +192,56 @@ class QchemSavedir:
                 struct.pack("<4i", n_basis, n_orbitals, purecart, n_fagments)
             )
 
-    def write_integrals(self, tensor_dict: dict) -> None:
+    def write_antisym_eri(self, **eri_blocks: np.ndarray) -> None:
         """
-        Write integral hdf5 file to savedir.
+        Write the anti-symmetric ERI to the savedir using a HDF5 file.
+        Only supported within adcman.
 
         Parameters
         ----------
-        tensor_dict: dict
-            Contains all tensors to be stored in a hdf5 file in the savedir.
-            Currently, anti-symmetrized ERIs and dipole vector AO matrices are
-            expected. Keys are used as hdf5 paths, values are expected to be
-            numpy arrays.
+        eri_blocks: np.ndarray
+            The anti-symmetric ERI blocks to store in the hdf5 file in the savedir.
+            ERI blocks in the form 'ooov' or 'ococ' are expected.
         """
+        spaces = {"o": "o1", "c": "o2", "v": "v1"}
         fname = self._get_filename("integrals")
-        f = h5py.File(fname, "w")
-        for key, tensor in tensor_dict.items():
-            f[key] = tensor.flatten()
-        f.close()
+        hdf5_file = h5py.File(fname, "a")  # Read/write if exists, create otherwise
+        for block, tensor in eri_blocks.items():
+            if len(block) != 4 or not all(sp in spaces for sp in block):
+                raise ValueError(f"Found unexpected ERI block: {block}")
+            key = "hf/i_" + "".join(spaces[sp] for sp in block)
+            hdf5_file.create_dataset(key, data=tensor.flatten())
+
+    def write_ao_integrals(self, **ao_integrals: np.ndarray) -> None:
+        """
+        Write integrals like the dipole vector operator matrices to the savedir
+        using a HDF5 file. Currently supported are
+        - the dipole vector AO matrices (expected as: 'dx', 'dy', 'dz')
+        Only supported within adcman.
+        """
+        dipoles = ("dx", "dy", "dz")
+        fname = self._get_filename("integrals")
+        hdf5_file = h5py.File(fname, "a")  # Read/write if exists, create otherwise
+        for name, tensor in ao_integrals.items():
+            if name in dipoles:
+                hdf5_file.create_dataset(f"ao/{name}_bb", data=tensor.flatten())
+                continue
+            raise ValueError(f"Unknown ao integral {name}")
 
     def _get_filename(self, content: str) -> Path:
         """
         Get the file name in which to write the desired content.
         """
-        id, file_type = self._filenames.get(content, (None, None))
-        if id is None:
+        if content not in self._filenames:
             raise ValueError(f"Unknown file content {content}. Can't determine "
                              "the file name.")
+        name, file_type = self._filenames[content]
         if file_type == "hdf5":
-            fpath = self.savedir / f"{id}.hdf5"
+            fpath = self.savedir / f"{name}.hdf5"
+        elif file_type == "qchem_fortran_style":
+            fpath = self.savedir / f"{name}.0"
         else:
-            fpath = self.savedir / f"{id}.0"
+            raise ValueError(f"Unknown file type {file_type}.")
         if fpath.exists():
             warnings.warn(f"The file {fpath} already exists.")
         return fpath
