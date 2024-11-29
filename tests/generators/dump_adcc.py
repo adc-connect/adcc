@@ -45,8 +45,8 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group) -> None:
     dm_bb_a, dm_bb_b = ground_state.mp2_diffdm.to_ao_basis(
         ground_state.reference_state
     )
-    gs_data[f"{gs}2/dm_bb_a"] = dm_bb_a
-    gs_data[f"{gs}2/dm_bb_b"] = dm_bb_b
+    gs_data[f"{gs}2/dm_bb_a"] = dm_bb_a.to_ndarray()
+    gs_data[f"{gs}2/dm_bb_b"] = dm_bb_b.to_ndarray()
     # write the data to hdf5
     emplace_dict(gs_data, hdf5_file, compression="gzip")
 
@@ -137,21 +137,23 @@ def dump_matrix_testdata(matrix: AdcMatrix, trial_vec: AmplitudeVector,
     trial_vec is a random amplitude vector.
     """
     blocks = matrix.axis_blocks  # [singles, doubles, ...]
-    singles_singles = "_".join(blocks[0], blocks[0])
+    singles_singles = f"{blocks[0]}_{blocks[0]}"
     data = {}
     # compute the MVP for individual blocks of the secular matrix.
-    data["result_ss"] = matrix.block_apply(singles_singles, trial_vec[blocks[0]])
+    data["result_ss"] = matrix.block_apply(
+        singles_singles, trial_vec[blocks[0]]
+    ).to_ndarray()
     if len(blocks) > 1:  # we have doubles
         assert blocks[1] in trial_vec
-        singles_doubles = "_".join(blocks[0], blocks[1])
+        singles_doubles = f"{blocks[0]}_{blocks[1]}"
         data["result_sd"] = matrix.block_apply(
             singles_doubles, trial_vec[blocks[1]]
         )[blocks[0]].to_ndarray()
-        doubles_singles = "_".join(blocks[1], blocks[0])
+        doubles_singles = f"{blocks[1]}_{blocks[0]}"
         data["result_ds"] = matrix.block_apply(
             doubles_singles, trial_vec[blocks[0]]
         )[blocks[1]].to_ndarray()
-        doubles_doubles = "_".join(blocks[1], blocks[1])
+        doubles_doubles = f"{blocks[1]}_{blocks[1]}"
         data["result_dd"] = matrix.block_apply(
             doubles_doubles, trial_vec[blocks[1]]
         )[blocks[1]].to_ndarray()
