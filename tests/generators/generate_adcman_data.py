@@ -23,10 +23,13 @@ _gs_data_method = "adc3"
 
 
 def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
-                 n_singlets: int = 0, n_triplets: int = 0) -> None:
+                 n_singlets: int = 0, n_triplets: int = 0,
+                 n_spin_flip: int = 0, dump_nstates: int = None) -> None:
     """
     Generate and dump the excited state reference data for the given reference case
     of the given test case if the data doesn't exist already.
+    The function currently assumes that all states kinds are generated
+    simultaneously, e.g., singlet and triplet states in a single calculation!
     """
     # TODO: maybe we only want to import the first n excited states?
     # or we stay consistent with the existing adcc strategy to always dump
@@ -40,9 +43,13 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     if case == "cvs" and method.level == 0:
         return None
     print(f"Generating {method.name} data for {case} {test_case.file_name}.")
+    # add a cvs prefix to the method if necessary
+    if "cvs" in case and not method.is_core_valence_separated:
+        method = AdcMethod(f"cvs-{method.name}")
     state_data, _ = run_qchem(
         test_case, method, case, import_states=True, import_gs=False,
-        n_singlets=n_singlets, n_triplets=n_triplets
+        n_singlets=n_singlets, n_triplets=n_triplets, n_spin_flip=n_spin_flip,
+        import_nstates=dump_nstates
     )
     # the data returned from run_qchem should have already been imported
     # using the correct keys -> just dump them
@@ -52,6 +59,7 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
 
 def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
                      n_singlets: int = 0, n_triplets: int = 0,
+                     n_spin_flip: int = 0, dump_nstates: int = None,
                      states_per_case: dict[str, dict[str, int]] = None) -> None:
     """
     Generate and dump the excited state reference data for all relevant
@@ -60,10 +68,12 @@ def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
     # go through all cases and generate the data
     for case in test_case.filter_cases(method.adc_type):
         if states_per_case is not None and case in states_per_case:
-            n_singlets = states_per_case[case].get(case, 0)
-            n_triplets = states_per_case[case].get(case, 0)
+            n_singlets = states_per_case[case].get("n_singlets", 0)
+            n_triplets = states_per_case[case].get("n_triplets", 0)
+            n_spin_flip = states_per_case[case].get("n_spin_flip", 0)
         generate_adc(
-            test_case, method, case, n_singlets=n_singlets, n_triplets=n_triplets
+            test_case, method, case, n_singlets=n_singlets, n_triplets=n_triplets,
+            n_spin_flip=n_spin_flip, dump_nstates=dump_nstates
         )
 
 

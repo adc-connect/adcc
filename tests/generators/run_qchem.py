@@ -23,9 +23,10 @@ _qchem_context_file = "context.hdf5"
 
 
 def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
-              import_states: bool = True,
-              import_gs: bool = False, n_singlets: int = 0,
-              n_triplets: int = 0) -> tuple[dict | None, dict | None]:
+              import_states: bool = True, import_gs: bool = False,
+              import_nstates: int = None,
+              n_singlets: int = 0, n_triplets: int = 0, n_spin_flip: int = 0,
+              ) -> tuple[dict | None, dict | None]:
     """
     Run a qchem calculation for the given test case and method on top
     of the previously generated pyscf results.
@@ -43,16 +44,16 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
         Import the excited states data (default: True).
     import_gs: bool, optional
         Import the MP ground state data (default: False).
+    import_nstates: int, optional
+        The number of excited states to import after the calculation. By default
+        all states are imported.
 
     Returns
     -------
     tuple[dict | None, dict | None]
         Tuple containing the excited states and ground state data.
     """
-    # sanitize the input for cvs:
-    # add a cvs prefix to the method if necessary
-    if "cvs" in case and not method.is_core_valence_separated:
-        method = AdcMethod(f"cvs-{method.name}")
+    # sanitize the input for cvs
     assert method.is_core_valence_separated == ("cvs" in case)
     # cvs-adc0 is not available in qchem
     if method.is_core_valence_separated and method.level == 0:
@@ -89,7 +90,8 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
             multiplicity=test_case.multiplicity,
             n_core_orbitals=n_core_orbitals, n_frozen_core=n_frozen_core,
             n_frozen_virtual=n_frozen_virtual, potfile=None,
-            singlet_states=n_singlets, triplet_states=n_triplets
+            singlet_states=n_singlets, triplet_states=n_triplets,
+            sf_states=n_spin_flip,
         )
         # call qchem and wait for completion
         execute_qchem(infile.name, outfile, savedir.name, tmpdir.resolve())
@@ -103,7 +105,10 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
             # import the excited state data as nested dict {kind: {prop: list}}
             states = None
             if import_states:
-                states = import_excited_states(context_file, method=method)
+                states = import_excited_states(
+                    context_file, method=method, is_spin_flip=bool(n_spin_flip),
+                    import_nstates=import_nstates
+                )
         except NotConvergedError as e:
             # one of the states is not converged
             # copy the output file to the working directory and abort.
@@ -272,6 +277,7 @@ def generate_qchem_input_file(infile: str, method: str, basis: str, xyz: str,
                               potfile: str = None, memory: int = 10000,  # in mb
                               bohr: bool = True,
                               singlet_states: int = 0, triplet_states: int = 0,
+                              sf_states: int = 0,
                               maxiter: int = 160, conv_tol: int = 10,
                               n_core_orbitals: int = 0, n_frozen_core: int = 0,
                               n_frozen_virtual: int = 0) -> None:
@@ -295,6 +301,7 @@ def generate_qchem_input_file(infile: str, method: str, basis: str, xyz: str,
         memory=memory,
         singlet_states=singlet_states,
         triplet_states=triplet_states,
+        sf_states=sf_states,
         n_guesses=nguess_singles,
         bohr=bohr,
         maxiter=maxiter,
@@ -327,6 +334,7 @@ mem_total                {memory}
 pe                       {pe}
 ee_singlets              {singlet_states}
 ee_triplets              {triplet_states}
+sf_states                {sf_states}
 input_bohr               {bohr}
 sym_ignore               true
 adc_davidson_maxiter     {maxiter}

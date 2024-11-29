@@ -30,6 +30,7 @@ def import_groundstate(context: h5py.File, dims_pref: str = "dims/") -> dict:
 
 
 def import_excited_states(context: h5py.File, method: AdcMethod,
+                          is_spin_flip: bool = False,
                           import_nstates: int = None, dims_pref: str = "dims/"
                           ) -> dict:
     """
@@ -42,6 +43,8 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
         The hdf5 file to import from.
     method: AdcMethod
         The adc method, e.g., adc2 or adc3
+    is_spin_flip: bool, optional
+        Indicates whether the calculation was a spin flip calculation.
     import_nstates: int, optional
         Only import the first n states from the context.
     dims_pref: str, optional
@@ -54,9 +57,11 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
         "pp": [
             ("singlets", True), ("triplets", True),  # restricted
             # uhf and spin flip are located in the same ".../uhf/..." subtree
-            ("any", False),  # unrestricted
+            ("any_or_spinflip", False),  # unrestricted
         ]
     }
+    # Of course the kinds have to have a slightly different name in adcc....
+    kind_map = {"singlets": "singlet", "triplets": "triplet"}
     method_name: str = method.name.replace("-", "_")  # cvs-adcn -> cvs_adcn
     if method_name.endswith("adc2"):  # adc2 -> adc2s
         method_name += "s"
@@ -70,7 +75,9 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
         )
         if states is None:  # no states of the given kind available
             continue
-        data[kind] = states
+        if kind == "any_or_spinflip":
+            kind = "spin_flip" if is_spin_flip else "any"
+        data[kind_map.get(kind, kind)] = states
     if not data:
         raise RuntimeError(f"Could not find any states for {method.name} in "
                            f"{context.filename}.")

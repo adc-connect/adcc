@@ -51,17 +51,17 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group) -> None:
     emplace_dict(gs_data, hdf5_file, compression="gzip")
 
 
-def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group) -> None:
+def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
+                        dump_nstates: int = None) -> None:
     """
-    Dump the excited states data to the given hdf5 file/group. The excited state
-    data is dumped into a kind (singlet, triplet, any, ...) subgroup.
+    Dump the excited states data to the given hdf5 file/group.
+    The number of states to dump can be given by dump_nstates. By default all states
+    are dumped.
     """
-    # TODO: add functionality to only import the first n states. In the original
-    # verion we had n_import_full: import all energies but only the first n
-    # statedms, tdms, ...
-    # TODO: add data for matrix tests (see original dump_reference_adcc.py)
     assert states.converged
     n_states = len(states.excitation_energy)
+    if dump_nstates is not None:
+        n_states = min(n_states, dump_nstates)
     dm_bb_a = []  # State diffdm AO basis alpha part
     dm_bb_b = []  # State diffdm AO basis beta part.
     tdm_bb_a = []  # Ground to Excited state tdm AO basis alpha part
@@ -108,10 +108,12 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group) -> None:
     if not states.method.is_core_valence_separated:
         for ifrom in range(n_states - 1):
             state2state = State2States(states, initial=ifrom)
-            # extract the tdms
+            # extract the tdms for the desired states
             tdm_bb_a = []
             tdm_bb_b = []
-            for tdm in state2state.transition_dm:
+            for j, tdm in enumerate(state2state.transition_dm):
+                if ifrom + j + 2 > n_states:  # ifrom + j + 2 = ito
+                    break
                 bb_a, bb_b = tdm.to_ao_basis(states.reference_state)
                 tdm_bb_a.append(bb_a.to_ndarray())
                 tdm_bb_b.append(bb_b.to_ndarray())
@@ -125,8 +127,7 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group) -> None:
                 np.asarray(tdm_bb_b)
             )
     # write the data to hdf5
-    kind_group = hdf5_file.create_group(states.kind)
-    emplace_dict(kind_data, kind_group, compression="gzip")
+    emplace_dict(kind_data, hdf5_file, compression="gzip")
 
 
 def dump_matrix_testdata(matrix: AdcMatrix, trial_vec: AmplitudeVector,
