@@ -96,7 +96,7 @@ def generate_groundstate(test_case: testcases.TestCase) -> None:
         method = AdcMethod(method)
         _, gs_data = run_qchem(
             test_case, method, case, import_states=False, import_gs=True,
-            n_singlets=1
+            n_states=1
         )
         # the data returned from run_qchem should already have been imported
         # such that the correct keys are used -> directly dump them.
@@ -112,17 +112,23 @@ def generate_ch2nh2():  # UHF, doublet
 
 
 def generate_cn():  # UHF, doublet
+    # cn_sto3g does not converge??
     cases = testcases.get(n_expected_cases=2, name="cn")
     for case in cases:
         generate_groundstate(case)
-        for method in _methods["pp"]:
-            generate_adc_all(case, AdcMethod(method), n_singlets=6)
+        # for method in _methods["pp"]:
+        #     # n_singlets (ee_singlets) is translated to ee_states in a unrestricted
+        #     # calculation
+        #     generate_adc_all(case, AdcMethod(method), n_singlets=5, dump_nstates=3)
 
 
 def generate_h2o():
     cases = testcases.get(n_expected_cases=2, name="h2o")
     for case in cases:
         generate_groundstate(case)
+        # for method in _methods["pp"]:
+        #     pass
+        #     # generate_adc_all(case, )
 
 
 def generate_h2s():
@@ -143,12 +149,12 @@ def generate_methox():
 
 def main():
     # TODO: decide which data to generate and how many states for which case
-    generate_ch2nh2()
-    generate_cn()
+    # generate_ch2nh2()
+    # generate_cn()
     generate_h2o()
-    generate_h2s()
-    generate_hf()
-    generate_methox()
+    # generate_h2s()
+    # generate_hf()
+    # generate_methox()
 
 
 if __name__ == "__main__":

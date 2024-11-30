@@ -1,7 +1,6 @@
 from pathlib import Path
 import numpy as np
 import struct
-import warnings
 import h5py
 
 
@@ -242,6 +241,4 @@ class QchemSavedir:
             fpath = self.savedir / f"{name}.0"
         else:
             raise ValueError(f"Unknown file type {file_type}.")
-        if fpath.exists():
-            warnings.warn(f"The file {fpath} already exists.")
         return fpath

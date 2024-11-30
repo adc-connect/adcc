@@ -34,7 +34,7 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
         hf, n_states=n_states, n_singlets=n_singlets, n_triplets=n_triplets,
         n_spin_flip=n_spin_flip
     )
-    if case in hdf5_file and kind in hdf5_file[case]:
+    if f"{case}/{kind}" in hdf5_file:
         return None
     print(f"Generating {method.name} data for {case} {test_case.file_name}.")
     # prepend cvs to the method if needed (otherwise we will get an error)
@@ -45,17 +45,15 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
         n_triplets=n_triplets, n_spin_flip=n_spin_flip
     )
     assert states.kind == kind  # maybe we predicted wrong?
-    if case not in hdf5_file:
+    if f"{case}/matrix" not in hdf5_file:
         # the matrix data is only dumped once for each case. I think it does not
         # make sense to dump the data once for a singlet and once for a triplet
-        # state.
-        hdf5_file.create_group(case)
-        matrix_group = hdf5_file[case].create_group("matrix")
-        # build the trial vector
+        # trial vector.
+        matrix_group = hdf5_file.create_group(f"{case}/matrix")
         trial_vec = adcc_copy(states.excitation_vector[0]).set_random()
         dump_matrix_testdata(states.matrix, trial_vec, matrix_group)
     # dump the excited states data
-    kind_group = hdf5_file[case].create_group(states.kind)
+    kind_group = hdf5_file.create_group(f"{case}/{states.kind}")
     dump_excited_states(states, kind_group)
 
 

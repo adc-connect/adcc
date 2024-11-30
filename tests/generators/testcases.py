@@ -166,46 +166,46 @@ def _init_test_cases() -> tuple[TestCase]:
         basis="sto-3g", core_orbitals=2, cases=ref_cases, only_full_mode=False
     ))
     # CN
-    ref_cases = ("gen", "cvs", "fc", "fv")
     xyz, unit = _xyz["cn"]
-    test_cases.append(TestCase(
-        name="cn", xyz=xyz, unit=unit, charge=0, multiplicity=2,
-        basis="cc-pvdz", core_orbitals=1, frozen_core=1, frozen_virtual=3,
-        cases=ref_cases, only_full_mode=True
-    ))
     ref_cases = ("gen", "cvs", "fc", "fv", "fv-cvs", "fc-fv")
     test_cases.append(TestCase(
         name="cn", xyz=xyz, unit=unit, charge=0, multiplicity=2,
         basis="sto-3g", core_orbitals=1, frozen_core=1, frozen_virtual=1,
         only_full_mode=False
     ))
-    # H2O
-    ref_cases = ("gen", "cvs")
-    xyz, unit = _xyz["h2o"]
+    ref_cases = ("gen", "cvs", "fc", "fv")
     test_cases.append(TestCase(
-        name="h2o", xyz=xyz, unit=unit, charge=0, multiplicity=1,
-        basis="def2-tzvp", core_orbitals=1, cases=ref_cases,
-        only_full_mode=True
+        name="cn", xyz=xyz, unit=unit, charge=0, multiplicity=2,
+        basis="cc-pvdz", core_orbitals=1, frozen_core=1, frozen_virtual=3,
+        cases=ref_cases, only_full_mode=True
     ))
+    # H2O
+    xyz, unit = _xyz["h2o"]
     ref_cases = ("gen", "cvs", "fc", "fv", "fv-cvs", "fc-fv")
     test_cases.append(TestCase(
         name="h2o", xyz=xyz, unit=unit, charge=0, multiplicity=1,
         basis="sto-3g", core_orbitals=1, frozen_core=1, frozen_virtual=1,
         cases=ref_cases, only_full_mode=False
     ))
-    # H2S
-    ref_cases = ("gen", "cvs", "fc", "fv", "fc-cvs", "fv-cvs", "fc-fv", "fc-fv-cvs")
-    xyz, unit = _xyz["h2s"]
+    ref_cases = ("gen", "cvs")
     test_cases.append(TestCase(
-        name="h2s", xyz=xyz, unit=unit, charge=0, multiplicity=1,
-        basis="6-311+g**", core_orbitals=1, frozen_core=1, frozen_virtual=3,
+        name="h2o", xyz=xyz, unit=unit, charge=0, multiplicity=1,
+        basis="def2-tzvp", core_orbitals=1, cases=ref_cases,
         only_full_mode=True
     ))
+    # H2S
+    xyz, unit = _xyz["h2s"]
     ref_cases = ("gen", "cvs", "fc", "fv", "fc-cvs", "fv-cvs", "fc-fv", "fc-fv-cvs")
     test_cases.append(TestCase(
         name="h2s", xyz=xyz, unit=unit, charge=0, multiplicity=1,
         basis="sto-3g", core_orbitals=1, frozen_core=1, frozen_virtual=1,
         cases=ref_cases, only_full_mode=False
+    ))
+    ref_cases = ("gen", "cvs", "fc", "fv", "fc-cvs", "fv-cvs", "fc-fv", "fc-fv-cvs")
+    test_cases.append(TestCase(
+        name="h2s", xyz=xyz, unit=unit, charge=0, multiplicity=1,
+        basis="6-311+g**", core_orbitals=1, frozen_core=1, frozen_virtual=3,
+        only_full_mode=True
     ))
     # HF
     ref_cases = ("gen", "fc", "fv")

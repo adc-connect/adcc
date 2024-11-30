@@ -24,7 +24,7 @@ _qchem_context_file = "context.hdf5"
 
 def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
               import_states: bool = True, import_gs: bool = False,
-              import_nstates: int = None,
+              import_nstates: int = None, n_states: int = 0,
               n_singlets: int = 0, n_triplets: int = 0, n_spin_flip: int = 0,
               ) -> tuple[dict | None, dict | None]:
     """
@@ -74,7 +74,11 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
         tmpdir = Path(tmpdir)
         savedir = tmpdir / "savedir"
         savedir.mkdir()
-        generate_qchem_savedir(pyscf_data=hdf5_file, savedir=savedir)
+        generate_qchem_savedir(
+            pyscf_data=hdf5_file, savedir=savedir,
+            core_orbitals=n_core_orbitals,
+            frozen_core=n_frozen_core, frozen_virtual=n_frozen_virtual
+        )
         # extrac the relevant data from the pyscf data and write the qchem infile
         _, basis_def = _extract_dataset(hdf5_file["qchem_formatted_basis"])
         _, xyz = _extract_dataset(hdf5_file["xyz"])
@@ -89,7 +93,7 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
             xyz=xyz, bohr=bohr, charge=test_case.charge,
             multiplicity=test_case.multiplicity,
             n_core_orbitals=n_core_orbitals, n_frozen_core=n_frozen_core,
-            n_frozen_virtual=n_frozen_virtual, potfile=None,
+            n_frozen_virtual=n_frozen_virtual, potfile=None, any_states=n_states,
             singlet_states=n_singlets, triplet_states=n_triplets,
             sf_states=n_spin_flip,
         )
@@ -112,7 +116,8 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
         except NotConvergedError as e:
             # one of the states is not converged
             # copy the output file to the working directory and abort.
-            shutil.copy(tmpdir / outfile, Path.cwd())
+            if (tmpdir / outfile).exists():
+                shutil.copy(tmpdir / outfile, Path.cwd())
             raise e
         # import the ground state data as flat dict
         gs_data = None
@@ -135,7 +140,9 @@ def open_pyscf_result(test_case: testcases.TestCase) -> h5py.File:
     return h5py.File(hdf5_file, "r")
 
 
-def generate_qchem_savedir(pyscf_data: h5py.File, savedir: str) -> None:
+def generate_qchem_savedir(pyscf_data: h5py.File, savedir: str,
+                           core_orbitals: int = None, frozen_core: int = None,
+                           frozen_virtual: int = None) -> None:
     """
     Writes the pyscf SCF result in the given savedir folder.
     """
@@ -146,7 +153,10 @@ def generate_qchem_savedir(pyscf_data: h5py.File, savedir: str) -> None:
     _, orb_energies = _extract_dataset(pyscf_data["orben_f"])
     # compute the density in the ao basis
     ao_density_aa, ao_density_bb = compute_ao_density(pyscf_data)
-    eri_blocks = build_antisym_eri(pyscf_data)
+    eri_blocks = build_antisym_eri(
+        pyscf_data, core_orbitals=core_orbitals, frozen_core=frozen_core,
+        frozen_virtual=frozen_virtual
+    )
     ao_integrals = collect_ao_integrals(pyscf_data)
     purecart = determine_purecart(pyscf_data)
     savedir_writer.write(
@@ -157,13 +167,19 @@ def generate_qchem_savedir(pyscf_data: h5py.File, savedir: str) -> None:
     )
 
 
-def build_antisym_eri(pyscf_data: h5py.File) -> dict[str, np.ndarray]:
+def build_antisym_eri(pyscf_data: h5py.File, core_orbitals: int = None,
+                      frozen_core: int = None, frozen_virtual: int = None
+                      ) -> dict[str, np.ndarray]:
     """
     Builds all anti-symmetric ERI blocks (MO basis) from the pyscf data.
     Returned using keys like "ooov" or "ococ".
     """
     ret = {}
-    refstate = ReferenceState(pyscf_data)
+    print(f"{core_orbitals=} {frozen_core=} {frozen_virtual=}")
+    refstate = ReferenceState(
+        pyscf_data, core_orbitals=core_orbitals, frozen_core=frozen_core,
+        frozen_virtual=frozen_virtual
+    )
     for block in itertools.product("ocv", repeat=4):
         block = "".join(block)
         if not is_canonical_eri_block(block):
@@ -254,15 +270,17 @@ def execute_qchem(infile: str, outfile: str, savedir: str, workdir: str) -> None
     # set the QCSCRATCH environment variable for the command
     env = os.environ.copy()
     env["QCSCRATCH"] = workdir
+    assert (Path(savedir) / "integrals.hdf5").exists()
     # check_returncode raises an error if the return code is not zero.
     code = subprocess.run(
         ["qchem", infile, outfile, savedir], env=env
     ).returncode
     # qchem did not terminate normal -> copy the outputfile to the working directory
     if code:
-        shutil.copy(outfile, cwd)
-        raise RuntimeError("Qchem calculation did finish with return code != 0."
-                           "Copied outputfile to the working directory.")
+        if Path(outfile).exists():
+            shutil.copy(outfile, cwd)
+        raise RuntimeError("Qchem calculation did finish with return code != 0. "
+                           "Tried to copy the outputfile to the working directory.")
     # revert back to the original workdir
     os.chdir(cwd)
 
@@ -275,7 +293,7 @@ def generate_qchem_input_file(infile: str, method: str, basis: str, xyz: str,
                               charge: int, multiplicity: int,
                               basis_definition: str = None, purecart: int = None,
                               potfile: str = None, memory: int = 10000,  # in mb
-                              bohr: bool = True,
+                              bohr: bool = True, any_states: int = 0,
                               singlet_states: int = 0, triplet_states: int = 0,
                               sf_states: int = 0,
                               maxiter: int = 160, conv_tol: int = 10,
@@ -299,6 +317,7 @@ def generate_qchem_input_file(infile: str, method: str, basis: str, xyz: str,
         method=_method_dict[method],
         basis=basis,
         memory=memory,
+        any_states=any_states,
         singlet_states=singlet_states,
         triplet_states=triplet_states,
         sf_states=sf_states,
@@ -332,6 +351,7 @@ method                   {method}
 basis                    {basis}
 mem_total                {memory}
 pe                       {pe}
+ee_states                {any_states}
 ee_singlets              {singlet_states}
 ee_triplets              {triplet_states}
 sf_states                {sf_states}
@@ -343,9 +363,9 @@ adc_nguess_singles       {n_guesses}
 adc_davidson_maxsubspace {max_ss}
 adc_prop_es              true
 cc_rest_occ              {cc_rest_occ}
-n_frozen_core            {n_frozen_core}
-n_frozen_virtual         {n_frozen_virtual}
-adc_print                3
+cc_frzn_core             {n_frozen_core}
+cc_frzn_virt             {n_frozen_virtual}
+adc_print                6
 adc_export_test_data     42  ! exports the full context to context.hdf5 +
                              ! reads integrals from integrals.hdf5
 
