@@ -62,6 +62,7 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
     }
     # Of course the kinds have to have a slightly different name in adcc....
     kind_map = {"singlets": "singlet", "triplets": "triplet"}
+    # also the adcc methods have to be translated
     method_name: str = method.name.replace("-", "_")  # cvs-adcn -> cvs_adcn
     if method_name.endswith("adc2"):  # adc2 -> adc2s
         method_name += "s"
@@ -205,17 +206,18 @@ _excited_state_data = {
         # diff dm in the AO basis
         "opdm/dm_bb_a": "state_diffdm_bb_a",
         "opdm/dm_bb_b": "state_diffdm_bb_b",
-        # transition dm in the AO basis
-        "optdm/dm_bb_a": "ground_to_excited_tdm_bb_a",
-        "optdm/dm_bb_b": "ground_to_excited_tdm_bb_b",
         # excited state dipole moment (vector)
         "prop/dipole": "state_dipole_moments",
-        # transition dipole moment (vector)
-        "tprop/dipole": "transition_dipole_moments",
         # the singles part of the amplitude vector
         "u1": "eigenvectors_singles"
     },
     "optional": {
+        # transition dm in the AO basis:
+        # not computed for Singlet -> Triplet excitations
+        "optdm/dm_bb_a": "ground_to_excited_tdm_bb_a",
+        "optdm/dm_bb_b": "ground_to_excited_tdm_bb_b",
+        # transition dipole moment (vector): only when we have a optdm
+        "tprop/dipole": "transition_dipole_moments",
         # doubles and triples part of the amplitude vector
         "u2": "eigenvectors_doubles",
         "u3": "eigenvectors_triples"

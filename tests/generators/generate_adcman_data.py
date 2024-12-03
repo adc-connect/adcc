@@ -24,7 +24,8 @@ _gs_data_method = "adc3"
 
 def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
                  n_singlets: int = 0, n_triplets: int = 0,
-                 n_spin_flip: int = 0, dump_nstates: int = None) -> None:
+                 n_spin_flip: int = 0, n_states: int = 0,
+                 dump_nstates: int = None) -> None:
     """
     Generate and dump the excited state reference data for the given reference case
     of the given test case if the data doesn't exist already.
@@ -40,7 +41,7 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     if case in hdf5_file:
         return None
     # skip cvs-adc(0), since it is not available in qchem.
-    if case == "cvs" and method.level == 0:
+    if "cvs" in case and method.level == 0:
         return None
     print(f"Generating {method.name} data for {case} {test_case.file_name}.")
     # add a cvs prefix to the method if necessary
@@ -49,7 +50,7 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     state_data, _ = run_qchem(
         test_case, method, case, import_states=True, import_gs=False,
         n_singlets=n_singlets, n_triplets=n_triplets, n_spin_flip=n_spin_flip,
-        import_nstates=dump_nstates
+        n_states=n_states, import_nstates=dump_nstates
     )
     # the data returned from run_qchem should have already been imported
     # using the correct keys -> just dump them
@@ -59,7 +60,8 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
 
 def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
                      n_singlets: int = 0, n_triplets: int = 0,
-                     n_spin_flip: int = 0, dump_nstates: int = None,
+                     n_spin_flip: int = 0, n_states: int = 0,
+                     dump_nstates: int = None,
                      states_per_case: dict[str, dict[str, int]] = None) -> None:
     """
     Generate and dump the excited state reference data for all relevant
@@ -71,9 +73,10 @@ def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
             n_singlets = states_per_case[case].get("n_singlets", 0)
             n_triplets = states_per_case[case].get("n_triplets", 0)
             n_spin_flip = states_per_case[case].get("n_spin_flip", 0)
+            n_states = states_per_case[case].get("n_states", 0)
         generate_adc(
             test_case, method, case, n_singlets=n_singlets, n_triplets=n_triplets,
-            n_spin_flip=n_spin_flip, dump_nstates=dump_nstates
+            n_spin_flip=n_spin_flip, n_states=n_states, dump_nstates=dump_nstates
         )
 
 
@@ -104,57 +107,49 @@ def generate_groundstate(test_case: testcases.TestCase) -> None:
         emplace_dict(gs_data, case_group, compression="gzip")
 
 
-def generate_ch2nh2():  # UHF, doublet
-    case = testcases.get(n_expected_cases=1, name="ch2nh2").pop()
-    generate_groundstate(case)
+def generate_h2o_sto3g():
+    # RHF, Singlet
+    states = {
+        "adc1": {
+            # we only have 1 core and 1 virtual orbital
+            # only define for adc1, because we skip adc0 cvs calculations
+            # (they are not implented in adcman)
+            "fv-cvs": {"n_singlets": 1, "n_triplets": 1}
+        }
+    }
+    test_case = testcases.get(n_expected_cases=1, name="h2o", basis="sto-3g").pop()
+    generate_groundstate(test_case)
     for method in _methods["pp"]:
-        generate_adc_all(case, AdcMethod(method), n_singlets=3)
+        generate_adc_all(
+            test_case, method=AdcMethod(method), n_singlets=3, n_triplets=3,
+            dump_nstates=2, states_per_case=states.get(method, None)
+        )
 
 
-def generate_cn():  # UHF, doublet
-    # cn_sto3g does not converge??
-    cases = testcases.get(n_expected_cases=2, name="cn")
-    for case in cases:
-        generate_groundstate(case)
-        # for method in _methods["pp"]:
-        #     # n_singlets (ee_singlets) is translated to ee_states in a unrestricted
-        #     # calculation
-        #     generate_adc_all(case, AdcMethod(method), n_singlets=5, dump_nstates=3)
+def generate_cn_sto3g():
+    # UHF, Doublet
+    test_case = testcases.get(n_expected_cases=1, name="cn", basis="sto-3g").pop()
+    generate_groundstate(test_case)
+    for method in _methods["pp"]:
+        generate_adc_all(
+            test_case, method=AdcMethod(method), n_states=3, dump_nstates=2
+        )
 
 
-def generate_h2o():
-    cases = testcases.get(n_expected_cases=2, name="h2o")
-    for case in cases:
-        generate_groundstate(case)
-        # for method in _methods["pp"]:
-        #     pass
-        #     # generate_adc_all(case, )
-
-
-def generate_h2s():
-    cases = testcases.get(n_expected_cases=2, name="h2s")
-    for case in cases:
-        generate_groundstate(case)
-
-
-def generate_hf():
-    case = testcases.get(n_expected_cases=1, name="hf").pop()
-    generate_groundstate(case)
-
-
-def generate_methox():
-    case = testcases.get(n_expected_cases=1, name="r2methyloxirane").pop()
-    generate_groundstate(case)
+def generate_hf_631g():
+    # UHF, Triplet
+    test_case = testcases.get(n_expected_cases=1, name="hf").pop()
+    generate_groundstate(test_case)
+    for method in _methods["pp"]:
+        generate_adc_all(
+            test_case, method=AdcMethod(method), n_spin_flip=3, dump_nstates=2
+        )
 
 
 def main():
-    # TODO: decide which data to generate and how many states for which case
-    # generate_ch2nh2()
-    # generate_cn()
-    generate_h2o()
-    # generate_h2s()
-    # generate_hf()
-    # generate_methox()
+    generate_h2o_sto3g()
+    generate_cn_sto3g()
+    generate_hf_631g()
 
 
 if __name__ == "__main__":

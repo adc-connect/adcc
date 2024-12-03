@@ -6,6 +6,8 @@ from pyscf import gto, scf
 from pathlib import Path
 import numpy as np
 import h5py
+import os
+import tempfile
 
 
 _testdata_dirname = "data"
@@ -24,24 +26,28 @@ def run_pyscf(test_case: testcases.TestCase, restricted: bool, frac_occ: bool):
     """
     Runs the pyscf calculation for the given testcase.
     """
-    # Run SCF in pyscf and converge super-tight using an EDIIS
-    mol = gto.M(
-        atom=test_case.xyz,
-        basis=test_case.basis,
-        unit=test_case.unit,
-        spin=test_case.multiplicity - 1,  # =2S
-        verbose=0
-    )
-    mf = scf.RHF(mol) if restricted else scf.UHF(mol)
-    mf.diis = scf.EDIIS()
-    mf.conv_tol = 1e-14
-    mf.conv_tol_grad = 1e-12
-    mf.diis_space = 6
-    mf.max_cycle = 600
-    if frac_occ:
-        mf = scf.addons.frac_occ(mf)
-    mf.kernel()
-    assert mf.converged  # ensure that the SCF is converged
+    # create a temporary directory for the temporary pyscf files:
+    # on a cluster the /tmp folder might not be cleaned as often.
+    with tempfile.TemporaryDirectory(dir=Path.cwd()) as tmpdir:
+        os.environ["PYSCF_TMPDIR"] = tmpdir
+        # Run SCF in pyscf and converge super-tight using an EDIIS
+        mol = gto.M(
+            atom=test_case.xyz,
+            basis=test_case.basis,
+            unit=test_case.unit,
+            spin=test_case.multiplicity - 1,  # =2S
+            verbose=0
+        )
+        mf = scf.RHF(mol) if restricted else scf.UHF(mol)
+        mf.diis = scf.EDIIS()
+        mf.conv_tol = 1e-14
+        mf.conv_tol_grad = 1e-12
+        mf.diis_space = 6
+        mf.max_cycle = 600
+        if frac_occ:
+            mf = scf.addons.frac_occ(mf)
+        mf.kernel()
+        assert mf.converged  # ensure that the SCF is converged
     return mf
 
 

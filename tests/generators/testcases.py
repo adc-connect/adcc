@@ -2,20 +2,6 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 
 
-_basis_to_fname = {
-    "sto-3g": "sto3g",
-    "cc-pvdz": "ccpvdz",
-    "def2-tzvp": "def2tzvp",
-    "6-311+g**": "6311g",
-    "6-31g": "631g"
-}
-
-_molname_to_fname = {
-    "hf": "hf3",
-    "r2methyloxirane": "methox"
-}
-
-
 @dataclass(frozen=True, slots=True)
 class TestCase:
     name: str
@@ -36,10 +22,9 @@ class TestCase:
     @property
     def file_name(self) -> str:
         """Builds a file name based on name and basis."""
-        name = self.name
-        if name in _molname_to_fname:
-            name = _molname_to_fname[self.name]
-        return f"{name}_{_basis_to_fname[self.basis]}"
+        # asterisk is "problematic"
+        basis = self.basis.replace("-", "").replace("*", "")
+        return f"{self.name}_{basis}"
 
     @property
     def hfdata_file_name(self) -> str:
@@ -171,7 +156,7 @@ def _init_test_cases() -> tuple[TestCase]:
     test_cases.append(TestCase(
         name="cn", xyz=xyz, unit=unit, charge=0, multiplicity=2,
         basis="sto-3g", core_orbitals=1, frozen_core=1, frozen_virtual=1,
-        only_full_mode=False
+        cases=ref_cases, only_full_mode=False
     ))
     ref_cases = ("gen", "cvs", "fc", "fv")
     test_cases.append(TestCase(
@@ -205,7 +190,7 @@ def _init_test_cases() -> tuple[TestCase]:
     test_cases.append(TestCase(
         name="h2s", xyz=xyz, unit=unit, charge=0, multiplicity=1,
         basis="6-311+g**", core_orbitals=1, frozen_core=1, frozen_virtual=3,
-        only_full_mode=True
+        cases=ref_cases, only_full_mode=True
     ))
     # HF
     ref_cases = ("gen", "fc", "fv")

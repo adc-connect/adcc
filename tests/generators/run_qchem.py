@@ -65,11 +65,9 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
     n_frozen_virtual = test_case.frozen_virtual if "fv" in case else 0
     # load the pyscf result from the hdf5 file
     hdf5_file = open_pyscf_result(test_case)
-    # TODO: switch delete to True once everything works
-    # create a temporary directoy in the generators folder for the qchem calculation
+    # create a temporary directoy for the qchem calculation
     with tempfile.TemporaryDirectory(prefix=test_case.file_name,
-                                     dir=Path(__file__).parent,
-                                     delete=False) as tmpdir:
+                                     dir=Path.cwd()) as tmpdir:
         # create the savedir in the temporary dir
         tmpdir = Path(tmpdir)
         savedir = tmpdir / "savedir"
@@ -86,7 +84,7 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
         bohr = xyz_unit.lower() == "bohr"
         purecart = determine_purecart(hdf5_file)
         infile = tmpdir / f"{test_case.file_name}_{method.name}.in"
-        outfile = f"{test_case.file_name}_{method.name}.out"
+        outfile = tmpdir / f"{test_case.file_name}_{method.name}.out"
         generate_qchem_input_file(
             infile=infile, method=method.name,
             basis=test_case.basis, basis_definition=basis_def, purecart=purecart,
@@ -98,31 +96,34 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
             sf_states=n_spin_flip,
         )
         # call qchem and wait for completion
-        execute_qchem(infile.name, outfile, savedir.name, tmpdir.resolve())
+        execute_qchem(infile.name, outfile.name, savedir.name, tmpdir.resolve())
         # after the calculation we should have the context file in the tmpdir
         context_file = tmpdir / _qchem_context_file
         if not context_file.exists():
             raise FileNotFoundError(f"Expected the qchem data in {context_file} "
                                     "after the qchem calculation.")
         context_file = h5py.File(context_file, "r")
-        try:
-            # import the excited state data as nested dict {kind: {prop: list}}
-            states = None
-            if import_states:
+        # import the excited state data as nested dict {kind: {prop: list}}
+        states = None
+        if import_states:
+            try:
                 states = import_excited_states(
                     context_file, method=method, is_spin_flip=bool(n_spin_flip),
                     import_nstates=import_nstates
                 )
-        except NotConvergedError as e:
-            # one of the states is not converged
-            # copy the output file to the working directory and abort.
-            if (tmpdir / outfile).exists():
-                shutil.copy(tmpdir / outfile, Path.cwd())
-            raise e
+            except NotConvergedError as e:
+                # one of the states is not converged
+                # copy the output file to the working directory and abort.
+                if outfile.exists():
+                    shutil.copy(outfile, Path.cwd())
+                raise e
         # import the ground state data as flat dict
         gs_data = None
         if import_gs:
             gs_data = import_groundstate(context_file)
+        # don't forget to close the file. Otherwise the tmpdir won't be able
+        # to delete itself
+        context_file.close()
     return states, gs_data
 
 
@@ -175,7 +176,6 @@ def build_antisym_eri(pyscf_data: h5py.File, core_orbitals: int = None,
     Returned using keys like "ooov" or "ococ".
     """
     ret = {}
-    print(f"{core_orbitals=} {frozen_core=} {frozen_virtual=}")
     refstate = ReferenceState(
         pyscf_data, core_orbitals=core_orbitals, frozen_core=frozen_core,
         frozen_virtual=frozen_virtual
@@ -262,7 +262,7 @@ def execute_qchem(infile: str, outfile: str, savedir: str, workdir: str) -> None
     savedir: str
         Name of the directory that contains the SCF result to read in.
     workdir: str
-        Directory in which infile, oufile and savedir are located.
+        Directory in which infile, oufile and savedir are/will be located.
     """
     # modify the current working directory to workdir
     cwd = Path.cwd().resolve()
