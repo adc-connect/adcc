@@ -74,7 +74,7 @@ class TestCase:
     def validate_cases(self):
         """
         Validates the set cases by checking that the cases are valid and ensuring
-        that required data is set, e.g., that n_core_orbitals is defined for cvs.
+        that required data is set, e.g., that core_orbitals is defined for cvs.
         """
         requirements = {"cvs": "core_orbitals",
                         "fc": "frozen_core",

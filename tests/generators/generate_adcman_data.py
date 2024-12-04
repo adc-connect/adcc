@@ -108,12 +108,14 @@ def generate_groundstate(test_case: testcases.TestCase) -> None:
 
 
 def generate_h2o_sto3g():
-    # RHF, Singlet
+    # RHF, Singlet, 7 basis functions: 5 occ, 2 virt.
     states = {
+        # only define for adc1, because we skip adc0 cvs calculations
+        # (they are not implented in adcman)
         "adc1": {
-            # we only have 1 core and 1 virtual orbital
-            # only define for adc1, because we skip adc0 cvs calculations
-            # (they are not implented in adcman)
+            # 1 core and 2 virtual orbitals
+            "cvs": {"n_singlets": 2, "n_triplets": 2},
+            # 1 core and 1 virtual orbital
             "fv-cvs": {"n_singlets": 1, "n_triplets": 1}
         }
     }
@@ -127,7 +129,7 @@ def generate_h2o_sto3g():
 
 
 def generate_cn_sto3g():
-    # UHF, Doublet
+    # UHF, Doublet, 10 basis functions: (7a, 6b) occ, (3a, 4b) virt
     test_case = testcases.get(n_expected_cases=1, name="cn", basis="sto-3g").pop()
     generate_groundstate(test_case)
     for method in _methods["pp"]:

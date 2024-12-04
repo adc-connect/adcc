@@ -85,15 +85,17 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
             )
     kind_data = {}
     # eigenvalues
-    kind_data["eigenvalues"] = states.excitation_energy
+    kind_data["eigenvalues"] = states.excitation_energy[:n_states]
     # state and transition dipole moments
-    kind_data["state_dipole_moments"] = states.state_dipole_moment
-    kind_data["transition_dipole_moments"] = states.transition_dipole_moment
+    kind_data["state_dipole_moments"] = states.state_dipole_moment[:n_states]
+    kind_data["transition_dipole_moments"] = (
+        states.transition_dipole_moment[:n_states]
+    )
     kind_data["transition_dipole_moments_velocity"] = (
-        states.transition_dipole_moment_velocity
+        states.transition_dipole_moment_velocity[:n_states]
     )
     kind_data["transition_magnetic_dipole_moments"] = (
-        states.transition_magnetic_dipole_moment
+        states.transition_magnetic_dipole_moment[:n_states]
     )
     # state diffdm and ground to excited state tdm
     kind_data["state_diffdm_bb_a"] = np.asarray(dm_bb_a)
@@ -118,7 +120,7 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
                 tdm_bb_a.append(bb_a.to_ndarray())
                 tdm_bb_b.append(bb_b.to_ndarray())
             kind_data[f"state_to_state/from_{ifrom}/transition_dipole_moments"] = (
-                state2state.transition_dipole_moment
+                state2state.transition_dipole_moment[:n_states - ifrom - 1]
             )
             kind_data[f"state_to_state/from_{ifrom}/state_to_excited_tdm_bb_a"] = (
                 np.asarray(tdm_bb_a)
@@ -140,6 +142,7 @@ def dump_matrix_testdata(matrix: AdcMatrix, trial_vec: AmplitudeVector,
     singles_singles = f"{blocks[0]}_{blocks[0]}"
     data = {}
     # compute the MVP for individual blocks of the secular matrix.
+    assert blocks[0] in trial_vec
     data["result_ss"] = matrix.block_apply(
         singles_singles, trial_vec[blocks[0]]
     ).to_ndarray()
@@ -148,15 +151,15 @@ def dump_matrix_testdata(matrix: AdcMatrix, trial_vec: AmplitudeVector,
         singles_doubles = f"{blocks[0]}_{blocks[1]}"
         data["result_sd"] = matrix.block_apply(
             singles_doubles, trial_vec[blocks[1]]
-        )[blocks[0]].to_ndarray()
+        ).to_ndarray()
         doubles_singles = f"{blocks[1]}_{blocks[0]}"
         data["result_ds"] = matrix.block_apply(
             doubles_singles, trial_vec[blocks[0]]
-        )[blocks[1]].to_ndarray()
+        ).to_ndarray()
         doubles_doubles = f"{blocks[1]}_{blocks[1]}"
         data["result_dd"] = matrix.block_apply(
             doubles_doubles, trial_vec[blocks[1]]
-        )[blocks[1]].to_ndarray()
+        ).to_ndarray()
     # compute the full mvp
     matvec = matrix.matvec(trial_vec)
     data["matvec_singles"] = matvec[blocks[0]].to_ndarray()

@@ -13,15 +13,21 @@ import h5py
 
 _testdata_dirname = "data"
 
+# the base methods for each adc_type for which to generate data
+# the different cases (cvs, fc, ...) are handled in the generate functions.
+_methods = {
+    "pp": ("adc0", "adc1", "adc2", "adc2x", "adc3")
+}
+
 
 def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
                  n_states: int = None, n_singlets: int = None,
-                 n_triplets: int = None, n_spin_flip: int = None) -> None:
+                 n_triplets: int = None, n_spin_flip: int = None,
+                 dump_nstates: int = None) -> None:
     """
     Generate and dump the excited states reference data for the given reference case
     of the given test case if the data is not available already.
     """
-    # TODO: only import the first n excited states
     datadir = Path(__file__).parent.parent / _testdata_dirname
     datafile = datadir / test_case.adcdata_file_name("adcc", method.name)
     hdf5_file = h5py.File(datafile, "a")  # Read/write if exists, create otherwise
@@ -54,12 +60,13 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
         dump_matrix_testdata(states.matrix, trial_vec, matrix_group)
     # dump the excited states data
     kind_group = hdf5_file.create_group(f"{case}/{states.kind}")
-    dump_excited_states(states, kind_group)
+    dump_excited_states(states, kind_group, dump_nstates=dump_nstates)
 
 
 def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
                      n_states: int = None, n_singlets: int = None,
                      n_triplets: int = None, n_spin_flip: int = None,
+                     dump_nstates: int = None,
                      states_per_case: dict[str, dict[str, int]] = None) -> None:
     """
     Generate and dump the excited states reference data for all reference cases
@@ -67,12 +74,14 @@ def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
     """
     for case in test_case.filter_cases(method.adc_type):
         if states_per_case is not None and case in states_per_case:
-            n_singlets = states_per_case[case].get("n_singlets", 0)
-            n_triplets = states_per_case[case].get("n_triplets", 0)
-            n_spin_flip = states_per_case[case].get("n_spin_flip", 0)
+            n_states = states_per_case[case].get("n_states", None)
+            n_singlets = states_per_case[case].get("n_singlets", None)
+            n_triplets = states_per_case[case].get("n_triplets", None)
+            n_spin_flip = states_per_case[case].get("n_spin_flip", None)
         generate_adc(
             test_case, method, case, n_states=n_states, n_singlets=n_singlets,
-            n_triplets=n_triplets, n_spin_flip=n_spin_flip
+            n_triplets=n_triplets, n_spin_flip=n_spin_flip,
+            dump_nstates=dump_nstates
         )
 
 
@@ -92,16 +101,58 @@ def generate_groundstate(test_case: testcases.TestCase) -> None:
         dump_groundstate(mp, case_group)
 
 
-def generate_h2o():
-    cases = testcases.get(n_expected_cases=2, name="h2o")
-    for case in cases:
-        generate_groundstate(case)
-        generate_adc_all(case, method=AdcMethod("adc1"), n_singlets=5)
-        generate_adc_all(case, method=AdcMethod("adc1"), n_triplets=5)
+def generate_h2o_sto3g():
+    # RHF, Singlet, 7 basis functions: 5 occ, 2 virt.
+    states = {
+        "adc0": [
+            # fv-cvs: 1 core and 1 virtual orbital
+            # cvs: 1 core orbital and 2 virtual orbitals
+            {"fv-cvs": {"n_singlets": 1}, "cvs": {"n_singlets": 2}},
+            {"fv-cvs": {"n_triplets": 1}, "cvs": {"n_triplets": 2}}
+        ],
+        "adc1": [
+            {"fv-cvs": {"n_singlets": 1}, "cvs": {"n_singlets": 2}},
+            {"fv-cvs": {"n_triplets": 1}, "cvs": {"n_triplets": 2}}
+        ]
+    }
+    test_case = testcases.get(n_expected_cases=1, name="h2o", basis="sto-3g").pop()
+    generate_groundstate(test_case)
+    for method in _methods["pp"]:
+        singlet, triplet = states.get(method, (None, None))
+        generate_adc_all(
+            test_case, method=AdcMethod(method), n_singlets=3, dump_nstates=2,
+            states_per_case=singlet
+        )
+        generate_adc_all(
+            test_case, method=AdcMethod(method), n_triplets=3, dump_nstates=2,
+            states_per_case=triplet
+        )
+
+
+def generate_cn_sto3g():
+    # UHF, Doublet, 10 basis functions: (7a, 6b) occ, (3a, 4b) virt
+    test_case = testcases.get(n_expected_cases=1, name="cn", basis="sto-3g").pop()
+    generate_groundstate(test_case)
+    for method in _methods["pp"]:
+        generate_adc_all(
+            test_case, method=AdcMethod(method), n_states=3, dump_nstates=2
+        )
+
+
+def generate_hf_631g():
+    # UHF, Triplet
+    test_case = testcases.get(n_expected_cases=1, name="hf").pop()
+    generate_groundstate(test_case)
+    for method in _methods["pp"]:
+        generate_adc_all(
+            test_case, method=AdcMethod(method), n_spin_flip=3, dump_nstates=2
+        )
 
 
 def main():
-    generate_h2o()
+    generate_h2o_sto3g()
+    generate_cn_sto3g()
+    generate_hf_631g()
 
 
 if __name__ == "__main__":

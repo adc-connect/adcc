@@ -29,6 +29,7 @@ def run_pyscf(test_case: testcases.TestCase, restricted: bool, frac_occ: bool):
     # create a temporary directory for the temporary pyscf files:
     # on a cluster the /tmp folder might not be cleaned as often.
     with tempfile.TemporaryDirectory(dir=Path.cwd()) as tmpdir:
+        old_tmpdir = os.environ.get("PYSCF_TMPDIR", None)
         os.environ["PYSCF_TMPDIR"] = tmpdir
         # Run SCF in pyscf and converge super-tight using an EDIIS
         mol = gto.M(
@@ -47,6 +48,11 @@ def run_pyscf(test_case: testcases.TestCase, restricted: bool, frac_occ: bool):
         if frac_occ:
             mf = scf.addons.frac_occ(mf)
         mf.kernel()
+        # restore the original state of the env variable
+        if old_tmpdir is None:
+            del os.environ["PYSCF_TMPDIR"]
+        else:
+            os.environ["PYSCF_TMPDIR"] = old_tmpdir
         assert mf.converged  # ensure that the SCF is converged
     return mf
 
