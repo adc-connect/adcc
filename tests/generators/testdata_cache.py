@@ -24,8 +24,23 @@ class TestdataCache:
         return hdf5io.load(fname)
 
     @cached_member_function
-    def refstate(self, test_case: testcases.TestCase, case: str) -> ReferenceState:
-        """Build the adcc.ReferenceState for the given test case"""
+    def refstate(self, test_case: str, case: str) -> ReferenceState:
+        """
+        Build the adcc.ReferenceState.
+
+        Parameters
+        ----------
+        test_case: str
+            File name of the test case, e.g., "h2o_sto3g". It is also possible
+            to pass the TestCase directly.
+        case: str
+            The reference case for which to construct the ReferenceState, e.g.,
+            "gen" for generic or "fv-cvs" for a frozen virtual, core valence
+            separated reference state.
+        """
+        if isinstance(test_case, str):
+            test_case = testcases.get_by_filename(test_case).pop()
+        assert isinstance(test_case, testcases.TestCase)
         # ensure that the case is valid for the testcase
         assert case in test_case.cases
         # load the pyscf hf data and initialize a ReferenceState depending

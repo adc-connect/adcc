@@ -248,3 +248,19 @@ def get(n_expected_cases: int = None, **kwargs: str) -> list[TestCase]:
                          f"{kwargs}. Found {len(ret)} cases. Maybe a case was "
                          "added or removed.")
     return ret
+
+
+def get_by_filename(*args: str) -> list[TestCase]:
+    """
+    Obtain test cases according to their filename. At the moment the
+    file name for a test case is build from the molecule name and the basis set,
+    e.g., "h2o_sto3g". The function assumes to find 1 test case per file name.
+    """
+    ret = []
+    for case in available:
+        if case.file_name in args:
+            ret.append(case)
+    if len(args) != len(ret):
+        raise ValueError(f"Found {len(ret)} test cases for {len(args)} filenames. "
+                         "Expected to find 1 test case per file name.")
+    return ret
