@@ -42,7 +42,8 @@ class IsrMatrix(AdcMatrixlike):
         "adc3":  dict(ph_ph=3, ph_pphh=2,    pphh_ph=2,    pphh_pphh=1),     # noqa: E501
     }
 
-    def __init__(self, method, hf_or_mp, operator, block_orders=None):
+    def __init__(self, method, hf_or_mp, operator, block_orders=None,
+                 gs_density_order=None):
         """
         Initialise an ISR matrix of a given one-particle operator
         for the provided ADC method.
@@ -59,10 +60,15 @@ class IsrMatrix(AdcMatrixlike):
         block_orders : optional
             The order of perturbation theory to employ for each matrix block.
             If not set, defaults according to the selected ADC method are chosen.
+        gs_density_order: int or str
+            The order of ground state density to use, e.g., 3 to upgrade the MP2
+            density to the MP3 density in an ISR(2) calculation or
+            "sigma4+" for the iterated sigma4+ density.
+            Note that currently only upgrades of the density are supported.
         """
         if isinstance(hf_or_mp, (libadcc.ReferenceState,
                                  libadcc.HartreeFockSolution_i)):
-            hf_or_mp = LazyMp(hf_or_mp)
+            hf_or_mp = LazyMp(hf_or_mp, density_order=gs_density_order)
         if not isinstance(hf_or_mp, LazyMp):
             raise TypeError("hf_or_mp is not a valid object. It needs to be "
                             "either a LazyMp, a ReferenceState or a "

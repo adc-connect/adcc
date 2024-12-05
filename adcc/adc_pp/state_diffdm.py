@@ -45,13 +45,13 @@ def diffdm_adc0(mp, amplitude, intermediates):
     return dm
 
 
-def diffdm_adc2(mp, amplitude, intermediates):
+def diffdm_adc2(mp: LazyMp, amplitude, intermediates):
     dm = diffdm_adc0(mp, amplitude, intermediates)  # Get ADC(1) result
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
     u1, u2 = amplitude.ph, amplitude.pphh
 
     t2 = mp.t2(b.oovv)
-    p0 = mp.mp2_diffdm
+    p0 = mp.diffdm(2, strict=False)  # potentially upgrade the MP2 diffdm
     p1_oo = dm.oo.evaluate()  # ADC(1) diffdm
     p1_vv = dm.vv.evaluate()  # ADC(1) diffdm
 

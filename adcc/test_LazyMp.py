@@ -194,3 +194,27 @@ class TestLazyMp(unittest.TestCase):
         assert len(timer.intervals("td2/o1o1v1v1")) == 1
         assert len(timer.intervals("energy_correction/2")) == 1
         assert len(timer.intervals("energy_correction/3")) == 1
+
+    def test_apply_density_order(self):
+        # no density_order
+        test = LazyMp(cache.refstate["h2o_sto3g"])
+        for level in [1, 2, 3, "sigma4+", 4]:
+            assert test._apply_density_order(level) == level
+        # number density order
+        test = LazyMp(cache.refstate["h2o_sto3g"], density_order=2)
+        assert test._apply_density_order(1) == 2
+        assert test._apply_density_order(2) == 2
+        assert test._apply_density_order(3) == 3
+        assert test._apply_density_order("sigma4+") == "sigma4+"
+        # sigma4+ density order
+        test = LazyMp(cache.refstate["h2o_sto3g"], density_order="sigma4+")
+        assert test._apply_density_order(2) == "sigma4+"
+        assert test._apply_density_order(3) == "sigma4+"
+        assert test._apply_density_order("sigma4+") == "sigma4+"
+        assert test._apply_density_order(4) == 4
+        # invalid level
+        with pytest.raises(ValueError):
+            test._apply_density_order("sdf")
+        # invalid density order
+        with pytest.raises(ValueError):
+            LazyMp(cache.refstate["h2o_sto3g"], density_order="sdf")

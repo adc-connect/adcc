@@ -239,7 +239,9 @@ class ExcitedStates(ElectronicTransition):
     @mark_excitation_property(transform_to_ao=True)
     def state_dm(self):
         """List of state density matrices of all computed states"""
-        mp_density = self.ground_state.density(self.property_method.level)
+        mp_density = self.ground_state.density(
+            self.property_method.level, strict=False
+        )
         return [mp_density + diffdm for diffdm in self.state_diffdm]
 
     @cached_property
@@ -251,7 +253,9 @@ class ExcitedStates(ElectronicTransition):
         if pmethod.level == 0:
             gs_dip_moment = self.reference_state.dipole_moment
         else:
-            gs_dip_moment = self.ground_state.dipole_moment(pmethod.level)
+            gs_dip_moment = self.ground_state.dipole_moment(
+                pmethod.level, strict=False
+            )
 
         dipole_integrals = self.operators.electric_dipole
         return gs_dip_moment - np.array([

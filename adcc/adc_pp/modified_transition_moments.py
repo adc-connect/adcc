@@ -41,9 +41,9 @@ def mtm_adc1(mp, op, intermediates):
     return ampl + AmplitudeVector(ph=f1)
 
 
-def mtm_adc2(mp, op, intermediates):
+def mtm_adc2(mp: LazyMp, op, intermediates):
     t2 = mp.t2(b.oovv)
-    p0 = mp.mp2_diffdm
+    p0 = mp.diffdm(2, strict=False)
 
     op_vo = op.ov.transpose() if op.is_symmetric else op.vo
 

@@ -406,7 +406,10 @@ def adc2_i2(hf, mp, intermediates):
 def adc3_i1(hf, mp, intermediates):
     # Used for both CVS and general
     td2 = mp.td2(b.oovv)
-    p0 = intermediates.cvs_p0 if hf.has_core_occupied_space else mp.mp2_diffdm
+    if hf.has_core_occupied_space:
+        p0 = intermediates.cvs_p0
+    else:
+        p0 = mp.diffdm(2, strict=False)  # potentially upgraded ground state diffdm
 
     t2eri_sum = (
         + einsum("jicb->ijcb", mp.t2eri(b.oovv, b.ov))  # t2eri4
@@ -426,7 +429,7 @@ def adc3_i1(hf, mp, intermediates):
 def adc3_i2(hf, mp, intermediates):
     # Used only for general
     td2 = mp.td2(b.oovv)
-    p0 = mp.mp2_diffdm
+    p0 = mp.diffdm(2, strict=False)  # potentially upgraded ground state diffdm
 
     # t2eri4 + t2eri3 / 4
     t2eri_sum = mp.t2eri(b.oovv, b.ov) + 0.25 * mp.t2eri(b.oovv, b.oo)
@@ -453,7 +456,7 @@ def cvs_adc3_i2(hf, mp, intermediates):
 @register_as_intermediate
 def adc3_m11(hf, mp, intermediates):
     td2 = mp.td2(b.oovv)
-    p0 = mp.mp2_diffdm
+    p0 = mp.diffdm(2, strict=False)  # potentially upgraded ground state diffdm
 
     i1 = adc3_i1(hf, mp, intermediates).evaluate()
     i2 = adc3_i2(hf, mp, intermediates).evaluate()

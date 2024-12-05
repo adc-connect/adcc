@@ -34,7 +34,10 @@ from . import block as b
 
 
 class LazyMp:
-    def __init__(self, hf):
+    # sigma4+ ranks between third and fourth order
+    _special_density_orders = {"sigma4+": 3.5}
+
+    def __init__(self, hf, density_order=None):
         """
         Initialise the class dealing with the Møller-Plesset ground state.
         """
@@ -43,10 +46,30 @@ class LazyMp:
         if not isinstance(hf, ReferenceState):
             raise TypeError("hf needs to be a ReferenceState "
                             "or a HartreeFockSolution_i")
+        if density_order is not None and not isinstance(density_order, int) and \
+                density_order not in self._special_density_orders:
+            raise ValueError(f"Invalid density order {density_order}. Valid are "
+                             "numbers and "
+                             f"{list(self._special_density_orders.keys())}.")
         self.reference_state = hf
         self.mospaces = hf.mospaces
         self.timer = Timer()
         self.has_core_occupied_space = hf.has_core_occupied_space
+        self.density_order = density_order
+
+    def _apply_density_order(self, level):
+        """
+        Apply the density order to the given level potentially upgrading
+        the level according to the density order.
+        """
+        if self.density_order is None:
+            return level
+        # ensure that level is valid
+        if not isinstance(level, int) and level not in self._special_density_orders:
+            raise ValueError(f"Invalid level {level}. Valid are numbers and "
+                             f"{list(self._special_density_orders.keys())}.")
+        return max(level, self.density_order,
+                   key=lambda lev: self._special_density_orders.get(lev, lev))
 
     def __getattr__(self, attr):
         # Shortcut some quantities, which are needed most often
@@ -118,11 +141,32 @@ class LazyMp:
         contraction_str, eri_block = expressions[key]
         return einsum(contraction_str, self.t2oo, hf.eri(eri_block))
 
+    def diffdm(self, level: int = 2, strict: bool = True) -> OneParticleOperator:
+        """
+        Return the MPn difference density in the MO basis.
+        If strict is set, the strict MPn difference density is returned. Otherwise
+        the density might be upgraded to a higher order according to the
+        density order.
+        """
+        # deal with the density order: we only upgrade the density!
+        if not strict:
+            level = self._apply_density_order(level)
+        # compute the density
+        if level == 2:
+            return self.mp2_diffdm
+        elif level == 3:
+            raise NotImplementedError()
+        elif level == "sigma4+":
+            raise NotImplementedError()
+        else:
+            raise NotImplementedError("Difference density not implemented for level"
+                                      f" {level}.")
+
     @cached_property
     @timed_member_call(timer="timer")
     def mp2_diffdm(self):
         """
-        Return the MP2 differensce density in the MO basis.
+        Return the MP2 difference density in the MO basis.
         """
         hf = self.reference_state
         ret = OneParticleOperator(self.mospaces, is_symmetric=True)
@@ -169,31 +213,35 @@ class LazyMp:
         ret.reference_state = self.reference_state
         return evaluate(ret)
 
-    def density(self, level=2):
+    def density(self, level: int = 2, strict: bool = True):
         """
         Return the MP density in the MO basis with all corrections
-        up to the specified order of perturbation theory
+        up to the specified order of perturbation theory.
+        If strict is set, the strict MPn density is returned. Otherwise the
+        density might be upgraded to a higher order density according to the
+        density order.
         """
         if level == 1:
             return self.reference_state.density
-        elif level == 2:
-            return self.reference_state.density + self.mp2_diffdm
-        else:
-            raise NotImplementedError("Only densities for level 1 and 2"
-                                      " are implemented.")
+        diffdm = self.diffdm(level, strict=strict)
+        return self.reference_state.density + diffdm
 
-    def dipole_moment(self, level=2):
+    def dipole_moment(self, level: int = 2, strict: bool = True):
         """
         Return the MP dipole moment at the specified level of
         perturbation theory.
+        If strict is set, the strict MPn dipole moment is computed. Otherwise the
+        dipole moment might be computed for a higher order density according to the
+        density_order.
         """
         if level == 1:
             return self.reference_state.dipole_moment
-        elif level == 2:
-            return self.mp2_dipole_moment
-        else:
-            raise NotImplementedError("Only dipole moments for level 1 and 2"
-                                      " are implemented.")
+        diffdm = self.diffdm(level, strict=strict)
+        dipole_integrals = self.reference_state.operators.electric_dipole
+        correction = -np.array(
+            [product_trace(comp, diffdm) for comp in dipole_integrals]
+        )
+        return self.reference_state.dipole_moment + correction
 
     @cached_member_function
     def energy_correction(self, level=2):
@@ -264,22 +312,24 @@ class LazyMp:
 
     @property
     def mp2_density(self):
-        return self.density(2)
+        return self.density(2, strict=True)
 
     @cached_property
     def mp2_dipole_moment(self):
-        refstate = self.reference_state
-        dipole_integrals = refstate.operators.electric_dipole
-        mp2corr = -np.array([product_trace(comp, self.mp2_diffdm)
-                             for comp in dipole_integrals])
-        return refstate.dipole_moment + mp2corr
+        return self.dipole_moment(2, strict=True)
 
 
 #
 # Register cvs_p0 intermediate
 #
 @register_as_intermediate
-def cvs_p0(hf, mp, intermediates):
+def cvs_p0(hf, mp: LazyMp, intermediates):
+    # TODO: this is a bit weird with the density order for CVS. But as long as we
+    # don't have any other CVS density implemented it should be fine.
+    if mp._apply_density_order(2) != 2:
+        raise NotImplementedError("The MP2 density with CVS is only implemented "
+                                  f"in 2nd order. An upgrade to level "
+                                  f"{mp._apply_density_order(2)} is not available.")
     # NOTE: equal to mp2_diffdm if CVS applied for the density
     ret = OneParticleOperator(hf.mospaces, is_symmetric=True)
     ret.oo = -0.5 * einsum("ikab,jkab->ij", mp.t2oo, mp.t2oo)
