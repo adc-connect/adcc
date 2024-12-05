@@ -230,8 +230,11 @@ class LazyMp:
             # 3rd order
             - einsum("ikab,jkab->ij", self.t2oo, self.td2(b.oovv)).symmetrise(0, 1)
         )
-        # We need access to the intermediates here.
-        # Or implement M_3_plus/minus and sigma_ov in a different way.
+        # TODO: we need the intermediates: sigma_ov, m_3_plus and m_3_minus here
+        # The intermediates are also needed for the IP-ADC ETMs. Would be good
+        # to cache them. However, we can't use the Intermediates class without
+        # changing the class. Installing the intermediates on the ground state
+        # class also seems weird.
         ret.ov = (
             mp2_dm.ov  # 2nd order
             - (  # 3rd order
@@ -242,12 +245,12 @@ class LazyMp:
                 + einsum("ibac,bc->ia", hf.ovvv, mp2_dm.vv)
                 # + m_3_plus
                 + 1 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.ov))
-                + 1 * einsum("ijbc,jabc->ia", self.td2(b.oovv), hf.ovvv)
+                + 0.5 * einsum("ijbc,jabc->ia", self.td2(b.oovv), hf.ovvv)
                 - 0.25 * einsum(
                     "ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.oo)
                 )
                 # + m_3_minus
-                + 1 * einsum("jkab,jkib->ia", self.td2(b.oovv), hf.ooov)
+                + 0.5 * einsum("jkab,jkib->ia", self.td2(b.oovv), hf.ooov)
                 - 1 * einsum("jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.ov))
                 - 0.25 * einsum(
                     "jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.vv)
@@ -385,35 +388,3 @@ def cvs_p0(hf, mp: LazyMp, intermediates):
                      + einsum("jkib,jkab->ia", hf.ooov, mp.t2oo)) / mp.df(b.ov)
     ret.vv = 0.5 * einsum("ijac,ijbc->ab", mp.t2oo, mp.t2oo)
     return ret
-
-
-@register_as_intermediate
-def m_3_plus(hf: ReferenceState, mp: LazyMp, intermediates):
-    # Intermediate M_ia^{(3)+}, parts of the dynamic self-energy
-    return (
-        + 1 * einsum("ijbc,jabc->ia", mp.t2oo, mp.t2eri(b.ovvv, b.ov))
-        + 1 * einsum("ijbc,jabc->ia", mp.td2(b.oovv), hf.ovvv)
-        - 0.25 * einsum("ijbc,jabc->ia", mp.t2oo, mp.t2eri(b.ovvv, b.oo))
-    )
-
-
-@register_as_intermediate
-def m_3_minus(hf: ReferenceState, mp: LazyMp, intermediates):
-    # Intermediate M_ia^{(3)-}, parts of the dynamic self-energy
-    return (
-        + 1 * einsum("jkab,jkib->ia", mp.td2(b.oovv), hf.ooov)
-        - 1 * einsum("jkab,jkib->ia", mp.t2oo, mp.t2eri(b.ooov, b.ov))
-        - 0.25 * einsum("jkab,jkib->ia", mp.t2oo, mp.t2eri(b.ooov, b.vv))
-    )
-
-
-@register_as_intermediate
-def sigma_ov(hf: ReferenceState, mp: LazyMp, intermediates):
-    # Static self-energy, ov part \Sigma_{ij}(\infty)
-    p0 = mp.diffdm(2, strict=True)
-    return (
-        - einsum("ijka,jk->ia", hf.ooov, p0.oo)
-        + einsum("ijab,jb->ia", hf.oovv, p0.ov)
-        - einsum("ibja,jb->ia", hf.ovov, p0.ov)
-        + einsum("ibac,bc->ia", hf.ovvv, p0.vv)
-    )
