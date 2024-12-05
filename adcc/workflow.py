@@ -47,7 +47,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
             n_guesses_doubles=None, output=sys.stdout, core_orbitals=None,
             frozen_core=None, frozen_virtual=None, method=None,
             n_singlets=None, n_triplets=None, n_spin_flip=None,
-            environment=None, **solverargs):
+            environment=None, gs_density_order=None, **solverargs):
     """Run an ADC calculation.
 
     Main entry point to run an ADC calculation. The reference to build the ADC
@@ -133,6 +133,14 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         The keywords to specify how coupling to an environment model,
         e.g. PE, is treated. For details see :ref:`environment`.
 
+    gs_density_order: int or str
+        The order of ground state density to use, e.g., 3 for the MP3 density
+        or "sigma4+" for the iterated sigma4+ density.
+        Note that currently only upgrades of the density are supported, i.e.,
+        The MP2 density in an ADC(3) calculation can be upgraded to the MP3 or
+        sigma4+ density, but the MP3 density in an ISR(3) or ADC(4) calculation
+        can not be downgraded to the MP2 density.
+
     Other parameters
     ----------------
     max_subspace : int, optional
@@ -178,7 +186,8 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     """
     matrix = construct_adcmatrix(
         data_or_matrix, core_orbitals=core_orbitals, frozen_core=frozen_core,
-        frozen_virtual=frozen_virtual, method=method)
+        frozen_virtual=frozen_virtual, method=method,
+        gs_density_order=gs_density_order)
 
     n_states, kind = validate_state_parameters(
         matrix.reference_state, n_states=n_states, n_singlets=n_singlets,
@@ -219,7 +228,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
 # Individual steps
 #
 def construct_adcmatrix(data_or_matrix, core_orbitals=None, frozen_core=None,
-                        frozen_virtual=None, method=None):
+                        frozen_virtual=None, method=None, gs_density_order=None):
     """
     Use the provided data or AdcMatrix object to check consistency of the
     other passed parameters and construct the AdcMatrix object representing
@@ -271,7 +280,9 @@ def construct_adcmatrix(data_or_matrix, core_orbitals=None, frozen_core=None,
     # Make AdcMatrix (if not done)
     if isinstance(data_or_matrix, (ReferenceState, LazyMp)):
         try:
-            return AdcMatrix(method, data_or_matrix)
+            return AdcMatrix(
+                method, data_or_matrix, gs_density_order=gs_density_order
+            )
         except ValueError as e:
             # In case of an issue with CVS <-> chosen spaces
             raise InputError(str(e))

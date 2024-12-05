@@ -42,7 +42,7 @@ def s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates):
     return dm
 
 
-def s2s_tdm_adc2(mp, amplitude_l, amplitude_r, intermediates):
+def s2s_tdm_adc2(mp: LazyMp, amplitude_l, amplitude_r, intermediates):
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude_l, amplitude_r)
     dm = s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates)
 
@@ -50,7 +50,7 @@ def s2s_tdm_adc2(mp, amplitude_l, amplitude_r, intermediates):
     ur1, ur2 = amplitude_r.ph, amplitude_r.pphh
 
     t2 = mp.t2(b.oovv)
-    p0 = mp.mp2_diffdm
+    p0 = mp.diffdm(2, strict=False)  # potentially upgrade the MP2 diffdm
     p1_oo = dm.oo.evaluate()  # ADC(1) tdm
     p1_vv = dm.vv.evaluate()  # ADC(1) tdm
 

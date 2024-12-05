@@ -73,7 +73,7 @@ def tdm_cvs_adc2(mp, amplitude, intermediates):
     return dm
 
 
-def tdm_adc2(mp, amplitude, intermediates):
+def tdm_adc2(mp: LazyMp, amplitude, intermediates):
     dm = tdm_adc1(mp, amplitude, intermediates)  # Get ADC(1) result
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
     u1 = amplitude.ph
@@ -81,7 +81,7 @@ def tdm_adc2(mp, amplitude, intermediates):
 
     t2 = mp.t2(b.oovv)
     td2 = mp.td2(b.oovv)
-    p0 = mp.mp2_diffdm
+    p0 = mp.diffdm(2, strict=False)  # potentially upgrade the MP2 diffdm
 
     # Compute ADC(2) tdm
     dm.oo = (  # adc2_dp0_oo
