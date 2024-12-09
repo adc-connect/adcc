@@ -21,26 +21,35 @@
 ##
 ## ---------------------------------------------------------------------
 import adcc
-import unittest
+from . import testcases
+from .testdata_cache import testdata_cache
 
-from adcc.testdata.cache import cache
+import pytest
 
-from .misc import expand_test_templates
+methods = ["adc1", "adc2", "adc2x", "adc3"]
+# only do the test for a single testcase
+h2o = testcases.get_by_filename("h2o_sto3g").pop()
 
-methods = ["adc1", "adc2", "adc2x", "adc3", "cvs-adc1", "cvs-adc2x"]
 
-
-@expand_test_templates(methods)
-class TestAdcMatrixBlockView(unittest.TestCase):
-    def template_singles_view(self, method):
-        if "cvs" in method:
-            reference_state = cache.refstate_cvs["h2o_sto3g"]
-            shape = (8, 8)
+@pytest.mark.parametrize("case", h2o.cases)
+@pytest.mark.parametrize("method", methods)
+class TestAdcMatrixBlockView:
+    def test_singles_view(self, method, case):
+        n_occ = 10
+        n_virt = 4
+        spaces_ph = ["o1", "v1"]
+        if "cvs" in case:
+            n_occ = 2 * h2o.core_orbitals  # alpha and beta
             spaces_ph = ["o2", "v1"]
-        else:
-            reference_state = cache.refstate["h2o_sto3g"]
-            shape = (40, 40)
-            spaces_ph = ["o1", "v1"]
+            if "cvs" not in method:
+                method = f"cvs-{method}"
+        elif "fc" in case:
+            n_occ -= 2 * h2o.frozen_core  # alpha and beta
+        if "fv" in case:
+            n_virt -= 2 * h2o.frozen_virtual  # alpha and beta
+        shape = (n_occ * n_virt, n_occ * n_virt)
+
+        reference_state = testdata_cache.refstate(h2o, case)
         matrix = adcc.AdcMatrix(method, adcc.LazyMp(reference_state))
         view = matrix.block_view("ph_ph")
 
