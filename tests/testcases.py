@@ -209,7 +209,8 @@ def _init_test_cases() -> tuple[TestCase]:
     ))
     # Formaledhyde
     xyz, unit = _xyz["formaldehyde"]
-    pe_pot_file = Path(__file__).resolve().parent / "potentials/fa_6w.pot"
+    pe_pot_file = Path(__file__).resolve().parent
+    pe_pot_file = pe_pot_file / "generators" / "potentials" / "fa_6w.pot"
     test_cases.append(TestCase(
         name="formaldehyde", xyz=xyz, unit=unit, charge=0, multiplicity=1,
         basis="sto-3g", pe_pot_file=str(pe_pot_file), only_full_mode=False

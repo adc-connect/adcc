@@ -2,7 +2,7 @@ import adcc
 from pyscf import gto, scf, tdscf
 from pyscf.solvent import ddCOSMO
 
-import testcases
+from tests import testcases
 
 from pathlib import Path
 import json

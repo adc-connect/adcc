@@ -1,8 +1,8 @@
-from import_qchem_data import (
+from tests.generators.import_qchem_data import (
     import_excited_states, import_groundstate, NotConvergedError
 )
-from qchem_savedir import QchemSavedir
-import testcases
+from tests.generators.qchem_savedir import QchemSavedir
+from tests import testcases
 
 from adcc.hdf5io import _extract_dataset
 from adcc.AdcMethod import AdcMethod
