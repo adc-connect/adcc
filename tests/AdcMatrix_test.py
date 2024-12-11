@@ -29,7 +29,7 @@ from adcc.AdcMatrix import AdcExtraTerm, AdcMatrixProjected, AdcMatrixShifted
 from adcc.Intermediates import Intermediates
 from adcc.adc_pp.matrix import AdcBlock
 
-from adcc.test_projection import (  # TODO: redirect import
+from .projection_test import (
     assert_nonzero_blocks, construct_nonzero_blocks, assert_equal_symmetry
 )
 from .testdata_cache import testdata_cache

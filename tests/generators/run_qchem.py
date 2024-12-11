@@ -116,6 +116,7 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
                 # copy the output file to the working directory and abort.
                 if outfile.exists():
                     shutil.copy(outfile, Path.cwd())
+                context_file.close()
                 raise e
         # import the ground state data as flat dict
         gs_data = None

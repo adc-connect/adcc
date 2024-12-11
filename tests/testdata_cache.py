@@ -119,8 +119,14 @@ class TestdataCache:
             system=system, method=method, case=case, source="adcc"
         )
 
-    def adcman_data(self):
-        raise NotImplementedError
+    def adcman_data(self, system: str, method: str, case: str) -> dict:
+        """
+        Load the adcman reference data for the given system and method, where
+        method might refer to mp or adcn.
+        """
+        return self._load_data(
+            system=system, method=method, case=case, source="adcman"
+        )
 
     @cached_member_function
     def _make_mock_adc_state(self, system: str, method: str, case: str,
@@ -192,7 +198,7 @@ class TestdataCache:
             system, method=method, case=case, kind=kind, source="adcc"
         )
 
-    def adcman_states(self, test_case: str, method: str, kind: str,
+    def adcman_states(self, system: str, method: str, kind: str,
                       case: str) -> ExcitedStates:
         """
         Construct an ExcitedStates object for the given test case,
@@ -200,7 +206,7 @@ class TestdataCache:
         reference case (gen/cvs/fc/...) using the adcman reference data.
         """
         return self._make_mock_adc_state(
-            test_case, method=method, case=case, kind=kind, source="adcman"
+            system, method=method, case=case, kind=kind, source="adcman"
         )
 
 

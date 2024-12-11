@@ -56,7 +56,9 @@ def collect_data(refstate: ReferenceState) -> dict:
 
 
 def main():
-    test_cases = testcases.get_by_filename("cn_sto3g")
+    test_cases = testcases.get_by_filename(
+        "h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz", "ch2nh2_sto3g"
+    )
     for tcase in test_cases:
         dump_imported(tcase)
 

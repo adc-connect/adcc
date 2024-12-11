@@ -128,9 +128,38 @@ def generate_h2o_sto3g():
         )
 
 
+def generate_h2o_def2tzvp():
+    # RHF, Singlet, 43 basis functions: 5 occ, 38 virt.
+    states = {
+        "adc1": {
+            # problems converging more than 2 triplets
+            "gen": {"n_triplets": 2}
+        }
+    }
+    test_case = testcases.get(
+        n_expected_cases=1, name="h2o", basis="def2-tzvp"
+    ).pop()
+    generate_groundstate(test_case)
+    for method in _methods["pp"]:
+        generate_adc_all(
+            test_case, method=AdcMethod(method), n_singlets=3, n_triplets=3,
+            dump_nstates=2, states_per_case=states.get(method, None)
+        )
+
+
 def generate_cn_sto3g():
     # UHF, Doublet, 10 basis functions: (7a, 6b) occ, (3a, 4b) virt
     test_case = testcases.get(n_expected_cases=1, name="cn", basis="sto-3g").pop()
+    generate_groundstate(test_case)
+    for method in _methods["pp"]:
+        generate_adc_all(
+            test_case, method=AdcMethod(method), n_states=3, dump_nstates=2
+        )
+
+
+def generate_cn_ccpvdz():
+    # UHF, Doublet
+    test_case = testcases.get(n_expected_cases=1, name="cn", basis="cc-pvdz").pop()
     generate_groundstate(test_case)
     for method in _methods["pp"]:
         generate_adc_all(
@@ -150,7 +179,9 @@ def generate_hf_631g():
 
 def main():
     generate_h2o_sto3g()
+    generate_h2o_def2tzvp()
     generate_cn_sto3g()
+    generate_cn_ccpvdz()
     generate_hf_631g()
 
 

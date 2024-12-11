@@ -23,18 +23,15 @@
 import re
 import adcc
 import unittest
+import pytest
 import itertools
-
-from adcc.projection import (Projector, SubspacePartitioning,
-                             transfer_cvs_to_full)
-from adcc.testdata.cache import cache
-
 import numpy as np
-
 from numpy.testing import assert_allclose
 
-from .misc import expand_test_templates
-from .HfCounterData import HfCounterData
+from adcc.projection import Projector, SubspacePartitioning, transfer_cvs_to_full
+from adcc.HfCounterData import HfCounterData
+
+from .testdata_cache import testdata_cache
 
 
 class TestSubspacePartitioning(unittest.TestCase):
@@ -166,8 +163,10 @@ def assert_equal_symmetry(sym1, sym2):
 
 
 class TestProjector(unittest.TestCase):
-    def base_test(self, case, kind, n_core, n_virt):
-        state = cache.adc_states[case]["adc3"][kind]
+    def base_test(self, system: str, kind: str, n_core: int, n_virt: int):
+        state = testdata_cache.adcc_states(
+            system=system, method="adc3", kind=kind, case="gen"
+        )
         mospaces = state.reference_state.mospaces
 
         partitioning = SubspacePartitioning(mospaces,
@@ -200,7 +199,7 @@ class TestProjector(unittest.TestCase):
         self.base_test("h2o_sto3g", "triplet", n_core=1, n_virt=1)
 
     def test_cn_sto3g(self):
-        self.base_test("cn_sto3g", "state", n_core=2, n_virt=1)
+        self.base_test("cn_sto3g", "any", n_core=2, n_virt=1)
 
     def test_h2o_def2tzvp_singlet(self):
         self.base_test("h2o_def2tzvp", "singlet", n_core=2, n_virt=5)
@@ -209,7 +208,7 @@ class TestProjector(unittest.TestCase):
         self.base_test("h2o_def2tzvp", "triplet", n_core=1, n_virt=3)
 
     def test_cn_ccpvdz(self):
-        self.base_test("cn_ccpvdz", "state", n_core=2, n_virt=4)
+        self.base_test("cn_ccpvdz", "any", n_core=2, n_virt=4)
 
 
 testcases = [("h2o_sto3g", "singlet"), ("h2o_sto3g", "triplet"),
@@ -217,13 +216,14 @@ testcases = [("h2o_sto3g", "singlet"), ("h2o_sto3g", "triplet"),
              ("h2o_def2tzvp", "triplet"), ("cn_ccpvdz", "any")]
 
 
-@expand_test_templates(testcases)
-class TestCvsTransfer(unittest.TestCase):
-    def template_high_level(self, case, kind):
-        kindkey = kind if kind != "any" else "state"
-        print(cache.adc_states[case]["cvs-adc2x"].keys())
-        state_cvs = cache.adc_states[case]["cvs-adc2x"][kindkey]
-        matrix = adcc.AdcMatrix("adc2x", cache.refstate[case])
+@pytest.mark.parametrize("system,kind", testcases)
+class TestCvsTransfer:
+    def test_high_level(self, system: str, kind: str):
+        state_cvs = testdata_cache.adcc_states(
+            system=system, method="adc2x", kind=kind, case="cvs"
+        )
+        refstate = testdata_cache.refstate(system, case="gen")
+        matrix = adcc.AdcMatrix("adc2x", refstate)
 
         orth = np.array([[v @ w for v in state_cvs.excitation_vector]
                          for w in state_cvs.excitation_vector])
@@ -231,11 +231,13 @@ class TestCvsTransfer(unittest.TestCase):
         orthfull = np.array([[v @ w for v in fullvecs] for w in fullvecs])
         assert_allclose(orth, orthfull, atol=1e-16)
 
-    def template_random(self, case, kind):
-        kindkey = kind if kind != "any" else "state"
-        state_cvs = cache.adc_states[case]["cvs-adc2x"][kindkey]
+    def test_random(self, system: str, kind: str):
+        state_cvs = testdata_cache.adcc_states(
+            system=system, method="adc2x", kind=kind, case="cvs"
+        )
+        refstate = testdata_cache.refstate(system, case="gen")
+        matrix = adcc.AdcMatrix("adc2x", refstate)
         vectors = [v.copy().set_random() for v in state_cvs.excitation_vector]
-        matrix = adcc.AdcMatrix("adc2x", cache.refstate[case])
 
         orth = np.array([[v @ w for v in vectors] for w in vectors])
         fullvecs = transfer_cvs_to_full(state_cvs.matrix, matrix, vectors, kind)
