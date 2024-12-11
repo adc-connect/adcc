@@ -109,7 +109,7 @@ def ea_adc3_f11(hf, mp, intermediates):
     d_vv = zeros_like(hf.fvv)
     d_vv.set_mask("aa", 1.0)
 
-    df = mp.df(b.o + b.v)
+    df = mp.df(b.ov)
     df2 = direct_sum("ib+jc->ijbc", df, df).symmetrise((2, 3))
 
     t2 = mp.t2(b.oovv)
@@ -132,13 +132,13 @@ def ea_adc3_f12(hf, mp, intermediates):
     return - mp.mp2_diffdm.ov + (intermediates.sigma_ov
                                  + intermediates.m_3_plus
                                  + intermediates.m_3_minus
-                                 ) / mp.df(b.o + b.v)
+                                 ) / mp.df)
 
 
 @register_as_intermediate
 def ea_adc3_f22(hf, mp, intermediates):
     # effective transition moments, oovv part f_ijab
-    df = mp.df(b.o + b.v)
+    df = mp.df(b.ov)
     df2 = direct_sum("ia+jb->ijab", df, df).symmetrise((2, 3))
 
     return (1/sqrt(2) * mp.t2(b.oovv)
