@@ -25,6 +25,8 @@ import numpy as np
 
 from .LazyMp import LazyMp
 from .adc_pp import matrix as ppmatrix
+from .adc_ip import matrix as ipmatrix
+from .adc_ea import matrix as eamatrix
 from .timings import Timer, timed_member_call
 from .AdcMethod import AdcMethod
 from .functions import ones_like
@@ -72,14 +74,25 @@ class AdcMatrixlike:
 
 
 class AdcMatrix(AdcMatrixlike):
-    # Default perturbation-theory orders for the matrix blocks (== standard ADC-PP).
+    # Default perturbation-theory orders for the matrix blocks
+    # (== standard ADC-PP).
     default_block_orders = {
         #             ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),
-        "adc0":  dict(ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
-        "adc1":  dict(ph_ph=1, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
-        "adc2":  dict(ph_ph=2, ph_pphh=1,    pphh_ph=1,    pphh_pphh=0),     # noqa: E501
-        "adc2x": dict(ph_ph=2, ph_pphh=1,    pphh_ph=1,    pphh_pphh=1),     # noqa: E501
-        "adc3":  dict(ph_ph=3, ph_pphh=2,    pphh_ph=2,    pphh_pphh=1),     # noqa: E501
+        "adc0":     dict(ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
+        "adc1":     dict(ph_ph=1, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
+        "adc2":     dict(ph_ph=2, ph_pphh=1,    pphh_ph=1,    pphh_pphh=0),     # noqa: E501
+        "adc2x":    dict(ph_ph=2, ph_pphh=1,    pphh_ph=1,    pphh_pphh=1),     # noqa: E501
+        "adc3":     dict(ph_ph=3, ph_pphh=2,    pphh_ph=2,    pphh_pphh=1),     # noqa: E501
+        "ip_adc0":  dict(h_h=0,   h_phh=None,   phh_h=None,   phh_phh=None),
+        "ip_adc1":  dict(h_h=1,   h_phh=None,   phh_h=None,   phh_phh=None),
+        "ip_adc2":  dict(h_h=2,   h_phh=1,      phh_h=1,      phh_phh=0),
+        "ip_adc2x": dict(h_h=2,   h_phh=1,      phh_h=1,      phh_phh=1),
+        "ip_adc3":  dict(h_h=3,   h_phh=2,      phh_h=2,      phh_phh=1),
+        "ea_adc0":  dict(p_p=0,   p_pph=None,   pph_p=None,   pph_pph=None),
+        "ea_adc1":  dict(p_p=1,   p_pph=None,   pph_p=None,   pph_pph=None),
+        "ea_adc2":  dict(p_p=2,   p_pph=1,      pph_p=1,      pph_pph=0),
+        "ea_adc2x": dict(p_p=2,   p_pph=1,      pph_p=1,      pph_pph=1),
+        "ea_adc3":  dict(p_p=3,   p_pph=2,      pph_p=2,      pph_pph=1),
     }
 
     def __init__(self, method, hf_or_mp, block_orders=None, intermediates=None,
@@ -95,7 +108,8 @@ class AdcMatrix(AdcMatrixlike):
             HF reference or MP ground state
         block_orders : optional
             The order of perturbation theory to employ for each matrix block.
-            If not set, defaults according to the selected ADC method are chosen.
+            If not set, defaults according to the selected ADC method are
+            chosen.
         intermediates : adcc.Intermediates or NoneType
             Allows to pass intermediates to re-use to this class.
         diagonal_precomputed: adcc.AmplitudeVector
@@ -122,6 +136,12 @@ class AdcMatrix(AdcMatrixlike):
 
         self.timer = Timer()
         self.method = method
+        if "ip" in method.name:
+            self.type = "ip"
+        elif "ea" in method.name:
+            self.type = "ea"
+        else:
+            self.type = "pp"
         self.ground_state = hf_or_mp
         self.reference_state = hf_or_mp.reference_state
         self.mospaces = hf_or_mp.reference_state.mospaces
@@ -142,15 +162,21 @@ class AdcMatrix(AdcMatrixlike):
             block_orders = tmp_orders
 
         # Sanity checks on block_orders
+        valid_blocks = {"pp": ("ph_ph", "ph_pphh", "pphh_ph", "pphh_pphh"),
+                        "ip": ("h_h", "h_phh", "phh_h", "phh_phh"),
+                        "ea": ("p_p", "p_pph", "pph_p", "pph_pph")}
         for block in block_orders.keys():
-            if block not in ("ph_ph", "ph_pphh", "pphh_ph", "pphh_pphh"):
+            if block not in valid_blocks[self.type]:
                 raise ValueError(f"Invalid block order key: {block}")
-        if block_orders["ph_pphh"] != block_orders["pphh_ph"]:
-            raise ValueError("ph_pphh and pphh_ph should always have "
-                             "the same order")
-        if block_orders["ph_pphh"] is not None \
-           and block_orders["pphh_pphh"] is None:
-            raise ValueError("pphh_pphh cannot be None if ph_pphh isn't.")
+        if (block_orders[valid_blocks[self.type][1]]
+                != block_orders[valid_blocks[self.type][2]]):
+            raise ValueError(f"{valid_blocks[self.type][1]} and "
+                             f"{valid_blocks[self.type][2]} should always "
+                             "have the same order")
+        if block_orders[valid_blocks[self.type][1]] is not None \
+                and block_orders[valid_blocks[self.type][3]] is None:
+            raise ValueError(f"{valid_blocks[self.type][3]} cannot be None if "
+                             f"{valid_blocks[self.type][1]} isn't.")
         self.block_orders = block_orders
 
         # Build the blocks and diagonals
@@ -158,11 +184,13 @@ class AdcMatrix(AdcMatrixlike):
             variant = None
             if self.is_core_valence_separated:
                 variant = "cvs"
+            matrix = {"pp": ppmatrix, "ip": ipmatrix, "ea": eamatrix}
             blocks = {
-                block: ppmatrix.block(self.ground_state, block.split("_"),
-                                      order=order, intermediates=self.intermediates,
-                                      variant=variant)
-                for block, order in self.block_orders.items() if order is not None
+                block: matrix[self.type].block(
+                    self.ground_state, block.split("_"), order=order,
+                    intermediates=self.intermediates, variant=variant)
+                for block, order in self.block_orders.items()
+                if order is not None
             }
             self.blocks = {bl: blocks[bl].apply for bl in blocks}
             if diagonal_precomputed:

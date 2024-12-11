@@ -26,8 +26,8 @@ import numpy as np
 from numpy.testing import assert_allclose
 from adcc.testdata.cache import cache
 
-from .test_state_densities import Runners
-from pytest import approx
+from .test_state_densities import Runners, Runners_IP_EA
+import pytest
 
 
 class TestMagneticTransitionDipoleMoments(unittest.TestCase, Runners):
@@ -78,4 +78,19 @@ class TestRotatoryStrengths(unittest.TestCase, Runners):
         for i in range(n_ref):
             assert state.excitation_energy[i] == refevals[i]
             ref_dot = np.dot(ref_tmdm[i], ref_tdmvel[i])
-            assert res_rots[i] == approx(ref_dot / refevals[i])
+            assert res_rots[i] == pytest.approx(ref_dot / refevals[i])
+
+
+class TestPoleStrenghts(unittest.TestCase, Runners_IP_EA):
+    def base_test(self, system, method, kind, prefix=""):
+        method = prefix + method
+        refdata = cache.adcc_reference_data[system]
+        state = cache.adcc_states[system][method][kind]
+
+        if "adc2x" in method:
+            pytest.xfail("Pole strengths are not (yet) implemented for adc2x")
+        else:
+            res_poles = state.pole_strength
+            ref = refdata[method][kind]
+            n_ref = len(state.excitation_vector)
+            assert_allclose(res_poles, ref["pole_strengths"][:n_ref], atol=1e-4)

@@ -24,10 +24,13 @@
 
 def get_valid_methods():
     valid_prefixes = ["cvs"]
-    valid_bases = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+    valid_bases = ["adc0", "adc1", "adc2", "adc2x", "adc3",
+                   "ip_adc0", "ip_adc1", "ip_adc2", "ip_adc2x", "ip_adc3",
+                   "ea_adc0", "ea_adc1", "ea_adc2", "ea_adc2x", "ea_adc3"]
 
+    # CVS-IP calculations not yet implemented
     ret = valid_bases + [p + "-" + m for p in valid_prefixes
-                         for m in valid_bases]
+                         for m in valid_bases[:5]]
     return ret
 
 
@@ -37,15 +40,15 @@ class AdcMethod:
     def __init__(self, method):
         if method not in self.available_methods:
             raise ValueError("Invalid method " + str(method) + ". Only "
-                             + ",".join(self.available_methods) + " are known.")
+                             + ",".join(self.available_methods)
+                             + " are known.")
 
         split = method.split("-")
-        self.__base_method = split[-1]
-        split = split[:-1]
+        self.__base_method = split.pop()
         self.is_core_valence_separated = "cvs" in split
 
         try:
-            if self.__base_method == "adc2x":
+            if self.__base_method in ["adc2x", "ip_adc2x", "ea_adc2x"]:
                 self.level = 2
             else:
                 self.level = int(self.__base_method[-1])
@@ -57,10 +60,13 @@ class AdcMethod:
         Return an equivalent method, where only the level is changed
         (e.g. calling this on a CVS method returns a CVS method)
         """
-        if self.is_core_valence_separated:
-            return AdcMethod("cvs-adc" + str(newlevel))
-        else:
-            return AdcMethod("adc" + str(newlevel))
+        try:
+            int(self.name[-1])
+        except ValueError:
+            raise NotImplementedError("This method is not implemented for ADC "
+                                      "methods that do not end with a number "
+                                      "like 'adc2x'.")
+        return AdcMethod(self.name[:-1] + str(newlevel))
 
     @property
     def name(self):

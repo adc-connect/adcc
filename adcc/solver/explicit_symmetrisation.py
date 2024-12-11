@@ -76,6 +76,8 @@ class IndexSpinSymmetrisation(IndexSymmetrisation):
     def __init__(self, matrix, enforce_spin_kind="singlet"):
         super().__init__(matrix)
         self.enforce_spin_kind = enforce_spin_kind
+        # Bool to distinguish IP/EA if 'spin_kind=='doublet'
+        self.is_ip = (matrix.type == "ip")
 
     def symmetrise(self, new_vectors):
         if isinstance(new_vectors, AmplitudeVector):
@@ -87,13 +89,14 @@ class IndexSpinSymmetrisation(IndexSymmetrisation):
         for vec in new_vectors:
             # Only work on the doubles part
             # the other blocks are not yet implemented
-            # or nothing needs to be done ("ph" block)
-            if "pphh" in vec.blocks:
+            # or nothing needs to be done ("ph"/"h"/"p" block)
+            if len(vec.blocks) > 1:
                 # TODO: Note that the "d" is needed here because the C++ side
-                #       does not yet understand ph and pphh
+                #       does not yet understand ph/h/p and pphh/phh/pph
                 amplitude_vector_enforce_spin_kind(
-                    vec.pphh, "d", self.enforce_spin_kind
+                        vec.get(vec.blocks[1]), "d", self.enforce_spin_kind, self.is_ip
                 )
+
         return new_vectors
 
 

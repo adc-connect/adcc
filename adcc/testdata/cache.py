@@ -55,6 +55,8 @@ def make_mock_adc_state(refstate, matmethod, kind, reference):
         symm = "symmetric"
     elif refstate.restricted and kind == "triplet":
         symm = "antisymmetric"
+    elif refstate.restricted and kind == "doublet":
+        symm = "none"
     elif kind in ["state", "spin_flip", "any"]:
         symm = "none"
     else:
@@ -69,10 +71,12 @@ def make_mock_adc_state(refstate, matmethod, kind, reference):
     has_doubles = "eigenvectors_doubles" in reference[kind]
     vec_singles = reference[kind]["eigenvectors_singles"]
     vec_doubles = reference[kind].get("eigenvectors_doubles", None)
+    blocks = {"pp": ("ph", "pphh"), "ip": ("h", "phh"), "ea": ("p", "pph")}
+    block = blocks[matrix.type]
     for i, evec in enumerate(state.eigenvectors):
-        evec.ph.set_from_ndarray(vec_singles[i])
+        evec.get(block[0]).set_from_ndarray(vec_singles[i])
         if has_doubles:
-            evec.pphh.set_from_ndarray(vec_doubles[i], 1e-14)
+            evec.get(block[1]).set_from_ndarray(vec_doubles[i], 1e-14)
     return ExcitedStates(state)
 
 
@@ -156,11 +160,14 @@ class TestdataCache():
         return ret
 
     def read_reference_data(self, refname):
-        prefixes = ["", "cvs", "fc", "fv", "fc_cvs",
+        prefixes = (["", "cvs", "fc", "fv", "fc_cvs",
                     "fv_cvs", "fc_fv", "fc_fv_cvs"]
+                    + [s + var for s in ["", "alpha_", "beta_"]
+                       for var in ["ip", "ea"]])
         raws = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
-        methods = raws + ["_".join([p, r]) for p in prefixes
-                          for r in raws if p != ""]
+        methods = (raws
+                   + ["_".join([p, r]) for p in prefixes
+                      for r in raws if p != ""])
 
         ret = {}
         for k in self.testcases:
@@ -185,17 +192,35 @@ class TestdataCache():
     def construct_adc_states(self, refdata):
         """
         Construct a hierachy of dicts, which contains a mock adc state
-        for all test cases, all methods and all kinds (singlet, triplet)
+        for all test cases, all methods and all kinds (singlet, triplet) for PP
+        and doublet for IP/EA
         """
         res = {}
+        raws = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+        ip_ea_methods = ["_".join([p, r]) for p in ["ip", "ea"] for r in raws]
+        methods = raws + ip_ea_methods
         for case in self.testcases:
             if case not in refdata:
                 continue
-            available_kinds = refdata[case]["available_kinds"]
+            available_kinds = refdata[case].get("available_kinds", None)
+
+            # Flag to check 'available_kinds' method-dependently if required
+            method_dependent_kinds = True if available_kinds is None else False
+
             res_case = {}
-            for method in ["adc0", "adc1", "adc2", "adc2x", "adc3"]:
+            for method in methods:
                 if method not in refdata[case]:
                     continue
+
+                # adcc ref data has 'available_kinds' within the 'method' key
+                # while normal ref data has it one level higher ('case')
+                # thus, it is tried to first get 'avaialble_kinds' from the
+                # normal ref data and returns 'None' if the key does not exist
+                # and looks up 'available_kinds' for each method individually
+                # if it is still 'None'. Throws 'KeyError' otherwise.
+                if method_dependent_kinds:
+                    available_kinds = refdata[case][method]["available_kinds"]
+
                 res_case[method] = {
                     kind: make_mock_adc_state(self.refstate[case], method, kind,
                                               refdata[case][method])
@@ -206,11 +231,29 @@ class TestdataCache():
                            "cvs-adc2x", "cvs-adc3"]:
                 if method not in refdata[case]:
                     continue
+                if method_dependent_kinds:
+                    available_kinds = refdata[case][method]["available_kinds"]
                 res_case[method] = {
                     kind: make_mock_adc_state(self.refstate_cvs[case],
                                               method, kind, refdata[case][method])
                     for kind in available_kinds
                 }
+
+            for matmethod in ip_ea_methods:
+                for spin in ["alpha-", "beta-"]:
+                    method = spin + matmethod
+                    if method not in refdata[case]:
+                        continue
+
+                    available_kinds = refdata[case][method]["available_kinds"]
+
+                    res_case[method] = {
+                        kind: make_mock_adc_state(self.refstate[case],
+                                                  matmethod, kind,
+                                                  refdata[case][method])
+                        for kind in available_kinds
+                    }
+
 
             other_methods = [(spec, cvs, basemethod) for spec in ["fc", "fv"]
                              for cvs in ["", "cvs"]
@@ -227,6 +270,8 @@ class TestdataCache():
                 method = spec + "-" + matmethod
                 if method not in refdata[case]:
                     continue
+                if method_dependent_kinds:
+                    available_kinds = refdata[case][method]["available_kinds"]
                 res_case[method] = {
                     kind: make_mock_adc_state(
                         self.refstate_nocache(case, fspec), matmethod, kind,

@@ -33,7 +33,7 @@ import h5py
 
 sys.path.insert(0, join(dirname(__file__), "adcc-testdata"))
 
-import adcctestdata as atd  # noqa: E402
+# import adcctestdata as atd  # noqa: E402
 
 
 def dump_all(case, kwargs, kwargs_overwrite={}, spec="gen", generator="adcc"):
@@ -43,7 +43,7 @@ def dump_all(case, kwargs, kwargs_overwrite={}, spec="gen", generator="adcc"):
         dump_method(case, method, kw, spec, generator=generator)
 
 
-def dump_method(case, method, kwargs, spec, generator="adcc"):
+def dump_method(case, method, kwargs, spec, generator="adcc", is_alpha=None):
     h5file = case + "_hfdata.hdf5"
     if not os.path.isfile(h5file):
         raise ValueError("HfData not found: " + h5file)
@@ -70,6 +70,10 @@ def dump_method(case, method, kwargs, spec, generator="adcc"):
     prefix = ""
     if spec != "gen":
         prefix = spec.replace("-", "_") + "_"
+
+    # For unrestricted IP/EA ref. data, generate one alpha and one beta file
+    if is_alpha is not None:
+        prefix += "alpha_" if is_alpha else "beta_"
     adc_tree = prefix.replace("_", "-") + method
     mp_tree = prefix.replace("_", "-") + "mp"
 
@@ -107,6 +111,17 @@ def dump_h2o_sto3g():  # H2O restricted
     dump_method(case, "adc2x", kwargs, spec="fv")
     dump_method(case, "adc2x", kwargs, spec="fv-cvs")
 
+    # IP-ADC
+    base_methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+    kwargs = {"n_doublets": 3}
+    for method in base_methods:
+        dump_method(case, "ip_" + method, kwargs, spec="gen")
+
+    # EA-ADC
+    kwargs = {"n_doublets": 2}
+    for method in base_methods:
+        dump_method(case, "ea_" + method, kwargs, spec="gen")
+
 
 def dump_h2o_def2tzvp():  # H2O restricted
     kwargs = {"n_singlets": 3, "n_triplets": 3, "n_guess_singles": 6,
@@ -130,6 +145,19 @@ def dump_cn_sto3g():  # CN unrestricted
                                "max_subspace": 30}, spec="fc-fv")
     dump_method(case, "adc2x", {"n_states": 4, "n_guess_singles": 8}, spec="fv")
     dump_method(case, "adc2x", {"n_states": 4}, spec="fv-cvs")
+
+    # IP-ADC
+    base_methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+    kwargs1 = {"n_states": 3, "is_alpha": True}
+    kwargs2 = {"n_states": 3, "is_alpha": False}
+    for method in base_methods:
+        dump_method(case, "ip_" + method, kwargs1, spec="gen", is_alpha=True)
+        dump_method(case, "ip_" + method, kwargs2, spec="gen", is_alpha=False)
+
+    # EA-ADC
+    for method in base_methods:
+        dump_method(case, "ea_" + method, kwargs1, spec="gen", is_alpha=True)
+        dump_method(case, "ea_" + method, kwargs2, spec="gen", is_alpha=False)
 
 
 def dump_cn_ccpvdz():  # CN unrestricted

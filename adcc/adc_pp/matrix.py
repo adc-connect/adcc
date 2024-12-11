@@ -50,16 +50,8 @@ containing the expression to the diagonal of the ADC matrix from this block.
 AdcBlock = namedtuple("AdcBlock", ["apply", "diagonal"])
 
 
-def block(ground_state, spaces, order, variant=None, intermediates=None):
-    """
-    Gets ground state, potentially intermediates, spaces (ph, pphh and so on)
-    and the perturbation theory order for the block,
-    variant is "cvs" or sth like that.
-
-    It is assumed largely, that CVS is equivalent to mp.has_core_occupied_space,
-    while one would probably want in the long run that one can have an "o2" space,
-    but not do CVS.
-    """
+def get_block_prereqs(ground_state, spaces, order, variant=None,
+                      intermediates=None):
     if isinstance(variant, str):
         variant = [variant]
     elif variant is None:
@@ -77,7 +69,22 @@ def block(ground_state, spaces, order, variant=None, intermediates=None):
                          "top of a ground state without a "
                          "core-valence separation.")
 
-    fn = "_".join(["block"] + variant + spaces + [str(order)])
+    return ("_".join(["block"] + variant + spaces + [str(order)]),
+            reference_state)
+
+
+def block(ground_state, spaces, order, variant=None, intermediates=None):
+    """
+    Gets ground state, potentially intermediates, spaces (ph, pphh and so on)
+    and the perturbation theory order for the block,
+    variant is "cvs" or sth like that.
+
+    It is assumed largely, that CVS is equivalent to mp.has_core_occupied_space,
+    while one would probably want in the long run that one can have an "o2" space,
+    but not do CVS.
+    """
+    fn, reference_state = get_block_prereqs(
+        ground_state, spaces, order, variant, intermediates)
 
     if fn not in globals():
         raise ValueError("Could not dispatch: "

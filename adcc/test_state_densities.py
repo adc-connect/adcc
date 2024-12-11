@@ -32,6 +32,8 @@ from pytest import approx, skip
 # The methods to test
 basemethods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 methods = [m for bm in basemethods for m in [bm, "cvs_" + bm]]
+ip_ea_methods = [variant + method for variant in ["ip_", "ea_"]
+                 for method in ["adc0", "adc1", "adc2", "adc2x", "adc3"]]
 
 
 @expand_test_templates(methods)
@@ -94,6 +96,21 @@ class Runners():
         self.base_test("h2s_6311g", "fv_cvs_adc2x", "singlet")
 
 
+@expand_test_templates(ip_ea_methods)
+class Runners_IP_EA():
+    def base_test(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def template_h2o_sto3g_doublet(self, method):
+        self.base_test("h2o_sto3g", method, "doublet")
+
+    def template_cn_sto3g_alpha(self, method):
+        self.base_test("cn_sto3g", "alpha-" + method, "any")
+
+    def template_cn_sto3g_beta(self, method):
+        self.base_test("cn_sto3g", "beta-" + method, "any")
+
+
 # Return combinations not tested so far:
 #     The rationale is that cvs-spin-flip as a method do not make
 #     that much sense and probably the routines are anyway covered
@@ -111,6 +128,25 @@ class TestStateDiffDm(unittest.TestCase, Runners):
 
         refdata = cache.reference_data[system]
         state = cache.adc_states[system][method][kind]
+
+        refdens_a = refdata[method][kind]["state_diffdm_bb_a"]
+        refdens_b = refdata[method][kind]["state_diffdm_bb_b"]
+        refevals = refdata[method][kind]["eigenvalues"]
+        for i in range(len(state.excitation_vector)):
+            # Check that we are talking about the same state when
+            # comparing reference and computed
+            assert state.excitation_energy[i] == refevals[i]
+
+            dm_ao_a, dm_ao_b = state.state_diffdm[i].to_ao_basis()
+            assert dm_ao_a.to_ndarray() == approx(refdens_a[i])
+            assert dm_ao_b.to_ndarray() == approx(refdens_b[i])
+
+
+# For IP/EA, only consistency tests exist yet. Q-Chem ref data would be nice
+class TestStateDiffDmIpEa(unittest.TestCase, Runners_IP_EA):
+    def base_test(self, system, method, kind):
+        refdata = cache.adcc_reference_data[system]
+        state = cache.adcc_states[system][method][kind]
 
         refdens_a = refdata[method][kind]["state_diffdm_bb_a"]
         refdens_b = refdata[method][kind]["state_diffdm_bb_b"]
@@ -161,6 +197,40 @@ class TestStateExcitedToExcitedTdm(unittest.TestCase, Runners):
         for i, exci in enumerate(state.excitations):
             # Check that we are talking about the same state when
             # comparing reference and computed
+            assert exci.excitation_energy == refevals[i]
+            fromi_ref_a = state_to_state[f"from_{i}"]["state_to_excited_tdm_bb_a"]
+            fromi_ref_b = state_to_state[f"from_{i}"]["state_to_excited_tdm_bb_b"]
+
+            state2state = State2States(state, initial=i)
+            for ii, j in enumerate(range(i + 1, state.size)):
+                assert state.excitation_energy[j] == refevals[j]
+                ee_ref = refevals[j] - refevals[i]
+                assert state2state.excitation_energy[ii] == ee_ref
+                dm_ao_a, dm_ao_b = state2state.transition_dm[ii].to_ao_basis()
+                np.testing.assert_allclose(fromi_ref_a[ii],
+                                           dm_ao_a.to_ndarray(), atol=1e-4)
+                np.testing.assert_allclose(fromi_ref_b[ii],
+                                           dm_ao_b.to_ndarray(), atol=1e-4)
+
+
+# For IP/EA, only consistency tests exist yet. Q-Chem ref data would be nice
+class TestStateExcitedToExcitedTdmIpEa(unittest.TestCase, Runners_IP_EA):
+    def base_test(self, system, method, kind):
+        refdata = cache.adcc_reference_data[system]
+        state = cache.adcc_states[system][method][kind]
+        state_to_state = refdata[method][kind]["state_to_state"]
+        refevals = refdata[method][kind]["eigenvalues"]
+
+        for i, exci in enumerate(state.excitations):
+            # Check that we are talking about the same state when
+            # comparing reference and computed
+
+            # Stop if s2s objects are exhausted
+            # (necessary since EA-ADC(0/1) calculations have very few states,
+            # especially with minimal bases)
+            if i >= len(state_to_state):
+                return None
+
             assert exci.excitation_energy == refevals[i]
             fromi_ref_a = state_to_state[f"from_{i}"]["state_to_excited_tdm_bb_a"]
             fromi_ref_b = state_to_state[f"from_{i}"]["state_to_excited_tdm_bb_b"]
