@@ -106,7 +106,7 @@ def ip_adc3_f11(hf, mp, intermediates):
     d_oo = zeros_like(hf.foo)
     d_oo.set_mask("ii", 1.0)
 
-    df = mp.df(b.o + b.v)
+    df = mp.df(b.ov)
     df2 = direct_sum("ia+kb->ikab", df, df).symmetrise((0, 1))
 
     t2 = mp.t2(b.oovv)
@@ -128,14 +128,14 @@ def ip_adc3_f12(hf, mp, intermediates):
     return mp.mp2_diffdm.ov - (intermediates.sigma_ov
                                + intermediates.m_3_plus
                                + intermediates.m_3_minus
-                               ) / mp.df(b.o + b.v)
+                               ) / mp.df(b.ov)
 
 
 @register_as_intermediate
 def ip_adc3_f22(hf, mp, intermediates):
     # effective transition moments, oovv part f_ijab
 
-    df = mp.df(b.o + b.v)
+    df = mp.df(b.ov)
     df2 = direct_sum("ia+jb->ijab", df, df).symmetrise((2, 3))
 
     return (- 1/sqrt(2) * mp.t2(b.oovv)
@@ -147,11 +147,13 @@ def ip_adc3_f22(hf, mp, intermediates):
             )
 
 
+# TODO: Intermediates are also necessary in LazyMP, avoid redundancy
+# TODO: Proper testing against Q-Chem of the pole strengths
 @register_as_intermediate
 def sigma_ov(hf, mp, intermediates):
     # Static self-energy, oo part \Sigma_{ij}(\infty)
     p0 = mp.mp2_diffdm
-    return (einsum("jika,jk->ia", hf.ooov, p0.oo)
+    return (+ einsum("jika,jk->ia", hf.ooov, p0.oo)
             + einsum("ijab,jb->ia", hf.oovv, p0.ov)
             - einsum("ibja,jb->ia", hf.ovov, p0.ov)
             + einsum("ibac,bc->ia", hf.ovvv, p0.vv))
@@ -160,38 +162,22 @@ def sigma_ov(hf, mp, intermediates):
 @register_as_intermediate
 def m_3_plus(hf, mp, intermediates):
     # Intermediate M_ia^{(3)+}, parts of the dynamic self-energy
-
-    df = mp.df(b.o + b.v)
-    df2 = direct_sum("ia+jb->ijab", df, df).symmetrise((2, 3))
-
-    return (0.5 * einsum("ijbc,jabc->ia", mp.t2oo, intermediates.adc3_pib)
-            - 0.25 * einsum("jabc,ijbc->ia", hf.ovvv,
-                            mp.t2eri(b.oovv, b.oo) / df2)
-            - 0.25 * einsum("jabc,ijbc->ia", hf.ovvv,
-                            mp.t2eri(b.oovv, b.vv) / df2)
-            - 2 * einsum("jabc,ijbc->ia", hf.ovvv,
-                           ((mp.t2eri(b.oovv, b.ov)).antisymmetrise(0, 1)
-                            ).antisymmetrise(2, 3) / df2)
+    return (+ 1 * einsum("ijbc,jabc->ia", mp.t2oo, mp.t2eri(b.ovvv, b.ov))
+            + 0.5 * einsum("ijbc,jabc->ia", mp.td2(b.oovv), hf.ovvv)
+            - 0.25 * einsum(
+                "ijbc,jabc->ia", mp.t2oo, mp.t2eri(b.ovvv, b.oo))
             )
 
 
 @register_as_intermediate
 def m_3_minus(hf, mp, intermediates):
     # Intermediate M_ia^{(3)-}, parts of the dynamic self-energy
-
-    df = mp.df(b.o + b.v)
-    df2 = direct_sum("ia+jb->ijab", df, df).symmetrise((2, 3))
-
-    return (- 0.5 * einsum("jkab,jkib->ia", mp.t2oo, intermediates.adc3_pia)
-            - 0.25 * einsum("jkib,jkab->ia", hf.ooov,
-                            mp.t2eri(b.oovv, b.oo) / df2)
-            - 0.25 * einsum("jkib,jkab->ia", hf.ooov,
-                            mp.t2eri(b.oovv, b.vv) / df2)
-            - 2 * einsum("jkib,jkab->ia", hf.ooov,
-                           ((mp.t2eri(b.oovv, b.ov)).antisymmetrise(2, 3)
-                            ).antisymmetrise(0, 1) / df2)
+    return (+ 0.5 * einsum("jkab,jkib->ia", mp.td2(b.oovv), hf.ooov)
+            - 1 * einsum("jkab,jkib->ia", mp.t2oo, mp.t2eri(b.ooov, b.ov))
+            - 0.25 * einsum(
+                "jkab,jkib->ia", mp.t2oo, mp.t2eri(b.ooov, b.vv)
+                )
             )
-
 
 DISPATCH = {
     "ip_adc0": pole_strength_ip_adc0,
