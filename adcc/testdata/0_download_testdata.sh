@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SOURCE="https://q-chem.de/adcc_testdata/0.5.0/"
+SOURCE="https://wwwagdreuw.iwr.uni-heidelberg.de/adcc_test_data/0.6.0/"
 DATAFILES=(
 	ch2nh2_sto3g_hfdata.hdf5
 	ch2nh2_sto3g_hfimport.hdf5
@@ -180,7 +180,7 @@ echo "Updating testdata ... please wait."
 
 download() {
 	if which wget &> /dev/null; then
-		wget -w 1 -qN --show-progress $@
+		wget -w 1 -qN --show-progress --no-check-certificate $@
 	else
 		echo "wget not installed" >&2
 		exit 1

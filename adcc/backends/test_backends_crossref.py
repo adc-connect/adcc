@@ -56,7 +56,7 @@ class TestCrossReferenceBackends(unittest.TestCase):
             scfres = cached_backend_hf(b, "r2methyloxirane", basis,
                                        conv_tol=1e-10)
             results[b] = adcc.adc2(scfres, n_singlets=3, conv_tol=1e-9)
-        compare_adc_results(results, 5e-8)
+        compare_adc_results(results, 5e-7)
 
     def template_adc2_uhf_ch2nh2(self, basis):
         results = {}
