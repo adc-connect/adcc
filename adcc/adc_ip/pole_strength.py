@@ -67,6 +67,9 @@ def pole_strength_ip_adc3(mp, amplitude, intermediates):
     u1, u2 = amplitude.h, amplitude.phh
 
     f11 = intermediates.ip_adc3_f11
+    # TODO: when mp3_diffdm is implemented, intermediate can be directly reused
+    # to avoid redundancy
+    # f12 = intermediates.mp3_diffdm.ov
     f12 = intermediates.ip_adc3_f12
     f22 = intermediates.ip_adc3_f22
 
@@ -134,7 +137,6 @@ def ip_adc3_f12(hf, mp, intermediates):
 @register_as_intermediate
 def ip_adc3_f22(hf, mp, intermediates):
     # effective transition moments, oovv part f_ijab
-
     df = mp.df(b.ov)
     df2 = direct_sum("ia+jb->ijab", df, df).symmetrise((2, 3))
 

@@ -67,6 +67,9 @@ def pole_strength_ea_adc3(mp, amplitude, intermediates):
     u1, u2 = amplitude.p, amplitude.pph
 
     f11 = intermediates.ea_adc3_f11
+    # TODO: when mp3_diffdm is implemented, intermediate can be directly reused
+    # to avoid redundancy
+    # f12 = - intermediates.mp3_diffdm.ov
     f12 = intermediates.ea_adc3_f12
     f22 = intermediates.ea_adc3_f22
 
@@ -125,6 +128,7 @@ def ea_adc3_f11(hf, mp, intermediates):
 @register_as_intermediate
 def ea_adc3_f12(hf, mp, intermediates):
     # effective transition moments, ov part f_ia
+    # Intermediates are defined in /adcc/adc_ip/pole_strength.py
     return - mp.mp2_diffdm.ov + (intermediates.sigma_ov
                                  + intermediates.m_3_plus
                                  + intermediates.m_3_minus
@@ -134,7 +138,6 @@ def ea_adc3_f12(hf, mp, intermediates):
 @register_as_intermediate
 def ea_adc3_f22(hf, mp, intermediates):
     # effective transition moments, oovv part f_ijab
-
     df = mp.df(b.o + b.v)
     df2 = direct_sum("ia+jb->ijab", df, df).symmetrise((2, 3))
 
@@ -145,10 +148,6 @@ def ea_adc3_f22(hf, mp, intermediates):
                                ).antisymmetrise(2, 3)).antisymmetrise(0, 1)
                            ) / df2
             )
-
-
-# Further intermediates (sigma_ov, m_3_plus, m_3_minus) can be found in
-# /adcc/adc_ip/pole_strength.py
 
 
 DISPATCH = {
