@@ -90,8 +90,6 @@ def compute_true_residuals(subspace, rvals, rvecs, epair_mask):
                     if i in epair_mask]
     rnorms = np.array([np.sqrt(r @ r) for r in residuals])
 
-    # Note here the actual residual norm (and not the residual norm squared)
-    # is returned.
     return eigenvectors, residuals, rnorms
 
 
@@ -102,10 +100,6 @@ def amend_true_residuals(state, subspace, rvals, rvecs, epair_mask):
     """
     res = compute_true_residuals(subspace, rvals, rvecs, epair_mask)
     state.eigenvectors, state.residuals, state.residual_norms = res
-
-    # TODO For consistency with the Davidson the residual norms are
-    #      squared to give output in the same order of magnitude.
-    state.residual_norms = state.residual_norms**2
 
     return state
 
@@ -152,7 +146,7 @@ def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9
     max_subspace : int
         Maximal subspace size
     conv_tol : float, optional
-        Convergence tolerance on the l2 norm squared of residuals to consider
+        Convergence tolerance on the l2 norm of residuals to consider
         them converged
     which : str, optional
         Which eigenvectors to converge to (e.g. LM, LA, SM, SA)
@@ -167,14 +161,6 @@ def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9
     if callback is None:
         def callback(state, identifier):
             pass
-
-    # TODO For consistency with the Davidson the conv_tol is interpreted
-    #      as the residual norm *squared*. Arnoldi, however, uses the actual norm
-    #      to check for convergence and so on. See also the comment in Davidson
-    #      around the line computing state.residual_norms
-    #
-    #      See also the squaring of the residual norms below
-    tol = np.sqrt(conv_tol)
 
     if state is None:
         state = LanczosState(iterator)
@@ -191,12 +177,12 @@ def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9
 
         if debug_checks:
             eps = np.finfo(float).eps
-            orthotol = max(tol / 1000, subspace.n_problem * eps)
+            orthotol = max(conv_tol / 1000, subspace.n_problem * eps)
             orth = subspace.check_orthogonality(orthotol)
             state.subspace_orthogonality = orth
 
         is_rval_converged, eigenpair_error = check_convergence(subspace, rvals,
-                                                               rvecs, tol)
+                                                               rvecs, conv_tol)
 
         # Update state
         state.n_iter += 1
@@ -210,10 +196,6 @@ def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9
         state.eigenvalues = rvals[epair_mask]
         state.residual_norms = eigenpair_error[epair_mask]
         converged = np.all(is_rval_converged[epair_mask])
-
-        # TODO For consistency with the Davidson the residual norms are squared
-        #      again to give output in the same order of magnitude.
-        state.residual_norms = state.residual_norms**2
 
         callback(state, "next_iter")
         state.timer.restart("iteration")

@@ -28,9 +28,9 @@ from .LazyMp import LazyMp
 from .Tensor import Tensor
 from .Symmetry import Symmetry
 from .MoSpaces import MoSpaces
-from .AdcMatrix import AdcBlockView, AdcMatrix
+from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod
-from .functions import (contract, copy, direct_sum, dot, einsum, empty_like,
+from .functions import (copy, direct_sum, dot, einsum, empty_like,
                         evaluate, lincomb, linear_combination, nosym_like,
                         ones_like, transpose, zeros_like)
 from .memory_pool import memory_pool
@@ -50,9 +50,9 @@ from .guess import (guess_symmetries, guess_zero, guesses_any, guesses_singlet,
 from .workflow import run_adc
 from .exceptions import InputError
 
-__all__ = ["run_adc", "InputError", "AdcMatrix", "AdcBlockView",
+__all__ = ["run_adc", "InputError", "AdcMatrix",
            "AdcMethod", "Symmetry", "ReferenceState", "MoSpaces",
-           "einsum", "contract", "copy", "dot", "empty_like", "evaluate",
+           "einsum", "copy", "dot", "empty_like", "evaluate",
            "lincomb", "nosym_like", "ones_like", "transpose",
            "linear_combination", "zeros_like", "direct_sum",
            "memory_pool", "set_n_threads", "get_n_threads", "AmplitudeVector",

@@ -61,7 +61,7 @@ class IndexSymmetrisation():
             if not isinstance(vec, AmplitudeVector):
                 raise TypeError("new_vectors has to be an "
                                 "iterable of AmplitudeVector")
-            for b in vec.blocks_ph:
+            for b in vec.blocks:
                 if b not in self.symmetrisation_functions:
                     continue
                 vec[b] = evaluate(self.symmetrisation_functions[b](vec[b]))
@@ -76,6 +76,7 @@ class IndexSpinSymmetrisation(IndexSymmetrisation):
     def __init__(self, matrix, enforce_spin_kind="singlet"):
         super().__init__(matrix)
         self.enforce_spin_kind = enforce_spin_kind
+        # Bool to distinguish IP/EA if 'spin_kind=='doublet'
         self.is_ip = (matrix.type == "ip")
 
     def symmetrise(self, new_vectors):
@@ -89,12 +90,11 @@ class IndexSpinSymmetrisation(IndexSymmetrisation):
             # Only work on the doubles part
             # the other blocks are not yet implemented
             # or nothing needs to be done ("ph"/"h"/"p" block)
-            if len(vec.keys()) > 1:
-                block = sorted(vec.keys())[1]
+            if len(vec.blocks) > 1:
                 # TODO: Note that the "d" is needed here because the C++ side
                 #       does not yet understand ph/h/p and pphh/phh/pph
                 amplitude_vector_enforce_spin_kind(
-                        vec.get(block), "d", self.enforce_spin_kind, self.is_ip
+                        vec.get(vec.blocks[1]), "d", self.enforce_spin_kind, self.is_ip
                 )
 
         return new_vectors

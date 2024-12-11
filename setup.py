@@ -37,7 +37,6 @@ import subprocess
 from distutils import log
 
 from setuptools import Command, find_packages, setup
-from setuptools.command.test import test as TestCommand
 
 try:
     from pybind11.setup_helpers import Pybind11Extension, build_ext
@@ -81,40 +80,6 @@ else:
             raise RuntimeError(
                 "Sphinx not found. Try 'pip install -U adcc[build_docs]'"
             )
-
-
-class PyTest(TestCommand):
-    user_options = [
-        ("mode=", "m", "Mode for the testsuite (fast or full)"),
-        ("skip-update", "s", "Skip updating testdata"),
-        ("pytest-args=", "a", "Arguments to pass to pytest"),
-    ]
-
-    def initialize_options(self):
-        TestCommand.initialize_options(self)
-        self.pytest_args = ""
-        self.mode = "fast"
-        self.skip_update = False
-
-    def finalize_options(self):
-        if self.mode not in ["fast", "full"]:
-            raise Exception("Only test modes 'fast' and 'full' are supported")
-
-    def run_tests(self):
-        # import here, cause outside the eggs aren't loaded
-        import pytest
-
-        if not os.path.isdir("adcc/testdata"):
-            raise RuntimeError("Can only test from git repository, "
-                               "not from installation tarball.")
-
-        args = ["adcc"]
-        args += ["--mode", self.mode]
-        if self.skip_update:
-            args += ["--skip-update"]
-        args += shlex.split(self.pytest_args)
-        errno = pytest.main(args)
-        sys.exit(errno)
 
 
 class CppTest(Command):
@@ -355,7 +320,7 @@ def libadcc_extension():
         libtensor_url=None,
     )
 
-    if sys.platform == "darwin" and is_conda_build():
+    if sys.platform == "darwin":
         flags["extra_compile_args"] += ["-Wno-unused-command-line-argument",
                                         "-Wno-undefined-var-template",
                                         "-Wno-bitwise-instead-of-logical"]
@@ -473,7 +438,6 @@ def adccsetup(*args, **kwargs):
     if is_conda_build():
         kwargs.pop("install_requires")
         kwargs.pop("setup_requires")
-        kwargs.pop("tests_require")
         kwargs.pop("extras_require")
     try:
         setup(*args, **kwargs)
@@ -539,17 +503,17 @@ adccsetup(
     install_requires=[
         "opt_einsum >= 3.0",
         "numpy >= 1.14",
-        "scipy >= 1.2,<1.11",  # TODO: pyscf problem with sym_pos, remove later
+        "scipy >= 1.2",
         "h5py >= 2.9",
         "tqdm >= 4.30",
     ],
-    tests_require=["pytest", "pytest-cov", "pyyaml", "pandas >= 0.25.0"],
     extras_require={
+        "tests": ["pytest", "pytest-cov", "pyyaml", "pandas >= 0.25.0"],
         "build_docs": ["sphinx>=2", "breathe", "sphinxcontrib-bibtex",
                        "sphinx-automodapi", "sphinx-rtd-theme"],
         "analysis": ["matplotlib >= 3.0", "pandas >= 0.25.0"],
     },
     #
-    cmdclass={"build_ext": build_ext, "pytest": PyTest,
+    cmdclass={"build_ext": build_ext,
               "build_docs": BuildDocs, "cpptest": CppTest},
 )

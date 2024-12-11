@@ -17,15 +17,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {version: '3.7', os: ubuntu-latest, documentation: True}
+          - {version: '3.11', os: ubuntu-latest, documentation: True}
           - {version: '3.9', os: ubuntu-latest, documentation: False}
-          - {version: '3.7', os: macos-11 , documentation: False}
+          - {version: '3.11', os: macos-13 , documentation: False}
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.version }}
-      - uses: actions/cache@v1
+      - uses: actions/cache@v4
         env:
           cache-name: cache-artifacts
         with:
@@ -60,27 +60,30 @@ jobs:
           export PATH="/usr/local/opt/ccache/libexec:$PATH"
           export PATH="/usr/lib/ccache:$PATH"
           python -m pip install --user pyscf cppe wheel
-          python -m pip install --user -r requirements.txt -v
       #
+      - name: Install package
+        run: |
+          pip install --user .[tests]
       - name: Run python tests with std allocator
         run: |
-          python setup.py test -a '--cov=adcc'
+          python -m pytest adcc --cov=adcc
       - name: Run reduced python tests with libxm
         run: |
-          python setup.py test -a '--allocator=libxm -k "TestFunctionality and h2o_sto3g"'
+          python -m pytest adcc --allocator=libxm -k "TestFunctionality and h2o_sto3g"
       - name: Run C++ tests
         run: python setup.py cpptest -v
-      #
+      # Documentation build
       - name: Dependencies for documentation
         run: python -m pip install --user .[build_docs]
         if: matrix.documentation
       - name: Build documentation
-        run: python setup.py build_docs
+        run: |
+          cd docs && doxygen && cd ..
+          sphinx-build -M html docs build/sphinx
         if: matrix.documentation
-      - name: Upload documentation artefact
-        uses: actions/upload-artifact@v2
+      - name: Upload documentation artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: documentation
           path: build/sphinx/html
         if: matrix.documentation
       #
@@ -92,6 +95,7 @@ jobs:
           lcov --remove coverage.info '/opt/*' '/Applications/*' '/Library/*' '/usr/*' "${HOME}"'/.cache/*' "${HOME}"'/.local/*' "${PWD}"'/build/*' "${PWD}"'/libadcc/tests/*' --output-file coverage.info
           lcov --list coverage.info
           codecov -X gcov -f coverage.info
+        if: contains(matrix.os, 'ubuntu')
 
       - name: Upload coverage to coveralls
         # Note: Needs to be after the above step, because it parses the coverage.info
@@ -102,7 +106,26 @@ jobs:
           coveralls --service=github --merge=coverage.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: contains(matrix.os, 'ubuntu')
 
+  deploy_documentation:
+    name: Deploy Documentation to Github Pages
+    if: github.ref == 'refs/heads/master'
+    needs: test
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+    # Deploy to the github-pages environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    # Specify runner + deployment step
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
   #
   # Test Conda Python
   #
@@ -113,16 +136,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {version: '3.9', os: ubuntu-latest, documentation: False}
+          - {version: '3.11', os: ubuntu-latest, documentation: False}
+          - {version: '3.11', os: macos-13 , documentation: False}
     defaults:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v2
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: actions/checkout@v4
+      - name: Patch compiler in Conda environment file
+        if: contains( matrix.os, 'macos')
+        run: |
+          sed -E -i.bak "s;gcc_linux-64;clang_osx-64;g" conda/environment.yml
+          sed -E -i.bak "s;gxx_linux-64;clangxx_osx-64;g" conda/environment.yml
+      - uses: conda-incubator/setup-miniconda@v3
         with:
           activate-environment: adcc-dev
-          environment-file: conda/environment_dev_linux.yml
+          environment-file: conda/environment.yml
           miniforge-variant: Mambaforge
           use-mamba: true
           miniforge-version: latest
@@ -141,9 +170,11 @@ jobs:
         run: |
           conda info
           conda list
+          CXXFLAGS="$(echo $CXXFLAGS | sed 's/-fvisibility-inlines-hidden //g')"
+          pip install .[tests] --user
           # NOTE: pcmsolver not 'linked' with Psi4 1.8
-          python setup.py test -a '-k "not pcm"'
-          python setup.py cpptest -v
+          pytest adcc -k "not pcm"
+          # python setup.py cpptest -v  # TODO: currently doesn't compile...
       #
       # - name: Upload coverage to codecov
       #   run: |
@@ -171,10 +202,10 @@ jobs:
     name: Code style
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.11'
       - name: Install dependencies
         run: |
           pip install flake8

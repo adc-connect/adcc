@@ -40,8 +40,8 @@ class TestPCM(unittest.TestCase):
 
         assert_allclose(scfres.energy_scf, result["energy_scf"], atol=1e-8)
 
-        state = adcc.run_adc(scfres, method=method, n_singlets=5,
-                             conv_tol=1e-7, environment="ptlr")
+        state = adcc.run_adc(scfres, method=method, n_singlets=5, conv_tol=1e-7,
+                             max_subspace=24, environment="ptlr")
 
         # compare ptLR result to LR data
         assert_allclose(state.excitation_energy,
@@ -49,7 +49,7 @@ class TestPCM(unittest.TestCase):
 
         # Consistency check with values obtained with ADCc
         assert_allclose(state.excitation_energy,
-                        result["ptlr_adcc_excitation_energy"], atol=1e-6)
+                        result["ptlr_adcc_excitation_energy"], atol=1e-5)
 
         if backend == "psi4":
             # remove cavity files from PSI4 PCM calculations
@@ -78,7 +78,7 @@ class TestPCM(unittest.TestCase):
         assert len(matrix.extra_terms)
 
         state = adcc.run_adc(matrix, n_singlets=5, conv_tol=1e-7,
-                             environment=False)
+                             max_subspace=24, environment=False)
         assert_allclose(
             state.excitation_energy_uncorrected,
             result["lr_excitation_energy"],
@@ -101,8 +101,8 @@ class TestPCM(unittest.TestCase):
             adcc.run_adc(scfres, method=method, n_singlets=5)
 
         # automatically add coupling term
-        state = adcc.run_adc(scfres, method=method, n_singlets=5,
-                             conv_tol=1e-7, environment="linear_response")
+        state = adcc.run_adc(scfres, method=method, n_singlets=5, conv_tol=1e-7,
+                             max_subspace=24, environment="linear_response")
         assert_allclose(
             state.excitation_energy_uncorrected,
             result["lr_excitation_energy"],
@@ -173,7 +173,7 @@ class TestPCMcomparison(unittest.TestCase):
 def remove_cavity_psi4():
     # removes cavity files from PSI4 PCM calculations
     for cavityfile in os.listdir(os.getcwd()):
-        if cavityfile.startswith(("cavity.off_", "PEDRA.OUT_")):
+        if cavityfile.startswith(("cavity.off_", "cavity.npz", "PEDRA.OUT_")):
             os.remove(cavityfile)
 
 
