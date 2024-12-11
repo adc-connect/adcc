@@ -22,24 +22,22 @@
 ## ---------------------------------------------------------------------
 import adcc
 import pytest
-import itertools
 import numpy as np
-
 from numpy.testing import assert_allclose
 
 from adcc.AdcMatrix import AdcExtraTerm, AdcMatrixProjected, AdcMatrixShifted
+from adcc.Intermediates import Intermediates
 from adcc.adc_pp.matrix import AdcBlock
 
+from adcc.test_projection import (  # TODO: redirect import
+    assert_nonzero_blocks, construct_nonzero_blocks, assert_equal_symmetry
+)
 from .testdata_cache import testdata_cache
 from . import testcases
 
-# Test diagonal, block-wise apply and matvec
-
-# Reference data for cn_sto3g and h2o_sto3g contains
-# a random vector and the result of block-wise application and matvec
-# as well as reference results for the diagonal() call
 
 test_cases = testcases.get_by_filename("h2o_sto3g", "cn_sto3g")
+h2o_sto3g = testcases.get_by_filename("h2o_sto3g").pop()
 cases = [(case.file_name, c) for case in test_cases for c in case.cases]
 methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 
@@ -134,269 +132,271 @@ class TestAdcMatrix:
                 )
 
 
-# class TestAdcMatrixInterface(unittest.TestCase):
-#     def test_properties_adc2(self):
-#         case = "h2o_sto3g"
-#         method = "adc2"
+class TestAdcMatrixInterface:
+    @pytest.mark.parametrize("method", methods)
+    @pytest.mark.parametrize("system,case",
+                             [("h2o_sto3g", c) for c in h2o_sto3g.cases])
+    def test_properties(self, system: str, case: str, method: str):
+        reference_state = testdata_cache.refstate(system=system, case=case)
+        ground_state = adcc.LazyMp(reference_state)
+        if "cvs" in case and "cvs" not in method:
+            method = f"cvs-{method}"
+        matrix = adcc.AdcMatrix(method, ground_state)
 
-#         reference_state = cache.refstate[case]
-#         ground_state = adcc.LazyMp(reference_state)
-#         matrix = adcc.AdcMatrix(method, ground_state)
+        assert matrix.ndim == 2
+        assert matrix.is_core_valence_separated == ("cvs" in case)
+        # check that the blocks are correct
+        blocks = matrix.axis_blocks
+        if matrix.method.adc_type == "pp":
+            assert blocks == ["ph", "pphh", "ppphhh"][:matrix.method.level // 2 + 1]
+        else:
+            raise NotImplementedError(f"Unknown adc type {matrix.method.adc_type}.")
+        assert sorted(matrix.axis_spaces.keys(), key=len) == blocks
+        assert sorted(matrix.axis_lengths.keys(), key=len) == blocks
+        # check that the spaces for each block are correct.
+        # -> build the spaces for each block
+        spaces = []
+        for block in blocks:
+            assert all(sp in "ph" for sp in block)
+            block_spaces = ["o1" if sp == "h" else "v1" for sp in block]
+            if "cvs" in case:  # replace last o1 -> o2
+                block_spaces.reverse()
+                block_spaces[block_spaces.index("o1")] = "o2"
+                block_spaces.reverse()
+            spaces.append(sorted(block_spaces))
+        for block, space in zip(blocks, spaces):
+            assert matrix.axis_spaces[block] == space
+        # check that the sizes of the matrix and for each block are correct
+        # -> compute the sizes for the case starting from the "gen" sizes
+        sizes = {"o1": 10, "v1": 4}
+        if "cvs" in case:
+            sizes["o2"] = 2 * h2o_sto3g.core_orbitals  # alpha and beta
+            sizes["o1"] -= 2 * h2o_sto3g.core_orbitals  # alpha and beta
+        elif "fc" in case:
+            sizes["o1"] -= 2 * h2o_sto3g.frozen_core  # alpha and beta
+        if "fv" in case:
+            sizes["v1"] -= 2 * h2o_sto3g.frozen_virtual  # alpha and beta
+        matrix_size = 0  # the sum of all blocks
+        for block, space in zip(blocks, spaces):
+            size = 1
+            for sp in space:
+                size *= sizes[sp]
+            assert matrix.axis_lengths[block] == size
+            matrix_size += size
+        assert matrix.shape == (matrix_size, matrix_size)
+        assert len(matrix) == matrix_size
 
-#         assert matrix.ndim == 2
-#         assert not matrix.is_core_valence_separated
-#         assert matrix.shape == (1640, 1640)
-#         assert len(matrix) == 1640
+        assert matrix.reference_state == reference_state
+        assert matrix.mospaces == reference_state.mospaces
+        assert isinstance(matrix.timer, adcc.timings.Timer)
 
-#         assert matrix.axis_blocks == ["ph", "pphh"]
-#         assert sorted(matrix.axis_spaces.keys()) == matrix.axis_blocks
-#         assert sorted(matrix.axis_lengths.keys()) == matrix.axis_blocks
-#         assert matrix.axis_spaces["ph"] == ["o1", "v1"]
-#         assert matrix.axis_spaces["pphh"] == ["o1", "o1", "v1", "v1"]
-#         assert matrix.axis_lengths["ph"] == 40
-#         assert matrix.axis_lengths["pphh"] == 1600
+    def test_intermediates_adc2(self):
+        ground_state = adcc.LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
+        matrix = adcc.AdcMatrix("adc2", ground_state)
+        assert isinstance(matrix.intermediates, Intermediates)
+        intermediates = Intermediates(ground_state)
+        matrix.intermediates = intermediates
+        assert matrix.intermediates == intermediates
 
-#         assert matrix.reference_state == reference_state
-#         assert matrix.mospaces == reference_state.mospaces
-#         assert isinstance(matrix.timer, adcc.timings.Timer)
+    def test_matvec_adc2(self):
+        ground_state = adcc.LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
+        matrix = adcc.AdcMatrix("adc2", ground_state)
 
-#     def test_properties_cvs_adc1(self):
-#         case = "h2o_sto3g"
-#         method = "cvs-adc1"
+        vectors = [adcc.guess_zero(matrix) for _ in range(3)]
+        for vec in vectors:
+            vec.set_random()
+        v, w, x = vectors
 
-#         reference_state = cache.refstate_cvs[case]
-#         ground_state = adcc.LazyMp(reference_state)
-#         matrix = adcc.AdcMatrix(method, ground_state)
+        # Compute references:
+        refv = matrix.matvec(v)
+        refw = matrix.matvec(w)
+        refx = matrix.matvec(x)
 
-#         assert matrix.ndim == 2
-#         assert matrix.is_core_valence_separated
-#         assert matrix.shape == (8, 8)
-#         assert len(matrix) == 8
+        # @ operator (1 vector)
+        resv = matrix @ v
+        diffv = refv - resv
+        assert diffv.ph.dot(diffv.ph) < 1e-12
+        assert diffv.pphh.dot(diffv.pphh) < 1e-12
 
-#         assert matrix.axis_blocks == ["ph"]
-#         assert sorted(matrix.axis_spaces.keys()) == matrix.axis_blocks
-#         assert sorted(matrix.axis_lengths.keys()) == matrix.axis_blocks
-#         assert matrix.axis_spaces["ph"] == ["o2", "v1"]
-#         assert matrix.axis_lengths["ph"] == 8
+        # @ operator (multiple vectors)
+        resv, resw, resx = matrix @ [v, w, x]
+        diffs = [refv - resv, refw - resw, refx - resx]
+        for i in range(3):
+            assert diffs[i].ph.dot(diffs[i].ph) < 1e-12
+            assert diffs[i].pphh.dot(diffs[i].pphh) < 1e-12
 
-#         assert matrix.reference_state == reference_state
-#         assert matrix.mospaces == reference_state.mospaces
-#         assert isinstance(matrix.timer, adcc.timings.Timer)
+        # compute matvec
+        resv = matrix.matvec(v)
+        diffv = refv - resv
+        assert diffv.ph.dot(diffv.ph) < 1e-12
+        assert diffv.pphh.dot(diffv.pphh) < 1e-12
 
-#     def test_intermediates_adc2(self):
-#         ground_state = adcc.LazyMp(cache.refstate["h2o_sto3g"])
-#         matrix = adcc.AdcMatrix("adc2", ground_state)
-#         assert isinstance(matrix.intermediates, Intermediates)
-#         intermediates = Intermediates(ground_state)
-#         matrix.intermediates = intermediates
-#         assert matrix.intermediates == intermediates
+        resv = matrix.rmatvec(v)
+        diffv = refv - resv
+        assert diffv.ph.dot(diffv.ph) < 1e-12
+        assert diffv.pphh.dot(diffv.pphh) < 1e-12
 
-#     def test_matvec_adc2(self):
-#         ground_state = adcc.LazyMp(cache.refstate["h2o_sto3g"])
-#         matrix = adcc.AdcMatrix("adc2", ground_state)
+        # Test apply
+        resv.ph = matrix.block_apply("ph_ph", v.ph)
+        resv.ph += matrix.block_apply("ph_pphh", v.pphh)
+        refv = matrix.matvec(v)
+        diffv = resv.ph - refv.ph
+        assert diffv.dot(diffv) < 1e-12
 
-#         vectors = [adcc.guess_zero(matrix) for i in range(3)]
-#         for vec in vectors:
-#             vec.set_random()
-#         v, w, x = vectors
+    def test_extra_term(self):
+        ground_state = adcc.LazyMp(testdata_cache.refstate("h2o_sto3g", "gen"))
+        matrix_adc1 = adcc.AdcMatrix("adc1", ground_state)
+        with pytest.raises(TypeError):
+            matrix_adc1 += 42
+        matrix = adcc.AdcMatrix("adc2", ground_state)
 
-#         # Compute references:
-#         refv = matrix.matvec(v)
-#         refw = matrix.matvec(w)
-#         refx = matrix.matvec(x)
+        with pytest.raises(TypeError):
+            adcc.AdcMatrix("adc2", ground_state,
+                           diagonal_precomputed=42)
+        with pytest.raises(ValueError):
+            adcc.AdcMatrix("adc2", ground_state,
+                           diagonal_precomputed=matrix.diagonal() + 42)
+        with pytest.raises(TypeError):
+            AdcExtraTerm(matrix, "fail")
+        with pytest.raises(TypeError):
+            AdcExtraTerm(matrix, {"fail": "not_callable"})
 
-#         # @ operator (1 vector)
-#         resv = matrix @ v
-#         diffv = refv - resv
-#         assert diffv.ph.dot(diffv.ph) < 1e-12
-#         assert diffv.pphh.dot(diffv.pphh) < 1e-12
+        shift = -0.3
+        shifted = AdcMatrixShifted(matrix, shift)
+        # TODO: need to use AmplitudeVector to differentiate between
+        # diagonals for ph and pphh
+        # if we just pass numbers, i.e., shift
+        # we get 2*shift on the diagonal
+        ones = matrix.diagonal().ones_like()
 
-#         # @ operator (multiple vectors)
-#         resv, resw, resx = matrix @ [v, w, x]
-#         diffs = [refv - resv, refw - resw, refx - resx]
-#         for i in range(3):
-#             assert diffs[i].ph.dot(diffs[i].ph) < 1e-12
-#             assert diffs[i].pphh.dot(diffs[i].pphh) < 1e-12
+        def __shift_ph(hf, mp, intermediates):
+            def apply(invec):
+                return adcc.AmplitudeVector(ph=shift * invec.ph)
+            diag = adcc.AmplitudeVector(ph=shift * ones.ph)
+            return AdcBlock(apply, diag)
 
-#         # compute matvec
-#         resv = matrix.matvec(v)
-#         diffv = refv - resv
-#         assert diffv.ph.dot(diffv.ph) < 1e-12
-#         assert diffv.pphh.dot(diffv.pphh) < 1e-12
+        def __shift_pphh(hf, mp, intermediates):
+            def apply(invec):
+                return adcc.AmplitudeVector(pphh=shift * invec.pphh)
+            diag = adcc.AmplitudeVector(pphh=shift * ones.pphh)
+            return AdcBlock(apply, diag)
+        extra = AdcExtraTerm(
+            matrix, {'ph_ph': __shift_ph, 'pphh_pphh': __shift_pphh}
+        )
+        # cannot add to 'pphh_pphh' in ADC(1) matrix
+        with pytest.raises(ValueError):
+            matrix_adc1 += extra
 
-#         resv = matrix.rmatvec(v)
-#         diffv = refv - resv
-#         assert diffv.ph.dot(diffv.ph) < 1e-12
-#         assert diffv.pphh.dot(diffv.pphh) < 1e-12
-
-#         # Test apply
-#         resv.ph = matrix.block_apply("ph_ph", v.ph)
-#         resv.ph += matrix.block_apply("ph_pphh", v.pphh)
-#         refv = matrix.matvec(v)
-#         diffv = resv.ph - refv.ph
-#         assert diffv.dot(diffv) < 1e-12
-
-#     def test_extra_term(self):
-#         ground_state = adcc.LazyMp(cache.refstate["h2o_sto3g"])
-#         matrix_adc1 = adcc.AdcMatrix("adc1", ground_state)
-#         with pytest.raises(TypeError):
-#             matrix_adc1 += 42
-#         matrix = adcc.AdcMatrix("adc2", ground_state)
-
-#         with pytest.raises(TypeError):
-#             adcc.AdcMatrix("adc2", ground_state,
-#                            diagonal_precomputed=42)
-#         with pytest.raises(ValueError):
-#             adcc.AdcMatrix("adc2", ground_state,
-#                            diagonal_precomputed=matrix.diagonal() + 42)
-#         with pytest.raises(TypeError):
-#             AdcExtraTerm(matrix, "fail")
-#         with pytest.raises(TypeError):
-#             AdcExtraTerm(matrix, {"fail": "not_callable"})
-
-#         shift = -0.3
-#         shifted = AdcMatrixShifted(matrix, shift)
-#         # TODO: need to use AmplitudeVector to differentiate between
-#         # diagonals for ph and pphh
-#         # if we just pass numbers, i.e., shift
-#         # we get 2*shift on the diagonal
-#         ones = matrix.diagonal().ones_like()
-
-#         def __shift_ph(hf, mp, intermediates):
-#             def apply(invec):
-#                 return adcc.AmplitudeVector(ph=shift * invec.ph)
-#             diag = adcc.AmplitudeVector(ph=shift * ones.ph)
-#             return AdcBlock(apply, diag)
-
-#         def __shift_pphh(hf, mp, intermediates):
-#             def apply(invec):
-#                 return adcc.AmplitudeVector(pphh=shift * invec.pphh)
-#             diag = adcc.AmplitudeVector(pphh=shift * ones.pphh)
-#             return AdcBlock(apply, diag)
-#         extra = AdcExtraTerm(
-#             matrix, {'ph_ph': __shift_ph, 'pphh_pphh': __shift_pphh}
-#         )
-#         # cannot add to 'pphh_pphh' in ADC(1) matrix
-#         with pytest.raises(ValueError):
-#             matrix_adc1 += extra
-
-#         shifted_2 = matrix + extra
-#         shifted_3 = extra + matrix
-#         for manual in [shifted_2, shifted_3]:
-#             assert_allclose(
-#                 shifted.diagonal().ph.to_ndarray(),
-#                 manual.diagonal().ph.to_ndarray(),
-#                 atol=1e-12
-#             )
-#             assert_allclose(
-#                 shifted.diagonal().pphh.to_ndarray(),
-#                 manual.diagonal().pphh.to_ndarray(),
-#                 atol=1e-12
-#             )
-#             vec = adcc.guess_zero(matrix)
-#             vec.set_random()
-#             ref = shifted @ vec
-#             ret = manual @ vec
-#             diff_s = ref.ph - ret.ph
-#             diff_d = ref.pphh - ret.pphh
-#             assert np.max(np.abs(diff_s.to_ndarray())) < 1e-12
-#             assert np.max(np.abs(diff_d.to_ndarray())) < 1e-12
-
-
-# @expand_test_templates(testcases)
-# class TestAdcMatrixShifted(unittest.TestCase):
-#     def construct_matrices(self, case, shift):
-#         reference_state = cache.refstate[case]
-#         ground_state = adcc.LazyMp(reference_state)
-#         matrix = adcc.AdcMatrix("adc3", ground_state)
-#         shifted = AdcMatrixShifted(matrix, shift)
-#         return matrix, shifted
-
-#     def template_diagonal(self, case):
-#         shift = -0.3
-#         matrix, shifted = self.construct_matrices(case, shift)
-
-#         for block in ("ph", "pphh"):
-#             odiag = matrix.diagonal()[block].to_ndarray()
-#             sdiag = shifted.diagonal()[block].to_ndarray()
-#             assert np.max(np.abs(sdiag - shift - odiag)) < 1e-12
-
-#     def template_matmul(self, case):
-#         shift = -0.3
-#         matrix, shifted = self.construct_matrices(case, shift)
-
-#         vec = adcc.guess_zero(matrix)
-#         vec.set_random()
-
-#         ores = matrix @ vec
-#         sres = shifted @ vec
-
-#         assert ores.ph.describe_symmetry() == sres.ph.describe_symmetry()
-#         assert ores.pphh.describe_symmetry() == sres.pphh.describe_symmetry()
-
-#         diff_s = sres.ph - ores.ph - shift * vec.ph
-#         diff_d = sres.pphh - ores.pphh - shift * vec.pphh
-#         assert np.max(np.abs(diff_s.to_ndarray())) < 1e-12
-#         assert np.max(np.abs(diff_d.to_ndarray())) < 1e-12
-
-#     # TODO Test block_view, block_apply
+        shifted_2 = matrix + extra
+        shifted_3 = extra + matrix
+        for manual in [shifted_2, shifted_3]:
+            assert_allclose(
+                shifted.diagonal().ph.to_ndarray(),
+                manual.diagonal().ph.to_ndarray(),
+                atol=1e-12
+            )
+            assert_allclose(
+                shifted.diagonal().pphh.to_ndarray(),
+                manual.diagonal().pphh.to_ndarray(),
+                atol=1e-12
+            )
+            vec = adcc.guess_zero(matrix)
+            vec.set_random()
+            ref = shifted @ vec
+            ret = manual @ vec
+            diff_s = ref.ph - ret.ph
+            diff_d = ref.pphh - ret.pphh
+            assert np.max(np.abs(diff_s.to_ndarray())) < 1e-12
+            assert np.max(np.abs(diff_d.to_ndarray())) < 1e-12
 
 
-# @expand_test_templates(testcases)
-# class TestAdcMatrixProjected(unittest.TestCase):
-#     def construct_matrices(self, case, n_core, n_virt):
-#         from .test_projection import construct_nonzero_blocks
+@pytest.mark.parametrize("system", ["h2o_sto3g", "cn_sto3g"])
+class TestAdcMatrixShifted:
+    def construct_matrices(self, system, shift):
+        reference_state = testdata_cache.refstate(system, case="gen")
+        ground_state = adcc.LazyMp(reference_state)
+        matrix = adcc.AdcMatrix("adc3", ground_state)
+        shifted = AdcMatrixShifted(matrix, shift)
+        return matrix, shifted
 
-#         reference_state = cache.refstate[case]
-#         ground_state = adcc.LazyMp(reference_state)
-#         matrix = adcc.AdcMatrix("adc3", ground_state)
+    def test_diagonal(self, system: str):
+        shift = -0.3
+        matrix, shifted = self.construct_matrices(system, shift)
 
-#         out = construct_nonzero_blocks(reference_state.mospaces, n_core, n_virt)
-#         spaces, nonzero_blocks = out
+        for block in ("ph", "pphh"):
+            odiag = matrix.diagonal()[block].to_ndarray()
+            sdiag = shifted.diagonal()[block].to_ndarray()
+            assert np.max(np.abs(sdiag - shift - odiag)) < 1e-12
 
-#         excitation_blocks = spaces["ph"] + spaces["pphh"]
-#         projected = AdcMatrixProjected(matrix, excitation_blocks,
-#                                        core_orbitals=n_core,
-#                                        outer_virtuals=n_virt)
-#         return matrix, projected, nonzero_blocks
+    def template_matmul(self, system: str):
+        shift = -0.3
+        matrix, shifted = self.construct_matrices(system, shift)
 
-#     def template_diagonal(self, case):
-#         from .test_projection import assert_nonzero_blocks
+        vec = adcc.guess_zero(matrix)
+        vec.set_random()
 
-#         out = self.construct_matrices(case, n_core=2, n_virt=1)
-#         matrix, projected, nonzeros = out
+        ores = matrix @ vec
+        sres = shifted @ vec
 
-#         for block in ("ph", "pphh"):
-#             odiag = matrix.diagonal()[block]
-#             pdiag = projected.diagonal()[block]
-#             assert_nonzero_blocks(odiag, pdiag, nonzeros[block], zero_value=100000)
-#             # TODO Manually verified to be identical, however, string parsing
-#             #      of the describe_symmetry output is not super reliable and so this
-#             #      test does not pass in CI.
-#             # assert_equal_symmetry(odiag, pdiag)
+        assert ores.ph.describe_symmetry() == sres.ph.describe_symmetry()
+        assert ores.pphh.describe_symmetry() == sres.pphh.describe_symmetry()
 
-#     def template_matmul(self, case):
-#         from .test_projection import (assert_equal_symmetry,
-#                                       assert_nonzero_blocks)
+        diff_s = sres.ph - ores.ph - shift * vec.ph
+        diff_d = sres.pphh - ores.pphh - shift * vec.pphh
+        assert np.max(np.abs(diff_s.to_ndarray())) < 1e-12
+        assert np.max(np.abs(diff_d.to_ndarray())) < 1e-12
 
-#         out = self.construct_matrices(case, n_core=1, n_virt=1)
-#         matrix, projected, nonzeros = out
+    # TODO Test block_view, block_apply
 
-#         spin_block_symmetrisation = "none"
-#         if "h2o" in case:
-#             spin_block_symmetrisation = "symmetric"
-#         vec = adcc.guess_zero(matrix,
-#                               spin_block_symmetrisation=spin_block_symmetrisation)
-#         vec.set_random()
-#         pvec = projected.apply_projection(vec.copy())  # only apply projection
 
-#         pres = projected @ vec
-#         ores = matrix @ pvec
-#         res_for_sym = matrix @ vec
+@pytest.mark.parametrize("system", ["h2o_sto3g", "cn_sto3g"])
+class TestAdcMatrixProjected:
+    def construct_matrices(self, system, n_core: int, n_virt: int):
+        reference_state = testdata_cache.refstate(system, "gen")
+        ground_state = adcc.LazyMp(reference_state)
+        matrix = adcc.AdcMatrix("adc3", ground_state)
 
-#         assert_equal_symmetry(res_for_sym.ph, pres.ph)
-#         assert_equal_symmetry(res_for_sym.pphh, pres.pphh)
-#         assert_nonzero_blocks(ores.ph, pres.ph, nonzeros["ph"], tol=1e-14)
-#         assert_nonzero_blocks(ores.pphh, pres.pphh, nonzeros["pphh"], tol=1e-14)
+        out = construct_nonzero_blocks(reference_state.mospaces, n_core, n_virt)
+        spaces, nonzero_blocks = out
 
-#     # TODO Test block_view, block_apply
+        excitation_blocks = spaces["ph"] + spaces["pphh"]
+        projected = AdcMatrixProjected(matrix, excitation_blocks,
+                                       core_orbitals=n_core,
+                                       outer_virtuals=n_virt)
+        return matrix, projected, nonzero_blocks
+
+    def test_diagonal(self, system: str):
+        out = self.construct_matrices(system, n_core=2, n_virt=1)
+        matrix, projected, nonzeros = out
+
+        for block in ("ph", "pphh"):
+            odiag = matrix.diagonal()[block]
+            pdiag = projected.diagonal()[block]
+            assert_nonzero_blocks(odiag, pdiag, nonzeros[block], zero_value=100000)
+            # TODO Manually verified to be identical, however, string parsing
+            #      of the describe_symmetry output is not super reliable and so this
+            #      test does not pass in CI.
+            # assert_equal_symmetry(odiag, pdiag)
+
+    def test_matmul(self, system):
+        out = self.construct_matrices(system, n_core=1, n_virt=1)
+        matrix, projected, nonzeros = out
+
+        spin_block_symmetrisation = "none"
+        if "h2o" in system:
+            spin_block_symmetrisation = "symmetric"
+        vec = adcc.guess_zero(matrix,
+                              spin_block_symmetrisation=spin_block_symmetrisation)
+        vec.set_random()
+        pvec = projected.apply_projection(vec.copy())  # only apply projection
+
+        pres = projected @ vec
+        ores = matrix @ pvec
+        res_for_sym = matrix @ vec
+
+        assert_equal_symmetry(res_for_sym.ph, pres.ph)
+        assert_equal_symmetry(res_for_sym.pphh, pres.pphh)
+        assert_nonzero_blocks(ores.ph, pres.ph, nonzeros["ph"], tol=1e-14)
+        assert_nonzero_blocks(ores.pphh, pres.pphh, nonzeros["pphh"], tol=1e-14)
+
+    # TODO Test block_view, block_apply
