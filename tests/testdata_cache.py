@@ -21,13 +21,15 @@ class AdcMockState(EigenSolverStateBase):
 
 class TestdataCache:
     @cached_member_function
-    def _load_hfdata(self, test_case: testcases.TestCase) -> dict:
+    def _load_hfdata(self, system: testcases.TestCase) -> dict:
         """Load the HF data for the given test case."""
+        if isinstance(system, str):
+            system = testcases.get_by_filename(system).pop()
         datadir = Path(__file__).parent / _testdata_dirname
-        fname = datadir / test_case.hfdata_file_name
+        fname = datadir / system.hfdata_file_name
         if not fname.exists():
             raise FileNotFoundError(
-                f"Missing hfdata file for {test_case.file_name}. Was looking for "
+                f"Missing hfdata file for {system.file_name}. Was looking for "
                 f"{fname}."
             )
         return hdf5io.load(fname)
@@ -64,6 +66,25 @@ class TestdataCache:
         )
         refstate.import_all()
         return refstate
+
+    @cached_member_function
+    def hfimport(self, system: str, case: str) -> dict:
+        if isinstance(system, str):
+            system = testcases.get_by_filename(system).pop()
+        assert isinstance(system, testcases.TestCase)
+        # ensure that the case is valid for the testcase
+        assert case in system.cases
+        # ensure that the file exists
+        datadir = Path(__file__).parent / _testdata_dirname
+        fname = datadir / system.hfimport_file_name
+        if not fname.exists():
+            raise FileNotFoundError(
+                f"Missing hfimport data file for {system.file_name}."
+            )
+        data = hdf5io.load(fname).get(case, None)
+        if data is None:
+            raise ValueError(f"No data available for case {case} in file {fname}.")
+        return data
 
     @cached_member_function
     def _load_data(self, system: str, method: str, case: str, source: str) -> dict:

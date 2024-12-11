@@ -25,14 +25,14 @@ import unittest
 import numpy as np
 
 import adcc
-from adcc.testdata.cache import cache
+from .testdata_cache import testdata_cache
 
 
 class TestAmplitudeVector(unittest.TestCase):
     def test_functionality(self):
-        ground_state = adcc.LazyMp(cache.refstate["h2o_sto3g"])
+        ground_state = adcc.LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
         matrix = adcc.AdcMatrix("adc2", ground_state)
-        vectors = [adcc.guess_zero(matrix) for i in range(2)]
+        vectors = [adcc.guess_zero(matrix) for _ in range(2)]
         for vec in vectors:
             vec.set_random()
         v, w = vectors

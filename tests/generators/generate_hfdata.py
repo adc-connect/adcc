@@ -13,15 +13,6 @@ import tempfile
 _testdata_dirname = "data"
 
 
-def hdf5_filename(test_case: testcases.TestCase) -> Path:
-    """
-    Build the absolute file name for the test case.
-    """
-    hdf5_file = Path(__file__).resolve().parent.parent / _testdata_dirname
-    hdf5_file /= f"{test_case.file_name}_hfdata.hdf5"
-    return hdf5_file
-
-
 def run_pyscf(test_case: testcases.TestCase, restricted: bool, frac_occ: bool):
     """
     Runs the pyscf calculation for the given testcase.
@@ -63,7 +54,8 @@ def generate(test_case: testcases.TestCase, restricted: bool,
     Run Pyscf for the given test case and dump the result in the hdf5 file
     if the file does not already exist.
     """
-    hdf5_file = hdf5_filename(test_case)
+    hdf5_file = Path(__file__).resolve().parent.parent / _testdata_dirname
+    hdf5_file /= test_case.hfdata_file_name
     if hdf5_file.exists():
         return None
     print(f"Generating data for {test_case.file_name}.")

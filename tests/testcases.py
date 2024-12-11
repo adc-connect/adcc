@@ -31,6 +31,11 @@ class TestCase:
         """Builds the file name for the hfdata."""
         return f"{self.file_name}_hfdata.hdf5"
 
+    @property
+    def hfimport_file_name(self) -> str:
+        """Builds the file name for the hfimport data."""
+        return f"{self.file_name}_hfimport.hdf5"
+
     def mpdata_file_name(self, source: str) -> str:
         """Builds the file name for the mpdata."""
         assert source in ["adcc", "adcman"]

@@ -1,6 +1,12 @@
 from . import testcases
 
+import os
 import pytest
+
+
+def update_testdata(session):
+    # TODO: implement once descided where the test data is stored
+    pass
 
 
 #
@@ -26,6 +32,9 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 def pytest_collection_modifyitems(config: pytest.Config,
                                   items: list[pytest.Item]) -> None:
+    # Called after collection has been performed.
+    # May filter or re-order the items in-place.
+    # -> Skip all "slow" tests if not running in full mode
     if config.getoption("mode") == "fast":
         slow_cases = [case.file_name for case in testcases.available
                       if case.only_full_mode]
@@ -33,3 +42,25 @@ def pytest_collection_modifyitems(config: pytest.Config,
         for item in items:
             if any(name in kw for kw in item.keywords for name in slow_cases):
                 item.add_marker(skip_slow)
+
+
+def pytest_collection(session):
+    # Perform the collection phase for the given session.
+    if not session.config.option.skip_update:
+        update_testdata(session)
+
+
+def pytest_runtestloop(session):
+    # Perform the main runtest loop (after collection finished).
+    if os.environ.get("CI", "false") == "true":
+        import adcc
+
+        # use more moderate thread setup in continuous integration environment
+        print("Detected continuous integration session")
+        adcc.set_n_threads(2)
+    if session.config.option.allocator != "standard":
+        import adcc
+
+        allocator = session.config.option.allocator
+        adcc.memory_pool.initialise(allocator=allocator)
+        print(f"Using allocator: {allocator}")
