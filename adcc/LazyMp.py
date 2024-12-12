@@ -40,6 +40,15 @@ class LazyMp:
     def __init__(self, hf, density_order=None):
         """
         Initialise the class dealing with the Møller-Plesset ground state.
+
+        Parameters
+        ----------
+        hf : adcc.ReferenceState
+            HF reference the MP ground state is build on top.
+        density_order : int or str, optional
+            MP densities are optionally upgraded (through the strict flag) to the
+            level defined by the density order, e.g., a MP2 density can be
+            upgraded to a MP3 or sigma4+ density.
         """
         if isinstance(hf, libadcc.HartreeFockSolution_i):
             hf = ReferenceState(hf)
@@ -141,6 +150,49 @@ class LazyMp:
         contraction_str, eri_block = expressions[key]
         return einsum(contraction_str, self.t2oo, hf.eri(eri_block))
 
+    @cached_property
+    def m_3_plus(self):
+        """
+        Third order contribution to the ov block of the N+1 part of the dynamic
+        self-energy.
+        """
+        # NOTE: m_3_plus, m_3_minus have to be implemented on LazyMp so we can
+        # use them for the evaluation of the MP3 density: We can't add an
+        # Intermediate instance to LazyMp (circular reference -> memory leak)!
+        return (
+            + 1 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.ov))
+            + 0.5 * einsum(
+                "ijbc,jabc->ia", self.td2(b.oovv), self.reference_state.ovvv
+            )
+            - 0.25 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.oo))
+        )
+
+    @cached_property
+    def m_3_minus(self):
+        """
+        Third order contribution to the ov block of the N-1 part of the dynamic
+        self-energy.
+        """
+        return (
+            + 0.5 * einsum(
+                "jkab,jkib->ia", self.td2(b.oovv), self.reference_state.ooov
+            )
+            - 1 * einsum("jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.ov))
+            - 0.25 * einsum("jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.vv))
+        )
+
+    @cached_member_function
+    def sigma_inf_ov(self, level: int):
+        """The ov part of the static self-energy."""
+        hf = self.reference_state
+        dm = self.diffdm(level - 1, strict=True)
+        return (
+            - einsum("ijka,jk->ia", hf.ooov, dm.oo)
+            + einsum("ijab,jb->ia", hf.oovv, dm.ov)
+            - einsum("ibja,jb->ia", hf.ovov, dm.ov)
+            + einsum("ibac,bc->ia", hf.ovvv, dm.vv)
+        )
+
     def diffdm(self, level: int = 2, strict: bool = True) -> OneParticleOperator:
         """
         Return the MPn difference density in the MO basis.
@@ -221,7 +273,6 @@ class LazyMp:
         """
         if self.has_core_occupied_space:
             raise NotImplementedError("MP3 density not implemented for CVS.")
-        hf = self.reference_state
         ret = OneParticleOperator(self.mospaces, is_symmetric=True)
 
         mp2_dm = self.mp2_diffdm
@@ -230,31 +281,10 @@ class LazyMp:
             # 3rd order
             - einsum("ikab,jkab->ij", self.t2oo, self.td2(b.oovv)).symmetrise(0, 1)
         )
-        # TODO: we need the intermediates: sigma_ov, m_3_plus and m_3_minus here
-        # The intermediates are also needed for the IP-ADC ETMs. Would be good
-        # to cache them. However, we can't use the Intermediates class without
-        # changing the class. Installing the intermediates on the ground state
-        # class also seems weird.
         ret.ov = (
             mp2_dm.ov  # 2nd order
             - (  # 3rd order
-                # + sigma_ov
-                - einsum("ijka,jk->ia", hf.ooov, mp2_dm.oo)
-                + einsum("ijab,jb->ia", hf.oovv, mp2_dm.ov)
-                - einsum("ibja,jb->ia", hf.ovov, mp2_dm.ov)
-                + einsum("ibac,bc->ia", hf.ovvv, mp2_dm.vv)
-                # + m_3_plus
-                + 1 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.ov))
-                + 0.5 * einsum("ijbc,jabc->ia", self.td2(b.oovv), hf.ovvv)
-                - 0.25 * einsum(
-                    "ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.oo)
-                )
-                # + m_3_minus
-                + 0.5 * einsum("jkab,jkib->ia", self.td2(b.oovv), hf.ooov)
-                - 1 * einsum("jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.ov))
-                - 0.25 * einsum(
-                    "jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.vv)
-                )
+                self.sigma_inf_ov(3) + self.m_3_plus + self.m_3_minus
             ) / self.df(b.ov)
         )
         ret.vv = (
@@ -374,7 +404,7 @@ class LazyMp:
 # Register cvs_p0 intermediate
 #
 @register_as_intermediate
-def cvs_p0(hf, mp: LazyMp, intermediates):
+def cvs_p0(hf: ReferenceState, mp: LazyMp, intermediates):
     # TODO: this is a bit weird with the density order for CVS. But as long as we
     # don't have any other CVS density implemented it should be fine.
     if mp._apply_density_order(2) != 2:

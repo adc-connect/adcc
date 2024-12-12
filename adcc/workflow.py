@@ -134,12 +134,13 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         e.g. PE, is treated. For details see :ref:`environment`.
 
     gs_density_order: int or str
-        The order of ground state density to use, e.g., 3 for the MP3 density
-        or "sigma4+" for the iterated sigma4+ density.
+        The pt order of the ground state density to use for the evaluation of the
+        ADC(n) and ISR(n) equations, e.g., 3 for the MP3 density or "sigma4+"
+        for the iterated sigma4+ density.
         Note that currently only upgrades of the density are supported, i.e.,
-        The MP2 density in an ADC(3) calculation can be upgraded to the MP3 or
-        sigma4+ density, but the MP3 density in an ISR(3) or ADC(4) calculation
-        can not be downgraded to the MP2 density.
+        The MP2 density in the ADC(3) and ISR(2) equations can be upgraded to the
+        MP3 or sigma4+ density, but the MP3 density in the ISR(3) or ADC(4)
+        equations can not be downgraded to the MP2 density.
 
     Other parameters
     ----------------
