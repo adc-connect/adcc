@@ -21,16 +21,15 @@
 ##
 ## ---------------------------------------------------------------------
 import unittest
-
 from numpy.testing import assert_allclose
 
 from adcc import direct_sum, empty_like, nosym_like
-from adcc.testdata.cache import cache
+from .testdata_cache import testdata_cache
 
 
 class TestDirectSum(unittest.TestCase):
     def test_1_1(self):
-        refstate = cache.refstate["cn_sto3g"]
+        refstate = testdata_cache.refstate("cn_sto3g", case="gen")
         a = nosym_like(refstate.orbital_energies("o1")).set_random()
         b = nosym_like(refstate.orbital_energies("o1")).set_random()
 
@@ -55,7 +54,7 @@ class TestDirectSum(unittest.TestCase):
         assert_allclose(res.to_ndarray(), ref, rtol=1e-10, atol=1e-14)
 
     def test_2_2(self):
-        refstate = cache.refstate["cn_sto3g"]
+        refstate = testdata_cache.refstate("cn_sto3g", case="gen")
         a = nosym_like(refstate.fock("o1v1")).set_random()
         b = nosym_like(refstate.fock("v1o1")).set_random()
         no, nv = a.shape
@@ -78,7 +77,7 @@ class TestDirectSum(unittest.TestCase):
         assert_allclose(res.to_ndarray(), ref, rtol=1e-10, atol=1e-14)
 
     def test_2_2_sym(self):
-        refstate = cache.refstate["h2o_sto3g"]
+        refstate = testdata_cache.refstate("cn_sto3g", case="gen")
         a = empty_like(refstate.fock("o1o1")).set_random()
         b = empty_like(refstate.fock("v1v1")).set_random()
         no, _ = a.shape
@@ -102,7 +101,7 @@ class TestDirectSum(unittest.TestCase):
         assert_allclose(res.to_ndarray(), ref, rtol=1e-10, atol=1e-14)
 
     def test_1_2_1(self):
-        refstate = cache.refstate["cn_sto3g"]
+        refstate = testdata_cache.refstate("cn_sto3g", case="gen")
         oeo = nosym_like(refstate.orbital_energies("o1")).set_random()
         fvv = nosym_like(refstate.fock("v1v1")).set_random()
         oev = nosym_like(refstate.orbital_energies("v1")).set_random()
