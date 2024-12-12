@@ -50,6 +50,7 @@ class AdcExtraTerm:
         """
         self.ground_state = matrix.ground_state
         self.reference_state = matrix.reference_state
+        self.intermediates = matrix.intermediates
         self.blocks = {}
         if not isinstance(blocks, dict):
             raise TypeError("blocks needs to be a dict.")
@@ -61,14 +62,6 @@ class AdcExtraTerm:
                 self.reference_state, self.ground_state, self.intermediates
             )
             self.blocks[space] = block
-
-    @property
-    def intermediates(self) -> Intermediates:
-        return self.ground_state.intermediates
-
-    @intermediates.setter
-    def intermediates(self, value: Intermediates) -> None:
-        self.ground_state.intermediates = value
 
 
 class AdcMatrixlike:
@@ -115,10 +108,7 @@ class AdcMatrix(AdcMatrixlike):
         """
         if isinstance(hf_or_mp, (libadcc.ReferenceState,
                                  libadcc.HartreeFockSolution_i)):
-            hf_or_mp = LazyMp(
-                hf_or_mp, density_order=gs_density_order,
-                intermediates=intermediates
-            )
+            hf_or_mp = LazyMp(hf_or_mp, density_order=gs_density_order)
         if not isinstance(hf_or_mp, LazyMp):
             raise TypeError("hf_or_mp is not a valid object. It needs to be "
                             "either a LazyMp, a ReferenceState or a "
@@ -144,9 +134,9 @@ class AdcMatrix(AdcMatrixlike):
         self.ndim = 2
         self.extra_terms = []
 
-        # this installs the intermediates on the ground state class
-        if intermediates is not None:
-            self.intermediates = intermediates
+        self.intermediates = intermediates
+        if self.intermediates is None:
+            self.intermediates = Intermediates(self.ground_state)
 
         # Determine orders of PT in the blocks
         if block_orders is None:
@@ -261,14 +251,6 @@ class AdcMatrix(AdcMatrixlike):
 
     def __len__(self):
         return self.shape[0]
-
-    @property
-    def intermediates(self) -> Intermediates:
-        return self.ground_state.intermediates
-
-    @intermediates.setter
-    def intermediates(self, value: Intermediates) -> None:
-        self.ground_state.intermediates = value
 
     @property
     def axis_blocks(self):
