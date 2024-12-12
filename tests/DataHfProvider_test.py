@@ -20,26 +20,22 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import os
 import tempfile
 import unittest
-import numpy as np
-
-from adcc.test_ReferenceState_refdata import compare_refstate_with_reference
-from adcc.testdata.cache import cache
-
 import h5py
+import numpy as np
+from pathlib import Path
+
+from .ReferenceState_refdata_test import compare_refstate_with_reference
+from .testdata_cache import testdata_cache
 
 
 class TestDataHfProvdier(unittest.TestCase):
     def test_dict(self):
-        data = cache.hfdata["cn_sto3g"]
-        spec = "gen"
-        refdata = cache.hfimport["cn_sto3g"][spec]
-
-        if "threshold" in data and "conv_tol" not in data:
-            # Fall back to deprecated key threshold
-            data["conv_tol"] = data["threshold"]
+        system = "cn_sto3g"
+        case = "gen"
+        data = testdata_cache._load_hfdata(system)
+        refdata = testdata_cache.hfimport(system, case=case)
 
         bdict = dict()
         for key in ["restricted", "conv_tol", "occupation_f", "orbcoeff_fb",
@@ -55,20 +51,19 @@ class TestDataHfProvdier(unittest.TestCase):
         }
 
         # Import hfdata from dict
-        compare_refstate_with_reference(data, refdata, spec, scfres=bdict,
-                                        compare_eri="abs")
+        compare_refstate_with_reference(
+            system=system, case=case, data=data, reference=refdata, scfres=bdict,
+            compare_eri="abs"
+        )
 
     def test_hdf5(self):
-        data = cache.hfdata["cn_sto3g"]
-        spec = "gen"
-        refdata = cache.hfimport["cn_sto3g"][spec]
-
-        if "threshold" in data and "conv_tol" not in data:
-            # Fall back to deprecated key threshold
-            data["conv_tol"] = data["threshold"]
+        system = "cn_sto3g"
+        case = "gen"
+        data = testdata_cache._load_hfdata(system)
+        refdata = testdata_cache.hfimport(system, case=case)
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            fn = os.path.join(tmpdir, "data.hdf5")
+            fn = Path(tmpdir) / "data.hdf5"
             with h5py.File(fn, "w") as h5f:
                 h5f.create_dataset("restricted", data=data["restricted"])
                 h5f.create_dataset("conv_tol", data=data["conv_tol"])
@@ -90,5 +85,7 @@ class TestDataHfProvdier(unittest.TestCase):
                 mmp.create_dataset("nuclear_1", data=dmmp["nuclear_1"])
 
             # Import hfdata from hdf5 file
-            compare_refstate_with_reference(data, refdata, spec, scfres=fn,
-                                            compare_eri="abs")
+            compare_refstate_with_reference(
+                system=system, case=case, data=data, reference=refdata,
+                scfres=str(fn), compare_eri="abs"
+            )

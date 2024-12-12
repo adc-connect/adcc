@@ -177,23 +177,28 @@ def operator_import_from_ao_test(scfres, ao_dict, operator="electric_dipole"):
             )
 
 
-def cached_backend_hf(backend, molecule, basis, multiplicity=1, conv_tol=1e-12,
-                      pe_options=None):
+def cached_backend_hf(backend: str, system: str, conv_tol=1e-12, pe_options=None):
     """
     Run the SCF for a backend and a particular test case (if not done)
     and return the result.
     """
     import adcc.backends
 
-    from adcc.testdata import static_data
+    from .. import testcases
 
     global __cache_cached_backend_hf
 
+    if isinstance(system, str):
+        system = testcases.get_by_filename(system).pop()
+    assert isinstance(system, testcases.TestCase)
+
     def payload():
+        # TODO: conv_tol_grad should be sqrt(conv_tol) I think,
+        # but leave it for now as long as it works.
         conv_tol_grad = 10 * conv_tol
-        hfres = adcc.backends.run_hf(backend, xyz=static_data.xyz[molecule],
-                                     basis=basis, conv_tol=conv_tol,
-                                     multiplicity=multiplicity,
+        hfres = adcc.backends.run_hf(backend, xyz=system.xyz,
+                                     basis=system.basis, conv_tol=conv_tol,
+                                     multiplicity=system.multiplicity,
                                      conv_tol_grad=conv_tol_grad,
                                      pe_options=pe_options)
         return adcc.backends.import_scf_results(hfres)
@@ -203,7 +208,7 @@ def cached_backend_hf(backend, molecule, basis, multiplicity=1, conv_tol=1e-12,
     if backend == "pyscf":
         return payload()
 
-    key = (backend, molecule, basis, str(multiplicity))
+    key = (backend, system)
     try:
         return __cache_cached_backend_hf[key]
     except NameError:

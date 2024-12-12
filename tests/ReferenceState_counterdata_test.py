@@ -20,28 +20,25 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
-import unittest
+import pytest
 import numpy as np
-
-from .misc import expand_test_templates
-from .HfCounterData import HfCounterData
-
 from numpy.testing import assert_array_equal
 
+from adcc.ReferenceState import ReferenceState
+from adcc.HfCounterData import HfCounterData
 
-@expand_test_templates(["restricted", "unrestricted"])
-class TestReferenceStateCounterData(unittest.TestCase):
+
+class TestReferenceStateCounterData:
     def base_test(self, n_alpha, n_beta, n_bas, n_orbs_alpha, restricted,
                   check_symmetry=False, core_orbitals=[], frozen_core=[],
                   frozen_virtual=[]):
         if not isinstance(restricted, bool):
             restricted = (restricted == "restricted")
         data = HfCounterData(n_alpha, n_beta, n_bas, n_orbs_alpha, restricted)
-        refstate = adcc.ReferenceState(data, core_orbitals, frozen_core,
-                                       frozen_virtual,
-                                       symmetry_check_on_import=check_symmetry,
-                                       import_all_below_n_orbs=None)
+        refstate = ReferenceState(
+            data, core_orbitals, frozen_core, frozen_virtual,
+            symmetry_check_on_import=check_symmetry, import_all_below_n_orbs=None
+        )
 
         # Setup spaces and refstate axis
         subspaces = ["o1", "v1"]
@@ -159,21 +156,25 @@ class TestReferenceStateCounterData(unittest.TestCase):
     #
     # Gen & CVS
     #
-    def template_generic_small(self, restricted):
+    @pytest.mark.parametrize("restricted", ["restricted", "unrestricted"])
+    def test_generic_small(self, restricted: str):
         self.base_test(n_alpha=3, n_beta=3, n_bas=8, n_orbs_alpha=8,
                        restricted=restricted, check_symmetry=False)
         #              # XXX check_symmetry=True fails because a
         #                write buffer overflow
 
-    def template_generic_medium(self, restricted):
+    @pytest.mark.parametrize("restricted", ["restricted", "unrestricted"])
+    def test_generic_medium(self, restricted):
         self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
                        restricted=restricted)
 
-    def template_generic_large(self, restricted):
+    @pytest.mark.parametrize("restricted", ["restricted", "unrestricted"])
+    def test_generic_large(self, restricted):
         self.base_test(n_alpha=21, n_beta=21, n_bas=60, n_orbs_alpha=60,
                        restricted=restricted)
 
-    def template_cvs_medium(self, restricted):
+    @pytest.mark.parametrize("restricted", ["restricted", "unrestricted"])
+    def test_cvs_medium(self, restricted):
         self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
                        restricted=restricted, core_orbitals=([0, 1], [0, 1]))
 
@@ -184,7 +185,8 @@ class TestReferenceStateCounterData(unittest.TestCase):
     #
     # frozen-core
     #
-    def template_fc_medium(self, restricted):
+    @pytest.mark.parametrize("restricted", ["restricted", "unrestricted"])
+    def test_fc_medium(self, restricted):
         self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
                        restricted=restricted, frozen_core=([0, 1], [0, 1]))
 
@@ -192,7 +194,8 @@ class TestReferenceStateCounterData(unittest.TestCase):
         self.base_test(n_alpha=15, n_beta=15, n_bas=60, n_orbs_alpha=60,
                        restricted=True, frozen_core=([0, 1, 2], [0, 1, 2]))
 
-    def template_fc_cvs_medium(self, restricted):
+    @pytest.mark.parametrize("restricted", ["restricted", "unrestricted"])
+    def test_fc_cvs_medium(self, restricted):
         self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
                        restricted=restricted, frozen_core=([0], [0]),
                        core_orbitals=([1], [1]))
@@ -205,7 +208,8 @@ class TestReferenceStateCounterData(unittest.TestCase):
     #
     # frozen-virtual
     #
-    def template_fv_medium(self, restricted):
+    @pytest.mark.parametrize("restricted", ["restricted", "unrestricted"])
+    def test_fv_medium(self, restricted):
         self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
                        restricted=restricted,
                        frozen_virtual=([18, 19], [18, 19]))
@@ -215,7 +219,8 @@ class TestReferenceStateCounterData(unittest.TestCase):
                        restricted=True,
                        frozen_virtual=([57, 58, 59], [57, 58, 59]))
 
-    def template_fv_cvs_medium(self, restricted):
+    @pytest.mark.parametrize("restricted", ["restricted", "unrestricted"])
+    def test_fv_cvs_medium(self, restricted):
         self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
                        restricted=restricted,
                        frozen_virtual=([18, 19], [18, 19]),
@@ -230,7 +235,8 @@ class TestReferenceStateCounterData(unittest.TestCase):
     #
     # frozen-core, frozen-virtual
     #
-    def template_fc_fv_medium(self, restricted):
+    @pytest.mark.parametrize("restricted", ["restricted", "unrestricted"])
+    def test_fc_fv_medium(self, restricted):
         self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
                        restricted=restricted, frozen_core=([0, 1], [0, 1]),
                        frozen_virtual=([18, 19], [18, 19]))
@@ -240,7 +246,8 @@ class TestReferenceStateCounterData(unittest.TestCase):
                        restricted=True, frozen_core=([0, 1, 2], [0, 1, 2]),
                        frozen_virtual=([57, 58, 59], [57, 58, 59]))
 
-    def template_fc_fv_cvs_medium(self, restricted):
+    @pytest.mark.parametrize("restricted", ["restricted", "unrestricted"])
+    def test_fc_fv_cvs_medium(self, restricted):
         self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
                        restricted=restricted,
                        frozen_virtual=([18, 19], [18, 19]),

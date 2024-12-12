@@ -23,8 +23,7 @@
 import unittest
 
 from adcc.MoSpaces import expand_spaceargs
-
-from .HfCounterData import HfCounterData
+from adcc.HfCounterData import HfCounterData
 
 
 class TestReferenceState(unittest.TestCase):
