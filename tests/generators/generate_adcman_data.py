@@ -130,12 +130,6 @@ def generate_h2o_sto3g():
 
 def generate_h2o_def2tzvp():
     # RHF, Singlet, 43 basis functions: 5 occ, 38 virt.
-    states = {
-        "adc1": {
-            # problems converging more than 2 triplets
-            "gen": {"n_triplets": 2}
-        }
-    }
     test_case = testcases.get(
         n_expected_cases=1, name="h2o", basis="def2-tzvp"
     ).pop()
@@ -143,7 +137,7 @@ def generate_h2o_def2tzvp():
     for method in _methods["pp"]:
         generate_adc_all(
             test_case, method=AdcMethod(method), n_singlets=3, n_triplets=3,
-            dump_nstates=2, states_per_case=states.get(method, None)
+            dump_nstates=2
         )
 
 
