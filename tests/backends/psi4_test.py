@@ -20,32 +20,28 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import unittest
+import pytest
 import numpy as np
-import adcc
-import adcc.backends
-
-from ..misc import expand_test_templates
-from .testing import (eri_asymm_construction_test, eri_chem_permutations,
-                      operator_import_from_ao_test)
-
 from numpy.testing import assert_almost_equal
 
+import adcc
+import adcc.backends
 from adcc.backends import have_backend
-from adcc.testdata import static_data
 
-import pytest
+from .testing import (eri_asymm_construction_test, eri_chem_permutations,
+                      operator_import_from_ao_test)
+from .. import testcases
 
 if have_backend("psi4"):
     import psi4
 
-basissets = ["sto3g", "ccpvdz"]
+
+h2o = testcases.get(n_expected_cases=2, name="h2o")
+ch2nh2 = testcases.get(n_expected_cases=2, name="ch2nh2")
 
 
-@expand_test_templates(basissets)
 @pytest.mark.skipif(not have_backend("psi4"), reason="psi4 not found.")
-class TestPsi4(unittest.TestCase):
-
+class TestPsi4:
     def base_test(self, wfn):
         hfdata = adcc.backends.import_scf_results(wfn)
         assert hfdata.backend == "psi4"
@@ -115,17 +111,20 @@ class TestPsi4(unittest.TestCase):
         ao_dip = [-1.0 * np.array(comp) for comp in mints.ao_nabla()]
         operator_import_from_ao_test(wfn, ao_dip, operator="nabla")
 
-    def template_rhf_h2o(self, basis):
-        wfn = adcc.backends.run_hf("psi4", static_data.xyz["h2o"], basis)
+    @pytest.mark.parametrize("system", h2o, ids=[case.file_name for case in h2o])
+    def test_rhf(self, system: testcases.TestCase):
+        wfn = adcc.backends.run_hf("psi4", system.xyz, system.basis)
         self.base_test(wfn)
         self.operators_test(wfn)
         # Test ERI
         eri_asymm_construction_test(wfn)
         eri_asymm_construction_test(wfn, core_orbitals=1)
 
-    def template_uhf_ch2nh2(self, basis):
-        wfn = adcc.backends.run_hf("psi4", static_data.xyz["ch2nh2"], basis,
-                                   multiplicity=2)
+    @pytest.mark.parametrize("system", ch2nh2,
+                             ids=[case.file_name for case in ch2nh2])
+    def test_uhf(self, system: testcases.TestCase):
+        wfn = adcc.backends.run_hf("psi4", system.xyz, system.basis,
+                                   multiplicity=system.multiplicity)
         self.base_test(wfn)
         self.operators_test(wfn)
         # Test ERI

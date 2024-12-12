@@ -142,6 +142,13 @@ _xyz = {
     O 2.1078857690998 2.0406638776593 2.1812021228452
     H 2.0682421748693 5.7438044586615 1.5798996515014
     H 1.8588483602149 3.6361694243085 -1.2192956060942
+    """, "Bohr"),
+    #
+    "nh3": ("""
+    N     -0.0000000001    -0.1040380466      0.0000000000
+    H     -0.9015844116     0.4818470201     -1.5615900098
+    H     -0.9015844116     0.4818470201      1.5615900098
+    H      1.8031688251     0.4818470204      0.0000000000
     """, "Bohr")
 }
 
@@ -154,6 +161,10 @@ def _init_test_cases() -> tuple[TestCase]:
     test_cases.append(TestCase(
         name="ch2nh2", xyz=xyz, unit=unit, charge=0, multiplicity=2,
         basis="sto-3g", core_orbitals=2, cases=ref_cases, only_full_mode=False
+    ))
+    test_cases.append(TestCase(
+        name="ch2nh2", xyz=xyz, unit=unit, charge=0, multiplicity=2,
+        basis="cc-pvdz", only_full_mode=True
     ))
     # CN
     xyz, unit = _xyz["cn"]
@@ -212,6 +223,10 @@ def _init_test_cases() -> tuple[TestCase]:
         name="r2methyloxirane", xyz=xyz, unit=unit, charge=0, multiplicity=1,
         basis="sto-3g", core_orbitals=1, cases=ref_cases, only_full_mode=False
     ))
+    test_cases.append(TestCase(
+        name="r2methyloxirane", xyz=xyz, unit=unit, charge=0, multiplicity=1,
+        basis="cc-pvdz", only_full_mode=True
+    ))
     # Formaledhyde
     xyz, unit = _xyz["formaldehyde"]
     pe_pot_file = Path(__file__).resolve().parent
@@ -223,6 +238,12 @@ def _init_test_cases() -> tuple[TestCase]:
     test_cases.append(TestCase(
         name="formaldehyde", xyz=xyz, unit=unit, charge=0, multiplicity=1,
         basis="cc-pvdz", pe_pot_file=str(pe_pot_file), only_full_mode=True
+    ))
+    # NH3
+    xyz, unit = _xyz["nh3"]
+    test_cases.append(TestCase(
+        name="nh3", xyz=xyz, unit=unit, charge=0, multiplicity=1, basis="3-21g",
+        only_full_mode=False
     ))
     for case in test_cases:
         case.validate_cases()

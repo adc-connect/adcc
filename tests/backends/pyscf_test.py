@@ -20,28 +20,25 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import unittest
+import pytest
 import numpy as np
-import adcc
-import adcc.backends
-
-from ..misc import expand_test_templates
-from .testing import (eri_asymm_construction_test, eri_chem_permutations,
-                      operator_import_from_ao_test)
-
 from numpy.testing import assert_almost_equal
 
+import adcc
+import adcc.backends
 from adcc.backends import have_backend
-from adcc.testdata import static_data
 
-import pytest
+from .testing import (eri_asymm_construction_test, eri_chem_permutations,
+                      operator_import_from_ao_test)
+from .. import testcases
 
-basissets = ["sto3g", "ccpvdz"]
+
+h2o = testcases.get(n_expected_cases=2, name="h2o")
+ch2nh2 = testcases.get(n_expected_cases=2, name="ch2nh2")
 
 
-@expand_test_templates(basissets)
 @pytest.mark.skipif(not have_backend("pyscf"), reason="pyscf not found.")
-class TestPyscf(unittest.TestCase):
+class TestPyscf:
     def base_test(self, scfres):
         from pyscf import scf
 
@@ -122,17 +119,20 @@ class TestPyscf(unittest.TestCase):
         ao_linmom = -1.0 * mf.mol.intor('int1e_ipovlp', comp=3, hermi=2)
         operator_import_from_ao_test(mf, list(ao_linmom), "nabla")
 
-    def template_rhf_h2o(self, basis):
-        mf = adcc.backends.run_hf("pyscf", static_data.xyz["h2o"], basis)
+    @pytest.mark.parametrize("system", h2o, ids=[case.file_name for case in h2o])
+    def test_rhf(self, system: testcases.TestCase):
+        mf = adcc.backends.run_hf("pyscf", system.xyz, system.basis)
         self.base_test(mf)
         self.operators_test(mf)
         # Test ERI
         eri_asymm_construction_test(mf)
         eri_asymm_construction_test(mf, core_orbitals=1)
 
-    def template_uhf_ch2nh2(self, basis):
+    @pytest.mark.parametrize("system", ch2nh2,
+                             ids=[case.file_name for case in ch2nh2])
+    def template_uhf_ch2nh2(self, system: testcases.TestCase):
         mf = adcc.backends.run_hf(
-            "pyscf", static_data.xyz["ch2nh2"], basis, multiplicity=2
+            "pyscf", system.xyz, system.basis, multiplicity=system.multiplicity
         )
         self.base_test(mf)
         self.operators_test(mf)
@@ -143,5 +143,6 @@ class TestPyscf(unittest.TestCase):
     def test_h2o_sto3g_core_hole(self):
         from adcc.backends.pyscf import run_core_hole
 
-        mf = run_core_hole(static_data.xyz["h2o"], "sto3g")
+        system = testcases.get_by_filename("h2o_sto3g").pop()
+        mf = run_core_hole(system.xyz, "sto3g")
         self.base_test(mf)

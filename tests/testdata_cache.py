@@ -9,6 +9,8 @@ from adcc.solver import EigenSolverStateBase
 from adcc import hdf5io, guess_zero
 
 from pathlib import Path
+import numpy as np
+import json
 
 
 _testdata_dirname = "data"
@@ -211,3 +213,20 @@ class TestdataCache:
 
 
 testdata_cache = TestdataCache()
+
+
+def read_json_data(name: str) -> dict:
+    """Import the json file from the data directory."""
+    jsonfile = Path(__file__).parent / _testdata_dirname / name
+    if not jsonfile.exists():
+        raise FileNotFoundError(f"Missing json data file {jsonfile}.")
+    return json.load(open(jsonfile, "r"), object_hook=_import_hook)
+
+
+def _import_hook(data: dict):
+    return {key: np.array(val) if isinstance(val, list) else val
+            for key, val in data.items()}
+
+
+psi4_data = read_json_data("psi4_data.json")
+pyscf_data = read_json_data("pyscf_data.json")

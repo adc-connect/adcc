@@ -20,27 +20,25 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import unittest
+import pytest
 import numpy as np
-import adcc
-import adcc.backends
-
-from ..misc import expand_test_templates
-from .testing import eri_asymm_construction_test
-
 from numpy.testing import assert_almost_equal
 
+import adcc
+import adcc.backends
 from adcc.backends import have_backend
-from adcc.testdata import static_data
 
-import pytest
+from .testing import eri_asymm_construction_test
 
-basissets = ["sto3g"]
+from .. import testcases
 
 
-@expand_test_templates(basissets)
+h2o = testcases.get_by_filename("h2o_sto3g").pop()
+
+
+@pytest.mark.parametrize("system", [h2o.file_name])
 @pytest.mark.skipif(not have_backend("molsturm"), reason="molsturm not found.")
-class TestMolsturm(unittest.TestCase):
+class TestMolsturm:
     def base_test(self, scfres):
         hfdata = adcc.backends.import_scf_results(scfres)
         assert hfdata.backend == "molsturm"
@@ -82,14 +80,18 @@ class TestMolsturm(unittest.TestCase):
         hfdata.fill_eri_ffff((sfull, sfull, sfull, sfull), eri)
         assert_almost_equal(eri, scfres["eri_ffff"])
 
-    def template_rhf_h2o(self, basis):
-        scfres = adcc.backends.run_hf("molsturm", static_data.xyz["h2o"], basis)
+    def test_rhf(self, system):
+        system = testcases.get_by_filename(system).pop()
+
+        scfres = adcc.backends.run_hf("molsturm", system.xyz, system.basis)
         self.base_test(scfres)
         eri_asymm_construction_test(scfres)
         eri_asymm_construction_test(scfres, core_orbitals=1)
 
-    def template_uhf_h2o(self, basis):
-        scfres = adcc.backends.run_hf("molsturm", static_data.xyz["h2o"], basis,
+    def test_uhf(self, system):
+        system = testcases.get_by_filename(system).pop()
+
+        scfres = adcc.backends.run_hf("molsturm", system.xyz, system.basis,
                                       multiplicity=3, conv_tol_grad=1e-6)
         self.base_test(scfres)
         eri_asymm_construction_test(scfres)

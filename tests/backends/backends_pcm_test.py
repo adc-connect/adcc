@@ -1,47 +1,69 @@
 import os
-import pytest
 import unittest
-import itertools
+import pytest
 import numpy as np
-import adcc
-import adcc.backends
-
 from scipy import constants
 from numpy.testing import assert_allclose
 
-from adcc.misc import expand_test_templates
-from adcc.testdata import static_data
-from adcc.testdata.cache import psi4_data, pyscf_data
+import adcc
+import adcc.backends
 from adcc.AdcMatrix import AdcExtraTerm
+import adcc.backends.psi4
 from adcc.exceptions import InputError
 from adcc.adc_pp.environment import block_ph_ph_0_pcm
 
+from .. import testcases
+from ..testdata_cache import psi4_data, pyscf_data  # noqa F401
+
+
 backends = [b for b in ["psi4", "pyscf"] if b in adcc.backends.available()]
-basissets = ["sto3g", "ccpvdz"]
 methods = ["adc1"]
+
+formaldehyde = testcases.get_by_filename(
+    "formaldehyde_sto3g", "formaldehyde_ccpvdz"
+)
+cases = [(case.file_name, c) for case in formaldehyde for c in case.cases]
 
 
 @pytest.mark.skipif(len(backends) == 0, reason="No backend for PCM available.")
-@expand_test_templates(list(itertools.product(basissets, methods, backends)))
-class TestPCM(unittest.TestCase):
-    def template_pcm_ptlr_formaldehyde(self, basis, method, backend):
+@pytest.mark.parametrize("method", methods)
+@pytest.mark.parametrize("system,case", cases)
+@pytest.mark.parametrize("backend", backends)
+class TestPCM:
+    options = {"psi4": {"pcm": True}, "pyscf": {}}
+    pcm_options = {"psi4": {"pcm_method": "IEFPCM", "solvent": "Water"},
+                   "pyscf": {"eps": 78.3553, "eps_opt": 1.78}}
+
+    def test_pcm_ptlr(self, system, case, method, backend):
         if method != "adc1":
             pytest.skip("Data only available for adc1.")
+        system = testcases.get_by_filename(system).pop()
 
-        c = config[backend]
-        basename = f"formaldehyde_{basis}_pcm_{method}"
-        result = c["data"][basename]
+        basename = f"{system.file_name}_pcm_{method}"
+        result = globals()[f"{backend}_data"][basename]
 
-        run_hf = c["run_hf"]
-        scfres = run_hf(static_data.xyz["formaldehyde"], basis, charge=0,
-                        multiplicity=1, conv_tol=1e-12, conv_tol_grad=1e-11,
-                        max_iter=150, pcm_options=c["pcm_options"],
-                        options=c["options"])
+        run_hf = globals()[f"{backend}_run_pcm_hf"]
+        scfres = run_hf(
+            xyz=system.xyz, basis=system.basis, charge=system.charge,
+            multiplicity=system.multiplicity, conv_tol=1e-12, conv_tol_grad=1e-11,
+            max_iter=150, pcm_options=self.pcm_options[backend],
+            options=self.options[backend]
+        )
 
         assert_allclose(scfres.energy_scf, result["energy_scf"], atol=1e-8)
 
-        state = adcc.run_adc(scfres, method=method, n_singlets=5, conv_tol=1e-7,
-                             max_subspace=24, environment="ptlr")
+        if "cvs" in case and "cvs" not in method:
+            method = f"cvs-{method}"
+        core_orbitals = system.core_orbitals if "cvs" in case else None
+        frozen_core = system.frozen_core if "fc" in case else None
+        frozen_virtual = system.frozen_virtual if "fv" in case else None
+
+        state = adcc.run_adc(
+            scfres, method=method, n_singlets=5, conv_tol=1e-7, max_iter=250,
+            max_subspace=24, environment="ptlr", core_orbitals=core_orbitals,
+            frozen_core=frozen_core, frozen_virtual=frozen_virtual
+        )
+        assert state.converged
 
         # compare ptLR result to LR data
         assert_allclose(state.excitation_energy,
@@ -55,30 +77,43 @@ class TestPCM(unittest.TestCase):
             # remove cavity files from PSI4 PCM calculations
             remove_cavity_psi4()
 
-    def template_pcm_linear_response_formaldehyde(self, basis, method, backend):
+    def test_pcm_linear_response(self, system, case, method, backend):
         if method != "adc1":
             pytest.skip("Reference only exists for adc1.")
+        system = testcases.get_by_filename(system).pop()
 
-        c = config[backend]
-        basename = f"formaldehyde_{basis}_pcm_{method}"
-        result = c["data"][basename]
+        basename = f"{system.file_name}_pcm_{method}"
+        result = globals()[f"{backend}_data"][basename]
 
-        run_hf = c["run_hf"]
-        scfres = run_hf(static_data.xyz["formaldehyde"], basis, charge=0,
-                        multiplicity=1, conv_tol=1e-12, conv_tol_grad=1e-11,
-                        max_iter=150, pcm_options=c["pcm_options"],
-                        options=c["options"])
+        run_hf = globals()[f"{backend}_run_pcm_hf"]
+        scfres = run_hf(
+            xyz=system.xyz, basis=system.basis, charge=system.charge,
+            multiplicity=system.multiplicity, conv_tol=1e-12, conv_tol_grad=1e-11,
+            max_iter=150, pcm_options=self.pcm_options[backend],
+            options=self.options[backend]
+        )
 
         assert_allclose(scfres.energy_scf, result["energy_scf"], atol=1e-8)
 
-        matrix = adcc.AdcMatrix(method, scfres)
+        if "cvs" in case and "cvs" not in method:
+            method = f"cvs-{method}"
+        core_orbitals = system.core_orbitals if "cvs" in case else None
+        frozen_core = system.frozen_core if "fc" in case else None
+        frozen_virtual = system.frozen_virtual if "fv" in case else None
+
+        refstate = adcc.ReferenceState(
+            scfres, core_orbitals=core_orbitals, frozen_core=frozen_core,
+            frozen_virtual=frozen_virtual
+        )
+        matrix = adcc.AdcMatrix(method, refstate)
         solvent = AdcExtraTerm(matrix, {'ph_ph': block_ph_ph_0_pcm})
 
         matrix += solvent
         assert len(matrix.extra_terms)
 
-        state = adcc.run_adc(matrix, n_singlets=5, conv_tol=1e-7,
+        state = adcc.run_adc(matrix, n_singlets=5, conv_tol=1e-7, max_iter=250,
                              max_subspace=24, environment=False)
+        assert state.converged
         assert_allclose(
             state.excitation_energy_uncorrected,
             result["lr_excitation_energy"],
@@ -102,7 +137,11 @@ class TestPCM(unittest.TestCase):
 
         # automatically add coupling term
         state = adcc.run_adc(scfres, method=method, n_singlets=5, conv_tol=1e-7,
-                             max_subspace=24, environment="linear_response")
+                             max_subspace=24, environment="linear_response",
+                             max_iter=250,
+                             core_orbitals=core_orbitals, frozen_core=frozen_core,
+                             frozen_virtual=frozen_virtual)
+        assert state.converged
         assert_allclose(
             state.excitation_energy_uncorrected,
             result["lr_excitation_energy"],
@@ -118,10 +157,12 @@ class TestPCM(unittest.TestCase):
                     reason="Psi4 not available")
 class TestPCMcomparison(unittest.TestCase):
     def test_comparison_dd_pcmsolver(self):
+        system = testcases.get_by_filename("nh3_321g").pop()
+
         scfargs = dict(
-            xyz=static_data.xyz["nh3"],
-            basis="3-21g",
-            charge=0, multiplicity=1,
+            xyz=system.xyz,
+            basis=system.basis,
+            charge=system.charge, multiplicity=system.multiplicity,
             conv_tol=1e-12, conv_tol_grad=1e-11,
             max_iter=150,
         )
@@ -134,6 +175,7 @@ class TestPCMcomparison(unittest.TestCase):
                                                       solvent="Water",
                                                       radiiset="UFF"))
         state_ief = adcc.run_adc(scfres_ief, **adcopts)
+        assert state_ief.converged
 
         scfres_dd = psi4_run_pcm_hf(**scfargs, options=dict(
             ddx=True, ddx_model="pcm", ddx_solvent="water",
@@ -141,6 +183,7 @@ class TestPCMcomparison(unittest.TestCase):
             ddx_lmax=10, **psiopts,
         ))
         state_dd = adcc.run_adc(scfres_dd, **adcopts)
+        assert state_dd.converged
 
         assert_allclose(scfres_ief.energy_scf, scfres_dd.energy_scf, atol=1e-4)
         assert_allclose(state_ief.excitation_energy, state_dd.excitation_energy,
@@ -148,12 +191,13 @@ class TestPCMcomparison(unittest.TestCase):
         remove_cavity_psi4()
 
     def test_comparison_gaussian(self):
+        system = testcases.get_by_filename("nh3_321g").pop()
+
         scfres = psi4_run_pcm_hf(
-            xyz=static_data.xyz["nh3"],
-            basis="3-21g",
-            charge=0, multiplicity=1,
-            conv_tol=1e-12, conv_tol_grad=1e-11,
-            max_iter=150,
+            xyz=system.xyz,
+            basis=system.basis,
+            charge=system.charge, multiplicity=system.multiplicity,
+            conv_tol=1e-12, conv_tol_grad=1e-11, max_iter=150,
             options=dict(
                 ddx=True, ddx_model="cosmo", ddx_solvent_epsilon=2.0,
                 ddx_solvent_epsilon_optical=2.0, ddx_radii_set="uff",
@@ -163,6 +207,7 @@ class TestPCMcomparison(unittest.TestCase):
         )
         state = adcc.cis(scfres, n_singlets=7, conv_tol=1e-7,
                          environment="linear_response")
+        assert state.converged
 
         eV = constants.value("Hartree energy in eV")
         ref_gaussian = np.array([9.2735, 11.2083, 11.2083, 15.2852, 15.2852,
@@ -177,13 +222,10 @@ def remove_cavity_psi4():
             os.remove(cavityfile)
 
 
-def psi4_run_pcm_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
-                    conv_tol_grad=1e-11, max_iter=150, options=None,
-                    pcm_options=None):
-    basis_map = {
-        "sto3g": "sto-3g",
-        "ccpvdz": "cc-pvdz",
-    }
+def psi4_run_pcm_hf(xyz: str, basis: str, charge: int = 0, multiplicity: int = 1,
+                    conv_tol: float = 1e-12, conv_tol_grad: float = 1e-11,
+                    max_iter: int = 150, options: dict = None,
+                    pcm_options: dict = None) -> adcc.backends.psi4.Psi4HFProvider:
 
     import psi4
 
@@ -200,7 +242,7 @@ def psi4_run_pcm_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
 
     psi4.core.be_quiet()
     psi4.set_options({
-        'basis': basis_map.get(basis, basis),
+        'basis': basis,
         'scf_type': 'pk',
         'e_convergence': conv_tol,
         'd_convergence': conv_tol_grad,
@@ -211,7 +253,6 @@ def psi4_run_pcm_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
 
     if options.get("pcm", False):
         psi4.set_options({"pcm_scf_type": "total"})
-        pcm_options = pcm_options.copy()
 
         psi4.pcm_helper(f"""
             Units = AU
@@ -236,9 +277,10 @@ def psi4_run_pcm_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
     return adcc.backends.import_scf_results(wfn)
 
 
-def pyscf_run_pcm_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
-                     conv_tol_grad=1e-10, max_iter=150, pcm_options=None,
-                     options=None):
+def pyscf_run_pcm_hf(xyz: str, basis: str, charge: int = 0, multiplicity: int = 1,
+                     conv_tol: float = 1e-11, conv_tol_grad: float = 1e-10,
+                     max_iter: int = 150, pcm_options: dict = None,
+                     options: dict = None):
 
     from pyscf import gto, scf
     from pyscf.solvent import ddCOSMO
@@ -267,13 +309,3 @@ def pyscf_run_pcm_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-11,
     # replace eps with eps_opt for the ADC calculation
     mf.with_solvent.eps = pcm_options.get("eps_opt")
     return adcc.backends.import_scf_results(mf)
-
-
-config = {
-    "psi4": {"data": psi4_data, "run_hf": psi4_run_pcm_hf,
-             "options": {"pcm": True, },
-             "pcm_options": {"pcm_method": "IEFPCM", "solvent": "Water"}},
-    "pyscf": {"data": pyscf_data, "run_hf": pyscf_run_pcm_hf,
-              "options": {},
-              "pcm_options": {"eps": 78.3553, "eps_opt": 1.78}}
-}

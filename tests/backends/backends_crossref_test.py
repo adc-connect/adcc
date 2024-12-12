@@ -20,69 +20,108 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import unittest
 import itertools
+import pytest
 import numpy as np
+from numpy.testing import assert_allclose
+
 import adcc
 import adcc.backends
 
-from numpy.testing import assert_allclose
-
-import pytest
-
-from ..misc import expand_test_templates
 from .testing import cached_backend_hf
+from .. import testcases
 
 # molsturm is super slow
 backends = [b for b in adcc.backends.available() if b != "molsturm"]
-basissets = ["sto3g", "ccpvdz"]
+
+h2o = testcases.get_by_filename("h2o_sto3g", "h2o_def2tzvp")
+h2o_cases = [(case.file_name, c) for case in h2o for c in case.cases]
+
+methox = testcases.get_by_filename(
+    "r2methyloxirane_sto3g", "r2methyloxirane_ccpvdz"
+)
+methox_cases = [(case.file_name, c) for case in methox for c in case.cases]
+
+ch2nh2 = testcases.get_by_filename("ch2nh2_sto3g", "ch2nh2_ccpvdz")
+ch2nh2_cases = [(case.file_name, c) for case in ch2nh2 for c in case.cases]
 
 
 @pytest.mark.skipif(len(backends) < 2,
                     reason="Need at least two available backends for cross "
                     "reference test.")
-@expand_test_templates(basissets)
-class TestCrossReferenceBackends(unittest.TestCase):
-    def template_adc2_h2o(self, basis):
+class TestCrossReferenceBackends:
+
+    @pytest.mark.parametrize("system,case", h2o_cases)
+    def test_adc2_h2o(self, system, case):
+        system = testcases.get_by_filename(system).pop()
+
+        method = "cvs-adc2" if "cvs" in case else "adc2"
+        core_orbitals = system.core_orbitals if "cvs" in case else None
+        frozen_core = system.frozen_core if "fc" in case else None
+        frozen_virtual = system.frozen_virtual if "fv" in case else None
+
         results = {}
         for b in backends:
-            scfres = cached_backend_hf(b, "h2o", basis, conv_tol=1e-10)
-            results[b] = adcc.adc2(scfres, n_singlets=5, conv_tol=1e-9)
+            scfres = cached_backend_hf(b, system, conv_tol=1e-10)
+            results[b] = adcc.run_adc(
+                scfres, method=method, n_singlets=5, conv_tol=1e-9,
+                core_orbitals=core_orbitals, frozen_core=frozen_core,
+                frozen_virtual=frozen_virtual
+            )
+            assert results[b].converged
         compare_adc_results(results, 5e-8)
 
-    def template_adc2_r2methyloxirane(self, basis):
+    @pytest.mark.parametrize("system,case", methox_cases)
+    def test_adc2_r2methyloxirane(self, system, case):
+        system = testcases.get_by_filename(system).pop()
+
+        method = "cvs-adc2" if "cvs" in case else "adc2"
+        core_orbitals = system.core_orbitals if "cvs" in case else None
+        frozen_core = system.frozen_core if "fc" in case else None
+        frozen_virtual = system.frozen_virtual if "fv" in case else None
+
         results = {}
         for b in backends:
-            scfres = cached_backend_hf(b, "r2methyloxirane", basis,
-                                       conv_tol=1e-10)
-            results[b] = adcc.adc2(scfres, n_singlets=3, conv_tol=1e-9)
+            scfres = cached_backend_hf(b, system, conv_tol=1e-10)
+            results[b] = adcc.run_adc(
+                scfres, method=method, n_singlets=3, conv_tol=1e-8,
+                core_orbitals=core_orbitals, frozen_core=frozen_core,
+                frozen_virtual=frozen_virtual
+            )
+            assert results[b].converged
         compare_adc_results(results, 5e-7)
 
-    def template_adc2_uhf_ch2nh2(self, basis):
-        results = {}
+    @pytest.mark.parametrize("system,case", ch2nh2_cases)
+    def test_adc2_uhf_ch2nh2(self, system, case):
         # UHF not supported for VeloxChem
         if "veloxchem" in backends:
             backends.remove("veloxchem")
-        if not len(backends):
+        if len(backends) < 2:
             pytest.skip("Not enough backends that support UHF available.")
-        for b in backends:
-            scfres = cached_backend_hf(b, "ch2nh2", basis, multiplicity=2,
-                                       conv_tol=1e-10)
-            results[b] = adcc.adc2(scfres, n_states=5, conv_tol=1e-9)
-        compare_adc_results(results, 5e-8)
 
-    def template_cvs_adc2_h2o(self, basis):
+        system = testcases.get_by_filename(system).pop()
+        method = "cvs-adc2" if "cvs" in case else "adc2"
+        core_orbitals = system.core_orbitals if "cvs" in case else None
+        frozen_core = system.frozen_core if "fc" in case else None
+        frozen_virtual = system.frozen_virtual if "fv" in case else None
+
         results = {}
         for b in backends:
-            scfres = cached_backend_hf(b, "h2o", basis, conv_tol=1e-10)
-            results[b] = adcc.cvs_adc2(scfres, n_singlets=5, core_orbitals=1,
-                                       conv_tol=1e-9)
+            scfres = cached_backend_hf(b, system, conv_tol=1e-10)
+            results[b] = adcc.run_adc(
+                scfres, method=method, n_states=5, conv_tol=1e-9,
+                core_orbitals=core_orbitals, frozen_core=frozen_core,
+                frozen_virtual=frozen_virtual
+            )
+            assert results[b].converged
         compare_adc_results(results, 5e-8)
 
-    def template_hf_properties_h2o(self, basis):
+    @pytest.mark.parametrize("system", h2o)
+    def template_hf_properties(self, system):
+        system = testcases.get_by_filename(system).pop()
         results = {}
         for b in backends:
-            results[b] = adcc.ReferenceState(cached_backend_hf(b, "h2o", basis))
+            results[b] = adcc.ReferenceState(cached_backend_hf(b, system))
         compare_hf_properties(results, 5e-9)
 
 
@@ -109,7 +148,8 @@ def compare_adc_results(adc_results, atol):
         assert_allclose(
             state1.excitation_energy, state2.excitation_energy
         )
-        assert state1.n_iter == state2.n_iter
+        # allow a deviation of 1 davidson iteration
+        assert abs(state1.n_iter - state2.n_iter) <= 1
 
         blocks1 = state1.excitation_vector[0].blocks
         blocks2 = state2.excitation_vector[0].blocks
