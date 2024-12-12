@@ -58,7 +58,7 @@ class Intermediates():
     def __repr__(self):
         return (
             "AdcIntermediates(contains="
-            + list(self.cached_tensors.keys()).join(",")
+            + ",".join(self.cached_tensors.keys())
             + ")"
         )
 
