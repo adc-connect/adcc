@@ -22,8 +22,7 @@ class TestCase:
     @property
     def file_name(self) -> str:
         """Builds a file name based on name and basis."""
-        # asterisk is "problematic"
-        basis = self.basis.replace("-", "").replace("*", "")
+        basis = self.basis.replace("-", "").replace("*", "").replace("+", "")
         return f"{self.name}_{basis}"
 
     @property

@@ -111,8 +111,8 @@ class TestPCM:
         matrix += solvent
         assert len(matrix.extra_terms)
 
-        state = adcc.run_adc(matrix, n_singlets=5, conv_tol=1e-7, max_iter=250,
-                             max_subspace=24, environment=False)
+        state = adcc.run_adc(matrix, n_singlets=5, conv_tol=1e-7, max_iter=400,
+                             max_subspace=25, environment=False)
         assert state.converged
         assert_allclose(
             state.excitation_energy_uncorrected,
@@ -137,8 +137,8 @@ class TestPCM:
 
         # automatically add coupling term
         state = adcc.run_adc(scfres, method=method, n_singlets=5, conv_tol=1e-7,
-                             max_subspace=24, environment="linear_response",
-                             max_iter=250,
+                             max_subspace=25, environment="linear_response",
+                             max_iter=400,
                              core_orbitals=core_orbitals, frozen_core=frozen_core,
                              frozen_virtual=frozen_virtual)
         assert state.converged

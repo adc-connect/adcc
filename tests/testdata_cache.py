@@ -23,10 +23,11 @@ class AdcMockState(EigenSolverStateBase):
 
 class TestdataCache:
     @cached_member_function
-    def _load_hfdata(self, system: testcases.TestCase) -> dict:
+    def _load_hfdata(self, system: str) -> dict:
         """Load the HF data for the given test case."""
         if isinstance(system, str):
             system = testcases.get_by_filename(system).pop()
+        assert isinstance(system, testcases.TestCase)
         datadir = Path(__file__).parent / _testdata_dirname
         fname = datadir / system.hfdata_file_name
         if not fname.exists():
@@ -99,6 +100,7 @@ class TestdataCache:
             system: testcases.TestCase = (
                 testcases.get_by_filename(system).pop()
             )
+        assert isinstance(system, testcases.TestCase)
         datadir = Path(__file__).parent / _testdata_dirname
         if method == "mp":
             datafile = datadir / system.mpdata_file_name(source)
@@ -143,6 +145,7 @@ class TestdataCache:
             system: testcases.TestCase = (
                 testcases.get_by_filename(system).pop()
             )
+        assert isinstance(system, testcases.TestCase)
         # load the adc data
         data = self._load_data(system, method=method, case=case, source=source)
         adc_data = data.get(kind, None)

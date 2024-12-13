@@ -158,7 +158,8 @@ def _import_excited_states(context: h5py.File, method: str, adc_type: str = "pp"
         if key not in data:
             data[key] = []
         data[key].append(val)
-    return data
+    # convert to numpy array!
+    return {k: np.array(v) if isinstance(v, list) else v for k, v in data.items()}
 
 
 def import_data(context: h5py.File, dims_pref: str = "dims/",

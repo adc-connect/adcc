@@ -64,7 +64,7 @@ def generate(test_case: testcases.TestCase, restricted: bool,
 
 
 def generate_ch2nh2():
-    cases = testcases.get(n_expected_cases=1, name="ch2nh2").pop()
+    cases = testcases.get(n_expected_cases=1, name="ch2nh2", basis="sto-3g").pop()
     generate(cases, restricted=False, frac_occ=True)
 
 
@@ -102,7 +102,9 @@ def generate_hf():
 
 
 def generate_methox():
-    case = testcases.get(n_expected_cases=1, name="r2methyloxirane").pop()
+    case = testcases.get(
+        n_expected_cases=1, name="r2methyloxirane", basis="sto-3g"
+    ).pop()
     generate(case, restricted=True, frac_occ=False)
 
 

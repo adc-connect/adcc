@@ -24,7 +24,7 @@ import adcc
 import unittest
 import numpy as np
 
-from adcc.testdata.cache import cache
+from .testdata_cache import testdata_cache
 
 
 class TestHardCodedCisResults(unittest.TestCase):
@@ -43,7 +43,7 @@ class TestHardCodedCisResults(unittest.TestCase):
                  2.55565534e-02, 3.10309645e-01, 1.43808081e-02]
             )
         }
-        hf = cache.hfdata["methox_sto3g"]
+        hf = testdata_cache._load_hfdata("r2methyloxirane_sto3g")
         state = adcc.cis(hf, n_singlets=6, conv_tol=1e-8)
         np.testing.assert_allclose(vlx_result['excitation_energies'],
                                    state.excitation_energy, atol=1e-6)

@@ -25,7 +25,7 @@ _gs_data_method = "adc3"
 def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
                  n_singlets: int = 0, n_triplets: int = 0,
                  n_spin_flip: int = 0, n_states: int = 0,
-                 dump_nstates: int = None) -> None:
+                 dump_nstates: int = None, **kwargs) -> None:
     """
     Generate and dump the excited state reference data for the given reference case
     of the given test case if the data doesn't exist already.
@@ -50,7 +50,7 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     state_data, _ = run_qchem(
         test_case, method, case, import_states=True, import_gs=False,
         n_singlets=n_singlets, n_triplets=n_triplets, n_spin_flip=n_spin_flip,
-        n_states=n_states, import_nstates=dump_nstates
+        n_states=n_states, import_nstates=dump_nstates, **kwargs
     )
     # the data returned from run_qchem should have already been imported
     # using the correct keys -> just dump them
@@ -62,7 +62,8 @@ def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
                      n_singlets: int = 0, n_triplets: int = 0,
                      n_spin_flip: int = 0, n_states: int = 0,
                      dump_nstates: int = None,
-                     states_per_case: dict[str, dict[str, int]] = None) -> None:
+                     states_per_case: dict[str, dict[str, int]] = None,
+                     **kwargs) -> None:
     """
     Generate and dump the excited state reference data for all relevant
     reference cases of the given test case.
@@ -76,7 +77,8 @@ def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
             n_states = states_per_case[case].get("n_states", 0)
         generate_adc(
             test_case, method, case, n_singlets=n_singlets, n_triplets=n_triplets,
-            n_spin_flip=n_spin_flip, n_states=n_states, dump_nstates=dump_nstates
+            n_spin_flip=n_spin_flip, n_states=n_states, dump_nstates=dump_nstates,
+            **kwargs
         )
 
 
@@ -171,12 +173,53 @@ def generate_hf_631g():
         )
 
 
+def generate_h2s_sto3g():
+    # RHF, Singlet
+    states = {
+        # only define for adc1, because we skip adc0 cvs calculations
+        # (they are not implented in adcman)
+        "adc1": {
+            # 1 core and 2 virtual orbitals
+            "cvs": {"n_singlets": 2, "n_triplets": 2},
+            # 1 core and 1 virtual orbital
+            "fv-cvs": {"n_singlets": 1, "n_triplets": 1}
+        }
+    }
+    test_case = testcases.get(n_expected_cases=1, name="h2s", basis="sto-3g").pop()
+    generate_groundstate(test_case)
+    for method in _methods["pp"]:
+        generate_adc_all(
+            test_case, method=AdcMethod(method), n_singlets=3,
+            n_triplets=3, dump_nstates=2, states_per_case=states.get(method, None)
+        )
+
+
+def generate_h2s_6311g():
+    # RHF, Singlet
+    test_case = testcases.get(
+        n_expected_cases=1, name="h2s", basis="6-311+g**"
+    ).pop()
+    generate_groundstate(test_case)
+    for method in _methods["pp"]:
+        for case in test_case.cases:
+            kwargs = {}
+            # davidson did not converge for fc-cvs adc1 triplets
+            if "cvs" in case and "fc" in case:
+                kwargs["max_ss"] = 21
+            generate_adc(
+                test_case, method=AdcMethod(method), case=case, n_singlets=3,
+                n_triplets=3, dump_nstates=2, **kwargs
+            )
+
+
 def main():
     generate_h2o_sto3g()
     generate_h2o_def2tzvp()
     generate_cn_sto3g()
     generate_cn_ccpvdz()
     generate_hf_631g()
+    generate_h2s_sto3g()
+    generate_h2s_6311g()
 
 
 if __name__ == "__main__":

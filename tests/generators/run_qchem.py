@@ -26,7 +26,7 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
               import_states: bool = True, import_gs: bool = False,
               import_nstates: int = None, n_states: int = 0,
               n_singlets: int = 0, n_triplets: int = 0, n_spin_flip: int = 0,
-              ) -> tuple[dict | None, dict | None]:
+              **kwargs) -> tuple[dict | None, dict | None]:
     """
     Run a qchem calculation for the given test case and method on top
     of the previously generated pyscf results.
@@ -93,7 +93,7 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
             n_core_orbitals=n_core_orbitals, n_frozen_core=n_frozen_core,
             n_frozen_virtual=n_frozen_virtual, potfile=None, any_states=n_states,
             singlet_states=n_singlets, triplet_states=n_triplets,
-            sf_states=n_spin_flip,
+            sf_states=n_spin_flip, **kwargs
         )
         # call qchem and wait for completion
         execute_qchem(infile.name, outfile.name, savedir.name, tmpdir.resolve())
@@ -299,12 +299,13 @@ def generate_qchem_input_file(infile: str, method: str, basis: str, xyz: str,
                               sf_states: int = 0,
                               maxiter: int = 160, conv_tol: int = 10,
                               n_core_orbitals: int = 0, n_frozen_core: int = 0,
-                              n_frozen_virtual: int = 0) -> None:
+                              n_frozen_virtual: int = 0, max_ss: int = None) -> None:
     """
     Generates a qchem input file for the given test case and method.
     """
     nguess_singles = 2 * max(singlet_states, triplet_states)
-    max_ss = 7 * nguess_singles
+    if max_ss is None:
+        max_ss = 7 * nguess_singles
     qsys_mem = "{:d}gb".format(max(memory // 1000, 1) + 5)
     qsys_vmem = qsys_mem
     pe = potfile is not None
