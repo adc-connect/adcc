@@ -85,7 +85,7 @@ def generate_cn():
 
 
 def generate_h2o():
-    cases = testcases.get(n_expected_cases=2, name="h2o")
+    cases = testcases.get_by_filename("h2o_sto3g", "h2o_def2tzvp")
     for case in cases:
         generate(case, restricted=True, frac_occ=False)
 

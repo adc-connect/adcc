@@ -20,13 +20,11 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import unittest
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
 import adcc
-from .misc import expand_test_templates
 
 methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 methods.extend([f"cvs-{m}" for m in methods])
@@ -68,8 +66,8 @@ def _residual_norms(state):
 
 @pytest.mark.skipif("pyscf" not in adcc.backends.available(),
                     reason="PySCF not found.")
-@expand_test_templates(methods)
-class TestSmoke(unittest.TestCase):
+@pytest.mark.parametrize("method", methods)
+class TestSmoke:
     conv_tol = 1e-7
 
     def _run_scf_h2o_sto3g(self):
@@ -85,7 +83,7 @@ class TestSmoke(unittest.TestCase):
         )
         return scfres
 
-    def template_test_h2o_sto3g(self, method):
+    def test_h2o_sto3g(self, method):
         scfres = self._run_scf_h2o_sto3g()
         if "cvs" in method:
             refstate = adcc.ReferenceState(scfres, core_orbitals=1)

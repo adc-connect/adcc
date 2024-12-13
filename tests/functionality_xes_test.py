@@ -20,28 +20,28 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
 import unittest
+import pytest
 import numpy as np
-
 from numpy.testing import assert_allclose
 
+import adcc
 from adcc.backends import have_backend
-from adcc.testdata import static_data
 
-import pytest
+from .testdata_cache import testdata_cache
+from . import testcases
 
 
 @pytest.mark.skipif(not have_backend("pyscf"), reason="pyscf not found.")
 class TestFunctionalityXes(unittest.TestCase):
     # Test for XES calculations using pyscf / adcc
 
-    def base_test(self, system, ref):
+    def base_test(self, system: str, ref: dict):
         from adcc.backends.pyscf import run_core_hole
 
-        basis = system.split("_")[-1]
-        molecule = system.split("_")[0]
-        mf = run_core_hole(static_data.xyz[molecule], basis)
+        system: testcases.TestCase = testcases.get_by_filename(system).pop()
+
+        mf = run_core_hole(system.xyz, system.basis)
         state = adcc.adc2x(mf, conv_tol=1e-7, n_states=len(ref["eigenvalues"]))
 
         assert_allclose(state.excitation_energy, ref["eigenvalues"], atol=1e-6)

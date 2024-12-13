@@ -193,6 +193,10 @@ def _init_test_cases() -> tuple[TestCase]:
         basis="def2-tzvp", core_orbitals=1, cases=ref_cases,
         only_full_mode=True
     ))
+    test_cases.append(TestCase(
+        name="h2o", xyz=xyz, unit=unit, charge=0, multiplicity=1,
+        basis="cc-pvdz", only_full_mode=True
+    ))
     # H2S
     xyz, unit = _xyz["h2s"]
     ref_cases = ("gen", "cvs", "fc", "fv", "fc-cvs", "fv-cvs", "fc-fv", "fc-fv-cvs")

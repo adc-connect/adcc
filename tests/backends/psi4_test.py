@@ -36,7 +36,7 @@ if have_backend("psi4"):
     import psi4
 
 
-h2o = testcases.get(n_expected_cases=2, name="h2o")
+h2o = testcases.get_by_filename("h2o_sto3g", "h2o_def2tzvp")
 ch2nh2 = testcases.get(n_expected_cases=2, name="ch2nh2")
 
 
