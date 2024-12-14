@@ -299,7 +299,8 @@ def generate_qchem_input_file(infile: str, method: str, basis: str, xyz: str,
                               sf_states: int = 0,
                               maxiter: int = 160, conv_tol: int = 10,
                               n_core_orbitals: int = 0, n_frozen_core: int = 0,
-                              n_frozen_virtual: int = 0, max_ss: int = None) -> None:
+                              n_frozen_virtual: int = 0,
+                              max_ss: int = None) -> None:
     """
     Generates a qchem input file for the given test case and method.
     """

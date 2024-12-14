@@ -20,24 +20,29 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import unittest
 import itertools
+import pytest
 import numpy as np
+from pytest import approx
+from numpy.testing import assert_array_equal
+
 import adcc
 import adcc.guess
 
-from pytest import approx
-from numpy.testing import assert_array_equal
-from adcc.testdata.cache import cache
+from .testdata_cache import testdata_cache
+from . import testcases
 
-from .misc import expand_test_templates
 
 # The methods to test
-methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+singles_methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+doubles_methods = ["adc2", "adc2x", "adc3"]
+# the testcases
+h2o_sto3g, cn_sto3g, hf_631g = testcases.get_by_filename(
+    "h2o_sto3g", "cn_sto3g", "hf_631g"
+)
 
 
-@expand_test_templates(methods)
-class TestGuess(unittest.TestCase):
+class TestGuess:
     def assert_symmetry_no_spin_change(self, matrix, guess, block,
                                        spin_block_symmetrisation):
         """
@@ -184,7 +189,8 @@ class TestGuess(unittest.TestCase):
                 ref = 1 if i == j else 0
                 assert adcc.dot(gi, gj) == approx(ref)
 
-    def assert_guess_values(self, matrix, block, guesses, spin_flip=False):
+    def assert_guess_values(self, matrix, block, guesses, spin_flip=False,
+                            triplet=False):
         """
         Assert that the guesses correspond to the smallest
         diagonal values.
@@ -216,7 +222,13 @@ class TestGuess(unittest.TestCase):
                             idx[0]  < nCa and idx[1]  < nva))  # noqa: E221
                 ]
         elif block == "pphh":
-            diagonal = matrix.diagonal().pphh.to_ndarray()
+            # the doubles guesses are constructed from the 0th order diagonal
+            if matrix.method.name.endswith("adc2"):
+                diagonal = matrix.diagonal().pphh.to_ndarray()
+            else:
+                diagonal = adcc.adc_pp.matrix.diagonal_pphh_pphh_0(
+                    matrix.reference_state
+                ).pphh.to_ndarray()
 
             # Build list of indices, which would sort the diagonal
             sidcs = np.dstack(np.unravel_index(np.argsort(diagonal.ravel()),
@@ -234,6 +246,7 @@ class TestGuess(unittest.TestCase):
             else:
                 sidcs = [
                     idx for idx in sidcs[0]
+                    # aaaa / bbbb / abab / baba / abba / baab
                     if any((idx[0]  < noa and idx[1]  < nCa and idx[2]  < nva and idx[3]  < nva,   # noqa: E221,E501
                             idx[0] >= noa and idx[1] >= nCa and idx[2] >= nva and idx[3] >= nva,   # noqa: E221,E501
                             idx[0]  < noa and idx[1] >= nCa and idx[2]  < nva and idx[3] >= nva,   # noqa: E221,E501
@@ -241,6 +254,15 @@ class TestGuess(unittest.TestCase):
                             idx[0]  < noa and idx[1] >= nCa and idx[2] >= nva and idx[3]  < nva,   # noqa: E221,E501
                             idx[0] >= noa and idx[1]  < nCa and idx[2]  < nva and idx[3] >= nva))  # noqa: E221,E501
                 ]
+                # for triplets we have to filter out closed shell singlet
+                # excitations: excitations from a common spatial orbital to a
+                # common spatial orbital
+                # Only relevant for the oovv and ccvv blocks, but we don't
+                # cover the ccvv block in CVS-ADC.
+                if triplet and not mospaces.has_core_occupied_space:
+                    sidcs = [idx for idx in sidcs
+                             if abs(idx[0] - idx[1]) != noa
+                             or abs(idx[2] - idx[3]) != nva]
             sidcs = [idx for idx in sidcs if idx[2] != idx[3]]
             if not matrix.is_core_valence_separated:
                 sidcs = [idx for idx in sidcs if idx[0] != idx[1]]
@@ -249,11 +271,12 @@ class TestGuess(unittest.TestCase):
         def grouping(x):
             return np.round(diagonal[tuple(x)], decimals=12)
         gidcs = [[tuple(gitem) for gitem in group]
-                 for key, group in itertools.groupby(sidcs, grouping)]
+                 for _, group in itertools.groupby(sidcs, grouping)]
         igroup = 0  # The current diagonal value group we are in
         for (i, guess) in enumerate(guesses):
             # Extract indices of non-zero elements
             nonzeros = np.dstack(np.where(guess[block].to_ndarray() != 0))
+
             assert nonzeros.shape[0] == 1
             nonzeros = [tuple(nzitem) for nzitem in nonzeros[0]]
             if i > 0 and igroup + 1 < len(gidcs):
@@ -262,12 +285,12 @@ class TestGuess(unittest.TestCase):
             for nz in nonzeros:
                 assert nz in gidcs[igroup]
 
-    def base_test_no_spin_change(self, case, method, block, max_guesses=10):
-        if adcc.AdcMethod(method).is_core_valence_separated:
-            ground_state = adcc.LazyMp(cache.refstate_cvs[case])
-        else:
-            ground_state = adcc.LazyMp(cache.refstate[case])
-        matrix = adcc.AdcMatrix(method, ground_state)
+    def base_test_no_spin_change(self, system: str, case: str, method: str,
+                                 block: str, max_guesses: int = 10):
+        hf = testdata_cache.refstate(system, case=case)
+        if "cvs" in case and "cvs" not in method:
+            method = f"cvs-{method}"
+        matrix = adcc.AdcMatrix(method, hf)
 
         symmetrisations = ["none"]
         if matrix.reference_state.restricted:
@@ -283,11 +306,17 @@ class TestGuess(unittest.TestCase):
                 for gs in guesses:
                     self.assert_symmetry_no_spin_change(matrix, gs, block, symm)
                 self.assert_orthonormal(guesses)
-                self.assert_guess_values(matrix, block, guesses)
+                self.assert_guess_values(
+                    matrix, block, guesses, spin_flip=False,
+                    triplet=(symm == "antisymmetric")
+                )
 
-    def base_test_spin_flip(self, case, method, block, max_guesses=10):
-        ground_state = adcc.LazyMp(cache.refstate[case])
-        matrix = adcc.AdcMatrix(method, ground_state)
+    def base_test_spin_flip(self, system: str, case: str, method: str, block: str,
+                            max_guesses: int = 10):
+        hf = testdata_cache.refstate(system, case=case)
+        if "cvs" in case and "cvs" not in method:
+            method = f"cvs-{method}"
+        matrix = adcc.AdcMatrix(method, hf)
         for n_guesses in range(1, max_guesses + 1):
             guesses = adcc.guess.guesses_from_diagonal(
                 matrix, n_guesses, block=block, spin_change=-1,
@@ -299,50 +328,62 @@ class TestGuess(unittest.TestCase):
             self.assert_orthonormal(guesses)
             self.assert_guess_values(matrix, block, guesses, spin_flip=True)
 
-    def template_singles_h2o(self, method):
-        self.base_test_no_spin_change("h2o_sto3g", method, "ph")
+    @pytest.mark.parametrize("method", singles_methods)
+    @pytest.mark.parametrize("case", h2o_sto3g.cases)
+    def test_singles_h2o(self, method: str, case: str):
+        guesses = {  # fewer guesses available
+            "fv-cvs": 1, "cvs": 2, "fc": 8, "fv": 5, "fc-fv": 4
+        }
+        self.base_test_no_spin_change(
+            "h2o_sto3g", case=case, method=method, block="ph",
+            max_guesses=guesses.get(case, 10)
+        )
 
-    def template_singles_h2o_cvs(self, method):
-        self.base_test_no_spin_change("h2o_sto3g", "cvs-" + method, "ph",
-                                      max_guesses=2)
+    @pytest.mark.parametrize("method", doubles_methods)
+    @pytest.mark.parametrize("case", h2o_sto3g.cases)
+    def test_doubles_h2o(self, method: str, case: str):
+        guesses = {  # fewer guesses available
+            "fv-cvs": 4
+        }
+        self.base_test_no_spin_change(
+            system="h2o_sto3g", case=case, method=method, block="pphh",
+            max_guesses=guesses.get(case, 5)
+        )
 
-    def template_singles_cn(self, method):
-        self.base_test_no_spin_change("cn_sto3g", method, "ph")
+    @pytest.mark.parametrize("method", singles_methods)
+    @pytest.mark.parametrize("case", cn_sto3g.cases)
+    def test_singles_cn(self, method: str, case: str):
+        guesses = {  # fewer guesses available
+            "cvs": 7, "fv-cvs": 5
+        }
+        self.base_test_no_spin_change(
+            system="cn_sto3g", case=case, method=method, block="ph",
+            max_guesses=guesses.get(case, 10)
+        )
 
-    def template_singles_cn_cvs(self, method):
-        self.base_test_no_spin_change("cn_sto3g", "cvs-" + method, "ph",
-                                      max_guesses=7)
+    @pytest.mark.parametrize("method", doubles_methods)
+    @pytest.mark.parametrize("case", cn_sto3g.cases)
+    def test_doubles_cn(self, method: str, case: str):
+        self.base_test_no_spin_change(
+            system="cn_sto3g", case=case, method=method, block="pphh",
+            max_guesses=5
+        )
 
-    def template_singles_hf3(self, method):
-        self.base_test_spin_flip("hf3_631g", method, "ph")
+    @pytest.mark.parametrize("method", singles_methods)
+    @pytest.mark.parametrize("case", hf_631g.cases)
+    def test_singles_hf(self, method: str, case: str):
+        self.base_test_spin_flip(
+            system="hf_631g", case=case, method=method, block="ph",
+            max_guesses=10
+        )
 
-    # TODO These tests fails because of adcman, because some delta-Fock-based
-    #      approximation is used for the diagonal instead of the actual
-    #      doubles diagonal which would be employed for ADC(2) and ADC(3)
-    # def test_doubles_h2o_adc2(self):
-    #     self.base_test_no_spin_change("h2o_sto3g", "adc2", "pphh", max_guesses=3)
-    #
-    # def test_doubles_h2o_adc3(self):
-    #     self.base_test_no_spin_change("h2o_sto3g", "adc3", "pphh", max_guesses=3)
-    #
-    # def test_doubles_cn_adc2(self):
-    #     self.base_test_no_spin_change("cn_sto3g", "adc2", "pphh")
-    #
-    # def test_doubles_cn_adc3(self):
-    #    self.base_test_no_spin_change("cn_sto3g", "adc3", "pphh")
-    #
-    # TODO Perhaps could be templatified as well one the issues are resolved
-
-    def test_doubles_h2o_cvs_adc2(self):
-        self.base_test_no_spin_change("h2o_sto3g", "cvs-adc2", "pphh",
-                                      max_guesses=5)
-
-    def test_doubles_hf3_adc2(self):
-        self.base_test_spin_flip("hf3_631g", "adc2", "pphh")
-
-    # TODO See above
-    # def test_doubles_hf3_adc3(self):
-    #     self.base_test_spin_flip("hf3_631g", "adc3", "pphh")
+    @pytest.mark.parametrize("method", doubles_methods)
+    @pytest.mark.parametrize("case", hf_631g.cases)
+    def test_doubles_hf(self, method: str, case: str):
+        self.base_test_spin_flip(
+            system="hf_631g", case=case, method=method, block="pphh",
+            max_guesses=5
+        )
 
     #
     # Tests against reference values
@@ -373,25 +414,27 @@ class TestGuess(unittest.TestCase):
                     assert nonzeros == ref_sb[i][0]
                     assert_array_equal(values, np.array(ref_sb[i][1]))
 
-    def test_reference_h2o_adc2x(self):
-        ground_state = adcc.LazyMp(cache.refstate["h2o_sto3g"])
-        matrix = adcc.AdcMatrix("adc2x", ground_state)
-        self.base_reference(matrix, self.get_ref_h2o())
+    @pytest.mark.parametrize("method", doubles_methods)
+    def test_reference_h2o(self, method: str):
+        hf = testdata_cache.refstate("h2o_sto3g", "gen")
+        matrix = adcc.AdcMatrix(method=method, hf_or_mp=hf)
+        self.base_reference(matrix=matrix, ref=self.get_ref_h2o())
 
-    def test_reference_h2o_adc3(self):
-        ground_state = adcc.LazyMp(cache.refstate["h2o_sto3g"])
-        matrix = adcc.AdcMatrix("adc3", ground_state)
-        self.base_reference(matrix, self.get_ref_h2o())
+    # NOTE: This test is a bit weird, because the order of the guesses is
+    # ill defined, because some orbitals are degenerate for cn sto3g:
+    # occ (beta): 11, 12
+    # virt (alpha): 0, 1  // virt (beta): 4, 5.
+    # The system has 7 occ alpha, 6 occ beta, 3 virt alpha and 4 virt beta orbitals.
+    # I'm not 100% sure when the order is expected to change. Maybe whenever new
+    # reference data is generated? Anyway, it does not make sense to compare
+    # against hard coded referece data. The test against numpy above should be
+    # sufficient.
 
-    def test_reference_cn_adc2x(self):
-        ground_state = adcc.LazyMp(cache.refstate["cn_sto3g"])
-        matrix = adcc.AdcMatrix("adc2x", ground_state)
-        self.base_reference(matrix, self.get_ref_cn())
-
-    def test_reference_cn_adc3(self):
-        ground_state = adcc.LazyMp(cache.refstate["cn_sto3g"])
-        matrix = adcc.AdcMatrix("adc3", ground_state)
-        self.base_reference(matrix, self.get_ref_cn())
+    # @pytest.mark.parametrize("method", doubles_methods)
+    # def test_reference_cn(self, method: str):
+    #     hf = testdata_cache.refstate("cn_sto3g", case="gen")
+    #     matrix = adcc.AdcMatrix(method=method, hf_or_mp=hf)
+    #     self.base_reference(matrix=matrix, ref=self.get_ref_cn())
 
     def get_ref_h2o(self):
         sq8 = 1 / np.sqrt(8)
