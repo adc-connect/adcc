@@ -10,6 +10,7 @@ from adcc import hdf5io, guess_zero
 
 from pathlib import Path
 import numpy as np
+import h5py
 import json
 
 
@@ -131,10 +132,11 @@ class TestdataCache:
             datafile = datadir / system.adcdata_file_name(source, method)
         if not datafile.exists():
             raise FileNotFoundError(f"Missing reference data file {datafile}.")
-        data = hdf5io.load(datafile).get(case, None)
-        if data is None:
-            raise ValueError(f"No data available for case {case} in file "
-                             f"{datafile}.")
+        with h5py.File(datafile, "r") as hdf5_file:
+            if case not in hdf5_file:
+                raise ValueError(f"No data available for case {case} in file "
+                                 f"{datafile}.")
+            data = hdf5io.extract_group(hdf5_file[case])
         return data
 
     def adcc_data(self, system: str, method: str, case: str) -> dict:
