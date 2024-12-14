@@ -59,8 +59,8 @@ class TestPCM:
         frozen_virtual = system.frozen_virtual if "fv" in case else None
 
         state = adcc.run_adc(
-            scfres, method=method, n_singlets=5, conv_tol=1e-7, max_iter=250,
-            max_subspace=24, environment="ptlr", core_orbitals=core_orbitals,
+            scfres, method=method, n_singlets=5, conv_tol=1e-7, max_iter=500,
+            max_subspace=25, environment="ptlr", core_orbitals=core_orbitals,
             frozen_core=frozen_core, frozen_virtual=frozen_virtual
         )
         assert state.converged

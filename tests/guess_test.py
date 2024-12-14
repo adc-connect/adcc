@@ -420,14 +420,14 @@ class TestGuess:
         matrix = adcc.AdcMatrix(method=method, hf_or_mp=hf)
         self.base_reference(matrix=matrix, ref=self.get_ref_h2o())
 
-    # NOTE: This test is a bit weird, because the order of the guesses is
+    # NOTE: This test is a bit weird: the order of the guesses is
     # ill defined, because some orbitals are degenerate for cn sto3g:
     # occ (beta): 11, 12
     # virt (alpha): 0, 1  // virt (beta): 4, 5.
     # The system has 7 occ alpha, 6 occ beta, 3 virt alpha and 4 virt beta orbitals.
     # I'm not 100% sure when the order is expected to change. Maybe whenever new
     # reference data is generated? Anyway, it does not make sense to compare
-    # against hard coded referece data. The test against numpy above should be
+    # against hard coded reference data. The test against numpy above should be
     # sufficient.
 
     # @pytest.mark.parametrize("method", doubles_methods)
