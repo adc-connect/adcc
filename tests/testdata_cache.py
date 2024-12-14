@@ -26,7 +26,10 @@ class TestdataCache:
     def _load_hfdata(self, system: str) -> dict:
         """Load the HF data for the given test case."""
         if isinstance(system, str):
+            # avoid loading data twice for str and TestCase. Instead store a
+            # reference to the same object in both cases.
             system = testcases.get_by_filename(system).pop()
+            return self._load_hfdata(system)
         assert isinstance(system, testcases.TestCase)
         datadir = Path(__file__).parent / _testdata_dirname
         fname = datadir / system.hfdata_file_name
@@ -44,7 +47,7 @@ class TestdataCache:
 
         Parameters
         ----------
-        test_case: str
+        system: str
             File name of the test case, e.g., "h2o_sto3g". It is also possible
             to pass the TestCase directly.
         case: str
@@ -53,7 +56,10 @@ class TestdataCache:
             separated reference state.
         """
         if isinstance(system, str):
+            # avoid building ReferenceState twice for str and TestCase.
+            # Instead store a reference to the same object in both cases.
             system = testcases.get_by_filename(system).pop()
+            return self.refstate(system, case=case)
         assert isinstance(system, testcases.TestCase)
         # ensure that the case is valid for the testcase
         assert case in system.cases
@@ -72,8 +78,24 @@ class TestdataCache:
 
     @cached_member_function
     def hfimport(self, system: str, case: str) -> dict:
+        """
+        Load HF data that was dumped after an import with ReferenceState.
+
+        Parameters
+        ----------
+        system: str
+            File name of the test case, e.g., "h2o_sto3g". It is also possible
+            to pass the TestCase directly.
+        case: str
+            The reference case for which to load the data, e.g.,
+            "gen" for generic or "fv-cvs" for frozen virtual core valence
+            separated.
+        """
         if isinstance(system, str):
+            # avoid loading data twice for str and TestCase. Instead store a
+            # reference to the same object in both cases.
             system = testcases.get_by_filename(system).pop()
+            return self.hfimport(system, case=case)
         assert isinstance(system, testcases.TestCase)
         # ensure that the case is valid for the testcase
         assert case in system.cases
@@ -97,9 +119,10 @@ class TestdataCache:
         either adcman or adcc.
         """
         if isinstance(system, str):
-            system: testcases.TestCase = (
-                testcases.get_by_filename(system).pop()
-            )
+            # avoid loading data twice for str and TestCase. Instead store a
+            # reference to the same object in both cases.
+            system = testcases.get_by_filename(system).pop()
+            return self._load_data(system, method=method, case=case, source=source)
         assert isinstance(system, testcases.TestCase)
         datadir = Path(__file__).parent / _testdata_dirname
         if method == "mp":
@@ -142,8 +165,12 @@ class TestdataCache:
         (adcman/adcc).
         """
         if isinstance(system, str):
-            system: testcases.TestCase = (
-                testcases.get_by_filename(system).pop()
+            # avoid building an ExcitedStates object from the same data twice for
+            # str and TestCase. Instead store a reference to the same object in
+            # both cases.
+            system = testcases.get_by_filename(system).pop()
+            return self._make_mock_adc_state(
+                system, method=method, case=case, kind=kind, source=source
             )
         assert isinstance(system, testcases.TestCase)
         # load the adc data
