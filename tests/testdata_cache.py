@@ -226,7 +226,8 @@ class TestdataCache:
         """
         Construct an ExcitedStates object for the given test case,
         method (adcn), state kind (singlet/triplet/any/...) and
-        reference case (gen/cvs/fc/...) using the adcc reference data.
+        reference case (gen/cvs/fc/...) using the adcc reference data
+        (the eigenvalues and eigenstates).
         """
         return self._make_mock_adc_state(
             system, method=method, case=case, kind=kind, source="adcc"
@@ -237,7 +238,8 @@ class TestdataCache:
         """
         Construct an ExcitedStates object for the given test case,
         method (adcn), state kind (singlet/triplet/any/...) and
-        reference case (gen/cvs/fc/...) using the adcman reference data.
+        reference case (gen/cvs/fc/...) using the adcman reference data
+        (the eigenvalues and eigenstates).
         """
         return self._make_mock_adc_state(
             system, method=method, case=case, kind=kind, source="adcman"
