@@ -22,18 +22,17 @@
 ## ---------------------------------------------------------------------
 import adcc
 import pytest
-
 from pytest import approx
 
 from adcc import InputError
-from adcc.testdata.cache import cache
+from .testdata_cache import testdata_cache
 
 
 class TestWorkflow:
     def test_validate_state_parameters_rhf(self):
         from adcc.workflow import validate_state_parameters
 
-        refstate = cache.refstate["h2o_sto3g"]
+        refstate = testdata_cache.refstate("h2o_sto3g", case="gen")
 
         assert 3, "any" == validate_state_parameters(refstate, n_states=3)
         assert 4, "singlet" == validate_state_parameters(refstate, n_states=4,
@@ -61,7 +60,7 @@ class TestWorkflow:
     def test_validate_state_parameters_uhf(self):
         from adcc.workflow import validate_state_parameters
 
-        refstate = cache.refstate["cn_sto3g"]
+        refstate = testdata_cache.refstate("cn_sto3g", case="gen")
 
         assert 3, "any" == validate_state_parameters(refstate, n_states=3,
                                                      kind="any")
@@ -94,7 +93,7 @@ class TestWorkflow:
         #
         # Construction from hfdata
         #
-        hfdata = cache.hfdata["h2o_sto3g"]
+        hfdata = testdata_cache._load_hfdata("h2o_sto3g")
 
         res = construct_adcmatrix(hfdata, method="adc3")
         assert isinstance(res, adcc.AdcMatrix)
@@ -144,8 +143,8 @@ class TestWorkflow:
         #
         # Construction from LazyMp or ReferenceState
         #
-        refst_ful = cache.refstate["h2o_sto3g"]
-        refst_cvs = cache.refstate_cvs["h2o_sto3g"]
+        refst_ful = testdata_cache.refstate("h2o_sto3g", case="gen")
+        refst_cvs = testdata_cache.refstate("h2o_sto3g", case="cvs")
         gs_ful, gs_cvs = adcc.LazyMp(refst_ful), adcc.LazyMp(refst_cvs)
 
         for obj in [gs_ful, refst_ful]:
@@ -199,40 +198,47 @@ class TestWorkflow:
     def test_diagonalise_adcmatrix(self):
         from adcc.workflow import diagonalise_adcmatrix
 
-        refdata = cache.reference_data["h2o_sto3g"]
-        matrix = adcc.AdcMatrix("adc2", adcc.LazyMp(cache.refstate["h2o_sto3g"]))
+        system = "h2o_sto3g"
+        case = "gen"
+        method = "adc2"
+        kind = "singlet"
 
-        res = diagonalise_adcmatrix(matrix, n_states=3, kind="singlet",
+        refdata = testdata_cache.adcman_data(system, method=method, case=case)
+        ref_singlets = refdata[kind]["eigenvalues"]
+        n_states = min(len(ref_singlets), 3)
+
+        matrix = adcc.AdcMatrix(method, testdata_cache.refstate(system, case=case))
+
+        res = diagonalise_adcmatrix(matrix, n_states=n_states, kind=kind,
                                     eigensolver="davidson")
-        ref_singlets = refdata["adc2"]["singlet"]["eigenvalues"]
         assert res.converged
-        assert res.eigenvalues == approx(ref_singlets[:3])
+        assert res.eigenvalues[:n_states] == approx(ref_singlets[:n_states])
 
         guesses = adcc.guesses_singlet(matrix, n_guesses=6, block="ph")
-        res = diagonalise_adcmatrix(matrix, n_states=3, kind="singlet",
+        res = diagonalise_adcmatrix(matrix, n_states=n_states, kind=kind,
                                     guesses=guesses)
-        ref_singlets = refdata["adc2"]["singlet"]["eigenvalues"]
         assert res.converged
-        assert res.eigenvalues == approx(ref_singlets[:3])
+        assert res.eigenvalues[:n_states] == approx(ref_singlets[:n_states])
 
         with pytest.raises(InputError):  # Too low tolerance
-            res = diagonalise_adcmatrix(matrix, n_states=9, kind="singlet",
+            # SCF tolerance = 1e-14 currently
+            res = diagonalise_adcmatrix(matrix, n_states=9, kind=kind,
                                         eigensolver="davidson",
-                                        conv_tol=1e-14)
+                                        conv_tol=1e-15)
 
         with pytest.raises(InputError):  # Wrong solver method
-            res = diagonalise_adcmatrix(matrix, n_states=9, kind="singlet",
+            res = diagonalise_adcmatrix(matrix, n_states=9, kind=kind,
                                         eigensolver="blubber")
 
         with pytest.raises(InputError):  # Too few guesses
-            res = diagonalise_adcmatrix(matrix, n_states=9, kind="singlet",
+            res = diagonalise_adcmatrix(matrix, n_states=9, kind=kind,
                                         eigensolver="davidson",
                                         guesses=guesses)
 
     def test_estimate_n_guesses(self):
         from adcc.workflow import estimate_n_guesses
 
-        refstate = cache.refstate["h2o_sto3g"]
+        refstate = testdata_cache.refstate("h2o_sto3g", case="gen")
         ground_state = adcc.LazyMp(refstate)
         matrix = adcc.AdcMatrix("adc2", ground_state)
 
@@ -246,7 +252,7 @@ class TestWorkflow:
     def test_obtain_guesses_by_inspection(self):
         from adcc.workflow import obtain_guesses_by_inspection
 
-        refstate = cache.refstate["h2o_sto3g"]
+        refstate = testdata_cache.refstate("h2o_sto3g", case="gen")
         ground_state = adcc.LazyMp(refstate)
         matrix2 = adcc.AdcMatrix("adc2", ground_state)
         matrix1 = adcc.AdcMatrix("adc1", ground_state)

@@ -21,21 +21,18 @@
 ##
 ## ---------------------------------------------------------------------
 import pytest
-import unittest
 import numpy as np
-
 from numpy.testing import assert_allclose
 
 from adcc import direct_sum, einsum, empty_like, nosym_like
-from adcc.testdata.cache import cache
 
-from .misc import expand_test_templates
+from .testdata_cache import testdata_cache
 
 
-@expand_test_templates(["h2o_sto3g", "cn_sto3g"])
-class TestTensor(unittest.TestCase):
-    def template_nontrivial_addition(self, case):
-        refstate = cache.refstate[case]
+class TestTensor:
+    @pytest.mark.parametrize("system", ["h2o_sto3g", "cn_sto3g"])
+    def test_nontrivial_addition(self, system: str):
+        refstate = testdata_cache.refstate(system=system, case="gen")
         mtcs = [empty_like(refstate.fock("o1v1")).set_random(),
                 empty_like(refstate.fock("v1o1")).set_random(),
                 empty_like(refstate.fock("o1v1")).set_random()]
@@ -48,7 +45,7 @@ class TestTensor(unittest.TestCase):
         assert_allclose(res.to_ndarray(), ref, rtol=1e-10, atol=1e-14)
 
     def test_nontrivial_symmetrisation(self):
-        refstate = cache.refstate["cn_sto3g"]
+        refstate = testdata_cache.refstate("cn_sto3g", case="gen")
         mtcs = [nosym_like(refstate.eri("o1o1v1v1")).set_random(),
                 nosym_like(refstate.eri("o1v1o1v1")).set_random(),
                 nosym_like(refstate.eri("o1o1v1v1")).set_random()]
@@ -65,8 +62,9 @@ class TestTensor(unittest.TestCase):
         assert res.needs_evaluation
         assert_allclose(res.to_ndarray(), ref, rtol=1e-10, atol=1e-14)
 
-    def template_nontrivial_contraction(self, case):
-        refstate = cache.refstate[case]
+    @pytest.mark.parametrize("system", ["h2o_sto3g", "cn_sto3g"])
+    def test_nontrivial_contraction(self, system: str):
+        refstate = testdata_cache.refstate(system=system, case="gen")
         f_oo = empty_like(refstate.fock("o1o1")).set_random()
         f_vv = empty_like(refstate.fock("v1v1")).set_random()
         i1 = empty_like(refstate.fock("v1v1")).set_random()
@@ -106,7 +104,7 @@ class TestTensor(unittest.TestCase):
     def test_nontrivial_trace(self):
         import libadcc
 
-        refstate = cache.refstate["cn_sto3g"]
+        refstate = testdata_cache.refstate("cn_sto3g", case="gen")
         oovv = empty_like(refstate.eri("o1o1v1v1")).set_random()
         ovov = empty_like(refstate.eri("o1v1o1v1")).set_random()
         noovv = oovv.to_ndarray()
@@ -117,7 +115,7 @@ class TestTensor(unittest.TestCase):
         assert_allclose(res, ref, rtol=1e-10, atol=1e-14)
 
     def test_nontrivial_direct_sum(self):
-        refstate = cache.refstate["cn_sto3g"]
+        refstate = testdata_cache.refstate("cn_sto3g", case="gen")
         oeo = nosym_like(refstate.orbital_energies("o1")).set_random()
         oovv = empty_like(refstate.eri("o1o1v1v1")).set_random()
         oev = nosym_like(refstate.orbital_energies("v1")).set_random()
@@ -133,7 +131,7 @@ class TestTensor(unittest.TestCase):
         assert_allclose(res.to_ndarray(), ref, rtol=1e-10, atol=1e-14)
 
     def test_nontrivial_diagonal(self):
-        refstate = cache.refstate["cn_sto3g"]
+        refstate = testdata_cache.refstate("cn_sto3g", case="gen")
         mtcs = [nosym_like(refstate.eri("o1o1v1v1")).set_random(),
                 nosym_like(refstate.eri("o1v1o1v1")).set_random(),
                 nosym_like(refstate.eri("o1o1v1v1")).set_random()]
@@ -147,7 +145,7 @@ class TestTensor(unittest.TestCase):
         assert_allclose(res.to_ndarray(), ref, rtol=1e-10, atol=1e-14)
 
     def test_dimension_mismatch(self):
-        refstate = cache.refstate["h2o_sto3g"]
+        refstate = testdata_cache.refstate("h2o_sto3g", case="gen")
         with pytest.raises(ValueError, match="^Shape of this tensor"):
             refstate.foo + refstate.fvv
         with pytest.raises(ValueError, match="^Dimensionality of this tensor"):
