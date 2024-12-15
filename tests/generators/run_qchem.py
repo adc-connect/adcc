@@ -1,5 +1,5 @@
 from tests.generators.import_qchem_data import (
-    import_excited_states, import_groundstate, NotConvergedError
+    import_excited_states, import_groundstate, DataImportError
 )
 from tests.generators.qchem_savedir import QchemSavedir
 from tests import testcases
@@ -102,29 +102,27 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
         if not context_file.exists():
             raise FileNotFoundError(f"Expected the qchem data in {context_file} "
                                     "after the qchem calculation.")
-        context_file = h5py.File(context_file, "r")
-        # import the excited state data as nested dict {kind: {prop: list}}
-        states = None
-        if import_states:
-            try:
-                states = import_excited_states(
-                    context_file, method=method, is_spin_flip=bool(n_spin_flip),
-                    import_nstates=import_nstates
-                )
-            except NotConvergedError as e:
-                # one of the states is not converged
-                # copy the output file to the working directory and abort.
-                if outfile.exists():
-                    shutil.copy(outfile, Path.cwd())
-                context_file.close()
-                raise e
-        # import the ground state data as flat dict
-        gs_data = None
-        if import_gs:
-            gs_data = import_groundstate(context_file)
-        # don't forget to close the file. Otherwise the tmpdir won't be able
-        # to delete itself
-        context_file.close()
+        # import all relevant data from the context hdf5 file and return the
+        # imported data in dictionaries.
+        with h5py.File(context_file, "r") as context:
+            # import the excited state data as nested dict {kind: {prop: list}}
+            states = None
+            if import_states:
+                try:
+                    states = import_excited_states(
+                        context, method=method, is_spin_flip=bool(n_spin_flip),
+                        import_nstates=import_nstates
+                    )
+                except DataImportError as e:
+                    # something (expected) went wrong during import
+                    # copy the output file to the working directory and abort.
+                    if outfile.exists():
+                        shutil.copy(outfile, Path.cwd())
+                    raise e
+            # import the ground state data as flat dict
+            gs_data = None
+            if import_gs:
+                gs_data = import_groundstate(context)
     return states, gs_data
 
 
@@ -365,6 +363,7 @@ adc_davidson_conv        {conv_tol}
 adc_nguess_singles       {n_guesses}
 adc_davidson_maxsubspace {max_ss}
 adc_prop_es              true
+adc_prop_es2es           true
 cc_rest_occ              {cc_rest_occ}
 cc_frzn_core             {n_frozen_core}
 cc_frzn_virt             {n_frozen_virtual}
