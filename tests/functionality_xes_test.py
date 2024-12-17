@@ -28,7 +28,6 @@ from numpy.testing import assert_allclose
 import adcc
 from adcc.backends import have_backend
 
-from .testdata_cache import testdata_cache
 from . import testcases
 
 

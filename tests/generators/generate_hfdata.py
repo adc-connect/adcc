@@ -60,7 +60,9 @@ def generate(test_case: testcases.TestCase, restricted: bool,
         return None
     print(f"Generating data for {test_case.file_name}.")
     mf = run_pyscf(test_case, restricted, frac_occ)
-    return dump_pyscf(mf, str(hdf5_file))
+    hdf5_file = h5py.File(hdf5_file, "w")
+    dump_pyscf(mf, hdf5_file)
+    return hdf5_file
 
 
 def generate_ch2nh2():

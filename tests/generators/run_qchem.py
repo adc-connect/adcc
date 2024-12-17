@@ -302,7 +302,7 @@ def generate_qchem_input_file(infile: str, method: str, basis: str, xyz: str,
     """
     Generates a qchem input file for the given test case and method.
     """
-    nguess_singles = 2 * max(singlet_states, triplet_states)
+    nguess_singles = 2 * max(singlet_states, triplet_states, any_states, sf_states)
     if max_ss is None:
         max_ss = 7 * nguess_singles
     qsys_mem = "{:d}gb".format(max(memory // 1000, 1) + 5)

@@ -21,18 +21,211 @@
 ##
 ## ---------------------------------------------------------------------
 import numpy as np
+import h5py
 
 from pyscf import ao2mo, scf, gto
 
-import h5py
+from adcc.backends.pyscf import import_scf, PyScfHFProvider
+from adcc import hdf5io
 
 
-# TODO: extract the geometry directly from pyscf.gto.Mole
-# see their tostring member function code.
-# we probably need highly accurate coordinates to obtain matching integrals
+def dump_pyscf(scfres: scf.hf.SCF, hdf5_file: h5py.Group):
+    """
+    Convert pyscf SCF result to HDF5 file in adcc format
+    """
+    data = {}
+    # build a HFProvider isntance to obtain meta data about the SCF
+    # like restricted, convergence tolerance, ...
+    # Tensors like MO coefficients, not antisymmetrised ERI, ... are imported
+    # directly from the pyscf object.
+    hfprovider: PyScfHFProvider = import_scf(scfres)
 
-# TODO: move to ReferenceState? mo_coeffs can be obtained
-# ReferenceState.orbital_coefficients_alpha/beta(o1b/v1b/...)
+    data["energy_scf"] = hfprovider.get_energy_scf()
+
+    # Determine the number of orbitals
+    n_orbs = hfprovider.n_orbs
+    n_orbs_alpha = hfprovider.get_n_orbs_alpha()
+    assert n_orbs == 2 * n_orbs_alpha  # equal number of alpha and beta orbitals
+
+    data["n_orbs_alpha"] = n_orbs_alpha
+
+    # dump the scf convergence tolerance
+    data["conv_tol"] = hfprovider.get_conv_tol()
+
+    restricted = hfprovider.get_restricted()
+    data["restricted"] = restricted
+
+    # NOTE: The following parameters are needed to perform a QChem calculation
+    # on top of the reference data.
+    # - format the basis set in qchem format
+    data["qchem_formatted_basis"] = get_qchem_formatted_basis(scfres.mol)
+    # - dump whether cartesian angular functions have been used
+    data["cartesian_angular_functions"] = scfres.mol.cart
+    # - dump the xyz geometry and the unit
+    geom, unit = get_xyz_geometry(scfres.mol)
+    data["xyz"] = geom
+    data["xyz_unit"] = unit
+    # - the charge of the system
+    data["charge"] = scfres.mol.charge
+    # - the multiplicity of the system
+    data["spin_multiplicity"] = hfprovider.get_spin_multiplicity()
+
+    # get the MO coefsfs, MO energies, Fock matrix in the AO basis and the
+    # occupation numbers.
+    mo_occ = scfres.mo_occ
+    mo_energy = scfres.mo_energy
+    mo_coeff = scfres.mo_coeff
+    fock_bb = scfres.get_fock()
+
+    # pyscf only keeps occupation and mo energies once if restriced,
+    # so we unfold it here in order to unify the treatment in the rest
+    # of the code
+    if restricted:
+        mo_occ = np.asarray((mo_occ / 2, mo_occ / 2))
+        mo_energy = (mo_energy, mo_energy)
+        mo_coeff = (mo_coeff, mo_coeff)
+        fock_bb = (fock_bb, fock_bb)
+
+    # stacked fock matrix in ao basis (needed for the qchem calculation)
+    # a ( )
+    # b ( )
+    data["fock_bb"] = np.vstack((fock_bb[0], fock_bb[1]))
+
+    # Determine number of electrons
+    n_alpha = np.sum(mo_occ[0] > 0)
+    n_beta = np.sum(mo_occ[1] > 0)
+    if n_alpha != np.sum(mo_occ[0]) or n_beta != np.sum(mo_occ[1]):
+        raise ValueError("Fractional occupation numbers are not supported "
+                         "in adcc.")
+
+    # NOTE: orbitals should already be sorted correctly:
+    # occupied below virtual and according to their energy within the space.
+    # assert this behaviour
+    for spin in range(2):
+        raw_order = list(zip(-mo_occ[spin], mo_energy[spin]))
+        assert raw_order == sorted(raw_order)
+
+    # Dump occupation numbers, orbital energies
+    data["occupation_f"] = np.hstack((mo_occ[0], mo_occ[1]))
+    data["orben_f"] = np.hstack((mo_energy[0], mo_energy[1]))
+    # Transform fock matrix to MOs and build the full, block-diagonal matrix
+    fock = tuple(
+        mo_coeff[spin].transpose().conj() @ fock_bb[spin] @ mo_coeff[spin]
+        for spin in range(2)
+    )
+    full_fock_ff = np.zeros((n_orbs, n_orbs))
+    full_fock_ff[:n_orbs_alpha, :n_orbs_alpha] = fock[0]
+    full_fock_ff[n_orbs_alpha:, n_orbs_alpha:] = fock[1]
+    data["fock_ff"] = full_fock_ff
+
+    non_canonical = np.max(np.abs(data["fock_ff"] - np.diag(data["orben_f"])))
+    if non_canonical > max(1e-12, data["conv_tol"]):
+        raise ValueError("Running adcc on top of a non-canonical fock "
+                         "matrix is not implemented.")
+
+    # Dump the stacked orbital coefficients
+    #    b
+    # a ( )
+    # b ( )
+    cf_bf = np.hstack((mo_coeff[0], mo_coeff[1]))
+    data["orbcoeff_fb"] = cf_bf.transpose()
+
+    #
+    # ERI AO to MO transformation
+    #
+    if hasattr(scfres, "_eri") and scfres._eri is not None:
+        # eri is stored ... use it directly
+        eri_ao = scfres._eri
+    else:
+        # eri is not stored ... generate it now.
+        eri_ao = scfres.mol.intor("int2e", aosym="s8")
+
+    aro = slice(0, n_alpha)
+    bro = slice(n_orbs_alpha, n_orbs_alpha + n_beta)
+    arv = slice(n_alpha, n_orbs_alpha)
+    brv = slice(n_orbs_alpha + n_beta, n_orbs)
+
+    # compute full ERI tensor (with really everything)
+    eri = ao2mo.general(eri_ao, (cf_bf, cf_bf, cf_bf, cf_bf), compact=False)
+    eri = eri.reshape(n_orbs, n_orbs, n_orbs, n_orbs)
+    del eri_ao
+
+    # Adjust spin-forbidden blocks to be exactly zero
+    eri[aro, bro, :, :] = 0
+    eri[aro, brv, :, :] = 0
+    eri[arv, bro, :, :] = 0
+    eri[arv, brv, :, :] = 0
+
+    eri[bro, aro, :, :] = 0
+    eri[bro, arv, :, :] = 0
+    eri[brv, aro, :, :] = 0
+    eri[brv, arv, :, :] = 0
+
+    eri[:, :, aro, bro] = 0
+    eri[:, :, aro, brv] = 0
+    eri[:, :, arv, bro] = 0
+    eri[:, :, arv, brv] = 0
+
+    eri[:, :, bro, aro] = 0
+    eri[:, :, bro, arv] = 0
+    eri[:, :, brv, aro] = 0
+    eri[:, :, brv, arv] = 0
+    data["eri_ffff"] = eri
+
+    # Calculate mass center and charge center
+    masses = scfres.mol.atom_mass_list()
+    charges = scfres.mol.atom_charges()
+    coords = scfres.mol.atom_coords()
+    mass_center = np.einsum('i,ij->j', masses, coords) / masses.sum()
+    charge_center = np.einsum('i,ij->j', charges, coords) / charges.sum()
+
+    # Compute electric and nuclear multipole moments
+    data["multipoles"] = {}
+    data["multipoles"]["nuclear_0"] = int(np.sum(charges))
+    data["multipoles"]["nuclear_1"] = np.einsum("i,ix->x", charges, coords)
+    data["multipoles"]["elec_0"] = -int(n_alpha + n_beta)
+    data["multipoles"]["elec_1"] = scfres.mol.intor_symmetric("int1e_r", comp=3)
+
+    with scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
+        data["multipoles"]["elec_2_origin"] = (
+            scfres.mol.intor_symmetric('int1e_rr', comp=9)
+        )
+    with scfres.mol.with_common_orig(mass_center):
+        data["multipoles"]["elec_2_mass_center"] = (
+            scfres.mol.intor_symmetric('int1e_rr', comp=9)
+        )
+    with scfres.mol.with_common_orig(charge_center):
+        data["multipoles"]["elec_2_charge_center"] = (
+            scfres.mol.intor_symmetric('int1e_rr', comp=9)
+        )
+
+    data["magnetic_moments"] = {}
+    data["derivatives"] = {}
+    with scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
+        data["magnetic_moments"]["mag_1_origin"] = (
+            0.5 * scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
+        )
+        data["derivatives"]["nabla_origin"] = (
+            -1.0 * scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
+        )
+    with scfres.mol.with_common_orig(mass_center):
+        data["magnetic_moments"]["mag_1_mass_center"] = (
+            0.5 * scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
+        )
+        data["derivatives"]["nabla_mass_center"] = (
+            -1.0 * scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
+        )
+    with scfres.mol.with_common_orig(charge_center):
+        data["magnetic_moments"]["mag_1_charge_center"] = (
+            0.5 * scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
+        )
+        data["derivatives"]["nabla_charge_center"] = (
+            -1.0 * scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
+        )
+
+    hdf5io.emplace_dict(data, hdf5_file, compression="gzip")
+    hdf5_file.attrs["backend"] = "pyscf"
+
 
 def get_qchem_formatted_basis(mol: gto.Mole) -> str:
     """
@@ -43,7 +236,7 @@ def get_qchem_formatted_basis(mol: gto.Mole) -> str:
     angular_momentum_map = {0: "S", 1: "P", 2: "D", 3: "F", 4: "G", 5: "H"}
     # iterate over the contracted gaussians and sort them according to their
     # atom id (the index of the atom in the geometry).
-    cgtos_by_atom = {}
+    cgtos_by_atom: dict[int, list] = {}
     for cgto_number in range(mol.nbas):
         atom_number: int = mol.bas_atom(cgto_number)
         atom_name: str = mol.elements[atom_number]
@@ -86,224 +279,14 @@ def get_qchem_formatted_basis(mol: gto.Mole) -> str:
     return "\n".join(qchem_formatted_basis)
 
 
-def dump_pyscf(scfres: scf.hf.SCF, out: str | h5py.File):
+def get_xyz_geometry(mol: gto.Mole) -> tuple[str, str]:
     """
-    Convert pyscf SCF result to HDF5 file in adcc format
+    Extracts the geometry from the pyscf Mole object as xyz coordinates in Bohr.
     """
-    if not isinstance(scfres, scf.hf.SCF):
-        raise TypeError("Unsupported type for dump_pyscf.")
-
-    if not scfres.converged:
-        raise ValueError(
-            "Cannot dump a pyscf calculation, "
-            "which is not yet converged. Did you forget to run "
-            "the kernel() or the scf() function of the pyscf scf "
-            "object?"
-        )
-
-    if isinstance(out, h5py.File):
-        data = out
-    elif isinstance(out, str):
-        data = h5py.File(out, "w")
-    else:
-        raise TypeError("Unknown type for out, only HDF5 file and str supported.")
-
-    # Try to determine whether we are restricted
-    if isinstance(scfres.mo_occ, list):
-        restricted = len(scfres.mo_occ) < 2
-    elif isinstance(scfres.mo_occ, np.ndarray):
-        restricted = scfres.mo_occ.ndim < 2
-    else:
-        raise ValueError(
-            "Unusual pyscf SCF class encountered. Could not "
-            "determine restricted / unrestricted."
-        )
-
-    mo_occ = scfres.mo_occ
-    mo_energy = scfres.mo_energy
-    mo_coeff = scfres.mo_coeff
-    fock_bb = scfres.get_fock()
-
-    # pyscf only keeps occupation and mo energies once if restriced,
-    # so we unfold it here in order to unify the treatment in the rest
-    # of the code
-    if restricted:
-        mo_occ = np.asarray((mo_occ / 2, mo_occ / 2))
-        mo_energy = (mo_energy, mo_energy)
-        mo_coeff = (mo_coeff, mo_coeff)
-        fock_bb = (fock_bb, fock_bb)
-
-    # Transform fock matrix to MOs
-    fock = tuple(mo_coeff[i].transpose().conj() @ fock_bb[i] @ mo_coeff[i]
-                 for i in range(2))
-
-    # Determine number of orbitals
-    n_orbs_alpha = mo_coeff[0].shape[1]
-    n_orbs_beta = mo_coeff[1].shape[1]
-    n_orbs = n_orbs_alpha + n_orbs_beta
-    if n_orbs_alpha != n_orbs_beta:
-        raise ValueError(
-            "adcc cannot deal with different number of alpha and "
-            "beta orbitals like in a restricted "
-            "open-shell reference at the moment."
-        )
-
-    # Determine number of electrons
-    n_alpha = np.sum(mo_occ[0] > 0)
-    n_beta = np.sum(mo_occ[1] > 0)
-    if n_alpha != np.sum(mo_occ[0]) or n_beta != np.sum(mo_occ[1]):
-        raise ValueError("Fractional occupation numbers are not supported "
-                         "in adcc.")
-
-    # conv_tol is energy convergence, conv_tol_grad is gradient convergence
-    if scfres.conv_tol_grad is None:
-        conv_tol = scfres.conv_tol
-    else:
-        conv_tol = max(scfres.conv_tol, scfres.conv_tol_grad**2)
-
-    # format the basis set in the qchem format
-    basis_bytes = get_qchem_formatted_basis(scfres.mol).encode()
-    # get the geometry of the system
-    # the coordinates are converted Bohr -> Angstrom during the export!
-    geom_bytes: bytes = scfres.mol.tostring().encode()
-    geom_unit = "angstrom".encode()
-
-    #
-    # Put basic data into HDF5 file
-    #
-    data.create_dataset("xyz", data=geom_bytes, shape=(),
-                        dtype=h5py.string_dtype())
-    data.create_dataset("xyz_unit", data=geom_unit, shape=(),
-                        dtype=h5py.string_dtype())
-    data.create_dataset("qchem_formatted_basis", data=basis_bytes, shape=(),
-                        dtype=h5py.string_dtype())
-    data.create_dataset("n_orbs_alpha", shape=(), data=int(n_orbs_alpha))
-    data.create_dataset("energy_scf", shape=(), data=float(scfres.e_tot))
-    data.create_dataset("restricted", shape=(), data=restricted)
-    data.create_dataset("conv_tol", shape=(), data=float(conv_tol))
-    data.create_dataset("cartesian_angular_functions", shape=(),
-                        data=scfres.mol.cart)
-    data.create_dataset("charge", shape=(), data=int(scfres.mol.charge))
-
-    # Note: In the pyscf world spin is 2S, so the multiplicity
-    #       is spin + 1
-    data.create_dataset(
-        "spin_multiplicity", shape=(), data=int(scfres.mol.spin) + 1
-    )
-
-    #
-    # Orbital reordering
-    #
-    # TODO This should not be needed any more
-    # adcc assumes that the occupied orbitals are specified first,
-    # followed by the virtual orbitals. Pyscf does this by means of the
-    # mo_occ numpy arrays, so we need to reorder in order to agree
-    # with what is expected in adcc.
-    #
-    # First build a structured numpy array with the negative occupation
-    # in the primary field and the energy in the secondary
-    # for each alpha and beta
-    order_array = (
-        np.array(list(zip(-mo_occ[0], mo_energy[0])),
-                 dtype=np.dtype("float,float")),
-        np.array(list(zip(-mo_occ[1], mo_energy[1])),
-                 dtype=np.dtype("float,float")),
-    )
-    sort_indices = tuple(np.argsort(ary) for ary in order_array)
-
-    # Use the indices which sort order_array (== stort_indices) to reorder
-    mo_occ = tuple(mo_occ[i][sort_indices[i]] for i in range(2))
-    mo_energy = tuple(mo_energy[i][sort_indices[i]] for i in range(2))
-    mo_coeff = tuple(mo_coeff[i][:, sort_indices[i]] for i in range(2))
-    fock = tuple(fock[i][sort_indices[i]][:, sort_indices[i]] for i in range(2))
-
-    #
-    # SCF orbitals and SCF results
-    #
-    data.create_dataset("occupation_f", data=np.hstack((mo_occ[0], mo_occ[1])))
-    data.create_dataset("orben_f", data=np.hstack((mo_energy[0], mo_energy[1])))
-    fullfock_ff = np.zeros((n_orbs, n_orbs))
-    fullfock_ff[:n_orbs_alpha, :n_orbs_alpha] = fock[0]
-    fullfock_ff[n_orbs_alpha:, n_orbs_alpha:] = fock[1]
-    data.create_dataset("fock_ff", data=fullfock_ff, compression=8)
-
-    # fock matrix in ao basis
-    stacked_fock_bb = np.hstack((fock_bb[0], fock_bb[1]))
-    data.create_dataset(
-        "fock_bb", data=stacked_fock_bb.transpose(), compression=8
-    )
-
-    non_canonical = np.max(np.abs(data["fock_ff"] - np.diag(data["orben_f"])))
-    if non_canonical > max(1e-12, data["conv_tol"][()]):
-        raise ValueError("Running adcc on top of a non-canonical fock "
-                         "matrix is not implemented.")
-
-    cf_bf = np.hstack((mo_coeff[0], mo_coeff[1]))
-    data.create_dataset("orbcoeff_fb", data=cf_bf.transpose(), compression=8)
-
-    #
-    # ERI AO to MO transformation
-    #
-    if hasattr(scfres, "_eri") and scfres._eri is not None:
-        # eri is stored ... use it directly
-        eri_ao = scfres._eri
-    else:
-        # eri is not stored ... generate it now.
-        eri_ao = scfres.mol.intor("int2e", aosym="s8")
-
-    aro = slice(0, n_alpha)
-    bro = slice(n_orbs_alpha, n_orbs_alpha + n_beta)
-    arv = slice(n_alpha, n_orbs_alpha)
-    brv = slice(n_orbs_alpha + n_beta, n_orbs)
-
-    # compute full ERI tensor (with really everything)
-    eri = ao2mo.general(eri_ao, (cf_bf, cf_bf, cf_bf, cf_bf), compact=False)
-    eri = eri.reshape(n_orbs, n_orbs, n_orbs, n_orbs)
-    del eri_ao
-
-    # Adjust spin-forbidden blocks to be exactly zero
-    eri[aro, bro, :, :] = 0
-    eri[aro, brv, :, :] = 0
-    eri[arv, bro, :, :] = 0
-    eri[arv, brv, :, :] = 0
-
-    eri[bro, aro, :, :] = 0
-    eri[bro, arv, :, :] = 0
-    eri[brv, aro, :, :] = 0
-    eri[brv, arv, :, :] = 0
-
-    eri[:, :, aro, bro] = 0
-    eri[:, :, aro, brv] = 0
-    eri[:, :, arv, bro] = 0
-    eri[:, :, arv, brv] = 0
-
-    eri[:, :, bro, aro] = 0
-    eri[:, :, bro, arv] = 0
-    eri[:, :, brv, aro] = 0
-    eri[:, :, brv, arv] = 0
-    data.create_dataset("eri_ffff", data=eri, compression=8)
-
-    # Compute electric and nuclear multipole moments
-    charges = scfres.mol.atom_charges()
-    coords = scfres.mol.atom_coords()
-    mmp = data.create_group("multipoles")
-    mmp.create_dataset("nuclear_0", shape=(), data=int(np.sum(charges)))
-    mmp.create_dataset("nuclear_1", data=np.einsum("i,ix->x", charges, coords))
-    mmp.create_dataset("elec_0", shape=(), data=-int(n_alpha + n_beta))
-    mmp.create_dataset("elec_1",
-                       data=scfres.mol.intor_symmetric("int1e_r", comp=3))
-
-    magm = data.create_group("magnetic_moments")
-    derivs = data.create_group("derivatives")
-    with scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
-        magm.create_dataset(
-            "mag_1",
-            data=0.5 * scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
-        )
-        derivs.create_dataset(
-            "nabla",
-            data=-1.0 * scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
-        )
-
-    data.attrs["backend"] = "pyscf"
-    return data
+    out = []
+    coordinates = mol.atom_coords()
+    for i in range(mol.natm):
+        symbol = mol.atom_pure_symbol(i)
+        x, y, z = coordinates[i]
+        out.append(f"{symbol} {x:>20.15f} {y:>20.15f} {z:>20.15f}")
+    return "\n".join(out), "bohr"
