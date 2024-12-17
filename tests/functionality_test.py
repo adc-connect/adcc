@@ -53,9 +53,6 @@ class TestFunctionality:
     def base_test(self, system: str, case: str, method: str, kind: str,
                   generator: str, test_mp: bool = True, **args):
         system: testcases.TestCase = testcases.get_by_filename(system).pop()
-        if method == "adc1" and system.name == "cn" and system.basis == "sto-3g":
-            pytest.xfail("For CN/STO-3G adc1, the Davidson sometimes converges to "
-                         "zero for unknown reasons.")
         # build a ReferenceState that is already aware of the case (cvs/...)
         hf = testdata_cache.refstate(system, case=case)
         # load the adc refdata
@@ -91,16 +88,6 @@ class TestFunctionality:
                     #      are implemented
                     assert res.ground_state.energy_correction(3) == \
                         approx(refmp["mp3"]["energy"])
-
-        if generator == "adcman":
-            if "cvs" in method and res.method.level >= 2:
-                pytest.xfail("From second order on, the CVS transition dipole "
-                             "moments in the reference data are erroneous.")
-
-        if method == "adc0" and system.name == "cn":
-            # TODO Investigate this
-            pytest.xfail("CN adc0 transition properties currently fail for "
-                         "unknown reasons and are thus not explicitly tested.")
 
         for i in range(n_ref):
             # Computing the dipole moment implies a lot of cancelling in the

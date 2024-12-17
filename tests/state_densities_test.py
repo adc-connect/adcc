@@ -84,8 +84,6 @@ class TestStateDensities:
                              [c for c in cases if c[2] != "triplet"])
     def test_ground_to_excited_tdm(self, system: str, case: str, kind: str,
                                    method: str, generator: str):
-        if generator == "adcman" and AdcMethod(method).level > 1:
-            pytest.skip("Fix adcman ISR(2) tdm implemention.")
         if "cvs" in case and AdcMethod(method).level == 0 and generator == "adcman":
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
         refdata = testdata_cache._load_data(
@@ -110,6 +108,7 @@ class TestStateDensities:
             assert (dm_ao_a == approx(ref_dm_a))
             assert (dm_ao_b == approx(ref_dm_b))
 
+    # CVS state-to-state TDM is not implemented in adcc
     @pytest.mark.parametrize("system,case,kind",
                              [c for c in cases if "cvs" not in c[1]])
     def test_state_to_state_tdm(self, system: str, case: str, kind: str,
