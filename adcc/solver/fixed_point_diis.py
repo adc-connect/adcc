@@ -37,17 +37,22 @@ class DIISSubspace:
 
     def is_converged(self, conv_tol: float) -> bool:
         """
-        Computes the square root of the norm of the last error vector and checks
-        whether it is smaller than the given tolerance.
+        Computes the Frobenius norm of the last error vector and checks
+        whether it is smaller than the convergence criterion passed as
+        conv_tol.
         """
-        if self.n_iter >= 2 and self.residual_norm < conv_tol:
+        if self.n_iter >= 1 and self.residual_norm < conv_tol:
             self.converged = True
         return self.converged
 
     @property
     def residual_norm(self) -> float:
-        """Returns the norm of the most recent error vector"""
-        return np.sqrt(self.error_vectors[-1].dot(self.error_vectors[-1]))
+        """
+        Returns the Frobenius norm of the most recent error vector, which is
+        just the square root of the last diagonal element of the current
+        overlap matrix.
+        """
+        return np.sqrt(self.overlap[self.size-1, self.size-1])
 
     @property
     def size(self) -> int:
@@ -64,8 +69,8 @@ class DIISSubspace:
 
     def add(self, subspace_vector, error_vector) -> None:
         """
-        Add a new vector and error vector to the subspace and updates the
-        DIIS matrix. Also the iteration counter is incremented.
+        Adds a new vector and corresponding error vector to the subspace and
+        updates the DIIS matrix. Also the iteration counter is incremented.
         """
         self.n_iter += 1
         self.subspace_vectors.append(subspace_vector)
@@ -100,7 +105,8 @@ class DIISSubspace:
         # init new overlap matrix, copy elements and add new elements
         new_overlap = np.zeros((cur_size, cur_size))
         new_overlap.fill(float("NaN"))
-        new_overlap[:copy_size, :copy_size] = self.overlap[-copy_size:, -copy_size:]
+        if copy_size > 0:
+            new_overlap[:copy_size, :copy_size] = self.overlap[-copy_size:, -copy_size:]
         for ind, error_vec in enumerate(self.error_vectors):
             overlap_value = error_vec.dot(self.error_vectors[-1])
             new_overlap[ind, -1] = overlap_value
@@ -109,7 +115,7 @@ class DIISSubspace:
                 new_overlap[-1, ind] = overlap_value
         # Check that there are no NaN elements in the updated overlap matrix,
         # i.e., that all elements have been properly populated
-        assert not np.isnan(np.sum(new_overlap))
+        assert not np.any(np.isnan(new_overlap))
         self.overlap = new_overlap
 
     def compute_guess(self, n_omit_vectors: int = 0):
@@ -133,9 +139,9 @@ class DIISSubspace:
 
         Parameters
         ----------
-        n_omit_vectors
-            Omit the n subspace vectors with the largest error vectors in the
-            extrapolation.
+        n_omit_vectors: int
+            In the DIIS extrapolation, omit the n subspace vectors associated
+            with the error vectors with the largest Frobenius norm.
         """
         if not self.size:
             raise SubspaceError("No vectors in subspace.")
@@ -166,9 +172,13 @@ class DIISSubspace:
             b = np.delete(b, inds_to_discard, axis=0)
         # solve the system of linear equations
         coefficients = np.linalg.solve(A, b)
+        # discard the Lagrange multiplier, which is not needed for DIIS
+        # extrapolation
+        coefficients = coefficients[:-1]
         # build the linear combination:
-        # determine the indices of not discarded vectors to combine with the
-        # corresponding coefficients
+        # determine the indices of vectors to use for the generation of the
+        # DIIS-extrapolated guess, i.e., vectors which have not beeen
+        # discarded above
         vec_indices = [i for i in range(self.size) if i not in inds_to_discard]
         guess = self.subspace_vectors[0].zeros_like()
         for vec_ind, coeff in zip(vec_indices, coefficients):
@@ -207,13 +217,14 @@ def diis(updater: callable, guess_vector, diis_start_size: int = 3,
         The guess vector to start with.
     diis_start_size: int
         Perform n linear steps until the DIIS subspace contains at least
-        n vectors. Has to be smaller than max_subspace_size (default: 3).
+        n vectors. Has to be smaller than or equal to max_subspace_size
+        (default: 3).
     max_subspace_size: int
         The maximum number of vectors to keep in the subspace simultaneously
-        (default 7).
+        (default: 7).
     conv_tol: float
-        The convergence tolerance on the euclidean norm of the
-        error vector. (default: 1e-9)
+        The convergence tolerance on the Frobenius norm of the
+        error vector (default: 1e-9).
     n_max_iterations: int
         The maximum number of allowed iterations (default: 100).
     callback: callable
