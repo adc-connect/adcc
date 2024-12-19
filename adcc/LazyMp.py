@@ -209,14 +209,14 @@ class LazyMp:
         elif level == 3:
             return self.mp3_diffdm
         elif level == "sigma4+":
-            raise NotImplementedError()
+            return self.sigma_4_plus_diffdm
         else:
             raise NotImplementedError("Difference density not implemented for level"
                                       f" {level}.")
 
     @cached_property
     @timed_member_call(timer="timer")
-    def mp2_diffdm(self):
+    def mp2_diffdm(self) -> OneParticleOperator:
         """
         Return the MP2 difference density in the MO basis.
         """
@@ -267,7 +267,7 @@ class LazyMp:
 
     @cached_property
     @timed_member_call(timer="timer")
-    def mp3_diffdm(self):
+    def mp3_diffdm(self) -> OneParticleOperator:
         """
         Return the MP3 difference density in the MO basis.
         """
@@ -291,6 +291,51 @@ class LazyMp:
             mp2_dm.vv  # 2nd order
             # 3rd order
             + einsum("ijac,ijbc->ab", self.t2oo, self.td2(b.oovv)).symmetrise(0, 1)
+        )
+        return evaluate(ret)
+
+    @cached_property
+    @timed_member_call(timer="timer")
+    def sigma_4_plus_diffdm(self) -> OneParticleOperator:
+        """
+        Return the Sigma(4+) difference density, where the OV part of the MP3
+        density is self consistently updated to include higher order contributions.
+        """
+        from .solver.fixed_point_diis import diis, default_print
+
+        if self.has_core_occupied_space:
+            raise NotImplementedError("Sigma(4+) density not implemented for CVS.")
+        ret = OneParticleOperator(self.mospaces, is_symmetric=True)
+
+        hf = self.reference_state
+        df = self.df(b.ov)
+        mp2_dm = self.mp2_diffdm
+        mp3_dm = self.mp3_diffdm
+        # oo and vv part are not updated
+        ret.oo = mp3_dm.oo
+        ret.vv = mp3_dm.vv
+
+        # compute the constant third order contributions for the iterations
+        itmd = (
+            self.m_3_plus + self.m_3_minus
+            - einsum("ijka,jk->ia", hf.ooov, mp3_dm.oo)
+            + einsum("ibac,bc->ia", hf.ovvv, mp3_dm.vv)
+        ).evaluate()
+
+        # setup the updater and run the diis
+        def updater(dm_ov):
+            return evaluate(
+                mp2_dm.ov - (
+                    itmd
+                    + einsum("ijab,jb->ia", hf.oovv, dm_ov)
+                    - einsum("ibja,jb->ia", hf.ovov, dm_ov)
+                ) / df
+            )
+
+        ret.ov = diis(
+            updater=updater, guess_vector=mp3_dm.ov, diis_start_size=2,
+            max_subspace_size=7, conv_tol=1e-12, n_max_iterations=200,
+            callback=default_print
         )
         return evaluate(ret)
 
