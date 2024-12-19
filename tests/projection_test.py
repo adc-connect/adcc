@@ -32,6 +32,7 @@ from adcc.projection import Projector, SubspacePartitioning, transfer_cvs_to_ful
 from adcc.HfCounterData import HfCounterData
 
 from .testdata_cache import testdata_cache
+from . import testcases
 
 
 class TestSubspacePartitioning(unittest.TestCase):
@@ -211,12 +212,13 @@ class TestProjector(unittest.TestCase):
         self.base_test("cn_ccpvdz", "any", n_core=2, n_virt=4)
 
 
-testcases = [("h2o_sto3g", "singlet"), ("h2o_sto3g", "triplet"),
-             ("cn_sto3g", "any"), ("h2o_def2tzvp", "singlet"),
-             ("h2o_def2tzvp", "triplet"), ("cn_ccpvdz", "any")]
+test_cases = testcases.get_by_filename(
+    "h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz"
+)
+cases = [(case.file_name, kind) for case in test_cases for kind in case.pp_kinds]
 
 
-@pytest.mark.parametrize("system,kind", testcases)
+@pytest.mark.parametrize("system,kind", cases)
 class TestCvsTransfer:
     def test_high_level(self, system: str, kind: str):
         state_cvs = testdata_cache.adcc_states(

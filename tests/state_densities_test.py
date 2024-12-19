@@ -34,20 +34,12 @@ from . import testcases
 methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 generators = ["adcman", "adcc"]
 
-closed = testcases.get_by_filename(
-    "h2o_sto3g", "h2o_def2tzvp", "h2s_sto3g", "h2s_6311g"
+test_cases = testcases.get_by_filename(
+    "h2o_sto3g", "h2o_def2tzvp", "h2s_sto3g", "h2s_6311g", "cn_sto3g", "cn_ccpvdz",
+    "hf_631g"
 )
-open = testcases.get_by_filename("cn_sto3g", "cn_ccpvdz")
-spin_flip = testcases.get_by_filename("hf_631g")
-
 cases = [(case.file_name, c, kind)
-         for case in closed for c in case.cases for kind in ["singlet", "triplet"]]
-cases.extend([
-    (case.file_name, c, "any") for case in open for c in case.cases
-])
-cases.extend([
-    (case.file_name, c, "spin_flip") for case in spin_flip for c in case.cases
-])
+         for case in test_cases for c in case.cases for kind in case.pp_kinds]
 
 
 @pytest.mark.parametrize("method", methods)

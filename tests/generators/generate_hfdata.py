@@ -13,7 +13,7 @@ import tempfile
 _testdata_dirname = "data"
 
 
-def run_pyscf(test_case: testcases.TestCase, restricted: bool, frac_occ: bool):
+def run_pyscf(test_case: testcases.TestCase, frac_occ: bool):
     """
     Runs the pyscf calculation for the given testcase.
     """
@@ -30,7 +30,7 @@ def run_pyscf(test_case: testcases.TestCase, restricted: bool, frac_occ: bool):
             spin=test_case.multiplicity - 1,  # =2S
             verbose=0
         )
-        mf = scf.RHF(mol) if restricted else scf.UHF(mol)
+        mf = scf.RHF(mol) if test_case.restricted else scf.UHF(mol)
         mf.diis = scf.EDIIS()
         mf.conv_tol = 1e-14
         mf.conv_tol_grad = 1e-12
@@ -48,8 +48,7 @@ def run_pyscf(test_case: testcases.TestCase, restricted: bool, frac_occ: bool):
     return mf
 
 
-def generate(test_case: testcases.TestCase, restricted: bool,
-             frac_occ: bool) -> h5py.File:
+def generate(test_case: testcases.TestCase, frac_occ: bool) -> h5py.File:
     """
     Run Pyscf for the given test case and dump the result in the hdf5 file
     if the file does not already exist.
@@ -59,7 +58,7 @@ def generate(test_case: testcases.TestCase, restricted: bool,
     if hdf5_file.exists():
         return None
     print(f"Generating data for {test_case.file_name}.")
-    mf = run_pyscf(test_case, restricted, frac_occ)
+    mf = run_pyscf(test_case, frac_occ)
     hdf5_file = h5py.File(hdf5_file, "w")
     dump_pyscf(mf, hdf5_file)
     return hdf5_file
@@ -67,13 +66,13 @@ def generate(test_case: testcases.TestCase, restricted: bool,
 
 def generate_ch2nh2():
     cases = testcases.get(n_expected_cases=1, name="ch2nh2", basis="sto-3g").pop()
-    generate(cases, restricted=False, frac_occ=True)
+    generate(cases, frac_occ=True)
 
 
 def generate_cn():
     cases = testcases.get(n_expected_cases=2, name="cn")
     for case in cases:
-        hdf5_file = generate(case, restricted=False, frac_occ=True)
+        hdf5_file = generate(case, frac_occ=True)
         if hdf5_file is None:
             continue
         # Since CN has some symmetry some energy levels are degenerate,
@@ -89,25 +88,25 @@ def generate_cn():
 def generate_h2o():
     cases = testcases.get_by_filename("h2o_sto3g", "h2o_def2tzvp")
     for case in cases:
-        generate(case, restricted=True, frac_occ=False)
+        generate(case, frac_occ=False)
 
 
 def generate_h2s():
     cases = testcases.get(n_expected_cases=2, name="h2s")
     for case in cases:
-        generate(case, restricted=True, frac_occ=False)
+        generate(case, frac_occ=False)
 
 
 def generate_hf():
     case = testcases.get(n_expected_cases=1, name="hf").pop()
-    generate(case, restricted=False, frac_occ=False)
+    generate(case, frac_occ=False)
 
 
 def generate_methox():
     case = testcases.get(
         n_expected_cases=1, name="r2methyloxirane", basis="sto-3g"
     ).pop()
-    generate(case, restricted=True, frac_occ=False)
+    generate(case, frac_occ=False)
 
 
 def main():

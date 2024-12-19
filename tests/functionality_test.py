@@ -39,12 +39,33 @@ methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 generators = ["adcman", "adcc"]
 
 h2o_sto3g = testcases.get_by_filename("h2o_sto3g").pop()
+h2o_sto3g_cases = [
+    (c, kind) for c in h2o_sto3g.cases for kind in h2o_sto3g.pp_kinds
+]
 h2o_def2tzvp = testcases.get_by_filename("h2o_def2tzvp").pop()
+h2o_def2tzvp_cases = [
+    (c, kind) for c in h2o_def2tzvp.cases for kind in h2o_def2tzvp.pp_kinds
+]
 cn_sto3g = testcases.get_by_filename("cn_sto3g").pop()
+cn_sto3g_cases = [
+    (c, kind) for c in cn_sto3g.cases for kind in cn_sto3g.pp_kinds
+]
 cn_ccpvdz = testcases.get_by_filename("cn_ccpvdz").pop()
+cn_ccpvdz_cases = [
+    (c, kind) for c in cn_ccpvdz.cases for kind in cn_ccpvdz.pp_kinds
+]
 hf_631g = testcases.get_by_filename("hf_631g").pop()
+hf_631g_cases = [
+    (c, kind) for c in hf_631g.cases for kind in hf_631g.pp_kinds
+]
 h2s_sto3g = testcases.get_by_filename("h2s_sto3g").pop()
+h2s_sto3g_cases = [
+    (c, kind) for c in h2s_sto3g.cases for kind in h2s_sto3g.pp_kinds
+]
 h2s_6311g = testcases.get_by_filename("h2s_6311g").pop()
+h2s_6311g_cases = [
+    (c, kind) for c in h2s_6311g.cases for kind in h2s_6311g.pp_kinds
+]
 
 
 @pytest.mark.parametrize("method", methods)
@@ -124,8 +145,7 @@ class TestFunctionality:
         # dependent anyway.
         assert res.n_iter <= 1 if method in ["adc0", "cvs-adc0"] else 40
 
-    @pytest.mark.parametrize("case", h2o_sto3g.cases)
-    @pytest.mark.parametrize("kind", ["singlet", "triplet"])
+    @pytest.mark.parametrize("case,kind", h2o_sto3g_cases)
     def test_h2o_sto3g(self, case, method, kind, generator):
         method = adcc.AdcMethod(method)
         if generator == "adcman" and "cvs" in case and method.level == 0:
@@ -144,8 +164,7 @@ class TestFunctionality:
             generator=generator, **args
         )
 
-    @pytest.mark.parametrize("case", h2o_def2tzvp.cases)
-    @pytest.mark.parametrize("kind", ["singlet", "triplet"])
+    @pytest.mark.parametrize("case,kind", h2o_def2tzvp_cases)
     def test_h2o_def2tzvp(self, case, method, kind, generator):
         method = adcc.AdcMethod(method)
         if generator == "adcman" and "cvs" in case and method.level == 0:
@@ -157,37 +176,36 @@ class TestFunctionality:
             generator=generator, **args
         )
 
-    @pytest.mark.parametrize("case", cn_sto3g.cases)
-    def test_cn_sto3g(self, case, method, generator):
+    @pytest.mark.parametrize("case,kind", cn_sto3g_cases)
+    def test_cn_sto3g(self, case, kind, method, generator):
         method = adcc.AdcMethod(method)
         if generator == "adcman" and "cvs" in case and method.level == 0:
             pytest.skip("CVS-ADC(0) adcman data is not available")
 
         self.base_test(
-            system="cn_sto3g", case=case, method=method.name, kind="any",
+            system="cn_sto3g", case=case, method=method.name, kind=kind,
             generator=generator, n_states=3
         )
 
-    @pytest.mark.parametrize("case", cn_ccpvdz.cases)
-    def test_cn_ccpvdz(self, case, method, generator):
+    @pytest.mark.parametrize("case,kind", cn_ccpvdz_cases)
+    def test_cn_ccpvdz(self, case, kind, method, generator):
         method = adcc.AdcMethod(method)
         if generator == "adcman" and "cvs" in case and method.level == 0:
             pytest.skip("CVS-ADC(0) adcman data is not available")
 
         self.base_test(
-            system="cn_ccpvdz", case=case, method=method.name, kind="any",
+            system="cn_ccpvdz", case=case, method=method.name, kind=kind,
             generator=generator, n_states=3
         )
 
-    @pytest.mark.parametrize("case", hf_631g.cases)
-    def test_hf_spin_flip(self, case, generator, method):
+    @pytest.mark.parametrize("case,kind", hf_631g_cases)
+    def test_hf_spin_flip(self, case, kind, generator, method):
         self.base_test(
-            system="hf_631g", case=case, method=method, kind="spin_flip",
+            system="hf_631g", case=case, method=method, kind=kind,
             generator=generator, n_spin_flip=3
         )
 
-    @pytest.mark.parametrize("case", h2s_sto3g.cases)
-    @pytest.mark.parametrize("kind", ["singlet", "triplet"])
+    @pytest.mark.parametrize("case,kind", h2s_sto3g_cases)
     def test_h2s_sto3g(self, case, method, kind, generator):
         method = adcc.AdcMethod(method)
         if generator == "adcman" and "cvs" in case and method.level == 0:
@@ -206,8 +224,7 @@ class TestFunctionality:
             generator=generator, **args
         )
 
-    @pytest.mark.parametrize("case", h2s_6311g.cases)
-    @pytest.mark.parametrize("kind", ["singlet", "triplet"])
+    @pytest.mark.parametrize("case,kind", h2s_6311g_cases)
     def test_h2s_6311g(self, case, method, kind, generator):
         method = adcc.AdcMethod(method)
         if generator == "adcman" and "cvs" in case and method.level == 0:

@@ -205,7 +205,7 @@ class TestdataCache:
             symm = "none"
             spin_change = 0 if kind == "any" else -1
         else:
-            raise ValueError("Unknown kind: {}".format(kind))
+            raise ValueError(f"Unknown kind: {kind}")
 
         n_states = len(adc_data["eigenvalues"])
         states.eigenvectors = [guess_zero(matrix, spin_change=spin_change,

@@ -104,32 +104,54 @@ def generate_groundstate(test_case: testcases.TestCase) -> None:
         dump_groundstate(mp, case_group)
 
 
+def kinds_to_nstates(test_case: testcases.TestCase, method: AdcMethod) -> list[str]:
+    # possible kinds: singlet, triplet -> n_singlets, n_triplets
+    #                 any              -> n_states
+    #                 spin_flip        -> n_spin_flip
+    ret = []
+    for kind in getattr(test_case, f"{method.adc_type}_kinds"):
+        if kind == "any":
+            ret.append("n_states")
+        elif kind == "spin_flip":
+            ret.append("n_spin_flip")
+        else:
+            ret.append(f"n_{kind}s")
+    return ret
+
+
 def generate_h2o_sto3g():
     # RHF, Singlet, 7 basis functions: 5 occ, 2 virt.
-    states = {
-        "adc0": [
-            # fv-cvs: 1 core and 1 virtual orbital
-            # cvs: 1 core orbital and 2 virtual orbitals
-            {"fv-cvs": {"n_singlets": 1}, "cvs": {"n_singlets": 2}},
-            {"fv-cvs": {"n_triplets": 1}, "cvs": {"n_triplets": 2}}
-        ],
-        "adc1": [
-            {"fv-cvs": {"n_singlets": 1}, "cvs": {"n_singlets": 2}},
-            {"fv-cvs": {"n_triplets": 1}, "cvs": {"n_triplets": 2}}
-        ]
+    # fv-cvs: 1 core and 1 virtual orbital
+    # cvs: 1 core orbital and 2 virtual orbitals
+    states_per_case = {
+        "adc0": {
+            "n_singlets": {
+                "fv-cvs": {"n_singlets": 1}, "cvs": {"n_singlets": 2}
+            },
+            "n_triplets": {
+                "fv-cvs": {"n_triplets": 1}, "cvs": {"n_triplets": 2}
+            }
+        },
+        "adc1": {
+            "n_singlets": {
+                "fv-cvs": {"n_singlets": 1}, "cvs": {"n_singlets": 2}
+            },
+            "n_triplets": {
+                "fv-cvs": {"n_triplets": 1}, "cvs": {"n_triplets": 2}
+            }
+        }
     }
     test_case = testcases.get(n_expected_cases=1, name="h2o", basis="sto-3g").pop()
     generate_groundstate(test_case)
     for method in _methods["pp"]:
-        singlet, triplet = states.get(method, (None, None))
-        generate_adc_all(
-            test_case, method=AdcMethod(method), n_singlets=3, dump_nstates=2,
-            states_per_case=singlet
-        )
-        generate_adc_all(
-            test_case, method=AdcMethod(method), n_triplets=3, dump_nstates=2,
-            states_per_case=triplet
-        )
+        method = AdcMethod(method)
+        for n_states in kinds_to_nstates(test_case, method):
+            per_case = states_per_case.get(method.name, {}).get(n_states, None)
+            n_states = {n_states: 3}
+            generate_adc_all(
+                test_case, method=method, dump_nstates=2, states_per_case=per_case,
+                **n_states
+            )
 
 
 def generate_h2o_def2tzvp():
@@ -139,12 +161,12 @@ def generate_h2o_def2tzvp():
     ).pop()
     generate_groundstate(test_case)
     for method in _methods["pp"]:
-        generate_adc_all(
-            test_case, method=AdcMethod(method), n_singlets=3, dump_nstates=2
-        )
-        generate_adc_all(
-            test_case, method=AdcMethod(method), n_triplets=3, dump_nstates=2
-        )
+        method = AdcMethod(method)
+        for n_states in kinds_to_nstates(test_case, method):
+            n_states = {n_states: 3}
+            generate_adc_all(
+                test_case, method=method, dump_nstates=2, **n_states
+            )
 
 
 def generate_cn_sto3g():
@@ -152,9 +174,12 @@ def generate_cn_sto3g():
     test_case = testcases.get(n_expected_cases=1, name="cn", basis="sto-3g").pop()
     generate_groundstate(test_case)
     for method in _methods["pp"]:
-        generate_adc_all(
-            test_case, method=AdcMethod(method), n_states=3, dump_nstates=2
-        )
+        method = AdcMethod(method)
+        for n_states in kinds_to_nstates(test_case, method):
+            n_states = {n_states: 3}
+            generate_adc_all(
+                test_case, method=method, dump_nstates=2, **n_states
+            )
 
 
 def generate_cn_ccpvdz():
@@ -162,9 +187,12 @@ def generate_cn_ccpvdz():
     test_case = testcases.get(n_expected_cases=1, name="cn", basis="cc-pvdz").pop()
     generate_groundstate(test_case)
     for method in _methods["pp"]:
-        generate_adc_all(
-            test_case, method=AdcMethod(method), n_states=3, dump_nstates=2
-        )
+        method = AdcMethod(method)
+        for n_states in kinds_to_nstates(test_case, method):
+            n_states = {n_states: 3}
+            generate_adc_all(
+                test_case, method=method, dump_nstates=2, **n_states
+            )
 
 
 def generate_hf_631g():
@@ -172,35 +200,47 @@ def generate_hf_631g():
     test_case = testcases.get(n_expected_cases=1, name="hf").pop()
     generate_groundstate(test_case)
     for method in _methods["pp"]:
-        generate_adc_all(
-            test_case, method=AdcMethod(method), n_spin_flip=3, dump_nstates=2
-        )
+        method = AdcMethod(method)
+        for n_states in kinds_to_nstates(test_case, method):
+            n_states = {n_states: 3}
+            generate_adc_all(
+                test_case, method=method, dump_nstates=2, **n_states
+            )
 
 
 def generate_h2s_sto3g():
     # RHF, Singlet
-    states = {
-        "adc0": [
-            {"cvs": {"n_singlets": 2}, "fv-cvs": {"n_singlets": 1}},
-            {"cvs": {"n_triplets": 2}, "fv-cvs": {"n_triplets": 1}}
-        ],
-        "adc1": [
-            {"cvs": {"n_singlets": 2}, "fv-cvs": {"n_singlets": 1}},
-            {"cvs": {"n_triplets": 2}, "fv-cvs": {"n_triplets": 1}}
-        ]
+    # fv-cvs: 1 core and 1 virtual orbital
+    # cvs: 1 core orbital and 2 virtual orbitals
+    states_per_case = {
+        "adc0": {
+            "n_singlets": {
+                "fv-cvs": {"n_singlets": 1}, "cvs": {"n_singlets": 2}
+            },
+            "n_triplets": {
+                "fv-cvs": {"n_triplets": 1}, "cvs": {"n_triplets": 2}
+            }
+        },
+        "adc1": {
+            "n_singlets": {
+                "fv-cvs": {"n_singlets": 1}, "cvs": {"n_singlets": 2}
+            },
+            "n_triplets": {
+                "fv-cvs": {"n_triplets": 1}, "cvs": {"n_triplets": 2}
+            }
+        }
     }
     test_case = testcases.get(n_expected_cases=1, name="h2s", basis="sto-3g").pop()
     generate_groundstate(test_case)
     for method in _methods["pp"]:
-        singlet, triplet = states.get(method, (None, None))
-        generate_adc_all(
-            test_case, method=AdcMethod(method), n_singlets=3, dump_nstates=2,
-            states_per_case=singlet
-        )
-        generate_adc_all(
-            test_case, method=AdcMethod(method), n_triplets=3, dump_nstates=2,
-            states_per_case=triplet
-        )
+        method = AdcMethod(method)
+        for n_states in kinds_to_nstates(test_case, method):
+            per_case = states_per_case.get(method.name, {}).get(n_states, None)
+            n_states = {n_states: 3}
+            generate_adc_all(
+                test_case, method=method, dump_nstates=2, states_per_case=per_case,
+                **n_states
+            )
 
 
 def generate_h2s_6311g():
@@ -210,12 +250,12 @@ def generate_h2s_6311g():
     ).pop()
     generate_groundstate(test_case)
     for method in _methods["pp"]:
-        generate_adc_all(
-            test_case, method=AdcMethod(method), n_singlets=3, dump_nstates=2
-        )
-        generate_adc_all(
-            test_case, method=AdcMethod(method), n_triplets=3, dump_nstates=2
-        )
+        method = AdcMethod(method)
+        for n_states in kinds_to_nstates(test_case, method):
+            n_states = {n_states: 3}
+            generate_adc_all(
+                test_case, method=method, dump_nstates=2, **n_states
+            )
 
 
 def main():

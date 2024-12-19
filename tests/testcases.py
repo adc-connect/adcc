@@ -10,6 +10,7 @@ class TestCase:
     charge: int
     multiplicity: int  # = 2S+1
     basis: str
+    restricted: bool
     only_full_mode: bool  # whether to run the test case only in full mode
     pe_pot_file: str = None
     core_orbitals: int = None
@@ -18,6 +19,9 @@ class TestCase:
     # the different cases for which to generate mp/adc reference data
     # generic, cvs, frozen core (fc), frozen virtual (fv), ...
     cases: tuple[str] = ("gen",)
+    # the available state kinds for the test system per adc type
+    # for instance ("singlet", "triplet") for a restricted PP-ADC calculation
+    pp_kinds: tuple[str] = tuple()
 
     @property
     def file_name(self) -> str:
@@ -75,11 +79,12 @@ class TestCase:
         raise NotImplementedError(f"Filtering for adc type {adc_type} not "
                                   "implemented.")
 
-    def validate_cases(self):
+    def validate(self):
         """
         Validates the set cases by checking that the cases are valid and ensuring
         that required data is set, e.g., that core_orbitals is defined for cvs.
         """
+        # validate the reference cases
         requirements = {"cvs": "core_orbitals",
                         "fc": "frozen_core",
                         "fv": "frozen_virtual"}
@@ -89,6 +94,11 @@ class TestCase:
                     continue
                 assert component in requirements
                 assert getattr(self, requirements[component], None) is not None
+        # validate the PP-ADC kinds
+        if self.restricted:
+            assert all(kind in ["singlet", "triplet"] for kind in self.pp_kinds)
+        else:
+            assert all(kind in ["any", "spin_flip"] for kind in self.pp_kinds)
 
 
 _xyz = {
@@ -159,11 +169,13 @@ def _init_test_cases() -> tuple[TestCase]:
     xyz, unit = _xyz["ch2nh2"]
     test_cases.append(TestCase(
         name="ch2nh2", xyz=xyz, unit=unit, charge=0, multiplicity=2,
-        basis="sto-3g", core_orbitals=2, cases=ref_cases, only_full_mode=False
+        basis="sto-3g", core_orbitals=2, cases=ref_cases, only_full_mode=False,
+        restricted=False, pp_kinds=("any",)
     ))
     test_cases.append(TestCase(
         name="ch2nh2", xyz=xyz, unit=unit, charge=0, multiplicity=2,
-        basis="cc-pvdz", only_full_mode=True
+        basis="cc-pvdz", only_full_mode=True, restricted=False,
+        pp_kinds=("any",)
     ))
     # CN
     xyz, unit = _xyz["cn"]
@@ -171,13 +183,15 @@ def _init_test_cases() -> tuple[TestCase]:
     test_cases.append(TestCase(
         name="cn", xyz=xyz, unit=unit, charge=0, multiplicity=2,
         basis="sto-3g", core_orbitals=1, frozen_core=1, frozen_virtual=1,
-        cases=ref_cases, only_full_mode=False
+        cases=ref_cases, only_full_mode=False, restricted=False,
+        pp_kinds=("any",)
     ))
     ref_cases = ("gen", "cvs", "fc", "fv")
     test_cases.append(TestCase(
         name="cn", xyz=xyz, unit=unit, charge=0, multiplicity=2,
         basis="cc-pvdz", core_orbitals=1, frozen_core=1, frozen_virtual=3,
-        cases=ref_cases, only_full_mode=True
+        cases=ref_cases, only_full_mode=True, restricted=False,
+        pp_kinds=("any",)
     ))
     # H2O
     xyz, unit = _xyz["h2o"]
@@ -185,17 +199,18 @@ def _init_test_cases() -> tuple[TestCase]:
     test_cases.append(TestCase(
         name="h2o", xyz=xyz, unit=unit, charge=0, multiplicity=1,
         basis="sto-3g", core_orbitals=1, frozen_core=1, frozen_virtual=1,
-        cases=ref_cases, only_full_mode=False
+        cases=ref_cases, only_full_mode=False, restricted=True,
+        pp_kinds=("singlet", "triplet")
     ))
     ref_cases = ("gen", "cvs")
     test_cases.append(TestCase(
         name="h2o", xyz=xyz, unit=unit, charge=0, multiplicity=1,
-        basis="def2-tzvp", core_orbitals=1, cases=ref_cases,
-        only_full_mode=True
+        basis="def2-tzvp", core_orbitals=1, cases=ref_cases, restricted=True,
+        only_full_mode=True, pp_kinds=("singlet", "triplet")
     ))
     test_cases.append(TestCase(
-        name="h2o", xyz=xyz, unit=unit, charge=0, multiplicity=1,
-        basis="cc-pvdz", only_full_mode=True
+        name="h2o", xyz=xyz, unit=unit, charge=0, multiplicity=1, restricted=True,
+        basis="cc-pvdz", only_full_mode=True, pp_kinds=("singlet", "triplet")
     ))
     # H2S
     xyz, unit = _xyz["h2s"]
@@ -203,13 +218,15 @@ def _init_test_cases() -> tuple[TestCase]:
     test_cases.append(TestCase(
         name="h2s", xyz=xyz, unit=unit, charge=0, multiplicity=1,
         basis="sto-3g", core_orbitals=1, frozen_core=1, frozen_virtual=1,
-        cases=ref_cases, only_full_mode=False
+        cases=ref_cases, only_full_mode=False, restricted=True,
+        pp_kinds=("singlet", "triplet")
     ))
     ref_cases = ("gen", "cvs", "fc", "fv", "fc-cvs", "fv-cvs", "fc-fv", "fc-fv-cvs")
     test_cases.append(TestCase(
         name="h2s", xyz=xyz, unit=unit, charge=0, multiplicity=1,
         basis="6-311+g**", core_orbitals=1, frozen_core=1, frozen_virtual=3,
-        cases=ref_cases, only_full_mode=True
+        cases=ref_cases, only_full_mode=True, restricted=True,
+        pp_kinds=("singlet", "triplet")
     ))
     # HF
     ref_cases = ("gen", "fc", "fv")
@@ -217,18 +234,19 @@ def _init_test_cases() -> tuple[TestCase]:
     test_cases.append(TestCase(
         name="hf", xyz=xyz, unit=unit, charge=0, multiplicity=3,
         basis="6-31g", frozen_core=1, frozen_virtual=3, cases=ref_cases,
-        only_full_mode=False
+        only_full_mode=False, restricted=False, pp_kinds=("spin_flip",)
     ))
     # (R)-2-Methyloxirane
     ref_cases = ("gen", "cvs")
     xyz, unit = _xyz["r2methyloxirane"]
     test_cases.append(TestCase(
         name="r2methyloxirane", xyz=xyz, unit=unit, charge=0, multiplicity=1,
-        basis="sto-3g", core_orbitals=1, cases=ref_cases, only_full_mode=False
+        basis="sto-3g", core_orbitals=1, cases=ref_cases, only_full_mode=False,
+        restricted=True
     ))
     test_cases.append(TestCase(
         name="r2methyloxirane", xyz=xyz, unit=unit, charge=0, multiplicity=1,
-        basis="cc-pvdz", only_full_mode=True
+        basis="cc-pvdz", only_full_mode=True, restricted=True
     ))
     # Formaledhyde
     xyz, unit = _xyz["formaldehyde"]
@@ -236,20 +254,22 @@ def _init_test_cases() -> tuple[TestCase]:
     pe_pot_file = pe_pot_file / "generators" / "potentials" / "fa_6w.pot"
     test_cases.append(TestCase(
         name="formaldehyde", xyz=xyz, unit=unit, charge=0, multiplicity=1,
-        basis="sto-3g", pe_pot_file=str(pe_pot_file), only_full_mode=False
+        basis="sto-3g", pe_pot_file=str(pe_pot_file), only_full_mode=False,
+        restricted=True
     ))
     test_cases.append(TestCase(
         name="formaldehyde", xyz=xyz, unit=unit, charge=0, multiplicity=1,
-        basis="cc-pvdz", pe_pot_file=str(pe_pot_file), only_full_mode=True
+        basis="cc-pvdz", pe_pot_file=str(pe_pot_file), only_full_mode=True,
+        restricted=True
     ))
     # NH3
     xyz, unit = _xyz["nh3"]
     test_cases.append(TestCase(
         name="nh3", xyz=xyz, unit=unit, charge=0, multiplicity=1, basis="3-21g",
-        only_full_mode=False
+        only_full_mode=False, restricted=True
     ))
     for case in test_cases:
-        case.validate_cases()
+        case.validate()
     return tuple(test_cases)
 
 

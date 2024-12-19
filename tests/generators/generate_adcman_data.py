@@ -109,6 +109,21 @@ def generate_groundstate(test_case: testcases.TestCase) -> None:
         emplace_dict(gs_data, case_group, compression="gzip")
 
 
+def kinds_to_nstates(test_case: testcases.TestCase, method: AdcMethod) -> list[str]:
+    # possible kinds: singlet, triplet -> n_singlets, n_triplets
+    #                 any              -> n_states
+    #                 spin_flip        -> n_spin_flip
+    ret = []
+    for kind in getattr(test_case, f"{method.adc_type}_kinds"):
+        if kind == "any":
+            ret.append("n_states")
+        elif kind == "spin_flip":
+            ret.append("n_spin_flip")
+        else:
+            ret.append(f"n_{kind}s")
+    return ret
+
+
 def generate_h2o_sto3g():
     # RHF, Singlet, 7 basis functions: 5 occ, 2 virt.
     states = {
@@ -124,9 +139,13 @@ def generate_h2o_sto3g():
     test_case = testcases.get(n_expected_cases=1, name="h2o", basis="sto-3g").pop()
     generate_groundstate(test_case)
     for method in _methods["pp"]:
+        method = AdcMethod(method)
+        # get the number of states for all kinds -> Generate the data in a single
+        # adcman calculation
+        n_states = {kind: 3 for kind in kinds_to_nstates(test_case, method)}
         generate_adc_all(
-            test_case, method=AdcMethod(method), n_singlets=3, n_triplets=3,
-            dump_nstates=2, states_per_case=states.get(method, None)
+            test_case, method=method, dump_nstates=2,
+            states_per_case=states.get(method.name, None), **n_states
         )
 
 
@@ -137,9 +156,10 @@ def generate_h2o_def2tzvp():
     ).pop()
     generate_groundstate(test_case)
     for method in _methods["pp"]:
+        method = AdcMethod(method)
+        n_states = {kind: 3 for kind in kinds_to_nstates(test_case, method)}
         generate_adc_all(
-            test_case, method=AdcMethod(method), n_singlets=3, n_triplets=3,
-            dump_nstates=2
+            test_case, method=method, dump_nstates=2, **n_states
         )
 
 
@@ -148,8 +168,10 @@ def generate_cn_sto3g():
     test_case = testcases.get(n_expected_cases=1, name="cn", basis="sto-3g").pop()
     generate_groundstate(test_case)
     for method in _methods["pp"]:
+        method = AdcMethod(method)
+        n_states = {kind: 3 for kind in kinds_to_nstates(test_case, method)}
         generate_adc_all(
-            test_case, method=AdcMethod(method), n_states=3, dump_nstates=2
+            test_case, method=method, dump_nstates=2, **n_states
         )
 
 
@@ -158,8 +180,10 @@ def generate_cn_ccpvdz():
     test_case = testcases.get(n_expected_cases=1, name="cn", basis="cc-pvdz").pop()
     generate_groundstate(test_case)
     for method in _methods["pp"]:
+        method = AdcMethod(method)
+        n_states = {kind: 3 for kind in kinds_to_nstates(test_case, method)}
         generate_adc_all(
-            test_case, method=AdcMethod(method), n_states=3, dump_nstates=2
+            test_case, method=method, dump_nstates=2, **n_states
         )
 
 
@@ -168,8 +192,10 @@ def generate_hf_631g():
     test_case = testcases.get(n_expected_cases=1, name="hf").pop()
     generate_groundstate(test_case)
     for method in _methods["pp"]:
+        method = AdcMethod(method)
+        n_states = {kind: 3 for kind in kinds_to_nstates(test_case, method)}
         generate_adc_all(
-            test_case, method=AdcMethod(method), n_spin_flip=3, dump_nstates=2
+            test_case, method=method, dump_nstates=2, **n_states
         )
 
 
@@ -188,9 +214,11 @@ def generate_h2s_sto3g():
     test_case = testcases.get(n_expected_cases=1, name="h2s", basis="sto-3g").pop()
     generate_groundstate(test_case)
     for method in _methods["pp"]:
+        method = AdcMethod(method)
+        n_states = {kind: 3 for kind in kinds_to_nstates(test_case, method)}
         generate_adc_all(
-            test_case, method=AdcMethod(method), n_singlets=3,
-            n_triplets=3, dump_nstates=2, states_per_case=states.get(method, None)
+            test_case, method=method, dump_nstates=2,
+            states_per_case=states.get(method.name, None), **n_states
         )
 
 
@@ -201,14 +229,14 @@ def generate_h2s_6311g():
     ).pop()
     generate_groundstate(test_case)
     for method in _methods["pp"]:
+        method = AdcMethod(method)
         for case in test_case.cases:
-            kwargs = {}
+            kwargs = {kind: 3 for kind in kinds_to_nstates(test_case, method)}
             # davidson did not converge for fc-cvs adc1 triplets
             if "cvs" in case and "fc" in case:
                 kwargs["max_ss"] = 21
             generate_adc(
-                test_case, method=AdcMethod(method), case=case, n_singlets=3,
-                n_triplets=3, dump_nstates=2, **kwargs
+                test_case, method=method, case=case, dump_nstates=2, **kwargs
             )
 
 
