@@ -206,6 +206,20 @@ class ElectronicTransition:
             for tdm in self.transition_dm
         ])
 
+    @mark_excitation_property()
+    @timed_member_call(timer="_property_timer")
+    def transition_quadrupole_moment_velocity(self, gauge_origin=[0.0, 0.0, 0.0]):
+        """List of transition quadrupole moments of all computed states"""
+        if self.property_method.level == 0:
+            warnings.warn("ADC(0) transition quadrupole moments are known to be "
+                          "faulty in some cases.")
+        quadrupole_integrals = self.operators.electric_quadrupole_velocity(gauge_origin)
+        return np.array([
+            [[product_trace(quad1, tdm)
+                for quad1 in quad] for quad in quadrupole_integrals]
+            for tdm in self.transition_dm
+        ])
+
     @cached_property
     @mark_excitation_property()
     def oscillator_strength(self):

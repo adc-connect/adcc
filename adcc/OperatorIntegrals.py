@@ -104,6 +104,7 @@ class OperatorIntegrals:
             "nabla",
             "electric_quadrupole_traceless",
             "electric_quadrupole",
+            "electric_quadrupole_velocity",
             "diamagnetic_magnetizability",
             "pe_induction_elec",
             "pcm_potential_elec",
@@ -250,6 +251,17 @@ class OperatorIntegrals:
         The default gauge origin is set to [0.0, 0.0, 0.0].
         """
         callback = self.provider_ao.electric_quadrupole
+        return self.__import_quadrupole_like_operator(callback, is_symmetric=False)
+
+    @property
+    @timed_member_call("_import_timer")
+    def electric_quadrupole_velocity(self):
+        """
+        Returns a function to obtain electric quadrupole integrals in velocity gauge
+        in the molecular orbital basis dependent on the selected gauge origin.
+        The default gauge origin is set to [0.0, 0.0, 0.0].
+        """
+        callback = self.provider_ao.electric_quadrupole_velocity
         return self.__import_quadrupole_like_operator(callback, is_symmetric=False)
 
     @property

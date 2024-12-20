@@ -88,6 +88,22 @@ class PyScfOperatorIntegralProvider:
         return electric_quadrupole_traceless_gauge
 
     @property
+    def electric_quadrupole_velocity(self):
+        def electric_quadrupole_velocity_gauge(gauge_origin):
+            gauge_origin = _determine_gauge_origin(self.scfres, gauge_origin)
+            with self.scfres.mol.with_common_orig(gauge_origin):
+                r_p = self.scfres.mol.intor('int1e_irp', comp=9, hermi=0)
+                r_p = np.reshape(r_p, (3, 3, r_p.shape[1], r_p.shape[1]))
+                ovlp = self.scfres.mol.intor_symmetric('int1e_ovlp', comp=1)
+                ovlp_matrix = np.zeros_like(r_p)
+                for i in range(3):
+                    ovlp_matrix[i][i] = ovlp
+                term = r_p + r_p.transpose(1,0,2,3) - ovlp_matrix
+                term = np.reshape(term, (9, ovlp.shape[0], ovlp.shape[0]))
+                return list(term)
+        return electric_quadrupole_velocity_gauge
+
+    @property
     def diamagnetic_magnetizability(self):
         def diamagnetic_magnetizability_gauge(gauge_origin):
             gauge_origin = _determine_gauge_origin(self.scfres, gauge_origin)
@@ -435,6 +451,10 @@ def run_core_hole(xyz, basis, charge=0, multiplicity=1,
 
 
 def _determine_gauge_origin(scfres, gauge_origin):
+    """
+    Determines the gauge origin. If the gauge origin is defined as a list
+    the coordinates need to be given in atomic units!
+    """
     coords = scfres.mol.atom_coords()
     masses = scfres.mol.atom_mass_list()
     charges = scfres.mol.atom_charges()
@@ -450,5 +470,7 @@ def _determine_gauge_origin(scfres, gauge_origin):
     else:
         raise NotImplementedError("Gauge origin has to be defined by"
                                   " using one of the keywords"
-                                  " mass_center, charge_center or origin.")
+                                  " mass_center, charge_center or origin. "
+                                  "If they are defined with a list, they need "
+                                  "to be given in atomic units")
     return gauge_origin
