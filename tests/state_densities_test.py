@@ -39,7 +39,7 @@ test_cases = testcases.get_by_filename(
     "hf_631g"
 )
 cases = [(case.file_name, c, kind)
-         for case in test_cases for c in case.cases for kind in case.kinds["pp"]]
+         for case in test_cases for c in case.cases for kind in case.kinds.pp]
 
 
 @pytest.mark.parametrize("method", methods)

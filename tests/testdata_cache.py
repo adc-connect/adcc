@@ -179,7 +179,8 @@ class TestdataCache:
 
     @cached_member_function
     def _make_mock_adc_state(self, system: str, method: str, case: str,
-                             kind: str, source: str, gs_density_order: int = None):
+                             kind: str, source: str,
+                             gs_density_order: int = None) -> ExcitedStates:
         """
         Create an ExcitedStates instance for the given test case, method (adcn),
         reference case (gen/cvs/fc/...), state kind (singlet/triplet/any/...)

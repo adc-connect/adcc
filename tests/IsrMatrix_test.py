@@ -20,36 +20,50 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import pytest
 import unittest
-import itertools
 import numpy as np
 
 from adcc.IsrMatrix import IsrMatrix
-from adcc.testdata.cache import cache
 from adcc.State2States import State2States
-from adcc.misc import expand_test_templates
-from pytest import skip
+
+from .testdata_cache import testdata_cache
+from . import testcases
 
 
-testcases = [("h2o_sto3g", "singlet"), ("cn_sto3g", "any")]
+test_cases = testcases.get_by_filename("h2o_sto3g", "cn_sto3g")
+cases = [(case.file_name, c, kind)
+         for case in test_cases for c in ["gen", "cvs"] for kind in case.kinds.pp]
+
 methods = ["adc0", "adc1", "adc2"]
 operator_kinds = ["electric", "magnetic"]
 
 
-@expand_test_templates(list(itertools.product(testcases, methods, operator_kinds)))
-class TestIsrMatrix(unittest.TestCase):
-    def template_matrix_vector_product(self, case, method, op_kind):
-        (system, kind) = case
-        state = cache.adcc_states[system][method][kind]
+@pytest.mark.parametrize("method", methods)
+@pytest.mark.parametrize("system,case,kind", cases)
+@pytest.mark.parametrize("operator_kind", operator_kinds)
+class TestIsrMatrix:
+    def test_matrix_vector_product(self, system: str, case: str, kind: str,
+                                   method: str, operator_kind: str):
+        state = testdata_cache.adcc_states(
+            system=system, method=method, kind=kind, case=case
+        )
+
         n_ref = len(state.excitation_vector)
         mp = state.ground_state
-        if op_kind == "electric":  # example of a symmetric operator
+        if operator_kind == "electric":  # example of a symmetric operator
             dips = state.reference_state.operators.electric_dipole
-        elif op_kind == "magnetic":  # example of an asymmetric operator
+        elif operator_kind == "magnetic":  # example of an asymmetric operator
             dips = state.reference_state.operators.magnetic_dipole
         else:
-            skip("Tests are only implemented for electric "
-                 "and magnetic dipole operators.")
+            raise NotImplementedError(f"Unexptected operator kind {operator_kind}")
+
+        if "cvs" in case:  # cvs not implemented
+            if "cvs" not in method:
+                method = f"cvs-{method}"
+            with pytest.raises(ValueError):
+                matrix = IsrMatrix(method, mp, dips)
+            return
 
         # computing Y_m @ B @ Y_n yields the state-to-state
         # transition dipole moments (n->m) (for n not equal to m)
@@ -65,7 +79,7 @@ class TestIsrMatrix(unittest.TestCase):
                 s2s_tdm = [state.excitations[ito].excitation_vector @ vec
                            for vec in B_Yn]
 
-                if op_kind == "electric":
+                if operator_kind == "electric":
                     s2s_tdm_ref = state2state.transition_dipole_moment[j]
                 else:
                     s2s_tdm_ref = state2state.transition_magnetic_dipole_moment[j]
@@ -78,7 +92,10 @@ class TestIsrMatrixInterface(unittest.TestCase):
         method = "adc2"
         kind = "singlet"
 
-        state = cache.adc_states[system][method][kind]
+        state = testdata_cache.adcc_states(
+            system=system, method=method, kind=kind, case="gen"
+        )
+        assert len(state.excitation_vector) > 1
         mp = state.ground_state
         dips = state.reference_state.operators.electric_dipole
         magdips = state.reference_state.operators.magnetic_dipole

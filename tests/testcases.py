@@ -1,4 +1,4 @@
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, fields
 from pathlib import Path
 
 
@@ -109,10 +109,13 @@ class TestCase:
                 assert component in requirements
                 assert getattr(self, requirements[component], None) is not None
         # validate the PP-ADC kinds
+        assert len(fields(self.kinds)) == 3
+        assert not self.kinds.ip
+        assert not self.kinds.ea
         if self.restricted:
-            assert all(kind in ["singlet", "triplet"] for kind in self.kinds["pp"])
+            assert all(kind in ["singlet", "triplet"] for kind in self.kinds.pp)
         else:
-            assert all(kind in ["any", "spin_flip"] for kind in self.kinds["pp"])
+            assert all(kind in ["any", "spin_flip"] for kind in self.kinds.pp)
 
 
 def kinds_to_nstates(kinds: tuple[str]) -> list[str]:
