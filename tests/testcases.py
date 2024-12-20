@@ -101,6 +101,25 @@ class TestCase:
             assert all(kind in ["any", "spin_flip"] for kind in self.pp_kinds)
 
 
+def kinds_to_nstates(kinds: tuple[str]) -> list[str]:
+    """
+    Transforms the given kinds to a list of keywords to request states of the
+    corresponding kind in an adc calculation.
+    """
+    # singlet, triplet -> n_singlets, n_triplets
+    # any              -> n_states
+    # spin_flip        -> n_spin_flip
+    ret = []
+    for kind in kinds:
+        if kind == "any":
+            ret.append("n_states")
+        elif kind == "spin_flip":
+            ret.append("n_spin_flip")
+        else:
+            ret.append(f"n_{kind}s")
+    return ret
+
+
 _xyz = {
     "h2o": ("""
     O 0 0 0

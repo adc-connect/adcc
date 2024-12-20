@@ -38,42 +38,22 @@ methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 # The different reference data that are tested against
 generators = ["adcman", "adcc"]
 
-h2o_sto3g = testcases.get_by_filename("h2o_sto3g").pop()
-h2o_sto3g_cases = [
-    (c, kind) for c in h2o_sto3g.cases for kind in h2o_sto3g.pp_kinds
-]
-h2o_def2tzvp = testcases.get_by_filename("h2o_def2tzvp").pop()
-h2o_def2tzvp_cases = [
-    (c, kind) for c in h2o_def2tzvp.cases for kind in h2o_def2tzvp.pp_kinds
-]
-cn_sto3g = testcases.get_by_filename("cn_sto3g").pop()
-cn_sto3g_cases = [
-    (c, kind) for c in cn_sto3g.cases for kind in cn_sto3g.pp_kinds
-]
-cn_ccpvdz = testcases.get_by_filename("cn_ccpvdz").pop()
-cn_ccpvdz_cases = [
-    (c, kind) for c in cn_ccpvdz.cases for kind in cn_ccpvdz.pp_kinds
-]
-hf_631g = testcases.get_by_filename("hf_631g").pop()
-hf_631g_cases = [
-    (c, kind) for c in hf_631g.cases for kind in hf_631g.pp_kinds
-]
-h2s_sto3g = testcases.get_by_filename("h2s_sto3g").pop()
-h2s_sto3g_cases = [
-    (c, kind) for c in h2s_sto3g.cases for kind in h2s_sto3g.pp_kinds
-]
-h2s_6311g = testcases.get_by_filename("h2s_6311g").pop()
-h2s_6311g_cases = [
-    (c, kind) for c in h2s_6311g.cases for kind in h2s_6311g.pp_kinds
+test_cases = testcases.get_by_filename(
+    "h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz", "hf_631g",
+    "h2s_sto3g", "h2s_6311g"
+)
+cases = [
+    (case.file_name, c, kind)
+    for case in test_cases for c in case.cases for kind in case.pp_kinds
 ]
 
 
+@pytest.mark.parametrize("system,case,kind", cases)
 @pytest.mark.parametrize("method", methods)
 @pytest.mark.parametrize("generator", generators)
 class TestFunctionality:
-    def base_test(self, system: str, case: str, method: str, kind: str,
-                  generator: str, test_mp: bool = True, **args):
-        system: testcases.TestCase = testcases.get_by_filename(system).pop()
+    def base_test(self, system: testcases.TestCase, case: str, method: str,
+                  kind: str, generator: str, test_mp: bool = True, **args):
         # build a ReferenceState that is already aware of the case (cvs/...)
         hf = testdata_cache.refstate(system, case=case)
         # load the adc refdata
@@ -145,96 +125,29 @@ class TestFunctionality:
         # dependent anyway.
         assert res.n_iter <= 1 if method in ["adc0", "cvs-adc0"] else 40
 
-    @pytest.mark.parametrize("case,kind", h2o_sto3g_cases)
-    def test_h2o_sto3g(self, case, method, kind, generator):
-        method = adcc.AdcMethod(method)
+    def test_functionality(self, system: str, case: str, method: str, kind: str,
+                           generator: str):
+        method: adcc.AdcMethod = adcc.AdcMethod(method)
         if generator == "adcman" and "cvs" in case and method.level == 0:
             pytest.skip("CVS-ADC(0) adcman data is not available")
 
-        n_states = 3
-        if method.level < 2:  # adc0/adc1
+        system: testcases.TestCase = testcases.get_by_filename(system).pop()
+        n_states = testcases.kinds_to_nstates([kind]).pop()
+
+        kwargs = {n_states: 3}
+        # only few states available for h2o/h2s sto3g adc0/adc1
+        if system.name in ["h2o", "h2s"] and system.basis == "sto-3g" and \
+                method.level < 2:
             if "cvs" in case and "fv" in case:
-                n_states = 1
+                kwargs[n_states] = 1
             elif "cvs" in case:
-                n_states = 2
-        args = {f"n_{kind}s": n_states}
+                kwargs[n_states] = 2
+        # avoid converging towards zero
+        if system.name == "h2s" and system.basis == "6-311+g**" and \
+                "cvs" in case and "fv" in case:
+            kwargs["max_subspace"] = 20
 
         self.base_test(
-            system="h2o_sto3g", case=case, method=method.name, kind=kind,
-            generator=generator, **args
-        )
-
-    @pytest.mark.parametrize("case,kind", h2o_def2tzvp_cases)
-    def test_h2o_def2tzvp(self, case, method, kind, generator):
-        method = adcc.AdcMethod(method)
-        if generator == "adcman" and "cvs" in case and method.level == 0:
-            pytest.skip("CVS-ADC(0) adcman data is not available")
-
-        args = {f"n_{kind}s": 3}
-        self.base_test(
-            system="h2o_def2tzvp", case=case, method=method.name, kind=kind,
-            generator=generator, **args
-        )
-
-    @pytest.mark.parametrize("case,kind", cn_sto3g_cases)
-    def test_cn_sto3g(self, case, kind, method, generator):
-        method = adcc.AdcMethod(method)
-        if generator == "adcman" and "cvs" in case and method.level == 0:
-            pytest.skip("CVS-ADC(0) adcman data is not available")
-
-        self.base_test(
-            system="cn_sto3g", case=case, method=method.name, kind=kind,
-            generator=generator, n_states=3
-        )
-
-    @pytest.mark.parametrize("case,kind", cn_ccpvdz_cases)
-    def test_cn_ccpvdz(self, case, kind, method, generator):
-        method = adcc.AdcMethod(method)
-        if generator == "adcman" and "cvs" in case and method.level == 0:
-            pytest.skip("CVS-ADC(0) adcman data is not available")
-
-        self.base_test(
-            system="cn_ccpvdz", case=case, method=method.name, kind=kind,
-            generator=generator, n_states=3
-        )
-
-    @pytest.mark.parametrize("case,kind", hf_631g_cases)
-    def test_hf_spin_flip(self, case, kind, generator, method):
-        self.base_test(
-            system="hf_631g", case=case, method=method, kind=kind,
-            generator=generator, n_spin_flip=3
-        )
-
-    @pytest.mark.parametrize("case,kind", h2s_sto3g_cases)
-    def test_h2s_sto3g(self, case, method, kind, generator):
-        method = adcc.AdcMethod(method)
-        if generator == "adcman" and "cvs" in case and method.level == 0:
-            pytest.skip("CVS-ADC(0) adcman data is not available")
-
-        n_states = 3
-        if method.level < 2:  # adc0/adc1
-            if "cvs" in case and "fv" in case:  # only 1 state available
-                n_states = 1
-            elif "cvs" in case:  # only 2 states available
-                n_states = 2
-        args = {f"n_{kind}s": n_states}
-
-        self.base_test(
-            system="h2s_sto3g", case=case, method=method.name, kind=kind,
-            generator=generator, **args
-        )
-
-    @pytest.mark.parametrize("case,kind", h2s_6311g_cases)
-    def test_h2s_6311g(self, case, method, kind, generator):
-        method = adcc.AdcMethod(method)
-        if generator == "adcman" and "cvs" in case and method.level == 0:
-            pytest.skip("CVS-ADC(0) adcman data is not available")
-
-        args = {f"n_{kind}s": 3}
-        if "cvs" in case and "fv" in case:  # avoid converging towards zero
-            args["max_subspace"] = 20
-
-        self.base_test(
-            system="h2s_6311g", case=case, method=method.name, kind=kind,
-            generator=generator, **args
+            system=system, case=case, method=method.name, kind=kind,
+            generator=generator, **kwargs
         )
