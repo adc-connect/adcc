@@ -35,7 +35,7 @@ from .testdata_cache import testdata_cache
 # The methods to test
 methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 
-# The different reference data that are tested against
+# The different reference data that we test against
 generators = ["adcman", "adcc"]
 
 test_cases = testcases.get_by_filename(
@@ -48,12 +48,12 @@ cases = [
 ]
 
 
-@pytest.mark.parametrize("system,case,kind", cases)
 @pytest.mark.parametrize("method", methods)
 @pytest.mark.parametrize("generator", generators)
+@pytest.mark.parametrize("system,case,kind", cases)
 class TestFunctionality:
     def base_test(self, system: testcases.TestCase, case: str, method: str,
-                  kind: str, generator: str, test_mp: bool = True, **args):
+                  kind: str, generator: str, **args):
         # build a ReferenceState that is already aware of the case (cvs/...)
         hf = testdata_cache.refstate(system, case=case)
         # load the adc refdata
@@ -75,20 +75,19 @@ class TestFunctionality:
         assert_allclose(res.excitation_energy[:n_ref],
                         ref["eigenvalues"], atol=1e-7)
 
-        if test_mp:
-            # load the mp refdata and compare mp2/3 energies
-            refmp = getattr(testdata_cache, f"{generator}_data")(
-                system=system, method="mp", case=case
-            )
-            if res.method.level >= 2:
-                assert res.ground_state.energy_correction(2) == \
-                    approx(refmp["mp2"]["energy"])
-            if res.method.level >= 3:
-                if not res.method.is_core_valence_separated:
-                    # TODO The latter check can be removed once CVS-MP3 energies
-                    #      are implemented
-                    assert res.ground_state.energy_correction(3) == \
-                        approx(refmp["mp3"]["energy"])
+        # load the mp refdata and compare mp2/3 energies
+        refmp = getattr(testdata_cache, f"{generator}_data")(
+            system=system, method="mp", case=case
+        )
+        if res.method.level >= 2:
+            assert res.ground_state.energy_correction(2) == \
+                approx(refmp["mp2"]["energy"])
+        if res.method.level >= 3:
+            if not res.method.is_core_valence_separated:
+                # TODO The latter check can be removed once CVS-MP3 energies
+                #      are implemented
+                assert res.ground_state.energy_correction(3) == \
+                    approx(refmp["mp3"]["energy"])
 
         for i in range(n_ref):
             # Computing the dipole moment implies a lot of cancelling in the

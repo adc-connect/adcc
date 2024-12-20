@@ -57,10 +57,14 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
     The number of states to dump can be given by dump_nstates. By default all states
     are dumped.
     """
+    # ensure that the calculation converged on a nonzero result
     assert states.converged
+    assert all(e > 1e-12 for e in states.excitation_energy)
+
     n_states = len(states.excitation_energy)
     if dump_nstates is not None:
         n_states = min(n_states, dump_nstates)
+
     dm_bb_a = []  # State diffdm AO basis alpha part
     dm_bb_b = []  # State diffdm AO basis beta part.
     tdm_bb_a = []  # Ground to Excited state tdm AO basis alpha part

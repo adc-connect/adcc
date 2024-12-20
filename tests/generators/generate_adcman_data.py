@@ -20,9 +20,13 @@ _methods = {
 # The method given below is used for this. The pt order should rather high
 # to ensure that all desired MP properties are generated.
 _gs_data_method = "adc3"
+# Once we have other flavours or the MP4 density implemented, we will need to
+# perform multiple MP calculations to obtain all the data.
+_gs_data_density_orders = (None,)
 
 
 def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
+                 gs_density_order: int = None,
                  n_singlets: int = 0, n_triplets: int = 0,
                  n_spin_flip: int = 0, n_states: int = 0,
                  dump_nstates: int = None, **kwargs) -> None:
@@ -35,23 +39,29 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     datadir = Path(__file__).parent.parent / _testdata_dirname
     datafile = datadir / test_case.adcdata_file_name("adcman", method.name)
     hdf5_file = h5py.File(datafile, "a")  # Read/write if exists, create otherwise
-    if case in hdf5_file:
+    if f"{case}/{gs_density_order}" in hdf5_file:
         return None
     # skip cvs-adc(0), since it is not available in qchem.
     if "cvs" in case and method.level == 0:
         return None
-    print(f"Generating {method.name} data for {case} {test_case.file_name}.")
+    # gs_density_order is only available for adc(3) and adc(4)
+    # and it is not available for cvs-adc
+    if gs_density_order is not None and (method.level < 3 or "cvs" in case):
+        return None
+    print(f"Generating {method.name} (gs_density_order={gs_density_order}) "
+          f"data for {case} {test_case.file_name}.")
     # add a cvs prefix to the method if necessary
     if "cvs" in case and not method.is_core_valence_separated:
         method = AdcMethod(f"cvs-{method.name}")
     state_data, _ = run_qchem(
         test_case, method, case, import_states=True, import_gs=False,
         n_singlets=n_singlets, n_triplets=n_triplets, n_spin_flip=n_spin_flip,
-        n_states=n_states, import_nstates=dump_nstates, **kwargs
+        n_states=n_states, import_nstates=dump_nstates,
+        gs_density_order=gs_density_order, **kwargs
     )
     # the data returned from run_qchem should have already been imported
     # using the correct keys -> just dump them
-    case_group = hdf5_file.create_group(case)
+    case_group = hdf5_file.create_group(f"{case}/{gs_density_order}")
     emplace_dict(state_data, case_group, compression="gzip")
 
 
@@ -72,11 +82,13 @@ def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
             n_triplets = states_per_case[case].get("n_triplets", 0)
             n_spin_flip = states_per_case[case].get("n_spin_flip", 0)
             n_states = states_per_case[case].get("n_states", 0)
-        generate_adc(
-            test_case, method, case, n_singlets=n_singlets, n_triplets=n_triplets,
-            n_spin_flip=n_spin_flip, n_states=n_states, dump_nstates=dump_nstates,
-            **kwargs
-        )
+        for density_order in test_case.gs_density_orders:
+            generate_adc(
+                test_case, method, case, n_singlets=n_singlets,
+                n_triplets=n_triplets, n_spin_flip=n_spin_flip, n_states=n_states,
+                dump_nstates=dump_nstates, gs_density_order=density_order,
+                **kwargs
+            )
 
 
 def generate_groundstate(test_case: testcases.TestCase) -> None:
@@ -91,15 +103,28 @@ def generate_groundstate(test_case: testcases.TestCase) -> None:
     for case in test_case.cases:
         if case in hdf5_file:
             continue
-        # run a adc calculation for a single singlet state:
-        # we have to ask for a state for adcman to do sth...
         print(f"Generating MP data for {case} {test_case.file_name}.")
-        method = f"cvs-{_gs_data_method}" if "cvs" in case else _gs_data_method
+        # we possibly have to perform multiple MP calculations to generate
+        # data for all gs_density_orders
+        # However: for CVS the gs_density_order is not available
+        if "cvs" in case:
+            method = f"cvs-{_gs_data_method}"
+            gs_density_orders = (None,)
+        else:
+            method = _gs_data_method
+            gs_density_orders = _gs_data_density_orders
         method = AdcMethod(method)
-        _, gs_data = run_qchem(
-            test_case, method, case, import_states=False, import_gs=True,
-            n_states=1
-        )
+
+        gs_data = {}
+        for density_order in gs_density_orders:
+            # run a adc calculation for a single singlet state:
+            # we have to ask for a state for adcman to do sth
+            _, data = run_qchem(
+                test_case, method=method, case=case, import_states=False,
+                import_gs=True, n_states=1, gs_density_order=density_order
+            )
+            # add the newly generated data to the gs_data
+            gs_data.update({k: v for k, v in data.items() if k not in gs_data})
         # the data returned from run_qchem should already have been imported
         # such that the correct keys are used -> directly dump them.
         case_group = hdf5_file.create_group(case)
@@ -218,15 +243,18 @@ def generate_h2s_6311g():
     generate_groundstate(test_case)
     for method in _methods["pp"]:
         method = AdcMethod(method)
-        for case in test_case.cases:
-            kwargs = {kind: 3 for kind in
-                      testcases.kinds_to_nstates(test_case.pp_kinds)}
+        n_states = {kind: 3 for kind in
+                    testcases.kinds_to_nstates(test_case.pp_kinds)}
+        for case in test_case.filter_cases(method.adc_type):
+            kwargs = n_states.copy()
             # davidson did not converge for fc-cvs adc1 triplets
             if "cvs" in case and "fc" in case:
                 kwargs["max_ss"] = 21
-            generate_adc(
-                test_case, method=method, case=case, dump_nstates=2, **kwargs
-            )
+            for density_order in test_case.gs_density_orders:
+                generate_adc(
+                    test_case, method=method, case=case,
+                    gs_density_order=density_order, dump_nstates=2, **kwargs
+                )
 
 
 def main():

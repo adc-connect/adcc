@@ -113,9 +113,12 @@ class TestdataCache:
         return data
 
     @cached_member_function
-    def _load_data(self, system: str, method: str, case: str, source: str) -> dict:
+    def _load_data(self, system: str, method: str, case: str, source: str,
+                   gs_density_order: int = None) -> dict:
         """
-        Read the reference data for the given test case and method.
+        Load the reference data for the given system, method (mpn / adcn),
+        reference case (cvs, fc, fv-cvs, ...) and optionally gs_density_order
+        (2, 3, sigma4+, ...).
         Source defines the source which generated the reference data, i.e.,
         either adcman or adcc.
         """
@@ -123,48 +126,68 @@ class TestdataCache:
             # avoid loading data twice for str and TestCase. Instead store a
             # reference to the same object in both cases.
             system = testcases.get_by_filename(system).pop()
-            return self._load_data(system, method=method, case=case, source=source)
+            return self._load_data(
+                system, method=method, case=case, source=source,
+                gs_density_order=gs_density_order
+            )
         assert isinstance(system, testcases.TestCase)
+        assert case in system.cases
+        assert gs_density_order in system.gs_density_orders
+
         datadir = Path(__file__).parent / _testdata_dirname
         if method == "mp":
             datafile = datadir / system.mpdata_file_name(source)
-        else:  # adc data
+            key = case
+            assert gs_density_order is None  # not considered -> should not be set
+        else:  # adc data is one level deeper than mpdata: gs_density_order
             datafile = datadir / system.adcdata_file_name(source, method)
+            key = f"{case}/{gs_density_order}"
         if not datafile.exists():
             raise FileNotFoundError(f"Missing reference data file {datafile}.")
         with h5py.File(datafile, "r") as hdf5_file:
-            if case not in hdf5_file:
-                raise ValueError(f"No data available for case {case} in file "
-                                 f"{datafile}.")
-            data = hdf5io.extract_group(hdf5_file[case])
+            if key not in hdf5_file:
+                raise ValueError(
+                    f"No data available for case {case} and gs_density_order "
+                    f"{gs_density_order} in file {datafile}."
+                )
+            data = hdf5io.extract_group(hdf5_file[key])
         return data
 
-    def adcc_data(self, system: str, method: str, case: str) -> dict:
+    def adcc_data(self, system: str, method: str, case: str,
+                  gs_density_order: int = None) -> dict:
         """
-        Load the adcc reference data for the given system and method, where
-        method might refer to mp or adcn.
+        Load the adcc reference data for the given system, method (mpn / adcn),
+        reference case (cvs, fc, fv-cvs, ...) and optionally gs_density_order
+        (2, 3, sigma4+, ...).
         """
         return self._load_data(
-            system=system, method=method, case=case, source="adcc"
+            system=system, method=method, case=case,
+            gs_density_order=gs_density_order, source="adcc"
         )
 
-    def adcman_data(self, system: str, method: str, case: str) -> dict:
+    def adcman_data(self, system: str, method: str, case: str,
+                    gs_density_order: int = None) -> dict:
         """
-        Load the adcman reference data for the given system and method, where
-        method might refer to mp or adcn.
+        Load the adcman reference data for the given system, method (mpn / adcn),
+        reference case (cvs, fc, fv-cvs, ...) and optionally gs_density_order
+        (2, 3, sigma4+, ...).
         """
         return self._load_data(
-            system=system, method=method, case=case, source="adcman"
+            system=system, method=method, case=case,
+            gs_density_order=gs_density_order, source="adcman"
         )
 
     @cached_member_function
     def _make_mock_adc_state(self, system: str, method: str, case: str,
-                             kind: str, source: str):
+                             kind: str, source: str, gs_density_order: int = None):
         """
         Create an ExcitedStates instance for the given test case, method (adcn),
-        reference case (gen/cvs/fc/...) and state kind (singlet/triplet/any/...).
+        reference case (gen/cvs/fc/...), state kind (singlet/triplet/any/...)
+        and optionally gs_density_order (2/3/sigma4+).
         Source refers to the source with which the data were generated
         (adcman/adcc).
+        The excited states object is build on top of the loaded HF data and
+        contains the eigenstates and eigenvalues of the loaded ADC data.
         """
         if isinstance(system, str):
             # avoid building an ExcitedStates object from the same data twice for
@@ -172,11 +195,17 @@ class TestdataCache:
             # both cases.
             system = testcases.get_by_filename(system).pop()
             return self._make_mock_adc_state(
-                system, method=method, case=case, kind=kind, source=source
+                system, method=method, case=case, kind=kind, source=source,
+                gs_density_order=gs_density_order
             )
         assert isinstance(system, testcases.TestCase)
+        assert case in system.cases
+        assert gs_density_order in system.gs_density_orders
         # load the adc data
-        data = self._load_data(system, method=method, case=case, source=source)
+        data = self._load_data(
+            system, method=method, case=case, source=source,
+            gs_density_order=gs_density_order
+        )
         adc_data = data.get(kind, None)
         if adc_data is None:
             raise ValueError(f"No data available for kind {kind} in {case} "
@@ -185,6 +214,8 @@ class TestdataCache:
         if "cvs" in case and "cvs" not in method:
             method = f"cvs-{method}"
         refstate = self.refstate(system, case)
+        # TODO: here we need to pass gs_density_order to LazyMp once implemented
+        assert gs_density_order is None
         ground_state = LazyMp(refstate)
         matrix = AdcMatrix(method, ground_state)
 
@@ -222,27 +253,29 @@ class TestdataCache:
         return ExcitedStates(states)
 
     def adcc_states(self, system: str, method: str, kind: str,
-                    case: str) -> ExcitedStates:
+                    case: str, gs_density_order: int = None) -> ExcitedStates:
         """
-        Construct an ExcitedStates object for the given test case,
-        method (adcn), state kind (singlet/triplet/any/...) and
-        reference case (gen/cvs/fc/...) using the adcc reference data
-        (the eigenvalues and eigenstates).
+        Create an ExcitedStates instance for the given test case, method (adcn),
+        reference case (gen/cvs/fc/...), state kind (singlet/triplet/any/...)
+        and optionally gs_density_order (2/3/sigma4+) using the adcc eigenstates
+        and eigenvalues.
         """
         return self._make_mock_adc_state(
-            system, method=method, case=case, kind=kind, source="adcc"
+            system, method=method, case=case, kind=kind,
+            gs_density_order=gs_density_order, source="adcc"
         )
 
     def adcman_states(self, system: str, method: str, kind: str,
-                      case: str) -> ExcitedStates:
+                      case: str, gs_density_order: int = None) -> ExcitedStates:
         """
-        Construct an ExcitedStates object for the given test case,
-        method (adcn), state kind (singlet/triplet/any/...) and
-        reference case (gen/cvs/fc/...) using the adcman reference data
-        (the eigenvalues and eigenstates).
+        Create an ExcitedStates instance for the given test case, method (adcn),
+        reference case (gen/cvs/fc/...), state kind (singlet/triplet/any/...)
+        and optionally gs_density_order (2/3/sigma4+) using the adcman eigenstates
+        and eigenvalues.
         """
         return self._make_mock_adc_state(
-            system, method=method, case=case, kind=kind, source="adcman"
+            system, method=method, case=case, kind=kind,
+            gs_density_order=gs_density_order, source="adcman"
         )
 
 

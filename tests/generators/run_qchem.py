@@ -11,11 +11,11 @@ from adcc import ReferenceState
 from pathlib import Path
 import numpy as np
 import h5py
+import itertools
 import os
 import shutil
 import subprocess
 import tempfile
-import itertools
 
 
 _testdata_dirname = "data"
@@ -53,11 +53,20 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
     tuple[dict | None, dict | None]
         Tuple containing the excited states and ground state data.
     """
-    # sanitize the input for cvs
+    # sanitize the input
     assert method.is_core_valence_separated == ("cvs" in case)
-    # cvs-adc0 is not available in qchem
     if method.is_core_valence_separated and method.level == 0:
         raise ValueError("CVS-ADC(0) is not available in adcman.")
+
+    if kwargs.get("gs_density_order", None) is not None:
+        if method.level < 3:
+            raise ValueError("gs_density_order is only available for ADC(n) with "
+                             "n > 2")
+        if method.is_core_valence_separated:
+            raise ValueError("gs_density_order not available for CVS-ADC.")
+
+    if not n_states and not n_singlets and not n_triplets and not n_spin_flip:
+        raise ValueError("No excited states requested. Adcman will do nothing.")
     # get the number of core, frozen core and frozen virtual orbitals
     # from the test case.
     n_core_orbitals = test_case.core_orbitals if "cvs" in case else 0
@@ -86,10 +95,9 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
         infile = tmpdir / f"{test_case.file_name}_{method.name}.in"
         outfile = tmpdir / f"{test_case.file_name}_{method.name}.out"
         generate_qchem_input_file(
-            infile=infile, method=method.name,
-            basis=test_case.basis, basis_definition=basis_def, purecart=purecart,
-            xyz=xyz, bohr=bohr, charge=test_case.charge,
-            multiplicity=test_case.multiplicity,
+            infile=infile, method=method, basis=test_case.basis,
+            basis_definition=basis_def, purecart=purecart, xyz=xyz, bohr=bohr,
+            charge=test_case.charge, multiplicity=test_case.multiplicity,
             n_core_orbitals=n_core_orbitals, n_frozen_core=n_frozen_core,
             n_frozen_virtual=n_frozen_virtual, potfile=None, any_states=n_states,
             singlet_states=n_singlets, triplet_states=n_triplets,
@@ -288,7 +296,7 @@ def clean_xyz(xyz: str):
     return "\n".join(line.strip() for line in xyz.splitlines())
 
 
-def generate_qchem_input_file(infile: str, method: str, basis: str, xyz: str,
+def generate_qchem_input_file(infile: str, method: AdcMethod, basis: str, xyz: str,
                               charge: int, multiplicity: int,
                               basis_definition: str = None, purecart: int = None,
                               potfile: str = None, memory: int = 10000,  # in mb
@@ -297,16 +305,25 @@ def generate_qchem_input_file(infile: str, method: str, basis: str, xyz: str,
                               sf_states: int = 0,
                               maxiter: int = 160, conv_tol: int = 10,
                               n_core_orbitals: int = 0, n_frozen_core: int = 0,
-                              n_frozen_virtual: int = 0,
-                              max_ss: int = None) -> None:
+                              n_frozen_virtual: int = 0, max_ss: int = None,
+                              gs_density_order: int = None) -> None:
     """
     Generates a qchem input file for the given test case and method.
     """
     nguess_singles = 2 * max(singlet_states, triplet_states, any_states, sf_states)
     if max_ss is None:
         max_ss = 7 * nguess_singles
+
+    method = _method_dict[method.name]
+    if isinstance(gs_density_order, str):
+        # sigma4+ -> sigma_4_plus
+        gs_density_order = _gs_density_order_dict[gs_density_order]
+    if gs_density_order is not None:  # append density order to the method
+        method += f"\nadc_gs_density_order     {gs_density_order}"
+
     qsys_mem = "{:d}gb".format(max(memory // 1000, 1) + 5)
     qsys_vmem = qsys_mem
+
     pe = potfile is not None
     custom_basis = basis_definition is not None
 
@@ -315,7 +332,7 @@ def generate_qchem_input_file(infile: str, method: str, basis: str, xyz: str,
         basis = "gen\npurecart                 {:d}".format(purecart)
 
     input = _qchem_template.format(
-        method=_method_dict[method],
+        method=method,
         basis=basis,
         memory=memory,
         any_states=any_states,
@@ -415,4 +432,8 @@ _method_dict = {
     "cvs-adc2": "cvs-adc(2)",
     "cvs-adc2x": "cvs-adc(2)-x",
     "cvs-adc3": "cvs-adc(3)"
+}
+
+_gs_density_order_dict = {
+    "sigma4+": "sigma_4_plus"
 }

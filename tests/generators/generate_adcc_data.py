@@ -23,6 +23,7 @@ _methods = {
 
 
 def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
+                 gs_density_order: int = None,
                  n_states: int = None, n_singlets: int = None,
                  n_triplets: int = None, n_spin_flip: int = None,
                  dump_nstates: int = None, **kwargs) -> None:
@@ -42,26 +43,30 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
         hf, n_states=n_states, n_singlets=n_singlets, n_triplets=n_triplets,
         n_spin_flip=n_spin_flip
     )
-    if f"{case}/{kind}" in hdf5_file:
+    key = f"{case}/{gs_density_order}"
+    if f"{key}/{kind}" in hdf5_file:
         return None
     print(f"Generating {method.name} data for {case} {test_case.file_name}.")
     # prepend cvs to the method if needed (otherwise we will get an error)
     if "cvs" in case and not method.is_core_valence_separated:
         method = AdcMethod(f"cvs-{method.name}")
+    # TODO: add the gs_density_order to the run_adc call once implemented
+    # For now just use it to enforce the correct data structure in the hdf5 file
+    assert gs_density_order is None
     states = run_adc(
         hf, method=method, n_states=n_states, n_singlets=n_singlets,
         n_triplets=n_triplets, n_spin_flip=n_spin_flip, **kwargs
     )
     assert states.kind == kind  # maybe we predicted wrong?
-    if f"{case}/matrix" not in hdf5_file:
+    if f"{key}/matrix" not in hdf5_file:
         # the matrix data is only dumped once for each case. I think it does not
         # make sense to dump the data once for a singlet and once for a triplet
         # trial vector.
-        matrix_group = hdf5_file.create_group(f"{case}/matrix")
+        matrix_group = hdf5_file.create_group(f"{key}/matrix")
         trial_vec = adcc_copy(states.excitation_vector[0]).set_random()
         dump_matrix_testdata(states.matrix, trial_vec, matrix_group)
     # dump the excited states data
-    kind_group = hdf5_file.create_group(f"{case}/{states.kind}")
+    kind_group = hdf5_file.create_group(f"{key}/{states.kind}")
     dump_excited_states(states, kind_group, dump_nstates=dump_nstates)
 
 
@@ -81,11 +86,12 @@ def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
             n_singlets = states_per_case[case].get("n_singlets", None)
             n_triplets = states_per_case[case].get("n_triplets", None)
             n_spin_flip = states_per_case[case].get("n_spin_flip", None)
-        generate_adc(
-            test_case, method, case, n_states=n_states, n_singlets=n_singlets,
-            n_triplets=n_triplets, n_spin_flip=n_spin_flip,
-            dump_nstates=dump_nstates, **kwargs
-        )
+        for density_order in test_case.gs_density_orders:
+            generate_adc(
+                test_case, method, case, n_states=n_states, n_singlets=n_singlets,
+                n_triplets=n_triplets, n_spin_flip=n_spin_flip,
+                dump_nstates=dump_nstates, gs_density_order=density_order, **kwargs
+            )
 
 
 def generate_groundstate(test_case: testcases.TestCase) -> None:
@@ -238,9 +244,16 @@ def generate_h2s_6311g():
         method = AdcMethod(method)
         for n_states in testcases.kinds_to_nstates(test_case.pp_kinds):
             n_states = {n_states: 3}
-            generate_adc_all(
-                test_case, method=method, dump_nstates=2, **n_states
-            )
+            for case in test_case.filter_cases(method.adc_type):
+                kwargs = n_states.copy()
+                # avoid convergin fv-cvs adc1 to zero
+                if "cvs" in case and "fv" in case:
+                    kwargs["max_subspace"] = 20
+                for density_order in test_case.gs_density_orders:
+                    generate_adc(
+                        test_case, method=method, case=case,
+                        gs_density_order=density_order, dump_nstates=2, **kwargs
+                    )
 
 
 def main():

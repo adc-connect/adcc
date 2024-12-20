@@ -22,6 +22,10 @@ class TestCase:
     # the available state kinds for the test system per adc type
     # for instance ("singlet", "triplet") for a restricted PP-ADC calculation
     pp_kinds: tuple[str] = tuple()
+    # the ground state density orders to generate data for, e.g.,
+    # (None, 2, 3, "sigma4+")
+    # where None invokes a calculation without a specific gs_density_order
+    gs_density_orders: tuple = (None,)
 
     @property
     def file_name(self) -> str:

@@ -168,6 +168,10 @@ def _import_excited_states(context: h5py.File, method: str, adc_type: str = "pp"
         if key not in data:
             data[key] = []
         data[key].append(val)
+    # ensure that we did converge on a nonzero result
+    if any(e < 1e-12 for e in data["eigenvalues"]):
+        raise DataImportError("Eigenvalue < 1e-12 detected. Calculation converged "
+                              "towards zero.")
     # convert to numpy array!
     return {k: np.array(v) if isinstance(v, list) else v for k, v in data.items()}
 
@@ -345,4 +349,22 @@ _mp_data = {
     "mp2/td_o1o1v1v1": "mp2/td_o1o1v1v1",
     # MP3
     "mp3/energy": "mp3/energy",
+    # MP3 density in the AO basis
+    "mp3/opdm/dm_bb_a": "mp3/dm_bb_a",
+    "mp3/opdm/dm_bb_b": "mp3/dm_bb_b",
+    # MP3 density in the MO basis
+    "mp3/opdm/dm_o1o1": "mp3/dm_o1o1",
+    "mp3/opdm/dm_o1v1": "mp3/dm_o1v1",
+    "mp3/opdm/dm_v1v1": "mp3/dm_v1v1",
+    # MP3 dipole vector
+    "mp3/prop/dipole": "mp3/dipole",
+    # sigma4+ density in the AO basis
+    "sigma4+/opdm/dm_bb_a": "sigma4+/dm_bb_a",
+    "sigma4+/opdm/dm_bb_b": "sigma4+/dm_bb_b",
+    # sigma4+ density in the MO basis
+    "sigma4+/opdm/dm_o1o1": "sigma4+/dm_o1o1",
+    "sigma4+/opdm/dm_o1v1": "sigma4+/dm_o1v1",
+    "sigma4+/opdm/dm_v1v1": "sigma4+/dm_v1v1",
+    # sigma4+ dipole vector
+    "sigma4+/prop/dipole": "sigma4+/dipole",
 }
