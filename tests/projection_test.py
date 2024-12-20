@@ -215,7 +215,7 @@ class TestProjector(unittest.TestCase):
 test_cases = testcases.get_by_filename(
     "h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz"
 )
-cases = [(case.file_name, kind) for case in test_cases for kind in case.pp_kinds]
+cases = [(case.file_name, kind) for case in test_cases for kind in case.kinds["pp"]]
 
 
 @pytest.mark.parametrize("system,kind", cases)

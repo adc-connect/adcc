@@ -2,6 +2,17 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 
 
+# NOTE: Can't use a dict, because TestCase has to be hashable.
+@dataclass(frozen=True, slots=True)
+class Kinds:
+    pp: tuple[str] = tuple()
+    ip: tuple[str] = tuple()
+    ea: tuple[str] = tuple()
+
+    def __getitem__(self, key: str):
+        return getattr(self, key)
+
+
 @dataclass(frozen=True, slots=True)
 class TestCase:
     name: str
@@ -20,8 +31,7 @@ class TestCase:
     # generic, cvs, frozen core (fc), frozen virtual (fv), ...
     cases: tuple[str] = ("gen",)
     # the available state kinds for the test system per adc type
-    # for instance ("singlet", "triplet") for a restricted PP-ADC calculation
-    pp_kinds: tuple[str] = tuple()
+    kinds: Kinds = Kinds()
     # the ground state density orders to generate data for, e.g.,
     # (None, 2, 3, "sigma4+")
     # where None invokes a calculation without a specific gs_density_order
@@ -100,9 +110,9 @@ class TestCase:
                 assert getattr(self, requirements[component], None) is not None
         # validate the PP-ADC kinds
         if self.restricted:
-            assert all(kind in ["singlet", "triplet"] for kind in self.pp_kinds)
+            assert all(kind in ["singlet", "triplet"] for kind in self.kinds["pp"])
         else:
-            assert all(kind in ["any", "spin_flip"] for kind in self.pp_kinds)
+            assert all(kind in ["any", "spin_flip"] for kind in self.kinds["pp"])
 
 
 def kinds_to_nstates(kinds: tuple[str]) -> list[str]:
@@ -187,18 +197,22 @@ _xyz = {
 
 def _init_test_cases() -> tuple[TestCase]:
     test_cases: list[TestCase] = []
+    # some shared data
+    restricted_kinds = Kinds(pp=("singlet", "triplet"))
+    unrestricted_kinds = Kinds(pp=("any",))
+    spin_flip_kinds = Kinds(pp=("spin_flip",))
     # CH2NH2
     ref_cases = ("gen", "cvs")
     xyz, unit = _xyz["ch2nh2"]
     test_cases.append(TestCase(
         name="ch2nh2", xyz=xyz, unit=unit, charge=0, multiplicity=2,
         basis="sto-3g", core_orbitals=2, cases=ref_cases, only_full_mode=False,
-        restricted=False, pp_kinds=("any",)
+        restricted=False, kinds=unrestricted_kinds
     ))
     test_cases.append(TestCase(
         name="ch2nh2", xyz=xyz, unit=unit, charge=0, multiplicity=2,
         basis="cc-pvdz", only_full_mode=True, restricted=False,
-        pp_kinds=("any",)
+        kinds=unrestricted_kinds
     ))
     # CN
     xyz, unit = _xyz["cn"]
@@ -207,14 +221,14 @@ def _init_test_cases() -> tuple[TestCase]:
         name="cn", xyz=xyz, unit=unit, charge=0, multiplicity=2,
         basis="sto-3g", core_orbitals=1, frozen_core=1, frozen_virtual=1,
         cases=ref_cases, only_full_mode=False, restricted=False,
-        pp_kinds=("any",)
+        kinds=unrestricted_kinds
     ))
     ref_cases = ("gen", "cvs", "fc", "fv")
     test_cases.append(TestCase(
         name="cn", xyz=xyz, unit=unit, charge=0, multiplicity=2,
         basis="cc-pvdz", core_orbitals=1, frozen_core=1, frozen_virtual=3,
         cases=ref_cases, only_full_mode=True, restricted=False,
-        pp_kinds=("any",)
+        kinds=unrestricted_kinds
     ))
     # H2O
     xyz, unit = _xyz["h2o"]
@@ -223,17 +237,17 @@ def _init_test_cases() -> tuple[TestCase]:
         name="h2o", xyz=xyz, unit=unit, charge=0, multiplicity=1,
         basis="sto-3g", core_orbitals=1, frozen_core=1, frozen_virtual=1,
         cases=ref_cases, only_full_mode=False, restricted=True,
-        pp_kinds=("singlet", "triplet")
+        kinds=restricted_kinds
     ))
     ref_cases = ("gen", "cvs")
     test_cases.append(TestCase(
         name="h2o", xyz=xyz, unit=unit, charge=0, multiplicity=1,
         basis="def2-tzvp", core_orbitals=1, cases=ref_cases, restricted=True,
-        only_full_mode=True, pp_kinds=("singlet", "triplet")
+        only_full_mode=True, kinds=restricted_kinds
     ))
     test_cases.append(TestCase(
         name="h2o", xyz=xyz, unit=unit, charge=0, multiplicity=1, restricted=True,
-        basis="cc-pvdz", only_full_mode=True, pp_kinds=("singlet", "triplet")
+        basis="cc-pvdz", only_full_mode=True
     ))
     # H2S
     xyz, unit = _xyz["h2s"]
@@ -242,14 +256,14 @@ def _init_test_cases() -> tuple[TestCase]:
         name="h2s", xyz=xyz, unit=unit, charge=0, multiplicity=1,
         basis="sto-3g", core_orbitals=1, frozen_core=1, frozen_virtual=1,
         cases=ref_cases, only_full_mode=False, restricted=True,
-        pp_kinds=("singlet", "triplet")
+        kinds=restricted_kinds
     ))
     ref_cases = ("gen", "cvs", "fc", "fv", "fc-cvs", "fv-cvs", "fc-fv", "fc-fv-cvs")
     test_cases.append(TestCase(
         name="h2s", xyz=xyz, unit=unit, charge=0, multiplicity=1,
         basis="6-311+g**", core_orbitals=1, frozen_core=1, frozen_virtual=3,
         cases=ref_cases, only_full_mode=True, restricted=True,
-        pp_kinds=("singlet", "triplet")
+        kinds=restricted_kinds
     ))
     # HF
     ref_cases = ("gen", "fc", "fv")
@@ -257,7 +271,7 @@ def _init_test_cases() -> tuple[TestCase]:
     test_cases.append(TestCase(
         name="hf", xyz=xyz, unit=unit, charge=0, multiplicity=3,
         basis="6-31g", frozen_core=1, frozen_virtual=3, cases=ref_cases,
-        only_full_mode=False, restricted=False, pp_kinds=("spin_flip",)
+        only_full_mode=False, restricted=False, kinds=spin_flip_kinds
     ))
     # (R)-2-Methyloxirane
     ref_cases = ("gen", "cvs")

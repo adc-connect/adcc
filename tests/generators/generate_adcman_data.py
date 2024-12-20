@@ -150,7 +150,7 @@ def generate_h2o_sto3g():
         # get the number of states for all kinds -> Generate the data in a single
         # adcman calculation
         n_states = {kind: 3 for kind in
-                    testcases.kinds_to_nstates(test_case.pp_kinds)}
+                    testcases.kinds_to_nstates(test_case.kinds[method.adc_type])}
         generate_adc_all(
             test_case, method=method, dump_nstates=2,
             states_per_case=states.get(method.name, None), **n_states
@@ -166,7 +166,7 @@ def generate_h2o_def2tzvp():
     for method in _methods["pp"]:
         method = AdcMethod(method)
         n_states = {kind: 3 for kind in
-                    testcases.kinds_to_nstates(test_case.pp_kinds)}
+                    testcases.kinds_to_nstates(test_case.kinds[method.adc_type])}
         generate_adc_all(
             test_case, method=method, dump_nstates=2, **n_states
         )
@@ -179,7 +179,7 @@ def generate_cn_sto3g():
     for method in _methods["pp"]:
         method = AdcMethod(method)
         n_states = {kind: 3 for kind in
-                    testcases.kinds_to_nstates(test_case.pp_kinds)}
+                    testcases.kinds_to_nstates(test_case.kinds[method.adc_type])}
         generate_adc_all(
             test_case, method=method, dump_nstates=2, **n_states
         )
@@ -192,7 +192,7 @@ def generate_cn_ccpvdz():
     for method in _methods["pp"]:
         method = AdcMethod(method)
         n_states = {kind: 3 for kind in
-                    testcases.kinds_to_nstates(test_case.pp_kinds)}
+                    testcases.kinds_to_nstates(test_case.kinds[method.adc_type])}
         generate_adc_all(
             test_case, method=method, dump_nstates=2, **n_states
         )
@@ -205,7 +205,7 @@ def generate_hf_631g():
     for method in _methods["pp"]:
         method = AdcMethod(method)
         n_states = {kind: 3 for kind in
-                    testcases.kinds_to_nstates(test_case.pp_kinds)}
+                    testcases.kinds_to_nstates(test_case.kinds[method.adc_type])}
         generate_adc_all(
             test_case, method=method, dump_nstates=2, **n_states
         )
@@ -228,7 +228,7 @@ def generate_h2s_sto3g():
     for method in _methods["pp"]:
         method = AdcMethod(method)
         n_states = {kind: 3 for kind in
-                    testcases.kinds_to_nstates(test_case.pp_kinds)}
+                    testcases.kinds_to_nstates(test_case.kinds[method.adc_type])}
         generate_adc_all(
             test_case, method=method, dump_nstates=2,
             states_per_case=states.get(method.name, None), **n_states
@@ -244,7 +244,7 @@ def generate_h2s_6311g():
     for method in _methods["pp"]:
         method = AdcMethod(method)
         n_states = {kind: 3 for kind in
-                    testcases.kinds_to_nstates(test_case.pp_kinds)}
+                    testcases.kinds_to_nstates(test_case.kinds[method.adc_type])}
         for case in test_case.filter_cases(method.adc_type):
             kwargs = n_states.copy()
             # davidson did not converge for fc-cvs adc1 triplets
