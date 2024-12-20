@@ -52,7 +52,7 @@ class DIISSubspace:
         just the square root of the last diagonal element of the current
         overlap matrix.
         """
-        return np.sqrt(self.overlap[self.size-1, self.size-1])
+        return np.sqrt(self.overlap[-1, -1])
 
     @property
     def size(self) -> int:
