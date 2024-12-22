@@ -124,7 +124,9 @@ def generate_groundstate(test_case: testcases.TestCase) -> None:
                 import_gs=True, n_states=1, gs_density_order=density_order
             )
             # add the newly generated data to the gs_data
-            gs_data.update({k: v for k, v in data.items() if k not in gs_data})
+            for key, val in data.items():
+                if key not in gs_data:
+                    gs_data[key] = val
         # the data returned from run_qchem should already have been imported
         # such that the correct keys are used -> directly dump them.
         case_group = hdf5_file.create_group(case)
