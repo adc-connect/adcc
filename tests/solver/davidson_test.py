@@ -22,35 +22,48 @@
 ## ---------------------------------------------------------------------
 import adcc
 import unittest
-
-from pytest import approx
+import pytest
 
 from adcc import LazyMp
-from adcc.testdata.cache import cache
 from adcc.solver.davidson import jacobi_davidson
+
+from ..testdata_cache import testdata_cache
 
 
 class TestSolverDavidson(unittest.TestCase):
     def test_adc2_singlets(self):
-        refdata = cache.reference_data["h2o_sto3g"]
-        matrix = adcc.AdcMatrix("adc2", LazyMp(cache.refstate["h2o_sto3g"]))
+        refdata = testdata_cache.adcman_data(
+            system="h2o_sto3g", method="adc2", case="gen"
+        )["singlet"]
+
+        matrix = adcc.AdcMatrix(
+            "adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
+        )
 
         # Solve for singlets
         guesses = adcc.guesses_singlet(matrix, n_guesses=9, block="ph")
         res = jacobi_davidson(matrix, guesses, n_ep=9)
 
-        ref_singlets = refdata["adc2"]["singlet"]["eigenvalues"]
+        ref_singlets = refdata["eigenvalues"]
+        n_states = min(len(ref_singlets), len(res.eigenvalues))
+        assert n_states > 1
         assert res.converged
-        assert res.eigenvalues == approx(ref_singlets)
+        assert res.eigenvalues[:n_states] == pytest.approx(ref_singlets[:n_states])
 
     def test_adc2_triplets(self):
-        refdata = cache.reference_data["h2o_sto3g"]
-        matrix = adcc.AdcMatrix("adc2", LazyMp(cache.refstate["h2o_sto3g"]))
+        refdata = testdata_cache.adcman_data(
+            system="h2o_sto3g", method="adc2", case="gen"
+        )["triplet"]
+        matrix = adcc.AdcMatrix(
+            "adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
+        )
 
         # Solve for triplets
         guesses = adcc.guesses_triplet(matrix, n_guesses=10, block="ph")
         res = jacobi_davidson(matrix, guesses, n_ep=10)
 
-        ref_triplets = refdata["adc2"]["triplet"]["eigenvalues"]
+        ref_triplets = refdata["eigenvalues"]
+        n_states = min(len(ref_triplets), len(res.eigenvalues))
+        assert n_states > 1
         assert res.converged
-        assert res.eigenvalues == approx(ref_triplets)
+        assert res.eigenvalues[:n_states] == pytest.approx(ref_triplets[:n_states])

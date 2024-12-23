@@ -20,23 +20,20 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import unittest
+import pytest
 import numpy as np
-
 from numpy.testing import assert_allclose
+from scipy.sparse.linalg import aslinearoperator
 
-from adcc.misc import expand_test_templates
 from adcc.solver.power_method import default_print, power_method
 
-from pytest import approx
-from scipy.sparse.linalg import aslinearoperator
 
 sizes = ["0004", "0050", "0200", "1000"]
 
 
-@expand_test_templates(sizes)
-class TestPowerMethod(unittest.TestCase):
-    def template_random_matrix(self, size):
+@pytest.mark.parametrize("size", sizes)
+class TestPowerMethod:
+    def test_random_matrix(self, size: str):
         np.random.seed(42)
         size = int(size)
         conv_tol = 1e-10
@@ -56,4 +53,4 @@ class TestPowerMethod(unittest.TestCase):
         if size > 100:
             extrafac = 3
         assert_allclose(res.eigenvectors[0], ones, atol=conv_tol * 10 * extrafac)
-        assert approx(res.eigenvalues[0]) == ev[0]
+        assert pytest.approx(res.eigenvalues[0]) == ev[0]

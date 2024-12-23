@@ -22,8 +22,7 @@
 ## ---------------------------------------------------------------------
 import adcc
 import unittest
-
-from pytest import approx
+import pytest
 
 from adcc import LazyMp
 from adcc.AdcMatrix import AdcMatrixShifted
@@ -32,37 +31,55 @@ from adcc.solver.preconditioner import JacobiPreconditioner
 from adcc.solver.conjugate_gradient import (IterativeInverse,
                                             default_print as cg_print)
 from adcc.solver.explicit_symmetrisation import IndexSpinSymmetrisation
-from adcc.testdata.cache import cache
+
+from ..testdata_cache import testdata_cache
 
 
 class TestSolverLanczos(unittest.TestCase):
     def test_adc2_singlets(self):
-        refdata = cache.reference_data["h2o_sto3g"]
-        matrix = adcc.AdcMatrix("adc2", LazyMp(cache.refstate["h2o_sto3g"]))
+        refdata = testdata_cache.adcman_data(
+            system="h2o_sto3g", method="adc2", case="gen"
+        )["singlet"]
+        matrix = adcc.AdcMatrix(
+            "adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
+        )
 
         # Solve for singlets
         guesses = adcc.guesses_singlet(matrix, n_guesses=5, block="ph")
         res = lanczos(matrix, guesses, n_ep=5, which="SM")
 
-        ref_singlets = refdata["adc2"]["singlet"]["eigenvalues"][:5]
+        ref_singlets = refdata["eigenvalues"]
+        n_states = min(len(ref_singlets), len(res.eigenvalues))
+        assert n_states > 1
         assert res.converged
-        assert res.eigenvalues == approx(ref_singlets)
+        assert res.eigenvalues[:n_states] == pytest.approx(ref_singlets[:n_states])
 
     def test_adc2_triplets(self):
-        refdata = cache.reference_data["h2o_sto3g"]
-        matrix = adcc.AdcMatrix("adc2", LazyMp(cache.refstate["h2o_sto3g"]))
+        refdata = testdata_cache.adcman_data(
+            system="h2o_sto3g", method="adc2", case="gen"
+        )["triplet"]
+        matrix = adcc.AdcMatrix(
+            "adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
+        )
 
         # Solve for triplets
         guesses = adcc.guesses_triplet(matrix, n_guesses=6, block="ph")
         res = lanczos(matrix, guesses, n_ep=6, which="SM")
 
-        ref_triplets = refdata["adc2"]["triplet"]["eigenvalues"][:6]
+        ref_triplets = refdata["eigenvalues"]
+        n_states = min(len(ref_triplets), len(res.eigenvalues))
+        assert n_states > 1
         assert res.converged
-        assert res.eigenvalues == approx(ref_triplets)
+        assert res.eigenvalues[:n_states] == pytest.approx(ref_triplets[:n_states])
 
     def test_adc2_shift_invert_singlets(self):
-        refdata = cache.reference_data["h2o_sto3g"]
-        matrix = adcc.AdcMatrix("adc2", LazyMp(cache.refstate["h2o_sto3g"]))
+        refdata = testdata_cache.adcman_data(
+            system="h2o_sto3g", method="adc2", case="gen"
+        )["singlet"]
+        matrix = adcc.AdcMatrix(
+            "adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
+        )
+
         conv_tol = 1e-5
         shift = -0.5
 
@@ -81,12 +98,19 @@ class TestSolverLanczos(unittest.TestCase):
 
         # Undo spectral transformation and compare
         eigenvalues = sorted(1 / res.eigenvalues - shift)
-        ref_singlets = refdata["adc2"]["singlet"]["eigenvalues"][:5]
-        assert eigenvalues == approx(ref_singlets)
+        ref_singlets = refdata["eigenvalues"]
+        n_states = min(len(ref_singlets), len(res.eigenvalues))
+        assert n_states > 1
+        assert eigenvalues[:n_states] == pytest.approx(ref_singlets[:n_states])
 
     def test_adc2_shift_invert_triplets(self):
-        refdata = cache.reference_data["h2o_sto3g"]
-        matrix = adcc.AdcMatrix("adc2", LazyMp(cache.refstate["h2o_sto3g"]))
+        refdata = testdata_cache.adcman_data(
+            system="h2o_sto3g", method="adc2", case="gen"
+        )["triplet"]
+        matrix = adcc.AdcMatrix(
+            "adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
+        )
+
         conv_tol = 1e-5
         shift = -0.5
 
@@ -105,5 +129,7 @@ class TestSolverLanczos(unittest.TestCase):
 
         # Undo spectral transformation and compare
         eigenvalues = sorted(1 / res.eigenvalues - shift)
-        ref_triplets = refdata["adc2"]["triplet"]["eigenvalues"][:5]
-        assert eigenvalues == approx(ref_triplets)
+        ref_triplets = refdata["eigenvalues"]
+        n_states = min(len(ref_triplets), len(res.eigenvalues))
+        assert n_states > 1
+        assert eigenvalues[:n_states] == pytest.approx(ref_triplets[:n_states])
