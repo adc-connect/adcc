@@ -23,7 +23,7 @@ class TestCase:
     basis: str
     restricted: bool
     only_full_mode: bool  # whether to run the test case only in full mode
-    pe_pot_file: str = None
+    pe_potfile: str = None
     core_orbitals: int = None
     frozen_core: int = None
     frozen_virtual: int = None
@@ -290,17 +290,17 @@ def _init_test_cases() -> tuple[TestCase]:
     ))
     # Formaledhyde
     xyz, unit = _xyz["formaldehyde"]
-    pe_pot_file = Path(__file__).resolve().parent
-    pe_pot_file = pe_pot_file / "generators" / "potentials" / "fa_6w.pot"
+    pe_potfile = Path(__file__).resolve().parent
+    pe_potfile = pe_potfile / "generators" / "potentials" / "fa_6w.pot"
     test_cases.append(TestCase(
         name="formaldehyde", xyz=xyz, unit=unit, charge=0, multiplicity=1,
-        basis="sto-3g", pe_pot_file=str(pe_pot_file), only_full_mode=False,
-        restricted=True
+        basis="sto-3g", pe_potfile=str(pe_potfile), only_full_mode=False,
+        restricted=True, kinds=Kinds(pp=("singlet",))
     ))
     test_cases.append(TestCase(
         name="formaldehyde", xyz=xyz, unit=unit, charge=0, multiplicity=1,
-        basis="cc-pvdz", pe_pot_file=str(pe_pot_file), only_full_mode=True,
-        restricted=True
+        basis="cc-pvdz", pe_potfile=str(pe_potfile), only_full_mode=True,
+        restricted=True, kinds=Kinds(pp=("singlet",))
     ))
     # NH3
     xyz, unit = _xyz["nh3"]

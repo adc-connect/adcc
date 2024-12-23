@@ -259,6 +259,23 @@ def generate_h2s_6311g():
                 )
 
 
+def generate_formaldehyde_pe():
+    for test_case in testcases.get(n_expected_cases=2, name="formaldehyde"):
+        for method in _methods["pp"]:
+            method = AdcMethod(method)
+            kwargs = {
+                kind: 3 for kind in
+                testcases.kinds_to_nstates(test_case.kinds[method.adc_type])
+            }
+            assert test_case.pe_potfile is not None
+            kwargs["pe_potfile"] = test_case.pe_potfile
+            kwargs["run_qchem_scf"] = True
+            generate_adc_all(
+                test_case=test_case, method=method, dump_nstates=2,
+                **kwargs
+            )
+
+
 def main():
     generate_h2o_sto3g()
     generate_h2o_def2tzvp()
@@ -267,6 +284,7 @@ def main():
     generate_hf_631g()
     generate_h2s_sto3g()
     generate_h2s_6311g()
+    generate_formaldehyde_pe()
 
 
 if __name__ == "__main__":

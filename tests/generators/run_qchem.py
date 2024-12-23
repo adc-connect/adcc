@@ -24,6 +24,7 @@ _qchem_context_file = "context.hdf5"
 
 def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
               import_states: bool = True, import_gs: bool = False,
+              run_qchem_scf: bool = False,
               import_nstates: int = None, n_states: int = 0,
               n_singlets: int = 0, n_triplets: int = 0, n_spin_flip: int = 0,
               **kwargs) -> tuple[dict | None, dict | None]:
@@ -40,6 +41,9 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
     case: str
         The "adc-case" to run with qchem, e.g., "gen" for generic adcn, "cvs"
         for cvs-adcn or "fc-cvs" for a frozen core cvs-adcn calculation.
+    run_qchem_scf: bool
+        If set, a Qchem SCF calculation will be performed. Otherwise it will be
+        attempted to read and import the SCF data from the testdata data directory.
     import_states: bool, optional
         Import the excited states data (default: True).
     import_gs: bool, optional
@@ -72,39 +76,55 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
     n_core_orbitals = test_case.core_orbitals if "cvs" in case else 0
     n_frozen_core = test_case.frozen_core if "fc" in case else 0
     n_frozen_virtual = test_case.frozen_virtual if "fv" in case else 0
-    # load the pyscf result from the hdf5 file
-    hdf5_file = open_pyscf_result(test_case)
     # create a temporary directoy for the qchem calculation
     with tempfile.TemporaryDirectory(prefix=test_case.file_name,
                                      dir=Path.cwd()) as tmpdir:
         # create the savedir in the temporary dir
         tmpdir = Path(tmpdir)
-        savedir = tmpdir / "savedir"
-        savedir.mkdir()
-        generate_qchem_savedir(
-            pyscf_data=hdf5_file, savedir=savedir,
-            core_orbitals=n_core_orbitals,
-            frozen_core=n_frozen_core, frozen_virtual=n_frozen_virtual
-        )
-        # extrac the relevant data from the pyscf data and write the qchem infile
-        _, basis_def = _extract_dataset(hdf5_file["qchem_formatted_basis"])
-        _, xyz = _extract_dataset(hdf5_file["xyz"])
-        _, xyz_unit = _extract_dataset(hdf5_file["xyz_unit"])
-        bohr = xyz_unit.lower() == "bohr"
-        purecart = determine_purecart(hdf5_file)
+        args = {}
+        # we don't want to read the pyscf SCF data:
+        # -> extract the data from the TestCase
+        if run_qchem_scf:
+            args["bohr"] = test_case.unit.lower() == "bohr"
+            args["xyz"] = test_case.xyz
+            savedir = None
+        else:  # Load the SCF data and create the savedir
+            # load the pyscf result from the hdf5 file
+            hdf5_file = open_pyscf_result(test_case)
+            savedir = tmpdir / "savedir"
+            savedir.mkdir()
+            generate_qchem_savedir(
+                pyscf_data=hdf5_file, savedir=savedir,
+                core_orbitals=n_core_orbitals,
+                frozen_core=n_frozen_core, frozen_virtual=n_frozen_virtual
+            )
+            savedir = savedir.name
+            # extrac the relevant data from the pyscf data for the infile.
+            args["basis_definition"] = (
+                _extract_dataset(hdf5_file["qchem_formatted_basis"])[1]
+            )
+            args["xyz"] = _extract_dataset(hdf5_file["xyz"])[1]
+            _, xyz_unit = _extract_dataset(hdf5_file["xyz_unit"])
+            args["bohr"] = xyz_unit.lower() == "bohr"
+            args["purecart"] = determine_purecart(hdf5_file)
+        # add the user input
+        args.update(kwargs)
+        # use the data to write the infile
         infile = tmpdir / f"{test_case.file_name}_{method.name}.in"
         outfile = tmpdir / f"{test_case.file_name}_{method.name}.out"
         generate_qchem_input_file(
             infile=infile, method=method, basis=test_case.basis,
-            basis_definition=basis_def, purecart=purecart, xyz=xyz, bohr=bohr,
             charge=test_case.charge, multiplicity=test_case.multiplicity,
             n_core_orbitals=n_core_orbitals, n_frozen_core=n_frozen_core,
-            n_frozen_virtual=n_frozen_virtual, potfile=None, any_states=n_states,
+            n_frozen_virtual=n_frozen_virtual, any_states=n_states,
             singlet_states=n_singlets, triplet_states=n_triplets,
-            sf_states=n_spin_flip, **kwargs
+            sf_states=n_spin_flip, run_qchem_scf=run_qchem_scf, **args
         )
         # call qchem and wait for completion
-        execute_qchem(infile.name, outfile.name, savedir.name, tmpdir.resolve())
+        execute_qchem(
+            infile=infile.name, outfile=outfile.name, savedir=savedir,
+            workdir=tmpdir.resolve()
+        )
         # after the calculation we should have the context file in the tmpdir
         context_file = tmpdir / _qchem_context_file
         if not context_file.exists():
@@ -251,7 +271,8 @@ def determine_purecart(pyscf_data: h5py.File) -> int:
     return 2222 if use_cart_angular_funcs else 1111
 
 
-def execute_qchem(infile: str, outfile: str, savedir: str, workdir: str) -> None:
+def execute_qchem(infile: str, outfile: str, workdir: str,
+                  savedir: str = None) -> None:
     """
     Execute Qchem by calling 'qchem' which needs to be some executable available in
     the path. The function defines the QCSCRATCH environment variable to point to
@@ -266,7 +287,7 @@ def execute_qchem(infile: str, outfile: str, savedir: str, workdir: str) -> None
         Name of the input file.
     outfile: str
         Name of the output file.
-    savedir: str
+    savedir: str, optional
         Name of the directory that contains the SCF result to read in.
     workdir: str
         Directory in which infile, oufile and savedir are/will be located.
@@ -277,11 +298,14 @@ def execute_qchem(infile: str, outfile: str, savedir: str, workdir: str) -> None
     # set the QCSCRATCH environment variable for the command
     env = os.environ.copy()
     env["QCSCRATCH"] = workdir
-    assert (Path(savedir) / "integrals.hdf5").exists()
-    # check_returncode raises an error if the return code is not zero.
-    code = subprocess.run(
-        ["qchem", infile, outfile, savedir], env=env
-    ).returncode
+    # Call the executable (with or without savedir)
+    if savedir is None:
+        code = subprocess.run(["qchem", infile, outfile], env=env).returncode
+    else:
+        assert (Path(savedir) / "integrals.hdf5").exists()
+        code = subprocess.run(
+            ["qchem", infile, outfile, savedir], env=env
+        ).returncode
     # qchem did not terminate normal -> copy the outputfile to the working directory
     if code:
         if Path(outfile).exists():
@@ -299,14 +323,15 @@ def clean_xyz(xyz: str):
 def generate_qchem_input_file(infile: str, method: AdcMethod, basis: str, xyz: str,
                               charge: int, multiplicity: int,
                               basis_definition: str = None, purecart: int = None,
-                              potfile: str = None, memory: int = 10000,  # in mb
+                              pe_potfile: str = None, memory: int = 10000,  # in mb
                               bohr: bool = True, any_states: int = 0,
                               singlet_states: int = 0, triplet_states: int = 0,
                               sf_states: int = 0,
                               maxiter: int = 160, conv_tol: int = 10,
                               n_core_orbitals: int = 0, n_frozen_core: int = 0,
                               n_frozen_virtual: int = 0, max_ss: int = None,
-                              gs_density_order: int = None) -> None:
+                              gs_density_order: int = None,
+                              run_qchem_scf: bool = False) -> None:
     """
     Generates a qchem input file for the given test case and method.
     """
@@ -324,12 +349,26 @@ def generate_qchem_input_file(infile: str, method: AdcMethod, basis: str, xyz: s
     qsys_mem = "{:d}gb".format(max(memory // 1000, 1) + 5)
     qsys_vmem = qsys_mem
 
-    pe = potfile is not None
+    pe = pe_potfile is not None
     custom_basis = basis_definition is not None
 
     if custom_basis:
         assert purecart is not None  # has to be provided for a custom basis
         basis = "gen\npurecart                 {:d}".format(purecart)
+
+    # Adjust the input depending on whether we want to perform an qchem SCF calc
+    scf_options = [
+        "use_libqints             true",
+        "gen_scfman               true",
+    ]
+    if run_qchem_scf:
+        export_test_data = 2
+    else:
+        export_test_data = 42
+        scf_options.extend([
+            "scf_guess                read",
+            "max_scf_cycles           0",
+        ])
 
     input = _qchem_template.format(
         method=method,
@@ -349,13 +388,15 @@ def generate_qchem_input_file(infile: str, method: AdcMethod, basis: str, xyz: s
         cc_rest_occ=n_core_orbitals,
         n_frozen_core=n_frozen_core,
         n_frozen_virtual=n_frozen_virtual,
+        export_test_data=export_test_data,
+        scf_options="\n".join(scf_options),
         xyz=clean_xyz(xyz),
         pe=pe,
         qsys_mem=qsys_mem,
         qsys_vmem=qsys_vmem
     )
     if pe:
-        input += _pe_template.format(potfile=potfile)
+        input += _pe_template.format(potfile=pe_potfile)
     if custom_basis:
         input += _basis_template.format(basis_definition=basis_definition)
     # build the inputfile name
@@ -385,18 +426,16 @@ cc_rest_occ              {cc_rest_occ}
 cc_frzn_core             {n_frozen_core}
 cc_frzn_virt             {n_frozen_virtual}
 adc_print                6
-adc_export_test_data     42  ! exports the full context to context.hdf5 +
-                             ! reads integrals from integrals.hdf5
+! 2: exports the full context to context.hdf5
+! 42: additionally reads integrals from integrals.hdf5
+adc_export_test_data     {export_test_data}
 
 ! integral thresholds
 thresh                   15
 s2thresh                 15
 
 ! scf stuff
-use_libqints             true
-gen_scfman               true
-scf_guess                read
-max_scf_cycles           0
+{scf_options}
 
 !QSYS mem={qsys_mem}
 !QSYS mem={qsys_vmem}

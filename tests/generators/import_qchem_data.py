@@ -308,7 +308,10 @@ _excited_state_data = {
         "tprop/dipole": "transition_dipole_moments",
         # doubles and triples part of the amplitude vector
         "u2": "eigenvectors_doubles",
-        "u3": "eigenvectors_triples"
+        "u3": "eigenvectors_triples",
+        # PE data
+        "prop/e_pe_ptSS": "pe_ptss_correction",
+        "tprop/e_pe_ptLR": "pe_ptlr_correction",
     }
 }
 
