@@ -20,23 +20,18 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import unittest
-import itertools
-import adcc
-import adcc.backends
-
 from numpy.testing import assert_allclose
-
 import pytest
 
-from ..misc import expand_test_templates
-from .testing import cached_backend_hf
-from ..exceptions import InputError
-from ..testdata.cache import qchem_data, tmole_data
-from ..testdata.static_data import pe_potentials
+import adcc
+import adcc.backends
+from adcc.exceptions import InputError
+from adcc.AdcMatrix import AdcExtraTerm
+from adcc.adc_pp.environment import block_ph_ph_0_pe
 
-from ..AdcMatrix import AdcExtraTerm
-from ..adc_pp.environment import block_ph_ph_0_pe
+from .testing import cached_backend_hf
+from ..testdata_cache import testdata_cache, tmole_data
+from .. import testcases
 
 try:
     import cppe  # noqa: F401
@@ -48,55 +43,72 @@ except ImportError:
 
 backends = [b for b in adcc.backends.available()
             if b not in ["molsturm", "veloxchem"]]
-basissets = ["sto3g", "ccpvdz"]
-methods = ["adc1", "adc2", "adc3"]
+
+methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 
 
 @pytest.mark.skipif(not has_cppe, reason="CPPE not found")
 @pytest.mark.skipif(len(backends) == 0, reason="No backend found.")
-@expand_test_templates(list(itertools.product(basissets, methods, backends)))
-class TestPolarizableEmbedding(unittest.TestCase):
-    def template_pe_perturbative_formaldehyde(self, basis, method, backend):
-        basename = f"formaldehyde_{basis}_pe_{method}"
-        qc_result = qchem_data[basename]
-        pe_options = {"potfile": pe_potentials["fa_6w"]}
-        scfres = cached_backend_hf(backend, "formaldehyde", basis,
-                                   pe_options=pe_options)
-        state = adcc.run_adc(scfres, method=method,
-                             n_singlets=5, conv_tol=1e-10,
-                             environment=["ptlr", "ptss"])
+@pytest.mark.parametrize("system", ["formaldehyde_sto3g", "formaldehyde_ccpvdz"])
+@pytest.mark.parametrize("backend", backends)
+class TestPolarizableEmbedding:
+    @pytest.mark.parametrize("method", methods)
+    def test_perturbative(self, system: str, method: str, backend: str):
+        test_case = testcases.get_by_filename(system).pop()
+
+        refdata = testdata_cache.adcman_data(
+            system=system, method=method, case="gen"
+        )["singlet"]
+
+        assert test_case.pe_potfile is not None
+        pe_options = {"potfile": test_case.pe_potfile}
+        scfres = cached_backend_hf(
+            backend=backend, system=system, pe_options=pe_options
+        )
+        state = adcc.run_adc(
+            scfres, method=method, n_singlets=5, conv_tol=1e-7,
+            environment=["ptlr", "ptss"]
+        )
+        assert state.converged
+
+        n_states = min(len(refdata["eigenvalues"]), len(state.excitation_energy))
+        assert n_states > 1
 
         assert_allclose(
-            qc_result["excitation_energy"],
-            state.excitation_energy_uncorrected,
+            refdata["eigenvalues"][:n_states],
+            state.excitation_energy_uncorrected[:n_states],
             atol=1e-5
         )
         assert_allclose(
-            + qc_result["excitation_energy"]
-            + qc_result["pe_ptss_correction"]
-            + qc_result["pe_ptlr_correction"],
-            state.excitation_energy,
+            + refdata["eigenvalues"][:n_states]
+            + refdata["pe_ptss_correction"][:n_states]
+            + refdata["pe_ptlr_correction"][:n_states],
+            state.excitation_energy[:n_states],
             atol=1e-5
         )
         assert_allclose(
-            qc_result["pe_ptss_correction"],
-            state.pe_ptss_correction,
+            refdata["pe_ptss_correction"][:n_states],
+            state.pe_ptss_correction[:n_states],
             atol=1e-5
         )
         assert_allclose(
-            qc_result["pe_ptlr_correction"],
-            state.pe_ptlr_correction,
+            refdata["pe_ptlr_correction"][:n_states],
+            state.pe_ptlr_correction[:n_states],
             atol=1e-5
         )
 
-    def template_pe_linear_response_formaldehyde(self, basis, method, backend):
-        if method != "adc2":
-            pytest.skip("Reference only exists for adc2.")
-        basename = f"formaldehyde_{basis}_pe_{method}"
+    @pytest.mark.parametrize("method", ["adc2"])
+    def test_linear_response(self, system: str, method: str, backend: str):
+        system: testcases.TestCase = testcases.get_by_filename(system).pop()
+
+        basename = f"{system.file_name}_pe_{method}"
         tm_result = tmole_data[basename]
-        pe_options = {"potfile": pe_potentials["fa_6w"]}
-        scfres = cached_backend_hf(backend, "formaldehyde", basis,
-                                   pe_options=pe_options)
+
+        assert system.pe_potfile is not None
+        pe_options = {"potfile": system.pe_potfile}
+        scfres = cached_backend_hf(
+            backend=backend, system=system.file_name, pe_options=pe_options
+        )
         assert_allclose(scfres.energy_scf, tm_result["energy_scf"], atol=1e-8)
 
         matrix = adcc.AdcMatrix(method, scfres)
@@ -113,6 +125,7 @@ class TestPolarizableEmbedding(unittest.TestCase):
         )
         state = adcc.run_adc(matrix, n_singlets=5, conv_tol=1e-7,
                              environment=False)
+        assert state.converged
         assert_allclose(
             state.excitation_energy_uncorrected,
             tm_result["excitation_energy"],
@@ -130,6 +143,7 @@ class TestPolarizableEmbedding(unittest.TestCase):
         # automatically add coupling term
         state = adcc.run_adc(scfres, method=method, n_singlets=5,
                              conv_tol=1e-7, environment="linear_response")
+        assert state.converged
         assert_allclose(
             state.excitation_energy_uncorrected,
             tm_result["excitation_energy"],
