@@ -148,8 +148,8 @@ def _import_excited_states(context: h5py.File, method: str, adc_type: str = "pp"
         # ensure that the state is converged
         _, converged = _extract_dataset(context[f"{state_tree}/converged"])
         if not converged:
-            raise DataImportError(f"State {n} of file {context.filename} is not "
-                                  "converged.")
+            raise DataImportError(f"State {n} of kind {state_kind} in file "
+                                  f"{context.filename} is not converged.")
         data_to_read.update({
             f"{state_tree}/{path}": (n, key)
             for path, key in _excited_state_data["required"].items()
@@ -169,7 +169,7 @@ def _import_excited_states(context: h5py.File, method: str, adc_type: str = "pp"
             data[key] = []
         data[key].append(val)
     # ensure that we did converge on a nonzero result
-    if any(e < 1e-12 for e in data["eigenvalues"]):
+    if any(abs(e) < 1e-12 for e in data["eigenvalues"]):
         raise DataImportError("Eigenvalue < 1e-12 detected. Calculation converged "
                               "towards zero.")
     # convert to numpy array!

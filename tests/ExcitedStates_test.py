@@ -20,20 +20,34 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import unittest
 import pytest
 from numpy.testing import assert_allclose
 
-from adcc.testdata.cache import cache
 from adcc.OneParticleOperator import OneParticleOperator
 from adcc.ExcitedStates import EnergyCorrection
-from .test_state_densities import Runners
+
+from .testdata_cache import testdata_cache
+from . import testcases
 
 
-class TestExcitationView(unittest.TestCase, Runners):
-    def base_test(self, system, method, kind):
-        method = method.replace("_", "-")
-        state = cache.adc_states[system][method][kind]
+methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+
+test_cases = testcases.get_by_filename(
+    "h2o_sto3g", "h2o_def2tzvp", "h2s_sto3g", "h2s_6311g", "cn_sto3g", "cn_ccpvdz",
+    "hf_631g"
+)
+cases = [(case.file_name, c, kind)
+         for case in test_cases for c in case.cases for kind in case.kinds.pp]
+
+
+@pytest.mark.parametrize("method", methods)
+@pytest.mark.parametrize("system,case,kind", cases)
+class TestExcitedStates:
+    def test_excitation_view(self, system: str, case: str, method: str, kind: str):
+        state = testdata_cache.adcc_states(
+            system=system, method=method, case=case, kind=kind
+        )
+
         n_ref = len(state.excitation_vector)
         assert n_ref == state.size
 
@@ -59,11 +73,11 @@ class TestExcitationView(unittest.TestCase, Runners):
                 else:
                     assert_allclose(ref, res)
 
-
-class TestCustomExcitationEnergyCorrections(unittest.TestCase, Runners):
-    def base_test(self, system, method, kind):
-        method = method.replace("_", "-")
-        state = cache.adc_states[system][method][kind]
+    def test_custom_excitation_energy_correctios(self, system: str, case: str,
+                                                 method: str, kind: str):
+        state = testdata_cache.adcc_states(
+            system=system, method=method, kind=kind, case=case
+        )
 
         cc1 = EnergyCorrection("custom_correction1",
                                lambda exci: exci.excitation_energy ** 2)
@@ -98,11 +112,11 @@ class TestCustomExcitationEnergyCorrections(unittest.TestCase, Runners):
                             state_corrected2.excitation_energy[i])
         state_corrected2.describe()
 
+    def test_dataframe_export(self, system: str, case: str, method: str, kind: str):
+        state = testdata_cache.adcc_states(
+            system=system, method=method, kind=kind, case=case
+        )
 
-class TestDataFrameExport(unittest.TestCase, Runners):
-    def base_test(self, system, method, kind):
-        method = method.replace("_", "-")
-        state = cache.adc_states[system][method][kind]
         df = state.to_dataframe()
         df.drop(["excitation", "kind"], inplace=True, axis=1)
         components = ["x", "y", "z"]

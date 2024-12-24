@@ -41,9 +41,10 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
     case: str
         The "adc-case" to run with qchem, e.g., "gen" for generic adcn, "cvs"
         for cvs-adcn or "fc-cvs" for a frozen core cvs-adcn calculation.
-    run_qchem_scf: bool
-        If set, a Qchem SCF calculation will be performed. Otherwise it will be
-        attempted to read and import the SCF data from the testdata data directory.
+    run_qchem_scf: bool, optional
+        If set, a Qchem SCF calculation will be performed. Otherwise, it will be
+        attempted to read and import the pyscf SCF data from the testdata data
+        directory. (default: False)
     import_states: bool, optional
         Import the excited states data (default: True).
     import_gs: bool, optional
@@ -357,18 +358,14 @@ def generate_qchem_input_file(infile: str, method: AdcMethod, basis: str, xyz: s
         basis = "gen\npurecart                 {:d}".format(purecart)
 
     # Adjust the input depending on whether we want to perform an qchem SCF calc
-    scf_options = [
-        "use_libqints             true",
-        "gen_scfman               true",
-    ]
+    scf_options = ["use_libqints             true",
+                   "gen_scfman               true"]
     if run_qchem_scf:
         export_test_data = 2
     else:
         export_test_data = 42
-        scf_options.extend([
-            "scf_guess                read",
-            "max_scf_cycles           0",
-        ])
+        scf_options.extend(["scf_guess                read",
+                            "max_scf_cycles           0"])
 
     input = _qchem_template.format(
         method=method,

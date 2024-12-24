@@ -20,35 +20,31 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import unittest
+import pytest
 import numpy as np
-import adcc
-import adcc.backends
-
-from ..misc import expand_test_templates
-from .testing import (eri_asymm_construction_test, eri_chem_permutations,
-                      operator_import_from_ao_test)
-
 from numpy.testing import assert_almost_equal, assert_array_equal
 
+import adcc
+import adcc.backends
 from adcc.backends import have_backend
-from adcc.testdata import static_data
 
-import pytest
+from .testing import (eri_asymm_construction_test, eri_chem_permutations,
+                      operator_import_from_ao_test)
+from .. import testcases
 
 if have_backend("veloxchem"):
     import veloxchem as vlx
     from veloxchem.veloxchemlib import (AngularMomentumIntegralsDriver,
                                         LinearMomentumIntegralsDriver)
 
+
 basissets = ["sto3g", "ccpvdz"]
 
 
-@expand_test_templates(basissets)
 @pytest.mark.skipif(
     not have_backend("veloxchem"), reason="Veloxchem not found."
 )
-class TestVeloxchem(unittest.TestCase):
+class TestVeloxchem:
     def base_test(self, scfdrv):
         hfdata = adcc.backends.import_scf_results(scfdrv)
         assert hfdata.backend == "veloxchem"
@@ -148,8 +144,10 @@ class TestVeloxchem(unittest.TestCase):
                      -1.0 * linmom_mats.z_to_numpy())
         operator_import_from_ao_test(scfdrv, integrals, operator="nabla")
 
-    def template_rhf_h2o(self, basis):
-        scfdrv = adcc.backends.run_hf("veloxchem", static_data.xyz["h2o"], basis)
+    @pytest.mark.parametrize("basis", basissets)
+    def test_rhf_h2o(self, basis: str):
+        system = testcases.get(n_expected_cases=1, name="h2o", basis=basis).pop()
+        scfdrv = adcc.backends.run_hf("veloxchem", system.xyz, system.basis)
         self.base_test(scfdrv)
         self.operators_test(scfdrv)
         # Test ERI
