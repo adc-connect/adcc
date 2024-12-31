@@ -4,7 +4,6 @@ from tests import testcases
 from pyscf import gto, scf
 
 from pathlib import Path
-import numpy as np
 import h5py
 import os
 import tempfile
@@ -75,14 +74,25 @@ def generate_cn():
         hdf5_file = generate(case, frac_occ=True)
         if hdf5_file is None:
             continue
+        # TODO: is this still needed? -> comment out for now and see.
+        # This only modifies the orbital energies which can be obtained as
+        # ReferenceState.orbital_energies(space)
+        # However, with the exception of some tests, the orbital energies are
+        # usually obtained as
+        # ReferenceState.fock(space).diagonal()
+        # which is not modified here, since DataHFProvider reads the fock matrix
+        # from "fock_ff".
+        # In fact, TestReferenceStateCounterData should be the only test that may be
+        # affected by this.
+
         # Since CN has some symmetry some energy levels are degenerate,
         # which can lead to all sort of inconsistencies. This code
         # adds a fudge value of 1e-14 to make them numerically distinguishable
-        orben_f = hdf5_file["orben_f"]
-        for i in range(1, len(orben_f)):
-            if np.abs(orben_f[i - 1] - orben_f[i]) < 1e-14:
-                orben_f[i - 1] -= 1e-14
-                orben_f[i] += 1e-14
+        # orben_f = hdf5_file["orben_f"]
+        # for i in range(1, len(orben_f)):
+        #     if np.abs(orben_f[i - 1] - orben_f[i]) < 1e-14:
+        #         orben_f[i - 1] -= 1e-14
+        #         orben_f[i] += 1e-14
 
 
 def generate_h2o():
