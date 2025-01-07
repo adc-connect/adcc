@@ -1,3 +1,4 @@
+from collections import Counter
 from dataclasses import dataclass, asdict, fields
 from pathlib import Path
 
@@ -308,8 +309,14 @@ def _init_test_cases() -> tuple[TestCase]:
         name="nh3", xyz=xyz, unit=unit, charge=0, multiplicity=1, basis="3-21g",
         only_full_mode=False, restricted=True
     ))
+    # validate the testcases: cvs -> core_orbitals needs to be set
+    # and similar for the other cases
     for case in test_cases:
         case.validate()
+    # Furthermore ensure that all test cases have a unique file_name
+    assert all(
+        v == 1 for v in Counter([case.file_name for case in test_cases]).values()
+    )
     return tuple(test_cases)
 
 
