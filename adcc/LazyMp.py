@@ -35,7 +35,7 @@ from . import block as b
 
 class LazyMp:
     # sigma4+ ranks between third and fourth order
-    _special_density_orders = {"sigma4+": 3.5}
+    _special_density_orders = {"sigma4+": 3.5, "dem4+": 3.6}
 
     def __init__(self, hf, density_order=None):
         """
@@ -48,7 +48,7 @@ class LazyMp:
         density_order : int or str, optional
             MP densities are optionally upgraded (through the strict flag) to the
             level defined by the density order, e.g., a MP2 density can be
-            upgraded to a MP3 or sigma4+ density.
+            upgraded to a MP3, sigma4+ or DEM (dem4+) density.
         """
         if isinstance(hf, libadcc.HartreeFockSolution_i):
             hf = ReferenceState(hf)
@@ -210,6 +210,8 @@ class LazyMp:
             return self.mp3_diffdm
         elif level == "sigma4+":
             return self.sigma_4_plus_diffdm
+        elif level == "dem4+":
+            return self.dem_4_plus_diffdm
         else:
             raise NotImplementedError("Difference density not implemented for level"
                                       f" {level}.")
@@ -337,6 +339,105 @@ class LazyMp:
             max_subspace_size=7, conv_tol=1e-12, n_max_iterations=200,
             callback=default_print
         )
+        return evaluate(ret)
+
+    @cached_property
+    @timed_member_call(timer="timer")
+    def dem_4_plus_diffdm(self) -> OneParticleOperator:
+        """
+        Return the DEM(4+) difference density according to
+        [Schirmer and Angonoa, JCP 91, 1754-1761 (1989)]
+        """
+        from .solver.fixed_point_diis import diis, default_print
+
+        if self.has_core_occupied_space:
+            raise NotImplementedError("DEM(4+) density not implemented for CVS.")
+        ret = OneParticleOperator(self.mospaces, is_symmetric=True)
+
+        hf = self.reference_state
+        df = self.df(b.ov)
+
+        v_0_plus = (
+            -1.0 * self.t2oo + (
+                0.5 * self.t2eri(b.oovv, b.oo)
+                + 2.0 * self.t2eri(b.oovv, b.ov).antisymmetrise(2, 3)
+            ) / direct_sum("ia+jb->ijab", df, df)
+        ).evaluate()
+
+        v_0_minus = (
+            -1.0 * self.t2oo + (
+                0.5 * self.t2eri(b.oovv, b.vv)
+                + 2.0 * self.t2eri(b.oovv, b.ov).antisymmetrise(0, 1)
+            ) / direct_sum("ia+jb->ijab", df, df)
+        ).evaluate()
+
+        def v_plus_updater(v_plus):
+            return evaluate(
+                v_0_plus - (
+                    0.5 * einsum("ijcd,abcd->ijab", v_plus, hf.vvvv)
+                    + einsum("ikca,kbjc->ijab", v_plus, hf.ovov)
+                    - einsum("ikcb,kajc->ijab", v_plus, hf.ovov)
+                ) / direct_sum("ia+jb->ijab", df, df)
+            )
+
+        def v_minus_updater(v_minus):
+            return evaluate(
+                v_0_minus + (
+                    -0.5 * einsum("klab,ijkl->ijab", v_minus, hf.oooo)
+                    + einsum("ikcb,kajc->ijab", v_minus, hf.ovov)
+                    - einsum("jkcb,kaic->ijab", v_minus, hf.ovov)
+                ) / direct_sum("ia+jb->ijab", df, df)
+            )
+
+        v_plus = diis(
+            updater=v_plus_updater, guess_vector=v_0_plus, diis_start_size=2,
+            max_subspace_size=7, conv_tol=1e-12, n_max_iterations=200,
+            callback=default_print
+        )
+
+        v_minus = diis(
+            updater=v_minus_updater, guess_vector=v_0_minus, diis_start_size=2,
+            max_subspace_size=7, conv_tol=1e-12, n_max_iterations=200,
+            callback=default_print
+        )
+
+        q_oo = -0.5 * einsum("jlab,klab->jk", v_plus, v_plus)
+        q_vv = 0.5 * einsum("kldb,kldc->bc", v_minus, v_minus)
+
+        t2eri_a = 0.5 * self.t2eri(b.ooov, b.vv) + 2.0 * self.t2eri(
+            b.ooov, b.ov).antisymmetrise(0, 1)
+
+        t2eri_b = -0.5 * self.t2eri(b.ovvv, b.oo) + 2.0 * self.t2eri(
+            b.ovvv, b.ov).antisymmetrise(2, 3)
+
+        q_ov = -0.5 * (
+            -1.0 * einsum("jkcd,kbcd->jb", v_plus, hf.ovvv + t2eri_b)
+            + einsum("klcb,kljc->jb", v_minus, hf.ooov - t2eri_a)
+        ) / df
+
+        itmd = evaluate(
+            q_ov - (
+                einsum("jika,jk->ia", hf.ooov, q_oo)
+                + einsum("ibac,bc->ia", hf.ovvv, q_vv)
+            ) / df
+        )
+
+        def dm_ov_updater(dm_ov):
+            return evaluate(
+                itmd - (
+                    einsum("ijab,jb->ia", hf.oovv, dm_ov)
+                    - einsum("ibja,jb->ia", hf.ovov, dm_ov)
+                ) / df
+            )
+
+        ret.oo = q_oo
+        ret.ov = diis(
+            updater=dm_ov_updater, guess_vector=q_ov, diis_start_size=2,
+            max_subspace_size=7, conv_tol=1e-12, n_max_iterations=200,
+            callback=default_print
+        )
+        ret.vv = q_vv
+
         return evaluate(ret)
 
     def density(self, level: int = 2, strict: bool = True):
