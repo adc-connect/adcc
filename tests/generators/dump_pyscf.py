@@ -23,6 +23,7 @@
 import numpy as np
 import h5py
 
+import pyscf
 from pyscf import ao2mo, scf, gto
 
 from adcc.backends.pyscf import import_scf, PyScfHFProvider
@@ -225,6 +226,7 @@ def dump_pyscf(scfres: scf.hf.SCF, hdf5_file: h5py.Group):
 
     hdf5io.emplace_dict(data, hdf5_file, compression="gzip")
     hdf5_file.attrs["backend"] = "pyscf"
+    hdf5_file.attrs["pyscf_version"] = pyscf.__version__
 
 
 def get_qchem_formatted_basis(mol: gto.Mole) -> str:
