@@ -38,7 +38,7 @@ if have_backend("veloxchem"):
                                         LinearMomentumIntegralsDriver)
 
 
-basissets = ["sto3g", "ccpvdz"]
+h2o = testcases.get_by_filename("h2o_sto3g", "h2o_ccpvdz")
 
 
 @pytest.mark.skipif(
@@ -144,9 +144,8 @@ class TestVeloxchem:
                      -1.0 * linmom_mats.z_to_numpy())
         operator_import_from_ao_test(scfdrv, integrals, operator="nabla")
 
-    @pytest.mark.parametrize("basis", basissets)
-    def test_rhf_h2o(self, basis: str):
-        system = testcases.get(n_expected_cases=1, name="h2o", basis=basis).pop()
+    @pytest.mark.parametrize("system", h2o, ids=[case.file_name for case in h2o])
+    def test_rhf(self, system: testcases.TestCase):
         scfdrv = adcc.backends.run_hf("veloxchem", system.xyz, system.basis)
         self.base_test(scfdrv)
         self.operators_test(scfdrv)

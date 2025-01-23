@@ -328,7 +328,7 @@ class TestAdcMatrixShifted:
             sdiag = shifted.diagonal()[block].to_ndarray()
             assert np.max(np.abs(sdiag - shift - odiag)) < 1e-12
 
-    def template_matmul(self, system: str):
+    def test_matmul(self, system: str):
         shift = -0.3
         matrix, shifted = self.construct_matrices(system, shift)
 

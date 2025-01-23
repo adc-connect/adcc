@@ -130,7 +130,7 @@ class TestPyscf:
 
     @pytest.mark.parametrize("system", ch2nh2,
                              ids=[case.file_name for case in ch2nh2])
-    def template_uhf_ch2nh2(self, system: testcases.TestCase):
+    def test_uhf(self, system: testcases.TestCase):
         mf = adcc.backends.run_hf(
             "pyscf", system.xyz, system.basis, multiplicity=system.multiplicity
         )

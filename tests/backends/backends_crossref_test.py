@@ -116,9 +116,8 @@ class TestCrossReferenceBackends:
             assert results[b].converged
         compare_adc_results(results, 5e-8)
 
-    @pytest.mark.parametrize("system", h2o)
-    def template_hf_properties(self, system):
-        system = testcases.get_by_filename(system).pop()
+    @pytest.mark.parametrize("system", h2o, ids=[case.file_name for case in h2o])
+    def test_hf_properties(self, system: testcases.TestCase):
         results = {}
         for b in backends:
             results[b] = adcc.ReferenceState(cached_backend_hf(b, system))
