@@ -217,52 +217,6 @@ def generate_hf_631g():
         )
 
 
-def generate_h2s_sto3g():
-    # RHF, Singlet
-    states = {
-        # only define for adc1, because we skip adc0 cvs calculations
-        # (they are not implented in adcman)
-        "adc1": {
-            # 1 core and 2 virtual orbitals
-            "cvs": {"n_singlets": 2, "n_triplets": 2},
-            # 1 core and 1 virtual orbital
-            "fv-cvs": {"n_singlets": 1, "n_triplets": 1}
-        }
-    }
-    test_case = testcases.get(n_expected_cases=1, name="h2s", basis="sto-3g").pop()
-    generate_groundstate(test_case)
-    for method in _methods["pp"]:
-        method = AdcMethod(method)
-        n_states = {kind: 3 for kind in
-                    testcases.kinds_to_nstates(test_case.kinds[method.adc_type])}
-        generate_adc_all(
-            test_case, method=method, dump_nstates=2,
-            states_per_case=states.get(method.name, None), **n_states
-        )
-
-
-def generate_h2s_6311g():
-    # RHF, Singlet
-    test_case = testcases.get(
-        n_expected_cases=1, name="h2s", basis="6-311+g**"
-    ).pop()
-    generate_groundstate(test_case)
-    for method in _methods["pp"]:
-        method = AdcMethod(method)
-        n_states = {kind: 3 for kind in
-                    testcases.kinds_to_nstates(test_case.kinds[method.adc_type])}
-        for case in test_case.filter_cases(method.adc_type):
-            kwargs = n_states.copy()
-            # davidson did not converge for fc-cvs adc1 triplets
-            if "cvs" in case and "fc" in case:
-                kwargs["max_ss"] = 21
-            for density_order in test_case.gs_density_orders:
-                generate_adc(
-                    test_case, method=method, case=case,
-                    gs_density_order=density_order, dump_nstates=2, **kwargs
-                )
-
-
 def generate_formaldehyde_pe():
     for test_case in testcases.get(n_expected_cases=2, name="formaldehyde"):
         for method in _methods["pp"]:
@@ -286,8 +240,6 @@ def main():
     generate_cn_sto3g()
     generate_cn_ccpvdz()
     generate_hf_631g()
-    generate_h2s_sto3g()
-    generate_h2s_6311g()
     generate_formaldehyde_pe()
 
 

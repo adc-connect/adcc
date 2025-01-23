@@ -101,12 +101,6 @@ def generate_h2o():
         generate(case, frac_occ=False)
 
 
-def generate_h2s():
-    cases = testcases.get(n_expected_cases=2, name="h2s")
-    for case in cases:
-        generate(case, frac_occ=False)
-
-
 def generate_hf():
     case = testcases.get(n_expected_cases=1, name="hf").pop()
     generate(case, frac_occ=False)
@@ -123,7 +117,6 @@ def main():
     generate_ch2nh2()
     generate_cn()
     generate_h2o()
-    generate_h2s()
     generate_hf()
     generate_methox()
 

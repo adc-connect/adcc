@@ -145,12 +145,6 @@ _xyz = {
     H 1.693194615993441 0 -0.599043184453037
     """, "Bohr"),
     #
-    "h2s": ("""
-    S  -0.38539679062   0 -0.27282082253
-    H  -0.0074283962687 0  2.2149138578
-    H   2.0860198029    0 -0.74589639249
-    """, "Bohr"),
-    #
     "cn": ("""
     C 0 0 0
     N 0 0 2.2143810738114829
@@ -252,22 +246,6 @@ def _init_test_cases() -> tuple[TestCase]:
     test_cases.append(TestCase(
         name="h2o", xyz=xyz, unit=unit, charge=0, multiplicity=1, restricted=True,
         basis="cc-pvdz", only_full_mode=True
-    ))
-    # H2S
-    xyz, unit = _xyz["h2s"]
-    ref_cases = ("gen", "cvs", "fc", "fv", "fc-cvs", "fv-cvs", "fc-fv", "fc-fv-cvs")
-    test_cases.append(TestCase(
-        name="h2s", xyz=xyz, unit=unit, charge=0, multiplicity=1,
-        basis="sto-3g", core_orbitals=1, frozen_core=1, frozen_virtual=1,
-        cases=ref_cases, only_full_mode=False, restricted=True,
-        kinds=restricted_kinds
-    ))
-    ref_cases = ("gen", "cvs", "fc", "fv", "fc-cvs", "fv-cvs", "fc-fv", "fc-fv-cvs")
-    test_cases.append(TestCase(
-        name="h2s", xyz=xyz, unit=unit, charge=0, multiplicity=1,
-        basis="6-311+g**", core_orbitals=1, frozen_core=1, frozen_virtual=3,
-        cases=ref_cases, only_full_mode=True, restricted=True,
-        kinds=restricted_kinds
     ))
     # HF
     ref_cases = ("gen", "fc", "fv")

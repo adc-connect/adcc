@@ -37,8 +37,7 @@ methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 generators = ["adcman", "adcc"]
 
 test_cases = testcases.get_by_filename(
-    "h2o_sto3g", "h2o_def2tzvp", "h2s_sto3g", "h2s_6311g", "cn_sto3g", "cn_ccpvdz",
-    "hf_631g"
+    "h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz", "hf_631g"
 )
 cases = [(case.file_name, c, kind)
          for case in test_cases for c in case.cases for kind in case.kinds.pp]

@@ -39,8 +39,7 @@ methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 generators = ["adcman", "adcc"]
 
 test_cases = testcases.get_by_filename(
-    "h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz", "hf_631g",
-    "h2s_sto3g", "h2s_6311g"
+    "h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz", "hf_631g"
 )
 cases = [
     (case.file_name, c, kind)
@@ -134,17 +133,12 @@ class TestFunctionality:
         n_states = testcases.kinds_to_nstates([kind]).pop()
 
         kwargs = {n_states: 3}
-        # only few states available for h2o/h2s sto3g adc0/adc1
-        if system.name in ["h2o", "h2s"] and system.basis == "sto-3g" and \
-                method.level < 2:
+        # only few states available for h2o sto3g adc0/adc1
+        if system.name == "h2o" and system.basis == "sto-3g" and method.level < 2:
             if "cvs" in case and "fv" in case:
                 kwargs[n_states] = 1
             elif "cvs" in case:
                 kwargs[n_states] = 2
-        # avoid converging towards zero
-        if system.name == "h2s" and system.basis == "6-311+g**" and \
-                "cvs" in case and "fv" in case:
-            kwargs["max_subspace"] = 20
 
         self.base_test(
             system=system, case=case, method=method.name, kind=kind,

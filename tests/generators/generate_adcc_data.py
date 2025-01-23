@@ -195,73 +195,12 @@ def generate_hf_631g():
             )
 
 
-def generate_h2s_sto3g():
-    # RHF, Singlet
-    # fv-cvs: 1 core and 1 virtual orbital
-    # cvs: 1 core orbital and 2 virtual orbitals
-    states_per_case = {
-        "adc0": {
-            "n_singlets": {
-                "fv-cvs": {"n_singlets": 1}, "cvs": {"n_singlets": 2}
-            },
-            "n_triplets": {
-                "fv-cvs": {"n_triplets": 1}, "cvs": {"n_triplets": 2}
-            }
-        },
-        "adc1": {
-            "n_singlets": {
-                "fv-cvs": {"n_singlets": 1}, "cvs": {"n_singlets": 2}
-            },
-            "n_triplets": {
-                "fv-cvs": {"n_triplets": 1}, "cvs": {"n_triplets": 2}
-            }
-        }
-    }
-    test_case = testcases.get(n_expected_cases=1, name="h2s", basis="sto-3g").pop()
-    generate_groundstate(test_case)
-    for method in _methods["pp"]:
-        method = AdcMethod(method)
-        for n_states in \
-                testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
-            per_case = states_per_case.get(method.name, {}).get(n_states, None)
-            n_states = {n_states: 3}
-            generate_adc_all(
-                test_case, method=method, dump_nstates=2, states_per_case=per_case,
-                **n_states
-            )
-
-
-def generate_h2s_6311g():
-    # RHF, Singlet
-    test_case = testcases.get(
-        n_expected_cases=1, name="h2s", basis="6-311+g**"
-    ).pop()
-    generate_groundstate(test_case)
-    for method in _methods["pp"]:
-        method = AdcMethod(method)
-        for n_states in \
-                testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
-            n_states = {n_states: 3}
-            for case in test_case.filter_cases(method.adc_type):
-                kwargs = n_states.copy()
-                # avoid convergin fv-cvs adc1 to zero
-                if "cvs" in case and "fv" in case:
-                    kwargs["max_subspace"] = 20
-                for density_order in test_case.gs_density_orders:
-                    generate_adc(
-                        test_case, method=method, case=case,
-                        gs_density_order=density_order, dump_nstates=2, **kwargs
-                    )
-
-
 def main():
     generate_h2o_sto3g()
     generate_h2o_def2tzvp()
     generate_cn_sto3g()
     generate_cn_ccpvdz()
     generate_hf_631g()
-    generate_h2s_sto3g()
-    generate_h2s_6311g()
 
 
 if __name__ == "__main__":
