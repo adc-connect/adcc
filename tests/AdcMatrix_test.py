@@ -172,7 +172,7 @@ class TestAdcMatrixInterface:
         if "cvs" in case:
             sizes["o2"] = 2 * h2o_sto3g.core_orbitals  # alpha and beta
             sizes["o1"] -= 2 * h2o_sto3g.core_orbitals  # alpha and beta
-        elif "fc" in case:
+        if "fc" in case:
             sizes["o1"] -= 2 * h2o_sto3g.frozen_core  # alpha and beta
         if "fv" in case:
             sizes["v1"] -= 2 * h2o_sto3g.frozen_virtual  # alpha and beta

@@ -142,7 +142,11 @@ def generate_h2o_sto3g():
             # 1 core and 2 virtual orbitals
             "cvs": {"n_singlets": 2, "n_triplets": 2},
             # 1 core and 1 virtual orbital
-            "fv-cvs": {"n_singlets": 1, "n_triplets": 1}
+            "fv-cvs": {"n_singlets": 1, "n_triplets": 1},
+            # 1 core and 2 virtual orbitals
+            "fc-cvs": {"n_singlets": 2, "n_triplets": 2},
+            # 1 core and 1 virtual orbital
+            "fc-fv-cvs": {"n_singlets": 1, "n_triplets": 1}
         }
     }
     test_case = testcases.get(n_expected_cases=1, name="h2o", basis="sto-3g").pop()

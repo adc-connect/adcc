@@ -37,9 +37,9 @@ from . import testcases
 singles_methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 doubles_methods = ["adc2", "adc2x", "adc3"]
 # the testcases
-h2o_sto3g, cn_sto3g, hf_631g = testcases.get_by_filename(
-    "h2o_sto3g", "cn_sto3g", "hf_631g"
-)
+h2o_sto3g = testcases.get_by_filename("h2o_sto3g").pop()
+cn_sto3g = testcases.get_by_filename("cn_sto3g").pop()
+hf_631g = testcases.get_by_filename("hf_631g").pop()
 
 
 class TestGuess:
@@ -332,7 +332,8 @@ class TestGuess:
     @pytest.mark.parametrize("case", h2o_sto3g.cases)
     def test_singles_h2o(self, method: str, case: str):
         guesses = {  # fewer guesses available
-            "fv-cvs": 1, "cvs": 2, "fc": 8, "fv": 5, "fc-fv": 4
+            "fv-cvs": 1, "cvs": 2, "fc": 8, "fv": 5, "fc-fv": 4, "fc-cvs": 2,
+            "fc-fv-cvs": 1
         }
         self.base_test_no_spin_change(
             "h2o_sto3g", case=case, method=method, block="ph",
@@ -342,8 +343,8 @@ class TestGuess:
     @pytest.mark.parametrize("method", doubles_methods)
     @pytest.mark.parametrize("case", h2o_sto3g.cases)
     def test_doubles_h2o(self, method: str, case: str):
-        guesses = {  # fewer guesses available
-            "fv-cvs": 4
+        guesses = {  # fewer guesses available?
+            "fv-cvs": 4, "fc-fv-cvs": 3
         }
         self.base_test_no_spin_change(
             system="h2o_sto3g", case=case, method=method, block="pphh",

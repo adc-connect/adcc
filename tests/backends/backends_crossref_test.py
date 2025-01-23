@@ -55,6 +55,11 @@ class TestCrossReferenceBackends:
     def test_adc2_h2o(self, system, case):
         system = testcases.get_by_filename(system).pop()
 
+        # fewer states available for fc-fv-cvs
+        n_states = 5
+        if "fc" in case and "fv" in case and "cvs" in case:
+            n_states = 4
+
         method = "cvs-adc2" if "cvs" in case else "adc2"
         core_orbitals = system.core_orbitals if "cvs" in case else None
         frozen_core = system.frozen_core if "fc" in case else None
@@ -64,7 +69,7 @@ class TestCrossReferenceBackends:
         for b in backends:
             scfres = cached_backend_hf(b, system, conv_tol=1e-10)
             results[b] = adcc.run_adc(
-                scfres, method=method, n_singlets=5, conv_tol=1e-9,
+                scfres, method=method, n_singlets=n_states, conv_tol=1e-9,
                 core_orbitals=core_orbitals, frozen_core=frozen_core,
                 frozen_virtual=frozen_virtual
             )

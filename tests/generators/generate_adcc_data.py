@@ -112,25 +112,12 @@ def generate_groundstate(test_case: testcases.TestCase) -> None:
 
 def generate_h2o_sto3g():
     # RHF, Singlet, 7 basis functions: 5 occ, 2 virt.
-    # fv-cvs: 1 core and 1 virtual orbital
     # cvs: 1 core orbital and 2 virtual orbitals
+    # fv-cvs: 1 core and 1 virtual orbital
+    # fc-cvs: 1 core and 2 virtual
+    # fc-fv-cvs: 1 core and 1 virtual
     states_per_case = {
-        "adc0": {
-            "n_singlets": {
-                "fv-cvs": {"n_singlets": 1}, "cvs": {"n_singlets": 2}
-            },
-            "n_triplets": {
-                "fv-cvs": {"n_triplets": 1}, "cvs": {"n_triplets": 2}
-            }
-        },
-        "adc1": {
-            "n_singlets": {
-                "fv-cvs": {"n_singlets": 1}, "cvs": {"n_singlets": 2}
-            },
-            "n_triplets": {
-                "fv-cvs": {"n_triplets": 1}, "cvs": {"n_triplets": 2}
-            }
-        }
+        "cvs": 2, "fc-cvs": 2, "fv-cvs": 1, "fc-fv-cvs": 1
     }
     test_case = testcases.get(n_expected_cases=1, name="h2o", basis="sto-3g").pop()
     generate_groundstate(test_case)
@@ -138,7 +125,11 @@ def generate_h2o_sto3g():
         method = AdcMethod(method)
         for n_states in \
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
-            per_case = states_per_case.get(method.name, {}).get(n_states, None)
+            per_case = None
+            if method.level < 2:  # adc0/adc1
+                per_case = {
+                    case: {n_states: n} for case, n in states_per_case.items()
+                }
             n_states = {n_states: 3}
             generate_adc_all(
                 test_case, method=method, dump_nstates=2, states_per_case=per_case,

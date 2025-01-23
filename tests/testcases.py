@@ -236,7 +236,7 @@ def _init_test_cases() -> tuple[TestCase]:
     ))
     # H2O
     xyz, unit = _xyz["h2o"]
-    ref_cases = ("gen", "cvs", "fc", "fv", "fv-cvs", "fc-fv")
+    ref_cases = ("gen", "cvs", "fc", "fv", "fv-cvs", "fc-fv", "fc-cvs", "fc-fv-cvs")
     test_cases.append(TestCase(
         name="h2o", xyz=xyz, unit=unit, charge=0, multiplicity=1,
         basis="sto-3g", core_orbitals=1, frozen_core=1, frozen_virtual=1,

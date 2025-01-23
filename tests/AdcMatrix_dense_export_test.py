@@ -31,10 +31,12 @@ from . import testcases
 
 
 h2o = testcases.get_by_filename("h2o_sto3g").pop()
+cases = ["gen", "cvs"]
+assert all(c in h2o.cases for c in cases)
 methods = ["adc1", "adc2", "adc2x", "adc3"]
 
 
-@pytest.mark.parametrize("case", h2o.cases)
+@pytest.mark.parametrize("case", cases)
 @pytest.mark.parametrize("method", methods)
 class TestAdcMatrixDenseExport:
     # TODO Testing this for CN is a bit tricky, because

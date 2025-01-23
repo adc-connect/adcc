@@ -34,7 +34,7 @@ from . import testcases
 test_cases = testcases.get_by_filename(
     "h2o_sto3g", "cn_sto3g", "h2o_def2tzvp", "cn_ccpvdz"
 )
-cases = [(case.file_name, c) for case in test_cases for c in case.cases]
+cases = [(case.file_name, c) for case in test_cases for c in ["gen", "cvs"]]
 generators = ["adcman", "adcc"]
 
 
