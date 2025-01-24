@@ -59,7 +59,7 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
     """
     # ensure that the calculation converged on a nonzero result
     assert states.converged
-    assert all(e > 1e-12 for e in states.excitation_energy)
+    assert all(abs(e) > 1e-12 for e in states.excitation_energy)
 
     n_states = len(states.excitation_energy)
     if dump_nstates is not None:

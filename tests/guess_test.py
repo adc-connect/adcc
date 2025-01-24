@@ -355,7 +355,7 @@ class TestGuess:
     @pytest.mark.parametrize("case", cn_sto3g.cases)
     def test_singles_cn(self, method: str, case: str):
         guesses = {  # fewer guesses available
-            "cvs": 7, "fv-cvs": 5
+            "cvs": 7, "fc-cvs": 7, "fv-cvs": 5, "fc-fv-cvs": 5
         }
         self.base_test_no_spin_change(
             system="cn_sto3g", case=case, method=method, block="ph",

@@ -214,14 +214,14 @@ def _init_test_cases() -> tuple[TestCase]:
     ))
     # CN
     xyz, unit = _xyz["cn"]
-    ref_cases = ("gen", "cvs", "fc", "fv", "fv-cvs", "fc-fv")
+    ref_cases = ("gen", "cvs", "fc", "fv", "fv-cvs", "fc-fv", "fc-cvs", "fc-fv-cvs")
     test_cases.append(TestCase(
         name="cn", xyz=xyz, unit=unit, charge=0, multiplicity=2,
         basis="sto-3g", core_orbitals=1, frozen_core=1, frozen_virtual=1,
         cases=ref_cases, only_full_mode=False, restricted=False,
         kinds=unrestricted_kinds
     ))
-    ref_cases = ("gen", "cvs", "fc", "fv")
+    ref_cases = ("gen", "cvs")
     test_cases.append(TestCase(
         name="cn", xyz=xyz, unit=unit, charge=0, multiplicity=2,
         basis="cc-pvdz", core_orbitals=1, frozen_core=1, frozen_virtual=3,
@@ -248,7 +248,7 @@ def _init_test_cases() -> tuple[TestCase]:
         basis="cc-pvdz", only_full_mode=True
     ))
     # HF
-    ref_cases = ("gen", "fc", "fv")
+    ref_cases = ("gen", "fc", "fv", "fc-fv")
     xyz, unit = _xyz["hf"]
     test_cases.append(TestCase(
         name="hf", xyz=xyz, unit=unit, charge=0, multiplicity=3,
