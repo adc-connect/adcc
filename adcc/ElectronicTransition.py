@@ -213,7 +213,8 @@ class ElectronicTransition:
         if self.property_method.level == 0:
             warnings.warn("ADC(0) transition quadrupole moments are known to be "
                           "faulty in some cases.")
-        quadrupole_integrals = self.operators.electric_quadrupole_velocity(gauge_origin)
+        quadrupole_integrals = \
+            self.operators.electric_quadrupole_velocity(gauge_origin)
         return np.array([
             [[product_trace(quad1, tdm)
                 for quad1 in quad] for quad in quadrupole_integrals]

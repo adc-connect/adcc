@@ -98,7 +98,7 @@ class PyScfOperatorIntegralProvider:
                 ovlp_matrix = np.zeros_like(r_p)
                 for i in range(3):
                     ovlp_matrix[i][i] = ovlp
-                term = r_p + r_p.transpose(1,0,2,3) - ovlp_matrix
+                term = r_p + r_p.transpose(1, 0, 2, 3) - ovlp_matrix
                 term = np.reshape(term, (9, ovlp.shape[0], ovlp.shape[0]))
                 return list(term)
         return electric_quadrupole_velocity_gauge
