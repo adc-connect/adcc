@@ -34,11 +34,18 @@ from . import testcases
 methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 generators = ["adcman", "adcc"]
 
+
+# There are only distinct density matrix implementations for the
+# "gen" and "cvs" cases
+# -> no need to test other cases (fc/fv)
+# -> independent of state kind (singlet/triplet)
 test_cases = testcases.get_by_filename(
     "h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz", "hf_631g"
 )
 cases = [(case.file_name, c, kind)
-         for case in test_cases for c in case.cases for kind in case.kinds.pp]
+         for case in test_cases
+         for c in ["gen", "cvs"] if c in case.cases
+         for kind in ["singlet", "any", "spin_flip"] if kind in case.kinds.pp]
 
 
 @pytest.mark.parametrize("method", methods)

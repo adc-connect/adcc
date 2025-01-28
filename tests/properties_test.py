@@ -33,14 +33,21 @@ from .testdata_cache import testdata_cache
 from . import testcases
 
 
-methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+# The density matrices are already tested in state_densities_test.py
+# -> here we only want to test the contraction of the densities with
+#    the operator matrices
+# -> independent of method, case (gen/cvs/fc/fv) and kind (singlet/triplet)
+# Actually, the tests should also be independent of the systems, because
+# we only load some already tested density and contract it with some operator.
+methods = ["adc2"]
 generators = ["adcman", "adcc"]
 
 test_cases = testcases.get_by_filename(
     "h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz", "hf_631g"
 )
-cases = [(case.file_name, c, kind)
-         for case in test_cases for c in case.cases for kind in case.kinds.pp]
+cases = [(case.file_name, "gen", kind)
+         for case in test_cases
+         for kind in ["singlet", "any", "spin_flip"] if kind in case.kinds.pp]
 
 
 @pytest.mark.parametrize("method", methods)

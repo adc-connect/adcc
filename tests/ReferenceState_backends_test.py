@@ -41,11 +41,12 @@ backends = [b for b in adcc.backends.available() if b != "molsturm"]
 @pytest.mark.parametrize("backend", backends)
 def test_backends_import_reference_data(system: str, case: str, backend: str):
     system: testcases.TestCase = testcases.get_by_filename(system).pop()
-    if system.basis == "def2-tzvp" and system.name == "h2o" and \
-            backend == "veloxchem":
-        pytest.skip("VeloxChem does not support f-functions.")
-    if system.multiplicity == 2:
-        pytest.skip("VeloxChem does not support UHF.")
+
+    if backend == "veloxchem":
+        if system.basis == "def2-tzvp" and system.name == "h2o":
+            pytest.skip("VeloxChem does not support f-functions.")
+        if system.multiplicity != 1:
+            pytest.skip("VeloxChem does not support UHF.")
 
     compare_eri = "abs"
     if system.name == "cn":

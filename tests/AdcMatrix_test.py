@@ -36,14 +36,15 @@ from .testdata_cache import testdata_cache
 from . import testcases
 
 
-test_cases = testcases.get_by_filename("h2o_sto3g", "cn_sto3g")
 h2o_sto3g = testcases.get_by_filename("h2o_sto3g").pop()
-cases = [(case.file_name, c) for case in test_cases for c in case.cases]
 methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 
 
+# Distinct implementations of the matrix equations only exist for the cases
+# "gen" and "cvs".
 @pytest.mark.parametrize("method", methods)
-@pytest.mark.parametrize("system,case", cases)
+@pytest.mark.parametrize("case", ["gen", "cvs"])
+@pytest.mark.parametrize("system", ["h2o_sto3g", "cn_sto3g"])
 class TestAdcMatrix:
     def load_matrix_data(self, system: str, case: str, method: str) -> dict:
         refdata = testdata_cache.adcc_data(
@@ -134,8 +135,8 @@ class TestAdcMatrix:
 
 class TestAdcMatrixInterface:
     @pytest.mark.parametrize("method", methods)
-    @pytest.mark.parametrize("system,case",
-                             [("h2o_sto3g", c) for c in h2o_sto3g.cases])
+    @pytest.mark.parametrize("case", h2o_sto3g.cases)
+    @pytest.mark.parametrize("system", ["h2o_sto3g"])
     def test_properties(self, system: str, case: str, method: str):
         reference_state = testdata_cache.refstate(system=system, case=case)
         ground_state = adcc.LazyMp(reference_state)

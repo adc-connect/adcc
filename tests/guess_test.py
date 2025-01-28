@@ -343,7 +343,7 @@ class TestGuess:
     @pytest.mark.parametrize("method", doubles_methods)
     @pytest.mark.parametrize("case", h2o_sto3g.cases)
     def test_doubles_h2o(self, method: str, case: str):
-        guesses = {  # fewer guesses available?
+        guesses = {  # fewer ocvv guesses available
             "fv-cvs": 4, "fc-fv-cvs": 3
         }
         self.base_test_no_spin_change(

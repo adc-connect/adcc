@@ -34,7 +34,6 @@ methods = ["adc0", "adc1", "adc2"]
 test_cases = testcases.get_by_filename(
     "h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz"
 )
-assert all("gen" in case.cases and "cvs" in case.cases for case in test_cases)
 cases = [(case.file_name, c, kind)
          for case in test_cases for c in ["gen", "cvs"] for kind in case.kinds.pp]
 

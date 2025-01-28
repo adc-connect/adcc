@@ -70,8 +70,8 @@ class TestExcitedStates:
                 else:
                     assert_allclose(ref, res)
 
-    def test_custom_excitation_energy_correctios(self, system: str, case: str,
-                                                 method: str, kind: str):
+    def test_custom_excitation_energy_corrections(self, system: str, case: str,
+                                                  method: str, kind: str):
         state = testdata_cache.adcc_states(
             system=system, method=method, kind=kind, case=case
         )
