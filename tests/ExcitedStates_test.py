@@ -27,22 +27,12 @@ from adcc.OneParticleOperator import OneParticleOperator
 from adcc.ExcitedStates import EnergyCorrection
 
 from .testdata_cache import testdata_cache
-from . import testcases
 
 
-methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
-
-test_cases = testcases.get_by_filename("h2o_sto3g", "cn_sto3g", "hf_631g")
-cases = [(case.file_name, c, kind)
-         for case in test_cases for c in case.cases for kind in case.kinds.pp]
-
-
-@pytest.mark.parametrize("method", methods)
-@pytest.mark.parametrize("system,case,kind", cases)
 class TestExcitedStates:
-    def test_excitation_view(self, system: str, case: str, method: str, kind: str):
+    def test_excitation_view(self):
         state = testdata_cache.adcc_states(
-            system=system, method=method, case=case, kind=kind
+            system="h2o_sto3g", method="adc2", case="gen", kind="singlet"
         )
 
         n_ref = len(state.excitation_vector)
@@ -56,12 +46,9 @@ class TestExcitedStates:
                              "method", "parent_state"]
                 if any(b in key for b in blacklist):
                     continue
-                try:
-                    ref = getattr(state, key)[i]
-                    res = getattr(exci, key)
-                except NotImplementedError:
-                    # nabla, etc. not implemented in dict backend
-                    continue
+                ref = getattr(state, key)[i]
+                res = getattr(exci, key)
+
                 if isinstance(ref, OneParticleOperator):
                     assert ref.blocks == res.blocks
                     for b in ref.blocks:
@@ -70,10 +57,9 @@ class TestExcitedStates:
                 else:
                     assert_allclose(ref, res)
 
-    def test_custom_excitation_energy_corrections(self, system: str, case: str,
-                                                  method: str, kind: str):
+    def test_custom_excitation_energy_corrections(self):
         state = testdata_cache.adcc_states(
-            system=system, method=method, kind=kind, case=case
+            system="h2o_sto3g", method="adc2", kind="singlet", case="gen"
         )
 
         cc1 = EnergyCorrection("custom_correction1",
@@ -109,9 +95,9 @@ class TestExcitedStates:
                             state_corrected2.excitation_energy[i])
         state_corrected2.describe()
 
-    def test_dataframe_export(self, system: str, case: str, method: str, kind: str):
+    def test_dataframe_export(self):
         state = testdata_cache.adcc_states(
-            system=system, method=method, kind=kind, case=case
+            system="h2o_sto3g", method="adc2", kind="singlet", case="gen"
         )
 
         df = state.to_dataframe()

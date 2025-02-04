@@ -174,12 +174,12 @@ class LazyMp:
         Return the MP density in the MO basis with all corrections
         up to the specified order of perturbation theory
         """
-        if level == 1:
+        if level in [0, 1]:
             return self.reference_state.density
         elif level == 2:
             return self.reference_state.density + self.mp2_diffdm
         else:
-            raise NotImplementedError("Only densities for level 1 and 2"
+            raise NotImplementedError("Only densities for level 0, 1 and 2"
                                       " are implemented.")
 
     def dipole_moment(self, level=2):
@@ -187,12 +187,12 @@ class LazyMp:
         Return the MP dipole moment at the specified level of
         perturbation theory.
         """
-        if level == 1:
+        if level in [0, 1]:
             return self.reference_state.dipole_moment
         elif level == 2:
             return self.mp2_dipole_moment
         else:
-            raise NotImplementedError("Only dipole moments for level 1 and 2"
+            raise NotImplementedError("Only dipole moments for level 0, 1 and 2"
                                       " are implemented.")
 
     @cached_member_function
