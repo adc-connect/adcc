@@ -40,14 +40,14 @@ class PyScfOperatorIntegralProvider:
 
     @cached_property
     def electric_dipole(self):
-        """-\sum_i r_i"""
+        """-sum_i r_i"""
         return list(
                 -1.0 * self.scfres.mol.intor_symmetric('int1e_r', comp=3)
         )
 
     @cached_property
     def magnetic_dipole(self):
-        """-0.5 * \sum_i r_i x p_i"""
+        """-0.5 * sum_i r_i x p_i"""
         # TODO: Gauge origin?
         with self.scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
             return list(
@@ -58,7 +58,7 @@ class PyScfOperatorIntegralProvider:
     def nabla(self):
         # this is the electric dipole operator in the velocity gauge
         # TODO: rename
-        """-\sum_i p_i"""
+        """-sum_i p_i"""
         with self.scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
             return list(
                 self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)

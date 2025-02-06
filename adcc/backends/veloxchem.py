@@ -46,7 +46,7 @@ class VeloxChemOperatorIntegralProvider:
 
     @cached_property
     def electric_dipole(self):
-        """-\sum_i r_i"""
+        """-sum_i r_i"""
         task = self.scfdrv.task
         dipole_drv = vlx.ElectricDipoleIntegralsDriver(task.mpi_comm)
         dipole_mats = dipole_drv.compute(task.molecule, task.ao_basis)
@@ -55,7 +55,7 @@ class VeloxChemOperatorIntegralProvider:
 
     @cached_property
     def magnetic_dipole(self):
-        """-0.5 * \sum_i r_i x p_i"""
+        """-0.5 * sum_i r_i x p_i"""
         # TODO: Gauge origin?
         task = self.scfdrv.task
         angmom_drv = AngularMomentumIntegralsDriver(task.mpi_comm)
@@ -67,7 +67,7 @@ class VeloxChemOperatorIntegralProvider:
     def nabla(self):
         # this is the electric dipole operator in the velocity gauge
         # TODO: rename
-        """-\sum_i p_i"""
+        """-sum_i p_i"""
         task = self.scfdrv.task
         linmom_drv = LinearMomentumIntegralsDriver(task.mpi_comm)
         linmom_mats = linmom_drv.compute(task.molecule, task.ao_basis)

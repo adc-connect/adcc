@@ -40,12 +40,12 @@ class Psi4OperatorIntegralProvider:
 
     @cached_property
     def electric_dipole(self):
-        """-\sum_i r_i"""
+        """-sum_i r_i"""
         return [np.asarray(comp) for comp in self.mints.ao_dipole()]
 
     @cached_property
     def magnetic_dipole(self):
-        """-0.5 * \sum_i r_i x p_i"""
+        """-0.5 * sum_i r_i x p_i"""
         # TODO: Gauge origin?
         return [
             -0.5 * np.asarray(comp)
@@ -56,7 +56,7 @@ class Psi4OperatorIntegralProvider:
     def nabla(self):
         # this is the electric dipole operator in the velocity gauge
         # TODO: rename
-        """-\sum_i p_i"""
+        """-sum_i p_i"""
         return [np.asarray(comp) for comp in self.mints.ao_nabla()]
 
     @property
