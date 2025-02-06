@@ -1,7 +1,7 @@
 from tests.testdata_cache import testdata_cache
 from tests import testcases
 
-from adcc import ReferenceState
+import adcc
 from adcc.hdf5io import emplace_dict
 
 from pathlib import Path
@@ -29,9 +29,10 @@ def dump_imported(test_case: testcases.TestCase):
         # and write in the hdf5 file
         case_group = hdf5_file.create_group(case)
         emplace_dict(data, case_group, compression="gzip")
+        case_group.attrs["adcc_version"] = adcc.__version__
 
 
-def collect_data(refstate: ReferenceState) -> dict:
+def collect_data(refstate: adcc.ReferenceState) -> dict:
     subspaces = refstate.mospaces.subspaces
 
     # dump the subspaces

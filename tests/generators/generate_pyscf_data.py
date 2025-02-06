@@ -1,4 +1,5 @@
 import adcc
+import pyscf
 from pyscf import gto, scf, tdscf
 from pyscf.solvent import ddCOSMO
 
@@ -101,6 +102,7 @@ def main():
         key, res = dump_results(case, pcm_options=pcm_options)
         pyscf_results[key] = res
         print(f"Dumped {key}.")
+    pyscf_results["pyscf_version"] = pyscf.__version__
 
     dump_file = Path(__file__).parent.parent / _testdata_dirname / "pyscf_data.json"
     json.dump(pyscf_results, open(dump_file, "w"), indent=2)

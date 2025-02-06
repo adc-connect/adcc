@@ -1,3 +1,4 @@
+import adcc
 from adcc.AdcMatrix import AdcMatrix
 from adcc.AmplitudeVector import AmplitudeVector
 from adcc.ExcitedStates import ExcitedStates
@@ -48,6 +49,7 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group) -> None:
     gs_data[f"{gs}2/dm_bb_b"] = dm_bb_b.to_ndarray()
     # write the data to hdf5
     emplace_dict(gs_data, hdf5_file, compression="gzip")
+    hdf5_file.attrs["adcc_version"] = adcc.__version__
 
 
 def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
@@ -133,6 +135,7 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
             )
     # write the data to hdf5
     emplace_dict(kind_data, hdf5_file, compression="gzip")
+    hdf5_file.attrs["adcc_version"] = adcc.__version__
 
 
 def dump_matrix_testdata(matrix: AdcMatrix, trial_vec: AmplitudeVector,
@@ -178,3 +181,4 @@ def dump_matrix_testdata(matrix: AdcMatrix, trial_vec: AmplitudeVector,
         data["random_doubles"] = trial_vec[blocks[1]].to_ndarray()
     # write the data to hdf5
     emplace_dict(data, hdf5_file, compression="gzip")
+    hdf5_file.attrs["adcc_version"] = adcc.__version__

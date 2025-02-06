@@ -121,6 +121,7 @@ def main():
         key, res = dump_results(test_case=case, pcm_options=pcm_options)
         psi4_results[key] = res
         print(f"Dumped {key}.")
+    psi4_results["psi4_version"] = psi4.__version__
 
     dump_file = Path(__file__).parent.parent / _testdata_dirname / "psi4_data.json"
     json.dump(psi4_results, open(dump_file, "w"), indent=2)
