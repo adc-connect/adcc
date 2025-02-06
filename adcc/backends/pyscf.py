@@ -42,7 +42,7 @@ class PyScfOperatorIntegralProvider:
     def electric_dipole(self):
         """-sum_i r_i"""
         return list(
-                -1.0 * self.scfres.mol.intor_symmetric('int1e_r', comp=3)
+            -1.0 * self.scfres.mol.intor_symmetric('int1e_r', comp=3)
         )
 
     @cached_property
