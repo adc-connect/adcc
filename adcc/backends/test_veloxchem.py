@@ -119,12 +119,12 @@ class TestVeloxchem(unittest.TestCase):
             assert_almost_equal(eri_perm, eri)
 
     def operators_test(self, scfdrv):
-        # Test dipole
+        # Test electric dipole
         dipole_drv = vlx.ElectricDipoleIntegralsDriver(scfdrv.task.mpi_comm)
         dipole_mats = dipole_drv.compute(scfdrv.task.molecule,
                                          scfdrv.task.ao_basis)
-        integrals = (dipole_mats.x_to_numpy(), dipole_mats.y_to_numpy(),
-                     dipole_mats.z_to_numpy())
+        integrals = (-1.0 * dipole_mats.x_to_numpy(), -1.0 * dipole_mats.y_to_numpy(),
+                     -1.0 * dipole_mats.z_to_numpy())
         operator_import_from_ao_test(scfdrv, integrals,
                                      operator="electric_dipole")
 
@@ -133,8 +133,8 @@ class TestVeloxchem(unittest.TestCase):
         angmom_mats = angmom_drv.compute(scfdrv.task.molecule,
                                          scfdrv.task.ao_basis)
         integrals = (
-            0.5 * angmom_mats.x_to_numpy(), 0.5 * angmom_mats.y_to_numpy(),
-            0.5 * angmom_mats.z_to_numpy()
+            -0.5 * angmom_mats.x_to_numpy(), -0.5 * angmom_mats.y_to_numpy(),
+            -0.5 * angmom_mats.z_to_numpy()
         )
         operator_import_from_ao_test(scfdrv, integrals,
                                      operator="magnetic_dipole")

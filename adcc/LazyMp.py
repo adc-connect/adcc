@@ -270,7 +270,7 @@ class LazyMp:
     def mp2_dipole_moment(self):
         refstate = self.reference_state
         dipole_integrals = refstate.operators.electric_dipole
-        mp2corr = -np.array([product_trace(comp, self.mp2_diffdm)
+        mp2corr = np.array([product_trace(comp, self.mp2_diffdm)
                              for comp in dipole_integrals])
         return refstate.dipole_moment + mp2corr
 

@@ -218,7 +218,7 @@ class ElectronicTransition:
     @cached_property
     @mark_excitation_property()
     def rotatory_strength(self):
-        """List of rotatory strengths of all computed states"""
+        """List of rotatory strengths in velocity gauge of all computed states"""
         return np.array([
             np.dot(tdm, magmom) / ee
             for tdm, magmom, ee in zip(self.transition_dipole_moment_velocity,

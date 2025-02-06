@@ -221,8 +221,7 @@ class ReferenceState(libadcc.ReferenceState):
         the electronic and the nuclear contribution.)
         """
         dipole_integrals = self.operators.electric_dipole
-        # Notice the negative sign due to the negative charge of the electrons
-        return self.nuclear_dipole - np.array([product_trace(comp, self.density)
+        return self.nuclear_dipole + np.array([product_trace(comp, self.density)
                                                for comp in dipole_integrals])
 
 # TODO some nice describe method
