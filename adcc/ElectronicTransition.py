@@ -201,8 +201,8 @@ class ElectronicTransition:
                           "faulty in some cases.")
         quadrupole_integrals = self.operators.electric_quadrupole(gauge_origin)
         return np.array([
-            [[product_trace(quad1, tdm)
-                for quad1 in quad] for quad in quadrupole_integrals]
+            [[product_trace(quad1, tdm) for quad1 in quad]
+            for quad in quadrupole_integrals]
             for tdm in self.transition_dm
         ])
 
@@ -216,8 +216,8 @@ class ElectronicTransition:
         quadrupole_integrals = \
             self.operators.electric_quadrupole_velocity(gauge_origin)
         return np.array([
-            [[product_trace(quad1, tdm)
-                for quad1 in quad] for quad in quadrupole_integrals]
+            [[product_trace(quad1, tdm) for quad1 in quad]
+            for quad in quadrupole_integrals]
             for tdm in self.transition_dm
         ])
 
