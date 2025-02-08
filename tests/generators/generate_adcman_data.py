@@ -117,11 +117,10 @@ def generate_groundstate(test_case: testcases.TestCase) -> None:
 
         gs_data = {}
         for density_order in gs_density_orders:
-            # run a adc calculation for a single singlet state:
-            # we have to ask for a state for adcman to do sth
+            # run a adc calculation asking for zero excited states
             _, data = run_qchem(
                 test_case, method=method, case=case, import_states=False,
-                import_gs=True, n_states=1, gs_density_order=density_order
+                import_gs=True, gs_density_order=density_order
             )
             # add the newly generated data to the gs_data
             for key, val in data.items():

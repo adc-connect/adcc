@@ -161,10 +161,18 @@ def generate_cn_sto3g():
         method = AdcMethod(method)
         for n_states in \
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
-            n_states = {n_states: 3}
-            generate_adc_all(
-                test_case, method=method, dump_nstates=2, **n_states
-            )
+            kwargs = {n_states: 3}
+            # apparently we need to find a 2p-2h state for fc-cvs-adc3
+            # according to adcman
+            for case in test_case.cases:
+                if "fc" in case and "cvs" in case and method.level == 3:
+                    kwargs[n_states] = 4
+                    kwargs["n_guesses_doubles"] = 1
+                for density_order in test_case.gs_density_orders:
+                    generate_adc(
+                        test_case=test_case, method=method, case=case,
+                        dump_nstates=2, gs_density_order=density_order, **kwargs
+                    )
 
 
 def generate_cn_ccpvdz():

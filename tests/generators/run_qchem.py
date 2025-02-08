@@ -70,8 +70,6 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
         if method.is_core_valence_separated:
             raise ValueError("gs_density_order not available for CVS-ADC.")
 
-    if not n_states and not n_singlets and not n_triplets and not n_spin_flip:
-        raise ValueError("No excited states requested. Adcman will do nothing.")
     # get the number of core, frozen core and frozen virtual orbitals
     # from the test case.
     n_core_orbitals = test_case.core_orbitals if "cvs" in case else 0
