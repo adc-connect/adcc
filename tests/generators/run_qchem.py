@@ -229,9 +229,7 @@ def is_canonical_eri_block(block: str | tuple[str]) -> bool:
     ket_canonical = sorted(ket)
     if ket_canonical < bra_canonical:  # swap bra and ket
         bra_canonical, ket_canonical = ket_canonical, bra_canonical
-    if bra == bra_canonical and ket == ket_canonical:
-        return True
-    return False
+    return bra == bra_canonical and ket == ket_canonical
 
 
 def collect_ao_integrals(pyscf_data: h5py.File) -> dict:

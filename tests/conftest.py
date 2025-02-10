@@ -1,12 +1,20 @@
 from . import testcases
 
+from pathlib import Path
 import os
 import pytest
+import subprocess
+
+
+_testdata_dirname = "data"
 
 
 def update_testdata(session):
-    # TODO: implement once descided where the test data is stored
-    pass
+    testdata_dir = Path(__file__).resolve().parent / _testdata_dirname
+    cmd = [f"{testdata_dir}/update_testdata.sh"]
+    if session.config.option.mode == "full":
+        cmd.append("--full")
+    subprocess.check_call(cmd)
 
 
 #
