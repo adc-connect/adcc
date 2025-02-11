@@ -38,7 +38,7 @@ jobs:
             ${{ runner.os }}-test-
             ${{ runner.os }}-
       - name: Install system dependencies on Linux
-        run: sudo apt-get install libopenblas-base ccache doxygen lcov
+        run: sudo apt-get install libopenblas-dev ccache doxygen lcov
         if: contains( matrix.os, 'ubuntu')
       - name: Install system dependencies on macOS
         run:  brew install ccache doxygen lcov
@@ -66,10 +66,10 @@ jobs:
           pip install --user .[tests]
       - name: Run python tests with std allocator
         run: |
-          python -m pytest adcc --cov=adcc
+          python -m pytest --cov=adcc
       - name: Run reduced python tests with libxm
         run: |
-          python -m pytest adcc --allocator=libxm -k "TestFunctionality and h2o_sto3g"
+          python -m pytest --allocator=libxm -k "TestFunctionality and h2o_sto3g"
       - name: Run C++ tests
         run: python setup.py cpptest -v
       # Documentation build
@@ -152,7 +152,7 @@ jobs:
         with:
           activate-environment: adcc-dev
           environment-file: conda/environment.yml
-          miniforge-variant: Mambaforge
+          miniforge-variant: Miniforge3
           use-mamba: true
           miniforge-version: latest
           python-version: ${{ matrix.version }}
