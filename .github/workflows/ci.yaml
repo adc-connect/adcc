@@ -41,7 +41,8 @@ jobs:
         run: sudo apt-get install libopenblas-dev ccache doxygen lcov
         if: contains( matrix.os, 'ubuntu')
       - name: Install system dependencies on macOS
-        run:  brew install ccache doxygen lcov
+        # coreutils for sha256sum for update_testdata.sh
+        run:  brew install ccache doxygen lcov coreutils
         if: contains( matrix.os, 'macos')
       #
       - name: Dump siteconfig with coverage flags for C++
@@ -173,7 +174,7 @@ jobs:
           CXXFLAGS="$(echo $CXXFLAGS | sed 's/-fvisibility-inlines-hidden //g')"
           pip install .[tests] --user
           # NOTE: pcmsolver not 'linked' with Psi4 1.8
-          pytest adcc -k "not pcm"
+          pytest -k "not pcm"
           # python setup.py cpptest -v  # TODO: currently doesn't compile...
       #
       # - name: Upload coverage to codecov
