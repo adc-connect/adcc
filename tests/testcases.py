@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 # NOTE: Can't use a dict, because TestCase has to be hashable.
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class Kinds:
     pp: tuple[str] = tuple()
     ip: tuple[str] = tuple()
@@ -14,7 +14,7 @@ class Kinds:
         return getattr(self, key)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class TestCase:
     name: str
     xyz: str

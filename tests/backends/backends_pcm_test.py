@@ -8,7 +8,6 @@ from numpy.testing import assert_allclose
 import adcc
 import adcc.backends
 from adcc.AdcMatrix import AdcExtraTerm
-import adcc.backends.psi4
 from adcc.exceptions import InputError
 from adcc.adc_pp.environment import block_ph_ph_0_pcm
 
@@ -225,7 +224,7 @@ def remove_cavity_psi4():
 def psi4_run_pcm_hf(xyz: str, basis: str, charge: int = 0, multiplicity: int = 1,
                     conv_tol: float = 1e-12, conv_tol_grad: float = 1e-11,
                     max_iter: int = 150, options: dict = None,
-                    pcm_options: dict = None) -> adcc.backends.psi4.Psi4HFProvider:
+                    pcm_options: dict = None):
 
     import psi4
 

@@ -33,7 +33,7 @@ def compare_refstate_with_reference(system: str, case: str,
                                     data: dict, reference: dict,
                                     scfres=None, compare_orbcoeff: bool = True,
                                     compare_eri: str = "value"):
-    # - data is the data to build a ReferenceState on top. If scref is given
+    # - data is the data to build a ReferenceState on top. If scfres is given
     # it will be used instead of data. We check that the data of the constructed
     # ReferenceState is consistent with data!
     # - reference is the dumped hfimport data against which we check that the
