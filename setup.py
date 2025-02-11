@@ -493,7 +493,7 @@ adccsetup(
         "Operating System :: POSIX :: Linux",
     ],
     #
-    packages=find_packages(exclude=["*.test*", "test"]),
+    packages=find_packages(exclude=["tests*", "examples*", "docs*"]),
     ext_modules=[libadcc_extension()],
     zip_safe=False,
     #
@@ -508,7 +508,7 @@ adccsetup(
         "tqdm >= 4.30",
     ],
     extras_require={
-        "tests": ["pytest", "pytest-cov", "pyyaml", "pandas >= 0.25.0"],
+        "tests": ["pytest", "pytest-cov", "pandas >= 0.25.0"],
         "build_docs": ["sphinx>=2", "breathe", "sphinxcontrib-bibtex",
                        "sphinx-automodapi", "sphinx-rtd-theme"],
         "analysis": ["matplotlib >= 3.0", "pandas >= 0.25.0"],

@@ -67,10 +67,10 @@ jobs:
           pip install --user .[tests]
       - name: Run python tests with std allocator
         run: |
-          python -m pytest . --cov=adcc
+          python -m pytest --cov=adcc
       - name: Run reduced python tests with libxm
         run: |
-          python -m pytest . --allocator=libxm -k "TestFunctionality and h2o_sto3g"
+          python -m pytest --allocator=libxm -k "TestFunctionality and h2o_sto3g"
       - name: Run C++ tests
         run: python setup.py cpptest -v
       # Documentation build
@@ -178,7 +178,7 @@ jobs:
           CXXFLAGS="$(echo $CXXFLAGS | sed 's/-fvisibility-inlines-hidden //g')"
           pip install .[tests] --user
           # NOTE: pcmsolver not 'linked' with Psi4 1.8
-          pytest . -k "not pcm"
+          pytest -k "not pcm"
           # python setup.py cpptest -v  # TODO: currently doesn't compile...
       #
       # - name: Upload coverage to codecov
