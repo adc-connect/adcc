@@ -216,9 +216,9 @@ std::shared_ptr<Tensor> import_eri_chem_then_asym(const HartreeFockSolution_i& h
                                          strides[3] * i3;
                       buffer[offset + idx] = 0.0;
                     }  // i3
-                  }    // i2
-                }      // i1
-              }        // i0
+                  }  // i2
+                }  // i1
+              }  // i0
             }
 
             if (need_1203) {
@@ -253,12 +253,12 @@ std::shared_ptr<Tensor> import_eri_chem_then_asym(const HartreeFockSolution_i& h
                                            o_strides[3] * i3;
                       buffer[offset + idx] = buffer[offset + idx] - other[o_idx];
                     }  // i3
-                  }    // i2
-                }      // i1
-              }        // i0
+                  }  // i2
+                }  // i1
+              }  // i0
 
             }  // need_1203
-          }    // map : mappings
+          }  // map : mappings
         };
   eri->import_from(gen_translate_chem_asym, hf.conv_tol(), symmetry_check_on_import);
   hf.flush_cache();
