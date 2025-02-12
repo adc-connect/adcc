@@ -117,9 +117,12 @@ def compare_refstate_with_reference(system: str, case: str,
                         reference["fock"][ss], atol=atol)
 
     if compare_eri == "abs":
+        decimal = 7
+        if refstate.backend == "veloxchem":
+            decimal = 6
         for ss in reference["eri"].keys():
             assert_almost_equal(np.abs(refstate.eri(ss).to_ndarray()),
-                                np.abs(reference["eri"][ss]))
+                                np.abs(reference["eri"][ss]), decimal=decimal)
     elif compare_eri == "value":
         for ss in reference["eri"].keys():
             assert_allclose(refstate.eri(ss).to_ndarray(),

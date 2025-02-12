@@ -39,6 +39,7 @@ if have_backend("veloxchem"):
 
 
 h2o = testcases.get_by_filename("h2o_sto3g", "h2o_ccpvdz")
+ch2nh2 = testcases.get(n_expected_cases=2, name="ch2nh2")
 
 
 @pytest.mark.skipif(
@@ -66,7 +67,17 @@ class TestVeloxchem:
             mo_energy = (scfdrv.mol_orbs.ea_to_numpy(),
                          scfdrv.mol_orbs.ea_to_numpy())
         else:
-            raise NotImplementedError()
+            assert hfdata.n_alpha >= hfdata.n_beta
+
+            # Check SCF type fits
+            assert isinstance(scfdrv, (vlx. ScfUnrestrictedDriver))
+            n_mo = scfdrv.mol_orbs.number_mos()
+            n_alpha = np.sum(
+                scfdrv.task.molecule.get_aufbau_alpha_occupation(n_mo) > 0)
+            n_beta = np.sum(
+                scfdrv.task.molecule.get_aufbau_beta_occupation(n_mo) > 0)
+            mo_energy = (scfdrv.mol_orbs.ea_to_numpy(),
+                         scfdrv.mol_orbs.eb_to_numpy())
 
         # Check n_alpha and n_beta
         assert hfdata.n_alpha == n_alpha
@@ -79,7 +90,8 @@ class TestVeloxchem:
         assert_array_equal(np.sort(mo_energy[1]), mo_energy[1])
 
         mo_coeff_a = scfdrv.mol_orbs.alpha_to_numpy()
-        mo_coeff = (mo_coeff_a, mo_coeff_a)
+        mo_coeff_b = scfdrv.mol_orbs.beta_to_numpy()
+        mo_coeff = (mo_coeff_a, mo_coeff_b)
 
         # occupation_f
         occu = np.zeros(2 * n_orbs_alpha)
@@ -117,6 +129,7 @@ class TestVeloxchem:
     def operators_test(self, scfdrv):
         # Test dipole
         dipole_drv = vlx.ElectricDipoleIntegralsDriver(scfdrv.task.mpi_comm)
+        dipole_drv.origin = tuple(np.zeros(3))
         dipole_mats = dipole_drv.compute(scfdrv.task.molecule,
                                          scfdrv.task.ao_basis)
         integrals = (dipole_mats.x_to_numpy(), dipole_mats.y_to_numpy(),
@@ -126,6 +139,7 @@ class TestVeloxchem:
 
         # Test magnetic dipole
         angmom_drv = AngularMomentumIntegralsDriver(scfdrv.task.mpi_comm)
+        angmom_drv.origin = tuple(np.zeros(3))
         angmom_mats = angmom_drv.compute(scfdrv.task.molecule,
                                          scfdrv.task.ao_basis)
         integrals = (
@@ -147,6 +161,18 @@ class TestVeloxchem:
     @pytest.mark.parametrize("system", h2o, ids=[case.file_name for case in h2o])
     def test_rhf(self, system: testcases.TestCase):
         scfdrv = adcc.backends.run_hf("veloxchem", system.xyz, system.basis)
+        self.base_test(scfdrv)
+        self.operators_test(scfdrv)
+        # Test ERI
+        eri_asymm_construction_test(scfdrv)
+        eri_asymm_construction_test(scfdrv, core_orbitals=1)
+
+    @pytest.mark.parametrize("system", ch2nh2,
+                             ids=[case.file_name for case in ch2nh2])
+    def test_uhf(self, system: testcases.TestCase):
+        scfdrv = adcc.backends.run_hf("veloxchem", system.xyz, system.basis,
+                                      charge=system.charge,
+                                      multiplicity=system.multiplicity)
         self.base_test(scfdrv)
         self.operators_test(scfdrv)
         # Test ERI

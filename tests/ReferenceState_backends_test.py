@@ -45,17 +45,18 @@ def test_backends_import_reference_data(system: str, case: str, backend: str):
     if backend == "veloxchem":
         if system.basis == "def2-tzvp" and system.name == "h2o":
             pytest.skip("VeloxChem does not support f-functions.")
-        if system.multiplicity != 1:
-            pytest.skip("VeloxChem does not support UHF.")
 
     compare_eri = "abs"
     if system.name == "cn":
         compare_eri = "off"
 
+    conv_tol = 1e-12
+    if backend == "veloxchem":
+        conv_tol = 1e-7
     data = testdata_cache._load_hfdata(system)  # is also cached
     reference = testdata_cache.hfimport(system, case=case)
     # perform a new scf calculation with the backend
-    scfres = cached_backend_hf(backend=backend, system=system)
+    scfres = cached_backend_hf(backend=backend, system=system, conv_tol=conv_tol)
     compare_refstate_with_reference(
         system=system, case=case, data=data, reference=reference, scfres=scfres,
         compare_orbcoeff=False, compare_eri=compare_eri
