@@ -203,12 +203,7 @@ def cached_backend_hf(backend: str, system: str, conv_tol=1e-12, pe_options=None
                                      pe_options=pe_options)
         return adcc.backends.import_scf_results(hfres)
 
-    # For reasons not clear to me (mfh), caching does not work
-    # with pyscf
-    if backend == "pyscf":
-        return payload()
-
-    key = (backend, system)
+    key = (backend, system, conv_tol)
     try:
         return __cache_cached_backend_hf[key]
     except NameError:

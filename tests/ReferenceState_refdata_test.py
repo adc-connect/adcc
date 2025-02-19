@@ -92,12 +92,9 @@ def compare_refstate_with_reference(system: str, case: str,
                     multipoles["nuclear_1"], atol=atol)
 
     # This only makes sense if we used scfres to construct refstate.
-    if scfres is not None and "electric_dipole" in refstate.operators.available \
+    if "electric_dipole" in refstate.operators.available \
             and "elec_1" in multipoles:
-        refstate2 = adcc.ReferenceState(
-            data, core_orbitals=core_orbitals, frozen_core=frozen_core,
-            frozen_virtual=frozen_virtual
-        )
+        refstate2 = adcc.ReferenceState(data)
         assert_allclose(
             refstate.dipole_moment, refstate2.dipole_moment, atol=atol
         )

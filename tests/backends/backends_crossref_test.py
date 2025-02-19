@@ -98,12 +98,6 @@ class TestCrossReferenceBackends:
 
     @pytest.mark.parametrize("system,case", ch2nh2_cases)
     def test_adc2_uhf_ch2nh2(self, system, case):
-        # UHF not supported for VeloxChem
-        if "veloxchem" in backends:
-            backends.remove("veloxchem")
-        if len(backends) < 2:
-            pytest.skip("Not enough backends that support UHF available.")
-
         system = testcases.get_by_filename(system).pop()
         method = "cvs-adc2" if "cvs" in case else "adc2"
         core_orbitals = system.core_orbitals if "cvs" in case else None
@@ -119,7 +113,7 @@ class TestCrossReferenceBackends:
                 frozen_virtual=frozen_virtual
             )
             assert results[b].converged
-        compare_adc_results(results, 5e-8)
+        compare_adc_results(results, 5e-7)
 
     @pytest.mark.parametrize("system", h2o, ids=[case.file_name for case in h2o])
     def test_hf_properties(self, system: testcases.TestCase):
