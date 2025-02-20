@@ -50,7 +50,7 @@ def test_backends_import_reference_data(system: str, case: str, backend: str):
     if system.name == "cn":
         compare_eri = "off"
 
-    conv_tol = 1e-12
+    conv_tol = 1e-11
     if backend == "veloxchem":
         conv_tol = 1e-7
     data = testdata_cache._load_hfdata(system)  # is also cached

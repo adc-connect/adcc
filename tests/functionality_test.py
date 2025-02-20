@@ -139,11 +139,6 @@ class TestFunctionality:
                 kwargs[n_states] = 1
             elif "cvs" in case:
                 kwargs[n_states] = 2
-        # fc-cvs cn_sto3g adc3: we need to find a 2p-2h state...
-        if system.name == "cn" and system.basis == "sto-3g" and method.level == 3 \
-                and "fc" in case and "cvs" in case:
-            kwargs[n_states] = 4
-            kwargs["n_guesses_doubles"] = 1
 
         self.base_test(
             system=system, case=case, method=method.name, kind=kind,

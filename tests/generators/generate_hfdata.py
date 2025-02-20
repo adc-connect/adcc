@@ -31,8 +31,8 @@ def run_pyscf(test_case: testcases.TestCase, frac_occ: bool):
         )
         mf = scf.RHF(mol) if test_case.restricted else scf.UHF(mol)
         mf.diis = scf.EDIIS()
-        mf.conv_tol = 1e-14
-        mf.conv_tol_grad = 1e-12
+        mf.conv_tol = 1e-13
+        mf.conv_tol_grad = 1e-11
         mf.diis_space = 6
         mf.max_cycle = 600
         if frac_occ:

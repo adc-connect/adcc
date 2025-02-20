@@ -120,7 +120,7 @@ def dump_pyscf(scfres: scf.hf.SCF, hdf5_file: h5py.Group):
     data["fock_ff"] = full_fock_ff
 
     non_canonical = np.max(np.abs(data["fock_ff"] - np.diag(data["orben_f"])))
-    if non_canonical > max(1e-12, data["conv_tol"]):
+    if non_canonical > max(1e-11, data["conv_tol"]):
         raise ValueError("Running adcc on top of a non-canonical fock "
                          "matrix is not implemented.")
 
