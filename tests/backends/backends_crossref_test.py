@@ -54,6 +54,15 @@ class TestCrossReferenceBackends:
     @pytest.mark.parametrize("system,case", h2o_cases)
     def test_adc2_h2o(self, system, case):
         system = testcases.get_by_filename(system).pop()
+        # Veloxchem does not support f-functions.
+        # Define local variable to track which backends should be tested.
+        if "veloxchem" in backends and system.basis == "def2-tzvp":
+            backends_test = [b for b in backends if b != "veloxchem"]
+        else:
+            backends_test = [b for b in backends]
+        if len(backends_test) < 2:
+            pytest.skip("Veloxchem does not support f-functions. "
+                        "Not enough backends that support UHF available.")
 
         # fewer states available for fc-fv-cvs
         n_states = 5
@@ -66,7 +75,7 @@ class TestCrossReferenceBackends:
         frozen_virtual = system.frozen_virtual if "fv" in case else None
 
         results = {}
-        for b in backends:
+        for b in backends_test:
             scfres = cached_backend_hf(b, system, conv_tol=1e-10)
             results[b] = adcc.run_adc(
                 scfres, method=method, n_singlets=n_states, conv_tol=1e-9,
@@ -79,14 +88,22 @@ class TestCrossReferenceBackends:
     @pytest.mark.parametrize("system,case", methox_cases)
     def test_adc2_r2methyloxirane(self, system, case):
         system = testcases.get_by_filename(system).pop()
-
+        # Veloxchem not available for (R)-2-Methyloxirane.
+        # Define local variable to track which backends should be tested.
+        if "veloxchem" in backends:
+            backends_test = [b for b in backends if b != "veloxchem"]
+        else:
+            backends_test = [b for b in backends]
+        if len(backends_test) < 2:
+            pytest.skip("Veloxchem not available for (R)-2-Methyloxirane. "
+                        "Not enough backends available.")
         method = "cvs-adc2" if "cvs" in case else "adc2"
         core_orbitals = system.core_orbitals if "cvs" in case else None
         frozen_core = system.frozen_core if "fc" in case else None
         frozen_virtual = system.frozen_virtual if "fv" in case else None
 
         results = {}
-        for b in backends:
+        for b in backends_test:
             scfres = cached_backend_hf(b, system, conv_tol=1e-10)
             results[b] = adcc.run_adc(
                 scfres, method=method, n_singlets=3, conv_tol=1e-8,
@@ -117,8 +134,17 @@ class TestCrossReferenceBackends:
 
     @pytest.mark.parametrize("system", h2o, ids=[case.file_name for case in h2o])
     def test_hf_properties(self, system: testcases.TestCase):
+        # Veloxchem does not support f-functions.
+        # Define local variable to track which backends should be tested.
+        if "veloxchem" in backends and system.basis == "def2-tzvp":
+            backends_test = [b for b in backends if b != "veloxchem"]
+        else:
+            backends_test = [b for b in backends]
+        if len(backends_test) < 2:
+            pytest.skip("Veloxchem does not support f-functions. "
+                        "Not enough backends that support UHF available.")
         results = {}
-        for b in backends:
+        for b in backends_test:
             results[b] = adcc.ReferenceState(cached_backend_hf(b, system))
         compare_hf_properties(results, 5e-9)
 
