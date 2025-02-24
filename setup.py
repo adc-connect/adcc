@@ -418,7 +418,9 @@ def libadcc_extension():
     ext = Pybind11Extension("libadcc", libadcc_sources("extension"),
                             language="c++", **extargs)
     if flags["coverage"]:
-        ext.extra_compile_args += ["--coverage", "-O0", "-g"]
+        ext.extra_compile_args += [
+            "--coverage", "-O0", "-g", "-fprofile-update=atomic"
+        ]
         ext.extra_link_args += ["--coverage"]
     return ext
 
