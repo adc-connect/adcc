@@ -92,7 +92,7 @@ jobs:
         run: |
           pip install codecov
           codecov -X gcov
-          lcov --directory . --capture --output-file coverage.info
+          lcov --keep-going --directory . --capture --output-file coverage.info
           lcov --remove coverage.info '/opt/*' '/Applications/*' '/Library/*' '/usr/*' "${HOME}"'/.cache/*' "${HOME}"'/.local/*' "${PWD}"'/build/*' "${PWD}"'/libadcc/tests/*' --output-file coverage.info
           lcov --list coverage.info
           codecov -X gcov -f coverage.info
