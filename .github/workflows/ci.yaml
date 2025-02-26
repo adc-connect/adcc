@@ -89,6 +89,9 @@ jobs:
         if: matrix.documentation
       #
       - name: Upload coverage to codecov
+        # Note: lcov curerntly produces some error and therefore requires the keep-going flag to complete.
+        # Since the error might be the result of some gcc/gcov bug, I don't know how to resolve it currently.
+        # lcov < 2.0 apparently did hide a lot of errors from the user so the problem might have been around for some time already...
         run: |
           pip install codecov
           codecov -X gcov
