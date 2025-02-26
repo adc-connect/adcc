@@ -266,12 +266,29 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             n_ss_added = 0
             for i in range(n_block):
                 pvec = preconds[i]
-                # Project out the components of the current subspace
+                # Project out the components of the current subspace using
+                # conventional Gram-Schmidt (CGS) procedure.
                 # That is form (1 - SS * SS^T) * pvec = pvec + SS * (-SS^T * pvec)
                 coefficients = np.hstack(([1], -(pvec @ SS)))
                 pvec = lincomb(coefficients, [pvec] + SS, evaluate=True)
                 pnorm = np.sqrt(pvec @ pvec)
-                if pnorm > residual_min_norm:
+                if pnorm < residual_min_norm:
+                    continue
+                # Perform reorthogonalisation if loss of orthogonality is
+                # detected; this comes at the expense of computing n_ss_vec
+                # additional scalar products but avoids linear dependence
+                # within the subspace.
+                with state.timer.record("reorthogonalisation"):
+                    ss_overlap = np.array(pvec @ SS)
+                    max_ortho_loss = np.max(np.abs(ss_overlap)) / pnorm
+                    if max_ortho_loss > n_problem * eps:
+                        # Update pvec by instance reorthogonalised against SS
+                        # using a second CGS. Also update pnorm.
+                        coefficients = np.hstack(([1], -ss_overlap))
+                        pvec = lincomb(coefficients, [pvec] + SS, evaluate=True)
+                        pnorm = np.sqrt(pvec @ pvec)
+                        state.reortho_triggers.append(max_ortho_loss)
+                if pnorm >= residual_min_norm:
                     # Extend the subspace
                     SS.append(evaluate(pvec / pnorm))
                     n_ss_added += 1
@@ -284,8 +301,10 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
                 state.subspace_orthogonality = np.max(np.abs(orth))
                 if state.subspace_orthogonality > n_problem * eps:
                     warnings.warn(la.LinAlgWarning(
-                        "Subspace in davidson has lost orthogonality. "
-                        "Expect inaccurate results."
+                        "Subspace in Davidson has lost orthogonality. "
+                        "Max. deviation from orthogonality is {:.4E}. "
+                        "Expect inaccurate results.".format(
+                            state.subspace_orthogonality)
                     ))
 
         if n_ss_added == 0:

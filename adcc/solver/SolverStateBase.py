@@ -39,6 +39,7 @@ class EigenSolverStateBase:
         self.converged = False            # Flag whether iteration is converged
         self.n_iter = 0                   # Number of iterations
         self.n_applies = 0                # Number of applies
+        self.reortho_triggers = []        # List of reorthogonalisation triggers
         self.timer = Timer()              # Construct a new timer
 
     def describe(self):
@@ -56,6 +57,10 @@ class EigenSolverStateBase:
         text += "| {0:<41s}  {1:>15s} |\n".format(algorithm, conv)
         text += ("| {0:30s} n_iter={1:<3d}  n_applies={2:<5d} |\n"
                  "".format(problem[:30], self.n_iter, self.n_applies))
+        text += ("| n_reortho={0:<7d}  max_overlap_before_reortho={1:<10s}   |\n"
+                 "".format(len(self.reortho_triggers),
+                           "{:<10.4E}".format(max(self.reortho_triggers))
+                           if len(self.reortho_triggers) > 0 else "N/A"))
         text += "+" + 60 * "-" + "+\n"
         text += ("|  #     eigenvalue  res. norm       "
                  "dominant elements       |\n")
