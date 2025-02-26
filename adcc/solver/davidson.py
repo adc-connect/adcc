@@ -131,11 +131,11 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
     # The problem size
     n_problem = matrix.shape[1]
 
-    # The block size
-    n_block = len(state.subspace_vectors)
+    # The block size == Number of desired eigenpairs
+    n_block = n_ep
 
-    # The current subspace size
-    n_ss_vec = n_block
+    # The current subspace size == Number of guesses
+    n_ss_vec = len(state.subspace_vectors)
 
     # The current subspace
     SS = state.subspace_vectors
@@ -157,6 +157,16 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         Ax = evaluate(matrix @ SS)
         state.n_applies += n_ss_vec
 
+    # Initially fill Ass[n_ss_vec-n_block:, n_ss_vec-n_block:] since n_block
+    # may be smaller than the initial subspace size (== number of guesses);
+    # the remaining subspace-projected A matrix is filled during the first
+    # Davidson iteration
+    for i in range(n_ss_vec - n_block):
+        for j in range(i, n_ss_vec - n_block):
+            Ass_cont[i, j] = SS[i] @ Ax[j]
+            if (i != j):
+                Ass_cont[j, i] = Ass_cont[i, j]
+
     while state.n_iter < max_iter:
         state.n_iter += 1
 
@@ -168,9 +178,11 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         # since they have been computed in the previous iterations already.
         with state.timer.record("projection"):
             Ass = Ass_cont[:n_ss_vec, :n_ss_vec]  # Increase the work view size
-            for i in range(n_block):
-                Ass[:, -n_block + i] = Ax[-n_block + i] @ SS
-            Ass[-n_block:, :] = np.transpose(Ass[:, -n_block:])
+            for i in range(n_ss_vec - n_block, n_ss_vec):
+                for j in range(i + 1):
+                    Ass[i, j] = SS[i] @ Ax[j]
+                    if (i != j):
+                        Ass[j, i] = Ass[i, j]
 
         # Compute the which(== largest, smallest, ...) eigenpair of Ass
         # and the associated ritz vector as well as residual
