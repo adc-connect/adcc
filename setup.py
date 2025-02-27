@@ -495,7 +495,7 @@ adccsetup(
         "Operating System :: POSIX :: Linux",
     ],
     #
-    packages=find_packages(exclude=["tests*", "examples*", "docs*"]),
+    packages=find_packages(),
     ext_modules=[libadcc_extension()],
     zip_safe=False,
     #
