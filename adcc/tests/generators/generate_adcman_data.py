@@ -1,5 +1,5 @@
-from tests.generators.run_qchem import run_qchem
-from tests import testcases
+from adcc.tests.generators.run_qchem import run_qchem
+from adcc.tests import testcases
 
 from adcc.AdcMethod import AdcMethod
 from adcc.hdf5io import emplace_dict

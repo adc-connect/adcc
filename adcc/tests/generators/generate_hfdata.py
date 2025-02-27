@@ -1,5 +1,5 @@
-from tests.generators.dump_pyscf import dump_pyscf
-from tests import testcases
+from adcc.tests.generators.dump_pyscf import dump_pyscf
+from adcc.tests import testcases
 
 from pyscf import gto, scf
 

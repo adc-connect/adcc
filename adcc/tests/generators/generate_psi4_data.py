@@ -2,7 +2,7 @@ import psi4
 import adcc
 from psi4.driver.procrouting.response.scf_response import tdscf_excitations
 
-from tests import testcases
+from adcc.tests import testcases
 
 from pathlib import Path
 import json

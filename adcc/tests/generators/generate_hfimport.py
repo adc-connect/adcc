@@ -1,5 +1,5 @@
-from tests.testdata_cache import testdata_cache
-from tests import testcases
+from adcc.tests.testdata_cache import testdata_cache
+from adcc.tests import testcases
 
 import adcc
 from adcc.hdf5io import emplace_dict

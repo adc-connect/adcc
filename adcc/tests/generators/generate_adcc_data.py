@@ -1,8 +1,8 @@
-from tests.generators.dump_adcc import (
+from adcc.tests.generators.dump_adcc import (
     dump_groundstate, dump_matrix_testdata, dump_excited_states
 )
-from tests.testdata_cache import testdata_cache
-from tests import testcases
+from adcc.tests.testdata_cache import testdata_cache
+from adcc.tests import testcases
 
 from adcc.AdcMethod import AdcMethod
 from adcc.LazyMp import LazyMp
