@@ -75,7 +75,7 @@ def default_print(state, identifier, file=sys.stdout):
 
 
 # TODO This function should be merged with eigsh
-def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
+def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
                         is_converged, which, callback=None, preconditioner=None,
                         preconditioning_method="Davidson", debug_checks=False,
                         residual_min_norm=None, explicit_symmetrisation=None):
@@ -93,6 +93,8 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         Maximal number of iterations
     n_ep : int or NoneType, optional
         Number of eigenpairs to be computed
+    n_block : int or NoneType, optional
+        Davidson block size
     is_converged
         Function to test for convergence
     callback : callable, optional
@@ -131,11 +133,18 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
     # The problem size
     n_problem = matrix.shape[1]
 
-    # The block size == Number of desired eigenpairs
-    n_block = n_ep
-
     # The current subspace size == Number of guesses
     n_ss_vec = len(state.subspace_vectors)
+
+    # The block size == Number of desired eigenpairs
+    n_block = n_ep if n_block is None else n_block
+
+    # Sanity checks for block size
+    if n_block > n_ss_vec:
+        raise ValueError("n_block cannot exceed the number of guess vectors.")
+    elif n_block < n_ep:
+        raise ValueError("n_block cannot be smaller than the number of "
+            "states requested.")
 
     # The current subspace
     SS = state.subspace_vectors
@@ -336,7 +345,7 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             state.n_applies += n_ss_added
 
 
-def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
+def eigsh(matrix, guesses, n_ep=None, n_block=None, max_subspace=None,
           conv_tol=1e-9, which="SA", max_iter=70,
           callback=None, preconditioner=None,
           preconditioning_method="Davidson", debug_checks=False,
@@ -351,6 +360,8 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
         Guess vectors (fixes also the Davidson block size)
     n_ep : int or NoneType, optional
         Number of eigenpairs to be computed
+    n_block : int or NoneType, optional
+        The solver block size
     max_subspace : int or NoneType, optional
         Maximal subspace size
     conv_tol : float, optional
@@ -416,7 +427,7 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
 
     state = DavidsonState(matrix, guesses)
     davidson_iterations(matrix, state, max_subspace, max_iter,
-                        n_ep=n_ep, is_converged=convergence_test,
+                        n_ep=n_ep, n_block=n_block, is_converged=convergence_test,
                         callback=callback, which=which,
                         preconditioner=preconditioner,
                         preconditioning_method=preconditioning_method,
