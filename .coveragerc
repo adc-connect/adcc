@@ -1,7 +1,4 @@
 [run]
 branch = True
 source = adcc
-omit =
-	adcc/testdata/*
-	adcc/lib/*
-	*/test_*.py
+omit = adcc/tests/*

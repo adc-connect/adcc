@@ -43,6 +43,8 @@ class AdcMethod:
         self.__base_method = split[-1]
         split = split[:-1]
         self.is_core_valence_separated = "cvs" in split
+        # NOTE: added this to make the testdata generation ready for IP/EA
+        self.adc_type = "pp"
 
         try:
             if self.__base_method == "adc2x":

@@ -717,15 +717,15 @@ TEST_CASE("Test Tensor interface", "[tensor]") {
                         outstr[0] * i + outstr[1] * k + outstr[2] * l + outstr[3] * m;
                   out.at(out_idx) += a.at(a_idx) * b.at(b_idx);
                 }  // m
-              }    // l
-            }      // k
-          }        // j
-        }          // i
+              }  // l
+            }  // k
+          }  // j
+        }  // i
 
         CHECK_ELEMENTWISE(out_ptr, Approx(out[i]));
       }
     }  // SECTION (1, 2, 4)
-  }    // SECTION tensordot
+  }  // SECTION tensordot
 
   SECTION("trace") {
     SECTION("Matrix trace") {

@@ -38,10 +38,11 @@ jobs:
             ${{ runner.os }}-test-
             ${{ runner.os }}-
       - name: Install system dependencies on Linux
-        run: sudo apt-get install libopenblas-base ccache doxygen lcov
+        run: sudo apt-get install libopenblas-dev ccache doxygen lcov
         if: contains( matrix.os, 'ubuntu')
       - name: Install system dependencies on macOS
-        run:  brew install ccache doxygen lcov
+        # coreutils for sha256sum for update_testdata.sh
+        run:  brew install ccache doxygen lcov coreutils
         if: contains( matrix.os, 'macos')
       #
       - name: Dump siteconfig with coverage flags for C++
@@ -66,10 +67,10 @@ jobs:
           pip install --user .[tests]
       - name: Run python tests with std allocator
         run: |
-          python -m pytest adcc --cov=adcc
+          python -m pytest --cov=adcc
       - name: Run reduced python tests with libxm
         run: |
-          python -m pytest adcc --allocator=libxm -k "TestFunctionality and h2o_sto3g"
+          python -m pytest --allocator=libxm -k "TestFunctionality and h2o_sto3g"
       - name: Run C++ tests
         run: python setup.py cpptest -v
       # Documentation build
@@ -88,11 +89,14 @@ jobs:
         if: matrix.documentation
       #
       - name: Upload coverage to codecov
+        # Note: lcov curerntly produces some error and therefore requires the keep-going flag to complete.
+        # Since the error might be the result of some gcc/gcov bug, I don't know how to resolve it currently.
+        # lcov < 2.0 apparently did hide a lot of errors from the user so the problem might have been around for some time already...
         run: |
           pip install codecov
           codecov -X gcov
-          lcov --directory . --capture --output-file coverage.info
-          lcov --remove coverage.info '/opt/*' '/Applications/*' '/Library/*' '/usr/*' "${HOME}"'/.cache/*' "${HOME}"'/.local/*' "${PWD}"'/build/*' "${PWD}"'/libadcc/tests/*' --output-file coverage.info
+          lcov --keep-going --directory . --capture --output-file coverage.info
+          lcov --ignore-errors unused --remove coverage.info '/opt/*' '/Applications/*' '/Library/*' '/usr/*' "${HOME}"'/.cache/*' "${HOME}"'/.local/*' "${PWD}"'/build/*' "${PWD}"'/libadcc/tests/*' --output-file coverage.info
           lcov --list coverage.info
           codecov -X gcov -f coverage.info
         if: contains(matrix.os, 'ubuntu')
@@ -152,7 +156,7 @@ jobs:
         with:
           activate-environment: adcc-dev
           environment-file: conda/environment.yml
-          miniforge-variant: Mambaforge
+          miniforge-variant: Miniforge3
           use-mamba: true
           miniforge-version: latest
           python-version: ${{ matrix.version }}
@@ -166,6 +170,10 @@ jobs:
           mamba install psi4 pyddx -c conda-forge -c conda-forge/label/libint_dev
           psi4 --version
           python -c "import psi4"
+      - name: Install system dependencies on macOS
+        # install sha256sum for update_testdata.sh
+        run:  brew install coreutils
+        if: contains( matrix.os, 'macos')
       - name: Build and test adcc
         run: |
           conda info
@@ -173,7 +181,7 @@ jobs:
           CXXFLAGS="$(echo $CXXFLAGS | sed 's/-fvisibility-inlines-hidden //g')"
           pip install .[tests] --user
           # NOTE: pcmsolver not 'linked' with Psi4 1.8
-          pytest adcc -k "not pcm"
+          pytest -k "not pcm"
           # python setup.py cpptest -v  # TODO: currently doesn't compile...
       #
       # - name: Upload coverage to codecov
