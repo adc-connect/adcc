@@ -16,7 +16,7 @@ jobs:
           python-version: '3.9'
       - name: Install dependencies
         run: |
-          sudo apt-get install libopenblas-base
+          sudo apt-get install libopenblas-dev
           python -m pip install --user pyscf cppe wheel
           python -m pip install --user -r requirements.txt
       - name: Install package
@@ -24,7 +24,7 @@ jobs:
           python -m pip install --user .[tests]
       - name: Run python tests
         run: |
-          python -m pytest adcc
+          python -m pytest
       - name: Build a source tarball
         # in the future...
         # run: python -m build --sdist

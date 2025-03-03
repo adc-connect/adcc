@@ -69,7 +69,7 @@ def block(ground_state, operator, spaces, order, variant=None):
 
     if fn not in globals():
         raise ValueError("Could not dispatch: "
-                         f"spaces={spaces} order={order} variant=variant")
+                         f"spaces={spaces} order={order} variant={variant}")
     return globals()[fn](ground_state, operator)
 
 

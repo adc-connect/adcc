@@ -1,3 +1,0 @@
-[submodule "adcc/testdata/adcc-testdata"]
-	path = adcc/testdata/adcc-testdata
-	url = https://github.com/adc-connect/adcc-testdata.git
