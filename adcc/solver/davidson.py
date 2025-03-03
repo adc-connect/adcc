@@ -94,7 +94,8 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
     n_ep : int or NoneType, optional
         Number of eigenpairs to be computed
     n_block : int or NoneType, optional
-        Davidson block size
+        Davidson block size: the number of vectors that are added to the subspace
+        in each iteration
     is_converged
         Function to test for convergence
     callback : callable, optional
@@ -144,7 +145,7 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
         raise ValueError("n_block cannot exceed the number of guess vectors.")
     elif n_block < n_ep:
         raise ValueError("n_block cannot be smaller than the number of "
-            "states requested.")
+                         "states requested.")
 
     # The current subspace
     SS = state.subspace_vectors

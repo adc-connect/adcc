@@ -391,7 +391,7 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
     # Obtain or check guesses
     if guesses is None:
         if n_guesses is None:
-            # restrict to the number of available singles guesses for if no doubles
+            # restrict to the number of available singles guesses if no doubles
             # are available
             n_guesses = estimate_n_guesses(
                 matrix=matrix, n_states=n_states,
