@@ -223,7 +223,7 @@ TEST_CASE("Test MoIndexTranslation", "[MoIndexTranslation]") {
                                       }};
       CHECK(motrans.map_range_to_hf_provider({{0, 6}, {0, 3}, {3, 5}, {1, 4}}) == ref_3);
     }  // o1v1o1v1
-  }    // Block size 16
+  }  // Block size 16
 
   //
   // Block size 4
@@ -358,7 +358,7 @@ TEST_CASE("Test MoIndexTranslation", "[MoIndexTranslation]") {
                                       }};
       CHECK(motrans.map_range_to_hf_provider({{0, 6}, {0, 2}, {3, 5}, {1, 4}}) == ref_2);
     }  // o1v1o1v1
-  }    // Block size 4
+  }  // Block size 4
 
   SECTION("Scattered CVS space") {
     const HFSolutionMock& tested = hf_h2o;
@@ -470,7 +470,7 @@ TEST_CASE("Test MoIndexTranslation", "[MoIndexTranslation]") {
                                       }};
       CHECK(motrans.map_range_to_hf_provider({{3, 6}, {4, 6}}) == ref_3);
     }  // o1o1
-  }    // Scattered CVS space
+  }  // Scattered CVS space
 }  // MoIndexTranslation
 }  // namespace tests
 }  // namespace libadcc
