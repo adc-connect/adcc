@@ -185,7 +185,9 @@ def dump_pyscf(scfres: scf.hf.SCF, hdf5_file: h5py.Group):
     data["multipoles"]["nuclear_0"] = int(np.sum(charges))
     data["multipoles"]["nuclear_1"] = np.einsum("i,ix->x", charges, coords)
     data["multipoles"]["elec_0"] = -int(n_alpha + n_beta)
-    data["multipoles"]["elec_1"] = -1.0 * scfres.mol.intor_symmetric("int1e_r", comp=3)
+    data["multipoles"]["elec_1"] = (
+        -1.0 * scfres.mol.intor_symmetric("int1e_r", comp=3)
+    )
 
     with scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
         data["multipoles"]["elec_2_origin"] = (
