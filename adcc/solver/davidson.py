@@ -87,13 +87,13 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
         Matrix to diagonalise
     state
         DavidsonState containing the eigenvector guess
-    max_subspace : int or NoneType, optional
+    max_subspace : int
         Maximal subspace size
-    max_iter : int, optional
+    max_iter : int
         Maximal number of iterations
-    n_ep : int or NoneType, optional
+    n_ep : int
         Number of eigenpairs to be computed
-    n_block : int or NoneType, optional
+    n_block : int
         Davidson block size: the number of vectors that are added to the subspace
         in each iteration
     is_converged
@@ -137,15 +137,8 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
     # The current subspace size == Number of guesses
     n_ss_vec = len(state.subspace_vectors)
 
-    # The block size == Number of desired eigenpairs
-    n_block = n_ep if n_block is None else n_block
-
     # Sanity checks for block size
-    if n_block > n_ss_vec:
-        raise ValueError("n_block cannot exceed the number of guess vectors.")
-    elif n_block < n_ep:
-        raise ValueError("n_block cannot be smaller than the number of "
-                         "states requested.")
+    assert n_block >= n_ep and n_block <= n_ss_vec
 
     # The current subspace
     SS = state.subspace_vectors
@@ -362,7 +355,8 @@ def eigsh(matrix, guesses, n_ep=None, n_block=None, max_subspace=None,
     n_ep : int or NoneType, optional
         Number of eigenpairs to be computed
     n_block : int or NoneType, optional
-        The solver block size
+        The solver block size: the number of vectors that are added to the subspace
+        in each iteration
     max_subspace : int or NoneType, optional
         Maximal subspace size
     conv_tol : float, optional
@@ -407,11 +401,28 @@ def eigsh(matrix, guesses, n_ep=None, n_block=None, max_subspace=None,
     if n_ep is None:
         n_ep = len(guesses)
     elif n_ep > len(guesses):
-        raise ValueError("n_ep cannot exceed the number of guess vectors.")
+        raise ValueError(f"n_ep (= {n_ep}) cannot exceed the number of guess "
+                         f"vectors {len(guesses)}.")
+
+    if n_block is None:
+        n_block = n_ep
+    elif n_block < n_ep:
+        raise ValueError(f"n_block (= {n_block}) cannot be smaller than the number "
+                         f"of states requested (= {n_ep}).")
+    elif n_block > len(guesses):
+        raise ValueError(f"n_block (= {n_block}) cannot exceed the number of guess "
+                         f"vectors (= {len(guesses)}).")
+
     if not max_subspace:
         # TODO Arnoldi uses this:
         # max_subspace = max(2 * n_ep + 1, 20)
         max_subspace = max(6 * n_ep, 20, 5 * len(guesses))
+    elif max_subspace < 2 * n_block:
+        raise ValueError(f"max_subspace (= {max_subspace}) needs to be at least "
+                         f"twice as large as n_block (n_block = {n_block}).")
+    elif max_subspace < len(guesses):
+        raise ValueError(f"max_subspace (= {max_subspace}) cannot be smaller than "
+                         f"the number of guess vectors (= {len(guesses)}).")
 
     def convergence_test(state):
         state.residuals_converged = state.residual_norms < conv_tol
