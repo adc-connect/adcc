@@ -226,7 +226,7 @@ def compare_adc_results(adc_results, atol):
                             for op in ["magnetic_dipole", "nabla"])
         if has_rotatory1 and has_rotatory2:
             for gauge_origin in gauge_origins:
-                # reduce the tolerance criteria for mass_center as there are diff. 
+                # reduce the tolerance criteria for mass_center as there are diff.
                 # isotropic mass values implemented in veloxchem and pyscf.
                 if gauge_origin == "mass_center":
                     atol_tdm_mag = 2e-4
