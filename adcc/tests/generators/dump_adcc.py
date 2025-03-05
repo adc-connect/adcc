@@ -99,9 +99,15 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
     kind_data["transition_dipole_moments_velocity"] = (
         states.transition_dipole_moment_velocity[:n_states]
     )
-    kind_data["transition_magnetic_dipole_moments"] = (
-        states.transition_magnetic_dipole_moment[:n_states]
-    )
+
+    gauge_origins = ["origin", "mass_center", "charge_center"]
+    for g_origin in gauge_origins:
+        kind_data[f"transition_magnetic_dipole_moments_{g_origin}"] = (
+            states.transition_magnetic_dipole_moment(g_origin)[:n_states]
+        )
+        kind_data[f"transition_quadrupole_moments_{g_origin}"] = (
+            states.transition_quadrupole_moment(g_origin)[:n_states]
+        )
     # state diffdm and ground to excited state tdm
     kind_data["state_diffdm_bb_a"] = np.asarray(dm_bb_a)
     kind_data["state_diffdm_bb_b"] = np.asarray(dm_bb_b)

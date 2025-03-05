@@ -48,6 +48,7 @@ test_cases = testcases.get_by_filename(
 cases = [(case.file_name, "gen", kind)
          for case in test_cases
          for kind in ["singlet", "any", "spin_flip"] if kind in case.kinds.pp]
+gauge_origins = ["origin", "mass_center", "charge_center"]
 
 
 @pytest.mark.parametrize("method", methods)
@@ -180,7 +181,7 @@ class TestProperties:
             state = run_adc(scfres, method=method, n_singlets=5, core_orbitals=2)
         else:
             state = run_adc(scfres, method=method, n_singlets=10)
-        tdms = state.transition_magnetic_dipole_moment
+        tdms = state.transition_magnetic_dipole_moment("origin")
 
         # For linear molecules lying on the z-axis, the z-component must be zero
         for tdm in tdms:
@@ -196,13 +197,14 @@ class TestProperties:
         state = testdata_cache._make_mock_adc_state(
             system=system, method=method, case=case, kind=kind, source="adcc"
         )
-
-        res_dms = state.transition_magnetic_dipole_moment
-        n_ref = len(state.excitation_vector)
-        assert_allclose(
-            res_dms, refdata["transition_magnetic_dipole_moments"][:n_ref],
-            atol=1e-4
-        )
+        for g_origin in gauge_origins:
+            res_dms = state.transition_magnetic_dipole_moment(g_origin)
+            n_ref = len(state.excitation_vector)
+            assert_allclose(
+                res_dms,
+                refdata[f"transition_magnetic_dipole_moments_{g_origin}"][:n_ref],
+                atol=1e-4
+            )
 
     # Only adcc reference data available.
     @pytest.mark.parametrize("system,case,kind", cases)
@@ -224,6 +226,25 @@ class TestProperties:
 
     # Only adcc reference data available.
     @pytest.mark.parametrize("system,case,kind", cases)
+    def test_transition_quadrupole_moments(self, system: str, case: str,
+                                           kind: str, method: str):
+        refdata = testdata_cache._load_data(
+            system=system, method=method, case=case, source="adcc"
+        )[kind]
+        state = testdata_cache._make_mock_adc_state(
+            system=system, method=method, case=case, kind=kind, source="adcc"
+        )
+        for g_origin in gauge_origins:
+            res_dms = state.transition_quadrupole_moment(g_origin)
+            n_ref = len(state.excitation_vector)
+            assert_allclose(
+                res_dms,
+                refdata[f"transition_quadrupole_moments_{g_origin}"][:n_ref],
+                atol=1e-4
+            )
+
+    # Only adcc reference data available.
+    @pytest.mark.parametrize("system,case,kind", cases)
     def test_rotatory_strengths(self, system: str, case: str, kind: str,
                                 method: str):
         refdata = testdata_cache._load_data(
@@ -233,12 +254,13 @@ class TestProperties:
             system=system, method=method, case=case, kind=kind, source="adcc"
         )
 
-        res_rots = state.rotatory_strength
-        ref_tmdm = refdata["transition_magnetic_dipole_moments"]
-        ref_tdmvel = refdata["transition_dipole_moments_velocity"]
-        refevals = refdata["eigenvalues"]
-        n_ref = len(state.excitation_vector)
-        for i in range(n_ref):
-            assert state.excitation_energy[i] == refevals[i]
-            ref_dot = np.dot(ref_tmdm[i], ref_tdmvel[i])
-            assert res_rots[i] == pytest.approx(ref_dot / refevals[i])
+        for g_origin in gauge_origins:
+            res_rots = state.rotatory_strength(g_origin)
+            ref_tmdm = refdata[f"transition_magnetic_dipole_moments_{g_origin}"]
+            ref_tdmvel = refdata["transition_dipole_moments_velocity"]
+            refevals = refdata["eigenvalues"]
+            n_ref = len(state.excitation_vector)
+            for i in range(n_ref):
+                assert state.excitation_energy[i] == refevals[i]
+                ref_dot = np.dot(ref_tmdm[i], ref_tdmvel[i])
+                assert res_rots[i] == pytest.approx(ref_dot / refevals[i])

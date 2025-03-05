@@ -56,21 +56,23 @@ class VeloxChemOperatorIntegralProvider:
 
     @cached_property
     def magnetic_dipole(self):
-        # TODO: Gauge origin?
-        task = self.scfdrv.task
-        angmom_drv = AngularMomentumIntegralsDriver(task.mpi_comm)
-        # define the origin for magnetic dipole integrals
-        angmom_drv.origin = tuple(np.zeros(3))
-        angmom_mats = angmom_drv.compute(task.molecule, task.ao_basis)
-        return (0.5 * angmom_mats.x_to_numpy(), 0.5 * angmom_mats.y_to_numpy(),
-                0.5 * angmom_mats.z_to_numpy())
+        def g_origin_dep_ints_mag_dip(gauge_origin="origin"):
+            gauge_origin = _determine_gauge_origin(self.scfdrv, gauge_origin)
+            task = self.scfdrv.task
+            angmom_drv = AngularMomentumIntegralsDriver(task.mpi_comm)
+            angmom_drv.origin = tuple(gauge_origin)
+            angmom_mats = angmom_drv.compute(task.molecule, task.ao_basis)
+            return (0.5 * angmom_mats.x_to_numpy(), 0.5 * angmom_mats.y_to_numpy(),
+                    0.5 * angmom_mats.z_to_numpy())
+        return g_origin_dep_ints_mag_dip
 
     @cached_property
     def nabla(self):
         task = self.scfdrv.task
         linmom_drv = LinearMomentumIntegralsDriver(task.mpi_comm)
         linmom_mats = linmom_drv.compute(task.molecule, task.ao_basis)
-        return (-1.0 * linmom_mats.x_to_numpy(), -1.0 * linmom_mats.y_to_numpy(),
+        return (-1.0 * linmom_mats.x_to_numpy(),
+                -1.0 * linmom_mats.y_to_numpy(),
                 -1.0 * linmom_mats.z_to_numpy())
 
 
@@ -161,7 +163,7 @@ class VeloxChemHFProvider(HartreeFockProvider):
     def get_n_bas(self):
         return self.mol_orbs.number_aos()
 
-    def get_nuclear_multipole(self, order):
+    def get_nuclear_multipole(self, order, gauge_origin=[0, 0, 0]):
         mol = self.scfdrv.task.molecule
         nuc_charges = mol.elem_ids_to_numpy()
         if order == 0:
@@ -172,8 +174,17 @@ class VeloxChemHFProvider(HartreeFockProvider):
                 (mol.x_to_numpy(), mol.y_to_numpy(), mol.z_to_numpy())
             ).transpose()
             return np.einsum('i,ix->x', nuc_charges, coords)
+        elif order == 2:
+            coords = mol.get_coordinates_in_bohr() - gauge_origin
+            r_r = np.einsum("ij,ik->ijk", coords, coords)
+            res = np.einsum("i,ijk->jk", nuc_charges, r_r)
+            res = [res[0, 0], res[0, 1], res[0, 2], res[1, 1], res[1, 2], res[2, 2]]
+            return np.array(res)
         else:
-            raise NotImplementedError("get_nuclear_multipole with order > 1")
+            raise NotImplementedError("get_nuclear_multipole with order > 2")
+
+    def get_gauge_origin(self, gauge_origin):
+        return _determine_gauge_origin(self.scfdrv, gauge_origin)
 
     def fill_occupation_f(self, out):
         n_mo = self.mol_orbs.number_mos()
@@ -268,3 +279,32 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=None, conv_tol_grad=1e
         scfdrv.compute(task.molecule, task.ao_basis, task.min_basis)
         scfdrv.task = task
     return scfdrv
+
+
+def _determine_gauge_origin(scfdrv, gauge_origin):
+    """
+    Determines the gauge origin. If the gauge origin is defined as a list
+    the coordinates need to be given in atomic units!
+    """
+    molecule = scfdrv.task.molecule
+    coords = molecule.get_coordinates_in_bohr()
+    charges = molecule.elem_ids_to_numpy()
+    masses = molecule.masses_to_numpy()
+
+    if gauge_origin == "mass_center":
+        # gauge_origin = list(molecule.center_of_mass_in_bohr())
+        gauge_origin = list(np.einsum("i,ij->j", masses, coords) / masses.sum())
+    elif gauge_origin == "charge_center":
+        gauge_origin = list(np.einsum("i,ij->j", charges, coords)
+                            / charges.sum())
+    elif gauge_origin == "origin":
+        gauge_origin = [0.0, 0.0, 0.0]
+    elif isinstance(gauge_origin, list):
+        gauge_origin = gauge_origin
+    else:
+        raise NotImplementedError("The gauge origin can be defined either by a "
+                                  "keyword (origin, mass_center or charge_center) "
+                                  "or by a list defining the Cartesian components "
+                                  "e.g. [x, y, z]."
+                                  )
+    return gauge_origin

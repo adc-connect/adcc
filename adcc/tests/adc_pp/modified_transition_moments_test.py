@@ -59,8 +59,8 @@ def test_modified_transition_moments(system: str, case: str, method: str, kind: 
         dips = state.reference_state.operators.electric_dipole
         ref_tdm = ref["transition_dipole_moments"]
     elif op_kind == "magnetic":
-        dips = state.reference_state.operators.magnetic_dipole
-        ref_tdm = ref["transition_magnetic_dipole_moments"]
+        dips = state.reference_state.operators.magnetic_dipole("origin")
+        ref_tdm = ref["transition_magnetic_dipole_moments_origin"]
     else:
         raise NotImplementedError(
             f"Test not implemented for operator kind {op_kind}"
