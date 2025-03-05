@@ -53,9 +53,7 @@ class Psi4OperatorIntegralProvider:
         ]
 
     @cached_property
-    def nabla(self):
-        # this is the electric dipole operator in the velocity gauge
-        # TODO: rename
+    def electric_dipole_velocity(self):
         """-sum_i p_i"""
         return [np.asarray(comp) for comp in self.mints.ao_nabla()]
 

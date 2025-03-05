@@ -174,7 +174,7 @@ class ElectronicTransition:
         if self.property_method.level == 0:
             warnings.warn("ADC(0) transition velocity dipole moments "
                           "are known to be faulty in some cases.")
-        dipole_integrals = self.operators.nabla
+        dipole_integrals = self.operators.electric_dipole_velocity
         return np.array([
             [product_trace(comp, tdm) for comp in dipole_integrals]
             for tdm in self.transition_dm

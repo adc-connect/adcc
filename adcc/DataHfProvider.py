@@ -216,8 +216,8 @@ class DataHfProvider(HartreeFockProvider):
                 raise ValueError("derivatives/nabla_origin is expected to "
                                  "have shape "
                                  + str((3, nb, nb)) + " not "
-                                 + str(derivs["nabla"].shape))
-            opprov.nabla = np.asarray(derivs["nabla_origin"])
+                                 + str(derivs["nabla_origin"].shape))
+            opprov.electric_dipole_velocity = np.asarray(derivs["nabla_origin"])
         self.operator_integral_provider = opprov
 
     #

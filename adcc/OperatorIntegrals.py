@@ -101,7 +101,7 @@ class OperatorIntegrals:
         integrals = (
             "electric_dipole",
             "magnetic_dipole",
-            "nabla",
+            "electric_dipole_velocity",
             "pe_induction_elec",
             "pcm_potential_elec",
         )
@@ -141,12 +141,13 @@ class OperatorIntegrals:
 
     @property
     @timed_member_call("_import_timer")
-    def nabla(self):
+    def electric_dipole_velocity(self):
         """
-        Return the momentum (nabla operator) integrals
+        Return the electric dipole integrals (in the velocity gauge)
         in the molecular orbital basis.
         """
-        return self.import_dipole_like_operator("nabla", is_symmetric=False)
+        return self.import_dipole_like_operator("electric_dipole_velocity",
+                                                is_symmetric=False)
 
     def __import_density_dependent_operator(self, ao_callback, is_symmetric=True):
         """Returns a function that imports a density-dependent operator.

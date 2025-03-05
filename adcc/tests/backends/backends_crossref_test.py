@@ -201,15 +201,17 @@ def compare_adc_results(adc_results, atol):
             assert_allclose(state1.state_dipole_moment,
                             state2.state_dipole_moment, atol=atol)
 
-        if "nabla" in state1.operators.available and \
-                "nabla" in state2.operators.available:
+        if "electric_dipole_velocity" in state1.operators.available and \
+                "electric_dipole_velocity" in state2.operators.available:
             assert_allclose(state1.oscillator_strength_velocity,
                             state2.oscillator_strength_velocity, atol=atol)
 
         has_rotatory1 = all(op in state1.operators.available
-                            for op in ["magnetic_dipole", "nabla"])
+                            for op
+                            in ["magnetic_dipole", "electric_dipole_velocity"])
         has_rotatory2 = all(op in state2.operators.available
-                            for op in ["magnetic_dipole", "nabla"])
+                            for op
+                            in ["magnetic_dipole", "electric_dipole_velocity"])
         if has_rotatory1 and has_rotatory2:
             assert_allclose(state1.rotatory_strength,
                             state2.rotatory_strength, atol=atol)

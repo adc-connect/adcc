@@ -55,9 +55,7 @@ class PyScfOperatorIntegralProvider:
             )
 
     @cached_property
-    def nabla(self):
-        # this is the electric dipole operator in the velocity gauge
-        # TODO: rename
+    def electric_dipole_velocity(self):
         """-sum_i p_i"""
         with self.scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
             return list(

@@ -68,9 +68,7 @@ class VeloxChemOperatorIntegralProvider:
                 -0.5 * angmom_mats.z_to_numpy())
 
     @cached_property
-    def nabla(self):
-        # this is the electric dipole operator in the velocity gauge
-        # TODO: rename
+    def electric_dipole_velocity(self):
         """-sum_i p_i"""
         task = self.scfdrv.task
         linmom_drv = LinearMomentumIntegralsDriver(task.mpi_comm)

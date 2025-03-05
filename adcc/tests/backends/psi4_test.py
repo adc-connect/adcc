@@ -107,9 +107,10 @@ class TestPsi4:
         ao_dip = [-0.5 * np.array(comp) for comp in mints.ao_angular_momentum()]
         operator_import_from_ao_test(wfn, ao_dip, operator="magnetic_dipole")
 
-        # Test nabla
+        # Test electric dipole velocity
         ao_dip = [np.array(comp) for comp in mints.ao_nabla()]
-        operator_import_from_ao_test(wfn, ao_dip, operator="nabla")
+        operator_import_from_ao_test(wfn, ao_dip,
+                                     operator="electric_dipole_velocity")
 
     @pytest.mark.parametrize("system", h2o, ids=[case.file_name for case in h2o])
     def test_rhf(self, system: testcases.TestCase):

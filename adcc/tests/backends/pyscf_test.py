@@ -115,9 +115,10 @@ class TestPyscf:
             ao_magdip = -0.5 * mf.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
         operator_import_from_ao_test(mf, list(ao_magdip), "magnetic_dipole")
 
-        # Test nabla
+        # Test electric_dipole_velocity
         ao_linmom = mf.mol.intor('int1e_ipovlp', comp=3, hermi=2)
-        operator_import_from_ao_test(mf, list(ao_linmom), "nabla")
+        operator_import_from_ao_test(mf, list(ao_linmom),
+                                     "electric_dipole_velocity")
 
     @pytest.mark.parametrize("system", h2o, ids=[case.file_name for case in h2o])
     def test_rhf(self, system: testcases.TestCase):
