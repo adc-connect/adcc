@@ -33,6 +33,7 @@ from .. import testcases
 
 # molsturm is super slow
 backends = [b for b in adcc.backends.available() if b != "molsturm"]
+backends_with_gauge_origin = ["pyscf", "veloxchem"]
 
 h2o = testcases.get_by_filename("h2o_sto3g", "h2o_def2tzvp")
 h2o_cases = [(case.file_name, c) for case in h2o for c in case.cases]
@@ -154,6 +155,14 @@ def compare_hf_properties(results, atol):
         refstate1 = results[comb[0]]
         refstate2 = results[comb[1]]
 
+        # assert same gauge origins
+        if len(set(comb) & set(backends_with_gauge_origin)) == 2:
+            gauge_origins = ["origin", "mass_center", "charge_center"]
+            for gauge_origin in gauge_origins:
+                assert_allclose(refstate1.determine_gauge_origin(gauge_origin),
+                                refstate2.determine_gauge_origin(gauge_origin),
+                                atol=1e-5)
+
         assert_allclose(refstate1.nuclear_total_charge,
                         refstate2.nuclear_total_charge, atol=atol)
         assert_allclose(refstate1.nuclear_dipole,
@@ -206,10 +215,30 @@ def compare_adc_results(adc_results, atol):
             assert_allclose(state1.oscillator_strength_velocity,
                             state2.oscillator_strength_velocity, atol=atol)
 
+        # Only in two backends the gauge origin selection is implemented.
+        if len(set(comb) & set(backends_with_gauge_origin)) == 2:
+            gauge_origins = ["origin", "mass_center", "charge_center"]
+        else:
+            gauge_origins = ["origin"]
         has_rotatory1 = all(op in state1.operators.available
                             for op in ["magnetic_dipole", "nabla"])
         has_rotatory2 = all(op in state2.operators.available
                             for op in ["magnetic_dipole", "nabla"])
         if has_rotatory1 and has_rotatory2:
-            assert_allclose(state1.rotatory_strength,
-                            state2.rotatory_strength, atol=atol)
+            for gauge_origin in gauge_origins:
+                # reduce the tolerance criteria for mass_center as there are diff. 
+                # isotropic mass values implemented in veloxchem and pyscf.
+                if gauge_origin == "mass_center":
+                    atol_tdm_mag = 2e-4
+                else:
+                    atol_tdm_mag = atol
+                assert_allclose(state1.rotatory_strength(gauge_origin),
+                                state2.rotatory_strength(gauge_origin), atol=atol)
+
+                # Test the absolut values of transition magnetic dipole moments
+                # to account for differences with different gauge origins.
+                # (The rotatory strength is zero for achiral molecules.)
+                assert_allclose(
+                    abs(state1.transition_magnetic_dipole_moment(gauge_origin)),
+                    abs(state2.transition_magnetic_dipole_moment(gauge_origin)),
+                    atol=atol_tdm_mag)

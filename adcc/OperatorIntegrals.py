@@ -117,7 +117,6 @@ class OperatorIntegrals:
             raise NotImplementedError(f"{integral.replace('_', ' ')} operator "
                                       "not implemented "
                                       f"in {self.provider_ao.backend} backend.")
-
         dipoles = []
         for i, component in enumerate(["x", "y", "z"]):
             dip_backend = getattr(self.provider_ao, integral)[i]
@@ -185,12 +184,10 @@ class OperatorIntegrals:
     def nabla(self):
         """
         Returns a function to obtain nabla intergrals
-        in the molecular orbital basis dependent on the selected gauge origin.
-        The default gauge origin is set to [0.0, 0.0, 0.0].
+        in the molecular orbital basis.
         """
-        callback = self.provider_ao.nabla
-        return self.__import_gauge_dependent_dipole_like(callback,
-                                                         is_symmetric=False)
+        return self.import_dipole_like_operator("nabla",
+                                                is_symmetric=False)
 
     def __import_quadrupole_like_operator(self, callback, is_symmetric=True):
         """Returns a function that imports a gauge-dependent quadrupole like

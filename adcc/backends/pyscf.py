@@ -44,36 +44,33 @@ class PyScfOperatorIntegralProvider:
 
     @property
     def magnetic_dipole(self):
-        def magnetic_dipole_gauge(gauge_origin="origin"):
+        def g_origin_dep_ints_mag_dip(gauge_origin="origin"):
             gauge_origin = _determine_gauge_origin(self.scfres, gauge_origin)
             with self.scfres.mol.with_common_orig(gauge_origin):
                 return list(
                     0.5 * self.scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
                 )
-        return magnetic_dipole_gauge
+        return g_origin_dep_ints_mag_dip
 
-    @property
+    @cached_property
     def nabla(self):
-        def nabla_gauge(gauge_origin):
-            gauge_origin = _determine_gauge_origin(self.scfres, gauge_origin)
-            with self.scfres.mol.with_common_orig(gauge_origin):
-                return list(
-                    -1.0 * self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
-                )
-        return nabla_gauge
+        with self.scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
+            return list(
+                -1.0 * self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
+            )
 
     @property
     def electric_quadrupole(self):
-        def electric_quadrupole_gauge(gauge_origin):
+        def g_origin_dep_ints_el_quad(gauge_origin):
             gauge_origin = _determine_gauge_origin(self.scfres, gauge_origin)
             with self.scfres.mol.with_common_orig(gauge_origin):
                 r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
                 return list(r_r)
-        return electric_quadrupole_gauge
+        return g_origin_dep_ints_el_quad
 
     @property
     def electric_quadrupole_traceless(self):
-        def electric_quadrupole_traceless_gauge(gauge_origin):
+        def g_origin_dep_ints_el_quad_traceless(gauge_origin):
             gauge_origin = _determine_gauge_origin(self.scfres, gauge_origin)
             with self.scfres.mol.with_common_orig(gauge_origin):
                 r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
@@ -85,11 +82,11 @@ class PyScfOperatorIntegralProvider:
                 term = 0.5 * (3 * r_r - r_quadr_matrix)
                 term = np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
                 return list(term)
-        return electric_quadrupole_traceless_gauge
+        return g_origin_dep_ints_el_quad_traceless
 
     @property
     def electric_quadrupole_velocity(self):
-        def electric_quadrupole_velocity_gauge(gauge_origin):
+        def g_origin_dep_ints_el_quad_vel(gauge_origin):
             gauge_origin = _determine_gauge_origin(self.scfres, gauge_origin)
             with self.scfres.mol.with_common_orig(gauge_origin):
                 r_p = self.scfres.mol.intor('int1e_irp', comp=9, hermi=0)
@@ -101,11 +98,11 @@ class PyScfOperatorIntegralProvider:
                 term = r_p + r_p.transpose(1, 0, 2, 3) - ovlp_matrix
                 term = np.reshape(term, (9, ovlp.shape[0], ovlp.shape[0]))
                 return list(term)
-        return electric_quadrupole_velocity_gauge
+        return g_origin_dep_ints_el_quad_vel
 
     @property
     def diamagnetic_magnetizability(self):
-        def diamagnetic_magnetizability_gauge(gauge_origin):
+        def g_origin_dep_ints_diamag_magn(gauge_origin):
             gauge_origin = _determine_gauge_origin(self.scfres, gauge_origin)
             with self.scfres.mol.with_common_orig(gauge_origin):
                 r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
@@ -117,7 +114,7 @@ class PyScfOperatorIntegralProvider:
                 term = -0.25 * (r_quadr_matrix - r_r)
                 term = np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
                 return list(term)
-        return diamagnetic_magnetizability_gauge
+        return g_origin_dep_ints_diamag_magn
 
     @property
     def pe_induction_elec(self):
@@ -456,7 +453,7 @@ def _determine_gauge_origin(scfres, gauge_origin):
     the coordinates need to be given in atomic units!
     """
     coords = scfres.mol.atom_coords()
-    masses = scfres.mol.atom_mass_list()
+    masses = scfres.mol.atom_mass_list(isotope_avg=True)
     charges = scfres.mol.atom_charges()
     if gauge_origin == "mass_center":
         gauge_origin = list(np.einsum("i,ij->j", masses, coords) / masses.sum())
@@ -468,9 +465,9 @@ def _determine_gauge_origin(scfres, gauge_origin):
     elif isinstance(gauge_origin, list):
         gauge_origin = gauge_origin
     else:
-        raise NotImplementedError("Gauge origin has to be defined by"
-                                  " using one of the keywords"
-                                  " mass_center, charge_center or origin. "
-                                  "If they are defined with a list, they need "
-                                  "to be given in atomic units")
+        raise NotImplementedError("The gauge origin can be defined either by a "
+                                  "keyword (origin, mass_center or charge_center) "
+                                  "or by a list defining the Cartesian components "
+                                  "e.g. [x, y, z]."
+                                  )
     return gauge_origin

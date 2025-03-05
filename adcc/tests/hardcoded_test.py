@@ -48,6 +48,6 @@ class TestHardCodedCisResults(unittest.TestCase):
         np.testing.assert_allclose(vlx_result['excitation_energies'],
                                    state.excitation_energy, atol=1e-6)
         np.testing.assert_allclose(vlx_result['rotatory_strengths'],
-                                   state.rotatory_strength('origin'), atol=1e-4)
+                                   state.rotatory_strength("origin"), atol=1e-4)
         np.testing.assert_allclose(vlx_result['oscillator_strengths'],
                                    state.oscillator_strength, atol=1e-4)

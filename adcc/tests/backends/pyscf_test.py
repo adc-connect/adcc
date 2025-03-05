@@ -106,18 +106,33 @@ class TestPyscf:
             assert_almost_equal(eri_perm, eri)
 
     def operators_test(self, mf):
+        from adcc.backends.pyscf import _determine_gauge_origin
+        gauge_origins = ["origin", "mass_center", "charge_center"]
+
         # Test dipole
         ao_dip = mf.mol.intor_symmetric('int1e_r', comp=3)
         operator_import_from_ao_test(mf, list(ao_dip))
 
-        # Test magnetic dipole
-        with mf.mol.with_common_orig([0.0, 0.0, 0.0]):
-            ao_magdip = 0.5 * mf.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
-        operator_import_from_ao_test(mf, list(ao_magdip), "magnetic_dipole")
-
         # Test nabla
-        ao_linmom = -1.0 * mf.mol.intor('int1e_ipovlp', comp=3, hermi=2)
+        with mf.mol.with_common_orig([0.0, 0.0, 0.0]):
+            ao_linmom = -1.0 * mf.mol.intor('int1e_ipovlp', comp=3, hermi=2)
         operator_import_from_ao_test(mf, list(ao_linmom), "nabla")
+
+        # Test gauge origin dependent integrals
+        for gauge_origin in gauge_origins:
+            gauge_origin = _determine_gauge_origin(mf, gauge_origin)
+
+            # Test magnetic dipole
+            with mf.mol.with_common_orig(gauge_origin):
+                ao_magdip = 0.5 * mf.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
+            operator_import_from_ao_test(mf, list(ao_magdip), "magnetic_dipole",
+                                         gauge_origin)
+
+            # Test electric quadrupole
+            with mf.mol.with_common_orig(gauge_origin):
+                ao_quad = mf.mol.intor_symmetric('int1e_rr', comp=9)
+            operator_import_from_ao_test(mf, list(ao_quad),
+                                         "electric_quadrupole", gauge_origin)
 
     @pytest.mark.parametrize("system", h2o, ids=[case.file_name for case in h2o])
     def test_rhf(self, system: testcases.TestCase):

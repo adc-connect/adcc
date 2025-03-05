@@ -22,6 +22,7 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 import warnings
+
 from molsturm.State import State
 from adcc.DataHfProvider import DataHfProvider
 
@@ -29,9 +30,9 @@ from adcc.DataHfProvider import DataHfProvider
 def convert_scf_to_dict(scfres):
     if not isinstance(scfres, State):
         raise TypeError("Unsupported type for backends.molsturm.import_scf.")
-    warnings.warn("Gauge origin selection not available "
-                  "in Molsturm. "
-                  "The gauge origin is selected as [0, 0, 0].")
+    warnings.warn("Gauge origin selection not available in Molsturm."
+                  "The gauge origin is selected as origin of the "
+                  "Cartesian coordinate system [0.0, 0.0, 0.0].")
 
     n_alpha = scfres["n_alpha"]
     n_beta = scfres["n_beta"]
@@ -69,8 +70,6 @@ def convert_scf_to_dict(scfres):
         data["multipoles"]["nuclear_0"] = int(np.sum(charges)),
         data["multipoles"]["nuclear_1"] = np.einsum('i,ix->x', charges, coords)
     else:
-        import warnings
-
         # We have no information about this, so we can just provide dummies
         data["multipoles"]["nuclear_0"] = -1
         data["multipoles"]["nuclear_1"] = np.zeros(3)

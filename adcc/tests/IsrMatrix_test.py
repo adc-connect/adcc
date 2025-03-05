@@ -53,8 +53,8 @@ class TestIsrMatrix:
         mp = state.ground_state
         if operator_kind == "electric":  # example of a symmetric operator
             dips = state.reference_state.operators.electric_dipole
-        elif op_kind == "magnetic":  # example of an asymmetric operator
-            dips = state.reference_state.operators.magnetic_dipole('origin')
+        elif operator_kind == "magnetic":  # example of an asymmetric operator
+            dips = state.reference_state.operators.magnetic_dipole("origin")
         else:
             raise NotImplementedError(f"Unexptected operator kind {operator_kind}")
 
