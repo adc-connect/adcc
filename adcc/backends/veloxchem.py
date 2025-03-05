@@ -73,8 +73,8 @@ class VeloxChemOperatorIntegralProvider:
         task = self.scfdrv.task
         linmom_drv = LinearMomentumIntegralsDriver(task.mpi_comm)
         linmom_mats = linmom_drv.compute(task.molecule, task.ao_basis)
-        return (-1.0 * linmom_mats.x_to_numpy(), -1.0 * linmom_mats.y_to_numpy(),
-                -1.0 * linmom_mats.z_to_numpy())
+        return (linmom_mats.x_to_numpy(), linmom_mats.y_to_numpy(),
+                linmom_mats.z_to_numpy())
 
 
 class VeloxChemEriBuilder(EriBuilder):
