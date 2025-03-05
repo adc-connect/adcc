@@ -46,7 +46,7 @@ def compare_refstate_with_reference(system: str, case: str,
     if scfres is None:
         import_data = data
         atol = data["conv_tol"]
-        backend = data["backend"]
+        backend = None
     else:
         import_data = scfres
         if hasattr(scfres, "conv_tol"):
