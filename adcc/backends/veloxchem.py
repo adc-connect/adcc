@@ -64,8 +64,8 @@ class VeloxChemOperatorIntegralProvider:
         # define the origin for magnetic dipole integrals
         angmom_drv.origin = tuple(np.zeros(3))
         angmom_mats = angmom_drv.compute(task.molecule, task.ao_basis)
-        return (-0.5 * angmom_mats.x_to_numpy(), -0.5 * angmom_mats.y_to_numpy(),
-                -0.5 * angmom_mats.z_to_numpy())
+        return (0.5 * angmom_mats.x_to_numpy(), 0.5 * angmom_mats.y_to_numpy(),
+                0.5 * angmom_mats.z_to_numpy())
 
     @cached_property
     def electric_dipole_velocity(self):
@@ -73,8 +73,8 @@ class VeloxChemOperatorIntegralProvider:
         task = self.scfdrv.task
         linmom_drv = LinearMomentumIntegralsDriver(task.mpi_comm)
         linmom_mats = linmom_drv.compute(task.molecule, task.ao_basis)
-        return (linmom_mats.x_to_numpy(), linmom_mats.y_to_numpy(),
-                linmom_mats.z_to_numpy())
+        return (-1.0 * linmom_mats.x_to_numpy(), -1.0 * linmom_mats.y_to_numpy(),
+                -1.0 * linmom_mats.z_to_numpy())
 
 
 class VeloxChemEriBuilder(EriBuilder):

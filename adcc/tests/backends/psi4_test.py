@@ -104,11 +104,11 @@ class TestPsi4:
         operator_import_from_ao_test(wfn, ao_dip)
 
         # Test magnetic dipole
-        ao_dip = [-0.5 * np.array(comp) for comp in mints.ao_angular_momentum()]
+        ao_dip = [0.5 * np.array(comp) for comp in mints.ao_angular_momentum()]
         operator_import_from_ao_test(wfn, ao_dip, operator="magnetic_dipole")
 
         # Test electric dipole velocity
-        ao_dip = [np.array(comp) for comp in mints.ao_nabla()]
+        ao_dip = [-1.0 * np.array(comp) for comp in mints.ao_nabla()]
         operator_import_from_ao_test(wfn, ao_dip,
                                      operator="electric_dipole_velocity")
 

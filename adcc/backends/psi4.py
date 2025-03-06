@@ -48,14 +48,14 @@ class Psi4OperatorIntegralProvider:
         """-0.5 * sum_i r_i x p_i"""
         # TODO: Gauge origin?
         return [
-            -0.5 * np.asarray(comp)
+            0.5 * np.asarray(comp)
             for comp in self.mints.ao_angular_momentum()
         ]
 
     @cached_property
     def electric_dipole_velocity(self):
         """-sum_i p_i"""
-        return [np.asarray(comp) for comp in self.mints.ao_nabla()]
+        return [-1.0 * np.asarray(comp) for comp in self.mints.ao_nabla()]
 
     @property
     def pe_induction_elec(self):
