@@ -64,10 +64,14 @@ class TestCrossReferenceBackends:
             pytest.skip("Veloxchem does not support f-functions. "
                         "Not enough backends that support UHF available.")
 
-        # fewer states available for fc-fv-cvs
-        n_states = 5
-        if "fc" in case and "fv" in case and "cvs" in case:
-            n_states = 4
+        kwargs = {"n_singlets": 5}
+        # fewer states available for fc-fv-cvs (4) and fv-cvs (5)
+        if "fv" in case and "cvs" in case:
+            kwargs["n_singlets"] = 3
+            kwargs["n_guesses"] = 3
+        elif "cvs" in case:
+            # state 5 and 6 are degenerate -> can't compare the eigenvectors
+            kwargs["n_singlets"] = 4
 
         method = "cvs-adc2" if "cvs" in case else "adc2"
         core_orbitals = system.core_orbitals if "cvs" in case else None
@@ -78,9 +82,9 @@ class TestCrossReferenceBackends:
         for b in backends_test:
             scfres = cached_backend_hf(b, system, conv_tol=1e-10)
             results[b] = adcc.run_adc(
-                scfres, method=method, n_singlets=n_states, conv_tol=1e-9,
+                scfres, method=method, conv_tol=1e-9,
                 core_orbitals=core_orbitals, frozen_core=frozen_core,
-                frozen_virtual=frozen_virtual
+                frozen_virtual=frozen_virtual, **kwargs
             )
             assert results[b].converged
         compare_adc_results(results, 5e-8)

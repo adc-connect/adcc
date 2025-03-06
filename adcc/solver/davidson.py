@@ -75,7 +75,7 @@ def default_print(state, identifier, file=sys.stdout):
 
 
 # TODO This function should be merged with eigsh
-def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
+def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
                         is_converged, which, callback=None, preconditioner=None,
                         preconditioning_method="Davidson", debug_checks=False,
                         residual_min_norm=None, explicit_symmetrisation=None):
@@ -87,12 +87,15 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         Matrix to diagonalise
     state
         DavidsonState containing the eigenvector guess
-    max_subspace : int or NoneType, optional
+    max_subspace : int
         Maximal subspace size
-    max_iter : int, optional
+    max_iter : int
         Maximal number of iterations
-    n_ep : int or NoneType, optional
+    n_ep : int
         Number of eigenpairs to be computed
+    n_block : int
+        Davidson block size: the number of vectors that are added to the subspace
+        in each iteration
     is_converged
         Function to test for convergence
     callback : callable, optional
@@ -131,11 +134,11 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
     # The problem size
     n_problem = matrix.shape[1]
 
-    # The block size
-    n_block = len(state.subspace_vectors)
+    # The current subspace size == Number of guesses
+    n_ss_vec = len(state.subspace_vectors)
 
-    # The current subspace size
-    n_ss_vec = n_block
+    # Sanity checks for block size
+    assert n_block >= n_ep and n_block <= n_ss_vec
 
     # The current subspace
     SS = state.subspace_vectors
@@ -157,20 +160,22 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
         Ax = evaluate(matrix @ SS)
         state.n_applies += n_ss_vec
 
+    # Get the worksize view for the first iteration
+    Ass = Ass_cont[:n_ss_vec, :n_ss_vec]
+
+    # Initiall projection of Ax onto the subspace exploiting the hermiticity
+    with state.timer.record("projection"):
+        for i in range(n_ss_vec):
+            for j in range(i, n_ss_vec):
+                Ass[i, j] = SS[i] @ Ax[j]
+                if i != j:
+                    Ass[j, i] = Ass[i, j]
+
     while state.n_iter < max_iter:
         state.n_iter += 1
 
         assert len(SS) >= n_block
         assert len(SS) <= max_subspace
-
-        # Project A onto the subspace, keeping in mind
-        # that the values Ass[:-n_block, :-n_block] are already valid,
-        # since they have been computed in the previous iterations already.
-        with state.timer.record("projection"):
-            Ass = Ass_cont[:n_ss_vec, :n_ss_vec]  # Increase the work view size
-            for i in range(n_block):
-                Ass[:, -n_block + i] = Ax[-n_block + i] @ SS
-            Ass[-n_block:, :] = np.transpose(Ass[:, -n_block:])
 
         # Compute the which(== largest, smallest, ...) eigenpair of Ass
         # and the associated ritz vector as well as residual
@@ -237,7 +242,10 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
                 # Update projection of ADC matrix A onto subspace
                 Ass = Ass_cont[:n_ss_vec, :n_ss_vec]
                 for i in range(n_ss_vec):
-                    Ass[:, i] = Ax[i] @ SS
+                    for j in range(i, n_ss_vec):
+                        Ass[i, j] = SS[i] @ Ax[j]
+                        if i != j:
+                            Ass[j, i] = Ass[i, j]
             # continue to add residuals to space
 
         with state.timer.record("preconditioner"):
@@ -266,12 +274,29 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
             n_ss_added = 0
             for i in range(n_block):
                 pvec = preconds[i]
-                # Project out the components of the current subspace
+                # Project out the components of the current subspace using
+                # conventional Gram-Schmidt (CGS) procedure.
                 # That is form (1 - SS * SS^T) * pvec = pvec + SS * (-SS^T * pvec)
                 coefficients = np.hstack(([1], -(pvec @ SS)))
                 pvec = lincomb(coefficients, [pvec] + SS, evaluate=True)
                 pnorm = np.sqrt(pvec @ pvec)
-                if pnorm > residual_min_norm:
+                if pnorm < residual_min_norm:
+                    continue
+                # Perform reorthogonalisation if loss of orthogonality is
+                # detected; this comes at the expense of computing n_ss_vec
+                # additional scalar products but avoids linear dependence
+                # within the subspace.
+                with state.timer.record("reorthogonalisation"):
+                    ss_overlap = np.array(pvec @ SS)
+                    max_ortho_loss = np.max(np.abs(ss_overlap)) / pnorm
+                    if max_ortho_loss > n_problem * eps:
+                        # Update pvec by instance reorthogonalised against SS
+                        # using a second CGS. Also update pnorm.
+                        coefficients = np.hstack(([1], -ss_overlap))
+                        pvec = lincomb(coefficients, [pvec] + SS, evaluate=True)
+                        pnorm = np.sqrt(pvec @ pvec)
+                        state.reortho_triggers.append(max_ortho_loss)
+                if pnorm >= residual_min_norm:
                     # Extend the subspace
                     SS.append(evaluate(pvec / pnorm))
                     n_ss_added += 1
@@ -284,8 +309,10 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
                 state.subspace_orthogonality = np.max(np.abs(orth))
                 if state.subspace_orthogonality > n_problem * eps:
                     warnings.warn(la.LinAlgWarning(
-                        "Subspace in davidson has lost orthogonality. "
-                        "Expect inaccurate results."
+                        "Subspace in Davidson has lost orthogonality. "
+                        "Max. deviation from orthogonality is {:.4E}. "
+                        "Expect inaccurate results.".format(
+                            state.subspace_orthogonality)
                     ))
 
         if n_ss_added == 0:
@@ -300,12 +327,26 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep,
                 "be aborted without convergence. Try a different guess."))
             return state
 
+        # Matrix applies for the new vectors
         with state.timer.record("projection"):
             Ax.extend(matrix @ SS[-n_ss_added:])
             state.n_applies += n_ss_added
 
+        # Update the worksize view for the next iteration
+        Ass = Ass_cont[:n_ss_vec, :n_ss_vec]
 
-def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
+        # Project Ax onto the subspace, keeping in mind
+        # that the values Ass[:-n_ss_added, :-n_ss_added] are already valid,
+        # since they have been computed in the previous iterations already.
+        with state.timer.record("projection"):
+            for i in range(n_ss_vec - n_ss_added, n_ss_vec):
+                for j in range(i + 1):
+                    Ass[i, j] = SS[i] @ Ax[j]
+                    if i != j:
+                        Ass[j, i] = Ass[i, j]
+
+
+def eigsh(matrix, guesses, n_ep=None, n_block=None, max_subspace=None,
           conv_tol=1e-9, which="SA", max_iter=70,
           callback=None, preconditioner=None,
           preconditioning_method="Davidson", debug_checks=False,
@@ -320,6 +361,9 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
         Guess vectors (fixes also the Davidson block size)
     n_ep : int or NoneType, optional
         Number of eigenpairs to be computed
+    n_block : int or NoneType, optional
+        The solver block size: the number of vectors that are added to the subspace
+        in each iteration
     max_subspace : int or NoneType, optional
         Maximal subspace size
     conv_tol : float, optional
@@ -364,11 +408,28 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
     if n_ep is None:
         n_ep = len(guesses)
     elif n_ep > len(guesses):
-        raise ValueError("n_ep cannot exceed the number of guess vectors.")
+        raise ValueError(f"n_ep (= {n_ep}) cannot exceed the number of guess "
+                         f"vectors (= {len(guesses)}).")
+
+    if n_block is None:
+        n_block = n_ep
+    elif n_block < n_ep:
+        raise ValueError(f"n_block (= {n_block}) cannot be smaller than the number "
+                         f"of states requested (= {n_ep}).")
+    elif n_block > len(guesses):
+        raise ValueError(f"n_block (= {n_block}) cannot exceed the number of guess "
+                         f"vectors (= {len(guesses)}).")
+
     if not max_subspace:
         # TODO Arnoldi uses this:
         # max_subspace = max(2 * n_ep + 1, 20)
         max_subspace = max(6 * n_ep, 20, 5 * len(guesses))
+    elif max_subspace < 2 * n_block:
+        raise ValueError(f"max_subspace (= {max_subspace}) needs to be at least "
+                         f"twice as large as n_block (n_block = {n_block}).")
+    elif max_subspace < len(guesses):
+        raise ValueError(f"max_subspace (= {max_subspace}) cannot be smaller than "
+                         f"the number of guess vectors (= {len(guesses)}).")
 
     def convergence_test(state):
         state.residuals_converged = state.residual_norms < conv_tol
@@ -385,7 +446,7 @@ def eigsh(matrix, guesses, n_ep=None, max_subspace=None,
 
     state = DavidsonState(matrix, guesses)
     davidson_iterations(matrix, state, max_subspace, max_iter,
-                        n_ep=n_ep, is_converged=convergence_test,
+                        n_ep=n_ep, n_block=n_block, is_converged=convergence_test,
                         callback=callback, which=which,
                         preconditioner=preconditioner,
                         preconditioning_method=preconditioning_method,
