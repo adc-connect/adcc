@@ -62,7 +62,7 @@ class TestCrossReferenceBackends:
             backends_test = [b for b in backends]
         if len(backends_test) < 2:
             pytest.skip("Veloxchem does not support f-functions. "
-                        "Not enough backends that support UHF available.")
+                        "Not enough backends available.")
 
         # fewer states available for fc-fv-cvs
         n_states = 5
@@ -142,7 +142,7 @@ class TestCrossReferenceBackends:
             backends_test = [b for b in backends]
         if len(backends_test) < 2:
             pytest.skip("Veloxchem does not support f-functions. "
-                        "Not enough backends that support UHF available.")
+                        "Not enough backends available.")
         results = {}
         for b in backends_test:
             results[b] = adcc.ReferenceState(cached_backend_hf(b, system))
@@ -249,3 +249,13 @@ def compare_adc_results(adc_results, atol):
         if has_rotatory1 and has_rotatory2:
             assert_allclose(state1.rotatory_strength,
                             state2.rotatory_strength, atol=atol)
+
+        has_rotatory_len1 = all(op in state1.operators.available
+                            for op
+                            in ["electric_dipole", "magnetic_dipole"])
+        has_rotatory_len2 = all(op in state2.operators.available
+                            for op
+                            in ["electric_dipole", "magnetic_dipole"])
+        if has_rotatory_len1 and has_rotatory_len2:
+            assert_allclose(state1.rotatory_strength_length,
+                            state2.rotatory_strength_length, atol=atol)
