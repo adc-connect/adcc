@@ -193,6 +193,20 @@ def compare_adc_results(adc_results, atol):
                             "in block {}".format(block)
                 )
 
+        def fix_signs(actual, desired, atol):
+            fixed_signs = (
+                np.sign(actual * (np.absolute(actual) > atol))
+                * np.sign(desired * (np.absolute(desired) > atol))
+            )
+            for i in range(len(fixed_signs)):
+                if -1 in fixed_signs[i]:
+                    fixed_signs[i][fixed_signs[i] == 0] = -1
+                else:
+                    fixed_signs[i][fixed_signs[i] == 0] = 1
+                assert all(fixed_signs[i] == 1) or all(fixed_signs[i] == -1)
+            return fixed_signs
+        
+        fixed_signs = None
         # test properties
         if "electric_dipole" in state1.operators.available and \
                 "electric_dipole" in state2.operators.available:
@@ -200,11 +214,31 @@ def compare_adc_results(adc_results, atol):
                             state2.oscillator_strength, atol=atol)
             assert_allclose(state1.state_dipole_moment,
                             state2.state_dipole_moment, atol=atol)
+            if fixed_signs is None:
+                fixed_signs = fix_signs(state1.transition_dipole_moment,
+                                        state2.transition_dipole_moment, atol=atol)
+            assert_allclose(fixed_signs * state1.transition_dipole_moment,
+                            state2.transition_dipole_moment, atol=atol)
 
         if "electric_dipole_velocity" in state1.operators.available and \
                 "electric_dipole_velocity" in state2.operators.available:
             assert_allclose(state1.oscillator_strength_velocity,
                             state2.oscillator_strength_velocity, atol=atol)
+            if fixed_signs is None:
+                fixed_signs = fix_signs(state1.transition_dipole_moment_velocity,
+                                        state2.transition_dipole_moment_velocity,
+                                        atol=atol)
+            assert_allclose(fixed_signs * state1.transition_dipole_moment_velocity,
+                            state2.transition_dipole_moment_velocity, atol=atol)
+
+        if "magnetic_dipole" in state1.operators.available and \
+                "magnetic_dipole" in state2.operators.available:
+            if fixed_signs is None:
+                fixed_signs = fix_signs(state1.transition_magnetic_dipole_moment,
+                                        state2.transition_magnetic_dipole_moment,
+                                        atol=atol)
+            assert_allclose(fixed_signs * state1.transition_magnetic_dipole_moment,
+                            state2.transition_magnetic_dipole_moment, atol=atol)
 
         has_rotatory1 = all(op in state1.operators.available
                             for op
