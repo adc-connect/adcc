@@ -205,7 +205,7 @@ def compare_adc_results(adc_results, atol):
                     fixed_signs[i][fixed_signs[i] == 0] = 1
                 assert all(fixed_signs[i] == 1) or all(fixed_signs[i] == -1)
             return fixed_signs
-        
+
         fixed_signs = None
         # test properties
         if "electric_dipole" in state1.operators.available and \
@@ -251,11 +251,11 @@ def compare_adc_results(adc_results, atol):
                             state2.rotatory_strength, atol=atol)
 
         has_rotatory_len1 = all(op in state1.operators.available
-                            for op
-                            in ["electric_dipole", "magnetic_dipole"])
+                                for op
+                                in ["electric_dipole", "magnetic_dipole"])
         has_rotatory_len2 = all(op in state2.operators.available
-                            for op
-                            in ["electric_dipole", "magnetic_dipole"])
+                                for op
+                                in ["electric_dipole", "magnetic_dipole"])
         if has_rotatory_len1 and has_rotatory_len2:
             assert_allclose(state1.rotatory_strength_length,
                             state2.rotatory_strength_length, atol=atol)
