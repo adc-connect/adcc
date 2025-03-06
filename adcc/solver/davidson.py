@@ -160,32 +160,23 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
         Ax = evaluate(matrix @ SS)
         state.n_applies += n_ss_vec
 
-    # Initially fill Ass[n_ss_vec-n_block:, n_ss_vec-n_block:] since n_block
-    # may be smaller than the initial subspace size (== number of guesses);
-    # the remaining subspace-projected A matrix is filled during the first
-    # Davidson iteration
-    for i in range(n_ss_vec - n_block):
-        for j in range(i, n_ss_vec - n_block):
-            Ass_cont[i, j] = SS[i] @ Ax[j]
-            if (i != j):
-                Ass_cont[j, i] = Ass_cont[i, j]
+    # Get the worksize view for the first iteration
+    Ass = Ass_cont[:n_ss_vec, :n_ss_vec]
+
+    # Initiall projection of Ax onto the subspace, exploiting the hermiticity
+    # of the Ass matrix
+    with state.timer.record("projection"):
+        for i in range(n_ss_vec):
+            for j in range(i, n_ss_vec):
+                Ass[i, j] = SS[i] @ Ax[j]
+                if i != j:
+                    Ass[j, i] = Ass[i, j]
 
     while state.n_iter < max_iter:
         state.n_iter += 1
 
         assert len(SS) >= n_block
         assert len(SS) <= max_subspace
-
-        # Project A onto the subspace, keeping in mind
-        # that the values Ass[:-n_block, :-n_block] are already valid,
-        # since they have been computed in the previous iterations already.
-        with state.timer.record("projection"):
-            Ass = Ass_cont[:n_ss_vec, :n_ss_vec]  # Increase the work view size
-            for i in range(n_ss_vec - n_block, n_ss_vec):
-                for j in range(i + 1):
-                    Ass[i, j] = SS[i] @ Ax[j]
-                    if (i != j):
-                        Ass[j, i] = Ass[i, j]
 
         # Compute the which(== largest, smallest, ...) eigenpair of Ass
         # and the associated ritz vector as well as residual
@@ -252,7 +243,10 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
                 # Update projection of ADC matrix A onto subspace
                 Ass = Ass_cont[:n_ss_vec, :n_ss_vec]
                 for i in range(n_ss_vec):
-                    Ass[:, i] = Ax[i] @ SS
+                    for j in range(i, n_ss_vec):
+                        Ass[i, j] = SS[i] @ Ax[j]
+                        if i != j:
+                            Ass[j, i] = Ass[i, j]
             # continue to add residuals to space
 
         with state.timer.record("preconditioner"):
@@ -334,9 +328,23 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
                 "be aborted without convergence. Try a different guess."))
             return state
 
+        # Matrix applies for the new vectors
         with state.timer.record("projection"):
             Ax.extend(matrix @ SS[-n_ss_added:])
             state.n_applies += n_ss_added
+
+        # Update the worksize view for the next iteration
+        Ass = Ass_cont[:n_ss_vec, :n_ss_vec]
+
+        # Project Ax onto the subspace, keeping in mind
+        # that the values Ass[:-n_ss_added, :-n_ss_added] are already valid,
+        # since they have been computed in the previous iterations already.
+        with state.timer.record("projection"):
+            for i in range(n_ss_vec - n_ss_added, n_ss_vec):
+                for j in range(i + 1):
+                    Ass[i, j] = SS[i] @ Ax[j]
+                    if i != j:
+                        Ass[j, i] = Ass[i, j]
 
 
 def eigsh(matrix, guesses, n_ep=None, n_block=None, max_subspace=None,
