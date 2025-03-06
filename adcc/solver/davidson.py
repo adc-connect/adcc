@@ -163,8 +163,7 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
     # Get the worksize view for the first iteration
     Ass = Ass_cont[:n_ss_vec, :n_ss_vec]
 
-    # Initiall projection of Ax onto the subspace, exploiting the hermiticity
-    # of the Ass matrix
+    # Initiall projection of Ax onto the subspace exploiting the hermiticity
     with state.timer.record("projection"):
         for i in range(n_ss_vec):
             for j in range(i, n_ss_vec):
@@ -410,7 +409,7 @@ def eigsh(matrix, guesses, n_ep=None, n_block=None, max_subspace=None,
         n_ep = len(guesses)
     elif n_ep > len(guesses):
         raise ValueError(f"n_ep (= {n_ep}) cannot exceed the number of guess "
-                         f"vectors {len(guesses)}.")
+                         f"vectors (= {len(guesses)}).")
 
     if n_block is None:
         n_block = n_ep

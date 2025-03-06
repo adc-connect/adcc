@@ -43,21 +43,23 @@ class TestSolverDavidson(unittest.TestCase):
         guesses = adcc.guesses_singlet(self.matrix, n_guesses=1, block="ph")
         with pytest.raises(ValueError):
             eigsh(self.matrix, guesses, n_ep=2)
-        res = eigsh(self.matrix, guesses, n_ep=1)
+        res = eigsh(self.matrix, guesses, n_ep=1, max_iter=1)
         assert len(res.eigenvalues) == 1
-        # construct 1 state for each guess
-        res = eigsh(self.matrix, guesses)
+        # by default: construct 1 state for each guess
+        res = eigsh(self.matrix, guesses, max_iter=1)
         assert len(res.eigenvalues) == 1
 
     def test_n_block(self):
         # has to be: n_ep <= n_block <= n_guesses
-        guesses = adcc.guesses_singlet(self.matrix, n_guesses=2, block="ph")
+        guesses = adcc.guesses_singlet(self.matrix, n_guesses=3, block="ph")
         with pytest.raises(ValueError):
             eigsh(self.matrix, guesses, n_ep=2, n_block=1)
         with pytest.raises(ValueError):
-            eigsh(self.matrix, guesses, n_ep=2, n_block=3)
-        res = eigsh(self.matrix, guesses, n_ep=2, n_block=2)
+            eigsh(self.matrix, guesses, n_ep=2, n_block=4)
+        # defaults to n_ep
+        res = eigsh(self.matrix, guesses, n_ep=2, max_iter=2)
         assert len(res.eigenvalues) == 2
+        assert res.n_applies == 5
 
     def test_max_subspace(self):
         # max_subspace >= 2 * n_block
