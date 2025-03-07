@@ -115,7 +115,7 @@ class TestPyscf:
             ao_magdip = -0.5 * mf.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
         operator_import_from_ao_test(mf, list(ao_magdip), "magnetic_dipole")
 
-        # Test electric_dipole_velocity
+        # Test electric dipole velocity
         ao_linmom = mf.mol.intor('int1e_ipovlp', comp=3, hermi=2)
         operator_import_from_ao_test(mf, list(ao_linmom),
                                      "electric_dipole_velocity")
