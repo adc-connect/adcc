@@ -193,17 +193,41 @@ def compare_adc_results(adc_results, atol):
                             "in block {}".format(block)
                 )
 
+        def assert_allclose_transmom(actual, desired, atol=0, fixed_signs=None):
+            shape = actual.shape[1:]
+            axis = tuple(range(1, len(shape) + 1))
+            if fixed_signs is None:
+                fixed_signs = fix_signs(actual, desired, atol)
+            else:
+                idx = np.where(np.all(np.isnan(fixed_signs), axis=axis))
+                for i in idx:
+                    fixed_signs[i] = fix_signs(actual[i], desired[i], atol)
+            fixed_signs_mod = fixed_signs.copy()
+            idx = np.where(np.all(np.isnan(fixed_signs), axis=axis))
+            for i in idx:
+                fixed_signs_mod[i] = np.ones(shape)
+            assert 0 not in fixed_signs_mod
+            assert not np.any(np.isnan(fixed_signs_mod))
+            np.testing.assert_allclose(actual, fixed_signs_mod * desired, atol=atol)
+            return fixed_signs
+
         def fix_signs(actual, desired, atol):
             fixed_signs = (
                 np.sign(actual * (np.absolute(actual) > atol))
                 * np.sign(desired * (np.absolute(desired) > atol))
             )
             for i in range(len(fixed_signs)):
-                if -1 in fixed_signs[i]:
+                if 1 in fixed_signs[i]:
+                    fixed_signs[i][fixed_signs[i] == 0] = 1
+                elif -1 in fixed_signs[i]:
                     fixed_signs[i][fixed_signs[i] == 0] = -1
                 else:
-                    fixed_signs[i][fixed_signs[i] == 0] = 1
-                assert all(fixed_signs[i] == 1) or all(fixed_signs[i] == -1)
+                    fixed_signs[i][fixed_signs[i] == 0] = np.nan
+                assert (
+                    np.all(fixed_signs[i] == 1)
+                    or np.all(fixed_signs[i] == -1)
+                    or np.all(np.isnan(fixed_signs[i]))
+                )
             return fixed_signs
 
         fixed_signs = None
@@ -214,31 +238,26 @@ def compare_adc_results(adc_results, atol):
                             state2.oscillator_strength, atol=atol)
             assert_allclose(state1.state_dipole_moment,
                             state2.state_dipole_moment, atol=atol)
-            if fixed_signs is None:
-                fixed_signs = fix_signs(state1.transition_dipole_moment,
-                                        state2.transition_dipole_moment, atol=atol)
-            assert_allclose(fixed_signs * state1.transition_dipole_moment,
-                            state2.transition_dipole_moment, atol=atol)
+            fixed_signs = assert_allclose_transmom(
+                state1.transition_dipole_moment,
+                state2.transition_dipole_moment,
+                atol=atol, fixed_signs=fixed_signs)
 
         if "electric_dipole_velocity" in state1.operators.available and \
                 "electric_dipole_velocity" in state2.operators.available:
             assert_allclose(state1.oscillator_strength_velocity,
                             state2.oscillator_strength_velocity, atol=atol)
-            if fixed_signs is None:
-                fixed_signs = fix_signs(state1.transition_dipole_moment_velocity,
-                                        state2.transition_dipole_moment_velocity,
-                                        atol=atol)
-            assert_allclose(fixed_signs * state1.transition_dipole_moment_velocity,
-                            state2.transition_dipole_moment_velocity, atol=atol)
+            fixed_signs = assert_allclose_transmom(
+                state1.transition_dipole_moment_velocity,
+                state2.transition_dipole_moment_velocity,
+                atol=atol, fixed_signs=fixed_signs)
 
         if "magnetic_dipole" in state1.operators.available and \
                 "magnetic_dipole" in state2.operators.available:
-            if fixed_signs is None:
-                fixed_signs = fix_signs(state1.transition_magnetic_dipole_moment,
-                                        state2.transition_magnetic_dipole_moment,
-                                        atol=atol)
-            assert_allclose(fixed_signs * state1.transition_magnetic_dipole_moment,
-                            state2.transition_magnetic_dipole_moment, atol=atol)
+            fixed_signs = assert_allclose_transmom(
+                state1.transition_magnetic_dipole_moment,
+                state2.transition_magnetic_dipole_moment,
+                atol=atol, fixed_signs=fixed_signs)
 
         has_rotatory1 = all(op in state1.operators.available
                             for op
