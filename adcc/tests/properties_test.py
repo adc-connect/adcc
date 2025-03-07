@@ -199,10 +199,11 @@ class TestProperties:
 
         res_dms = state.transition_magnetic_dipole_moment
         n_ref = len(state.excitation_vector)
-        assert_allclose(
-            res_dms, refdata["transition_magnetic_dipole_moments"][:n_ref],
-            atol=1e-4
-        )
+        for i in range(n_ref):
+            assert_allclose_signfix(
+                res_dms[i], refdata["transition_magnetic_dipole_moments"][i],
+                atol=1e-4
+            )
 
     # Only adcc reference data available.
     @pytest.mark.parametrize("system,case,kind", cases)
@@ -217,10 +218,11 @@ class TestProperties:
 
         res_dms = state.transition_dipole_moment_velocity
         n_ref = len(state.excitation_vector)
-        assert_allclose(
-            res_dms, refdata["transition_dipole_moments_velocity"][:n_ref],
-            atol=1e-4
-        )
+        for i in range(n_ref):
+            assert_allclose_signfix(
+                res_dms[i], refdata["transition_dipole_moments_velocity"][i],
+                atol=1e-4
+            )
 
     # Only adcc reference data available.
     @pytest.mark.parametrize("system,case,kind", cases)
