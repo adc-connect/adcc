@@ -106,18 +106,19 @@ class TestPyscf:
             assert_almost_equal(eri_perm, eri)
 
     def operators_test(self, mf):
-        # Test dipole
-        ao_dip = mf.mol.intor_symmetric('int1e_r', comp=3)
+        # Test electric dipole
+        ao_dip = -1.0 * mf.mol.intor_symmetric('int1e_r', comp=3)
         operator_import_from_ao_test(mf, list(ao_dip))
 
         # Test magnetic dipole
         with mf.mol.with_common_orig([0.0, 0.0, 0.0]):
-            ao_magdip = 0.5 * mf.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
+            ao_magdip = -0.5 * mf.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
         operator_import_from_ao_test(mf, list(ao_magdip), "magnetic_dipole")
 
-        # Test nabla
-        ao_linmom = -1.0 * mf.mol.intor('int1e_ipovlp', comp=3, hermi=2)
-        operator_import_from_ao_test(mf, list(ao_linmom), "nabla")
+        # Test electric dipole velocity
+        ao_linmom = mf.mol.intor('int1e_ipovlp', comp=3, hermi=2)
+        operator_import_from_ao_test(mf, list(ao_linmom),
+                                     "electric_dipole_velocity")
 
     @pytest.mark.parametrize("system", h2o, ids=[case.file_name for case in h2o])
     def test_rhf(self, system: testcases.TestCase):

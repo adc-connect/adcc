@@ -127,13 +127,14 @@ class TestVeloxchem:
             assert_almost_equal(eri_perm, eri)
 
     def operators_test(self, scfdrv):
-        # Test dipole
+        # Test electric dipole
         dipole_drv = vlx.ElectricDipoleIntegralsDriver(scfdrv.task.mpi_comm)
         dipole_drv.origin = tuple(np.zeros(3))
         dipole_mats = dipole_drv.compute(scfdrv.task.molecule,
                                          scfdrv.task.ao_basis)
-        integrals = (dipole_mats.x_to_numpy(), dipole_mats.y_to_numpy(),
-                     dipole_mats.z_to_numpy())
+        integrals = (-1.0 * dipole_mats.x_to_numpy(),
+                     -1.0 * dipole_mats.y_to_numpy(),
+                     -1.0 * dipole_mats.z_to_numpy())
         operator_import_from_ao_test(scfdrv, integrals,
                                      operator="electric_dipole")
 
@@ -149,14 +150,15 @@ class TestVeloxchem:
         operator_import_from_ao_test(scfdrv, integrals,
                                      operator="magnetic_dipole")
 
-        # Test nabla
+        # Test electric dipole velocity
         linmom_drv = LinearMomentumIntegralsDriver(scfdrv.task.mpi_comm)
         linmom_mats = linmom_drv.compute(scfdrv.task.molecule,
                                          scfdrv.task.ao_basis)
         integrals = (-1.0 * linmom_mats.x_to_numpy(),
                      -1.0 * linmom_mats.y_to_numpy(),
                      -1.0 * linmom_mats.z_to_numpy())
-        operator_import_from_ao_test(scfdrv, integrals, operator="nabla")
+        operator_import_from_ao_test(scfdrv, integrals,
+                                     operator="electric_dipole_velocity")
 
     @pytest.mark.parametrize("system", h2o, ids=[case.file_name for case in h2o])
     def test_rhf(self, system: testcases.TestCase):
