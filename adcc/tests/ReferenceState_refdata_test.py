@@ -91,7 +91,6 @@ def compare_refstate_with_reference(system: str, case: str,
     assert_allclose(refstate.nuclear_dipole,
                     multipoles["nuclear_1"], atol=atol)
 
-    # This only makes sense if we used scfres to construct refstate.
     if "electric_dipole" in refstate.operators.available \
             and "elec_1" in multipoles:
         refstate2 = adcc.ReferenceState(data)
