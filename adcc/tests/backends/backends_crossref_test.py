@@ -27,6 +27,7 @@ from numpy.testing import assert_allclose
 
 import adcc
 import adcc.backends
+from adcc.misc import assert_allclose_signfix
 
 from .testing import cached_backend_hf
 from .. import testcases
@@ -193,24 +194,6 @@ def compare_adc_results(adc_results, atol):
                             "in block {}".format(block)
                 )
 
-        def assert_allclose_transmom(actual, desired, atol=0, fixed_signs=None):
-            shape = actual.shape[1:]
-            axis = tuple(range(1, len(shape) + 1))
-            if fixed_signs is None:
-                fixed_signs = fix_signs(actual, desired, atol)
-            else:
-                idx = np.where(np.all(np.isnan(fixed_signs), axis=axis))
-                for i in idx:
-                    fixed_signs[i] = fix_signs(actual[i], desired[i], atol)
-            fixed_signs_mod = fixed_signs.copy()
-            idx = np.where(np.all(np.isnan(fixed_signs), axis=axis))
-            for i in idx:
-                fixed_signs_mod[i] = np.ones(shape)
-            assert 0 not in fixed_signs_mod
-            assert not np.any(np.isnan(fixed_signs_mod))
-            np.testing.assert_allclose(actual, fixed_signs_mod * desired, atol=atol)
-            return fixed_signs
-
         def fix_signs(actual, desired, atol):
             fixed_signs = (
                 np.sign(actual * (np.absolute(actual) > atol))
@@ -218,11 +201,14 @@ def compare_adc_results(adc_results, atol):
             )
             for i in range(len(fixed_signs)):
                 if 1 in fixed_signs[i]:
-                    fixed_signs[i][fixed_signs[i] == 0] = 1
+                    subs = 1
                 elif -1 in fixed_signs[i]:
-                    fixed_signs[i][fixed_signs[i] == 0] = -1
+                    subs = -1
                 else:
-                    fixed_signs[i][fixed_signs[i] == 0] = np.nan
+                    subs = np.nan
+                # zero components are given the same sign as the others
+                # if they are all zero, the sign is nan
+                fixed_signs[i][fixed_signs[i] == 0] = subs
                 assert (
                     np.all(fixed_signs[i] == 1)
                     or np.all(fixed_signs[i] == -1)
@@ -230,34 +216,82 @@ def compare_adc_results(adc_results, atol):
                 )
             return fixed_signs
 
+        def assert_allclose_signs(actual, desired):
+            shape = actual.shape[1:]
+            axis = tuple(range(1, len(shape) + 1))
+            # the nan entries should not be compared
+            idx_a = np.where(np.all(np.isnan(actual), axis=axis))
+            actual_mod = actual.copy()
+            for i in idx_a:
+                actual_mod[i] = desired[i]
+            idx_d = np.where(np.all(np.isnan(desired), axis=axis))
+            desired_mod = desired.copy()
+            for i in idx_d:
+                desired_mod[i] = actual[i]
+            np.testing.assert_allclose(actual_mod, desired_mod)
+
         fixed_signs = None
         # test properties
+        # the signs of the transition moments can differ between different ADC
+        # calculations (due to the eigenvectors), but this should be uniform for
+        # all properties
         if "electric_dipole" in state1.operators.available and \
                 "electric_dipole" in state2.operators.available:
             assert_allclose(state1.oscillator_strength,
                             state2.oscillator_strength, atol=atol)
             assert_allclose(state1.state_dipole_moment,
                             state2.state_dipole_moment, atol=atol)
-            fixed_signs = assert_allclose_transmom(
+
+            for i in range(len(state1.transition_dipole_moment)):
+                assert_allclose_signfix(
+                    state1.transition_dipole_moment[i],
+                    state2.transition_dipole_moment[i],
+                    atol=atol)
+            fixed_signs_new = fix_signs(
                 state1.transition_dipole_moment,
                 state2.transition_dipole_moment,
-                atol=atol, fixed_signs=fixed_signs)
+                atol=atol
+            )
+            if fixed_signs is None:
+                fixed_signs = fixed_signs_new
+            else:
+                assert_allclose_signs(fixed_signs_new, fixed_signs)
 
         if "electric_dipole_velocity" in state1.operators.available and \
                 "electric_dipole_velocity" in state2.operators.available:
             assert_allclose(state1.oscillator_strength_velocity,
                             state2.oscillator_strength_velocity, atol=atol)
-            fixed_signs = assert_allclose_transmom(
+            for i in range(len(state1.transition_dipole_moment_velocity)):
+                assert_allclose_signfix(
+                    state1.transition_dipole_moment_velocity[i],
+                    state2.transition_dipole_moment_velocity[i],
+                    atol=atol)
+            fixed_signs_new = fix_signs(
                 state1.transition_dipole_moment_velocity,
                 state2.transition_dipole_moment_velocity,
-                atol=atol, fixed_signs=fixed_signs)
+                atol=atol
+            )
+            if fixed_signs is None:
+                fixed_signs = fixed_signs_new
+            else:
+                assert_allclose_signs(fixed_signs_new, fixed_signs)
 
         if "magnetic_dipole" in state1.operators.available and \
                 "magnetic_dipole" in state2.operators.available:
-            fixed_signs = assert_allclose_transmom(
+            for i in range(len(state1.transition_magnetic_dipole_moment)):
+                assert_allclose_signfix(
+                    state1.transition_magnetic_dipole_moment[i],
+                    state2.transition_magnetic_dipole_moment[i],
+                    atol=atol)
+            fixed_signs_new = fix_signs(
                 state1.transition_magnetic_dipole_moment,
                 state2.transition_magnetic_dipole_moment,
-                atol=atol, fixed_signs=fixed_signs)
+                atol=atol
+            )
+            if fixed_signs is None:
+                fixed_signs = fixed_signs_new
+            else:
+                assert_allclose_signs(fixed_signs_new, fixed_signs)
 
         has_rotatory1 = all(op in state1.operators.available
                             for op
