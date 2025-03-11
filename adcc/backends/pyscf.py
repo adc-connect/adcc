@@ -40,21 +40,26 @@ class PyScfOperatorIntegralProvider:
 
     @cached_property
     def electric_dipole(self):
-        return list(self.scfres.mol.intor_symmetric('int1e_r', comp=3))
+        """-sum_i r_i"""
+        return list(
+            -1.0 * self.scfres.mol.intor_symmetric('int1e_r', comp=3)
+        )
 
     @cached_property
     def magnetic_dipole(self):
+        """-0.5 * sum_i r_i x p_i"""
         # TODO: Gauge origin?
         with self.scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
             return list(
-                0.5 * self.scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
+                -0.5 * self.scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
             )
 
     @cached_property
-    def nabla(self):
+    def electric_dipole_velocity(self):
+        """-sum_i p_i"""
         with self.scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
             return list(
-                -1.0 * self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
+                self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
             )
 
     @property

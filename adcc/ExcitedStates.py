@@ -254,7 +254,7 @@ class ExcitedStates(ElectronicTransition):
             gs_dip_moment = self.ground_state.dipole_moment(pmethod.level)
 
         dipole_integrals = self.operators.electric_dipole
-        return gs_dip_moment - np.array([
+        return gs_dip_moment + np.array([
             [product_trace(comp, ddm) for comp in dipole_integrals]
             for ddm in self.state_diffdm
         ])
@@ -289,7 +289,8 @@ class ExcitedStates(ElectronicTransition):
         eV = constants.value("Hartree energy in eV")
         has_dipole = "electric_dipole" in self.operators.available
         has_rotatory = all(op in self.operators.available
-                           for op in ["magnetic_dipole", "nabla"])
+                           for op
+                           in ["magnetic_dipole", "electric_dipole_velocity"])
 
         # Build information about the optional columns
         opt_thead = ""
