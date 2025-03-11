@@ -221,8 +221,8 @@ class DataHfProvider(HartreeFockProvider):
                                  + str(magm["mag_1_origin"].shape))
             opprov.magnetic_dipole = get_integral_magdip
         derivs = data.get("derivatives", {})
-        if "nabla_origin" in derivs:
-            opprov.nabla = np.asarray(derivs["nabla_origin"])
+        if "elec_vel_1" in derivs:
+            opprov.electric_dipole_velocity = np.asarray(derivs["elec_vel_1"])
         self.operator_integral_provider = opprov
 
     #
