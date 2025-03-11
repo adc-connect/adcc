@@ -135,19 +135,21 @@ class TestVeloxchem:
         dipole_drv.origin = tuple(np.zeros(3))
         dipole_mats = dipole_drv.compute(scfdrv.task.molecule,
                                          scfdrv.task.ao_basis)
-        integrals = (dipole_mats.x_to_numpy(), dipole_mats.y_to_numpy(),
-                     dipole_mats.z_to_numpy())
+        integrals = (-1.0 * dipole_mats.x_to_numpy(),
+                     -1.0 * dipole_mats.y_to_numpy(),
+                     -1.0 * dipole_mats.z_to_numpy())
         operator_import_from_ao_test(scfdrv, integrals,
                                      operator="electric_dipole")
 
-        # Test nabla
+        # Test electric dipole velocity
         linmom_drv = LinearMomentumIntegralsDriver(scfdrv.task.mpi_comm)
         linmom_mats = linmom_drv.compute(scfdrv.task.molecule,
                                          scfdrv.task.ao_basis)
         integrals = (-1.0 * linmom_mats.x_to_numpy(),
                      -1.0 * linmom_mats.y_to_numpy(),
                      -1.0 * linmom_mats.z_to_numpy())
-        operator_import_from_ao_test(scfdrv, integrals, operator="nabla")
+        operator_import_from_ao_test(scfdrv, integrals,
+                                     operator="electric_dipole_velocity")
 
         for gauge_origin in gauge_origins:
             gauge_origin = _determine_gauge_origin(scfdrv, gauge_origin)

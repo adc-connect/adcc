@@ -46,14 +46,16 @@ class Psi4OperatorIntegralProvider:
 
     @cached_property
     def electric_dipole(self):
-        return [-1.0 * np.asarray(comp) for comp in self.mints.ao_dipole()]
+        """-sum_i r_i"""
+        return [np.asarray(comp) for comp in self.mints.ao_dipole()]
 
     @property
     def magnetic_dipole(self):
+        """-0.5 * sum_i r_i x p_i"""
         def gauge_origin_dependent_integrals(gauge_origin):
             # TODO: Gauge origin?
-            if gauge_origin != [0.0, 0.0, 0.0] and gauge_origin != "origin":
-                raise NotImplementedError('Only [0.0, 0.0, 0.0] can be selected as'
+            if gauge_origin != (0.0, 0.0, 0.0) and gauge_origin != "origin":
+                raise NotImplementedError('Only (0.0, 0.0, 0.0) can be selected as'
                                           ' gauge origin.')
             return [
                 0.5 * np.asarray(comp)
@@ -62,7 +64,8 @@ class Psi4OperatorIntegralProvider:
         return gauge_origin_dependent_integrals
 
     @cached_property
-    def nabla(self):
+    def electric_dipole_velocity(self):
+        """-sum_i p_i"""
         return [-1.0 * np.asarray(comp) for comp in self.mints.ao_nabla()]
 
     @property

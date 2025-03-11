@@ -144,7 +144,7 @@ def eri_asymm_construction_test(scfres, core_orbitals=0):
 
 
 def operator_import_from_ao_test(scfres, ao_dict, operator="electric_dipole",
-                                 gauge_origin=[0.0, 0.0, 0.0]):
+                                 gauge_origin=(0.0, 0.0, 0.0)):
     refstate = adcc.ReferenceState(scfres)
     occa = refstate.orbital_coefficients_alpha("o1b").to_ndarray()
     occb = refstate.orbital_coefficients_beta("o1b").to_ndarray()

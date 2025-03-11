@@ -100,10 +100,10 @@ class OperatorIntegrals:
         """Which integrals are available in the underlying backend"""
         integrals = (
             "electric_dipole",
+            "electric_dipole_velocity",
             "magnetic_dipole",
-            "nabla",
-            "electric_quadrupole_traceless",
             "electric_quadrupole",
+            "electric_quadrupole_traceless",
             "electric_quadrupole_velocity",
             "diamagnetic_magnetizability",
             "pe_induction_elec",
@@ -181,12 +181,12 @@ class OperatorIntegrals:
 
     @property
     @timed_member_call("_import_timer")
-    def nabla(self):
+    def electric_dipole_velocity(self):
         """
-        Returns a function to obtain nabla intergrals
+        Return the electric dipole integrals (in the velocity gauge)
         in the molecular orbital basis.
         """
-        return self.import_dipole_like_operator("nabla",
+        return self.import_dipole_like_operator("electric_dipole_velocity",
                                                 is_symmetric=False)
 
     def __import_quadrupole_like_operator(self, callback, is_symmetric=True):
@@ -206,7 +206,7 @@ class OperatorIntegrals:
         if not callable(callback):
             raise TypeError
 
-        def process_operator(gauge_origin=[0.0, 0.0, 0.0], callback=callback,
+        def process_operator(gauge_origin=(0.0, 0.0, 0.0), callback=callback,
                              is_symmetric=is_symmetric):
             quad = []
             quadrupoles = []
@@ -234,7 +234,7 @@ class OperatorIntegrals:
         """
         Returns a function to obtain traceless electric quadrupole integrals
         in the molecular orbital basis dependent on the selected gauge origin.
-        The default gauge origin is set to [0.0, 0.0, 0.0].
+        The default gauge origin is set to (0.0, 0.0, 0.0).
         """
         callback = self.provider_ao.electric_quadrupole_traceless
         return self.__import_quadrupole_like_operator(callback, is_symmetric=False)
@@ -245,7 +245,7 @@ class OperatorIntegrals:
         """
         Returns a function to obtain electric quadrupole integrals
         in the molecular orbital basis dependent on the selected gauge origin.
-        The default gauge origin is set to [0.0, 0.0, 0.0].
+        The default gauge origin is set to (0.0, 0.0, 0.0).
         """
         callback = self.provider_ao.electric_quadrupole
         return self.__import_quadrupole_like_operator(callback, is_symmetric=False)
@@ -256,7 +256,7 @@ class OperatorIntegrals:
         """
         Returns a function to obtain electric quadrupole integrals in velocity gauge
         in the molecular orbital basis dependent on the selected gauge origin.
-        The default gauge origin is set to [0.0, 0.0, 0.0].
+        The default gauge origin is set to (0.0, 0.0, 0.0).
         """
         callback = self.provider_ao.electric_quadrupole_velocity
         return self.__import_quadrupole_like_operator(callback, is_symmetric=False)
@@ -267,7 +267,7 @@ class OperatorIntegrals:
         """
         Returns a function to obtain diamagnetic magnetizability integrals
         in the molecular orbital basis dependent on the selected gauge origin.
-        The default gauge origin is set to [0.0, 0.0, 0.0].
+        The default gauge origin is set to (0.0, 0.0, 0.0).
         """
         callback = self.provider_ao.diamagnetic_magnetizability
         return self.__import_quadrupole_like_operator(callback, is_symmetric=False)

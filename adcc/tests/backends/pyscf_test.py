@@ -109,14 +109,14 @@ class TestPyscf:
         from adcc.backends.pyscf import _determine_gauge_origin
         gauge_origins = ["origin", "mass_center", "charge_center"]
 
-        # Test dipole
-        ao_dip = mf.mol.intor_symmetric('int1e_r', comp=3)
+        # Test electric dipole
+        ao_dip = -1.0 * mf.mol.intor_symmetric('int1e_r', comp=3)
         operator_import_from_ao_test(mf, list(ao_dip))
 
-        # Test nabla
-        with mf.mol.with_common_orig([0.0, 0.0, 0.0]):
-            ao_linmom = -1.0 * mf.mol.intor('int1e_ipovlp', comp=3, hermi=2)
-        operator_import_from_ao_test(mf, list(ao_linmom), "nabla")
+        # Test electric dipole velocity
+        ao_linmom = mf.mol.intor('int1e_ipovlp', comp=3, hermi=2)
+        operator_import_from_ao_test(mf, list(ao_linmom),
+                                     "electric_dipole_velocity")
 
         # Test gauge origin dependent integrals
         for gauge_origin in gauge_origins:
@@ -124,7 +124,7 @@ class TestPyscf:
 
             # Test magnetic dipole
             with mf.mol.with_common_orig(gauge_origin):
-                ao_magdip = 0.5 * mf.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
+                ao_magdip = -0.5 * mf.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
             operator_import_from_ao_test(mf, list(ao_magdip), "magnetic_dipole",
                                          gauge_origin)
 
