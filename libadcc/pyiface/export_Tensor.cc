@@ -17,6 +17,7 @@
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include "../AdcMemory.hh"
 #include "../Tensor.hh"
 #include "../exceptions.hh"
 #include "util.hh"
@@ -346,6 +347,13 @@ static py::object Tensor___repr__(const Tensor& self) {
   return Tensor___str__(self);
 }
 
+static ten_ptr init_1d_tensor(const py::int_ len,
+                              std::shared_ptr<const AdcMemory> adcmem_ptr) {
+  // Note, that this function sets up the array without symmetry
+  std::vector<AxisInfo> ax{{"x", len}};
+  return make_tensor(adcmem_ptr, ax);
+}
+
 //
 // Operations with a scalar
 //
@@ -540,6 +548,7 @@ void export_Tensor(py::module& m) {
   m.def("trace", &Tensor_trace_2, "tensor"_a);
   m.def("linear_combination_strict", &linear_combination_strict, "coefficients"_a,
         "tensors"_a);
+  m.def("init_1d_tensor", &init_1d_tensor, "len"_a, "adcmem_ptr"_a);
 }
 
 }  // namespace libadcc
