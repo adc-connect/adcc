@@ -299,7 +299,7 @@ def _determine_gauge_origin(scfdrv, gauge_origin):
         gauge_origin = tuple(np.einsum("i,ij->j", masses, coords) / masses.sum())
     elif gauge_origin == "charge_center":
         gauge_origin = tuple(np.einsum("i,ij->j", charges, coords)
-                            / charges.sum())
+                             / charges.sum())
     elif gauge_origin == "origin":
         gauge_origin = (0.0, 0.0, 0.0)
     elif isinstance(gauge_origin, tuple):

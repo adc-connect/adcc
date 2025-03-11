@@ -209,7 +209,6 @@ class TestProperties:
 
         res_dms = state.transition_magnetic_dipole_moment
         n_ref = len(state.excitation_vector)
-        
 
     # Only adcc reference data available.
     @pytest.mark.parametrize("system,case,kind", cases)

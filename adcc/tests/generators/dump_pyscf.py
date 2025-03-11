@@ -217,15 +217,15 @@ def dump_pyscf(scfres: scf.hf.SCF, hdf5_file: h5py.Group):
 
     data["derivatives"] = {}
     data["derivatives"]["elec_vel_1"] = (
-            -1.0 * scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
-        )
+        -1.0 * scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
+    )
 
     data["magnetic_moments"] = {}
     with scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
         data["magnetic_moments"]["mag_1_origin"] = (
             -0.5 * scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
         )
-        
+
     with scfres.mol.with_common_orig(mass_center):
         data["magnetic_moments"]["mag_1_mass_center"] = (
             -0.5 * scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)

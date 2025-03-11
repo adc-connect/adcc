@@ -258,8 +258,9 @@ class ElectronicTransition:
         """List of rotatory strengths in length gauge of all computed states"""
         return np.array([
             -1.0 * np.dot(tdm, magmom)
-            for tdm, magmom in zip(self.transition_dipole_moment,
-                                   self.transition_magnetic_dipole_moment(gauge_origin))
+            for tdm, magmom in zip(
+                self.transition_dipole_moment,
+                self.transition_magnetic_dipole_moment(gauge_origin))
         ])
 
     @property
