@@ -93,11 +93,11 @@ class ReferenceState {
   /** Return the nuclear contribution to the cartesian multipole moment
    *  (in standard ordering, i.e. xx, xy, xz, yy, yz, zz) of the given order. */
   std::vector<scalar_type> nuclear_multipole(size_t order,
-                                             std::vector<scalar_type> gauge_origin = {
+                                             std::array<scalar_type, 3> gauge_origin = {
                                                    0, 0, 0}) const;
 
   /** Determine the gauge origin for nuclear multipoles. */
-  std::vector<scalar_type> determine_gauge_origin(std::string gauge_origin) const;
+  const std::array<scalar_type, 3> determine_gauge_origin(std::string gauge_origin) const;
 
   /** Return the SCF convergence tolerance */
   double conv_tol() const { return m_hfsoln_ptr->conv_tol(); }

@@ -119,15 +119,21 @@ void export_ReferenceState(py::module& m) {
                                  return res;
                                })
         .def("nuclear_quadrupole",
-             [](const ReferenceState& ref, py::list gauge_origin) {
+             [](const ReferenceState& ref, std::array<scalar_type, 3> gauge_origin) {
                py::array_t<scalar_type> ret(std::vector<ssize_t>{6});
-               auto res = ref.nuclear_multipole(
-                     2, py::cast<std::vector<scalar_type>>(gauge_origin));
+               auto res = ref.nuclear_multipole(2, gauge_origin);
                std::copy(res.begin(), res.end(), ret.mutable_data());
                return res;
              })
-        .def("determine_gauge_origin", &ReferenceState::determine_gauge_origin,
-             "Determine the gauge origin.")
+        .def("determine_gauge_origin",
+             [](const ReferenceState& ref, std::string gauge_origin) {
+               auto vec = ref.determine_gauge_origin(gauge_origin);
+               py::tuple coords(3);
+               for (size_t i = 0; i < vec.size(); ++i) {
+                 coords[i] = vec[i];  // Assign values to the tuple
+               }
+               return coords;
+             })
         .def_property_readonly("conv_tol", &ReferenceState::conv_tol,
                                "SCF convergence tolererance")
         .def_property_readonly("energy_scf", &ReferenceState::energy_scf,

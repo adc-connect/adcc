@@ -47,7 +47,7 @@ class HartreeFockProvider : public HartreeFockSolution_i {
   //
   // Translate C++-like interface to python-like interface
   //
-  void nuclear_multipole(size_t order, std::vector<scalar_type> gauge_origin,
+  void nuclear_multipole(size_t order, std::array<scalar_type, 3> gauge_origin,
                          scalar_type* buffer, size_t size) const override {
     py::array_t<scalar_type> ret = get_nuclear_multipole(order, py::cast(gauge_origin));
     if (static_cast<ssize_t>(size) != ret.size()) {
@@ -58,10 +58,10 @@ class HartreeFockProvider : public HartreeFockSolution_i {
     std::copy(ret.data(), ret.data() + size, buffer);
   }
 
-  std::vector<scalar_type> determine_gauge_origin(
+  const std::array<scalar_type, 3> determine_gauge_origin(
         std::string gauge_origin) const override {
-    std::vector<scalar_type> ret =
-          py::cast<std::vector<scalar_type>>(get_gauge_origin(py::cast(gauge_origin)));
+    const std::array<scalar_type, 3> ret =
+          py::cast<std::array<scalar_type, 3>>(get_gauge_origin(py::cast(gauge_origin)));
     if (ret.size() != 3) {
       throw dimension_mismatch("Array size (==" + std::to_string(ret.size()) +
                                ") needs to be 3.");
@@ -263,7 +263,7 @@ class HartreeFockProvider : public HartreeFockSolution_i {
 
   virtual py::array_t<scalar_type> get_nuclear_multipole(
         size_t order, py::array_t<scalar_type> gauge_origin) const = 0;
-  virtual py::list get_gauge_origin(py::str gauge_origin) const    = 0;
+  virtual py::tuple get_gauge_origin(py::str gauge_origin) const   = 0;
   virtual real_type get_conv_tol() const                           = 0;
   virtual bool get_restricted() const                              = 0;
   virtual size_t get_spin_multiplicity() const                     = 0;
@@ -296,9 +296,9 @@ class PyHartreeFockProvider : public HartreeFockProvider {
     PYBIND11_OVERLOAD_PURE(py::array_t<scalar_type>, HartreeFockProvider,
                            get_nuclear_multipole, order, gauge_origin);
   }
-  py::list get_gauge_origin(py::str gauge_origin) const override {
-    PYBIND11_OVERLOAD_PURE(py::array_t<scalar_type>, HartreeFockProvider,
-                           get_gauge_origin, gauge_origin);
+  py::tuple get_gauge_origin(py::str gauge_origin) const override {
+    PYBIND11_OVERLOAD_PURE(py::tuple, HartreeFockProvider, get_gauge_origin,
+                           gauge_origin);
   }
   real_type get_conv_tol() const override {
     PYBIND11_OVERLOAD_PURE(real_type, HartreeFockProvider, get_conv_tol, );

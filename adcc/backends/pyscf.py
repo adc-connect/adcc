@@ -449,25 +449,25 @@ def run_core_hole(xyz, basis, charge=0, multiplicity=1,
 
 def _determine_gauge_origin(scfres, gauge_origin):
     """
-    Determines the gauge origin. If the gauge origin is defined as a list
+    Determines the gauge origin. If the gauge origin is defined as a tuple
     the coordinates need to be given in atomic units!
     """
     coords = scfres.mol.atom_coords()
     masses = scfres.mol.atom_mass_list(isotope_avg=True)
     charges = scfres.mol.atom_charges()
     if gauge_origin == "mass_center":
-        gauge_origin = list(np.einsum("i,ij->j", masses, coords) / masses.sum())
+        gauge_origin = tuple(np.einsum("i,ij->j", masses, coords) / masses.sum())
     elif gauge_origin == "charge_center":
-        gauge_origin = list(np.einsum("i,ij->j", charges, coords)
+        gauge_origin = tuple(np.einsum("i,ij->j", charges, coords)
                             / charges.sum())
     elif gauge_origin == "origin":
-        gauge_origin = [0.0, 0.0, 0.0]
-    elif isinstance(gauge_origin, list):
+        gauge_origin = (0.0, 0.0, 0.0)
+    elif isinstance(gauge_origin, tuple):
         gauge_origin = gauge_origin
     else:
         raise NotImplementedError("The gauge origin can be defined either by a "
                                   "keyword (origin, mass_center or charge_center) "
-                                  "or by a list defining the Cartesian components "
-                                  "e.g. [x, y, z]."
+                                  "or by a tuple defining the Cartesian components "
+                                  "e.g. (x, y, z)."
                                   )
     return gauge_origin
