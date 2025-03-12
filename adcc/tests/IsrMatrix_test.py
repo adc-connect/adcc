@@ -83,7 +83,7 @@ class TestIsrMatrix:
                     s2s_tdm_ref = state2state.transition_dipole_moment[j]
                 else:
                     s2s_tdm_ref = \
-                        state2state.transition_magnetic_dipole_moment('origin')[j]
+                        state2state.transition_magnetic_dipole_moment("origin")[j]
                 np.testing.assert_allclose(s2s_tdm, s2s_tdm_ref, atol=1e-12)
 
 

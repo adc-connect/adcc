@@ -50,7 +50,6 @@ class TestExcitedStates:
                     ref = getattr(state, key)[i]
                     res = getattr(exci, key)
                 except NotImplementedError:
-                    # nabla, etc. not implemented in dict backend
                     continue
                 except TypeError:
                     # gauge origin dependent properties are callables

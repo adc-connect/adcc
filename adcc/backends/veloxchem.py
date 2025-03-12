@@ -166,7 +166,7 @@ class VeloxChemHFProvider(HartreeFockProvider):
     def get_n_bas(self):
         return self.mol_orbs.number_aos()
 
-    def get_nuclear_multipole(self, order, gauge_origin=[0, 0, 0]):
+    def get_nuclear_multipole(self, order, gauge_origin=(0, 0, 0)):
         mol = self.scfdrv.task.molecule
         nuc_charges = mol.elem_ids_to_numpy()
         if order == 0:

@@ -290,7 +290,7 @@ class PyScfHFProvider(HartreeFockProvider):
     def get_n_bas(self):
         return int(self.scfres.mol.nao_nr())
 
-    def get_nuclear_multipole(self, order, gauge_origin=[0, 0, 0]):
+    def get_nuclear_multipole(self, order, gauge_origin=(0, 0, 0)):
         charges = self.scfres.mol.atom_charges()
         if order == 0:
             # The function interface needs to be a np.array on return

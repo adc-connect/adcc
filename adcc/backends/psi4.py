@@ -211,7 +211,7 @@ class Psi4HFProvider(HartreeFockProvider):
     def get_n_bas(self):
         return self.wfn.basisset().nbf()
 
-    def get_nuclear_multipole(self, order, gauge_origin=[0, 0, 0]):
+    def get_nuclear_multipole(self, order, gauge_origin=(0, 0, 0)):
         molecule = self.wfn.molecule()
         if order == 0:
             # The function interface needs to be a np.array on return
