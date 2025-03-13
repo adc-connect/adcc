@@ -42,7 +42,7 @@ class Psi4OperatorIntegralProvider:
         warnings.warn("Gauge origin selection not available in "
                       f"{self.backend}. "
                       "The gauge origin is selected as origin of the "
-                      "Cartesian coordinate system [0.0, 0.0, 0.0].")
+                      "Cartesian coordinate system (0.0, 0.0, 0.0).")
 
     @cached_property
     def electric_dipole(self):
@@ -223,8 +223,8 @@ class Psi4HFProvider(HartreeFockProvider):
         else:
             raise NotImplementedError("get_nuclear_multipole with order > 1")
 
-    def get_gauge_origin(self, gauge_origin):
-        raise NotImplementedError("get_gauge_origin not implemented.")
+    def transform_gauge_origin_to_xyz(self, gauge_origin):
+        raise NotImplementedError("transform_gauge_origin_to_xyz not implemented.")
 
     def fill_orbcoeff_fb(self, out):
         mo_coeff_a = np.asarray(self.wfn.Ca())

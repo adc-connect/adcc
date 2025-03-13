@@ -59,7 +59,7 @@ class VeloxChemOperatorIntegralProvider:
     def magnetic_dipole(self):
         """-0.5 * sum_i r_i x p_i"""
         def g_origin_dep_ints_mag_dip(gauge_origin="origin"):
-            gauge_origin = _determine_gauge_origin(self.scfdrv, gauge_origin)
+            gauge_origin = _transform_gauge_origin_to_xyz(self.scfdrv, gauge_origin)
             task = self.scfdrv.task
             angmom_drv = AngularMomentumIntegralsDriver(task.mpi_comm)
             angmom_drv.origin = tuple(gauge_origin)
@@ -186,8 +186,8 @@ class VeloxChemHFProvider(HartreeFockProvider):
         else:
             raise NotImplementedError("get_nuclear_multipole with order > 2")
 
-    def get_gauge_origin(self, gauge_origin):
-        return _determine_gauge_origin(self.scfdrv, gauge_origin)
+    def transform_gauge_origin_to_xyz(self, gauge_origin):
+        return _transform_gauge_origin_to_xyz(self.scfdrv, gauge_origin)
 
     def fill_occupation_f(self, out):
         n_mo = self.mol_orbs.number_mos()
@@ -284,7 +284,7 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=None, conv_tol_grad=1e
     return scfdrv
 
 
-def _determine_gauge_origin(scfdrv, gauge_origin):
+def _transform_gauge_origin_to_xyz(scfdrv, gauge_origin):
     """
     Determines the gauge origin. If the gauge origin is defined as a tuple
     the coordinates need to be given in atomic units!
@@ -295,7 +295,6 @@ def _determine_gauge_origin(scfdrv, gauge_origin):
     masses = molecule.masses_to_numpy()
 
     if gauge_origin == "mass_center":
-        # gauge_origin = list(molecule.center_of_mass_in_bohr())
         gauge_origin = tuple(np.einsum("i,ij->j", masses, coords) / masses.sum())
     elif gauge_origin == "charge_center":
         gauge_origin = tuple(np.einsum("i,ij->j", charges, coords)

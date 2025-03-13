@@ -49,7 +49,7 @@ class PyScfOperatorIntegralProvider:
     def magnetic_dipole(self):
         """-0.5 * sum_i r_i x p_i"""
         def g_origin_dep_ints_mag_dip(gauge_origin="origin"):
-            gauge_origin = _determine_gauge_origin(self.scfres, gauge_origin)
+            gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
             with self.scfres.mol.with_common_orig(gauge_origin):
                 return list(
                     -0.5 * self.scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
@@ -59,24 +59,28 @@ class PyScfOperatorIntegralProvider:
     @cached_property
     def electric_dipole_velocity(self):
         """-sum_i p_i"""
-        with self.scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
+        with self.scfres.mol.with_common_orig((0.0, 0.0, 0.0)):
             return list(
                 self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
             )
 
     @property
     def electric_quadrupole(self):
+        """-sum_i r_{i, alpha} r_{i, beta}"""
         def g_origin_dep_ints_el_quad(gauge_origin):
-            gauge_origin = _determine_gauge_origin(self.scfres, gauge_origin)
+            gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
             with self.scfres.mol.with_common_orig(gauge_origin):
-                r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
+                r_r = -1.0 * self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
                 return list(r_r)
         return g_origin_dep_ints_el_quad
 
     @property
     def electric_quadrupole_traceless(self):
+        """
+        -0.5 * sum_i (r_{i, alpha} r_{i, beta} - delta_{alpha, beta} r^2)
+        """
         def g_origin_dep_ints_el_quad_traceless(gauge_origin):
-            gauge_origin = _determine_gauge_origin(self.scfres, gauge_origin)
+            gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
             with self.scfres.mol.with_common_orig(gauge_origin):
                 r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
                 r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
@@ -85,14 +89,19 @@ class PyScfOperatorIntegralProvider:
                 for i in range(3):
                     r_quadr_matrix[i][i] = r_quadr
                 term = 0.5 * (3 * r_r - r_quadr_matrix)
-                term = np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
+                term = -1.0 * np.reshape(term, (9, r_quadr.shape[0],
+                                                r_quadr.shape[0]))
                 return list(term)
         return g_origin_dep_ints_el_quad_traceless
 
     @property
     def electric_quadrupole_velocity(self):
+        """
+        -sum_i (r_{i, beta} p_{i, alpha} - delta_{alpha, beta} S
+        + r_{i, alpha} p_{i, beta})
+        """
         def g_origin_dep_ints_el_quad_vel(gauge_origin):
-            gauge_origin = _determine_gauge_origin(self.scfres, gauge_origin)
+            gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
             with self.scfres.mol.with_common_orig(gauge_origin):
                 r_p = self.scfres.mol.intor('int1e_irp', comp=9, hermi=0)
                 r_p = np.reshape(r_p, (3, 3, r_p.shape[1], r_p.shape[1]))
@@ -101,14 +110,15 @@ class PyScfOperatorIntegralProvider:
                 for i in range(3):
                     ovlp_matrix[i][i] = ovlp
                 term = r_p + r_p.transpose(1, 0, 2, 3) - ovlp_matrix
-                term = np.reshape(term, (9, ovlp.shape[0], ovlp.shape[0]))
+                term = -1.0 * np.reshape(term, (9, ovlp.shape[0], ovlp.shape[0]))
                 return list(term)
         return g_origin_dep_ints_el_quad_vel
 
     @property
     def diamagnetic_magnetizability(self):
+        """0.25 * sum_i (r_{i, alpha} r_{i, beta} - delta_{alpha, beta} r^2"""
         def g_origin_dep_ints_diamag_magn(gauge_origin):
-            gauge_origin = _determine_gauge_origin(self.scfres, gauge_origin)
+            gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
             with self.scfres.mol.with_common_orig(gauge_origin):
                 r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
                 r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
@@ -116,7 +126,7 @@ class PyScfOperatorIntegralProvider:
                 r_quadr_matrix = np.zeros_like(r_r)
                 for i in range(3):
                     r_quadr_matrix[i][i] = r_quadr
-                term = -0.25 * (r_quadr_matrix - r_r)
+                term = 0.25 * (r_quadr_matrix - r_r)
                 term = np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
                 return list(term)
         return g_origin_dep_ints_diamag_magn
@@ -307,8 +317,8 @@ class PyScfHFProvider(HartreeFockProvider):
         else:
             raise NotImplementedError("get_nuclear_multipole with order > 2")
 
-    def get_gauge_origin(self, gauge_origin):
-        return _determine_gauge_origin(self.scfres, gauge_origin)
+    def transform_gauge_origin_to_xyz(self, gauge_origin):
+        return _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
 
     def fill_occupation_f(self, out):
         if self.restricted:
@@ -452,7 +462,7 @@ def run_core_hole(xyz, basis, charge=0, multiplicity=1,
     return mf_chole
 
 
-def _determine_gauge_origin(scfres, gauge_origin):
+def _transform_gauge_origin_to_xyz(scfres, gauge_origin):
     """
     Determines the gauge origin. If the gauge origin is defined as a tuple
     the coordinates need to be given in atomic units!

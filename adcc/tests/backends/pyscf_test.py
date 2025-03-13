@@ -106,7 +106,7 @@ class TestPyscf:
             assert_almost_equal(eri_perm, eri)
 
     def operators_test(self, mf):
-        from adcc.backends.pyscf import _determine_gauge_origin
+        from adcc.backends.pyscf import _transform_gauge_origin_to_xyz
         gauge_origins = ["origin", "mass_center", "charge_center"]
 
         # Test electric dipole
@@ -120,7 +120,7 @@ class TestPyscf:
 
         # Test gauge origin dependent integrals
         for gauge_origin in gauge_origins:
-            gauge_origin = _determine_gauge_origin(mf, gauge_origin)
+            gauge_origin = _transform_gauge_origin_to_xyz(mf, gauge_origin)
 
             # Test magnetic dipole
             with mf.mol.with_common_orig(gauge_origin):
@@ -130,7 +130,7 @@ class TestPyscf:
 
             # Test electric quadrupole
             with mf.mol.with_common_orig(gauge_origin):
-                ao_quad = mf.mol.intor_symmetric('int1e_rr', comp=9)
+                ao_quad = -1.0 * mf.mol.intor_symmetric('int1e_rr', comp=9)
             operator_import_from_ao_test(mf, list(ao_quad),
                                          "electric_quadrupole", gauge_origin)
 

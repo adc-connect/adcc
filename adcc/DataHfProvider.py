@@ -222,7 +222,12 @@ class DataHfProvider(HartreeFockProvider):
             opprov.magnetic_dipole = get_integral_magdip
         derivs = data.get("derivatives", {})
         if "elec_vel_1" in derivs:
+            if derivs["elec_vel_1"].shape != (3, nb, nb):
+                raise ValueError("derivatives/elec_vel_1 is expected to have shape "
+                                 + str((3, nb, nb)) + " not "
+                                 + str(derivs["elec_vel_1"].shape))
             opprov.electric_dipole_velocity = np.asarray(derivs["elec_vel_1"])
+
         self.operator_integral_provider = opprov
 
     #
@@ -265,7 +270,7 @@ class DataHfProvider(HartreeFockProvider):
     def get_energy_scf(self):
         return get_scalar_value(self.data, "energy_scf", 0.0)
 
-    def get_nuclear_multipole(self, order: int, gauge_origin) -> np.ndarray:
+    def get_nuclear_multipole(self, order: int, gauge_origin: str) -> np.ndarray:
         key = f"multipoles/nuclear_{order}"
         if order == 0:
             nuc_multipole = get_scalar_value(self.data, key, default=None)

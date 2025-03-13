@@ -128,8 +128,8 @@ class OperatorIntegrals:
             dipoles.append(dip_ff)
         return dipoles
 
-    def __import_gauge_dependent_dipole_like(self, callback, is_symmetric=True):
-        """Returns a function that imports a gauge-dependent dipole like
+    def __import_g_origin_dep_dip_like_operator(self, callback, is_symmetric=True):
+        """Returns a function that imports a gauge-origin dependent dipole like
         operator.
         The returned function imports the operator and transforms it to the
         molecular orbital basis.
@@ -145,7 +145,7 @@ class OperatorIntegrals:
         if not callable(callback):
             raise TypeError
 
-        def process_operator(gauge_origin=[0.0, 0.0, 0.0], callback=callback,
+        def process_operator(gauge_origin=(0.0, 0.0, 0.0), callback=callback,
                              is_symmetric=is_symmetric):
             dipoles = []
             for i, component in enumerate(["x", "y", "z"]):
@@ -169,18 +169,6 @@ class OperatorIntegrals:
 
     @property
     @timed_member_call("_import_timer")
-    def magnetic_dipole(self):
-        """
-        Returns a function to obtain magnetic dipole intergrals
-        in the molecular orbital basis dependent on the selected gauge origin.
-        The default gauge origin is set to [0.0, 0.0, 0.0].
-        """
-        callback = self.provider_ao.magnetic_dipole
-        return self.__import_gauge_dependent_dipole_like(callback,
-                                                         is_symmetric=False)
-
-    @property
-    @timed_member_call("_import_timer")
     def electric_dipole_velocity(self):
         """
         Return the electric dipole integrals (in the velocity gauge)
@@ -189,8 +177,20 @@ class OperatorIntegrals:
         return self.import_dipole_like_operator("electric_dipole_velocity",
                                                 is_symmetric=False)
 
-    def __import_quadrupole_like_operator(self, callback, is_symmetric=True):
-        """Returns a function that imports a gauge-dependent quadrupole like
+    @property
+    @timed_member_call("_import_timer")
+    def magnetic_dipole(self):
+        """
+        Returns a function to obtain magnetic dipole intergrals
+        in the molecular orbital basis dependent on the selected gauge origin.
+        The default gauge origin is set to (0.0, 0.0, 0.0).
+        """
+        callback = self.provider_ao.magnetic_dipole
+        return self.__import_g_origin_dep_dip_like_operator(callback,
+                                                            is_symmetric=False)
+
+    def __import_g_origin_dep_quad_like_operator(self, callback, is_symmetric=True):
+        """Returns a function that imports a gauge-origin dependent quadrupole like
         operator.
         The returned function imports the operator and transforms it to the
         molecular orbital basis.
@@ -230,17 +230,6 @@ class OperatorIntegrals:
 
     @property
     @timed_member_call("_import_timer")
-    def electric_quadrupole_traceless(self):
-        """
-        Returns a function to obtain traceless electric quadrupole integrals
-        in the molecular orbital basis dependent on the selected gauge origin.
-        The default gauge origin is set to (0.0, 0.0, 0.0).
-        """
-        callback = self.provider_ao.electric_quadrupole_traceless
-        return self.__import_quadrupole_like_operator(callback, is_symmetric=False)
-
-    @property
-    @timed_member_call("_import_timer")
     def electric_quadrupole(self):
         """
         Returns a function to obtain electric quadrupole integrals
@@ -248,7 +237,20 @@ class OperatorIntegrals:
         The default gauge origin is set to (0.0, 0.0, 0.0).
         """
         callback = self.provider_ao.electric_quadrupole
-        return self.__import_quadrupole_like_operator(callback, is_symmetric=False)
+        return self.__import_g_origin_dep_quad_like_operator(callback,
+                                                             is_symmetric=True)
+
+    @property
+    @timed_member_call("_import_timer")
+    def electric_quadrupole_traceless(self):
+        """
+        Returns a function to obtain traceless electric quadrupole integrals
+        in the molecular orbital basis dependent on the selected gauge origin.
+        The default gauge origin is set to (0.0, 0.0, 0.0).
+        """
+        callback = self.provider_ao.electric_quadrupole_traceless
+        return self.__import_g_origin_dep_quad_like_operator(callback,
+                                                             is_symmetric=True)
 
     @property
     @timed_member_call("_import_timer")
@@ -259,7 +261,8 @@ class OperatorIntegrals:
         The default gauge origin is set to (0.0, 0.0, 0.0).
         """
         callback = self.provider_ao.electric_quadrupole_velocity
-        return self.__import_quadrupole_like_operator(callback, is_symmetric=False)
+        return self.__import_g_origin_dep_quad_like_operator(callback,
+                                                             is_symmetric=False)
 
     @property
     @timed_member_call("_import_timer")
@@ -270,7 +273,8 @@ class OperatorIntegrals:
         The default gauge origin is set to (0.0, 0.0, 0.0).
         """
         callback = self.provider_ao.diamagnetic_magnetizability
-        return self.__import_quadrupole_like_operator(callback, is_symmetric=False)
+        return self.__import_g_origin_dep_quad_like_operator(callback,
+                                                             is_symmetric=True)
 
     def __import_density_dependent_operator(self, ao_callback, is_symmetric=True):
         """Returns a function that imports a density-dependent operator.

@@ -160,8 +160,8 @@ def compare_hf_properties(results, atol):
         if len(set(comb) & set(backends_with_gauge_origin)) == 2:
             gauge_origins = ["origin", "mass_center", "charge_center"]
             for gauge_origin in gauge_origins:
-                assert_allclose(refstate1.determine_gauge_origin(gauge_origin),
-                                refstate2.determine_gauge_origin(gauge_origin),
+                assert_allclose(refstate1.gauge_origin_to_xyz(gauge_origin),
+                                refstate2.gauge_origin_to_xyz(gauge_origin),
                                 atol=1e-5)
 
         assert_allclose(refstate1.nuclear_total_charge,
@@ -314,16 +314,9 @@ def compare_adc_results(adc_results, atol):
                             for op
                             in ["magnetic_dipole", "electric_dipole_velocity"])
         if has_rotatory1 and has_rotatory2:
-            for gauge_origin in gauge_origins:
-                # reduce the tolerance criteria for mass_center as there are diff.
-                # isotropic mass values implemented in veloxchem and pyscf.
-                if gauge_origin == "mass_center":
-                    atol_tdm_mag = 2e-4
-                else:
-                    atol_tdm_mag = atol
-                assert_allclose(state1.rotatory_strength(gauge_origin),
-                                state2.rotatory_strength(gauge_origin),
-                                atol=atol_tdm_mag)
+            assert_allclose(state1.rotatory_strength,
+                            state2.rotatory_strength,
+                            atol=atol)
 
         has_rotatory_len1 = all(op in state1.operators.available
                                 for op

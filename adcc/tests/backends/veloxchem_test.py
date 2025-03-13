@@ -127,7 +127,7 @@ class TestVeloxchem:
             assert_almost_equal(eri_perm, eri)
 
     def operators_test(self, scfdrv):
-        from adcc.backends.veloxchem import _determine_gauge_origin
+        from adcc.backends.veloxchem import _transform_gauge_origin_to_xyz
         gauge_origins = ["origin", "mass_center", "charge_center"]
 
         # Test dipole
@@ -152,7 +152,7 @@ class TestVeloxchem:
                                      operator="electric_dipole_velocity")
 
         for gauge_origin in gauge_origins:
-            gauge_origin = _determine_gauge_origin(scfdrv, gauge_origin)
+            gauge_origin = _transform_gauge_origin_to_xyz(scfdrv, gauge_origin)
 
             # Test magnetic dipole
             angmom_drv = AngularMomentumIntegralsDriver(scfdrv.task.mpi_comm)

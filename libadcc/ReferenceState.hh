@@ -97,7 +97,7 @@ class ReferenceState {
                                                    0, 0, 0}) const;
 
   /** Determine the gauge origin for nuclear multipoles. */
-  const std::array<scalar_type, 3> determine_gauge_origin(std::string gauge_origin) const;
+  const std::array<scalar_type, 3> gauge_origin_to_xyz(std::string gauge_origin) const;
 
   /** Return the SCF convergence tolerance */
   double conv_tol() const { return m_hfsoln_ptr->conv_tol(); }

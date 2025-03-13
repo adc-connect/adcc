@@ -212,8 +212,8 @@ class ElectronicTransition:
     def transition_quadrupole_moment_velocity(self, gauge_origin=(0.0, 0.0, 0.0)):
         """List of transition quadrupole moments of all computed states"""
         if self.property_method.level == 0:
-            warnings.warn("ADC(0) transition quadrupole moments are known to be "
-                          "faulty in some cases.")
+            warnings.warn("ADC(0) transition velocity quadrupole moments are known "
+                          "to be faulty in some cases.")
         quadrupole_integrals = \
             self.operators.electric_quadrupole_velocity(gauge_origin)
         return np.array([[
@@ -242,14 +242,17 @@ class ElectronicTransition:
                                self.excitation_energy)
         ])
 
+    @cached_property
     @mark_excitation_property()
-    def rotatory_strength(self, gauge_origin=(0.0, 0.0, 0.0)):
-        """List of rotatory strengths (in velocity gauge) of all computed states"""
+    def rotatory_strength(self):
+        """List of rotatory strengths (in velocity gauge) of all computed states.
+        This property is gauge-origin invariant, thus, it is not possible to
+        select a gauge origin."""
         return np.array([
             np.dot(tdm, magmom) / ee
             for tdm, magmom, ee in zip(
                 self.transition_dipole_moment_velocity,
-                self.transition_magnetic_dipole_moment(gauge_origin),
+                self.transition_magnetic_dipole_moment("origin"),
                 self.excitation_energy)
         ])
 

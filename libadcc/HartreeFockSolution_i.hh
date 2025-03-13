@@ -51,7 +51,7 @@ class HartreeFockSolution_i {
   //@}
 
   /** Determine the gauge origin. */
-  virtual const std::array<scalar_type, 3> determine_gauge_origin(
+  virtual const std::array<scalar_type, 3> gauge_origin_to_xyz(
         std::string gauge_origin) const = 0;
 
   /** \name Sizes of the data */

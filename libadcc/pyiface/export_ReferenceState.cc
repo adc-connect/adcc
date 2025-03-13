@@ -125,9 +125,9 @@ void export_ReferenceState(py::module& m) {
                std::copy(res.begin(), res.end(), ret.mutable_data());
                return res;
              })
-        .def("determine_gauge_origin",
+        .def("gauge_origin_to_xyz",
              [](const ReferenceState& ref, std::string gauge_origin) {
-               auto vec = ref.determine_gauge_origin(gauge_origin);
+               auto vec = ref.gauge_origin_to_xyz(gauge_origin);
                py::tuple coords(3);
                for (size_t i = 0; i < vec.size(); ++i) {
                  coords[i] = vec[i];  // Assign values to the tuple

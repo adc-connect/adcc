@@ -259,13 +259,12 @@ class TestProperties:
             system=system, method=method, case=case, kind=kind, source="adcc"
         )
 
-        for g_origin in gauge_origins:
-            res_rots = state.rotatory_strength(g_origin)
-            ref_tmdm = refdata[f"transition_magnetic_dipole_moments_{g_origin}"]
-            ref_tdmvel = refdata["transition_dipole_moments_velocity"]
-            refevals = refdata["eigenvalues"]
-            n_ref = len(state.excitation_vector)
-            for i in range(n_ref):
-                assert state.excitation_energy[i] == refevals[i]
-                ref_dot = np.dot(ref_tmdm[i], ref_tdmvel[i])
-                assert res_rots[i] == pytest.approx(ref_dot / refevals[i])
+        res_rots = state.rotatory_strength
+        ref_tmdm = refdata["transition_magnetic_dipole_moments_origin"]
+        ref_tdmvel = refdata["transition_dipole_moments_velocity"]
+        refevals = refdata["eigenvalues"]
+        n_ref = len(state.excitation_vector)
+        for i in range(n_ref):
+            assert state.excitation_energy[i] == refevals[i]
+            ref_dot = np.dot(ref_tmdm[i], ref_tdmvel[i])
+            assert res_rots[i] == pytest.approx(ref_dot / refevals[i])
