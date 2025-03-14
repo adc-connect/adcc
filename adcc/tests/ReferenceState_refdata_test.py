@@ -46,12 +46,15 @@ def compare_refstate_with_reference(system: str, case: str,
     if scfres is None:
         import_data = data
         atol = data["conv_tol"]
+        backend = None
     else:
         import_data = scfres
         if hasattr(scfres, "conv_tol"):
             atol = scfres.conv_tol
+            backend = scfres.backend
         else:
             atol = data["conv_tol"]
+            backend = None
     # construct the ReferenceState
     core_orbitals = system.core_orbitals if "cvs" in case else None
     frozen_core = system.frozen_core if "fc" in case else None
@@ -90,6 +93,18 @@ def compare_refstate_with_reference(system: str, case: str,
                     multipoles["nuclear_0"], atol=atol)
     assert_allclose(refstate.nuclear_dipole,
                     multipoles["nuclear_1"], atol=atol)
+    if backend is not None and backend in ["pyscf", "veloxchem"]:
+        gauge_origins = ["origin", "mass_center", "charge_center"]
+        for g_origin in gauge_origins:
+            # adjust tolerance criteria for mass_center, because of different iso-
+            # tropic mass averages.
+            if g_origin == "mass_center":
+                atol_nuc_quad = 2e-4
+            else:
+                atol_nuc_quad = atol
+            assert_allclose(refstate.nuclear_quadrupole(g_origin),
+                            multipoles[f"nuclear_2_{g_origin}"],
+                            atol=atol_nuc_quad)
 
     if "electric_dipole" in refstate.operators.available \
             and "elec_1" in multipoles:

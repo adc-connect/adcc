@@ -19,8 +19,10 @@
 
 #pragma once
 #include "config.hh"
+#include <array>
 #include <cstddef>
 #include <string>
+#include <vector>
 
 namespace libadcc {
 /** Access to a Hartree-Fock solution where all quantities are
@@ -45,9 +47,13 @@ class HartreeFockSolution_i {
   ///@{
   /** Fill a buffer with nuclear multipole data for the nuclear multipole of
    *  given order. */
-  virtual void nuclear_multipole(size_t order, scalar_type* buffer,
-                                 size_t size) const = 0;
+  virtual void nuclear_multipole(size_t order, std::array<scalar_type, 3> gauge_origin,
+                                 scalar_type* buffer, size_t size) const = 0;
   //@}
+
+  /** Determine the gauge origin. */
+  virtual const std::array<scalar_type, 3> gauge_origin_to_xyz(
+        std::string gauge_origin) const = 0;
 
   /** \name Sizes of the data */
   ///@{

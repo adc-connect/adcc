@@ -72,7 +72,13 @@ class Excitation:
             kwargs = getattr(fget, "__excitation_property").copy()
 
             def get_parent_property(self, key=key, kwargs=kwargs):
-                return getattr(self.parent_state, key)[self.index]
+                if callable(getattr(self.parent_state, key)):
+                    def wrapper(*args, **kwargs):
+                        callback = getattr(self.parent_state, key)
+                        return callback(*args, **kwargs)[self.index]
+                    return wrapper
+                else:
+                    return getattr(self.parent_state, key)[self.index]
 
             setattr(Excitation, key, property(get_parent_property))
 

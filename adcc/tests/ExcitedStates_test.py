@@ -46,9 +46,19 @@ class TestExcitedStates:
                              "method", "parent_state"]
                 if any(b in key for b in blacklist):
                     continue
-                ref = getattr(state, key)[i]
-                res = getattr(exci, key)
-
+                try:
+                    ref = getattr(state, key)[i]
+                    res = getattr(exci, key)
+                except NotImplementedError:
+                    continue
+                except TypeError:
+                    try:
+                        ref = getattr(state, key)("origin")[i]
+                        res = getattr(exci, key)("origin")
+                    except AttributeError:
+                        # electric dipole velocity integrals are not implemented in
+                        # the reference backend
+                        continue
                 if isinstance(ref, OneParticleOperator):
                     assert ref.blocks == res.blocks
                     for b in ref.blocks:

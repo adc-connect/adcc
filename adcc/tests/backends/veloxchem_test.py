@@ -127,7 +127,10 @@ class TestVeloxchem:
             assert_almost_equal(eri_perm, eri)
 
     def operators_test(self, scfdrv):
-        # Test electric dipole
+        from adcc.backends.veloxchem import _transform_gauge_origin_to_xyz
+        gauge_origins = ["origin", "mass_center", "charge_center"]
+
+        # Test dipole
         dipole_drv = vlx.ElectricDipoleIntegralsDriver(scfdrv.task.mpi_comm)
         dipole_drv.origin = tuple(np.zeros(3))
         dipole_mats = dipole_drv.compute(scfdrv.task.molecule,
@@ -138,18 +141,6 @@ class TestVeloxchem:
         operator_import_from_ao_test(scfdrv, integrals,
                                      operator="electric_dipole")
 
-        # Test magnetic dipole
-        angmom_drv = AngularMomentumIntegralsDriver(scfdrv.task.mpi_comm)
-        angmom_drv.origin = tuple(np.zeros(3))
-        angmom_mats = angmom_drv.compute(scfdrv.task.molecule,
-                                         scfdrv.task.ao_basis)
-        integrals = (
-            0.5 * angmom_mats.x_to_numpy(), 0.5 * angmom_mats.y_to_numpy(),
-            0.5 * angmom_mats.z_to_numpy()
-        )
-        operator_import_from_ao_test(scfdrv, integrals,
-                                     operator="magnetic_dipole")
-
         # Test electric dipole velocity
         linmom_drv = LinearMomentumIntegralsDriver(scfdrv.task.mpi_comm)
         linmom_mats = linmom_drv.compute(scfdrv.task.molecule,
@@ -159,6 +150,21 @@ class TestVeloxchem:
                      -1.0 * linmom_mats.z_to_numpy())
         operator_import_from_ao_test(scfdrv, integrals,
                                      operator="electric_dipole_velocity")
+
+        for gauge_origin in gauge_origins:
+            gauge_origin = _transform_gauge_origin_to_xyz(scfdrv, gauge_origin)
+
+            # Test magnetic dipole
+            angmom_drv = AngularMomentumIntegralsDriver(scfdrv.task.mpi_comm)
+            angmom_drv.origin = tuple(gauge_origin)
+            angmom_mats = angmom_drv.compute(scfdrv.task.molecule,
+                                             scfdrv.task.ao_basis)
+            integrals = (
+                0.5 * angmom_mats.x_to_numpy(), 0.5 * angmom_mats.y_to_numpy(),
+                0.5 * angmom_mats.z_to_numpy()
+            )
+            operator_import_from_ao_test(scfdrv, integrals,
+                                         "magnetic_dipole", gauge_origin)
 
     @pytest.mark.parametrize("system", h2o, ids=[case.file_name for case in h2o])
     def test_rhf(self, system: testcases.TestCase):
