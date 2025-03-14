@@ -19,6 +19,7 @@
 
 #pragma once
 #include "config.hh"
+#include <array>
 #include <cstddef>
 #include <string>
 #include <vector>

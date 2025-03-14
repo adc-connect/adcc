@@ -49,11 +49,11 @@ struct HFSolutionMock : public HartreeFockSolution_i {
   size_t spin_multiplicity() const override { return restricted() ? 1 : 0; }
 
   size_t n_bas() const override { return exposed_n_bas; }
-  void nuclear_multipole(size_t /*order*/, std::vector<scalar_type> /*gauge_origin*/,
+  void nuclear_multipole(size_t /*order*/, std::array<scalar_type, 3> /*gauge_origin*/,
                          scalar_type* /*buffer*/, size_t /*size*/) const override {
     throw not_implemented_error("Not implemented.");
   }
-  std::vector<double> determine_gauge_origin(
+  const std::array<scalar_type, 3> gauge_origin_to_xyz(
         std::string /*gauge_origin*/) const override {
     throw not_implemented_error("Not implemented.");
   }
