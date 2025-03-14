@@ -192,7 +192,7 @@ def dump_pyscf(scfres: scf.hf.SCF, hdf5_file: h5py.Group):
     data["multipoles"]["nuclear_0"] = int(np.sum(charges))
     data["multipoles"]["nuclear_1"] = np.einsum("i,ix->x", charges, coords)
     data["multipoles"]["nuclear_2_origin"] = \
-        calculate_nuclear_quadrupole(charges, coords, [0, 0, 0])
+        calculate_nuclear_quadrupole(charges, coords, (0, 0, 0))
     data["multipoles"]["nuclear_2_mass_center"] = \
         calculate_nuclear_quadrupole(charges, coords, mass_center)
     data["multipoles"]["nuclear_2_charge_center"] = \

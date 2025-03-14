@@ -57,7 +57,10 @@ class VeloxChemOperatorIntegralProvider:
 
     @cached_property
     def magnetic_dipole(self):
-        """-0.5 * sum_i r_i x p_i"""
+        """
+        The imaginary part of the integral is returned.
+        -0.5 * sum_i r_i x p_i
+        """
         def g_origin_dep_ints_mag_dip(gauge_origin="origin"):
             gauge_origin = _transform_gauge_origin_to_xyz(self.scfdrv, gauge_origin)
             task = self.scfdrv.task
@@ -70,7 +73,10 @@ class VeloxChemOperatorIntegralProvider:
 
     @cached_property
     def electric_dipole_velocity(self):
-        """-sum_i p_i"""
+        """
+        The imaginary part of the integral is returned.
+        -sum_i p_i
+        """
         task = self.scfdrv.task
         linmom_drv = LinearMomentumIntegralsDriver(task.mpi_comm)
         linmom_mats = linmom_drv.compute(task.molecule, task.ao_basis)

@@ -27,8 +27,6 @@ from adcc.misc import cached_property
 
 import psi4
 
-import warnings
-
 from .EriBuilder import EriBuilder
 from ..exceptions import InvalidReference
 from ..ExcitedStates import EnergyCorrection
@@ -39,10 +37,6 @@ class Psi4OperatorIntegralProvider:
         self.wfn = wfn
         self.backend = "psi4"
         self.mints = psi4.core.MintsHelper(self.wfn)
-        warnings.warn("Gauge origin selection not available in "
-                      f"{self.backend}. "
-                      "The gauge origin is selected as origin of the "
-                      "Cartesian coordinate system (0.0, 0.0, 0.0).")
 
     @cached_property
     def electric_dipole(self):
@@ -51,8 +45,11 @@ class Psi4OperatorIntegralProvider:
 
     @property
     def magnetic_dipole(self):
-        """-0.5 * sum_i r_i x p_i"""
-        def gauge_origin_dependent_integrals(gauge_origin):
+        """
+        The imaginary part of the integral is returned.
+        -0.5 * sum_i r_i x p_i
+        """
+        def g_origin_dep_ints_mag_dip(gauge_origin):
             # TODO: Gauge origin?
             if gauge_origin != (0.0, 0.0, 0.0) and gauge_origin != "origin":
                 raise NotImplementedError('Only (0.0, 0.0, 0.0) can be selected as'
@@ -61,11 +58,14 @@ class Psi4OperatorIntegralProvider:
                 0.5 * np.asarray(comp)
                 for comp in self.mints.ao_angular_momentum()
             ]
-        return gauge_origin_dependent_integrals
+        return g_origin_dep_ints_mag_dip
 
     @cached_property
     def electric_dipole_velocity(self):
-        """-sum_i p_i"""
+        """
+        The imaginary part of the integral is returned.
+        -sum_i p_i
+        """
         return [-1.0 * np.asarray(comp) for comp in self.mints.ao_nabla()]
 
     @property

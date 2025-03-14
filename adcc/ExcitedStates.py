@@ -440,7 +440,7 @@ class ExcitedStates(ElectronicTransition):
         return ret[:-1]
 
     @requires_module("pandas")
-    def to_dataframe(self):
+    def to_dataframe(self, gauge_origin="origin"):
         """
         Exports the ExcitedStates object as :class:`pandas.DataFrame`.
         Atomic units are used for all values.
@@ -458,6 +458,12 @@ class ExcitedStates(ElectronicTransition):
             except NotImplementedError:
                 # some properties are not available for every backend
                 continue
+            if callable(d):
+                try:
+                    d = d(gauge_origin)
+                except NotImplementedError:
+                    # some properties are not available for every backend
+                    continue
             if not isinstance(d, np.ndarray):
                 continue
             if not np.issubdtype(d.dtype, np.number):
@@ -467,7 +473,11 @@ class ExcitedStates(ElectronicTransition):
             elif d.ndim == 2 and d.shape[1] == 3:
                 for i, p in enumerate(["x", "y", "z"]):
                     data[f"{key}_{p}"] = d[:, i]
-            elif d.ndim > 2:
+            elif d.ndim == 3 and d.shape[1:] == (3, 3):
+                for i, p in enumerate(["x", "y", "z"]):
+                    for j, q in enumerate(["x", "y", "z"]):
+                        data[f"{key}_{p}{q}"] = d[:, i, j]
+            elif d.ndim > 3:
                 warnings.warn(f"Exporting NumPy array for property {key}"
                               f" with shape {d.shape} not supported.")
                 continue

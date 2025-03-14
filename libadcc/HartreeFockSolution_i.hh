@@ -22,7 +22,6 @@
 #include <array>
 #include <cstddef>
 #include <string>
-#include <vector>
 
 namespace libadcc {
 /** Access to a Hartree-Fock solution where all quantities are

@@ -138,7 +138,7 @@ class OperatorIntegrals:
         ----------
         callback : callable
             Function that computes the operator in atomic orbitals using
-            the gauge-origin (str or list) as single argument
+            the gauge-origin (str or tuple) as single argument
         is_symmetric : bool, optional
             if the imported operator is symmetric, by default True
         """
@@ -185,6 +185,11 @@ class OperatorIntegrals:
         in the molecular orbital basis dependent on the selected gauge origin.
         The default gauge origin is set to (0.0, 0.0, 0.0).
         """
+        if "magnetic_dipole" not in self.available:
+            raise NotImplementedError(f"magnetic dipole operator "
+                                      "not implemented "
+                                      f"in {self.provider_ao.backend} backend.")
+
         callback = self.provider_ao.magnetic_dipole
         return self.__import_g_origin_dep_dip_like_operator(callback,
                                                             is_symmetric=False)
@@ -199,7 +204,7 @@ class OperatorIntegrals:
         ----------
         callback : callable
             Function that computes the operator in atomic orbitals using
-            a the gauge-origin (str or list) as single argument
+            a the gauge-origin (str or tuple) as single argument
         is_symmetric : bool, optional
             if the imported operator is symmetric, by default True
         """
@@ -236,6 +241,11 @@ class OperatorIntegrals:
         in the molecular orbital basis dependent on the selected gauge origin.
         The default gauge origin is set to (0.0, 0.0, 0.0).
         """
+        if "electric_quadrupole" not in self.available:
+            raise NotImplementedError(f"electric quadrupole operator "
+                                      "not implemented "
+                                      f"in {self.provider_ao.backend} backend.")
+
         callback = self.provider_ao.electric_quadrupole
         return self.__import_g_origin_dep_quad_like_operator(callback,
                                                              is_symmetric=True)
@@ -248,6 +258,11 @@ class OperatorIntegrals:
         in the molecular orbital basis dependent on the selected gauge origin.
         The default gauge origin is set to (0.0, 0.0, 0.0).
         """
+        if "electric_quadrupole_traceless" not in self.available:
+            raise NotImplementedError(f"electric quadrupole traceless "
+                                      "operator not implemented "
+                                      f"in {self.provider_ao.backend} backend.")
+
         callback = self.provider_ao.electric_quadrupole_traceless
         return self.__import_g_origin_dep_quad_like_operator(callback,
                                                              is_symmetric=True)
@@ -260,6 +275,11 @@ class OperatorIntegrals:
         in the molecular orbital basis dependent on the selected gauge origin.
         The default gauge origin is set to (0.0, 0.0, 0.0).
         """
+        if "electric_quadrupole_velocity" not in self.available:
+            raise NotImplementedError(f"electric quadrupole velocity "
+                                      "operator not implemented "
+                                      f"in {self.provider_ao.backend} backend.")
+
         callback = self.provider_ao.electric_quadrupole_velocity
         return self.__import_g_origin_dep_quad_like_operator(callback,
                                                              is_symmetric=False)
@@ -272,6 +292,11 @@ class OperatorIntegrals:
         in the molecular orbital basis dependent on the selected gauge origin.
         The default gauge origin is set to (0.0, 0.0, 0.0).
         """
+        if "diamagnetic_magnetizability" not in self.available:
+            raise NotImplementedError(f"diamagnetic magnetizability "
+                                      "operator not implemented "
+                                      f"in {self.provider_ao.backend} backend.")
+
         callback = self.provider_ao.diamagnetic_magnetizability
         return self.__import_g_origin_dep_quad_like_operator(callback,
                                                              is_symmetric=True)

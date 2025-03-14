@@ -47,7 +47,10 @@ class PyScfOperatorIntegralProvider:
 
     @property
     def magnetic_dipole(self):
-        """-0.5 * sum_i r_i x p_i"""
+        """
+        The imaginary part of the integral is returned.
+        -0.5 * sum_i r_i x p_i
+        """
         def g_origin_dep_ints_mag_dip(gauge_origin="origin"):
             gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
             with self.scfres.mol.with_common_orig(gauge_origin):
@@ -58,7 +61,10 @@ class PyScfOperatorIntegralProvider:
 
     @cached_property
     def electric_dipole_velocity(self):
-        """-sum_i p_i"""
+        """
+        The imaginary part of the integral is returned.
+        -sum_i p_i
+        """
         with self.scfres.mol.with_common_orig((0.0, 0.0, 0.0)):
             return list(
                 self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
@@ -77,7 +83,8 @@ class PyScfOperatorIntegralProvider:
     @property
     def electric_quadrupole_traceless(self):
         """
-        -0.5 * sum_i (r_{i, alpha} r_{i, beta} - delta_{alpha, beta} r^2)
+        -0.5 * sum_i (3 * r_{i, alpha} r_{i, beta}
+        - delta_{alpha, beta} r_{i}^2)
         """
         def g_origin_dep_ints_el_quad_traceless(gauge_origin):
             gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
@@ -97,7 +104,8 @@ class PyScfOperatorIntegralProvider:
     @property
     def electric_quadrupole_velocity(self):
         """
-        -sum_i (r_{i, beta} p_{i, alpha} - delta_{alpha, beta} S
+        The imaginary part of the integral is returned.
+        -sum_i (r_{i, beta} p_{i, alpha} - i delta_{alpha, beta}
         + r_{i, alpha} p_{i, beta})
         """
         def g_origin_dep_ints_el_quad_vel(gauge_origin):
@@ -116,7 +124,10 @@ class PyScfOperatorIntegralProvider:
 
     @property
     def diamagnetic_magnetizability(self):
-        """0.25 * sum_i (r_{i, alpha} r_{i, beta} - delta_{alpha, beta} r^2"""
+        """
+        0.25 * sum_i (r_{i, alpha} r_{i, beta}
+        - delta_{alpha, beta} r_{i}^2)
+        """
         def g_origin_dep_ints_diamag_magn(gauge_origin):
             gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
             with self.scfres.mol.with_common_orig(gauge_origin):

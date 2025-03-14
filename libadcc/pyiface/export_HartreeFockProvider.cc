@@ -255,15 +255,14 @@ class HartreeFockProvider : public HartreeFockSolution_i {
   //
   virtual size_t get_n_orbs_alpha() const = 0;
   virtual size_t get_n_bas() const        = 0;
-
   virtual py::array_t<scalar_type> get_nuclear_multipole(
-        size_t order, py::array_t<scalar_type> gauge_origin) const            = 0;
-  virtual py::tuple transform_gauge_origin_to_xyz(py::str gauge_origin) const = 0;
-  virtual real_type get_conv_tol() const                                      = 0;
-  virtual bool get_restricted() const                                         = 0;
-  virtual size_t get_spin_multiplicity() const                                = 0;
-  virtual real_type get_energy_scf() const                                    = 0;
-  virtual std::string get_backend() const                                     = 0;
+        size_t order, py::tuple gauge_origin) const                                 = 0;
+  virtual const py::tuple transform_gauge_origin_to_xyz(py::str gauge_origin) const = 0;
+  virtual real_type get_conv_tol() const                                            = 0;
+  virtual bool get_restricted() const                                               = 0;
+  virtual size_t get_spin_multiplicity() const                                      = 0;
+  virtual real_type get_energy_scf() const                                          = 0;
+  virtual std::string get_backend() const                                           = 0;
 
   virtual void fill_occupation_f(py::array out) const                         = 0;
   virtual void fill_orben_f(py::array out) const                              = 0;
@@ -286,12 +285,12 @@ class PyHartreeFockProvider : public HartreeFockProvider {
   size_t get_n_bas() const override {
     PYBIND11_OVERLOAD_PURE(size_t, HartreeFockProvider, get_n_bas, );
   }
-  py::array_t<scalar_type> get_nuclear_multipole(
-        size_t order, py::array_t<scalar_type> gauge_origin) const override {
+  py::array_t<scalar_type> get_nuclear_multipole(size_t order,
+                                                 py::tuple gauge_origin) const override {
     PYBIND11_OVERLOAD_PURE(py::array_t<scalar_type>, HartreeFockProvider,
                            get_nuclear_multipole, order, gauge_origin);
   }
-  py::tuple transform_gauge_origin_to_xyz(py::str gauge_origin) const override {
+  const py::tuple transform_gauge_origin_to_xyz(py::str gauge_origin) const override {
     PYBIND11_OVERLOAD_PURE(py::tuple, HartreeFockProvider, transform_gauge_origin_to_xyz,
                            gauge_origin);
   }
@@ -454,8 +453,8 @@ void export_HartreeFockProvider(py::module& m) {
              "dipole moment as an array of size 3.")
         .def("transform_gauge_origin_to_xyz",
              &HartreeFockProvider::transform_gauge_origin_to_xyz,
-             "Transforms the gauge origin given string to a string containig the "
-             "x, y, z Catesian components.")
+             "Transforms a string specifying the gauge origin to a tuple containing "
+             "the x, y, z, Cartesian components.")
         //
         .def("fill_occupation_f", &HartreeFockProvider::fill_orben_f,
              "Fill the passed numpy array of size `(2 * nf, )` with the occupation "

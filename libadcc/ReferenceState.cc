@@ -359,7 +359,7 @@ std::vector<scalar_type> ReferenceState::nuclear_multipole(
 
 const std::array<scalar_type, 3> ReferenceState::gauge_origin_to_xyz(
       std::string gauge_origin) const {
-  std::array<scalar_type, 3> ret = m_hfsoln_ptr->gauge_origin_to_xyz(gauge_origin);
+  const std::array<scalar_type, 3> ret = m_hfsoln_ptr->gauge_origin_to_xyz(gauge_origin);
   return ret;
 }
 
