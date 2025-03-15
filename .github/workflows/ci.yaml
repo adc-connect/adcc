@@ -89,7 +89,7 @@ jobs:
         if: matrix.documentation
       #
       - name: Upload coverage to codecov
-        # Note: lcov curerntly produces some error and therefore requires the keep-going flag to complete.
+        # Note: lcov currently produces some error and therefore requires the keep-going flag to complete.
         # Since the error might be the result of some gcc/gcov bug, I don't know how to resolve it currently.
         # lcov < 2.0 apparently did hide a lot of errors from the user so the problem might have been around for some time already...
         run: |
@@ -99,6 +99,8 @@ jobs:
           lcov --ignore-errors unused --remove coverage.info '/opt/*' '/Applications/*' '/Library/*' '/usr/*' "${HOME}"'/.cache/*' "${HOME}"'/.local/*' "${PWD}"'/build/*' "${PWD}"'/libadcc/tests/*' --output-file coverage.info
           lcov --list coverage.info
           codecov -X gcov -f coverage.info
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         if: contains(matrix.os, 'ubuntu')
 
       - name: Upload coverage to coveralls

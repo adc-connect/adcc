@@ -133,12 +133,16 @@ class TestFunctionality:
         n_states = testcases.kinds_to_nstates([kind]).pop()
 
         kwargs = {n_states: 3}
-        # only few states available for h2o sto3g adc0/adc1
-        if system.name == "h2o" and system.basis == "sto-3g" and method.level < 2:
-            if "cvs" in case and "fv" in case:
-                kwargs[n_states] = 1
-            elif "cvs" in case:
-                kwargs[n_states] = 2
+        # only few states available for h2o sto3g
+        if system.name == "h2o" and system.basis == "sto-3g":
+            if method.level < 2:  # adc0/adc1
+                if "cvs" in case and "fv" in case:
+                    kwargs[n_states] = 1
+                elif "cvs" in case:
+                    kwargs[n_states] = 2
+            elif method.level < 4:  # adc2/adc3
+                if "cvs" in case and "fv" in case:  # only 5 states available
+                    kwargs["n_guesses"] = 3
 
         self.base_test(
             system=system, case=case, method=method.name, kind=kind,
