@@ -451,10 +451,11 @@ void export_HartreeFockProvider(py::module& m) {
              "Returns the nuclear multipole of the requested order. For `0` returns the "
              "total nuclear charge as an array of size 1, for `1` returns the nuclear "
              "dipole moment as an array of size 3.")
+        //
         .def("transform_gauge_origin_to_xyz",
              &HartreeFockProvider::transform_gauge_origin_to_xyz,
              "Transforms a string specifying the gauge origin to a tuple containing "
-             "the x, y, z, Cartesian components.")
+             "the x, y, z Cartesian components.")
         //
         .def("fill_occupation_f", &HartreeFockProvider::fill_orben_f,
              "Fill the passed numpy array of size `(2 * nf, )` with the occupation "
