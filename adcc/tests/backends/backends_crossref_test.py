@@ -34,6 +34,7 @@ from .. import testcases
 
 # molsturm is super slow
 backends = [b for b in adcc.backends.available() if b != "molsturm"]
+backends_with_gauge_origin = ["pyscf", "veloxchem"]
 
 h2o = testcases.get_by_filename("h2o_sto3g", "h2o_def2tzvp")
 h2o_cases = [(case.file_name, c) for case in h2o for c in case.cases]
@@ -159,6 +160,14 @@ def compare_hf_properties(results, atol):
         refstate1 = results[comb[0]]
         refstate2 = results[comb[1]]
 
+        # assert same gauge origins
+        if len(set(comb) & set(backends_with_gauge_origin)) == 2:
+            gauge_origins = ["origin", "mass_center", "charge_center"]
+            for gauge_origin in gauge_origins:
+                assert_allclose(refstate1.gauge_origin_to_xyz(gauge_origin),
+                                refstate2.gauge_origin_to_xyz(gauge_origin),
+                                atol=1e-5)
+
         assert_allclose(refstate1.nuclear_total_charge,
                         refstate2.nuclear_total_charge, atol=atol)
         assert_allclose(refstate1.nuclear_dipole,
@@ -282,14 +291,14 @@ def compare_adc_results(adc_results, atol):
 
         if "magnetic_dipole" in state1.operators.available and \
                 "magnetic_dipole" in state2.operators.available:
-            for i in range(len(state1.transition_magnetic_dipole_moment)):
+            for i in range(len(state1.transition_magnetic_dipole_moment("origin"))):
                 assert_allclose_signfix(
-                    state1.transition_magnetic_dipole_moment[i],
-                    state2.transition_magnetic_dipole_moment[i],
+                    state1.transition_magnetic_dipole_moment("origin")[i],
+                    state2.transition_magnetic_dipole_moment("origin")[i],
                     atol=atol)
             fixed_signs_new = fix_signs(
-                state1.transition_magnetic_dipole_moment,
-                state2.transition_magnetic_dipole_moment,
+                state1.transition_magnetic_dipole_moment("origin"),
+                state2.transition_magnetic_dipole_moment("origin"),
                 atol=atol
             )
             if fixed_signs is None:
@@ -297,6 +306,11 @@ def compare_adc_results(adc_results, atol):
             else:
                 assert_allclose_signs(fixed_signs_new, fixed_signs)
 
+        # Only in two backends the gauge origin selection is implemented.
+        if len(set(comb) & set(backends_with_gauge_origin)) == 2:
+            gauge_origins = ["origin", "mass_center", "charge_center"]
+        else:
+            gauge_origins = ["origin"]
         has_rotatory1 = all(op in state1.operators.available
                             for op
                             in ["magnetic_dipole", "electric_dipole_velocity"])
@@ -305,7 +319,8 @@ def compare_adc_results(adc_results, atol):
                             in ["magnetic_dipole", "electric_dipole_velocity"])
         if has_rotatory1 and has_rotatory2:
             assert_allclose(state1.rotatory_strength,
-                            state2.rotatory_strength, atol=atol)
+                            state2.rotatory_strength,
+                            atol=atol)
 
         has_rotatory_len1 = all(op in state1.operators.available
                                 for op
@@ -314,5 +329,13 @@ def compare_adc_results(adc_results, atol):
                                 for op
                                 in ["electric_dipole", "magnetic_dipole"])
         if has_rotatory_len1 and has_rotatory_len2:
-            assert_allclose(state1.rotatory_strength_length,
-                            state2.rotatory_strength_length, atol=atol)
+            for gauge_origin in gauge_origins:
+                # reduce the tolerance criteria for mass_center as there are diff.
+                # isotropic mass values implemented in veloxchem and pyscf.
+                if gauge_origin == "mass_center":
+                    atol_tdm_mag = 2e-4
+                else:
+                    atol_tdm_mag = atol
+                assert_allclose(state1.rotatory_strength_length(gauge_origin),
+                                state2.rotatory_strength_length(gauge_origin),
+                                atol=atol_tdm_mag)

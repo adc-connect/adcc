@@ -174,16 +174,29 @@ def dump_pyscf(scfres: scf.hf.SCF, hdf5_file: h5py.Group):
     data["eri_ffff"] = eri
 
     # Calculate mass center and charge center
-    masses = scfres.mol.atom_mass_list()
+    masses = scfres.mol.atom_mass_list(isotope_avg=True)
     charges = scfres.mol.atom_charges()
     coords = scfres.mol.atom_coords()
     mass_center = np.einsum('i,ij->j', masses, coords) / masses.sum()
     charge_center = np.einsum('i,ij->j', charges, coords) / charges.sum()
 
+    def calculate_nuclear_quadrupole(charges, coordinates, gauge_origin):
+        coords = coordinates - gauge_origin
+        r_r = np.einsum("ij,ik->ijk", coords, coords)
+        res = np.einsum("i,ijk->jk", charges, r_r)
+        res = [res[0, 0], res[0, 1], res[0, 2], res[1, 1], res[1, 2], res[2, 2]]
+        return np.array(res)
+
     # Compute electric and nuclear multipole moments
     data["multipoles"] = {}
     data["multipoles"]["nuclear_0"] = int(np.sum(charges))
     data["multipoles"]["nuclear_1"] = np.einsum("i,ix->x", charges, coords)
+    data["multipoles"]["nuclear_2_origin"] = \
+        calculate_nuclear_quadrupole(charges, coords, (0, 0, 0))
+    data["multipoles"]["nuclear_2_mass_center"] = \
+        calculate_nuclear_quadrupole(charges, coords, mass_center)
+    data["multipoles"]["nuclear_2_charge_center"] = \
+        calculate_nuclear_quadrupole(charges, coords, charge_center)
     data["multipoles"]["elec_0"] = -int(n_alpha + n_beta)
     data["multipoles"]["elec_1"] = (
         -1.0 * scfres.mol.intor_symmetric("int1e_r", comp=3)
@@ -202,28 +215,23 @@ def dump_pyscf(scfres: scf.hf.SCF, hdf5_file: h5py.Group):
             -1.0 * scfres.mol.intor_symmetric('int1e_rr', comp=9)
         )
 
-    data["magnetic_moments"] = {}
     data["derivatives"] = {}
+    data["derivatives"]["elec_vel_1"] = (
+        scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
+    )
+
+    data["magnetic_moments"] = {}
     with scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
         data["magnetic_moments"]["mag_1_origin"] = (
             -0.5 * scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
-        )
-        data["derivatives"]["nabla_origin"] = (
-            scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
         )
     with scfres.mol.with_common_orig(mass_center):
         data["magnetic_moments"]["mag_1_mass_center"] = (
             -0.5 * scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
         )
-        data["derivatives"]["nabla_mass_center"] = (
-            scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
-        )
     with scfres.mol.with_common_orig(charge_center):
         data["magnetic_moments"]["mag_1_charge_center"] = (
             -0.5 * scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
-        )
-        data["derivatives"]["nabla_charge_center"] = (
-            scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
         )
 
     hdf5io.emplace_dict(data, hdf5_file, compression="gzip")

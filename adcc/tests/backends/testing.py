@@ -143,36 +143,44 @@ def eri_asymm_construction_test(scfres, core_orbitals=0):
                 )
 
 
-def operator_import_from_ao_test(scfres, ao_dict, operator="electric_dipole"):
+def operator_import_from_ao_test(scfres, ao_dict, operator="electric_dipole",
+                                 gauge_origin=(0.0, 0.0, 0.0)):
     refstate = adcc.ReferenceState(scfres)
     occa = refstate.orbital_coefficients_alpha("o1b").to_ndarray()
     occb = refstate.orbital_coefficients_beta("o1b").to_ndarray()
     virta = refstate.orbital_coefficients_alpha("v1b").to_ndarray()
     virtb = refstate.orbital_coefficients_beta("v1b").to_ndarray()
 
-    dip_imported = getattr(refstate.operators, operator)
+    if operator in ["magnetic_dipole"]:
+        int_imported = getattr(refstate.operators, operator)(gauge_origin)
+    elif operator in ["electric_quadrupole"]:
+        callback = getattr(refstate.operators, operator)(gauge_origin)
+        # flatten the list of lists of OneParticleOperators
+        int_imported = [quad for quads in callback for quad in quads]
+    else:
+        int_imported = getattr(refstate.operators, operator)
 
     for i, ao_component in enumerate(ao_dict):
-        dip_oo = np.einsum('ib,ba,ja->ij', occa, ao_component, occa)
-        dip_oo += np.einsum('ib,ba,ja->ij', occb, ao_component, occb)
+        int_oo = np.einsum('ib,ba,ja->ij', occa, ao_component, occa)
+        int_oo += np.einsum('ib,ba,ja->ij', occb, ao_component, occb)
 
-        dip_ov = np.einsum('ib,ba,ja->ij', occa, ao_component, virta)
-        dip_ov += np.einsum('ib,ba,ja->ij', occb, ao_component, virtb)
+        int_ov = np.einsum('ib,ba,ja->ij', occa, ao_component, virta)
+        int_ov += np.einsum('ib,ba,ja->ij', occb, ao_component, virtb)
 
-        dip_vv = np.einsum('ib,ba,ja->ij', virta, ao_component, virta)
-        dip_vv += np.einsum('ib,ba,ja->ij', virtb, ao_component, virtb)
+        int_vv = np.einsum('ib,ba,ja->ij', virta, ao_component, virta)
+        int_vv += np.einsum('ib,ba,ja->ij', virtb, ao_component, virtb)
 
-        dip_mock = {"o1o1": dip_oo, "o1v1": dip_ov, "v1v1": dip_vv}
+        int_mock = {"o1o1": int_oo, "o1v1": int_ov, "v1v1": int_vv}
 
-        dip_imported_comp = dip_imported[i]
-        if not dip_imported_comp.is_symmetric:
-            dip_vo = np.einsum('ib,ba,ja->ij', virta, ao_component, occa)
-            dip_vo += np.einsum('ib,ba,ja->ij', virtb, ao_component, occb)
-            dip_mock["v1o1"] = dip_vo
+        int_imported_comp = int_imported[i]
+        if not int_imported_comp.is_symmetric:
+            int_vo = np.einsum('ib,ba,ja->ij', virta, ao_component, occa)
+            int_vo += np.einsum('ib,ba,ja->ij', virtb, ao_component, occb)
+            int_mock["v1o1"] = int_vo
 
-        for b in dip_imported_comp.blocks:
+        for b in int_imported_comp.blocks:
             np.testing.assert_allclose(
-                dip_mock[b], dip_imported_comp[b].to_ndarray(),
+                int_mock[b], int_imported_comp[b].to_ndarray(),
                 atol=refstate.conv_tol
             )
 

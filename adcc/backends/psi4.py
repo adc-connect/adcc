@@ -43,18 +43,29 @@ class Psi4OperatorIntegralProvider:
         """-sum_i r_i"""
         return [np.asarray(comp) for comp in self.mints.ao_dipole()]
 
-    @cached_property
+    @property
     def magnetic_dipole(self):
-        """-0.5 * sum_i r_i x p_i"""
-        # TODO: Gauge origin?
-        return [
-            0.5 * np.asarray(comp)
-            for comp in self.mints.ao_angular_momentum()
-        ]
+        """
+        The imaginary part of the integral is returned.
+        -0.5 * sum_i r_i x p_i
+        """
+        def g_origin_dep_ints_mag_dip(gauge_origin):
+            # TODO: Gauge origin?
+            if gauge_origin != (0.0, 0.0, 0.0) and gauge_origin != "origin":
+                raise NotImplementedError('Only (0.0, 0.0, 0.0) can be selected as'
+                                          ' gauge origin.')
+            return [
+                0.5 * np.asarray(comp)
+                for comp in self.mints.ao_angular_momentum()
+            ]
+        return g_origin_dep_ints_mag_dip
 
     @cached_property
     def electric_dipole_velocity(self):
-        """-sum_i p_i"""
+        """
+        The imaginary part of the integral is returned.
+        -sum_i p_i
+        """
         return [-1.0 * np.asarray(comp) for comp in self.mints.ao_nabla()]
 
     @property
@@ -200,7 +211,7 @@ class Psi4HFProvider(HartreeFockProvider):
     def get_n_bas(self):
         return self.wfn.basisset().nbf()
 
-    def get_nuclear_multipole(self, order):
+    def get_nuclear_multipole(self, order, gauge_origin=(0, 0, 0)):
         molecule = self.wfn.molecule()
         if order == 0:
             # The function interface needs to be a np.array on return
@@ -211,6 +222,9 @@ class Psi4HFProvider(HartreeFockProvider):
             return np.array([dip_nuclear[0], dip_nuclear[1], dip_nuclear[2]])
         else:
             raise NotImplementedError("get_nuclear_multipole with order > 1")
+
+    def transform_gauge_origin_to_xyz(self, gauge_origin):
+        raise NotImplementedError("transform_gauge_origin_to_xyz not implemented.")
 
     def fill_orbcoeff_fb(self, out):
         mo_coeff_a = np.asarray(self.wfn.Ca())

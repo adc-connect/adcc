@@ -180,7 +180,7 @@ class ElectronicTransition:
             for tdm in self.transition_dm
         ])
 
-    @cached_property
+    @property
     @mark_excitation_property()
     @timed_member_call(timer="_property_timer")
     def transition_magnetic_dipole_moment(self):
@@ -188,11 +188,51 @@ class ElectronicTransition:
         if self.property_method.level == 0:
             warnings.warn("ADC(0) transition magnetic dipole moments "
                           "are known to be faulty in some cases.")
-        mag_dipole_integrals = self.operators.magnetic_dipole
-        return np.array([
-            [product_trace(comp, tdm) for comp in mag_dipole_integrals]
-            for tdm in self.transition_dm
-        ])
+
+        def g_origin_dep_trans_magdip_moment(gauge_origin="origin"):
+            mag_dipole_integrals = self.operators.magnetic_dipole(gauge_origin)
+            return np.array([
+                [product_trace(comp, tdm) for comp in mag_dipole_integrals]
+                for tdm in self.transition_dm
+            ])
+        return g_origin_dep_trans_magdip_moment
+
+    @property
+    @mark_excitation_property()
+    @timed_member_call(timer="_property_timer")
+    def transition_quadrupole_moment(self):
+        """List of transition quadrupole moments of all computed states"""
+        if self.property_method.level == 0:
+            warnings.warn("ADC(0) transition quadrupole moments are known to be "
+                          "faulty in some cases.")
+
+        def g_origin_dep_trans_el_quad_moment(gauge_origin="origin"):
+            quadrupole_integrals = self.operators.electric_quadrupole(gauge_origin)
+            return np.array([[
+                [product_trace(quad1, tdm) for quad1 in quad]
+                for quad in quadrupole_integrals]
+                for tdm in self.transition_dm
+            ])
+        return g_origin_dep_trans_el_quad_moment
+
+    @property
+    @mark_excitation_property()
+    @timed_member_call(timer="_property_timer")
+    def transition_quadrupole_moment_velocity(self):
+        """List of transition quadrupole moments of all computed states"""
+        if self.property_method.level == 0:
+            warnings.warn("ADC(0) transition velocity quadrupole moments are known "
+                          "to be faulty in some cases.")
+
+        def g_origin_dep_trans_el_quad_vel_moment(gauge_origin="origin"):
+            quadrupole_integrals = \
+                self.operators.electric_quadrupole_velocity(gauge_origin)
+            return np.array([[
+                [product_trace(quad1, tdm) for quad1 in quad]
+                for quad in quadrupole_integrals]
+                for tdm in self.transition_dm
+            ])
+        return g_origin_dep_trans_el_quad_vel_moment
 
     @cached_property
     @mark_excitation_property()
@@ -217,23 +257,29 @@ class ElectronicTransition:
     @cached_property
     @mark_excitation_property()
     def rotatory_strength(self):
-        """List of rotatory strengths (in velocity gauge) of all computed states"""
+        """List of rotatory strengths (in velocity gauge) of all computed states.
+        This property is gauge-origin invariant, thus, it is not possible to
+        select a gauge origin."""
         return np.array([
             np.dot(tdm, magmom) / ee
-            for tdm, magmom, ee in zip(self.transition_dipole_moment_velocity,
-                                       self.transition_magnetic_dipole_moment,
-                                       self.excitation_energy)
+            for tdm, magmom, ee in zip(
+                self.transition_dipole_moment_velocity,
+                self.transition_magnetic_dipole_moment("origin"),
+                self.excitation_energy)
         ])
 
-    @cached_property
+    @property
     @mark_excitation_property()
     def rotatory_strength_length(self):
         """List of rotatory strengths in length gauge of all computed states"""
-        return np.array([
-            -1.0 * np.dot(tdm, magmom)
-            for tdm, magmom in zip(self.transition_dipole_moment,
-                                   self.transition_magnetic_dipole_moment)
-        ])
+        def g_origin_dep_rot_str_len(gauge_origin="origin"):
+            return np.array([
+                -1.0 * np.dot(tdm, magmom)
+                for tdm, magmom in zip(
+                    self.transition_dipole_moment,
+                    self.transition_magnetic_dipole_moment(gauge_origin))
+            ])
+        return g_origin_dep_rot_str_len
 
     @property
     @mark_excitation_property()
