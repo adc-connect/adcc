@@ -69,7 +69,8 @@ __version__ = "0.15.17"
 __license__ = "GPL v3"
 __url__ = "https://adc-connect.org"
 __authors__ = ["Michael F. Herbst", "Maximilian Scheurer", "Jonas Leitner",
-               "Antonia Papapostolou"]
+               "Antonia Papapostolou", "Friederike Schneider",
+               "Adrian L. Dempwolff"]
 __email__ = "developers@adc-connect.org"
 __contributors__ = []
 
