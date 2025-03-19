@@ -163,7 +163,7 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
     # Get the worksize view for the first iteration
     Ass = Ass_cont[:n_ss_vec, :n_ss_vec]
 
-    # Initiall projection of Ax onto the subspace exploiting the hermiticity
+    # Initial projection of Ax onto the subspace exploiting the hermiticity
     with state.timer.record("projection"):
         for i in range(n_ss_vec):
             for j in range(i, n_ss_vec):

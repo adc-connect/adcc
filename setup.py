@@ -471,7 +471,7 @@ adccsetup(
     ],
     #
     author=("Michael F. Herbst, Maximilian Scheurer, Jonas Leitner, "
-            "Antonia Papapostolou"),
+            "Antonia Papapostolou, Friederike Schneider, Adrian L. Dempwolff"),
     author_email="developers@adc-connect.org",
     license="GPL v3",
     url="https://adc-connect.org",
