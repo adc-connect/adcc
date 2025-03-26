@@ -27,12 +27,12 @@ from os.path import basename
 import h5py
 
 
-def __emplace_ndarray(keyval, group, typ, **kwargs):
+def _emplace_ndarray(keyval, group, typ, **kwargs):
     dset = group.create_dataset(keyval[0], data=keyval[1], **kwargs)
     dset.attrs["type"] = "ndarray"
 
 
-def __extract_ndarray(dataset):
+def _extract_ndarray(dataset):
     arr = np.empty(dataset.shape, dtype=dataset.dtype)
     dataset.read_direct(arr)
 
@@ -50,7 +50,7 @@ def __extract_ndarray(dataset):
     return (basename(dataset.name), arr)
 
 
-def __emplace_listlike(keyval, group, typ, **kwargs):
+def _emplace_listlike(keyval, group, typ, **kwargs):
     dtype = None
     # Usually the heuristic for doing the conversion is pretty
     # good here, but there are some exceptions.
@@ -62,24 +62,24 @@ def __emplace_listlike(keyval, group, typ, **kwargs):
     dset.attrs["type"] = "list"
 
 
-def __extract_listlike(dataset):
-    key, arr = __extract_ndarray(dataset)
+def _extract_listlike(dataset):
+    key, arr = _extract_ndarray(dataset)
     return (key, arr.tolist())
 
 
-def __emplace_none(keyval, group, typ, **kwargs):
+def _emplace_none(keyval, group, typ, **kwargs):
     dset = group.create_dataset(keyval[0], data=h5py.Empty("f"), **kwargs)
     dset.attrs["type"] = "none"
 
 
-def __extract_none(dataset):
+def _extract_none(dataset):
     return (basename(dataset.name), None)
 
 
 # Type transformations for scalar types
 # If type not found here, we have an error
 # in the direction python -> hdf5, else we ignore it.
-__scalar_transform = [
+_scalar_transform = [
     (str,     h5py.special_dtype(vlen=str)),
     (bool,    np.dtype("b1")),
     (complex, np.dtype("c16")),
@@ -88,12 +88,12 @@ __scalar_transform = [
 ]
 
 
-def __emplace_scalar(keyval, group, typ, compression=None, **kwargs):
+def _emplace_scalar(keyval, group, typ, compression=None, **kwargs):
     # Note: The compression key is present such that the compression
     # specification is silently dropped here and not passed onto
     # create_dataset
     dtype = None  # Indicate no target type found
-    for t in __scalar_transform:
+    for t in _scalar_transform:
         if isinstance(keyval[1], t[0]):
             dtype = t[1]
             break
@@ -106,9 +106,9 @@ def __emplace_scalar(keyval, group, typ, compression=None, **kwargs):
     dset.attrs["type"] = "scalar"
 
 
-def __extract_scalar(dataset):
+def _extract_scalar(dataset):
     dtype = None  # Target type to transform to
-    for t in __scalar_transform:
+    for t in _scalar_transform:
         if dataset.dtype == t[1]:
             dtype = t[0]
             break
@@ -127,28 +127,28 @@ def __extract_scalar(dataset):
     return (basename(dataset.name), ret)
 
 
-def __extract_dataset(dataset):
+def _extract_dataset(dataset):
     """Select extractor based on the type attribute and use that
        to make the proper key-value pair out of the dataset
     """
     if "type" not in dataset.attrs:
         if dataset.shape == ():
-            return __extract_scalar(dataset)  # Treat as scalar
+            return _extract_scalar(dataset)  # Treat as scalar
         else:
-            return __extract_ndarray(dataset)  # Treat as array
+            return _extract_ndarray(dataset)  # Treat as array
     else:
         # Use type attribute to distinguish what should happen
         tpe = dataset.attrs["type"]
         return {
-            "scalar":   __extract_scalar,
-            "none":     __extract_none,
-            "ndarray":  __extract_ndarray,
-            "list":     __extract_listlike,
-            "tuple":    __extract_listlike,
+            "scalar":   _extract_scalar,
+            "none":     _extract_none,
+            "ndarray":  _extract_ndarray,
+            "list":     _extract_listlike,
+            "tuple":    _extract_listlike,
         }[tpe](dataset)
 
 
-def __emplace_key_value(kv, group, **kwargs):
+def _emplace_key_value(kv, group, **kwargs):
     """
     Emplace a single key-value pair in the group.
 
@@ -156,16 +156,16 @@ def __emplace_key_value(kv, group, **kwargs):
     to emplace.
     """
 
-    def __emplace_dict_inner(kv, group, typ, **kwargs):
+    def _emplace_dict_inner(kv, group, typ, **kwargs):
         subgroup = group.create_group(kv[0])
         emplace_dict(kv[1], subgroup)
 
     emplace_map = [
-        (np.ndarray,   __emplace_ndarray),
-        (type(None),   __emplace_none),
-        (list,         __emplace_listlike),
-        (tuple,        __emplace_listlike),
-        (dict,         __emplace_dict_inner),
+        (np.ndarray,   _emplace_ndarray),
+        (type(None),   _emplace_none),
+        (list,         _emplace_listlike),
+        (tuple,        _emplace_listlike),
+        (dict,         _emplace_dict_inner),
     ]
 
     for (typ, emplace) in emplace_map:
@@ -178,7 +178,7 @@ def __emplace_key_value(kv, group, **kwargs):
 
     # Fallback: Assume value is a simple scalar type
     try:
-        __emplace_scalar(kv, group, typ, **kwargs)
+        _emplace_scalar(kv, group, typ, **kwargs)
     except TypeError as e:
         raise TypeError("Error with key '" + kv[0] + "': " + str(e))
 
@@ -192,7 +192,7 @@ def emplace_dict(dictionary, group, **kwargs):
     using the kwargs to create all neccessary datasets.
     """
     for kv in dictionary.items():
-        __emplace_key_value(kv, group, **kwargs)
+        _emplace_key_value(kv, group, **kwargs)
 
 
 def extract_group(group):
@@ -201,7 +201,7 @@ def extract_group(group):
            if isinstance(v, h5py.Group)}
 
     # Now deal with all datasets
-    ret.update([__extract_dataset(v) for v in group.values()
+    ret.update([_extract_dataset(v) for v in group.values()
                 if isinstance(v, h5py.Dataset)])
 
     if not all(isinstance(v, (h5py.Dataset, h5py.Group)) or v is None

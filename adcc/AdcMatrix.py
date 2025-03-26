@@ -253,7 +253,9 @@ class AdcMatrix(AdcMatrixlike):
         Return the blocks used along one of the axes of the ADC matrix
         (e.g. ['ph', 'pphh']).
         """
-        return list(self.axis_spaces.keys())
+        # sort the keys by length to ensure that we always get
+        # [singles, doubles, ...]
+        return sorted(self.axis_spaces, key=len)
 
     def diagonal(self):
         """Return the diagonal of the ADC matrix"""

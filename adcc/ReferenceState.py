@@ -223,8 +223,12 @@ class ReferenceState(libadcc.ReferenceState):
         the electronic and the nuclear contribution.)
         """
         dipole_integrals = self.operators.electric_dipole
-        # Notice the negative sign due to the negative charge of the electrons
-        return self.nuclear_dipole - np.array([product_trace(comp, self.density)
+        return self.nuclear_dipole + np.array([product_trace(comp, self.density)
                                                for comp in dipole_integrals])
+
+    def nuclear_quadrupole(self, gauge_origin="origin"):
+        if isinstance(gauge_origin, str):
+            gauge_origin = self.gauge_origin_to_xyz(gauge_origin)
+        return super().nuclear_quadrupole(gauge_origin)
 
 # TODO some nice describe method

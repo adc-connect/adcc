@@ -21,7 +21,6 @@ dependencies:
   - cppe >=0.3.1
   - pytest
   - pytest-cov
-  - pyyaml
   - lcov
   - pip:
     - pyscf

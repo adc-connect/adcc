@@ -203,21 +203,31 @@ class DataHfProvider(HartreeFockProvider):
                                  + str((3, nb, nb)) + " not "
                                  + str(mmp["elec_1"].shape))
             opprov.electric_dipole = np.asarray(mmp["elec_1"])
+        if "elec_2_origin" in mmp:
+            def get_integral_elquad(gauge_origin):
+                return np.asarray(mmp[f"elec_2_{gauge_origin}"])
+            if mmp["elec_2_origin"].shape != (9, nb, nb):
+                raise ValueError("multipoles/elec_2_origin is expected to "
+                                 "have shape " + str((9, nb, nb)) + " not "
+                                 + str(mmp["elec_2"].shape))
+            opprov.electric_quadrupole = get_integral_elquad
         magm = data.get("magnetic_moments", {})
-        if "mag_1" in magm:
-            if magm["mag_1"].shape != (3, nb, nb):
-                raise ValueError("magnetic_moments/mag_1 is expected to have "
-                                 "shape " + str((3, nb, nb)) + " not "
-                                 + str(magm["mag_1"].shape))
-            opprov.magnetic_dipole = np.asarray(magm["mag_1"])
+        if "mag_1_origin" in magm:
+            def get_integral_magdip(gauge_origin):
+                return np.asarray(magm[f"mag_1_{gauge_origin}"])
+            if magm["mag_1_origin"].shape != (3, nb, nb):
+                raise ValueError("magnetic_moments/mag_1_origin is expected to have"
+                                 " shape " + str((3, nb, nb)) + " not "
+                                 + str(magm["mag_1_origin"].shape))
+            opprov.magnetic_dipole = get_integral_magdip
         derivs = data.get("derivatives", {})
-        if "nabla" in derivs:
-            if derivs["nabla"].shape != (3, nb, nb):
-                raise ValueError("derivatives/nabla is expected to "
-                                 "have shape "
+        if "elec_vel_1" in derivs:
+            if derivs["elec_vel_1"].shape != (3, nb, nb):
+                raise ValueError("derivatives/elec_vel_1 is expected to have shape "
                                  + str((3, nb, nb)) + " not "
-                                 + str(derivs["nabla"].shape))
-            opprov.nabla = np.asarray(derivs["nabla"])
+                                 + str(derivs["elec_vel_1"].shape))
+            opprov.electric_dipole_velocity = np.asarray(derivs["elec_vel_1"])
+
         self.operator_integral_provider = opprov
 
     #
@@ -260,15 +270,21 @@ class DataHfProvider(HartreeFockProvider):
     def get_energy_scf(self):
         return get_scalar_value(self.data, "energy_scf", 0.0)
 
-    def get_nuclear_multipole(self, order):
-        if order == 0:  # The function interface needs an np.array on return
-            nuc_0 = get_scalar_value(self.data, "multipoles/nuclear_0", 0.0)
-            return np.array([nuc_0])
-        elif order == 1:
-            return get_array_value(self.data, "multipoles/nuclear_1",
-                                   [0., 0, 0])
+    def get_nuclear_multipole(self, order: int, gauge_origin: str) -> np.ndarray:
+        key = f"multipoles/nuclear_{order}"
+        if order == 0:
+            nuc_multipole = get_scalar_value(self.data, key, default=None)
+        elif order == 2:
+            key_quad = key + f"_{gauge_origin}"
+            nuc_multipole = get_array_value(self.data, key_quad, default=None)
         else:
-            raise NotImplementedError("get_nuclear_multipole with order > 1")
+            nuc_multipole = get_array_value(self.data, key, default=None)
+        if nuc_multipole is None:
+            raise NotImplementedError(f"Nuclear multipole with order {order} is "
+                                      "not available.")
+        if order == 0:  # The function interface needs an np.array on return
+            nuc_multipole = np.array([nuc_multipole])
+        return nuc_multipole
 
     def get_spin_multiplicity(self):
         if "spin_multiplicity" in self.data:
