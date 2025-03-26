@@ -24,12 +24,79 @@ import numpy as np
 
 from libadcc import HartreeFockProvider
 from adcc.misc import cached_property
+from adcc.gradients import GradientComponents
 
 import psi4
 
 from .EriBuilder import EriBuilder
 from ..exceptions import InvalidReference
 from ..ExcitedStates import EnergyCorrection
+
+
+class Psi4GradientProvider:
+    def __init__(self, wfn):
+        self.wfn = wfn
+        self.mol = self.wfn.molecule()
+        self.backend = "psi4"
+        self.mints = psi4.core.MintsHelper(self.wfn)
+
+    def correlated_gradient(self, g1_ao, w_ao, g2_ao_1, g2_ao_2):
+        """
+        g1_ao: relaxed one-particle density matrix
+        w_ao:  energy-weighted density matrix
+        g2_ao_1, g2_ao_2: relaxed two-particle density matrices
+        """
+        natoms = self.mol.natom()
+        Gradient = {}
+        Gradient["N"] = np.zeros((natoms, 3))
+        Gradient["S"] = np.zeros((natoms, 3))
+        Gradient["T"] = np.zeros((natoms, 3))
+        Gradient["V"] = np.zeros((natoms, 3))
+        Gradient["OEI"] = np.zeros((natoms, 3))
+        Gradient["TEI"] = np.zeros((natoms, 3))
+        Gradient["Total"] = np.zeros((natoms, 3))
+
+        # 1st Derivative of Nuclear Repulsion
+        Gradient["N"] = psi4.core.Matrix.to_array(
+            self.mol.nuclear_repulsion_energy_deriv1([0, 0, 0])
+        )
+        # Build Integral Derivatives
+        cart = ['_X', '_Y', '_Z']
+        oei_dict = {"S": "OVERLAP", "T": "KINETIC", "V": "POTENTIAL"}
+
+        deriv1_mat = {}
+        deriv1_np = {}
+        # 1st Derivative of OEIs
+        for atom in range(natoms):
+            for key in oei_dict:
+                string = key + str(atom)
+                deriv1_mat[string] = self.mints.ao_oei_deriv1(oei_dict[key], atom)
+                for p in range(3):
+                    map_key = string + cart[p]
+                    deriv1_np[map_key] = np.asarray(deriv1_mat[string][p])
+                    if key == "S":
+                        Gradient["S"][atom, p] = np.sum(w_ao * deriv1_np[map_key])
+                    else:
+                        Gradient[key][atom, p] = np.sum(g1_ao * deriv1_np[map_key])
+        # Build Total OEI Gradient
+        Gradient["OEI"] = Gradient["T"] + Gradient["V"] + Gradient["S"]
+
+        # Build TE contributions
+        for atom in range(natoms):
+            deriv2 = self.mints.ao_tei_deriv1(atom)
+            for p in range(3):
+                deriv2_np = np.asarray(deriv2[p])
+                Gradient["TEI"][atom, p] += np.einsum(
+                    'pqrs,prqs->', g2_ao_1, deriv2_np, optimize=True
+                )
+                Gradient["TEI"][atom, p] -= np.einsum(
+                    'pqrs,psqr->', g2_ao_2, deriv2_np, optimize=True
+                )
+        ret = GradientComponents(
+            natoms, Gradient["N"], Gradient["S"],
+            Gradient["T"] + Gradient["V"], Gradient["TEI"]
+        )
+        return ret
 
 
 class Psi4OperatorIntegralProvider:
@@ -130,6 +197,7 @@ class Psi4HFProvider(HartreeFockProvider):
                                           wfn.nalpha(), wfn.nbeta(),
                                           self.restricted)
         self.operator_integral_provider = Psi4OperatorIntegralProvider(self.wfn)
+        self.gradient_provider = Psi4GradientProvider(self.wfn)
 
         self.environment = None
         self.environment_implementation = None

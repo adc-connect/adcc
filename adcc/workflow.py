@@ -359,7 +359,7 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
     if conv_tol is None:
         conv_tol = max(10 * reference_state.conv_tol, 1e-6)
     if reference_state.conv_tol > conv_tol:
-        raise InputError(
+        warnings.warn(
             "Convergence tolerance of SCF results "
             f"(== {reference_state.conv_tol}) needs to be lower than ADC "
             f"convergence tolerance parameter conv_tol (== {conv_tol})."
@@ -411,6 +411,13 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
         if n_guesses_doubles is not None:
             warnings.warn("Ignoring n_guesses_doubles parameter, since guesses "
                           "are explicitly provided.")
+
+    nguess_found = len(guesses)
+    if n_states > nguess_found:
+        warnings.warn(f"More states requested ({n_states}) than "
+                      f"guesses available ({nguess_found}). "
+                      "Reducing number of eigenstates to number of guesses.")
+        n_states = nguess_found
 
     solverargs.setdefault("which", "SA")
     return run_eigensolver(matrix, guesses, n_ep=n_states, conv_tol=conv_tol,
@@ -491,8 +498,8 @@ def obtain_guesses_by_inspection(matrix, n_guesses, kind, n_guesses_doubles=None
 
     total_guesses = singles_guesses + doubles_guesses
     if len(total_guesses) < n_guesses:
-        raise InputError("Less guesses found than requested: {} found, "
-                         "{} requested".format(len(total_guesses), n_guesses))
+        warnings.warn("Less guesses found than requested: "
+                      f"{len(total_guesses)} found, {n_guesses} requested.")
     return total_guesses
 
 

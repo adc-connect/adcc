@@ -66,6 +66,8 @@ class Excitation:
         self.__parent_state = parent_state
         self.index = index
         self.method = method
+        self.ground_state = parent_state.ground_state
+        self.reference_state = parent_state.reference_state
         for key in self.parent_state.excitation_property_keys:
             fget = getattr(type(self.parent_state), key).fget
             # Extract the kwargs passed to mark_excitation_property
