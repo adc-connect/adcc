@@ -19,6 +19,10 @@ class SomeClass:
     def cached_timed(self, x=0, y=1):
         return (x, y)
 
+    @cached_member_function(timer="my_timer", separate_timings_by_args=False)
+    def cached_timed_combined(self, x=0, y=1):
+        return (x, y)
+
     @cached_member_function(timer="my_timer")
     def cached_evaluatable_timed(self):
         return OtherClass()
@@ -70,6 +74,10 @@ class TestCachedMemberFunction(unittest.TestCase):
         res = instance.cached_timed()
         assert res is instance.cached_timed()
         assert len(instance.my_timer.intervals("cached_timed/0_1")) == 1
+        # store the timings independent of the args
+        instance.cached_timed_combined(0, 0)
+        instance.cached_timed_combined(0, 1)
+        assert len(instance.my_timer.intervals("cached_timed_combined")) == 2
 
     def test_evaluate(self):
         instance = SomeClass()

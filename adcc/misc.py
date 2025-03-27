@@ -53,13 +53,25 @@ def cached_property(f):
     return property(get)
 
 
-def cached_member_function(timer: str = "timer"):
+def cached_member_function(timer: str = "timer",
+                           separate_timings_by_args: bool = True):
     """
     Decorates a member function being called with
     one or more arguments and stores the results
     in field `_function_cache` of the class instance.
     If the class has a timer (defined under the provided name)
     the timings of the (first) call will be measured.
+
+    Parameters
+    ----------
+    timer: str, optional
+        Name of the member variable the :class:`Timer` instance can be found on the
+        class instance (default: 'timer'). If the timer is not found no timings
+        are measured.
+    separate_timings_by_args: bool, optional
+        If set the arguments passed to the decorated functions will be included
+        in the key under which the timings are stored, i.e., a distinct timer task
+        will be generated for each set of arguments. (default: True)
     """
     def decorator(function):
         fname = function.__name__
@@ -101,8 +113,12 @@ def cached_member_function(timer: str = "timer"):
                 # Record with a timer if possible
                 instance_timer = getattr(self, timer, None)
                 if isinstance(instance_timer, Timer):
-                    descr = '_'.join([str(a) for a in args])
-                    with instance_timer.record(f"{fname}/{descr}"):
+                    timer_task = fname
+                    if separate_timings_by_args:
+                        descr = '_'.join([str(a) for a in args])
+                        timer_task += f"/{descr}"
+
+                    with instance_timer.record(timer_task):
                         # try to evaluate the result if possible
                         result = function(self, *args)
                         if hasattr(result, "evaluate"):
