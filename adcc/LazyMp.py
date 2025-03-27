@@ -56,7 +56,7 @@ class LazyMp:
         else:
             raise AttributeError
 
-    @cached_member_function
+    @cached_member_function()
     def df(self, space):
         """Delta Fock matrix"""
         hf = self.reference_state
@@ -65,7 +65,7 @@ class LazyMp:
         fv = hf.fock(s2 + s2).diagonal()
         return direct_sum("-i+a->ia", fC, fv)
 
-    @cached_member_function
+    @cached_member_function()
     def t2(self, space):
         """T2 amplitudes"""
         hf = self.reference_state
@@ -77,7 +77,7 @@ class LazyMp:
             hf.eri(space) / direct_sum("ia+jb->ijab", eia, ejb).symmetrise((2, 3))
         )
 
-    @cached_member_function
+    @cached_member_function()
     def td2(self, space):
         """Return the T^D_2 term"""
         if space != b.oovv:
@@ -93,7 +93,7 @@ class LazyMp:
             - 0.5 * self.t2eri(b.oovv, b.oo)
         ) / denom
 
-    @cached_member_function
+    @cached_member_function()
     def t2eri(self, space, contraction):
         """
         Return the T2 tensor with ERI tensor contraction intermediates.
@@ -195,7 +195,7 @@ class LazyMp:
             raise NotImplementedError("Only dipole moments for level 0, 1 and 2"
                                       " are implemented.")
 
-    @cached_member_function
+    @cached_member_function()
     def energy_correction(self, level=2):
         """Obtain the MP energy correction at a particular level"""
         if level > 3:

@@ -23,7 +23,7 @@ class AdcMockState(EigenSolverStateBase):
 
 
 class TestdataCache:
-    @cached_member_function
+    @cached_member_function()
     def _load_hfdata(self, system: str) -> dict:
         """Load the HF data for the given test case."""
         if isinstance(system, str):
@@ -41,7 +41,7 @@ class TestdataCache:
             )
         return hdf5io.load(fname)
 
-    @cached_member_function
+    @cached_member_function()
     def refstate(self, system: str, case: str) -> ReferenceState:
         """
         Build the adcc.ReferenceState.
@@ -77,7 +77,7 @@ class TestdataCache:
         refstate.import_all()
         return refstate
 
-    @cached_member_function
+    @cached_member_function()
     def hfimport(self, system: str, case: str) -> dict:
         """
         Load HF data that was dumped after an import with ReferenceState.
@@ -112,7 +112,7 @@ class TestdataCache:
             raise ValueError(f"No data available for case {case} in file {fname}.")
         return data
 
-    @cached_member_function
+    @cached_member_function()
     def _load_data(self, system: str, method: str, case: str, source: str,
                    gs_density_order: int = None) -> dict:
         """
@@ -177,7 +177,7 @@ class TestdataCache:
             gs_density_order=gs_density_order, source="adcman"
         )
 
-    @cached_member_function
+    @cached_member_function()
     def _make_mock_adc_state(self, system: str, method: str, case: str,
                              kind: str, source: str,
                              gs_density_order: int = None) -> ExcitedStates:
