@@ -20,14 +20,15 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from adcc import dot
 from scipy import constants
 
+from .import adc_pp
+from .ElectronicTransition import ElectronicTransition
 from .Excitation import Excitation
+from .FormatDominantElements import FormatDominantElements
 from .FormatIndex import (FormatIndexAdcc, FormatIndexBase,
                           FormatIndexHfProvider, FormatIndexHomoLumo)
-from .ElectronicTransition import ElectronicTransition
-from .FormatDominantElements import FormatDominantElements
+from .functions import dot
 
 
 class FormatExcitationVector:
@@ -119,6 +120,8 @@ class FormatExcitationVector:
 
 
 class ExcitedStates(ElectronicTransition):
+    _module = adc_pp
+
     @property
     def excitations(self) -> list[Excitation]:
         """
