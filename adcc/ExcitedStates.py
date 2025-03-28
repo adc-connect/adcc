@@ -20,47 +20,13 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import warnings
-import numpy as np
-
 from adcc import dot
 from scipy import constants
 
-from . import adc_pp
-from .misc import cached_property, requires_module
-from .timings import timed_member_call
-from .Excitation import Excitation, mark_excitation_property
 from .FormatIndex import (FormatIndexAdcc, FormatIndexBase,
                           FormatIndexHfProvider, FormatIndexHomoLumo)
-from .OneParticleOperator import product_trace
 from .ElectronicTransition import ElectronicTransition
 from .FormatDominantElements import FormatDominantElements
-
-
-class EnergyCorrection:
-    def __init__(self, name, function):
-        """A helper class to represent excitation energy
-        corrections.
-
-        Parameters
-        ----------
-        name : str
-            descriptive name of the energy correction
-        function : callable
-            function that takes a :py:class:`Excitation`
-            as single argument and returns the energy
-            correction as a float
-        """
-        if not isinstance(name, str):
-            raise TypeError("name needs to be a string.")
-        if not callable(function):
-            raise TypeError("function needs to be callable.")
-        self.name = name
-        self.function = function
-
-    def __call__(self, excitation):
-        assert isinstance(excitation, Excitation)
-        return self.function(excitation)
 
 
 class FormatExcitationVector:
@@ -152,112 +118,44 @@ class FormatExcitationVector:
 
 
 class ExcitedStates(ElectronicTransition):
-    def __init__(self, data, method=None, property_method=None):
-        """Construct an ExcitedStates class from some data obtained
-        from an interative solver or another :class:`ExcitedStates`
-        object.
-
-        The class provides access to the results from an ADC calculation
-        as well as derived properties. Properties are computed lazily
-        on the fly as requested by the user.
-
-        By default the ADC method is extracted from the data object
-        and the property method in property_method is set equal to
-        this method, except ADC(3) where property_method=="adc2".
-        This can be overwritten using the parameters.
-
-        Parameters
-        ----------
-        data
-            Any kind of iterative solver state. Typically derived off
-            a :class:`solver.EigenSolverStateBase`. Can also be an
-            :class:`ExcitedStates` object.
-        method : str, optional
-            Provide an explicit method parameter if data contains none.
-        property_method : str, optional
-            Provide an explicit method for property calculations to
-            override the automatic selection.
-        """
-        super().__init__(data, method, property_method)
-        self._excitation_energy_corrections = []
-        # copy energy corrections if possible
-        # and avoids re-computation of the corrections
-        if hasattr(data, "_excitation_energy_corrections"):
-            for eec in data._excitation_energy_corrections:
-                correction_energy = getattr(data, eec.name)
-                setattr(self, eec.name, correction_energy)
-                self._excitation_energy += correction_energy
-                self._excitation_energy_corrections.append(eec)
-
-    def __add_energy_correction(self, correction):
-        assert isinstance(correction, EnergyCorrection)
-        if hasattr(self, correction.name):
-            raise ValueError("ExcitedStates already has a correction"
-                             f" with the name '{correction.name}'")
-        correction_energy = np.array([correction(exci)
-                                      for exci in self.excitations])
-        setattr(self, correction.name, correction_energy)
-        self._excitation_energy += correction_energy
-        self._excitation_energy_corrections.append(correction)
-
-    def __iadd__(self, other):
-        if isinstance(other, EnergyCorrection):
-            self.__add_energy_correction(other)
-        elif isinstance(other, list):
-            for k in other:
-                self += k
+    def _repr_pretty_(self, pp, cycle):
+        if cycle:
+            pp.text("ExcitedStates(...)")
         else:
-            return NotImplemented
-        return self
+            pp.text(self.describe())
 
-    def __add__(self, other):
-        if not isinstance(other, (EnergyCorrection, list)):
-            return NotImplemented
-        ret = ExcitedStates(self, self.method, self.property_method)
-        ret += other
-        return ret
+    # @cached_property
+    # @mark_excitation_property(transform_to_ao=True)
+    # @timed_member_call(timer="_property_timer")
+    # def state_diffdm(self):
+    #     """List of difference density matrices of all computed states"""
+    #     return [adc_pp.state_diffdm(self.property_method, self.ground_state,
+    #                                 evec, self.matrix.intermediates)
+    #             for evec in self.excitation_vector]
 
-    @cached_property
-    @mark_excitation_property(transform_to_ao=True)
-    @timed_member_call(timer="_property_timer")
-    def transition_dm(self):
-        """List of transition density matrices of all computed states"""
-        return [adc_pp.transition_dm(self.property_method, self.ground_state,
-                                     evec, self.matrix.intermediates)
-                for evec in self.excitation_vector]
+    # @property
+    # @mark_excitation_property(transform_to_ao=True)
+    # def state_dm(self):
+    #     """List of state density matrices of all computed states"""
+    #     mp_density = self.ground_state.density(self.property_method.level)
+    #     return [mp_density + diffdm for diffdm in self.state_diffdm]
 
-    @cached_property
-    @mark_excitation_property(transform_to_ao=True)
-    @timed_member_call(timer="_property_timer")
-    def state_diffdm(self):
-        """List of difference density matrices of all computed states"""
-        return [adc_pp.state_diffdm(self.property_method, self.ground_state,
-                                    evec, self.matrix.intermediates)
-                for evec in self.excitation_vector]
+    # @cached_property
+    # @mark_excitation_property()
+    # @timed_member_call(timer="_property_timer")
+    # def state_dipole_moment(self):
+    #     """List of state dipole moments"""
+    #     pmethod = self.property_method
+    #     if pmethod.level == 0:
+    #         gs_dip_moment = self.reference_state.dipole_moment
+    #     else:
+    #         gs_dip_moment = self.ground_state.dipole_moment(pmethod.level)
 
-    @property
-    @mark_excitation_property(transform_to_ao=True)
-    def state_dm(self):
-        """List of state density matrices of all computed states"""
-        mp_density = self.ground_state.density(self.property_method.level)
-        return [mp_density + diffdm for diffdm in self.state_diffdm]
-
-    @cached_property
-    @mark_excitation_property()
-    @timed_member_call(timer="_property_timer")
-    def state_dipole_moment(self):
-        """List of state dipole moments"""
-        pmethod = self.property_method
-        if pmethod.level == 0:
-            gs_dip_moment = self.reference_state.dipole_moment
-        else:
-            gs_dip_moment = self.ground_state.dipole_moment(pmethod.level)
-
-        dipole_integrals = self.operators.electric_dipole
-        return gs_dip_moment + np.array([
-            [product_trace(comp, ddm) for comp in dipole_integrals]
-            for ddm in self.state_diffdm
-        ])
+    #     dipole_integrals = self.operators.electric_dipole
+    #     return gs_dip_moment + np.array([
+    #         [product_trace(comp, ddm) for comp in dipole_integrals]
+    #         for ddm in self.state_diffdm
+    #     ])
 
     def describe(self, oscillator_strengths=True, rotatory_strengths=False,
                  state_dipole_moments=False, transition_dipole_moments=False,
@@ -387,12 +285,6 @@ class ExcitedStates(ElectronicTransition):
             text += separator + "\n"
         return text
 
-    def _repr_pretty_(self, pp, cycle):
-        if cycle:
-            pp.text("ExcitedStates(...)")
-        else:
-            pp.text(self.describe())
-
     def describe_amplitudes(self, tolerance=0.01, index_format=None):
         """
         Return a string describing the dominant amplitudes of each
@@ -439,112 +331,112 @@ class ExcitedStates(ElectronicTransition):
                 ret += separator
         return ret[:-1]
 
-    @requires_module("pandas")
-    def to_dataframe(self, gauge_origin="origin"):
-        """
-        Exports the ExcitedStates object as :class:`pandas.DataFrame`.
-        Atomic units are used for all values.
-        """
-        import pandas as pd
-        propkeys = self.excitation_property_keys
-        propkeys.extend([k.name for k in self._excitation_energy_corrections])
-        data = {
-            "excitation": np.arange(0, self.size, dtype=int),
-            "kind": np.tile(self.kind, self.size)
-        }
-        for key in propkeys:
-            try:
-                d = getattr(self, key)
-            except NotImplementedError:
-                # some properties are not available for every backend
-                continue
-            if callable(d):
-                try:
-                    d = d(gauge_origin)
-                except NotImplementedError:
-                    # some properties are not available for every backend
-                    continue
-            if not isinstance(d, np.ndarray):
-                continue
-            if not np.issubdtype(d.dtype, np.number):
-                continue
-            if d.ndim == 1:
-                data[key] = d
-            elif d.ndim == 2 and d.shape[1] == 3:
-                for i, p in enumerate(["x", "y", "z"]):
-                    data[f"{key}_{p}"] = d[:, i]
-            elif d.ndim == 3 and d.shape[1:] == (3, 3):
-                for i, p in enumerate(["x", "y", "z"]):
-                    for j, q in enumerate(["x", "y", "z"]):
-                        data[f"{key}_{p}{q}"] = d[:, i, j]
-            elif d.ndim > 3:
-                warnings.warn(f"Exporting NumPy array for property {key}"
-                              f" with shape {d.shape} not supported.")
-                continue
-        df = pd.DataFrame(data=data)
-        df.set_index("excitation")
-        return df
+    # @requires_module("pandas")
+    # def to_dataframe(self, gauge_origin="origin"):
+    #     """
+    #     Exports the ExcitedStates object as :class:`pandas.DataFrame`.
+    #     Atomic units are used for all values.
+    #     """
+    #     import pandas as pd
+    #     propkeys = self.excitation_property_keys
+    #     propkeys.extend([k.name for k in self._excitation_energy_corrections])
+    #     data = {
+    #         "excitation": np.arange(0, self.size, dtype=int),
+    #         "kind": np.tile(self.kind, self.size)
+    #     }
+    #     for key in propkeys:
+    #         try:
+    #             d = getattr(self, key)
+    #         except NotImplementedError:
+    #             # some properties are not available for every backend
+    #             continue
+    #         if callable(d):
+    #             try:
+    #                 d = d(gauge_origin)
+    #             except NotImplementedError:
+    #                 # some properties are not available for every backend
+    #                 continue
+    #         if not isinstance(d, np.ndarray):
+    #             continue
+    #         if not np.issubdtype(d.dtype, np.number):
+    #             continue
+    #         if d.ndim == 1:
+    #             data[key] = d
+    #         elif d.ndim == 2 and d.shape[1] == 3:
+    #             for i, p in enumerate(["x", "y", "z"]):
+    #                 data[f"{key}_{p}"] = d[:, i]
+    #         elif d.ndim == 3 and d.shape[1:] == (3, 3):
+    #             for i, p in enumerate(["x", "y", "z"]):
+    #                 for j, q in enumerate(["x", "y", "z"]):
+    #                     data[f"{key}_{p}{q}"] = d[:, i, j]
+    #         elif d.ndim > 3:
+    #             warnings.warn(f"Exporting NumPy array for property {key}"
+    #                           f" with shape {d.shape} not supported.")
+    #             continue
+    #     df = pd.DataFrame(data=data)
+    #     df.set_index("excitation")
+    #     return df
 
-    @property
-    def excitation_property_keys(self):
-        """
-        Extracts the property keys which are marked
-        as excitation property with :func:`mark_excitation_property`.
-        """
-        ret = []
-        for key in dir(self):
-            if key == "excitations":
-                continue
-            if "__" in key or key.startswith("_"):
-                continue  # skip "private" fields
-            if not hasattr(type(self), key):
-                continue
-            if not isinstance(getattr(type(self), key), property):
-                continue
-            fget = getattr(type(self), key).fget
-            if hasattr(fget, "__excitation_property"):
-                ret.append(key)
-        return ret
+    # @property
+    # def excitation_property_keys(self):
+    #     """
+    #     Extracts the property keys which are marked
+    #     as excitation property with :func:`mark_excitation_property`.
+    #     """
+    #     ret = []
+    #     for key in dir(self):
+    #         if key == "excitations":
+    #             continue
+    #         if "__" in key or key.startswith("_"):
+    #             continue  # skip "private" fields
+    #         if not hasattr(type(self), key):
+    #             continue
+    #         if not isinstance(getattr(type(self), key), property):
+    #             continue
+    #         fget = getattr(type(self), key).fget
+    #         if hasattr(fget, "__excitation_property"):
+    #             ret.append(key)
+    #     return ret
 
-    def to_qcvars(self, properties=False, recurse=False):
-        """
-        Return a dictionary with property keys compatible to a Psi4 wavefunction
-        or a QCEngine Atomicresults object.
-        """
-        name = self.method.name.upper()
+    # def to_qcvars(self, properties=False, recurse=False):
+    #     """
+    #     Return a dictionary with property keys compatible to a Psi4 wavefunction
+    #     or a QCEngine Atomicresults object.
+    #     """
+    #     name = self.method.name.upper()
 
-        qcvars = {
-            "EXCITATION KIND": self.kind.upper(),
-            "NUMBER OF EXCITED STATES": len(self.excitation_energy),
-            f"{name} ITERATIONS": self.n_iter,
-            f"{name} EXCITATION ENERGIES": self.excitation_energy,
-        }
+    #     qcvars = {
+    #         "EXCITATION KIND": self.kind.upper(),
+    #         "NUMBER OF EXCITED STATES": len(self.excitation_energy),
+    #         f"{name} ITERATIONS": self.n_iter,
+    #         f"{name} EXCITATION ENERGIES": self.excitation_energy,
+    #     }
 
-        if properties:
-            qcvars.update({
-                # Transition properties
-                f"{name} TRANSITION DIPOLES (LEN)": self.transition_dipole_moment,
-                f"{name} TRANSITION DIPOLES (VEL)": self.transition_dipole_moment_velocity,  # noqa: E501
-                f"{name} OSCILLATOR STRENGTHS (LEN)": self.oscillator_strength,
-                f"{name} OSCILLATOR STRENGTHS (VEL)": self.oscillator_strength_velocity,  # noqa: E501
-                f"{name} ROTATIONAL STRENGTHS (VEL)": self.rotatory_strength,
-                #
-                # State properties
-                f"{name} STATE DIPOLES": self.state_dipole_moment
-            })
+    #     if properties:
+    #         qcvars.update({
+    #             # Transition properties
+    #             f"{name} TRANSITION DIPOLES (LEN)": self.transition_dipole_moment,
+    #             f"{name} TRANSITION DIPOLES (VEL)": self.transition_dipole_moment_velocity,  # noqa: E501
+    #             f"{name} OSCILLATOR STRENGTHS (LEN)": self.oscillator_strength,
+    #             f"{name} OSCILLATOR STRENGTHS (VEL)": self.oscillator_strength_velocity,  # noqa: E501
+    #             f"{name} ROTATIONAL STRENGTHS (VEL)": self.rotatory_strength,
+    #             #
+    #             # State properties
+    #             f"{name} STATE DIPOLES": self.state_dipole_moment
+    #         })
 
-        if recurse:
-            mpvars = self.ground_state.to_qcvars(properties, recurse=True,
-                                                 maxlevel=self.method.level)
-            qcvars.update(mpvars)
-        return qcvars
+    #     if recurse:
+    #         mpvars = self.ground_state.to_qcvars(properties, recurse=True,
+    #                                              maxlevel=self.method.level)
+    #         qcvars.update(mpvars)
+    #     return qcvars
 
-    @property
-    def excitations(self):
-        """
-        Provides a list of Excitations, i.e., a view to all individual
-        excited states and their properties. Still under heavy development.
-        """
-        excitations = [Excitation(self, index=i, method=self.method)
-                       for i in range(self.size)]
-        return excitations
+    # @property
+    # def excitations(self):
+    #     """
+    #     Provides a list of Excitations, i.e., a view to all individual
+    #     excited states and their properties. Still under heavy development.
+    #     """
+    #     excitations = [Excitation(self, index=i, method=self.method)
+    #                    for i in range(self.size)]
+    #     return excitations

@@ -29,7 +29,7 @@ import psi4
 
 from .EriBuilder import EriBuilder
 from ..exceptions import InvalidReference
-from ..ExcitedStates import EnergyCorrection
+from ..ElectronicStates import EnergyCorrection
 
 
 class Psi4OperatorIntegralProvider:
