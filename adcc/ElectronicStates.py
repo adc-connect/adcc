@@ -2,11 +2,11 @@ import numpy as np
 
 from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod
-from .Excitation import Excitation
 from .LazyMp import LazyMp
 from .OperatorIntegrals import OperatorIntegrals
 from .ReferenceState import ReferenceState
 from .solver.SolverStateBase import EigenSolverStateBase
+from .StateView import StateView
 from .timings import Timer
 
 
@@ -128,33 +128,36 @@ class ElectronicStates:
         return ret
 
     @property
-    # @mark_excitation_property()
     def excitation_energy(self):
         """Excitation energies including all corrections in atomic units"""
         return self._excitation_energy
 
     @property
-    # @mark_excitation_property()
     def excitation_energy_uncorrected(self):
         """Excitation energies without any corrections in atomic units"""
         return self._excitation_energy_uncorrected
 
     @property
-    # @mark_excitation_property()
     def excitation_vector(self):
         """List of excitation vectors"""
         return self._excitation_vector
 
+    def _state_view(self, state_n: int):
+        """
+        Provides a view onto a single state and his properties. This method has
+        to be implemented on the child classes, since the view depends on the
+        adc_variant.
+        """
+        return NotImplemented
+
     def _add_energy_correction(self, correction: "EnergyCorrection") -> None:
         assert isinstance(correction, EnergyCorrection)
         if hasattr(self, correction.name):
-            raise ValueError(f"{self.__name__} already has an attribute "
+            raise ValueError(f"{self.__class__.__name__} already has an attribute "
                              f" with the name '{correction.name}'")
-        # TODO: need to figure out how to dispatch to the Excitation interface
-        # for IP/EA
-        return NotImplemented
-        correction_energy = np.array([correction(exci)
-                                      for exci in self.excitations])
+        correction_energy = np.array([
+            correction(self._state_view(i)) for i in range(self.size)
+        ])
         setattr(self, correction.name, correction_energy)
         self._excitation_energy += correction_energy
         self._excitation_energy_corrections.append(correction)
@@ -198,6 +201,6 @@ class EnergyCorrection:
         self.name = name
         self.function = function
 
-    def __call__(self, excitation: Excitation):
-        assert isinstance(excitation, Excitation)
+    def __call__(self, excitation: StateView):
+        assert isinstance(excitation, StateView)
         return self.function(excitation)

@@ -23,6 +23,7 @@
 from adcc import dot
 from scipy import constants
 
+from .Excitation import Excitation
 from .FormatIndex import (FormatIndexAdcc, FormatIndexBase,
                           FormatIndexHfProvider, FormatIndexHomoLumo)
 from .ElectronicTransition import ElectronicTransition
@@ -118,6 +119,19 @@ class FormatExcitationVector:
 
 
 class ExcitedStates(ElectronicTransition):
+    @property
+    def excitations(self) -> list[Excitation]:
+        """
+        Provides a list of Excitations, i.e., a view to all individual
+        excited states and their properties.
+        """
+        return [self._state_view(i) for i in range(self.size)]
+
+    def _state_view(self, state_n: int) -> Excitation:
+        """
+        Provides a view to the given excited state and his properties."""
+        return Excitation(self, state_n)
+
     def _repr_pretty_(self, pp, cycle):
         if cycle:
             pp.text("ExcitedStates(...)")
@@ -430,13 +444,3 @@ class ExcitedStates(ElectronicTransition):
     #                                              maxlevel=self.method.level)
     #         qcvars.update(mpvars)
     #     return qcvars
-
-    # @property
-    # def excitations(self):
-    #     """
-    #     Provides a list of Excitations, i.e., a view to all individual
-    #     excited states and their properties. Still under heavy development.
-    #     """
-    #     excitations = [Excitation(self, index=i, method=self.method)
-    #                    for i in range(self.size)]
-    #     return excitations

@@ -20,6 +20,10 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import numpy as np
+
+from .OneParticleOperator import OneParticleOperator
+from .StateView import StateView
 
 
 def mark_excitation_property(**kwargs):
@@ -42,15 +46,14 @@ def mark_excitation_property(**kwargs):
     return inner
 
 
-class Excitation:
-    def __init__(self, parent_state, index, method):
-        """Construct an Excitation from an :class:`adcc.ExcitedStates`
+class Excitation(StateView):
+    def __init__(self, parent_state, index: int):
+        """
+        Construct an Excitation instance from an :class:`adcc.ExcitedStates`
         parent object.
 
         The class provides access to the properties of a single
-        excited state, dynamically constructed inside ExcitedStates.excitations
-        All properties marked with :func:`mark_excitation_property` are
-        set as properties of :class:`adcc.Excitation`.
+        excited state, dynamically constructed inside ExcitedStates.excitations.
 
         Parameters
         ----------
@@ -60,37 +63,34 @@ class Excitation:
         index : int
             Index of the excited state the constructed :class:`adcc.Excitation`
             should refer to (0-based)
-        method : AdcMethod
-            ADC method of the parent :class:`adcc.ExcitedStates` object
         """
-        self.__parent_state = parent_state
-        self.index = index
-        self.method = method
-        for key in self.parent_state.excitation_property_keys:
-            fget = getattr(type(self.parent_state), key).fget
-            # Extract the kwargs passed to mark_excitation_property
-            kwargs = getattr(fget, "__excitation_property").copy()
-
-            def get_parent_property(self, key=key, kwargs=kwargs):
-                if callable(getattr(self.parent_state, key)):
-                    def wrapper(*args, **kwargs):
-                        callback = getattr(self.parent_state, key)
-                        return callback(*args, **kwargs)[self.index]
-                    return wrapper
-                else:
-                    return getattr(self.parent_state, key)[self.index]
-
-            setattr(Excitation, key, property(get_parent_property))
-
-            transform = kwargs.pop("transform_to_ao", False)
-            if transform:
-                def get_parent_property_transform(self, key=key):
-                    matrix = getattr(self.parent_state, key)[self.index]
-                    return sum(matrix.to_ao_basis())
-
-                setattr(Excitation, key + "_ao",
-                        property(get_parent_property_transform))
+        from .ExcitedStates import ExcitedStates
+        # NOTE: In theory this should also work with S2S. But then index
+        # would need to be relative to S2S.initial, i.e., 0 for S2S.initial + 1
+        # which seems kind of weird.
+        # TODO: Should we allow this?
+        if not isinstance(parent_state, ExcitedStates):
+            raise TypeError("parent_state needs to be an ExcitedStates object. "
+                            f"Got: {type(parent_state)}.")
+        super().__init__(parent_state, index)
+        self._parent_state: ExcitedStates
 
     @property
-    def parent_state(self):
-        return self.__parent_state
+    def transition_dm(self) -> OneParticleOperator:
+        """The transition density matrix"""
+        return self._parent_state._transition_dm(self.index)
+
+    @property
+    def transition_dm_ao(self) -> OneParticleOperator:
+        """The transition density matrix in the AO basis"""
+        return self.transition_dm.to_ao_basis()
+
+    @property
+    def transition_dipole_moment(self) -> np.ndarray:
+        """The transition dipole moment"""
+        return self._parent_state._transition_dipole_moment(self.index)
+
+    @property
+    def oscillator_strength(self) -> np.float64:
+        """The oscillator strength"""
+        return self._parent_state._oscillator_strength(self.index)
