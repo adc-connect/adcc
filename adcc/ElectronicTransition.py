@@ -34,7 +34,6 @@ timer_name = "_property_timer"
 
 class ElectronicTransition(ElectronicStates):
     @property
-    # @mark_excitation_property(transform_to_ao=True)
     def transition_dm(self) -> list[OneParticleOperator]:
         """List of transition density matrices of all computed states"""
         return [self._transition_dm(i) for i in range(self.size)]
@@ -48,7 +47,6 @@ class ElectronicTransition(ElectronicStates):
         )
 
     @property
-    # @mark_excitation_property()
     def transition_dipole_moment(self) -> np.ndarray:
         """Array of transition dipole moments of all computed states"""
         return np.array([
@@ -68,7 +66,6 @@ class ElectronicTransition(ElectronicStates):
         )
 
     @property
-    # @mark_excitation_property()
     def oscillator_strength(self) -> np.ndarray:
         """Array of oscillator strengths of all computed states"""
         return np.array([self._oscillator_strength(i) for i in range(self.size)])
