@@ -11,23 +11,30 @@ from .timings import Timer
 
 
 class ElectronicStates:
-    """
-    Construct an ElectronicStates class from some data obtained from an iterative
-    solver or another :class:`ElectronicStates` instance.
+    # The module where the equations for the ADC scheme are implemented, e.g.,
+    # adc_pp for PP-ADC. Overwrite the class variable on child classes to
+    # forward the call to the corresponding module. This assumes that the
+    # structure within each module is consistent for all adc_types, which should
+    # be fine I think.
+    _module = None
 
-    Parameters
-    ----------
-    data
-        Any kind of iterative solver state. Typically derived off
-        a :class:`solver.EigenSolverStateBase`.
-    method : str, optional
-        Provide an explicit method parameter if data contains none.
-    property_method : str, optional
-        Provide an explicit method for property calculations to
-        override the automatic selection.
-    """
     def __init__(self, data, method: str = None,
                  property_method: str = None) -> None:
+        """
+        Construct an ElectronicStates class from some data obtained from an
+        iterative solver or another :class:`ElectronicStates` instance.
+
+        Parameters
+        ----------
+        data
+            Any kind of iterative solver state. Typically derived off
+            a :class:`solver.EigenSolverStateBase`.
+        method : str, optional
+            Provide an explicit method parameter if data contains none.
+        property_method : str, optional
+            Provide an explicit method for property calculations to
+            override the automatic selection.
+    """
         self.matrix: AdcMatrix = data.matrix
         self.ground_state: LazyMp = self.matrix.ground_state
         self.reference_state: ReferenceState = (

@@ -23,7 +23,6 @@
 import numpy as np
 import warnings
 
-from . import adc_pp
 from .ElectronicStates import ElectronicStates
 from .misc import cached_member_function
 from .OneParticleOperator import OneParticleOperator, product_trace
@@ -42,7 +41,7 @@ class ElectronicTransition(ElectronicStates):
     def _transition_dm(self, state_n: int) -> OneParticleOperator:
         """Computes the tansition density matrix for a single state"""
         evec = self.excitation_vector[state_n]
-        return adc_pp.transition_dm(
+        return self._module.transition_dm(
             self.property_method, self.ground_state, evec, self.matrix.intermediates
         )
 

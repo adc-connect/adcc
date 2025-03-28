@@ -60,6 +60,13 @@ class State2States(ElectronicTransition):
         super().__init__(data, method, property_method)
         self.initial = initial
 
+        # Since this class should be used for all adc_types we have to determine
+        # the module according to the method.
+        if self.method.adc_type == "pp":
+            self._module = adc_pp
+        else:
+            raise ValueError(f"Unknown adc_type {self.method.adc_type}.")
+
     @property
     def size(self) -> int:
         # the number of states "above" the initial state to correctly index
@@ -93,7 +100,7 @@ class State2States(ElectronicTransition):
         # This is necessary to enable the use of the implementations on
         # the parent class.
         state_n = self.initial + state_n + 1
-        return adc_pp.state2state_transition_dm(
+        return self._module.state2state_transition_dm(
             self.property_method, self.ground_state,
             self.excitation_vector[self.initial],
             self.excitation_vector[state_n],
