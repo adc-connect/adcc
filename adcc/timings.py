@@ -194,9 +194,7 @@ class Timer:
         else:
             raise ValueError("Task not currently running: " + task)
 
-    def describe(self, colour=sys.stdout.isatty()):
-        maxlen = max(len(key) for key in self.tasks)
-
+    def describe(self, colour=sys.stdout.isatty()) -> str:
         # This is very dummy ... in the future we would like to have
         # a nice little table, which also respects the key hierachy
         # and displays cumulative sums for each level and which
@@ -204,6 +202,11 @@ class Timer:
         # run at the same time)
         # Colour: Use one for each level
         text = "Timer " + strtime_short(self.lifetime) + " lifetime:\n"
+        if not self.tasks:
+            text += "  No timings recorded"
+            return text
+
+        maxlen = max(len(key) for key in self.tasks)
         for key in self.tasks:
             fmt = "  {:<" + str(maxlen) + "s} {:>20s}\n"
             text += fmt.format(key, strtime(self.total(key), colour=colour))
