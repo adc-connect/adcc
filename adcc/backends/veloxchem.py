@@ -32,7 +32,7 @@ import veloxchem as vlx
 
 from .EriBuilder import EriBuilder
 from ..exceptions import InvalidReference
-from ..ExcitedStates import EnergyCorrection
+from ..ElectronicStates import EnergyCorrection
 
 from veloxchem.mpitask import MpiTask
 from veloxchem.veloxchemlib import (AngularMomentumIntegralsDriver,

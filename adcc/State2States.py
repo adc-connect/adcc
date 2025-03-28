@@ -23,11 +23,9 @@
 import numpy as np
 
 from . import adc_pp
-from .misc import cached_property
-from .timings import timed_member_call
-
-from .Excitation import mark_excitation_property
 from .ElectronicTransition import ElectronicTransition
+from .misc import cached_member_function
+from .OneParticleOperator import OneParticleOperator
 
 
 class State2States(ElectronicTransition):
@@ -63,27 +61,41 @@ class State2States(ElectronicTransition):
         self.initial = initial
 
     @property
-    def excitation_energy(self):
+    def size(self) -> int:
+        # the number of states "above" the initial state to correctly index
+        # into the transition_dm array
+        return super().size - self.initial - 1
+
+    @property
+    def excitation_energy(self) -> np.ndarray:
         return np.array([
             self._excitation_energy[final]
             - self._excitation_energy[self.initial]
-            for final in range(self.size) if final > self.initial
+            for final in range(self.initial + 1, super().size)
         ])
 
-    @cached_property
-    @mark_excitation_property(transform_to_ao=True)
-    @timed_member_call(timer="_property_timer")
-    def transition_dm(self):
+    @property
+    # @mark_excitation_property(transform_to_ao=True)
+    def transition_dm(self) -> list[OneParticleOperator]:
         """
-        List of transition density matrices from
-        initial state to final state/s
+        List of transition density matrices from initial state to final state/s
         """
-        return [
-            adc_pp.state2state_transition_dm(
-                self.property_method, self.ground_state,
-                self.excitation_vector[self.initial],
-                self.excitation_vector[final],
-                self.matrix.intermediates
-            )
-            for final in range(self.size) if final > self.initial
-        ]
+        return [self._transition_dm(final) for final in range(self.size)]
+
+    @cached_member_function(timer="_property_timer", separate_timings_by_args=False)
+    def _transition_dm(self, state_n: int) -> OneParticleOperator:
+        """
+        Computes the transition density matrices from initial state to a single
+        final state
+        """
+        # NOTE: state_n is relative to the initial state, i.e.,
+        # 0 refers to initial_state + 1.
+        # This is necessary to enable the use of the implementations on
+        # the parent class.
+        state_n = self.initial + state_n + 1
+        return adc_pp.state2state_transition_dm(
+            self.property_method, self.ground_state,
+            self.excitation_vector[self.initial],
+            self.excitation_vector[state_n],
+            self.matrix.intermediates
+        )

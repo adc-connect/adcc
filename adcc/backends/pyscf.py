@@ -27,7 +27,7 @@ from adcc.misc import cached_property
 
 from .EriBuilder import EriBuilder
 from ..exceptions import InvalidReference
-from ..ExcitedStates import EnergyCorrection
+from ..ElectronicStates import EnergyCorrection
 
 from pyscf import ao2mo, gto, scf
 from pyscf.solvent import ddcosmo
