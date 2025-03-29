@@ -75,6 +75,10 @@ class State2States(ElectronicTransition):
 
     @property
     def excitation_energy(self) -> np.ndarray:
+        """
+        Excitation energies from the inital state to energetically higher lying
+        states in atomic units
+        """
         return np.array([
             self._excitation_energy[final]
             - self._excitation_energy[self.initial]
@@ -82,7 +86,23 @@ class State2States(ElectronicTransition):
         ])
 
     @property
-    # @mark_excitation_property(transform_to_ao=True)
+    def excitation_energy_uncorrected(self) -> np.ndarray:
+        """
+        Excitation energies without any corrections from the inital state to
+        energetically higher lying states in atomic units
+        """
+        return np.array([
+            self._excitation_energy_uncorrected[final]
+            - self._excitation_energy_uncorrected[self.initial]
+            for final in range(self.initial + 1, super().size)
+        ])
+
+    @property
+    def excitation_vector(self):
+        """List of excitation vectors"""
+        return self._excitation_vector[self.initial + 1:]
+
+    @property
     def transition_dm(self) -> list[OneParticleOperator]:
         """
         List of transition density matrices from initial state to final state/s
@@ -102,7 +122,21 @@ class State2States(ElectronicTransition):
         state_n = self.initial + state_n + 1
         return self._module.state2state_transition_dm(
             self.property_method, self.ground_state,
-            self.excitation_vector[self.initial],
-            self.excitation_vector[state_n],
+            super().excitation_vector[self.initial],
+            super().excitation_vector[state_n],
             self.matrix.intermediates
         )
+
+    def _state_diffdm(self, state_n: int) -> OneParticleOperator:
+        """
+        The difference density matrix are not available through the
+        :class:`State2States`
+        class. Please use e.g. :class:`ExcitedStates` (for PP-ADC) instead
+        """
+        # alternatively one could create an independent StateProperties class
+        # and additionally inherit from that class on ExcitedStates and the
+        # future IP/EA class.
+        raise NotImplementedError("Difference density matrices and excited state "
+                                  "properties are not available through "
+                                  f"'{self.__class__.__name__}'. Please use e.g. "
+                                  "'ExcitedStates' for PP-ADC.")

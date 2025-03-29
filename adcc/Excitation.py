@@ -83,7 +83,7 @@ class Excitation(StateView):
     @property
     def transition_dm_ao(self) -> OneParticleOperator:
         """The transition density matrix in the AO basis"""
-        return self.transition_dm.to_ao_basis()
+        return sum(self.transition_dm.to_ao_basis())
 
     @property
     def transition_dipole_moment(self) -> np.ndarray:
