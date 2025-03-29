@@ -3,11 +3,16 @@ import numpy as np
 from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod
 from .LazyMp import LazyMp
+from .OneParticleOperator import OneParticleOperator, product_trace
 from .OperatorIntegrals import OperatorIntegrals
+from .misc import cached_member_function
 from .ReferenceState import ReferenceState
 from .solver.SolverStateBase import EigenSolverStateBase
 from .StateView import StateView
 from .timings import Timer
+
+
+_timer_name = "_property_timer"
 
 
 class ElectronicStates:
@@ -148,6 +153,38 @@ class ElectronicStates:
     def excitation_vector(self):
         """List of excitation vectors"""
         return self._excitation_vector
+
+    @property
+    def state_diffdm(self) -> list[OneParticleOperator]:
+        """List of difference density matrices of all computed states"""
+        return [self._state_diffdm(state_n=i) for i in range(self.size)]
+
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _state_diffdm(self, state_n: int) -> OneParticleOperator:
+        """Computes the difference density matrix for a single state"""
+        evec = self.excitation_vector[state_n]
+        return self._module.state_diffdm(
+            self.property_method, self.ground_state, evec, self.matrix.intermediates
+        )
+
+    @property
+    def state_dipole_moment(self) -> np.ndarray:
+        """Array of state dipole moments"""
+        return np.array([self._state_dipole_moment(i) for i in range(self.size)])
+
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _state_dipole_moment(self, state_n: int) -> np.ndarray:
+        """Computes the state dipole moment for a single state"""
+        pmethod = self.property_method
+        if pmethod.level == 0:
+            gs_dip_moment = self.reference_state.dipole_moment
+        else:
+            gs_dip_moment = self.ground_state.dipole_moment(pmethod.level)
+
+        dipole_integrals = self.operators.electric_dipole
+        ddm = self._state_diffdm(state_n)
+        return (gs_dip_moment
+                + np.array([product_trace(comp, ddm) for comp in dipole_integrals]))
 
     def _state_view(self, state_n: int):
         """

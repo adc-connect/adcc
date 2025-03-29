@@ -122,6 +122,14 @@ class FormatExcitationVector:
 class ExcitedStates(ElectronicTransition):
     _module = adc_pp
 
+    def __init__(self, data, method: str = None, property_method: str = None):
+        super().__init__(data, method, property_method)
+
+        if self.method.adc_type != "pp":
+            raise ValueError("ExcitedStates computes excited state properties "
+                             "for PP-ADC. Got the non-PP-ADC method "
+                             f"{self.method.name}")
+
     @property
     def excitations(self) -> list[Excitation]:
         """
@@ -141,38 +149,12 @@ class ExcitedStates(ElectronicTransition):
         else:
             pp.text(self.describe())
 
-    # @cached_property
-    # @mark_excitation_property(transform_to_ao=True)
-    # @timed_member_call(timer="_property_timer")
-    # def state_diffdm(self):
-    #     """List of difference density matrices of all computed states"""
-    #     return [adc_pp.state_diffdm(self.property_method, self.ground_state,
-    #                                 evec, self.matrix.intermediates)
-    #             for evec in self.excitation_vector]
-
     # @property
     # @mark_excitation_property(transform_to_ao=True)
     # def state_dm(self):
     #     """List of state density matrices of all computed states"""
     #     mp_density = self.ground_state.density(self.property_method.level)
     #     return [mp_density + diffdm for diffdm in self.state_diffdm]
-
-    # @cached_property
-    # @mark_excitation_property()
-    # @timed_member_call(timer="_property_timer")
-    # def state_dipole_moment(self):
-    #     """List of state dipole moments"""
-    #     pmethod = self.property_method
-    #     if pmethod.level == 0:
-    #         gs_dip_moment = self.reference_state.dipole_moment
-    #     else:
-    #         gs_dip_moment = self.ground_state.dipole_moment(pmethod.level)
-
-    #     dipole_integrals = self.operators.electric_dipole
-    #     return gs_dip_moment + np.array([
-    #         [product_trace(comp, ddm) for comp in dipole_integrals]
-    #         for ddm in self.state_diffdm
-    #     ])
 
     def describe(self, oscillator_strengths=True, rotatory_strengths=False,
                  state_dipole_moments=False, transition_dipole_moments=False,

@@ -23,12 +23,9 @@
 import numpy as np
 import warnings
 
-from .ElectronicStates import ElectronicStates
+from .ElectronicStates import ElectronicStates, _timer_name
 from .misc import cached_member_function
 from .OneParticleOperator import OneParticleOperator, product_trace
-
-
-timer_name = "_property_timer"
 
 
 class ElectronicTransition(ElectronicStates):
@@ -37,7 +34,7 @@ class ElectronicTransition(ElectronicStates):
         """List of transition density matrices of all computed states"""
         return [self._transition_dm(i) for i in range(self.size)]
 
-    @cached_member_function(timer=timer_name, separate_timings_by_args=False)
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
     def _transition_dm(self, state_n: int) -> OneParticleOperator:
         """Computes the tansition density matrix for a single state"""
         evec = self.excitation_vector[state_n]
@@ -52,7 +49,7 @@ class ElectronicTransition(ElectronicStates):
             self._transition_dipole_moment(i) for i in range(self.size)
         ])
 
-    @cached_member_function(timer=timer_name, separate_timings_by_args=False)
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
     def _transition_dipole_moment(self, state_n: int) -> np.ndarray:
         """Computes the transition dipole moment for a single state"""
         if self.property_method.level == 0:
@@ -69,7 +66,7 @@ class ElectronicTransition(ElectronicStates):
         """Array of oscillator strengths of all computed states"""
         return np.array([self._oscillator_strength(i) for i in range(self.size)])
 
-    @cached_member_function(timer=timer_name, separate_timings_by_args=False)
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
     def _oscillator_strength(self, state_n: int) -> np.float64:
         """Computes the oscillator strengths for a single state"""
         tdm = self._transition_dipole_moment(state_n)
