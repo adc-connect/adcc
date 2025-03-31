@@ -64,16 +64,15 @@ class Excitation(StateView):
             Index of the excited state the constructed :class:`adcc.Excitation`
             should refer to (0-based)
         """
-        from .ExcitedStates import ExcitedStates
-        # NOTE: In theory this should also work with S2S. But then index
+        from .ExcitedStates import ElectronicTransition
+        # NOTE: This should also work with S2S. But then index
         # would need to be relative to S2S.initial, i.e., 0 for S2S.initial + 1
-        # which seems kind of weird.
-        # TODO: Should we allow this?
-        if not isinstance(parent_state, ExcitedStates):
+        # which is kind of weird. But I think we can allow it.
+        if not isinstance(parent_state, ElectronicTransition):
             raise TypeError("parent_state needs to be an ExcitedStates object. "
                             f"Got: {type(parent_state)}.")
         super().__init__(parent_state, index)
-        self._parent_state: ExcitedStates
+        self._parent_state: ElectronicTransition
 
     @property
     def transition_dm(self) -> OneParticleOperator:

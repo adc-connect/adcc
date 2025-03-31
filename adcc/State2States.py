@@ -23,6 +23,7 @@
 import numpy as np
 
 from . import adc_pp
+from .ElectronicStates import _timer_name
 from .ElectronicTransition import ElectronicTransition
 from .misc import cached_member_function
 from .OneParticleOperator import OneParticleOperator
@@ -109,7 +110,7 @@ class State2States(ElectronicTransition):
         """
         return [self._transition_dm(final) for final in range(self.size)]
 
-    @cached_member_function(timer="_property_timer", separate_timings_by_args=False)
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
     def _transition_dm(self, state_n: int) -> OneParticleOperator:
         """
         Computes the transition density matrices from initial state to a single

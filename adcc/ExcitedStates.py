@@ -121,6 +121,7 @@ class FormatExcitationVector:
 
 class ExcitedStates(ElectronicTransition):
     _module = adc_pp
+    _state_view_type = Excitation
 
     def __init__(self, data, method: str = None, property_method: str = None):
         super().__init__(data, method, property_method)
@@ -141,7 +142,7 @@ class ExcitedStates(ElectronicTransition):
     def _state_view(self, state_n: int) -> Excitation:
         """
         Provides a view to the given excited state and his properties."""
-        return Excitation(self, state_n)
+        return self._state_view_type(self, state_n)
 
     def _repr_pretty_(self, pp, cycle):
         if cycle:
