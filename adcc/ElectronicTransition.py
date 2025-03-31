@@ -24,11 +24,27 @@ import numpy as np
 import warnings
 
 from .ElectronicStates import ElectronicStates, _timer_name
+from .Excitation import Excitation
 from .misc import cached_member_function
 from .OneParticleOperator import OneParticleOperator, product_trace
 
 
 class ElectronicTransition(ElectronicStates):
+    _state_view_type = Excitation
+
+    @property
+    def excitations(self) -> list[Excitation]:
+        """
+        Provides a list of Excitations, i.e., a view to all individual
+        excitations and their properties.
+        """
+        return [self._state_view(i) for i in range(self.size)]
+
+    def _state_view(self, state_n: int) -> Excitation:
+        """
+        Provides a view to the given excited state and his properties."""
+        return self._state_view_type(self, state_n)
+
     @property
     def transition_dm(self) -> list[OneParticleOperator]:
         """List of transition density matrices of all computed states"""
