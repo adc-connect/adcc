@@ -135,13 +135,6 @@ class ExcitedStates(ElectronicTransition):
         else:
             pp.text(self.describe())
 
-    # @property
-    # @mark_excitation_property(transform_to_ao=True)
-    # def state_dm(self):
-    #     """List of state density matrices of all computed states"""
-    #     mp_density = self.ground_state.density(self.property_method.level)
-    #     return [mp_density + diffdm for diffdm in self.state_diffdm]
-
     def describe(self, oscillator_strengths=True, rotatory_strengths=False,
                  state_dipole_moments=False, transition_dipole_moments=False,
                  block_norms=True):

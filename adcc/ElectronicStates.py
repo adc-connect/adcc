@@ -172,6 +172,17 @@ class ElectronicStates:
         )
 
     @property
+    def state_dm(self) -> list[OneParticleOperator]:
+        """List of state density matrices of all computed states"""
+        return [self._state_dm(i) for i in range(self.size)]
+
+    def _state_dm(self, state_n: int) -> OneParticleOperator:
+        """List of state density matrices of all computed states"""
+        mp_density = self.ground_state.density(self.property_method.level)
+        diffdm = self._state_diffdm(state_n)
+        return mp_density + diffdm
+
+    @property
     def state_dipole_moment(self) -> np.ndarray:
         """Array of state dipole moments"""
         return np.array([self._state_dipole_moment(i) for i in range(self.size)])
