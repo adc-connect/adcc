@@ -56,8 +56,18 @@ class StateView:
 
     @property
     def state_diffdm_ao(self) -> OneParticleOperator:
-        """The difference density matrix"""
+        """The difference density matrix in the AO basis"""
         return sum(self.state_diffdm.to_ao_basis())
+
+    @property
+    def state_dm(self) -> OneParticleOperator:
+        """The state density matrix"""
+        return self._parent_state._state_dm(self.index)
+
+    @property
+    def state_dm_ao(self) -> OneParticleOperator:
+        """The state density matrix in the AO basis"""
+        return sum(self.state_dm.to_ao_basis())
 
     @property
     def state_dipole_moment(self) -> np.ndarray:
