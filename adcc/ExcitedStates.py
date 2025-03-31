@@ -24,7 +24,6 @@ from scipy import constants
 
 from .import adc_pp
 from .ElectronicTransition import ElectronicTransition
-from .Excitation import Excitation
 from .FormatDominantElements import FormatDominantElements
 from .FormatIndex import (FormatIndexAdcc, FormatIndexBase,
                           FormatIndexHfProvider, FormatIndexHomoLumo)
@@ -121,7 +120,6 @@ class FormatExcitationVector:
 
 class ExcitedStates(ElectronicTransition):
     _module = adc_pp
-    _state_view_type = Excitation
 
     def __init__(self, data, method: str = None, property_method: str = None):
         super().__init__(data, method, property_method)
@@ -130,19 +128,6 @@ class ExcitedStates(ElectronicTransition):
             raise ValueError("ExcitedStates computes excited state properties "
                              "for PP-ADC. Got the non-PP-ADC method "
                              f"{self.method.name}")
-
-    @property
-    def excitations(self) -> list[Excitation]:
-        """
-        Provides a list of Excitations, i.e., a view to all individual
-        excited states and their properties.
-        """
-        return [self._state_view(i) for i in range(self.size)]
-
-    def _state_view(self, state_n: int) -> Excitation:
-        """
-        Provides a view to the given excited state and his properties."""
-        return self._state_view_type(self, state_n)
 
     def _repr_pretty_(self, pp, cycle):
         if cycle:
@@ -330,73 +315,6 @@ class ExcitedStates(ElectronicTransition):
                 ret += "\n"
                 ret += separator
         return ret[:-1]
-
-    # @requires_module("pandas")
-    # def to_dataframe(self, gauge_origin="origin"):
-    #     """
-    #     Exports the ExcitedStates object as :class:`pandas.DataFrame`.
-    #     Atomic units are used for all values.
-    #     """
-    #     import pandas as pd
-    #     propkeys = self.excitation_property_keys
-    #     propkeys.extend([k.name for k in self._excitation_energy_corrections])
-    #     data = {
-    #         "excitation": np.arange(0, self.size, dtype=int),
-    #         "kind": np.tile(self.kind, self.size)
-    #     }
-    #     for key in propkeys:
-    #         try:
-    #             d = getattr(self, key)
-    #         except NotImplementedError:
-    #             # some properties are not available for every backend
-    #             continue
-    #         if callable(d):
-    #             try:
-    #                 d = d(gauge_origin)
-    #             except NotImplementedError:
-    #                 # some properties are not available for every backend
-    #                 continue
-    #         if not isinstance(d, np.ndarray):
-    #             continue
-    #         if not np.issubdtype(d.dtype, np.number):
-    #             continue
-    #         if d.ndim == 1:
-    #             data[key] = d
-    #         elif d.ndim == 2 and d.shape[1] == 3:
-    #             for i, p in enumerate(["x", "y", "z"]):
-    #                 data[f"{key}_{p}"] = d[:, i]
-    #         elif d.ndim == 3 and d.shape[1:] == (3, 3):
-    #             for i, p in enumerate(["x", "y", "z"]):
-    #                 for j, q in enumerate(["x", "y", "z"]):
-    #                     data[f"{key}_{p}{q}"] = d[:, i, j]
-    #         elif d.ndim > 3:
-    #             warnings.warn(f"Exporting NumPy array for property {key}"
-    #                           f" with shape {d.shape} not supported.")
-    #             continue
-    #     df = pd.DataFrame(data=data)
-    #     df.set_index("excitation")
-    #     return df
-
-    # @property
-    # def excitation_property_keys(self):
-    #     """
-    #     Extracts the property keys which are marked
-    #     as excitation property with :func:`mark_excitation_property`.
-    #     """
-    #     ret = []
-    #     for key in dir(self):
-    #         if key == "excitations":
-    #             continue
-    #         if "__" in key or key.startswith("_"):
-    #             continue  # skip "private" fields
-    #         if not hasattr(type(self), key):
-    #             continue
-    #         if not isinstance(getattr(type(self), key), property):
-    #             continue
-    #         fget = getattr(type(self), key).fget
-    #         if hasattr(fget, "__excitation_property"):
-    #             ret.append(key)
-    #     return ret
 
     # def to_qcvars(self, properties=False, recurse=False):
     #     """

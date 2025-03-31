@@ -1,11 +1,12 @@
 import numpy as np
+import warnings
 
 from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod
 from .LazyMp import LazyMp
 from .OneParticleOperator import OneParticleOperator, product_trace
 from .OperatorIntegrals import OperatorIntegrals
-from .misc import cached_member_function
+from .misc import cached_member_function, requires_module
 from .ReferenceState import ReferenceState
 from .solver.SolverStateBase import EigenSolverStateBase
 from .StateView import StateView
@@ -22,6 +23,9 @@ class ElectronicStates:
     # structure within each module is consistent for all adc_types, which should
     # be fine I think.
     _module = None
+    # The type used to obtain a view on a single state, e.g., Excitation for the
+    # ExcitedStates class. Has to be set on the corresponding child class.
+    _state_view_type = None
 
     def __init__(self, data, method: str = None,
                  property_method: str = None) -> None:
@@ -104,7 +108,7 @@ class ElectronicStates:
         self._excitation_energy = self._excitation_energy_uncorrected.copy()
 
         # Collect all excitation energy corrections
-        self._excitation_energy_corrections = []
+        self._excitation_energy_corrections: list[EnergyCorrection] = []
         # copy energy corrections if possible
         # and avoids re-computation of the corrections
         if hasattr(data, "_excitation_energy_corrections"):
@@ -223,6 +227,73 @@ class ElectronicStates:
         ret += other
         return ret
 
+    @property
+    def excitation_property_keys(self) -> list[str]:
+        """
+        Extracts the names of available excited state and transition properties.
+        """
+        # NOTE: this currently assumes that all available properties are available
+        # on the corresponding state_view class
+        assert self._state_view_type is not None
+        blacklist = ("parent_state")
+        ret = []
+        for key in dir(self._state_view_type):
+            # private fields or ao transformed densities or other fields
+            if key.startswith("_") or key.endswith("_ao") or key in blacklist:
+                continue
+            ret.append(key)
+        return ret
+
+    @requires_module("pandas")
+    def to_dataframe(self, gauge_origin="origin"):
+        """
+        Exports the class object as :class:`pandas.DataFrame`.
+        Atomic units are used for all values.
+        """
+        import pandas as pd
+        propkeys = self.excitation_property_keys
+        propkeys.extend([k.name for k in self._excitation_energy_corrections])
+        data = {
+            "excitation": np.arange(0, self.size, dtype=int),
+            "kind": np.tile(self.kind, self.size)
+        }
+        for key in propkeys:
+            try:
+                d = getattr(self, key)
+            except NotImplementedError:
+                # some properties are not available for every backend
+                continue
+            # This assumes that all callables take a single argument:
+            # the gauge origin
+            if callable(d):
+                try:
+                    d = d(gauge_origin)
+                except NotImplementedError:
+                    # some properties are not available for every backend
+                    continue
+
+            if not isinstance(d, np.ndarray):
+                continue
+            if not np.issubdtype(d.dtype, np.number):
+                continue
+
+            if d.ndim == 1:
+                data[key] = d
+            elif d.ndim == 2 and d.shape[1] == 3:
+                for i, p in enumerate(["x", "y", "z"]):
+                    data[f"{key}_{p}"] = d[:, i]
+            elif d.ndim == 3 and d.shape[1:] == (3, 3):
+                for i, p in enumerate(["x", "y", "z"]):
+                    for j, q in enumerate(["x", "y", "z"]):
+                        data[f"{key}_{p}{q}"] = d[:, i, j]
+            elif d.ndim > 3:
+                warnings.warn(f"Exporting NumPy array for property {key}"
+                              f" with shape {d.shape} not supported.")
+                continue
+        df = pd.DataFrame(data=data)
+        df.set_index("excitation")
+        return df
+
 
 class EnergyCorrection:
     def __init__(self, name: str, function: callable) -> None:
@@ -242,8 +313,8 @@ class EnergyCorrection:
             raise TypeError("name needs to be a string.")
         if not callable(function):
             raise TypeError("function needs to be callable.")
-        self.name = name
-        self.function = function
+        self.name: str = name
+        self.function: callable = function
 
     def __call__(self, excitation: StateView):
         assert isinstance(excitation, StateView)
