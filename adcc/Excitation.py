@@ -26,26 +26,6 @@ from .OneParticleOperator import OneParticleOperator
 from .StateView import StateView
 
 
-def mark_excitation_property(**kwargs):
-    """
-    Decorator to mark properties of :class:`adcc.ExcitedStates` which
-    can be transferred to :class:`Excitation` defined below
-
-    Parameters
-    ----------
-    transform_to_ao : bool, optional
-        If set to True, the marked matrix property
-        (e.g., :func:`adcc.ExcitedStates.transition_dm`)
-        transformed to the AO basis will be added to :class:`Excitation`.
-        In the given example, this would result in `transition_dm` and
-        `transition_dm_ao`. The AO matrix is returned as a numpy array.
-    """
-    def inner(f, kwargs=kwargs):
-        f.__excitation_property = kwargs
-        return f
-    return inner
-
-
 class Excitation(StateView):
     def __init__(self, parent_state, index: int):
         """
@@ -90,6 +70,56 @@ class Excitation(StateView):
         return self._parent_state._transition_dipole_moment(self.index)
 
     @property
+    def transition_dipole_moment_velocity(self) -> np.ndarray:
+        """The transition dipole moment in the velocity gauge"""
+        return self._parent_state._transition_dipole_moment_velocity(self.index)
+
+    def transition_magnetic_dipole_moment(self,
+                                          gauge_origin="origin") -> np.ndarray:
+        """The transition magnetic dipole moment"""
+        return self._parent_state._transition_magnetic_dipole_moment(
+            state_n=self.index, gauge_origin=gauge_origin
+        )
+
+    def transition_quadrupole_moment(self, gauge_origin="origin") -> np.ndarray:
+        """The transition quadrupole moment"""
+        return self._parent_state._transition_quadrupole_moment(
+            state_n=self.index, gauge_origin=gauge_origin
+        )
+
+    def transition_quadrupole_moment_velocity(self,
+                                              gauge_origin="origin") -> np.ndarray:
+        """The transition quadrupole moment"""
+        return self._parent_state._transition_quadrupole_moment_velocity(
+            state_n=self.index, gauge_origin=gauge_origin
+        )
+
+    @property
     def oscillator_strength(self) -> np.float64:
         """The oscillator strength"""
         return self._parent_state._oscillator_strength(self.index)
+
+    @property
+    def oscillator_strength_velocity(self) -> np.float64:
+        """The oscillator strengh in the velocity gauge"""
+        return self._parent_state._oscillator_strength_velocity(self.index)
+
+    @property
+    def rotatory_strength(self) -> np.float64:
+        """
+        The rotatory strength (in velocity gauge).
+        This property is gauge-origin invariant, thus, it is not possible to
+        select a gauge origin.
+        """
+        return self._parent_state._rotatory_strength(self.index)
+
+    def rotatory_strength_length(self, gauge_origin="origin") -> np.float64:
+        """The rotatory strength in the length gauge"""
+        return self._parent_state._rotatory_strength_length(
+            state_n=self.index, gauge_origin=gauge_origin
+        )
+
+    @property
+    def cross_section(self) -> np.float64:
+        """The one-photon absorption cross section"""
+        return self._parent_state._cross_section(self.index)

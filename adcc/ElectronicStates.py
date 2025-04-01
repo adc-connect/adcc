@@ -23,9 +23,9 @@ class ElectronicStates:
     # structure within each module is consistent for all adc_types, which should
     # be fine I think.
     _module = None
-    # The type used to obtain a view on a single state, e.g., Excitation for the
-    # ExcitedStates class. Has to be set on the corresponding child class.
-    _state_view_type = None
+    # The class used to obtain a view on a single state, e.g., Excitation for the
+    # ExcitedStates class. Has to be defined on the corresponding child class.
+    _state_view_cls: StateView = None
 
     def __init__(self, data, method: str = None,
                  property_method: str = None) -> None:
@@ -201,13 +201,11 @@ class ElectronicStates:
         return (gs_dip_moment
                 + np.array([product_trace(comp, ddm) for comp in dipole_integrals]))
 
-    def _state_view(self, state_n: int):
+    def _state_view(self, state_n: int) -> StateView:
         """
-        Provides a view onto a single state and his properties. This method has
-        to be implemented on the child classes, since the view depends on the
-        adc_variant.
+        Provides a view onto a single state and his properties.
         """
-        return NotImplemented
+        return self._state_view_cls(self, state_n)
 
     def _add_energy_correction(self, correction: "EnergyCorrection") -> None:
         assert isinstance(correction, EnergyCorrection)
@@ -245,10 +243,10 @@ class ElectronicStates:
         """
         # NOTE: this currently assumes that all available properties are available
         # on the corresponding state_view class
-        assert self._state_view_type is not None
+        assert self._state_view_cls is not None
         blacklist = ("parent_state")
         ret = []
-        for key in dir(self._state_view_type):
+        for key in dir(self._state_view_cls):
             # private fields or ao transformed densities or other fields
             if key.startswith("_") or key.endswith("_ao") or key in blacklist:
                 continue
