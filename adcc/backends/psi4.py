@@ -23,77 +23,73 @@
 import numpy as np
 
 from libadcc import HartreeFockProvider
-from adcc.misc import cached_property
 
 import psi4
 
 from .EriBuilder import EriBuilder
 from ..exceptions import InvalidReference
 from ..ElectronicStates import EnergyCorrection
+from ..OneParticleOperator import OneParticleOperator
 
 
 class Psi4OperatorIntegralProvider:
+    available: tuple[str] = (
+        "electric_dipole", "electric_dipole_velocity", "magnetic_dipole",
+        "pe_induction_elec", "pcm_potential_elec"
+    )
+
     def __init__(self, wfn):
         self.wfn = wfn
         self.backend = "psi4"
         self.mints = psi4.core.MintsHelper(self.wfn)
 
-    @cached_property
-    def electric_dipole(self):
-        """-sum_i r_i"""
-        return [np.asarray(comp) for comp in self.mints.ao_dipole()]
-
     @property
-    def magnetic_dipole(self):
+    def electric_dipole(self) -> tuple[np.ndarray]:
+        """-sum_i r_i"""
+        return tuple(np.asarray(comp) for comp in self.mints.ao_dipole())
+
+    def magnetic_dipole(self, gauge_origin="origin") -> tuple[np.ndarray]:
         """
         The imaginary part of the integral is returned.
         -0.5 * sum_i r_i x p_i
         """
-        def g_origin_dep_ints_mag_dip(gauge_origin):
-            # TODO: Gauge origin?
-            if gauge_origin != (0.0, 0.0, 0.0) and gauge_origin != "origin":
-                raise NotImplementedError('Only (0.0, 0.0, 0.0) can be selected as'
-                                          ' gauge origin.')
-            return [
-                0.5 * np.asarray(comp)
-                for comp in self.mints.ao_angular_momentum()
-            ]
-        return g_origin_dep_ints_mag_dip
+        # TODO: Gauge origin?
+        if gauge_origin != (0.0, 0.0, 0.0) and gauge_origin != "origin":
+            raise NotImplementedError('Only (0.0, 0.0, 0.0) can be selected as'
+                                      ' gauge origin.')
+        return tuple(
+            0.5 * np.asarray(comp)
+            for comp in self.mints.ao_angular_momentum()
+        )
 
-    @cached_property
-    def electric_dipole_velocity(self):
+    @property
+    def electric_dipole_velocity(self) -> tuple[np.ndarray]:
         """
         The imaginary part of the integral is returned.
         -sum_i p_i
         """
-        return [-1.0 * np.asarray(comp) for comp in self.mints.ao_nabla()]
+        return tuple(-1.0 * np.asarray(comp) for comp in self.mints.ao_nabla())
 
-    @property
-    def pe_induction_elec(self):
-        if hasattr(self.wfn, "pe_state"):
-            def pe_induction_elec_ao(dm):
-                return self.wfn.pe_state.get_pe_contribution(
-                    psi4.core.Matrix.from_array(dm.to_ndarray()),
-                    elec_only=True
-                )[1]
-            return pe_induction_elec_ao
+    def pe_induction_elec(self, dm: OneParticleOperator):
+        if not hasattr(self.wfn, "pe_state"):
+            return None
 
-    @property
-    def pcm_potential_elec(self):
+        return self.wfn.pe_state.get_pe_contribution(
+            psi4.core.Matrix.from_array(dm.to_ndarray()),
+            elec_only=True
+        )[1]
+
+    def pcm_potential_elec(self, dm: OneParticleOperator):
         if hasattr(self.wfn, "ddx"):
-            def ddx_potential_elec_ao(dm):
-                return self.wfn.ddx.get_solvation_contributions(
-                    psi4.core.Matrix.from_array(dm.to_ndarray()),
-                    elec_only=True, nonequilibrium=True
-                )[1]
-            return ddx_potential_elec_ao
-        if self.wfn.PCM_enabled():
-            def pcm_potential_elec_ao(dm):
-                return psi4.core.PCM.compute_V(
-                    self.wfn.get_PCM(),
-                    psi4.core.Matrix.from_array(dm.to_ndarray())
-                )
-            return pcm_potential_elec_ao
+            return self.wfn.ddx.get_solvation_contributions(
+                psi4.core.Matrix.from_array(dm.to_ndarray()),
+                elec_only=True, nonequilibrium=True
+            )[1]
+        elif self.wfn.PCM_enabled():
+            return psi4.core.PCM.compute_V(
+                self.wfn.get_PCM(),
+                psi4.core.Matrix.from_array(dm.to_ndarray())
+            )
 
 
 class Psi4EriBuilder(EriBuilder):

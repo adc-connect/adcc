@@ -23,155 +23,145 @@
 import numpy as np
 
 from libadcc import HartreeFockProvider
-from adcc.misc import cached_property
 
 from .EriBuilder import EriBuilder
 from ..exceptions import InvalidReference
 from ..ElectronicStates import EnergyCorrection
+from ..OneParticleOperator import OneParticleOperator
 
 from pyscf import ao2mo, gto, scf
 from pyscf.solvent import ddcosmo
 
 
 class PyScfOperatorIntegralProvider:
+    available: tuple[str] = (
+        "electric_dipole", "electric_dipole_velocity", "magnetic_dipole",
+        "electric_quadrupole", "electric_quadrupole_traceless",
+        "electric_quadrupole_velocity", "diamagnetic_magnetizability",
+        "pe_induction_elec", "pcm_potential_elec"
+    )
+
     def __init__(self, scfres):
         self.scfres = scfres
         self.backend = "pyscf"
 
-    @cached_property
-    def electric_dipole(self):
+    @property
+    def electric_dipole(self) -> tuple[np.ndarray]:
         """-sum_i r_i"""
-        return list(
+        return tuple(
             -1.0 * self.scfres.mol.intor_symmetric('int1e_r', comp=3)
         )
 
-    @property
-    def magnetic_dipole(self):
+    def magnetic_dipole(self, gauge_origin="origin") -> tuple[np.ndarray]:
         """
         The imaginary part of the integral is returned.
         -0.5 * sum_i r_i x p_i
         """
-        def g_origin_dep_ints_mag_dip(gauge_origin="origin"):
-            gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
-            with self.scfres.mol.with_common_orig(gauge_origin):
-                return list(
-                    -0.5 * self.scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
-                )
-        return g_origin_dep_ints_mag_dip
+        gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
+        with self.scfres.mol.with_common_orig(gauge_origin):
+            return tuple(
+                -0.5 * self.scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
+            )
 
-    @cached_property
-    def electric_dipole_velocity(self):
+    @property
+    def electric_dipole_velocity(self) -> tuple[np.ndarray]:
         """
         The imaginary part of the integral is returned.
         -sum_i p_i
         """
         with self.scfres.mol.with_common_orig((0.0, 0.0, 0.0)):
-            return list(
+            return tuple(
                 self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
             )
 
-    @property
-    def electric_quadrupole(self):
+    def electric_quadrupole(self, gauge_origin="origin") -> tuple[np.ndarray]:
         """-sum_i r_{i, alpha} r_{i, beta}"""
-        def g_origin_dep_ints_el_quad(gauge_origin):
-            gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
-            with self.scfres.mol.with_common_orig(gauge_origin):
-                r_r = -1.0 * self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
-                return list(r_r)
-        return g_origin_dep_ints_el_quad
+        gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
+        with self.scfres.mol.with_common_orig(gauge_origin):
+            return tuple(
+                -1.0 * self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
+            )
 
-    @property
-    def electric_quadrupole_traceless(self):
+    def electric_quadrupole_traceless(self,
+                                      gauge_origin="origin") -> tuple[np.ndarray]:
         """
         -0.5 * sum_i (3 * r_{i, alpha} r_{i, beta}
         - delta_{alpha, beta} r_{i}^2)
         """
-        def g_origin_dep_ints_el_quad_traceless(gauge_origin):
-            gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
-            with self.scfres.mol.with_common_orig(gauge_origin):
-                r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
-                r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
-                r_quadr = self.scfres.mol.intor_symmetric('int1e_r2', comp=1)
-                r_quadr_matrix = np.zeros_like(r_r)
-                for i in range(3):
-                    r_quadr_matrix[i][i] = r_quadr
-                term = 0.5 * (3 * r_r - r_quadr_matrix)
-                term = -1.0 * np.reshape(term, (9, r_quadr.shape[0],
-                                                r_quadr.shape[0]))
-                return list(term)
-        return g_origin_dep_ints_el_quad_traceless
+        gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
+        with self.scfres.mol.with_common_orig(gauge_origin):
+            r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
+            r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
+            r_quadr = self.scfres.mol.intor_symmetric('int1e_r2', comp=1)
+            r_quadr_matrix = np.zeros_like(r_r)
+            for i in range(3):
+                r_quadr_matrix[i][i] = r_quadr
+            term = 0.5 * (3 * r_r - r_quadr_matrix)
+            return tuple(
+                -1.0 * np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
+            )
 
-    @property
-    def electric_quadrupole_velocity(self):
+    def electric_quadrupole_velocity(self,
+                                     gauge_origin="origin") -> tuple[np.ndarray]:
         """
         The imaginary part of the integral is returned.
         -sum_i (r_{i, beta} p_{i, alpha} - i delta_{alpha, beta}
         + r_{i, alpha} p_{i, beta})
         """
-        def g_origin_dep_ints_el_quad_vel(gauge_origin):
-            gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
-            with self.scfres.mol.with_common_orig(gauge_origin):
-                r_p = self.scfres.mol.intor('int1e_irp', comp=9, hermi=0)
-                r_p = np.reshape(r_p, (3, 3, r_p.shape[1], r_p.shape[1]))
-                ovlp = self.scfres.mol.intor_symmetric('int1e_ovlp', comp=1)
-                ovlp_matrix = np.zeros_like(r_p)
-                for i in range(3):
-                    ovlp_matrix[i][i] = ovlp
-                term = r_p + r_p.transpose(1, 0, 2, 3) - ovlp_matrix
-                term = -1.0 * np.reshape(term, (9, ovlp.shape[0], ovlp.shape[0]))
-                return list(term)
-        return g_origin_dep_ints_el_quad_vel
+        gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
+        with self.scfres.mol.with_common_orig(gauge_origin):
+            r_p = self.scfres.mol.intor('int1e_irp', comp=9, hermi=0)
+            r_p = np.reshape(r_p, (3, 3, r_p.shape[1], r_p.shape[1]))
+            ovlp = self.scfres.mol.intor_symmetric('int1e_ovlp', comp=1)
+            ovlp_matrix = np.zeros_like(r_p)
+            for i in range(3):
+                ovlp_matrix[i][i] = ovlp
+            term = r_p + r_p.transpose(1, 0, 2, 3) - ovlp_matrix
+            return tuple(
+                -1.0 * np.reshape(term, (9, ovlp.shape[0], ovlp.shape[0]))
+            )
 
-    @property
-    def diamagnetic_magnetizability(self):
+    def diamagnetic_magnetizability(self,
+                                    gauge_origin="origin") -> tuple[np.ndarray]:
         """
         0.25 * sum_i (r_{i, alpha} r_{i, beta}
         - delta_{alpha, beta} r_{i}^2)
         """
-        def g_origin_dep_ints_diamag_magn(gauge_origin):
-            gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
-            with self.scfres.mol.with_common_orig(gauge_origin):
-                r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
-                r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
-                r_quadr = self.scfres.mol.intor_symmetric('int1e_r2', comp=1)
-                r_quadr_matrix = np.zeros_like(r_r)
-                for i in range(3):
-                    r_quadr_matrix[i][i] = r_quadr
-                term = 0.25 * (r_quadr_matrix - r_r)
-                term = np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
-                return list(term)
-        return g_origin_dep_ints_diamag_magn
+        gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
+        with self.scfres.mol.with_common_orig(gauge_origin):
+            r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
+            r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
+            r_quadr = self.scfres.mol.intor_symmetric('int1e_r2', comp=1)
+            r_quadr_matrix = np.zeros_like(r_r)
+            for i in range(3):
+                r_quadr_matrix[i][i] = r_quadr
+            term = 0.25 * (r_quadr_matrix - r_r)
+            return tuple(
+                np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
+            )
 
-    @property
-    def pe_induction_elec(self):
+    def pe_induction_elec(self, dm: OneParticleOperator):
         try:
             self.scfres.with_solvent.cppe_state
         except AttributeError:
             return None
 
-        def pe_induction_elec_ao(dm):
-            return self.scfres.with_solvent._exec_cppe(
-                dm.to_ndarray(), elec_only=True
-            )[1]
-        return pe_induction_elec_ao
+        return self.scfres.with_solvent._exec_cppe(
+            dm.to_ndarray(), elec_only=True
+        )[1]
 
-    @property
-    def pcm_potential_elec(self):
+    def pcm_potential_elec(self, dm: OneParticleOperator):
         if not hasattr(self.scfres, "with_solvent"):
             return None
         if not isinstance(self.scfres.with_solvent, ddcosmo.DDCOSMO):
             return None
 
-        def pcm_potential_elec_ao(dm):
-            # Since eps (dielectric constant) is the only solvent parameter
-            # in pyscf and there is no solvent data available in the
-            # program, the user needs to adjust scfres.with_solvent.eps
-            # manually to the optical dielectric constant (if non
-            # equilibrium solvation is desired).
-            return self.scfres.with_solvent._B_dot_x(
-                dm.to_ndarray()
-            )
-        return pcm_potential_elec_ao
+        # Since eps (dielectric constant) is the only solvent parameter
+        # in pyscf and there is no solvent data available in the
+        # program, the user needs to adjust scfres.with_solvent.eps
+        # manually to the optical dielectric constant (if non
+        # equilibrium solvation is desired).
+        return self.scfres.with_solvent._B_dot_x(dm.to_ndarray())
 
 
 # TODO: refactor ERI builder to be more general
