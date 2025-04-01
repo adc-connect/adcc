@@ -21,6 +21,7 @@
 ##
 ## ---------------------------------------------------------------------
 import numpy as np
+from scipy import constants
 import warnings
 
 from .ElectronicStates import ElectronicStates, _timer_name
@@ -30,7 +31,11 @@ from .OneParticleOperator import OneParticleOperator, product_trace
 
 
 class ElectronicTransition(ElectronicStates):
-    _state_view_type = Excitation
+    # The child classes S2S and ExcitedStates currently
+    # both share the Excitation class for the state view.
+    # This might change in the future once e.g. ExcitedStates
+    # specific methods are implemented.
+    _state_view_cls = Excitation
 
     @property
     def excitations(self) -> list[Excitation]:
@@ -39,11 +44,6 @@ class ElectronicTransition(ElectronicStates):
         excitations and their properties.
         """
         return [self._state_view(i) for i in range(self.size)]
-
-    def _state_view(self, state_n: int) -> Excitation:
-        """
-        Provides a view to the given excited state and his properties."""
-        return self._state_view_type(self, state_n)
 
     @property
     def transition_dm(self) -> list[OneParticleOperator]:
@@ -78,6 +78,98 @@ class ElectronicTransition(ElectronicStates):
         )
 
     @property
+    def transition_dipole_moment_velocity(self) -> np.ndarray:
+        """
+        Array of transition dipole moments in the velocity gauge of all
+        computed states
+        """
+        return np.array([
+            self._transition_dipole_moment_velocity(i) for i in range(self.size)
+        ])
+
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _transition_dipole_moment_velocity(self, state_n: int) -> np.ndarray:
+        """
+        Computes the transition dipole moments in the velocity gauge for a
+        single state
+        """
+        if self.property_method.level == 0:
+            warnings.warn("ADC(0) transition velocity dipole moments "
+                          "are known to be faulty in some cases.")
+        dipole_integrals = self.operators.electric_dipole_velocity
+        tdm = self._transition_dm(state_n)
+        return np.array(
+            [product_trace(comp, tdm) for comp in dipole_integrals]
+        )
+
+    def transition_magnetic_dipole_moment(self,
+                                          gauge_origin="origin") -> np.ndarray:
+        """Array of transition magnetic dipole moments of all computed states"""
+        return np.array([
+            self._transition_magnetic_dipole_moment(state_n=i,
+                                                    gauge_origin=gauge_origin)
+            for i in range(self.size)
+        ])
+
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _transition_magnetic_dipole_moment(self, state_n: int,
+                                           gauge_origin="origin") -> np.ndarray:
+        """
+        Computes the transition magnetic dipole moments for a single state
+        """
+        if self.property_method.level == 0:
+            warnings.warn("ADC(0) transition magnetic dipole moments "
+                          "are known to be faulty in some cases.")
+        mag_dipole_integrals = self.operators.magnetic_dipole(gauge_origin)
+        tdm = self._transition_dm(state_n)
+        return np.array([
+            product_trace(comp, tdm) for comp in mag_dipole_integrals
+        ])
+
+    def transition_quadrupole_moment(self, gauge_origin="origin") -> np.ndarray:
+        """Array of transition quadrupole moments of all computed states"""
+        return np.array([
+            self._transition_quadrupole_moment(state_n=i, gauge_origin=gauge_origin)
+            for i in range(self.size)
+        ])
+
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _transition_quadrupole_moment(self, state_n: int, gauge_origin="origin"):
+        """Computes the transition quadrupole moments for a single state"""
+        if self.property_method.level == 0:
+            warnings.warn("ADC(0) transition quadrupole moments are known to be "
+                          "faulty in some cases.")
+        quadrupole_integrals = self.operators.electric_quadrupole(gauge_origin)
+        tdm = self._transition_dm(state_n)
+        return np.array([
+            [product_trace(q, tdm) for q in quad] for quad in quadrupole_integrals
+        ])
+
+    def transition_quadrupole_moment_velocity(self,
+                                              gauge_origin="origin") -> np.ndarray:
+        """Array of transition quadrupole moments of all computed states"""
+        return np.array([
+            self._transition_quadrupole_moment_velocity(state_n=i,
+                                                        gauge_origin=gauge_origin)
+            for i in range(self.size)
+        ])
+
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _transition_quadrupole_moment_velocity(self, state_n: int,
+                                               gauge_origin="origin") -> np.ndarray:
+        """Compute the transition quadrupole moments for a single state"""
+        if self.property_method.level == 0:
+            warnings.warn("ADC(0) transition velocity quadrupole moments are known "
+                          "to be faulty in some cases.")
+        quadrupole_integrals = (
+            self.operators.electric_quadrupole_velocity(gauge_origin)
+        )
+        tdm = self._transition_dm(state_n)
+        return np.array([
+            [product_trace(q, tdm) for q in quad] for quad in quadrupole_integrals
+        ])
+
+    @property
     def oscillator_strength(self) -> np.ndarray:
         """Array of oscillator strengths of all computed states"""
         return np.array([self._oscillator_strength(i) for i in range(self.size)])
@@ -89,121 +181,73 @@ class ElectronicTransition(ElectronicStates):
         ev = self.excitation_energy[state_n]
         return 2. / 3. * np.linalg.norm(tdm)**2 * np.abs(ev)
 
-    # @cached_property
-    # @mark_excitation_property()
-    # @timed_member_call(timer="_property_timer")
-    # def transition_dipole_moment_velocity(self):
-    #     """List of transition dipole moments in the
-    #     velocity gauge of all computed states"""
-    #     if self.property_method.level == 0:
-    #         warnings.warn("ADC(0) transition velocity dipole moments "
-    #                       "are known to be faulty in some cases.")
-    #     dipole_integrals = self.operators.electric_dipole_velocity
-    #     return np.array([
-    #         [product_trace(comp, tdm) for comp in dipole_integrals]
-    #         for tdm in self.transition_dm
-    #     ])
+    @property
+    def oscillator_strength_velocity(self) -> np.ndarray:
+        """Array of oscillator strengths in velocity gauge of all computed states"""
+        return np.array([
+            self._oscillator_strength_velocity(i) for i in range(self.size)
+        ])
 
-    # @property
-    # @mark_excitation_property()
-    # @timed_member_call(timer="_property_timer")
-    # def transition_magnetic_dipole_moment(self):
-    #     """List of transition magnetic dipole moments of all computed states"""
-    #     if self.property_method.level == 0:
-    #         warnings.warn("ADC(0) transition magnetic dipole moments "
-    #                       "are known to be faulty in some cases.")
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _oscillator_strength_velocity(self, state_n: int) -> np.float64:
+        """Computes the oscillator strength in velocity gauge for a single state"""
+        tdm = self._transition_dipole_moment_velocity(state_n)
+        ev = self.excitation_energy[state_n]
+        return 2. / 3. * np.linalg.norm(tdm)**2 / np.abs(ev)
 
-    #     def g_origin_dep_trans_magdip_moment(gauge_origin="origin"):
-    #         mag_dipole_integrals = self.operators.magnetic_dipole(gauge_origin)
-    #         return np.array([
-    #             [product_trace(comp, tdm) for comp in mag_dipole_integrals]
-    #             for tdm in self.transition_dm
-    #         ])
-    #     return g_origin_dep_trans_magdip_moment
+    @property
+    def rotatory_strength(self) -> np.ndarray:
+        """
+        Array of rotatory strengths (in velocity gauge) of all computed states.
+        This property is gauge-origin invariant, thus, it is not possible to
+        select a gauge origin.
+        """
+        return np.array([
+            self._rotatory_strength(i) for i in range(self.size)
+        ])
 
-    # @property
-    # @mark_excitation_property()
-    # @timed_member_call(timer="_property_timer")
-    # def transition_quadrupole_moment(self):
-    #     """List of transition quadrupole moments of all computed states"""
-    #     if self.property_method.level == 0:
-    #         warnings.warn("ADC(0) transition quadrupole moments are known to be "
-    #                       "faulty in some cases.")
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _rotatory_strength(self, state_n: int) -> np.float64:
+        """
+        Computes the rotatory strength (in velocity gauge) for a single state.
+        This property is gauge-origin invariant, thus, it is not possible to
+        select a gauge origin.
+        """
+        tdm = self._transition_dipole_moment_velocity(state_n)
+        magmom = self._transition_magnetic_dipole_moment(
+            state_n=state_n, gauge_origin="origin"
+        )
+        ee = self.excitation_energy[state_n]
+        return np.dot(tdm, magmom) / ee
 
-    #     def g_origin_dep_trans_el_quad_moment(gauge_origin="origin"):
-    #         quadrupole_integrals = self.operators.electric_quadrupole(gauge_origin)
-    #         return np.array([[
-    #             [product_trace(quad1, tdm) for quad1 in quad]
-    #             for quad in quadrupole_integrals]
-    #             for tdm in self.transition_dm
-    #         ])
-    #     return g_origin_dep_trans_el_quad_moment
+    def rotatory_strength_length(self, gauge_origin="origin") -> np.ndarray:
+        """Array of rotatory strengths in length gauge of all computed states"""
+        return np.array([
+            self._rotatory_strength_length(state_n=i, gauge_origin=gauge_origin)
+            for i in range(self.size)
+        ])
 
-    # @property
-    # @mark_excitation_property()
-    # @timed_member_call(timer="_property_timer")
-    # def transition_quadrupole_moment_velocity(self):
-    #     """List of transition quadrupole moments of all computed states"""
-    #     if self.property_method.level == 0:
-    #         warnings.warn("ADC(0) transition velocity quadrupole moments are known "
-    #                       "to be faulty in some cases.")
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _rotatory_strength_length(self, state_n: int,
+                                  gauge_origin="origin") -> np.float64:
+        """Computes the rotatory strength in length gauge for a single state"""
+        tdm = self._transition_dipole_moment(state_n)
+        magmom = self._transition_magnetic_dipole_moment(state_n=state_n,
+                                                         gauge_origin=gauge_origin)
+        return -1.0 * np.dot(tdm, magmom)
 
-    #     def g_origin_dep_trans_el_quad_vel_moment(gauge_origin="origin"):
-    #         quadrupole_integrals = \
-    #             self.operators.electric_quadrupole_velocity(gauge_origin)
-    #         return np.array([[
-    #             [product_trace(quad1, tdm) for quad1 in quad]
-    #             for quad in quadrupole_integrals]
-    #             for tdm in self.transition_dm
-    #         ])
-    #     return g_origin_dep_trans_el_quad_vel_moment
+    @property
+    def cross_section(self) -> np.ndarray:
+        """Array of one-photon absorption cross sections of all computed states"""
+        return np.array([self._cross_section(i) for i in range(self.size)])
 
-    # @cached_property
-    # @mark_excitation_property()
-    # def oscillator_strength_velocity(self):
-    #     """List of oscillator strengths in velocity gauge of all computed states"""
-    #     return 2. / 3. * np.array([
-    #         np.linalg.norm(tdm)**2 / np.abs(ev)
-    #         for tdm, ev in zip(self.transition_dipole_moment_velocity,
-    #                            self.excitation_energy)
-    #     ])
-
-    # @cached_property
-    # @mark_excitation_property()
-    # def rotatory_strength(self):
-    #     """List of rotatory strengths (in velocity gauge) of all computed states.
-    #     This property is gauge-origin invariant, thus, it is not possible to
-    #     select a gauge origin."""
-    #     return np.array([
-    #         np.dot(tdm, magmom) / ee
-    #         for tdm, magmom, ee in zip(
-    #             self.transition_dipole_moment_velocity,
-    #             self.transition_magnetic_dipole_moment("origin"),
-    #             self.excitation_energy)
-    #     ])
-
-    # @property
-    # @mark_excitation_property()
-    # def rotatory_strength_length(self):
-    #     """List of rotatory strengths in length gauge of all computed states"""
-    #     def g_origin_dep_rot_str_len(gauge_origin="origin"):
-    #         return np.array([
-    #             -1.0 * np.dot(tdm, magmom)
-    #             for tdm, magmom in zip(
-    #                 self.transition_dipole_moment,
-    #                 self.transition_magnetic_dipole_moment(gauge_origin))
-    #         ])
-    #     return g_origin_dep_rot_str_len
-
-    # @property
-    # @mark_excitation_property()
-    # def cross_section(self):
-    #     """List of one-photon absorption cross sections of all computed states"""
-    #     # TODO Source?
-    #     fine_structure = constants.fine_structure
-    #     fine_structure_au = 1 / fine_structure
-    #     prefac = 2.0 * np.pi ** 2 / fine_structure_au
-    #     return prefac * self.oscillator_strength
+    def _cross_section(self, state_n: int) -> np.float64:
+        """Computes the one-photon absorption cross sections for a single state"""
+        # TODO Source?
+        fine_structure = constants.fine_structure
+        fine_structure_au = 1 / fine_structure
+        prefac = 2.0 * np.pi ** 2 / fine_structure_au
+        return prefac * self._oscillator_strength(state_n)
 
     # @requires_module("matplotlib")
     # def plot_spectrum(self, broadening="lorentzian", xaxis="eV",
