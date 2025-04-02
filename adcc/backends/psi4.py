@@ -70,16 +70,17 @@ class Psi4OperatorIntegralProvider:
         """
         return tuple(-1.0 * np.asarray(comp) for comp in self.mints.ao_nabla())
 
-    def pe_induction_elec(self, dm: OneParticleOperator):
+    def pe_induction_elec(self, dm: OneParticleOperator) -> psi4.core.Matrix:
         if not hasattr(self.wfn, "pe_state"):
-            return None
+            raise RuntimeError("Can not compute the PE electronic induction "
+                               "operator using the given psi4 object.")
 
         return self.wfn.pe_state.get_pe_contribution(
             psi4.core.Matrix.from_array(dm.to_ndarray()),
             elec_only=True
         )[1]
 
-    def pcm_potential_elec(self, dm: OneParticleOperator):
+    def pcm_potential_elec(self, dm: OneParticleOperator) -> psi4.core.Matrix:
         if hasattr(self.wfn, "ddx"):
             return self.wfn.ddx.get_solvation_contributions(
                 psi4.core.Matrix.from_array(dm.to_ndarray()),
@@ -90,6 +91,8 @@ class Psi4OperatorIntegralProvider:
                 self.wfn.get_PCM(),
                 psi4.core.Matrix.from_array(dm.to_ndarray())
             )
+        raise RuntimeError("Can not compute the electronic PCM potential "
+                           "operator using the given psi4 object.")
 
 
 class Psi4EriBuilder(EriBuilder):

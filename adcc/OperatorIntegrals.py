@@ -293,10 +293,6 @@ class OperatorIntegrals:
         """
         dm_ao = sum(density_mo.to_ao_basis())
         v_ao = getattr(self.provider_ao, operator)(dm_ao)
-        if v_ao is None:
-            raise NotImplementedError("Could not compute the density dependent "
-                                      f"operator {operator} in backend"
-                                      f"{self.provider_ao.backend}.")
         v_bb = replicate_ao_block(
             self.mospaces, v_ao, is_symmetric=is_symmetric
         )
