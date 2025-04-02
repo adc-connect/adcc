@@ -140,21 +140,22 @@ class PyScfOperatorIntegralProvider:
                 np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
             )
 
-    def pe_induction_elec(self, dm: OneParticleOperator):
+    def pe_induction_elec(self, dm: OneParticleOperator) -> np.ndarray:
         try:
             self.scfres.with_solvent.cppe_state
         except AttributeError:
-            return None
+            raise RuntimeError("Can not compute the PE electronic induction "
+                               "operator using the given pyscf object.")
 
         return self.scfres.with_solvent._exec_cppe(
             dm.to_ndarray(), elec_only=True
         )[1]
 
-    def pcm_potential_elec(self, dm: OneParticleOperator):
-        if not hasattr(self.scfres, "with_solvent"):
-            return None
-        if not isinstance(self.scfres.with_solvent, ddcosmo.DDCOSMO):
-            return None
+    def pcm_potential_elec(self, dm: OneParticleOperator) -> np.ndarray:
+        if not hasattr(self.scfres, "with_solvent") or \
+                not isinstance(self.scfres.with_solvent, ddcosmo.DDCOSMO):
+            raise RuntimeError("Can not compute the electronic PCM potential "
+                               "operator using the given pyscf object.")
 
         # Since eps (dielectric constant) is the only solvent parameter
         # in pyscf and there is no solvent data available in the
