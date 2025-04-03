@@ -42,7 +42,8 @@ class Spectrum:
     #  support element-wise multiplication, division, addition /
     #                   subtraction of spectra ?
 
-    def __init__(self, x, y, *args, **kwargs):
+    def __init__(self, x, y, *args, xlabel: str = None, ylabel: str = None,
+                 **kwargs):
         """Pass spectrum data to initialise the class.
 
         To allow the copy and other functions to work properly, all arguments
@@ -61,8 +62,8 @@ class Spectrum:
         """
         self.x = np.array(x).flatten()
         self.y = np.array(y).flatten()
-        self.xlabel = "x"
-        self.ylabel = "y"
+        self.xlabel = "x" if xlabel is None else xlabel
+        self.ylabel = "y" if ylabel is None else ylabel
         if self.x.size != self.y.size:
             raise ValueError("Sizes of x and y mismatch: {} versus {}."
                              "".format(self.x.size, self.y.size))
