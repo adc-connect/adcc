@@ -335,55 +335,53 @@ class ElectronicStates:
             gamma parameter. The value should be given in atomic units
             and will be converted to the unit of the energy axis.
         """
-        from matplotlib import pyplot as plt
 
-        # - process the x-Axis: this should be the same for all adc variants
-        if xaxis == "eV":
-            eV = constants.value("Hartree energy in eV")
-            xvalues = self.excitation_energy * eV
-            width = width * eV
-            xlabel = "Energy (eV)"
-        elif xaxis in ["au", "Hartree", "a.u."]:
-            xvalues = self.excitation_energy
-            xlabel = "Energy (au)"
-        elif xaxis == "nm":
-            hc = constants.h * constants.c
-            Eh = constants.value("Hartree energy")
-            xvalues = hc / (self.excitation_energy * Eh) * 1e9
-            xlabel = "Wavelength (nm)"
-            # TODO: this should be possible! Only the width has to be adjusted
-            # to a sensible value that due to the inverse relation of au -> nm
-            # strongly depends on the x-range at hand. Although it is kind of
-            # ugly to come up with the width in a.u. as user. And the default
-            # of 0.01au = 4500nm does not rly make sense. Maybe we can set the
-            # default depending on the x-label?
-            if broadening is not None and not callable(broadening):
-                raise ValueError("xaxis=nm and broadening enabled is "
-                                 "not supported.")
-        elif xaxis in ["cm-1", "cm^-1", "cm^{-1}"]:
-            towvn = constants.value("hartree-inverse meter relationship") / 100
-            xvalues = self.excitation_energy * towvn
-            width = width * towvn
-            xlabel = "Wavenumbers (cm^{-1})"
-        else:
-            raise ValueError(f"Unknown xaxis specifier: {xaxis}")
+        def convert_x_units(spectrum: Spectrum):
+            # modifies the spectrum in place by converting the x values to
+            # the desired unit
+            if xaxis in ["au", "hartree", "a.u."]:
+                spectrum.xlabel = "Energy (au)"
+            elif xaxis == "ev":
+                eV = constants.value("Hartree energy in eV")
+                spectrum.x = spectrum.x * eV
+                spectrum.xlabel = "Energy (eV)"
+            elif xaxis == "nm":
+                hc = constants.h * constants.c
+                Eh = constants.value("Hartree energy")
+                spectrum.x = hc / (spectrum.x * Eh) * 1e9
+                spectrum.xlabel = "Wavelength (nm)"
+            elif xaxis in ["cm-1", "cm^-1", "cm^{-1}"]:
+                towvn = constants.value("hartree-inverse meter relationship") / 100
+                spectrum.x = spectrum.x * towvn
+                spectrum.xlabel = "Wavenumbers (cm^{-1})"
+            else:
+                raise ValueError(f"Unknown xaxis specifier: {xaxis}")
 
-        spectrum = Spectrum(x=xvalues, y=yvalues, xlabel=xlabel, ylabel=ylabel)
-        if not broadening:
-            plots = spectrum.plot(style="discrete", **kwargs)
-        else:
-            kwdisc = kwargs.copy()
-            kwdisc.pop("label", "")
+        # first build the spectra in atomic units on the x-axis
+        spectrum = Spectrum(x=self.excitation_energy, y=yvalues, ylabel=ylabel)
+        if broadening:  # generate a broadened spectrum
+            broadened_spectrum: Spectrum = spectrum.broaden_lines(
+                width=width, shape=broadening
+            )
+        xaxis = xaxis.lower()
+        # convert the x-unit of the dicrete spectrum
+        convert_x_units(spectrum)
+        if broadening:
+            # convert the x-unit of the broadened spectrum
+            convert_x_units(broadened_spectrum)
+            # plot both spectra:
+            # - avoid labeling the discrete spectrum
+            kwdisc = {k: v for k, v in kwargs.items() if k != "label"}
             plots = spectrum.plot(style="discrete", **kwdisc)
-
-            kwargs.pop("color", "")
-            sp_broad = spectrum.broaden_lines(width, shape=broadening)
-            plots.extend(sp_broad.plot(color=plots[0].get_color(),
-                                       style="continuous", **kwargs))
-
-        if xaxis in ["nm"]:
-            # Invert x axis
-            plt.xlim(plt.xlim()[::-1])
+            # - use the same color as for the discrete spectrum
+            kwbroad = {k: v for k, v in kwargs.items() if k != "color"}
+            disc_color = plots[0].get_color()
+            plots.extend(broadened_spectrum.plot(
+                color=disc_color, style="continuous", **kwbroad
+            ))
+        else:
+            # plot the discrete spectrum
+            plots = spectrum.plot(style="discrete", **kwargs)
         return plots
 
 
