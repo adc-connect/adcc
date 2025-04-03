@@ -309,35 +309,35 @@ class ExcitedStates(ElectronicTransition):
                 ret += separator
         return ret[:-1]
 
-    # def to_qcvars(self, properties=False, recurse=False):
-    #     """
-    #     Return a dictionary with property keys compatible to a Psi4 wavefunction
-    #     or a QCEngine Atomicresults object.
-    #     """
-    #     name = self.method.name.upper()
+    def to_qcvars(self, properties=False, recurse=False):
+        """
+        Return a dictionary with property keys compatible to a Psi4 wavefunction
+        or a QCEngine Atomicresults object.
+        """
+        name = self.method.name.upper()
 
-    #     qcvars = {
-    #         "EXCITATION KIND": self.kind.upper(),
-    #         "NUMBER OF EXCITED STATES": len(self.excitation_energy),
-    #         f"{name} ITERATIONS": self.n_iter,
-    #         f"{name} EXCITATION ENERGIES": self.excitation_energy,
-    #     }
+        qcvars = {
+            "EXCITATION KIND": self.kind.upper(),
+            "NUMBER OF EXCITED STATES": len(self.excitation_energy),
+            f"{name} ITERATIONS": self.n_iter,
+            f"{name} EXCITATION ENERGIES": self.excitation_energy,
+        }
 
-    #     if properties:
-    #         qcvars.update({
-    #             # Transition properties
-    #             f"{name} TRANSITION DIPOLES (LEN)": self.transition_dipole_moment,
-    #             f"{name} TRANSITION DIPOLES (VEL)": self.transition_dipole_moment_velocity,  # noqa: E501
-    #             f"{name} OSCILLATOR STRENGTHS (LEN)": self.oscillator_strength,
-    #             f"{name} OSCILLATOR STRENGTHS (VEL)": self.oscillator_strength_velocity,  # noqa: E501
-    #             f"{name} ROTATIONAL STRENGTHS (VEL)": self.rotatory_strength,
-    #             #
-    #             # State properties
-    #             f"{name} STATE DIPOLES": self.state_dipole_moment
-    #         })
+        if properties:
+            qcvars.update({
+                # Transition properties
+                f"{name} TRANSITION DIPOLES (LEN)": self.transition_dipole_moment,
+                f"{name} TRANSITION DIPOLES (VEL)": self.transition_dipole_moment_velocity,  # noqa: E501
+                f"{name} OSCILLATOR STRENGTHS (LEN)": self.oscillator_strength,
+                f"{name} OSCILLATOR STRENGTHS (VEL)": self.oscillator_strength_velocity,  # noqa: E501
+                f"{name} ROTATIONAL STRENGTHS (VEL)": self.rotatory_strength,
+                #
+                # State properties
+                f"{name} STATE DIPOLES": self.state_dipole_moment
+            })
 
-    #     if recurse:
-    #         mpvars = self.ground_state.to_qcvars(properties, recurse=True,
-    #                                              maxlevel=self.method.level)
-    #         qcvars.update(mpvars)
-    #     return qcvars
+        if recurse:
+            mpvars = self.ground_state.to_qcvars(properties, recurse=True,
+                                                 maxlevel=self.method.level)
+            qcvars.update(mpvars)
+        return qcvars
