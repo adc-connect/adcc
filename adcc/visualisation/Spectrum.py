@@ -112,12 +112,12 @@ class Spectrum:
         # But only if the user did not provide any data for min/max!
         if xmin is None:
             xmin = xmin_disc
-            xmin_padding = max((xmax_disc - xmin_disc) / 10, 2 * width)
+            xmin_padding = max((xmax_disc - xmin_disc) / 10, 5 * width)
         else:
             xmin_padding = 0
         if xmax is None:
             xmax = xmax_disc
-            xmax_padding = max((xmax_disc - xmin_disc) / 10, 2 * width)
+            xmax_padding = max((xmax_disc - xmin_disc) / 10, 5 * width)
         else:
             xmax_padding = 0
 
