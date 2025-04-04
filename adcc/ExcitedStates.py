@@ -20,9 +20,11 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import numpy as np
 from scipy import constants
 
 from .import adc_pp
+from .ElectronicStates import TableColumn
 from .ElectronicTransition import ElectronicTransition
 from .FormatDominantElements import FormatDominantElements
 from .FormatIndex import (FormatIndexAdcc, FormatIndexBase,
@@ -159,109 +161,86 @@ class ExcitedStates(ElectronicTransition):
             Show the norms of the (1p1h, 2p2h, ...) blocks of the excited states,
             by default ``True``.
         """
-        # TODO This function is quite horrible and definitely needs some
-        #      refactoring, also it assumes ADC-PP everywhere
-
-        eV = constants.value("Hartree energy in eV")
         has_dipole = "electric_dipole" in self.operators.available
-        has_rotatory = all(op in self.operators.available
-                           for op
-                           in ["magnetic_dipole", "electric_dipole_velocity"])
-
-        # Build information about the optional columns
-        opt_thead = ""
-        opt_body = ""
-        opt = {}
-        if has_dipole and transition_dipole_moments:
-            opt_body += " {tdmx:8.4f} {tdmy:8.4f} {tdmz:8.4f}"
-            opt_thead += "  transition dipole moment "
-            opt["tdmx"] = lambda i, vec: self.transition_dipole_moment[i][0]
-            opt["tdmy"] = lambda i, vec: self.transition_dipole_moment[i][1]
-            opt["tdmz"] = lambda i, vec: self.transition_dipole_moment[i][2]
-        if has_dipole and oscillator_strengths:
-            opt_body += "{osc:8.4f} "
-            opt_thead += " osc str "
-            opt["osc"] = lambda i, vec: self.oscillator_strength[i]
-        if has_rotatory and rotatory_strengths:
-            opt_body += "{rot:8.4f} "
-            opt_thead += " rot str "
-            opt["rot"] = lambda i, vec: self.rotatory_strength[i]
-        if "ph" in self.matrix.axis_blocks and block_norms:
-            opt_body += "{v1:9.4g} "
-            opt_thead += "   |v1|^2 "
-            opt["v1"] = lambda i, vec: dot(vec.ph, vec.ph)
-        if "pphh" in self.matrix.axis_blocks and block_norms:
-            opt_body += "{v2:9.4g} "
-            opt_thead += "   |v2|^2 "
-            opt["v2"] = lambda i, vec: dot(vec.pphh, vec.pphh)
-        if has_dipole and state_dipole_moments:
-            opt_body += " {dmx:8.4f} {dmy:8.4f} {dmz:8.4f}"
-            opt_thead += "     state dipole moment   "
-            opt["dmx"] = lambda i, vec: self.state_dipole_moment[i][0]
-            opt["dmy"] = lambda i, vec: self.state_dipole_moment[i][1]
-            opt["dmz"] = lambda i, vec: self.state_dipole_moment[i][2]
-
-        # Heading of the table
-        kind = ""
-        if hasattr(self, "kind") and self.kind \
-           and self.kind not in [" ", ""]:
-            kind = self.kind + " "
-
-        spin_change = ""
-        if kind.strip() == "spin_flip" and hasattr(self, "spin_change") and \
-                self.spin_change is not None and self.spin_change != -1:
-            spin_change = "(ΔMS={:+2d})".format(self.spin_change)
-
-        conv = ""
-        if hasattr(self, "converged"):
-            conv = "NOT CONVERGED"
-            if self.converged:
-                conv = "converged"
-
-        propname = ""
-        if self.property_method != self.method:
-            propname = " (" + self.property_method.name + ")"
-
-        head = "| {0:18s}  {1:>" + str(11 + len(opt_thead)) + "s} |\n"
-        delim = ",  " if kind else ""
-        headtext = head.format(self.method.name + propname,
-                               kind + spin_change + delim + conv)
-
-        extra = len(headtext) - len(opt_thead) - 36
-        text = ""
-        separator = "+" + 33 * "-" + extra * "-" + len(opt_thead) * "-" + "+"
-        text += separator + "\n"
-        text += headtext
-        text += separator + "\n"
-
-        if extra > 0:
-            opt["space"] = lambda i, vec: ""
-            opt_body += "{space:" + str(extra) + "s}"
-            opt_thead += (extra * " ")
-
-        # Body of the table
-        body = "| {i:2d} {ene:13.7g} {ev:13.7g} " + opt_body + " |\n"
-        text += "|  #        excitation energy    " + opt_thead + " |\n"
-        text += "|          (au)           (eV)   "
-        text += len(opt_thead) * " " + " |\n"
-        for i, vec in enumerate(self.excitation_vector):
-            fields = {}
-            for k, compute in opt.items():
-                fields[k] = compute(i, vec)
-            text += body.format(i=i, ene=self.excitation_energy[i],
-                                ev=self.excitation_energy[i] * eV, **fields)
-        text += separator + "\n"
-        if len(self._excitation_energy_corrections):
-            head_corr = "|  Excitation energy includes these corrections:"
-            text += head_corr
-            nspace = len(separator) - len(head_corr) - 1
-            text += nspace * " " + "|\n"
-            maxlen = len(separator) - 8
-            for eec in self._excitation_energy_corrections:
-                label = f"|    - {eec.name:{maxlen}.{maxlen}}|\n"
-                text += label
-            text += separator + "\n"
-        return text
+        has_rotatory = all(
+            op in self.operators.available for op in
+            ["magnetic_dipole", "electric_dipole_velocity"]
+        )
+        # Collect the columns to print
+        columns: list[TableColumn] = []
+        values: list[str] = []
+        # count the number of states
+        values.extend(str(i) for i in range(self.size))
+        columns.append(TableColumn(
+            header="#", values=values.copy(), unit="", width=len(str(self.size)) + 1
+        ))
+        values.clear()
+        # excitation energy in a.u. and eV
+        eV = constants.value("Hartree energy in eV")
+        values.extend(f"{e:^13.7g} {e * eV:^13.7g}" for e in self.excitation_energy)
+        columns.append(TableColumn(
+            header="excitation energy", values=values.copy(),
+            unit="(au)         (eV)", width=27
+        ))
+        values.clear()
+        # the transition dipole moments
+        if transition_dipole_moments and has_dipole:
+            for tdm in self.transition_dipole_moment:
+                tdmx, tdmy, tdmz = tdm
+                values.append(
+                    f"{tdmx:^8.4f} {tdmy:^8.4f} {tdmz:^8.4f}"
+                    f"{np.linalg.norm(tdm):^8.4f}"
+                )
+            columns.append(TableColumn(
+                header="transition dipole moment", values=values.copy(),
+                unit="x(au)    y(au)    z(au)    abs(au)", width=35
+            ))
+            values.clear()
+        # the oscillator strengths
+        if oscillator_strengths and has_dipole:
+            values.extend(f"{osc:^8.4f}" for osc in self.oscillator_strength)
+            columns.append(TableColumn(
+                header="osc str", values=values.copy(), unit="(au)",
+                width=10
+            ))
+            values.clear()
+        if rotatory_strengths and has_rotatory:
+            values.extend(f"{rot:^8.4f}" for rot in self.rotatory_strength)
+            columns.append(TableColumn(
+                header="rot str", values=values.copy(), unit="(au)",
+                width=10
+            ))
+            values.clear()
+        # vector norm
+        if block_norms and "ph" in self.matrix.axis_blocks:
+            values.extend(f"{dot(vec.ph, vec.ph):^9.4f}"
+                          for vec in self.excitation_vector)
+            columns.append(TableColumn(
+                header="|v1|^2", values=values.copy(), unit="", width=9
+            ))
+            values.clear()
+        if block_norms and "pphh" in self.matrix.axis_blocks:
+            values.extend(f"{dot(vec.pphh, vec.pphh):^9.4f}"
+                          for vec in self.excitation_vector)
+            columns.append(TableColumn(
+                header="|v2|^2", values=values.copy(), unit="", width=9
+            ))
+            values.clear()
+        # the state dipole moment
+        if state_dipole_moments and has_dipole:
+            for dm in self.state_dipole_moment:
+                dmx, dmy, dmz = dm
+                values.append(
+                    f"{dmx:^8.4f} {dmy:^8.4f} {dmz:^8.4f}"
+                    f"{np.linalg.norm(dm):^8.4f}"
+                )
+            columns.append(TableColumn(
+                header="state dipole moment", values=values.copy(),
+                unit="x(au)    y(au)    z(au)    abs(au)", width=36
+            ))
+            values.clear()
+            values.clear()
+        return self._describe(columns)
 
     def describe_amplitudes(self, tolerance=0.01, index_format=None):
         """
