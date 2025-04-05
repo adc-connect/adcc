@@ -171,16 +171,14 @@ class ExcitedStates(ElectronicTransition):
         values: list[str] = []
         # count the number of states
         values.extend(str(i) for i in range(self.size))
-        columns.append(TableColumn(
-            header="#", values=values.copy(), unit="", width=len(str(self.size)) + 1
-        ))
+        columns.append(TableColumn(header="#", values=values.copy(), unit=""))
         values.clear()
         # excitation energy in a.u. and eV
         eV = constants.value("Hartree energy in eV")
         values.extend(f"{e:^13.7g} {e * eV:^13.7g}" for e in self.excitation_energy)
         columns.append(TableColumn(
             header="excitation energy", values=values.copy(),
-            unit="(au)         (eV)", width=27
+            unit="(au)         (eV)"
         ))
         values.clear()
         # the transition dipole moments
@@ -193,22 +191,20 @@ class ExcitedStates(ElectronicTransition):
                 )
             columns.append(TableColumn(
                 header="transition dipole moment", values=values.copy(),
-                unit="x(au)    y(au)    z(au)    abs(au)", width=35
+                unit="x(au)    y(au)    z(au)    abs(au)"
             ))
             values.clear()
         # the oscillator strengths
         if oscillator_strengths and has_dipole:
             values.extend(f"{osc:^8.4f}" for osc in self.oscillator_strength)
             columns.append(TableColumn(
-                header="osc str", values=values.copy(), unit="(au)",
-                width=10
+                header="osc str", values=values.copy(), unit="(au)"
             ))
             values.clear()
         if rotatory_strengths and has_rotatory:
             values.extend(f"{rot:^8.4f}" for rot in self.rotatory_strength)
             columns.append(TableColumn(
-                header="rot str", values=values.copy(), unit="(au)",
-                width=10
+                header="rot str", values=values.copy(), unit="(au)"
             ))
             values.clear()
         # vector norm
@@ -216,14 +212,14 @@ class ExcitedStates(ElectronicTransition):
             values.extend(f"{dot(vec.ph, vec.ph):^9.4f}"
                           for vec in self.excitation_vector)
             columns.append(TableColumn(
-                header="|v1|^2", values=values.copy(), unit="", width=9
+                header="|v1|^2", values=values.copy(), unit=""
             ))
             values.clear()
         if block_norms and "pphh" in self.matrix.axis_blocks:
             values.extend(f"{dot(vec.pphh, vec.pphh):^9.4f}"
                           for vec in self.excitation_vector)
             columns.append(TableColumn(
-                header="|v2|^2", values=values.copy(), unit="", width=9
+                header="|v2|^2", values=values.copy(), unit=""
             ))
             values.clear()
         # the state dipole moment
@@ -236,7 +232,7 @@ class ExcitedStates(ElectronicTransition):
                 )
             columns.append(TableColumn(
                 header="state dipole moment", values=values.copy(),
-                unit="x(au)    y(au)    z(au)    abs(au)", width=36
+                unit="x(au)    y(au)    z(au)    abs(au)"
             ))
             values.clear()
             values.clear()

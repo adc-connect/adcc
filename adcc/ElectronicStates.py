@@ -516,9 +516,7 @@ class TableColumn:
                  width: int = None, align: str = "^"):
         # the minimum required width of the column
         min_width = max(len(header), len(unit), *(len(v) for v in values))
-        if width is None:
-            width = min_width + 1
-        if width < min_width:
+        if width is None or width < min_width:
             width = min_width + 1
 
         self.width = width
