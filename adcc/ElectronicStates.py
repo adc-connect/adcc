@@ -4,6 +4,11 @@ import warnings
 
 from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod
+from .AmplitudeVector import AmplitudeVector
+from .FormatDominantElements import FormatDominantElements
+from .FormatIndex import (
+    FormatIndexBase, FormatIndexAdcc, FormatIndexHfProvider, FormatIndexHomoLumo
+)
 from .LazyMp import LazyMp
 from .OneParticleOperator import OneParticleOperator, product_trace
 from .OperatorIntegrals import OperatorIntegrals
@@ -483,6 +488,55 @@ class ElectronicStates:
                 lines.append(f"|    - {eec.name:<{maxlen}s} |")
         return "\n".join(lines)
 
+    def describe_amplitudes(self, tolerance: float = 0.01,
+                            index_format=None) -> str:
+        """
+        Return a string describing the dominant amplitudes of each
+        excitation vector in human-readable form. The ``kwargs``
+        are for :py:class:`FormatExcitationVector`.
+
+        Parameters
+        ----------
+        tolerance : float, optional
+            Minimal absolute value of the excitation amplitudes considered.
+
+        index_format : NoneType or str or FormatIndexBase, optional
+            Formatter to use for displaying tensor indices.
+            Valid are ``"adcc"`` to keep the adcc-internal indexing,
+            ``"hf"`` to select the HFProvider indexing, ``"homolumo"``
+            to index relative on the HOMO / LUMO / HOCO orbitals.
+            If ``None`` an automatic selection will be made.
+        """
+        eV = constants.value("Hartree energy in eV")
+        formatter = FormatAmplitudeVector(
+            matrix=self.matrix, tolerance=tolerance, index_format=index_format
+        )
+        # optimise the formatting by pre-inspecting the amplitude coefficients
+        # to determine the (str) length of indices that will be printed.
+        formatter.optimise_formatting(tuple(self.excitation_vector))
+        # first format all the headers to determine their length
+        headers = []
+        for i, energy in enumerate(self.excitation_energy):
+            headers.append(
+                f"State {i:3d}, {energy:13.7g} au, {energy * eV:13.7g} eV"
+            )
+        # determine the required linewidth
+        width = max(formatter.linewidth, *(len(h) for h in headers))
+        hline = "+" + (width + 2) * "-" + "+"  # +2: space to the left and right
+
+        lines = []
+        for header, amplitude in zip(headers, self.excitation_vector):
+            lines.append(hline)
+            lines.append(f"| {header:<{width}s} |")
+            lines.append(hline)
+            # format the vector and add the table borders + spaces
+            for coefficient in formatter.format(amplitude):
+                lines.append(
+                    f"| {coefficient:^{width}s} |"
+                )
+            lines.append(hline)
+        return "\n".join(lines)
+
 
 class EnergyCorrection:
     def __init__(self, name: str, function: callable) -> None:
@@ -540,3 +594,118 @@ class TableColumn:
             header=self.header.strip(), values=values, unit=self.unit.strip(),
             width=self.width, align=align
         )
+
+
+class FormatAmplitudeVector:
+    def __init__(self, matrix: AdcMatrix, tolerance: float = 0.01,
+                 index_format: str = None):
+        """
+        Set up a formatter class for formatting excitation vectors.
+
+        Parameters
+        ----------
+        tolerance : float, optional
+            Minimal absolute value of the excitation amplitudes considered
+
+        index_format : NoneType or str or FormatIndexBase, optional
+            Formatter to use for displaying tensor indices.
+            Valid are ``"adcc"`` to keep the adcc-internal indexing,
+            ``"hf"`` to select the HFProvider indexing, ``"homolumo"``
+            to index relative on the HOMO / LUMO / HOCO orbitals.
+            If ``None`` an automatic selection will be made.
+        """
+        self.matrix = matrix
+        refstate = matrix.reference_state
+        # default for index formatting
+        if index_format is None:
+            closed_shell = refstate.n_alpha == refstate.n_beta
+            if closed_shell and refstate.is_aufbau_occupation:
+                index_format = "homolumo"
+            else:
+                index_format = "hf"
+
+        if index_format == "adcc":
+            index_format = FormatIndexAdcc(refstate)
+        elif index_format == "hf":
+            index_format = FormatIndexHfProvider(refstate)
+        elif index_format == "homolumo":
+            index_format = FormatIndexHomoLumo(refstate)
+        elif not isinstance(index_format, FormatIndexBase):
+            raise ValueError("Unsupported value for index_format: "
+                             + str(index_format))
+
+        self.tensor_format = FormatDominantElements(
+            matrix.mospaces, tolerance, index_format
+        )
+        self.index_format = self.tensor_format.index_format
+        # Formatting used for the values (coefficients)
+        self.value_format = "{:+8.3g}"
+
+    def optimise_formatting(self, vectors: list[AmplitudeVector]) -> None:
+        """
+        Optimise the formatting of the amplitude vectors by inspecting the entries
+        of the given amplitude vectors in advance.
+        This enables to nicely format indices by e.g. determining the maximum
+        length of indices that will be printed.
+        """
+        if not isinstance(vectors, (list, tuple)):
+            return self.optimise_formatting([vectors])
+
+        for vector in vectors:
+            for block, spaces in self.matrix.axis_spaces.items():
+                self.tensor_format.optimise_formatting((spaces, vector[block]))
+
+    @property
+    def linewidth(self) -> int:
+        """
+        The width of a line if an amplitude is formatted with this class
+        """
+        # This assumes a formatting: idx1 idx2 -> idx3 idx4   aa->aa   number
+        nblk = len(self.matrix.axis_blocks[-1])  # axis blocks is sorted by len
+        # n_idx * (len(index) + space) + 2 for the arrow
+        width_indices = nblk * (self.index_format.max_n_characters + 1) + 2
+        width_spins = nblk + 2  # n_idx * 1 (for a/b) + 2 for the arrow
+        # the width of the numerical value of the coefficient
+        width_value = len(self.value_format.format(0))
+        # +6: 3 spaces between indices and spin + 3 spaces between spins and value
+        return width_indices + width_spins + width_value + 6
+
+    def format(self, amplitude: AmplitudeVector) -> list[str]:
+        """
+        Formats the given amplitude vector.
+        """
+        empty_idx = self.index_format.max_n_characters * " "
+        idx_spin_gap = " " * 3
+        spin_coeff_gap = " " * 3
+
+        if self.matrix.axis_blocks == ["ph"]:
+            formats = {"ov": (
+                "{} -> {}" + idx_spin_gap + "{}->{}"
+                + spin_coeff_gap + self.value_format
+            )}
+        elif self.matrix.axis_blocks == ["ph", "pphh"]:
+            formats = {
+                "ov": (
+                    "{} " + empty_idx + " -> {} " + empty_idx + idx_spin_gap
+                    + "{} ->{} " + spin_coeff_gap + self.value_format
+                ),
+                "oovv": (
+                    "{} {} -> {} {}" + idx_spin_gap + "{}{}->{}{}"
+                    + spin_coeff_gap + self.value_format
+                )
+            }
+        else:
+            raise NotImplementedError("Unknown ADC matrix structure")
+
+        lines = []
+        for block, spaces in self.matrix.axis_spaces.items():
+            # remove the numbers from the spaces: o1 -> o
+            space_str = "".join(c for c in "".join(spaces) if c.isalpha())
+
+            assert block in amplitude
+            formatted = self.tensor_format.format_as_list(spaces, amplitude[block])
+            for indices, spins, coeff in formatted:
+                lines.append(
+                    formats[space_str].format(*indices, *spins, coeff)
+                )
+        return lines
