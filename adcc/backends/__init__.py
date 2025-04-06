@@ -29,21 +29,16 @@ from ..misc import is_module_available
 __all__ = ["import_scf_results", "run_hf", "have_backend", "available"]
 
 
-# Cache for the list of available backends ... cannot be filled right now,
-# since this can lead to import loops when adcc is e.g. used from Psi4
-__status = dict()
-
-
 def available():
-    global __status
-    if not __status:
-        status = {
-            "pyscf": is_module_available("pyscf", "1.5.0"),
-            "psi4": (is_module_available("psi4", "1.3.0")
-                     and is_module_available("psi4.core")),
-            "veloxchem": is_module_available("veloxchem"),  # No version info
-            "molsturm": is_module_available("molsturm"),    # No version info
-        }
+    # This can currently not be cached in e.g. a global variable, because
+    # this can lead to import loops when adcc is e.g. used from Psi4
+    status = {
+        "pyscf": is_module_available("pyscf", "1.5.0"),
+        "psi4": (is_module_available("psi4", "1.3.0")
+                 and is_module_available("psi4.core")),
+        "veloxchem": is_module_available("veloxchem"),  # No version info
+        "molsturm": is_module_available("molsturm"),    # No version info
+    }
     return sorted([b for b in status if status[b]])
 
 
