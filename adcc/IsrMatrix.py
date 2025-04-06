@@ -71,12 +71,10 @@ class IsrMatrix(AdcMatrixlike):
         if not isinstance(method, AdcMethod):
             method = AdcMethod(method)
 
-        if isinstance(operator, list):
-            self.operator = operator.copy()
-        elif isinstance(operator, tuple):
-            self.operator = list(operator)
+        if isinstance(operator, (list, tuple)):
+            self.operator = tuple(operator)
         else:
-            self.operator = [operator]
+            self.operator = (operator,)
         if not all(isinstance(op, OneParticleOperator) for op in self.operator):
             raise TypeError("operator is not a valid object. It needs to be "
                             "either an OneParticleOperator or a list of "
