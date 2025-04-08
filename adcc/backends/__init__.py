@@ -76,7 +76,7 @@ def import_scf_results(res):
 
         from . import veloxchem as backend_veloxchem
 
-        if isinstance(res, vlx.scfrestdriver.ScfRestrictedDriver):
+        if isinstance(res, vlx.scfrestdriver.ScfDriver):
             return backend_veloxchem.import_scf(res)
 
     if have_backend("psi4"):

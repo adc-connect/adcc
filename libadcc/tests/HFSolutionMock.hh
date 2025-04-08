@@ -37,11 +37,11 @@ struct HFSolutionMock : public HartreeFockSolution_i {
   size_t exposed_n_bas                   = 7;
   std::vector<size_t> exposed_occupation = {1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0};
   std::vector<double> exposed_orben      = {
-             -2.0233397420161026e+01, -1.2657145550718050e+00, -6.2926710042596645e-01,
-             -4.4166801612481776e-01, -3.8764506899048456e-01, 6.0283939648336604e-01,
-             7.6591832861501685e-01,  -2.0233397420161026e+01, -1.2657145550718050e+00,
-             -6.2926710042596645e-01, -4.4166801612481776e-01, -3.8764506899048456e-01,
-             6.0283939648336604e-01,  7.6591832861501685e-01};
+        -2.0233397420161026e+01, -1.2657145550718050e+00, -6.2926710042596645e-01,
+        -4.4166801612481776e-01, -3.8764506899048456e-01, 6.0283939648336604e-01,
+        7.6591832861501685e-01,  -2.0233397420161026e+01, -1.2657145550718050e+00,
+        -6.2926710042596645e-01, -4.4166801612481776e-01, -3.8764506899048456e-01,
+        6.0283939648336604e-01,  7.6591832861501685e-01};
 
   size_t n_orbs_alpha() const override { return exposed_n_orbs_alpha; }
   real_type conv_tol() const override { return 1e-10; }
@@ -49,8 +49,12 @@ struct HFSolutionMock : public HartreeFockSolution_i {
   size_t spin_multiplicity() const override { return restricted() ? 1 : 0; }
 
   size_t n_bas() const override { return exposed_n_bas; }
-  void nuclear_multipole(size_t /*order*/, scalar_type* /*buffer*/,
-                         size_t /*size*/) const override {
+  void nuclear_multipole(size_t /*order*/, std::array<scalar_type, 3> /*gauge_origin*/,
+                         scalar_type* /*buffer*/, size_t /*size*/) const override {
+    throw not_implemented_error("Not implemented.");
+  }
+  const std::array<scalar_type, 3> gauge_origin_to_xyz(
+        std::string /*gauge_origin*/) const override {
     throw not_implemented_error("Not implemented.");
   }
   real_type energy_scf() const override { return 0; }

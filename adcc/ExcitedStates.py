@@ -254,7 +254,7 @@ class ExcitedStates(ElectronicTransition):
             gs_dip_moment = self.ground_state.dipole_moment(pmethod.level)
 
         dipole_integrals = self.operators.electric_dipole
-        return gs_dip_moment - np.array([
+        return gs_dip_moment + np.array([
             [product_trace(comp, ddm) for comp in dipole_integrals]
             for ddm in self.state_diffdm
         ])
@@ -289,7 +289,8 @@ class ExcitedStates(ElectronicTransition):
         eV = constants.value("Hartree energy in eV")
         has_dipole = "electric_dipole" in self.operators.available
         has_rotatory = all(op in self.operators.available
-                           for op in ["magnetic_dipole", "nabla"])
+                           for op
+                           in ["magnetic_dipole", "electric_dipole_velocity"])
 
         # Build information about the optional columns
         opt_thead = ""
@@ -439,7 +440,7 @@ class ExcitedStates(ElectronicTransition):
         return ret[:-1]
 
     @requires_module("pandas")
-    def to_dataframe(self):
+    def to_dataframe(self, gauge_origin="origin"):
         """
         Exports the ExcitedStates object as :class:`pandas.DataFrame`.
         Atomic units are used for all values.
@@ -457,6 +458,12 @@ class ExcitedStates(ElectronicTransition):
             except NotImplementedError:
                 # some properties are not available for every backend
                 continue
+            if callable(d):
+                try:
+                    d = d(gauge_origin)
+                except NotImplementedError:
+                    # some properties are not available for every backend
+                    continue
             if not isinstance(d, np.ndarray):
                 continue
             if not np.issubdtype(d.dtype, np.number):
@@ -466,7 +473,11 @@ class ExcitedStates(ElectronicTransition):
             elif d.ndim == 2 and d.shape[1] == 3:
                 for i, p in enumerate(["x", "y", "z"]):
                     data[f"{key}_{p}"] = d[:, i]
-            elif d.ndim > 2:
+            elif d.ndim == 3 and d.shape[1:] == (3, 3):
+                for i, p in enumerate(["x", "y", "z"]):
+                    for j, q in enumerate(["x", "y", "z"]):
+                        data[f"{key}_{p}{q}"] = d[:, i, j]
+            elif d.ndim > 3:
                 warnings.warn(f"Exporting NumPy array for property {key}"
                               f" with shape {d.shape} not supported.")
                 continue
@@ -537,32 +548,3 @@ class ExcitedStates(ElectronicTransition):
         excitations = [Excitation(self, index=i, method=self.method)
                        for i in range(self.size)]
         return excitations
-
-
-# deprecated property names of ExcitedStates
-deprecated = {
-    "excitation_energies": "excitation_energy",
-    "transition_dipole_moments": "transition_dipole_moment",
-    "transition_dms": "transition_dm",
-    "transition_dipole_moments_velocity":
-        "transition_dipole_moment_velocity",
-    "transition_magnetic_dipole_moments":
-        "transition_magnetic_dipole_moment",
-    "state_dipole_moments": "state_dipole_moment",
-    "state_dms": "state_dm",
-    "state_diffdms": "state_diffdm",
-    "oscillator_strengths": "oscillator_strength",
-    "oscillator_stenths_velocity": "oscillator_strength_velocity",
-    "rotatory_strengths": "rotatory_strength",
-    "excitation_vectors": "excitation_vector",
-}
-
-for dep_property in deprecated:
-    new_key = deprecated[dep_property]
-
-    def deprecated_property(self, key=new_key, old_key=dep_property):
-        warnings.warn(f"Property '{old_key}' is deprecated "
-                      " and will be removed in version 0.16.0."
-                      f" Please use '{key}' instead.")
-        return getattr(self, key)
-    setattr(ExcitedStates, dep_property, property(deprecated_property))

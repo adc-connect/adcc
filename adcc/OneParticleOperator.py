@@ -20,7 +20,6 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import warnings
 import numpy as np
 from itertools import product, combinations_with_replacement
 
@@ -156,15 +155,6 @@ class OneParticleOperator:
             self.__setitem__(b.__getattr__(attr), value)
         except AttributeError:
             super().__setattr__(attr, value)
-
-    def set_block(self, block, tensor):
-        """
-        Assigns tensor to a given block. Deprecated
-        """
-        warnings.warn("The set_block function is deprecated and will be "
-                      "removed in 0.16.0. "
-                      "Use __setitem__ instead.")
-        self.__setitem__(block, tensor)
 
     def set_zero_block(self, block):
         """

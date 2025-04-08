@@ -1,7 +1,6 @@
 # Exclude test stuff
-global-exclude test_*.py
-exclude adcc/conftest.py
+exclude adcc/tests/**
+include adcc/tests/smoke_test.py
 global-include libadcc/**/*.hh libadcc/**/*.cc
 include LICENSE
 include README.md
-include adcc/test_smoke.py

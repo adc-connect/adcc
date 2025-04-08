@@ -21,11 +21,11 @@ jobs:
           - {version: '3.9', os: ubuntu-latest, documentation: False}
           - {version: '3.11', os: macos-13 , documentation: False}
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.version }}
-      - uses: actions/cache@v1
+      - uses: actions/cache@v4
         env:
           cache-name: cache-artifacts
         with:
@@ -38,10 +38,11 @@ jobs:
             ${{ runner.os }}-test-
             ${{ runner.os }}-
       - name: Install system dependencies on Linux
-        run: sudo apt-get install libopenblas-base ccache doxygen lcov
+        run: sudo apt-get install libopenblas-dev ccache doxygen lcov
         if: contains( matrix.os, 'ubuntu')
       - name: Install system dependencies on macOS
-        run:  brew install ccache doxygen lcov
+        # coreutils for sha256sum for update_testdata.sh
+        run:  brew install ccache doxygen lcov coreutils
         if: contains( matrix.os, 'macos')
       #
       - name: Dump siteconfig with coverage flags for C++
@@ -66,36 +67,40 @@ jobs:
           pip install --user .[tests]
       - name: Run python tests with std allocator
         run: |
-          python -m pytest adcc --cov=adcc
+          python -m pytest --cov=adcc
       - name: Run reduced python tests with libxm
         run: |
-          python -m pytest adcc --allocator=libxm -k "TestFunctionality and h2o_sto3g"
+          python -m pytest --allocator=libxm -k "TestFunctionality and h2o_sto3g"
       - name: Run C++ tests
         run: python setup.py cpptest -v
-      #
-      # TODO: sphinx.setup_command does not exist anymore,
-      # need to build docs differently
-      # - name: Dependencies for documentation
-      #   run: python -m pip install --user .[build_docs]
-      #   if: matrix.documentation
-      # - name: Build documentation
-      #   run: python setup.py build_docs
-      #   if: matrix.documentation
-      # - name: Upload documentation artefact
-      #   uses: actions/upload-artifact@v2
-      #   with:
-      #     name: documentation
-      #     path: build/sphinx/html
-      #   if: matrix.documentation
+      # Documentation build
+      - name: Dependencies for documentation
+        run: python -m pip install --user .[build_docs]
+        if: matrix.documentation
+      - name: Build documentation
+        run: |
+          cd docs && doxygen && cd ..
+          sphinx-build -M html docs build/sphinx
+        if: matrix.documentation
+      - name: Upload documentation artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/sphinx/html
+        if: matrix.documentation
       #
       - name: Upload coverage to codecov
+        # Note: lcov currently produces some error and therefore requires the keep-going flag to complete.
+        # Since the error might be the result of some gcc/gcov bug, I don't know how to resolve it currently.
+        # lcov < 2.0 apparently did hide a lot of errors from the user so the problem might have been around for some time already...
         run: |
           pip install codecov
           codecov -X gcov
-          lcov --directory . --capture --output-file coverage.info
-          lcov --remove coverage.info '/opt/*' '/Applications/*' '/Library/*' '/usr/*' "${HOME}"'/.cache/*' "${HOME}"'/.local/*' "${PWD}"'/build/*' "${PWD}"'/libadcc/tests/*' --output-file coverage.info
+          lcov --keep-going --directory . --capture --output-file coverage.info
+          lcov --ignore-errors unused --remove coverage.info '/opt/*' '/Applications/*' '/Library/*' '/usr/*' "${HOME}"'/.cache/*' "${HOME}"'/.local/*' "${PWD}"'/build/*' "${PWD}"'/libadcc/tests/*' --output-file coverage.info
           lcov --list coverage.info
           codecov -X gcov -f coverage.info
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         if: contains(matrix.os, 'ubuntu')
 
       - name: Upload coverage to coveralls
@@ -109,6 +114,24 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: contains(matrix.os, 'ubuntu')
 
+  deploy_documentation:
+    name: Deploy Documentation to Github Pages
+    if: github.ref == 'refs/heads/master'
+    needs: test
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+    # Deploy to the github-pages environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    # Specify runner + deployment step
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
   #
   # Test Conda Python
   #
@@ -119,17 +142,23 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {version: '3.9', os: ubuntu-latest, documentation: False}
+          - {version: '3.11', os: ubuntu-latest, documentation: False}
+          - {version: '3.11', os: macos-13 , documentation: False}
     defaults:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v2
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: actions/checkout@v4
+      - name: Patch compiler in Conda environment file
+        if: contains( matrix.os, 'macos')
+        run: |
+          sed -E -i.bak "s;gcc_linux-64;clang_osx-64;g" conda/environment.yml
+          sed -E -i.bak "s;gxx_linux-64;clangxx_osx-64;g" conda/environment.yml
+      - uses: conda-incubator/setup-miniconda@v3
         with:
           activate-environment: adcc-dev
-          environment-file: conda/environment_dev_linux.yml
-          miniforge-variant: Mambaforge
+          environment-file: conda/environment.yml
+          miniforge-variant: Miniforge3
           use-mamba: true
           miniforge-version: latest
           python-version: ${{ matrix.version }}
@@ -143,13 +172,18 @@ jobs:
           mamba install psi4 pyddx -c conda-forge -c conda-forge/label/libint_dev
           psi4 --version
           python -c "import psi4"
+      - name: Install system dependencies on macOS
+        # install sha256sum for update_testdata.sh
+        run:  brew install coreutils
+        if: contains( matrix.os, 'macos')
       - name: Build and test adcc
         run: |
           conda info
           conda list
-          # NOTE: pcmsolver not 'linked' with Psi4 1.8
+          CXXFLAGS="$(echo $CXXFLAGS | sed 's/-fvisibility-inlines-hidden //g')"
           pip install .[tests] --user
-          pytest adcc -k "not pcm"
+          # NOTE: pcmsolver not 'linked' with Psi4 1.8
+          pytest -k "not pcm"
           # python setup.py cpptest -v  # TODO: currently doesn't compile...
       #
       # - name: Upload coverage to codecov
@@ -178,8 +212,8 @@ jobs:
     name: Code style
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies

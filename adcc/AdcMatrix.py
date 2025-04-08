@@ -21,7 +21,6 @@
 ##
 ## ---------------------------------------------------------------------
 import libadcc
-import warnings
 import numpy as np
 
 from .LazyMp import LazyMp
@@ -165,8 +164,7 @@ class AdcMatrix(AdcMatrixlike):
                                       variant=variant)
                 for block, order in self.block_orders.items() if order is not None
             }
-            # TODO Rename to self.block in 0.16.0
-            self.blocks_ph = {bl: blocks[bl].apply for bl in blocks}
+            self.blocks = {bl: blocks[bl].apply for bl in blocks}
             if diagonal_precomputed:
                 self.__diagonal = diagonal_precomputed
             else:
@@ -185,16 +183,16 @@ class AdcMatrix(AdcMatrixlike):
         """
         if not isinstance(other, AdcExtraTerm):
             return NotImplemented
-        if not all(k in self.blocks_ph for k in other.blocks):
+        if not all(k in self.blocks for k in other.blocks):
             raise ValueError("Can only add to blocks of"
                              " AdcMatrix that already exist.")
         for sp in other.blocks:
-            orig_app = self.blocks_ph[sp]
+            orig_app = self.blocks[sp]
             other_app = other.blocks[sp].apply
 
             def patched_apply(ampl, original=orig_app, other=other_app):
                 return sum(app(ampl) for app in (original, other))
-            self.blocks_ph[sp] = patched_apply
+            self.blocks[sp] = patched_apply
         other_diagonal = sum(bl.diagonal for bl in other.blocks.values()
                              if bl.diagonal)
         self.__diagonal = self.__diagonal + other_diagonal
@@ -232,7 +230,7 @@ class AdcMatrix(AdcMatrixlike):
         """Update the cached data regarding the spaces of the ADC matrix"""
         self.axis_spaces = {}
         self.axis_lengths = {}
-        for block in diagonal.blocks_ph:
+        for block in diagonal.blocks:
             self.axis_spaces[block] = getattr(diagonal, block).subspaces
             self.axis_lengths[block] = np.prod([
                 self.mospaces.n_orbs(sp) for sp in self.axis_spaces[block]
@@ -250,54 +248,18 @@ class AdcMatrix(AdcMatrixlike):
         return self.shape[0]
 
     @property
-    def blocks(self):
-        # TODO Remove in 0.16.0
-        return self.__diagonal.blocks
-
-    def has_block(self, block):
-        warnings.warn("The has_block function is deprecated and "
-                      "will be removed in 0.16.0. "
-                      "Use `in matrix.axis_blocks` in the future.")
-        return self.block_spaces(block) is not None
-
-    def block_spaces(self, block):
-        warnings.warn("The block_spaces function is deprecated and "
-                      "will be removed in 0.16.0. "
-                      "Use `matrix.axis_spaces[block]` in the future.")
-        return {
-            "s": self.axis_spaces.get("ph", None),
-            "d": self.axis_spaces.get("pphh", None),
-            "t": self.axis_spaces.get("ppphhh", None),
-        }[block]
-
-    @property
     def axis_blocks(self):
         """
         Return the blocks used along one of the axes of the ADC matrix
         (e.g. ['ph', 'pphh']).
         """
-        return list(self.axis_spaces.keys())
+        # sort the keys by length to ensure that we always get
+        # [singles, doubles, ...]
+        return sorted(self.axis_spaces, key=len)
 
-    def diagonal(self, block=None):
+    def diagonal(self):
         """Return the diagonal of the ADC matrix"""
-        if block is not None:
-            warnings.warn("Support for the block argument will be dropped "
-                          "in 0.16.0.")
-            if block == "s":
-                return self.__diagonal.ph
-            if block == "d":
-                return self.__diagonal.pphh
         return self.__diagonal
-
-    def compute_apply(self, block, tensor):
-        warnings.warn("The compute_apply function is deprecated and "
-                      "will be removed in 0.16.0.")
-        if block in ("ss", "sd", "ds", "dd"):
-            warnings.warn("The singles-doubles interface is deprecated and "
-                          "will be removed in 0.16.0.")
-            block = {"ss": "ph_ph", "sd": "ph_pphh",
-                     "ds": "pphh_ph", "dd": "pphh_pphh"}[block]
-        return self.block_apply(block, tensor)
 
     def block_apply(self, block, tensor):
         """
@@ -311,7 +273,7 @@ class AdcMatrix(AdcMatrixlike):
         with self.timer.record(f"apply/{block}"):
             outblock, inblock = block.split("_")
             ampl = AmplitudeVector(**{inblock: tensor})
-            ret = self.blocks_ph[block](ampl)
+            ret = self.blocks[block](ampl)
             return getattr(ret, outblock)
 
     @timed_member_call()
@@ -320,20 +282,11 @@ class AdcMatrix(AdcMatrixlike):
         Compute the matrix-vector product of the ADC matrix
         with an excitation amplitude and return the result.
         """
-        return sum(block(v) for block in self.blocks_ph.values())
+        return sum(block(v) for block in self.blocks.values())
 
     def rmatvec(self, v):
         # ADC matrix is symmetric
         return self.matvec(v)
-
-    def compute_matvec(self, ampl):
-        """
-        Compute the matrix-vector product of the ADC matrix
-        with an excitation amplitude and return the result.
-        """
-        warnings.warn("The compute_matvec function is deprecated and "
-                      "will be removed in 0.16.0.")
-        return self.matvec(ampl)
 
     def __matmul__(self, other):
         if isinstance(other, AmplitudeVector):
@@ -565,25 +518,6 @@ class AdcMatrix(AdcMatrixlike):
         return out
 
 
-class AdcBlockView(AdcMatrix):
-    def __init__(self, fullmatrix, block):
-        warnings.warn("The AdcBlockView class got deprecated and will be "
-                      "removed in 0.16.0. Use the matrix.block_view "
-                      "function instead.")
-        assert isinstance(fullmatrix, AdcMatrix)
-
-        self.__fullmatrix = fullmatrix
-        self.__block = block
-        if block == "s":
-            block_orders = dict(ph_ph=fullmatrix.block_orders["ph_ph"],
-                                ph_pphh=None, pphh_ph=None, pphh_pphh=None)
-        else:
-            raise NotImplementedError(f"Block {block} not implemented")
-        super().__init__(fullmatrix.method, fullmatrix.ground_state,
-                         block_orders=block_orders,
-                         intermediates=fullmatrix.intermediates)
-
-
 class AdcMatrixShifted(AdcMatrix):
     def __init__(self, matrix, shift=0.0):
         """
@@ -619,8 +553,8 @@ class AdcMatrixShifted(AdcMatrix):
             ret += self.shift * in_vec
         return ret
 
-    def diagonal(self, block=None):
-        out = super().diagonal(block)
+    def diagonal(self):
+        out = super().diagonal()
         out = out + self.shift  # Shift the diagonal
         return out
 

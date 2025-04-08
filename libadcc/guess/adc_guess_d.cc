@@ -252,7 +252,7 @@ void transfer_elements(const list2d_t& ov1, const list2d_t& ov2, index_group_map
 
       to.add_index(value, spm, spi, idx);
     }  // for itb
-  }    // for ita
+  }  // for ita
 }
 
 size_t build_guesses(list_t::iterator& cur_guess, list_t::iterator end,

@@ -418,7 +418,9 @@ def libadcc_extension():
     ext = Pybind11Extension("libadcc", libadcc_sources("extension"),
                             language="c++", **extargs)
     if flags["coverage"]:
-        ext.extra_compile_args += ["--coverage", "-O0", "-g"]
+        ext.extra_compile_args += [
+            "--coverage", "-O0", "-g", "-fprofile-update=atomic"
+        ]
         ext.extra_link_args += ["--coverage"]
     return ext
 
@@ -469,7 +471,7 @@ adccsetup(
     ],
     #
     author=("Michael F. Herbst, Maximilian Scheurer, Jonas Leitner, "
-            "Antonia Papapostolou"),
+            "Antonia Papapostolou, Friederike Schneider, Adrian L. Dempwolff"),
     author_email="developers@adc-connect.org",
     license="GPL v3",
     url="https://adc-connect.org",
@@ -478,7 +480,7 @@ adccsetup(
         "Issues": "https://github.com/adc-connect/adcc/issues",
     },
     #
-    version="0.15.17",
+    version="0.16.0",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
@@ -493,7 +495,7 @@ adccsetup(
         "Operating System :: POSIX :: Linux",
     ],
     #
-    packages=find_packages(exclude=["*.test*", "test"]),
+    packages=find_packages(),
     ext_modules=[libadcc_extension()],
     zip_safe=False,
     #
@@ -508,7 +510,7 @@ adccsetup(
         "tqdm >= 4.30",
     ],
     extras_require={
-        "tests": ["pytest", "pytest-cov", "pyyaml", "pandas >= 0.25.0"],
+        "tests": ["pytest", "pytest-cov", "pandas >= 0.25.0"],
         "build_docs": ["sphinx>=2", "breathe", "sphinxcontrib-bibtex",
                        "sphinx-automodapi", "sphinx-rtd-theme"],
         "analysis": ["matplotlib >= 3.0", "pandas >= 0.25.0"],

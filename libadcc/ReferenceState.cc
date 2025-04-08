@@ -350,9 +350,16 @@ std::string ReferenceState::irreducible_representation() const {
   throw not_implemented_error("Only C1 is implemented.");
 }
 
-std::vector<scalar_type> ReferenceState::nuclear_multipole(size_t order) const {
+std::vector<scalar_type> ReferenceState::nuclear_multipole(
+      size_t order, std::array<scalar_type, 3> gauge_origin) const {
   std::vector<scalar_type> ret((order + 2) * (order + 1) / 2);
-  m_hfsoln_ptr->nuclear_multipole(order, ret.data(), ret.size());
+  m_hfsoln_ptr->nuclear_multipole(order, gauge_origin, ret.data(), ret.size());
+  return ret;
+}
+
+const std::array<scalar_type, 3> ReferenceState::gauge_origin_to_xyz(
+      std::string gauge_origin) const {
+  const std::array<scalar_type, 3> ret = m_hfsoln_ptr->gauge_origin_to_xyz(gauge_origin);
   return ret;
 }
 
