@@ -555,7 +555,8 @@ def eigsh(matrix, guesses, n_ep=None, n_block=None, max_subspace=None,
     return state
 
 
-def eigsh_folded(matrix, guesses, omegas=None, n_ep=None, max_subspace=None,
+def eigsh_folded(matrix, guesses, omegas=None, n_ep=None, n_block=None,
+                 max_subspace=None,
                  conv_tol=1e-9, which="SA", max_iter=70,
                  callback=None, preconditioner=None,
                  preconditioning_method="Davidson",
@@ -573,6 +574,9 @@ def eigsh_folded(matrix, guesses, omegas=None, n_ep=None, max_subspace=None,
         Guess vectors (fixes also the Davidson block size)
     n_ep : int or NoneType, optional
         Number of eigenpairs to be computed
+    n_block : int or NoneType, optional
+        The solver block size: the number of vectors that are added to the subspace
+        in each iteration
     max_subspace : int or NoneType, optional
         Maximal subspace size
     conv_tol : float, optional
@@ -626,7 +630,18 @@ def eigsh_folded(matrix, guesses, omegas=None, n_ep=None, max_subspace=None,
     if n_ep is None:
         n_ep = len(guesses)
     elif n_ep > len(guesses):
-        raise ValueError("n_ep cannot exceed the number of guess vectors.")
+        raise ValueError(f"n_ep (= {n_ep}) cannot exceed the number of guess "
+                         f"vectors (= {len(guesses)}).")
+
+    if n_block is None:
+        n_block = n_ep
+    elif n_block < n_ep:
+        raise ValueError(f"n_block (= {n_block}) cannot be smaller than the number "
+                         f"of states requested (= {n_ep}).")
+    elif n_block > len(guesses):
+        raise ValueError(f"n_block (= {n_block}) cannot exceed the number of guess "
+                         f"vectors (= {len(guesses)}).")
+
     if not max_subspace:
         # TODO Arnoldi uses this:
         # max_subspace = max(2 * n_ep + 1, 20)
@@ -676,6 +691,7 @@ def eigsh_folded(matrix, guesses, omegas=None, n_ep=None, max_subspace=None,
 
     # Retain single part of guess vectors
     guesses_i = [AmplitudeVector(ph=guess.__getitem__("ph")) for guess in guesses]
+    
     if omegas is None:
         # Calculate the initial (guess) eigenvalue for state 0.
         Avi = matrix.block_apply("ph_ph", guesses_i[0].ph)
@@ -704,6 +720,7 @@ def eigsh_folded(matrix, guesses, omegas=None, n_ep=None, max_subspace=None,
                 max_subspace,
                 max_iter,
                 n_ep=n_ep,
+                n_block=n_block,
                 is_converged=convergence_micro,
                 callback=callback,
                 which=which,
