@@ -61,6 +61,7 @@ jobs:
           export PATH="/usr/local/opt/ccache/libexec:$PATH"
           export PATH="/usr/lib/ccache:$PATH"
           python -m pip install --user pyscf cppe wheel
+          python -m pip install --user -U setuptools
       #
       - name: Install package
         run: |
