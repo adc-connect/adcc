@@ -20,284 +20,243 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import warnings
 import numpy as np
-
-from .misc import cached_property, requires_module
-from .timings import Timer, timed_member_call
-from .visualisation import ExcitationSpectrum
-from .OneParticleOperator import product_trace
-from .AdcMethod import AdcMethod
-
 from scipy import constants
-from .Excitation import mark_excitation_property
-from .solver.SolverStateBase import EigenSolverStateBase
+import warnings
+
+from .ElectronicStates import ElectronicStates, _timer_name
+from .Excitation import Excitation
+from .misc import cached_member_function
+from .OneParticleOperator import OneParticleOperator, product_trace
 
 
-class ElectronicTransition:
-    def __init__(self, data, method=None, property_method=None):
-        """Construct an ElectronicTransition class from some data obtained
-        from an interative solver or another :class:`ElectronicTransition`
-        object.
+class ElectronicTransition(ElectronicStates):
+    # The child classes S2S and ExcitedStates currently
+    # both share the Excitation class for the state view.
+    # This might change in the future once e.g. ExcitedStates
+    # specific methods are implemented.
+    _state_view_cls = Excitation
 
-        Parameters
-        ----------
-        data
-            Any kind of iterative solver state. Typically derived off
-            a :class:`solver.EigenSolverStateBase`.
-        method : str, optional
-            Provide an explicit method parameter if data contains none.
-        property_method : str, optional
-            Provide an explicit method for property calculations to
-            override the automatic selection.
+    @property
+    def excitations(self) -> list[Excitation]:
         """
-        self.matrix = data.matrix
-        self.ground_state = self.matrix.ground_state
-        self.reference_state = self.matrix.ground_state.reference_state
-        self.operators = self.reference_state.operators
-
-        # List of all the objects which have timers (do not yet collect
-        # timers, since new times might be added implicitly at a later point)
-        self._property_timer = Timer()
-        self._timed_objects = [("", self.reference_state),
-                               ("adcmatrix", self.matrix),
-                               ("mp", self.ground_state),
-                               ("intermediates", self.matrix.intermediates)]
-        if hasattr(data, "timer"):
-            datakey = getattr(data, "algorithm", data.__class__.__name__)
-            self._timed_objects.append((datakey, data))
-
-        # Copy some optional attributes
-        for optattr in ["converged", "spin_change", "kind", "n_iter"]:
-            if hasattr(data, optattr):
-                setattr(self, optattr, getattr(data, optattr))
-
-        self.method = getattr(data, "method", method)
-        if self.method is None:
-            self.method = self.matrix.method
-        if not isinstance(self.method, AdcMethod):
-            self.method = AdcMethod(self.method)
-        if property_method is None:
-            if self.method.level < 3:
-                property_method = self.method
-            else:
-                # Auto-select ADC(2) properties for ADC(3) calc
-                property_method = self.method.at_level(2)
-        elif not isinstance(property_method, AdcMethod):
-            property_method = AdcMethod(property_method)
-        self._property_method = property_method
-
-        # Special stuff for special solvers
-        if isinstance(data, EigenSolverStateBase):
-            self._excitation_vector = data.eigenvectors
-            self._excitation_energy_uncorrected = data.eigenvalues
-            self.residual_norm = data.residual_norms
-        else:
-            if hasattr(data, "eigenvalues"):
-                self._excitation_energy_uncorrected = data.eigenvalues
-            if hasattr(data, "eigenvectors"):
-                self._excitation_vector = data.eigenvectors
-            # if both excitation_energy and excitation_energy_uncorrected
-            # are present, the latter one has priority
-            if hasattr(data, "excitation_energy"):
-                self._excitation_energy_uncorrected = \
-                    data.excitation_energy.copy()
-            if hasattr(data, "excitation_energy_uncorrected"):
-                self._excitation_energy_uncorrected =\
-                    data.excitation_energy_uncorrected.copy()
-            if hasattr(data, "excitation_vector"):
-                self._excitation_vector = data.excitation_vector
-
-        # Collect all excitation energy corrections
-        self._excitation_energy = self._excitation_energy_uncorrected.copy()
-
-    def __len__(self):
-        return self.size
+        Provides a list of Excitations, i.e., a view to all individual
+        excitations and their properties.
+        """
+        return [self._state_view(i) for i in range(self.size)]
 
     @property
-    def size(self):
-        return self._excitation_energy.size
+    def transition_dm(self) -> list[OneParticleOperator]:
+        """List of transition density matrices of all computed states"""
+        return [self._transition_dm(i) for i in range(self.size)]
+
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _transition_dm(self, state_n: int) -> OneParticleOperator:
+        """Computes the tansition density matrix for a single state"""
+        evec = self.excitation_vector[state_n]
+        return self._module.transition_dm(
+            self.property_method, self.ground_state, evec, self.matrix.intermediates
+        )
 
     @property
-    def timer(self):
-        """Return a cumulative timer collecting timings from the calculation"""
-        ret = Timer()
-        for key, obj in self._timed_objects:
-            ret.attach(obj.timer, subtree=key)
-        ret.attach(self._property_timer, subtree="properties")
-        ret.time_construction = self.reference_state.timer.time_construction
-        return ret
+    def transition_dipole_moment(self) -> np.ndarray:
+        """Array of transition dipole moments of all computed states"""
+        return np.array([
+            self._transition_dipole_moment(i) for i in range(self.size)
+        ])
 
-    @property
-    def property_method(self):
-        """The method used to evaluate ADC properties"""
-        return self._property_method
-
-    @property
-    @mark_excitation_property()
-    def excitation_energy(self):
-        """Excitation energies including all corrections in atomic units"""
-        return self._excitation_energy
-
-    @property
-    @mark_excitation_property()
-    def excitation_energy_uncorrected(self):
-        """Excitation energies without any corrections in atomic units"""
-        return self._excitation_energy_uncorrected
-
-    @property
-    @mark_excitation_property()
-    def excitation_vector(self):
-        """List of excitation vectors"""
-        return self._excitation_vector
-
-    @cached_property
-    @mark_excitation_property()
-    @timed_member_call(timer="_property_timer")
-    def transition_dipole_moment(self):
-        """List of transition dipole moments of all computed states"""
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _transition_dipole_moment(self, state_n: int) -> np.ndarray:
+        """Computes the transition dipole moment for a single state"""
         if self.property_method.level == 0:
             warnings.warn("ADC(0) transition dipole moments are known to be "
                           "faulty in some cases.")
         dipole_integrals = self.operators.electric_dipole
-        return np.array([
+        tdm = self._transition_dm(state_n)
+        return np.array(
             [product_trace(comp, tdm) for comp in dipole_integrals]
-            for tdm in self.transition_dm
+        )
+
+    @property
+    def transition_dipole_moment_velocity(self) -> np.ndarray:
+        """
+        Array of transition dipole moments in the velocity gauge of all
+        computed states
+        """
+        return np.array([
+            self._transition_dipole_moment_velocity(i) for i in range(self.size)
         ])
 
-    @cached_property
-    @mark_excitation_property()
-    @timed_member_call(timer="_property_timer")
-    def transition_dipole_moment_velocity(self):
-        """List of transition dipole moments in the
-        velocity gauge of all computed states"""
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _transition_dipole_moment_velocity(self, state_n: int) -> np.ndarray:
+        """
+        Computes the transition dipole moments in the velocity gauge for a
+        single state
+        """
         if self.property_method.level == 0:
             warnings.warn("ADC(0) transition velocity dipole moments "
                           "are known to be faulty in some cases.")
         dipole_integrals = self.operators.electric_dipole_velocity
-        return np.array([
+        tdm = self._transition_dm(state_n)
+        return np.array(
             [product_trace(comp, tdm) for comp in dipole_integrals]
-            for tdm in self.transition_dm
+        )
+
+    def transition_magnetic_dipole_moment(self,
+                                          gauge_origin="origin") -> np.ndarray:
+        """Array of transition magnetic dipole moments of all computed states"""
+        return np.array([
+            self._transition_magnetic_dipole_moment(state_n=i,
+                                                    gauge_origin=gauge_origin)
+            for i in range(self.size)
         ])
 
-    @property
-    @mark_excitation_property()
-    @timed_member_call(timer="_property_timer")
-    def transition_magnetic_dipole_moment(self):
-        """List of transition magnetic dipole moments of all computed states"""
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _transition_magnetic_dipole_moment(self, state_n: int,
+                                           gauge_origin="origin") -> np.ndarray:
+        """
+        Computes the transition magnetic dipole moments for a single state
+        """
         if self.property_method.level == 0:
             warnings.warn("ADC(0) transition magnetic dipole moments "
                           "are known to be faulty in some cases.")
+        mag_dipole_integrals = self.operators.magnetic_dipole(gauge_origin)
+        tdm = self._transition_dm(state_n)
+        return np.array([
+            product_trace(comp, tdm) for comp in mag_dipole_integrals
+        ])
 
-        def g_origin_dep_trans_magdip_moment(gauge_origin="origin"):
-            mag_dipole_integrals = self.operators.magnetic_dipole(gauge_origin)
-            return np.array([
-                [product_trace(comp, tdm) for comp in mag_dipole_integrals]
-                for tdm in self.transition_dm
-            ])
-        return g_origin_dep_trans_magdip_moment
+    def transition_quadrupole_moment(self, gauge_origin="origin") -> np.ndarray:
+        """Array of transition quadrupole moments of all computed states"""
+        return np.array([
+            self._transition_quadrupole_moment(state_n=i, gauge_origin=gauge_origin)
+            for i in range(self.size)
+        ])
 
-    @property
-    @mark_excitation_property()
-    @timed_member_call(timer="_property_timer")
-    def transition_quadrupole_moment(self):
-        """List of transition quadrupole moments of all computed states"""
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _transition_quadrupole_moment(self, state_n: int, gauge_origin="origin"):
+        """Computes the transition quadrupole moments for a single state"""
         if self.property_method.level == 0:
             warnings.warn("ADC(0) transition quadrupole moments are known to be "
                           "faulty in some cases.")
+        quadrupole_integrals = self.operators.electric_quadrupole(gauge_origin)
+        tdm = self._transition_dm(state_n)
+        return np.array([
+            [product_trace(q, tdm) for q in quad] for quad in quadrupole_integrals
+        ])
 
-        def g_origin_dep_trans_el_quad_moment(gauge_origin="origin"):
-            quadrupole_integrals = self.operators.electric_quadrupole(gauge_origin)
-            return np.array([[
-                [product_trace(quad1, tdm) for quad1 in quad]
-                for quad in quadrupole_integrals]
-                for tdm in self.transition_dm
-            ])
-        return g_origin_dep_trans_el_quad_moment
+    def transition_quadrupole_moment_velocity(self,
+                                              gauge_origin="origin") -> np.ndarray:
+        """Array of transition quadrupole moments of all computed states"""
+        return np.array([
+            self._transition_quadrupole_moment_velocity(state_n=i,
+                                                        gauge_origin=gauge_origin)
+            for i in range(self.size)
+        ])
 
-    @property
-    @mark_excitation_property()
-    @timed_member_call(timer="_property_timer")
-    def transition_quadrupole_moment_velocity(self):
-        """List of transition quadrupole moments of all computed states"""
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _transition_quadrupole_moment_velocity(self, state_n: int,
+                                               gauge_origin="origin") -> np.ndarray:
+        """Compute the transition quadrupole moments for a single state"""
         if self.property_method.level == 0:
             warnings.warn("ADC(0) transition velocity quadrupole moments are known "
                           "to be faulty in some cases.")
-
-        def g_origin_dep_trans_el_quad_vel_moment(gauge_origin="origin"):
-            quadrupole_integrals = \
-                self.operators.electric_quadrupole_velocity(gauge_origin)
-            return np.array([[
-                [product_trace(quad1, tdm) for quad1 in quad]
-                for quad in quadrupole_integrals]
-                for tdm in self.transition_dm
-            ])
-        return g_origin_dep_trans_el_quad_vel_moment
-
-    @cached_property
-    @mark_excitation_property()
-    def oscillator_strength(self):
-        """List of oscillator strengths of all computed states"""
-        return 2. / 3. * np.array([
-            np.linalg.norm(tdm)**2 * np.abs(ev)
-            for tdm, ev in zip(self.transition_dipole_moment,
-                               self.excitation_energy)
-        ])
-
-    @cached_property
-    @mark_excitation_property()
-    def oscillator_strength_velocity(self):
-        """List of oscillator strengths in velocity gauge of all computed states"""
-        return 2. / 3. * np.array([
-            np.linalg.norm(tdm)**2 / np.abs(ev)
-            for tdm, ev in zip(self.transition_dipole_moment_velocity,
-                               self.excitation_energy)
-        ])
-
-    @cached_property
-    @mark_excitation_property()
-    def rotatory_strength(self):
-        """List of rotatory strengths (in velocity gauge) of all computed states.
-        This property is gauge-origin invariant, thus, it is not possible to
-        select a gauge origin."""
+        quadrupole_integrals = (
+            self.operators.electric_quadrupole_velocity(gauge_origin)
+        )
+        tdm = self._transition_dm(state_n)
         return np.array([
-            np.dot(tdm, magmom) / ee
-            for tdm, magmom, ee in zip(
-                self.transition_dipole_moment_velocity,
-                self.transition_magnetic_dipole_moment("origin"),
-                self.excitation_energy)
+            [product_trace(q, tdm) for q in quad] for quad in quadrupole_integrals
         ])
 
     @property
-    @mark_excitation_property()
-    def rotatory_strength_length(self):
-        """List of rotatory strengths in length gauge of all computed states"""
-        def g_origin_dep_rot_str_len(gauge_origin="origin"):
-            return np.array([
-                -1.0 * np.dot(tdm, magmom)
-                for tdm, magmom in zip(
-                    self.transition_dipole_moment,
-                    self.transition_magnetic_dipole_moment(gauge_origin))
-            ])
-        return g_origin_dep_rot_str_len
+    def oscillator_strength(self) -> np.ndarray:
+        """Array of oscillator strengths of all computed states"""
+        return np.array([self._oscillator_strength(i) for i in range(self.size)])
+
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _oscillator_strength(self, state_n: int) -> np.float64:
+        """Computes the oscillator strengths for a single state"""
+        tdm = self._transition_dipole_moment(state_n)
+        ev = self.excitation_energy[state_n]
+        return 2. / 3. * np.linalg.norm(tdm)**2 * np.abs(ev)
 
     @property
-    @mark_excitation_property()
-    def cross_section(self):
-        """List of one-photon absorption cross sections of all computed states"""
+    def oscillator_strength_velocity(self) -> np.ndarray:
+        """Array of oscillator strengths in velocity gauge of all computed states"""
+        return np.array([
+            self._oscillator_strength_velocity(i) for i in range(self.size)
+        ])
+
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _oscillator_strength_velocity(self, state_n: int) -> np.float64:
+        """Computes the oscillator strength in velocity gauge for a single state"""
+        tdm = self._transition_dipole_moment_velocity(state_n)
+        ev = self.excitation_energy[state_n]
+        return 2. / 3. * np.linalg.norm(tdm)**2 / np.abs(ev)
+
+    @property
+    def rotatory_strength(self) -> np.ndarray:
+        """
+        Array of rotatory strengths (in velocity gauge) of all computed states.
+        This property is gauge-origin invariant, thus, it is not possible to
+        select a gauge origin.
+        """
+        return np.array([
+            self._rotatory_strength(i) for i in range(self.size)
+        ])
+
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _rotatory_strength(self, state_n: int) -> np.float64:
+        """
+        Computes the rotatory strength (in velocity gauge) for a single state.
+        This property is gauge-origin invariant, thus, it is not possible to
+        select a gauge origin.
+        """
+        tdm = self._transition_dipole_moment_velocity(state_n)
+        magmom = self._transition_magnetic_dipole_moment(
+            state_n=state_n, gauge_origin="origin"
+        )
+        ee = self.excitation_energy[state_n]
+        return np.dot(tdm, magmom) / ee
+
+    def rotatory_strength_length(self, gauge_origin="origin") -> np.ndarray:
+        """Array of rotatory strengths in length gauge of all computed states"""
+        return np.array([
+            self._rotatory_strength_length(state_n=i, gauge_origin=gauge_origin)
+            for i in range(self.size)
+        ])
+
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _rotatory_strength_length(self, state_n: int,
+                                  gauge_origin="origin") -> np.float64:
+        """Computes the rotatory strength in length gauge for a single state"""
+        tdm = self._transition_dipole_moment(state_n)
+        magmom = self._transition_magnetic_dipole_moment(state_n=state_n,
+                                                         gauge_origin=gauge_origin)
+        return -1.0 * np.dot(tdm, magmom)
+
+    @property
+    def cross_section(self) -> np.ndarray:
+        """Array of one-photon absorption cross sections of all computed states"""
+        return np.array([self._cross_section(i) for i in range(self.size)])
+
+    def _cross_section(self, state_n: int) -> np.float64:
+        """Computes the one-photon absorption cross sections for a single state"""
         # TODO Source?
         fine_structure = constants.fine_structure
         fine_structure_au = 1 / fine_structure
         prefac = 2.0 * np.pi ** 2 / fine_structure_au
-        return prefac * self.oscillator_strength
+        return prefac * self._oscillator_strength(state_n)
 
-    @requires_module("matplotlib")
     def plot_spectrum(self, broadening="lorentzian", xaxis="eV",
-                      yaxis="cross_section", width=0.01, **kwargs):
-        """One-shot plotting function for the spectrum generated by all states
+                      yaxis="cross_section", width=0.01,
+                      width_unit: str = "au", **kwargs):
+        """
+        One-shot plotting function for the spectrum generated by all states
         known to this class.
 
-        Makes use of the :class:`adcc.visualisation.ExcitationSpectrum` class
+        Makes use of the :class:`adcc.visualisation.Spectrum` class
         in order to generate and format the spectrum to be plotted, using
         many sensible defaults.
 
@@ -307,7 +266,7 @@ class ElectronicTransition:
             The broadening type to used for the computed excitations.
             A value of None disables broadening any other value is passed
             straight to
-            :func:`adcc.visualisation.ExcitationSpectrum.broaden_lines`.
+            :func:`adcc.visualisation.Spectrum.broaden_lines`.
         xaxis : str
             Energy unit to be used on the x-Axis. Options:
             ["eV", "au", "nm", "cm-1"]
@@ -319,63 +278,26 @@ class ElectronicTransition:
             Gaussian broadening standard deviation or Lorentzian broadening
             gamma parameter. The value should be given in atomic units
             and will be converted to the unit of the energy axis.
+        width_unit: str, optional
+            The unit the width is given in. All xaxis options except "nm" are
+            possible.
         """
-        from matplotlib import pyplot as plt
-        if xaxis == "eV":
-            eV = constants.value("Hartree energy in eV")
-            energies = self.excitation_energy * eV
-            width = width * eV
-            xlabel = "Energy (eV)"
-        elif xaxis in ["au", "Hartree", "a.u."]:
-            energies = self.excitation_energy
-            xlabel = "Energy (au)"
-        elif xaxis == "nm":
-            hc = constants.h * constants.c
-            Eh = constants.value("Hartree energy")
-            energies = hc / (self.excitation_energy * Eh) * 1e9
-            xlabel = "Wavelength (nm)"
-            if broadening is not None and not callable(broadening):
-                raise ValueError("xaxis=nm and broadening enabled is "
-                                 "not supported.")
-        elif xaxis in ["cm-1", "cm^-1", "cm^{-1}"]:
-            towvn = constants.value("hartree-inverse meter relationship") / 100
-            energies = self.excitation_energy * towvn
-            width = width * towvn
-            xlabel = "Wavenumbers (cm^{-1})"
-        else:
-            raise ValueError("Unknown xaxis specifier: {}".format(xaxis))
-
         if yaxis in ["osc", "osc_strength", "oscillator_strength", "f"]:
-            absorption = self.oscillator_strength
+            yvalues = self.oscillator_strength
             ylabel = "Oscillator strengths (au)"
         elif yaxis in ["dipole", "dipole_norm", "μ"]:
-            absorption = np.linalg.norm(self.transition_dipole_moment, axis=1)
+            yvalues = np.linalg.norm(self.transition_dipole_moment, axis=1)
             ylabel = "Modulus of transition dipole (au)"
         elif yaxis in ["cross_section", "σ"]:
-            absorption = self.cross_section
+            yvalues = self.cross_section
             ylabel = "Cross section (au)"
         elif yaxis in ["rot", "rotational_strength", "rotatory_strength"]:
-            absorption = self.rotatory_strength
+            yvalues = self.rotatory_strength
             ylabel = "Rotatory strength (au)"
         else:
-            raise ValueError("Unknown yaxis specifier: {}".format(yaxis))
+            raise ValueError(f"Unknown yaxis specifier: {yaxis}")
 
-        sp = ExcitationSpectrum(energies, absorption)
-        sp.xlabel = xlabel
-        sp.ylabel = ylabel
-        if not broadening:
-            plots = sp.plot(style="discrete", **kwargs)
-        else:
-            kwdisc = kwargs.copy()
-            kwdisc.pop("label", "")
-            plots = sp.plot(style="discrete", **kwdisc)
-
-            kwargs.pop("color", "")
-            sp_broad = sp.broaden_lines(width, shape=broadening)
-            plots.extend(sp_broad.plot(color=plots[0].get_color(),
-                                       style="continuous", **kwargs))
-
-        if xaxis in ["nm"]:
-            # Invert x axis
-            plt.xlim(plt.xlim()[::-1])
-        return plots
+        return self._plot_spectrum(
+            yvalues=yvalues, ylabel=ylabel, xaxis=xaxis, broadening=broadening,
+            width=width, width_unit=width_unit, **kwargs
+        )

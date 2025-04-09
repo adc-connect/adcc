@@ -67,6 +67,14 @@ class DataOperatorIntegralProvider:
     def __init__(self, backend="data"):
         self.backend = backend
 
+    @property
+    def available(self) -> tuple[str]:
+        blacklist = ("backend", "available")
+        return tuple(
+            integral for integral in dir(self)
+            if not integral.startswith("_") and integral not in blacklist
+        )
+
 
 class DataHfProvider(HartreeFockProvider):
     def __init__(self, data):

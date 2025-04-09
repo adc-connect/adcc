@@ -123,7 +123,7 @@ def modified_transition_moments(method, ground_state, operator=None,
     unpack = False
     if operator is None:
         operator = ground_state.reference_state.operators.electric_dipole
-    elif not isinstance(operator, list):
+    elif not isinstance(operator, (list, tuple)):
         unpack = True
         operator = [operator]
     if method.name not in DISPATCH:
