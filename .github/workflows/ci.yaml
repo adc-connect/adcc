@@ -19,7 +19,7 @@ jobs:
         include:
           - {version: '3.11', os: ubuntu-latest, documentation: True}
           - {version: '3.9', os: ubuntu-latest, documentation: False}
-          - {version: '3.11', os: macos-13 , documentation: False}
+          - {version: '3.11', os: macos-latest, documentation: False}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -137,7 +137,7 @@ jobs:
       matrix:
         include:
           - {version: '3.11', os: ubuntu-latest, documentation: False}
-          - {version: '3.11', os: macos-13 , documentation: False}
+          - {version: '3.11', os: macos-latest, documentation: False}
     defaults:
       run:
         shell: bash -l {0}
