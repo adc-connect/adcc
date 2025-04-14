@@ -29,6 +29,7 @@ import json
 import time
 import shlex
 import shutil
+import platform
 import tempfile
 import functools
 import sysconfig
@@ -370,8 +371,12 @@ def libadcc_extension():
                 if sys.platform == "linux":
                     url = [asset for asset in assets if "-linux_x86_64" in asset]
                 elif sys.platform == "darwin":
-                    url = [asset for asset in assets
-                           if "-macosx_" in asset and "_x86_64" in asset]
+                    # platform.machine() gives e.g., arm64
+                    # we want to match macosx_X_arm64, where X is the Version
+                    url = [
+                        asset for asset in assets
+                        if "-macosx_" in asset and f"_{platform.machine()}" in asset
+                    ]
                 else:
                     raise AssertionError("Should not get to download for "
                                          "unspported platform.")

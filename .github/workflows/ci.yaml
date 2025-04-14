@@ -49,13 +49,6 @@ jobs:
         run: |
           mkdir $HOME/.adcc/
           echo 'coverage = True' > $HOME/.adcc/siteconfig.py
-      - name: Hard-code download url for MacOS
-        run: |
-          echo "libtensor_url = \"$BASE_URL/$VERSION_URL\"" >> $HOME/.adcc/siteconfig.py
-        env:
-          BASE_URL: https://github.com/adc-connect/libtensor/releases/download
-          VERSION_URL: v3.0.1/libtensorlight-3.0.1-macosx_10_15_x86_64.tar.gz
-        if: contains( matrix.os, 'macos')
       - name: Install python dependencies
         run: |
           export PATH="/usr/local/opt/ccache/libexec:$PATH"
