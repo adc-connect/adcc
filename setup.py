@@ -310,9 +310,8 @@ def libadcc_extension():
         libraries=[],
         library_dirs=[],
         include_dirs=[],
-        extra_link_args=["-arch", platform.machine()],
-        extra_compile_args=["-Wall", "-Wextra", "-Werror", "-O3",
-                            "-arch", platform.machine()],
+        extra_link_args=[],
+        extra_compile_args=["-Wall", "-Wextra", "-Werror", "-O3"],
         runtime_library_dirs=[],
         extra_objects=[],
         define_macros=[],
@@ -326,6 +325,9 @@ def libadcc_extension():
         flags["extra_compile_args"] += ["-Wno-unused-command-line-argument",
                                         "-Wno-undefined-var-template",
                                         "-Wno-bitwise-instead-of-logical"]
+        # NOTE: This assumes a clang compiler!
+        flags["extra_compile_args"].extend(["-arch", platform.machine()])
+        flags["extra_link_args"].extend(["-arch", platform.machine()])
     if sys.platform.startswith("linux"):
         # otherwise fails with -O3 on gcc>=12
         flags["extra_compile_args"] += ["-Wno-array-bounds"]
