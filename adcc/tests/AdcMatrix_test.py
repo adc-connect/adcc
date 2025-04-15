@@ -25,7 +25,11 @@ import pytest
 import numpy as np
 from numpy.testing import assert_allclose
 
-from adcc.AdcMatrix import AdcExtraTerm, AdcMatrixProjected, AdcMatrixShifted
+from adcc.AdcMatrix import (
+    AdcExtraTerm,
+    AdcMatrixProjected,
+    AdcMatrixShifted,
+    AdcMatrixFolded)
 from adcc.Intermediates import Intermediates
 from adcc.adc_pp.matrix import AdcBlock
 
@@ -401,3 +405,97 @@ class TestAdcMatrixProjected:
         assert_nonzero_blocks(ores.pphh, pres.pphh, nonzeros["pphh"], tol=1e-14)
 
     # TODO Test block_view, block_apply
+
+
+@pytest.mark.parametrize("system", ["h2o_sto3g", "cn_sto3g"])
+class TestAdcMatrixFolded:
+    def construct_matrices(self, system: str):
+        reference_state = testdata_cache.refstate(system, case="gen")
+        ground_state = adcc.LazyMp(reference_state)
+        matrix = adcc.AdcMatrix("adc2", ground_state)
+
+        folded = AdcMatrixFolded(matrix)
+        return matrix, folded
+
+    def test_diagonal(self, system: str):
+        matrix, folded = self.construct_matrices(system)
+
+        odiag = matrix.diagonal()
+        fdiag = folded.diagonal()
+        assert np.max(np.abs(fdiag["ph"].to_ndarray()
+                             - odiag["ph"].to_ndarray())) < 1e-12
+        assert not hasattr(fdiag, "pphh")
+
+    def test_matmul(self, system: str):
+        omega = 0.5
+        matrix, folded = self.construct_matrices(system)
+        folded.omega = omega
+
+        vec = adcc.guess_zero(matrix)
+        vec.set_random()
+
+        ores = matrix @ vec
+        fres = folded @ vec
+
+        assert ores.ph.describe_symmetry() == fres.ph.describe_symmetry()
+        assert not hasattr(fres, "pphh")
+        # assert_equal_symmetry(ores.ph, fres.ph)
+
+        # Consistency of the different part of ores.ph and freq.sh, i.e A_12 * V2
+        diff_o = matrix.block_apply("ph_pphh", vec.pphh)
+
+        diag = matrix.diagonal().pphh
+        e = diag.ones_like()
+        u2 = matrix.block_apply("pphh_ph", vec.ph) / (e * folded.omega - diag)
+        diff_f = matrix.block_apply("ph_pphh", u2)
+
+        diff_matmul = ores.ph - fres.ph
+        diff_man = diff_o - diff_f
+        diff = diff_man - diff_matmul
+        assert np.max(np.abs(diff.to_ndarray())) < 1e-12
+
+
+"""
+    def test_unfold(self, system: str):
+
+        matrix, folded = self.construct_matrices(system)
+
+        # omega = 0.5
+
+        from adcc.workflow import run_adc
+        adc2 = run_adc(matrix, method="adc2", kind="singlet", n_states=1)
+        omega = adc2.excitation_energy_uncorrected
+        vec = adc2.excitation_vector[0]
+
+        # vec = adcc.guess_zero(matrix)
+        # vec.set_random()
+        print(vec)
+
+        # from adcc.solver.conjugate_gradient import conjugate_gradient
+        # matrix_shifted = AdcMatrixShifted(matrix, shift=-omega)
+        # rhs = vec.zeros_like()
+        # fres_unfold = conjugate_gradient(matrix_shifted, rhs=rhs, x0=vec)
+        # print(fres_unfold)
+        folded.omega = omega
+        fres_unfold = folded.unfold(vec)
+
+        # # Consistency of manully recomputed vector and "unfold"
+        # diff = vec.pphh - fres_unfold.pphh
+        # assert np.max(np.abs(diff.to_ndarray())) < 1e-12
+
+        # Consistency of symmetry
+        assert vec.ph.describe_symmetry() == fres_unfold.ph.describe_symmetry()
+        print("vec.pphh", vec.pphh.describe_symmetry())
+        print("fres_unfold.pphh", fres_unfold.pphh.describe_symmetry())
+        assert vec.pphh.describe_symmetry() == fres_unfold.pphh.describe_symmetry()
+        # assert_equal_symmetry(vec.pphh, fres_unfold.pphh)
+
+
+        # diag = matrix.diagonal().pphh
+        # e = diag.ones_like()
+        # u2_man = matrix.block_apply("pphh_ph", vec.ph) / (e * folded.omega - diag)
+        # assert u2_man.describe_symmetry() == fres_unfold.pphh.describe_symmetry()
+        # # Consistency of manully recomputed vector and "unfold"
+        # diff = u2_man - fres_unfold.pphh
+        # assert np.max(np.abs(diff.to_ndarray())) < 1e-12
+"""

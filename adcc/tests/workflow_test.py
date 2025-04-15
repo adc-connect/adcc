@@ -220,25 +220,25 @@ class TestWorkflow:
         assert res.converged
         assert res.eigenvalues[:n_states] == approx(ref_singlets[:n_states])
 
+        # for ADC problems with doubles-folding
         guesses = adcc.guesses_singlet(matrix, n_guesses=6, block="ph")
-        res = diagonalise_adcmatrix(matrix, n_states=3, kind="singlet",
+        res = diagonalise_adcmatrix(matrix, n_states=3, kind=kind,
                                     guesses=guesses, fold=True)
-        ref_singlets = refdata["adc2"]["singlet"]["eigenvalues"]
         assert res.converged
-        assert res.eigenvalues == approx(ref_singlets[:3])
+        assert res.eigenvalues[:n_states] == approx(ref_singlets[:n_states])
 
         from adcc.workflow import run_adc
-        matrix_adc1 = adcc.AdcMatrix("adc1", adcc.LazyMp
-                                     (cache.refstate["h2o_sto3g"]))
-        adc1 = run_adc(matrix_adc1, method="adc1", kind="singlet", n_states=3)
+        matrix_adc1 = adcc.AdcMatrix(
+            "adc1", adcc.LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
+        )
+        adc1 = run_adc(matrix_adc1, method="adc1", kind=kind, n_states=3)
         omegas = adc1.excitation_energy_uncorrected
         guesses = adc1.excitation_vector
         res = diagonalise_adcmatrix(matrix, n_states=3, kind="singlet",
                                     fold=True, guesses_fold="adc1",
                                     guesses=guesses, omegas=omegas)
-        ref_singlets = refdata["adc2"]["singlet"]["eigenvalues"]
         assert res.converged
-        assert res.eigenvalues == approx(ref_singlets[:3])
+        assert res.eigenvalues[:n_states] == approx(ref_singlets[:n_states])
 
         with pytest.raises(InputError):  # Too low tolerance
             # SCF tolerance = 1e-14 currently

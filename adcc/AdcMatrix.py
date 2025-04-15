@@ -666,9 +666,6 @@ class AdcMatrixFolded(AdcMatrix):
                          block_orders=matrix.block_orders,
                          intermediates=matrix.intermediates)
 
-    def update_omega(self, omega):
-        self.omega = omega
-
     def diagonal(self):
         """
         Return the approximate diagonal of the ADC(2) matrix with doubles-folding.
@@ -686,19 +683,11 @@ class AdcMatrixFolded(AdcMatrix):
         return AmplitudeVector(ph=self.block_apply("ph_ph", other.ph)
                                + self.block_apply("ph_pphh", u2))
 
-    def __matmul__(self, other):
-        if isinstance(other, AmplitudeVector):
-            return self.matvec(other)
-        if isinstance(other, list):
-            if all(isinstance(elem, AmplitudeVector) for elem in other):
-                return [self.matvec(v) for v in other]
-        return NotImplemented
-
-    def unfold(self, u1):
-        """
-        recompute the doubles component and return the complete vector.
-        """
-        diag = super().diagonal().pphh
-        e = diag.ones_like()
-        u2 = self.block_apply("pphh_ph", u1.ph) / (e * self.omega - diag)
-        return AmplitudeVector(ph=u1.ph, pphh=u2)
+    # def unfold(self, u1):
+    #     """
+    #     recompute the doubles component and return the complete vector.
+    #     """
+    #     diag = super().diagonal().pphh
+    #     e = diag.ones_like()
+    #     u2 = self.block_apply("pphh_ph", u1.ph) / (e * self.omega - diag)
+    #     return AmplitudeVector(ph=u1.ph, pphh=u2)

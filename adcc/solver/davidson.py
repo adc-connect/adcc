@@ -668,7 +668,7 @@ def eigsh_folded(matrix, guesses, omegas=None, n_ep=None, n_block=None,
         # For DIIS, update the eigenvalue corresponding to the new eigenvector.
         if diis_omegaUpdate:
             state.eigenvalues[state.n_state] = Av @ state.eigenvector
-            folded_matrix.update_omega(state.eigenvalues[state.n_state])
+            folded_matrix.omega = state.eigenvalues[state.n_state]
         return state.residual_norm
 
     if conv_tol < matrix.shape[1] * np.finfo(float).eps:
@@ -691,7 +691,7 @@ def eigsh_folded(matrix, guesses, omegas=None, n_ep=None, n_block=None,
 
     # Retain single part of guess vectors
     guesses_i = [AmplitudeVector(ph=guess.__getitem__("ph")) for guess in guesses]
-    
+
     if omegas is None:
         # Calculate the initial (guess) eigenvalue for state 0.
         Avi = matrix.block_apply("ph_ph", guesses_i[0].ph)
@@ -701,9 +701,9 @@ def eigsh_folded(matrix, guesses, omegas=None, n_ep=None, n_block=None,
     for n_state in range(n_ep):
         # Initialize guess omega for excited states.
         if omegas is None:
-            folded_matrix.update_omega(state.eigenvalues[n_state])
+            folded_matrix.omega = state.eigenvalues[n_state]
         else:
-            folded_matrix.update_omega(omegas[n_state])
+            folded_matrix.omega = omegas[n_state]
 
         state_i = FoldedDavidsonState(folded_matrix, guesses_i)
         state_i.n_state = n_state
@@ -733,7 +733,7 @@ def eigsh_folded(matrix, guesses, omegas=None, n_ep=None, n_block=None,
             state.n_iter += state_i.n_iter
             # Update omega and calculate the residual_norm
             # under the latest omega for state i.
-            folded_matrix.update_omega(state_i.eigenvalues[state_i.n_state])
+            folded_matrix.omega = state_i.eigenvalues[state_i.n_state]
             residualNorm_folded(state_i)
             callback(state_i, "micro")
             if state_i.residual_norm < macro_conv_tol:
@@ -788,7 +788,7 @@ def eigsh_folded(matrix, guesses, omegas=None, n_ep=None, n_block=None,
         state.n_applies += state_i.n_applies
         state.eigenvalues[n_state:] = state_i.eigenvalues[n_state:]
         state.residual_norms[n_state] = state_i.residual_norm
-        state_i.eigenvector = folded_matrix.unfold(state_i.eigenvector)
+        # state_i.eigenvector = folded_matrix.unfold(state_i.eigenvector)
         state_i.eigenvector /= np.sqrt(state_i.eigenvector @ state_i.eigenvector)
         state.eigenvectors.append(state_i.eigenvector)
 

@@ -147,6 +147,7 @@ class TestSolverDavidson(unittest.TestCase):
         refdata = testdata_cache.adcman_data(
             system="h2o_sto3g", method="adc2", case="gen"
         )["triplet"]
+
         # Solve for triplets
         guesses = adcc.guesses_triplet(self.matrix, n_guesses=8, block="ph")
         res = davidson_folded_DIIS(self.matrix, guesses, n_ep=8)
