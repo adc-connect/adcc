@@ -20,11 +20,15 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import libadcc
+
 from .AdcMatrix import AdcMatrixlike
+from .AdcMethod import AdcMethod
 from .adc_pp import bmatrix as ppbmatrix
-from .timings import timed_member_call
-from .OneParticleOperator import OneParticleOperator
 from .AmplitudeVector import AmplitudeVector
+from .LazyMp import LazyMp
+from .OneParticleOperator import OneParticleOperator
+from .timings import Timer, timed_member_call
 
 
 class IsrMatrix(AdcMatrixlike):
@@ -47,14 +51,16 @@ class IsrMatrix(AdcMatrixlike):
             The order of perturbation theory to employ for each matrix block.
             If not set, defaults according to the selected ADC method are chosen.
         """
-        super().__init__(
-            method=method, hf_or_mp=hf_or_mp, block_orders=block_orders
-        )
+        if isinstance(hf_or_mp, (libadcc.ReferenceState,
+                                 libadcc.HartreeFockSolution_i)):
+            hf_or_mp = LazyMp(hf_or_mp)
+        if not isinstance(hf_or_mp, LazyMp):
+            raise TypeError("hf_or_mp is not a valid object. It needs to be "
+                            "either a LazyMp, a ReferenceState or a "
+                            "HartreeFockSolution_i.")
 
-        self._validate_block_orders(
-            block_orders=self.block_orders, method=self.method,
-            allow_missing_diagonal_blocks=True
-        )
+        if not isinstance(method, AdcMethod):
+            method = AdcMethod(method)
 
         if isinstance(operator, (list, tuple)):
             self.operator = tuple(operator)
@@ -64,6 +70,23 @@ class IsrMatrix(AdcMatrixlike):
             raise TypeError("operator is not a valid object. It needs to be "
                             "either an OneParticleOperator or a list of "
                             "OneParticleOperator objects.")
+
+        self.timer = Timer()
+        self.method = method
+        self.ground_state = hf_or_mp
+        self.reference_state = hf_or_mp.reference_state
+        self.mospaces = hf_or_mp.reference_state.mospaces
+        self.is_core_valence_separated = method.is_core_valence_separated
+        self.ndim = 2
+        self.extra_terms = []
+
+        self.block_orders = self._default_block_orders(self.method)
+        if block_orders is not None:
+            self.block_orders.update(block_orders)
+        self._validate_block_orders(
+            block_orders=self.block_orders, method=self.method,
+            allow_missing_diagonal_blocks=True
+        )
 
         # Build the blocks
         with self.timer.record("build"):

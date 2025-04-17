@@ -75,45 +75,6 @@ class AdcMatrixlike:
         "adc2x": {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 1},
     }
 
-    def __init__(self, method, hf_or_mp,
-                 block_orders: dict[str, int] | None = None) -> None:
-        """
-        Initialise an ADC matrix.
-
-        Parameters
-        ----------
-        method : str or AdcMethod
-            Method to use.
-        hf_or_mp : adcc.ReferenceState or adcc.LazyMp
-            HF reference or MP ground state
-        block_orders : optional
-            The order of perturbation theory to employ for each matrix block.
-            If not set, defaults according to the selected ADC method are chosen.
-        """
-
-        if isinstance(hf_or_mp, (libadcc.ReferenceState,
-                                 libadcc.HartreeFockSolution_i)):
-            hf_or_mp = LazyMp(hf_or_mp)
-        if not isinstance(hf_or_mp, LazyMp):
-            raise TypeError("hf_or_mp is not a valid object. It needs to be "
-                            "either a LazyMp, a ReferenceState or a "
-                            "HartreeFockSolution_i.")
-        if not isinstance(method, AdcMethod):
-            method = AdcMethod(method)
-        # set the class attributes
-        self.timer = Timer()
-        self.method = method
-        self.ground_state = hf_or_mp
-        self.reference_state = hf_or_mp.reference_state
-        self.mospaces = hf_or_mp.reference_state.mospaces
-        self.is_core_valence_separated = method.is_core_valence_separated
-        self.ndim = 2
-        self.extra_terms = []
-
-        self.block_orders = self._default_block_orders(self.method)
-        if block_orders is not None:
-            self.block_orders.update(block_orders)
-
     @classmethod
     def _default_block_orders(cls, method: AdcMethod) -> dict[str, int]:
         """
@@ -242,14 +203,16 @@ class AdcMatrix(AdcMatrixlike):
         diagonal_precomputed: adcc.AmplitudeVector
             Allows to pass a pre-computed diagonal, for internal use only.
         """
-        super().__init__(
-            method=method, hf_or_mp=hf_or_mp, block_orders=block_orders
-        )
+        if isinstance(hf_or_mp, (libadcc.ReferenceState,
+                                 libadcc.HartreeFockSolution_i)):
+            hf_or_mp = LazyMp(hf_or_mp)
+        if not isinstance(hf_or_mp, LazyMp):
+            raise TypeError("hf_or_mp is not a valid object. It needs to be "
+                            "either a LazyMp, a ReferenceState or a "
+                            "HartreeFockSolution_i.")
 
-        self._validate_block_orders(
-            block_orders=self.block_orders, method=self.method,
-            allow_missing_diagonal_blocks=False
-        )
+        if not isinstance(method, AdcMethod):
+            method = AdcMethod(method)
 
         if diagonal_precomputed:
             if not isinstance(diagonal_precomputed, AmplitudeVector):
@@ -259,9 +222,26 @@ class AdcMatrix(AdcMatrixlike):
                 raise ValueError("diagonal_precomputed must already"
                                  " be evaluated.")
 
+        self.timer = Timer()
+        self.method = method
+        self.ground_state = hf_or_mp
+        self.reference_state = hf_or_mp.reference_state
+        self.mospaces = hf_or_mp.reference_state.mospaces
+        self.is_core_valence_separated = method.is_core_valence_separated
+        self.ndim = 2
+        self.extra_terms = []
+
         self.intermediates = intermediates
         if self.intermediates is None:
             self.intermediates = Intermediates(self.ground_state)
+
+        self.block_orders = self._default_block_orders(self.method)
+        if block_orders is not None:
+            self.block_orders.update(block_orders)
+        self._validate_block_orders(
+            block_orders=self.block_orders, method=self.method,
+            allow_missing_diagonal_blocks=False
+        )
 
         # Build the blocks and diagonals
         with self.timer.record("build"):
@@ -276,10 +256,11 @@ class AdcMatrix(AdcMatrixlike):
             }
             self.blocks = {bl: blocks[bl].apply for bl in blocks}
             if diagonal_precomputed:
-                self._diagonal = diagonal_precomputed
+                self._diagonal: AmplitudeVector = diagonal_precomputed
             else:
-                self._diagonal = sum(bl.diagonal for bl in blocks.values()
-                                     if bl.diagonal)
+                self._diagonal: AmplitudeVector = sum(
+                    bl.diagonal for bl in blocks.values() if bl.diagonal
+                )
                 self._diagonal.evaluate()
             self._init_space_data(self._diagonal)
 
