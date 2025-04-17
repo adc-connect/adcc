@@ -214,12 +214,17 @@ def extract_library_dirs(libs):
     return libdirs
 
 
-def request_urllib(url, filename):
+def request_urllib(url, filename, token=None):
     """Download a file from the net"""
     import urllib.request
 
+    # optionally add an auth token to the request
+    request = urllib.request.Request(url)
+    if token is not None:
+        request.add_header("Authorization", token)
+
     try:
-        resp = urllib.request.urlopen(url)
+        resp = urllib.request.urlopen(request)
     except urllib.request.HTTPError as e:
         return e.code
 
@@ -232,10 +237,14 @@ def request_urllib(url, filename):
 def assets_most_recent_release(project):
     """Return the assert urls attached to the most recent release of a project."""
     url = f"https://api.github.com/repos/{project}/releases"
+    # look for the github token in the environment
+    # and use it to the request to avoid the github API
+    # rate limits
+    token = os.environ.get("GITHUB_TOKEN", None)
     with tempfile.TemporaryDirectory() as tmpdir:
         fn = tmpdir + "/releases.json"
         for _ in range(10):
-            status = request_urllib(url, fn)
+            status = request_urllib(url, fn, token=token)
             if 200 <= status < 300:
                 break
             time.sleep(1)

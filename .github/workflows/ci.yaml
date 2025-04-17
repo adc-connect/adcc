@@ -59,6 +59,8 @@ jobs:
       - name: Install package
         run: |
           pip install --user .[tests]
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Run python tests with std allocator
         run: |
           python -m pytest --cov=adcc
