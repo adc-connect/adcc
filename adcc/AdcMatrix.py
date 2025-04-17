@@ -236,7 +236,11 @@ class AdcMatrix(AdcMatrixlike):
             self.intermediates = Intermediates(self.ground_state)
 
         self.block_orders = self._default_block_orders(self.method)
-        if block_orders is not None:
+        if block_orders is None:
+            if method.level > 3:
+                raise NotImplementedError("The ADC secular matrix is not "
+                                          f"implemented for method {method.name}.")
+        else:
             self.block_orders.update(block_orders)
         self._validate_block_orders(
             block_orders=self.block_orders, method=self.method,
