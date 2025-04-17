@@ -20,27 +20,14 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import libadcc
-
 from .AdcMatrix import AdcMatrixlike
-from .LazyMp import LazyMp
 from .adc_pp import bmatrix as ppbmatrix
-from .timings import Timer, timed_member_call
-from .AdcMethod import AdcMethod
+from .timings import timed_member_call
 from .OneParticleOperator import OneParticleOperator
 from .AmplitudeVector import AmplitudeVector
 
 
 class IsrMatrix(AdcMatrixlike):
-    # Default perturbation-theory orders for the matrix blocks (== standard ADC-PP).
-    default_block_orders = {
-        #             ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),
-        "adc0":  dict(ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
-        "adc1":  dict(ph_ph=1, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
-        "adc2":  dict(ph_ph=2, ph_pphh=1,    pphh_ph=1,    pphh_pphh=0),     # noqa: E501
-        "adc2x": dict(ph_ph=2, ph_pphh=1,    pphh_ph=1,    pphh_pphh=1),     # noqa: E501
-        "adc3":  dict(ph_ph=3, ph_pphh=2,    pphh_ph=2,    pphh_pphh=1),     # noqa: E501
-    }
 
     def __init__(self, method, hf_or_mp, operator, block_orders=None):
         """
@@ -60,16 +47,14 @@ class IsrMatrix(AdcMatrixlike):
             The order of perturbation theory to employ for each matrix block.
             If not set, defaults according to the selected ADC method are chosen.
         """
-        if isinstance(hf_or_mp, (libadcc.ReferenceState,
-                                 libadcc.HartreeFockSolution_i)):
-            hf_or_mp = LazyMp(hf_or_mp)
-        if not isinstance(hf_or_mp, LazyMp):
-            raise TypeError("hf_or_mp is not a valid object. It needs to be "
-                            "either a LazyMp, a ReferenceState or a "
-                            "HartreeFockSolution_i.")
+        super().__init__(
+            method=method, hf_or_mp=hf_or_mp, block_orders=block_orders
+        )
 
-        if not isinstance(method, AdcMethod):
-            method = AdcMethod(method)
+        self._validate_block_orders(
+            block_orders=self.block_orders, method=self.method,
+            allow_missing_diagonal_blocks=True
+        )
 
         if isinstance(operator, (list, tuple)):
             self.operator = tuple(operator)
@@ -79,35 +64,6 @@ class IsrMatrix(AdcMatrixlike):
             raise TypeError("operator is not a valid object. It needs to be "
                             "either an OneParticleOperator or a list of "
                             "OneParticleOperator objects.")
-
-        self.timer = Timer()
-        self.method = method
-        self.ground_state = hf_or_mp
-        self.reference_state = hf_or_mp.reference_state
-        self.mospaces = hf_or_mp.reference_state.mospaces
-        self.is_core_valence_separated = method.is_core_valence_separated
-        self.ndim = 2
-        self.extra_terms = []
-
-        # Determine orders of PT in the blocks
-        if block_orders is None:
-            block_orders = self.default_block_orders[method.base_method.name]
-        else:
-            tmp_orders = self.default_block_orders[method.base_method.name].copy()
-            tmp_orders.update(block_orders)
-            block_orders = tmp_orders
-
-        # Sanity checks on block_orders
-        for block in block_orders.keys():
-            if block not in ("ph_ph", "ph_pphh", "pphh_ph", "pphh_pphh"):
-                raise ValueError(f"Invalid block order key: {block}")
-        if block_orders["ph_pphh"] != block_orders["pphh_ph"]:
-            raise ValueError("ph_pphh and pphh_ph should always have "
-                             "the same order")
-        if block_orders["ph_pphh"] is not None \
-           and block_orders["pphh_pphh"] is None:
-            raise ValueError("pphh_pphh cannot be None if ph_pphh isn't.")
-        self.block_orders = block_orders
 
         # Build the blocks
         with self.timer.record("build"):

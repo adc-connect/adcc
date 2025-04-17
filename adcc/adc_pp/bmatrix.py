@@ -69,7 +69,9 @@ def block(ground_state, operator, spaces, order, variant=None):
 
     if fn not in globals():
         raise ValueError("Could not dispatch: "
-                         f"spaces={spaces} order={order} variant={variant}")
+                         f"spaces={spaces} order={order} variant={variant}. "
+                         "Probably the B-matrix is not implemented for the "
+                         "requested method.")
     return globals()[fn](ground_state, operator)
 
 

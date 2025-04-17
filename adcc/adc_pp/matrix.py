@@ -81,7 +81,9 @@ def block(ground_state, spaces, order, variant=None, intermediates=None):
 
     if fn not in globals():
         raise ValueError("Could not dispatch: "
-                         f"spaces={spaces} order={order} variant=variant")
+                         f"spaces={spaces} order={order} variant={variant}. "
+                         "Probably the secular matrix is not implemented for "
+                         "the requested method.")
     return globals()[fn](reference_state, ground_state, intermediates)
 
 
