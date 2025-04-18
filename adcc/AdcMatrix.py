@@ -148,7 +148,7 @@ class AdcMatrixlike:
             # ensure that the matrix is symmetric
             inv_block = f"{ket}_{bra}"
             inv_order = block_orders.get(inv_block, None)
-            if inv_block is None or inv_order != order:
+            if inv_order is None or inv_order != order:
                 raise ValueError(f"{block} and {inv_block} should always have "
                                  "the same order.")
             if allow_missing_diagonal_blocks:
