@@ -29,6 +29,7 @@ import json
 import time
 import shlex
 import shutil
+import platform
 import tempfile
 import functools
 import sysconfig
@@ -213,12 +214,17 @@ def extract_library_dirs(libs):
     return libdirs
 
 
-def request_urllib(url, filename):
+def request_urllib(url, filename, token=None):
     """Download a file from the net"""
     import urllib.request
 
+    # optionally add an auth token to the request
+    request = urllib.request.Request(url)
+    if token is not None:
+        request.add_header("Authorization", token)
+
     try:
-        resp = urllib.request.urlopen(url)
+        resp = urllib.request.urlopen(request)
     except urllib.request.HTTPError as e:
         return e.code
 
@@ -231,10 +237,14 @@ def request_urllib(url, filename):
 def assets_most_recent_release(project):
     """Return the assert urls attached to the most recent release of a project."""
     url = f"https://api.github.com/repos/{project}/releases"
+    # look for the github token in the environment
+    # and use it to the request to avoid the github API
+    # rate limits
+    token = os.environ.get("GITHUB_TOKEN", None)
     with tempfile.TemporaryDirectory() as tmpdir:
         fn = tmpdir + "/releases.json"
         for _ in range(10):
-            status = request_urllib(url, fn)
+            status = request_urllib(url, fn, token=token)
             if 200 <= status < 300:
                 break
             time.sleep(1)
@@ -324,6 +334,9 @@ def libadcc_extension():
         flags["extra_compile_args"] += ["-Wno-unused-command-line-argument",
                                         "-Wno-undefined-var-template",
                                         "-Wno-bitwise-instead-of-logical"]
+        # NOTE: This assumes a clang compiler!
+        flags["extra_compile_args"].extend(["-arch", platform.machine()])
+        flags["extra_link_args"].extend(["-arch", platform.machine()])
     if sys.platform.startswith("linux"):
         # otherwise fails with -O3 on gcc>=12
         flags["extra_compile_args"] += ["-Wno-array-bounds"]
@@ -370,8 +383,12 @@ def libadcc_extension():
                 if sys.platform == "linux":
                     url = [asset for asset in assets if "-linux_x86_64" in asset]
                 elif sys.platform == "darwin":
-                    url = [asset for asset in assets
-                           if "-macosx_" in asset and "_x86_64" in asset]
+                    # platform.machine() gives e.g., arm64
+                    # we want to match macosx_X_arm64, where X is the Version
+                    url = [
+                        asset for asset in assets
+                        if "-macosx_" in asset and f"_{platform.machine()}" in asset
+                    ]
                 else:
                     raise AssertionError("Should not get to download for "
                                          "unspported platform.")

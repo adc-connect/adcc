@@ -25,7 +25,10 @@ import pytest
 import numpy as np
 from numpy.testing import assert_allclose
 
-from adcc.AdcMatrix import AdcExtraTerm, AdcMatrixProjected, AdcMatrixShifted
+from adcc.AdcMatrix import (
+    AdcExtraTerm, AdcMatrixProjected, AdcMatrixShifted, AdcMatrixlike
+)
+from adcc.AdcMethod import AdcMethod
 from adcc.Intermediates import Intermediates
 from adcc.adc_pp.matrix import AdcBlock
 
@@ -34,6 +37,80 @@ from .projection_test import (
 )
 from .testdata_cache import testdata_cache
 from . import testcases
+
+
+class TestBlockOrders:
+    def test_default_block_orders(self):
+        ref = (
+            {"ph_ph": 0},  # adc0
+            {"ph_ph": 1},  # adc1
+            {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 0},  # adc2
+            {"ph_ph": 3, "ph_pphh": 2, "pphh_ph": 2, "pphh_pphh": 1},  # adc3
+        )
+        # verify the default methods
+        for order in range(0, 4):
+            block_orders = AdcMatrixlike._default_block_orders(
+                method=AdcMethod(f"adc{order}")
+            )
+            cvs_block_orders = AdcMatrixlike._default_block_orders(
+                method=AdcMethod(f"cvs-adc{order}")
+            )
+            assert ref[order] == block_orders
+            assert cvs_block_orders == block_orders
+        # verify the special methods: adc2x
+        block_orders = AdcMatrixlike._default_block_orders(
+            method=AdcMethod("adc2x")
+        )
+        cvs_block_orders = AdcMatrixlike._default_block_orders(
+            method=AdcMethod("cvs-adc2x")
+        )
+        ref = {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 1}
+        assert block_orders == ref
+        assert block_orders == cvs_block_orders
+
+    def test_validate_block_orders(self):
+        valid_block_orders = (
+            {"ph_ph": 0},  # adc0
+            {"ph_ph": 1, "ph_pphh": None, "ppphhh_ppphhh": None},  # adc1
+            {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 0},  # adc2
+            {"ph_ph": 3, "ph_pphh": 2, "pphh_ph": 2, "pphh_pphh": 1},  # adc3
+        )
+        for block_orders in valid_block_orders:
+            AdcMatrixlike._validate_block_orders(block_orders, AdcMethod("adc0"))
+        invalid_block_orders = (
+            {"ph_ph": 0, "h_h": 0},  # invalid PP block
+            {"ph_ph": 2, "ph_pphh": 2, "pphh_ph": 1, "pphh_pphh": 0},  # asymmetric
+            {"ph_ph": 2, "ph_pphh": 2, "pphh_ph": None, "pphh_pphh": 0},
+            {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1},  # missing diagonal block
+            {"ph_ph": 2, "ph_pphh": 2, "pphh_ph": 1, "pphh_pphh": None},
+        )
+        for block_orders in invalid_block_orders:
+            with pytest.raises(ValueError):
+                AdcMatrixlike._validate_block_orders(
+                    block_orders, AdcMethod("adc0")
+                )
+
+    def test_validate_space(self):
+        # some valid PP-ADC methods
+        assert AdcMatrixlike._is_valid_space(
+            "ph", AdcMethod("adc0")
+        )
+        assert AdcMatrixlike._is_valid_space(
+            "pphh", AdcMethod("adc0")
+        )
+        assert AdcMatrixlike._is_valid_space(
+            "pppphhhh", AdcMethod("adc0")
+        )
+        # some invalid method strings
+        assert not AdcMatrixlike._is_valid_space(
+            "p", AdcMethod("adc0")
+        )
+        assert not AdcMatrixlike._is_valid_space(
+            "hp", AdcMethod("adc0")
+        )
+        assert not AdcMatrixlike._is_valid_space(
+            "phh", AdcMethod("adc0")
+        )
 
 
 h2o_sto3g = testcases.get_by_filename("h2o_sto3g").pop()

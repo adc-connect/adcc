@@ -26,13 +26,12 @@ import numpy as np
 
 from mpi4py import MPI
 from libadcc import HartreeFockProvider
-from adcc.misc import cached_property
 
 import veloxchem as vlx
 
 from .EriBuilder import EriBuilder
 from ..exceptions import InvalidReference
-from ..ExcitedStates import EnergyCorrection
+from ..ElectronicStates import EnergyCorrection
 
 from veloxchem.mpitask import MpiTask
 from veloxchem.veloxchemlib import (AngularMomentumIntegralsDriver,
@@ -40,39 +39,42 @@ from veloxchem.veloxchemlib import (AngularMomentumIntegralsDriver,
 
 
 class VeloxChemOperatorIntegralProvider:
+    available: tuple[str] = (
+        "electric_dipole", "electric_dipole_velocity", "magnetic_dipole",
+    )
+
     def __init__(self, scfdrv):
         self.scfdrv = scfdrv
         self.backend = "veloxchem"
 
-    @cached_property
-    def electric_dipole(self):
+    @property
+    def electric_dipole(self) -> tuple[np.ndarray]:
         """-sum_i r_i"""
         task = self.scfdrv.task
         dipole_drv = vlx.ElectricDipoleIntegralsDriver(task.mpi_comm)
         # define the origin for electric dipole integrals
         dipole_drv.origin = tuple(np.zeros(3))
         dipole_mats = dipole_drv.compute(task.molecule, task.ao_basis)
-        return [-1.0 * dipole_mats.x_to_numpy(), -1.0 * dipole_mats.y_to_numpy(),
-                -1.0 * dipole_mats.z_to_numpy()]
+        return (-1.0 * dipole_mats.x_to_numpy(),
+                -1.0 * dipole_mats.y_to_numpy(),
+                -1.0 * dipole_mats.z_to_numpy())
 
-    @cached_property
-    def magnetic_dipole(self):
+    def magnetic_dipole(self, gauge_origin="origin") -> tuple[np.ndarray]:
         """
         The imaginary part of the integral is returned.
         -0.5 * sum_i r_i x p_i
         """
-        def g_origin_dep_ints_mag_dip(gauge_origin="origin"):
-            gauge_origin = _transform_gauge_origin_to_xyz(self.scfdrv, gauge_origin)
-            task = self.scfdrv.task
-            angmom_drv = AngularMomentumIntegralsDriver(task.mpi_comm)
-            angmom_drv.origin = tuple(gauge_origin)
-            angmom_mats = angmom_drv.compute(task.molecule, task.ao_basis)
-            return (0.5 * angmom_mats.x_to_numpy(), 0.5 * angmom_mats.y_to_numpy(),
-                    0.5 * angmom_mats.z_to_numpy())
-        return g_origin_dep_ints_mag_dip
+        gauge_origin = _transform_gauge_origin_to_xyz(self.scfdrv, gauge_origin)
+        task = self.scfdrv.task
+        angmom_drv = AngularMomentumIntegralsDriver(task.mpi_comm)
+        angmom_drv.origin = tuple(gauge_origin)
+        angmom_mats = angmom_drv.compute(task.molecule, task.ao_basis)
+        return (0.5 * angmom_mats.x_to_numpy(),
+                0.5 * angmom_mats.y_to_numpy(),
+                0.5 * angmom_mats.z_to_numpy())
 
-    @cached_property
-    def electric_dipole_velocity(self):
+    @property
+    def electric_dipole_velocity(self) -> tuple[np.ndarray]:
         """
         The imaginary part of the integral is returned.
         -sum_i p_i

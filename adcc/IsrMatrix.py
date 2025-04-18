@@ -23,24 +23,15 @@
 import libadcc
 
 from .AdcMatrix import AdcMatrixlike
-from .LazyMp import LazyMp
-from .adc_pp import bmatrix as ppbmatrix
-from .timings import Timer, timed_member_call
 from .AdcMethod import AdcMethod
-from .OneParticleOperator import OneParticleOperator
+from .adc_pp import bmatrix as ppbmatrix
 from .AmplitudeVector import AmplitudeVector
+from .LazyMp import LazyMp
+from .OneParticleOperator import OneParticleOperator
+from .timings import Timer, timed_member_call
 
 
 class IsrMatrix(AdcMatrixlike):
-    # Default perturbation-theory orders for the matrix blocks (== standard ADC-PP).
-    default_block_orders = {
-        #             ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),
-        "adc0":  dict(ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
-        "adc1":  dict(ph_ph=1, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
-        "adc2":  dict(ph_ph=2, ph_pphh=1,    pphh_ph=1,    pphh_pphh=0),     # noqa: E501
-        "adc2x": dict(ph_ph=2, ph_pphh=1,    pphh_ph=1,    pphh_pphh=1),     # noqa: E501
-        "adc3":  dict(ph_ph=3, ph_pphh=2,    pphh_ph=2,    pphh_pphh=1),     # noqa: E501
-    }
 
     def __init__(self, method, hf_or_mp, operator, block_orders=None):
         """
@@ -71,10 +62,10 @@ class IsrMatrix(AdcMatrixlike):
         if not isinstance(method, AdcMethod):
             method = AdcMethod(method)
 
-        if not isinstance(operator, list):
-            self.operator = [operator]
+        if isinstance(operator, (list, tuple)):
+            self.operator = tuple(operator)
         else:
-            self.operator = operator.copy()
+            self.operator = (operator,)
         if not all(isinstance(op, OneParticleOperator) for op in self.operator):
             raise TypeError("operator is not a valid object. It needs to be "
                             "either an OneParticleOperator or a list of "
@@ -89,25 +80,19 @@ class IsrMatrix(AdcMatrixlike):
         self.ndim = 2
         self.extra_terms = []
 
-        # Determine orders of PT in the blocks
+        self.block_orders = self._default_block_orders(self.method)
         if block_orders is None:
-            block_orders = self.default_block_orders[method.base_method.name]
+            # only implemented through PP-ADC(2)
+            if method.adc_type != "pp" or method.name.endswith("adc2x") \
+                    or method.level > 2:
+                raise NotImplementedError("The B-matrix is not implemented "
+                                          f"for method {method.name}.")
         else:
-            tmp_orders = self.default_block_orders[method.base_method.name].copy()
-            tmp_orders.update(block_orders)
-            block_orders = tmp_orders
-
-        # Sanity checks on block_orders
-        for block in block_orders.keys():
-            if block not in ("ph_ph", "ph_pphh", "pphh_ph", "pphh_pphh"):
-                raise ValueError(f"Invalid block order key: {block}")
-        if block_orders["ph_pphh"] != block_orders["pphh_ph"]:
-            raise ValueError("ph_pphh and pphh_ph should always have "
-                             "the same order")
-        if block_orders["ph_pphh"] is not None \
-           and block_orders["pphh_pphh"] is None:
-            raise ValueError("pphh_pphh cannot be None if ph_pphh isn't.")
-        self.block_orders = block_orders
+            self.block_orders.update(block_orders)
+        self._validate_block_orders(
+            block_orders=self.block_orders, method=self.method,
+            allow_missing_diagonal_blocks=True
+        )
 
         # Build the blocks
         with self.timer.record("build"):

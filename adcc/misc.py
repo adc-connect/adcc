@@ -26,6 +26,8 @@ import inspect
 from functools import wraps
 from pkg_resources import parse_version
 
+from .timings import Timer
+
 
 def cached_property(f):
     """
@@ -51,57 +53,85 @@ def cached_property(f):
     return property(get)
 
 
-def cached_member_function(function):
+def cached_member_function(timer: str = "timer",
+                           separate_timings_by_args: bool = True):
     """
     Decorates a member function being called with
     one or more arguments and stores the results
     in field `_function_cache` of the class instance.
+    If the class has a timer (defined under the provided name)
+    the timings of the (first) call will be measured.
+
+    Parameters
+    ----------
+    timer: str, optional
+        Name of the member variable the :class:`Timer` instance can be found on the
+        class instance (default: 'timer'). If the timer is not found no timings
+        are measured.
+    separate_timings_by_args: bool, optional
+        If set the arguments passed to the decorated functions will be included
+        in the key under which the timings are stored, i.e., a distinct timer task
+        will be generated for each set of arguments. (default: True)
     """
-    fname = function.__name__
+    def decorator(function):
+        fname = function.__name__
 
-    # get the function signature and ensure that we don't have any
-    # keyword only arguments:
-    # func(..., *, kwarg=None, ...) or func(..., **kwargs).
-    # If we want to support them we need to add them in a well defined
-    # order to the cache key (sort them by name)
-    func_signature = inspect.signature(function)
-    bad_arg_types = (inspect.Parameter.KEYWORD_ONLY, inspect.Parameter.VAR_KEYWORD)
-    if any(arg.kind in bad_arg_types for arg in func_signature.parameters.values()):
-        raise ValueError("Member functions with keyword only arguments can not be "
-                         "wrapped with the cached_member_function.")
+        # get the function signature and ensure that we don't have any
+        # keyword only arguments:
+        # func(..., *, kwarg=None, ...) or func(..., **kwargs).
+        # If we want to support them we need to add them in a well defined
+        # order to the cache key (sort them by name)
+        func_signature = inspect.signature(function)
+        bad_arg_types = (
+            inspect.Parameter.KEYWORD_ONLY, inspect.Parameter.VAR_KEYWORD
+        )
+        if any(arg.kind in bad_arg_types for arg in
+               func_signature.parameters.values()):
+            raise ValueError("Member functions with keyword only arguments can not "
+                             "be wrapped with the cached_member_function.")
 
-    @wraps(function)
-    def wrapper(self, *args, **kwargs):
-        # convert all arguments to poisitonal arguments and add default arguments
-        # for not provided arguments
-        bound_args = func_signature.bind(self, *args, **kwargs)
-        bound_args.apply_defaults()
-        assert not bound_args.kwargs
-        args = bound_args.args[1:]  # remove self from args
+        @wraps(function)
+        def wrapper(self, *args, **kwargs):
+            # convert all arguments to poisitonal arguments and add default
+            # arguments for not provided arguments
+            bound_args = func_signature.bind(self, *args, **kwargs)
+            bound_args.apply_defaults()
+            assert not bound_args.kwargs
+            args = bound_args.args[1:]  # remove self from args
 
-        try:
-            fun_cache = self._function_cache[fname]
-        except AttributeError:
-            self._function_cache = {}
-            fun_cache = self._function_cache[fname] = {}
-        except KeyError:
-            fun_cache = self._function_cache[fname] = {}
+            try:
+                fun_cache = self._function_cache[fname]
+            except AttributeError:
+                self._function_cache = {}
+                fun_cache = self._function_cache[fname] = {}
+            except KeyError:
+                fun_cache = self._function_cache[fname] = {}
 
-        try:
-            return fun_cache[args]
-        except KeyError:
-            # adds a timer on top
-            if hasattr(self, "timer"):
-                descr = '_'.join([str(a) for a in args])
-                with self.timer.record(f"{fname}/{descr}"):
-                    try:
-                        fun_cache[args] = result = function(self, *args).evaluate()
-                    except AttributeError:
-                        fun_cache[args] = result = function(self, *args)
-            else:
-                fun_cache[args] = result = function(self, *args)
-            return result
-    return wrapper
+            try:
+                return fun_cache[args]
+            except KeyError:
+                # Record with a timer if possible
+                instance_timer = getattr(self, timer, None)
+                if isinstance(instance_timer, Timer):
+                    timer_task = fname
+                    if separate_timings_by_args:
+                        descr = '_'.join([str(a) for a in args])
+                        timer_task += f"/{descr}"
+
+                    with instance_timer.record(timer_task):
+                        # try to evaluate the result if possible
+                        result = function(self, *args)
+                        if hasattr(result, "evaluate"):
+                            result = result.evaluate()
+                        fun_cache[args] = result
+                else:
+                    result = function(self, *args)
+                    if hasattr(result, "evaluate"):
+                        result = result.evaluate()
+                    fun_cache[args] = result
+                return result
+        return wrapper
+    return decorator
 
 
 def is_module_available(module, min_version=None):

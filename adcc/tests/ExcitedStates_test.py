@@ -24,7 +24,7 @@ import pytest
 from numpy.testing import assert_allclose
 
 from adcc.OneParticleOperator import OneParticleOperator
-from adcc.ExcitedStates import EnergyCorrection
+from adcc.ElectronicStates import EnergyCorrection
 
 from .testdata_cache import testdata_cache
 
