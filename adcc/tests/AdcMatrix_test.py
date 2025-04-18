@@ -80,6 +80,7 @@ class TestBlockOrders:
         invalid_block_orders = (
             {"ph_ph": 0, "h_h": 0},  # invalid PP block
             {"ph_ph": 2, "ph_pphh": 2, "pphh_ph": 1, "pphh_pphh": 0},  # asymmetric
+            {"ph_ph": 2, "ph_pphh": 2, "pphh_ph": None, "pphh_pphh": 0},
             {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1},  # missing diagonal block
             {"ph_ph": 2, "ph_pphh": 2, "pphh_ph": 1, "pphh_pphh": None},
         )
