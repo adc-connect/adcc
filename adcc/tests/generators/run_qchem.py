@@ -219,7 +219,7 @@ def build_antisym_eri(pyscf_data: h5py.File, core_orbitals: int = None,
     return ret
 
 
-def is_canonical_eri_block(block: str | tuple[str]) -> bool:
+def is_canonical_eri_block(block: str | tuple[str, ...]) -> bool:
     """Checks if a given ERI block is canonical assuming physicist notation."""
     assert len(block) == 4 and all(sp in "ocv" for sp in block)
     space_ordering = {"o": 0, "c": 1, "v": 2}

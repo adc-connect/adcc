@@ -68,7 +68,7 @@ class DataOperatorIntegralProvider:
         self.backend = backend
 
     @property
-    def available(self) -> tuple[str]:
+    def available(self) -> tuple[str, ...]:
         blacklist = ("backend", "available")
         return tuple(
             integral for integral in dir(self)

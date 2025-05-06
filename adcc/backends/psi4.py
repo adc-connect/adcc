@@ -33,7 +33,7 @@ from ..OneParticleOperator import OneParticleOperator
 
 
 class Psi4OperatorIntegralProvider:
-    available: tuple[str] = (
+    available: tuple[str, ...] = (
         "electric_dipole", "electric_dipole_velocity", "magnetic_dipole",
         "pe_induction_elec", "pcm_potential_elec"
     )
@@ -44,11 +44,11 @@ class Psi4OperatorIntegralProvider:
         self.mints = psi4.core.MintsHelper(self.wfn)
 
     @property
-    def electric_dipole(self) -> tuple[np.ndarray]:
+    def electric_dipole(self) -> tuple[np.ndarray, ...]:
         """-sum_i r_i"""
         return tuple(np.asarray(comp) for comp in self.mints.ao_dipole())
 
-    def magnetic_dipole(self, gauge_origin="origin") -> tuple[np.ndarray]:
+    def magnetic_dipole(self, gauge_origin="origin") -> tuple[np.ndarray, ...]:
         """
         The imaginary part of the integral is returned.
         -0.5 * sum_i r_i x p_i
@@ -63,7 +63,7 @@ class Psi4OperatorIntegralProvider:
         )
 
     @property
-    def electric_dipole_velocity(self) -> tuple[np.ndarray]:
+    def electric_dipole_velocity(self) -> tuple[np.ndarray, ...]:
         """
         The imaginary part of the integral is returned.
         -sum_i p_i

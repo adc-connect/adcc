@@ -39,7 +39,7 @@ from veloxchem.veloxchemlib import (AngularMomentumIntegralsDriver,
 
 
 class VeloxChemOperatorIntegralProvider:
-    available: tuple[str] = (
+    available: tuple[str, ...] = (
         "electric_dipole", "electric_dipole_velocity", "magnetic_dipole",
     )
 
@@ -48,7 +48,7 @@ class VeloxChemOperatorIntegralProvider:
         self.backend = "veloxchem"
 
     @property
-    def electric_dipole(self) -> tuple[np.ndarray]:
+    def electric_dipole(self) -> tuple[np.ndarray, ...]:
         """-sum_i r_i"""
         task = self.scfdrv.task
         dipole_drv = vlx.ElectricDipoleIntegralsDriver(task.mpi_comm)
@@ -59,7 +59,7 @@ class VeloxChemOperatorIntegralProvider:
                 -1.0 * dipole_mats.y_to_numpy(),
                 -1.0 * dipole_mats.z_to_numpy())
 
-    def magnetic_dipole(self, gauge_origin="origin") -> tuple[np.ndarray]:
+    def magnetic_dipole(self, gauge_origin="origin") -> tuple[np.ndarray, ...]:
         """
         The imaginary part of the integral is returned.
         -0.5 * sum_i r_i x p_i
@@ -74,7 +74,7 @@ class VeloxChemOperatorIntegralProvider:
                 0.5 * angmom_mats.z_to_numpy())
 
     @property
-    def electric_dipole_velocity(self) -> tuple[np.ndarray]:
+    def electric_dipole_velocity(self) -> tuple[np.ndarray, ...]:
         """
         The imaginary part of the integral is returned.
         -sum_i p_i

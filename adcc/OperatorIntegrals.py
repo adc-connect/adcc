@@ -96,12 +96,12 @@ class OperatorIntegrals:
         return self._provider_ao
 
     @property
-    def available(self) -> tuple[str]:
+    def available(self) -> tuple[str, ...]:
         """Which integrals are available in the underlying backend"""
         return self.provider_ao.available
 
     def _import_dipole_like_operator(self, integral: str, is_symmetric: bool = True
-                                     ) -> tuple[OneParticleOperator]:
+                                     ) -> tuple[OneParticleOperator, ...]:
         if integral not in self.available:
             raise NotImplementedError(f"{integral.replace('_', ' ')} operator "
                                       "not implemented "
@@ -122,14 +122,14 @@ class OperatorIntegrals:
 
     @cached_property
     @timed_member_call("_import_timer")
-    def electric_dipole(self) -> tuple[OneParticleOperator]:
+    def electric_dipole(self) -> tuple[OneParticleOperator, ...]:
         """Return the electric dipole integrals in the molecular orbital basis."""
         return self._import_dipole_like_operator("electric_dipole",
                                                  is_symmetric=True)
 
     @cached_property
     @timed_member_call("_import_timer")
-    def electric_dipole_velocity(self) -> tuple[OneParticleOperator]:
+    def electric_dipole_velocity(self) -> tuple[OneParticleOperator, ...]:
         """
         Return the electric dipole integrals (in the velocity gauge)
         in the molecular orbital basis.
@@ -140,7 +140,7 @@ class OperatorIntegrals:
     def _import_g_origin_dep_dip_like_operator(self, integral: str,
                                                gauge_origin="origin",
                                                is_symmetric: bool = True
-                                               ) -> tuple[OneParticleOperator]:
+                                               ) -> tuple[OneParticleOperator, ...]:
         """
         Imports the operator and transforms it to the molecular orbital basis.
 
@@ -175,7 +175,8 @@ class OperatorIntegrals:
     # separate the timings, so one can easily see in the timings how many different
     # gauge_origins were used throughout the calculation
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
-    def magnetic_dipole(self, gauge_origin="origin") -> tuple[OneParticleOperator]:
+    def magnetic_dipole(self, gauge_origin="origin"
+                        ) -> tuple[OneParticleOperator, ...]:
         """
         Returns the magnetic dipole intergrals
         in the molecular orbital basis dependent on the selected gauge origin.
@@ -189,7 +190,7 @@ class OperatorIntegrals:
     def _import_g_origin_dep_quad_like_operator(self, integral: str,
                                                 gauge_origin="origin",
                                                 is_symmetric: bool = True
-                                                ) -> tuple[tuple[OneParticleOperator]]:  # noqa E501
+                                                ) -> tuple[tuple[OneParticleOperator, ...], ...]:  # noqa E501
         """
         Imports the operator and transforms it to the molecular orbital basis.
 
@@ -223,7 +224,7 @@ class OperatorIntegrals:
 
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
     def electric_quadrupole(self, gauge_origin="origin"
-                            ) -> tuple[tuple[OneParticleOperator]]:
+                            ) -> tuple[tuple[OneParticleOperator, ...], ...]:
         """
         Returns the electric quadrupole integrals
         in the molecular orbital basis dependent on the selected gauge origin.
@@ -236,7 +237,7 @@ class OperatorIntegrals:
 
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
     def electric_quadrupole_traceless(self, gauge_origin="origin"
-                                      ) -> tuple[tuple[OneParticleOperator]]:
+                                      ) -> tuple[tuple[OneParticleOperator, ...], ...]:  # noqa E501
         """
         Returns the traceless electric quadrupole integrals
         in the molecular orbital basis dependent on the selected gauge origin.
@@ -249,7 +250,7 @@ class OperatorIntegrals:
 
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
     def electric_quadrupole_velocity(self, gauge_origin="origin"
-                                     ) -> tuple[tuple[OneParticleOperator]]:
+                                     ) -> tuple[tuple[OneParticleOperator, ...], ...]:  # noqa E501
         """
         Returns the electric quadrupole integrals in velocity gauge
         in the molecular orbital basis dependent on the selected gauge origin.
@@ -262,7 +263,7 @@ class OperatorIntegrals:
 
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
     def diamagnetic_magnetizability(self, gauge_origin="origin"
-                                    ) -> tuple[tuple[OneParticleOperator]]:
+                                    ) -> tuple[tuple[OneParticleOperator, ...], ...]:  # noqa E501
         """
         Returns the diamagnetic magnetizability integrals
         in the molecular orbital basis dependent on the selected gauge origin.

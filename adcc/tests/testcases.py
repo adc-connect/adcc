@@ -6,9 +6,9 @@ from pathlib import Path
 # NOTE: Can't use a dict, because TestCase has to be hashable.
 @dataclass(frozen=True)
 class Kinds:
-    pp: tuple[str] = tuple()
-    ip: tuple[str] = tuple()
-    ea: tuple[str] = tuple()
+    pp: tuple[str, ...] = tuple()
+    ip: tuple[str, ...] = tuple()
+    ea: tuple[str, ...] = tuple()
 
     def __getitem__(self, key: str):
         return getattr(self, key)
@@ -24,13 +24,13 @@ class TestCase:
     basis: str
     restricted: bool
     only_full_mode: bool  # whether to run the test case only in full mode
-    pe_potfile: str = None
-    core_orbitals: int = None
-    frozen_core: int = None
-    frozen_virtual: int = None
+    pe_potfile: str | None = None
+    core_orbitals: int | None = None
+    frozen_core: int | None = None
+    frozen_virtual: int | None = None
     # the different cases for which to generate mp/adc reference data
     # generic, cvs, frozen core (fc), frozen virtual (fv), ...
-    cases: tuple[str] = ("gen",)
+    cases: tuple[str, ...] = ("gen",)
     # the available state kinds for the test system per adc type
     kinds: Kinds = Kinds()
     # the ground state density orders to generate data for, e.g.,
@@ -83,7 +83,7 @@ class TestCase:
             ret[key] = getattr(self, field)
         return ret
 
-    def filter_cases(self, adc_type: str) -> tuple[str]:
+    def filter_cases(self, adc_type: str) -> tuple[str, ...]:
         """
         Filter the available cases only returning cases that are relevant
         for the given adc_type.
@@ -119,7 +119,7 @@ class TestCase:
             assert all(kind in ["any", "spin_flip"] for kind in self.kinds.pp)
 
 
-def kinds_to_nstates(kinds: tuple[str]) -> list[str]:
+def kinds_to_nstates(kinds: tuple[str, ...]) -> list[str]:
     """
     Transforms the given kinds to a list of keywords to request states of the
     corresponding kind in an adc calculation.
@@ -193,7 +193,7 @@ _xyz = {
 }
 
 
-def _init_test_cases() -> tuple[TestCase]:
+def _init_test_cases() -> tuple[TestCase, ...]:
     test_cases: list[TestCase] = []
     # some shared data
     restricted_kinds = Kinds(pp=("singlet", "triplet"))

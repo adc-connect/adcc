@@ -34,7 +34,7 @@ from pyscf.solvent import ddcosmo
 
 
 class PyScfOperatorIntegralProvider:
-    available: tuple[str] = (
+    available: tuple[str, ...] = (
         "electric_dipole", "electric_dipole_velocity", "magnetic_dipole",
         "electric_quadrupole", "electric_quadrupole_traceless",
         "electric_quadrupole_velocity", "diamagnetic_magnetizability",
@@ -46,13 +46,13 @@ class PyScfOperatorIntegralProvider:
         self.backend = "pyscf"
 
     @property
-    def electric_dipole(self) -> tuple[np.ndarray]:
+    def electric_dipole(self) -> tuple[np.ndarray, ...]:
         """-sum_i r_i"""
         return tuple(
             -1.0 * self.scfres.mol.intor_symmetric('int1e_r', comp=3)
         )
 
-    def magnetic_dipole(self, gauge_origin="origin") -> tuple[np.ndarray]:
+    def magnetic_dipole(self, gauge_origin="origin") -> tuple[np.ndarray, ...]:
         """
         The imaginary part of the integral is returned.
         -0.5 * sum_i r_i x p_i
@@ -64,7 +64,7 @@ class PyScfOperatorIntegralProvider:
             )
 
     @property
-    def electric_dipole_velocity(self) -> tuple[np.ndarray]:
+    def electric_dipole_velocity(self) -> tuple[np.ndarray, ...]:
         """
         The imaginary part of the integral is returned.
         -sum_i p_i
@@ -74,7 +74,7 @@ class PyScfOperatorIntegralProvider:
                 self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
             )
 
-    def electric_quadrupole(self, gauge_origin="origin") -> tuple[np.ndarray]:
+    def electric_quadrupole(self, gauge_origin="origin") -> tuple[np.ndarray, ...]:
         """-sum_i r_{i, alpha} r_{i, beta}"""
         gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
         with self.scfres.mol.with_common_orig(gauge_origin):
@@ -82,8 +82,8 @@ class PyScfOperatorIntegralProvider:
                 -1.0 * self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
             )
 
-    def electric_quadrupole_traceless(self,
-                                      gauge_origin="origin") -> tuple[np.ndarray]:
+    def electric_quadrupole_traceless(self, gauge_origin="origin"
+                                      ) -> tuple[np.ndarray, ...]:
         """
         -0.5 * sum_i (3 * r_{i, alpha} r_{i, beta}
         - delta_{alpha, beta} r_{i}^2)
@@ -101,8 +101,8 @@ class PyScfOperatorIntegralProvider:
                 -1.0 * np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
             )
 
-    def electric_quadrupole_velocity(self,
-                                     gauge_origin="origin") -> tuple[np.ndarray]:
+    def electric_quadrupole_velocity(self, gauge_origin="origin"
+                                     ) -> tuple[np.ndarray, ...]:
         """
         The imaginary part of the integral is returned.
         -sum_i (r_{i, beta} p_{i, alpha} - i delta_{alpha, beta}
@@ -121,8 +121,8 @@ class PyScfOperatorIntegralProvider:
                 -1.0 * np.reshape(term, (9, ovlp.shape[0], ovlp.shape[0]))
             )
 
-    def diamagnetic_magnetizability(self,
-                                    gauge_origin="origin") -> tuple[np.ndarray]:
+    def diamagnetic_magnetizability(self, gauge_origin="origin"
+                                    ) -> tuple[np.ndarray, ...]:
         """
         0.25 * sum_i (r_{i, alpha} r_{i, beta}
         - delta_{alpha, beta} r_{i}^2)
