@@ -24,7 +24,7 @@ import warnings
 import numpy as np
 import inspect
 from functools import wraps
-from pkg_resources import parse_version
+from packaging.version import parse
 
 
 def cached_property(f):
@@ -123,7 +123,7 @@ def is_module_available(module, min_version=None):
         )
         return True
 
-    if parse_version(mod.__version__) < parse_version(min_version):
+    if parse(mod.__version__) < parse(min_version):
         warnings.warn(
             f"Found module {module}, but its version {mod.__version__} is below "
             f"the least required (== {min_version}). This module will be ignored."
