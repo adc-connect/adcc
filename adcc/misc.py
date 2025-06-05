@@ -24,7 +24,6 @@ import warnings
 import numpy as np
 import inspect
 from functools import wraps
-from pkg_resources import parse_version
 from packaging.version import parse
 
 
