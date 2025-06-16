@@ -1,6 +1,7 @@
 from collections import Counter
 from dataclasses import dataclass, asdict, fields
 from pathlib import Path
+from typing import Optional
 
 
 # NOTE: Can't use a dict, because TestCase has to be hashable.
@@ -24,10 +25,10 @@ class TestCase:
     basis: str
     restricted: bool
     only_full_mode: bool  # whether to run the test case only in full mode
-    pe_potfile: str | None = None
-    core_orbitals: int | None = None
-    frozen_core: int | None = None
-    frozen_virtual: int | None = None
+    pe_potfile: Optional[str] = None
+    core_orbitals: Optional[int] = None
+    frozen_core: Optional[int] = None
+    frozen_virtual: Optional[int] = None
     # the different cases for which to generate mp/adc reference data
     # generic, cvs, frozen core (fc), frozen virtual (fv), ...
     cases: tuple[str, ...] = ("gen",)
