@@ -105,7 +105,6 @@ jobs:
           pip install coveralls
           sudo gem install coveralls-lcov
           coveralls-lcov -v -n coverage.info > coverage.json
-          coveralls debug --service=github --merge=coverage.json
           coveralls --service=github --merge=coverage.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
