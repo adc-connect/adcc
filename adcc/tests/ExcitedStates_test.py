@@ -43,7 +43,8 @@ class TestExcitedStates:
                 if key.startswith("_"):
                     continue
                 blacklist = ["__", "index", "_ao", "excitation_vector",
-                             "method", "parent_state"]
+                             "method", "parent_state", "ground_state",
+                             "reference_state"]
                 if any(b in key for b in blacklist):
                     continue
                 try:

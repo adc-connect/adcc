@@ -156,7 +156,9 @@ class ReferenceState(libadcc.ReferenceState):
         )
 
         self.environment = None  # no environment attached by default
-        for name in ["excitation_energy_corrections", "environment"]:
+        for name in ["excitation_energy_corrections",
+                     "environment",
+                     "gradient_provider"]:
             if hasattr(hfdata, name):
                 setattr(self, name, getattr(hfdata, name))
 
