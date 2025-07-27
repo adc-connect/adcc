@@ -37,7 +37,7 @@ import subprocess
 
 from distutils import log
 
-from setuptools import Command, find_packages, setup
+from setuptools import Command, setup
 
 try:
     from pybind11.setup_helpers import Pybind11Extension, build_ext
@@ -454,10 +454,6 @@ def is_conda_build():
 
 def adccsetup(*args, **kwargs):
     """Wrapper around setup, displaying a link to adc-connect.org on any error."""
-    if is_conda_build():
-        kwargs.pop("install_requires")
-        kwargs.pop("setup_requires")
-        kwargs.pop("extras_require")
     try:
         setup(*args, **kwargs)
     except Exception as e:
@@ -477,68 +473,13 @@ if not os.path.isfile("adcc/__init__.py"):
                        "from top level of repository as './setup.py <command>'")
 
 adccsetup(
-    name="adcc",
-    description="adcc:  Seamlessly connect your host program to ADC",
+    # content of readme can't be modified from within pyproject.toml
     long_description=read_readme(),
     long_description_content_type="text/markdown",
-    keywords=[
-        "ADC", "algebraic-diagrammatic", "construction", "excited", "states",
-        "electronic", "structure", "computational", "chemistry", "quantum",
-        "spectroscopy",
-    ],
     #
-    author=("Michael F. Herbst, Maximilian Scheurer, Jonas Leitner, "
-            "Antonia Papapostolou, Friederike Schneider, Adrian L. Dempwolff"),
-    author_email="developers@adc-connect.org",
-    license="GPL v3",
-    url="https://adc-connect.org",
-    project_urls={
-        "Source": "https://github.com/adc-connect/adcc",
-        "Issues": "https://github.com/adc-connect/adcc/issues",
-    },
-    #
-    version="0.16.1",
-    classifiers=[
-        "Development Status :: 5 - Production/Stable",
-        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-        "License :: Free For Educational Use",
-        "Intended Audience :: Science/Research",
-        "Topic :: Scientific/Engineering :: Chemistry",
-        "Topic :: Education",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
-        "Programming Language :: Python :: 3.12",
-        "Programming Language :: Python :: 3.13",
-        "Operating System :: MacOS :: MacOS X",
-        "Operating System :: POSIX :: Linux",
-    ],
-    #
-    packages=find_packages(),
     ext_modules=[libadcc_extension()],
-    zip_safe=False,
     #
-    platforms=["Linux", "Mac OS-X"],
-    python_requires=">=3.7",
-    setup_requires=["pybind11 >= 2.6"],
-    install_requires=[
-        "opt_einsum >= 3.0",
-        "numpy >= 1.14",
-        "scipy >= 1.2",
-        "h5py >= 2.9",
-        "tqdm >= 4.30",
-        "packaging >=24.0",
-    ],
-    extras_require={
-        "tests": ["pytest", "pytest-cov", "pandas >= 0.25.0"],
-        "build_docs": ["sphinx>=2", "breathe", "sphinxcontrib-bibtex",
-                       "sphinx-automodapi", "sphinx-rtd-theme"],
-        "analysis": ["matplotlib >= 3.0", "pandas >= 0.25.0"],
+    cmdclass={
+        "build_ext": build_ext, "build_docs": BuildDocs, "cpptest": CppTest
     },
-    #
-    cmdclass={"build_ext": build_ext,
-              "build_docs": BuildDocs, "cpptest": CppTest},
 )

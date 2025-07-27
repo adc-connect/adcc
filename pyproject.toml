@@ -1,0 +1,81 @@
+[project]
+name = "adcc"
+description = "adcc:  Seamlessly connect your host program to ADC"
+version = "0.16.1"
+dynamic = ["readme"]  # handled in setup.py
+keywords = [
+	"ADC", "algebraic-diagrammatic", "construction", "excited", "states",
+	"electronic", "structure", "computational", "chemistry", "quantum",
+	"spectroscopy",
+]
+authors = [
+	{name = "Michael F. Herbst"},
+	{name = "Maximilian Scheurer"},
+	{name = "Jonas Leitner"},
+	{name = "Antonia Papapostolou"},
+	{name = "Friederike Schneider"},
+	{name = "Adrian L. Dempwolff"},
+	{email = "developers@adc-connect.org"},
+]
+license = "GPL-3.0-or-later"
+classifiers = [
+	"Development Status :: 5 - Production/Stable",
+	"Intended Audience :: Science/Research",
+	"Topic :: Scientific/Engineering :: Chemistry",
+	"Topic :: Education",
+	# remove 3.7 and 3.8? does it even work?
+	"Programming Language :: Python :: 3.7",
+	"Programming Language :: Python :: 3.8",
+	"Programming Language :: Python :: 3.9",
+	"Programming Language :: Python :: 3.9",
+	"Programming Language :: Python :: 3.10",
+	"Programming Language :: Python :: 3.11",
+	"Programming Language :: Python :: 3.12",
+	"Programming Language :: Python :: 3.13",
+	"Operating System :: MacOS :: MacOS X",
+	"Operating System :: POSIX :: Linux",
+]
+requires-python = ">= 3.7"
+dependencies = [
+	"opt_einsum >= 3.0",
+	"numpy >= 1.14",
+	"scipy >= 1.2",
+	"h5py >= 2.9",
+	"tqdm >= 4.30",
+	"packaging >=24.0",
+]
+
+[project.optional-dependencies]
+tests = ["pytest", "pytest-cov", "pandas >= 0.25.0"]
+build_docs = [
+	"sphinx>=2", "breathe", "sphinxcontrib-bibtex",
+	"sphinx-automodapi", "sphinx-rtd-theme"
+]
+analysis = ["matplotlib >= 3.0", "pandas >= 0.25.0"]
+
+[project.urls]
+Homepage = "https://adc-connect.org"
+"Source Code" = "https://github.com/adc-connect/adcc"
+"Issue Tracker" = "https://github.com/adc-connect/adcc/issues"
+
+[build-system]
+requires = [
+	"setuptools >= 61.0",
+	"pybind11 >= 2.6"
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages]
+find = {}
+
+[tool.bumpversion]
+current_version = "0.16.1"
+commit = true
+tag = true
+files = [
+	{filename = "adcc/__init__.py"}
+]
+
+[tool.pytest.ini_options]
+addopts = "--verbose"
+testpaths = ["adcc/tests"]
