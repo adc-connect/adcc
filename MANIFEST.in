@@ -1,6 +1,7 @@
 # Exclude test stuff
 exclude adcc/tests/**
 include adcc/tests/smoke_test.py
-global-include libadcc/**/*.hh libadcc/**/*.cc
-include LICENSE
-include README.md
+# add examples etc for sdist
+recursive-include examples *
+recursive-include docs *
+recursive-include scripts *
