@@ -158,9 +158,8 @@ def get_pkg_config():
     """
     pkg_config = os.environ.get('PKG_CONFIG', 'pkg-config')
     if shutil.which(pkg_config) is None:
-        log.warn("WARNING: Pkg-config is not installed. Adcc may not be "
-                 "able to find some dependencies.")
-        return None
+        raise RuntimeError("Pkg-config is not installed. Adcc is not able to find "
+                           "the libtensorlight library.")
 
     # Some default places to search for pkg-config files:
     pkg_config_paths = [sysconfig.get_config_var('LIBDIR'),
@@ -182,24 +181,20 @@ def search_with_pkg_config(library, minversion=None, define_prefix=True):
     version if `minversion` is not `None`.
     """
     pkg_config = get_pkg_config()
-    if pkg_config:
-        cmd = [pkg_config, "libtensorlight"]
-        if define_prefix:
-            cmd.append("--define-prefix")
-
-        try:
-            if minversion:
-                subprocess.check_call([*cmd, f"--atleast-version={minversion}"])
-
-            cflags = shlex.split(os.fsdecode(
-                subprocess.check_output([*cmd, "--cflags"])))
-            libs = shlex.split(os.fsdecode(
-                subprocess.check_output([*cmd, "--libs"])))
-
-            return cflags, libs
-        except (OSError, subprocess.CalledProcessError):
-            pass
-    return None, None
+    
+    cmd = [pkg_config, "libtensorlight"]
+    if define_prefix:
+        cmd.append("--define-prefix")
+    try:
+        if minversion:
+            subprocess.check_call([*cmd, f"--atleast-version={minversion}"])
+        cflags = shlex.split(os.fsdecode(
+            subprocess.check_output([*cmd, "--cflags"])))
+        libs = shlex.split(os.fsdecode(
+            subprocess.check_output([*cmd, "--libs"])))
+        return cflags, libs
+    except (OSError, subprocess.CalledProcessError):
+        return None, None
 
 
 def extract_library_dirs(libs):
@@ -403,7 +398,9 @@ def libadcc_extension():
 
             destdir = os.path.expanduser(flags["libtensor_autoinstall"])
             install_libtensor(url, destdir)
-            os.environ['PKG_CONFIG_PATH'] += f":{destdir}/lib/pkgconfig"
+            os.environ["PKG_CONFIG_PATH"] = (
+                os.environ.get("PKG_CONFIG_PATH", "") + f":{destdir}/lib/pkgconfig"
+            )
             cflags, libs = search_with_pkg_config("libtensorlight", lt_min_version)
             assert cflags is not None and libs is not None
 

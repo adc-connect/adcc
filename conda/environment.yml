@@ -10,6 +10,7 @@ dependencies:
   - libtensorlight >=3.0.1
   - pybind11 >=2.6
   - pip
+  - pkg-config
   # Run
   - numpy >=1.14
   - scipy >=1.2
