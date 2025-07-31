@@ -35,20 +35,12 @@ import functools
 import sysconfig
 import subprocess
 
+from pathlib import Path
 from distutils import log
 
 from setuptools import Command, setup
 
-try:
-    from pybind11.setup_helpers import Pybind11Extension, build_ext
-
-    have_pybind11 = True
-except ImportError:
-    # Failing for the first time is ok because of setup_requires
-    from setuptools import Extension as Pybind11Extension
-    from setuptools.command.build_ext import build_ext
-
-    have_pybind11 = False
+from pybind11.setup_helpers import Pybind11Extension, build_ext
 
 try:
     from sphinx.setup_command import BuildDoc as SphinxBuildDoc
@@ -151,65 +143,81 @@ class CppTest(Command):
 #
 # Setup libadcc extension
 #
+def append_to_pkg_config_path(*paths: str):
+    """Append the given paths to the `PKG_CONFIG_PATH`."""
+    for path in paths:
+        if "PKG_CONFIG_PATH" in os.environ:
+            os.environ["PKG_CONFIG_PATH"] += os.pathsep + path
+        else:
+            os.environ["PKG_CONFIG_PATH"] = path
+
+
 @functools.lru_cache()
 def get_pkg_config():
     """
     Get path to pkg-config and set up the PKG_CONFIG environment variable.
     """
-    pkg_config = os.environ.get('PKG_CONFIG', 'pkg-config')
+    pkg_config = os.environ.get("PKG_CONFIG", "pkg-config")
     if shutil.which(pkg_config) is None:
         raise RuntimeError("Pkg-config is not installed. Adcc is not able to find "
                            "the libtensorlight library.")
 
-    # Some default places to search for pkg-config files:
-    pkg_config_paths = [sysconfig.get_config_var('LIBDIR'),
-                        os.path.expanduser("~/.local/lib")]
+    # Some default places to search for pkg-config files
+    pkg_config_paths = [
+        sysconfig.get_config_var("LIBDIR"), Path.home() / ".local" / "lib"
+    ]
     for path in pkg_config_paths:
-        if path is not None:
-            path = os.path.join(path, 'pkgconfig')
-            try:
-                os.environ['PKG_CONFIG_PATH'] += ':' + path
-            except KeyError:
-                os.environ['PKG_CONFIG_PATH'] = path
+        if path is None:
+            continue
+        elif not isinstance(path, Path):
+            path = Path(path)
+        path = str(path / "pkgconfig")
+        append_to_pkg_config_path(path)
     return pkg_config
 
 
-def search_with_pkg_config(library, minversion=None, define_prefix=True):
+def search_with_pkg_config(library: str, minversion=None,
+                           define_prefix: bool = True):
     """
     Search the OS with pkg-config for a library and return the resulting
     cflags and libs stored inside the pc file. Also checks for a minimal
     version if `minversion` is not `None`.
     """
     pkg_config = get_pkg_config()
-    
-    cmd = [pkg_config, "libtensorlight"]
+
+    cmd = [pkg_config, library]
     if define_prefix:
         cmd.append("--define-prefix")
     try:
+        # first verify that the lib has the correct version
         if minversion:
             subprocess.check_call([*cmd, f"--atleast-version={minversion}"])
+        # then get the include path for the headers for the compiler
         cflags = shlex.split(os.fsdecode(
-            subprocess.check_output([*cmd, "--cflags"])))
+            subprocess.check_output([*cmd, "--cflags"])
+        ))
+        # and the path to the library file and its name for the linker
         libs = shlex.split(os.fsdecode(
-            subprocess.check_output([*cmd, "--libs"])))
+            subprocess.check_output([*cmd, "--libs"])
+        ))
         return cflags, libs
     except (OSError, subprocess.CalledProcessError):
         return None, None
 
 
-def extract_library_dirs(libs):
+def extract_library_dirs(libs: list[str]) -> list[str]:
     """
     From the `libs` flags returned by `search_with_pkg_config` extract
     the existing library directories.
     """
     libdirs = []
     for flag in libs:
-        if flag.startswith("-L") and os.path.isdir(flag[2:]):
+        if flag.startswith("-L") and Path(flag[2:]).is_dir():
             libdirs.append(flag[2:])
     return libdirs
 
 
-def request_urllib(url, filename, token=None):
+def request_urllib(url: str, filename: str, token=None):
     """Download a file from the net"""
     import urllib.request
 
@@ -224,22 +232,24 @@ def request_urllib(url, filename, token=None):
         return e.code
 
     if 200 <= resp.status < 300:
-        with open(filename, 'wb') as fp:
+        with open(filename, "wb") as fp:
             fp.write(resp.read())
     return resp.status
 
 
-def assets_most_recent_release(project):
-    """Return the assert urls attached to the most recent release of a project."""
+def assets_most_recent_release(project: str) -> list[str]:
+    """
+    Return the asset urls attached to the most recent release of a github project.
+    """
     url = f"https://api.github.com/repos/{project}/releases"
     # look for the github token in the environment
-    # and use it to the request to avoid the github API
-    # rate limits
+    # and use it for the request to avoid the github API rate limits
     token = os.environ.get("GITHUB_TOKEN", None)
     with tempfile.TemporaryDirectory() as tmpdir:
-        fn = tmpdir + "/releases.json"
+        filename = str(Path(tmpdir) / "releases.json")
+        status = None
         for _ in range(10):
-            status = request_urllib(url, fn, token=token)
+            status = request_urllib(url, filename, token=token)
             if 200 <= status < 300:
                 break
             time.sleep(1)
@@ -247,55 +257,84 @@ def assets_most_recent_release(project):
             raise RuntimeError(f"Error downloading asset list from {url} "
                                f"... Response: {status}")
 
-        with open(fn) as fp:
+        with open(filename) as fp:
             ret = json.loads(fp.read())
         assets = [ret[i]["assets"] for i in range(len(ret))][0]
         return [asset["browser_download_url"] for asset in assets]
 
 
-def install_libtensor(url, destination):
+def url_most_recent_release(project: str) -> str:
+    """
+    Return the download url for the most recent release of a github project."""
+    assets = assets_most_recent_release(project)
+    if sys.platform == "linux":
+        url = [asset for asset in assets if "-linux_x86_64" in asset]
+    elif sys.platform == "darwin":
+        # platform.machine() gives e.g., arm64
+        # we want to match macosx_X_arm64, where X is the Version
+        url = [
+            asset for asset in assets
+            if "-macosx_" in asset and f"_{platform.machine()}" in asset
+        ]
+    else:
+        raise AssertionError("Can't download {project} from github"
+                             " releases for unspported platform "
+                             f"{sys.platform}.")
+    if not url:
+        raise RuntimeError(
+            "Could not find a libtensor version to download. "
+            "Check your platform is supported and if in doubt see the "
+            "adcc installation instructions "
+            "(https://adc-connect.org/latest/installation.html)."
+        )
+    assert len(url) == 1  # found more than 1 url for the current system??
+    return url[0]
+
+
+def install_libtensor(url: str, destination: str):
     """
     Download libtensor from `url` and install at `destination`, removing possibly
     existing files from a previous installation.
     """
+    dest_folder = Path(destination)
     with tempfile.TemporaryDirectory() as tmpdir:
         print(f"Downloading libtensorlight from {url} to {destination} ...")
-        fn = os.path.basename(url)
-        local = tmpdir + "/" + fn
+        tmpdir = Path(tmpdir)
+        archive_file = tmpdir / Path(url).name
 
-        status_code = request_urllib(url, local)
+        # download the archive
+        status_code = request_urllib(url, str(archive_file))  # add token?
         if status_code < 200 or status_code >= 300:
             raise RuntimeError(
                 "Could not download libtensorlight. Check for a network issue "
                 "and if in doubt see the adcc installation instructions "
                 "(https://adc-connect.org/latest/installation.html)."
             )
-
+        # remove old installation files
         file_globs = [
-            destination + "/include/libtensorlight/**/*.hh",
-            destination + "/include/libtensor/**/*.hh",
-            destination + "/include/libutil/**/*.hh",
-            destination + "/lib/libtensorlight.so",
-            destination + "/lib/libtensorlight.so.*",
-            destination + "/lib/libtensorlight.dylib",
-            destination + "/lib/libtensorlight.*.dylib",
-            destination + "/lib/pkgconfig/libtensorlight.pc",
+            "include/libtensorlight/**/*.h",
+            "include/libtensor/**/*.h",
+            "include/libutil/**/*.h",
+            "lib/libtensorlight.so",
+            "lib/libtensorlight.so.*",
+            "lib/libtensorlight.dylib",
+            "lib/libtensorlight.*.dylib",
+            "lib/pkgconfig/libtensorlight.pc",
         ]
-
         for fglob in file_globs:
-            for fn in glob.glob(fglob, recursive=True):
-                log.info(f"Removing old libtensor file: {fn}")
-                os.remove(fn)
-
-        # Change to installation directory
-        olddir = os.getcwd()
-        os.makedirs(destination, exist_ok=True)
+            for file in dest_folder.rglob(fglob):
+                log.info(f"Removing old libtensor file: {file}")
+                assert file.is_file()
+                file.unlink()
+        # Change to installation directory and unpack the downloaded archive
+        olddir = Path.cwd()
+        dest_folder.mkdir(parents=True, exist_ok=True)
         os.chdir(destination)
-        subprocess.run(["tar", "xf", local], check=True)
+        subprocess.run(["tar", "xf", archive_file.resolve()], check=True)
         os.chdir(olddir)
 
 
-def libadcc_sources(target):
+def libadcc_sources(target: str) -> list[str]:
     sourcefiles = set(glob.glob("libadcc/**/*.cc", recursive=True))
     unittests = glob.glob("libadcc/tests/*.cc", recursive=True)
     exportfiles = glob.glob("libadcc/pyiface/*.cc")
@@ -309,129 +348,129 @@ def libadcc_sources(target):
 
 @functools.lru_cache()
 def libadcc_extension():
-    # Initial lot of flags
-    flags = dict(
-        libraries=[],
-        library_dirs=[],
-        include_dirs=[],
-        extra_link_args=[],
-        extra_compile_args=["-Wall", "-Wextra", "-Werror", "-O3"],
-        runtime_library_dirs=[],
-        extra_objects=[],
-        define_macros=[],
-        search_system=True,
-        coverage=False,
-        libtensor_autoinstall="~/.local",
-        libtensor_url=None,
-    )
+    # flags that are passed to the compiler
+    compiler_flags: dict[str, list[str]] = {
+        "libraries": [],
+        "library_dirs": [],
+        "include_dirs": [],
+        "extra_link_args": ["-Wall", "-Wextra", "-Werror", "-O3"],
+        "extra_compile_args": [],
+        "runtime_library_dirs": [],
+        "extra_objects": [],
+        "define_macros": [],
+    }
+    # flags relevant for configuration of the extension (e.g. setting
+    # the compiler flags and finding libtensor)
+    build_flags = {
+        "coverage": False,  # generate a test coverage report
+        "search_system": True,  # search system for libtensorlight using pkg-config
+        # install libtensor to folder if missing in the system
+        "libtensor_autoinstall": None,
+        # try to download libtensor from the url for the autoinstall
+        "libtensor_url": None,
+    }
+    # only checked when we search the system or download the library!
+    libtensorlight_min_version = "3.0.1"
 
+    # set specific compile args depending on the operating system
     if sys.platform == "darwin":
-        flags["extra_compile_args"] += ["-Wno-unused-command-line-argument",
-                                        "-Wno-undefined-var-template",
-                                        "-Wno-bitwise-instead-of-logical"]
-        # NOTE: This assumes a clang compiler!
-        flags["extra_compile_args"].extend(["-arch", platform.machine()])
-        flags["extra_link_args"].extend(["-arch", platform.machine()])
-    if sys.platform.startswith("linux"):
+        compiler_flags["extra_compile_args"] += [
+            "-Wno-unused-command-line-argument",
+            "-Wno-undefined-var-template", "-Wno-bitwise-instead-of-logical"
+        ]
+        compiler_flags["extra_compile_args"].extend(["-arch", platform.machine()])
+        compiler_flags["extra_link_args"].extend(["-arch", platform.machine()])
+    elif sys.platform.startswith("linux"):
         # otherwise fails with -O3 on gcc>=12
-        flags["extra_compile_args"] += ["-Wno-array-bounds"]
+        compiler_flags["extra_compile_args"] += ["-Wno-array-bounds"]
 
+    # folder to look for libtensor install: for linux and mac-os and if we are not
+    # running in a conda environment (we don't want to create a folder in home if
+    # we are running in conda)
     platform_autoinstall = (
         sys.platform.startswith("linux") or sys.platform.startswith("darwin")
     )
     if platform_autoinstall and not is_conda_build():
-        flags["libtensor_autoinstall"] = "~/.local"
-    else:
-        # Not yet supported on other platforms and disabled
-        # for conda builds
-        flags["libtensor_autoinstall"] = None
+        build_flags["libtensor_autoinstall"] = "~/.local"
 
-    # User-provided config
-    adcc_config = os.environ.get('ADCC_CONFIG')
+    # User-provided config: modify compiler and build flags
+    adcc_config = os.environ.get("ADCC_CONFIG")
     if adcc_config and not os.path.isfile(adcc_config):
         raise FileNotFoundError(adcc_config)
     for siteconfig in [adcc_config, "siteconfig.py", "~/.adcc/siteconfig.py"]:
         if siteconfig is not None:
             siteconfig = os.path.expanduser(siteconfig)
-            if os.path.isfile(siteconfig):
-                log.info("Reading siteconfig file:", siteconfig)
-                exec(open(siteconfig, "r").read(), flags)
-                flags.pop("__builtins__")
-                break
+            if not os.path.isfile(siteconfig):
+                continue
+            log.info("Reading siteconfig file:", siteconfig)
+            # merge compiler and build flags, update the content from the config
+            # and split again afterwards
+            assert not compiler_flags.keys() & build_flags.keys()
+            combined_flags = compiler_flags | build_flags
+            exec(open(siteconfig, "r").read(), combined_flags)
+            combined_flags.pop("__builtins__")  # created by exec
+            for key, val in combined_flags.items():
+                if key in build_flags:
+                    build_flags[key] = val
+                else:  # add new, unknown keys to compiler flags
+                    compiler_flags[key] = val
+            del combined_flags
+            break  # only read a single config file!
 
     # Keep track whether libtensor has been found
-    found_libtensor = "tensorlight" in flags["libraries"]
-    lt_min_version = "3.0.1"
+    found_libtensor = "tensorlight" in compiler_flags["libraries"]
 
     if not found_libtensor:
-        if flags["search_system"]:  # Find libtensor on the OS using pkg-config
+        # Once we enter this if statement we require pkg-config to find
+        # libtensorlight and generate the compiler and linker args!
+        cflags, libs = None, None
+        # first try to search the system with pkg-config
+        if build_flags["search_system"]:
             log.info("Searching OS for libtensorlight using pkg-config")
-            cflags, libs = search_with_pkg_config("libtensorlight", lt_min_version)
-
-        # Try to download libtensor if not on the OS
-        if (cflags is None or libs is None) and flags["libtensor_autoinstall"]:
-            if flags["libtensor_url"]:
-                url = flags["libtensor_url"]
-            else:
-                assets = assets_most_recent_release("adc-connect/libtensor")
-                url = []
-                if sys.platform == "linux":
-                    url = [asset for asset in assets if "-linux_x86_64" in asset]
-                elif sys.platform == "darwin":
-                    # platform.machine() gives e.g., arm64
-                    # we want to match macosx_X_arm64, where X is the Version
-                    url = [
-                        asset for asset in assets
-                        if "-macosx_" in asset and f"_{platform.machine()}" in asset
-                    ]
-                else:
-                    raise AssertionError("Should not get to download for "
-                                         "unspported platform.")
-                if len(url) != 1:
-                    raise RuntimeError(
-                        "Could not find a libtensor version to download. "
-                        "Check your platform is supported and if in doubt see the "
-                        "adcc installation instructions "
-                        "(https://adc-connect.org/latest/installation.html)."
-                    )
-                url = url[0]
-
-            destdir = os.path.expanduser(flags["libtensor_autoinstall"])
-            install_libtensor(url, destdir)
-            os.environ["PKG_CONFIG_PATH"] = (
-                os.environ.get("PKG_CONFIG_PATH", "") + f":{destdir}/lib/pkgconfig"
+            cflags, libs = search_with_pkg_config(
+                "libtensorlight", libtensorlight_min_version
             )
-            cflags, libs = search_with_pkg_config("libtensorlight", lt_min_version)
+        # if this was not successful we try to download libensorlight
+        if (cflags is None or libs is None) and \
+                build_flags["libtensor_autoinstall"]:
+            # - get the url from where to download
+            if build_flags["libtensor_url"]:
+                url = build_flags["libtensor_url"]
+            else:
+                url = url_most_recent_release("adc-connect/libtensor")
+            # download libtensor from the url and install it in the given folder
+            install_dir = os.path.expanduser(build_flags["libtensor_autoinstall"])
+            assert install_dir
+            install_libtensor(url, install_dir)
+            # add the installdir to the PKG_CONFIG_PATH so we can find the package
+            append_to_pkg_config_path(
+                str(Path(install_dir) / "lib" / "pkgconfig")
+            )
+            cflags, libs = search_with_pkg_config(
+                "libtensorlight", libtensorlight_min_version
+            )
             assert cflags is not None and libs is not None
 
         if cflags is not None and libs is not None:
             found_libtensor = True
-            flags["extra_compile_args"].extend(cflags)
-            flags["extra_link_args"].extend(libs)
+            compiler_flags["extra_compile_args"].extend(cflags)
+            compiler_flags["extra_link_args"].extend(libs)
             log.info(f"Using libtensorlight libraries: {libs}.")
             if sys.platform == "darwin":
-                flags["extra_link_args"].append("-Wl,-rpath,@loader_path")
+                compiler_flags["extra_link_args"].append("-Wl,-rpath,@loader_path")
                 for path in extract_library_dirs(libs):
-                    flags["extra_link_args"].append(f"-Wl,-rpath,{path}")
+                    compiler_flags["extra_link_args"].append(f"-Wl,-rpath,{path}")
             else:
-                flags["runtime_library_dirs"].extend(extract_library_dirs(libs))
+                compiler_flags["runtime_library_dirs"].extend(
+                    extract_library_dirs(libs)
+                )
 
     if not found_libtensor:
         raise RuntimeError("Did not find the libtensorlight library.")
 
-    # Filter out the arguments to pass to Pybind11Extension
-    extargs = {k: v for k, v in flags.items()
-               if k in ("libraries", "library_dirs", "include_dirs",
-                        "extra_link_args", "extra_compile_args",
-                        "runtime_library_dirs", "extra_objects",
-                        "define_macros")}
-    if have_pybind11:
-        # This is needed on the first pass where pybind11 is not yet installed
-        extargs["cxx_std"] = 14
-
     ext = Pybind11Extension("libadcc", libadcc_sources("extension"),
-                            language="c++", **extargs)
-    if flags["coverage"]:
+                            language="c++", cxx_std=14, **compiler_flags)
+    if build_flags["coverage"]:
         ext.extra_compile_args += [
             "--coverage", "-O0", "-g", "-fprofile-update=atomic"
         ]
