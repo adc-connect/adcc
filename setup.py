@@ -299,7 +299,7 @@ def install_libtensor(url: str, destination: str):
     dest_folder = Path(destination)
     with tempfile.TemporaryDirectory() as tmpdir:
         print(f"Downloading libtensorlight from {url} to {destination} ...")
-        tmpdir = Path(tmpdir)
+        tmpdir = Path(tmpdir).resolve()
         archive_file = tmpdir / Path(url).name
 
         # download the archive
@@ -330,7 +330,7 @@ def install_libtensor(url: str, destination: str):
         olddir = Path.cwd()
         dest_folder.mkdir(parents=True, exist_ok=True)
         os.chdir(destination)
-        subprocess.run(["tar", "xf", archive_file.resolve()], check=True)
+        subprocess.run(["tar", "xf", archive_file], check=True)
         os.chdir(olddir)
 
 
@@ -353,8 +353,8 @@ def libadcc_extension():
         "libraries": [],
         "library_dirs": [],
         "include_dirs": [],
-        "extra_link_args": ["-Wall", "-Wextra", "-Werror", "-O3"],
-        "extra_compile_args": [],
+        "extra_link_args": [],
+        "extra_compile_args": ["-Wall", "-Wextra", "-Werror", "-O3"],
         "runtime_library_dirs": [],
         "extra_objects": [],
         "define_macros": [],
@@ -408,11 +408,12 @@ def libadcc_extension():
             assert not compiler_flags.keys() & build_flags.keys()
             combined_flags = compiler_flags | build_flags
             exec(open(siteconfig, "r").read(), combined_flags)
-            combined_flags.pop("__builtins__")  # created by exec
             for key, val in combined_flags.items():
+                # unknown keys, e.g., variables that were created
+                # in the config file are dropped
                 if key in build_flags:
                     build_flags[key] = val
-                else:  # add new, unknown keys to compiler flags
+                elif key in compiler_flags:
                     compiler_flags[key] = val
             del combined_flags
             break  # only read a single config file!
