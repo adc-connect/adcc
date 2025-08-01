@@ -66,7 +66,7 @@ class BuildDocs(Command):
             raise RuntimeError("setup.py is expected to be called from the "
                                "top level project directory: ./setup.py build_docs")
 
-        try:  # generate the for libadcc
+        try:  # generate the documentation for libadcc
             # we need to create the folder for doxygen
             (build_folder / "libadcc_docs").mkdir(parents=True, exist_ok=True)
             doxyfile = docs_folder / "Doxyfile"

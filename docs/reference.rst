@@ -6,7 +6,7 @@ API reference
 =============
 
 .. note::
-   Work in progress. Many function do not yet follow
+   Work in progress. Many functions do not yet follow
    the numpy standard in their documentation!
 
 This page contains a structured overview of the python API of adcc.
@@ -32,9 +32,9 @@ They are generated directly from the C++ source code
 using `pybind11 <https://pybind11.readthedocs.io>`_
 and the sources contained in the
 `extension <https://github.com/adc-connect/adcc/tree/master/libadcc/pyiface>`_
-subfolder of the adcc github repository.
+subfolder of the adcc GitHub repository.
 
-It is not recommended to call these functions directly,
+It is not recommended calling these functions directly,
 but instead resort to the higher-level functionality
 from the :ref:`adccmodule`.
 

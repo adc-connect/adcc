@@ -1,1 +1,1 @@
-This summary only shows a few key results, which have been generated using commit **9c7bba83** from the `adcc repository <https://code.adc-connect.org>`_. The full results in interactive form is accessible on https://adc-connect.github.io/adcc-bench.
+This summary only shows a few key results, which have been generated using commit **9c7bba83** from the `adcc repository <https://code.adc-connect.org>`_. The full results in interactive form are accessible on https://adc-connect.github.io/adcc-bench.

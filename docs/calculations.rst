@@ -8,7 +8,7 @@ Performing calculations with adcc
 This section gives a practical guide for performing ADC calculations with adcc.
 It deliberately does not show all tricks and all tweaks,
 but instead provides a working man's subset of selected features.
-To checkout the full API with all details of the mentioned functions and
+To check out the full API with all details of the mentioned functions and
 classes, see the advanced topics or the :ref:`API reference <pyapi>`.
 
 Overview of supported features
@@ -16,9 +16,9 @@ Overview of supported features
 Currently adcc supports all ADC(n) variants up to level 3,
 that is **ADC(0)**, **ADC(1)**, **ADC(2)**, **ADC(2)-x** and **ADC(3)**.
 For each of these methods, basic state properties and transition properties
-such as the state dipole moments or the oscillator strengths are available.
-More complicated analysis can be performed in user code by requesting
-the full state and transition density matrices e.g. as NumPy arrays.
+such as, for example, the state dipole moments or the oscillator strengths
+are available. More complicated analysis can be performed in user code by
+requesting the full state and transition density matrices e.g. as NumPy arrays.
 
 The code supports the **spin-flip** variant of all aforementioned methods
 and furthermore allows the **core-valence separation** (CVS),
@@ -92,7 +92,7 @@ There are a few things to note here:
   contained in the ``scfres`` object in the above code example.
 * Apart from the SCF result in ``scfref``, the :func:`adcc.adc3` method takes
   extra keyword arguments such as ``n_singlets`` in this case. These arguments
-  allow to specify, which and how many states to compute, how accurate
+  allow specifying which and how many states to compute, how accurate
   this should be done and which algorithms to use.
   These arguments will be discussed in detail in this section.
 * The Jacobi-Davidson convergence table allows to monitor the convergence
@@ -111,7 +111,7 @@ There are a few things to note here:
   matrix had to be applied to some vectors (i.e. the number of
   matrix-vector products with the ADC matrix, which had to be
   computed). It also shows the total time for the Jacobi-Davidson solver in order
-  to converge the requested states. Typically the runtime is directly
+  to converge the requested states. Typically, the runtime is directly
   related to the number of such applies and this number should therefore
   be used when trying to identify a suitable set of adcc parameters for converging
   a calculation.
@@ -163,12 +163,12 @@ This returns a table, such as::
 
 The first line of this table contains a reminder and summary of the
 calculation we performed, namely we did an ADC(3) calculation
-and requestet singlets. Further we are informed that the calculation
-converged successfully. An unseccessful calculation would instead print
-``NOT CONVERGED``. Some extra explaination needs the printout
+and requested singlets. Further we are informed that the calculation
+converged successfully. An unsuccessful calculation would instead print
+``NOT CONVERGED``. Some extra explanation needs the printout
 ``adc3 (adc2)``. Here the ``adc2`` inside the brackets indicates
 the ADC level at which properties are computed.
-Currently adcc only has ADC(3) expressions for the excited state
+Currently, adcc only has ADC(3) expressions for the excited state
 energies and excitation vectors implemented and the property calculation,
 such as the oscillator strength, is thus only done at the ADC(2) level.
 
@@ -213,10 +213,10 @@ In our case it would produce a table such as::
 
     ...
 
-In the tables a few lines have been cute near the ``...`` for clearity.
+In the tables a few lines have been cute near the ``...`` for clarity.
 
 Without a doubt, ADC(3) is a rather expensive method,
-taking already noticable time for a simple system such as
+taking already noticeable time for a simple system such as
 a triple zeta water calculation. For comparison an equivalent ADC(1)
 calculation, started with
 
@@ -237,7 +237,7 @@ on top of the same PySCF reference state, gives rise to::
         Total solver time:           295.018ms
 
 on the same machine, i.e. is both faster per iteration
-and needs less iterations in total.
+and needs fewer iterations in total.
 Other means to influence the calculation runtime
 and determine the number and kind of states to compute
 is discussed in the next section.
@@ -283,7 +283,7 @@ each take a number of arguments:
 - **n_guesses** (Number of guess vectors):
   By default adcc uses twice as many guess vectors as states to be computed.
   Sometimes increasing this value by a few vectors can be helpful.
-  If you encounter a convergence to zero eigenvalues, than decreasing this
+  If you encounter a convergence to zero eigenvalues, then decreasing this
   parameter might solve the problems.
 - **max_iter** (Maximal number of iterations)
   The default value (70) should be good in most cases. If convergence
@@ -366,20 +366,20 @@ to produce a plot such as
 .. image:: images/plot_spectrum_water.png
 
 In this image crosses represent the actual computed value
-for the absorption cross section for the obtained excited states.
+for the absorption cross-section for the obtained excited states.
 To form the actual spectrum (solid blue line) these discrete
 peaks are artificially broadened with an empirical broadening parameter.
 Notice, that the :func:`adcc.ElectronicTransition.plot_spectrum`
 function does only prepare the spectrum inside Matplotlib,
-such that ``plt.show()`` needs to be called in order to actuall *see* the plot.
-This allows to *simulaneously* plot the spectrum from multiple
+such that ``plt.show()`` needs to be called in order to actually *see* the plot.
+This allows to *simultaneously* plot the spectrum from multiple
 calculations in one figure if desired.
 
 The :func:`adcc.ElectronicTransition.plot_spectrum` function takes a number
 of parameters to alter the default plotting behaviour:
 
 - **Broadening parameters**: The default broadening can be completely disabled
-  using the parameter ``broadening=None``. If instead of useng lorentzian
+  using the parameter ``broadening=None``. If instead of using Lorentzian
   broadening, Gaussian broadening is preferred,
   select ``broadening="gaussian"``. The width of the broadening is controlled
   by the ``width`` parameter. Its default value is 0.01 atomic units or roughly
@@ -439,10 +439,10 @@ one can use the following pattern:
    triplets = adcc.adc2(singlets.matrix, n_triplets=5)
 
 This will perform both an ADC(2) calculation for 3 singlets
-as well as 5 triplets on top of the HF reference in ``scfres``
+and 5 triplets on top of the HF reference in ``scfres``
 by using the ADC(2) matrix stored in the ``singlets.matrix`` attribute
 of the :class:`adcc.ExcitedStates` class returned by the first
-:func:`adcc.adc2` call, along with its its precomputed intermediates.
+:func:`adcc.adc2` call, along with its precomputed intermediates.
 
 If the ADC method is to be varied between
 the first and the second run, one may at least reuse the
@@ -489,7 +489,7 @@ e.g.
 Programmatic access to computed data
 ------------------------------------
 .. note::
-   This section should be written. Idea: Describe how to get data in a nice way.
+   This section should be written. Idea: Describe how to get data nicely.
 
 
 Spin-flip calculations
@@ -554,9 +554,9 @@ Such a calculation requires one additional parameter,
 namely ``core_orbitals``, which determines the number of **spatial** orbitals
 to put into the core space. This is to say, that ``core_orbitals=1`` will
 not just place one orbital into the core space,
-much rather one alpha and one beta orbital. Similarly ``core_orbitals=2``
+much rather one alpha and one beta orbital. Similarly, ``core_orbitals=2``
 places two alphas and two betas into the core space and so on.
-By default the lowest-energy occupied orbitals are selected to be part of
+By default, the lowest-energy occupied orbitals are selected to be part of
 the core space.
 
 For example, in order to perform a CVS-ADC(2) calculation of water,
@@ -589,7 +589,7 @@ Restricting active orbitals: Frozen core and frozen virtuals
 
 In most cases the occupied orbitals in the core
 region of an atom are hardly involved in the valence to valence
-electronic transitions. Similarly the high-enery unoccupied
+electronic transitions. Similarly, the high-energy unoccupied
 molecular orbitals typically are discretised continuum states
 or other discretisation artifacts and thus are rarely important
 for properly describing valence-region electronic spectra.
@@ -611,7 +611,7 @@ and ``frozen_core``. Similar to ``core_orbitals``,
 these arguments allow to specify the number of *spatial* orbitals
 to be placed in the respective spaces, thus
 the number of alpha and beta orbitals to deactivate in the ADC treatment.
-By default the *lowest-energy occupied* orbitals are selected
+By default, the *lowest-energy occupied* orbitals are selected
 with ``frozen_core`` to make up the frozen core space and the
 *highest-energy virtual* orbitals are selected with
 ``frozen_virtual`` to give the frozen virtual space.
@@ -641,13 +641,13 @@ For example the code
    # in the frozen virtual space
    states_fv = adcc.adc2(wfn, n_singlets=4, frozen_virtual=5)
 
-runs two ADC(2) calulationos for 4 singlets. In the first
+runs two ADC(2) calculations for 4 singlets. In the first
 the oxygen 1s is flagged as inactive by placing it into the frozen core space.
-In the second the 5 highest-energy virtual orbitials are frozen (deactivated)
+In the second the 5 highest-energy virtual orbitals are frozen (deactivated)
 instead.
 
 Frozen-core and frozen-virtual methods may be combined with
-CVS calulations. When specifying both ``frozen_core``
+CVS calculations. When specifying both ``frozen_core``
 and ``core_orbitals`` keep in mind that the frozen core orbitals
 are determined first, followed by the core-occupied orbitals.
 In this way one may deactivate part of lower-energy occupied orbitals
@@ -701,7 +701,7 @@ ADC calculations with the Polarisable Embedding (PE) model are supported
 for the PySCF and Psi4 backends via the `CPPE library <https://github.com/maxscheurer/cppe>`_ :cite:`Scheurer2019`.
 In the PE model, interactions with the environment are represented by a
 multi-center multipole expansion for electrostatics, and polarisation is modeled
-via dipole polarizabilities located at the expansion sites.
+via dipole polarisabilities located at the expansion sites.
 For a general introduction of PE and a tutorial on how to set up calculations, please see the tutorial review :cite:`Steinmann2019`.
 The embedding potential needed for PE can be generated using `PyFraME <https://gitlab.com/FraME-projects/PyFraME>`_, which is installable
 via ``pip install pyframe``.
@@ -818,9 +818,9 @@ Polarisable Continuum Model
 ---------------------------
 
 ADC calculations with the Polarisable Continuum Model (PCM) are supported
-for the PySCF and Psi4 backends. In the PCM model, the surrouding solvent molecules, 
+for the PySCF and Psi4 backends. In the PCM model, the surrounding solvent molecules, 
 the environment, are modeled implicitly as dielectric polarisable continuum that is
-represented as discrete charge distribution on the suface of the cavity the solute is
+represented as discrete charge distribution on the surface of the cavity the solute is
 embedded in. The solvent-solute interaction is modeled as the purely electrostatic
 interaction between the solute's charge density and the discrete charge distribution.
 A general introduction of PCM is e.g. available in the review :cite:`Mennucci2012`.

@@ -17,7 +17,7 @@ The distribution of workload is such that ``libadcc`` is responsible for:
 - Interaction with the underlying linear algebra backend, i.e. the tensor library
 - A unified interface to import Hartree-Fock results into the tensor library
 
-In contrast the adcc Python module
+In contrast, the adcc Python module
 
 - Implements iterative numerical solver schemes (e.g. the Davidson diagonalisation)
 - Implements all working equations (Møller-Plesset perturbation theory and ADC matrix expressions)
