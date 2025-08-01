@@ -29,18 +29,21 @@ import json
 import time
 import shlex
 import shutil
+import logging
 import platform
 import tempfile
 import functools
 import sysconfig
 import subprocess
-import logging as log
 
 from pathlib import Path
 
 from setuptools import Command, setup
 
 from pybind11.setup_helpers import Pybind11Extension, build_ext
+
+
+log = logging.getLogger()
 
 
 #
@@ -98,30 +101,33 @@ class CppTest(Command):
         subprocess.check_call([test_executable])
 
     def compile_test_executable(self):
-        from distutils.ccompiler import new_compiler
-        from distutils.sysconfig import customize_compiler
+        from setuptools._distutils.ccompiler import new_compiler
+        from setuptools._distutils.sysconfig import customize_compiler
 
-        output_dir = os.path.abspath("build/cpptest")
-        test_executable = output_dir + "/libadcc_tests"
-        if os.path.isfile(test_executable):
-            print(f"Skipping recompilation of {os.path.relpath(test_executable)}. "
+        output_dir = Path(__file__).parent / "build" / "cpptest"
+        test_executable = output_dir / "libadcc_tests"
+        if test_executable.is_file():
+            rel_path = test_executable.relative_to(Path.cwd())
+            print(f"Skipping recompilation of {rel_path}. "
                   "Delete file if recompilation desired.")
             return test_executable  # Don't recompile
 
         # Download catch
-        if not os.path.isfile(output_dir + "/catch2/catch.hpp"):
-            os.makedirs(output_dir + "/catch2", exist_ok=True)
+        catch_header = output_dir / "catch2" / "catch.hpp"
+        if not catch_header.is_file():
+            (output_dir / "catch2").mkdir(parents=True, exist_ok=True)
             base = "https://github.com/catchorg/Catch2/releases/download/"
-            request_urllib(base + "v2.13.9/catch.hpp",
-                           output_dir + "/catch2/catch.hpp")
+            request_urllib(base + "v2.13.9/catch.hpp", str(catch_header))
 
         # Adapt stuff from libadcc extension
         libadcc = libadcc_extension()
-        include_dirs = libadcc.include_dirs + [output_dir]
+        include_dirs = libadcc.include_dirs + [str(output_dir)]
         sources = libadcc_sources("cpptest")
-        extra_compile_args = [arg for arg in libadcc.extra_compile_args
-                              if not any(arg.startswith(start)
-                                         for start in ("-fvisibility", "-g", "-O"))]
+        extra_compile_args = [
+            arg for arg in libadcc.extra_compile_args
+            if not any(arg.startswith(start) for
+                       start in ("-fvisibility", "-g", "-O"))
+        ]
 
         # Reduce optimisation a bit to ensure that the debugging experience is good
         if "--coverage" in extra_compile_args:
@@ -130,10 +136,10 @@ class CppTest(Command):
             extra_compile_args += ["-O1", "-g"]
 
         # Bring forward stuff from libadcc
-        compiler = new_compiler(verbose=self.verbose)
+        compiler = new_compiler()
         customize_compiler(compiler)
         objects = compiler.compile(
-            sources, output_dir, libadcc.define_macros, include_dirs,
+            sources, str(output_dir), libadcc.define_macros, include_dirs,
             debug=True, extra_postargs=extra_compile_args
         )
 
@@ -141,7 +147,7 @@ class CppTest(Command):
             objects.extend(libadcc.extra_objects)
 
         compiler.link_executable(
-            objects, "libadcc_tests", output_dir, libadcc.libraries,
+            objects, "libadcc_tests", str(output_dir), libadcc.libraries,
             libadcc.library_dirs, libadcc.runtime_library_dirs, debug=True,
             extra_postargs=libadcc.extra_link_args, target_lang=libadcc.language
         )
@@ -167,8 +173,8 @@ def get_pkg_config():
     """
     pkg_config = os.environ.get("PKG_CONFIG", "pkg-config")
     if shutil.which(pkg_config) is None:
-        raise RuntimeError("Pkg-config is not installed. Adcc is not able to find "
-                           "the libtensorlight library.")
+        raise RuntimeError("Pkg-config is not installed. Adcc is not able to search"
+                           " the libtensorlight library.")
 
     # Some default places to search for pkg-config files
     pkg_config_paths = [
@@ -331,7 +337,7 @@ def install_libtensor(url: str, destination: str):
         ]
         for fglob in file_globs:
             for file in dest_folder.rglob(fglob):
-                log.info(f"Removing old libtensor file: {file}")
+                log.info(f"Removing old libtensor file: {str(file)}")
                 assert file.is_file()
                 file.unlink()
         # Change to installation directory and unpack the downloaded archive
@@ -359,7 +365,7 @@ def update_flags_from_config(config_file: Path, *flags: dict):
     Reads and executes the content of the config file and updates
     the prodided flags accordingly
     """
-    log.info("Reading siteconfig file:", config_file)
+    log.info(f"Reading siteconfig file: {str(config_file)}")
     assert config_file.is_file()
     # merge the flags into a single dict: can't have the same keys!
     combined_flags = {}
