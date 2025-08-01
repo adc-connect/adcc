@@ -75,13 +75,12 @@ jobs:
         if: matrix.documentation
       - name: Build documentation
         run: |
-          cd docs && doxygen && cd ..
-          sphinx-build -M html docs build/sphinx
+          ./setup.py build_docs
         if: matrix.documentation
       - name: Upload documentation artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: build/sphinx/html
+          path: build/docs/html
         if: matrix.documentation
       #
       - name: Upload coverage to codecov

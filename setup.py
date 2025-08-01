@@ -42,36 +42,44 @@ from setuptools import Command, setup
 
 from pybind11.setup_helpers import Pybind11Extension, build_ext
 
-try:
-    from sphinx.setup_command import BuildDoc as SphinxBuildDoc
-
-    have_sphinx = True
-except ImportError:
-    have_sphinx = False
 
 #
 # Custom commands
 #
+class BuildDocs(Command):
+    description = "Build the C++ and python documentation"
+    user_options = []
 
-if have_sphinx:
-    class BuildDocs(SphinxBuildDoc):
-        def run(self):
-            subprocess.check_call(["doxygen"], cwd="docs")
-            super().run()
-else:
-    # No sphinx found -> make a dummy class
-    class BuildDocs(Command):
-        user_options = []
+    def initialize_options(self):
+        pass
 
-        def initialize_options(self):
-            pass
+    def finalize_options(self):
+        pass
 
-        def finalize_options(self):
-            pass
+    def run(self):
+        build_folder = Path(__file__).parent / "build"
+        docs_folder = Path(__file__).parent / "docs"
+        if not docs_folder.is_dir():
+            raise RuntimeError("setup.py is expected to be called from the "
+                               "top level project directory: ./setup.py build_docs")
 
-        def run(self):
+        try:  # generate the for libadcc
+            # we need to create the folder for doxygen
+            (build_folder / "libadcc_docs").mkdir(parents=True, exist_ok=True)
+            doxyfile = docs_folder / "Doxyfile"
+            subprocess.check_call(["doxygen", str(doxyfile)])
+        except (OSError, subprocess.CalledProcessError) as e:
             raise RuntimeError(
-                "Sphinx not found. Try 'pip install -U adcc[build_docs]'"
+                f"Could not build C++ documentation with doxygen: {e}"
+            )
+        try:  # generate full documentation
+            output = build_folder / "docs"
+            subprocess.check_call([
+                "sphinx-build", "-M", "html", str(docs_folder), str(output)
+            ])
+        except (OSError, subprocess.CalledProcessError) as e:
+            raise RuntimeError(
+                f"Could not build adcc documentation with sphinx: {e}"
             )
 
 
