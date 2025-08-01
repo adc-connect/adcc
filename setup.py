@@ -34,9 +34,9 @@ import tempfile
 import functools
 import sysconfig
 import subprocess
+import logging as log
 
 from pathlib import Path
-from distutils import log
 
 from setuptools import Command, setup
 
@@ -346,10 +346,32 @@ def libadcc_sources(target: str) -> list[str]:
         raise ValueError(f"Unknown target: {target}")
 
 
+def update_flags_from_config(config_file: Path, *flags: dict):
+    """
+    Reads and executes the content of the config file and updates
+    the prodided flags accordingly
+    """
+    log.info("Reading siteconfig file:", config_file)
+    assert config_file.is_file()
+    # merge the flags into a single dict: can't have the same keys!
+    combined_flags = {}
+    for flag_subset in flags:
+        assert not flag_subset.keys() & combined_flags.keys()
+        combined_flags.update(flag_subset)
+    # read and execute the config and update the flags
+    exec(open(config_file, "r").read(), combined_flags)
+    # split the flags up in the original dicts only keeping
+    # known keys that existed in the original dicts
+    for key, val in combined_flags.items():
+        for flag_subset in flags:
+            if key in flag_subset:
+                flag_subset[key] = val
+
+
 @functools.lru_cache()
 def libadcc_extension():
     # flags that are passed to the compiler
-    compiler_flags: dict[str, list[str]] = {
+    build_flags: dict[str, list[str]] = {
         "libraries": [],
         "library_dirs": [],
         "include_dirs": [],
@@ -361,7 +383,7 @@ def libadcc_extension():
     }
     # flags relevant for configuration of the extension (e.g. setting
     # the compiler flags and finding libtensor)
-    build_flags = {
+    config_flags = {
         "coverage": False,  # generate a test coverage report
         "search_system": True,  # search system for libtensorlight using pkg-config
         # install libtensor to folder if missing in the system
@@ -371,77 +393,68 @@ def libadcc_extension():
     }
     # only checked when we search the system or download the library!
     libtensorlight_min_version = "3.0.1"
+    # The config files to check
+    if "ADCC_CONFIG" in os.environ:
+        if not Path(os.environ["ADCC_CONFIG"]).is_file():
+            raise FileNotFoundError(os.environ["ADCC_CONFIG"])
+        config_files: list[Path] = [Path(os.environ["ADCC_CONFIG"])]
+    else:
+        config_files: list[Path] = [
+            Path("siteconfig.py"), Path.home() / ".adcc" / "siteconfig.py"
+        ]
 
     # set specific compile args depending on the operating system
     if sys.platform == "darwin":
-        compiler_flags["extra_compile_args"] += [
+        build_flags["extra_compile_args"] += [
             "-Wno-unused-command-line-argument",
             "-Wno-undefined-var-template", "-Wno-bitwise-instead-of-logical"
         ]
-        compiler_flags["extra_compile_args"].extend(["-arch", platform.machine()])
-        compiler_flags["extra_link_args"].extend(["-arch", platform.machine()])
+        build_flags["extra_compile_args"].extend(["-arch", platform.machine()])
+        build_flags["extra_link_args"].extend(["-arch", platform.machine()])
     elif sys.platform.startswith("linux"):
         # otherwise fails with -O3 on gcc>=12
-        compiler_flags["extra_compile_args"] += ["-Wno-array-bounds"]
+        build_flags["extra_compile_args"] += ["-Wno-array-bounds"]
 
     # folder to look for libtensor install: for linux and mac-os and if we are not
-    # running in a conda environment (we don't want to create a folder in home if
-    # we are running in conda)
+    # running in a conda environment (avoid creating a folder in home in conda)
     platform_autoinstall = (
         sys.platform.startswith("linux") or sys.platform.startswith("darwin")
     )
     if platform_autoinstall and not is_conda_build():
-        build_flags["libtensor_autoinstall"] = "~/.local"
+        # Keep '~' here and expand later to not change the behaviour!
+        config_flags["libtensor_autoinstall"] = "~/.local"
 
     # User-provided config: modify compiler and build flags
-    adcc_config = os.environ.get("ADCC_CONFIG")
-    if adcc_config and not os.path.isfile(adcc_config):
-        raise FileNotFoundError(adcc_config)
-    for siteconfig in [adcc_config, "siteconfig.py", "~/.adcc/siteconfig.py"]:
-        if siteconfig is not None:
-            siteconfig = os.path.expanduser(siteconfig)
-            if not os.path.isfile(siteconfig):
-                continue
-            log.info("Reading siteconfig file:", siteconfig)
-            # merge compiler and build flags, update the content from the config
-            # and split again afterwards
-            assert not compiler_flags.keys() & build_flags.keys()
-            combined_flags = compiler_flags | build_flags
-            exec(open(siteconfig, "r").read(), combined_flags)
-            for key, val in combined_flags.items():
-                # unknown keys, e.g., variables that were created
-                # in the config file are dropped
-                if key in build_flags:
-                    build_flags[key] = val
-                elif key in compiler_flags:
-                    compiler_flags[key] = val
-            del combined_flags
-            break  # only read a single config file!
+    for siteconfig in config_files:
+        if not siteconfig.is_file():
+            continue
+        # in-place update the flags from the config file
+        update_flags_from_config(siteconfig, build_flags, config_flags)
+        break  # only read a single config file!
 
     # Keep track whether libtensor has been found
-    found_libtensor = "tensorlight" in compiler_flags["libraries"]
+    found_libtensor = "tensorlight" in build_flags["libraries"]
 
     if not found_libtensor:
         # Once we enter this if statement we require pkg-config to find
         # libtensorlight and generate the compiler and linker args!
         cflags, libs = None, None
         # first try to search the system with pkg-config
-        if build_flags["search_system"]:
+        if config_flags["search_system"]:
             log.info("Searching OS for libtensorlight using pkg-config")
             cflags, libs = search_with_pkg_config(
                 "libtensorlight", libtensorlight_min_version
             )
         # if this was not successful we try to download libensorlight
         if (cflags is None or libs is None) and \
-                build_flags["libtensor_autoinstall"]:
+                config_flags["libtensor_autoinstall"]:
             # - get the url from where to download
-            if build_flags["libtensor_url"]:
-                url = build_flags["libtensor_url"]
+            if config_flags["libtensor_url"]:
+                url = config_flags["libtensor_url"]
             else:
                 url = url_most_recent_release("adc-connect/libtensor")
             # download libtensor from the url and install it in the given folder
-            install_dir = os.path.expanduser(build_flags["libtensor_autoinstall"])
-            assert install_dir
+            install_dir = os.path.expanduser(config_flags["libtensor_autoinstall"])
             install_libtensor(url, install_dir)
             # add the installdir to the PKG_CONFIG_PATH so we can find the package
             append_to_pkg_config_path(
@@ -454,15 +467,15 @@ def libadcc_extension():
 
         if cflags is not None and libs is not None:
             found_libtensor = True
-            compiler_flags["extra_compile_args"].extend(cflags)
-            compiler_flags["extra_link_args"].extend(libs)
+            build_flags["extra_compile_args"].extend(cflags)
+            build_flags["extra_link_args"].extend(libs)
             log.info(f"Using libtensorlight libraries: {libs}.")
             if sys.platform == "darwin":
-                compiler_flags["extra_link_args"].append("-Wl,-rpath,@loader_path")
+                build_flags["extra_link_args"].append("-Wl,-rpath,@loader_path")
                 for path in extract_library_dirs(libs):
-                    compiler_flags["extra_link_args"].append(f"-Wl,-rpath,{path}")
+                    build_flags["extra_link_args"].append(f"-Wl,-rpath,{path}")
             else:
-                compiler_flags["runtime_library_dirs"].extend(
+                build_flags["runtime_library_dirs"].extend(
                     extract_library_dirs(libs)
                 )
 
@@ -470,8 +483,8 @@ def libadcc_extension():
         raise RuntimeError("Did not find the libtensorlight library.")
 
     ext = Pybind11Extension("libadcc", libadcc_sources("extension"),
-                            language="c++", cxx_std=14, **compiler_flags)
-    if build_flags["coverage"]:
+                            language="c++", cxx_std=14, **build_flags)
+    if config_flags["coverage"]:
         ext.extra_compile_args += [
             "--coverage", "-O0", "-g", "-fprofile-update=atomic"
         ]
@@ -489,17 +502,6 @@ def is_conda_build():
     )
 
 
-def adccsetup(*args, **kwargs):
-    """Wrapper around setup, displaying a link to adc-connect.org on any error."""
-    try:
-        setup(*args, **kwargs)
-    except Exception as e:
-        url = kwargs["url"] + "/installation.html"
-        raise RuntimeError("Unfortunately adcc setup.py failed.\n"
-                           "For hints how to install adcc, see {}."
-                           "".format(url)) from e
-
-
 def read_readme():
     with open("README.md") as fp:
         return "".join([line for line in fp if not line.startswith("<img")])
@@ -509,7 +511,7 @@ if not os.path.isfile("adcc/__init__.py"):
     raise RuntimeError("Running setup.py is only supported "
                        "from top level of repository as './setup.py <command>'")
 
-adccsetup(
+setup(
     # content of readme can't be modified from within pyproject.toml
     long_description=read_readme(),
     long_description_content_type="text/markdown",
