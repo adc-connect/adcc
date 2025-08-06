@@ -173,8 +173,8 @@ def get_pkg_config():
     """
     pkg_config = os.environ.get("PKG_CONFIG", "pkg-config")
     if shutil.which(pkg_config) is None:
-        raise RuntimeError("Pkg-config is not installed. Adcc is not able to search"
-                           " the libtensorlight library.")
+        raise RuntimeError("Pkg-config is not installed. Adcc is not able to "
+                           "find or autoinstall the libtensorlight library.")
 
     # Some default places to search for pkg-config files
     pkg_config_paths = [
@@ -296,7 +296,7 @@ def url_most_recent_release(project: str) -> str:
                              f"{sys.platform}.")
     if not url:
         raise RuntimeError(
-            "Could not find a libtensor version to download. "
+            f"Could not find a version of project {project} to download. "
             "Check your platform is supported and if in doubt see the "
             "adcc installation instructions "
             "(https://adc-connect.org/latest/installation.html)."
@@ -438,7 +438,7 @@ def libadcc_extension():
         # Keep '~' here and expand later to not change the behaviour!
         config_flags["libtensor_autoinstall"] = "~/.local"
 
-    # User-provided config: modify compiler and build flags
+    # User-provided config: modify build and config flags
     for siteconfig in config_files:
         if not siteconfig.is_file():
             continue
