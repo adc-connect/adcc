@@ -24,7 +24,6 @@
 """Setup for adcc"""
 import os
 import sys
-import glob
 import json
 import time
 import shlex
@@ -60,22 +59,22 @@ class BuildDocs(Command):
         pass
 
     def run(self):
-        build_folder = Path(__file__).parent / "build"
-        docs_folder = Path(__file__).parent / "docs"
-        if not docs_folder.is_dir():
-            raise RuntimeError("setup.py is expected to be called from the "
-                               "top level project directory: ./setup.py build_docs")
+        build_folder = Path("build")
+        docs_folder = Path("docs")
+        assert docs_folder.is_dir()
 
         try:  # generate the documentation for libadcc
             # we need to create the folder for doxygen
             (build_folder / "libadcc_docs").mkdir(parents=True, exist_ok=True)
             doxyfile = docs_folder / "Doxyfile"
+            assert doxyfile.is_file()  # config file
             subprocess.check_call(["doxygen", str(doxyfile)])
         except (OSError, subprocess.CalledProcessError) as e:
             raise RuntimeError(
                 f"Could not build C++ documentation with doxygen: {e}"
             )
         try:  # generate full documentation
+            assert (docs_folder / "conf.py").is_file()  # config file
             output = build_folder / "docs"
             subprocess.check_call([
                 "sphinx-build", "-M", "html", str(docs_folder), str(output)
@@ -104,7 +103,7 @@ class CppTest(Command):
         from setuptools._distutils.ccompiler import new_compiler
         from setuptools._distutils.sysconfig import customize_compiler
 
-        output_dir = Path(__file__).parent / "build" / "cpptest"
+        output_dir = Path("build") / "cpptest"
         test_executable = output_dir / "libadcc_tests"
         if test_executable.is_file():
             rel_path = test_executable.relative_to(Path.cwd())
@@ -349,9 +348,21 @@ def install_libtensor(url: str, destination: str):
 
 
 def libadcc_sources(target: str) -> list[str]:
-    sourcefiles = set(glob.glob("libadcc/**/*.cc", recursive=True))
-    unittests = glob.glob("libadcc/tests/*.cc", recursive=True)
-    exportfiles = glob.glob("libadcc/pyiface/*.cc")
+    # The paths have to be relative to the top level project directory
+    # (the folder that contains setup.py - required by setuptools).
+    # The compiler requires the source files relative to cwd.
+    # Therefore, cwd == top_level_project_dir has to be enforced
+    # for build and install to succeed.
+    libadcc_src = Path("libadcc_src")
+    test_src = libadcc_src / "tests"
+    bindings_src = libadcc_src / "pyiface"
+    assert libadcc_src.is_dir()
+    assert test_src.is_dir()
+    assert bindings_src.is_dir()
+    # apparently older pybind versions expect strings
+    sourcefiles = {str(p) for p in libadcc_src.rglob("*.cc")}
+    unittests = [str(p) for p in test_src.rglob("*.cc")]
+    exportfiles = [str(p) for p in bindings_src.rglob("*.cc")]
     if target == "extension":
         return sorted(sourcefiles.difference(unittests))
     elif target == "cpptest":
@@ -521,7 +532,8 @@ def read_readme():
         return "".join([line for line in fp if not line.startswith("<img")])
 
 
-if not os.path.isfile("adcc/__init__.py"):
+if Path.cwd() != Path(__file__).parent or \
+        not (Path("adcc") / "__init__.py").is_file():
     raise RuntimeError("Running setup.py is only supported "
                        "from top level of repository as './setup.py <command>'")
 

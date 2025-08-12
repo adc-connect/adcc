@@ -2,7 +2,7 @@
 exclude adcc/tests/**
 include adcc/tests/smoke_test.py
 # add examples etc for sdist
-recursive-include libadcc *
+recursive-include libadcc_src *
 recursive-include examples *
 recursive-include docs *
 recursive-include scripts *

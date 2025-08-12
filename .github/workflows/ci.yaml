@@ -91,7 +91,7 @@ jobs:
           pip install codecov
           codecov -X gcov
           lcov --keep-going --directory . --capture --output-file coverage.info
-          lcov --ignore-errors unused --remove coverage.info '/opt/*' '/Applications/*' '/Library/*' '/usr/*' '/tmp/*' "${HOME}"'/.cache/*' "${HOME}"'/.local/*' "${PWD}"'/build/*' "${PWD}"'/libadcc/tests/*' --output-file coverage.info
+          lcov --ignore-errors unused --remove coverage.info '/opt/*' '/Applications/*' '/Library/*' '/usr/*' '/tmp/*' "${HOME}"'/.cache/*' "${HOME}"'/.local/*' "${PWD}"'/build/*' "${PWD}"'/libadcc_src/tests/*' --output-file coverage.info
           lcov --list coverage.info
           codecov -X gcov -f coverage.info
         env:
@@ -176,25 +176,6 @@ jobs:
           # NOTE: pcmsolver not 'linked' with Psi4 1.8
           pytest -k "not pcm"
           # python setup.py cpptest -v  # TODO: currently doesn't compile...
-      #
-      # - name: Upload coverage to codecov
-      #   run: |
-      #     pip install codecov
-      #     codecov -X gcov
-      #     lcov --directory . --capture --output-file coverage.info
-      #     lcov --remove coverage.info '/opt/*' '/Applications/*' '/Library/*' '/usr/*' "${HOME}"'/.cache/*' "${HOME}"'/.local/*' "${PWD}"'/build/*' "${PWD}"'/libadcc/tests/*' --output-file coverage.info
-      #     lcov --list coverage.info
-      #     codecov -X gcov -f coverage.info
-      #
-      # - name: Upload coverage to coveralls
-      #   # Note: Needs to be after the above step, because it parses the coverage.info
-      #   run: |
-      #     pip install coveralls
-      #     sudo gem install coveralls-lcov
-      #     coveralls-lcov -v -n coverage.info > coverage.json
-      #     coveralls --service=github --merge=coverage.json
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   #
   # Test source code formatting
@@ -213,7 +194,7 @@ jobs:
           sudo apt-get install clang-format
       - run: flake8
       - name: Checking C++ files with clang-format
-        working-directory: libadcc
+        working-directory: libadcc_src
         run: |
           clang-format --version
           find . -type f \( -name '*.cc' -o -name '*.hh' \) -print0 | xargs -r0 clang-format -i

@@ -2,7 +2,7 @@ PROJECT_NAME     = libadcc
 PROJECT_NUMBER   = 
 PROJECT_BRIEF    = "Compiled component to adcc"
 
-INPUT            = libadcc
+INPUT            = libadcc_src
 RECURSIVE        = YES
 OUTPUT_DIRECTORY = build/libadcc_docs
 EXCLUDE_PATTERNS = *.cc  */tests/*  */pyiface/*  *.py
