@@ -31,7 +31,7 @@ The libadcc Python module contains python bindings of :ref:`libadcc-layer`.
 They are generated directly from the C++ source code
 using `pybind11 <https://pybind11.readthedocs.io>`_
 and the sources contained in the
-`extension <https://github.com/adc-connect/adcc/tree/master/libadcc/pyiface>`_
+`extension <https://github.com/adc-connect/adcc/tree/master/libadcc_src/pyiface>`_
 subfolder of the adcc GitHub repository.
 
 It is not recommended calling these functions directly,
