@@ -25,7 +25,7 @@ import unittest
 import pytest
 
 from adcc import LazyMp
-from adcc.solver.davidson import jacobi_davidson, eigsh
+from adcc.solver.davidson import jacobi_davidson, eigsh, davidson_folded_DIIS
 from adcc.misc import cached_property
 
 from ..testdata_cache import testdata_cache
@@ -121,6 +121,82 @@ class TestSolverDavidson(unittest.TestCase):
         # Solve for triplets
         guesses = adcc.guesses_triplet(self.matrix, n_guesses=10, block="ph")
         res = jacobi_davidson(self.matrix, guesses, n_ep=10)
+
+        ref_triplets = refdata["eigenvalues"]
+        n_states = min(len(ref_triplets), len(res.eigenvalues))
+        assert n_states > 1
+        assert res.converged
+        assert res.eigenvalues[:n_states] == pytest.approx(ref_triplets[:n_states])
+
+    def test_adc2_singlets_folded(self):
+        refdata = testdata_cache.adcman_data(
+            system="h2o_sto3g", method="adc2", case="gen"
+        )["singlet"]
+
+        # Solve for singlets
+        guesses = adcc.guesses_singlet(self.matrix, n_guesses=8, block="ph")
+        res = davidson_folded_DIIS(self.matrix, guesses, n_ep=8)
+
+        ref_singlets = refdata["eigenvalues"]
+        n_states = min(len(ref_singlets), len(res.eigenvalues))
+        assert n_states > 1
+        assert res.converged
+        assert res.eigenvalues[:n_states] == pytest.approx(ref_singlets[:n_states])
+
+    def test_adc2_triplets_folded(self):
+        refdata = testdata_cache.adcman_data(
+            system="h2o_sto3g", method="adc2", case="gen"
+        )["triplet"]
+        # Solve for triplets
+        guesses = adcc.guesses_triplet(self.matrix, n_guesses=8, block="ph")
+        res = davidson_folded_DIIS(self.matrix, guesses, n_ep=8)
+
+        ref_triplets = refdata["eigenvalues"]
+        n_states = min(len(ref_triplets), len(res.eigenvalues))
+        assert n_states > 1
+        assert res.converged
+        assert res.eigenvalues[:n_states] == pytest.approx(ref_triplets[:n_states])
+
+    def test_adc2_singlets_folded_adc1Guesses(self):
+        from adcc.workflow import run_adc
+
+        refdata = testdata_cache.adcman_data(
+            system="h2o_sto3g", method="adc2", case="gen"
+        )["singlet"]
+
+        # run adc1 as initial guesses
+        matrix_adc1 = adcc.AdcMatrix(
+            "adc1", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
+        )
+        adc1 = run_adc(matrix_adc1, method="adc1", n_singlets=8)
+        omegas = adc1.excitation_energy_uncorrected
+        guesses = adc1.excitation_vector
+        # Solve for singlets
+        res = davidson_folded_DIIS(self.matrix, guesses, omegas=omegas, n_ep=8)
+
+        ref_singlets = refdata["eigenvalues"]
+        n_states = min(len(ref_singlets), len(res.eigenvalues))
+        assert n_states > 1
+        assert res.converged
+        assert res.eigenvalues[:n_states] == pytest.approx(ref_singlets[:n_states])
+
+    def test_adc2_triplets_folded_adc1Guesses(self):
+        from adcc.workflow import run_adc
+
+        refdata = testdata_cache.adcman_data(
+            system="h2o_sto3g", method="adc2", case="gen"
+        )["triplet"]
+
+        # run adc1 as initial guesses
+        matrix_adc1 = adcc.AdcMatrix(
+            "adc1", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
+        )
+        adc1 = run_adc(matrix_adc1, method="adc1", n_triplets=8)
+        omegas = adc1.excitation_energy_uncorrected
+        guesses = adc1.excitation_vector
+        # Solve for triplets
+        res = davidson_folded_DIIS(self.matrix, guesses=guesses,
+                                   omegas=omegas, n_ep=8)
 
         ref_triplets = refdata["eigenvalues"]
         n_states = min(len(ref_triplets), len(res.eigenvalues))
