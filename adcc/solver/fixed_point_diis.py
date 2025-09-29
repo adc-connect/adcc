@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
-import numpy as np
+from typing import Callable, Optional, TextIO
 from collections import deque
 import sys
+
+import numpy as np
 
 
 class DIISError(Exception):
@@ -23,15 +25,23 @@ class DIISSubspace:
     ----------
     max_size: int
         The maximum number of vectors to keep in the subspace simultaneously.
+    start_size: int
+        The minimal number of subspace vectors required in the subspace
+        in order to start extrapolating. If less vectors are in the
+        subspace, linear steps will be performed.
     """
-    def __init__(self, max_size: int):
+    def __init__(self, max_size: int, start_size: int):
         if max_size < 2:
             raise SubspaceError("DIIS size has to be greater than 1.")
+        if start_size > max_size:
+            raise SubspaceError(f"The maximum subspace size {max_size} has to be "
+                                f"larger than the DIIS start size {start_size}.")
         self.max_size: int = max_size
+        self.start_size: int = start_size
         self.subspace_vectors = deque(maxlen=max_size)
         self.error_vectors = deque(maxlen=max_size)
         self.overlap: np.ndarray = np.zeros((0, 0))
-        self.step_info: str = None
+        self.step_info: Optional[str] = None
         self.converged: bool = False
         self.n_iter: int = 0
 
@@ -106,7 +116,9 @@ class DIISSubspace:
         new_overlap = np.zeros((cur_size, cur_size))
         new_overlap.fill(float("NaN"))
         if copy_size > 0:
-            new_overlap[:copy_size, :copy_size] = self.overlap[-copy_size:, -copy_size:]
+            new_overlap[:copy_size, :copy_size] = (
+                self.overlap[-copy_size:, -copy_size:]
+            )
         for ind, error_vec in enumerate(self.error_vectors):
             overlap_value = error_vec.dot(self.error_vectors[-1])
             new_overlap[ind, -1] = overlap_value
@@ -147,7 +159,8 @@ class DIISSubspace:
             raise SubspaceError("No vectors in subspace.")
 
         # we only have a single vector -> perform a linear step
-        if self.size == 1 or self.size - n_omit_vectors == 1:
+        if self.size == 1 or self.size - n_omit_vectors <= 1 or \
+                self.size < self.start_size:
             self.step_info = "Linear step"
             return self.last_vector
 
@@ -191,7 +204,7 @@ class DIISSubspace:
         return guess
 
 
-def default_print(state: DIISSubspace, identifier: str, file=sys.stdout):
+def default_print(state: DIISSubspace, identifier: str, file: TextIO = sys.stdout):
     if identifier == "start":
         print("Niter   DIIS_error  comment", file=file)
     elif identifier == "next_iter":
@@ -203,45 +216,50 @@ def default_print(state: DIISSubspace, identifier: str, file=sys.stdout):
         print("=== Converged ===", file=file)
 
 
-def diis(updater: callable, guess_vector, diis_start_size: int = 3,
+def _no_print(state: DIISSubspace, identifier: str, file: TextIO = sys.stdout):
+    _, _, _ = state, identifier, file
+
+
+def diis(updater: Callable, guess_vector, diis_start_size: int = 3,
          max_subspace_size: int = 7, conv_tol: float = 1e-9,
-         n_max_iterations: int = 100, callback: callable = None):
+         n_max_iterations: int = 100, callback: Optional[Callable] = None):
     """
     Implementation of the direct inversion of the iterative subspace algorithm.
 
     Parameters
     ----------
-    updater: callable
+    updater: Callable
         Callable that takes the guess vector and updates it once.
     guess_vector
         The guess vector to start with.
-    diis_start_size: int
+    diis_start_size: int, optional
         Perform n linear steps until the DIIS subspace contains at least
         n vectors. Has to be smaller than or equal to max_subspace_size
         (default: 3).
-    max_subspace_size: int
+    max_subspace_size: int, optional
         The maximum number of vectors to keep in the subspace simultaneously
         (default: 7).
-    conv_tol: float
+    conv_tol: float, optional
         The convergence tolerance on the Frobenius norm of the
         error vector (default: 1e-9).
-    n_max_iterations: int
+    n_max_iterations: int, optional
         The maximum number of allowed iterations (default: 100).
-    callback: callable
+    callback: Callable, optional
         A callable that is called after each iteration, e.g., to produce
         printout.
     """
 
     if callback is None:
-        def callback(state, hint):
-            pass
+        callback = _no_print
 
     if diis_start_size > max_subspace_size:
         raise SubspaceError("diis_start_size cannot be greater than "
                             "max_subspace_size")
 
     # initialize DIIS subspace
-    diis_subspace = DIISSubspace(max_size=max_subspace_size)
+    diis_subspace = DIISSubspace(
+        max_size=max_subspace_size, start_size=diis_start_size
+    )
     # perform an initial linear step
     new_subspace_vector = updater(guess_vector)
     new_error_vector = new_subspace_vector - guess_vector
