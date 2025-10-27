@@ -25,7 +25,7 @@ import unittest
 import pytest
 
 from adcc import LazyMp
-from adcc.solver.davidson import jacobi_davidson, eigsh, davidson_folded_DIIS
+from adcc.solver.davidson import jacobi_davidson, eigsh, davidson_folded_DIIS, eigsh_folded
 from adcc.misc import cached_property
 
 from ..testdata_cache import testdata_cache
@@ -127,6 +127,59 @@ class TestSolverDavidson(unittest.TestCase):
         assert n_states > 1
         assert res.converged
         assert res.eigenvalues[:n_states] == pytest.approx(ref_triplets[:n_states])
+        
+from adcc.solver.preconditioner import JacobiPreconditioner
+class TestSolverDavidsonFolded(unittest.TestCase):
+    @cached_property
+    def matrix(self):
+        return adcc.AdcMatrix(
+            "adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
+        )
+
+    def test_n_guesses(self):
+        # we have to have a guess for each state
+        guesses = adcc.guesses_singlet(self.matrix, n_guesses=1, block="ph")
+        with pytest.raises(ValueError):
+            eigsh_folded(self.matrix, guesses, n_ep=2)
+        res = eigsh_folded(self.matrix, guesses, n_ep=1, max_iter=1,
+                            preconditioner=JacobiPreconditioner,
+                            preconditioning_method="Davidson")
+        assert len(res.eigenvalues) == 1
+        # by default: construct 1 state for each guess
+        res = eigsh_folded(self.matrix, guesses, max_iter=1,
+                            preconditioner=JacobiPreconditioner,
+                            preconditioning_method="Davidson")
+        assert len(res.eigenvalues) == 1
+
+    def test_n_block(self):
+        # has to be: n_ep <= n_block <= n_guesses
+        guesses = adcc.guesses_singlet(self.matrix, n_guesses=3, block="ph")
+        with pytest.raises(ValueError):
+            eigsh_folded(self.matrix, guesses, n_ep=2, n_block=1)
+        with pytest.raises(ValueError):
+            eigsh_folded(self.matrix, guesses, n_ep=2, n_block=4)
+        # defaults to n_ep
+        res = eigsh_folded(self.matrix, guesses, n_ep=2, max_iter=2,
+                            preconditioner=JacobiPreconditioner,
+                            preconditioning_method="Davidson")
+        assert len(res.eigenvalues) == 2
+
+    def test_max_subspace(self):
+        # max_subspace >= 2 * n_block
+        guesses = adcc.guesses_singlet(self.matrix, n_guesses=3, block="ph")
+        with pytest.raises(ValueError):
+            eigsh_folded(self.matrix, guesses, n_ep=1, n_block=2, max_subspace=3)
+        res = eigsh_folded(self.matrix, guesses, n_ep=1, n_block=2, max_subspace=4,
+                            preconditioner=JacobiPreconditioner,
+                            preconditioning_method="Davidson")
+        assert len(res.eigenvalues) == 1
+        # max_subspace >= n_guesses
+        with pytest.raises(ValueError):
+            eigsh_folded(self.matrix, guesses, n_ep=1, n_block=1, max_subspace=2)
+        res = eigsh_folded(self.matrix, guesses, n_ep=1, n_block=1, max_subspace=3,
+                            preconditioner=JacobiPreconditioner,
+                            preconditioning_method="Davidson")
+        assert len(res.eigenvalues) == 1
 
     def test_adc2_singlets_folded(self):
         refdata = testdata_cache.adcman_data(
@@ -143,6 +196,18 @@ class TestSolverDavidson(unittest.TestCase):
         assert res.converged
         assert res.eigenvalues[:n_states] == pytest.approx(ref_singlets[:n_states])
 
+        ref_singlets_vec_s = refdata["eigenvectors_singles"]
+        ref_singlets_vec_d = refdata["eigenvectors_doubles"]
+        
+        from adcc.AmplitudeVector import AmplitudeVector
+        print(ref_singlets_vec_s,type(ref_singlets_vec_s),type(res.eigenvectors[0]),res.eigenvectors[0])
+        ref_vec = AmplitudeVector(ph=ref_singlets_vec_s,pphh=ref_singlets_vec_d)
+        assert res.eigenvectors[0].ph.describe_symmetry() == ref_vec.ph.describe_symmetry()
+        assert res.eigenvectors[0].pphh.describe_symmetry() == ref_vec.pphh.describe_symmetry()
+        
+        # assert res.eigenvectors[0].ph.describe_symmetry() == guesses[0].ph.describe_symmetry()
+        # assert res.eigenvectors[0].pphh.describe_symmetry() == guesses[0].pphh.describe_symmetry()
+
     def test_adc2_triplets_folded(self):
         refdata = testdata_cache.adcman_data(
             system="h2o_sto3g", method="adc2", case="gen"
@@ -158,7 +223,7 @@ class TestSolverDavidson(unittest.TestCase):
         assert res.converged
         assert res.eigenvalues[:n_states] == pytest.approx(ref_triplets[:n_states])
 
-    def test_adc2_singlets_folded_adc1Guesses(self):
+    def test_adc2_singlets_folded_guess_adc1(self):
         from adcc.workflow import run_adc
 
         refdata = testdata_cache.adcman_data(
@@ -172,6 +237,8 @@ class TestSolverDavidson(unittest.TestCase):
         adc1 = run_adc(matrix_adc1, method="adc1", n_singlets=8)
         omegas = adc1.excitation_energy_uncorrected
         guesses = adc1.excitation_vector
+        print("OMEGAS:", type(omegas),type(omegas[0]))
+
         # Solve for singlets
         res = davidson_folded_DIIS(self.matrix, guesses, omegas=omegas, n_ep=8)
 
@@ -181,7 +248,7 @@ class TestSolverDavidson(unittest.TestCase):
         assert res.converged
         assert res.eigenvalues[:n_states] == pytest.approx(ref_singlets[:n_states])
 
-    def test_adc2_triplets_folded_adc1Guesses(self):
+    def test_adc2_triplets_folded_guess_adc1(self):
         from adcc.workflow import run_adc
 
         refdata = testdata_cache.adcman_data(

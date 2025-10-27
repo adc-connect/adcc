@@ -30,6 +30,7 @@ from adcc.AdcMatrix import (
     AdcMatrixProjected,
     AdcMatrixShifted,
     AdcMatrixFolded)
+# from adcc.solver.AdcMatrixFolded import AdcMatrixFolded
 from adcc.Intermediates import Intermediates
 from adcc.adc_pp.matrix import AdcBlock
 
@@ -414,88 +415,86 @@ class TestAdcMatrixFolded:
         ground_state = adcc.LazyMp(reference_state)
         matrix = adcc.AdcMatrix("adc2", ground_state)
 
-        folded = AdcMatrixFolded(matrix)
-        return matrix, folded
+        folded_matrix = AdcMatrixFolded(matrix)
+        return matrix, folded_matrix
+
+    def test_adc2_matrix(self, system: str):
+        reference_state = testdata_cache.refstate(system, case="gen")
+        ground_state = adcc.LazyMp(reference_state)
+        matrix = adcc.AdcMatrix("adc3", ground_state)
+        with pytest.raises(TypeError):
+            AdcMatrixFolded(matrix)
 
     def test_diagonal(self, system: str):
-        matrix, folded = self.construct_matrices(system)
+        matrix, folded_matrix = self.construct_matrices(system)
 
         odiag = matrix.diagonal()
-        fdiag = folded.diagonal()
+        fdiag = folded_matrix.diagonal()
         assert np.max(np.abs(fdiag["ph"].to_ndarray()
                              - odiag["ph"].to_ndarray())) < 1e-12
         assert not hasattr(fdiag, "pphh")
 
-    def test_matmul(self, system: str):
-        omega = 0.5
-        matrix, folded = self.construct_matrices(system)
-        folded.omega = omega
+    def test_u2_fold(self, system: str):
+        matrix, folded_matrix = self.construct_matrices(system)
+        folded_matrix.omega = 0.5
+
+        vec = adcc.guess_zero(matrix)
+        vec.set_random()
+
+        diag = matrix.diagonal().pphh
+        e = diag.ones_like()
+        u2_manual = matrix.block_apply("pphh_ph", vec.ph) / (e * folded_matrix.omega - diag)
+
+        u2_fold = folded_matrix.u2_fold(vec)
+
+        diff = u2_manual - u2_fold.pphh
+        assert np.max(np.abs(diff.to_ndarray())) < 1e-12
+
+    def test_matvec(self, system: str):
+        matrix, folded_matrix = self.construct_matrices(system)
+        folded_matrix.omega = 0.5
 
         vec = adcc.guess_zero(matrix)
         vec.set_random()
 
         ores = matrix @ vec
-        fres = folded @ vec
+        fres = folded_matrix @ vec
 
         assert ores.ph.describe_symmetry() == fres.ph.describe_symmetry()
         assert not hasattr(fres, "pphh")
-        # assert_equal_symmetry(ores.ph, fres.ph)
 
-        # Consistency of the different part of ores.ph and freq.sh, i.e A_12 * V2
-        diff_o = matrix.block_apply("ph_pphh", vec.pphh)
+        # Consistency of the different part
+        diag = matrix.diagonal().pphh
+        e = diag.ones_like()
+        u2 = matrix.block_apply("pphh_ph", vec.ph) / (e * folded_matrix.omega - diag)
+        diff_f = matrix.block_apply("ph_pphh", u2) #A_12 * u2_fold
+        
+        diff_o = matrix.block_apply("ph_pphh", vec.pphh) #A_12 * V2
+        
+        diff_manual = diff_o - diff_f
+        diff_matvec = ores.ph - fres.ph
+        diff = diff_manual - diff_matvec
+        assert np.max(np.abs(diff.to_ndarray())) < 1e-12
+
+    def test_unfold_random_vec(self,system:str):
+        matrix, folded_matrix = self.construct_matrices(system)
+        
+        vec = adcc.guess_zero(matrix)
+        vec.set_random()
+        
+        omega = 0.5
+        folded_matrix.omega = omega
+        fres_unfold = folded_matrix.unfold(vec)
 
         diag = matrix.diagonal().pphh
         e = diag.ones_like()
-        u2 = matrix.block_apply("pphh_ph", vec.ph) / (e * folded.omega - diag)
-        diff_f = matrix.block_apply("ph_pphh", u2)
-
-        diff_matmul = ores.ph - fres.ph
-        diff_man = diff_o - diff_f
-        diff = diff_man - diff_matmul
-        assert np.max(np.abs(diff.to_ndarray())) < 1e-12
-
-
-"""
-    def test_unfold(self, system: str):
-
-        matrix, folded = self.construct_matrices(system)
-
-        # omega = 0.5
-
-        from adcc.workflow import run_adc
-        adc2 = run_adc(matrix, method="adc2", kind="singlet", n_states=1)
-        omega = adc2.excitation_energy_uncorrected
-        vec = adc2.excitation_vector[0]
-
-        # vec = adcc.guess_zero(matrix)
-        # vec.set_random()
-        print(vec)
-
-        # from adcc.solver.conjugate_gradient import conjugate_gradient
-        # matrix_shifted = AdcMatrixShifted(matrix, shift=-omega)
-        # rhs = vec.zeros_like()
-        # fres_unfold = conjugate_gradient(matrix_shifted, rhs=rhs, x0=vec)
-        # print(fres_unfold)
-        folded.omega = omega
-        fres_unfold = folded.unfold(vec)
-
-        # # Consistency of manully recomputed vector and "unfold"
-        # diff = vec.pphh - fres_unfold.pphh
-        # assert np.max(np.abs(diff.to_ndarray())) < 1e-12
-
-        # Consistency of symmetry
-        assert vec.ph.describe_symmetry() == fres_unfold.ph.describe_symmetry()
-        print("vec.pphh", vec.pphh.describe_symmetry())
-        print("fres_unfold.pphh", fres_unfold.pphh.describe_symmetry())
-        assert vec.pphh.describe_symmetry() == fres_unfold.pphh.describe_symmetry()
-        # assert_equal_symmetry(vec.pphh, fres_unfold.pphh)
-
-
-        # diag = matrix.diagonal().pphh
-        # e = diag.ones_like()
-        # u2_man = matrix.block_apply("pphh_ph", vec.ph) / (e * folded.omega - diag)
-        # assert u2_man.describe_symmetry() == fres_unfold.pphh.describe_symmetry()
-        # # Consistency of manully recomputed vector and "unfold"
-        # diff = u2_man - fres_unfold.pphh
-        # assert np.max(np.abs(diff.to_ndarray())) < 1e-12
-"""
+        u2_man = matrix.block_apply("pphh_ph", vec.ph) / (e * folded_matrix.omega - diag)
+        u2_man_symm = folded_matrix.isymm.symmetrise(adcc.AmplitudeVector(pphh=u2_man))
+        mres_unfold = adcc.AmplitudeVector(ph=vec.ph, pphh=u2_man_symm.pphh)
+        
+        diff_s = mres_unfold.ph - fres_unfold.ph
+        diff_d = mres_unfold.pphh - fres_unfold.pphh
+        assert np.max(np.abs(diff_s.to_ndarray())) < 1e-12
+        assert np.max(np.abs(diff_d.to_ndarray())) < 1e-12
+        assert mres_unfold.ph.describe_symmetry() == fres_unfold.ph.describe_symmetry()
+        assert mres_unfold.pphh.describe_symmetry() == fres_unfold.pphh.describe_symmetry()

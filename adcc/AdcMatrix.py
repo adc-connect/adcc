@@ -30,7 +30,7 @@ from .AdcMethod import AdcMethod
 from .functions import ones_like
 from .Intermediates import Intermediates
 from .AmplitudeVector import AmplitudeVector
-
+# from .solver.explicit_symmetrisation import IndexSymmetrisation
 
 class AdcExtraTerm:
     def __init__(self, matrix, blocks):
@@ -665,6 +665,11 @@ class AdcMatrixFolded(AdcMatrix):
         super().__init__(matrix.method, matrix.ground_state,
                          block_orders=matrix.block_orders,
                          intermediates=matrix.intermediates)
+        if matrix.method.name != "adc2":
+            raise TypeError("The matrix should be ADC2 Matrix for doubles-folding.")
+
+        from .solver.explicit_symmetrisation import IndexSymmetrisation
+        self.isymm = IndexSymmetrisation(matrix)
 
     def diagonal(self):
         """
@@ -672,22 +677,29 @@ class AdcMatrixFolded(AdcMatrix):
         """
         return AmplitudeVector(ph=super().diagonal().ph)
 
-    def matvec(self, other):
+    def u2_fold(self, other):
         """
-        Compute the doubles-folded matrix-vector product of the singles vector with
-        an effective ADC matrix which depends on the eigenvalue ω.
+        Return the doubles component of u in terms of its singles component.
         """
         diag = super().diagonal().pphh
         e = diag.ones_like()
         u2 = self.block_apply("pphh_ph", other.ph) / (e * self.omega - diag)
-        return AmplitudeVector(ph=self.block_apply("ph_ph", other.ph)
-                               + self.block_apply("ph_pphh", u2))
+        return self.isymm.symmetrise(AmplitudeVector(pphh=u2))
 
-    # def unfold(self, u1):
-    #     """
-    #     recompute the doubles component and return the complete vector.
-    #     """
-    #     diag = super().diagonal().pphh
-    #     e = diag.ones_like()
-    #     u2 = self.block_apply("pphh_ph", u1.ph) / (e * self.omega - diag)
-    #     return AmplitudeVector(ph=u1.ph, pphh=u2)
+    def matvec(self, other):
+        """
+        Compute the doubles-folded matrix-vector product of the singles vector with
+        an effective ADC matrix which depends on the eigenvalue(omega).
+        """
+        u2 = self.u2_fold(other)
+        return AmplitudeVector(ph=self.block_apply("ph_ph", other.ph)
+                               + self.block_apply("ph_pphh", u2.pphh))
+
+    def unfold(self, other):
+        """
+        Recompute the doubles component and return the complete vector.
+        """
+        other_symm = self.isymm.symmetrise(other)
+        u2 = self.u2_fold(other_symm)
+
+        return AmplitudeVector(ph=other_symm.ph, pphh=u2.pphh)

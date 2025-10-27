@@ -34,7 +34,7 @@ from .common import select_eigenpairs
 from .preconditioner import JacobiPreconditioner
 from .SolverStateBase import EigenSolverStateBase
 from .explicit_symmetrisation import IndexSymmetrisation
-from itertools import product
+from .DIIS import DIIS
 
 
 class DavidsonState(EigenSolverStateBase):
@@ -289,6 +289,8 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
                                       if i in epair_mask]
                 callback(state, "is_converged")
             else:
+                print(state.n_iter, rvecs.shape, len(np.transpose(rvecs)[0]),len(SS))
+
                 # update guesses vectors for next macro iteration
                 state.subspace_vectors = [lincomb(v, SS, evaluate=True)
                                           for v in np.transpose(rvecs)]
@@ -321,6 +323,7 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
         if n_ss_vec + n_block > max_subspace:
             callback(state, "restart")
             with state.timer.record("projection"):
+                print("TRUE")
                 # The addition of the preconditioned vectors goes beyond max.
                 # subspace size => Collapse first, ie keep current Ritz vectors
                 # as new subspace
@@ -415,6 +418,7 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
             else:
                 # Compute all eigenvectors as guesses vectors
                 # for the next macro iteration.
+                print(state.n_iter, rvecs.shape, len(np.transpose(rvecs)[0]),len(SS))
                 state.subspace_vectors = [lincomb(v, SS, evaluate=True)
                                           for v in np.transpose(rvecs)]
                 assert len(state.subspace_vectors) == n_block
@@ -572,6 +576,10 @@ def eigsh_folded(matrix, guesses, omegas=None, n_ep=None, n_block=None,
         ADC(2) matrix instance
     guesses : list
         Guess vectors (fixes also the Davidson block size)
+    omegas : numpy.ndarray or NoneType, optional
+        Initial omega values for the modified Davidson solver when using
+        doubles-folded ADC(2) matrix. If not provided, the initial omega values
+        will be derived from the provided guess vectors.
     n_ep : int or NoneType, optional
         Number of eigenpairs to be computed
     n_block : int or NoneType, optional
@@ -619,6 +627,9 @@ def eigsh_folded(matrix, guesses, omegas=None, n_ep=None, n_block=None,
             pass
     if not isinstance(matrix, AdcMatrixlike):
         raise TypeError("matrix is not of type AdcMatrixlike")
+    elif matrix.method.name != "adc2":
+        raise TypeError("matrix is not ADC2 Matrix")
+
     for guess in guesses:
         if not isinstance(guess, AmplitudeVector):
             raise TypeError("One of the guesses is not of type AmplitudeVector")
@@ -646,18 +657,24 @@ def eigsh_folded(matrix, guesses, omegas=None, n_ep=None, n_block=None,
         # TODO Arnoldi uses this:
         # max_subspace = max(2 * n_ep + 1, 20)
         max_subspace = max(6 * n_ep, 20, 5 * len(guesses))
+    elif max_subspace < 2 * n_block:
+        raise ValueError(f"max_subspace (= {max_subspace}) needs to be at least "
+                         f"twice as large as n_block (n_block = {n_block}).")
+    elif max_subspace < len(guesses):
+        raise ValueError(f"max_subspace (= {max_subspace}) cannot be smaller than "
+                         f"the number of guess vectors (= {len(guesses)}).")
 
-    def convergence_test(state):
+    def convergence_test_final(state):
         state.residuals_converged = state.residual_norms < conv_tol
         state.converged = np.all(state.residuals_converged)
         return state.converged
 
-    def convergence_micro(state):  # really rough
+    def convergence_test_micro(state):  # really rough
         state.converged = np.abs(state.history_rval[0]
                                  - state.history_rval[1]) > state.energy_diff
         return state.converged
 
-    def residualNorm_folded(state, diis_omegaUpdate=False):
+    def residual_norm_folded(state, diis_omegaUpdate=False):
         state.eigenvector /= np.sqrt(state.eigenvector @ state.eigenvector)
         Av = folded_matrix @ state.eigenvector
         state.n_applies += 1
@@ -665,10 +682,9 @@ def eigsh_folded(matrix, guesses, omegas=None, n_ep=None, n_block=None,
         state.residual = lincomb([1, -folded_matrix.omega],
                                  [Av, state.eigenvector], evaluate=True)
         state.residual_norm = np.sqrt(state.residual @ state.residual)
-        # For DIIS, update the eigenvalue corresponding to the new eigenvector.
+        # For DIIS, update the omega corresponding to the new eigenvector.
         if diis_omegaUpdate:
-            state.eigenvalues[state.n_state] = Av @ state.eigenvector
-            folded_matrix.omega = state.eigenvalues[state.n_state]
+            folded_matrix.omega = Av @ state.eigenvector
         return state.residual_norm
 
     if conv_tol < matrix.shape[1] * np.finfo(float).eps:
@@ -686,24 +702,31 @@ def eigsh_folded(matrix, guesses, omegas=None, n_ep=None, n_block=None,
 
     folded_matrix = AdcMatrixFolded(matrix)
     if preconditioner is not None and isinstance(preconditioner, type):
-        preconditioner = preconditioner(matrix)
-        preconditioner.diagonal = folded_matrix.diagonal()
+        preconditioner = preconditioner(folded_matrix)
 
     # Retain single part of guess vectors
     guesses_i = [AmplitudeVector(ph=guess.__getitem__("ph")) for guess in guesses]
-
+    # If not given, the omega value of first state is computed 
+    # from the guess vectors; the other omegas are set to the eigenvalues 
+    # of the folded matrix under the previous state.
+    # If given, the guesses and omegas should be the pairs of eigenvalues and
+    # eigenvectors of the adc1 matrix.
     if omegas is None:
-        # Calculate the initial (guess) eigenvalue for state 0.
+        omegas = np.full(n_ep, np.nan)  
+        # Calculate the initial (guess) omega for state 0.
         Avi = matrix.block_apply("ph_ph", guesses_i[0].ph)
-        state.eigenvalues[0] = Avi.dot(guesses_i[0].ph)
+        omegas[0] = Avi.dot(guesses_i[0].ph)
+    elif len(omegas) < n_ep:
+        raise ValueError(f"The number of omegas (={len(omegas)}) should be equal "
+                         f"to the number of requested state(={n_ep}).")
+    print("OMEGAS2:", type(omegas),type(omegas[0]))
 
     state.timer.restart("folded iterations")
     for n_state in range(n_ep):
-        # Initialize guess omega for excited states.
-        if omegas is None:
-            folded_matrix.omega = state.eigenvalues[n_state]
-        else:
-            folded_matrix.omega = omegas[n_state]
+        # Initialize guess omega for the target state.
+        if np.isnan(omegas[n_state]):
+            omegas[n_state] = state_i.eigenvalues[n_state]
+        folded_matrix.omega = omegas[n_state]
 
         state_i = FoldedDavidsonState(folded_matrix, guesses_i)
         state_i.n_state = n_state
@@ -713,28 +736,22 @@ def eigsh_folded(matrix, guesses, omegas=None, n_ep=None, n_block=None,
         state_i.timer.restart("folded iterations")
         while state_i.macro_iter < macro_max_iter:
             state_i.macro_iter += 1
-            # Micro davidson iteration for diagonalising A(w_i)
-            state_i = davidson_iterations(
-                folded_matrix,
-                state_i,
-                max_subspace,
-                max_iter,
-                n_ep=n_ep,
-                n_block=n_block,
-                is_converged=convergence_micro,
-                callback=callback,
-                which=which,
-                preconditioner=preconditioner,
-                preconditioning_method=preconditioning_method,
-                debug_checks=debug_checks,
-                residual_min_norm=residual_min_norm,
-                explicit_symmetrisation=explicit_symmetrisation)
+            # Micro davidson iterations for diagonalising A(w_i)
+            davidson_iterations(folded_matrix, state_i, max_subspace,
+                                max_iter, n_ep=n_ep, n_block=n_block,
+                                is_converged=convergence_test_micro,
+                                callback=callback, which=which,
+                                preconditioner=preconditioner,
+                                preconditioning_method=preconditioning_method,
+                                debug_checks=debug_checks,
+                                residual_min_norm=residual_min_norm,
+                                explicit_symmetrisation=explicit_symmetrisation)
 
             state.n_iter += state_i.n_iter
             # Update omega and calculate the residual_norm
             # under the latest omega for state i.
             folded_matrix.omega = state_i.eigenvalues[state_i.n_state]
-            residualNorm_folded(state_i)
+            residual_norm_folded(state_i)
             callback(state_i, "micro")
             if state_i.residual_norm < macro_conv_tol:
                 state_i.converged_macro = True
@@ -747,7 +764,7 @@ def eigsh_folded(matrix, guesses, omegas=None, n_ep=None, n_block=None,
         callback(state_i, "macro_stop")
         # DIIS to further converge
         state_i.timer.restart("folded iterations")
-        diis = DIIS(num_diis_vecs=num_diis_vecs, start_iter=4)
+        diis = DIIS(num_diis_vecs=num_diis_vecs, start_iter=0)
         if not state_i.converged_macro:
             warnings.warn(la.LinAlgWarning(
                 "Macro iterations with Davidson diagonalization "
@@ -755,10 +772,10 @@ def eigsh_folded(matrix, guesses, omegas=None, n_ep=None, n_block=None,
 
         preconditioner.update_shifts(float(0))
         while diis.iter_idx < diis_max_iter:
-            b_i = state_i.eigenvector + preconditioner @ state_i.residual
             # corrected vector: b_i = u_i + residual_i / D11
+            b_i = state_i.eigenvector + preconditioner @ state_i.residual
             state_i.eigenvector = diis.compute_new_vec(b_i, state_i.residual)
-            residualNorm_folded(state_i, diis_omegaUpdate=True)
+            residual_norm_folded(state_i, diis_omegaUpdate=True)
             callback(state_i, "DIIS_steps")
             if state_i.residual_norm < conv_tol:
                 state_i.converged_diis = True
@@ -769,13 +786,14 @@ def eigsh_folded(matrix, guesses, omegas=None, n_ep=None, n_block=None,
                     "reached in DIIS procedure."))
         state_i.DIIS_iter = diis.iter_idx
         state.DIIS_iter += state_i.DIIS_iter
+        state_i.eigenvalues[n_state] = folded_matrix.omega
         callback(state_i, "DIIS_stop")
 
-        guesses_i = state_i.subspace_vectors.copy()
         # Orthonormalize and update guesses_i for the next state:
         # for state 0, taking initial guesses as guess vectors;
         # for the higher-excited states, taking all eigenvectors of
         # current A(w_i) as guess vectors.
+        guesses_i = state_i.subspace_vectors.copy()
         guess_vecs = guesses_i.copy()
         del guess_vecs[n_state]
         coefficient = np.hstack(([1], -(state_i.eigenvector @ guess_vecs)))
@@ -786,13 +804,13 @@ def eigsh_folded(matrix, guesses, omegas=None, n_ep=None, n_block=None,
 
         # Collect results into the "DavidsonState"
         state.n_applies += state_i.n_applies
-        state.eigenvalues[n_state:] = state_i.eigenvalues[n_state:]
         state.residual_norms[n_state] = state_i.residual_norm
-        # state_i.eigenvector = folded_matrix.unfold(state_i.eigenvector)
+        state.eigenvalues[n_state] = state_i.eigenvalues[n_state]
+        state_i.eigenvector = folded_matrix.unfold(state_i.eigenvector)
         state_i.eigenvector /= np.sqrt(state_i.eigenvector @ state_i.eigenvector)
         state.eigenvectors.append(state_i.eigenvector)
 
-    if convergence_test(state):
+    if convergence_test_final(state):
         callback(state, "sum_folded")
     state.timer.stop("folded iterations")
     return state
@@ -810,71 +828,3 @@ def davidson(*args, **kwargs):
 def davidson_folded_DIIS(*args, **kwargs):
     return eigsh_folded(*args, preconditioner=JacobiPreconditioner,
                         preconditioning_method="Davidson", **kwargs)
-
-
-class DIIS:
-    """
-    An implementation of DIIS acceleration, adapted from
-    https://github.com/edeprince3/pdaggerq/blob/master/examples/full_cc_codes/diis.py
-    """
-    def __init__(self, num_diis_vecs: int, start_iter=4):
-        """
-        Initialize DIIS updater
-
-        :params num_diis_vecs: Integer number representing number of DIIS
-                               vectors to keep
-        :param start_iter: optional (default=4) number to start DIIS iterations
-        """
-        self.nvecs = num_diis_vecs
-        self.error_vecs = []
-        self.prev_vecs = []
-        self.start_iter = start_iter
-        self.iter_idx = 0
-
-    def compute_new_vec(self, iterate, error):
-        """
-        Compute a DIIS update.  Only perform diis update after start_iter
-        have been accumulated.
-        """
-        # don't start DIIS until start_iter
-        if self.iter_idx < self.start_iter:
-            self.iter_idx += 1
-            return iterate
-
-        # add iterate and error to the list of error and iterates
-        self.prev_vecs.append(iterate)
-        self.error_vecs.append(error)
-        self.iter_idx += 1
-
-        # if prev_vecs is larger than the diis space size, then pop the oldest
-        if len(self.prev_vecs) > self.nvecs:
-            self.prev_vecs.pop(0)
-            self.error_vecs.pop(0)
-
-        # construct bmat and solve ax=b diis problem
-        b_mat, rhs = self.get_bmat()
-        c = np.linalg.solve(b_mat, rhs)
-        c = c.flatten()
-
-        # construct new iterate from solution to diis ax=b and previous vecs.
-        new_iterate = self.prev_vecs[0].zeros_like()
-        for ii in range(len(self.prev_vecs)):
-            new_iterate += c[ii] * self.prev_vecs[ii]
-        return new_iterate
-
-    def get_bmat(self):
-        """
-        Compute b-mat
-        """
-        dim = len(self.prev_vecs)
-        b = np.zeros((dim, dim))
-        for i, j in product(range(dim), repeat=2):
-            if i <= j:
-                b[i, j] = self.error_vecs[i].dot(self.error_vecs[j])
-                b[j, i] = b[i, j]
-        b = np.hstack((b, -1 * np.ones((dim, 1))))
-        b = np.vstack((b, -1 * np.ones((1, dim + 1))))
-        b[-1, -1] = 0
-        rhs = np.zeros((dim + 1, 1))
-        rhs[-1, 0] = -1
-        return b, rhs

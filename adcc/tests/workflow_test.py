@@ -223,9 +223,15 @@ class TestWorkflow:
         # for ADC problems with doubles-folding
         guesses = adcc.guesses_singlet(matrix, n_guesses=6, block="ph")
         res = diagonalise_adcmatrix(matrix, n_states=3, kind=kind,
-                                    guesses=guesses, fold=True)
+                                    guesses=guesses, doubles_folding=True)
         assert res.converged
         assert res.eigenvalues[:n_states] == approx(ref_singlets[:n_states])
+
+
+        with pytest.warns(UserWarning) as record:
+            diagonalise_adcmatrix(matrix, n_states=3, kind=kind, 
+                                doubles_folding=True, guesses=guesses, omegas=None)
+        assert len(record) == 2
 
         from adcc.workflow import run_adc
         matrix_adc1 = adcc.AdcMatrix(
@@ -235,7 +241,7 @@ class TestWorkflow:
         omegas = adc1.excitation_energy_uncorrected
         guesses = adc1.excitation_vector
         res = diagonalise_adcmatrix(matrix, n_states=3, kind="singlet",
-                                    fold=True, guesses_fold="adc1",
+                                    doubles_folding=True,
                                     guesses=guesses, omegas=omegas)
         assert res.converged
         assert res.eigenvalues[:n_states] == approx(ref_singlets[:n_states])
@@ -254,6 +260,11 @@ class TestWorkflow:
             res = diagonalise_adcmatrix(matrix, n_states=9, kind=kind,
                                         eigensolver="davidson",
                                         guesses=guesses)
+
+        with pytest.raises(InputError):  # Wrong solver for doubles folding
+            res = diagonalise_adcmatrix(matrix, n_states=9, kind=kind,
+                                        eigensolver="blubber",
+                                        doubles_folding=True)
 
     def test_estimate_n_guesses(self):
         from adcc.workflow import estimate_n_guesses

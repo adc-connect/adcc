@@ -47,7 +47,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
             n_guesses_doubles=None, output=sys.stdout, core_orbitals=None,
             frozen_core=None, frozen_virtual=None, method=None,
             n_singlets=None, n_triplets=None, n_spin_flip=None,
-            environment=None, fold=None, guesses_fold=None,
+            environment=None, doubles_folding=None, folding_guesses_adc1=False,
             omegas=None, **solverargs):
     """Run an ADC calculation.
 
@@ -106,8 +106,8 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
 
     guesses : list, optional
         Provide the guess vectors to be employed for the ADC run. Takes
-        preference over `n_guesses` and `n_guesses_doubles`, such that these
-        parameters are ignored.
+        preference over `n_guesses` `n_guesses_doubles` and `folding_guesses_adc1`,
+        such that these parameters are ignored. 
 
     output : stream, optional
         Python stream to which output will be written. If `None` all output
@@ -134,13 +134,18 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         The keywords to specify how coupling to an environment model,
         e.g. PE, is treated. For details see :ref:`environment`.
 
-    fold : bool, optional
+    doubles_folding : bool, optional
         Perfom modified Davidson algorithm when using doubles-folded ADC(2) matrix.
 
-    guesses_fold: str, optional
+    folding_guesses_adc1 : bool, optional
         There is one more option for the initial guess vectors of the modified
-        Davidson solver, i.e., "adc1" takes initial guess vectors and guess
-        eigenvalues as eigenvalues and eigenvectors of adc(1) matrix.
+        Davidson solver, i.e., "adc1", which sets initial guess vectors and omega
+        values as eigenvalues and eigenvectors of ADC(1) matrix.
+
+    omegas : numpy.ndarray or NoneType, optional
+        Initial omega values for the modified Davidson solver when using
+        doubles-folded ADC(2) matrix. If not provided, the initial omega values
+        will be derived from the provided guess vectors.
 
     Other parameters
     ----------------
@@ -220,16 +225,17 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     if env_matrix_term:
         matrix += env_matrix_term
 
-    if fold and guesses_fold == "adc1" and guesses is None:
-        fold_initial = run_adc(data_or_matrix, method="adc1",
-                               kind=kind, n_states=n_states)
-        omegas = fold_initial.excitation_energy_uncorrected
-        guesses = fold_initial.excitation_vector
+    if doubles_folding and folding_guesses_adc1 == True and guesses is None:
+            fold_initial = run_adc(data_or_matrix, method="adc1",
+                                kind=kind, n_states=n_states)
+            omegas = fold_initial.excitation_energy_uncorrected
+            guesses = fold_initial.excitation_vector
+            # print("OMEGAS1:", type(omegas),type(omegas[0]))
 
     diagres = diagonalise_adcmatrix(
         matrix, n_states, kind, guesses=guesses, n_guesses=n_guesses,
         n_guesses_doubles=n_guesses_doubles, conv_tol=conv_tol, output=output,
-        eigensolver=eigensolver, fold=fold, guesses_fold=guesses_fold,
+        eigensolver=eigensolver, doubles_folding=doubles_folding,
         omegas=omegas, **solverargs)
     exstates = ExcitedStates(diagres)
     exstates.kind = kind
@@ -372,8 +378,8 @@ def validate_state_parameters(reference_state, n_states=None, n_singlets=None,
 
 def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
                           guesses=None, n_guesses=None, n_guesses_doubles=None,
-                          conv_tol=None, output=sys.stdout, fold=None,
-                          guesses_fold=None, omegas=None, **solverargs):
+                          conv_tol=None, output=sys.stdout, doubles_folding=None,
+                          omegas=None, **solverargs):
     """
     This function seeks appropriate guesses and afterwards proceeds to
     diagonalise the ADC matrix using the specified eigensolver.
@@ -401,7 +407,7 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
     # Set some solver-specific parameters
     if eigensolver == "davidson":
         n_guesses_per_state = 2
-        if fold:
+        if doubles_folding:
             callback = setup_solver_printing(
                 "Jacobi-Davidson using doubles-folding", matrix, kind,
                 solver.davidson.default_print, output=output)
@@ -412,6 +418,9 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
                 output=output)
             run_eigensolver = jacobi_davidson
     elif eigensolver == "lanczos":
+        if doubles_folding:
+            raise InputError("Lanczos eigensolver not supported for "
+                             "doubles-folded ADC(2) matrices.")
         n_guesses_per_state = 1
         callback = setup_solver_printing(
             "Lanczos", matrix, kind, solver.lanczos.default_print,
@@ -419,6 +428,17 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
         run_eigensolver = lanczos
     else:
         raise InputError(f"Solver {eigensolver} unknown, try 'davidson'.")
+
+    # Doubles folding warnings
+    if doubles_folding and guesses is not None:
+        warnings.warn("The guess vectors are explicitly provided.\n"
+                    "It is recommended to use ADC(1) transition densities and excitation "
+                    "energies as the starting guesses for the eigenvectors and eigenvalues.")
+        if omegas is None:
+            warnings.warn("The guess vectors are explicitly provided, but no initial omegas.\n"
+                        "In the modified Davidson algorithm for the doubles-folded ADC(2) matrix, "
+                        "the initial omega value(s) are derived from the provided guess vector(s). "
+                        "Ensure their values and ordering match the intended states.")
 
     # Obtain or check guesses
     if guesses is None:
@@ -445,7 +465,7 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
                           "are explicitly provided.")
 
     solverargs.setdefault("which", "SA")
-    if fold and guesses_fold == "adc1":
+    if doubles_folding:
         return run_eigensolver(matrix, guesses=guesses, omegas=omegas,
                                n_ep=n_states, conv_tol=conv_tol, callback=callback,
                                explicit_symmetrisation=explicit_symmetrisation,
