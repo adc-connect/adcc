@@ -21,6 +21,7 @@
 ##
 ## ---------------------------------------------------------------------
 import adcc
+from adcc.OneParticleOperator import Symmetry
 import numpy as np
 
 from collections import namedtuple
@@ -173,12 +174,12 @@ def operator_import_from_ao_test(scfres, ao_dict, operator="electric_dipole",
         int_mock = {"o1o1": int_oo, "o1v1": int_ov, "v1v1": int_vv}
 
         int_imported_comp = int_imported[i]
-        if not int_imported_comp.is_symmetric:
+        if not int_imported_comp.symmetry == Symmetry.HERMITIAN:
             int_vo = np.einsum('ib,ba,ja->ij', virta, ao_component, occa)
             int_vo += np.einsum('ib,ba,ja->ij', virtb, ao_component, occb)
             int_mock["v1o1"] = int_vo
 
-        for b in int_imported_comp.blocks:
+        for b in int_imported_comp.canonical_blocks:
             np.testing.assert_allclose(
                 int_mock[b], int_imported_comp[b].to_ndarray(),
                 atol=refstate.conv_tol

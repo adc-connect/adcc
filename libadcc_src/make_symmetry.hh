@@ -82,7 +82,7 @@ std::shared_ptr<Symmetry> make_symmetry_eri_symm(
  */
 std::shared_ptr<Symmetry> make_symmetry_operator(
       std::shared_ptr<const MoSpaces> mospaces_ptr, const std::string& space,
-      bool symmetric, const std::string& cartesian_transformation);
+      int symmetry, const std::string& cartesian_transformation);
 
 /** Return the symmetry object for an operator in the AO basis. The object will
  *  represent a block-diagonal matrix of the form
@@ -98,7 +98,7 @@ std::shared_ptr<Symmetry> make_symmetry_operator(
  *                         symmetry.
  */
 std::shared_ptr<Symmetry> make_symmetry_operator_basis(
-      std::shared_ptr<const MoSpaces> mospaces_ptr, size_t n_bas, bool symmetric);
+      std::shared_ptr<const MoSpaces> mospaces_ptr, size_t n_bas, int symmetry);
 
 ///@}
 }  // namespace libadcc

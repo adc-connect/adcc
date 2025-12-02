@@ -31,7 +31,7 @@ from adcc.AmplitudeVector import AmplitudeVector
 
 
 def mtm_adc0(mp, op, intermediates):
-    f1 = op.ov if op.is_symmetric else op.vo.transpose()
+    f1 = op.vo.transpose()
     return AmplitudeVector(ph=f1)
 
 
@@ -45,13 +45,11 @@ def mtm_adc2(mp, op, intermediates):
     t2 = mp.t2(b.oovv)
     p0 = mp.mp2_diffdm
 
-    op_vo = op.ov.transpose() if op.is_symmetric else op.vo
-
     ampl = mtm_adc1(mp, op, intermediates)
     f1 = (
-        + 0.5 * einsum("ijab,jkbc,ck->ia", t2, t2, op_vo)
-        + 0.5 * einsum("ij,aj->ia", p0.oo, op_vo)
-        - 0.5 * einsum("bi,ab->ia", op_vo, p0.vv)
+        + 0.5 * einsum("ijab,jkbc,ck->ia", t2, t2, op.vo)
+        + 0.5 * einsum("ij,aj->ia", p0.oo, op.vo)
+        - 0.5 * einsum("bi,ab->ia", op.vo, p0.vv)
         + 1.0 * einsum("ib,ab->ia", p0.ov, op.vv)
         - 1.0 * einsum("ji,ja->ia", op.oo, p0.ov)
         - 1.0 * einsum("ijab,jb->ia", mp.td2(b.oovv), op.ov)
@@ -64,20 +62,18 @@ def mtm_adc2(mp, op, intermediates):
 
 
 def mtm_cvs_adc0(mp, op, intermediates):
-    f1 = op.cv if op.is_symmetric else op.vc.transpose()
+    f1 = op.vc.transpose()
     return AmplitudeVector(ph=f1)
 
 
 def mtm_cvs_adc2(mp, op, intermediates):
-    op_vc = op.cv.transpose() if op.is_symmetric else op.vc
-    op_oc = op.co.transpose() if op.is_symmetric else op.oc
 
     ampl = mtm_cvs_adc0(mp, op, intermediates)
     f1 = (
-        - 0.5 * einsum("bI,ab->Ia", op_vc, intermediates.cvs_p0.vv)
-        - 1.0 * einsum("jI,ja->Ia", op_oc, intermediates.cvs_p0.ov)
+        - 0.5 * einsum("bI,ab->Ia", op.vc, intermediates.cvs_p0.vv)
+        - 1.0 * einsum("jI,ja->Ia", op.oc, intermediates.cvs_p0.ov)
     )
-    f2 = (1 / sqrt(2)) * einsum("kI,kjab->jIab", op_oc, mp.t2(b.oovv))
+    f2 = (1 / sqrt(2)) * einsum("kI,kjab->jIab", op.oc, mp.t2(b.oovv))
     return ampl + AmplitudeVector(ph=f1, pphh=f2)
 
 

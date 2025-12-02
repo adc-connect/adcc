@@ -38,7 +38,8 @@ class PyScfOperatorIntegralProvider:
         "electric_dipole", "electric_dipole_velocity", "magnetic_dipole",
         "electric_quadrupole", "electric_quadrupole_traceless",
         "electric_quadrupole_velocity", "diamagnetic_magnetizability",
-        "pe_induction_elec", "pcm_potential_elec"
+        "pe_induction_elec", "pcm_potential_elec", "magnetic_dipole_giao_1e",
+        "magnetic_dipole_giao_2e"
     )
 
     def __init__(self, scfres):
@@ -61,6 +62,32 @@ class PyScfOperatorIntegralProvider:
         with self.scfres.mol.with_common_orig(gauge_origin):
             return tuple(
                 -0.5 * self.scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
+            )
+
+    def magnetic_dipole_giao_1e(self, gauge_origin="origin") -> tuple[np.ndarray, ...]:
+        """
+        The imaginary part of the integral is returned.
+        -0.5 * sum_i r_i x p_i + ...
+        """
+        gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
+        with self.scfres.mol.with_common_orig(gauge_origin):
+            return tuple(
+                -0.5 * self.scfres.mol.intor('int1e_giao_irjxp', comp=3, hermi=2)
+                # Vorzeichen noch checken!
+                +2 * self.scfres.mol.intor('int1e_ignuc', comp=3, hermi=2)
+                +2 * self.scfres.mol.intor('int1e_igkin', comp=3, hermi=2)
+            )
+
+    def magnetic_dipole_giao_2e(self, gauge_origin="origin") -> tuple[np.ndarray, ...]:
+        """
+        The imaginary part of the integral is returned.
+        -0.5 * sum_i r_i x p_i + ...
+        """
+        gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
+        with self.scfres.mol.with_common_orig(gauge_origin):
+            return tuple(
+                # Vorzeichen/Faktor, passt das?
+                -0.5 * self.scfres.mol.intor('int2e_ig1', comp=3, hermi=2)
             )
 
     @property

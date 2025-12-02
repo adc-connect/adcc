@@ -22,6 +22,7 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 from itertools import product, combinations_with_replacement
+from enum import Enum
 
 import libadcc
 
@@ -30,8 +31,14 @@ from .MoSpaces import split_spaces
 from .Tensor import Tensor
 
 
+class Symmetry(Enum):
+    NOSYMMETRY = 0
+    HERMITIAN = 1
+    ANTIHERMITIAN = 2
+
+
 class OneParticleOperator:
-    def __init__(self, spaces, is_symmetric=True):
+    def __init__(self, spaces, symmetry=Symmetry.HERMITIAN):
         """
         Construct an OneParticleOperator object. All blocks are initialised
         as zero blocks.
@@ -41,14 +48,19 @@ class OneParticleOperator:
         spaces : adcc.MoSpaces or adcc.ReferenceState or adcc.LazyMp
             MoSpaces object
 
-        is_symmetric : bool
-            Is the operator symmetric?
+        symmetry : Symmetry, optional
+            Symmetry type of the operator. Can be:
+            
+            - `Symmetry.NOSYMMETRY` : No symmetry is enforced
+            - `Symmetry.HERMITIAN` : Operator is Hermitian (O^\\dagger = O)
+            - `Symmetry.ANTIHERMITIAN` : Operator is Antihermitian (O^\\dagger = -O)
+            Default is `Symmetry.HERMITIAN`.
         """
         if hasattr(spaces, "mospaces"):
             self.mospaces = spaces.mospaces
         else:
             self.mospaces = spaces
-        self.is_symmetric = is_symmetric
+        self.symmetry = symmetry
 
         # Set reference_state if possible
         if isinstance(spaces, libadcc.ReferenceState):
@@ -63,16 +75,19 @@ class OneParticleOperator:
         # check that orbital subspaces are correct
         assert sum(self.mospaces.n_orbs(ss) for ss in self.orbital_subspaces) \
             == self.mospaces.n_orbs("f")
-        if self.is_symmetric:
-            # unique combinations of orbital subspaces (respects the symmetry)
-            # and repeated elements (e.g. o1o1)
-            combs = list(
-                combinations_with_replacement(self.orbital_subspaces, r=2)
-            )
-        else:
-            # Cartesian product of subspaces, equivalent to nested for loop
-            combs = list(product(self.orbital_subspaces, repeat=2))
+        # Initialize all blocks; symmetry rules are applied lazily upon access.
+        combs = list(product(self.orbital_subspaces, repeat=2))
         self.blocks = ["".join(com) for com in combs]
+        if self.symmetry in (Symmetry.HERMITIAN, Symmetry.ANTIHERMITIAN):
+            self.canonical_blocks = [
+                                        "".join(comb)
+                                        for comb in combinations_with_replacement(
+                                            self.orbital_subspaces,
+                                            r=2
+                                        )
+                                    ]
+        else:
+            self.canonical_blocks = self.blocks.copy()
         self._tensors = {}
 
     @property
@@ -102,7 +117,7 @@ class OneParticleOperator:
         Checks if block is explicitly marked as zero block.
         Returns False if the block does not exist.
         """
-        if block not in self.blocks:
+        if block not in self.canonical_blocks:
             return False
         return block not in self.blocks_nonzero
 
@@ -112,21 +127,42 @@ class OneParticleOperator:
         Does not create a block in case it is marked as a zero block.
         Use __getitem__ for that purpose.
         """
-        if block not in self.blocks_nonzero:
+        s1, s2 = split_spaces(block)
+        rev_block = s2 + s1
+
+        if block in self.blocks_nonzero:
+            return self._tensors[block]
+        elif rev_block in self.blocks_nonzero:
+            if self.symmetry in (Symmetry.HERMITIAN, Symmetry.ANTIHERMITIAN) and \
+                    s1.startswith('v') and s2.startswith('o'):
+                factor = 1.0 if self.symmetry == Symmetry.HERMITIAN else -1.0
+                return factor * self._tensors[rev_block].transpose()
+        else:
             raise KeyError("The block function does not support "
                            "access to zero-blocks. Available non-zero "
                            f"blocks are: {self.blocks_nonzero}.")
-        return self._tensors[block]
 
     def __getitem__(self, block):
         if block not in self.blocks:
             raise KeyError(f"Invalid block {block} requested. "
                            f"Available blocks are: {self.blocks}.")
         if block not in self._tensors:
-            sym = libadcc.make_symmetry_operator(
-                self.mospaces, block, self.is_symmetric, "1"
-            )
-            self._tensors[block] = Tensor(sym)
+            s1, s2 = split_spaces(block)
+            if self.symmetry in (Symmetry.HERMITIAN, Symmetry.ANTIHERMITIAN) and \
+                    s1.startswith('v') and s2.startswith('o'):
+                rev_block = s2 + s1
+                if rev_block not in self._tensors:
+                    sym = libadcc.make_symmetry_operator(
+                        self.mospaces, rev_block, self.symmetry.value, "1"
+                    )
+                    self._tensors[rev_block] = Tensor(sym)
+                factor = 1.0 if self.symmetry == Symmetry.HERMITIAN else -1.0
+                return factor * self._tensors[rev_block].transpose()
+            else:
+                sym = libadcc.make_symmetry_operator(
+                    self.mospaces, block, self.symmetry.value, "1"
+                )
+                self._tensors[block] = Tensor(sym)
         return self._tensors[block]
 
     def __getattr__(self, attr):
@@ -189,15 +225,17 @@ class OneParticleOperator:
             rowslice, colslice = slices[sp1], slices[sp2]
             dm_block = self[block].to_ndarray()
             ret[rowslice, colslice] = dm_block
-            if self.is_symmetric and sp1 != sp2:
-                ret[colslice, rowslice] = dm_block.T
+            if sp1 != sp2 and self.symmetry in \
+                    (Symmetry.HERMITIAN, Symmetry.ANTIHERMITIAN):
+                factor = 1.0 if self.symmetry == Symmetry.HERMITIAN else -1.0
+                ret[colslice, rowslice] = factor * dm_block.T
         return ret
 
     def copy(self):
         """
         Return a deep copy of the OneParticleOperator
         """
-        ret = OneParticleOperator(self.mospaces, self.is_symmetric)
+        ret = OneParticleOperator(self.mospaces, self.symmetry)
         for b in self.blocks_nonzero:
             ret[b] = self.block(b).copy()
         if hasattr(self, "reference_state"):
@@ -221,14 +259,23 @@ class OneParticleOperator:
         dm_bb_b = 0
         for block in self.blocks_nonzero:
             s1, s2 = split_spaces(block)
-            # scale off-diagonal block of symmetric operator by 2
-            # because only one of the blocks is actually present
-            pref = 2.0 if (s1 != s2 and self.is_symmetric) else 1.0
+            # hermitian operators: scale off-diagonal block of symmetric operator 
+            # by 2 because only one of the blocks is actually present
+            pref = (
+                2.0 if (s1 != s2 and self.symmetry == Symmetry.HERMITIAN) else 1.0
+                )
             dm_bb_a += pref * einsum("ip,ij,jq->pq", coeff_map[f"{s1}_a"],
                                      self[block], coeff_map[f"{s2}_a"])
             dm_bb_b += pref * einsum("ip,ij,jq->pq", coeff_map[f"{s1}_b"],
                                      self[block], coeff_map[f"{s2}_b"])
-        if self.is_symmetric:
+            if self.symmetry == Symmetry.ANTIHERMITIAN:
+                # account for antihermiticity
+                rev_block = s2 + s1
+                dm_bb_a -= pref * einsum("ip,ij,jq->pq", coeff_map[f"{s2}_a"],
+                                     self[rev_block], coeff_map[f"{s1}_a"])
+                dm_bb_b -= pref * einsum("ip,ij,jq->pq", coeff_map[f"{s2}_b"],
+                                     self[rev_block], coeff_map[f"{s1}_b"])
+        if self.symmetry == Symmetry.HERMITIAN:
             dm_bb_a = dm_bb_a.symmetrise()
             dm_bb_b = dm_bb_b.symmetrise()
         return (dm_bb_a.evaluate(), dm_bb_b.evaluate())
@@ -255,7 +302,8 @@ class OneParticleOperator:
         if self.mospaces != other.mospaces:
             raise ValueError("Cannot add OneParticleOperators with "
                              "differing mospaces.")
-        if self.is_symmetric and not other.is_symmetric:
+        if self.symmetry in (Symmetry.HERMITIAN, Symmetry.ANTIHERMITIAN) \
+                and other.symmetry == Symmetry.NOSYMMETRY:
             raise ValueError("Cannot add non-symmetric matrix "
                              "in-place to symmetric one.")
 
@@ -265,7 +313,8 @@ class OneParticleOperator:
             else:
                 self[b] = self.block(b) + other.block(b)
 
-        if not self.is_symmetric and other.is_symmetric:
+        if self.symmetry == Symmetry.NOSYMMETRY \
+                and other.symmetry in (Symmetry.HERMITIAN, Symmetry.ANTIHERMITIAN):
             for b in other.blocks_nonzero:
                 if b[:2] == b[2:]:
                     continue  # Done already
@@ -273,7 +322,8 @@ class OneParticleOperator:
 
                 obT = other.block(b).transpose()
                 if not self.is_zero_block(brev):
-                    obT += self.block(brev)
+                    factor = 1.0 if other.symmetry == Symmetry.HERMITIAN else -1.0
+                    obT += factor * self.block(brev)
                 self[brev] = evaluate(obT)
 
         # Update ReferenceState pointer
@@ -287,7 +337,8 @@ class OneParticleOperator:
         if self.mospaces != other.mospaces:
             raise ValueError("Cannot subtract OneParticleOperators with "
                              "differing mospaces.")
-        if self.is_symmetric and not other.is_symmetric:
+        if self.symmetry in (Symmetry.HERMITIAN, Symmetry.ANTIHERMITIAN) \
+                and other.symmetry == Symmetry.NOSYMMETRY:
             raise ValueError("Cannot subtract non-symmetric matrix "
                              "in-place from symmetric one.")
 
@@ -297,7 +348,8 @@ class OneParticleOperator:
             else:
                 self[b] = self.block(b) - other.block(b)
 
-        if not self.is_symmetric and other.is_symmetric:
+        if self.symmetry == Symmetry.NOSYMMETRY \
+                and other.symmetry in (Symmetry.HERMITIAN, Symmetry.ANTIHERMITIAN):
             for b in other.blocks_nonzero:
                 if b[:2] == b[2:]:
                     continue  # Done already
@@ -305,7 +357,8 @@ class OneParticleOperator:
 
                 obT = -1.0 * other.block(b).transpose()
                 if not self.is_zero_block(brev):
-                    obT += self.block(brev)
+                    factor = 1.0 if other.symmetry == Symmetry.HERMITIAN else -1.0
+                    obT += factor * self.block(brev)
                 self[brev] = evaluate(obT)
 
         # Update ReferenceState pointer
@@ -323,13 +376,15 @@ class OneParticleOperator:
         return self
 
     def __add__(self, other):
-        if not self.is_symmetric or other.is_symmetric:
+        if self.symmetry == Symmetry.NOSYMMETRY \
+                or other.symmetry in (Symmetry.HERMITIAN, Symmetry.ANTIHERMITIAN):
             return self.copy().__iadd__(other)
         else:
             return other.copy().__iadd__(self)
 
     def __sub__(self, other):
-        if not self.is_symmetric or other.is_symmetric:
+        if self.symmetry == Symmetry.NOSYMMETRY \
+                or other.symmetry in (Symmetry.HERMITIAN, Symmetry.ANTIHERMITIAN):
             return self.copy().__isub__(other)
         else:
             return (-1.0 * other).__iadd__(self)
@@ -354,36 +409,10 @@ def product_trace(op1, op2):
     #      which could potentially catch an arising error.
     all_blocks = list(set(op1.blocks + op2.blocks))
 
-    if op1.is_symmetric and op2.is_symmetric:
-        ret = 0
-        assert op1.blocks == op2.blocks
-        for b in all_blocks:
-            if op1.is_zero_block(b) or op2.is_zero_block(b):
-                continue
-            tb = b[2:] + b[:2]  # transposed block string
-            if b == tb:
-                ret += op1.block(b).dot(op2.block(b))
-            else:
-                ret += 2.0 * op1.block(b).dot(op2.block(b))
-        return ret
-    elif op1.is_symmetric and not op2.is_symmetric:
-        ret = 0
-        for b in all_blocks:
-            if op1.is_zero_block(b) or op2.is_zero_block(b):
-                continue
-            tb = b[2:] + b[:2]  # transposed block string
-            if b in op1.blocks:
-                ret += op1.block(b).dot(op2.block(b))
-            elif tb in op1.blocks:
-                ret += op1.block(tb).transpose().dot(op2.block(b))
-        return ret
-    elif not op1.is_symmetric and op2.is_symmetric:
-        return product_trace(op2, op1)
-    else:
-        ret = 0
-        assert op1.blocks == op2.blocks
-        for b in all_blocks:
-            if op1.is_zero_block(b) or op2.is_zero_block(b):
-                continue
-            ret += op1.block(b).dot(op2.block(b))
-        return ret
+    ret = 0
+    assert op1.blocks == op2.blocks
+    for b in all_blocks:
+        if op1.is_zero_block(b) or op2.is_zero_block(b):
+            continue
+        ret += op1[b].dot(op2[b])
+    return ret

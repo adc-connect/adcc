@@ -27,7 +27,7 @@ from .Tensor import Tensor
 from .MoSpaces import MoSpaces
 from .backends import import_scf_results
 from .OperatorIntegrals import OperatorIntegrals
-from .OneParticleOperator import OneParticleOperator, product_trace
+from .OneParticleOperator import OneParticleOperator, product_trace, Symmetry
 
 import libadcc
 
@@ -205,9 +205,10 @@ class ReferenceState(libadcc.ReferenceState):
         """
         Return the Hartree-Fock density in the MO basis
         """
-        density = OneParticleOperator(self.mospaces, is_symmetric=True)
-        for block in density.blocks:
-            sym = libadcc.make_symmetry_operator(self.mospaces, block, True, "1")
+        density = OneParticleOperator(self.mospaces, symmetry=Symmetry.HERMITIAN)
+        for block in density.canonical_blocks:
+            sym = libadcc.make_symmetry_operator(self.mospaces, block,
+                                                 density.symmetry.value, "1")
             density[block] = Tensor(sym)
         for ss in self.mospaces.subspaces_occupied:
             density[ss + ss].set_mask("ii", 1)

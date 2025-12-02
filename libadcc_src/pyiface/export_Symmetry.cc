@@ -122,9 +122,11 @@ void export_Symmetry(py::module& m) {
         "\n"
         "  mospaces    MoSpaces object\n"
         "  space       Space string (e.g. o1v1)\n"
-        "  symmetric   Is the tensor symmetric (only in effect if both subspaces\n"
-        "              of the space string are identical). False disables\n"
-        "              a setup of permutational symmetry.\n"
+        "  symmetry    Describes the symmetry of the tensor (only in effect if both subspaces\n"
+        "              of the space string are identical)."
+        "              0 no symmetry\n"
+        "              1 hermitian\n"
+        "              2 antihermitian\n"
         "  cartesian_transformation\n"
         "              The cartesian function according to which the operator "
         "transforms.\n"
@@ -145,7 +147,7 @@ void export_Symmetry(py::module& m) {
         "\n"
         "mospaces_ptr     MoSpaces pointer\n"
         "n_bas            Number of AO basis functions\n"
-        "symmetric        Is the tensor symmetric (only in effect if both space\n"
+        "symmetry         Is the tensor symmetric (only in effect if both space\n"
         "                 axes identical). false disables a setup of permutational\n"
         "                 symmetry.\n");
 }
