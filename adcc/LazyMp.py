@@ -122,7 +122,7 @@ class LazyMp:
     @timed_member_call(timer="timer")
     def mp2_diffdm(self):
         """
-        Return the MP2 differensce density in the MO basis.
+        Return the MP2 difference density in the MO basis.
         """
         hf = self.reference_state
         ret = OneParticleOperator(self.mospaces, symmetry=Symmetry.HERMITIAN)

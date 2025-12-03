@@ -67,7 +67,7 @@ def replicate_ao_block(mospaces, tensor, symmetry: Symmetry=Symmetry.HERMITIAN):
     This is achieved using this function.
     """
     sym = libadcc.make_symmetry_operator_basis(
-        mospaces, tensor.shape[0], symmetry.value
+        mospaces, tensor.shape[0], symmetry.to_str()
     )
     result = Tensor(sym)
 

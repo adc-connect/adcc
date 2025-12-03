@@ -274,14 +274,18 @@ std::shared_ptr<Symmetry> make_symmetry_eri_symm(
 
 std::shared_ptr<Symmetry> make_symmetry_operator(
       std::shared_ptr<const MoSpaces> mospaces_ptr, const std::string& space,
-      const int symmetry, const std::string& cartesian_transformation) {
+      const std::string& symmetry, const std::string& cartesian_transformation) {
   auto sym = std::make_shared<Symmetry>(mospaces_ptr, space);
 
   const std::vector<std::string>& ss = sym->subspaces();
   if (sym->ndim() == 2) {
     // Hermitian operator is a symmetric matrix if symmetric and both spaces equal
-    if (symmetry == 1 && ss[0] == ss[1]) {
+    if (symmetry == "hermitian" && ss[0] == ss[1]) {
       sym->set_permutations({"ij", "ji"});
+    }
+    //
+    if (symmetry == "antihermitian" && ss[0] == ss[1]) {
+      sym->set_permutations({"ij", "-ji"});
     }
 
     // Point-group symmetry
@@ -308,14 +312,14 @@ std::shared_ptr<Symmetry> make_symmetry_operator(
   else if (sym->ndim() == 4) {
     // Operator is a symmetric matrix if symmetric and all four spaces equal
     // Sicher, dass die korrekt sind?
-    if (symmetry == 1 && ss[0] == ss[1] && ss[1] == ss[2] && ss[2] == ss[3]) {
+    if (symmetry == "hermitian" && ss[0] == ss[1] && ss[1] == ss[2] && ss[2] == ss[3]) {
       std::vector<std::string> permutations{
           "ijkl", "jikl", "ijlk", "jilk",
           "klij", "lkij", "klji", "lkji"
       };
       sym->set_permutations(permutations);
     }
-    if (symmetry == 1 && ss[0] == ss[1] && ss[2] == ss[3]) {
+    if (symmetry == "hermitian" && ss[0] == ss[1] && ss[2] == ss[3]) {
       std::vector<std::string> permutations{
           "ijkl", "jilk"
       };
@@ -356,17 +360,18 @@ std::shared_ptr<Symmetry> make_symmetry_operator(
 }
 
 std::shared_ptr<Symmetry> make_symmetry_operator_basis(
-      std::shared_ptr<const MoSpaces> mospaces_ptr, size_t n_bas, const int symmetry) {
+      std::shared_ptr<const MoSpaces> mospaces_ptr, size_t n_bas,
+      const std::string symmetry) {
 
   // Setup symmetry in a way that the "b" axis has "b" alphas and "b" betas
   using map_type = std::map<std::string, std::pair<size_t, size_t>>;
   auto sym =
         std::make_shared<Symmetry>(mospaces_ptr, "bb", map_type{{"b", {n_bas, n_bas}}});
-  if (symmetry == 1) {
+  if (symmetry == "hermitian") {
       sym->set_permutations({"ij", "ji"});
     }
 
-  if (symmetry == 2) {
+  if (symmetry == "antihermitian") {
     sym->set_permutations({"ij", "-ji"});
   }
 
@@ -377,47 +382,6 @@ std::shared_ptr<Symmetry> make_symmetry_operator_basis(
   return sym;
 }
 
-std::vector<std::string> build_permutations(int symmetry,
-                                            const std::array<std::string,4>& ss)
-{
-    auto can_swap_blocks = [&](int i1, int i2, int j1, int j2) {
-        return (ss[i1] == ss[i2] && ss[j1] == ss[j2]);
-    };
-
-    bool swap_ij_kl =
-           can_swap_blocks(0,1, 2,3)   // Fall B: ss0=ss1 & ss2=ss3
-        || can_swap_blocks(2,3, 0,1)   // symmetrisch betrachtet
-        || (ss[0] == ss[1] && ss[1] == ss[2] && ss[2] == ss[3]) // Fall A
-        || (ss[0] == ss[3] && ss[1] == ss[2]); // Fall D
-
-    std::vector<std::string> result;
-
-    auto add = [&](std::string p, int sign) {
-        if (symmetry == 1)         result.push_back(p);               // hermitian
-        else if (symmetry == 2)    result.push_back((sign>0?"+":"-") + p); // antiherm.
-    };
-
-    add("ijkl", +1);
-
-    if (swap_ij_kl) {
-        // Blocktausch ergibt klij
-        add("klij", (symmetry==1 ? +1 : -1)); // Antiherm → Vorzeichen umdrehen
-
-        // Falls alle vier Bereiche gleich → zusätzliche Permutationen innerhalb von (i,j) und (k,l)
-        bool all_equal = (ss[0]==ss[1] && ss[1]==ss[2] && ss[2]==ss[3]);
-        if (all_equal) {
-            add("jikl", +1);
-            add("ijlk", +1);
-            add("jilk", +1);
-
-            add("lkij", (symmetry==1 ? +1 : -1));
-            add("klji", (symmetry==1 ? +1 : -1));
-            add("lkji", (symmetry==1 ? +1 : -1));
-        }
-    }
-
-    return result;
-}
 
 
 }  // namespace libadcc

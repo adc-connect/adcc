@@ -67,7 +67,7 @@ std::shared_ptr<Symmetry> make_symmetry_eri_symm(
  *
  * \param mospaces_ptr     MoSpaces pointer
  * \param space            Space to use (e.g. o1o1 or o1v1)
- * \param symmetric        Is the tensor symmetric (only in effect if both space
+ * \param symmetry         Is the tensor symmetric (only in effect if both space
  *                         axes identical). false disables a setup of permutational
  *                         symmetry.
  * \param cartesian_transformation
@@ -82,8 +82,8 @@ std::shared_ptr<Symmetry> make_symmetry_eri_symm(
  */
 std::shared_ptr<Symmetry> make_symmetry_operator(
       std::shared_ptr<const MoSpaces> mospaces_ptr, const std::string& space,
-      int symmetry, const std::string& cartesian_transformation);
-
+      const std::string& symmetry, const std::string& cartesian_transformation);
+ 
 /** Return the symmetry object for an operator in the AO basis. The object will
  *  represent a block-diagonal matrix of the form
  *      ( M 0 )
@@ -93,12 +93,13 @@ std::shared_ptr<Symmetry> make_symmetry_operator(
  *
  * \param mospaces_ptr     MoSpaces pointer
  * \param n_bas            Number of AO basis functions
- * \param symmetric        Is the tensor symmetric (only in effect if both space
+ * \param symmetry         Is the tensor symmetric (only in effect if both space
  *                         axes identical). false disables a setup of permutational
  *                         symmetry.
  */
 std::shared_ptr<Symmetry> make_symmetry_operator_basis(
-      std::shared_ptr<const MoSpaces> mospaces_ptr, size_t n_bas, int symmetry);
+      std::shared_ptr<const MoSpaces> mospaces_ptr, size_t n_bas,
+      std::string symmetry);
 
 ///@}
 }  // namespace libadcc
