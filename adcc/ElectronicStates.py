@@ -10,7 +10,8 @@ from .FormatIndex import (
     FormatIndexBase, FormatIndexAdcc, FormatIndexHfProvider, FormatIndexHomoLumo
 )
 from .LazyMp import LazyMp
-from .OneParticleOperator import OneParticleOperator, product_trace
+from .OneParticleOperator import OneParticleOperator
+from .NParticleOperator import product_trace
 from .OperatorIntegrals import OperatorIntegrals
 from .misc import cached_member_function, requires_module
 from .ReferenceState import ReferenceState

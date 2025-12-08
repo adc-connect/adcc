@@ -27,7 +27,7 @@ import numpy as np
 from numpy.testing import assert_array_almost_equal_nulp, assert_equal
 
 from adcc import OneParticleOperator, zeros_like
-from adcc.OneParticleOperator import product_trace, Symmetry
+from adcc.NParticleOperator import product_trace, OperatorSymmetry
 
 from .testdata_cache import testdata_cache
 
@@ -51,7 +51,7 @@ class TestOneParticleOperator(unittest.TestCase):
 
     def test_to_ndarray_nosym(self):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        dm = OneParticleOperator(ref.mospaces, symmetry=Symmetry.NOSYMMETRY)
+        dm = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.NOSYMMETRY)
         dm.oo.set_random()
         dm.ov.set_random()
         dm.vo.set_random()
@@ -70,7 +70,7 @@ class TestOneParticleOperator(unittest.TestCase):
 
     def test_to_ndarray_antiherm(self):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        dm = OneParticleOperator(ref.mospaces, symmetry=Symmetry.ANTIHERMITIAN)
+        dm = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.ANTIHERMITIAN)
         dm.oo.set_random()
         dm.ov.set_random()
         dm.vo.set_random()
@@ -118,7 +118,7 @@ class TestOneParticleOperator(unittest.TestCase):
         dipx_mo = ref.operators.electric_dipole[0]
         mp2diff_mo = adcc.LazyMp(ref).mp2_diffdm
         mp2diff_nosym = OneParticleOperator(ref.mospaces,
-                                            symmetry=Symmetry.NOSYMMETRY)
+                                            symmetry=OperatorSymmetry.NOSYMMETRY)
         mp2diff_nosym.oo = mp2diff_mo.oo
         mp2diff_nosym.ov = mp2diff_mo.ov
         mp2diff_nosym.vv = mp2diff_mo.vv
@@ -153,7 +153,7 @@ class TestOneParticleOperator(unittest.TestCase):
         dipx_mo = ref.operators.electric_dipole[0]
         mp2diff_mo = adcc.LazyMp(ref).mp2_diffdm
         mp2diff_antiherm = OneParticleOperator(ref.mospaces,
-                                               symmetry=Symmetry.ANTIHERMITIAN)
+                                               symmetry=OperatorSymmetry.ANTIHERMITIAN)
         mp2diff_antiherm.oo = mp2diff_mo.oo
         mp2diff_antiherm.ov = mp2diff_mo.ov
         mp2diff_antiherm.vv = mp2diff_mo.vv
@@ -187,8 +187,8 @@ class TestOneParticleOperator(unittest.TestCase):
         ref = testdata_cache.refstate("cn_sto3g", "gen")
         dipx_mo = ref.operators.electric_dipole[0]
         mp2diff_mo = adcc.LazyMp(ref).mp2_diffdm
-        mp2diff_nosym = OneParticleOperator(ref.mospaces, symmetry=Symmetry.NOSYMMETRY)
-        dipx_nosym = OneParticleOperator(ref.mospaces, symmetry=Symmetry.NOSYMMETRY)
+        mp2diff_nosym = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.NOSYMMETRY)
+        dipx_nosym = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.NOSYMMETRY)
 
         mp2diff_nosym.oo = mp2diff_mo.oo
         mp2diff_nosym.ov = mp2diff_mo.ov
@@ -248,7 +248,7 @@ class TestOneParticleOperator(unittest.TestCase):
 
     def test_copy_nosym(self):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        mp2diff = OneParticleOperator(ref, symmetry=Symmetry.NOSYMMETRY)
+        mp2diff = OneParticleOperator(ref, symmetry=OperatorSymmetry.NOSYMMETRY)
         cpy = mp2diff.copy()
 
         assert cpy.blocks == mp2diff.blocks
@@ -265,12 +265,12 @@ class TestOneParticleOperator(unittest.TestCase):
 
     def test_add(self):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=Symmetry.NOSYMMETRY)
+        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.NOSYMMETRY)
         a.oo.set_random()
         a.vo.set_random()
         a.vv.set_random()
 
-        b = OneParticleOperator(ref.mospaces, symmetry=Symmetry.HERMITIAN)
+        b = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
         b.oo.set_random()
         b.vv.set_random()
 
@@ -281,12 +281,12 @@ class TestOneParticleOperator(unittest.TestCase):
 
     def test_add_nosym(self):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=Symmetry.HERMITIAN)
+        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
         a.oo.set_random()
         a.ov.set_random()
         a.vv.set_random()
 
-        b = OneParticleOperator(ref.mospaces, symmetry=Symmetry.NOSYMMETRY)
+        b = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.NOSYMMETRY)
         b.oo.set_random()
         b.ov.set_random()
         b.vo.set_random()
@@ -299,12 +299,12 @@ class TestOneParticleOperator(unittest.TestCase):
 
     def test_add_nosym_antiherm(self):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=Symmetry.NOSYMMETRY)
+        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.NOSYMMETRY)
         a.oo.set_random()
         a.vo.set_random()
         a.vv.set_random()
 
-        b = OneParticleOperator(ref.mospaces, symmetry=Symmetry.ANTIHERMITIAN)
+        b = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.ANTIHERMITIAN)
         b.oo.set_random()
         b.vv.set_random()
 
@@ -315,12 +315,12 @@ class TestOneParticleOperator(unittest.TestCase):
 
     def test_add_herm_antiherm(self):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=Symmetry.HERMITIAN)
+        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
         a.oo.set_random()
         a.vo.set_random()
         a.vv.set_random()
 
-        b = OneParticleOperator(ref.mospaces, symmetry=Symmetry.ANTIHERMITIAN)
+        b = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.ANTIHERMITIAN)
         b.oo.set_random()
         b.vv.set_random()
 
@@ -331,13 +331,13 @@ class TestOneParticleOperator(unittest.TestCase):
 
     def test_iadd(self):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=Symmetry.NOSYMMETRY)
+        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.NOSYMMETRY)
         a.oo.set_random()
         a.vo.set_random()
         a.ov.set_random()
         a.vv.set_random()
 
-        b = OneParticleOperator(ref.mospaces, symmetry=Symmetry.NOSYMMETRY)
+        b = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.NOSYMMETRY)
         b.oo.set_random()
         b.ov.set_random()
         b.vv.set_random()
@@ -348,12 +348,12 @@ class TestOneParticleOperator(unittest.TestCase):
 
     def test_sub(self):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=Symmetry.HERMITIAN)
+        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
         a.oo.set_random()
         a.ov.set_random()
         a.vv.set_random()
 
-        b = OneParticleOperator(ref.mospaces, symmetry=Symmetry.HERMITIAN)
+        b = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
         b.oo.set_random()
         b.ov.set_random()
         b.vv.set_random()
@@ -369,12 +369,12 @@ class TestOneParticleOperator(unittest.TestCase):
 
     def test_sub_nosym(self):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=Symmetry.HERMITIAN)
+        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
         a.oo.set_random()
         a.ov.set_random()
         a.vv.set_random()
 
-        b = OneParticleOperator(ref.mospaces, symmetry=Symmetry.NOSYMMETRY)
+        b = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.NOSYMMETRY)
         b.oo.set_random()
         b.ov.set_random()
         b.vo.set_random()
@@ -391,11 +391,11 @@ class TestOneParticleOperator(unittest.TestCase):
 
     def test_isub(self):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=Symmetry.HERMITIAN)
+        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
         a.oo.set_random()
         a.ov.set_random()
 
-        b = OneParticleOperator(ref.mospaces, symmetry=Symmetry.HERMITIAN)
+        b = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
         b.ov.set_random()
         b.vv.set_random()
 
@@ -405,7 +405,7 @@ class TestOneParticleOperator(unittest.TestCase):
 
     def test_mul(self):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=Symmetry.HERMITIAN)
+        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
         a.oo.set_random()
         a.ov.set_random()
         assert_array_almost_equal_nulp((1.2 * a).to_ndarray(),
@@ -413,7 +413,7 @@ class TestOneParticleOperator(unittest.TestCase):
 
     def test_rmul(self):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=Symmetry.HERMITIAN)
+        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
         a.oo.set_random()
         a.vo.set_random()
         a.ov.set_random()
@@ -422,7 +422,7 @@ class TestOneParticleOperator(unittest.TestCase):
 
     def test_imul(self):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=Symmetry.NOSYMMETRY)
+        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.NOSYMMETRY)
         a.oo.set_random()
         a.vo.set_random()
         a.ov.set_random()
@@ -434,7 +434,7 @@ class TestOneParticleOperator(unittest.TestCase):
 
     def test_block_functions(self):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=Symmetry.HERMITIAN)
+        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
         # no AO transformation with only zero blocks possible
         with pytest.raises(ValueError):
             a.to_ao_basis(ref)

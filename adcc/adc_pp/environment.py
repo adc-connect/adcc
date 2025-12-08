@@ -21,7 +21,7 @@
 ##
 ## ---------------------------------------------------------------------
 from adcc import OneParticleOperator, AmplitudeVector
-from adcc.OneParticleOperator import Symmetry
+from adcc.NParticleOperator import OperatorSymmetry
 from .matrix import AdcBlock
 
 
@@ -37,7 +37,7 @@ def block_ph_ph_0_pe(hf, mp, intermediates):
     op = hf.operators
 
     def apply(ampl):
-        tdm = OneParticleOperator(mp, symmetry=Symmetry.NOSYMMETRY)
+        tdm = OneParticleOperator(mp, symmetry=OperatorSymmetry.NOSYMMETRY)
         tdm.vo = ampl.ph.transpose()
         vpe = op.pe_induction_elec(tdm)
         return AmplitudeVector(ph=vpe.ov)
@@ -56,7 +56,7 @@ def block_ph_ph_0_pcm(hf, mp, intermediates):
     op = hf.operators
 
     def apply(ampl):
-        tdm = OneParticleOperator(mp, symmetry=Symmetry.NOSYMMETRY)
+        tdm = OneParticleOperator(mp, symmetry=OperatorSymmetry.NOSYMMETRY)
         tdm.vo = ampl.ph.transpose()
         vpcm = op.pcm_potential_elec(tdm)
         return AmplitudeVector(ph=vpcm.ov)

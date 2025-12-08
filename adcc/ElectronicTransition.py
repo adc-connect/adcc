@@ -27,7 +27,8 @@ import warnings
 from .ElectronicStates import ElectronicStates, _timer_name
 from .Excitation import Excitation
 from .misc import cached_member_function
-from .OneParticleOperator import OneParticleOperator, product_trace
+from .OneParticleOperator import OneParticleOperator
+from .NParticleOperator import product_trace
 
 
 class ElectronicTransition(ElectronicStates):
