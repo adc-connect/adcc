@@ -126,7 +126,8 @@ class LazyMp:
         Return the MP2 difference density in the MO basis.
         """
         hf = self.reference_state
-        ret = OneParticleOperator(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
+        ret = OneParticleOperator(self.mospaces,
+                                  symmetry=OperatorSymmetry.HERMITIAN)
         # NOTE: the following 3 blocks are equivalent to the cvs_p0 intermediates
         # defined at the end of this file
         ret.oo = -0.5 * einsum("ikab,jkab->ij", self.t2oo, self.t2oo)

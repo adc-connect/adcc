@@ -60,7 +60,8 @@ def transform_operator_ao2mo(tensor_bb, tensor_ff, coefficients,
         tensor_ff[blk].set_from_ndarray(temp.to_ndarray(), conv_tol)
 
 
-def replicate_ao_block(mospaces, tensor, symmetry: OperatorSymmetry=OperatorSymmetry.HERMITIAN):
+def replicate_ao_block(mospaces, tensor,
+                       symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN):
     """
     transform_operator_ao2mo requires the operator in AO to be
     replicated in a block-diagonal fashion (i.e. like [A 0
@@ -101,9 +102,10 @@ class OperatorIntegrals:
         """Which integrals are available in the underlying backend"""
         return self.provider_ao.available
 
-    def _import_dipole_like_operator(self, integral: str, 
-                                     symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
-                                     ) -> tuple[OneParticleOperator, ...]:
+    def _import_dipole_like_operator(
+        self, integral: str,
+        symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
+    ) -> tuple[OneParticleOperator, ...]:
         if integral not in self.available:
             raise NotImplementedError(f"{integral.replace('_', ' ')} operator "
                                       "not implemented "
@@ -126,8 +128,8 @@ class OperatorIntegrals:
     @timed_member_call("_import_timer")
     def electric_dipole(self) -> tuple[OneParticleOperator, ...]:
         """Return the electric dipole integrals in the molecular orbital basis."""
-        return self._import_dipole_like_operator("electric_dipole",
-                                                 symmetry=OperatorSymmetry.HERMITIAN)
+        return self._import_dipole_like_operator(
+            "electric_dipole", symmetry=OperatorSymmetry.HERMITIAN)
 
     @cached_property
     @timed_member_call("_import_timer")
@@ -136,13 +138,13 @@ class OperatorIntegrals:
         Return the electric dipole integrals (in the velocity gauge)
         in the molecular orbital basis.
         """
-        return self._import_dipole_like_operator("electric_dipole_velocity",
-                                                 symmetry=OperatorSymmetry.ANTIHERMITIAN)
+        return self._import_dipole_like_operator(
+            "electric_dipole_velocity", symmetry=OperatorSymmetry.ANTIHERMITIAN)
 
     def _import_g_origin_dep_dip_like_operator(
-            self, integral: str, gauge_origin="origin", 
+            self, integral: str, gauge_origin="origin",
             symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
-            ) -> tuple[OneParticleOperator, ...]:
+    ) -> tuple[OneParticleOperator, ...]:
         """
         Imports the operator and transforms it to the molecular orbital basis.
 
@@ -189,10 +191,10 @@ class OperatorIntegrals:
             symmetry=OperatorSymmetry.ANTIHERMITIAN
         )
 
-    def _import_g_origin_dep_quad_like_operator(self, integral: str,
-                                                gauge_origin="origin",
-                                                symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
-                                                ) -> tuple[tuple[OneParticleOperator, ...], ...]:  # noqa E501
+    def _import_g_origin_dep_quad_like_operator(
+        self, integral: str, gauge_origin="origin",
+        symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
+    ) -> tuple[tuple[OneParticleOperator, ...], ...]:  # noqa E501
         """
         Imports the operator and transforms it to the molecular orbital basis.
 
@@ -220,7 +222,7 @@ class OperatorIntegrals:
                                          symmetry=symmetry)
             quad_ff = OneParticleOperator(
                 self.mospaces, symmetry=symmetry
-                )
+            )
             transform_operator_ao2mo(quad_bb, quad_ff, self._coefficients,
                                      self._conv_tol)
             flattened.append(quad_ff)
@@ -278,10 +280,10 @@ class OperatorIntegrals:
             symmetry=OperatorSymmetry.HERMITIAN
         )
 
-    def _import_density_dependent_operator(self, operator: str,
-                                           density_mo: OneParticleOperator,
-                                           symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
-                                           ) -> OneParticleOperator:
+    def _import_density_dependent_operator(
+        self, operator: str, density_mo: OneParticleOperator,
+        symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
+    ) -> OneParticleOperator:
         """
         Import the density-dependent operator and transform it to the
         molecular orbital basis.

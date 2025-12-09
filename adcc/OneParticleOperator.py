@@ -22,7 +22,6 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 from itertools import product, combinations_with_replacement
-from enum import Enum
 
 import libadcc
 
@@ -30,6 +29,7 @@ from .functions import evaluate, einsum
 from .MoSpaces import split_spaces
 from .Tensor import Tensor
 from .NParticleOperator import NParticleOperator, OperatorSymmetry
+
 
 class OneParticleOperator(NParticleOperator):
     def __init__(self, spaces, symmetry=OperatorSymmetry.HERMITIAN):
@@ -91,7 +91,9 @@ class OneParticleOperator(NParticleOperator):
             dm_block = self[block].to_ndarray()
             ret[rowslice, colslice] = dm_block
             if sp1 != sp2 and self.symmetry is not OperatorSymmetry.NOSYMMETRY:
-                factor = 1.0 if self.symmetry == OperatorSymmetry.HERMITIAN else -1.0
+                factor = (
+                    1.0 if self.symmetry == OperatorSymmetry.HERMITIAN else -1.0
+                )
                 ret[colslice, rowslice] = factor * dm_block.T
         return ret
 
@@ -129,7 +131,7 @@ class OneParticleOperator(NParticleOperator):
         for block in self.blocks_nonzero:
             # only canonical blocks
             s1, s2 = split_spaces(block)
-            # hermitian operators: scale off-diagonal block of symmetric operator 
+            # hermitian operators: scale off-diagonal block of symmetric operator
             # by 2 because only one of the blocks is actually present
             if s1 != s2:
                 pref = block_coeffs_ov[self.symmetry]
@@ -191,7 +193,10 @@ class OneParticleOperator(NParticleOperator):
 
                 obT = other.block(b).transpose()
                 if not self.is_zero_block(brev):
-                    factor = 1.0 if other.symmetry == OperatorSymmetry.HERMITIAN else -1.0
+                    factor = (
+                        1.0 if other.symmetry == OperatorSymmetry.HERMITIAN
+                        else -1.0
+                    )
                     obT += factor * self.block(brev)
                 self[brev] = evaluate(obT)
 
@@ -226,7 +231,10 @@ class OneParticleOperator(NParticleOperator):
 
                 obT = -1.0 * other.block(b).transpose()
                 if not self.is_zero_block(brev):
-                    factor = 1.0 if other.symmetry == OperatorSymmetry.HERMITIAN else -1.0
+                    factor = (
+                        1.0 if other.symmetry == OperatorSymmetry.HERMITIAN
+                        else -1.0
+                    )
                     obT += factor * self.block(brev)
                 self[brev] = evaluate(obT)
 

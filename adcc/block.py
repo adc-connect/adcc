@@ -23,6 +23,7 @@
 from .MoSpaces import split_spaces
 from .NParticleOperator import OperatorSymmetry
 
+
 def __getattr__(attr):
     """
     Return a multi-dimensional block string like 'o1o2v1v1'
@@ -49,7 +50,8 @@ def get_canonical_block(block: str,
     factor = 1
     assert not len(spaces) % 2
     nparticleop = len(spaces) // 2
-    bra, ket = spaces[:len(spaces)//2], spaces[len(spaces)//2:]
+    bra, ket = spaces[:len(spaces) // 2], spaces[len(spaces) // 2:]
+
     # sort them
     bra_sorted, ket_sorted = sorted(bra), sorted(ket)
     bra_perm = sort(bra)
@@ -60,6 +62,7 @@ def get_canonical_block(block: str,
         factor *= -1
     bra, ket = bra_sorted, ket_sorted
 
+    # get prefactor
     if operator_symmetry in (OperatorSymmetry.HERMITIAN,
                              OperatorSymmetry.ANTIHERMITIAN) and bra > ket:
         bra, ket = ket, bra
@@ -67,6 +70,10 @@ def get_canonical_block(block: str,
 
         if operator_symmetry == OperatorSymmetry.ANTIHERMITIAN:
             factor *= -1
+
     canonical_block = "".join(["".join(bra) + "".join(ket)])
-    perm = tuple(bra_perm + ket_perm)
+
+    # correct permutational still needs to be fixed.
+    perm = tuple(bra_perm[::-1] + ket_perm[::-1])
+    print(block, canonical_block, perm)
     return (canonical_block, factor, perm)

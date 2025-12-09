@@ -21,12 +21,10 @@
 ##
 ## ---------------------------------------------------------------------
 import numpy as np
-from itertools import product, combinations_with_replacement
 from enum import Enum
 
 import libadcc
 
-from .functions import evaluate, einsum
 from .MoSpaces import split_spaces
 from .Tensor import Tensor
 
@@ -51,12 +49,12 @@ class NParticleOperator:
         spaces : adcc.MoSpaces or adcc.ReferenceState or adcc.LazyMp
             MoSpaces object
 
-        symmetry : Symmetry, optional
+        symmetry : OperatorSymmetry, optional
             Symmetry type of the operator. Can be:
-            
             - `OperatorSymmetry.NOSYMMETRY` : No symmetry is enforced
             - `OperatorSymmetry.HERMITIAN` : Operator is Hermitian (O^\\dagger = O)
-            - `OperatorSymmetry.ANTIHERMITIAN` : Operator is Antihermitian (O^\\dagger = -O)
+            - `OperatorSymmetry.ANTIHERMITIAN` : Operator is Antihermitian
+                                                 (O^\\dagger = -O)
             Default is `OperatorSymmetry.HERMITIAN`.
         """
         if hasattr(spaces, "mospaces"):
@@ -154,11 +152,11 @@ class NParticleOperator:
                 from . import block as b
                 c_block, factor, perm = b.get_canonical_block(
                     blk, self.symmetry
-                    )
+                )
                 if c_block not in self._tensors:
                     sym = libadcc.make_symmetry_operator(
-                            self.mospaces, c_block, self.symmetry.to_str(), "1"
-                        )
+                        self.mospaces, c_block, self.symmetry.to_str(), "1"
+                    )
                     self._tensors[c_block] = Tensor(sym)
                 return factor * self._tensors[c_block].transpose(perm)
         return self._tensors[blk]
@@ -266,6 +264,7 @@ class NParticleOperator:
         for b in self.blocks_nonzero:
             self.block(b).evaluate()
         return self
+
 
 def product_trace(op1, op2):
     # TODO use blocks_nonzero and build the set intersection

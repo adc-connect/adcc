@@ -206,7 +206,8 @@ class ReferenceState(libadcc.ReferenceState):
         """
         Return the Hartree-Fock density in the MO basis
         """
-        density = OneParticleOperator(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
+        density = OneParticleOperator(self.mospaces,
+                                      symmetry=OperatorSymmetry.HERMITIAN)
         for block in density.canonical_blocks:
             sym = libadcc.make_symmetry_operator(self.mospaces, block,
                                                  density.symmetry.to_str(), "1")

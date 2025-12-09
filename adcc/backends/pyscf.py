@@ -64,7 +64,7 @@ class PyScfOperatorIntegralProvider:
                 -0.5 * self.scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
             )
 
-    def magnetic_dipole_giao_1e(self, gauge_origin="origin") -> tuple[np.ndarray, ...]:
+    def magnetic_dipole_giao_1e(self, gauge_origin="origin") -> tuple[np.ndarray, ...]:  # noqa E501
         """
         The imaginary part of the integral is returned.
         -0.5 * sum_i r_i x p_i + ...
@@ -72,13 +72,13 @@ class PyScfOperatorIntegralProvider:
         gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
         with self.scfres.mol.with_common_orig(gauge_origin):
             return tuple(
-                -0.5 * self.scfres.mol.intor('int1e_giao_irjxp', comp=3, hermi=2)
+                - 0.5 * self.scfres.mol.intor('int1e_giao_irjxp', comp=3, hermi=2)
                 # Vorzeichen noch checken!
-                +2 * self.scfres.mol.intor('int1e_ignuc', comp=3, hermi=2)
-                +2 * self.scfres.mol.intor('int1e_igkin', comp=3, hermi=2)
+                + 2 * self.scfres.mol.intor('int1e_ignuc', comp=3, hermi=2)
+                + 2 * self.scfres.mol.intor('int1e_igkin', comp=3, hermi=2)
             )
 
-    def magnetic_dipole_giao_2e(self, gauge_origin="origin") -> tuple[np.ndarray, ...]:
+    def magnetic_dipole_giao_2e(self, gauge_origin="origin") -> tuple[np.ndarray, ...]:  # noqa E501
         """
         The imaginary part of the integral is returned.
         -0.5 * sum_i r_i x p_i + ...
