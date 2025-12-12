@@ -22,9 +22,11 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 from enum import Enum
+from itertools import product, combinations_with_replacement
 
 import libadcc
 
+from .functions import evaluate
 from .MoSpaces import split_spaces
 from .Tensor import Tensor
 
@@ -39,7 +41,7 @@ class OperatorSymmetry(Enum):
 
 
 class NParticleOperator:
-    def __init__(self, spaces, symmetry=OperatorSymmetry.HERMITIAN):
+    def __init__(self, spaces, n_particle_op, symmetry=OperatorSymmetry.HERMITIAN):
         """
         Construct an NParticleOperator object. All blocks are initialised
         as zero blocks.
@@ -57,6 +59,7 @@ class NParticleOperator:
                                                  (O^\\dagger = -O)
             Default is `OperatorSymmetry.HERMITIAN`.
         """
+        self._n_particle_op = n_particle_op
         if hasattr(spaces, "mospaces"):
             self.mospaces = spaces.mospaces
         else:
@@ -79,14 +82,25 @@ class NParticleOperator:
             == self.mospaces.n_orbs("f")
         self._tensors = {}
 
-        # need to be set explicitly in One- or TwoParticleOperator inits
-
-        self.blocks = []
+        # Initialize all blocks; symmetry rules are applied lazily upon access.
+        combs = list(product(self.orbital_subspaces, repeat=2*self.n_particle_op))
+        self.blocks = ["".join((comb)) for comb in combs]
         self.canonical_blocks = []
-
-        # dictionary with factors for each block {blockstring: factor, ...}
         self.canonical_factors = {}
-        self._n_particle_op = None
+
+        for block in self.blocks:
+            from .block import get_canonical_block
+            bra, ket = block[:2*self.n_particle_op], block[2*self.n_particle_op:]
+            canonical_block, _, _ = get_canonical_block(bra, ket, self.symmetry)
+            if canonical_block not in self.canonical_blocks:
+                self.canonical_blocks.append(canonical_block)
+                self.canonical_factors[canonical_block] = 1
+            else:
+                self.canonical_factors[canonical_block] += 1
+
+    @property
+    def n_particle_op(self) -> int:
+        return self._n_particle_op
 
     @property
     def shape(self) -> tuple[int, ...]:
@@ -94,7 +108,7 @@ class NParticleOperator:
         Returns the shape tuple of the NParticleOperator
         """
         size = self.mospaces.n_orbs("f")
-        return (size, size,) * self._n_particle_op
+        return (size, size,) * self.n_particle_op
 
     @property
     def size(self) -> int:
@@ -128,9 +142,12 @@ class NParticleOperator:
         from . import block as b
         if block in self.blocks_nonzero:
             return self._tensors[block]
-        canonical_block, factor, perm = b.get_canonical_block(block, self.symmetry)
+        bra, ket = block[:2*self.n_particle_op], block[2*self.n_particle_op:]
+        canonical_block, factor, transpose = b.get_canonical_block(
+            bra, ket, self.symmetry
+        )
         if canonical_block in self.blocks_nonzero:
-            return factor * self._tensors[canonical_block].transpose(perm)
+            return factor * self._tensors[canonical_block].transpose(transpose)
         else:
             raise KeyError("The block function does not support "
                            "access to zero-blocks. Available non-zero "
@@ -150,15 +167,16 @@ class NParticleOperator:
                 return self._tensors[blk]
             else:
                 from . import block as b
-                c_block, factor, perm = b.get_canonical_block(
-                    blk, self.symmetry
+                bra, ket = blk[:2*self.n_particle_op], blk[2*self.n_particle_op:]
+                canonical_block, factor, transpose = b.get_canonical_block(
+                    bra, ket, self.symmetry
                 )
-                if c_block not in self._tensors:
+                if canonical_block not in self._tensors:
                     sym = libadcc.make_symmetry_operator(
-                        self.mospaces, c_block, self.symmetry.to_str(), "1"
+                        self.mospaces, canonical_block, self.symmetry.to_str(), "1"
                     )
-                    self._tensors[c_block] = Tensor(sym)
-                return factor * self._tensors[c_block].transpose(perm)
+                    self._tensors[canonical_block] = Tensor(sym)
+                return factor * self._tensors[canonical_block].transpose(transpose)
         return self._tensors[blk]
 
     def __getattr__(self, attr) -> Tensor:
@@ -201,10 +219,40 @@ class NParticleOperator:
         Returns the NParticleOperator as a contiguous
         np.ndarray instance including all blocks
         """
-        raise NotImplementedError
+        # offsets to start index of spaces
+        offsets = {
+            sp: sum(
+                self.mospaces.n_orbs(ss)
+                for ss in self.orbital_subspaces[:self.orbital_subspaces.index(sp)]
+            )
+            for sp in self.orbital_subspaces
+        }
+        # slices for each space
+        slices = {
+            sp: slice(offsets[sp], offsets[sp] + self.mospaces.n_orbs(sp))
+            for sp in self.orbital_subspaces
+        }
+        # build complete np.ndarray -> go through all blocks
+        ret = np.zeros((self.shape))
+        for block in self.blocks:
+            if self.is_zero_block(block):
+                continue
+            spaces = split_spaces(block)
+            slice_list = tuple(slices[sp] for sp in spaces)
+            dm_block = self[block].to_ndarray()
+            ret[slice_list] = dm_block
+        return ret
 
     def copy(self):
-        raise NotImplementedError
+        """
+        Return a deep copy of the OneParticleOperator
+        """
+        ret = self.__class__(self.mospaces, self.symmetry)
+        for b in self.blocks_nonzero:
+            ret[b] = self.block(b).copy()
+        if hasattr(self, "reference_state"):
+            ret.reference_state = self.reference_state
+        return ret
 
     def _transform_to_ao(self, refstate_or_coefficients) -> tuple[Tensor, Tensor]:
         raise NotImplementedError("implement it")
@@ -228,10 +276,84 @@ class NParticleOperator:
             raise TypeError("Argument type not supported.")
 
     def __iadd__(self, other):
-        raise NotImplementedError
+        from . import block as b
+        if self.mospaces != other.mospaces:
+            raise ValueError("Cannot add OneParticleOperators with "
+                             "differing mospaces.")
+        if self.symmetry is not OperatorSymmetry.NOSYMMETRY \
+                and other.symmetry == OperatorSymmetry.NOSYMMETRY:
+            raise ValueError("Cannot add non-symmetric matrix "
+                             "in-place to symmetric one.")
+        for block in other.blocks_nonzero:
+            if self.is_zero_block(block):
+                self[block] = other.block(block).copy()
+            else:
+                self[block] = self.block(block) + other.block(block)
+
+        if self.symmetry == OperatorSymmetry.NOSYMMETRY \
+                and other.symmetry != OperatorSymmetry.NOSYMMETRY:
+            for block in self.blocks_nonzero:
+                bra, ket = block[:2*self.n_particle_op], block[2*self.n_particle_op:]
+                c_block, factor, transpose = b.get_canonical_block(
+                    bra, ket, other.symmetry
+                )
+                print(block, c_block, transpose)
+                if block == c_block:
+                    continue  # Done already
+                obT = 0
+                if not other.is_zero_block(c_block):
+                    obT = factor * other.block(c_block).transpose(transpose)
+                if not self.is_zero_block(block):
+                    obT += self.block(block)
+                self[block] = evaluate(obT)
+
+        # Update ReferenceState pointer
+        if hasattr(self, "reference_state"):
+            if hasattr(other, "reference_state") \
+                    and self.reference_state != other.reference_state:
+                delattr(self, "reference_state")
+        return self
 
     def __isub__(self, other):
-        raise NotImplementedError
+    # def __iadd__(self, other):
+        from . import block as b
+        if self.mospaces != other.mospaces:
+            raise ValueError("Cannot add OneParticleOperators with "
+                             "differing mospaces.")
+        if self.symmetry is not OperatorSymmetry.NOSYMMETRY \
+                and other.symmetry == OperatorSymmetry.NOSYMMETRY:
+            raise ValueError("Cannot add non-symmetric matrix "
+                             "in-place to symmetric one.")
+
+        for block in other.blocks_nonzero:
+            if self.is_zero_block(block):
+                self[block] = -1.0 * other.block(block)  # The copy is implicit
+            else:
+                self[block] = self.block(block) - other.block(block)
+
+        if self.symmetry == OperatorSymmetry.NOSYMMETRY \
+                and other.symmetry is not OperatorSymmetry.NOSYMMETRY:
+            for block in self.blocks_nonzero:
+                bra, ket = block[:2*self.n_particle_op], block[2*self.n_particle_op:]
+                c_block, factor, transpose = b.get_canonical_block(
+                    bra, ket, other.symmetry
+                )
+                if block == c_block:
+                    continue  # Done already
+                obT = 0
+                if not other.is_zero_block(c_block):
+                    obT = -1 * factor * other.block(c_block).transpose(transpose)
+                if not self.is_zero_block(block):
+                    obT += self.block(block)
+                self[block] = evaluate(obT)
+
+        # Update ReferenceState pointer
+        if hasattr(self, "reference_state"):
+            if hasattr(other, "reference_state") \
+                    and self.reference_state != other.reference_state:
+                delattr(self, "reference_state")
+        return self
+        # raise NotImplementedError
 
     def __imul__(self, other):
         if not isinstance(other, (float, int)):
@@ -265,6 +387,11 @@ class NParticleOperator:
             self.block(b).evaluate()
         return self
 
+    def set_random(self):
+        for b in self.canonical_blocks:
+            self[b].set_random()
+        # return self
+
 
 def product_trace(op1, op2):
     # TODO use blocks_nonzero and build the set intersection
@@ -284,24 +411,15 @@ def product_trace(op1, op2):
             to_remove = []
             for b in list(factors.keys()):
                 spaces = split_spaces(b)
-                if op1._n_particle_op == 1:
-                    assert len(spaces) == 2
-                    if spaces[0] != spaces[1]:
-                        to_remove.append(b)
-                elif op1._n_particle_op == 2:
-                    assert len(spaces) == 4
-                    if spaces.count(spaces[0]) in [1, 3]:
-                        to_remove.append(b)
-                    elif spaces[0] == spaces[1] and spaces[2] == spaces[3]:
-                        to_remove.append(b)
-                # remove offdiagonals
+                n = op1.n_particle_op
+                if spaces[:2 * n] != spaces[2 * n:]:
+                    to_remove.append(b)
+            # remove non diagonals blocks
             for b in to_remove:
                 factors.pop(b)
     ret = 0
     for b, factor in factors.items():
         if op1.is_zero_block(b) or op2.is_zero_block(b):
-            continue
-        if factor == 0:
             continue
 
         ret += factor * op1.block(b).dot(op2.block(b))

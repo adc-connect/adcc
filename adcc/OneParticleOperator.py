@@ -44,69 +44,7 @@ class OneParticleOperator(NParticleOperator):
 
         symmetry : OperatorSymmetry, optional
         """
-        super().__init__(spaces, symmetry=symmetry)
-        self._n_particle_op = 1
-
-        # Initialize all blocks; symmetry rules are applied lazily upon access.
-        combs = list(product(self.orbital_subspaces, repeat=2))
-        self.blocks = ["".join((comb)) for comb in combs]
-        if self.symmetry is not OperatorSymmetry.NOSYMMETRY:
-            self.canonical_blocks = [
-                "".join(sorted(comb)) for comb in combinations_with_replacement(
-                    self.orbital_subspaces, r=2)
-            ]
-        else:
-            self.canonical_blocks = self.blocks.copy()
-        self.canonical_factors = {block: 1 for block in self.canonical_blocks}
-        for block in self.blocks:
-            if block in self.canonical_blocks:
-                continue
-            from .block import get_canonical_block
-            canonical_block, _, _ = get_canonical_block(block, self.symmetry)
-            assert canonical_block in self.canonical_factors.keys()
-            self.canonical_factors[canonical_block] += 1
-
-    def to_ndarray(self):
-        """
-        Returns the OneParticleOperator as a contiguous
-        np.ndarray instance including all blocks
-        """
-        # offsets to start index of spaces
-        offsets = {
-            sp: sum(
-                self.mospaces.n_orbs(ss)
-                for ss in self.orbital_subspaces[:self.orbital_subspaces.index(sp)]
-            )
-            for sp in self.orbital_subspaces
-        }
-        # slices for each space
-        slices = {
-            sp: slice(offsets[sp], offsets[sp] + self.mospaces.n_orbs(sp))
-            for sp in self.orbital_subspaces
-        }
-        ret = np.zeros((self.shape))
-        for block in self.blocks_nonzero:
-            sp1, sp2 = split_spaces(block)
-            rowslice, colslice = slices[sp1], slices[sp2]
-            dm_block = self[block].to_ndarray()
-            ret[rowslice, colslice] = dm_block
-            if sp1 != sp2 and self.symmetry is not OperatorSymmetry.NOSYMMETRY:
-                factor = (
-                    1.0 if self.symmetry == OperatorSymmetry.HERMITIAN else -1.0
-                )
-                ret[colslice, rowslice] = factor * dm_block.T
-        return ret
-
-    def copy(self):
-        """
-        Return a deep copy of the OneParticleOperator
-        """
-        ret = OneParticleOperator(self.mospaces, self.symmetry)
-        for b in self.blocks_nonzero:
-            ret[b] = self.block(b).copy()
-        if hasattr(self, "reference_state"):
-            ret.reference_state = self.reference_state
-        return ret
+        super().__init__(spaces, n_particle_op=1, symmetry=symmetry)
 
     def _transform_to_ao(self, refstate_or_coefficients) -> tuple[Tensor, Tensor]:
         if not len(self.blocks_nonzero):
@@ -123,22 +61,16 @@ class OneParticleOperator(NParticleOperator):
 
         dm_bb_a = 0
         dm_bb_b = 0
-        block_coeffs_ov = {
-            OperatorSymmetry.NOSYMMETRY: 1.0,
-            OperatorSymmetry.HERMITIAN: 2.0,
-            OperatorSymmetry.ANTIHERMITIAN: 0.0,
-        }
+
         for block in self.blocks_nonzero:
             # only canonical blocks
             s1, s2 = split_spaces(block)
             # hermitian operators: scale off-diagonal block of symmetric operator
             # by 2 because only one of the blocks is actually present
-            if s1 != s2:
-                pref = block_coeffs_ov[self.symmetry]
-            else:
-                pref = 1.0
-            if pref == 0.0:
+            pref = self.canonical_factors[block]
+            if self.symmetry == OperatorSymmetry.ANTIHERMITIAN and s1 != s2:
                 continue
+
             dm_bb_a += pref * einsum("ip,ij,jq->pq", coeff_map[f"{s1}_a"],
                                      self[block], coeff_map[f"{s2}_a"])
             dm_bb_b += pref * einsum("ip,ij,jq->pq", coeff_map[f"{s1}_b"],
@@ -150,97 +82,3 @@ class OneParticleOperator(NParticleOperator):
             dm_bb_a = dm_bb_a.antisymmetrise()
             dm_bb_b = dm_bb_b.antisymmetrise()
         return (dm_bb_a.evaluate(), dm_bb_b.evaluate())
-
-    def to_ao_basis(self, refstate_or_coefficients=None):
-        """
-        Transforms the NParticleOperator to the atomic orbital
-        basis using a ReferenceState or a coefficient map. If no
-        ReferenceState or coefficient map is given, the ReferenceState
-        used to construct the NParticleOperator is taken instead.
-        """
-        if isinstance(refstate_or_coefficients, (dict, libadcc.ReferenceState)):
-            return self._transform_to_ao(refstate_or_coefficients)
-        elif refstate_or_coefficients is None:
-            if not hasattr(self, "reference_state"):
-                raise ValueError("Argument reference_state is required if no "
-                                 "reference_state is stored in the "
-                                 "NParticleOperator")
-            return self._transform_to_ao(self.reference_state)
-        else:
-            raise TypeError("Argument type not supported.")
-
-    def __iadd__(self, other):
-        if self.mospaces != other.mospaces:
-            raise ValueError("Cannot add OneParticleOperators with "
-                             "differing mospaces.")
-        if self.symmetry is not OperatorSymmetry.NOSYMMETRY \
-                and other.symmetry == OperatorSymmetry.NOSYMMETRY:
-            raise ValueError("Cannot add non-symmetric matrix "
-                             "in-place to symmetric one.")
-
-        for b in other.blocks_nonzero:
-            if self.is_zero_block(b):
-                self[b] = other.block(b).copy()
-            else:
-                self[b] = self.block(b) + other.block(b)
-
-        if self.symmetry == OperatorSymmetry.NOSYMMETRY \
-                and other.symmetry is not OperatorSymmetry.NOSYMMETRY:
-            for b in other.blocks_nonzero:
-                if b[:2] == b[2:]:
-                    continue  # Done already
-                brev = b[2:] + b[:2]  # Reverse block
-
-                obT = other.block(b).transpose()
-                if not self.is_zero_block(brev):
-                    factor = (
-                        1.0 if other.symmetry == OperatorSymmetry.HERMITIAN
-                        else -1.0
-                    )
-                    obT += factor * self.block(brev)
-                self[brev] = evaluate(obT)
-
-        # Update ReferenceState pointer
-        if hasattr(self, "reference_state"):
-            if hasattr(other, "reference_state") \
-                    and self.reference_state != other.reference_state:
-                delattr(self, "reference_state")
-        return self
-
-    def __isub__(self, other):
-        if self.mospaces != other.mospaces:
-            raise ValueError("Cannot subtract OneParticleOperators with "
-                             "differing mospaces.")
-        if self.symmetry is not OperatorSymmetry.NOSYMMETRY \
-                and other.symmetry == OperatorSymmetry.NOSYMMETRY:
-            raise ValueError("Cannot subtract non-symmetric matrix "
-                             "in-place from symmetric one.")
-
-        for b in other.blocks_nonzero:
-            if self.is_zero_block(b):
-                self[b] = -1.0 * other.block(b)  # The copy is implicit
-            else:
-                self[b] = self.block(b) - other.block(b)
-
-        if self.symmetry == OperatorSymmetry.NOSYMMETRY \
-                and other.symmetry is not OperatorSymmetry.NOSYMMETRY:
-            for b in other.blocks_nonzero:
-                if b[:2] == b[2:]:
-                    continue  # Done already
-                brev = b[2:] + b[:2]  # Reverse block
-
-                obT = -1.0 * other.block(b).transpose()
-                if not self.is_zero_block(brev):
-                    factor = (
-                        1.0 if other.symmetry == OperatorSymmetry.HERMITIAN
-                        else -1.0
-                    )
-                    obT += factor * self.block(brev)
-                self[brev] = evaluate(obT)
-
-        # Update ReferenceState pointer
-        if hasattr(self, "reference_state"):
-            if hasattr(other, "reference_state") \
-                    and self.reference_state != other.reference_state:
-                delattr(self, "reference_state")
-        return self
