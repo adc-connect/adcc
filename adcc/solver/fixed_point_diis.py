@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
-from typing import Callable, Optional, TextIO
+from typing import Callable, Optional, TextIO, Protocol, Deque
 from collections import deque
 import sys
 
@@ -15,6 +15,23 @@ class DIISError(Exception):
 class SubspaceError(DIISError):
     """is raised when encountering problems related to the subspace setup."""
     pass
+
+
+class DIISVector(Protocol):
+    def dot(self, other: "DIISVector") -> float:
+        ...
+
+    def zeros_like(self) -> "DIISVector":
+        ...
+
+    def __sub__(self, other: "DIISVector") -> "DIISVector":
+        ...
+
+
+class DIISCallback(Protocol):
+    def __call__(self, state: "DIISSubspace", identifier: str,
+                 file: TextIO = sys.stdout) -> None:
+        ...
 
 
 class DIISSubspace:
@@ -38,9 +55,11 @@ class DIISSubspace:
                                 f"larger than the DIIS start size {start_size}.")
         self.max_size: int = max_size
         self.start_size: int = start_size
-        self.subspace_vectors = deque(maxlen=max_size)
-        self.error_vectors = deque(maxlen=max_size)
-        self.overlap: np.ndarray = np.zeros((0, 0))
+        self.subspace_vectors: Deque[DIISVector] = deque(maxlen=max_size)
+        self.error_vectors: Deque[DIISVector] = deque(maxlen=max_size)
+        self.overlap: np.typing.NDArray[np.float64] = np.zeros(
+            (0, 0), dtype=np.float64
+        )
         self.step_info: Optional[str] = None
         self.converged: bool = False
         self.n_iter: int = 0
@@ -56,7 +75,7 @@ class DIISSubspace:
         return self.converged
 
     @property
-    def residual_norm(self) -> float:
+    def residual_norm(self) -> np.float64:
         """
         Returns the Frobenius norm of the most recent error vector, which is
         just the square root of the last diagonal element of the current
@@ -70,14 +89,14 @@ class DIISSubspace:
         return len(self.subspace_vectors)
 
     @property
-    def last_vector(self):
+    def last_vector(self) -> DIISVector:
         """
         Returns the most recent subspace vector, that is, in case of
         convergence, the solution vector.
         """
         return self.subspace_vectors[-1]
 
-    def add(self, subspace_vector, error_vector) -> None:
+    def add(self, subspace_vector: DIISVector, error_vector: DIISVector) -> None:
         """
         Adds a new vector and corresponding error vector to the subspace and
         updates the DIIS matrix. Also the iteration counter is incremented.
@@ -113,7 +132,7 @@ class DIISSubspace:
         prev_size = self.overlap.shape[0]
         assert prev_size == copy_size or prev_size == cur_size
         # init new overlap matrix, copy elements and add new elements
-        new_overlap = np.zeros((cur_size, cur_size))
+        new_overlap = np.zeros((cur_size, cur_size), dtype=np.float64)
         new_overlap.fill(float("NaN"))
         if copy_size > 0:
             new_overlap[:copy_size, :copy_size] = (
@@ -167,12 +186,12 @@ class DIISSubspace:
         fill_value = -1.0
         diis_size = self.size
         # build the DIIS matrix
-        A = np.zeros((diis_size + 1, diis_size + 1))
+        A = np.zeros((diis_size + 1, diis_size + 1), dtype=np.float64)
         A.fill(fill_value)
         A[-1, -1] = 0.0
         A[:diis_size, :diis_size] = self.overlap / self.overlap[0, 0]
         # build the right hand side
-        b = np.zeros(diis_size + 1)
+        b = np.zeros(diis_size + 1, dtype=np.float64)
         b[-1] = fill_value
         # determine the indices of vectors to discard
         inds_to_discard = []
@@ -220,15 +239,16 @@ def _no_print(state: DIISSubspace, identifier: str, file: TextIO = sys.stdout):
     _, _, _ = state, identifier, file
 
 
-def diis(updater: Callable, guess_vector, diis_start_size: int = 3,
-         max_subspace_size: int = 7, conv_tol: float = 1e-9,
-         n_max_iterations: int = 100, callback: Optional[Callable] = None):
+def diis(updater: Callable[[DIISVector], DIISVector], guess_vector: DIISVector,
+         diis_start_size: int = 3, max_subspace_size: int = 7,
+         conv_tol: float = 1e-9, n_max_iterations: int = 100,
+         callback: Optional[DIISCallback] = None):
     """
     Implementation of the direct inversion of the iterative subspace algorithm.
 
     Parameters
     ----------
-    updater: Callable
+    updater: callable
         Callable that takes the guess vector and updates it once.
     guess_vector
         The guess vector to start with.
@@ -244,7 +264,7 @@ def diis(updater: Callable, guess_vector, diis_start_size: int = 3,
         error vector (default: 1e-9).
     n_max_iterations: int, optional
         The maximum number of allowed iterations (default: 100).
-    callback: Callable, optional
+    callback: DIISCallback, optional
         A callable that is called after each iteration, e.g., to produce
         printout.
     """
