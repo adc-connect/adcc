@@ -22,6 +22,8 @@
 ## ---------------------------------------------------------------------
 from .MoSpaces import split_spaces
 from .NParticleOperator import OperatorSymmetry
+from collections.abc import Callable
+from typing import TypeVar, Any, Union
 
 
 def __getattr__(attr):
@@ -35,45 +37,135 @@ def __getattr__(attr):
     return "".join(mapping[c] for c in attr)
 
 
-def get_canonical_block(block: str,
+T = TypeVar("T")
+
+def _sort_anticommuting(to_sort: list[T],
+                        key: Union[Callable[[T], Any], None]=None
+                        ) -> tuple[list[T], int]:
+    """
+    Sort a list of mutually anticommuting operators into canonical order.
+
+    All elements in ``to_sort`` are assumed to anticommute pairwise.  The
+    sorting is performed via a bidirectional bubble sort.
+
+    Parameters
+    ----------
+    to_sort : list[T]
+        List of operators (or any comparable objects) to be sorted.
+    key : callable, optional
+        Optional function mapping each element of ``to_sort`` to a comparison
+        key.  If ``None`` (default), the elements themselves are compared.
+
+    Returns
+    -------
+    to_sort : list[T]
+        The operators sorted into canonical order.
+    sign : int
+        The sign accumulated from the reordering, i.e. ``+1`` or ``-1``.
+    """
+    verified = False
+    sign = 1
+    rng = tuple(range(len(to_sort) - 1))
+    rev = tuple(range(len(to_sort) - 3, -1, -1))
+
+    if key == None:
+        key = lambda x: x
+                
+    keys = list(map(key, to_sort))
+    to_sort = list(to_sort)
+
+    while not verified:
+        verified = True
+        for i in rng:
+            left = keys[i]
+            right = keys[i + 1]
+            if left > right:
+                verified = False
+                keys[i], keys[i + 1] = right, left
+                to_sort[i], to_sort[i + 1] = to_sort[i + 1], to_sort[i]
+                sign *= -1
+        if verified:
+            break
+        for i in rev:
+            left = keys[i]
+            right = keys[i + 1]
+            if left > right:
+                verified = False
+                keys[i], keys[i + 1] = right, left
+                to_sort[i], to_sort[i + 1] = to_sort[i + 1], to_sort[i]
+                sign *= -1
+    return (to_sort, sign)
+
+
+def get_canonical_block(bra: str, ket: str,
                         operator_symmetry: OperatorSymmetry
                         ) -> tuple[str, int, tuple]:
     """
-    Returns the canonical form of the block and the factor needed to
-    reconstruct the original block from it.
+    Return the canonical representation of an operator block, together with the
+    factor required to recover the desired block and the transpose tuple that
+    encodes the transformation from the canonical form back to the requested block.
+
+    Parameters
+    ----------
+    bra : str
+        The bra index string of the block.
+    ket : str
+        The ket index string of the block.
+    operator_symmetry : OperatorSymmetry
+        Symmetry of the operator.
+
+    Returns
+    -------
+    canonical_block : str
+        The canonicalised block.
+    factor : int
+        The integer factor needed to recover the desired block
+        from the canonical block, i.e. ``+1`` or ``-1``.
+    transform : tuple
+        A tuple encoding the transformation applied to obtain the desired block
+        from the canonical block.
     """
-    def sort(lst: list[str]) -> list[int]:
-        """Returns indices that would sort the list."""
-        return sorted(range(len(lst)), key=lambda i: lst[i])
+    def invert_transpose_tuple(p: tuple[int, ...]) -> tuple[int, ...]:
+        """
+        Invert transpose tuple containing permutation that maps a block to its
+        canonical form. Returns the tuple that maps from the canonical block
+        back to the original block.
+        """
+        q = [None] * len(p)
+        for i, pi in enumerate(p):
+            q[pi] = i
+        return tuple(q)
 
-    spaces = split_spaces(block)
     factor = 1
-    assert not len(spaces) % 2
-    nparticleop = len(spaces) // 2
-    bra, ket = spaces[:len(spaces) // 2], spaces[len(spaces) // 2:]
+    
+    bra = split_spaces(bra) if bra else []
+    bra_sorted, bra_factor = _sort_anticommuting(
+        list(enumerate(bra)), key=lambda tpl: tpl[1]
+    )
+    bra_transpose = [val for val, _ in bra_sorted]
+    bra_space_sorted = [val for _, val in bra_sorted]
+    factor *=  bra_factor
 
-    # sort them
-    bra_sorted, ket_sorted = sorted(bra), sorted(ket)
-    bra_perm = sort(bra)
-    ket_perm = [x + nparticleop for x in sort(ket)]
-    if bra_sorted != bra:
-        factor *= -1
-    if ket_sorted != ket:
-        factor *= -1
-    bra, ket = bra_sorted, ket_sorted
+    ket = split_spaces(ket) if ket else []
+    ket_sorted, ket_factor = _sort_anticommuting(
+        list(enumerate(ket)), key=lambda tpl: tpl[1]
+    )
+    ket_transpose = [val for val, _ in ket_sorted] 
+    ket_transpose = tuple(x + len(bra) for x in ket_transpose)
+    ket_space_sorted = [val for _, val in ket_sorted]
+    factor *=  ket_factor
+        
+    transpose = (*bra_transpose, *ket_transpose)
+    canonical_block = "".join(bra_space_sorted) + "".join(ket_space_sorted)
 
-    # get prefactor
-    if operator_symmetry in (OperatorSymmetry.HERMITIAN,
-                             OperatorSymmetry.ANTIHERMITIAN) and bra > ket:
-        bra, ket = ket, bra
-        bra_perm, ket_perm = ket_perm, bra_perm
+    if operator_symmetry != OperatorSymmetry.NOSYMMETRY:
+        if len(bra) != len(ket):
+            raise ValueError("Invalid blocks strings.")
 
-        if operator_symmetry == OperatorSymmetry.ANTIHERMITIAN:
-            factor *= -1
-
-    canonical_block = "".join(["".join(bra) + "".join(ket)])
-
-    # correct permutational still needs to be fixed.
-    perm = tuple(bra_perm[::-1] + ket_perm[::-1])
-    print(block, canonical_block, perm)
-    return (canonical_block, factor, perm)
+        if ket_space_sorted < bra_space_sorted:
+            transpose = (*ket_transpose, *bra_transpose)
+            canonical_block = "".join(ket_space_sorted) + "".join(bra_space_sorted)
+            if operator_symmetry == OperatorSymmetry.ANTIHERMITIAN:
+                factor *= -1
+    transpose = invert_transpose_tuple(transpose)
+    return (canonical_block, factor, transpose)
