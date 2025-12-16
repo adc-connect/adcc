@@ -310,20 +310,18 @@ std::shared_ptr<Symmetry> make_symmetry_operator(
     }
   }
   else if (sym->ndim() == 4) {
-    // Operator is a symmetric matrix if symmetric and all four spaces equal
-    // Sicher, dass die korrekt sind?
-    if (symmetry == "hermitian" && ss[0] == ss[1] && ss[1] == ss[2] && ss[2] == ss[3]) {
-      std::vector<std::string> permutations{
-          "ijkl", "jikl", "ijlk", "jilk",
-          "klij", "lkij", "klji", "lkji"
-      };
+    std::vector<std::string> permutations{"ijkl"};
+    // oooo oovv ooov vvvv vvoo vvvo
+    if (ss[0] == ss[1]) permutations.push_back("-jikl");
+    // oooo oovv ovoo vooo vvvv vvoo vovv ovvv
+    if (ss[2] == ss[3]) permutations.push_back("-ijlk");
+    // oooo ovov vvvv
+    if (symmetry=="hermitian" && ss[0] == ss[2] && ss[1] == ss[3])
+      permutations.push_back("klij");
+    if (symmetry == "antihermitian" && ss[0] == ss[2] && ss[1] == ss[3]) 
+      permutations.push_back("-klij");
+    if (permutations.size() > 1) {
       sym->set_permutations(permutations);
-    }
-    if (symmetry == "hermitian" && ss[0] == ss[1] && ss[2] == ss[3]) {
-      std::vector<std::string> permutations{
-          "ijkl", "jilk"
-      };
-      sym->set_permutations(permutations); 
     }
 
     // Point-group symmetry
@@ -353,8 +351,8 @@ std::shared_ptr<Symmetry> make_symmetry_operator(
     }
   }
   else {
-    throw invalid_argument("Expect exactly a two- or four-dimensional space string, not " 
-                           + space + ".");
+    throw invalid_argument("Expect exactly a two- or four-dimensional space "
+                           "string, not " + space + ".");
   }
   return sym;
 }

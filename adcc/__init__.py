@@ -41,7 +41,9 @@ from .ElectronicTransition import ElectronicTransition
 from .DataHfProvider import DataHfProvider, DictHfProvider
 from .ReferenceState import ReferenceState
 from .AmplitudeVector import AmplitudeVector
+from .NParticleOperator import OperatorSymmetry
 from .OneParticleOperator import OneParticleOperator
+from .TwoParticleOperator import TwoParticleOperator
 from .opt_einsum_integration import register_with_opt_einsum
 
 # This has to be the last set of import
@@ -58,7 +60,8 @@ __all__ = ["run_adc", "InputError", "AdcMatrix",
            "memory_pool", "set_n_threads", "get_n_threads", "AmplitudeVector",
            "HartreeFockProvider", "ExcitedStates", "State2States",
            "Excitation", "ElectronicTransition", "Tensor", "DictHfProvider",
-           "DataHfProvider", "OneParticleOperator",
+           "DataHfProvider", "OneParticleOperator", "TwoParticleOperator",
+           "OperatorSymmetry",
            "guesses_singlet", "guesses_triplet", "guesses_any",
            "guess_symmetries", "guesses_spin_flip", "guess_zero", "LazyMp",
            "adc0", "cis", "adc1", "adc2", "adc2x", "adc3",
