@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
-from typing import Callable, Optional, TextIO, Protocol, Deque
+from typing import (
+    Callable, Optional, TextIO, Protocol, Deque, TypeVar, Generic, cast
+)
 from collections import deque
 import sys
 
@@ -17,14 +19,23 @@ class SubspaceError(DIISError):
     pass
 
 
+Vector = TypeVar("Vector", bound="DIISVector")
+
+
 class DIISVector(Protocol):
-    def dot(self, other: "DIISVector") -> float:
+    def dot(self: Vector, other: Vector) -> float:
         ...
 
-    def zeros_like(self) -> "DIISVector":
+    def zeros_like(self: Vector) -> Vector:
         ...
 
-    def __sub__(self, other: "DIISVector") -> "DIISVector":
+    def __sub__(self: Vector, other: Vector) -> Vector:
+        ...
+
+    def __mul__(self: Vector, other: float) -> Vector:
+        ...
+
+    def __iadd__(self: Vector, other: Vector) -> Vector:
         ...
 
 
@@ -34,7 +45,7 @@ class DIISCallback(Protocol):
         ...
 
 
-class DIISSubspace:
+class DIISSubspace(Generic[Vector]):
     """
     Manages the DIIS matrix and the subspace and error vectors.
 
@@ -55,8 +66,8 @@ class DIISSubspace:
                                 f"larger than the DIIS start size {start_size}.")
         self.max_size: int = max_size
         self.start_size: int = start_size
-        self.subspace_vectors: Deque[DIISVector] = deque(maxlen=max_size)
-        self.error_vectors: Deque[DIISVector] = deque(maxlen=max_size)
+        self.subspace_vectors: Deque[Vector] = deque(maxlen=max_size)
+        self.error_vectors: Deque[Vector] = deque(maxlen=max_size)
         self.overlap: np.typing.NDArray[np.float64] = np.zeros(
             (0, 0), dtype=np.float64
         )
@@ -89,14 +100,14 @@ class DIISSubspace:
         return len(self.subspace_vectors)
 
     @property
-    def last_vector(self) -> DIISVector:
+    def last_vector(self) -> Vector:
         """
         Returns the most recent subspace vector, that is, in case of
         convergence, the solution vector.
         """
         return self.subspace_vectors[-1]
 
-    def add(self, subspace_vector: DIISVector, error_vector: DIISVector) -> None:
+    def add(self, subspace_vector: Vector, error_vector: Vector) -> None:
         """
         Adds a new vector and corresponding error vector to the subspace and
         updates the DIIS matrix. Also the iteration counter is incremented.
@@ -149,7 +160,7 @@ class DIISSubspace:
         assert not np.any(np.isnan(new_overlap))
         self.overlap = new_overlap
 
-    def compute_guess(self, n_omit_vectors: int = 0):
+    def compute_guess(self, n_omit_vectors: int = 0) -> Vector:
         """
         Computes a DIIS guess from the current subspace of size n by solving a
         system of linear equations A * x = b, where A is a matrix of size
@@ -186,12 +197,16 @@ class DIISSubspace:
         fill_value = -1.0
         diis_size = self.size
         # build the DIIS matrix
-        A = np.zeros((diis_size + 1, diis_size + 1), dtype=np.float64)
+        A: np.ndarray[tuple[int, int], np.dtype[np.float64]] = np.zeros(
+            (diis_size + 1, diis_size + 1), dtype=np.float64
+        )
         A.fill(fill_value)
         A[-1, -1] = 0.0
         A[:diis_size, :diis_size] = self.overlap / self.overlap[0, 0]
         # build the right hand side
-        b = np.zeros(diis_size + 1, dtype=np.float64)
+        b: np.ndarray[tuple[int], np.dtype[np.float64]] = np.zeros(
+            diis_size + 1, dtype=np.float64
+        )
         b[-1] = fill_value
         # determine the indices of vectors to discard
         inds_to_discard = []
@@ -206,13 +221,18 @@ class DIISSubspace:
         coefficients = np.linalg.solve(A, b)
         # discard the Lagrange multiplier, which is not needed for DIIS
         # extrapolation
-        coefficients = coefficients[:-1]
+        # also: the coefficients have to be a 1D array with dtype float64
+        # the type checker unfortunately can not infer this automatically
+        coefficients = cast(
+            np.ndarray[tuple[int], np.dtype[np.float64]], coefficients[:-1]
+        )
         # build the linear combination:
         # determine the indices of vectors to use for the generation of the
         # DIIS-extrapolated guess, i.e., vectors which have not beeen
         # discarded above
         vec_indices = [i for i in range(self.size) if i not in inds_to_discard]
         guess = self.subspace_vectors[0].zeros_like()
+        assert len(vec_indices) == len(coefficients)
         for vec_ind, coeff in zip(vec_indices, coefficients):
             guess += self.subspace_vectors[vec_ind] * coeff
 
@@ -239,10 +259,10 @@ def _no_print(state: DIISSubspace, identifier: str, file: TextIO = sys.stdout):
     _, _, _ = state, identifier, file
 
 
-def diis(updater: Callable[[DIISVector], DIISVector], guess_vector: DIISVector,
+def diis(updater: Callable[[Vector], Vector], guess_vector: Vector,
          diis_start_size: int = 3, max_subspace_size: int = 7,
          conv_tol: float = 1e-9, n_max_iterations: int = 100,
-         callback: Optional[DIISCallback] = None):
+         callback: Optional[DIISCallback] = None) -> Vector:
     """
     Implementation of the direct inversion of the iterative subspace algorithm.
 
@@ -277,7 +297,7 @@ def diis(updater: Callable[[DIISVector], DIISVector], guess_vector: DIISVector,
                             "max_subspace_size")
 
     # initialize DIIS subspace
-    diis_subspace = DIISSubspace(
+    diis_subspace: DIISSubspace[Vector] = DIISSubspace(
         max_size=max_subspace_size, start_size=diis_start_size
     )
     # perform an initial linear step
