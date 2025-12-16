@@ -60,10 +60,16 @@ class DIISSubspace(Generic[Vector]):
     """
     def __init__(self, max_size: int, start_size: int):
         if max_size < 2:
-            raise SubspaceError("DIIS size has to be greater than 1.")
+            raise SubspaceError(f"The DIIS maximum subspace size ({max_size=}) "
+                                "has to be greater than 1.")
+        if start_size < 2:
+            raise SubspaceError(f"The DIIS start size ({start_size=}) has to "
+                                "be greater than 1.")
         if start_size > max_size:
-            raise SubspaceError(f"The maximum subspace size {max_size} has to be "
-                                f"larger than the DIIS start size {start_size}.")
+            raise SubspaceError(f"The maximum subspace size ({max_size=}) has to "
+                                "be larger than the DIIS start size "
+                                f"({start_size=}).")
+
         self.max_size: int = max_size
         self.start_size: int = start_size
         self.subspace_vectors: Deque[Vector] = deque(maxlen=max_size)
@@ -288,13 +294,8 @@ def diis(updater: Callable[[Vector], Vector], guess_vector: Vector,
         A callable that is called after each iteration, e.g., to produce
         printout.
     """
-
     if callback is None:
         callback = _no_print
-
-    if diis_start_size > max_subspace_size:
-        raise SubspaceError("diis_start_size cannot be greater than "
-                            "max_subspace_size")
 
     # initialize DIIS subspace
     diis_subspace: DIISSubspace[Vector] = DIISSubspace(
