@@ -296,6 +296,9 @@ def diis(updater: Callable[[Vector], Vector], guess_vector: Vector,
     """
     if callback is None:
         callback = _no_print
+    if n_max_iterations < 1:
+        raise DIISError(f"The maximum number of iterations ({n_max_iterations=}) "
+                        "can not be smaller than 1.")
 
     # initialize DIIS subspace
     diis_subspace: DIISSubspace[Vector] = DIISSubspace(
@@ -308,6 +311,10 @@ def diis(updater: Callable[[Vector], Vector], guess_vector: Vector,
     diis_subspace.step_info = "Linear step from guess"
     callback(diis_subspace, "start")
     callback(diis_subspace, "next_iter")
+    # check for convergence (very unlikely)
+    if diis_subspace.is_converged(conv_tol):
+        callback(diis_subspace, "is_converged")
+        return diis_subspace.last_vector
 
     # iterate
     while diis_subspace.n_iter < n_max_iterations:
