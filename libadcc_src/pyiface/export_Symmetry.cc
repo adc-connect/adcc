@@ -149,7 +149,8 @@ void export_Symmetry(py::module& m) {
         "n_bas            Number of AO basis functions\n"
         "symmetry         Is the tensor symmetric (only in effect if both space\n"
         "                 axes identical). false disables a setup of permutational\n"
-        "                 symmetry.\n");
+        "                 symmetry.\n"
+        "blocks           Spin blocks to include. Valid are \"ab\", \"a\" and \"b\".");
 }
 
 }  // namespace libadcc

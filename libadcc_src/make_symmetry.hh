@@ -99,7 +99,7 @@ std::shared_ptr<Symmetry> make_symmetry_operator(
  */
 std::shared_ptr<Symmetry> make_symmetry_operator_basis(
       std::shared_ptr<const MoSpaces> mospaces_ptr, size_t n_bas,
-      std::string symmetry);
+      std::string symmetry, const std::string& blocks);
 
 ///@}
 }  // namespace libadcc

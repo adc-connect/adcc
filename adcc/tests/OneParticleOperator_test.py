@@ -28,415 +28,127 @@ from numpy.testing import assert_array_almost_equal_nulp, assert_equal
 
 from adcc import OneParticleOperator, zeros_like
 from adcc.NParticleOperator import product_trace, OperatorSymmetry
+from adcc.MoSpaces import split_spaces
 
 from .testdata_cache import testdata_cache
+from . import testcases
+from adcc.backends import run_hf
+from itertools import combinations_with_replacement
 
 
-class TestOneParticleOperator(unittest.TestCase):
-    def test_to_ndarray(self):
-        mp2diff = adcc.LazyMp(
-            testdata_cache.refstate("h2o_sto3g", "gen")
-        ).mp2_diffdm
+operator_sym = [OperatorSymmetry.HERMITIAN, OperatorSymmetry.ANTIHERMITIAN,
+                OperatorSymmetry.NOSYMMETRY]
+op_syms_two_operators = list(combinations_with_replacement(operator_sym, 2))                
 
-        dm_oo = mp2diff.oo.to_ndarray()
-        dm_ov = mp2diff.ov.to_ndarray()
-        dm_vv = mp2diff.vv.to_ndarray()
+class TestOneParticleOperator:
+    def test_to_ao_basis_hermitian(self):
+        system = "h2o_sto3g"
+        system: testcases.TestCase = testcases.get_by_filename(system).pop()
+        scfres = run_hf("pyscf", system.xyz, system.basis)
+        ref = adcc.ReferenceState(scfres)
+        dipx_mo = ref.operators.electric_dipole[0]
+        dipx_ao_ref = ref.operators.provider_ao.electric_dipole[0]
 
-        dm_o = np.hstack((dm_oo, dm_ov))
-        dm_v = np.hstack((dm_ov.transpose(), dm_vv))
-        dm_full = np.vstack((dm_o, dm_v))
+        dipx_ao_a = dipx_mo.to_ao_basis(ref)[0].to_ndarray()
+        dipx_ao_b = dipx_mo.to_ao_basis(ref)[1].to_ndarray()
 
-        np.testing.assert_almost_equal(dm_full, mp2diff.to_ndarray(),
-                                       decimal=12)
+        np.testing.assert_allclose(dipx_ao_ref, dipx_ao_a, atol=1e-12)
+        np.testing.assert_allclose(dipx_ao_ref, dipx_ao_b, atol=1e-12)
 
-    def test_to_ndarray_nosym(self):
+    def test_to_ao_basis_antihermitian(self):
+        system = "h2o_sto3g"
+        system: testcases.TestCase = testcases.get_by_filename(system).pop()
+        scfres = run_hf("pyscf", system.xyz, system.basis)
+        ref = adcc.ReferenceState(scfres)
+        dipx_mo = ref.operators.magnetic_dipole()[0]
+        dipx_ao_ref = ref.operators.provider_ao.magnetic_dipole()[0]
+
+        dipx_ao_a = dipx_mo.to_ao_basis(ref)[0].to_ndarray()
+        dipx_ao_b = dipx_mo.to_ao_basis(ref)[1].to_ndarray()
+
+        np.testing.assert_allclose(dipx_ao_ref, dipx_ao_a, atol=1e-12)
+        np.testing.assert_allclose(dipx_ao_ref, dipx_ao_b, atol=1e-12)
+
+    @pytest.mark.parametrize("symmetry", operator_sym,
+                             ids=[f"{c.name}" for c in operator_sym])
+    def test_to_ndarray(self, symmetry):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        dm = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.NOSYMMETRY)
-        dm.oo.set_random()
-        dm.ov.set_random()
-        dm.vo.set_random()
-        dm.vv.set_random()
+        dm = OneParticleOperator(ref.mospaces, symmetry=symmetry)
+        dm.set_random()
 
         dm_oo = dm.oo.to_ndarray()
         dm_ov = dm.ov.to_ndarray()
-        dm_vo = dm.vo.to_ndarray()
         dm_vv = dm.vv.to_ndarray()
+
+        if symmetry == OperatorSymmetry.HERMITIAN:
+            dm_vo = dm_ov.conj().T
+        elif symmetry == OperatorSymmetry.ANTIHERMITIAN:
+            dm_vo = -dm_ov.conj().T
+        else:
+            dm_vo = dm.vo.to_ndarray()
 
         dm_o = np.hstack((dm_oo, dm_ov))
         dm_v = np.hstack((dm_vo, dm_vv))
         dm_full = np.vstack((dm_o, dm_v))
 
-        assert_array_almost_equal_nulp(dm_full, dm.to_ndarray())
+        np.testing.assert_almost_equal(dm_full, dm.to_ndarray(), decimal=12)
 
-    def test_to_ndarray_antiherm(self):
-        ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        dm = OneParticleOperator(ref.mospaces,
-                                 symmetry=OperatorSymmetry.ANTIHERMITIAN)
-        dm.oo.set_random()
-        dm.ov.set_random()
-        dm.vo.set_random()
-        dm.vv.set_random()
+    @pytest.mark.parametrize("symmetries",
+    op_syms_two_operators,
+    ids=[f"{c[0].name}_{c[1].name}" for c in op_syms_two_operators])
+    def test_product_trace(self, symmetries):
+        system = "h2o_sto3g"
+        system: testcases.TestCase = testcases.get_by_filename(system).pop()
+        scfres = run_hf("pyscf", system.xyz, system.basis)
+        ref = adcc.ReferenceState(scfres)
+        ovlp = ref.operators.provider_ao.overlap
+        ovlp_inv = np.linalg.inv(ovlp)
 
-        dm_oo = dm.oo.to_ndarray()
-        dm_ov = dm.ov.to_ndarray()
-        dm_vo = dm.vo.to_ndarray()
-        dm_vv = dm.vv.to_ndarray()
+        sym_1 = symmetries[0]
+        sym_2 = symmetries[1]
 
-        dm_o = np.hstack((dm_oo, dm_ov))
-        dm_v = np.hstack((dm_vo, dm_vv))
-        dm_full = np.vstack((dm_o, dm_v))
+        op_a_mo = OneParticleOperator(ref.mospaces, symmetry=sym_1)
+        op_a_mo.set_random()
+        op_a_ao_a = op_a_mo.to_ao_basis(ref)[0].to_ndarray()
+        op_a_ao_b = op_a_mo.to_ao_basis(ref)[1].to_ndarray()
 
-        assert_array_almost_equal_nulp(dm_full, dm.to_ndarray())
+        op_b_mo = OneParticleOperator(ref.mospaces, symmetry=sym_2)
+        op_b_mo.set_random()
+        op_b_ao_a = op_b_mo.to_ao_basis(ref)[0].to_ndarray()
+        op_b_ao_b = op_b_mo.to_ao_basis(ref)[1].to_ndarray()
 
-    def test_product_trace_herm(self):
-        ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        dipx_mo = ref.operators.electric_dipole[0]
-        mp2diff_mo = adcc.LazyMp(ref).mp2_diffdm
-        mp2diff_ao = mp2diff_mo.to_ao_basis(ref)
-
-        mp2a = mp2diff_ao[0].to_ndarray()
-        mp2b = mp2diff_ao[1].to_ndarray()
-        dipx_ao = ref.operators.provider_ao.electric_dipole[0]
-        dipx_ref = np.sum(mp2a * dipx_ao) + np.sum(mp2b * dipx_ao)
-
-        oo = np.sum(
-            mp2diff_mo.oo.to_ndarray() * dipx_mo.oo.to_ndarray()
+        ptrace_ao = (
+            np.trace(op_a_ao_a.T @ ovlp_inv @ op_b_ao_a @ ovlp_inv)
+            + np.trace(op_a_ao_a.T @ ovlp_inv @ op_b_ao_b @ ovlp_inv)
         )
-        ov = 2.0 * np.sum(
-            mp2diff_mo.ov.to_ndarray() * dipx_mo.ov.to_ndarray()
-        )
-        vv = np.sum(
-            mp2diff_mo.vv.to_ndarray() * dipx_mo.vv.to_ndarray()
-        )
-        dipx_np = oo + ov + vv
 
-        assert dipx_np == pytest.approx(product_trace(mp2diff_mo, dipx_mo))
-        assert product_trace(mp2diff_mo, dipx_mo) == pytest.approx(dipx_ref)
-        assert product_trace(dipx_mo, mp2diff_mo) == pytest.approx(dipx_ref)
+        ptrace_mo_ref = 0
+        if op_a_mo.symmetry == OperatorSymmetry.NOSYMMETRY:
+            factors = op_a_mo.canonical_factors.copy()
+        elif op_b_mo.symmetry == OperatorSymmetry.NOSYMMETRY:
+            factors = op_b_mo.canonical_factors.copy()
+        else:
+            assert op_a_mo.canonical_factors == op_a_mo.canonical_factors
+            factors = op_a_mo.canonical_factors.copy()
+            if op_a_mo.symmetry is not op_b_mo.symmetry:
+                to_remove = []
+                for b in list(factors.keys()):
+                    spaces = split_spaces(b)
+                    n = op_a_mo.n_particle_op
+                    if spaces[:2 * n] != spaces[2 * n:]:
+                        to_remove.append(b)
+                # remove non diagonals blocks
+                for b in to_remove:
+                    factors.pop(b)
 
-    def test_product_trace_nosym(self):
-        ref = testdata_cache.refstate("cn_sto3g", "gen")
-        dipx_mo = ref.operators.electric_dipole[0]
-        mp2diff_mo = adcc.LazyMp(ref).mp2_diffdm
-        mp2diff_nosym = OneParticleOperator(ref.mospaces,
-                                            symmetry=OperatorSymmetry.NOSYMMETRY)
-        mp2diff_nosym.oo = mp2diff_mo.oo
-        mp2diff_nosym.ov = mp2diff_mo.ov
-        mp2diff_nosym.vv = mp2diff_mo.vv
-        mp2diff_nosym.vo = zeros_like(mp2diff_mo.ov.transpose())
-        mp2diff_ao = mp2diff_nosym.to_ao_basis(ref)
+        for b, factor in factors.items():
+            ptrace_mo_ref += factor * np.sum(
+                op_a_mo[b].to_ndarray() * op_b_mo[b].to_ndarray()
+            )
 
-        mp2a = mp2diff_ao[0].to_ndarray()
-        mp2b = mp2diff_ao[1].to_ndarray()
-        dipx_ao = ref.operators.provider_ao.electric_dipole[0]
-        dipx_ref = np.sum(mp2a * dipx_ao) + np.sum(mp2b * dipx_ao)
-
-        oo = np.sum(
-            mp2diff_nosym.oo.to_ndarray() * dipx_mo.oo.to_ndarray()
-        )
-        ov = np.sum(
-            mp2diff_nosym.ov.to_ndarray() * dipx_mo.ov.to_ndarray()
-        )
-        vo = np.sum(
-            mp2diff_nosym.vo.to_ndarray() * dipx_mo.ov.to_ndarray().T
-        )
-        vv = np.sum(
-            mp2diff_nosym.vv.to_ndarray() * dipx_mo.vv.to_ndarray()
-        )
-        dipx_np = oo + ov + vo + vv
-
-        assert dipx_np == pytest.approx(product_trace(mp2diff_nosym, dipx_mo))
-        assert product_trace(mp2diff_nosym, dipx_mo) == pytest.approx(dipx_ref)
-        assert product_trace(dipx_mo, mp2diff_nosym) == pytest.approx(dipx_ref)
-
-    def test_product_trace_antiherm(self):
-        ref = testdata_cache.refstate("cn_sto3g", "gen")
-        dipx_mo = ref.operators.electric_dipole[0]
-        mp2diff_mo = adcc.LazyMp(ref).mp2_diffdm
-        mp2diff_antiherm = OneParticleOperator(
-            ref.mospaces, symmetry=OperatorSymmetry.ANTIHERMITIAN
-        )
-        mp2diff_antiherm.oo = mp2diff_mo.oo
-        mp2diff_antiherm.ov = mp2diff_mo.ov
-        mp2diff_antiherm.vv = mp2diff_mo.vv
-        mp2diff_antiherm.vo = zeros_like(mp2diff_mo.ov.transpose())
-        mp2diff_ao = mp2diff_antiherm.to_ao_basis(ref)
-
-        mp2a = mp2diff_ao[0].to_ndarray()
-        mp2b = mp2diff_ao[1].to_ndarray()
-        dipx_ao = ref.operators.provider_ao.electric_dipole[0]
-        dipx_ref = np.sum(mp2a * dipx_ao) + np.sum(mp2b * dipx_ao)
-
-        oo = np.sum(
-            mp2diff_antiherm.oo.to_ndarray() * dipx_mo.oo.to_ndarray()
-        )
-        ov = np.sum(
-            mp2diff_antiherm.ov.to_ndarray() * dipx_mo.ov.to_ndarray()
-        )
-        vo = np.sum(
-            mp2diff_antiherm.vo.to_ndarray() * dipx_mo.ov.to_ndarray().T
-        )
-        vv = np.sum(
-            mp2diff_antiherm.vv.to_ndarray() * dipx_mo.vv.to_ndarray()
-        )
-        dipx_np = oo + ov + vo + vv
-
-        assert dipx_np == pytest.approx(product_trace(mp2diff_antiherm, dipx_mo))
-        assert product_trace(mp2diff_antiherm, dipx_mo) == pytest.approx(dipx_ref)
-        assert product_trace(dipx_mo, mp2diff_antiherm) == pytest.approx(dipx_ref)
-
-    def test_product_trace_both_nosym(self):
-        ref = testdata_cache.refstate("cn_sto3g", "gen")
-        dipx_mo = ref.operators.electric_dipole[0]
-        mp2diff_mo = adcc.LazyMp(ref).mp2_diffdm
-        mp2diff_nosym = OneParticleOperator(ref.mospaces,
-                                            symmetry=OperatorSymmetry.NOSYMMETRY)
-        dipx_nosym = OneParticleOperator(ref.mospaces,
-                                         symmetry=OperatorSymmetry.NOSYMMETRY)
-
-        mp2diff_nosym.oo = mp2diff_mo.oo
-        mp2diff_nosym.ov = mp2diff_mo.ov
-        mp2diff_nosym.vv = mp2diff_mo.vv
-        mp2diff_nosym.vo = zeros_like(mp2diff_mo.ov.transpose())
-        mp2diff_ao = mp2diff_nosym.to_ao_basis(ref)
-
-        dipx_nosym.oo = dipx_mo.oo
-        dipx_nosym.ov = dipx_mo.ov
-        dipx_nosym.vv = dipx_mo.vv
-        dipx_nosym.vo = zeros_like(dipx_mo.ov.transpose())
-        dipx_ao = dipx_nosym.to_ao_basis(ref)
-
-        mp2a = mp2diff_ao[0].to_ndarray()
-        mp2b = mp2diff_ao[1].to_ndarray()
-        dipxa = dipx_ao[0].to_ndarray()
-        dipxb = dipx_ao[1].to_ndarray()
-        dipx_ref = np.sum(mp2a * dipxa) + np.sum(mp2b * dipxb)
-
-        oo = np.sum(
-            mp2diff_nosym.oo.to_ndarray() * dipx_nosym.oo.to_ndarray()
-        )
-        ov = np.sum(
-            mp2diff_nosym.ov.to_ndarray() * dipx_nosym.ov.to_ndarray()
-        )
-        vo = np.sum(
-            mp2diff_nosym.vo.to_ndarray() * dipx_nosym.vo.to_ndarray()
-        )
-        vv = np.sum(
-            mp2diff_nosym.vv.to_ndarray() * dipx_nosym.vv.to_ndarray()
-        )
-        dipx_np = oo + ov + vo + vv
-
-        assert dipx_np == pytest.approx(product_trace(mp2diff_nosym, dipx_nosym))
-        assert product_trace(mp2diff_nosym, dipx_nosym) == pytest.approx(dipx_ref)
-        assert product_trace(dipx_nosym, mp2diff_nosym) == pytest.approx(dipx_ref)
-
-    #
-    # Test operators
-    #
-    def test_copy(self):
-        ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        mp2diff = adcc.LazyMp(ref).mp2_diffdm
-        cpy = mp2diff.copy()
-
-        assert cpy.blocks == mp2diff.blocks
-        assert cpy.blocks_nonzero == mp2diff.blocks_nonzero
-        assert cpy.reference_state == mp2diff.reference_state
-        assert cpy.mospaces == mp2diff.mospaces
-
-        for b in mp2diff.blocks:
-            assert cpy.is_zero_block(b) == mp2diff.is_zero_block(b)
-            if not mp2diff.is_zero_block(b):
-                assert_equal(cpy.block(b).to_ndarray(),
-                             mp2diff.block(b).to_ndarray())
-                assert cpy.block(b) is not mp2diff.block(b)
-
-    def test_copy_nosym(self):
-        ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        mp2diff = OneParticleOperator(ref, symmetry=OperatorSymmetry.NOSYMMETRY)
-        cpy = mp2diff.copy()
-
-        assert cpy.blocks == mp2diff.blocks
-        assert cpy.blocks_nonzero == mp2diff.blocks_nonzero
-        assert cpy.reference_state == mp2diff.reference_state
-        assert cpy.mospaces == mp2diff.mospaces
-
-        for b in mp2diff.blocks:
-            assert cpy.is_zero_block(b) == mp2diff.is_zero_block(b)
-            if not mp2diff.is_zero_block(b):
-                assert_equal(cpy.block(b).to_ndarray(),
-                             mp2diff.block(b).to_ndarray())
-                assert cpy.block(b) is not mp2diff.block(b)
-
-    def test_add(self):
-        ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.NOSYMMETRY)
-        a.oo.set_random()
-        a.vo.set_random()
-        a.vv.set_random()
-
-        b = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
-        b.oo.set_random()
-        b.vv.set_random()
-
-        assert_array_almost_equal_nulp((a + b).to_ndarray(),
-                                       a.to_ndarray() + b.to_ndarray())
-        assert_array_almost_equal_nulp((b + a).to_ndarray(),
-                                       a.to_ndarray() + b.to_ndarray())
-
-    def test_add_nosym(self):
-        ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
-        a.oo.set_random()
-        a.ov.set_random()
-        a.vv.set_random()
-
-        b = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.NOSYMMETRY)
-        b.oo.set_random()
-        b.ov.set_random()
-        b.vo.set_random()
-        b.vv.set_random()
-
-        assert_array_almost_equal_nulp((a + b).to_ndarray(),
-                                       a.to_ndarray() + b.to_ndarray())
-        assert_array_almost_equal_nulp((b + a).to_ndarray(),
-                                       b.to_ndarray() + a.to_ndarray())
-
-    def test_add_nosym_antiherm(self):
-        ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.NOSYMMETRY)
-        a.oo.set_random()
-        a.vo.set_random()
-        a.vv.set_random()
-
-        b = OneParticleOperator(ref.mospaces,
-                                symmetry=OperatorSymmetry.ANTIHERMITIAN)
-        b.oo.set_random()
-        b.vv.set_random()
-
-        assert_array_almost_equal_nulp((a + b).to_ndarray(),
-                                       a.to_ndarray() + b.to_ndarray())
-        assert_array_almost_equal_nulp((b + a).to_ndarray(),
-                                       a.to_ndarray() + b.to_ndarray())
-
-    def test_add_herm_antiherm(self):
-        ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
-        a.oo.set_random()
-        a.vo.set_random()
-        a.vv.set_random()
-
-        b = OneParticleOperator(ref.mospaces,
-                                symmetry=OperatorSymmetry.ANTIHERMITIAN)
-        b.oo.set_random()
-        b.vv.set_random()
-
-        assert_array_almost_equal_nulp((a + b).to_ndarray(),
-                                       a.to_ndarray() + b.to_ndarray())
-        assert_array_almost_equal_nulp((b + a).to_ndarray(),
-                                       a.to_ndarray() + b.to_ndarray())
-
-    def test_iadd(self):
-        ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.NOSYMMETRY)
-        a.oo.set_random()
-        a.vo.set_random()
-        a.ov.set_random()
-        a.vv.set_random()
-
-        b = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.NOSYMMETRY)
-        b.oo.set_random()
-        b.ov.set_random()
-        b.vv.set_random()
-
-        ref = a.to_ndarray() + b.to_ndarray()
-        a += b
-        assert_array_almost_equal_nulp(a.to_ndarray(), ref)
-
-    def test_sub(self):
-        ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
-        a.oo.set_random()
-        a.ov.set_random()
-        a.vv.set_random()
-
-        b = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
-        b.oo.set_random()
-        b.ov.set_random()
-        b.vv.set_random()
-
-        assert_array_almost_equal_nulp((a - b).to_ndarray(),
-                                       a.to_ndarray() - b.to_ndarray())
-        assert_array_almost_equal_nulp((b - a).to_ndarray(),
-                                       b.to_ndarray() - a.to_ndarray())
-        assert_array_almost_equal_nulp((a - b).to_ndarray(),
-                                       (a + (-1 * b)).to_ndarray())
-        assert_array_almost_equal_nulp((b - a).to_ndarray(),
-                                       (b + (-1 * a)).to_ndarray())
-
-    def test_sub_nosym(self):
-        ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
-        a.oo.set_random()
-        a.ov.set_random()
-        a.vv.set_random()
-
-        b = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.NOSYMMETRY)
-        b.oo.set_random()
-        b.ov.set_random()
-        b.vo.set_random()
-        b.vv.set_random()
-
-        assert_array_almost_equal_nulp((a - b).to_ndarray(),
-                                       a.to_ndarray() - b.to_ndarray())
-        assert_array_almost_equal_nulp((b - a).to_ndarray(),
-                                       b.to_ndarray() - a.to_ndarray())
-        assert_array_almost_equal_nulp((a - b).to_ndarray(),
-                                       (a + (-1.0 * b)).to_ndarray())
-        assert_array_almost_equal_nulp((b - a).to_ndarray(),
-                                       (b + (-1.0 * a)).to_ndarray())
-
-    def test_isub(self):
-        ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
-        a.oo.set_random()
-        a.ov.set_random()
-
-        b = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
-        b.ov.set_random()
-        b.vv.set_random()
-
-        ref = a.to_ndarray() - b.to_ndarray()
-        a -= b
-        assert_array_almost_equal_nulp(a.to_ndarray(), ref)
-
-    def test_mul(self):
-        ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
-        a.oo.set_random()
-        a.ov.set_random()
-        assert_array_almost_equal_nulp((1.2 * a).to_ndarray(),
-                                       1.2 * a.to_ndarray())
-
-    def test_rmul(self):
-        ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
-        a.oo.set_random()
-        a.vo.set_random()
-        a.ov.set_random()
-        assert_array_almost_equal_nulp((a * -1.8).to_ndarray(),
-                                       -1.8 * a.to_ndarray())
-
-    def test_imul(self):
-        ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.NOSYMMETRY)
-        a.oo.set_random()
-        a.vo.set_random()
-        a.ov.set_random()
-        a.vv.set_random()
-
-        ref = 12 * a.to_ndarray()
-        a *= 12
-        assert_array_almost_equal_nulp(a.to_ndarray(), ref)
+        assert ptrace_mo_ref == pytest.approx(product_trace(op_a_mo, op_b_mo))
+        assert product_trace(op_a_mo, op_b_mo) == pytest.approx(ptrace_ao)
+        assert product_trace(op_a_mo, op_b_mo) == pytest.approx(ptrace_ao)
 
     def test_block_functions(self):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")

@@ -359,12 +359,26 @@ std::shared_ptr<Symmetry> make_symmetry_operator(
 
 std::shared_ptr<Symmetry> make_symmetry_operator_basis(
       std::shared_ptr<const MoSpaces> mospaces_ptr, size_t n_bas,
-      const std::string symmetry) {
+      const std::string symmetry, const std::string& blocks) {
+  if (blocks != "ab" && blocks != "a" && blocks != "b" && blocks != "abstack") {
+    throw invalid_argument(
+          "Invalid argument to 'blocks' parameter. Only valid values are 'ab' (both "
+          "alpha and beta blocks in a block-diagonal fashion), "
+          "'a' (only alpha block), 'b' (only beta block) and 'abstack'"
+          "(alpha and beta block stacked on top of another)");
+  }
+  // Setup extra "b" axis in a way that it twice n_bas in length
+  // (alpha and beta blocks)
+  std::map<std::string, std::pair<size_t, size_t>> extra_axis{{"b", {n_bas, n_bas}}};
 
+  if (blocks == "a" || blocks == "b" || blocks == "abstack") {
+    // Cut the second spin block in the axis (i.e. only have either alpha
+    // or beta spin along the "b" axis)
+    extra_axis = {{"b", {n_bas, 0}}};
+  }
   // Setup symmetry in a way that the "b" axis has "b" alphas and "b" betas
-  using map_type = std::map<std::string, std::pair<size_t, size_t>>;
-  auto sym =
-        std::make_shared<Symmetry>(mospaces_ptr, "bb", map_type{{"b", {n_bas, n_bas}}});
+  auto sym = std::make_shared<Symmetry>(mospaces_ptr, "bb", extra_axis);
+ 
   if (symmetry == "hermitian") {
       sym->set_permutations({"ij", "ji"});
     }
@@ -372,11 +386,35 @@ std::shared_ptr<Symmetry> make_symmetry_operator_basis(
   if (symmetry == "antihermitian") {
     sym->set_permutations({"ij", "-ji"});
   }
+  // Setup spin symmetry (spin block mapping)
+  if (mospaces_ptr->restricted) {
+    // Note: Libtensor assumes for the spin block mappings that there are
+    //       an even number of blocks along the spin axis. We explicitly check
+    //       for this in in as_lt_symmetry and ignore the spin symmetry if this
+    //       is not the case, but it has to be properly tested if this does
+    //       the trick. Notice that e.g. adcman does it like it is coded here
+    //       and ignores all symmetry between the spin blocks in the case of
+    //       an unrestricted reference. Technically speaking this is not
+    //       completely necessary and thus the if(restricted) should be dropped.
 
-  // A one-electron (spin-free) Operator is aa / bb block-diagonal only
-  // and the basis functions are spin-free, thus aa == bb.
-  sym->set_spin_blocks_forbidden({"ab", "ba"});
-  sym->set_spin_block_maps({{"aa", "bb", 1.}});
+    if (blocks == "ab") {
+      // ab and ba are forbidden, eventually "aa" and "bb" mapped on top.
+      sym->set_spin_blocks_forbidden({"ab", "ba"});
+      if (mospaces_ptr->restricted) {
+        sym->set_spin_block_maps({{"aa", "bb", 1.0}});
+      }
+  //   } else if (blocks == "a") {
+  //     // Only alpha spin is allowed
+  //     sym->set_spin_blocks_forbidden({"bx"});
+  //   } else if (blocks == "b") {
+  //     // Only beta spin is allowed
+  //     sym->set_spin_blocks_forbidden({"ax"});
+  //   } else if (blocks == "abstack") {
+  //     if (mospaces_ptr->restricted) {
+  //       sym->set_spin_block_maps({{"ax", "bx", 1.0}});
+  //     }
+    }
+  }  // spin symmetry
   return sym;
 }
 

@@ -35,16 +35,19 @@ from pyscf.solvent import ddcosmo
 
 class PyScfOperatorIntegralProvider:
     available: tuple[str, ...] = (
-        "electric_dipole", "electric_dipole_velocity", "magnetic_dipole",
+        "overlap", "electric_dipole", "electric_dipole_velocity", "magnetic_dipole",
         "electric_quadrupole", "electric_quadrupole_traceless",
         "electric_quadrupole_velocity", "diamagnetic_magnetizability",
-        "pe_induction_elec", "pcm_potential_elec", "magnetic_dipole_giao_1e",
-        "magnetic_dipole_giao_2e"
+        "pe_induction_elec", "pcm_potential_elec"
     )
 
     def __init__(self, scfres):
         self.scfres = scfres
         self.backend = "pyscf"
+
+    @property
+    def overlap(self) -> np.ndarray:
+        return self.scfres.mol.intor_symmetric('int1e_ovlp')
 
     @property
     def electric_dipole(self) -> tuple[np.ndarray, ...]:

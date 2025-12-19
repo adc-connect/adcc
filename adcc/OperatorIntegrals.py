@@ -61,7 +61,8 @@ def transform_operator_ao2mo(tensor_bb, tensor_ff, coefficients,
 
 
 def replicate_ao_block(mospaces, tensor,
-                       symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN):
+                       symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN,
+                       block: str = "ab"):
     """
     transform_operator_ao2mo requires the operator in AO to be
     replicated in a block-diagonal fashion (i.e. like [A 0
@@ -69,15 +70,20 @@ def replicate_ao_block(mospaces, tensor,
     This is achieved using this function.
     """
     sym = libadcc.make_symmetry_operator_basis(
-        mospaces, tensor.shape[0], symmetry.to_str()
+        mospaces, tensor.shape[0], symmetry.to_str(), block
     )
     result = Tensor(sym)
 
     zerobk = np.zeros_like(tensor)
-    result.set_from_ndarray(np.block([
-        [tensor, zerobk],
-        [zerobk, tensor],
-    ]), 1e-14)
+    if block == "ab":
+        result.set_from_ndarray(np.block([
+            [tensor, zerobk],
+            [zerobk, tensor],
+        ]), 1e-14)
+    else:
+        result.set_from_ndarray(np.block([
+            tensor
+        ]), 1e-14)
     return result
 
 
@@ -101,6 +107,27 @@ class OperatorIntegrals:
     def available(self) -> tuple[str, ...]:
         """Which integrals are available in the underlying backend"""
         return self.provider_ao.available
+
+    def _import_overlap_ao(
+        self, integral: str,
+        symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
+    ) -> Tensor:
+        if integral not in self.available:
+            raise NotImplementedError(f"{integral.replace('_', ' ')} operator "
+                                      "not implemented "
+                                      f"in {self.provider_ao.backend} backend.")
+
+        ao_operator = getattr(self.provider_ao, integral)
+        ovlp_bb = replicate_ao_block(self.mospaces, ao_operator, symmetry=symmetry,
+                                     block="b")
+        return ovlp_bb
+
+    @cached_property
+    @timed_member_call("_import_timer")
+    def overlap_ao(self) -> Tensor:
+        """Return the overlap in the atomic orbital basis."""
+        return self._import_overlap_ao(
+            "overlap", symmetry=OperatorSymmetry.HERMITIAN)
 
     def _import_dipole_like_operator(
         self, integral: str,
