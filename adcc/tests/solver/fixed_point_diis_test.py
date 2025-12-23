@@ -1,7 +1,9 @@
 import numpy as np
 import pytest
 
-from adcc.solver.fixed_point_diis import diis, SubspaceError, DIISError, default_print
+from adcc.solver.fixed_point_diis import (
+    diis, SubspaceError, DIISError, DIISSubspace, default_print
+)
 from adcc.solver.preconditioner import JacobiPreconditioner
 from adcc import AdcMatrix, AmplitudeVector, guess_zero, guesses_triplet
 
@@ -151,3 +153,104 @@ class TestDIIS:
         )
         diff = other_solution - solution
         assert np.sqrt(diff.dot(diff)) < conv_tol
+
+
+class TestDIISSubspace:
+    def test_update_overlap(self):
+        # manually add some simple error vectors to the subspace and
+        # test that the overlap is correctly computed
+        subspace = DIISSubspace(max_size=5, start_size=5)
+
+        assert subspace.overlap.size == 0
+        with pytest.raises(SubspaceError):
+            subspace._update_overlap()
+
+        e1 = DummyVec(np.array([1, 0, 0]))
+        e2 = DummyVec(np.array([0, 1, 0]))
+        e3 = DummyVec(np.array([1, 1, 0]))
+
+        subspace.error_vectors.append(e1)
+        subspace._update_overlap()
+        assert subspace.overlap.shape == (1, 1)
+        assert subspace.overlap[(0, 0)] == 1
+
+        subspace.error_vectors.append(e2)
+        subspace._update_overlap()
+        assert subspace.overlap.shape == (2, 2)
+        assert (subspace.overlap == np.array([[1, 0], [0, 1]])).all()
+
+        subspace.error_vectors.append(e3)
+        subspace._update_overlap()
+        assert subspace.overlap.shape == (3, 3)
+        assert (subspace.overlap == np.array([
+            [1, 0, 1],
+            [0, 1, 1],
+            [1, 1, 2]
+        ])).all()
+
+    def test_compute_guess(self):
+        # ensure that the DIIS extrapolation works correctly
+        # solution: [1, 1, 1, 1]
+        subspace = DIISSubspace(max_size=4, start_size=2)
+
+        assert not subspace.size and not subspace.n_iter
+        with pytest.raises(SubspaceError):
+            subspace.compute_guess()
+
+        v1 = DummyVec(np.array([1, 0, 0, 0]))
+        e1 = DummyVec(np.array([0, 1, 1, 1]))
+        v2 = DummyVec(np.array([0, 1, 0, 0]))
+        e2 = DummyVec(np.array([1, 0, 1, 1]))
+        v3 = DummyVec(np.array([0, 0, 2, 0]))
+        e3 = DummyVec(np.array([1, 1, -1, 1]))
+
+        # add the vectors to the subspace and update the overlap
+        subspace.add(subspace_vector=v1, error_vector=e1)
+        assert subspace.size == 1 and subspace.n_iter == 1
+        # can not omit or only vector
+        with pytest.raises(SubspaceError):
+            subspace.compute_guess(n_omit_vectors=1)
+        # 1 vector -> below start_size -> no extrapolation (v1 returned)
+        g1 = subspace.compute_guess()
+        assert (v1.array == g1.array).all()
+
+        subspace.add(subspace_vector=v2, error_vector=e2)
+        assert subspace.size == 2 and subspace.n_iter == 2
+        # if we omit 1 vector -> no extrapolation
+        g2 = subspace.compute_guess(n_omit_vectors=1)
+        assert (v2.array == g2.array).all()
+        # considering both vectors we can now extrapolate a new vector
+        assert (subspace.overlap == np.array([[3, 2], [2, 3]])).all()
+        # overlap is rescaled leading to the system of linear equations Ax = b
+        #     ( 3  2 -1)    ( 1    2/3 -1)        ( 0)
+        # A = ( 2  3 -1) -> ( 2/3  1   -1)    b = ( 0)
+        #     (-1 -1  0)    (-1   -1    0)        (-1)
+        # solution: [1/2, 1/2, 5/6]
+        g2 = subspace.compute_guess()
+        ref = v1 * 0.5
+        ref += v2 * 0.5
+        # due to some numerical problems it is not possible to directly compare
+        np.testing.assert_allclose(g2.array, ref.array, atol=1e-14)
+
+        subspace.add(subspace_vector=v3, error_vector=e3)
+        assert subspace.size == 3 and subspace.n_iter == 3
+        # if we omit 2 vectors -> no extrapolation
+        g3 = subspace.compute_guess(n_omit_vectors=2)
+        assert (v3.array == g3.array).all()
+        # if we omit 1 vector
+        # -> extrapolation but without v3, because it has the largest error norm
+        # -> should end up with g2 again
+        g3 = subspace.compute_guess(n_omit_vectors=1)
+        assert (g3.array == g2.array).all()
+        # solving another system of linear equations
+        g3 = subspace.compute_guess()
+        #     ( 3  2  1 -1)    ( 1    2/3  1/3  -1)        ( 0)
+        # A = ( 2  3  1 -1) -> ( 2/3  1    1/3  -1)    b = ( 0)
+        #     ( 1  1  4 -1)    ( 1/3  1/3  4/3  -1)        ( 0)
+        #     (-1 -1 -1  0)    (-1   -1   -1     0)        (-1)
+        # solution = [1/3, 1/3, 1/3, 2/3]
+        ref = v1 * (1 / 3)
+        ref += v2 * (1 / 3)
+        ref += v3 * (1 / 3)
+        # due to some numerical problems it is not possible to directly compare
+        np.testing.assert_allclose(g3.array, ref.array, atol=1e-14)

@@ -74,7 +74,7 @@ class DIISSubspace(Generic[Vector]):
         self.start_size: int = start_size
         self.subspace_vectors: Deque[Vector] = deque(maxlen=max_size)
         self.error_vectors: Deque[Vector] = deque(maxlen=max_size)
-        self.overlap: np.typing.NDArray[np.float64] = np.zeros(
+        self.overlap: np.ndarray[tuple[int, int], np.dtype[np.float64]] = np.zeros(
             (0, 0), dtype=np.float64
         )
         self.step_info: Optional[str] = None
@@ -193,6 +193,10 @@ class DIISSubspace(Generic[Vector]):
         """
         if not self.size:
             raise SubspaceError("No vectors in subspace.")
+        elif n_omit_vectors >= self.size:
+            raise SubspaceError(f"Can not omit {n_omit_vectors} vectors "
+                                f"because there are only {self.size} vectors "
+                                "in the subspace.")
 
         # we only have a single vector -> perform a linear step
         if self.size == 1 or self.size - n_omit_vectors <= 1 or \
