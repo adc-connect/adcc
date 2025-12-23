@@ -188,6 +188,26 @@ class TestDIISSubspace:
             [1, 1, 2]
         ])).all()
 
+    def test_add(self):
+        # ensure that the vectors are correctly added, n_iter is inscremented
+        # and the error overlap matrix is updated
+        subspace = DIISSubspace(3, 3)
+        v1 = DummyVec(np.array([1, 0, 0]))
+        e1 = DummyVec(np.array([0, 1, 1]))
+        # everything should start out empty
+        assert not subspace.error_vectors and not subspace.subspace_vectors
+        assert not subspace.n_iter
+        assert not subspace.overlap.size
+
+        subspace.add(subspace_vector=v1, error_vector=e1)
+        assert len(subspace.error_vectors) == 1
+        assert (subspace.error_vectors[0].array == e1.array).all()
+        assert len(subspace.subspace_vectors) == 1
+        assert (subspace.subspace_vectors[0].array == v1.array).all()
+        assert subspace.n_iter == 1
+        assert subspace.overlap.shape == (1, 1)
+        assert subspace.overlap[(0, 0)] == 2
+
     def test_compute_guess(self):
         # ensure that the DIIS extrapolation works correctly
         # solution: [1, 1, 1, 1]
