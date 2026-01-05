@@ -26,7 +26,7 @@ import numpy as np
 from .functions import direct_sum, evaluate, einsum
 from .misc import cached_property, cached_member_function
 from .ReferenceState import ReferenceState
-from .OneParticleOperator import OneParticleOperator
+from .OneParticleDensity import OneParticleDensity
 from .NParticleOperator import product_trace, OperatorSymmetry
 from .Intermediates import register_as_intermediate
 from .timings import Timer, timed_member_call
@@ -126,7 +126,7 @@ class LazyMp:
         Return the MP2 difference density in the MO basis.
         """
         hf = self.reference_state
-        ret = OneParticleOperator(self.mospaces,
+        ret = OneParticleDensity(self.mospaces,
                                   symmetry=OperatorSymmetry.HERMITIAN)
         # NOTE: the following 3 blocks are equivalent to the cvs_p0 intermediates
         # defined at the end of this file
@@ -283,7 +283,7 @@ class LazyMp:
 @register_as_intermediate
 def cvs_p0(hf, mp, intermediates):
     # NOTE: equal to mp2_diffdm if CVS applied for the density
-    ret = OneParticleOperator(hf.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
+    ret = OneParticleDensity(hf.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
     ret.oo = -0.5 * einsum("ikab,jkab->ij", mp.t2oo, mp.t2oo)
     ret.ov = -0.5 * (+ einsum("ijbc,jabc->ia", mp.t2oo, hf.ovvv)
                      + einsum("jkib,jkab->ia", hf.ooov, mp.t2oo)) / mp.df(b.ov)

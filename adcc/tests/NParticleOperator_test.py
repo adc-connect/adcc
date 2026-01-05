@@ -76,12 +76,7 @@ class TestNParticleOperator:
         a.set_random()
         b = NParticleOperator(ref, n_particle_op=n_particle_op, symmetry=op_sym[1])
         b.set_random()
-        if n_particle_op == 1:
-            print(a.vo)
-            print(b.vo)
-            print((a + b).vo)
 
-            print(a.vo + b.vo)
         assert_array_almost_equal_nulp((a + b).to_ndarray(),
                                        a.to_ndarray() + b.to_ndarray())
         assert_array_almost_equal_nulp((b + a).to_ndarray(),
@@ -100,6 +95,9 @@ class TestNParticleOperator:
 
         ref = a.to_ndarray() + b.to_ndarray()
         if op_sym[0] != op_sym[1] and op_sym[1] == OperatorSymmetry.NOSYMMETRY:
+            with pytest.raises(ValueError):
+                a += b
+        elif op_sym[0] != op_sym[1] and op_sym[1] != OperatorSymmetry.NOSYMMETRY and op_sym[0] != OperatorSymmetry.NOSYMMETRY:
             with pytest.raises(ValueError):
                 a += b
         else:
@@ -141,6 +139,9 @@ class TestNParticleOperator:
 
         ref = a.to_ndarray() - b.to_ndarray()
         if op_sym[0] != op_sym[1] and op_sym[1] == OperatorSymmetry.NOSYMMETRY:
+            with pytest.raises(ValueError):
+                a -= b
+        elif op_sym[0] != op_sym[1] and op_sym[1] != OperatorSymmetry.NOSYMMETRY and op_sym[0] != OperatorSymmetry.NOSYMMETRY:
             with pytest.raises(ValueError):
                 a -= b
         else:

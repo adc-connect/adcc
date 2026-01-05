@@ -33,7 +33,7 @@ from .NParticleOperator import NParticleOperator, OperatorSymmetry
 class TwoParticleOperator(NParticleOperator):
     def __init__(self, spaces, symmetry=OperatorSymmetry.HERMITIAN):
         """
-        Construct an TwoParticleOperator object. All blocks are initialised
+        Construct a TwoParticleOperator object. All blocks are initialised
         as zero blocks.
 
         Parameters
@@ -43,7 +43,16 @@ class TwoParticleOperator(NParticleOperator):
 
         symmetry : OperatorSymmetry, optional
         """
-        super().__init__(spaces, n_particle_op=1, symmetry=symmetry)
+        super().__init__(spaces, n_particle_op=2, symmetry=symmetry)
+
+    def _construct_empty(self):
+        """
+        Create an empty instance of a TwoParticleOperator
+        """
+        return self.__class__(
+            self.mospaces,
+            symmetry=self.symmetry,
+        )
 
     def _transform_to_ao(self, refstate_or_coefficients) -> tuple[Tensor, Tensor]:
         if not len(self.blocks_nonzero):
@@ -70,7 +79,6 @@ class TwoParticleOperator(NParticleOperator):
             if self.symmetry == OperatorSymmetry.ANTIHERMITIAN:
                 if spaces[:2] != spaces[2:]:  # non-diagonal block
                     continue
-            print(block, factor)
             dm_bb_a += factor * einsum("ip,jq,ijkl,kr,ls->pqrs",
                                        coeff_map[f"{spaces[0]}_a"],
                                        coeff_map[f"{spaces[1]}_a"],

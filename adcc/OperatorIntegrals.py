@@ -26,6 +26,7 @@ from .misc import cached_property, cached_member_function
 from .Tensor import Tensor
 from .timings import Timer, timed_member_call
 from .OneParticleOperator import OneParticleOperator
+from .OneParticleDensity import OneParticleDensity
 from .NParticleOperator import OperatorSymmetry
 
 import libadcc
@@ -308,9 +309,9 @@ class OperatorIntegrals:
         )
 
     def _import_density_dependent_operator(
-        self, operator: str, density_mo: OneParticleOperator,
+        self, operator: str, density_mo: OneParticleDensity,
         symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
-    ) -> OneParticleOperator:
+    ) -> OneParticleDensity:
         """
         Import the density-dependent operator and transform it to the
         molecular orbital basis.
@@ -320,7 +321,7 @@ class OperatorIntegrals:
         integral : str
             The density-dependent operator to import: an operator
             whose AO import function takes a density matrix as single argument.
-        density_mo: OneParticleOperator
+        density_mo: OneParticleDensity
             The density in the MO basis for which to compute the operator.
         is_symmetric : bool, optional
             if the imported operator is symmetric, by default True
@@ -330,14 +331,14 @@ class OperatorIntegrals:
         v_bb = replicate_ao_block(
             self.mospaces, v_ao, symmetry=symmetry
         )
-        v_ff = OneParticleOperator(self.mospaces, symmetry=symmetry)
+        v_ff = OneParticleDensity(self.mospaces, symmetry=symmetry)
         transform_operator_ao2mo(
             v_bb, v_ff, self._coefficients, self._conv_tol
         )
         return v_ff
 
     def pe_induction_elec(self,
-                          density_mo: OneParticleOperator) -> OneParticleOperator:
+                          density_mo: OneParticleDensity) -> OneParticleDensity:
         """
         Returns the (density-dependent) PE electronic induction operator in the
         molecular orbital basis.
@@ -352,7 +353,7 @@ class OperatorIntegrals:
         )
 
     def pcm_potential_elec(self,
-                           density_mo: OneParticleOperator) -> OneParticleOperator:
+                           density_mo: OneParticleDensity) -> OneParticleDensity:
         """
         Returns the (density-dependent) electronic PCM potential operator in the
         molecular orbital basis

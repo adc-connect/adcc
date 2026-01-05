@@ -24,6 +24,7 @@ import pytest
 from numpy.testing import assert_allclose
 
 from adcc.OneParticleOperator import OneParticleOperator
+from adcc.OneParticleDensity import OneParticleDensity
 from adcc.ElectronicStates import EnergyCorrection
 
 from .testdata_cache import testdata_cache
@@ -59,7 +60,7 @@ class TestExcitedStates:
                         # electric dipole velocity integrals are not implemented in
                         # the reference backend
                         continue
-                if isinstance(ref, OneParticleOperator):
+                if isinstance(ref, (OneParticleOperator, OneParticleDensity)):
                     assert ref.blocks == res.blocks
                     for b in ref.blocks:
                         assert_allclose(ref[b].to_ndarray(),

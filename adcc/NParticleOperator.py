@@ -243,12 +243,21 @@ class NParticleOperator:
             ret[slice_list] = dm_block
         return ret
 
+    def _construct_empty(self):
+        """
+        Create an empty instance of an NParticleOperator
+        """
+        return self.__class__(
+            self.mospaces,
+            self.n_particle_op,
+            symmetry=self.symmetry,
+        )
+
     def copy(self):
         """
         Return a deep copy of the NParticleOperator
         """
-        ret = self.__class__(
-            self.mospaces, n_particle_op=self.n_particle_op, symmetry=self.symmetry)
+        ret = self._construct_empty()
         for b in self.blocks_nonzero:
             ret[b] = self.block(b).copy()
         if hasattr(self, "reference_state"):
@@ -290,9 +299,9 @@ class NParticleOperator:
             and self.symmetry != OperatorSymmetry.NOSYMMETRY
             and other.symmetry != OperatorSymmetry.NOSYMMETRY
         ):
-            self._expand_to_nosymmetry()
-            other = other.copy()
-            other._expand_to_nosymmetry()
+            raise ValueError("Cannot add Hermitian and "
+                             "anti-Hermitian matrices in-place.")
+
         for block in other.blocks_nonzero:
             if self.is_zero_block(block):
                 self[block] = other.block(block).copy()
@@ -331,6 +340,13 @@ class NParticleOperator:
                 and other.symmetry == OperatorSymmetry.NOSYMMETRY:
             raise ValueError("Cannot add non-symmetric matrix "
                              "in-place to symmetric one.")
+        if (
+            self.symmetry != other.symmetry
+            and self.symmetry != OperatorSymmetry.NOSYMMETRY
+            and other.symmetry != OperatorSymmetry.NOSYMMETRY
+        ):
+            raise ValueError("Cannot add Hermitian and "
+                             "anti-Hermitian matrices in-place.")
 
         for block in other.blocks_nonzero:
             if self.is_zero_block(block):
@@ -370,6 +386,13 @@ class NParticleOperator:
         return self
 
     def __add__(self, other):
+        if (
+            self.symmetry != other.symmetry
+            and self.symmetry != OperatorSymmetry.NOSYMMETRY
+            and other.symmetry != OperatorSymmetry.NOSYMMETRY
+        ):
+            other = other._expand_to_nosymmetry()
+
         if self.symmetry == OperatorSymmetry.NOSYMMETRY \
                 or other.symmetry is not OperatorSymmetry.NOSYMMETRY:
             return self.copy().__iadd__(other)
@@ -377,6 +400,13 @@ class NParticleOperator:
             return other.copy().__iadd__(self)
 
     def __sub__(self, other):
+        if (
+            self.symmetry != other.symmetry
+            and self.symmetry != OperatorSymmetry.NOSYMMETRY
+            and other.symmetry != OperatorSymmetry.NOSYMMETRY
+        ):
+            other = other._expand_to_nosymmetry()
+
         if self.symmetry == OperatorSymmetry.NOSYMMETRY \
                 or other.symmetry is not OperatorSymmetry.NOSYMMETRY:
             return self.copy().__isub__(other)
@@ -408,7 +438,7 @@ class NParticleOperator:
         sym = self.symmetry
 
         for block in self.blocks:
-            if not self.is_zero_block(block):
+            if self.is_zero_block(block):
                 continue
 
             bra = block[:2 * self.n_particle_op]
@@ -435,6 +465,22 @@ class NParticleOperator:
 
 
 def product_trace(op1, op2):
+    """
+    Compute the expectation value (inner product) of two N-particle operators.
+
+    For the special case of a density operator and a general operator, the 
+    inner product is identical in the AO and MO basis.
+
+    Parameters
+    ----------
+    op1, op2 : NParticleOperator or NParticleDensity
+        Operators or densities to compute the inner product of.
+
+    Returns
+    -------
+    float
+        The trace / expectation value <op1, op2>.
+    """
     # TODO use blocks_nonzero and build the set intersection
     #      to avoid the is_zero_block( ) checks below.
     #      I'm a bit hesitant to do this right now, because I'm lacking

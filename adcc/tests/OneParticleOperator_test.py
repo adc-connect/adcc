@@ -93,63 +93,6 @@ class TestOneParticleOperator:
 
         np.testing.assert_almost_equal(dm_full, dm.to_ndarray(), decimal=12)
 
-    @pytest.mark.parametrize("symmetries",
-    op_syms_two_operators,
-    ids=[f"{c[0].name}_{c[1].name}" for c in op_syms_two_operators])
-    def test_product_trace(self, symmetries):
-        system = "h2o_sto3g"
-        system: testcases.TestCase = testcases.get_by_filename(system).pop()
-        scfres = run_hf("pyscf", system.xyz, system.basis)
-        ref = adcc.ReferenceState(scfres)
-        ovlp = ref.operators.provider_ao.overlap
-        ovlp_inv = np.linalg.inv(ovlp)
-
-        sym_1 = symmetries[0]
-        sym_2 = symmetries[1]
-
-        op_a_mo = OneParticleOperator(ref.mospaces, symmetry=sym_1)
-        op_a_mo.set_random()
-        op_a_ao_a = op_a_mo.to_ao_basis(ref)[0].to_ndarray()
-        op_a_ao_b = op_a_mo.to_ao_basis(ref)[1].to_ndarray()
-
-        op_b_mo = OneParticleOperator(ref.mospaces, symmetry=sym_2)
-        op_b_mo.set_random()
-        op_b_ao_a = op_b_mo.to_ao_basis(ref)[0].to_ndarray()
-        op_b_ao_b = op_b_mo.to_ao_basis(ref)[1].to_ndarray()
-
-        ptrace_ao = (
-            np.trace(op_a_ao_a.T @ ovlp_inv @ op_b_ao_a @ ovlp_inv)
-            + np.trace(op_a_ao_a.T @ ovlp_inv @ op_b_ao_b @ ovlp_inv)
-        )
-
-        ptrace_mo_ref = 0
-        if op_a_mo.symmetry == OperatorSymmetry.NOSYMMETRY:
-            factors = op_a_mo.canonical_factors.copy()
-        elif op_b_mo.symmetry == OperatorSymmetry.NOSYMMETRY:
-            factors = op_b_mo.canonical_factors.copy()
-        else:
-            assert op_a_mo.canonical_factors == op_a_mo.canonical_factors
-            factors = op_a_mo.canonical_factors.copy()
-            if op_a_mo.symmetry is not op_b_mo.symmetry:
-                to_remove = []
-                for b in list(factors.keys()):
-                    spaces = split_spaces(b)
-                    n = op_a_mo.n_particle_op
-                    if spaces[:2 * n] != spaces[2 * n:]:
-                        to_remove.append(b)
-                # remove non diagonals blocks
-                for b in to_remove:
-                    factors.pop(b)
-
-        for b, factor in factors.items():
-            ptrace_mo_ref += factor * np.sum(
-                op_a_mo[b].to_ndarray() * op_b_mo[b].to_ndarray()
-            )
-
-        assert ptrace_mo_ref == pytest.approx(product_trace(op_a_mo, op_b_mo))
-        assert product_trace(op_a_mo, op_b_mo) == pytest.approx(ptrace_ao)
-        assert product_trace(op_a_mo, op_b_mo) == pytest.approx(ptrace_ao)
-
     def test_block_functions(self):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
         a = OneParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)

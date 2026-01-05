@@ -28,7 +28,7 @@ from adcc.AdcMethod import AdcMethod
 from adcc.functions import einsum
 from adcc.Intermediates import Intermediates
 from adcc.AmplitudeVector import AmplitudeVector
-from adcc.OneParticleOperator import OneParticleOperator
+from adcc.OneParticleDensity import OneParticleDensity
 from adcc.NParticleOperator import OperatorSymmetry
 
 from .util import check_doubles_amplitudes, check_singles_amplitudes
@@ -41,7 +41,7 @@ def tdm_adc0(mp, amplitude, intermediates):
     u1 = amplitude.ph
 
     # Transition density matrix for (CVS-)ADC(0)
-    dm = OneParticleOperator(mp, symmetry=OperatorSymmetry.NOSYMMETRY)
+    dm = OneParticleDensity(mp, symmetry=OperatorSymmetry.NOSYMMETRY)
     dm[b.v + C] = u1.transpose()
     return dm
 

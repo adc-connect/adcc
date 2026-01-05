@@ -26,7 +26,7 @@ from adcc.AdcMethod import AdcMethod
 from adcc.functions import einsum
 from adcc.Intermediates import Intermediates
 from adcc.AmplitudeVector import AmplitudeVector
-from adcc.OneParticleOperator import OneParticleOperator
+from adcc.OneParticleDensity import OneParticleDensity
 from adcc.NParticleOperator import OperatorSymmetry
 
 from .util import check_doubles_amplitudes, check_singles_amplitudes
@@ -37,7 +37,7 @@ def s2s_tdm_adc0(mp, amplitude_l, amplitude_r, intermediates):
     ul1 = amplitude_l.ph
     ur1 = amplitude_r.ph
 
-    dm = OneParticleOperator(mp, symmetry=OperatorSymmetry.NOSYMMETRY)
+    dm = OneParticleDensity(mp, symmetry=OperatorSymmetry.NOSYMMETRY)
     dm.oo = -einsum('ja,ia->ij', ul1, ur1)
     dm.vv = einsum('ia,ib->ab', ul1, ur1)
     return dm
