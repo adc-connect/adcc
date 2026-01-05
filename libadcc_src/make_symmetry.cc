@@ -104,6 +104,84 @@ std::shared_ptr<Symmetry> make_symmetry_orbital_energies(
   return sym;
 }
 
+std::shared_ptr<Symmetry> make_symmetry_1p_op(
+      std::shared_ptr<const MoSpaces> mospaces_ptr, const std::string& symmetry,
+      const std::string& cartesian_transformation,
+      std::shared_ptr<Symmetry>& sym, const std::vector<std::string>& ss) {
+  // Hermitian operator is a symmetric matrix if symmetric and both spaces equal
+  if (symmetry == "hermitian" && ss[0] == ss[1]) {
+    sym->set_permutations({"ij", "ji"});
+  }
+  // Antihermitian operator is antisymmetric if both spaces are equal
+  if (symmetry == "antihermitian" && ss[0] == ss[1]) {
+    sym->set_permutations({"ij", "-ji"});
+  }
+
+  // Point-group symmetry
+  const std::vector<std::string> irreps = irreps_of_cartesian_transformation(
+        mospaces_ptr->point_group, cartesian_transformation,
+        mospaces_ptr->irrep_totsym());
+  sym->set_irreps_allowed(irreps);
+  // A one-electron (spin-free) Operator is aa / bb block-diagonal only.
+  if (mospaces_ptr->restricted) {
+    // Note: Libtensor assumes for the spin block mappings that there are
+    //       an even number of blocks along the spin axis. We explicitly check
+    //       for this in in as_lt_symmetry and ignore the spin symmetry if this
+    //       is not the case, but it has to be properly tested if this does
+    //       the trick. Notice that e.g. adcman does it like it is coded here
+    //       and ignores all symmetry between the spin blocks in the case of
+    //       an unrestricted reference. Technically speaking this is not
+    //       completely necessary and as for example the next statement of
+    //       forbidden blocks should actually be shifted one up out of the if.
+    sym->set_spin_blocks_forbidden({"ab", "ba"});
+    sym->set_spin_block_maps({{"aa", "bb", 1.}});
+  }
+  return sym;
+}
+
+std::shared_ptr<Symmetry> make_symmetry_2p_op(
+      std::shared_ptr<const MoSpaces> mospaces_ptr, const std::string& symmetry,
+      const std::string& cartesian_transformation,
+      std::shared_ptr<Symmetry>& sym, const std::vector<std::string>& ss) {
+  std::vector<std::string> permutations{"ijkl"};
+  if (ss[0] == ss[1]) permutations.push_back("-jikl");
+  if (ss[2] == ss[3]) permutations.push_back("-ijlk");
+  if (symmetry=="hermitian" && ss[0] == ss[2] && ss[1] == ss[3])
+    permutations.push_back("klij");
+  if (symmetry == "antihermitian" && ss[0] == ss[2] && ss[1] == ss[3]) 
+    permutations.push_back("-klij");
+  if (permutations.size() > 1) {
+    sym->set_permutations(permutations);
+  }
+
+  // Point-group symmetry
+  const std::vector<std::string> irreps = irreps_of_cartesian_transformation(
+        mospaces_ptr->point_group, cartesian_transformation,
+        mospaces_ptr->irrep_totsym());
+  sym->set_irreps_allowed(irreps);
+
+  // A two-electron (spin-free) Operator.
+  if (mospaces_ptr->restricted) {
+    // Note: Libtensor assumes for the spin block mappings that there are
+    //       an even number of blocks along the spin axis. We explicitly check
+    //       for this in in as_lt_symmetry and ignore the spin symmetry if this
+    //       is not the case, but it has to be properly tested if this does
+    //       the trick. Notice that e.g. adcman does it like it is coded here
+    //       and ignores all symmetry between the spin blocks in the case of
+    //       an unrestricted reference. Technically speaking this is not
+    //       completely necessary and as for example the next statement of
+    //       forbidden blocks should actually be shifted one up out of the if.
+    sym->set_spin_blocks_forbidden({"aaab", "aaba", "aabb", "abaa", "abbb",  //
+                                  "bbba", "bbab", "bbaa", "babb", "baaa"});
+    sym->set_spin_block_maps({
+          {"aaaa", "bbbb", 1.},
+          {"abab", "baba", 1.},
+          {"abba", "baab", 1.},
+    });
+  }
+  return sym;
+}
+
 std::shared_ptr<Symmetry> make_symmetry_orbital_coefficients(
       std::shared_ptr<const MoSpaces> mospaces_ptr, const std::string& space,
       size_t n_bas, const std::string& blocks) {
@@ -178,49 +256,14 @@ std::shared_ptr<Symmetry> make_symmetry_eri(std::shared_ptr<const MoSpaces> mosp
   auto sym = std::make_shared<Symmetry>(mospaces_ptr, space);
 
   const std::vector<std::string>& ss = sym->subspaces();
-  const MoSpaces& mo                 = *mospaces_ptr;
   if (sym->ndim() != 4) {
     throw invalid_argument("Expect exactly a four-dimensional space string, not " +
                            space + ".");
   }
 
-  // adcc uses anti-symmetrised repulsion integrals in the physicist's
-  // convention, i.e. the integral <ij || kl> = < ij | kl > - < ij | lk>
-  // is anti-symmetric in the first two indices and the last two
-  // indices but symmetric if the first two are swapped with the last two.
-  //
-  // These symmetries of course only apply if we deal with the same MO subspace
-  // blocks in the respective indices.
-  std::vector<std::string> permutations{"ijkl"};
-  if (ss[0] == ss[1]) permutations.push_back("-jikl");
-  if (ss[2] == ss[3]) permutations.push_back("-ijlk");
-  if (ss[0] == ss[2] && ss[1] == ss[3]) permutations.push_back("klij");
-  if (permutations.size() > 1) {
-    sym->set_permutations(permutations);
-  }
-
-  // Set point-group symmetry: Repulsion integrals are totally symmetric
-  sym->set_irreps_allowed({mo.irrep_totsym()});
-
-  // Set spin symmetry:
-  if (mospaces_ptr->restricted) {
-    // Note: Libtensor assumes for the spin block mappings that there are
-    //       an even number of blocks along the spin axis. We explicitly check
-    //       for this in in as_lt_symmetry and ignore the spin symmetry if this
-    //       is not the case, but it has to be properly tested if this does
-    //       the trick. Notice that e.g. adcman does it like it is coded here
-    //       and ignores all symmetry between the spin blocks in the case of
-    //       an unrestricted reference. Technically speaking this is not
-    //       completely necessary and as for example the next statement of
-    //       forbidden blocks should actually be shifted one up out of the if.
-    sym->set_spin_blocks_forbidden({"aaab", "aaba", "aabb", "abaa", "abbb",  //
-                                    "bbba", "bbab", "bbaa", "babb", "baaa"});
-    sym->set_spin_block_maps({
-          {"aaaa", "bbbb", 1.},
-          {"abab", "baba", 1.},
-          {"abba", "baab", 1.},
-    });
-  }
+  // Operator symmetry: Repulsion integrals are always hermitian.
+  // Point-group symmetry: Repulsion integrals are totally symmetric
+  sym = make_symmetry_2p_op(mospaces_ptr, "hermitian", "1", sym, ss);
   return sym;
 }
 
@@ -279,76 +322,12 @@ std::shared_ptr<Symmetry> make_symmetry_operator(
 
   const std::vector<std::string>& ss = sym->subspaces();
   if (sym->ndim() == 2) {
-    // Hermitian operator is a symmetric matrix if symmetric and both spaces equal
-    if (symmetry == "hermitian" && ss[0] == ss[1]) {
-      sym->set_permutations({"ij", "ji"});
-    }
-    //
-    if (symmetry == "antihermitian" && ss[0] == ss[1]) {
-      sym->set_permutations({"ij", "-ji"});
-    }
-
-    // Point-group symmetry
-    const std::vector<std::string> irreps = irreps_of_cartesian_transformation(
-          mospaces_ptr->point_group, cartesian_transformation,
-          mospaces_ptr->irrep_totsym());
-    sym->set_irreps_allowed(irreps);
-
-    // A one-electron (spin-free) Operator is aa / bb block-diagonal only.
-    if (mospaces_ptr->restricted) {
-      // Note: Libtensor assumes for the spin block mappings that there are
-      //       an even number of blocks along the spin axis. We explicitly check
-      //       for this in in as_lt_symmetry and ignore the spin symmetry if this
-      //       is not the case, but it has to be properly tested if this does
-      //       the trick. Notice that e.g. adcman does it like it is coded here
-      //       and ignores all symmetry between the spin blocks in the case of
-      //       an unrestricted reference. Technically speaking this is not
-      //       completely necessary and as for example the next statement of
-      //       forbidden blocks should actually be shifted one up out of the if.
-      sym->set_spin_blocks_forbidden({"ab", "ba"});
-      sym->set_spin_block_maps({{"aa", "bb", 1.}});
-    }
+    sym = make_symmetry_1p_op(mospaces_ptr, symmetry, cartesian_transformation,
+      sym, ss);
   }
   else if (sym->ndim() == 4) {
-    std::vector<std::string> permutations{"ijkl"};
-    // oooo oovv ooov vvvv vvoo vvvo
-    if (ss[0] == ss[1]) permutations.push_back("-jikl");
-    // oooo oovv ovoo vooo vvvv vvoo vovv ovvv
-    if (ss[2] == ss[3]) permutations.push_back("-ijlk");
-    // oooo ovov vvvv
-    if (symmetry=="hermitian" && ss[0] == ss[2] && ss[1] == ss[3])
-      permutations.push_back("klij");
-    if (symmetry == "antihermitian" && ss[0] == ss[2] && ss[1] == ss[3]) 
-      permutations.push_back("-klij");
-    if (permutations.size() > 1) {
-      sym->set_permutations(permutations);
-    }
-
-    // Point-group symmetry
-    const std::vector<std::string> irreps = irreps_of_cartesian_transformation(
-          mospaces_ptr->point_group, cartesian_transformation,
-          mospaces_ptr->irrep_totsym());
-    sym->set_irreps_allowed(irreps);
-
-    // A two-electron (spin-free) Operator.
-    if (mospaces_ptr->restricted) {
-      // Note: Libtensor assumes for the spin block mappings that there are
-      //       an even number of blocks along the spin axis. We explicitly check
-      //       for this in in as_lt_symmetry and ignore the spin symmetry if this
-      //       is not the case, but it has to be properly tested if this does
-      //       the trick. Notice that e.g. adcman does it like it is coded here
-      //       and ignores all symmetry between the spin blocks in the case of
-      //       an unrestricted reference. Technically speaking this is not
-      //       completely necessary and as for example the next statement of
-      //       forbidden blocks should actually be shifted one up out of the if.
-      sym->set_spin_blocks_forbidden({"aaab", "aaba", "aabb", "abaa", "abbb",  //
-                                    "bbba", "bbab", "bbaa", "babb", "baaa"});
-      sym->set_spin_block_maps({
-            {"aaaa", "bbbb", 1.},
-            {"abab", "baba", 1.},
-            {"abba", "baab", 1.},
-      });
-    }
+    sym = make_symmetry_2p_op(mospaces_ptr, symmetry, cartesian_transformation,
+      sym, ss);
   }
   else {
     throw invalid_argument("Expect exactly a two- or four-dimensional space "

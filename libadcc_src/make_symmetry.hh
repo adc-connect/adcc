@@ -96,6 +96,13 @@ std::shared_ptr<Symmetry> make_symmetry_operator(
  * \param symmetry         Is the tensor symmetric (only in effect if both space
  *                         axes identical). false disables a setup of permutational
  *                         symmetry.
+ * \param blocks           Which blocks of the operator to return. Valid values
+ *                         are "ab" to return a tensor for both alpha and beta
+ *                         block as a block-diagonal tensor, "a" to only return a
+ *                         tensor for only alpha block and "b" for only the
+ *                         beta block. The fourth option is "abstack", which
+ *                         returns the symmetry for a alpha block stacked on top of
+ *                         a beta block (This is the convention used by adcman).
  */
 std::shared_ptr<Symmetry> make_symmetry_operator_basis(
       std::shared_ptr<const MoSpaces> mospaces_ptr, size_t n_bas,
