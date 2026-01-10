@@ -461,4 +461,76 @@ std::shared_ptr<Symmetry> make_symmetry_operator_basis(
     throw invalid_argument("make_symmetry_operator_basis: n_particle_op must be 1 or 2.");
   }
 }
+
+std::shared_ptr<Symmetry> make_symmetry_triples(
+    std::shared_ptr<const MoSpaces> mospaces_ptr, const std::string& space) {
+
+  auto sym = std::make_shared<Symmetry>(mospaces_ptr, space);
+
+  const std::vector<std::string>& subspaces = sym->subspaces();
+  const MoSpaces& mo                 = *mospaces_ptr;
+  if (sym->ndim() != 6) {
+    throw invalid_argument("Expect exactly a six-dimensional space string, not " +
+                           space + ".");
+  }
+
+  std::vector<std::string> permutations{"ijkabc"};
+  // 2 of the 6 unique permutations are sufficient for each index group
+  if (subspaces[0] == subspaces[1]) permutations.push_back("-jikabc");
+  if (subspaces[1] == subspaces[2]) permutations.push_back("-ikjabc");
+
+  if (subspaces[3] == subspaces[4]) permutations.push_back("-ijkbac");
+  if (subspaces[4] == subspaces[5]) permutations.push_back("-ijkacb");
+
+  if (permutations.size() > 1)
+    sym->set_permutations(permutations);
+
+  // Set point-group symmetry: Not used anyway at the moment
+  sym->set_irreps_allowed({mo.irrep_totsym()});
+
+  // Set spin symmetry:
+  if (mospaces_ptr->restricted) {
+    // Note: Libtensor assumes for the spin block mappings that there are
+    //       an even number of blocks along the spin axis. We explicitly check
+    //       for this in in as_lt_symmetry and ignore the spin symmetry if this
+    //       is not the case, but it has to be properly tested if this does
+    //       the trick. Notice that e.g. adcman does it like it is coded here
+    //       and ignores all symmetry between the spin blocks in the case of
+    //       an unrestricted reference. Technically speaking this is not
+    //       completely necessary and as for example the next statement of
+    //       forbidden blocks should actually be shifted one up out of the if.
+    sym->set_spin_blocks_forbidden({
+        "aaaaab", "aaaaba", "aaabaa", // 0/1
+        "aabaaa", "abaaaa", "baaaaa", // 1/0
+        "aaaabb", "aaabab", "aaabba", // 0/2
+        "abbaaa", "babaaa", "bbaaaa", // 2/0
+        "aaabbb", // 0/3
+        "bbbaaa", // 3/0
+        "aababb", "aabbab", "aabbba", // 1/2
+        "abaabb", "ababab", "ababba", // 1/2
+        "baaabb", "baabab", "baabba", // 1/2
+        "abbaab", "abbaba", "abbbaa", // 2/1
+        "babaab", "bababa", "babbaa", // 2/1
+        "bbaaab", "bbaaba", "bbabaa", // 2/1
+        "aabbbb", "ababbb", "baabbb", // 1/3
+        "bbbaab", "bbbaba", "bbbbaa", // 3/1
+        "abbbbb", "babbbb", "bbabbb", // 2/3
+        "bbbabb", "bbbbab", "bbbbba", // 3/2
+    });
+    sym->set_spin_block_maps({
+          {"aaaaaa", "bbbbbb", 1.},
+          {"aabaab", "bbabba", 1.},
+          {"aababa", "bbabab", 1.},
+          {"aabbaa", "bbaabb", 1.},
+          {"abaaab", "babbba", 1.},
+          {"abaaba", "babbab", 1.},
+          {"ababaa", "bababb", 1.},
+          {"baaaab", "abbbba", 1.},
+          {"baaaba", "abbbab", 1.},
+          {"baabaa", "abbabb", 1.},
+    });
+  }
+  return sym;
+}
+
 }  // namespace libadcc

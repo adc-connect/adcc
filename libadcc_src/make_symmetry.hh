@@ -107,5 +107,10 @@ std::shared_ptr<Symmetry> make_symmetry_operator_basis(
       const std::string& operator_symmetry, const int n_particle_op,
       const std::string& blocks);
 
+/** Return the symmetry object for an 6 dimensional triples amplitude.
+*/
+std::shared_ptr<Symmetry> make_symmetry_triples(
+       std::shared_ptr<const MoSpaces> mospaces_ptr, const std::string& space);
+
 ///@}
 }  // namespace libadcc

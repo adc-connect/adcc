@@ -153,6 +153,12 @@ void export_Symmetry(py::module& m) {
         "                 symmetry.\n"
         "n_particle_op    NParticleOperator\n"
         "blocks           Spin blocks to include. Valid are \"ab\", \"a\" and \"b\".");
+  m.def("make_symmetry_triples", &make_symmetry_triples,
+        "Return the Symmetry object like it would be set up for the passed subspace \n"
+        "of a triples amplitude tensor.\n"
+        "\n"
+        "  mospaces    MoSpaces object\n"
+        "  space       Space string (e.g. o1o1o1v1v1v1)\n");
 }
 
 }  // namespace libadcc
