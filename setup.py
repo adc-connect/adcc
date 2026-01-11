@@ -106,8 +106,7 @@ class CppTest(Command):
         output_dir = Path("build") / "cpptest"
         test_executable = output_dir / "libadcc_tests"
         if test_executable.is_file():
-            rel_path = test_executable.relative_to(Path.cwd())
-            print(f"Skipping recompilation of {rel_path}. "
+            print(f"Skipping recompilation of {test_executable}. "
                   "Delete file if recompilation desired.")
             return test_executable  # Don't recompile
 
