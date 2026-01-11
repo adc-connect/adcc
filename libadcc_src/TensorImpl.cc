@@ -120,49 +120,82 @@ template <size_t M, size_t N>
 std::pair<lt::expr::label<M>, lt::expr::label<M>> parse_permutation(
       const std::vector<AxisInfo>& axes, const lt::expr::label<N>& label,
       const std::vector<std::vector<size_t>>& permutations) {
+  if (permutations.size() != M)
+    throw invalid_argument("Invalid number of permutations");
+
   std::vector<const lt::letter*> set1;
   std::vector<const lt::letter*> set2;
 
   std::vector<size_t> processed_indices;
   for (const auto& perm : permutations) {
-    if (perm.size() < 2) {
-      throw invalid_argument("A permutation tuple has to have 2 or more indices.");
-    } else if (perm.size() == 2) {
-      if (perm[0] == perm[1]) {
-        throw invalid_argument(
-              "A permutation tuple cannot have duplicate indices. Here " +
-              std::to_string(perm[0]) + " is a duplicate.");
-      }
-      auto find_0 =
-            std::find(processed_indices.begin(), processed_indices.end(), perm[0]);
-      auto find_1 =
-            std::find(processed_indices.begin(), processed_indices.end(), perm[1]);
-
-      if (find_0 != processed_indices.end() or find_1 != processed_indices.end()) {
-        throw invalid_argument(
-              "Provided index tuples in a permutation list have to be disjoint.");
-      }
-      if (perm[0] >= N || perm[1] >= N) {
-        throw invalid_argument(
-              "Index in permutation list cannot be larger than dimension.");
-      }
-      if (axes[perm[0]] != axes[perm[1]]) {
-        throw invalid_argument(
-              "(Anti)-Symmetrisation can only be performed over equivalent axes (not '" +
-              axes[perm[0]].label + "' and '" + axes[perm[1]].label + "').");
-      }
-
-      set1.push_back(&label.letter_at(perm[0]));
-      set2.push_back(&label.letter_at(perm[1]));
-
-      processed_indices.push_back(perm[0]);
-      processed_indices.push_back(perm[1]);
-    } else {
-      throw not_implemented_error(
-            "Permutations for tuple length larger 2 not implemented.");
+    // due to the return type we can only have pairs of indices:
+    // 1 does not make any sense and returning a pair prevents treating triples
+    if (perm.size() != 2) {
+      throw invalid_argument("A permutation tuple has to have 2 indices.");
     }
+    if (perm[0] == perm[1]) {
+      throw invalid_argument(
+            "A permutation tuple cannot have duplicate indices. Here " +
+            std::to_string(perm[0]) + " is a duplicate.");
+    }
+    auto find_0 =
+          std::find(processed_indices.begin(), processed_indices.end(), perm[0]);
+    auto find_1 =
+          std::find(processed_indices.begin(), processed_indices.end(), perm[1]);
+
+    if (find_0 != processed_indices.end() or find_1 != processed_indices.end()) {
+      throw invalid_argument(
+            "Provided index tuples in a permutation list have to be disjoint.");
+    }
+    if (perm[0] >= N || perm[1] >= N) {
+      throw invalid_argument(
+            "Index in permutation list cannot be larger than dimension.");
+    }
+    if (axes[perm[0]] != axes[perm[1]]) {
+      throw invalid_argument(
+            "(Anti)-Symmetrisation can only be performed over equivalent axes (not '" +
+            axes[perm[0]].label + "' and '" + axes[perm[1]].label + "').");
+    }
+
+    set1.push_back(&label.letter_at(perm[0]));
+    set2.push_back(&label.letter_at(perm[1]));
+
+    processed_indices.push_back(perm[0]);
+    processed_indices.push_back(perm[1]);
   }
   return {lt::expr::label<M>(set1), lt::expr::label<M>(set2)};
+}
+
+template<size_t N>
+std::tuple<lt::expr::label<1>, lt::expr::label<1>, lt::expr::label<1>>
+parse_triple_permutation(
+      const std::vector<AxisInfo>& axes, const lt::expr::label<N>& label,
+      const std::vector<std::vector<size_t>>& permutations) {
+
+  if (permutations.size() != 1)
+    throw invalid_argument(
+      "A triple permutation can only consist of a single permutation, e.g., '0, 1, 2'");
+  const auto& perm = permutations[0];
+  if (perm.size() != 3)
+    throw invalid_argument(
+        "A triple permutation needs to consist of 3 components, e.g. '0, 1, 2'");
+  if (perm[0] == perm[1] || perm[0] == perm[2] || perm[1] == perm[2])
+    throw invalid_argument(
+      "A permutation triple cannot have duplicate indices: ['" +
+      std::to_string(perm[0]) + "', '" + std::to_string(perm[1]) +
+      "', '" + std::to_string(perm[2]) + "'].");
+  if (perm[0] >= N || perm[1] >= N || perm[2] >= N)
+    throw invalid_argument(
+        "Index in triple permutation cannot be larger than dimension.");
+  if (axes[perm[0]] != axes[perm[1]] || axes[perm[0]] != axes[perm[2]])
+    throw invalid_argument(
+        "(Anti)-Symmetrisation can only be performed over equivalent axes (not '" +
+        axes[perm[0]].label + "', '" + axes[perm[1]].label +
+        "' and '" + axes[perm[2]].label + "').");
+  return std::make_tuple(
+      lt::expr::label<1>(label.letter_at(perm[0])),
+      lt::expr::label<1>(label.letter_at(perm[1])),
+      lt::expr::label<1>(label.letter_at(perm[2])));
 }
 
 template <size_t N, typename T>
@@ -1109,15 +1142,28 @@ std::shared_ptr<Tensor> TensorImpl<N>::symmetrise(
 
   // Execute the operation
   auto symmetrised = [&permutations, &lthis, this, label]() {
-    if (permutations.size() == 1) {
-      auto parsed = parse_permutation<1>(m_axes, strip_safe<N>(label), permutations);
-      return 0.5 * lt::expr::symm(parsed.first, parsed.second, lthis);
-    } else if (permutations.size() == 2) {
-      auto parsed = parse_permutation<2>(m_axes, strip_safe<N>(label), permutations);
-      return 0.5 * lt::expr::symm(parsed.first, parsed.second, lthis);
+    // this assumes that all permutations have the same length
+    // but the parse functions throw if this is not the case
+    const auto perm_size = permutations.front().size();
+    if (perm_size == 2) {
+      if (permutations.size() == 1) {
+        auto parsed = parse_permutation<1>(m_axes, strip_safe<N>(label), permutations);
+        return 0.5 * lt::expr::symm(parsed.first, parsed.second, lthis);
+      } else if (permutations.size() == 2) {
+        auto parsed = parse_permutation<2>(m_axes, strip_safe<N>(label), permutations);
+        return 0.5 * lt::expr::symm(parsed.first, parsed.second, lthis);
+      } else {
+        throw runtime_error(
+            "Symmetrisation not implemented for more than two index pairs.");
+      }
+    } else if (perm_size == 3) {
+        const auto parsed = parse_triple_permutation(
+            m_axes, strip_safe<N>(label), permutations);
+        return 1. / 6. * lt::expr::symm(
+            std::get<0>(parsed), std::get<1>(parsed), std::get<2>(parsed), lthis);
     } else {
       throw runtime_error(
-            "Symmetrisation not implemented for more than two index pairs.");
+          "Symmetrisation only implemented for permutations of length 2 and 3.");
     }
   }();
 
@@ -1142,16 +1188,28 @@ std::shared_ptr<Tensor> TensorImpl<N>::antisymmetrise(
 
   // Execute the operation
   auto antisymmetrised = [&permutations, &lthis, this, &label]() {
-    if (permutations.size() == 1) {
-
-      auto parsed = parse_permutation<1>(m_axes, strip_safe<N>(label), permutations);
-      return 0.5 * lt::expr::asymm(parsed.first, parsed.second, lthis);
-    } else if (permutations.size() == 2) {
-      auto parsed = parse_permutation<2>(m_axes, strip_safe<N>(label), permutations);
-      return 0.5 * lt::expr::asymm(parsed.first, parsed.second, lthis);
+    // this assumes that all permutations have the same length
+    // but the parse functions throw if this is not the case
+    const auto perm_size = permutations.front().size();
+    if (perm_size == 2) {
+      if (permutations.size() == 1) {
+        auto parsed = parse_permutation<1>(m_axes, strip_safe<N>(label), permutations);
+        return 0.5 * lt::expr::asymm(parsed.first, parsed.second, lthis);
+      } else if (permutations.size() == 2) {
+        auto parsed = parse_permutation<2>(m_axes, strip_safe<N>(label), permutations);
+        return 0.5 * lt::expr::asymm(parsed.first, parsed.second, lthis);
+      } else {
+        throw runtime_error(
+            "Antisymmetrisation not implemented for more than two index pairs.");
+      }
+    } else if (perm_size == 3) {
+        const auto parsed = parse_triple_permutation(
+            m_axes, strip_safe<N>(label), permutations);
+        return 1. / 6. * lt::expr::asymm(
+            std::get<0>(parsed), std::get<1>(parsed), std::get<2>(parsed), lthis);
     } else {
       throw runtime_error(
-            "Antisymmetrisation not implemented for more than two index pairs.");
+          "Antissymmetrisation only implemented for permutations of length 2 and 3.");
     }
   }();
 
