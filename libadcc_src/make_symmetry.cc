@@ -463,15 +463,15 @@ std::shared_ptr<Symmetry> make_symmetry_operator_basis(
 }
 
 std::shared_ptr<Symmetry> make_symmetry_triples(
-    std::shared_ptr<const MoSpaces> mospaces_ptr, const std::string& space) {
+      std::shared_ptr<const MoSpaces> mospaces_ptr, const std::string& space) {
 
   auto sym = std::make_shared<Symmetry>(mospaces_ptr, space);
 
   const std::vector<std::string>& subspaces = sym->subspaces();
-  const MoSpaces& mo                 = *mospaces_ptr;
+  const MoSpaces& mo                        = *mospaces_ptr;
   if (sym->ndim() != 6) {
-    throw invalid_argument("Expect exactly a six-dimensional space string, not " +
-                           space + ".");
+    throw invalid_argument("Expect exactly a six-dimensional space string, not " + space +
+                           ".");
   }
 
   std::vector<std::string> permutations{"ijkabc"};
@@ -482,8 +482,7 @@ std::shared_ptr<Symmetry> make_symmetry_triples(
   if (subspaces[3] == subspaces[4]) permutations.push_back("-ijkbac");
   if (subspaces[4] == subspaces[5]) permutations.push_back("-ijkacb");
 
-  if (permutations.size() > 1)
-    sym->set_permutations(permutations);
+  if (permutations.size() > 1) sym->set_permutations(permutations);
 
   // Set point-group symmetry: Not used anyway at the moment
   sym->set_irreps_allowed({mo.irrep_totsym()});
@@ -500,22 +499,22 @@ std::shared_ptr<Symmetry> make_symmetry_triples(
     //       completely necessary and as for example the next statement of
     //       forbidden blocks should actually be shifted one up out of the if.
     sym->set_spin_blocks_forbidden({
-        "aaaaab", "aaaaba", "aaabaa", // 0/1
-        "aabaaa", "abaaaa", "baaaaa", // 1/0
-        "aaaabb", "aaabab", "aaabba", // 0/2
-        "abbaaa", "babaaa", "bbaaaa", // 2/0
-        "aaabbb", // 0/3
-        "bbbaaa", // 3/0
-        "aababb", "aabbab", "aabbba", // 1/2
-        "abaabb", "ababab", "ababba", // 1/2
-        "baaabb", "baabab", "baabba", // 1/2
-        "abbaab", "abbaba", "abbbaa", // 2/1
-        "babaab", "bababa", "babbaa", // 2/1
-        "bbaaab", "bbaaba", "bbabaa", // 2/1
-        "aabbbb", "ababbb", "baabbb", // 1/3
-        "bbbaab", "bbbaba", "bbbbaa", // 3/1
-        "abbbbb", "babbbb", "bbabbb", // 2/3
-        "bbbabb", "bbbbab", "bbbbba", // 3/2
+          "aaaaab", "aaaaba", "aaabaa",  // 0/1
+          "aabaaa", "abaaaa", "baaaaa",  // 1/0
+          "aaaabb", "aaabab", "aaabba",  // 0/2
+          "abbaaa", "babaaa", "bbaaaa",  // 2/0
+          "aaabbb",                      // 0/3
+          "bbbaaa",                      // 3/0
+          "aababb", "aabbab", "aabbba",  // 1/2
+          "abaabb", "ababab", "ababba",  // 1/2
+          "baaabb", "baabab", "baabba",  // 1/2
+          "abbaab", "abbaba", "abbbaa",  // 2/1
+          "babaab", "bababa", "babbaa",  // 2/1
+          "bbaaab", "bbaaba", "bbabaa",  // 2/1
+          "aabbbb", "ababbb", "baabbb",  // 1/3
+          "bbbaab", "bbbaba", "bbbbaa",  // 3/1
+          "abbbbb", "babbbb", "bbabbb",  // 2/3
+          "bbbabb", "bbbbab", "bbbbba",  // 3/2
     });
     sym->set_spin_block_maps({
           {"aaaaaa", "bbbbbb", 1.},
