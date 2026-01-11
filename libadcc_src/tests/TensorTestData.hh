@@ -44,6 +44,12 @@ struct TensorTestData {
   /** The anti-symmetrisation of above tensor by permuting simultaneously
    *  axes 0 and 1 and 2 / 3 */
   static std::vector<double> a_asym_01_23;
+
+  /** The symmetrisation of above tensor along axis 0, 1 and 2 */
+  static std::vector<double> a_sym_012;
+
+  /** The anti-symmetrisation of above tensor along axis 0, 1 and 2 */
+  static std::vector<double> a_asym_012;
 };
 
 }  // namespace tests

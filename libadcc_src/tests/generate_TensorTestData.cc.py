@@ -30,6 +30,16 @@ a_sym_01 = 0.5 * (a + a.transpose((1, 0, 2, 3)))
 a_asym_01 = 0.5 * (a - a.transpose((1, 0, 2, 3)))
 a_sym_01_23 = 0.5 * (a + a.transpose((1, 0, 3, 2)))
 a_asym_01_23 = 0.5 * (a - a.transpose((1, 0, 3, 2)))
+a_sym_012 = 1 / 6 * (
+    a + a.transpose((0, 2, 1, 3))
+    + a.transpose((1, 0, 2, 3)) + a.transpose((1, 2, 0, 3))
+    + a.transpose((2, 1, 0, 3)) + a.transpose((2, 0, 1, 3))
+)
+a_asym_012 = 1 / 6 * (
+    a - a.transpose((0, 2, 1, 3))
+    - a.transpose((1, 0, 2, 3)) + a.transpose((1, 2, 0, 3))
+    - a.transpose((2, 1, 0, 3)) + a.transpose((2, 0, 1, 3))
+)
 
 #
 #
@@ -80,6 +90,10 @@ with open("./TensorTestData.cc", "w") as f:
             + npprint(a_sym_01_23.ravel()) + "};")
     f.write("std::vector<double> TensorTestData::a_asym_01_23 = {"
             + npprint(a_asym_01_23.ravel()) + "};")
+    f.write("std::vector<double> TensorTestData::a_sym_012 = {"
+            + npprint(a_sym_012.ravel()) + "};")
+    f.write("std::vector<double> TensorTestData::a_asym_012 = {"
+            + npprint(a_asym_012.ravel()) + "};")
     f.write("\n}\n}")
 
 
