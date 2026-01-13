@@ -20,8 +20,8 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from .NParticleOperator import NParticleOperator, OperatorSymmetry
-
+from .NParticleDensity import NParticleDensity
+from .NParticleOperator import OperatorSymmetry
 from .Tensor import Tensor
 from .functions import einsum
 from .MoSpaces import split_spaces
@@ -29,10 +29,10 @@ from .MoSpaces import split_spaces
 import libadcc
 
 
-class TwoParticleOperator(NParticleOperator):
+class TwoParticleDensity(NParticleDensity):
     def __init__(self, spaces, symmetry=OperatorSymmetry.HERMITIAN):
         """
-        Construct a TwoParticleOperator object. All blocks are initialised
+        Construct a TwoParticleDensity object. All blocks are initialised
         as zero blocks.
 
         Parameters
@@ -46,7 +46,7 @@ class TwoParticleOperator(NParticleOperator):
 
     def _construct_empty(self):
         """
-        Create an empty instance of a TwoParticleOperator
+        Create an empty instance of a TwoParticleDensity
         """
         return self.__class__(
             self.mospaces,
@@ -60,7 +60,6 @@ class TwoParticleOperator(NParticleOperator):
         if isinstance(refstate_or_coefficients, libadcc.ReferenceState):
             hf = refstate_or_coefficients
             coeff_map = {}
-            ovlp = refstate_or_coefficients.operators.overlap_ao
             for sp in self.orbital_subspaces:
                 coeff_map[f"{sp}_a"] = hf.orbital_coefficients_alpha(sp + "b")
                 coeff_map[f"{sp}_b"] = hf.orbital_coefficients_beta(sp + "b")
@@ -75,29 +74,21 @@ class TwoParticleOperator(NParticleOperator):
             factor = self.canonical_factors[block]
             d = self.block(block)
             dm_bb_a += factor * einsum(
-                "pa,ta,qb,ub,tuvw,vc,rc,wd,sd->pqrs",
-                ovlp,
+                "tp,uq,tuvw,vr,ws->pqrs",
                 coeff_map[f"{spaces[0]}_a"],
-                ovlp,
                 coeff_map[f"{spaces[1]}_a"],
                 d,
                 coeff_map[f"{spaces[2]}_a"],
-                ovlp,
                 coeff_map[f"{spaces[3]}_a"],
-                ovlp
             )
 
             dm_bb_b += factor * einsum(
-                "pa,ta,qb,ub,tuvw,vc,rc,wd,sd->pqrs",
-                ovlp,
+                "tp,uq,tuvw,vr,ws->pqrs",
                 coeff_map[f"{spaces[0]}_b"],
-                ovlp,
                 coeff_map[f"{spaces[1]}_b"],
                 d,
                 coeff_map[f"{spaces[2]}_b"],
-                ovlp,
                 coeff_map[f"{spaces[3]}_b"],
-                ovlp
             )
 
         if self.symmetry == OperatorSymmetry.HERMITIAN:

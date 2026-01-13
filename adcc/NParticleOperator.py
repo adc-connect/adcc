@@ -20,13 +20,14 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import numpy as np
 from enum import Enum
-from itertools import product, combinations_with_replacement
+from itertools import product
+import numpy as np
+import string
 
 import libadcc
 
-from .functions import evaluate
+from .functions import evaluate, einsum
 from .MoSpaces import split_spaces
 from .Tensor import Tensor
 
@@ -50,6 +51,10 @@ class NParticleOperator:
         ----------
         spaces : adcc.MoSpaces or adcc.ReferenceState or adcc.LazyMp
             MoSpaces object
+
+        n_particle_operator: int
+            Particle rank of the operator, i.e. the number of creation and
+            annihilation operators involved.
 
         symmetry : OperatorSymmetry, optional
             Symmetry type of the operator. Can be:
@@ -83,14 +88,16 @@ class NParticleOperator:
         self._tensors = {}
 
         # Initialize all blocks; symmetry rules are applied lazily upon access.
-        combs = list(product(self.orbital_subspaces, repeat=2*self._n_particle_op))
+        combs = list(product(self.orbital_subspaces,
+                             repeat=2 * self._n_particle_op))
         self.blocks = ["".join((comb)) for comb in combs]
         self.canonical_blocks = []
         self.canonical_factors = {}
 
         for block in self.blocks:
             from .block import get_canonical_block
-            bra, ket = block[:2*self.n_particle_op], block[2*self.n_particle_op:]
+            bra = block[:2 * self.n_particle_op]
+            ket = block[2 * self.n_particle_op:]
             canonical_block, _, _ = get_canonical_block(bra, ket, self.symmetry)
             if canonical_block not in self.canonical_blocks:
                 self.canonical_blocks.append(canonical_block)
@@ -142,7 +149,8 @@ class NParticleOperator:
         from . import block as b
         if block in self.blocks_nonzero:
             return self._tensors[block]
-        bra, ket = block[:2*self.n_particle_op], block[2*self.n_particle_op:]
+        bra = block[:2 * self.n_particle_op]
+        ket = block[2 * self.n_particle_op:]
         canonical_block, factor, transpose = b.get_canonical_block(
             bra, ket, self.symmetry
         )
@@ -167,7 +175,8 @@ class NParticleOperator:
                 return self._tensors[blk]
             else:
                 from . import block as b
-                bra, ket = blk[:2*self.n_particle_op], blk[2*self.n_particle_op:]
+                bra = blk[:2 * self.n_particle_op]
+                ket = blk[2 * self.n_particle_op:]
                 canonical_block, factor, transpose = b.get_canonical_block(
                     bra, ket, self.symmetry
                 )
@@ -264,8 +273,87 @@ class NParticleOperator:
             ret.reference_state = self.reference_state
         return ret
 
-    def _transform_to_ao(self, refstate_or_coefficients) -> tuple[Tensor, Tensor]:
-        raise NotImplementedError("implement it")
+    def _transform_to_ao(self, refstate) -> tuple[Tensor, Tensor]:
+        if not self.blocks_nonzero:
+            raise ValueError("At least one non-zero block is needed.")
+
+        if not isinstance(refstate, libadcc.ReferenceState):
+            raise TypeError("refstate needs to be an libadcc.ReferenceState.")
+
+        coeff_map = {}
+        for sp in self.orbital_subspaces:
+            coeff_map[sp + "_a"] = refstate.orbital_coefficients_alpha(sp + "b")
+            coeff_map[sp + "_b"] = refstate.orbital_coefficients_beta(sp + "b")
+        ovlp = refstate.operators.overlap_ao
+
+        dm_bb_a = 0
+        dm_bb_b = 0
+
+        for block in self.blocks_nonzero:
+            # only canonical blocks
+            spaces = split_spaces(block)
+            factor = self.canonical_factors[block]
+
+            dm_bb_a += factor * self._construct_einsum(
+                tensor_mo=self.block(block),
+                coeff_map=coeff_map,
+                ovlp=ovlp,
+                bra_spaces=spaces[:self.n_particle_op],
+                ket_spaces=spaces[self.n_particle_op:],
+                spin="a",
+            )
+            dm_bb_b += factor * self._construct_einsum(
+                tensor_mo=self.block(block),
+                coeff_map=coeff_map,
+                ovlp=ovlp,
+                bra_spaces=spaces[:self.n_particle_op],
+                ket_spaces=spaces[self.n_particle_op:],
+                spin="b",
+            )
+
+        if self.n_particle_op == 1:
+            if self.symmetry == OperatorSymmetry.HERMITIAN:
+                dm_bb_a = dm_bb_a.symmetrise()
+                dm_bb_b = dm_bb_b.symmetrise()
+            elif self.symmetry == OperatorSymmetry.ANTIHERMITIAN:
+                dm_bb_a = dm_bb_a.antisymmetrise()
+                dm_bb_b = dm_bb_b.antisymmetrise()
+        else:
+            raise NotImplementedError
+        return (dm_bb_a.evaluate(), dm_bb_b.evaluate())
+
+    def _construct_einsum(self, tensor_mo, coeff_map, ovlp,
+                          bra_spaces, ket_spaces, spin="a") -> Tensor:
+        rank = 2 * self.n_particle_op
+
+        letters = string.ascii_lowercase
+        # ensure that there are enough letters
+        assert rank * 3 <= len(letters)
+
+        mo_indices = letters[:rank]
+        ao_indices = letters[rank:2 * rank]
+        ovlp_indices = letters[2 * rank:3 * rank]
+
+        einsum_inputs = []
+        einsum_indices = []
+
+        for i, sp in enumerate(bra_spaces):
+            einsum_inputs.extend([ovlp, coeff_map[f"{sp}_{spin}"]])
+            einsum_indices.append(f"{ovlp_indices[i]}{ao_indices[i]}")
+            einsum_indices.append(f"{mo_indices[i]}{ovlp_indices[i]}")
+
+        einsum_inputs.append(tensor_mo)
+        einsum_indices.append(mo_indices)
+
+        for i, sp in enumerate(ket_spaces):
+            einsum_inputs.extend([ovlp, coeff_map[f"{sp}_{spin}"]])
+            einsum_indices.append(f"{ao_indices[i + int(rank / 2)]}"
+                                  f"{ovlp_indices[i + int(rank / 2)]}")
+            einsum_indices.append(f"{mo_indices[i + int(rank / 2)]}"
+                                  f"{ovlp_indices[i + int(rank / 2)]}")
+
+        einsum_str = ",".join(einsum_indices) + "->" + "".join(ao_indices)
+        return einsum(einsum_str, *einsum_inputs)
 
     def to_ao_basis(self, refstate_or_coefficients=None):
         """
@@ -311,7 +399,8 @@ class NParticleOperator:
         if self.symmetry == OperatorSymmetry.NOSYMMETRY \
                 and other.symmetry != OperatorSymmetry.NOSYMMETRY:
             for block in self.blocks_nonzero:
-                bra, ket = block[:2*self.n_particle_op], block[2*self.n_particle_op:]
+                bra = block[:2 * self.n_particle_op]
+                ket = block[2 * self.n_particle_op:]
                 c_block, factor, transpose = b.get_canonical_block(
                     bra, ket, other.symmetry
                 )
@@ -357,7 +446,8 @@ class NParticleOperator:
         if self.symmetry == OperatorSymmetry.NOSYMMETRY \
                 and other.symmetry is not OperatorSymmetry.NOSYMMETRY:
             for block in self.blocks_nonzero:
-                bra, ket = block[:2*self.n_particle_op], block[2*self.n_particle_op:]
+                bra = block[:2 * self.n_particle_op]
+                ket = block[2 * self.n_particle_op:]
                 c_block, factor, transpose = b.get_canonical_block(
                     bra, ket, other.symmetry
                 )
@@ -468,7 +558,7 @@ def product_trace(op1, op2):
     """
     Compute the expectation value (inner product) of two N-particle operators.
 
-    For the special case of a density operator and a general operator, the 
+    For the special case of a density operator and a general operator, the
     inner product is identical in the AO and MO basis.
 
     Parameters
@@ -499,7 +589,7 @@ def product_trace(op1, op2):
             for b in list(factors.keys()):
                 spaces = split_spaces(b)
                 n = op1.n_particle_op
-                if spaces[:2 * n] != spaces[2 * n:]:
+                if spaces[:n] != spaces[n:]:
                     to_remove.append(b)
             # remove non diagonals blocks
             for b in to_remove:

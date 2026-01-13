@@ -39,8 +39,9 @@ def __getattr__(attr):
 
 T = TypeVar("T")
 
+
 def _sort_anticommuting(to_sort: list[T],
-                        key: Union[Callable[[T], Any], None]=None
+                        key: Union[Callable[[T], Any], None] = None
                         ) -> tuple[list[T], int]:
     """
     Sort a list of mutually anticommuting operators into canonical order.
@@ -68,9 +69,9 @@ def _sort_anticommuting(to_sort: list[T],
     rng = tuple(range(len(to_sort) - 1))
     rev = tuple(range(len(to_sort) - 3, -1, -1))
 
-    if key == None:
+    if key is None:
         key = lambda x: x
-                
+
     keys = list(map(key, to_sort))
     to_sort = list(to_sort)
 
@@ -137,24 +138,24 @@ def get_canonical_block(bra: str, ket: str,
         return tuple(q)
 
     factor = 1
-    
+
     bra = split_spaces(bra) if bra else []
     bra_sorted, bra_factor = _sort_anticommuting(
         list(enumerate(bra)), key=lambda tpl: tpl[1]
     )
     bra_transpose = [val for val, _ in bra_sorted]
     bra_space_sorted = [val for _, val in bra_sorted]
-    factor *=  bra_factor
+    factor *= bra_factor
 
     ket = split_spaces(ket) if ket else []
     ket_sorted, ket_factor = _sort_anticommuting(
         list(enumerate(ket)), key=lambda tpl: tpl[1]
     )
-    ket_transpose = [val for val, _ in ket_sorted] 
+    ket_transpose = [val for val, _ in ket_sorted]
     ket_transpose = tuple(x + len(bra) for x in ket_transpose)
     ket_space_sorted = [val for _, val in ket_sorted]
-    factor *=  ket_factor
-        
+    factor *= ket_factor
+
     transpose = (*bra_transpose, *ket_transpose)
     canonical_block = "".join(bra_space_sorted) + "".join(ket_space_sorted)
 

@@ -20,19 +20,12 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
-import unittest
 import pytest
-import numpy as np
 from numpy.testing import assert_array_almost_equal_nulp, assert_equal
 
-from adcc import zeros_like
-from adcc.NParticleOperator import product_trace, OperatorSymmetry, NParticleOperator
-from adcc.MoSpaces import split_spaces
+from adcc.NParticleOperator import OperatorSymmetry, NParticleOperator
 
 from .testdata_cache import testdata_cache
-from . import testcases
-from adcc.backends import run_hf
 from itertools import combinations_with_replacement
 
 
@@ -40,6 +33,7 @@ operator_sym = [OperatorSymmetry.HERMITIAN, OperatorSymmetry.ANTIHERMITIAN,
                 OperatorSymmetry.NOSYMMETRY]
 op_syms_two_operators = list(combinations_with_replacement(operator_sym, 2))
 n_particles = [1, 2]
+
 
 class TestNParticleOperator:
     #
@@ -69,7 +63,7 @@ class TestNParticleOperator:
     @pytest.mark.parametrize("n_particle_op", n_particles)
     @pytest.mark.parametrize("op_sym", op_syms_two_operators,
                              ids=[f"{c[0].name}_{c[1].name}"
-                             for c in op_syms_two_operators])
+                                  for c in op_syms_two_operators])
     def test_add(self, n_particle_op, op_sym):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
         a = NParticleOperator(ref, n_particle_op=n_particle_op, symmetry=op_sym[0])
@@ -85,7 +79,7 @@ class TestNParticleOperator:
     @pytest.mark.parametrize("n_particle_op", n_particles)
     @pytest.mark.parametrize("op_sym", op_syms_two_operators,
                              ids=[f"{c[0].name}_{c[1].name}"
-                             for c in op_syms_two_operators])
+                                  for c in op_syms_two_operators])
     def test_iadd(self, n_particle_op, op_sym):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
         a = NParticleOperator(ref, n_particle_op=n_particle_op, symmetry=op_sym[0])
@@ -97,7 +91,8 @@ class TestNParticleOperator:
         if op_sym[0] != op_sym[1] and op_sym[1] == OperatorSymmetry.NOSYMMETRY:
             with pytest.raises(ValueError):
                 a += b
-        elif op_sym[0] != op_sym[1] and op_sym[1] != OperatorSymmetry.NOSYMMETRY and op_sym[0] != OperatorSymmetry.NOSYMMETRY:
+        elif op_sym[0] != op_sym[1] and op_sym[1] != OperatorSymmetry.NOSYMMETRY \
+                and op_sym[0] != OperatorSymmetry.NOSYMMETRY:
             with pytest.raises(ValueError):
                 a += b
         else:
@@ -107,7 +102,7 @@ class TestNParticleOperator:
     @pytest.mark.parametrize("n_particle_op", n_particles)
     @pytest.mark.parametrize("op_sym", op_syms_two_operators,
                              ids=[f"{c[0].name}_{c[1].name}"
-                             for c in op_syms_two_operators])
+                                  for c in op_syms_two_operators])
     def test_sub(self, n_particle_op, op_sym):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
         a = NParticleOperator(ref, n_particle_op=n_particle_op, symmetry=op_sym[0])
@@ -128,7 +123,7 @@ class TestNParticleOperator:
     @pytest.mark.parametrize("n_particle_op", n_particles)
     @pytest.mark.parametrize("op_sym", op_syms_two_operators,
                              ids=[f"{c[0].name}_{c[1].name}"
-                             for c in op_syms_two_operators])
+                                  for c in op_syms_two_operators])
     def test_isub(self, n_particle_op, op_sym):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
         a = NParticleOperator(ref, n_particle_op=n_particle_op, symmetry=op_sym[0])
@@ -141,7 +136,8 @@ class TestNParticleOperator:
         if op_sym[0] != op_sym[1] and op_sym[1] == OperatorSymmetry.NOSYMMETRY:
             with pytest.raises(ValueError):
                 a -= b
-        elif op_sym[0] != op_sym[1] and op_sym[1] != OperatorSymmetry.NOSYMMETRY and op_sym[0] != OperatorSymmetry.NOSYMMETRY:
+        elif op_sym[0] != op_sym[1] and op_sym[1] != OperatorSymmetry.NOSYMMETRY \
+                and op_sym[0] != OperatorSymmetry.NOSYMMETRY:
             with pytest.raises(ValueError):
                 a -= b
         else:
@@ -151,7 +147,7 @@ class TestNParticleOperator:
     @pytest.mark.parametrize("n_particle_op", n_particles)
     @pytest.mark.parametrize("op_sym", operator_sym,
                              ids=[f"{c.name}"
-                             for c in operator_sym])
+                                  for c in operator_sym])
     def test_mul(self, n_particle_op, op_sym):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
         a = NParticleOperator(ref, n_particle_op=n_particle_op, symmetry=op_sym)
@@ -162,7 +158,7 @@ class TestNParticleOperator:
     @pytest.mark.parametrize("n_particle_op", n_particles)
     @pytest.mark.parametrize("op_sym", operator_sym,
                              ids=[f"{c.name}"
-                             for c in operator_sym])
+                                  for c in operator_sym])
     def test_rmul(self, n_particle_op, op_sym):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
         a = NParticleOperator(ref, n_particle_op=n_particle_op, symmetry=op_sym)
@@ -173,7 +169,7 @@ class TestNParticleOperator:
     @pytest.mark.parametrize("n_particle_op", n_particles)
     @pytest.mark.parametrize("op_sym", operator_sym,
                              ids=[f"{c.name}"
-                             for c in operator_sym])
+                                  for c in operator_sym])
     def test_imul(self, n_particle_op, op_sym):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
         a = NParticleOperator(ref, n_particle_op=n_particle_op, symmetry=op_sym)

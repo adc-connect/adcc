@@ -21,20 +21,18 @@
 ##
 ## ---------------------------------------------------------------------
 import adcc
-import unittest
 import pytest
 import numpy as np
-from numpy.testing import assert_array_almost_equal_nulp, assert_equal
 
-from adcc import OneParticleOperator, zeros_like
+from adcc import OneParticleOperator
 from adcc.NParticleOperator import product_trace, OperatorSymmetry
 from adcc.OneParticleDensity import OneParticleDensity
 from adcc.MoSpaces import split_spaces
 
-from .testdata_cache import testdata_cache
 from . import testcases
 from adcc.backends import run_hf
 from itertools import combinations_with_replacement
+import string
 
 
 operator_sym = [OperatorSymmetry.HERMITIAN, OperatorSymmetry.ANTIHERMITIAN,
@@ -42,10 +40,18 @@ operator_sym = [OperatorSymmetry.HERMITIAN, OperatorSymmetry.ANTIHERMITIAN,
 op_syms_two_operators = list(combinations_with_replacement(operator_sym, 2))
 
 
+def trace_contract(op_a, op_b):
+    letters = string.ascii_lowercase
+    indices = "".join([letters[i] for i in range(op_a.ndim)])  # "a", "b", "c", ...
+    subscripts = f"{indices},{indices}->"
+    return np.einsum(subscripts, op_a, op_b)
+
+
 class TestOneParticleDensity:
     @pytest.mark.parametrize("symmetries",
-    op_syms_two_operators,
-    ids=[f"{c[0].name}_{c[1].name}" for c in op_syms_two_operators])
+                             op_syms_two_operators,
+                             ids=[f"{c[0].name}_{c[1].name}"
+                                  for c in op_syms_two_operators])
     def test_product_trace(self, symmetries):
         system = "h2o_sto3g"
         system: testcases.TestCase = testcases.get_by_filename(system).pop()
@@ -55,19 +61,20 @@ class TestOneParticleDensity:
         sym_1 = symmetries[0]
         sym_2 = symmetries[1]
 
-        op_a_mo = OneParticleOperator(ref.mospaces, symmetry=sym_1)
+        op_a_mo = OneParticleOperator(ref, symmetry=sym_1)
+        op_b_mo = OneParticleDensity(ref, symmetry=sym_2)
+
         op_a_mo.set_random()
         op_a_ao_a = op_a_mo.to_ao_basis(ref)[0].to_ndarray()
         op_a_ao_b = op_a_mo.to_ao_basis(ref)[1].to_ndarray()
 
-        op_b_mo = OneParticleDensity(ref.mospaces, symmetry=sym_2)
         op_b_mo.set_random()
         op_b_ao_a = op_b_mo.to_ao_basis(ref)[0].to_ndarray()
         op_b_ao_b = op_b_mo.to_ao_basis(ref)[1].to_ndarray()
 
         ptrace_ao = (
-            np.trace(op_a_ao_a.T @ op_b_ao_a)
-            + np.trace(op_a_ao_a.T @ op_b_ao_b)
+            trace_contract(op_a_ao_a, op_b_ao_a)
+            + trace_contract(op_a_ao_b, op_b_ao_b)
         )
 
         ptrace_mo_ref = 0
@@ -83,7 +90,7 @@ class TestOneParticleDensity:
                 for b in list(factors.keys()):
                     spaces = split_spaces(b)
                     n = op_a_mo.n_particle_op
-                    if spaces[:2 * n] != spaces[2 * n:]:
+                    if spaces[:n] != spaces[n:]:
                         to_remove.append(b)
                 # remove non diagonals blocks
                 for b in to_remove:
@@ -93,7 +100,6 @@ class TestOneParticleDensity:
             ptrace_mo_ref += factor * np.sum(
                 op_a_mo[b].to_ndarray() * op_b_mo[b].to_ndarray()
             )
-
         assert ptrace_mo_ref == pytest.approx(product_trace(op_a_mo, op_b_mo))
         assert product_trace(op_a_mo, op_b_mo) == pytest.approx(ptrace_ao)
-        assert product_trace(op_a_mo, op_b_mo) == pytest.approx(ptrace_ao)
+        assert product_trace(op_b_mo, op_a_mo) == pytest.approx(ptrace_ao)

@@ -21,14 +21,11 @@
 ##
 ## ---------------------------------------------------------------------
 import adcc
-import unittest
 import pytest
 import numpy as np
-from numpy.testing import assert_array_almost_equal_nulp, assert_equal
 
-from adcc import OneParticleOperator, zeros_like
-from adcc.NParticleOperator import product_trace, OperatorSymmetry
-from adcc.MoSpaces import split_spaces
+from adcc import OneParticleOperator
+from adcc.NParticleOperator import OperatorSymmetry
 
 from .testdata_cache import testdata_cache
 from . import testcases
@@ -38,7 +35,8 @@ from itertools import combinations_with_replacement
 
 operator_sym = [OperatorSymmetry.HERMITIAN, OperatorSymmetry.ANTIHERMITIAN,
                 OperatorSymmetry.NOSYMMETRY]
-op_syms_two_operators = list(combinations_with_replacement(operator_sym, 2))                
+op_syms_two_operators = list(combinations_with_replacement(operator_sym, 2))
+
 
 class TestOneParticleOperator:
     def test_to_ao_basis_hermitian(self):
@@ -99,9 +97,7 @@ class TestOneParticleOperator:
         # no AO transformation with only zero blocks possible
         with pytest.raises(ValueError):
             a.to_ao_basis(ref)
-        a.oo.set_random()
-        a.ov.set_random()
-        a.vv.set_random()
+        a.set_random()
         assert a.size == a.shape[0] * a.shape[1]
         assert not a.is_zero_block("v1o1")
         a.set_zero_block("o1o1")

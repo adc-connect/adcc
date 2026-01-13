@@ -20,29 +20,26 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
-import unittest
 import pytest
 import numpy as np
-from numpy.testing import assert_array_almost_equal_nulp, assert_equal
 
-from adcc import TwoParticleOperator, zeros_like
-from adcc.NParticleOperator import product_trace, OperatorSymmetry
+from adcc import TwoParticleOperator
+from adcc.NParticleOperator import OperatorSymmetry
 
 from .testdata_cache import testdata_cache
 from itertools import combinations_with_replacement
 
 operator_sym = [OperatorSymmetry.HERMITIAN, OperatorSymmetry.ANTIHERMITIAN,
                 OperatorSymmetry.NOSYMMETRY]
-op_syms_two_operators = list(combinations_with_replacement(operator_sym, 2))                
+op_syms_two_operators = list(combinations_with_replacement(operator_sym, 2))
 
 
 class TestTwoParticleOperator:
     @pytest.mark.parametrize("symmetry", operator_sym,
                              ids=[f"{c.name}" for c in operator_sym])
-    def test_to_ndarray_herm(self, symmetry):
+    def test_to_ndarray(self, symmetry):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
-        a = TwoParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
+        a = TwoParticleOperator(ref.mospaces, symmetry=symmetry)
 
         a.set_random()
 
@@ -58,7 +55,7 @@ class TestTwoParticleOperator:
         n_orb = no + nv
 
         a_full = np.zeros((n_orb, n_orb, n_orb, n_orb))
-        # oo oo 
+        # oo oo
         a_full[:no, :no, :no, :no] = a_oooo
         # oo ov
         a_full[:no, :no, :no, no:] = a_ooov
@@ -71,49 +68,55 @@ class TestTwoParticleOperator:
         # vv vv
         a_full[no:, no:, no:, no:] = a_vvvv
 
-        # if symmetry != OperatorSymmetry.ANTIHERMITIAN:
         # oo vo
-        a_full[:no, :no, no:, :no] = -a_ooov.transpose((0,1,3,2))
-        # ov oo
-        a_full[:no, no:, :no, :no] = a_ooov.transpose((2,3,0,1))
-        # vo oo
-        a_full[no:, :no, :no, :no] = -a_ooov.transpose((3,2,0,1))
+        a_full[:no, :no, no:, :no] = -a_ooov.transpose((0, 1, 3, 2))
         # ov vo
-        a_full[:no, no:, no:, :no] = -a_ovov.transpose((0,1,3,2))
+        a_full[:no, no:, no:, :no] = -a_ovov.transpose((0, 1, 3, 2))
         # vo vo
-        a_full[no:, :no, no:, :no] = a_ovov.transpose((1,0,3,2))
+        a_full[no:, :no, no:, :no] = a_ovov.transpose((1, 0, 3, 2))
         # vo ov
-        a_full[no:, :no, :no, no:] = -a_ovov.transpose((1,0,2,3))
-        # vv oo
-        a_full[no:, no:, :no, :no] = a_oovv.transpose((2,3,0,1))
+        a_full[no:, :no, :no, no:] = -a_ovov.transpose((1, 0, 2, 3))
         # vo vv
-        a_full[no:, :no, no:, no:] = -a_ovvv.transpose((1,0,2,3))
-        # vv vo
-        a_full[no:, no:, no:, :no] = -a_ovvv.transpose((2,3,1,0))
-        # vv ov
-        a_full[no:, no:, :no, no:] = a_ovvv.transpose((2,3,0,1))
+        a_full[no:, :no, no:, no:] = -a_ovvv.transpose((1, 0, 2, 3))
 
-        # else:
-            # # oo vo
-            # a_full[:no, :no, no:, :no] = -a_ooov.transpose((0,1,3,2))
-            # # ov oo
-            # a_full[:no, no:, :no, :no] = -a_ooov.transpose((2,3,0,1))
-            # # vo oo
-            # a_full[no:, :no, :no, :no] = a_ooov.transpose((3,2,0,1))
-            # # ov vo
-            # a_full[:no, no:, no:, :no] = -a_ovov.transpose((0,1,3,2))
-            # # vo vo
-            # a_full[no:, :no, no:, :no] = a_ovov.transpose((1,0,3,2))
-            # # vo ov
-            # a_full[no:, :no, :no, no:] = -a_ovov.transpose((1,0,2,3))
-            # # vv oo
-            # a_full[no:, no:, :no, :no] = -a_oovv.transpose((2,3,0,1))
-            # # vo vv
-            # a_full[no:, :no, no:, no:] = -a_ovvv.transpose((1,0,2,3))
-            # # vv vo
-            # a_full[no:, no:, no:, :no] = a_ovvv.transpose((2,3,1,0))
-            # # vv ov
-            # a_full[no:, no:, :no, no:] = -a_ovvv.transpose((2,3,0,1))
+        if symmetry == OperatorSymmetry.HERMITIAN:
+            # ov oo
+            a_full[:no, no:, :no, :no] = a_ooov.transpose((2, 3, 0, 1))
+            # vo oo
+            a_full[no:, :no, :no, :no] = -a_ooov.transpose((3, 2, 0, 1))
+            # vv oo
+            a_full[no:, no:, :no, :no] = a_oovv.transpose((2, 3, 0, 1))
+            # vv vo
+            a_full[no:, no:, no:, :no] = -a_ovvv.transpose((2, 3, 1, 0))
+            # vv ov
+            a_full[no:, no:, :no, no:] = a_ovvv.transpose((2, 3, 0, 1))
+
+        elif symmetry == OperatorSymmetry.ANTIHERMITIAN:
+            # ov oo
+            a_full[:no, no:, :no, :no] = -a_ooov.transpose((2, 3, 0, 1))
+            # vo oo
+            a_full[no:, :no, :no, :no] = a_ooov.transpose((3, 2, 0, 1))
+            # vv oo
+            a_full[no:, no:, :no, :no] = -a_oovv.transpose((2, 3, 0, 1))
+            # vv vo
+            a_full[no:, no:, no:, :no] = a_ovvv.transpose((2, 3, 1, 0))
+            # vv ov
+            a_full[no:, no:, :no, no:] = -a_ovvv.transpose((2, 3, 0, 1))
+
+        else:
+            a_ovoo = a.ovoo.to_ndarray()
+            a_vvov = a.vvov.to_ndarray()
+            a_vvoo = a.vvoo.to_ndarray()
+            # ov oo
+            a_full[:no, no:, :no, :no] = a_ovoo
+            # vo oo
+            a_full[no:, :no, :no, :no] = -a_ovoo.transpose((1, 0, 2, 3))
+            # vv oo
+            a_full[no:, no:, :no, :no] = a_vvoo
+            # vv ov
+            a_full[no:, no:, :no, no:] = a_vvov
+            # vv vo
+            a_full[no:, no:, no:, :no] = -a_vvov.transpose((0, 1, 3, 2))
 
         np.testing.assert_almost_equal(a_full, a.to_ndarray(),
                                        decimal=12)
@@ -124,13 +127,8 @@ class TestTwoParticleOperator:
         # no AO transformation with only zero blocks possible
         with pytest.raises(ValueError):
             a.to_ao_basis(ref)
-        a.oooo = a.oooo.set_random()
-        a.ooov = a.ooov.set_random()
-        a.oovv = a.oovv.set_random()
-        a.ovov = a.ovov.set_random()
-        a.ovvv = a.ovvv.set_random()
-        a.vvvv = a.vvvv.set_random()
-        assert a.size == a.shape[0] * a.shape[1] * a.shape[2] * a.shape[3] 
+        a.set_random()
+        assert a.size == a.shape[0] * a.shape[1] * a.shape[2] * a.shape[3]
         assert not a.is_zero_block("v1o1v1v1")
         a.set_zero_block("o1o1o1o1")
         assert a.is_zero_block("o1o1o1o1")
