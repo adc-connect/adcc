@@ -93,9 +93,10 @@ std::shared_ptr<Symmetry> make_symmetry_operator(
  *
  * \param mospaces_ptr     MoSpaces pointer
  * \param n_bas            Number of AO basis functions
- * \param symmetry         Is the tensor symmetric (only in effect if both space
- *                         axes identical). false disables a setup of permutational
- *                         symmetry.
+ * \param symmetry         Is the tensor symmetric (hermitian/antihermitian, only
+ *                         in effect if both space axes identical).
+ *                         Nosymmetry disables a setup of permutational symmetry.
+ * \param n_particle_op    NParticle Operator
  * \param blocks           Which blocks of the operator to return. Valid values
  *                         are "ab" to return a tensor for both alpha and beta
  *                         block as a block-diagonal tensor, "a" to only return a
@@ -106,7 +107,8 @@ std::shared_ptr<Symmetry> make_symmetry_operator(
  */
 std::shared_ptr<Symmetry> make_symmetry_operator_basis(
       std::shared_ptr<const MoSpaces> mospaces_ptr, size_t n_bas,
-      std::string symmetry, const std::string& blocks);
+      const std::string& symmetry, const int& n_particle_op,
+      const std::string& blocks);
 
 ///@}
 }  // namespace libadcc

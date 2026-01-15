@@ -23,10 +23,14 @@
 import pytest
 import numpy as np
 
+import adcc
 from adcc import TwoParticleOperator
 from adcc.NParticleOperator import OperatorSymmetry
 
 from .testdata_cache import testdata_cache
+from . import testcases
+from adcc.backends import run_hf
+from adcc.OperatorIntegrals import replicate_ao_block, transform_operator_ao2mo
 from itertools import combinations_with_replacement
 
 operator_sym = [OperatorSymmetry.HERMITIAN, OperatorSymmetry.ANTIHERMITIAN,
@@ -125,7 +129,7 @@ class TestTwoParticleOperator:
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
         a = TwoParticleOperator(ref.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
         # no AO transformation with only zero blocks possible
-        with pytest.raises(ValueError):
+        with pytest.raises(NotImplementedError):
             a.to_ao_basis(ref)
         a.set_random()
         assert a.size == a.shape[0] * a.shape[1] * a.shape[2] * a.shape[3]
@@ -148,3 +152,23 @@ class TestTwoParticleOperator:
         # shortcuts
         np.testing.assert_allclose(a.oooo.to_ndarray(),
                                    a["o1o1o1o1"].to_ndarray())
+
+    def test_import_2p_op(self):
+        system = "h2o_sto3g"
+        system: testcases.TestCase = testcases.get_by_filename(system).pop()
+        scfres = run_hf("pyscf", system.xyz, system.basis)
+        ref = adcc.ReferenceState(scfres)
+
+        # get AO integral in physicist notation
+        int2e = scfres.mol.intor('int2e', comp=1, aosym=1).transpose((0, 2, 1, 3))
+        # from the integrals construct a TwoParticleOperator
+        dip_bb = replicate_ao_block(ref.mospaces, int2e,
+                                    symmetry=OperatorSymmetry.HERMITIAN)
+        eri_operator = TwoParticleOperator(ref, symmetry=OperatorSymmetry.HERMITIAN)
+        transform_operator_ao2mo(dip_bb, eri_operator, ref.orbital_coefficients,
+                                 ref.conv_tol)
+
+        # compare constructed TwoParticleOperator with ERIs
+        for block in eri_operator.blocks:
+            np.testing.assert_allclose(ref.eri(block).to_ndarray(),
+                                       eri_operator[block].to_ndarray(), atol=1e-12)

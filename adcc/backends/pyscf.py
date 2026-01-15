@@ -67,32 +67,6 @@ class PyScfOperatorIntegralProvider:
                 -0.5 * self.scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
             )
 
-    def magnetic_dipole_giao_1e(self, gauge_origin="origin") -> tuple[np.ndarray, ...]:  # noqa E501
-        """
-        The imaginary part of the integral is returned.
-        -0.5 * sum_i r_i x p_i + ...
-        """
-        gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
-        with self.scfres.mol.with_common_orig(gauge_origin):
-            return tuple(
-                - 0.5 * self.scfres.mol.intor('int1e_giao_irjxp', comp=3, hermi=2)
-                # Vorzeichen noch checken!
-                + 2 * self.scfres.mol.intor('int1e_ignuc', comp=3, hermi=2)
-                + 2 * self.scfres.mol.intor('int1e_igkin', comp=3, hermi=2)
-            )
-
-    def magnetic_dipole_giao_2e(self, gauge_origin="origin") -> tuple[np.ndarray, ...]:  # noqa E501
-        """
-        The imaginary part of the integral is returned.
-        -0.5 * sum_i r_i x p_i + ...
-        """
-        gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
-        with self.scfres.mol.with_common_orig(gauge_origin):
-            return tuple(
-                # Vorzeichen/Faktor, passt das?
-                -0.5 * self.scfres.mol.intor('int2e_ig1', comp=3, hermi=2)
-            )
-
     @property
     def electric_dipole_velocity(self) -> tuple[np.ndarray, ...]:
         """
@@ -217,7 +191,7 @@ class PyScfEriBuilder(EriBuilder):
 
     def compute_mo_eri(self, blocks, spins):
         coeffs = tuple(self.coefficients[blocks[i] + spins[i]] for i in range(4))
-        # TODO Pyscf usse HDF5 internal to do the AO2MO here we read it all
+        # TODO Pyscf uses HDF5 internal to do the AO2MO here we read it all
         #      into memory. This wastes memory and could be avoided if temporary
         #      files were used instead. These could be deleted on the call
         #      to `flush_cache` automatically.

@@ -22,12 +22,6 @@
 ## ---------------------------------------------------------------------
 from .NParticleOperator import NParticleOperator, OperatorSymmetry
 
-from .Tensor import Tensor
-from .functions import einsum
-from .MoSpaces import split_spaces
-
-import libadcc
-
 
 class TwoParticleOperator(NParticleOperator):
     def __init__(self, spaces, symmetry=OperatorSymmetry.HERMITIAN):
@@ -53,61 +47,19 @@ class TwoParticleOperator(NParticleOperator):
             symmetry=self.symmetry,
         )
 
-    def _transform_to_ao(self, refstate_or_coefficients) -> tuple[Tensor, Tensor]:
-        if not self.blocks_nonzero:
-            raise ValueError("At least one non-zero block is needed.")
-
-        if isinstance(refstate_or_coefficients, libadcc.ReferenceState):
-            hf = refstate_or_coefficients
-            coeff_map = {}
-            ovlp = refstate_or_coefficients.operators.overlap_ao
-            for sp in self.orbital_subspaces:
-                coeff_map[f"{sp}_a"] = hf.orbital_coefficients_alpha(sp + "b")
-                coeff_map[f"{sp}_b"] = hf.orbital_coefficients_beta(sp + "b")
-        else:
-            coeff_map = refstate_or_coefficients
-
-        dm_bb_a = 0
-        dm_bb_b = 0
-
-        for block in self.blocks_nonzero:
-            spaces = split_spaces(block)
-            factor = self.canonical_factors[block]
-            d = self.block(block)
-            dm_bb_a += factor * einsum(
-                "pa,ta,qb,ub,tuvw,vc,rc,wd,sd->pqrs",
-                ovlp,
-                coeff_map[f"{spaces[0]}_a"],
-                ovlp,
-                coeff_map[f"{spaces[1]}_a"],
-                d,
-                coeff_map[f"{spaces[2]}_a"],
-                ovlp,
-                coeff_map[f"{spaces[3]}_a"],
-                ovlp
-            )
-
-            dm_bb_b += factor * einsum(
-                "pa,ta,qb,ub,tuvw,vc,rc,wd,sd->pqrs",
-                ovlp,
-                coeff_map[f"{spaces[0]}_b"],
-                ovlp,
-                coeff_map[f"{spaces[1]}_b"],
-                d,
-                coeff_map[f"{spaces[2]}_b"],
-                ovlp,
-                coeff_map[f"{spaces[3]}_b"],
-                ovlp
-            )
-
-        if self.symmetry == OperatorSymmetry.HERMITIAN:
-            dm_bb_a = dm_bb_a.symmetrise((0, 2), (1, 3))
-            dm_bb_b = dm_bb_b.symmetrise((0, 2), (1, 3))
-        elif self.symmetry == OperatorSymmetry.ANTIHERMITIAN:
-            dm_bb_a = dm_bb_a.antisymmetrise((0, 2), (1, 3))
-            dm_bb_b = dm_bb_b.antisymmetrise((0, 2), (1, 3))
-
-        dm_bb_a = dm_bb_a.antisymmetrise(0, 1).antisymmetrise(2, 3)
-        dm_bb_b = dm_bb_b.antisymmetrise(0, 1).antisymmetrise(2, 3)
-
-        return dm_bb_a.evaluate(), dm_bb_b.evaluate()
+    def _transform_to_ao(self, refstate_or_coefficients):
+        """
+        MO -> AO transformation of antisymmetrized densities/integrals is
+        not implemented, because information about spin blocks is irreversibly lost
+        after antisymmetrization. Example: Product Trace of a TwoParticleDensity
+        with an ERI:
+        aaaa block: + Gamma^pq_rs <pq||rs>
+        bbbb block: + Gamma^pq_rs <pq||rs>
+        abab block: + Gamma^pq_rs <pq|rs>
+        abba block: - Gamma^pq_rs <pq|sr>
+        """
+        raise NotImplementedError(
+            "MO -> AO transformation of antisymmetrized densities/integrals is "
+            "not implemented, because information about spin blocks is "
+            "irreversibly lost after antisymmetrization."
+        )

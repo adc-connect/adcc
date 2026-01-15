@@ -28,6 +28,8 @@ from .timings import Timer, timed_member_call
 from .OneParticleOperator import OneParticleOperator
 from .OneParticleDensity import OneParticleDensity
 from .NParticleOperator import OperatorSymmetry
+from .TwoParticleOperator import TwoParticleOperator
+from .functions import einsum
 
 import libadcc
 
@@ -51,14 +53,28 @@ def transform_operator_ao2mo(tensor_bb, tensor_ff, coefficients,
         SCF convergence tolerance, by default 1e-14
     """
     for blk in tensor_ff.canonical_blocks:
-        assert len(blk) == 4
-        cleft = coefficients(blk[:2] + "b")
-        cright = coefficients(blk[2:] + "b")
-        temp = cleft @ tensor_bb @ cright.transpose()
+        if len(blk) == 4:
+            cleft = coefficients(blk[:2] + "b")
+            cright = coefficients(blk[2:] + "b")
+            temp = cleft @ tensor_bb @ cright.transpose()
 
-        # TODO: once the permutational symmetry is correct:
-        # tensor_ff.set_block(blk, tensor_ff)
-        tensor_ff[blk].set_from_ndarray(temp.to_ndarray(), conv_tol)
+            # TODO: once the permutational symmetry is correct:
+            # tensor_ff.set_block(blk, tensor_ff)
+            tensor_ff[blk].set_from_ndarray(temp.to_ndarray(), conv_tol)
+
+        elif len(blk) == 8:
+            cleft_1 = coefficients(blk[:2] + "b")
+            cleft_2 = coefficients(blk[2:4] + "b")
+            cright_1 = coefficients(blk[4:6] + "b")
+            cright_2 = coefficients(blk[6:] + "b")
+            temp = einsum("ia,jb,abcd,kc,ld->ijkl",
+                          cleft_1, cleft_2, tensor_bb, cright_1, cright_2)
+
+            # TODO: once the permutational symmetry is correct:
+            # tensor_ff.set_block(blk, tensor_ff)
+            tensor_ff[blk].set_from_ndarray(temp.to_ndarray(), conv_tol)
+        else:
+            raise NotImplementedError
 
 
 def replicate_ao_block(mospaces, tensor,
@@ -66,25 +82,59 @@ def replicate_ao_block(mospaces, tensor,
                        block: str = "ab"):
     """
     transform_operator_ao2mo requires the operator in AO to be
-    replicated in a block-diagonal fashion (i.e. like [A 0
-                                                       0 A].
+    replicated in a block-diagonal fashion (i.e. for a OneParticleOperator: [A 0
+                                                                             0 A].)
     This is achieved using this function.
     """
-    sym = libadcc.make_symmetry_operator_basis(
-        mospaces, tensor.shape[0], symmetry.to_str(), block
-    )
-    result = Tensor(sym)
-
     zerobk = np.zeros_like(tensor)
-    if block == "ab":
-        result.set_from_ndarray(np.block([
-            [tensor, zerobk],
-            [zerobk, tensor],
-        ]), 1e-14)
-    else:
-        result.set_from_ndarray(np.block([
-            tensor
-        ]), 1e-14)
+    if len(tensor.shape) == 2:
+        sym = libadcc.make_symmetry_operator_basis(
+            mospaces, tensor.shape[0], symmetry.to_str(), 1, block
+        )
+        result = Tensor(sym)
+
+        if block == "ab":
+            result.set_from_ndarray(np.block([
+                [tensor, zerobk],
+                [zerobk, tensor],
+            ]), 1e-14)
+        else:
+            result.set_from_ndarray(np.block([
+                tensor
+            ]), 1e-14)
+    elif len(tensor.shape) == 4:
+        sym = libadcc.make_symmetry_operator_basis(
+            mospaces, tensor.shape[0], symmetry.to_str(), 2, block
+        )
+        result = Tensor(sym)
+        if block == "ab":
+            tensor_ex = - tensor.transpose((0, 1, 3, 2))
+            tensor_as = tensor + tensor_ex
+            full_tensor = np.block([
+                [
+                    [
+                        [tensor_as, zerobk],
+                        [zerobk, zerobk],
+                    ],
+                    [
+                        [zerobk, tensor],
+                        [tensor_ex, zerobk],
+                    ],
+                ],
+                [
+                    [
+                        [zerobk, tensor_ex],
+                        [tensor, zerobk],
+                    ],
+                    [
+                        [zerobk, zerobk],
+                        [zerobk, tensor_as],
+                    ],
+                ],
+            ])
+            result.set_from_ndarray(full_tensor, 1e-14)
+        else:
+            raise NotImplementedError
     return result
 
 
@@ -120,7 +170,7 @@ class OperatorIntegrals:
 
         ao_operator = getattr(self.provider_ao, integral)
         ovlp_bb = replicate_ao_block(self.mospaces, ao_operator, symmetry=symmetry,
-                                     block="b")
+                                     block="a")
         return ovlp_bb
 
     @cached_property
@@ -366,6 +416,25 @@ class OperatorIntegrals:
             operator="pcm_potential_elec", density_mo=density_mo,
             symmetry=OperatorSymmetry.HERMITIAN
         )
+
+    def _import_2p_like_operator(
+        self, integral: str,
+        symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
+    ) -> TwoParticleOperator:
+        if integral not in self.available:
+            raise NotImplementedError(f"{integral.replace('_', ' ')} operator "
+                                      "not implemented "
+                                      f"in {self.provider_ao.backend} backend.")
+
+        ao_operator = getattr(self.provider_ao, integral)
+
+        op_bbbb = replicate_ao_block(self.mospaces, ao_operator,
+                                     symmetry=symmetry)
+
+        op_ffff = TwoParticleOperator(self.mospaces, symmetry=symmetry)
+        transform_operator_ao2mo(op_bbbb, op_ffff, self._coefficients,
+                                 self._conv_tol)
+        return op_ffff
 
     @property
     def timer(self):
