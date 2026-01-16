@@ -30,7 +30,7 @@ from .OneParticleDensity import OneParticleDensity
 from .NParticleOperator import product_trace, OperatorSymmetry
 from .Intermediates import register_as_intermediate
 from .timings import Timer, timed_member_call
-from .MoSpaces import split_spaces
+from .MoSpaces import MoSpaces, split_spaces
 from . import block as b
 
 
@@ -44,10 +44,10 @@ class LazyMp:
         if not isinstance(hf, ReferenceState):
             raise TypeError("hf needs to be a ReferenceState "
                             "or a HartreeFockSolution_i")
-        self.reference_state = hf
-        self.mospaces = hf.mospaces
-        self.timer = Timer()
-        self.has_core_occupied_space = hf.has_core_occupied_space
+        self.reference_state: ReferenceState = hf
+        self.mospaces: MoSpaces = hf.mospaces
+        self.timer: Timer = Timer()
+        self.has_core_occupied_space: bool = hf.has_core_occupied_space
 
     def __getattr__(self, attr):
         # Shortcut some quantities, which are needed most often
@@ -93,6 +93,34 @@ class LazyMp:
             - 0.5 * self.t2eri(b.oovv, b.vv)
             - 0.5 * self.t2eri(b.oovv, b.oo)
         ) / denom
+
+    @cached_member_function()
+    def tt2(self, space: str):
+        """
+        Return the second order MP triples amplitudes for the given space
+        (e.g. o1o1o1v1v1v1).
+        """
+        if space != b.ooovvv:
+            raise NotImplementedError("Second order MP triples amplitudes not "
+                                      f"implemented for space {space}.")
+        hf = self.reference_state
+        df = self.df(b.ov)
+        t2_1 = self.t2(b.oovv)
+        # denom = a + b + c - i - j - k   //   df = i - a
+        denom = - 1 * direct_sum(
+            "ia,jkbc->ijkabc", df, direct_sum("jb,kc->jkbc", df, df)
+        ).symmetrise(0, 1, 2).symmetrise(3, 4, 5)
+        # prefactor of 9, because we have 9 terms each in the expression, while the
+        # antisymmetrisation generates 36 terms and introduces a prefactor of 1/36.
+        # Each of the 9 terms is therefore generated 4 times.
+        # The scaling in the comments is given as: [comp_scaling] / [mem_scaling]
+        numerator = (
+            # N^7: O^3V^4 / N^6: O^3V^3
+            + 9 * einsum('idab,jkcd->ijkabc', hf.ovvv, t2_1)
+            # N^7: O^4V^3 / N^6: O^3V^3
+            + 9 * einsum('ijla,klbc->ijkabc', hf.ooov, t2_1)
+        ).antisymmetrise(0, 1, 2).antisymmetrise(3, 4, 5)
+        return numerator / denom
 
     @cached_member_function()
     def t2eri(self, space, contraction):

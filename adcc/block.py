@@ -22,11 +22,12 @@
 ## ---------------------------------------------------------------------
 from .MoSpaces import split_spaces
 from .NParticleOperator import OperatorSymmetry
-from collections.abc import Callable
+
+from collections.abc import Callable, Sequence
 from typing import TypeVar, Any, Union
 
 
-def __getattr__(attr):
+def __getattr__(attr: Sequence[str]) -> str:
     """
     Return a multi-dimensional block string like 'o1o2v1v1'
     when requesting the attribute 'ocvv'.
