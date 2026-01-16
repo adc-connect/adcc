@@ -144,6 +144,12 @@ std::string perm_to_string(const std::vector<size_t>& permutation) {
   return oss.str();
 }
 
+// Using a vector as return type would not significantly simplify the
+// code in symmetrise and antisymmetrise below.
+// Using an array would in principle be possible and avoids the
+// meta programming above to define the tuple_array_t, but there
+// are additional compile time guarantees to prevent for instance
+// out of bounds access for tuples, which is not available for arrays
 template <size_t PERM_SIZE, size_t N_PERMS, size_t N>
 tuple_array_t<lt::expr::label<N_PERMS>, PERM_SIZE> parse_permutation(
       const std::vector<AxisInfo>& axes, const lt::expr::label<N>& label,
