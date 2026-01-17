@@ -140,7 +140,9 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
             if import_states:
                 try:
                     states = import_excited_states(
-                        context, method=method, is_spin_flip=bool(n_spin_flip),
+                        context, method=method,
+                        only_full_mode=test_case.only_full_mode,
+                        is_spin_flip=bool(n_spin_flip),
                         import_nstates=import_nstates
                     )
                 except DataImportError as e:
@@ -152,7 +154,9 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
             # import the ground state data as flat dict
             gs_data = None
             if import_gs:
-                gs_data = import_groundstate(context)
+                gs_data = import_groundstate(
+                    context, only_full_mode=test_case.only_full_mode
+                )
     return states, gs_data
 
 

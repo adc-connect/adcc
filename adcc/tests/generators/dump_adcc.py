@@ -10,11 +10,15 @@ import numpy as np
 import h5py
 
 
-def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group) -> None:
+def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
+                     only_full_mode: bool) -> None:
     """
     Dump the MP data to the given hdf5 file/group. Data is dumped sorted by the
     perturbation theoretical orders of the quantity, e.g., mp1/t_o1o1v1v1 for
     the first order doubles amplitudes.
+    The only_full_mode flag indicates whether the underlying test case is only
+    run in full mode. Typically tests that run in full mode are larger
+    and therefore not all test data might be dumped in that case.
     """
     gs = "mp"
 
@@ -31,9 +35,11 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group) -> None:
     gs_data[f"{gs}2/energy"] = ground_state.energy_correction(2)
     gs_data[f"{gs}2/dipole"] = ground_state.dipole_moment(2)
     gs_data[f"{gs}2/td_o1o1v1v1"] = ground_state.td2("o1o1v1v1").to_ndarray()
-    gs_data[f"{gs}2/tt_o1o1o1v1v1v1"] = (
-        ground_state.tt2("o1o1o1v1v1v1").to_ndarray()
-    )
+    if not only_full_mode:
+        # triples take a lot of memory for the larger test cases
+        gs_data[f"{gs}2/tt_o1o1o1v1v1v1"] = (
+            ground_state.tt2("o1o1o1v1v1v1").to_ndarray()
+        )
     # MP3 data
     if not ground_state.has_core_occupied_space:
         gs_data[f"{gs}3/energy"] = ground_state.energy_correction(3)

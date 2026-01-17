@@ -107,7 +107,7 @@ def generate_groundstate(test_case: testcases.TestCase) -> None:
         hf = testdata_cache.refstate(test_case, case)
         mp = LazyMp(hf)
         case_group = hdf5_file.create_group(case)
-        dump_groundstate(mp, case_group)
+        dump_groundstate(mp, case_group, test_case.only_full_mode)
 
 
 def generate_h2o_sto3g():

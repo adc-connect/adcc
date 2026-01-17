@@ -11,7 +11,8 @@ class DataImportError(ValueError):
     pass
 
 
-def import_groundstate(context: h5py.File, dims_pref: str = "dims/") -> dict:
+def import_groundstate(context: h5py.File, only_full_mode: bool,
+                       dims_pref: str = "dims/") -> dict:
     """
     Import the MP ground state.
 
@@ -19,6 +20,10 @@ def import_groundstate(context: h5py.File, dims_pref: str = "dims/") -> dict:
     ----------
     context: h5py.File
         The hdf5 to import from.
+    only_full_mode: bool
+        Indicates whether the data to read is for a test case that is only
+        run in full mode. Since these systems are typically quite large
+        one might not want to import all data for these cases.
     dims_pref: str, optional
         Since tensors are exported as flattened array, the dimensions of the
         tensors are exported too. The dimensions can be found by adding the given
@@ -28,10 +33,18 @@ def import_groundstate(context: h5py.File, dims_pref: str = "dims/") -> dict:
     data_to_read = {
         path: key for path, key in _mp_data.items() if path in context
     }
+    if not only_full_mode:
+        addition = {
+            path: key for path, key in _mp_data_large.items() if path in context
+        }
+        assert not addition.keys() & data_to_read.keys()
+        data_to_read.update(addition)
+        del addition
     return import_data(context, dims_pref=dims_pref, **data_to_read)
 
 
 def import_excited_states(context: h5py.File, method: AdcMethod,
+                          only_full_mode: bool,
                           is_spin_flip: bool = False,
                           import_nstates: int | None = None,
                           dims_pref: str = "dims/") -> dict:
@@ -45,6 +58,10 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
         The hdf5 file to import from.
     method: AdcMethod
         The adc method, e.g., adc2 or adc3
+    only_full_mode: bool
+        Indicates whether the data to read is for a test case that only
+        runs in full mode. Since these systems are typically quite large
+        one might not want to import all data for these cases.
     is_spin_flip: bool, optional
         Indicates whether the calculation was a spin flip calculation.
     import_nstates: int, optional
@@ -72,9 +89,9 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
     data = {}
     for kind, restricted in state_kinds[method.adc_type]:
         states = _import_excited_states(
-            context, method=method_name, adc_type=method.adc_type,
-            import_nstates=import_nstates, state_kind=kind, restricted=restricted,
-            dims_pref=dims_pref
+            context, method=method_name, only_full_mode=only_full_mode,
+            adc_type=method.adc_type, import_nstates=import_nstates,
+            state_kind=kind, restricted=restricted, dims_pref=dims_pref
         )
         if states is None:  # no states of the given kind available
             continue
@@ -82,9 +99,9 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
         # -> if we have more than 1 state!
         if len(states["eigenvalues"]) > 1:
             state_to_state = _import_state_to_state_data(
-                context, method=method_name, adc_type=method.adc_type,
-                import_nstates=import_nstates, state_kind=kind,
-                restricted=restricted, dims_pref=dims_pref
+                context, method=method_name, only_full_mode=only_full_mode,
+                adc_type=method.adc_type, import_nstates=import_nstates,
+                state_kind=kind, restricted=restricted, dims_pref=dims_pref
             )
             states["state_to_state"] = state_to_state
 
@@ -97,7 +114,8 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
     return data
 
 
-def _import_excited_states(context: h5py.File, method: str, adc_type: str = "pp",
+def _import_excited_states(context: h5py.File, method: str, only_full_mode: bool,
+                           adc_type: str = "pp",
                            import_nstates: int | None = None,
                            state_kind: str | None = None, restricted: bool = True,
                            dims_pref: str = "dims/") -> None | dict[str, Any]:
@@ -113,6 +131,10 @@ def _import_excited_states(context: h5py.File, method: str, adc_type: str = "pp"
         The hdf5 file to import from.
     method: str
         The adc method, e.g., adc2 or adc3
+    only_full_mode: bool
+        Indicates whether the data to read is for a test case that only
+        runs in full mode. Since these systems are typically quite large
+        one might not want to import all data for these cases.
     adc_type: str, optional
         Which type of adc calculation has been performed, e.g., pp.
     import_nstates: int, optional
@@ -163,6 +185,10 @@ def _import_excited_states(context: h5py.File, method: str, adc_type: str = "pp"
             for path, key in _excited_state_data["optional"].items()
             if f"{state_tree}/{path}" in context
         })
+        if not only_full_mode:
+            # update data_to_read depending on the required structure of
+            # the dict
+            assert not _excited_state_data_large
     # read and import the objects
     raw_data = import_data(context, dims_pref=dims_pref, **data_to_read)
     # collect the data for each property in a list
@@ -181,6 +207,7 @@ def _import_excited_states(context: h5py.File, method: str, adc_type: str = "pp"
 
 
 def _import_state_to_state_data(context: h5py.File, method: str,
+                                only_full_mode: bool,
                                 adc_type: str = "pp",
                                 import_nstates: int | None = None,
                                 state_kind: str | None = None,
@@ -199,6 +226,10 @@ def _import_state_to_state_data(context: h5py.File, method: str,
         The hdf5 file to import from.
     method: str
         The adc method, e.g., adc2 or adc3
+    only_full_mode: bool
+        Indicates whether the data to read is for a test case that only
+        runs in full mode. Since these systems are typically quite large
+        one might not want to import all data for these cases.
     adc_type: str, optional
         Which type of adc calculation has been performed, e.g., pp.
     import_nstates: int, optional
@@ -243,6 +274,10 @@ def _import_state_to_state_data(context: h5py.File, method: str,
             for ito in range(ifrom + 1, n_states)
             for path, key in _state_to_state_data.items()
         }
+        if not only_full_mode:
+            # update data to read depending on the required structure
+            # of the dict
+            assert not _state_to_state_data_large
         raw_data = import_data(context, dims_pref=dims_pref, **data_to_read)
         # collect the data in a list
         # sort the data to ensure that we start with the lowest ito
@@ -325,6 +360,9 @@ _excited_state_data = {
         "tprop/e_pe_ptLR": "pe_ptlr_correction",
     }
 }
+# The large excited state data that is only imported for small test cases
+# that not only run in full mode.
+_excited_state_data_large = {}
 
 # The state-to-state ISR data to import for each pair of states.
 # All keys are required.
@@ -333,6 +371,9 @@ _state_to_state_data = {
     "optdm/dm_bb_a": "state_to_excited_tdm_bb_a",
     "optdm/dm_bb_b": "state_to_excited_tdm_bb_b",
 }
+# The large state-to-state ISR data that is only imported for small
+# test cases that not only run in full mode
+_state_to_state_data_large = {}
 
 # The available MP data depends on the adc method and order
 # -> treat all MP data as optional and import everything that is available
@@ -361,8 +402,6 @@ _mp_data = {
     "mp2/prop/dipole": "mp2/dipole",
     # MP2 doubles amplitudes
     "mp2/td_o1o1v1v1": "mp2/td_o1o1v1v1",
-    # MP2 triples amplitudes
-    "mp2/tt2_o1o1o1v1v1v1": "mp2/tt_o1o1o1v1v1v1",
     # MP3
     "mp3/energy": "mp3/energy",
     # MP3 density in the AO basis
@@ -383,4 +422,10 @@ _mp_data = {
     "sigma4+/opdm/dm_v1v1": "sigma4+/dm_v1v1",
     # sigma4+ dipole vector
     "sigma4+/prop/dipole": "sigma4+/dipole",
+}
+# the following quantities are only imported for small test cases that
+# not only run in full mode
+_mp_data_large = {
+    # MP2 triples amplitudes
+    "mp2/tt2_o1o1o1v1v1v1": "mp2/tt_o1o1o1v1v1v1",
 }
