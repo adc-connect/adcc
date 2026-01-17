@@ -1,6 +1,8 @@
 from adcc.AdcMethod import AdcMethod
 from adcc.hdf5io import _extract_dataset
 
+from collections.abc import Hashable
+from typing import Any
 import numpy as np
 import h5py
 
@@ -31,8 +33,8 @@ def import_groundstate(context: h5py.File, dims_pref: str = "dims/") -> dict:
 
 def import_excited_states(context: h5py.File, method: AdcMethod,
                           is_spin_flip: bool = False,
-                          import_nstates: int = None, dims_pref: str = "dims/"
-                          ) -> dict:
+                          import_nstates: int | None = None,
+                          dims_pref: str = "dims/") -> dict:
     """
     Import the excited states data (excitation energies, amplitude vectors, ...)
     from the context.
@@ -96,9 +98,9 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
 
 
 def _import_excited_states(context: h5py.File, method: str, adc_type: str = "pp",
-                           import_nstates: int = None, state_kind: str = None,
-                           restricted: bool = True, dims_pref: str = "dims/"
-                           ) -> None | dict[str, list]:
+                           import_nstates: int | None = None,
+                           state_kind: str | None = None, restricted: bool = True,
+                           dims_pref: str = "dims/") -> None | dict[str, Any]:
     """
     Import the excited states data (excitation energies, amplitude vectors, ...)
     from the context.
@@ -138,6 +140,7 @@ def _import_excited_states(context: h5py.File, method: str, adc_type: str = "pp"
     if f"{tree}/nstates" not in context:
         return None
     _, n_states = _extract_dataset(context[f"{tree}/nstates"])
+    assert isinstance(n_states, int)
     if import_nstates is not None:
         n_states = min(n_states, import_nstates)
     # go through the states and gather the tree paths to read and import from the
@@ -147,6 +150,7 @@ def _import_excited_states(context: h5py.File, method: str, adc_type: str = "pp"
         state_tree = tree + f"/es{n}"
         # ensure that the state is converged
         _, converged = _extract_dataset(context[f"{state_tree}/converged"])
+        assert isinstance(converged, bool)
         if not converged:
             raise DataImportError(f"State {n} of kind {state_kind} in file "
                                   f"{context.filename} is not converged.")
@@ -177,9 +181,12 @@ def _import_excited_states(context: h5py.File, method: str, adc_type: str = "pp"
 
 
 def _import_state_to_state_data(context: h5py.File, method: str,
-                                adc_type: str = "pp", import_nstates: int = None,
-                                state_kind: str = None, restricted: bool = True,
-                                dims_pref: str = "dims/") -> None | dict[str, list]:
+                                adc_type: str = "pp",
+                                import_nstates: int | None = None,
+                                state_kind: str | None = None,
+                                restricted: bool = True,
+                                dims_pref: str = "dims/"
+                                ) -> dict[str, dict[str, Any]]:
     """
     Import the state-to-state data (tdms, transition dipole moments, ...)
     from the context.
@@ -222,10 +229,14 @@ def _import_state_to_state_data(context: h5py.File, method: str,
     # '1-0', '2-0', '2-1'
     # for 3 available states.
     # -> determine the number of available states from the keys
-    n_states = max(int(key.split("-")[0]) for key in context[tree].keys()) + 1
+    s2s_data = context[tree]
+    assert isinstance(s2s_data, h5py.Group)
+    n_states = max(int(key.split("-")[0]) for key in s2s_data.keys()) + 1
     if import_nstates is not None:
         n_states = min(n_states, import_nstates)
-    data = {}
+    del s2s_data
+
+    data: dict[str, dict[str, Any]] = {}
     for ifrom in range(n_states - 1):
         data_to_read = {
             f"{tree}/{ito}-{ifrom}/{path}": (ito, key)
@@ -247,7 +258,7 @@ def _import_state_to_state_data(context: h5py.File, method: str,
 
 
 def import_data(context: h5py.File, dims_pref: str = "dims/",
-                **kwargs: str) -> dict:
+                **kwargs: Hashable) -> dict:
     """
     Read and import data from the dumped libctx context.
     The data to import can be defined through kwargs in the form

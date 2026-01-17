@@ -89,7 +89,7 @@ class TestCase:
         Filter the available cases only returning cases that are relevant
         for the given adc_type.
         """
-        # since cvs is not (yet) implemented for IP/EA.
+        # since cvs is not (yet) implemented for IP.
         if adc_type == "pp":
             return self.cases
         raise NotImplementedError(f"Filtering for adc type {adc_type} not "

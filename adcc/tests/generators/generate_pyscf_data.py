@@ -15,7 +15,7 @@ _testdata_dirname = "data"
 def run_pyscf_tdscf(xyz: str, basis: str, unit: str = "Bohr", charge: int = 0,
                     multiplicity: int = 1, conv_tol: float = 1e-12,
                     conv_tol_grad: float = 1e-10, max_iter: int = 150,
-                    pcm_options: dict = None):
+                    pcm_options: dict | None = None):
     """
     Performs a pyscf CIS calculation. Returns the SCF and the CIS objects.
     """
@@ -34,25 +34,25 @@ def run_pyscf_tdscf(xyz: str, basis: str, unit: str = "Bohr", charge: int = 0,
 
     if pcm_options:
         mf = ddCOSMO(scf.RHF(mol))
-        mf.with_solvent.eps = pcm_options.get("eps")
+        mf.with_solvent.eps = pcm_options.get("eps")  # type: ignore
     else:
         mf = scf.RHF(mol)
-    mf.conv_tol = conv_tol
-    mf.conv_tol_grad = conv_tol_grad
-    mf.max_cycle = max_iter
+    mf.conv_tol = conv_tol  # type: ignore
+    mf.conv_tol_grad = conv_tol_grad  # type: ignore
+    mf.max_cycle = max_iter  # type: ignore
 
-    mf.kernel()
+    mf.kernel()  # type: ignore
 
     if pcm_options:
-        mf.with_solvent.eps = pcm_options.get("eps_opt")
+        mf.with_solvent.eps = pcm_options.get("eps_opt")  # type: ignore
         # for n_eq solvation only PTE implemented
-        mf.with_solvent.equilibrium_solvation = True
+        mf.with_solvent.equilibrium_solvation = True  # type: ignore
         cis = ddCOSMO(tdscf.TDA(mf))
     else:
         cis = tdscf.TDA(mf)
-    cis.nstates = 5
-    cis.conv_tol = 1e-7
-    cis.kernel()
+    cis.nstates = 5  # type: ignore
+    cis.conv_tol = 1e-7  # type: ignore
+    cis.kernel()  # type: ignore
     return mf, cis
 
 
@@ -65,7 +65,7 @@ def run_adcc_ptlr(wfn) -> adcc.ExcitedStates:
                         max_iter=250, conv_tol=1e-7, environment="ptlr")
 
 
-def dump_results(test_case: testcases.TestCase, pcm_options: dict = None
+def dump_results(test_case: testcases.TestCase, pcm_options: dict | None = None
                  ) -> tuple[str, dict]:
     name = test_case.file_name
     if pcm_options is not None:
@@ -78,11 +78,13 @@ def dump_results(test_case: testcases.TestCase, pcm_options: dict = None
     ret = {"basis": test_case.basis,
            "method": "adc1",
            "molecule": test_case.name,
-           "energy_scf": float(hf.e_tot)}
+           "energy_scf": float(hf.e_tot)}  # type: ignore
     # dump does not like numpy types
-    ret["lr_excitation_energy"] = [float(round(s, 9)) for s in cis.e]
+    ret["lr_excitation_energy"] = [
+        float(round(s, 9)) for s in cis.e  # type: ignore
+    ]
     ret["lr_osc_strength"] = [
-        float(round(s, 5)) for s in cis.oscillator_strength()
+        float(round(s, 5)) for s in cis.oscillator_strength()  # type: ignore
     ]
 
     if pcm_options:

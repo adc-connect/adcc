@@ -8,7 +8,9 @@ from adcc.hdf5io import _extract_dataset
 from adcc.AdcMethod import AdcMethod
 from adcc import ReferenceState
 
+from collections.abc import Sequence
 from pathlib import Path
+from typing import cast
 import numpy as np
 import h5py
 import itertools
@@ -25,7 +27,7 @@ _qchem_context_file = "context.hdf5"
 def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
               import_states: bool = True, import_gs: bool = False,
               run_qchem_scf: bool = False,
-              import_nstates: int = None, n_states: int = 0,
+              import_nstates: int | None = None, n_states: int = 0,
               n_singlets: int = 0, n_triplets: int = 0, n_spin_flip: int = 0,
               **kwargs) -> tuple[dict | None, dict | None]:
     """
@@ -89,30 +91,31 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
             savedir = None
         else:  # Load the SCF data and create the savedir
             # load the pyscf result from the hdf5 file
-            hdf5_file = open_pyscf_result(test_case)
-            savedir = tmpdir / "savedir"
-            savedir.mkdir()
-            generate_qchem_savedir(
-                pyscf_data=hdf5_file, savedir=savedir,
-                core_orbitals=n_core_orbitals,
-                frozen_core=n_frozen_core, frozen_virtual=n_frozen_virtual
-            )
-            savedir = savedir.name
-            # extrac the relevant data from the pyscf data for the infile.
-            args["basis_definition"] = (
-                _extract_dataset(hdf5_file["qchem_formatted_basis"])[1]
-            )
-            args["xyz"] = _extract_dataset(hdf5_file["xyz"])[1]
-            _, xyz_unit = _extract_dataset(hdf5_file["xyz_unit"])
-            args["bohr"] = xyz_unit.lower() == "bohr"
-            args["purecart"] = determine_purecart(hdf5_file)
+            with open_pyscf_result(test_case) as hdf5_file:
+                savedir = tmpdir / "savedir"
+                savedir.mkdir()
+                generate_qchem_savedir(
+                    pyscf_data=hdf5_file, savedir=savedir,
+                    core_orbitals=n_core_orbitals,
+                    frozen_core=n_frozen_core, frozen_virtual=n_frozen_virtual
+                )
+                savedir = savedir.name
+                # extrac the relevant data from the pyscf data for the infile.
+                args["basis_definition"] = (
+                    _extract_dataset(hdf5_file["qchem_formatted_basis"])[1]
+                )
+                args["xyz"] = _extract_dataset(hdf5_file["xyz"])[1]
+                _, xyz_unit = _extract_dataset(hdf5_file["xyz_unit"])
+                assert isinstance(xyz_unit, str)
+                args["bohr"] = xyz_unit.lower() == "bohr"
+                args["purecart"] = determine_purecart(hdf5_file)
         # add the user input
         args.update(kwargs)
         # use the data to write the infile
         infile = tmpdir / f"{test_case.file_name}_{method.name}.in"
         outfile = tmpdir / f"{test_case.file_name}_{method.name}.out"
         generate_qchem_input_file(
-            infile=infile, method=method, basis=test_case.basis,
+            infile=infile, adc_method=method, basis=test_case.basis,
             charge=test_case.charge, multiplicity=test_case.multiplicity,
             n_core_orbitals=n_core_orbitals, n_frozen_core=n_frozen_core,
             n_frozen_virtual=n_frozen_virtual, any_states=n_states,
@@ -122,7 +125,7 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
         # call qchem and wait for completion
         execute_qchem(
             infile=infile.name, outfile=outfile.name, savedir=savedir,
-            workdir=tmpdir.resolve()
+            workdir=str(tmpdir.resolve())
         )
         # after the calculation we should have the context file in the tmpdir
         context_file = tmpdir / _qchem_context_file
@@ -167,17 +170,25 @@ def open_pyscf_result(test_case: testcases.TestCase) -> h5py.File:
     return h5py.File(hdf5_file, "r")
 
 
-def generate_qchem_savedir(pyscf_data: h5py.File, savedir: str,
-                           core_orbitals: int = None, frozen_core: int = None,
-                           frozen_virtual: int = None) -> None:
+def generate_qchem_savedir(pyscf_data: h5py.File, savedir: str | Path,
+                           core_orbitals: int | None = None,
+                           frozen_core: int | None = None,
+                           frozen_virtual: int | None = None) -> None:
     """
     Writes the pyscf SCF result in the given savedir folder.
     """
     savedir_writer = QchemSavedir(savedir)
     _, scf_energy = _extract_dataset(pyscf_data["energy_scf"])
+    assert isinstance(scf_energy, float)
     _, mo_coeffs = _extract_dataset(pyscf_data["orbcoeff_fb"])
+    assert isinstance(mo_coeffs, np.ndarray) and mo_coeffs.ndim == 2
+    mo_coeffs = cast(np.ndarray[tuple[int, int]], mo_coeffs)
     _, fock_ao = _extract_dataset(pyscf_data["fock_bb"])
+    assert isinstance(fock_ao, np.ndarray) and fock_ao.ndim == 2
+    fock_ao = cast(np.ndarray[tuple[int, int]], fock_ao)
     _, orb_energies = _extract_dataset(pyscf_data["orben_f"])
+    assert isinstance(orb_energies, np.ndarray) and orb_energies.ndim == 1
+    orb_energies = cast(np.ndarray[tuple[int]], orb_energies)
     # compute the density in the ao basis
     ao_density_aa, ao_density_bb = compute_ao_density(pyscf_data)
     eri_blocks = build_antisym_eri(
@@ -194,14 +205,15 @@ def generate_qchem_savedir(pyscf_data: h5py.File, savedir: str,
     )
 
 
-def build_antisym_eri(pyscf_data: h5py.File, core_orbitals: int = None,
-                      frozen_core: int = None, frozen_virtual: int = None
-                      ) -> dict[str, np.ndarray]:
+def build_antisym_eri(pyscf_data: h5py.File, core_orbitals: int | None = None,
+                      frozen_core: int | None = None,
+                      frozen_virtual: int | None = None
+                      ) -> dict[str, np.ndarray[tuple[int, int, int, int]]]:
     """
     Builds all anti-symmetric ERI blocks (MO basis) from the pyscf data.
     Returned using keys like "ooov" or "ococ".
     """
-    ret = {}
+    ret: dict[str, np.ndarray[tuple[int, int, int, int]]] = {}
     refstate = ReferenceState(
         pyscf_data, core_orbitals=core_orbitals, frozen_core=frozen_core,
         frozen_virtual=frozen_virtual
@@ -212,14 +224,15 @@ def build_antisym_eri(pyscf_data: h5py.File, core_orbitals: int = None,
             continue
         try:
             eri = getattr(refstate, block).to_ndarray()
-            ret[block] = eri
+            assert isinstance(eri, np.ndarray) and eri.ndim == 4
+            ret[block] = cast(np.ndarray[tuple[int, int, int, int]], eri)
         except ValueError as e:  # CVS block not available
             if refstate.has_core_occupied_space:
                 raise e
     return ret
 
 
-def is_canonical_eri_block(block: str | tuple[str, ...]) -> bool:
+def is_canonical_eri_block(block: Sequence[str]) -> bool:
     """Checks if a given ERI block is canonical assuming physicist notation."""
     assert len(block) == 4 and all(sp in "ocv" for sp in block)
     space_ordering = {"o": 0, "c": 1, "v": 2}
@@ -251,7 +264,9 @@ def compute_ao_density(pyscf_data: h5py.File) -> tuple[np.ndarray, np.ndarray]:
     coefficients.
     """
     _, n_orbs_alpha = _extract_dataset(pyscf_data["n_orbs_alpha"])
+    assert isinstance(n_orbs_alpha, int)
     _, mo_coeffs = _extract_dataset(pyscf_data["orbcoeff_fb"])
+    assert isinstance(mo_coeffs, np.ndarray) and mo_coeffs.ndim == 2
     mo_coeffs_a = mo_coeffs[:n_orbs_alpha, :]
     mo_coeffs_b = mo_coeffs[n_orbs_alpha:, :]
     return mo_coeffs_a @ mo_coeffs_a.T, mo_coeffs_b @ mo_coeffs_b.T
@@ -269,7 +284,7 @@ def determine_purecart(pyscf_data: h5py.File) -> int:
 
 
 def execute_qchem(infile: str, outfile: str, workdir: str,
-                  savedir: str = None) -> None:
+                  savedir: str | None = None) -> None:
     """
     Execute Qchem by calling 'qchem' which needs to be some executable available in
     the path. The function defines the QCSCRATCH environment variable to point to
@@ -299,7 +314,6 @@ def execute_qchem(infile: str, outfile: str, workdir: str,
     if savedir is None:
         code = subprocess.run(["qchem", infile, outfile], env=env).returncode
     else:
-        assert (Path(savedir) / "integrals.hdf5").exists()
         code = subprocess.run(
             ["qchem", infile, outfile, savedir], env=env
         ).returncode
@@ -317,17 +331,21 @@ def clean_xyz(xyz: str):
     return "\n".join(line.strip() for line in xyz.splitlines())
 
 
-def generate_qchem_input_file(infile: str, method: AdcMethod, basis: str, xyz: str,
-                              charge: int, multiplicity: int,
-                              basis_definition: str = None, purecart: int = None,
-                              pe_potfile: str = None, memory: int = 10000,  # in mb
+def generate_qchem_input_file(infile: str | Path, adc_method: AdcMethod, basis: str,
+                              xyz: str, charge: int, multiplicity: int,
+                              basis_definition: str | None = None,
+                              purecart: int | None = None,
+                              pe_potfile: str | None = None,
+                              memory: int = 10000,  # in mb
                               bohr: bool = True, any_states: int = 0,
                               singlet_states: int = 0, triplet_states: int = 0,
                               sf_states: int = 0,
                               maxiter: int = 160, conv_tol: int = 10,
-                              n_core_orbitals: int = 0, n_frozen_core: int = 0,
-                              n_frozen_virtual: int = 0, max_ss: int = None,
-                              gs_density_order: int = None,
+                              n_core_orbitals: int | None = None,
+                              n_frozen_core: int | None = None,
+                              n_frozen_virtual: int | None = None,
+                              max_ss: int | None = None,
+                              gs_density_order: int | str | None = None,
                               run_qchem_scf: bool = False) -> None:
     """
     Generates a qchem input file for the given test case and method.
@@ -336,7 +354,14 @@ def generate_qchem_input_file(infile: str, method: AdcMethod, basis: str, xyz: s
     if max_ss is None:
         max_ss = 7 * nguess_singles
 
-    method = _method_dict[method.name]
+    if n_core_orbitals is None:
+        n_core_orbitals = 0
+    if n_frozen_core is None:
+        n_frozen_core = 0
+    if n_frozen_virtual is None:
+        n_frozen_virtual = 0
+
+    method = _method_dict[adc_method.name]
     if isinstance(gs_density_order, str):
         # sigma4+ -> sigma_4_plus
         gs_density_order = _gs_density_order_dict[gs_density_order]

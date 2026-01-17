@@ -23,10 +23,10 @@ _methods = {
 
 
 def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
-                 gs_density_order: int = None,
-                 n_states: int = None, n_singlets: int = None,
-                 n_triplets: int = None, n_spin_flip: int = None,
-                 dump_nstates: int = None, **kwargs) -> None:
+                 gs_density_order: int | None = None,
+                 n_states: int | None = None, n_singlets: int | None = None,
+                 n_triplets: int | None = None, n_spin_flip: int | None = None,
+                 dump_nstates: int | None = None, **kwargs) -> None:
     """
     Generate and dump the excited states reference data for the given reference case
     of the given test case if the data is not available already.
@@ -57,24 +57,24 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
         hf, method=method, n_states=n_states, n_singlets=n_singlets,
         n_triplets=n_triplets, n_spin_flip=n_spin_flip, **kwargs
     )
-    assert states.kind == kind  # maybe we predicted wrong?
+    assert states.kind == kind  # maybe we predicted wrong?  # type: ignore
     if f"{key}/matrix" not in hdf5_file:
         # the matrix data is only dumped once for each case. I think it does not
         # make sense to dump the data once for a singlet and once for a triplet
         # trial vector.
         matrix_group = hdf5_file.create_group(f"{key}/matrix")
-        trial_vec = adcc_copy(states.excitation_vector[0]).set_random()
+        trial_vec = adcc_copy(states.excitation_vector[0]).set_random()  # type: ignore # noqa: E501
         dump_matrix_testdata(states.matrix, trial_vec, matrix_group)
     # dump the excited states data
-    kind_group = hdf5_file.create_group(f"{key}/{states.kind}")
+    kind_group = hdf5_file.create_group(f"{key}/{states.kind}")  # type: ignore
     dump_excited_states(states, kind_group, dump_nstates=dump_nstates)
 
 
 def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
-                     n_states: int = None, n_singlets: int = None,
-                     n_triplets: int = None, n_spin_flip: int = None,
-                     dump_nstates: int = None,
-                     states_per_case: dict[str, dict[str, int]] = None,
+                     n_states: int | None = None, n_singlets: int | None = None,
+                     n_triplets: int | None = None, n_spin_flip: int | None = None,
+                     dump_nstates: int | None = None,
+                     states_per_case: dict[str, dict[str, int]] | None = None,
                      **kwargs) -> None:
     """
     Generate and dump the excited states reference data for all reference cases
@@ -149,7 +149,8 @@ def generate_h2o_def2tzvp():
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
             n_states = {n_states: 3}
             generate_adc_all(
-                test_case, method=method, dump_nstates=2, **n_states
+                test_case, method=method, dump_nstates=2, states_per_case=None,
+                **n_states
             )
 
 
@@ -163,7 +164,8 @@ def generate_cn_sto3g():
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
             kwargs = {n_states: 3}
             generate_adc_all(
-                test_case=test_case, method=method, dump_nstates=2, **kwargs
+                test_case=test_case, method=method, dump_nstates=2,
+                states_per_case=None, **kwargs
             )
 
 
@@ -177,7 +179,8 @@ def generate_cn_ccpvdz():
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
             n_states = {n_states: 3}
             generate_adc_all(
-                test_case, method=method, dump_nstates=2, **n_states
+                test_case, method=method, dump_nstates=2, states_per_case=None,
+                **n_states
             )
 
 
@@ -191,7 +194,8 @@ def generate_hf_631g():
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
             n_states = {n_states: 3}
             generate_adc_all(
-                test_case, method=method, dump_nstates=2, **n_states
+                test_case, method=method, dump_nstates=2, states_per_case=None,
+                **n_states
             )
 
 

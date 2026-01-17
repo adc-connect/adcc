@@ -53,14 +53,14 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group) -> None:
 
 
 def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
-                        dump_nstates: int = None) -> None:
+                        dump_nstates: int | None = None) -> None:
     """
     Dump the excited states data to the given hdf5 file/group.
     The number of states to dump can be given by dump_nstates. By default all states
     are dumped.
     """
     # ensure that the calculation converged on a nonzero result
-    assert states.converged
+    assert states.converged  # type: ignore
     assert all(abs(e) > 1e-12 for e in states.excitation_energy)
 
     n_states = len(states.excitation_energy)
@@ -85,9 +85,9 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
         for exdegree, block in enumerate(states.matrix.axis_blocks):
             if exdegree + 1 not in eigenvectors:
                 eigenvectors[exdegree + 1] = []
-            eigenvectors[exdegree + 1].append(
-                getattr(states.excitation_vector[n], block).to_ndarray()
-            )
+            eigenvectors[exdegree + 1].append(getattr(
+                states.excitation_vector[n], block  # type: ignore
+            ).to_ndarray())
     kind_data = {}
     # eigenvalues
     kind_data["eigenvalues"] = states.excitation_energy[:n_states]
@@ -174,9 +174,9 @@ def dump_matrix_testdata(matrix: AdcMatrix, trial_vec: AmplitudeVector,
         ).to_ndarray()
     # compute the full mvp
     matvec = matrix.matvec(trial_vec)
-    data["matvec_singles"] = matvec[blocks[0]].to_ndarray()
+    data["matvec_singles"] = matvec[blocks[0]].to_ndarray()  # type: ignore
     if len(blocks) > 1:
-        data["matvec_doubles"] = matvec[blocks[1]].to_ndarray()
+        data["matvec_doubles"] = matvec[blocks[1]].to_ndarray()  # type: ignore
     # compute the diagonal
     data["diagonal_singles"] = matrix.diagonal()[blocks[0]].to_ndarray()
     if len(blocks) > 1:

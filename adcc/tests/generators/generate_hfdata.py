@@ -47,7 +47,8 @@ def run_pyscf(test_case: testcases.TestCase, frac_occ: bool):
     return mf
 
 
-def generate(test_case: testcases.TestCase, frac_occ: bool) -> h5py.File:
+def generate(test_case: testcases.TestCase,
+             frac_occ: bool) -> None:
     """
     Run Pyscf for the given test case and dump the result in the hdf5 file
     if the file does not already exist.
@@ -58,9 +59,8 @@ def generate(test_case: testcases.TestCase, frac_occ: bool) -> h5py.File:
         return None
     print(f"Generating data for {test_case.file_name}.")
     mf = run_pyscf(test_case, frac_occ)
-    hdf5_file = h5py.File(hdf5_file, "w")
-    dump_pyscf(mf, hdf5_file)
-    return hdf5_file
+    with h5py.File(hdf5_file, "w") as hdf5_file:
+        dump_pyscf(mf, hdf5_file)
 
 
 def generate_ch2nh2():
@@ -71,28 +71,7 @@ def generate_ch2nh2():
 def generate_cn():
     cases = testcases.get(n_expected_cases=2, name="cn")
     for case in cases:
-        hdf5_file = generate(case, frac_occ=True)
-        if hdf5_file is None:
-            continue
-        # TODO: is this still needed? -> comment out for now and see.
-        # This only modifies the orbital energies which can be obtained as
-        # ReferenceState.orbital_energies(space)
-        # However, with the exception of some tests, the orbital energies are
-        # usually obtained as
-        # ReferenceState.fock(space).diagonal()
-        # which is not modified here, since DataHFProvider reads the fock matrix
-        # from "fock_ff".
-        # In fact, TestReferenceStateCounterData should be the only test that may be
-        # affected by this.
-
-        # Since CN has some symmetry some energy levels are degenerate,
-        # which can lead to all sort of inconsistencies. This code
-        # adds a fudge value of 1e-14 to make them numerically distinguishable
-        # orben_f = hdf5_file["orben_f"]
-        # for i in range(1, len(orben_f)):
-        #     if np.abs(orben_f[i - 1] - orben_f[i]) < 1e-14:
-        #         orben_f[i - 1] -= 1e-14
-        #         orben_f[i] += 1e-14
+        generate(case, frac_occ=True)
 
 
 def generate_h2o():

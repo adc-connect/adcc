@@ -13,7 +13,7 @@ _testdata_dirname = "data"
 
 def run_psi4_tdscf(xyz: str, basis: str, charge: int = 0, multiplicity: int = 1,
                    conv_tol: float = 1e-12, conv_tol_grad: float = 1e-11,
-                   max_iter: int = 150, pcm_options: dict = None):
+                   max_iter: int = 150, pcm_options: dict | None = None):
     """
     Performs a psi4 CIS calculation and returns the SCF and the CIS results.
     """
@@ -50,7 +50,7 @@ def run_psi4_tdscf(xyz: str, basis: str, charge: int = 0, multiplicity: int = 1,
             }}
         """)
     psi4.core.be_quiet()
-    _, wfn = psi4.energy('scf', return_wfn=True, molecule=mol)
+    _, wfn = psi4.energy('scf', return_wfn=True, molecule=mol)  # type: ignore
 
     res = tdscf_excitations(wfn, states=5, triplets="NONE", tda=True,
                             r_convergence=1e-7)
@@ -76,7 +76,7 @@ def run_adcc_ptlr(wfn) -> adcc.ExcitedStates:
                         max_iter=100, conv_tol=1e-7, environment="ptlr")
 
 
-def dump_results(test_case: testcases.TestCase, pcm_options: dict = None
+def dump_results(test_case: testcases.TestCase, pcm_options: dict | None = None
                  ) -> tuple[str, dict]:
     """
     Performs a psi4 CIS calculation (potentially with PCM) and collects the

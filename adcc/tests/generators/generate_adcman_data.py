@@ -17,7 +17,7 @@ _methods = {
 }
 # Since it seems not possible to only perform an adcman MPn calculation,
 # the ground state data has to be extracted from an adc(n) calculation.
-# The method given below is used for this. The pt order should rather high
+# The method given below is used for this. The pt order should be rather high
 # to ensure that all desired MP properties are generated.
 _gs_data_method = "adc3"
 # Once we have other flavours or the MP4 density implemented, we will need to
@@ -26,10 +26,10 @@ _gs_data_density_orders = (None,)
 
 
 def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
-                 gs_density_order: int = None,
+                 gs_density_order: int | None = None,
                  n_singlets: int = 0, n_triplets: int = 0,
                  n_spin_flip: int = 0, n_states: int = 0,
-                 dump_nstates: int = None, **kwargs) -> None:
+                 dump_nstates: int | None = None, **kwargs) -> None:
     """
     Generate and dump the excited state reference data for the given reference case
     of the given test case if the data doesn't exist already.
@@ -68,8 +68,8 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
 def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
                      n_singlets: int = 0, n_triplets: int = 0,
                      n_spin_flip: int = 0, n_states: int = 0,
-                     dump_nstates: int = None,
-                     states_per_case: dict[str, dict[str, int]] = None,
+                     dump_nstates: int | None = None,
+                     states_per_case: dict[str, dict[str, int]] | None = None,
                      **kwargs) -> None:
     """
     Generate and dump the excited state reference data for all relevant
@@ -122,6 +122,7 @@ def generate_groundstate(test_case: testcases.TestCase) -> None:
                 test_case, method=method, case=case, import_states=False,
                 import_gs=True, gs_density_order=density_order
             )
+            assert data is not None
             # add the newly generated data to the gs_data
             for key, val in data.items():
                 if key not in gs_data:
@@ -173,7 +174,8 @@ def generate_h2o_def2tzvp():
         n_states = {kind: 3 for kind in
                     testcases.kinds_to_nstates(test_case.kinds[method.adc_type])}
         generate_adc_all(
-            test_case, method=method, dump_nstates=2, **n_states
+            test_case, method=method, dump_nstates=2, states_per_case=None,
+            **n_states
         )
 
 
@@ -186,7 +188,8 @@ def generate_cn_sto3g():
         n_states = {kind: 3 for kind in
                     testcases.kinds_to_nstates(test_case.kinds[method.adc_type])}
         generate_adc_all(
-            test_case, method=method, dump_nstates=2, **n_states
+            test_case, method=method, dump_nstates=2, states_per_case=None,
+            **n_states
         )
 
 
@@ -199,7 +202,8 @@ def generate_cn_ccpvdz():
         n_states = {kind: 3 for kind in
                     testcases.kinds_to_nstates(test_case.kinds[method.adc_type])}
         generate_adc_all(
-            test_case, method=method, dump_nstates=2, **n_states
+            test_case, method=method, dump_nstates=2, states_per_case=None,
+            **n_states
         )
 
 
@@ -212,7 +216,8 @@ def generate_hf_631g():
         n_states = {kind: 3 for kind in
                     testcases.kinds_to_nstates(test_case.kinds[method.adc_type])}
         generate_adc_all(
-            test_case, method=method, dump_nstates=2, **n_states
+            test_case, method=method, dump_nstates=2, states_per_case=None,
+            **n_states
         )
 
 
@@ -220,16 +225,15 @@ def generate_formaldehyde_pe():
     for test_case in testcases.get(n_expected_cases=2, name="formaldehyde"):
         for method in _methods["pp"]:
             method = AdcMethod(method)
-            kwargs = {
+            n_states = {
                 kind: 3 for kind in
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type])
             }
             assert test_case.pe_potfile is not None
-            kwargs["pe_potfile"] = test_case.pe_potfile
-            kwargs["run_qchem_scf"] = True
             generate_adc_all(
                 test_case=test_case, method=method, dump_nstates=2,
-                **kwargs
+                states_per_case=None, pe_potfile=test_case.pe_potfile,
+                run_qchem_scf=True, **n_states
             )
 
 

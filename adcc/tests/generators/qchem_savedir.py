@@ -4,6 +4,9 @@ import struct
 import h5py
 
 
+Array4D = np.ndarray[tuple[int, int, int, int]]
+
+
 class QchemSavedir:
     """
     Generates a Qchem savedir containing the SCF solution
@@ -30,17 +33,24 @@ class QchemSavedir:
         "integrals":         ("integrals", "hdf5"),
     }
 
-    def __init__(self, savedir: str) -> None:
-        self.savedir = Path(savedir).resolve()
+    def __init__(self, savedir: str | Path) -> None:
+        if isinstance(savedir, str):
+            savedir = Path(savedir)
+        self.savedir = savedir.resolve()
         self.savedir.mkdir(parents=True, exist_ok=True)
 
-    def write(self, scf_energy: float, mo_coeffs: np.ndarray,
-              fock_ao: np.ndarray, orb_energies: np.ndarray,
-              ao_density_aa: np.ndarray, ao_density_bb: np.ndarray,
-              purecart: int, n_basis: int = None,
-              n_orbitals: int = None, n_fragments: int = 0,
-              eri_blocks: dict[str, np.ndarray] = None,
-              ao_integrals: dict[str, np.ndarray] = None):
+    def write(self, scf_energy: float,
+              mo_coeffs: np.ndarray[tuple[int, int]],
+              fock_ao: np.ndarray[tuple[int, int]],
+              orb_energies: np.ndarray[tuple[int]],
+              ao_density_aa: np.ndarray[tuple[int, int]],
+              ao_density_bb: np.ndarray[tuple[int, int]],
+              purecart: int,
+              n_basis: int | None = None,
+              n_orbitals: int | None = None,
+              n_fragments: int = 0,
+              eri_blocks: dict[str, Array4D] | None = None,
+              ao_integrals: dict[str, np.ndarray] | None = None) -> None:
         """
         Write all content in the savedir.
 
@@ -107,8 +117,8 @@ class QchemSavedir:
         if ao_integrals is not None:
             self.write_ao_integrals(**ao_integrals)
 
-    def write_mo_coeffs(self, mo_coeffs: np.ndarray,
-                        orb_energies: np.ndarray) -> None:
+    def write_mo_coeffs(self, mo_coeffs: np.ndarray[tuple[int, int]],
+                        orb_energies: np.ndarray[tuple[int]]) -> None:
         """
         Writes the file for MO coefficients. Since the file also contains
         the orbital energies, they have to be provided too.
@@ -135,8 +145,8 @@ class QchemSavedir:
                 struct.pack("<12d", 0., scf_energy, *[0. for _ in range(10)])
             )
 
-    def write_ao_density(self, density_aa: np.ndarray,
-                         density_bb: np.ndarray) -> None:
+    def write_ao_density(self, density_aa: np.ndarray[tuple[int, int]],
+                         density_bb: np.ndarray[tuple[int, int]]) -> None:
         """
         Write the file containing the SCF density in the AO basis.
 
@@ -152,7 +162,7 @@ class QchemSavedir:
             f.write(density_aa.tobytes())
             f.write(density_bb.tobytes())
 
-    def write_ao_fock(self, fock: np.ndarray):
+    def write_ao_fock(self, fock: np.ndarray[tuple[int, int]]):
         """
         Write the Fock matrix in the AO basis to file. The Fock matrix is
         a (basis x basis) array.
