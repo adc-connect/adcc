@@ -346,6 +346,7 @@ def generate_qchem_input_file(infile: str | Path, adc_method: AdcMethod, basis: 
                               n_frozen_virtual: int | None = None,
                               max_ss: int | None = None,
                               gs_density_order: int | str | None = None,
+                              isr_maxorder: int | None = None,
                               run_qchem_scf: bool = False) -> None:
     """
     Generates a qchem input file for the given test case and method.
@@ -367,6 +368,8 @@ def generate_qchem_input_file(infile: str | Path, adc_method: AdcMethod, basis: 
         gs_density_order = _gs_density_order_dict[gs_density_order]
     if gs_density_order is not None:  # append density order to the method
         method += f"\nadc_gs_density_order     {gs_density_order}"
+    if isr_maxorder is not None:  # and isr_max_order
+        method += f"\nadc_isr_maxorder         {isr_maxorder}"
 
     qsys_mem = "{:d}gb".format(max(memory // 1000, 1) + 5)
     qsys_vmem = qsys_mem

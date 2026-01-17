@@ -140,7 +140,8 @@ def _import_excited_states(context: h5py.File, method: str, adc_type: str = "pp"
     if f"{tree}/nstates" not in context:
         return None
     _, n_states = _extract_dataset(context[f"{tree}/nstates"])
-    assert isinstance(n_states, int)
+    if not isinstance(n_states, int):
+        n_states = int(n_states)
     if import_nstates is not None:
         n_states = min(n_states, import_nstates)
     # go through the states and gather the tree paths to read and import from the
@@ -150,7 +151,6 @@ def _import_excited_states(context: h5py.File, method: str, adc_type: str = "pp"
         state_tree = tree + f"/es{n}"
         # ensure that the state is converged
         _, converged = _extract_dataset(context[f"{state_tree}/converged"])
-        assert isinstance(converged, bool)
         if not converged:
             raise DataImportError(f"State {n} of kind {state_kind} in file "
                                   f"{context.filename} is not converged.")
@@ -361,6 +361,8 @@ _mp_data = {
     "mp2/prop/dipole": "mp2/dipole",
     # MP2 doubles amplitudes
     "mp2/td_o1o1v1v1": "mp2/td_o1o1v1v1",
+    # MP2 triples amplitudes
+    "mp2/tt2_o1o1o1v1v1v1": "mp2/tt_o1o1o1v1v1v1",
     # MP3
     "mp3/energy": "mp3/energy",
     # MP3 density in the AO basis
