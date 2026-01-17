@@ -31,6 +31,9 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group) -> None:
     gs_data[f"{gs}2/energy"] = ground_state.energy_correction(2)
     gs_data[f"{gs}2/dipole"] = ground_state.dipole_moment(2)
     gs_data[f"{gs}2/td_o1o1v1v1"] = ground_state.td2("o1o1v1v1").to_ndarray()
+    gs_data[f"{gs}2/tt_o1o1o1v1v1v1"] = (
+        ground_state.tt2("o1o1o1v1v1v1").to_ndarray()
+    )
     # MP3 data
     if not ground_state.has_core_occupied_space:
         gs_data[f"{gs}3/energy"] = ground_state.energy_correction(3)
