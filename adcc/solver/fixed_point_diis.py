@@ -266,7 +266,7 @@ def default_print(state: DIISSubspace, identifier: str, file: TextIO = sys.stdou
 
 
 def _no_print(state: DIISSubspace, identifier: str, file: TextIO = sys.stdout):
-    _, _, _ = state, identifier, file
+    pass
 
 
 def diis(updater: Callable[[Vector], Vector], guess_vector: Vector,
