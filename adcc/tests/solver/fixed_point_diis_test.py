@@ -132,6 +132,7 @@ class TestDIIS:
         # close to another eigenstate -> only verify convergence in this test
         guess = guess_zero(matrix)
         guess.set_random()
+        guess /= np.sqrt(guess.dot(guess))
         solution = diis(updater=self.adc_updater(matrix), guess_vector=guess,
                         conv_tol=conv_tol,
                         callback=default_print)
