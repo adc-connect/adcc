@@ -34,7 +34,7 @@ classifiers = [
 requires-python = ">= 3.9"
 dependencies = [
 	"opt_einsum >= 3.0",
-	"numpy >= 1.14",
+	"numpy >= 2.0",
 	"scipy >= 1.2",
 	"h5py >= 2.9",
 	"tqdm >= 4.30",
