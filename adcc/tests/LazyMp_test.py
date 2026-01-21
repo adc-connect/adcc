@@ -35,8 +35,23 @@ from . import testcases
 test_cases = testcases.get_by_filename(
     "h2o_sto3g", "cn_sto3g", "h2o_def2tzvp", "cn_ccpvdz"
 )
-cases = [(case.file_name, c) for case in test_cases for c in ["gen", "cvs"]]
+small_cases = [
+    (case.file_name, c) for case in test_cases if not case.only_full_mode
+    for c in ["gen", "cvs"]
+]
+large_cases = [
+    (case.file_name, c) for case in test_cases if case.only_full_mode
+    for c in ["gen", "cvs"]
+]
+assert not any(c in small_cases for c in large_cases)
+cases = small_cases + large_cases
 generators = ["adcman", "adcc"]
+# we don't have tt2 reference data from adcman for cvs, since there
+# is nothing implemented currently for cvs that requires the tt2 amplitudes.
+tt2_cases = [(system, case, "adcc") for system, case in small_cases]
+tt2_cases.extend(
+    (system, case, "adcman") for system, case in small_cases if "cvs" not in case
+)
 
 
 # Helper class to lazily cache the LazyMp instances so we can utilize their cache
@@ -157,6 +172,29 @@ class TestLazyMp:
         assert_allclose(instances.get(system, case).td2("o1o1v1v1").to_ndarray(),
                         refmp["mp2"]["td_o1o1v1v1"], atol=1e-12)
         assert "td2/o1o1v1v1" in instances.get(system, case).timer.tasks
+
+    @pytest.mark.parametrize("system,case,generator", tt2_cases)
+    def test_tt2(self, system: str, case: str, generator: str,
+                 instances: LazyMpCache):
+        refmp = testdata_cache._load_data(
+            system=system, method="mp", case=case, source=generator
+        )
+        assert_allclose(
+            instances.get(system, case).tt2("o1o1o1v1v1v1").to_ndarray(),
+            refmp["mp2"]["tt_o1o1o1v1v1v1"],
+            atol=1e-12
+        )
+        assert "tt2/o1o1o1v1v1v1" in instances.get(system, case).timer.tasks
+
+    def test_triples_symmetry(self, instances: LazyMpCache):
+        import libadcc
+        # Ensure that the triples have the correct symmetry that matches
+        # the symmetry of make_symmetry_triples
+        mp = instances.get("h2o_sto3g", "gen")
+        tt2 = mp.tt2("o1o1o1v1v1v1")
+        sym = libadcc.make_symmetry_triples(mp.mospaces, "o1o1o1v1v1v1")
+        reimport = libadcc.Tensor(sym)
+        reimport.set_from_ndarray(tt2.to_ndarray(), 1e-14)
 
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)
