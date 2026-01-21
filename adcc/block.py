@@ -40,6 +40,8 @@ def __getattr__(attr):
 T = TypeVar("T")
 
 
+# adapted from
+# https://github.com/sympy/sympy/blob/master/sympy/physics/secondquant.py
 def _sort_anticommuting(to_sort: list[T],
                         key: Union[Callable[[T], Any], None] = None
                         ) -> tuple[list[T], int]:
@@ -69,8 +71,11 @@ def _sort_anticommuting(to_sort: list[T],
     rng = tuple(range(len(to_sort) - 1))
     rev = tuple(range(len(to_sort) - 3, -1, -1))
 
+    def _identity(x):
+        return x
+
     if key is None:
-        key = lambda x: x
+        key = _identity
 
     keys = list(map(key, to_sort))
     to_sort = list(to_sort)
