@@ -505,7 +505,9 @@ TEST_CASE("Test Tensor interface", "[tensor]") {
         // regarding the precision -> can not compare with full precision
         std::shared_ptr<Tensor> out_tensor_ptr = in_tensor_ptr->symmetrise({{0, 1, 2}});
         CHECK_ELEMENTWISE(out_tensor_ptr,
-            Catch::Detail::Approx(TensorTestData::a_sym_012[i]).margin(1e-14).epsilon(1e-14));
+                          Catch::Detail::Approx(TensorTestData::a_sym_012[i])
+                                .margin(1e-14)
+                                .epsilon(1e-14));
       }
     }
 
@@ -524,9 +526,12 @@ TEST_CASE("Test Tensor interface", "[tensor]") {
       SECTION("antisymmetrise_to (0,1,2)") {
         // the 6 fold anti-symmetrisation seems to introduce some problems
         // regarding the precision -> can not compare with full precision
-        std::shared_ptr<Tensor> out_tensor_ptr = in_tensor_ptr->antisymmetrise({{0, 1, 2}});
+        std::shared_ptr<Tensor> out_tensor_ptr =
+              in_tensor_ptr->antisymmetrise({{0, 1, 2}});
         CHECK_ELEMENTWISE(out_tensor_ptr,
-            Catch::Detail::Approx(TensorTestData::a_asym_012[i]).margin(1e-14).epsilon(1e-14));
+                          Catch::Detail::Approx(TensorTestData::a_asym_012[i])
+                                .margin(1e-14)
+                                .epsilon(1e-14));
       }
     }
   }  // SECTION symmetrise antisymmetrise

@@ -51,7 +51,7 @@ class TensorImpl : public Tensor {
              std::shared_ptr<ExpressionTree> expr_ptr                          = nullptr);
   TensorImpl(std::shared_ptr<const AdcMemory> adcmem_ptr, std::vector<AxisInfo> axes,
              std::shared_ptr<ExpressionTree> expr_ptr)
-        : TensorImpl(adcmem_ptr, axes, nullptr, expr_ptr) {};
+        : TensorImpl(adcmem_ptr, axes, nullptr, expr_ptr){};
 
   std::shared_ptr<Tensor> empty_like() const override;
   std::shared_ptr<Tensor> nosym_like() const override;

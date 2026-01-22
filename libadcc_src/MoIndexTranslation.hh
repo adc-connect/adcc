@@ -73,7 +73,7 @@ struct SimpleRange : std::vector<std::pair<size_t, size_t>> {
 
   /** Build a Range object by providing a vector of [start, end) pairs */
   SimpleRange(std::vector<std::pair<size_t, size_t>> in)
-        : std::vector<std::pair<size_t, size_t>>(in) {};
+        : std::vector<std::pair<size_t, size_t>>(in){};
 
   /** Build an empty SimpleRange object */
   SimpleRange() : std::vector<std::pair<size_t, size_t>>{} {}
