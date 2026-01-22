@@ -195,6 +195,12 @@ class TestLazyMp:
         sym = libadcc.make_symmetry_triples(mp.mospaces, "o1o1o1v1v1v1")
         reimport = libadcc.Tensor(sym)
         reimport.set_from_ndarray(tt2.to_ndarray(), 1e-14)
+        # and again for unrestricted (no spin block mapping)
+        mp = instances.get("cn_sto3g", "gen")
+        tt2 = mp.tt2("o1o1o1v1v1v1")
+        sym = libadcc.make_symmetry_triples(mp.mospaces, "o1o1o1v1v1v1")
+        reimport = libadcc.Tensor(sym)
+        reimport.set_from_ndarray(tt2.to_ndarray(), 1e-14)
 
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)
