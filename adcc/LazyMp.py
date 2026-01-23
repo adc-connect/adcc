@@ -23,10 +23,11 @@
 import libadcc
 import numpy as np
 
-from .functions import direct_sum, evaluate, einsum
+from .functions import direct_sum, evaluate, einsum, zeros_like
 from .misc import cached_property, cached_member_function
 from .ReferenceState import ReferenceState
 from .OneParticleDensity import OneParticleDensity
+from .TwoParticleDensity import TwoParticleDensity
 from .NParticleOperator import product_trace, OperatorSymmetry
 from .Intermediates import register_as_intermediate
 from .timings import Timer, timed_member_call
@@ -208,6 +209,69 @@ class LazyMp:
             return self.reference_state.density
         elif level == 2:
             return self.reference_state.density + self.mp2_diffdm
+        else:
+            raise NotImplementedError("Only densities for level 0, 1 and 2"
+                                      " are implemented.")
+
+    @cached_property
+    @timed_member_call(timer="timer")
+    def mp1_diffdm_2p(self):
+        """
+        Return the two-particle MP1 difference density in the MO basis.
+        """
+        ret = TwoParticleDensity(self.mospaces,
+                                 symmetry=OperatorSymmetry.HERMITIAN)
+        ret.oovv = -1.0 * self.t2oo
+        return ret.evaluate()
+
+    @cached_property
+    @timed_member_call(timer="timer")
+    def mp2_diffdm_2p(self):
+        """
+        Return the two-particle MP2 difference density in the MO basis.
+        """
+        hf = self.reference_state
+        ret = TwoParticleDensity(self.mospaces,
+                                 symmetry=OperatorSymmetry.HERMITIAN)
+        p0 = self.mp2_diffdm
+
+        # constuct Kronecker Delta
+        d_oo = zeros_like(hf.foo)
+        d_oo.set_mask("ii", 1)
+
+        ret.oooo = (
+            + 4.0 * einsum("ik,jl->ijkl", p0.oo, d_oo)
+            .antisymmetrise(0, 1).antisymmetrise(2, 3)
+            + 0.5 * einsum("ijab,klab->ijkl", self.t2oo, self.t2oo)
+        )
+        ret.ooov = (
+            + 2.0 * einsum("ja,ik->ijka", p0.ov, d_oo).antisymmetrise(0, 1)
+        )
+        ret.oovv = (
+            - 1.0 * self.td2(b.oovv)
+        )
+        ret.ovov = (
+            + 1.0 * einsum("ab,ij->iajb", p0.vv, d_oo)
+            - 1.0 * einsum("jkac,ikbc->iajb", self.t2oo, self.t2oo)
+        )
+        ret.vvvv = (
+            + 0.5 * einsum("ijab,ijcd->abcd", self.t2oo, self.t2oo)
+        )
+        return evaluate(ret)
+
+    def density_2p(self, level=2):
+        """
+        Return the two-particle MP density in the MO basis with all corrections
+        up to the specified order of perturbation theory
+        """
+        if level == 0:
+            return self.reference_state.density_2p
+        elif level == 1:
+            return (self.reference_state.density_2p
+                    + self.mp1_diffdm_2p)
+        elif level == 2:
+            return (self.reference_state.density_2p
+                    + self.mp1_diffdm_2p + self.mp2_diffdm_2p)
         else:
             raise NotImplementedError("Only densities for level 0, 1 and 2"
                                       " are implemented.")
