@@ -36,7 +36,7 @@ import libadcc
 
 
 def transform_operator_ao2mo(tensor_bb: Tensor, tensor_ff: Tensor,
-                             coefficients: callable[[str], Tensor],
+                             coefficients,
                              conv_tol: float = 1e-14):
     """Take a block-diagonal tensor in the atomic orbital basis
     and transform it into the molecular orbital basis in the
