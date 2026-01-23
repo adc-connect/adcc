@@ -115,9 +115,8 @@ std::shared_ptr<Symmetry> make_symmetry_1p_op(
   // Hermitian operator is a symmetric matrix if symmetric and both spaces equal
   if (symmetry == "hermitian" && ss[0] == ss[1]) {
     sym->set_permutations({"ij", "ji"});
-  }
-  // Antihermitian operator is antisymmetric if both spaces are equal
-  if (symmetry == "antihermitian" && ss[0] == ss[1]) {
+  } else if (symmetry == "antihermitian" && ss[0] == ss[1]) {
+    // Antihermitian operator is antisymmetric if both spaces are equal
     sym->set_permutations({"ij", "-ji"});
   }
 
@@ -157,7 +156,7 @@ std::shared_ptr<Symmetry> make_symmetry_2p_op(
   if (ss[2] == ss[3]) permutations.push_back("-ijlk");
   if (symmetry == "hermitian" && ss[0] == ss[2] && ss[1] == ss[3])
     permutations.push_back("klij");
-  if (symmetry == "antihermitian" && ss[0] == ss[2] && ss[1] == ss[3])
+  else if (symmetry == "antihermitian" && ss[0] == ss[2] && ss[1] == ss[3])
     permutations.push_back("-klij");
   if (permutations.size() > 1) {
     sym->set_permutations(permutations);
@@ -345,7 +344,7 @@ std::shared_ptr<Symmetry> make_symmetry_operator(
 
 std::shared_ptr<Symmetry> make_symmetry_operator_basis(
       std::shared_ptr<const MoSpaces> mospaces_ptr, size_t n_bas,
-      const std::string& symmetry, const int& n_particle_op, const std::string& blocks) {
+      const std::string& symmetry, const int n_particle_op, const std::string& blocks) {
   if (blocks != "ab" && blocks != "a" && blocks != "b" && blocks != "abstack") {
     throw invalid_argument(
           "Invalid argument to 'blocks' parameter. Only valid values are 'ab' (both "
@@ -374,7 +373,7 @@ std::shared_ptr<Symmetry> make_symmetry_operator_basis(
       sym->set_permutations({"ij", "ji"});
     }
 
-    if (symmetry == "antihermitian") {
+    else if (symmetry == "antihermitian") {
       sym->set_permutations({"ij", "-ji"});
     }
     // Setup spin symmetry (spin block mapping)
@@ -412,7 +411,7 @@ std::shared_ptr<Symmetry> make_symmetry_operator_basis(
     permutations.push_back("-jikl");
     permutations.push_back("-ijlk");
     if (symmetry == "hermitian") permutations.push_back("klij");
-    if (symmetry == "antihermitian") permutations.push_back("-klij");
+    else if (symmetry == "antihermitian") permutations.push_back("-klij");
     if (permutations.size() > 1) {
       sym->set_permutations(permutations);
     }

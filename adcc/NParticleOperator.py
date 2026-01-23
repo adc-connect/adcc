@@ -160,7 +160,6 @@ class NParticleOperator:
             raise KeyError("The block function does not support "
                            "access to zero-blocks. Available non-zero "
                            f"blocks are: {self.blocks_nonzero}.")
-        pass
 
     def __getitem__(self, blk) -> Tensor:
         if blk not in self.blocks:
@@ -387,7 +386,6 @@ class NParticleOperator:
                     and self.reference_state != other.reference_state:
                 delattr(self, "reference_state")
         return self
-        # raise NotImplementedError
 
     def __imul__(self, other):
         if not isinstance(other, (float, int)):

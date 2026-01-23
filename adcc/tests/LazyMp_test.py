@@ -166,7 +166,7 @@ class TestLazyMp:
         )
         mp2diff = instances.get(system, case).mp2_diffdm
 
-        assert mp2diff.symmetry.value == 1
+        assert mp2diff.symmetry is OperatorSymmetry.HERMITIAN
         blocks = ["o1o1", "o1v1", "v1v1"]
         if "cvs" in case:
             blocks.extend(["o2o1", "o2o2", "o2v1"])
