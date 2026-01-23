@@ -30,12 +30,14 @@ from .OneParticleDensity import OneParticleDensity
 from .NParticleOperator import OperatorSymmetry
 from .TwoParticleOperator import TwoParticleOperator
 from .functions import einsum
+from .MoSpaces import split_spaces
 
 import libadcc
 
 
-def transform_operator_ao2mo(tensor_bb, tensor_ff, coefficients,
-                             conv_tol=1e-14):
+def transform_operator_ao2mo(tensor_bb: Tensor, tensor_ff: Tensor,
+                             coefficients: callable[[str], Tensor],
+                             conv_tol: float = 1e-14):
     """Take a block-diagonal tensor in the atomic orbital basis
     and transform it into the molecular orbital basis in the
     convention used by adcc.
@@ -77,6 +79,51 @@ def transform_operator_ao2mo(tensor_bb, tensor_ff, coefficients,
             raise NotImplementedError(
                 "Only one- and two-particle operators are implemented."
             )
+
+
+def transform_operator_ao2mo_spin_projected(tensor_bb: Tensor, tensor_ff: Tensor,
+                                            coeff_map: dict[str, Tensor],
+                                            spin_map: str = "aa",
+                                            conv_tol: float = 1e-14):
+    """Take a tensor in the atomic orbital basis
+    and transform it into the molecular orbital basis in the
+    convention used by adcc.
+
+    The transformation is performed block-wise using the provided
+    molecular orbital coefficient matrices for the selected
+    spin components.
+
+    Parameters
+    ----------
+    tensor_bb : Tensor
+        Tensor in the atomic orbital basis
+    tensor_ff : Tensor
+        Output tensor with the symmetry set-up to contain
+        the operator in the molecular orbital representation
+    coeff_map : dict
+        Dictionary containing molecular orbital coefficient matrices,
+        keyed by orbital space and spin label (e.g. "<space>_a", "<space>_b").
+    spin_map : str, optional
+        Two-character string specifying which spin components are projected
+        for the left and right indices (e.g. "aa", "ab"). Default is "aa".
+    conv_tol : float, optional
+        SCF convergence tolerance, by default 1e-14
+    """
+    assert len(spin_map) == 2
+    spin1, spin2 = list(spin_map)
+
+    for blk in tensor_ff.canonical_blocks:
+        if len(blk) == 4:
+            s1, s2 = split_spaces(blk)
+            cleft = coeff_map[f"{s1}_{spin1}"]
+            cright = coeff_map[f"{s2}_{spin2}"]
+            temp = cleft @ tensor_bb @ cright.transpose()
+
+            # TODO: once the permutational symmetry is correct:
+            # tensor_ff.set_block(blk, tensor_ff)
+            tensor_ff[blk].set_from_ndarray(temp.to_ndarray(), conv_tol)
+        else:
+            raise NotImplementedError
 
 
 def replicate_ao_block(mospaces, tensor,
@@ -150,10 +197,13 @@ def replicate_ao_block(mospaces, tensor,
 
 
 class OperatorIntegrals:
-    def __init__(self, provider, mospaces, coefficients, conv_tol):
+    def __init__(self, provider, mospaces, coefficients, coefficients_alpha,
+                 coefficients_beta, conv_tol):
         self._provider_ao = provider
         self.mospaces = mospaces
         self._coefficients = coefficients
+        self._coefficients_alpha = coefficients_alpha
+        self._coefficients_beta = coefficients_beta
         self._conv_tol = conv_tol
         self._import_timer = Timer()
 
@@ -183,6 +233,81 @@ class OperatorIntegrals:
                                      symmetry=OperatorSymmetry.HERMITIAN,
                                      block="a")
         return ovlp_bb
+
+    @cached_property
+    @timed_member_call("_import_timer")
+    def ssq_1p(self) -> OneParticleOperator:
+        """Returns the one particle part of the S^2 operator"""
+        op = OneParticleOperator(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
+        # d_ij = 3/4 \delta_ij
+        for ss in self.mospaces.subspaces_occupied:
+            op[ss + ss].set_mask("ii", 0.75)
+        # d_ab = 3/4 \delta_ij
+        for ss in self.mospaces.subspaces_virtual:
+            op[ss + ss].set_mask("ii", 0.75)
+        return op
+
+    @cached_property
+    @timed_member_call("_import_timer")
+    def ssq_2p(self) -> TwoParticleOperator:
+        """Returns the two particle part of the S^2 operator"""
+        # Intermediates
+        # S^aa, S^ab and S^bb (spin projected overlap matrices)
+        ovlp_bb: Tensor = self.overlap_ao
+        coeff_map = {}
+        for sp in self.mospaces.subspaces:
+            coeff_map[sp + "_a"] = self._coefficients_alpha(sp + "b")
+            coeff_map[sp + "_b"] = self._coefficients_beta(sp + "b")
+
+        S_aa = OneParticleOperator(self.mospaces,
+                                   symmetry=OperatorSymmetry.NOSYMMETRY)
+        transform_operator_ao2mo_spin_projected(ovlp_bb, S_aa, coeff_map, "aa",
+                                                self._conv_tol)
+
+        S_ab = OneParticleOperator(self.mospaces,
+                                   symmetry=OperatorSymmetry.NOSYMMETRY)
+        transform_operator_ao2mo_spin_projected(ovlp_bb, S_ab, coeff_map, "ab",
+                                                self._conv_tol)
+
+        S_bb = OneParticleOperator(self.mospaces,
+                                   symmetry=OperatorSymmetry.NOSYMMETRY)
+        transform_operator_ao2mo_spin_projected(ovlp_bb, S_bb, coeff_map, "bb",
+                                                self._conv_tol)
+
+        # additional intermediate
+        S_aa_minus_bb = S_aa - S_bb
+
+        op = TwoParticleOperator(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
+        op.oooo = (
+            + 1.0 * einsum("ik,jl->ijkl", S_aa_minus_bb.oo,  S_aa_minus_bb.oo)
+            # exploit symmetry S_ab.oo = S_ba.oo.T
+            + 4.0 * einsum("ik,jl->ijkl", S_ab.oo.T, S_ab.oo)
+        ).antisymmetrise(2, 3)
+        op.ooov = (
+            + 2.0 * einsum("ik,ja->ijka", S_ab.oo.T, S_ab.ov)
+            + 2.0 * einsum("ik,ja->ijka", S_ab.oo, S_ab.vo.T)
+        ).antisymmetrise(0, 1)
+        op.oovv = (
+            + 2.0 * einsum("ia,jb->ijab", S_ab.vo.T, S_ab.ov)
+            + 2.0 * einsum("ia,jb->ijab", S_ab.ov, S_ab.vo.T)
+        ).antisymmetrise(2, 3)
+        op.ovov = (
+            + 0.5 * einsum("ij,ab->iajb", S_aa_minus_bb.oo, S_aa_minus_bb.vv)
+            + 1.0 * einsum("ij,ab->iajb", S_ab.oo.T, S_ab.vv)
+            + 1.0 * einsum("ij,ab->iajb", S_ab.oo, S_ab.vv.T)
+            - 1.0 * einsum("ib,aj->iajb", S_ab.vo.T, S_ab.vo)
+            - 1.0 * einsum("ib,aj->iajb", S_ab.ov, S_ab.ov.T)
+        )
+        op.ovvv = (
+            + 2.0 * einsum("ib,ac->iabc", S_ab.vo.T, S_ab.vv)
+            + 2.0 * einsum("ib,ac->iabc", S_ab.ov, S_ab.vv.T)
+        ).antisymmetrise(2, 3)
+        op.vvvv = (
+            + 1.0 * einsum("ac,bd->abcd", S_aa_minus_bb.vv, S_aa_minus_bb.vv)
+            # exploit symmetry S_ab.vv = S_ba.vv.T
+            + 4.0 * einsum("ac,bd->abcd", S_ab.vv, S_ab.vv.T)
+        ).antisymmetrise(2, 3)
+        return op
 
     def _import_dipole_like_operator(
         self, integral: str,

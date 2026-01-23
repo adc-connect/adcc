@@ -154,7 +154,8 @@ class ReferenceState(libadcc.ReferenceState):
 
         self.operators = OperatorIntegrals(
             hfdata.operator_integral_provider, self._mospaces,
-            self.orbital_coefficients, self.conv_tol
+            self.orbital_coefficients, self.orbital_coefficients_alpha,
+            self.orbital_coefficients_beta, self.conv_tol
         )
 
         self.environment = None  # no environment attached by default
@@ -250,5 +251,16 @@ class ReferenceState(libadcc.ReferenceState):
         if isinstance(gauge_origin, str):
             gauge_origin = self.gauge_origin_to_xyz(gauge_origin)
         return super().nuclear_quadrupole(gauge_origin)
+
+    @cached_property
+    def ssq(self):
+        """
+        Return <S^2> of the HF reference state.
+        """
+        ssq_1p_op = self.operators.ssq_1p
+        ssq_2p_op = self.operators.ssq_2p
+        ssq_1p = product_trace(ssq_1p_op, self.density)
+        ssq_2p = product_trace(ssq_2p_op, self.density_2p)
+        return (ssq_1p + ssq_2p)
 
 # TODO some nice describe method
