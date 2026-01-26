@@ -60,7 +60,6 @@ class OneParticleDensity(NParticleDensity):
             for sp in self.orbital_subspaces:
                 coeff_map[sp + "_a"] = refstate.orbital_coefficients_alpha(sp + "b")
                 coeff_map[sp + "_b"] = refstate.orbital_coefficients_beta(sp + "b")
-            ovlp = refstate.operators.overlap_ao
         else:
             raise TypeError("refstate needs to be an libadcc.ReferenceState.")
 

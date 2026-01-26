@@ -42,11 +42,13 @@ class OperatorSymmetry(Enum):
     def to_str(self) -> str:
         return self.name.lower()
 
+
 @dataclass(frozen=True)
 class BlockInfo:
     canonical: str
     factor: int
     transpose: tuple[int, ...]
+
 
 class NParticleOperator:
     def __init__(self, spaces, n_particle_op, symmetry=OperatorSymmetry.HERMITIAN):
@@ -122,7 +124,7 @@ class NParticleOperator:
         Returns canonical block multiplicity factors.
         """
         return dict(self._canonical_factors)
-    
+
     @property
     def canonical_blocks(self) -> tuple[str, ...]:
         """
@@ -321,7 +323,7 @@ class NParticleOperator:
             raise ValueError(f"Cannot add {self.__class__.__name__}s with "
                              "differing mospaces.")
         if self.symmetry is not OperatorSymmetry.NOSYMMETRY and \
-            self.symmetry is not other.symmetry:
+                self.symmetry is not other.symmetry:
             raise ValueError("Cannot add non-symmetric matrix "
                              "in-place to symmetric one.")
 
@@ -361,7 +363,7 @@ class NParticleOperator:
             raise ValueError(f"Cannot add {self.__class__.__name__}s with "
                              "differing mospaces.")
         if self.symmetry is not OperatorSymmetry.NOSYMMETRY and \
-            self.symmetry is not other.symmetry:
+                self.symmetry is not other.symmetry:
             raise ValueError("Cannot add non-symmetric matrix "
                              "in-place to symmetric one.")
 

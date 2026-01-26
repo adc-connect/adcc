@@ -77,9 +77,9 @@ class TestNParticleOperator:
                 ref = a + b
         else:
             assert_array_almost_equal_nulp((a + b).to_ndarray(),
-                                            a.to_ndarray() + b.to_ndarray())
+                                           a.to_ndarray() + b.to_ndarray())
             assert_array_almost_equal_nulp((b + a).to_ndarray(),
-                                            a.to_ndarray() + b.to_ndarray())
+                                           a.to_ndarray() + b.to_ndarray())
 
     @pytest.mark.parametrize("n_particle_op", n_particles)
     @pytest.mark.parametrize("op_sym", op_syms_two_operators,
@@ -122,13 +122,13 @@ class TestNParticleOperator:
                 ref = a - b
         else:
             assert_array_almost_equal_nulp((a - b).to_ndarray(),
-                                        a.to_ndarray() - b.to_ndarray())
+                                           a.to_ndarray() - b.to_ndarray())
             assert_array_almost_equal_nulp((b - a).to_ndarray(),
-                                        b.to_ndarray() - a.to_ndarray())
+                                           b.to_ndarray() - a.to_ndarray())
             assert_array_almost_equal_nulp((a - b).to_ndarray(),
-                                        (a + (-1 * b)).to_ndarray())
+                                           (a + (-1 * b)).to_ndarray())
             assert_array_almost_equal_nulp((b - a).to_ndarray(),
-                                        (b + (-1 * a)).to_ndarray())
+                                           (b + (-1 * a)).to_ndarray())
 
     @pytest.mark.parametrize("n_particle_op", n_particles)
     @pytest.mark.parametrize("op_sym", op_syms_two_operators,

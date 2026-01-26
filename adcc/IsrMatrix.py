@@ -133,7 +133,8 @@ class IsrMatrix(AdcMatrixlike):
         if all(op.symmetry is OperatorSymmetry.HERMITIAN for op in self.operator):
             return self.matvec(v)
         # anti-Hermitian operators
-        elif all(op.symmetry is OperatorSymmetry.ANTIHERMITIAN for op in self.operator):
+        elif all(op.symmetry is OperatorSymmetry.ANTIHERMITIAN
+                 for op in self.operator):
             return [
                 AmplitudeVector(ph=-1.0 * mv.ph, pphh=-1.0 * mv.pphh)
                 for mv in self.matvec(v)
