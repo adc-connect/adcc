@@ -130,7 +130,7 @@ def generate_h2o_sto3g():
                 per_case = {
                     case: {n_states: n} for case, n in states_per_case.items()
                 }
-            n_states = {n_states: 3}
+            n_states = {n_states: 3, "n_guesses": 3}
             generate_adc_all(
                 test_case, method=method, dump_nstates=2, states_per_case=per_case,
                 **n_states
