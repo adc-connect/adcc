@@ -65,11 +65,11 @@ std::shared_ptr<Symmetry> make_symmetry_eri_symm(
 
 /** Return the Symmetry object for a MO spaces block of a one-particle operator
  *
- * \param mospaces_ptr     MoSpaces pointer
- * \param space            Space to use (e.g. o1o1 or o1v1)
- * \param symmetry         Is the tensor symmetric (only in effect if both space
- *                         axes identical). false disables a setup of permutational
- *                         symmetry.
+ * \param mospaces_ptr        MoSpaces pointer
+ * \param space               Space to use (e.g. o1o1 or o1v1)
+ * \param operator_symmetry   Is the tensor symmetric (only in effect if both space
+ *                            axes identical). false disables a setup of permutational
+ *                            symmetry.
  * \param cartesian_transformation
  *  The cartesian function accordung to which the operator transforms.
  *  Valid values are:
@@ -82,7 +82,7 @@ std::shared_ptr<Symmetry> make_symmetry_eri_symm(
  */
 std::shared_ptr<Symmetry> make_symmetry_operator(
       std::shared_ptr<const MoSpaces> mospaces_ptr, const std::string& space,
-      const std::string& symmetry, const std::string& cartesian_transformation);
+      const std::string& operator_symmetry, const std::string& cartesian_transformation);
 
 /** Return the symmetry object for an operator in the AO basis. The object will
  *  represent a block-diagonal matrix of the form
@@ -91,23 +91,21 @@ std::shared_ptr<Symmetry> make_symmetry_operator(
  *  where M is an n_bas x n_bas block and is indentical in upper-left
  *  and lower-right.
  *
- * \param mospaces_ptr     MoSpaces pointer
- * \param n_bas            Number of AO basis functions
- * \param symmetry         Is the tensor symmetric (hermitian/antihermitian, only
- *                         in effect if both space axes identical).
- *                         Nosymmetry disables a setup of permutational symmetry.
- * \param n_particle_op    NParticle Operator
- * \param blocks           Which blocks of the operator to return. Valid values
- *                         are "ab" to return a tensor for both alpha and beta
- *                         block as a block-diagonal tensor, "a" to only return a
- *                         tensor for only alpha block and "b" for only the
- *                         beta block. The fourth option is "abstack", which
- *                         returns the symmetry for a alpha block stacked on top of
- *                         a beta block (This is the convention used by adcman).
+ * \param mospaces_ptr        MoSpaces pointer
+ * \param n_bas               Number of AO basis functions
+ * \param operator_symmetry   Is the tensor symmetric (hermitian/antihermitian, only
+ *                            in effect if both space axes identical).
+ *                            Nosymmetry disables a setup of permutational symmetry.
+ * \param n_particle_op       NParticle Operator
+ * \param blocks              Which blocks of the operator to return. Valid values
+ *                            are "ab" to return a tensor for both alpha and beta
+ *                            block as a block-diagonal tensor, "a" to only return a
+ *                            tensor for only alpha block.
  */
 std::shared_ptr<Symmetry> make_symmetry_operator_basis(
       std::shared_ptr<const MoSpaces> mospaces_ptr, size_t n_bas,
-      const std::string& symmetry, const int& n_particle_op, const std::string& blocks);
+      const std::string& operator_symmetry, const int n_particle_op,
+      const std::string& blocks);
 
 ///@}
 }  // namespace libadcc

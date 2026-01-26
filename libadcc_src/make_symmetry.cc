@@ -105,17 +105,22 @@ std::shared_ptr<Symmetry> make_symmetry_orbital_energies(
 }
 
 std::shared_ptr<Symmetry> make_symmetry_1p_op(
-      std::shared_ptr<const MoSpaces> mospaces_ptr, const std::string& symmetry,
-      const std::string& cartesian_transformation, std::shared_ptr<Symmetry>& sym,
-      const std::vector<std::string>& ss) {
-  if (symmetry != "hermitian" && symmetry != "antihermitian" &&
-      symmetry != "nosymmetry") {
-    throw invalid_argument("Unknown symmetry: " + symmetry + ".");
+      std::shared_ptr<const MoSpaces> mospaces_ptr, const std::string& space,
+      const std::string& operator_symmetry, const std::string& cartesian_transformation) {
+  if (operator_symmetry != "hermitian" && operator_symmetry != "antihermitian" &&
+      operator_symmetry != "nosymmetry") {
+    throw invalid_argument("Unknown symmetry: " + operator_symmetry + ".");
   }
+  auto sym = std::make_shared<Symmetry>(mospaces_ptr, space);
+  if (sym->ndim() != 2) {
+    throw invalid_argument("Expect exactly a two-dimensional space string, not " + space +
+                           ".");
+  }
+  const std::vector<std::string>& ss = sym->subspaces();
   // Hermitian operator is a symmetric matrix if symmetric and both spaces equal
-  if (symmetry == "hermitian" && ss[0] == ss[1]) {
+  if (operator_symmetry == "hermitian" && ss[0] == ss[1]) {
     sym->set_permutations({"ij", "ji"});
-  } else if (symmetry == "antihermitian" && ss[0] == ss[1]) {
+  } else if (operator_symmetry == "antihermitian" && ss[0] == ss[1]) {
     // Antihermitian operator is antisymmetric if both spaces are equal
     sym->set_permutations({"ij", "-ji"});
   }
@@ -143,20 +148,24 @@ std::shared_ptr<Symmetry> make_symmetry_1p_op(
 }
 
 std::shared_ptr<Symmetry> make_symmetry_2p_op(
-      std::shared_ptr<const MoSpaces> mospaces_ptr, const std::string& symmetry,
-      const std::string& cartesian_transformation, std::shared_ptr<Symmetry>& sym,
-      const std::vector<std::string>& ss) {
-  if (symmetry != "hermitian" && symmetry != "antihermitian" &&
-      symmetry != "nosymmetry") {
-    throw invalid_argument("Unknown symmetry: " + symmetry + ".");
+      std::shared_ptr<const MoSpaces> mospaces_ptr, const std::string& space,
+      const std::string& operator_symmetry, const std::string& cartesian_transformation) {
+  if (operator_symmetry != "hermitian" && operator_symmetry != "antihermitian" &&
+      operator_symmetry != "nosymmetry") {
+    throw invalid_argument("Unknown symmetry: " + operator_symmetry + ".");
   }
-
+  auto sym = std::make_shared<Symmetry>(mospaces_ptr, space);
+  if (sym->ndim() != 4) {
+    throw invalid_argument("Expect exactly a four-dimensional space string, not " +
+                           space + ".");
+  }
+  const std::vector<std::string>& ss = sym->subspaces();
   std::vector<std::string> permutations{"ijkl"};
   if (ss[0] == ss[1]) permutations.push_back("-jikl");
   if (ss[2] == ss[3]) permutations.push_back("-ijlk");
-  if (symmetry == "hermitian" && ss[0] == ss[2] && ss[1] == ss[3])
+  if (operator_symmetry == "hermitian" && ss[0] == ss[2] && ss[1] == ss[3])
     permutations.push_back("klij");
-  else if (symmetry == "antihermitian" && ss[0] == ss[2] && ss[1] == ss[3])
+  else if (operator_symmetry == "antihermitian" && ss[0] == ss[2] && ss[1] == ss[3])
     permutations.push_back("-klij");
   if (permutations.size() > 1) {
     sym->set_permutations(permutations);
@@ -187,6 +196,79 @@ std::shared_ptr<Symmetry> make_symmetry_2p_op(
           {"abba", "baab", 1.},
     });
   }
+  return sym;
+}
+
+std::shared_ptr<Symmetry> make_symmetry_1p_op_basis(
+      std::shared_ptr<const MoSpaces> mospaces_ptr, const std::string& operator_symmetry,
+      const std::string& blocks,
+      std::map<std::string, std::pair<size_t, size_t>>& extra_axis) {
+  auto sym = std::make_shared<Symmetry>(mospaces_ptr, "bb", extra_axis);
+  if (operator_symmetry == "hermitian") {
+    sym->set_permutations({"ij", "ji"});
+  }
+
+  else if (operator_symmetry == "antihermitian") {
+    sym->set_permutations({"ij", "-ji"});
+  }
+  // Setup spin symmetry (spin block mapping)
+  if (mospaces_ptr->restricted) {
+    // Note: Libtensor assumes for the spin block mappings that there are
+    //       an even number of blocks along the spin axis. We explicitly check
+    //       for this in in as_lt_symmetry and ignore the spin symmetry if this
+    //       is not the case, but it has to be properly tested if this does
+    //       the trick. Notice that e.g. adcman does it like it is coded here
+    //       and ignores all symmetry between the spin blocks in the case of
+    //       an unrestricted reference. Technically speaking this is not
+    //       completely necessary and thus the if(restricted) should be dropped.
+
+    if (blocks == "ab") {
+      // ab and ba are forbidden, eventually "aa" and "bb" mapped on top.
+      sym->set_spin_blocks_forbidden({"ab", "ba"});
+      sym->set_spin_block_maps({{"aa", "bb", 1.0}});
+    }
+  }  // spin symmetry
+  return sym;
+}
+
+std::shared_ptr<Symmetry> make_symmetry_2p_op_basis(
+      std::shared_ptr<const MoSpaces> mospaces_ptr, const std::string& operator_symmetry,
+      const std::string& blocks,
+      std::map<std::string, std::pair<size_t, size_t>> extra_axis) {
+  // Setup symmetry in a way that the "b" axis has "b" alphas and "b" betas
+  auto sym = std::make_shared<Symmetry>(mospaces_ptr, "bbbb", extra_axis);
+  std::vector<std::string> permutations{"ijkl"};
+  permutations.push_back("-jikl");
+  permutations.push_back("-ijlk");
+  if (operator_symmetry == "hermitian")
+    permutations.push_back("klij");
+  else if (operator_symmetry == "antihermitian")
+    permutations.push_back("-klij");
+  if (permutations.size() > 1) {
+    sym->set_permutations(permutations);
+  }
+  // Setup spin symmetry (spin block mapping)
+  if (mospaces_ptr->restricted) {
+    // Note: Libtensor assumes for the spin block mappings that there are
+    //       an even number of blocks along the spin axis. We explicitly check
+    //       for this in in as_lt_symmetry and ignore the spin symmetry if this
+    //       is not the case, but it has to be properly tested if this does
+    //       the trick. Notice that e.g. adcman does it like it is coded here
+    //       and ignores all symmetry between the spin blocks in the case of
+    //       an unrestricted reference. Technically speaking this is not
+    //       completely necessary and thus the if(restricted) should be dropped.
+
+    if (blocks == "ab") {
+      // ab and ba are forbidden, eventually "aa" and "bb" mapped on top.
+      sym->set_spin_blocks_forbidden({"aaab", "aaba", "aabb", "abaa", "abbb", "bbba",
+                                      "bbab", "bbaa", "babb", "baaa"});
+      sym->set_spin_block_maps({
+            {"aaaa", "bbbb", 1.},
+            {"abab", "baba", 1.},
+            {"abba", "baab", 1.},
+      });
+    }
+  }  // spin symmetry
   return sym;
 }
 
@@ -261,17 +343,15 @@ std::shared_ptr<Symmetry> make_symmetry_orbital_coefficients(
 
 std::shared_ptr<Symmetry> make_symmetry_eri(std::shared_ptr<const MoSpaces> mospaces_ptr,
                                             const std::string& space) {
-  auto sym = std::make_shared<Symmetry>(mospaces_ptr, space);
-
-  const std::vector<std::string>& ss = sym->subspaces();
-  if (sym->ndim() != 4) {
+  size_t size = space.length();
+  if (size != 8) {
     throw invalid_argument("Expect exactly a four-dimensional space string, not " +
                            space + ".");
   }
 
   // Operator symmetry: Repulsion integrals are always hermitian.
   // Point-group symmetry: Repulsion integrals are totally symmetric
-  sym = make_symmetry_2p_op(mospaces_ptr, "hermitian", "1", sym, ss);
+  auto sym = make_symmetry_2p_op(mospaces_ptr, space, "hermitian", "1");
   return sym;
 }
 
@@ -325,128 +405,57 @@ std::shared_ptr<Symmetry> make_symmetry_eri_symm(
 
 std::shared_ptr<Symmetry> make_symmetry_operator(
       std::shared_ptr<const MoSpaces> mospaces_ptr, const std::string& space,
-      const std::string& symmetry, const std::string& cartesian_transformation) {
-  auto sym = std::make_shared<Symmetry>(mospaces_ptr, space);
+      const std::string& operator_symmetry, const std::string& cartesian_transformation) {
+  // auto sym = std::make_shared<Symmetry>(mospaces_ptr, space);
 
-  const std::vector<std::string>& ss = sym->subspaces();
-  if (sym->ndim() == 2) {
-    sym = make_symmetry_1p_op(mospaces_ptr, symmetry, cartesian_transformation, sym, ss);
-  } else if (sym->ndim() == 4) {
-    sym = make_symmetry_2p_op(mospaces_ptr, symmetry, cartesian_transformation, sym, ss);
+  size_t size = space.length();
+  if (size == 4) {
+    std::shared_ptr<Symmetry> sym = make_symmetry_1p_op(
+          mospaces_ptr, space, operator_symmetry, cartesian_transformation);
+    return sym;
+  } else if (size == 8) {
+    std::shared_ptr<Symmetry> sym = make_symmetry_2p_op(
+          mospaces_ptr, space, operator_symmetry, cartesian_transformation);
+    return sym;
   } else {
     throw invalid_argument(
           "Expect exactly a two- or four-dimensional space "
           "string, not " +
           space + ".");
   }
-  return sym;
 }
 
 std::shared_ptr<Symmetry> make_symmetry_operator_basis(
       std::shared_ptr<const MoSpaces> mospaces_ptr, size_t n_bas,
-      const std::string& symmetry, const int n_particle_op, const std::string& blocks) {
-  if (blocks != "ab" && blocks != "a" && blocks != "b" && blocks != "abstack") {
+      const std::string& operator_symmetry, const int n_particle_op,
+      const std::string& blocks) {
+  if (blocks != "ab" && blocks != "a") {
     throw invalid_argument(
           "Invalid argument to 'blocks' parameter. Only valid values are 'ab' (both "
           "alpha and beta blocks in a block-diagonal fashion), "
-          "'a' (only alpha block), 'b' (only beta block) and 'abstack'"
-          "(alpha and beta block stacked on top of another)");
+          "'a' (only alpha block)");
   }
-  if (symmetry != "hermitian" && symmetry != "antihermitian" &&
-      symmetry != "nosymmetry") {
-    throw invalid_argument("Unknown symmetry: " + symmetry + ".");
+  if (operator_symmetry != "hermitian" && operator_symmetry != "antihermitian" &&
+      operator_symmetry != "nosymmetry") {
+    throw invalid_argument("Unknown symmetry: " + operator_symmetry + ".");
   }
 
   // Setup extra "b" axis in a way that it twice n_bas in length
   // (alpha and beta blocks)
   std::map<std::string, std::pair<size_t, size_t>> extra_axis{{"b", {n_bas, n_bas}}};
 
-  if (blocks == "a" || blocks == "b" || blocks == "abstack") {
+  if (blocks == "a") {
     // Cut the second spin block in the axis (i.e. only have either alpha
     // or beta spin along the "b" axis)
     extra_axis = {{"b", {n_bas, 0}}};
   }
   if (n_particle_op == 1) {
-    // Setup symmetry in a way that the "b" axis has "b" alphas and "b" betas
-    auto sym = std::make_shared<Symmetry>(mospaces_ptr, "bb", extra_axis);
-    if (symmetry == "hermitian") {
-      sym->set_permutations({"ij", "ji"});
-    }
-
-    else if (symmetry == "antihermitian") {
-      sym->set_permutations({"ij", "-ji"});
-    }
-    // Setup spin symmetry (spin block mapping)
-    if (mospaces_ptr->restricted) {
-      // Note: Libtensor assumes for the spin block mappings that there are
-      //       an even number of blocks along the spin axis. We explicitly check
-      //       for this in in as_lt_symmetry and ignore the spin symmetry if this
-      //       is not the case, but it has to be properly tested if this does
-      //       the trick. Notice that e.g. adcman does it like it is coded here
-      //       and ignores all symmetry between the spin blocks in the case of
-      //       an unrestricted reference. Technically speaking this is not
-      //       completely necessary and thus the if(restricted) should be dropped.
-
-      if (blocks == "ab") {
-        // ab and ba are forbidden, eventually "aa" and "bb" mapped on top.
-        sym->set_spin_blocks_forbidden({"ab", "ba"});
-        sym->set_spin_block_maps({{"aa", "bb", 1.0}});
-        //   } else if (blocks == "a") {
-        //     // Only alpha spin is allowed
-        //     sym->set_spin_blocks_forbidden({"bx"});
-        //   } else if (blocks == "b") {
-        //     // Only beta spin is allowed
-        //     sym->set_spin_blocks_forbidden({"ax"});
-        //   } else if (blocks == "abstack") {
-        //     if (mospaces_ptr->restricted) {
-        //       sym->set_spin_block_maps({{"ax", "bx", 1.0}});
-        //     }
-      }
-    }  // spin symmetry
+    auto sym =
+          make_symmetry_1p_op_basis(mospaces_ptr, operator_symmetry, blocks, extra_axis);
     return sym;
   } else if (n_particle_op == 2) {
-    // Setup symmetry in a way that the "b" axis has "b" alphas and "b" betas
-    auto sym = std::make_shared<Symmetry>(mospaces_ptr, "bbbb", extra_axis);
-    std::vector<std::string> permutations{"ijkl"};
-    permutations.push_back("-jikl");
-    permutations.push_back("-ijlk");
-    if (symmetry == "hermitian") permutations.push_back("klij");
-    else if (symmetry == "antihermitian") permutations.push_back("-klij");
-    if (permutations.size() > 1) {
-      sym->set_permutations(permutations);
-    }
-    // Setup spin symmetry (spin block mapping)
-    if (mospaces_ptr->restricted) {
-      // Note: Libtensor assumes for the spin block mappings that there are
-      //       an even number of blocks along the spin axis. We explicitly check
-      //       for this in in as_lt_symmetry and ignore the spin symmetry if this
-      //       is not the case, but it has to be properly tested if this does
-      //       the trick. Notice that e.g. adcman does it like it is coded here
-      //       and ignores all symmetry between the spin blocks in the case of
-      //       an unrestricted reference. Technically speaking this is not
-      //       completely necessary and thus the if(restricted) should be dropped.
-
-      if (blocks == "ab") {
-        // ab and ba are forbidden, eventually "aa" and "bb" mapped on top.
-        sym->set_spin_blocks_forbidden({"aaab", "aaba", "aabb", "abaa", "abbb", "bbba",
-                                        "bbab", "bbaa", "babb", "baaa"});
-        sym->set_spin_block_maps({
-              {"aaaa", "bbbb", 1.},
-              {"abab", "baba", 1.},
-              {"abba", "baab", 1.},
-        });
-        //   } else if (blocks == "a") {
-        //     // Only alpha spin is allowed
-        //     sym->set_spin_blocks_forbidden({"bx"});
-        //   } else if (blocks == "b") {
-        //     // Only beta spin is allowed
-        //     sym->set_spin_blocks_forbidden({"ax"});
-        //   } else if (blocks == "abstack") {
-        //     if (mospaces_ptr->restricted) {
-        //       sym->set_spin_block_maps({{"ax", "bx", 1.0}});
-        //     }
-      }
-    }  // spin symmetry
+    auto sym =
+          make_symmetry_2p_op_basis(mospaces_ptr, operator_symmetry, blocks, extra_axis);
     return sym;
   } else {
     throw invalid_argument("make_symmetry_operator_basis: n_particle_op must be 1 or 2.");
