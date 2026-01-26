@@ -43,7 +43,9 @@ from .ReferenceState import ReferenceState
 from .AmplitudeVector import AmplitudeVector
 from .NParticleOperator import OperatorSymmetry
 from .OneParticleOperator import OneParticleOperator
+from .OneParticleDensity import OneParticleDensity
 from .TwoParticleOperator import TwoParticleOperator
+from .TwoParticleDensity import TwoParticleDensity
 from .opt_einsum_integration import register_with_opt_einsum
 
 # This has to be the last set of import

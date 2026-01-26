@@ -174,7 +174,7 @@ def operator_import_from_ao_test(scfres, ao_dict, operator="electric_dipole",
         int_mock = {"o1o1": int_oo, "o1v1": int_ov, "v1v1": int_vv}
 
         int_imported_comp = int_imported[i]
-        if not int_imported_comp.symmetry == OperatorSymmetry.HERMITIAN:
+        if int_imported_comp.symmetry is not OperatorSymmetry.HERMITIAN:
             int_vo = np.einsum('ib,ba,ja->ij', virta, ao_component, occa)
             int_vo += np.einsum('ib,ba,ja->ij', virtb, ao_component, occb)
             int_mock["v1o1"] = int_vo

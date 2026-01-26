@@ -27,6 +27,7 @@ from .AdcMethod import AdcMethod
 from .adc_pp import bmatrix as ppbmatrix
 from .AmplitudeVector import AmplitudeVector
 from .LazyMp import LazyMp
+from .NParticleOperator import OperatorSymmetry
 from .OneParticleOperator import OneParticleOperator
 from .timings import Timer, timed_member_call
 

@@ -56,7 +56,6 @@ class OneParticleOperator(NParticleOperator):
             raise ValueError("At least one non-zero block is needed to "
                              "transform the OneParticleOperator.")
         if isinstance(refstate, libadcc.ReferenceState):
-
             coeff_map = {}
             for sp in self.orbital_subspaces:
                 coeff_map[sp + "_a"] = refstate.orbital_coefficients_alpha(sp + "b")

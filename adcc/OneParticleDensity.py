@@ -51,18 +51,18 @@ class OneParticleDensity(NParticleDensity):
             symmetry=self.symmetry,
         )
 
-    def _transform_to_ao(self, refstate_or_coefficients):
+    def _transform_to_ao(self, refstate):
         if not len(self.blocks_nonzero):
             raise ValueError("At least one non-zero block is needed to "
                              "transform the OneParticleOperator.")
-        if isinstance(refstate_or_coefficients, libadcc.ReferenceState):
-            hf = refstate_or_coefficients
+        if isinstance(refstate, libadcc.ReferenceState):
             coeff_map = {}
             for sp in self.orbital_subspaces:
-                coeff_map[sp + "_a"] = hf.orbital_coefficients_alpha(sp + "b")
-                coeff_map[sp + "_b"] = hf.orbital_coefficients_beta(sp + "b")
+                coeff_map[sp + "_a"] = refstate.orbital_coefficients_alpha(sp + "b")
+                coeff_map[sp + "_b"] = refstate.orbital_coefficients_beta(sp + "b")
+            ovlp = refstate.operators.overlap_ao
         else:
-            coeff_map = refstate_or_coefficients
+            raise TypeError("refstate needs to be an libadcc.ReferenceState.")
 
         dm_bb_a = 0
         dm_bb_b = 0

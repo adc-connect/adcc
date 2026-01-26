@@ -26,6 +26,7 @@ from pytest import approx
 
 from adcc import block as b
 from adcc import LazyMp
+from adcc import OperatorSymmetry
 
 from .testdata_cache import testdata_cache
 from . import testcases

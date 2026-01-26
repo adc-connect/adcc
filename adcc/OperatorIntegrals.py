@@ -74,18 +74,27 @@ def transform_operator_ao2mo(tensor_bb, tensor_ff, coefficients,
             # tensor_ff.set_block(blk, tensor_ff)
             tensor_ff[blk].set_from_ndarray(temp.to_ndarray(), conv_tol)
         else:
-            raise NotImplementedError
+            raise NotImplementedError(
+                "Only one- and two-particle operators are implemented."
+            )
 
 
 def replicate_ao_block(mospaces, tensor,
                        symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN,
                        block: str = "ab"):
     """
-    transform_operator_ao2mo requires the operator in AO to be
-    replicated in a block-diagonal fashion (i.e. for a OneParticleOperator: [A 0
-                                                                             0 A].)
+    transform_operator_ao2mo requires the operator in the AO basis to be
+    replicated in a block-diagonal fashion (e.g. for a OneParticleOperator:
+    [A  0
+     0  A]).
     This is achieved using this function.
+
+    The `block` argument controls which blocks are constructed:
+    - block="ab": replicate the operator for both alpha and beta spaces,
+      resulting in a full block-diagonal structure.
+    - block="a" or block="b": construct only the corresponding single block.
     """
+    assert block in ["ab", "a", "b"]
     zerobk = np.zeros_like(tensor)
     if len(tensor.shape) == 2:
         sym = libadcc.make_symmetry_operator_basis(
@@ -134,7 +143,9 @@ def replicate_ao_block(mospaces, tensor,
             ])
             result.set_from_ndarray(full_tensor, 1e-14)
         else:
-            raise NotImplementedError
+            raise NotImplementedError(
+                "Only one- and two-particle operators are implemented."
+            )
     return result
 
 
@@ -159,26 +170,19 @@ class OperatorIntegrals:
         """Which integrals are available in the underlying backend"""
         return self.provider_ao.available
 
-    def _import_overlap_ao(
-        self, integral: str,
-        symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
-    ) -> Tensor:
-        if integral not in self.available:
-            raise NotImplementedError(f"{integral.replace('_', ' ')} operator "
-                                      "not implemented "
-                                      f"in {self.provider_ao.backend} backend.")
-
-        ao_operator = getattr(self.provider_ao, integral)
-        ovlp_bb = replicate_ao_block(self.mospaces, ao_operator, symmetry=symmetry,
-                                     block="a")
-        return ovlp_bb
-
     @cached_property
     @timed_member_call("_import_timer")
     def overlap_ao(self) -> Tensor:
         """Return the overlap in the atomic orbital basis."""
-        return self._import_overlap_ao(
-            "overlap", symmetry=OperatorSymmetry.HERMITIAN)
+        if "overlap" not in self.available:
+            raise NotImplementedError(f"overlap operator not implemented "
+                                      f"in {self.provider_ao.backend} backend.")
+
+        ao_operator = getattr(self.provider_ao, "overlap")
+        ovlp_bb = replicate_ao_block(self.mospaces, ao_operator,
+                                     symmetry=OperatorSymmetry.HERMITIAN,
+                                     block="a")
+        return ovlp_bb
 
     def _import_dipole_like_operator(
         self, integral: str,

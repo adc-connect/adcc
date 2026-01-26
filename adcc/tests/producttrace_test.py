@@ -47,7 +47,7 @@ def trace_contract(op_a, op_b):
     return np.einsum(subscripts, op_a, op_b)
 
 
-class TestOneParticleDensity:
+class TestProductTrace:
     @pytest.mark.parametrize("symmetries",
                              op_syms_two_operators,
                              ids=[f"{c[0].name}_{c[1].name}"
