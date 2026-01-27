@@ -236,8 +236,6 @@ class DataHfProvider(HartreeFockProvider):
                                  + str(derivs["elec_vel_1"].shape))
             opprov.electric_dipole_velocity = np.asarray(derivs["elec_vel_1"])
 
-        overlap = data.get("overlap", 0)
-        opprov.overlap = overlap
         self.operator_integral_provider = opprov
 
     #

@@ -234,8 +234,6 @@ def dump_pyscf(scfres: scf.hf.SCF, hdf5_file: h5py.Group):
             -0.5 * scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
         )
 
-    data["overlap"] = scfres.mol.intor_symmetric('int1e_ovlp')
-
     hdf5io.emplace_dict(data, hdf5_file, compression="gzip")
     hdf5_file.attrs["backend"] = "pyscf"
     hdf5_file.attrs["pyscf_version"] = pyscf.__version__
