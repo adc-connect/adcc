@@ -215,9 +215,9 @@ class LazyMp:
 
     @cached_property
     @timed_member_call(timer="timer")
-    def mp1_diffdm_2p(self):
+    def density_correction_mp1_2p(self):
         """
-        Return the two-particle MP1 difference density in the MO basis.
+        Return the two-particle MP1 difference correction in the MO basis.
         """
         ret = TwoParticleDensity(self.mospaces,
                                  symmetry=OperatorSymmetry.HERMITIAN)
@@ -226,9 +226,9 @@ class LazyMp:
 
     @cached_property
     @timed_member_call(timer="timer")
-    def mp2_diffdm_2p(self) -> OneParticleDensity:
+    def density_correction_mp2_2p(self) -> OneParticleDensity:
         """
-        Return the two-particle MP2 difference density in the MO basis.
+        Return the two-particle MP2 difference correction in the MO basis.
         """
         hf: ReferenceState = self.reference_state
         ret = TwoParticleDensity(self.mospaces,
@@ -259,6 +259,16 @@ class LazyMp:
         )
         return evaluate(ret)
 
+    def diffdm_2p(self, level=2):
+        if level == 1:
+            return self.density_correction_mp1_2p
+        elif level == 2:
+            return (self.density_correction_mp1_2p
+                    + self.density_correction_mp2_2p)
+        else:
+            raise NotImplementedError("Only first and second-order density "
+                                      "corrections are implemented.")
+
     def density_2p(self, level=2):
         """
         Return the two-particle MP density in the MO basis with all corrections
@@ -266,12 +276,9 @@ class LazyMp:
         """
         if level == 0:
             return self.reference_state.density_2p
-        elif level == 1:
+        elif level in [1, 2]:
             return (self.reference_state.density_2p
-                    + self.mp1_diffdm_2p)
-        elif level == 2:
-            return (self.reference_state.density_2p
-                    + self.mp1_diffdm_2p + self.mp2_diffdm_2p)
+                    + self.diffdm_2p(level))
         else:
             raise NotImplementedError("Only densities for level 0, 1 and 2"
                                       " are implemented.")
@@ -373,18 +380,17 @@ class LazyMp:
         """
         Return <S^2> of the ground state.
         """
-        if level in [1, 2]:
+        if level in [0, 1, 2]:
             ssq_1p_op = self.reference_state.operators.ssq_1p
             ssq_2p_op = self.reference_state.operators.ssq_2p
             # the trace of the second-order (and higher) correction to the RDM1
             # is zero -> no influence on top of HF density for ground state
             ssq_1p = product_trace(ssq_1p_op, self.density(0))
-            # which level? What is MP0?
-            ssq_2p = product_trace(ssq_2p_op, self.density_2p(level-1))
+            ssq_2p = product_trace(ssq_2p_op, self.density_2p(level))
             return (ssq_1p + ssq_2p)
         else:
-            raise NotImplementedError("Only <S^2> for level 1 and 2"
-                                      " are implemented.")
+            raise NotImplementedError("<S^2> is only implemented for "
+                                      "levels 0, 1, and 2.")
 
 
 #
