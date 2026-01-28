@@ -450,12 +450,12 @@ std::shared_ptr<Symmetry> make_symmetry_operator_basis(
     extra_axis = {{"b", {n_bas, 0}}};
   }
   if (n_particle_op == 1) {
-    auto sym =
-          make_symmetry_1p_op_basis(mospaces_ptr, operator_symmetry, blocks, std::move(extra_axis));
+    auto sym = make_symmetry_1p_op_basis(mospaces_ptr, operator_symmetry, blocks,
+                                         std::move(extra_axis));
     return sym;
   } else if (n_particle_op == 2) {
-    auto sym =
-          make_symmetry_2p_op_basis(mospaces_ptr, operator_symmetry, blocks, std::move(extra_axis));
+    auto sym = make_symmetry_2p_op_basis(mospaces_ptr, operator_symmetry, blocks,
+                                         std::move(extra_axis));
     return sym;
   } else {
     throw invalid_argument("make_symmetry_operator_basis: n_particle_op must be 1 or 2.");
