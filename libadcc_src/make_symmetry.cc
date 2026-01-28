@@ -202,7 +202,7 @@ std::shared_ptr<Symmetry> make_symmetry_2p_op(
 std::shared_ptr<Symmetry> make_symmetry_1p_op_basis(
       std::shared_ptr<const MoSpaces> mospaces_ptr, const std::string& operator_symmetry,
       const std::string& blocks,
-      std::map<std::string, std::pair<size_t, size_t>>& extra_axis) {
+      std::map<std::string, std::pair<size_t, size_t>> extra_axis) {
   auto sym = std::make_shared<Symmetry>(mospaces_ptr, "bb", extra_axis);
   if (operator_symmetry == "hermitian") {
     sym->set_permutations({"ij", "ji"});
@@ -451,11 +451,11 @@ std::shared_ptr<Symmetry> make_symmetry_operator_basis(
   }
   if (n_particle_op == 1) {
     auto sym =
-          make_symmetry_1p_op_basis(mospaces_ptr, operator_symmetry, blocks, extra_axis);
+          make_symmetry_1p_op_basis(mospaces_ptr, operator_symmetry, blocks, std::move(extra_axis));
     return sym;
   } else if (n_particle_op == 2) {
     auto sym =
-          make_symmetry_2p_op_basis(mospaces_ptr, operator_symmetry, blocks, extra_axis);
+          make_symmetry_2p_op_basis(mospaces_ptr, operator_symmetry, blocks, std::move(extra_axis));
     return sym;
   } else {
     throw invalid_argument("make_symmetry_operator_basis: n_particle_op must be 1 or 2.");

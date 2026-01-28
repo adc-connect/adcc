@@ -143,7 +143,7 @@ class TestTwoParticleOperator:
         with pytest.raises(KeyError):
             a["xyz"]
         with pytest.raises(KeyError):
-            a["xyz"] = a.oo
+            a["xyz"] = a.oooo
         with pytest.raises(KeyError):
             a.set_zero_block("xyz")
         # invalid tensor shape

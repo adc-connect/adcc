@@ -46,7 +46,7 @@ class OneParticleOperator(NParticleOperator):
         """
         Create an empty instance of an OneParticleOperator
         """
-        return self.__class__(
+        return OneParticleOperator(
             self.mospaces,
             symmetry=self.symmetry,
         )

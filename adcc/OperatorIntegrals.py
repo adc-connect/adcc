@@ -92,9 +92,9 @@ def replicate_ao_block(mospaces, tensor,
     The `block` argument controls which blocks are constructed:
     - block="ab": replicate the operator for both alpha and beta spaces,
       resulting in a full block-diagonal structure.
-    - block="a" or block="b": construct only the corresponding single block.
+    - block="a": construct only the corresponding single block.
     """
-    assert block in ["ab", "a", "b"]
+    assert block in ["ab", "a"]
     zerobk = np.zeros_like(tensor)
     if len(tensor.shape) == 2:
         sym = libadcc.make_symmetry_operator_basis(

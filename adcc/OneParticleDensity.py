@@ -46,7 +46,7 @@ class OneParticleDensity(NParticleDensity):
         """
         Create an empty instance of an OneParticleDensity
         """
-        return self.__class__(
+        return OneParticleDensity(
             self.mospaces,
             symmetry=self.symmetry,
         )

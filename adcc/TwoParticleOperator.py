@@ -42,7 +42,7 @@ class TwoParticleOperator(NParticleOperator):
         """
         Create an empty instance of a TwoParticleOperator
         """
-        return self.__class__(
+        return TwoParticleOperator(
             self.mospaces,
             symmetry=self.symmetry,
         )

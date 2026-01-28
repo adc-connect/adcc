@@ -10,7 +10,7 @@ from .FormatIndex import (
     FormatIndexBase, FormatIndexAdcc, FormatIndexHfProvider, FormatIndexHomoLumo
 )
 from .LazyMp import LazyMp
-from .OneParticleOperator import OneParticleOperator
+from .OneParticleDensity import OneParticleDensity
 from .NParticleOperator import product_trace
 from .OperatorIntegrals import OperatorIntegrals
 from .misc import cached_member_function, requires_module
@@ -167,12 +167,12 @@ class ElectronicStates:
         return self._excitation_vector
 
     @property
-    def state_diffdm(self) -> list[OneParticleOperator]:
+    def state_diffdm(self) -> list[OneParticleDensity]:
         """List of difference density matrices of all computed states"""
         return [self._state_diffdm(state_n=i) for i in range(self.size)]
 
     @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
-    def _state_diffdm(self, state_n: int) -> OneParticleOperator:
+    def _state_diffdm(self, state_n: int) -> OneParticleDensity:
         """Computes the difference density matrix for a single state"""
         evec = self.excitation_vector[state_n]
         return self._module.state_diffdm(
@@ -180,11 +180,11 @@ class ElectronicStates:
         )
 
     @property
-    def state_dm(self) -> list[OneParticleOperator]:
+    def state_dm(self) -> list[OneParticleDensity]:
         """List of state density matrices of all computed states"""
         return [self._state_dm(i) for i in range(self.size)]
 
-    def _state_dm(self, state_n: int) -> OneParticleOperator:
+    def _state_dm(self, state_n: int) -> OneParticleDensity:
         """List of state density matrices of all computed states"""
         mp_density = self.ground_state.density(self.property_method.level)
         diffdm = self._state_diffdm(state_n)

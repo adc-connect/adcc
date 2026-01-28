@@ -43,7 +43,7 @@ class TwoParticleDensity(NParticleDensity):
         """
         Create an empty instance of a TwoParticleDensity
         """
-        return self.__class__(
+        return TwoParticleDensity(
             self.mospaces,
             symmetry=self.symmetry,
         )
