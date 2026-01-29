@@ -58,9 +58,6 @@ class CanonicalBlock:
     def symmetry_factor(self):
         return self._symmetry_factor
 
-    def increment_symmetry_factor(self):
-        self._symmetry_factor += 1
-
     @property
     def tensor(self):
         return self._tensor
@@ -142,7 +139,7 @@ class NParticleOperator:
                 self._canonical_blocks[canonical_block] = CanonicalBlock()
 
             # increment factor counter
-            self._canonical_blocks[canonical_block].increment_symmetry_factor()
+            self._canonical_blocks[canonical_block]._symmetry_factor += 1
 
     @property
     def canonical_factors(self) -> dict[str, int]:
