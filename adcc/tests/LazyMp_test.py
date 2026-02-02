@@ -21,12 +21,15 @@
 ##
 ## ---------------------------------------------------------------------
 import pytest
+import numpy as np
 from numpy.testing import assert_allclose
 from pytest import approx
 
 from adcc import block as b
-from adcc import LazyMp
+from adcc import LazyMp, OneParticleDensity, ReferenceState
 from adcc import OperatorSymmetry
+from adcc.functions import einsum, evaluate
+from adcc.backends import run_hf
 
 from .testdata_cache import testdata_cache
 from . import testcases
@@ -262,3 +265,181 @@ class TestLazyMp:
         assert len(timer.intervals("td2/o1o1v1v1")) == 1
         assert len(timer.intervals("energy_correction/2")) == 1
         assert len(timer.intervals("energy_correction/3")) == 1
+
+
+systems = ["h2o_sto3g", "h2o_def2tzvp"]
+
+
+@pytest.mark.parametrize("system", systems)
+class TestGroundstateDensities:
+    # Validate the one- and two-particle density matrices
+    # by reconstructing MP energies using their density-based formulas:
+    # The energy (corrections) are given as follows
+    #  E^{(0)} = f_{pq} d_{pq}
+    #  E^{(1)} = - 1.0 * <pj||qj> d_{pq} + 0.25 * <pq||rs> d_{pq[rs]}
+    #  E^{(2)} = f_{pq} d^{(2)}_{pq} + 0.25 * <pq||rs> d^{(1)}_{pq[rs]}
+    #  E^{(3)} = f_{pq} d^{(3)}_{pq} - 1.0 * <pj||qj> d^{(3)}_{pq}
+    #            + 0.25 * <pq||rs> d^{(2)}_{pq[rs]}
+    #
+    # where f is the Fock operator, <pq||rs> the electron repulsion integral,
+    # and d^{(x)} are the x-order MP corrections to the density matrices.
+    @staticmethod
+    def calculate_mp0_energy(hf):
+        hf_dens_1p = hf.density
+        mp0_energy = einsum("pq,pq", hf.foo, hf_dens_1p.oo)
+        mp0_energy += einsum("pq,pq", hf.fvv, hf_dens_1p.vv)
+        mp0_energy += einsum("pq,pq", hf.fov, hf_dens_1p.ov)
+        mp0_energy += einsum("pq,pq", hf.fov.T, hf_dens_1p.vo)
+
+        return mp0_energy
+
+    @staticmethod
+    def calculate_mp1_correction(hf, mp):
+        # one particle part
+        # calculate it with numpy because partial traces are not implemented
+        # in adcc.einsum
+        first_order_correction = -1.0 * (
+            + np.einsum("pjqj,pq", hf.eri("o1o1o1o1").to_ndarray(),
+                        hf.density.oo.to_ndarray())
+            + np.einsum("pjqj,pq", hf.eri("v1o1v1o1").to_ndarray(),
+                        hf.density.vv.to_ndarray())
+            + np.einsum("pjqj,pq", hf.eri("o1o1v1o1").to_ndarray(),
+                        hf.density.ov.to_ndarray())
+            + np.einsum("pjqj,pq", hf.eri("v1o1o1o1").to_ndarray(),
+                        hf.density.vo.to_ndarray())
+        )
+
+        # two particle part
+        for block in hf.density_2p.blocks:
+            first_order_correction += 0.25 * einsum(
+                "pqrs,pqrs", hf.density_2p[block], hf.eri(block)
+            )
+        return first_order_correction
+
+    @staticmethod
+    def calculate_mp2_correction(hf, mp):
+        # one particle part
+        second_order_correction = (
+            + einsum("pq,pq", hf.foo, mp.mp2_diffdm.oo)
+            + einsum("pq,pq", hf.fvv, mp.mp2_diffdm.vv)
+        )
+
+        # two particle part
+        for block in mp.density_correction_mp1_2p.blocks:
+            second_order_correction += 0.25 * einsum(
+                "pqrs,pqrs", mp.density_correction_mp1_2p[block], hf.eri(block)
+            )
+        return second_order_correction
+
+    def calculate_mp3_correction(self, hf, mp):
+        # one particle part
+        # Fock Operator
+        # skip hf.fov and hf.fvo part because the hf.fov block is zero anyways
+        # -> we don't need to calculate the mp3_diffdm.
+        third_order_correction = (
+            + einsum("pq,pq", hf.foo, self.mp3_diffdm(hf, mp).oo)
+            + einsum("pq,pq", hf.fvv, self.mp3_diffdm(hf, mp).vv)
+        )
+
+        # ERI
+        # calculate it with numpy because partial traces are not implemented
+        # in adcc.einsum
+        third_order_correction -= (
+            + np.einsum("pjqj,pq", hf.eri("o1o1o1o1").to_ndarray(),
+                        mp.mp2_diffdm.oo.to_ndarray())
+            + np.einsum("pjqj,pq", hf.eri("v1o1v1o1").to_ndarray(),
+                        mp.mp2_diffdm.vv.to_ndarray())
+            + np.einsum("pjqj,pq", hf.eri("o1o1v1o1").to_ndarray(),
+                        mp.mp2_diffdm.ov.to_ndarray())
+            + np.einsum("pjqj,pq", hf.eri("v1o1o1o1").to_ndarray(),
+                        mp.mp2_diffdm.vo.to_ndarray())
+        )
+
+        # two particle part
+        for block in mp.density_correction_mp2_2p.blocks:
+            third_order_correction += 0.25 * einsum(
+                "pqrs,pqrs", mp.density_correction_mp2_2p[block], hf.eri(block)
+            )
+        return third_order_correction
+
+    def mp3_diffdm(self, hf, mp) -> OneParticleDensity:
+        """
+        Return the MP3 difference density in the MO basis.
+        """
+        # Only calculate the oo and vv block since the hf.fov block is zero anyways.
+        ret = OneParticleDensity(hf.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
+
+        ret.oo = (
+            # 3rd order
+            - einsum("ikab,jkab->ij", mp.t2oo, mp.td2(b.oovv)).symmetrise(0, 1)
+        )
+        ret.vv = (
+            # 3rd order
+            + einsum("ijac,ijbc->ab", mp.t2oo, mp.td2(b.oovv)).symmetrise(0, 1)
+        )
+        return evaluate(ret)
+
+    def test_mp0_energy(self, system: str):
+        system: testcases.TestCase = testcases.get_by_filename(system).pop()
+        scfres = run_hf("pyscf", system.xyz, system.basis)
+        hf = ReferenceState(scfres)
+        # zeroth order energy -> sum of orbital energies
+        mp0_energy_ref = sum(hf.foo.diagonal().to_ndarray())
+
+        mp0_energy = self.calculate_mp0_energy(hf)
+        assert mp0_energy == pytest.approx(mp0_energy_ref)
+
+    def test_mp1_energy(self, system: str):
+        system: testcases.TestCase = testcases.get_by_filename(system).pop()
+        # we need to run the scf calculation since we don't store the nuclear energy
+        scfres = run_hf("pyscf", system.xyz, system.basis)
+        hf = ReferenceState(scfres)
+        mp = LazyMp(hf)
+
+        mp1_ref = mp.energy(level=1)
+
+        mp1_energy = (
+            + 1.0 * self.calculate_mp0_energy(hf)
+            + 1.0 * self.calculate_mp1_correction(hf, mp)
+            + 1.0 * scfres.energy_nuc()
+        )
+        assert mp1_energy == pytest.approx(mp1_ref)
+
+    def test_mp2_energy(self, system: str):
+        system: testcases.TestCase = testcases.get_by_filename(system).pop()
+        scfres = run_hf("pyscf", system.xyz, system.basis)
+        hf = ReferenceState(scfres)
+        mp = LazyMp(hf)
+
+        mp2_ref = mp.energy(level=2)
+
+        mp2_energy = (
+            + 1.0 * self.calculate_mp0_energy(hf)
+            + 1.0 * self.calculate_mp1_correction(hf, mp)
+            + 1.0 * self.calculate_mp2_correction(hf, mp)
+            + 1.0 * scfres.energy_nuc()
+        )
+        assert mp2_energy == pytest.approx(mp2_ref)
+
+    def test_mp3_energy(self, system: str):
+        system: testcases.TestCase = testcases.get_by_filename(system).pop()
+        scfres = run_hf("pyscf", system.xyz, system.basis)
+        hf = ReferenceState(scfres)
+        mp = LazyMp(hf)
+
+        mp3_ref = mp.energy(level=3)
+
+        with pytest.raises(AttributeError):
+            # Proper implementation not yet done.
+            # For now, we rely on the version in this file.
+            mp.mp3_diffdm
+
+        mp3_energy = (
+            + 1.0 * self.calculate_mp0_energy(hf)
+            + 1.0 * self.calculate_mp1_correction(hf, mp)
+            + 1.0 * self.calculate_mp2_correction(hf, mp)
+            + 1.0 * self.calculate_mp3_correction(hf, mp)
+            + 1.0 * scfres.energy_nuc()
+        )
+
+        assert mp3_energy == pytest.approx(mp3_ref)
