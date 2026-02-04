@@ -359,12 +359,9 @@ def generate_qchem_input_file(infile: str | Path, adc_method: AdcMethod, basis: 
     if max_ss is None:
         max_ss = 7 * nguess_singles
 
-    if n_core_orbitals is None:
-        n_core_orbitals = 0
-    if n_frozen_core is None:
-        n_frozen_core = 0
-    if n_frozen_virtual is None:
-        n_frozen_virtual = 0
+    n_core_orbitals = 0 if n_core_orbitals is None else n_core_orbitals
+    n_frozen_core = 0 if n_frozen_core is None else n_frozen_core
+    n_frozen_virtual = 0 if n_frozen_virtual is None else n_frozen_virtual
 
     method = _method_dict[adc_method.name]
     if isinstance(gs_density_order, str):
