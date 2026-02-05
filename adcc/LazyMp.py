@@ -380,6 +380,10 @@ class LazyMp:
         """
         Return <S^2> of the ground state.
         """
+        if self.reference_state.restricted:
+            raise NotImplementedError(
+                "<S^2> is not implemented for restricted HF references."
+            )
         if level in [0, 1, 2]:
             ssq_1p_op = self.reference_state.operators.ssq_1p
             ssq_2p_op = self.reference_state.operators.ssq_2p

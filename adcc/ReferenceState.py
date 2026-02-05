@@ -257,6 +257,10 @@ class ReferenceState(libadcc.ReferenceState):
         """
         Return <S^2> of the HF reference state.
         """
+        if self.restricted:
+            raise NotImplementedError(
+                "<S^2> is not implemented for restricted HF references."
+            )
         ssq_1p_op = self.operators.ssq_1p
         ssq_2p_op = self.operators.ssq_2p
         ssq_1p = product_trace(ssq_1p_op, self.density)

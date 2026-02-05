@@ -48,7 +48,7 @@ class ExcitedStates(ElectronicTransition):
 
     def describe(self, oscillator_strengths=True, rotatory_strengths=False,
                  state_dipole_moments=False, transition_dipole_moments=False,
-                 block_norms=True):
+                 block_norms=True, ssq=False):
         """
         Return a string providing a human-readable description of the class
 
@@ -69,6 +69,9 @@ class ExcitedStates(ElectronicTransition):
         block_norms : bool, optional
             Show the norms of the (1p1h, 2p2h, ...) blocks of the excited states,
             by default ``True``.
+
+        ssq : bool, optional
+            Show the <S^2> values of the excited states,  by default ``False``.
         """
         has_dipole = "electric_dipole" in self.operators.available
         has_rotatory = all(
@@ -144,6 +147,13 @@ class ExcitedStates(ElectronicTransition):
                 unit="x(au)    y(au)    z(au)    abs(au)"
             ))
             values.clear()
+            values.clear()
+        if ssq and not self.reference_state.restricted:
+            values.extend(f"{ssq:^9.4f}"
+                          for ssq in self.state_ssq)
+            columns.append(TableColumn(
+                header="<S^2>", values=values.copy(), unit="(au)"
+            ))
             values.clear()
         return self._describe(columns)
 
