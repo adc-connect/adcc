@@ -147,6 +147,50 @@ class LazyMp:
                                       f"'{contraction}'.")
         contraction_str, eri_block = expressions[key]
         return einsum(contraction_str, self.t2oo, hf.eri(eri_block))
+    
+    @cached_property
+    def m_3_plus(self):
+        """
+        Third order contribution to the ov block of the N+1 part of the dynamic
+        self-energy.
+        """
+        # NOTE: m_3_plus, m_3_minus have to be implemented on LazyMp so we can
+        # use them for the evaluation of the MP3 density: We can't add an
+        # Intermediate instance to LazyMp (circular reference -> memory leak)!
+        return (
+            + 1 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.ov))
+            + 0.5 * einsum(
+                "ijbc,jabc->ia", self.td2(b.oovv), self.reference_state.ovvv
+            )
+            - 0.25 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.oo))
+        )
+
+    @cached_property
+    def m_3_minus(self):
+        """
+        Third order contribution to the ov block of the N-1 part of the dynamic
+        self-energy.
+        """
+        return (
+            + 0.5 * einsum(
+                "jkab,jkib->ia", self.td2(b.oovv), self.reference_state.ooov
+            )
+            - 1 * einsum("jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.ov))
+            - 0.25 * einsum("jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.vv))
+        )
+
+    @cached_property
+    def sigma_inf_ov(self):
+        """The ov part of the static self-energy."""
+        hf = self.reference_state
+        dm = self.mp2_diffdm
+        return (
+            - einsum("ijka,jk->ia", hf.ooov, dm.oo)
+            + einsum("ijab,jb->ia", hf.oovv, dm.ov)
+            - einsum("ibja,jb->ia", hf.ovov, dm.ov)
+            + einsum("ibac,bc->ia", hf.ovvv, dm.vv)
+        )
+
 
     @cached_property
     @timed_member_call(timer="timer")
@@ -199,6 +243,36 @@ class LazyMp:
             ) / self.df(b.cv)
         ret.reference_state = self.reference_state
         return evaluate(ret)
+
+    @cached_property
+    @timed_member_call(timer="timer")
+    def mp3_diffdm(self) -> OneParticleDensity:
+        """
+        Return the MP3 difference density in the MO basis.
+        """
+        if self.has_core_occupied_space:
+            raise NotImplementedError("MP3 density not implemented for CVS.")
+        ret = OneParticleDensity(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
+
+        mp2_dm = self.mp2_diffdm
+        ret.oo = (
+            mp2_dm.oo  # 2nd order
+            # 3rd order
+            - einsum("ikab,jkab->ij", self.t2oo, self.td2(b.oovv)).symmetrise(0, 1)
+        )
+        ret.ov = (
+            mp2_dm.ov  # 2nd order
+            - (  # 3rd order
+                self.sigma_inf_ov + self.m_3_plus + self.m_3_minus
+            ) / self.df(b.ov)
+        )
+        ret.vv = (
+            mp2_dm.vv  # 2nd order
+            # 3rd order
+            + einsum("ijac,ijbc->ab", self.t2oo, self.td2(b.oovv)).symmetrise(0, 1)
+        )
+        return evaluate(ret)
+
 
     def density(self, level=2):
         """
@@ -292,6 +366,8 @@ class LazyMp:
             return self.reference_state.dipole_moment
         elif level == 2:
             return self.mp2_dipole_moment
+        elif level == 3:
+            return self.mp3_dipole_moment    
         else:
             raise NotImplementedError("Only dipole moments for level 0, 1 and 2"
                                       " are implemented.")
@@ -374,7 +450,7 @@ class LazyMp:
         mp2corr = np.array([product_trace(comp, self.mp2_diffdm)
                             for comp in dipole_integrals])
         return refstate.dipole_moment + mp2corr
-
+    
     @cached_member_function()
     def ssq(self, level=2):
         """
@@ -392,6 +468,13 @@ class LazyMp:
         ssq_2p = product_trace(ssq_2p_op, self.density_2p(level))
         return (ssq_1p + ssq_2p)
 
+    @cached_property
+    def mp3_dipole_moment(self):
+        refstate = self.reference_state
+        dipole_integrals = refstate.operators.electric_dipole
+        mp3corr = np.array([product_trace(comp, self.mp3_diffdm)
+                            for comp in dipole_integrals])
+        return refstate.dipole_moment + mp3corr
 
 #
 # Register cvs_p0 intermediate
