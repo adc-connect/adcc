@@ -196,7 +196,7 @@ class LazyMp:
         """Returns the MP(n) difference density in the MO basis
         """
         if level in [0, 1]:
-            raise NameError
+            raise ValueError()
         elif level == 2 :
             return self.mp2_diffdm
         elif level == 3 :
