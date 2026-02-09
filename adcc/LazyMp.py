@@ -147,7 +147,7 @@ class LazyMp:
                                       f"'{contraction}'.")
         contraction_str, eri_block = expressions[key]
         return einsum(contraction_str, self.t2oo, hf.eri(eri_block))
-    
+
     @cached_property
     def m_3_plus(self):
         """
@@ -172,24 +172,37 @@ class LazyMp:
         self-energy.
         """
         return (
-            + 0.5 * einsum(
+            + 0.5* einsum(
                 "jkab,jkib->ia", self.td2(b.oovv), self.reference_state.ooov
             )
             - 1 * einsum("jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.ov))
             - 0.25 * einsum("jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.vv))
         )
 
-    @cached_property
-    def sigma_inf_ov(self):
+    @cached_member_function()
+    def sigma_inf_ov(self, level):
         """The ov part of the static self-energy."""
         hf = self.reference_state
-        dm = self.mp2_diffdm
+        dm = self.diffdm(level - 1)
+        
         return (
             - einsum("ijka,jk->ia", hf.ooov, dm.oo)
             + einsum("ijab,jb->ia", hf.oovv, dm.ov)
             - einsum("ibja,jb->ia", hf.ovov, dm.ov)
             + einsum("ibac,bc->ia", hf.ovvv, dm.vv)
         )
+
+    def diffdm(self, level = 2):
+        """Returns the MP(n) difference density in the MO basis
+        """
+        if level in [0, 1]:
+            raise NameError
+        elif level == 2 :
+            return self.mp2_diffdm
+        elif level == 3 :
+            return self.mp3_diffdm
+        else:
+            raise NotImplementedError("diffdm for orders above 3 not implemented yet")
 
 
     @cached_property
@@ -243,6 +256,67 @@ class LazyMp:
             ) / self.df(b.cv)
         ret.reference_state = self.reference_state
         return evaluate(ret)
+    
+    @cached_property
+    @timed_member_call(timer='timer')
+    def mp2_dm_correction(self):
+        """
+        Returns the MP2 density correction at second order which is same as the mp2_diffdm
+        """
+        return self.mp2_diffdm
+
+
+    @cached_property
+    @timed_member_call(timer="timer")
+    def mp3_dm_correction(self):
+        """
+        Return the MP3  density correction at third order
+
+        This is the p^(3) term which when added to mp2_diffdm gives the total MP3_diffdm
+
+        MP3_diffdm = p^(2) + ^(3) , p^(2) = MP2_dm_correction = MP2_diffdm
+        """
+
+        if self.has_core_occupied_space:
+            raise NotImplementedError("CV2-MP3 difference density not implemented yet")
+        hf = self.reference_state
+        ret = OneParticleDensity(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)       
+
+        #Amplitudes
+        t2 = self.t2(b.oovv)
+        td2 = self.td2(b.oovv)
+
+        #MP2 density      
+        mp2_dm = self.mp2_diffdm
+        
+        ret.oo = (
+            - einsum("ikab,jkab->ij", self.t2oo, self.td2(b.oovv)).symmetrise(0, 1)
+        )
+        ret.ov = (
+            - (  self.sigma_inf_ov(3) + self.m_3_plus + self.m_3_minus
+            ) / self.df(b.ov)
+        )
+        
+        ret.vv = (
+            + einsum("ijac,ijbc->ab", self.t2oo, self.td2(b.oovv)).symmetrise(0, 1)
+        )
+        
+        return evaluate(ret)
+
+    def density(self, level=2):
+        """
+        Return the MP density in the MO basis with all corrections
+        up to the specified order of perturbation theory
+        """
+        if level in [0, 1]:
+            return self.reference_state.density
+        elif level == 2:
+            return self.reference_state.density + self.mp2_dm_correction
+        elif level ==3:
+            return self.reference_state.density + self.mp2_dm_correction + self.mp3_dm_correction
+        else:
+            raise NotImplementedError("Only densities for level 0, 1 and 2"
+                                      " are implemented.")
 
     @cached_property
     @timed_member_call(timer="timer")
@@ -253,39 +327,24 @@ class LazyMp:
         if self.has_core_occupied_space:
             raise NotImplementedError("MP3 density not implemented for CVS.")
         ret = OneParticleDensity(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
-
-        mp2_dm = self.mp2_diffdm
+        mp2_dm = self.mp2_dm_correction
+        mp3_dm = self.mp3_dm_correction
+ 
         ret.oo = (
             mp2_dm.oo  # 2nd order
             # 3rd order
-            - einsum("ikab,jkab->ij", self.t2oo, self.td2(b.oovv)).symmetrise(0, 1)
+            + mp3_dm.oo
         )
         ret.ov = (
             mp2_dm.ov  # 2nd order
-            - (  # 3rd order
-                self.sigma_inf_ov + self.m_3_plus + self.m_3_minus
-            ) / self.df(b.ov)
+            + mp3_dm.ov #3rd order
         )
         ret.vv = (
             mp2_dm.vv  # 2nd order
             # 3rd order
-            + einsum("ijac,ijbc->ab", self.t2oo, self.td2(b.oovv)).symmetrise(0, 1)
+            + mp3_dm.vv
         )
         return evaluate(ret)
-
-
-    def density(self, level=2):
-        """
-        Return the MP density in the MO basis with all corrections
-        up to the specified order of perturbation theory
-        """
-        if level in [0, 1]:
-            return self.reference_state.density
-        elif level == 2:
-            return self.reference_state.density + self.mp2_diffdm
-        else:
-            raise NotImplementedError("Only densities for level 0, 1 and 2"
-                                      " are implemented.")
 
     @cached_property
     @timed_member_call(timer="timer")
