@@ -78,7 +78,8 @@ def default_print(state, identifier, file=sys.stdout):
 def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
                         is_converged, which, callback=None, preconditioner=None,
                         preconditioning_method="Davidson", debug_checks=False,
-                        residual_min_norm=None, explicit_symmetrisation=None):
+                        residual_min_norm=None, explicit_symmetrisation=None,
+                        max_subspace_iter=None):
     """Drive the davidson iterations
 
     Parameters
@@ -119,6 +120,8 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
         Explicit symmetrisation to apply to new subspace vectors before
         adding them to the subspace. Allows to correct for loss of index
         or spin symmetries (type or instance)
+    max_subspace_iter : int, optional
+        Maximum number of iterations for diagonalizing the subspace matrix
     """
     if preconditioning_method not in ["Davidson", "Sleijpen-van-der-Vorst"]:
         raise ValueError("Only 'Davidson' and 'Sleijpen-van-der-Vorst' "
@@ -186,7 +189,8 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
                 # TODO Maybe play with precision a little here
                 # TODO Maybe use previous vectors somehow
                 v0 = None
-                rvals, rvecs = sla.eigsh(Ass, k=n_block, which=which, v0=v0)
+                rvals, rvecs = sla.eigsh(Ass, k=n_block, which=which, v0=v0,
+                                         maxiter=max_subspace_iter)
 
         with state.timer.record("residuals"):
             # Form residuals, A * SS * v - λ * SS * v = Ax * v + SS * (-λ*v)
@@ -350,7 +354,8 @@ def eigsh(matrix, guesses, n_ep=None, n_block=None, max_subspace=None,
           conv_tol=1e-9, which="SA", max_iter=70,
           callback=None, preconditioner=None,
           preconditioning_method="Davidson", debug_checks=False,
-          residual_min_norm=None, explicit_symmetrisation=IndexSymmetrisation):
+          residual_min_norm=None, explicit_symmetrisation=IndexSymmetrisation,
+          max_subspace_iter= None):
     """Davidson eigensolver for ADC problems
 
     Parameters
@@ -391,6 +396,12 @@ def eigsh(matrix, guesses, n_ep=None, n_block=None, max_subspace=None,
         Minimal norm a residual needs to have in order to be accepted as
         a new subspace vector
         (defaults to 2 * len(matrix) * machine_expsilon)
+    explicit_symmetrisation
+        Explicit symmetrisation to apply to new subspace vectors before
+        adding them to the subspace. Allows to correct for loss of index
+        or spin symmetries (type or instance)
+    max_subspace_iter : int, optional
+        Maximum number of iterations for diagonalizing the subspace matrix
     """
     if not isinstance(matrix, AdcMatrixlike):
         raise TypeError("matrix is not of type AdcMatrixlike")
@@ -452,7 +463,8 @@ def eigsh(matrix, guesses, n_ep=None, n_block=None, max_subspace=None,
                         preconditioning_method=preconditioning_method,
                         debug_checks=debug_checks,
                         residual_min_norm=residual_min_norm,
-                        explicit_symmetrisation=explicit_symmetrisation)
+                        explicit_symmetrisation=explicit_symmetrisation,
+                        max_subspace_iter=max_subspace_iter)
     return state
 
 
