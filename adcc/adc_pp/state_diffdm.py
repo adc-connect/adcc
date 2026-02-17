@@ -165,7 +165,7 @@ def diffdm_isr3(mp, amplitude, intermediates):
     ur1, ur2 = amplitude.ph, amplitude.pphh  #ADC amplitudes
 
     t2_1 = mp.t2(b.oovv)    #first order doubles
-    t1_2 = mp.mp2_diffdm.ov #second order singles  
+    t1_2 = mp.diffdm(level=2).ov #second order singles 
     t2_2 = mp.td2(b.oovv)  #second order doubles
     t3_2 = mp.tt2(b.ooovvv)  #second order triples
   
