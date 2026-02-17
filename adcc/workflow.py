@@ -212,7 +212,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         matrix, n_states, kind, guesses=guesses, n_guesses=n_guesses,
         n_guesses_doubles=n_guesses_doubles, conv_tol=conv_tol, output=output,
         eigensolver=eigensolver, **solverargs)
-    exstates = ExcitedStates(diagres)
+    exstates = ExcitedStates(diagres, isr_order=isr_order)
     exstates.kind = kind
     exstates.spin_change = spin_change
 
