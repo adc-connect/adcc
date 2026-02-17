@@ -125,7 +125,7 @@ def s2s_tdm_adc3(mp, amplitude_l, amplitude_r, intermediates):
     ur1, ur2 = amplitude_r.ph, amplitude_r.pphh
     
     t2_1 = mp.t2(b.oovv)
-    t1_2 = mp.mp2_diffdm.ov
+    t1_2 = mp.diffdm(level=2).ov
     t2_2 = mp.td2(b.oovv)
     t3_2 = mp.tt2(b.ooovvv)
 
