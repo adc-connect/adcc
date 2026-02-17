@@ -37,7 +37,9 @@ class ElectronicStates:
     _state_view_cls: StateView = None
 
     def __init__(self, data, method: str = None,
-                 property_method: str = None) -> None:
+                 property_method: str = None,
+                 isr_order: int = None ) -> None:
+                
         """
         Construct an ElectronicStates class from some data obtained from an
         iterative solver or another :class:`ElectronicStates` instance.
@@ -52,6 +54,9 @@ class ElectronicStates:
         property_method : str, optional
             Provide an explicit method for property calculations to
             override the automatic selection.
+        isr_order : int, optional
+            Provide the ISR order for calculation of properties at a speciifc order 
+            corresponding to the ADC method.
     """
         self.matrix: AdcMatrix = data.matrix
         self.ground_state: LazyMp = self.matrix.ground_state
