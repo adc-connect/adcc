@@ -105,7 +105,7 @@ def tdm_adc3(mp, amplitude, intermediates):
     
     ul1, ul2 = amplitude.ph, amplitude.pphh  #adc amplitudes
 
-    t1_2 = mp.diffdm(level=2).ov
+    t1_2 = mp.mp2_diffdm.ov
     t2_1 = mp.t2(b.oovv)
     t2_2 = mp.td2(b.oovv)
     t3_2 = mp.tt2(b.ooovvv)
