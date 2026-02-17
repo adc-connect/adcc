@@ -94,6 +94,7 @@ class ElectronicStates:
                 raise ValueError("isr_order incompatible with method order")
 
         if property_method is None:
+<<<<<<< HEAD
             if self.method.level in [MethodLevel.TWO_X, MethodLevel.THREE]:
                 # Auto-select ISR(2) properties for ADC(2)-x and ADC(3) calc
                 warnings.warn(f"ISR({self.method.level.to_str()}) not implemented."
@@ -104,6 +105,18 @@ class ElectronicStates:
         elif not isinstance(property_method, IsrMethod):
             property_method = IsrMethod(property_method)
         self._property_method: IsrMethod = property_method
+=======
+            if isr_order is None:
+                assert self.method.level <= 3
+                isr_order = min(self.method.level, 2)
+            property_method = self.method.at_level(isr_order)
+        else:
+            if isr_order is not None:
+                warning.warn("isr_order will be ignored if property_method is given")              
+            if not isinstance(property_method, AdcMethod):
+                property_method = AdcMethod(property_method)
+        self._property_method: AdcMethod = property_method
+>>>>>>> 9b5d3e4 (isr_order is defined when it is None)
 
         # Special stuff for special solvers
         if isinstance(data, EigenSolverStateBase):
