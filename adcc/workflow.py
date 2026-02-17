@@ -43,7 +43,7 @@ __all__ = ["run_adc"]
 
 
 def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
-            eigensolver=None, guesses=None, n_guesses=None,
+            eigensolver=None, guesses=None, n_guesses=None, isr_order=None,
             n_guesses_doubles=None, output=sys.stdout, core_orbitals=None,
             frozen_core=None, frozen_virtual=None, method=None,
             n_singlets=None, n_triplets=None, n_spin_flip=None,
@@ -107,6 +107,9 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         Provide the guess vectors to be employed for the ADC run. Takes
         preference over `n_guesses` and `n_guesses_doubles`, such that these
         parameters are ignored.
+    
+    isr_order: int, optional
+        Order of the ISR expansion used for property calculations.
 
     output : stream, optional
         Python stream to which output will be written. If `None` all output
