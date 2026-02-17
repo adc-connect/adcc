@@ -87,6 +87,12 @@ class ElectronicStates:
         if not isinstance(self.method, AdcMethod):
             self.method: AdcMethod = AdcMethod(self.method)
 
+        if isr_order is not None:
+            if not isinstance(isr_order, int):  
+                raise TypeError("isr_order must be an integer")
+            if self.method.level // 2 != isr_order // 2:
+                raise ValueError("isr_order incompatible with method order")
+
         if property_method is None:
             if self.method.level in [MethodLevel.TWO_X, MethodLevel.THREE]:
                 # Auto-select ISR(2) properties for ADC(2)-x and ADC(3) calc
