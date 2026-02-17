@@ -186,6 +186,12 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         data_or_matrix, core_orbitals=core_orbitals, frozen_core=frozen_core,
         frozen_virtual=frozen_virtual, method=method)
 
+    if isr_order is not None:
+        if not isinstance(isr_order, int):
+            raise TypeError ("isr_order must be an integer")
+        if isr_order < 0:
+            raise ValueError("isr_order must be >=0")
+
     n_states, kind = validate_state_parameters(
         matrix.reference_state, n_states=n_states, n_singlets=n_singlets,
         n_triplets=n_triplets, n_spin_flip=n_spin_flip, kind=kind)
