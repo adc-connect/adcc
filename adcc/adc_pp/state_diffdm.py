@@ -185,7 +185,7 @@ def diffdm_isr3(mp, amplitude, intermediates):
 	    - 1 * einsum("jc,ic->ij", 
                     einsum("lb,jlbc->jc", ur1, t2_1), 
                           einsum("ka,ikac->ic", ur1, t2_1))
-	    + (
+	    + 2 * (
 	      - 2 * einsum("ib,jb->ij", 
                       einsum("ka,ikab->ib", ur1, ur2), t1_2)  
 	      - 0.5 * einsum("ik,jk->ij", 
@@ -308,7 +308,7 @@ def diffdm_isr3(mp, amplitude, intermediates):
 	     - 0.5 * einsum("ijkb,ijka->ab", 
                        einsum("id,jkbd->ijkb", ur1, t2_1), 
                              einsum("ic,jkac->ijka", ur1, t2_1))
-	     +(
+	     + 2 * (
 	      + 2 * einsum("ja,jb->ab", 
                       einsum("ic,ijac->ja", ur1, ur2), t1_2)  
 	      - 0.5 * einsum("ib,ia->ab", 
