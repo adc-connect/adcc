@@ -118,7 +118,7 @@ def s2s_tdm_isr2(mp, amplitude_l, amplitude_r, intermediates):
 
 def s2s_tdm_adc3(mp, amplitude_l, amplitude_r, intermediates):
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude_l, amplitude_r)
-    dm = s2s_tdm_adc2(mp, amplitude_l. amplitude_r, intermediates)
+    dm = s2s_tdm_adc2(mp, amplitude_l, amplitude_r, intermediates)
 
     #ADC amplitudes
     ul1, ul2 = amplitude_l.ph, amplitude_l.pphh
