@@ -55,22 +55,25 @@ class TestStateDiffDm:
     #
     # where f is the Fock operator, <pq||rs> the electron repulsion integral,
     # and d^{(x)} are the x-order ADC corrections to the density matrices.
-    @staticmethod
-    def calculate_adcn_excitation_energy(state):
+    def calculate_adcn_excitation_energy(self, state):
         hf = state.reference_state
         mp = state.ground_state
         n_states = len(state.excitation_energy)
         excitation_energy = np.zeros((n_states))
         method = state.method
         level = method.level
+
+        method_order_minus_one = None
         if level - 1 >= 0:
             method_order_minus_one = AdcMethod("adc" + str(level - 1))
-        else:
-            method_order_minus_one = None
 
         for es in range(n_states):
             evec = state.excitation_vector[es]
-            dens_1p = state_diffdm(method, mp, evec)
+            # TODO switch to ISR(3) implemntation
+            if method.level == 3:
+                dens_1p = self.state_diffdm_adc3(mp, evec)
+            else:
+                dens_1p = state_diffdm(method, mp, evec)
 
             # one particle
             # fock operator part
@@ -78,60 +81,37 @@ class TestStateDiffDm:
             excitation_energy[es] += einsum("pq,pq", hf.fvv, dens_1p.vv)
 
             if method_order_minus_one is not None:
-                dens_1p_reduced = state_diffdm(method_order_minus_one, mp, evec)
-                # ERI part
-                # calculate it with numpy because partial traces are not implemented
-                # in adcc.einsum
-                for block in dens_1p_reduced.blocks:
-                    s1, s2 = split_spaces(block)
-                    eri_block = "o1" + s1 + "o1" + s2
-                    excitation_energy[es] -= (
-                        np.einsum("jpjq,pq", hf.eri(eri_block).to_ndarray(),
-                                  dens_1p_reduced[block].to_ndarray())
-                    )
-
                 # two particle part
                 dens_2p = state_diffdm_2p(method_order_minus_one, mp, evec)
+                # go for ISR(1)-d for ADC(2)
+                if method_order_minus_one.level == 1:
+                    dens_2p.ooov += (
+                        - 2.0 * einsum("kb,ijab->ijka", evec.ph, evec.pphh)
+                    )
+                    dens_2p.ovvv += (
+                        - 2.0 * einsum("ja,ijbc->iabc", evec.ph, evec.pphh)
+                    )
                 for block in dens_2p.blocks:
+                    # compute
+                    # 1/4 [(1 - P_pq) (1 - P_rs) 1 / (n_occ - 1) <pi||ri> delta_qs]
+                    #   * D^pq_rs
+                    # = 1 / (n_occ - 1) <pi||ri> D^pq_rq
+                    s1, s2, s3, s4 = split_spaces(block)
+                    if s2 == s4:
+                        eri_1p = np.einsum(
+                            "piqi->pq", hf.eri(f"{s1}o1{s3}o1").to_ndarray()
+                        )
+                        n_occ = hf.foo.shape[1]
+                        excitation_energy[es] -= 1 / (n_occ - 1) * np.einsum(
+                            "pr,pqrq->",
+                            eri_1p,
+                            dens_2p[block].to_ndarray()
+                        )
+                    # and the full 2e part
                     excitation_energy[es] += 0.25 * einsum(
                         "pqrs,pqrs", dens_2p[block], hf.eri(block)
                     )
         return excitation_energy
-
-    def calculate_adc3_excitation_energy(self, state):
-        hf = state.reference_state
-        mp = state.ground_state
-        n_states = len(state.excitation_energy)
-        adc3_energies = np.zeros((n_states))
-        for es in range(n_states):
-            evec = state.excitation_vector[es]
-            dens_1p_adc2 = state_diffdm("adc2", mp, evec)
-            # TODO: switch to ISR(3) implementation
-            dens_1p_adc3 = self.state_diffdm_adc3(mp, evec)
-
-            # one particle
-            # fock operator part -> dm in 3rd order
-            adc3_energies[es] = einsum("pq,pq", hf.foo, dens_1p_adc3.oo)
-            adc3_energies[es] += einsum("pq,pq", hf.fvv, dens_1p_adc3.vv)
-
-            # ERI part -> dm in 2nd order
-            # calculate it with numpy because partial traces are not implemented
-            # in adcc.einsum
-            for block in dens_1p_adc2.blocks:
-                s1, s2 = split_spaces(block)
-                eri_block = "o1" + s1 + "o1" + s2
-                adc3_energies[es] -= (
-                    np.einsum("jpjq,pq", hf.eri(eri_block).to_ndarray(),
-                              dens_1p_adc2[block].to_ndarray())
-                )
-
-            # two particle part -> dm in 2nd order
-            dens_2p = state_diffdm_2p("adc2", mp, evec)
-            for block in dens_2p.blocks:
-                adc3_energies[es] += 0.25 * einsum(
-                    "pqrs,pqrs", dens_2p[block], hf.eri(block)
-                )
-        return adc3_energies
 
     def mp3_diffdm(self, mp) -> OneParticleDensity:
         # Only calculate the oo and vv block since the hf.fov block is zero anyways.
@@ -281,5 +261,5 @@ class TestStateDiffDm:
             system=system, method="adc3", kind=kind, case=case
         )
         adc3_ref = state.excitation_energy_uncorrected
-        adc3 = self.calculate_adc3_excitation_energy(state)
+        adc3 = self.calculate_adcn_excitation_energy(state)
         np.testing.assert_allclose(adc3, adc3_ref, atol=1e-12)
