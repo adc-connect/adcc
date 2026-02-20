@@ -106,25 +106,6 @@ def diffdm_adc2_2p(mp, amplitude, intermediates):
     td2 = mp.td2(b.oovv)
     p0 = mp.mp2_diffdm
 
-    # TODO move to intermediates!
-    # ADC(1) diffdm
-    p1_oo = -einsum("ia,la->il", u1, u1).evaluate()
-    # p1_vv = einsum("ka,kb->ab", u1, u1).evaluate()
-    # same intermediates as in ADC(2) diffdm -> zeroth order doubles contributions
-    # p2_oo = -einsum("imab,kmab->ik", u2, u2).evaluate()
-    # p2_vv = einsum("klac,klbc->ab", u2, u2).evaluate()
-    # p2_ov = -2 * einsum("lb,jlab->ja", u1, u2).evaluate()
-    # p2_ooov = einsum("jc,klbc->jklb", u1, u2).evaluate()
-
-    # ADC(2) ISR intermediate (TODO Move to intermediates)
-    # ru1 = einsum("ijab,jb->ia", t2, u1).evaluate()
-    # new ones
-    # ru1_ooov = einsum("kc,ijac->ijka", u1, t2).evaluate()
-    # ru2_oo = einsum("klbc,jlbc->jk", u2, t2).evaluate()
-    # ru2_vv = einsum("jkad,jkcd->ac", u2, t2).evaluate()
-    # ru2_oooo = einsum("ijbc,klbc->ijkl", t2, u2).evaluate()
-    # ru2_oovv = einsum("jkad,ijbd->ikab", u2, t2).evaluate()
-
     dm.oooo += (
         # N^6: O^4V^2 / N^4: O^2V^2
         + 2.0 * einsum("ijab,klab->ijkl", u2, u2)
@@ -149,9 +130,11 @@ def diffdm_adc2_2p(mp, amplitude, intermediates):
                                                  einsum("na,imac->imnc", u1, t2)),
                            d_oo)
             # N^5: O^3V^2 / N^4: O^2V^2
-            - 2.0 * einsum("ik,jl->ijkl",
+            + 2.0 * einsum("ik,jl->ijkl",
                            einsum("inbc,knbc->ik",
-                                  einsum("mn,imbc->inbc", p1_oo, t2), t2), d_oo)
+                                  einsum("mn,imbc->inbc",
+                                         einsum("ia,la->il", u1, u1), t2), t2),
+                           d_oo)
         ).antisymmetrise(0, 1).antisymmetrise(2, 3)
         + (
             # N^5: O^3V^2 / N^4: O^2V^2
@@ -159,12 +142,15 @@ def diffdm_adc2_2p(mp, amplitude, intermediates):
                            einsum("ic,klbc->iklb", einsum("ma,imac->ic", u1, t2),
                                   t2), u1)
             # N^6: O^4V^2 / N^4: O^2V^2
-            - 2.0 * einsum("jklm,im->ijkl",
-                           einsum("jmbc,klbc->jklm", t2, t2), p1_oo)
+            + 2.0 * einsum("jklm,im->ijkl",
+                           einsum("jmbc,klbc->jklm", t2, t2),
+                           einsum("ia,la->il", u1, u1))
         ).antisymmetrise(0, 1).symmetrise([(0, 2), (1, 3)])
         + (
             # N^4: O^4 / N^4: O^4
-            - 4.0 * einsum("il,jk->ijkl", einsum("im,lm->il", p1_oo, p0.oo), d_oo)
+            + 4.0 * einsum("il,jk->ijkl", einsum("im,lm->il",
+                                                 einsum("ia,la->il", u1, u1),
+                                                 p0.oo), d_oo)
             # N^4: O^2V^2 / N^4: O^2V^2
             + 4.0 * einsum("ik,jl->ijkl",
                            einsum("kb,ib->ik",
@@ -208,7 +194,9 @@ def diffdm_adc2_2p(mp, amplitude, intermediates):
                            einsum("il,la->ia",
                                   einsum("lb,ib->il", u1, p0.ov), u1), d_oo)
             # N^4: O^3V^1 / N^4: O^3V^1
-            - 2.0 * einsum("ia,jk->ijka", einsum("il,la->ia", p1_oo, p0.ov), d_oo)
+            + 2.0 * einsum("ia,jk->ijka",
+                           einsum("il,la->ia", einsum("ia,la->il", u1, u1),
+                                  p0.ov), d_oo)
         ).antisymmetrise(0, 1)
     )
     dm.oovv += (

@@ -237,7 +237,7 @@ class OperatorIntegrals:
     @cached_property
     @timed_member_call("_import_timer")
     def ssq_1p(self) -> OneParticleOperator:
-        """Returns the one particle part of the S^2 operator"""
+        """Returns the one-particle part of the S^2 operator"""
         op = OneParticleOperator(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
         # d_ij = 3/4 \delta_ij
         for ss in self.mospaces.subspaces_occupied:
@@ -250,7 +250,7 @@ class OperatorIntegrals:
     @cached_property
     @timed_member_call("_import_timer")
     def ssq_2p(self) -> TwoParticleOperator:
-        """Returns the two particle part of the S^2 operator"""
+        """Returns the two-particle part of the S^2 operator"""
         # Intermediates
         # S^aa, S^ab and S^bb (spin projected overlap matrices)
         ovlp_bb: Tensor = self.overlap_ao

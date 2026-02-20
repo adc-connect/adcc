@@ -215,9 +215,9 @@ class LazyMp:
 
     @cached_property
     @timed_member_call(timer="timer")
-    def density_correction_mp1_2p(self):
+    def density_correction_mp1_2p(self) -> TwoParticleDensity:
         """
-        Return the two-particle MP1 difference correction in the MO basis.
+        Return the two-particle MP1 difference density correction in the MO basis.
         """
         ret = TwoParticleDensity(self.mospaces,
                                  symmetry=OperatorSymmetry.HERMITIAN)
@@ -226,9 +226,9 @@ class LazyMp:
 
     @cached_property
     @timed_member_call(timer="timer")
-    def density_correction_mp2_2p(self) -> OneParticleDensity:
+    def density_correction_mp2_2p(self) -> TwoParticleDensity:
         """
-        Return the two-particle MP2 difference correction in the MO basis.
+        Return the two-particle MP2 difference density correction in the MO basis.
         """
         hf: ReferenceState = self.reference_state
         ret = TwoParticleDensity(self.mospaces,
@@ -259,20 +259,24 @@ class LazyMp:
         )
         return evaluate(ret)
 
-    def diffdm_2p(self, level=2):
+    def diffdm_2p(self, level=2) -> TwoParticleDensity:
+        """
+        Return the MP difference density in the MO basis with all corrections
+        up to the specified order of perturbation theory.
+        """
         if level == 1:
             return self.density_correction_mp1_2p
         elif level == 2:
             return (self.density_correction_mp1_2p
                     + self.density_correction_mp2_2p)
         else:
-            raise NotImplementedError("Only first and second-order density "
-                                      "corrections are implemented.")
+            raise NotImplementedError("Only first and second-order two-particle "
+                                      "density corrections are implemented.")
 
-    def density_2p(self, level=2):
+    def density_2p(self, level=2) -> TwoParticleDensity:
         """
         Return the two-particle MP density in the MO basis with all corrections
-        up to the specified order of perturbation theory
+        up to the specified order of perturbation theory.
         """
         if level == 0:
             return self.reference_state.density_2p
@@ -280,8 +284,8 @@ class LazyMp:
             return (self.reference_state.density_2p
                     + self.diffdm_2p(level))
         else:
-            raise NotImplementedError("Only densities for level 0, 1 and 2"
-                                      " are implemented.")
+            raise NotImplementedError("Only two-particle densities for level 0, 1 "
+                                      "and 2 are implemented.")
 
     def dipole_moment(self, level=2):
         """

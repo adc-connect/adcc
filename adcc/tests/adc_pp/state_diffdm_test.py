@@ -44,17 +44,6 @@ cases = [(case.file_name, c, kind)
 
 @pytest.mark.parametrize("system,case,kind", cases)
 class TestStateDiffDm:
-    # Validate the one- and two-particle state difference density matrices
-    # by reconstructing excitation energies using their density-based formulas:
-    # The energy (corrections) are given as follows
-    #  E^{(0)} = f_{pq} d_{pq}
-    #  E^{(1)} = - 1.0 * <pj||qj> d_{pq} + 0.25 * <pq||rs> d_{pq[rs]}
-    #  E^{(2)} = f_{pq} d^{(2)}_{pq} + 0.25 * <pq||rs> d^{(1)}_{pq[rs]}
-    #  E^{(3)} = f_{pq} d^{(3)}_{pq} - 1.0 * <pj||qj> d^{(3)}_{pq}
-    #            + 0.25 * <pq||rs> d^{(2)}_{pq[rs]}
-    #
-    # where f is the Fock operator, <pq||rs> the electron repulsion integral,
-    # and d^{(x)} are the x-order ADC corrections to the density matrices.
     def calculate_adcn_excitation_energy(self, state):
         hf = state.reference_state
         mp = state.ground_state

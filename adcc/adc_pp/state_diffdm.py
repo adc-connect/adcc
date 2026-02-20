@@ -65,8 +65,8 @@ def diffdm_adc2(mp, amplitude, intermediates):
     ru1 = einsum("ijab,jb->ia", t2, u1).evaluate()
 
     # Compute second-order contributions to the density matrix
-    dm.oo = (  # adc2_p_oo
-        p1_oo + 2 * p2_oo - einsum("ia,ja->ij", ru1, ru1) + (
+    dm.oo += (  # adc2_p_oo
+        2 * p2_oo - einsum("ia,ja->ij", ru1, ru1) + (
             + einsum("ik,kj->ij", p1_oo, p0.oo)
             - einsum("ikcd,jkcd->ij", t2,
                      + 0.5 * einsum("lk,jlcd->jkcd", p1_oo, t2)
@@ -75,8 +75,8 @@ def diffdm_adc2(mp, amplitude, intermediates):
         ).symmetrise()
     )
 
-    dm.vv = (  # adc2_p_vv
-        p1_vv + 2 * p2_vv + einsum("ia,ib->ab", ru1, ru1) - (
+    dm.vv += (  # adc2_p_vv
+        2 * p2_vv + einsum("ia,ib->ab", ru1, ru1) - (
             + einsum("ac,cb->ab", p1_vv, p0.vv)
             + einsum("klbc,klac->ab", t2,
                      + 0.5 * einsum("klad,cd->klac", t2, p1_vv)
