@@ -193,12 +193,14 @@ class ElectronicStates:
 
     @property
     def state_diffdm_2p(self) -> list[TwoParticleDensity]:
-        """List of difference density matrices of all computed states"""
+        """
+        List of two-particle difference density matrices of all computed states
+        """
         return [self._state_diffdm_2p(state_n=i) for i in range(self.size)]
 
     @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
     def _state_diffdm_2p(self, state_n: int) -> TwoParticleDensity:
-        """Computes the difference density matrix for a single state"""
+        """Computes the two-particle difference density matrix for a single state"""
         evec = self.excitation_vector[state_n]
         return self._module.state_diffdm_2p(
             self.property_method, self.ground_state, evec, self.matrix.intermediates
@@ -206,11 +208,11 @@ class ElectronicStates:
 
     @property
     def state_dm_2p(self) -> list[TwoParticleDensity]:
-        """List of state density matrices of all computed states"""
+        """List of two-particle state density matrices of all computed states"""
         return [self._state_dm_2p(i) for i in range(self.size)]
 
     def _state_dm_2p(self, state_n: int) -> TwoParticleDensity:
-        """List of state density matrices of all computed states"""
+        """List of two particle state density matrices of all computed states"""
         mp_density = self.ground_state.density_2p(self.property_method.level)
         diffdm = self._state_diffdm_2p(state_n)
         return mp_density + diffdm

@@ -40,8 +40,10 @@ from ..testdata_cache import testdata_cache
 test_cases = testcases.get_by_filename("h2o_sto3g", "cn_sto3g")
 cases = [(case.file_name, c, kind)
          for case in test_cases for c in ["gen"] for kind in case.kinds.pp]
+methods = ["adc0", "adc1", "adc2", "adc3"]
 
 
+@pytest.mark.parametrize("method", methods)
 @pytest.mark.parametrize("system,case,kind", cases)
 class TestStateDiffDm:
     def calculate_adcn_excitation_energy(self, state):
@@ -224,34 +226,10 @@ class TestStateDiffDm:
         ).symmetrise()
         return dm
 
-    def test_adc0(self, system: str, case: str, kind: str):
+    def test_adcn(self, method: str, system: str, case: str, kind: str):
         state = testdata_cache.adcc_states(
-            system=system, method="adc0", kind=kind, case=case
+            system=system, method=method, kind=kind, case=case
         )
-        adc0_ref = state.excitation_energy_uncorrected
-        adc0 = self.calculate_adcn_excitation_energy(state)
-        np.testing.assert_allclose(adc0, adc0_ref, atol=1e-12)
-
-    def test_adc1(self, system: str, case: str, kind: str):
-        state = testdata_cache.adcc_states(
-            system=system, method="adc1", kind=kind, case=case
-        )
-        adc1_ref = state.excitation_energy_uncorrected
-        adc1 = self.calculate_adcn_excitation_energy(state)
-        np.testing.assert_allclose(adc1, adc1_ref, atol=1e-12)
-
-    def test_adc2(self, system: str, case: str, kind: str):
-        state = testdata_cache.adcc_states(
-            system=system, method="adc2", kind=kind, case=case
-        )
-        adc2_ref = state.excitation_energy_uncorrected
-        adc2 = self.calculate_adcn_excitation_energy(state)
-        np.testing.assert_allclose(adc2, adc2_ref, atol=1e-12)
-
-    def test_adc3(self, system: str, case: str, kind: str):
-        state = testdata_cache.adcc_states(
-            system=system, method="adc3", kind=kind, case=case
-        )
-        adc3_ref = state.excitation_energy_uncorrected
-        adc3 = self.calculate_adcn_excitation_energy(state)
-        np.testing.assert_allclose(adc3, adc3_ref, atol=1e-12)
+        ref = state.excitation_energy_uncorrected
+        adcn = self.calculate_adcn_excitation_energy(state)
+        np.testing.assert_allclose(adcn, ref, atol=1e-12)

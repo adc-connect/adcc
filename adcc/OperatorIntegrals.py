@@ -27,7 +27,7 @@ from .Tensor import Tensor
 from .timings import Timer, timed_member_call
 from .OneParticleOperator import OneParticleOperator
 from .OneParticleDensity import OneParticleDensity
-from .NParticleOperator import OperatorSymmetry
+from .NParticleOperator import OperatorSymmetry, NParticleOperator
 from .TwoParticleOperator import TwoParticleOperator
 from .functions import einsum
 from .MoSpaces import split_spaces
@@ -81,7 +81,8 @@ def transform_operator_ao2mo(tensor_bb: Tensor, tensor_ff: NParticleOperator,
             )
 
 
-def transform_operator_ao2mo_spin_projected(tensor_bb: Tensor, tensor_ff: NParticleOperator,
+def transform_operator_ao2mo_spin_projected(tensor_bb: Tensor,
+                                            tensor_ff: NParticleOperator,
                                             coeff_map: dict[str, Tensor],
                                             spin_map: str = "aa",
                                             conv_tol: float = 1e-14):

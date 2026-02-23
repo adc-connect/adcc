@@ -215,7 +215,7 @@ class LazyMp:
 
     @cached_property
     @timed_member_call(timer="timer")
-    def density_correction_mp1_2p(self) -> TwoParticleDensity:
+    def mp1_dm_correction_2p(self) -> TwoParticleDensity:
         """
         Return the two-particle MP1 difference density correction in the MO basis.
         """
@@ -226,7 +226,7 @@ class LazyMp:
 
     @cached_property
     @timed_member_call(timer="timer")
-    def density_correction_mp2_2p(self) -> TwoParticleDensity:
+    def mp2_dm_correction_2p(self) -> TwoParticleDensity:
         """
         Return the two-particle MP2 difference density correction in the MO basis.
         """
@@ -261,14 +261,14 @@ class LazyMp:
 
     def diffdm_2p(self, level=2) -> TwoParticleDensity:
         """
-        Return the MP difference density in the MO basis with all corrections
-        up to the specified order of perturbation theory.
+        Return the two-particle MP difference density in the MO basis with all
+        corrections up to the specified order of perturbation theory.
         """
         if level == 1:
-            return self.density_correction_mp1_2p
+            return self.mp1_dm_correction_2p
         elif level == 2:
-            return (self.density_correction_mp1_2p
-                    + self.density_correction_mp2_2p)
+            return (self.mp1_dm_correction_2p
+                    + self.mp2_dm_correction_2p)
         else:
             raise NotImplementedError("Only first and second-order two-particle "
                                       "density corrections are implemented.")
@@ -278,7 +278,7 @@ class LazyMp:
         Return the two-particle MP density in the MO basis with all corrections
         up to the specified order of perturbation theory.
         """
-        if level == 0
+        if level == 0:
             return self.reference_state.density_2p
         diffdm = self.diffdm_2p(level)
         return self.reference_state.density_2p + diffdm

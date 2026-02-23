@@ -268,12 +268,12 @@ class TestLazyMp:
         assert len(timer.intervals("energy_correction/3")) == 1
 
 
-systems = ["h2o_sto3g", "h2o_def2tzvp"]
+density_cases = [system for system, case in cases if "cvs" not in case]
 levels = [0, 1, 2, 3]
 
 
 @pytest.mark.parametrize("level", levels)
-@pytest.mark.parametrize("system", systems)
+@pytest.mark.parametrize("system", density_cases)
 class TestGroundstateDensity:
     def calculate_mpn_energy(self, mp, level):
         hf = mp.reference_state
@@ -333,7 +333,8 @@ class TestGroundstateDensity:
     def test_mpn_energy(self, system: str, level: int):
         system: testcases.TestCase = testcases.get_by_filename(system).pop()
         # we need to run the scf calculation since we don't store the nuclear energy
-        scfres = run_hf("pyscf", system.xyz, system.basis)
+        scfres = run_hf("pyscf", system.xyz,
+                        system.basis, multiplicity=system.multiplicity)
         hf = ReferenceState(scfres)
         mp = LazyMp(hf)
 
