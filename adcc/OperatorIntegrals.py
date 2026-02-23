@@ -35,7 +35,7 @@ from .MoSpaces import split_spaces
 import libadcc
 
 
-def transform_operator_ao2mo(tensor_bb: Tensor, tensor_ff: Tensor,
+def transform_operator_ao2mo(tensor_bb: Tensor, tensor_ff: NParticleOperator,
                              coefficients,
                              conv_tol: float = 1e-14):
     """Take a block-diagonal tensor in the atomic orbital basis
@@ -81,7 +81,7 @@ def transform_operator_ao2mo(tensor_bb: Tensor, tensor_ff: Tensor,
             )
 
 
-def transform_operator_ao2mo_spin_projected(tensor_bb: Tensor, tensor_ff: Tensor,
+def transform_operator_ao2mo_spin_projected(tensor_bb: Tensor, tensor_ff: NParticleOperator,
                                             coeff_map: dict[str, Tensor],
                                             spin_map: str = "aa",
                                             conv_tol: float = 1e-14):

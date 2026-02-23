@@ -279,6 +279,8 @@ class TestGroundstateDensity:
         hf = mp.reference_state
         if level == 3:
             # TODO move to ISR(3) implementation
+            with pytest.raises(NotImplementedError):
+                mp.density(level)
             dens_1p = mp.density(2) + self.mp3_diffdm(mp)
         else:
             dens_1p = mp.density(level)

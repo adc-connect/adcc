@@ -60,6 +60,9 @@ class TestStateDiffDm:
             evec = state.excitation_vector[es]
             # TODO switch to ISR(3) implemntation
             if method.level == 3:
+                # so we don't forget to switch to the actual implementation
+                with pytest.raises(NotImplementedError):
+                    state_diffdm(method, mp, evec)
                 dens_1p = self.state_diffdm_adc3(mp, evec)
             else:
                 dens_1p = state_diffdm(method, mp, evec)

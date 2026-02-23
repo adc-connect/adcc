@@ -278,14 +278,10 @@ class LazyMp:
         Return the two-particle MP density in the MO basis with all corrections
         up to the specified order of perturbation theory.
         """
-        if level == 0:
+        if level == 0
             return self.reference_state.density_2p
-        elif level in [1, 2]:
-            return (self.reference_state.density_2p
-                    + self.diffdm_2p(level))
-        else:
-            raise NotImplementedError("Only two-particle densities for level 0, 1 "
-                                      "and 2 are implemented.")
+        diffdm = self.diffdm_2p(level)
+        return self.reference_state.density_2p + diffdm
 
     def dipole_moment(self, level=2):
         """
@@ -388,17 +384,13 @@ class LazyMp:
             raise NotImplementedError(
                 "<S^2> is not implemented for restricted HF references."
             )
-        if level in [0, 1, 2]:
-            ssq_1p_op = self.reference_state.operators.ssq_1p
-            ssq_2p_op = self.reference_state.operators.ssq_2p
-            # the trace of the second-order (and higher) correction to the RDM1
-            # is zero -> no influence on top of HF density for ground state
-            ssq_1p = product_trace(ssq_1p_op, self.density(0))
-            ssq_2p = product_trace(ssq_2p_op, self.density_2p(level))
-            return (ssq_1p + ssq_2p)
-        else:
-            raise NotImplementedError("<S^2> is only implemented for "
-                                      "levels 0, 1, and 2.")
+        ssq_1p_op = self.reference_state.operators.ssq_1p
+        ssq_2p_op = self.reference_state.operators.ssq_2p
+        # the trace of the second-order (and higher) correction to the RDM1
+        # is zero -> no influence on top of HF density for ground state
+        ssq_1p = product_trace(ssq_1p_op, self.density(0))
+        ssq_2p = product_trace(ssq_2p_op, self.density_2p(level))
+        return (ssq_1p + ssq_2p)
 
 
 #
