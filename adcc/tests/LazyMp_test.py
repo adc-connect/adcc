@@ -138,6 +138,31 @@ class TestLazyMp:
             == approx(refmp["mp3"]["energy"])
         )
 
+    # Ssq only implemented for unrestricted case, no adcman reference
+    @pytest.mark.parametrize("system,case", [(s, c) for s, c in cases
+                                             if "cvs" not in c and "cn" in s])
+    def test_mp1_ssq(self, system: str, case: str,
+                     instances: LazyMpCache):
+        refmp = testdata_cache._load_data(
+            system=system, method="mp", case=case, source="adcc"
+        )
+        assert (
+            instances.get(system, case).ssq(1)
+            == approx(refmp["mp1"]["ssq"])
+        )
+
+    @pytest.mark.parametrize("system,case", [(s, c) for s, c in cases
+                                             if "cvs" not in c and "cn" in s])
+    def test_mp2_ssq(self, system: str, case: str,
+                     instances: LazyMpCache):
+        refmp = testdata_cache._load_data(
+            system=system, method="mp", case=case, source="adcc"
+        )
+        assert (
+            instances.get(system, case).ssq(2)
+            == approx(refmp["mp2"]["ssq"])
+        )
+
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)
     def test_df(self, system: str, case: str, generator: str,

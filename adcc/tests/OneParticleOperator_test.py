@@ -29,7 +29,6 @@ from adcc.NParticleOperator import OperatorSymmetry
 
 from .testdata_cache import testdata_cache
 from . import testcases
-from adcc.backends import run_hf
 from itertools import combinations_with_replacement
 
 
@@ -42,8 +41,8 @@ class TestOneParticleOperator:
     def test_to_ao_basis_hermitian(self):
         system = "h2o_sto3g"
         system: testcases.TestCase = testcases.get_by_filename(system).pop()
-        scfres = run_hf("pyscf", system.xyz, system.basis)
-        ref = adcc.ReferenceState(scfres)
+        data = testdata_cache._load_hfdata(system)
+        ref = adcc.ReferenceState(data)
         dipx_mo = ref.operators.electric_dipole[0]
         dipx_ao_ref = ref.operators.provider_ao.electric_dipole[0]
 
@@ -56,10 +55,10 @@ class TestOneParticleOperator:
     def test_to_ao_basis_antihermitian(self):
         system = "h2o_sto3g"
         system: testcases.TestCase = testcases.get_by_filename(system).pop()
-        scfres = run_hf("pyscf", system.xyz, system.basis)
-        ref = adcc.ReferenceState(scfres)
+        data = testdata_cache._load_hfdata(system)
+        ref = adcc.ReferenceState(data)
         dipx_mo = ref.operators.magnetic_dipole()[0]
-        dipx_ao_ref = ref.operators.provider_ao.magnetic_dipole()[0]
+        dipx_ao_ref = ref.operators.provider_ao.magnetic_dipole("origin")[0]
 
         dipx_ao_a = dipx_mo.to_ao_basis(ref)[0].to_ndarray()
         dipx_ao_b = dipx_mo.to_ao_basis(ref)[1].to_ndarray()
