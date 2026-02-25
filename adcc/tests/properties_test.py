@@ -48,6 +48,11 @@ test_cases = testcases.get_by_filename(
 cases = [(case.file_name, "gen", kind)
          for case in test_cases
          for kind in ["singlet", "any", "spin_flip"] if kind in case.kinds.pp]
+unrestricted_cases = [
+    (case.file_name, "gen", kind)
+    for case in test_cases if not case.restricted
+    for kind in ["singlet", "any", "spin_flip"] if kind in case.kinds.pp
+]
 gauge_origins = ["origin", "mass_center", "charge_center"]
 
 
@@ -135,9 +140,8 @@ class TestProperties:
         n_ref = len(state.excitation_vector)
         assert_allclose(res_dms, refdata["state_dipole_moments"][:n_ref], atol=1e-4)
 
-    @pytest.mark.parametrize("system,case,kind", [case for case
-                                                  in cases if "cn" in case[0]
-                                                  and "cvs" not in case[1]])
+    @pytest.mark.parametrize("system,case,kind",
+                             [c for c in unrestricted_cases if "cvs" not in c[1]])
     def test_state_ssq(self, system: str, case: str, kind: str,
                        method: str):
         refdata = testdata_cache._load_data(

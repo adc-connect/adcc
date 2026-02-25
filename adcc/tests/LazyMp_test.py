@@ -39,6 +39,10 @@ from . import testcases
 test_cases = testcases.get_by_filename(
     "h2o_sto3g", "cn_sto3g", "h2o_def2tzvp", "cn_ccpvdz"
 )
+unrestricted_cases = [
+    (case.file_name, c) for case in test_cases if not case.restricted
+    for c in ["gen", "cvs"]
+]
 small_cases = [
     (case.file_name, c) for case in test_cases if not case.only_full_mode
     for c in ["gen", "cvs"]
@@ -139,8 +143,8 @@ class TestLazyMp:
         )
 
     # Ssq only implemented for unrestricted case, no adcman reference
-    @pytest.mark.parametrize("system,case", [(s, c) for s, c in cases
-                                             if "cvs" not in c and "cn" in s])
+    @pytest.mark.parametrize("system,case", [(s, c) for s, c in unrestricted_cases
+                                             if "cvs" not in c])
     def test_mp1_ssq(self, system: str, case: str,
                      instances: LazyMpCache):
         refmp = testdata_cache._load_data(
@@ -151,8 +155,8 @@ class TestLazyMp:
             == approx(refmp["mp1"]["ssq"])
         )
 
-    @pytest.mark.parametrize("system,case", [(s, c) for s, c in cases
-                                             if "cvs" not in c and "cn" in s])
+    @pytest.mark.parametrize("system,case", [(s, c) for s, c in unrestricted_cases
+                                             if "cvs" not in c])
     def test_mp2_ssq(self, system: str, case: str,
                      instances: LazyMpCache):
         refmp = testdata_cache._load_data(
