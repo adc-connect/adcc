@@ -338,8 +338,8 @@ def diffdm_isr3(mp, amplitude, intermediates):
    )
     return dm
 
-    def diffdm_cvs_adc3(mp, amplitude, intermediates):
-        raise NotImplementedError("CVS-ADC(3) is not implemented yet")
+def diffdm_cvs_adc3(mp, amplitude, intermediates):
+    raise NotImplementedError("CVS-ADC(3) is not implemented yet")
 
 # dict controlling the dispatch of the state_diffdm function
 DISPATCH = {
