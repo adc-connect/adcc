@@ -76,6 +76,83 @@ def mtm_cvs_isr2(mp, op, intermediates):
     f2 = (1 / sqrt(2)) * einsum("kI,kjab->jIab", op.oc, mp.t2(b.oovv))
     return ampl + AmplitudeVector(ph=f1, pphh=f2)
 
+def mtm_adc3(mp, op, intermediates):
+    ampl = mtm_adc2(mp, op, intermediates)
+    
+    #mp amplitudes
+    t1_2 = mp.diffdm(level=2).ov
+    t2_1 = mp.t2(b.oovv)
+    t2_3 = mp.td3(b.oovv)
+    t2_2 = mp.td2(b.oovv)
+    t3_2 = mp.tt2(b.ooovvv)
+    t2sq = einsum("ikac,jkbc->iajb", mp.t2oo, mp.t2oo).evaluate()
+
+    d_vv, d_vo, d_ov, d_oo = op.vv, op.vo, op.ov, op.oo #density operators
+
+    p0_3 = mp.mp3_dm_correction
+    p0_2 = mp.mp2_dm_correction
+    p0_3_oo, p0_3_vv, p0_3_ov = p0_3.oo, p0_3.vv, p0_3.ov
+    p0_2_oo, p0_2_vv, p0_2_ov = p0_2.oo, p0_2.vv, p0_2.ov
+    
+
+    f1 = (
+	    + 1 * einsum("ib,ab->ia", t1_2, d_vv)  # N^3: O^1V^2 / N^2: V^2
+	    + 1 * einsum("ab,ib->ia", d_vv, p0_3_ov)  # N^3: O^1V^2 / N^2: V^2
+	    + 0.5 * einsum("aj,ij->ia", d_vo, p0_2_oo)  # N^3: O^2V^1 / N^2: O^1V^1
+	    + 0.5 * einsum("aj,ij->ia", d_vo, p0_3_oo)  # N^3: O^2V^1 / N^2: O^1V^1
+	    + 0.5 * einsum("bj,iajb->ia", d_vo, t2sq)  # N^4: O^2V^2 / N^4: O^2V^2
+	    - 1 * einsum("ijab,jb->ia", t2_1, d_ov)  # N^4: O^2V^2 / N^4: O^2V^2
+	    - 1 * einsum("ja,ji->ia", t1_2, d_oo)  # N^3: O^2V^1 / N^2: O^1V^1
+	    - 1 * einsum("ijab,jb->ia", t2_2, d_ov)  # N^4: O^2V^2 / N^4: O^2V^2
+	    - 1 * einsum("ijab,jb->ia", t2_3, d_ov)  # N^4: O^2V^2 / N^4: O^2V^2
+	    - 1 * einsum("ji,ja->ia", d_oo, p0_3_ov)  # N^3: O^2V^1 / N^2: O^1V^1
+	    - 0.5 * einsum("bi,ab->ia", d_vo, p0_2_vv)  # N^3: O^1V^2 / N^2: V^2
+	    - 0.5 * einsum("bi,ab->ia", d_vo, p0_3_vv)  # N^3: O^1V^2 / N^2: V^2
+	    + 1 * einsum("jb,ijab->ia", 
+			            einsum("kb,jk->jb", t1_2, d_oo), t2_1)  # N^4: O^2V^2 / N^4: O^2V^2
+	    + 1 * einsum("jc,ijac->ia",    
+			            einsum("jb,bc->jc", d_ov, p0_2_vv), t2_1)  # N^4: O^2V^2 / N^4: O^2V^2
+	    + 1 * einsum("ijkc,jkac->ia", 
+			            einsum("jb,ibkc->ijkc", d_ov, t2sq), t2_1)  # N^5: O^3V^2 / N^4: O^2V^2
+	    + 0.5 * einsum("ka,ik->ia", 
+			            einsum("jkab,jb->ka", t2_1, d_ov), p0_2_oo)  # N^4: O^2V^2 / N^4: O^2V^2
+	    + 0.5 * einsum("kc,ikac->ia", 
+			            einsum("jkbc,bj->kc", t2_2, d_vo), t2_1)  # N^4: O^2V^2 / N^4: O^2V^2
+	    + 0.5 * einsum("jb,ijab->ia", 
+			            einsum("jkbc,ck->jb", t2_1, d_vo), t2_2)  # N^4: O^2V^2 / N^4: O^2V^2
+	    - 1 * einsum("jb,ijab->ia", 
+			            einsum("jc,cb->jb", t1_2, d_vv), t2_1)  # N^4: O^2V^2 / N^4: O^2V^2
+	    - 1 * einsum("kb,ikab->ia", 
+			            einsum("jb,jk->kb", d_ov, p0_2_oo), t2_1)  # N^4: O^2V^2 / N^4: O^2V^2
+	    - 0.5 * einsum("ic,ac->ia", 
+			            einsum("ijbc,jb->ic", t2_1, d_ov), p0_2_vv)  # N^4: O^2V^2 / N^4: O^2V^2
+	    - 0.5 * einsum("kc,iakc->ia", 
+			            einsum("jkbc,jb->kc", t2_1, d_ov), t2sq)  # N^4: O^2V^2 / N^4: O^2V^2
+	    - 0.5 * einsum("jkbc,ijkabc->ia", 
+			            einsum("klbc,jl->jkbc", t2_1, d_oo), t3_2)  # N^6: O^3V^3 / N^6: O^3V^3
+	    - 0.5 * einsum("jkbc,ijkabc->ia", 
+			            einsum("jkbd,dc->jkbc", t2_1, d_vv), t3_2)  # N^6: O^3V^3 / N^6: O^3V^3
+	    - 0.25 * einsum("ijkl,jkla->ia", 
+			            einsum("ijcd,klcd->ijkl", t2_1, t2_1), 
+				            einsum("klab,jb->jkla", t2_1, d_ov))  # N^6: O^4V^2 / N^4: O^2V^2
+	    + 1 * einsum("ai->ia", d_vo)  # N^2: O^1V^1 / N^2: O^1V^1
+    )
+
+    f2 =  ( #(1 - P_ij) 
+        2 * ( 0.5 * einsum("jkab,ki->ijab", t2_1, d_oo)  # N^5: O^3V^2 / N^4: O^2V^2
+              + 0.5 * einsum("jkab,ki->ijab", t2_2, d_oo) # N^5: O^3V^2 / N^4: O^2V^2
+            ).antisymmetrise(0, 1)
+    #(1 - P_ab)
+        + 2 * ( 0.5 * einsum("ijac,bc->ijab", t2_1, d_vv)  # N^5: O^2V^3 / N^4: O^2V^2
+                + 0.5 * einsum("ijac,bc->ijab", t2_2, d_vv) # N^5: O^2V^3 / N^4: O^2V^2
+            ).antisymmetrise(2, 3)
+        - 0.5 * einsum("ijkabc,kc->ijab", t3_2, d_ov)  # N^6: O^3V^3 / N^6: O^3V^3
+    )
+    return AmplitudeVector(ph=f1, pphh=f2)
+
+
+def mtm_cvs_adc3(mp, op, intermediates):
+    raise NotImplementedError("CVS-ADC(3) is not implemented yet")
 
 DISPATCH = {
     "isr0": mtm_isr0,
