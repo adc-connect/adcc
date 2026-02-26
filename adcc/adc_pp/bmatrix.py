@@ -453,7 +453,7 @@ def block_ph_pphh_2(ground_state, op):
 
     def apply(ampl):
         ur2 = ampl.pphh
-        return AmplitudeVector(ph= yep(
+        return AmplitudeVector(ph= (
             #zeroth order
 	- 2 * einsum("ijab,jb->ia", ur2, d_ov)  # N^4: O^2V^2 / N^4: O^2V^2
 		    #first order
