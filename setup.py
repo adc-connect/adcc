@@ -435,6 +435,13 @@ def libadcc_extension():
         ]
         build_flags["extra_compile_args"].extend(["-arch", platform.machine()])
         build_flags["extra_link_args"].extend(["-arch", platform.machine()])
+        # The build fails with clang 22.1.0 for macosx 11.0,
+        # which is selected by default.
+        # Specify 12.0 for now, but we might need to update in the
+        # future once support for 12.0 is dropped, too.
+        # Or remove the it again once the default is updated.
+        if "MACOSX_DEPLOYMENT_TARGET" not in os.environ:
+            os.environ["MACOSX_DEPLOYMENT_TARGET"] = "12.0"
     elif sys.platform.startswith("linux"):
         # otherwise fails with -O3 on gcc>=12
         build_flags["extra_compile_args"] += ["-Wno-array-bounds"]
