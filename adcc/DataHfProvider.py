@@ -235,6 +235,12 @@ class DataHfProvider(HartreeFockProvider):
                                  + str((3, nb, nb)) + " not "
                                  + str(derivs["elec_vel_1"].shape))
             opprov.electric_dipole_velocity = np.asarray(derivs["elec_vel_1"])
+        if "overlap" in data:
+            if data["overlap"].shape != (nb, nb):
+                raise ValueError("overlap is expected to have shape "
+                                 + str((nb, nb)) + " not "
+                                 + str(data["overlap"].shape))
+            opprov.overlap = np.asarray(data["overlap"])
 
         self.operator_integral_provider = opprov
 
