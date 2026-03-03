@@ -15,6 +15,7 @@ authors = [
 	{name = "Antonia Papapostolou"},
 	{name = "Friederike Schneider"},
 	{name = "Adrian L. Dempwolff"},
+	{name = "Adrian J. Müller"},
 	{email = "developers@adc-connect.org"},
 ]
 license = "GPL-3.0-or-later"
