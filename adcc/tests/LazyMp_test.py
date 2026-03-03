@@ -21,12 +21,16 @@
 ##
 ## ---------------------------------------------------------------------
 import pytest
+import numpy as np
 from numpy.testing import assert_allclose
 from pytest import approx
 
 from adcc import block as b
-from adcc import LazyMp
+from adcc import LazyMp, OneParticleDensity, ReferenceState
 from adcc import OperatorSymmetry
+from adcc.functions import einsum, evaluate
+from adcc.backends import run_hf
+from adcc.MoSpaces import split_spaces
 
 from .testdata_cache import testdata_cache
 from . import testcases
@@ -35,6 +39,10 @@ from . import testcases
 test_cases = testcases.get_by_filename(
     "h2o_sto3g", "cn_sto3g", "h2o_def2tzvp", "cn_ccpvdz"
 )
+unrestricted_cases = [
+    (case.file_name, c) for case in test_cases if not case.restricted
+    for c in ["gen", "cvs"]
+]
 small_cases = [
     (case.file_name, c) for case in test_cases if not case.only_full_mode
     for c in ["gen", "cvs"]
@@ -132,6 +140,31 @@ class TestLazyMp:
         assert (
             instances.get(system, case).energy_correction(3)
             == approx(refmp["mp3"]["energy"])
+        )
+
+    # Ssq only implemented for unrestricted case, no adcman reference
+    @pytest.mark.parametrize("system,case", [(s, c) for s, c in unrestricted_cases
+                                             if "cvs" not in c])
+    def test_mp1_ssq(self, system: str, case: str,
+                     instances: LazyMpCache):
+        refmp = testdata_cache._load_data(
+            system=system, method="mp", case=case, source="adcc"
+        )
+        assert (
+            instances.get(system, case).ssq(1)
+            == approx(refmp["mp1"]["ssq"])
+        )
+
+    @pytest.mark.parametrize("system,case", [(s, c) for s, c in unrestricted_cases
+                                             if "cvs" not in c])
+    def test_mp2_ssq(self, system: str, case: str,
+                     instances: LazyMpCache):
+        refmp = testdata_cache._load_data(
+            system=system, method="mp", case=case, source="adcc"
+        )
+        assert (
+            instances.get(system, case).ssq(2)
+            == approx(refmp["mp2"]["ssq"])
         )
 
     @pytest.mark.parametrize("system,case", cases)
@@ -262,3 +295,88 @@ class TestLazyMp:
         assert len(timer.intervals("td2/o1o1v1v1")) == 1
         assert len(timer.intervals("energy_correction/2")) == 1
         assert len(timer.intervals("energy_correction/3")) == 1
+
+
+density_cases = [system for system, case in cases if "cvs" not in case]
+levels = [0, 1, 2, 3]
+
+
+@pytest.mark.parametrize("level", levels)
+@pytest.mark.parametrize("system", density_cases)
+class TestGroundstateDensity:
+    def calculate_mpn_energy(self, mp, level):
+        hf = mp.reference_state
+        if level == 3:
+            # TODO move to ISR(3) implementation
+            with pytest.raises(NotImplementedError):
+                mp.density(level)
+            dens_1p = mp.density(2) + self.mp3_diffdm(mp)
+        else:
+            dens_1p = mp.density(level)
+
+        energy = einsum("pq,pq", hf.foo, dens_1p.oo)
+        energy += einsum("pq,pq", hf.fvv, dens_1p.vv)
+
+        if level - 1 >= 0:
+            dens_2p = mp.density_2p(level - 1)
+            for block in dens_2p.blocks:
+                # compute
+                # 1/4 [(1 - P_pq) (1 - P_rs) 1 / (n_occ - 1) <pi||ri> delta_qs]
+                #   * D^pq_rs
+                # = 1 / (n_occ - 1) <pi||ri> D^pq_rq
+                s1, s2, s3, s4 = split_spaces(block)
+                if s2 == s4:
+                    eri_1p = np.einsum(
+                        "piqi->pq", hf.eri(f"{s1}o1{s3}o1").to_ndarray()
+                    )
+                    n_occ = hf.foo.shape[1]
+                    energy -= 1 / (n_occ - 1) * np.einsum(
+                        "pr,pqrq->",
+                        eri_1p,
+                        dens_2p[block].to_ndarray()
+                    )
+                # and the full 2e part
+                energy += 0.25 * einsum(
+                    "pqrs,pqrs", dens_2p[block], hf.eri(block)
+                )
+        return energy
+
+    def mp3_diffdm(self, mp) -> OneParticleDensity:
+        """
+        Return the MP3 difference density in the MO basis.
+        """
+        hf = mp.reference_state
+        # Only calculate the oo and vv block since the hf.fov block is zero anyways.
+        ret = OneParticleDensity(hf.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
+
+        ret.oo = (
+            # 3rd order
+            - einsum("ikab,jkab->ij", mp.t2oo, mp.td2(b.oovv)).symmetrise(0, 1)
+        )
+        ret.vv = (
+            # 3rd order
+            + einsum("ijac,ijbc->ab", mp.t2oo, mp.td2(b.oovv)).symmetrise(0, 1)
+        )
+        return evaluate(ret)
+
+    def test_mpn_energy(self, system: str, level: int):
+        system: testcases.TestCase = testcases.get_by_filename(system).pop()
+        # we need to run the scf calculation since we don't store the nuclear energy
+        scfres = run_hf("pyscf", system.xyz,
+                        system.basis, multiplicity=system.multiplicity)
+        hf = ReferenceState(scfres)
+        mp = LazyMp(hf)
+
+        if level == 0:
+            ref = (
+                + 1.0 * scfres.energy_nuc()
+                + sum(hf.foo.diagonal().to_ndarray())
+            )
+        else:
+            ref = mp.energy(level=level)
+
+        energy = (
+            + 1.0 * scfres.energy_nuc()
+            + self.calculate_mpn_energy(mp, level=level)
+        )
+        assert energy == pytest.approx(ref)

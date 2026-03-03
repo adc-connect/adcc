@@ -252,16 +252,21 @@ def is_canonical_eri_block(block: Sequence[str]) -> bool:
     return bra == bra_canonical and ket == ket_canonical
 
 
-def collect_ao_integrals(pyscf_data: h5py.File) -> dict:
+def collect_ao_integrals(pyscf_data: h5py.File) -> dict[str, np.ndarray]:
     """
     Collects integral matrices in the AO basis from the pyscf data. Supported are
-    - dipole x, y and z components. Returned as dx, dy and dz.
+    - dipole x, y and z components. Returned as the dx, dy and dz
+      components of the nabla operator.
     """
     ret = {}
     # extract the dipole operator matrices in the AO basis.
+    # However, adcman expects to load the nabla operator!
     _, dipole = _extract_dataset(pyscf_data["multipoles/elec_1"])
+    assert isinstance(dipole, np.ndarray)
+    assert dipole.ndim == 3
+    dipole = cast(np.ndarray[tuple[int, int, int]], dipole)
     for tensor, comp in zip(dipole, ["x", "y", "z"]):
-        ret[f"d{comp}"] = tensor
+        ret[f"d{comp}"] = -1.0 * tensor
     return ret
 
 

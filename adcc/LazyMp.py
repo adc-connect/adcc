@@ -23,10 +23,11 @@
 import libadcc
 import numpy as np
 
-from .functions import direct_sum, evaluate, einsum
+from .functions import direct_sum, evaluate, einsum, zeros_like
 from .misc import cached_property, cached_member_function
 from .ReferenceState import ReferenceState
 from .OneParticleDensity import OneParticleDensity
+from .TwoParticleDensity import TwoParticleDensity
 from .NParticleOperator import product_trace, OperatorSymmetry
 from .Intermediates import register_as_intermediate
 from .timings import Timer, timed_member_call
@@ -212,6 +213,76 @@ class LazyMp:
             raise NotImplementedError("Only densities for level 0, 1 and 2"
                                       " are implemented.")
 
+    @cached_property
+    @timed_member_call(timer="timer")
+    def mp1_dm_correction_2p(self) -> TwoParticleDensity:
+        """
+        Return the two-particle MP1 difference density correction in the MO basis.
+        """
+        ret = TwoParticleDensity(self.mospaces,
+                                 symmetry=OperatorSymmetry.HERMITIAN)
+        ret.oovv = -1.0 * self.t2oo
+        return ret.evaluate()
+
+    @cached_property
+    @timed_member_call(timer="timer")
+    def mp2_dm_correction_2p(self) -> TwoParticleDensity:
+        """
+        Return the two-particle MP2 difference density correction in the MO basis.
+        """
+        hf: ReferenceState = self.reference_state
+        ret = TwoParticleDensity(self.mospaces,
+                                 symmetry=OperatorSymmetry.HERMITIAN)
+        p0: OneParticleDensity = self.mp2_diffdm
+
+        # constuct Kronecker Delta
+        d_oo = zeros_like(hf.foo)
+        d_oo.set_mask("ii", 1)
+
+        ret.oooo = (
+            + 4.0 * einsum("ik,jl->ijkl", p0.oo, d_oo)
+            .antisymmetrise(0, 1).antisymmetrise(2, 3)
+            + 0.5 * einsum("ijab,klab->ijkl", self.t2oo, self.t2oo)
+        )
+        ret.ooov = (
+            + 2.0 * einsum("ja,ik->ijka", p0.ov, d_oo).antisymmetrise(0, 1)
+        )
+        ret.oovv = (
+            - 1.0 * self.td2(b.oovv)
+        )
+        ret.ovov = (
+            + 1.0 * einsum("ab,ij->iajb", p0.vv, d_oo)
+            - 1.0 * einsum("jkac,ikbc->iajb", self.t2oo, self.t2oo)
+        )
+        ret.vvvv = (
+            + 0.5 * einsum("ijab,ijcd->abcd", self.t2oo, self.t2oo)
+        )
+        return evaluate(ret)
+
+    def diffdm_2p(self, level=2) -> TwoParticleDensity:
+        """
+        Return the two-particle MP difference density in the MO basis with all
+        corrections up to the specified order of perturbation theory.
+        """
+        if level == 1:
+            return self.mp1_dm_correction_2p
+        elif level == 2:
+            return (self.mp1_dm_correction_2p
+                    + self.mp2_dm_correction_2p)
+        else:
+            raise NotImplementedError("Only first and second-order two-particle "
+                                      "density corrections are implemented.")
+
+    def density_2p(self, level=2) -> TwoParticleDensity:
+        """
+        Return the two-particle MP density in the MO basis with all corrections
+        up to the specified order of perturbation theory.
+        """
+        if level == 0:
+            return self.reference_state.density_2p
+        diffdm = self.diffdm_2p(level)
+        return self.reference_state.density_2p + diffdm
+
     def dipole_moment(self, level=2):
         """
         Return the MP dipole moment at the specified level of
@@ -303,6 +374,23 @@ class LazyMp:
         mp2corr = np.array([product_trace(comp, self.mp2_diffdm)
                             for comp in dipole_integrals])
         return refstate.dipole_moment + mp2corr
+
+    @cached_member_function()
+    def ssq(self, level=2):
+        """
+        Return <S^2> of the ground state.
+        """
+        if self.reference_state.restricted:
+            raise NotImplementedError(
+                "<S^2> is not implemented for restricted HF references."
+            )
+        ssq_1p_op = self.reference_state.operators.ssq_1p
+        ssq_2p_op = self.reference_state.operators.ssq_2p
+        # the trace of the second-order (and higher) correction to the RDM1
+        # is zero -> no influence on top of HF density for ground state
+        ssq_1p = product_trace(ssq_1p_op, self.density(0))
+        ssq_2p = product_trace(ssq_2p_op, self.density_2p(level))
+        return (ssq_1p + ssq_2p)
 
 
 #

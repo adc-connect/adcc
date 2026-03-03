@@ -49,14 +49,29 @@ test_cases = testcases.get_by_filename(
 cases_pp = [(case.file_name, m, "gen", kind)
          for case in test_cases
          for m in pp_methods
-         for kind in ["singlet", "any", "spin_flip"] if kind in case.kinds.pp]
-cases_ip_ea = [(case.file_name, m, c, kind, is_alpha) 
+         for kind in ["singlet", "any", "spin_flip"] if kind in case.kinds.pp
+]
+unrestricted_cases_pp = [
+    (case.file_name, m, "gen", kind, None)
+    for case in test_cases if not case.restricted
+    for m in pp_methods
+    for kind in ["singlet", "any", "spin_flip"] if kind in case.kinds.pp
+]
+cases_ip_ea = [(case.file_name, m, "gen", kind, is_alpha) 
     for case in test_cases
     for m in ip_ea_methods
-    for c in ["gen"] if c in case.cases
-    for kind in getattr(case.kinds, AdcMethod(m).adc_type)
+    for kind in ["doublet", "any"] if kind in getattr(
+        case.kinds, AdcMethod(m).adc_type)
     for is_alpha in ([True] if case.restricted else [True, False])
 ]
+unrestricted_cases_ip_ea = [] 
+#     (case.file_name, m, "gen", kind, is_alpha)
+#     for case in test_cases if not case.restricted
+#     for m in ip_ea_methods
+#     for kind in ["doublet", "any"] if kind in getattr(
+#         case.kinds, AdcMethod(m).adc_type)
+#     for is_alpha in [True, False]
+# ]
 
 gauge_origins = ["origin", "mass_center", "charge_center"]
 
@@ -193,6 +208,25 @@ class TestProperties:
         res_dms = state.state_dipole_moment
         n_ref = len(state.excitation_vector)
         assert_allclose(res_dms, refdata["state_dipole_moments"][:n_ref], atol=1e-4)
+
+    @pytest.mark.parametrize("system,method,case,kind,is_alpha",
+                             [c for c in (unrestricted_cases_pp + 
+                                          unrestricted_cases_ip_ea)
+                              if "cvs" not in c[1]])
+    def test_state_ssq(self, system: str, case: str, kind: str,
+                       method: str, is_alpha: bool | None):
+        refdata = testdata_cache._load_data(
+            system=system, method=method, case=case, source="adcc",
+            is_alpha=is_alpha
+        )[kind]
+        state = testdata_cache._make_mock_adc_state(
+            system=system, method=method, case=case, kind=kind, source="adcc",
+            is_alpha=is_alpha
+        )
+
+        res_dms = state.state_ssq
+        n_ref = len(state.excitation_vector)
+        assert_allclose(res_dms, refdata["state_ssq"][:n_ref], atol=1e-6)
 
     # CVS-ADC state2state tdm not implemented
     @pytest.mark.parametrize("generator", generators)

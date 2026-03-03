@@ -28,6 +28,8 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
     # MP1 data
     gs_data[f"{gs}1/df_o1v1"] = ground_state.df("o1v1").to_ndarray()
     gs_data[f"{gs}1/t_o1o1v1v1"] = ground_state.t2("o1o1v1v1").to_ndarray()
+    if not ground_state.reference_state.restricted:
+        gs_data[f"{gs}1/ssq"] = ground_state.ssq(1)
     # CVS-MP1 data
     if ground_state.has_core_occupied_space:
         gs_data[f"{gs}1/df_o2v1"] = ground_state.df("o2v1").to_ndarray()
@@ -37,6 +39,8 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
     gs_data[f"{gs}2/energy"] = ground_state.energy_correction(2)
     gs_data[f"{gs}2/dipole"] = ground_state.dipole_moment(2)
     gs_data[f"{gs}2/td_o1o1v1v1"] = ground_state.td2("o1o1v1v1").to_ndarray()
+    if not ground_state.reference_state.restricted:
+        gs_data[f"{gs}2/ssq"] = ground_state.ssq(2)
     if not only_full_mode:
         # triples take a lot of memory for the larger test cases
         gs_data[f"{gs}2/tt_o1o1o1v1v1v1"] = (
@@ -175,6 +179,10 @@ def dump_excited_states(
             kind_data[f"state_to_state/from_{ifrom}/state_to_excited_tdm_bb_b"] = (
                 np.asarray(tdm_bb_b)
             )
+    # ssq for unrestriced calculation
+    if not states.reference_state.restricted \
+            and not states.method.is_core_valence_separated:
+        kind_data["state_ssq"] = states.state_ssq
     # write the data to hdf5
     emplace_dict(kind_data, hdf5_file, compression="gzip")
     hdf5_file.attrs["adcc_version"] = adcc.__version__

@@ -11,6 +11,7 @@ from .FormatIndex import (
 )
 from .LazyMp import LazyMp
 from .OneParticleDensity import OneParticleDensity
+from .TwoParticleDensity import TwoParticleDensity
 from .NParticleOperator import product_trace
 from .OperatorIntegrals import OperatorIntegrals
 from .misc import cached_member_function, requires_module
@@ -190,6 +191,54 @@ class ElectronicStates:
         mp_density = self.ground_state.density(self.property_method.level)
         diffdm = self._state_diffdm(state_n)
         return mp_density + diffdm
+
+    @property
+    def state_diffdm_2p(self) -> list[TwoParticleDensity]:
+        """
+        List of two-particle difference density matrices of all computed states
+        """
+        return [self._state_diffdm_2p(state_n=i) for i in range(self.size)]
+
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _state_diffdm_2p(self, state_n: int) -> TwoParticleDensity:
+        """Computes the two-particle difference density matrix for a single state"""
+        evec = self.excitation_vector[state_n]
+        return self._module.state_diffdm_2p(
+            self.property_method, self.ground_state, evec, self.matrix.intermediates
+        )
+
+    @property
+    def state_dm_2p(self) -> list[TwoParticleDensity]:
+        """List of two-particle state density matrices of all computed states"""
+        return [self._state_dm_2p(i) for i in range(self.size)]
+
+    def _state_dm_2p(self, state_n: int) -> TwoParticleDensity:
+        """List of two particle state density matrices of all computed states"""
+        mp_density = self.ground_state.density_2p(self.property_method.level)
+        diffdm = self._state_diffdm_2p(state_n)
+        return mp_density + diffdm
+
+    @property
+    def state_ssq(self) -> np.ndarray:
+        """Array of state <S^2>"""
+        return np.array([self._state_ssq(i) for i in range(self.size)])
+
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _state_ssq(self, state_n: int) -> float:
+        """Computes the <S^2> of a single state."""
+        pmethod = self.property_method
+        if pmethod.level == 0:
+            gs_ssq = self.reference_state.ssq
+        else:
+            gs_ssq = self.ground_state.ssq(pmethod.level)
+
+        ssq_1p_op = self.operators.ssq_1p
+        ssq_2p_op = self.operators.ssq_2p
+        ddm_1p = self._state_diffdm(state_n)
+        ddm_2p = self._state_diffdm_2p(state_n)
+        ssq_1p = product_trace(ssq_1p_op, ddm_1p)
+        ssq_2p = product_trace(ssq_2p_op, ddm_2p)
+        return (ssq_1p + ssq_2p + gs_ssq)
 
     @property
     def state_dipole_moment(self) -> np.ndarray:
