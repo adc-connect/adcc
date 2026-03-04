@@ -47,6 +47,7 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
     # MP3 data
     if not ground_state.has_core_occupied_space:
         gs_data[f"{gs}3/energy"] = ground_state.energy_correction(3)
+        gs_data[f"{gs}3/dipole"] = ground_state.dipole_moment(3)
     # MP2 density: MO basis
     dm_blocks = ["dm_o1o1", "dm_o1v1", "dm_v1v1"]
     if ground_state.has_core_occupied_space:
@@ -60,6 +61,21 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
     )
     gs_data[f"{gs}2/dm_bb_a"] = dm_bb_a.to_ndarray()
     gs_data[f"{gs}2/dm_bb_b"] = dm_bb_b.to_ndarray()
+ 
+    if not ground_state.has_core_occupied_space:
+    # MP3 density: MO basis
+        dm_blocks = ["dm_o1o1", "dm_o1v1", "dm_v1v1"]
+
+        for block in dm_blocks:
+            blk = block.split("_")[-1]
+            gs_data[f"{gs}3/{block}"] = ground_state.mp3_diffdm[blk].to_ndarray()
+    # MP3 density: AO basis
+        dm_bb_a, dm_bb_b = ground_state.mp3_diffdm.to_ao_basis(
+            ground_state.reference_state
+        )
+        gs_data[f"{gs}3/dm_bb_a"] = dm_bb_a.to_ndarray()
+        gs_data[f"{gs}3/dm_bb_b"] = dm_bb_b.to_ndarray()
+
     # write the data to hdf5
     emplace_dict(gs_data, hdf5_file, compression="gzip")
     hdf5_file.attrs["adcc_version"] = adcc.__version__
