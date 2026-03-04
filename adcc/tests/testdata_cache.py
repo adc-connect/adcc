@@ -299,3 +299,4 @@ def _import_hook(data: dict):
 psi4_data = read_json_data("psi4_data.json")
 pyscf_data = read_json_data("pyscf_data.json")
 tmole_data = read_json_data("tmole_data.json")
+gradient_data = read_json_data("gradient_data.json")

@@ -191,6 +191,7 @@ def cached_backend_hf(backend: str, system: str, conv_tol=1e-12, pe_options=None
     and return the result.
     """
     import adcc.backends
+    print(system)
 
     from .. import testcases
 

@@ -21,15 +21,16 @@
 ##
 ## ---------------------------------------------------------------------
 from dataclasses import dataclass
+from pathlib import Path
 import itertools
 import adcc
 import numpy as np
-import yaml
+import json
 from tqdm import tqdm
 
 from pyscf import gto, lib
 
-from static_data import xyz
+from adcc.tests.testcases import _xyz
 
 adcc.set_n_threads(8)
 lib.num_threads(8)
@@ -50,11 +51,12 @@ class Molecule:
 
     @property
     def xyz(self):
-        return xyz[self.name]
+        return _xyz[self.name][0]
 
 
 molecules = [
     Molecule("h2o", 0, 1),
+    Molecule("ch2nh2", charge=0, multiplicity=2),
 ]
 
 
@@ -86,7 +88,7 @@ def fdiff_gradient(molecule, method, basis, step=1e-4, **kwargs):
     coords = m.atom_coords().copy()
     elements = m.elements.copy()
 
-    conv_tol = kwargs.get("conv_tol", 1e-10) / 100
+    conv_tol = kwargs.get("conv_tol", 1e-10)
 
     # run unperturbed system
     scfres = adcc.backends.run_hf(
@@ -137,10 +139,11 @@ def main():
         "cvs-adc0",
         "cvs-adc1",
         "cvs-adc2",
-        # "cvs-adc2x",  # TODO: broken
+        "cvs-adc2x",
     ]
     molnames = [
         "h2o",
+        # "ch2nh2",
     ]
     mols = [m for m in molecules if m.name in molnames]
     ret = {
@@ -148,7 +151,7 @@ def main():
         "methods": methods,
         "molecules": molnames,
     }
-    config_excited = {"n_singlets": 3}
+    config_excited = {"n_singlets": 5}
     for molecule in mols:
         molname = molecule.name
         ret[molname] = {}
@@ -156,7 +159,8 @@ def main():
             ret[molname][basis] = {}
             for method in methods:
                 kwargs = {
-                    "conv_tol": 1e-10,
+                    # "conv_tol": 1e-10,
+                    "conv_tol": 1e-9,
                 }
                 if "adc" in method:
                     kwargs.update(config_excited)
@@ -177,8 +181,10 @@ def main():
                 }
                 ret[molname][basis][method] = cont
         ret[molname]["xyz"] = molecule.xyz
-    with open("grad_dump.yml", "w") as yamlout:
-        yaml.safe_dump(ret, yamlout)
+    
+    dump_file = Path(__file__).parent.parent / "data" / "gradient_data.json"
+    with open(dump_file, "w") as fout:
+        json.dump(ret, fout)
 
 
 if __name__ == "__main__":
