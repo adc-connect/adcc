@@ -38,7 +38,8 @@ class PyScfOperatorIntegralProvider:
         "overlap", "electric_dipole", "electric_dipole_velocity", "magnetic_dipole",
         "electric_quadrupole", "electric_quadrupole_traceless",
         "electric_quadrupole_velocity", "diamagnetic_magnetizability",
-        "pe_induction_elec", "pcm_potential_elec"
+        "pe_induction_elec", "pcm_potential_elec", "magnetic_dipole_giao_1p",
+        "magnetic_dipole_giao_2p"
     )
 
     def __init__(self, scfres):
@@ -66,6 +67,21 @@ class PyScfOperatorIntegralProvider:
             return tuple(
                 -0.5 * self.scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
             )
+
+    @property
+    def magnetic_dipole_giao_1p(self) -> tuple[np.ndarray, ...]:
+        ret = -0.5 * self.scfres.mol.intor('int1e_giao_irjxp', comp=3, hermi=2)
+        ret -= self.scfres.mol.intor('int1e_ignuc', comp=3, hermi=2)
+        ret -= self.scfres.mol.intor('int1e_igkin', comp=3, hermi=2)
+        return tuple(ret)
+
+    @property
+    def magnetic_dipole_giao_2p(self) -> tuple[np.ndarray, ...]:
+        ret = []
+        ints = self.scfres.mol.intor('int2e_ig1', comp=3, aosym=1)
+        for i in range(3):  # xyz
+            ret.append(1.0 * (ints[i] + ints[i].transpose(2, 3, 0, 1)))
+        return tuple(ret)
 
     @property
     def electric_dipole_velocity(self) -> tuple[np.ndarray, ...]:
