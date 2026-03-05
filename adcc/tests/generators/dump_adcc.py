@@ -2,6 +2,7 @@ import adcc
 from adcc.AdcMatrix import AdcMatrix
 from adcc.AmplitudeVector import AmplitudeVector
 from adcc.ExcitedStates import ExcitedStates
+from adcc.ChargedExcitations import DetachedStates, AttachedStates
 from adcc.hdf5io import emplace_dict
 from adcc.LazyMp import LazyMp
 from adcc.State2States import State2States
@@ -9,6 +10,7 @@ from adcc.State2States import State2States
 import numpy as np
 import h5py
 
+from typing import Union
 
 def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
                      only_full_mode: bool) -> None:
@@ -65,47 +67,17 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
     hdf5_file.attrs["adcc_version"] = adcc.__version__
 
 
-def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
-                        dump_nstates: int | None = None) -> None:
+def _pp_adc_properties(states: ExcitedStates, kind_data: dict, n_states: int) -> None:
+    """Collects all properties that are unique for PP-ADC
     """
-    Dump the excited states data to the given hdf5 file/group.
-    The number of states to dump can be given by dump_nstates. By default all states
-    are dumped.
-    """
-    # ensure that the calculation converged on a nonzero result
-    assert states.converged  # type: ignore
-    assert all(abs(e) > 1e-12 for e in states.excitation_energy)
-
-    n_states = len(states.excitation_energy)
-    if dump_nstates is not None:
-        n_states = min(n_states, dump_nstates)
-
-    dm_bb_a = []  # State diffdm AO basis alpha part
-    dm_bb_b = []  # State diffdm AO basis beta part.
     tdm_bb_a = []  # Ground to Excited state tdm AO basis alpha part
     tdm_bb_b = []  # Ground to Excited state tdm AO basis beta part
-    # split the eigenvectors according to their excitation degree for all states
-    eigenvectors: dict[int, list] = {}
+
     for n in range(n_states):
-        # densities
-        bb_a, bb_b = states.state_diffdm[n].to_ao_basis(states.reference_state)
-        dm_bb_a.append(bb_a.to_ndarray())
-        dm_bb_b.append(bb_b.to_ndarray())
+        # TDMs
         bb_a, bb_b = states.transition_dm[n].to_ao_basis(states.reference_state)
         tdm_bb_a.append(bb_a.to_ndarray())
         tdm_bb_b.append(bb_b.to_ndarray())
-        # eigenvectors
-        for exdegree, block in enumerate(states.matrix.axis_blocks):
-            if exdegree + 1 not in eigenvectors:
-                eigenvectors[exdegree + 1] = []
-            eigenvectors[exdegree + 1].append(getattr(
-                states.excitation_vector[n], block  # type: ignore
-            ).to_ndarray())
-    kind_data = {}
-    # eigenvalues
-    kind_data["eigenvalues"] = states.excitation_energy[:n_states]
-    # state and transition dipole moments
-    kind_data["state_dipole_moments"] = states.state_dipole_moment[:n_states]
     kind_data["transition_dipole_moments"] = (
         states.transition_dipole_moment[:n_states]
     )
@@ -121,11 +93,66 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
         kind_data[f"transition_quadrupole_moments_{g_origin}"] = (
             states.transition_quadrupole_moment(g_origin)[:n_states]
         )
+    # ground to excited state tdm
+    kind_data["ground_to_excited_tdm_bb_a"] = np.asarray(tdm_bb_a)
+    kind_data["ground_to_excited_tdm_bb_b"] = np.asarray(tdm_bb_b)
+
+
+def _ip_ea_adc_properties(states: Union[DetachedStates, AttachedStates],
+                          kind_data: dict, n_states: int) -> None:
+    """Collects all properties that are unique for IP/EA-ADC
+    """
+    kind_data["pole_strengths"] = (
+        states.pole_strength[:n_states]
+    )
+
+
+def dump_excited_states(
+    states: Union[ExcitedStates,DetachedStates, AttachedStates],
+    hdf5_file: h5py.Group, dump_nstates: int = None) -> None:
+    """
+    Dump the (charged) excited states data to the given hdf5 file/group.
+    The number of states to dump can be given by dump_nstates. By default all states
+    are dumped.
+    """
+    # ensure that the calculation converged on a nonzero result
+    assert states.converged
+    assert all(abs(e) > 1e-12 for e in states.excitation_energy)
+
+    n_states = len(states.excitation_energy)
+    if dump_nstates is not None:
+        n_states = min(n_states, dump_nstates)
+
+    dm_bb_a = []  # State diffdm AO basis alpha part
+    dm_bb_b = []  # State diffdm AO basis beta part.
+    # split the eigenvectors according to their excitation degree for all states
+    eigenvectors: dict[int, list] = {}
+    for n in range(n_states):
+        # densities
+        bb_a, bb_b = states.state_diffdm[n].to_ao_basis(states.reference_state)
+        dm_bb_a.append(bb_a.to_ndarray())
+        dm_bb_b.append(bb_b.to_ndarray())
+        # eigenvectors
+        for exdegree, block in enumerate(states.matrix.axis_blocks):
+            if exdegree + 1 not in eigenvectors:
+                eigenvectors[exdegree + 1] = []
+            eigenvectors[exdegree + 1].append(
+                getattr(states.excitation_vector[n], block).to_ndarray()
+            )
+    kind_data = {}
+
+    if isinstance(states, ExcitedStates):
+        _pp_adc_properties(states, kind_data, n_states)
+    elif isinstance(states, (DetachedStates, AttachedStates)):
+        _ip_ea_adc_properties(states, kind_data, n_states)
+    # eigenvalues
+    kind_data["eigenvalues"] = states.excitation_energy[:n_states]
+    # state and transition dipole moments
+    kind_data["state_dipole_moments"] = states.state_dipole_moment[:n_states]
+
     # state diffdm and ground to excited state tdm
     kind_data["state_diffdm_bb_a"] = np.asarray(dm_bb_a)
     kind_data["state_diffdm_bb_b"] = np.asarray(dm_bb_b)
-    kind_data["ground_to_excited_tdm_bb_a"] = np.asarray(tdm_bb_a)
-    kind_data["ground_to_excited_tdm_bb_b"] = np.asarray(tdm_bb_b)
     # dump the eigenvectors
     kind_data["eigenvectors_singles"] = np.asarray(eigenvectors[1])
     if 2 in eigenvectors:
