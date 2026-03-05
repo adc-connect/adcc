@@ -355,7 +355,7 @@ def eigsh(matrix, guesses, n_ep=None, n_block=None, max_subspace=None,
           callback=None, preconditioner=None,
           preconditioning_method="Davidson", debug_checks=False,
           residual_min_norm=None, explicit_symmetrisation=IndexSymmetrisation,
-          max_subspace_iter= None):
+          max_subspace_iter=None):
     """Davidson eigensolver for ADC problems
 
     Parameters
