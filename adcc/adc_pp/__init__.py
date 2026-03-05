@@ -23,6 +23,7 @@
 from .state_diffdm import state_diffdm
 from .state_diffdm_2p import state_diffdm_2p
 from .transition_dm import transition_dm
+from .transition_dm_2p import transition_dm_2p
 from .state2state_transition_dm import state2state_transition_dm
 from .modified_transition_moments import modified_transition_moments
 
@@ -33,4 +34,4 @@ from the high-level objects in the adcc main module.
 """
 
 __all__ = ["state_diffdm", "state_diffdm_2p", "state2state_transition_dm",
-           "transition_dm", "modified_transition_moments"]
+           "transition_dm", "transition_dm_2p", "modified_transition_moments"]
