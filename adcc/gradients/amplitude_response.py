@@ -642,11 +642,7 @@ def ampl_relaxed_dms_cvs_adc2x(exci):
     g2a.ccvv = - 1.0 * t2ccvv
     g2a.ocvv = - 1.0 * t2ocvv
     g2a.ococ = 1.0 * einsum("iJab,kLab->iJkL", u.pphh, u.pphh)
-    g2a.vvvv = 1.0 * einsum("iJcd,iJab->abcd", u.pphh, u.pphh)
-
-    # TODO: remove
-    # g2a.ococ *= 0.0
-    # g2a.vvvv *= 0.0
+    g2a.vvvv = 2.0 * einsum("iJcd,iJab->abcd", u.pphh, u.pphh)
 
     g1a.co = (
         - 1.0 * einsum('JbKc,ibKc->Ji', g2a.cvcv, hf.ovcv)

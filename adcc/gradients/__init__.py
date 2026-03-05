@@ -159,7 +159,8 @@ def nuclear_gradient(excitation_or_mp):
         if hf.has_core_occupied_space:
             delta_IJ = hf.density.cc
 
-            g2_hf.oooo = -0.25 * einsum("ik,jl->ijkl", delta_ij, delta_ij)
+            g2_hf.oooo = 0.25 * (- einsum("li,jk->ijkl", delta_ij, delta_ij)
+                                 + einsum("ki,jl->ijkl", delta_ij, delta_ij))
             g2_hf.cccc = -0.5 * einsum("IK,JL->IJKL", delta_IJ, delta_IJ)
             g2_hf.ococ = -1.0 * einsum("ik,JL->iJkL", delta_ij, delta_IJ)
 
@@ -168,9 +169,7 @@ def nuclear_gradient(excitation_or_mp):
                 + einsum("ik,JL->iJkL", delta_ij, g1o.cc + 2.0 * delta_IJ)
                 + einsum("ik,JL->iJkL", g1o.oo, delta_IJ)
             )
-            g2_oresp.oooo = 0.25 * (
-                einsum("ik,jl->ijkl", delta_ij, g1o.oo + delta_ij)
-            )
+            g2_oresp.oooo = einsum("ij,kl->kilj", delta_ij, g1o.oo)
             g2_oresp.ovov = einsum("ij,ab->iajb", delta_ij, g1o.vv)
             g2_oresp.cvcv = einsum("IJ,ab->IaJb", delta_IJ, g1o.vv)
             g2_oresp.ocov = 2 * einsum("ik,Ja->iJka", delta_ij, g1o.cv)

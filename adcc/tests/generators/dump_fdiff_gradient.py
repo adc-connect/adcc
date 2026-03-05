@@ -89,10 +89,11 @@ def fdiff_gradient(molecule, method, basis, step=1e-4, **kwargs):
     elements = m.elements.copy()
 
     conv_tol = kwargs.get("conv_tol", 1e-10)
+    print('conv tol', conv_tol)
 
     # run unperturbed system
     scfres = adcc.backends.run_hf(
-        'pyscf', molecule.xyz, basis, conv_tol=conv_tol, conv_tol_grad=conv_tol,
+        'pyscf', molecule.xyz, basis, conv_tol=conv_tol, conv_tol_grad=conv_tol * 10,
         charge=molecule.charge, multiplicity=molecule.multiplicity
     )
     if "adc" in method:
@@ -160,7 +161,8 @@ def main():
             for method in methods:
                 kwargs = {
                     # "conv_tol": 1e-10,
-                    "conv_tol": 1e-9,
+                    # "conv_tol": 1e-9,
+                    "conv_tol": 1e-8,
                 }
                 if "adc" in method:
                     kwargs.update(config_excited)

@@ -78,7 +78,7 @@ def orbital_response_rhs(hf, g1a, g2a):
             + 2.0 * einsum('kJIb,kJab->Ia', g2a.occv, hf.ocvv)
             - 1.0 * einsum('abcd,Ibcd->Ia', g2a.vvvv, hf.cvvv)  # cvs-adc2x
             - 2.0 * einsum('jakb,jIkb->Ia', g2a.ovov, hf.ocov)  # cvs-adc2x
-            - 2.0 * einsum('jIlK,lKja->Ia', g2a.ococ, hf.ocov)  # cvs-adc2x
+            + 2.0 * einsum('jIlK,lKja->Ia', g2a.ococ, hf.ocov)  # cvs-adc2x
         )
         ret = AmplitudeVector(cv=ret_cv, ov=ret_ov)
     else:
@@ -112,7 +112,6 @@ def orbital_response_rhs(hf, g1a, g2a):
 
 def energy_weighted_density_matrix(hf, g1o, g2a):
     if hf.has_core_occupied_space:
-        # CVS-ADC0, CVS-ADC1, CVS-ADC2
         w = OneParticleOperator(hf)
         w.cc = - 0.5 * (
             + einsum("JKab,IKab->IJ", g2a.ccvv, hf.ccvv)
@@ -295,13 +294,6 @@ class OrbitalResponseMatrix:
             ret = AmplitudeVector(cv=ret_cv, ov=ret_ov)
         else:
             ret = AmplitudeVector(ov=ret_ov)
-        # TODO: generalize once other solvent methods are available
-        if self.hf.environment == "pe":
-            # PE contribution to the orbital Hessian
-            ops = self.hf.operators
-            dm = OneParticleOperator(self.hf, is_symmetric=True)
-            dm.ov = lam.ov
-            ret += ops.pe_induction_elec(dm).ov
         return evaluate(ret)
 
 

@@ -58,11 +58,12 @@ class TwoParticleDensityMatrix:
         ]
         if self.mospaces.has_core_occupied_space:
             self.blocks += [
-                b.cccc, b.ococ, b.oooo,  b.cvcv,
+                b.cccc, b.ococ, b.cvcv,
                 b.ocov, b.cccv, b.cocv, b.ocoo,
                 b.ccco, b.occv, b.ccvv, b.ocvv,
-                b.vvvv,
             ]
+        # make sure we didn't add any block twice!
+        assert len(list(set(self.blocks))) == len(self.blocks)
         self._tensors = {}
 
     @property
@@ -223,7 +224,7 @@ class TwoParticleDensityMatrix:
             if not hasattr(self, "reference_state"):
                 raise ValueError("Argument reference_state is required if no "
                                  "reference_state is stored in the "
-                                 "OneParticleOperator")
+                                 "TwoParticleDensityMatrix")
             return self.__transform_to_ao(self.reference_state)
         else:
             raise TypeError("Argument type not supported.")
