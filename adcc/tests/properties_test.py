@@ -64,14 +64,14 @@ cases_ip_ea = [(case.file_name, m, "gen", kind, is_alpha)
         case.kinds, AdcMethod(m).adc_type)
     for is_alpha in ([True] if case.restricted else [True, False])
 ]
-unrestricted_cases_ip_ea = [] 
-#     (case.file_name, m, "gen", kind, is_alpha)
-#     for case in test_cases if not case.restricted
-#     for m in ip_ea_methods
-#     for kind in ["doublet", "any"] if kind in getattr(
-#         case.kinds, AdcMethod(m).adc_type)
-#     for is_alpha in [True, False]
-# ]
+unrestricted_cases_ip_ea = [ 
+    (case.file_name, m, "gen", kind, is_alpha)
+    for case in test_cases if not case.restricted
+    for m in ip_ea_methods
+    for kind in ["doublet", "any"] if kind in getattr(
+        case.kinds, AdcMethod(m).adc_type)
+    for is_alpha in [True, False]
+]
 
 gauge_origins = ["origin", "mass_center", "charge_center"]
 
@@ -190,12 +190,8 @@ class TestProperties:
                                         case: str, kind: str, is_alpha: bool,
                                         generator: str):
         if generator == "adcman":
-            pytest.xfail("Dipole moment of charged species is gauge dependent."
-                         " Not (yet) implemented in adcc in contrast to adcman.")
             if method.endswith("adc2x"):
                 pytest.skip("No adcman reference data yet for IP/EA-ADC(2)-x")
-            if system.startswith("cn"):
-                pytest.xfail("Faulty adcman GS dipole moments")
         refdata = testdata_cache._load_data(
             system=system, method=method, case=case, source=generator,
             is_alpha=is_alpha

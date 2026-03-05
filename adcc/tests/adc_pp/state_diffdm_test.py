@@ -226,7 +226,7 @@ class TestStateDiffDm:
         ).symmetrise()
         return dm
 
-    def test_adcn(self, method: str, system: str, case: str, kind: str):
+    def test_pp_adcn(self, method: str, system: str, case: str, kind: str):
         state = testdata_cache.adcc_states(
             system=system, method=method, kind=kind, case=case
         )
