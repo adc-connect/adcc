@@ -23,82 +23,56 @@
 import numpy as np
 import pytest
 
-from adcc.AdcMethod import AdcMethod
-from adcc.functions import einsum
-from adcc.adc_pp.transition_dm_2p import transition_dm_2p
-from adcc.adc_pp.transition_dm import transition_dm
-from adcc.MoSpaces import split_spaces
-
+from adcc import run_adc
 from .. import testcases
 from ..testdata_cache import testdata_cache
 
 
 test_cases = testcases.get_by_filename("h2o_sto3g", "cn_sto3g")
-cases = [(case.file_name, c, kind)
-         for case in test_cases for c in ["gen"] for kind in case.kinds.pp]
-# methods = ["adc0", "adc1", "adc2", "adc3"]
 methods = ["adc0", "adc1", "adc2", "adc3"]
 
 
+@pytest.mark.parametrize("case", test_cases)
 @pytest.mark.parametrize("method", methods)
-@pytest.mark.parametrize("system,case,kind", cases)
 class TestTransitionDm:
-    def calculate_adcn_expectation_value(self, state):
-        hf = state.reference_state
-        mp = state.ground_state
-        n_states = len(state.excitation_energy)
-        expectation_value = np.zeros((n_states))
-        method = state.method
-        level = method.level
+    def test_adcn(self, method: str, case: str):
+        hf = testdata_cache.refstate(case, "gen")
+        state = run_adc(hf, n_states=3, method=method)
+        n_electrons = len(hf.foo.diagonal())
+        prefac = 1.0 / (n_electrons - 1)
+        state_tdm_2p = state.transition_dm_2p
+        state_tdm = state.transition_dm
+        for es in range(3):
+            # partial traces are not implemented in adcc.einsum
+            oo_1p = prefac * (
+                np.einsum("ikjk->ij", state_tdm_2p[es].oooo.to_ndarray())
+                + np.einsum("icjc->ij", state_tdm_2p[es].ovov.to_ndarray())
+            )
 
-        method_order_minus_one = None
-        if level - 1 >= 0:
-            method_order_minus_one = AdcMethod("adc" + str(level - 1))
+            vv_1p = prefac * (
+                np.einsum("akbk->ab", state_tdm_2p[es].vovo.to_ndarray())
+                + np.einsum("acbc->ab", state_tdm_2p[es].vvvv.to_ndarray())
+            )
 
-        for es in range(n_states):
-            evec = state.excitation_vector[es]
-            # TODO switch to ISR(3) implemntation
-            if method.level == 3:
-                # so we don't forget to switch to the actual implementation
-                with pytest.raises(NotImplementedError):
-                    transition_dm(method, mp, evec)
-                pytest.skip("ISR(3) TDM not yet implemented.")
-            else:
-                dens_1p = transition_dm(method, mp, evec)
+            ov_1p = prefac * (
+                np.einsum("ikbk->ib", state_tdm_2p[es].oovo.to_ndarray())
+                + np.einsum("icbc->ib", state_tdm_2p[es].ovvv.to_ndarray())
+            )
 
-            # one particle
-            # fock operator part
-            expectation_value[es] = einsum("pq,pq", hf.foo, dens_1p.oo)
-            expectation_value[es] += einsum("pq,pq", hf.fvv, dens_1p.vv)
-            if method_order_minus_one is not None:
-                # two particle part
-                dens_2p = transition_dm_2p(method_order_minus_one, mp, evec)
-                for block in dens_2p.blocks:
-                    # compute
-                    # 1/4 [(1 - P_pq) (1 - P_rs) 1 / (n_occ - 1) <pi||ri> delta_qs]
-                    #   * D^pq_rs
-                    # = 1 / (n_occ - 1) <pi||ri> D^pq_rq
-                    s1, s2, s3, s4 = split_spaces(block)
-                    if s2 == s4:
-                        eri_1p = np.einsum(
-                            "piqi->pq", hf.eri(f"{s1}o1{s3}o1").to_ndarray()
-                        )
-                        n_occ = hf.foo.shape[1]
-                        expectation_value[es] -= 1 / (n_occ - 1) * np.einsum(
-                            "pr,pqrq->",
-                            eri_1p,
-                            dens_2p[block].to_ndarray()
-                        )
-                    # and the full 2e part
-                    expectation_value[es] += 0.25 * einsum(
-                        "pqrs,pqrs", dens_2p[block], hf.eri(block)
-                    )
-        return expectation_value
+            vo_1p = prefac * (
+                np.einsum("akjk->aj", state_tdm_2p[es].vooo.to_ndarray())
+                + np.einsum("acjc->aj", state_tdm_2p[es].vvov.to_ndarray())
+            )
 
-    def test_adcn(self, method: str, system: str, case: str, kind: str):
-        state = testdata_cache.adcc_states(
-            system=system, method=method, kind=kind, case=case
-        )
-        ref = np.zeros_like(state.excitation_energy_uncorrected)
-        adcn = self.calculate_adcn_expectation_value(state)
-        np.testing.assert_allclose(adcn, ref, atol=1e-12)
+            np.testing.assert_allclose(
+                state_tdm[es].oo.to_ndarray(), oo_1p, atol=1e-12
+            )
+            np.testing.assert_allclose(
+                state_tdm[es].vv.to_ndarray(), vv_1p, atol=1e-12
+            )
+            np.testing.assert_allclose(
+                state_tdm[es].ov.to_ndarray(), ov_1p, atol=1e-12
+            )
+            np.testing.assert_allclose(
+                state_tdm[es].vo.to_ndarray(), vo_1p, atol=1e-12
+            )
