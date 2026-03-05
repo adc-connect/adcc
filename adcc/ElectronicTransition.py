@@ -27,7 +27,8 @@ import warnings
 from .ElectronicStates import ElectronicStates, _timer_name
 from .Excitation import Excitation
 from .misc import cached_member_function
-from .OneParticleOperator import OneParticleOperator
+from .OneParticleDensity import OneParticleDensity
+from .TwoParticleDensity import TwoParticleDensity
 from .NParticleOperator import product_trace
 
 
@@ -47,15 +48,36 @@ class ElectronicTransition(ElectronicStates):
         return [self._state_view(i) for i in range(self.size)]
 
     @property
-    def transition_dm(self) -> list[OneParticleOperator]:
-        """List of transition density matrices of all computed states"""
+    def transition_dm(self) -> list[OneParticleDensity]:
+        """
+        List of one-particle transition density matrices of all computed states
+        """
         return [self._transition_dm(i) for i in range(self.size)]
 
     @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
-    def _transition_dm(self, state_n: int) -> OneParticleOperator:
-        """Computes the tansition density matrix for a single state"""
+    def _transition_dm(self, state_n: int) -> OneParticleDensity:
+        """
+        Computes the one-particle tansition density matrix for a single state
+        """
         evec = self.excitation_vector[state_n]
         return self._module.transition_dm(
+            self.property_method, self.ground_state, evec, self.matrix.intermediates
+        )
+
+    @property
+    def transition_dm_2p(self) -> list[TwoParticleDensity]:
+        """
+        List of two-particle transition density matrices of all computed states
+        """
+        return [self._transition_dm_2p(i) for i in range(self.size)]
+
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _transition_dm_2p(self, state_n: int) -> TwoParticleDensity:
+        """
+        Computes the two-particle tansition density matrix for a single state
+        """
+        evec = self.excitation_vector[state_n]
+        return self._module.transition_dm_2p(
             self.property_method, self.ground_state, evec, self.matrix.intermediates
         )
 
@@ -126,6 +148,35 @@ class ElectronicTransition(ElectronicStates):
         return np.array([
             product_trace(comp, tdm) for comp in mag_dipole_integrals
         ])
+
+    @property
+    def transition_magnetic_dipole_moment_giao(self) -> np.ndarray:
+        """
+        Array of transition dipole moments employing a GIAO ansatz
+        in the limit B=0 of all computed states
+        """
+        return np.array([
+            self._transition_magnetic_dipole_moment_giao(i)
+            for i in range(self.size)
+        ])
+
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _transition_magnetic_dipole_moment_giao(self, state_n: int) -> np.ndarray:
+        """
+        Computes the transition dipole moment employing a GIAO ansatz
+        in the limit B=0 for a single state
+        """
+        if self.property_method.level == 0:
+            warnings.warn("ADC(0) transition dipole moments are known to be "
+                          "faulty in some cases.")
+        mag_dips_ints_1p = self.operators.magnetic_dipole_giao_1p
+        mag_dips_ints_2p = self.operators.magnetic_dipole_giao_2p
+        tdm_1p = self._transition_dm(state_n)
+        tdm_2p = self._transition_dm_2p(state_n)
+        return np.array(
+            [product_trace(comp_1p, tdm_1p) + product_trace(comp_2p, tdm_2p)
+             for comp_1p, comp_2p in zip(mag_dips_ints_1p, mag_dips_ints_2p)]
+        )
 
     def transition_quadrupole_moment(self, gauge_origin="origin") -> np.ndarray:
         """Array of transition quadrupole moments of all computed states"""
@@ -235,6 +286,25 @@ class ElectronicTransition(ElectronicStates):
         tdm = self._transition_dipole_moment(state_n)
         magmom = self._transition_magnetic_dipole_moment(state_n=state_n,
                                                          gauge_origin=gauge_origin)
+        return -1.0 * np.dot(tdm, magmom)
+
+    @property
+    def rotatory_strength_length_giao(self) -> np.ndarray:
+        """Array of rotatory strengths in length gauge employing a GIAO ansatz
+        in the limit B=0 of all computed states"""
+        return np.array([
+            self._rotatory_strength_length(state_n=i)
+            for i in range(self.size)
+        ])
+
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _rotatory_strength_length_giao(self, state_n: int) -> np.float64:
+        """
+        Computes the rotatory strength in length gauge employing a GIAO ansatz
+        in the limit B=0for a single state
+        """
+        tdm = self._transition_dipole_moment(state_n)
+        magmom = self._transition_magnetic_dipole_moment_giao(state_n=state_n)
         return -1.0 * np.dot(tdm, magmom)
 
     @property
