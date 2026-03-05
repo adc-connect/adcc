@@ -170,21 +170,29 @@ def replicate_ao_block(mospaces, tensor,
             full_tensor = np.block([
                 [
                     [
+                        # aaaa      aaab
                         [tensor_as, zerobk],
+                        # aaba      aabb
                         [zerobk, zerobk],
                     ],
                     [
+                        # abaa      abab
                         [zerobk, tensor],
+                        # abba      abbb
                         [tensor_ex, zerobk],
                     ],
                 ],
                 [
                     [
+                        # baaa      baab
                         [zerobk, tensor_ex],
+                        # baba      babb
                         [tensor, zerobk],
                     ],
                     [
+                        # bbaa      bbab
                         [zerobk, zerobk],
+                        # bbba      bbbb
                         [zerobk, tensor_as],
                     ],
                 ],
@@ -332,6 +340,30 @@ class OperatorIntegrals:
             dipoles.append(dip_ff)
         return tuple(dipoles)
 
+    def _import_dipole_like_operator_2p(
+        self, integral: str,
+        symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
+    ) -> tuple[TwoParticleOperator, ...]:
+        if integral not in self.available:
+            raise NotImplementedError(f"{integral.replace('_', ' ')} operator "
+                                      "not implemented "
+                                      f"in {self.provider_ao.backend} backend.")
+
+        ao_operator = getattr(self.provider_ao, integral)
+        assert len(ao_operator) == 3  # has to have a x, y and z component
+
+        ops = []
+        for comp in range(3):  # [x, y, z]
+            # make sure to use physicist notation
+            integral = ao_operator[comp].transpose((0, 2, 1, 3))
+            op_bb = replicate_ao_block(self.mospaces, integral,
+                                       symmetry=symmetry)
+            op_ff = TwoParticleOperator(self.mospaces, symmetry=symmetry)
+            transform_operator_ao2mo(op_bb, op_ff, self._coefficients,
+                                     self._conv_tol)
+            ops.append(op_ff)
+        return tuple(ops)
+
     @cached_property
     @timed_member_call("_import_timer")
     def electric_dipole(self) -> tuple[OneParticleOperator, ...]:
@@ -348,6 +380,26 @@ class OperatorIntegrals:
         """
         return self._import_dipole_like_operator(
             "electric_dipole_velocity", symmetry=OperatorSymmetry.ANTIHERMITIAN)
+
+    @cached_property
+    @timed_member_call("_import_timer")
+    def magnetic_dipole_giao_1p(self) -> tuple[OneParticleOperator, ...]:
+        """
+        Return the 1-particle part of the magnetic dipole integrals (in GIAO)
+        in the molecular orbital basis.
+        """
+        return self._import_dipole_like_operator(
+            "magnetic_dipole_giao_1p", symmetry=OperatorSymmetry.ANTIHERMITIAN)
+
+    @cached_property
+    @timed_member_call("_import_timer")
+    def magnetic_dipole_giao_2p(self) -> tuple[TwoParticleOperator, ...]:
+        """
+        Return the 2-particle part of the magnetic dipole integrals (in GIAO)
+        in the molecular orbital basis.
+        """
+        return self._import_dipole_like_operator_2p(
+            "magnetic_dipole_giao_2p", symmetry=OperatorSymmetry.ANTIHERMITIAN)
 
     def _import_g_origin_dep_dip_like_operator(
             self, integral: str, gauge_origin="origin",
