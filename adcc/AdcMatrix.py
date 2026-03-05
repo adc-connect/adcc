@@ -27,6 +27,8 @@ import libadcc
 
 from .LazyMp import LazyMp
 from .adc_pp import matrix as ppmatrix
+from .adc_ip import matrix as ipmatrix
+from .adc_ea import matrix as eamatrix
 from .timings import Timer, timed_member_call
 from .AdcMethod import AdcMethod
 from .functions import ones_like
@@ -73,6 +75,8 @@ class AdcMatrixlike:
 
     _special_block_orders = {
         "adc2x": {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 1},
+        "ip-adc2x": {"h_h": 2, "h_phh": 1, "phh_h": 1, "phh_phh": 1},
+        "ea-adc2x": {"p_p": 2, "p_pph": 1, "pph_p": 1, "pph_pph": 1},
     }
 
     @classmethod
@@ -90,7 +94,9 @@ class AdcMatrixlike:
         # - determine which spaces are available in the ADC(n) matrix
         #   starting from the given minimal space
         min_space = {
-            "pp": "ph"
+            "pp": "ph",
+            "ip": "h",
+            "ea": "p"
         }.get(method.adc_type, None)
         if min_space is None:
             raise ValueError(f"Unknown adc type {method.adc_type} for method "
@@ -178,6 +184,10 @@ class AdcMatrixlike:
         # be equal or differ e.g. by +-1 (IP/EA)
         if method.adc_type == "pp":
             return n_particle == n_hole
+        elif method.adc_type == "ip":
+            return n_particle == n_hole - 1 
+        elif method.adc_type == "ea":
+            return n_particle == n_hole + 1
         raise ValueError(f"Unknown adc type {method.adc_type} for method "
                          f"{method.name}. Can not validate space.")
 
@@ -252,11 +262,19 @@ class AdcMatrix(AdcMatrixlike):
             variant = None
             if self.is_core_valence_separated:
                 variant = "cvs"
+            # Directly import block dispatch functions?
+            BLOCK_DISPATCH = {
+                "pp": ppmatrix.block,
+                "ip": ipmatrix.block,
+                "ea": eamatrix.block}
+            block_dispatch_fun = BLOCK_DISPATCH[self.method.adc_type]
             blocks = {
-                block: ppmatrix.block(self.ground_state, block.split("_"),
-                                      order=order, intermediates=self.intermediates,
+                block: block_dispatch_fun(self.ground_state, block.split("_"),
+                                      order=order,
+                                      intermediates=self.intermediates,
                                       variant=variant)
-                for block, order in self.block_orders.items() if order is not None
+                for block, order in self.block_orders.items()
+                if order is not None
             }
             self.blocks = {bl: blocks[bl].apply for bl in blocks}
             if diagonal_precomputed:
@@ -362,7 +380,8 @@ class AdcMatrix(AdcMatrixlike):
         with another AmplitudeVector or Tensor. Non-matching blocks
         in the AmplitudeVector will be ignored.
         """
-        if not isinstance(tensor, libadcc.Tensor):
+        # TODO: Allow AmplitudeVector?
+        if not isinstance(tensor, (libadcc.Tensor, AmplitudeVector)):
             raise TypeError("tensor should be an adcc.Tensor")
 
         with self.timer.record(f"apply/{block}"):
@@ -426,16 +445,30 @@ class AdcMatrix(AdcMatrixlike):
         Returns a dictionary block identifier -> function
         """
         ret = {}
-        if self.is_core_valence_separated:
-            # CVS doubles part is antisymmetric wrt. (i,K,a,b) <-> (i,K,b,a)
-            ret["pphh"] = lambda v: v.antisymmetrise([(2, 3)])
-        else:
-            def symmetrise_generic_adc_doubles(invec):
-                # doubles part is antisymmetric wrt. (i,j,a,b) <-> (i,j,b,a)
-                scratch = invec.antisymmetrise([(2, 3)])
-                # doubles part is symmetric wrt. (i,j,a,b) <-> (j,i,b,a)
-                return scratch.symmetrise([(0, 1), (2, 3)])
-            ret["pphh"] = symmetrise_generic_adc_doubles
+        # TODO: IP/EA doubles
+        if self.method.adc_type == "pp":
+            if self.is_core_valence_separated:
+                # CVS doubles part is antisymmetric wrt. (i,K,a,b) <-> (i,K,b,a)
+                ret["pphh"] = lambda v: v.antisymmetrise([(2, 3)])
+            else:
+                def symmetrise_generic_adc_doubles(invec):
+                    # doubles part is antisymmetric wrt. (i,j,a,b) <-> (i,j,b,a)
+                    scratch = invec.antisymmetrise([(2, 3)])
+                    # doubles part is symmetric wrt. (i,j,a,b) <-> (j,i,b,a)
+                    return scratch.symmetrise([(0, 1), (2, 3)])
+                ret["pphh"] = symmetrise_generic_adc_doubles
+        elif self.method.adc_type == "ip":
+            if not self.is_core_valence_separated:
+                def symmetrise_generic_adc_doubles(invec):
+                    # doubles part is antisymmetric wrt. (i,j,a) <-> (j,i,a)
+                    return invec.antisymmetrise([(0, 1)])
+                ret["phh"] = symmetrise_generic_adc_doubles
+        elif self.method.adc_type == "ea":
+            if not self.is_core_valence_separated:
+                def symmetrise_generic_adc_doubles(invec):
+                    # doubles part is antisymmetric wrt. (i,a,b) <-> (i,a,b)
+                    return invec.antisymmetrise([(1, 2)])
+                ret["pph"] = symmetrise_generic_adc_doubles
         return ret
 
     def dense_basis(self, axis_blocks=None, ordering="adcc"):
