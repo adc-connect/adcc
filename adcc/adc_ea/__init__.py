@@ -21,6 +21,7 @@
 ##
 ## ---------------------------------------------------------------------
 from .state_diffdm import state_diffdm
+from .state_diffdm_2p import state_diffdm_2p
 from .pole_strength import pole_strength
 from .state2state_transition_dm import state2state_transition_dm
 
@@ -30,5 +31,5 @@ Submodule, which contains rather lengthy low-level kernels
 from the high-level objects in the adcc main module.
 """
 
-__all__ = ["state_diffdm", "state2state_transition_dm",
+__all__ = ["state_diffdm", "state_diffdm_2p", "state2state_transition_dm",
            "pole_strength"]

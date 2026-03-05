@@ -49,7 +49,7 @@ class ChargedExcitation(ElectronicStates):
             self.matrix.intermediates)
 
     def describe_helper(self, pole_strengths=True, state_dipole_moments=False,
-                 block_norms=True, excitation_type="energy",):
+                 block_norms=True, excitation_type="energy", ssq=False):
         """
         Creates and returns the to be printed columns
 
@@ -68,6 +68,8 @@ class ChargedExcitation(ElectronicStates):
         excitation_type : str, optional
             Defines the name of the energy property. 
             'ionization potential'/'electron affinity' for IP/EA
+        ssq : bool, optional
+            Show the <S^2> values of the excited states,  by default ``False``.
         """
         has_dipole = "electric_dipole" in self.operators.available
         # Collect the columns to print
@@ -123,6 +125,15 @@ class ChargedExcitation(ElectronicStates):
                 unit="x(au)    y(au)    z(au)    abs(au)"
             ))
             values.clear()
+        # <S^2> values
+        if ssq and not self.reference_state.restricted:
+            values.extend(f"{ssq:^9.4f}"
+                          for ssq in self.state_ssq)
+            columns.append(TableColumn(
+                header="<S^2>", values=values.copy(), unit="(au)"
+            ))
+            values.clear()
+
         return columns
 
 
@@ -140,7 +151,7 @@ class DetachedStates(ChargedExcitation):
                              f"{self.method.name}")
 
     def describe(self, pole_strengths=True, state_dipole_moments=False,
-                 block_norms=True):
+                 block_norms=True, ssq=False):
         """
         Return a string providing a human-readable description of the class
 
@@ -159,8 +170,11 @@ class DetachedStates(ChargedExcitation):
         assert (self.matrix.axis_blocks == ["h"] 
                 or self.matrix.axis_blocks == ["h", "phh"])
         columns = self.describe_helper(
-            pole_strengths, state_dipole_moments, block_norms,
-            "ionization potential")
+            pole_strengths=pole_strengths,
+            state_dipole_moments=state_dipole_moments,
+            block_norms=block_norms,
+            excitation_type="ionization potential",
+            ssq=ssq)
 
         # Format the state information: kind, spin_change,
         # alpha/beta detachment, and convergence
@@ -222,7 +236,7 @@ class AttachedStates(ChargedExcitation):
                              f"{self.method.name}")
 
     def describe(self, pole_strengths=True, state_dipole_moments=False,
-                 block_norms=True):
+                 block_norms=True, ssq=False):
         """
         Return a string providing a human-readable description of the class
 
@@ -241,8 +255,11 @@ class AttachedStates(ChargedExcitation):
         assert (self.matrix.axis_blocks == ["p"] 
                 or self.matrix.axis_blocks == ["p", "pph"])
         columns = self.describe_helper(
-            pole_strengths, state_dipole_moments, block_norms,
-            "electron affinity")
+            pole_strengths=pole_strengths,
+            state_dipole_moments=state_dipole_moments,
+            block_norms=block_norms,
+            excitation_type="electron affinity",
+            ssq=ssq)
 
         # Format the state information: kind, spin_change,
         # alpha/beta detachment, and convergence
