@@ -211,9 +211,9 @@ class TestdataCache:
         is_alpha: Optional[bool] = None
         ) -> ExcitedStates | AttachedStates | DetachedStates:
         """
-        Create an ExcitedStates/AttachedStates/DetachedStates instance for the 
-        given test case, method (adcn), reference case (gen/cvs/fc/...), 
-        state kind (singlet/triplet/any/...) and optionally gs_density_order 
+        Create an ExcitedStates/AttachedStates/DetachedStates instance for the
+        given test case, method (adcn), reference case (gen/cvs/fc/...),
+        state kind (singlet/triplet/any/...) and optionally gs_density_order
         (2/3/sigma4+) and optionally is_alpha for IP/EA. Source refers to the
         source with which the data were generated (adcman/adcc).
         The states object is build on top of the loaded HF data and
@@ -298,9 +298,9 @@ class TestdataCache:
                     is_alpha: Optional[bool] = None
                     ) -> ExcitedStates | AttachedStates | DetachedStates:
         """
-        Create an ExcitedStates/AttachedStates/DetachedStates instance for the  
-        given test case, method (adcn), reference case (gen/cvs/fc/...), 
-        state kind (singlet/triplet/any/...) and optionally gs_density_order 
+        Create an ExcitedStates/AttachedStates/DetachedStates instance for the
+        given test case, method (adcn), reference case (gen/cvs/fc/...),
+        state kind (singlet/triplet/any/...) and optionally gs_density_order
         (2/3/sigma4+) using the adcc eigenstates and eigenvalues.
         """
         if ("ip" in method or "ea" in method) and is_alpha is None:
@@ -315,9 +315,9 @@ class TestdataCache:
                       is_alpha: Optional[bool] = None
                       ) -> ExcitedStates | AttachedStates | DetachedStates:
         """
-        Create an ExcitedStates/AttachedStates/DetachedStates instance for the  
-        given test case, method (adcn), reference case (gen/cvs/fc/...), 
-        state kind (singlet/triplet/any/...) and optionally gs_density_order 
+        Create an ExcitedStates/AttachedStates/DetachedStates instance for the
+        given test case, method (adcn), reference case (gen/cvs/fc/...),
+        state kind (singlet/triplet/any/...) and optionally gs_density_order
         (2/3/sigma4+) using the adcman eigenstates and eigenvalues.
         """
         if ("ip" in method or "ea" in method) and is_alpha is None:

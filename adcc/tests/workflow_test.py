@@ -115,7 +115,7 @@ class TestWorkflow:
         # Build empty AdcMatrixlike object and assign ref_state and method
         matrix = AdcMatrixlike()
         matrix.reference_state = testdata_cache.refstate("h2o_sto3g", case="gen")
-        matrix.method = AdcMethod("ip-adc2") 
+        matrix.method = AdcMethod("ip-adc2")
 
         assert (3, "any", True) == (validate_state_parameters(
             matrix, n_states=3))
@@ -156,7 +156,7 @@ class TestWorkflow:
         # Build empty AdcMatrixlike object and assign ref_state and method
         matrix = AdcMatrixlike()
         matrix.reference_state = testdata_cache.refstate("cn_sto3g", case="gen")
-        matrix.method = AdcMethod("ip-adc2") 
+        matrix.method = AdcMethod("ip-adc2")
 
         assert (3, "any", True) == validate_state_parameters(
             matrix, n_states=3, kind="any")
@@ -181,7 +181,7 @@ class TestWorkflow:
         for case in invalid_cases:
             with pytest.raises(InputError):
                 validate_state_parameters(matrix, **case)
-    
+
     def test_validate_state_parameters_rhf_ea(self):
         from adcc.workflow import validate_state_parameters
         from adcc.AdcMatrix import AdcMatrixlike
@@ -192,7 +192,7 @@ class TestWorkflow:
         matrix.reference_state = testdata_cache.refstate("h2o_sto3g", case="gen")
 
         # IP
-        matrix.method = AdcMethod("ea-adc2") 
+        matrix.method = AdcMethod("ea-adc2")
 
         assert (3, "any", True) == (validate_state_parameters(
             matrix, n_states=3))
@@ -233,7 +233,7 @@ class TestWorkflow:
         # Build empty AdcMatrixlike object and assign ref_state and method
         matrix = AdcMatrixlike()
         matrix.reference_state = testdata_cache.refstate("cn_sto3g", case="gen")
-        matrix.method = AdcMethod("ea-adc2") 
+        matrix.method = AdcMethod("ea-adc2")
 
         assert (3, "any", True) == validate_state_parameters(
             matrix, n_states=3, kind="any")
@@ -526,7 +526,7 @@ class TestWorkflow:
         assert len(res) == 20
 
         # Only doubles guesses
-        res = obtain_guesses_by_inspection(matrix2, n_guesses=4, 
+        res = obtain_guesses_by_inspection(matrix2, n_guesses=4,
                                            kind="singlet",
                                            n_guesses_doubles=4)
         assert len(res) == 4
@@ -565,7 +565,7 @@ class TestWorkflow:
         assert len(res) == 20
 
         # Only doubles guesses
-        res = obtain_guesses_by_inspection(matrix2, n_guesses=4, 
+        res = obtain_guesses_by_inspection(matrix2, n_guesses=4,
                                            kind="doublet",
                                            spin_change=-0.5, is_alpha=True,
                                            n_guesses_doubles=4)
@@ -608,7 +608,7 @@ class TestWorkflow:
         assert len(res) == 20
 
         # Only doubles guesses
-        res = obtain_guesses_by_inspection(matrix2, n_guesses=4, 
+        res = obtain_guesses_by_inspection(matrix2, n_guesses=4,
                                            kind="doublet",
                                            spin_change=0.5, is_alpha=True,
                                            n_guesses_doubles=4)

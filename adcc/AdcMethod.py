@@ -27,9 +27,9 @@ def get_valid_methods():
     valid_adc_types = ["ip", "ea"]
     valid_bases = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 
-    ret = (valid_bases 
-        + [p + "-" + m for p in valid_prefixes for m in valid_bases]
-        + [t + "-" + m for t in valid_adc_types for m in valid_bases]
+    ret = (valid_bases
+           + [p + "-" + m for p in valid_prefixes for m in valid_bases]
+           + [t + "-" + m for t in valid_adc_types for m in valid_bases]
     )
     return ret
 
@@ -46,7 +46,7 @@ class AdcMethod:
         self.__base_method = split[-1]
         split = split[:-1]
         self.is_core_valence_separated = "cvs" in split
-        
+
         if "ip" in split:
             self.adc_type = "ip"
         elif "ea" in split:

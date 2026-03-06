@@ -36,7 +36,7 @@ from .AdcMethod import AdcMethod
 from .AmplitudeVector import AmplitudeVector
 from .exceptions import InputError
 from .ExcitedStates import ExcitedStates
-# from .ChargedExcitations import DetachedStates, AttachedStates
+from .ChargedExcitations import DetachedStates, AttachedStates
 from .ReferenceState import ReferenceState as adcc_ReferenceState
 from .solver.lanczos import lanczos
 from .solver.davidson import jacobi_davidson
@@ -221,7 +221,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         matrix, n_states=n_states, n_singlets=n_singlets,
         n_doublets=n_doublets, n_triplets=n_triplets, n_spin_flip=n_spin_flip,
         kind=kind, is_alpha=is_alpha)
-    
+
     # Setup environment coupling terms and energy corrections
     env_matrix_term, env_energy_corrections = setup_environment(matrix,
                                                                 environment)
@@ -229,7 +229,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     if env_matrix_term:
         matrix += env_matrix_term
 
-    # Construct guesses and determine spin_change 
+    # Construct guesses and determine spin_change
     if guesses is None:
         spin_change = determine_spin_change(matrix.method, kind, is_alpha)
         guesses = construct_guesses(
@@ -258,10 +258,10 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
 
     if matrix.method.adc_type == "pp":
         exstates = ExcitedStates(diagres)
-    # elif matrix.method.adc_type == "ip":
-    #     exstates = DetachedStates(diagres, is_alpha)
-    # elif matrix.method.adc_type == "ea":
-    #     exstates = AttachedStates(diagres, is_alpha)
+    elif matrix.method.adc_type == "ip":
+        exstates = DetachedStates(diagres, is_alpha)
+    elif matrix.method.adc_type == "ea":
+        exstates = AttachedStates(diagres, is_alpha)
     else:
         raise ValueError(f"Unknown ADC method: {matrix.method.name}")
 
@@ -514,7 +514,7 @@ def construct_guesses(
     return obtain_guesses_by_inspection(
         matrix, n_guesses, kind, n_guesses_doubles, is_alpha, spin_change
     )
-    
+
 
 def diagonalise_adcmatrix(matrix, n_states, guesses, kind="any", conv_tol=None,
                           eigensolver="davidson", output=sys.stdout,

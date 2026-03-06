@@ -185,7 +185,7 @@ class AdcMatrixlike:
         if method.adc_type == "pp":
             return n_particle == n_hole
         elif method.adc_type == "ip":
-            return n_particle == n_hole - 1 
+            return n_particle == n_hole - 1
         elif method.adc_type == "ea":
             return n_particle == n_hole + 1
         raise ValueError(f"Unknown adc type {method.adc_type} for method "
@@ -270,9 +270,9 @@ class AdcMatrix(AdcMatrixlike):
             block_dispatch_fun = BLOCK_DISPATCH[self.method.adc_type]
             blocks = {
                 block: block_dispatch_fun(self.ground_state, block.split("_"),
-                                      order=order,
-                                      intermediates=self.intermediates,
-                                      variant=variant)
+                                          order=order,
+                                          intermediates=self.intermediates,
+                                          variant=variant)
                 for block, order in self.block_orders.items()
                 if order is not None
             }

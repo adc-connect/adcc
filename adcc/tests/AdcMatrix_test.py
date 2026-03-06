@@ -565,7 +565,7 @@ class TestAdcMatrixShifted:
             spin_change = -0.5
         elif matrix.method.adc_type == "ea":
             spin_change = 0.5
-        
+
         vec = adcc.guess_zero(matrix, spin_change=spin_change)
         vec.set_random()
 

@@ -75,7 +75,7 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
         key = f"{key}/{spin}"
     if f"{key}/matrix" not in hdf5_file and spin == "alpha":
         # the matrix data is only dumped once for each case and only for alpha.
-        # I think it does not make sense to dump the data once for a singlet 
+        # I think it does not make sense to dump the data once for a singlet
         # and once for a triplet trial vector as well as an alpha and a beta one.
         matrix_group = hdf5_file.create_group(f"{key}/matrix")
         trial_vec = adcc_copy(states.excitation_vector[0]).set_random()  # type: ignore # noqa: E501
@@ -160,7 +160,7 @@ def generate_h2o_sto3g():
                 test_case, method=method, dump_nstates=2, states_per_case=per_case,
                 **n_states, **kwargs
             )
-        
+
     for method in _methods["ip"]:
         method = AdcMethod(method)
         for n_states in \
@@ -200,7 +200,7 @@ def generate_h2o_def2tzvp():
                 test_case, method=method, dump_nstates=2, states_per_case=None,
                 **n_states
             )
-    
+
     for method in _methods["ip"]:
         method = AdcMethod(method)
         for n_states in \

@@ -16,7 +16,7 @@ _testdata_dirname = "data"
 # ip/ea-adc2x not implemented in Q-Chem
 _methods = {
     "pp": ("adc0", "adc1", "adc2", "adc2x", "adc3"),
-    "ip": ("ip-adc0", "ip-adc2", "ip-adc3"), 
+    "ip": ("ip-adc0", "ip-adc2", "ip-adc3"),
     "ea": ("ea-adc0", "ea-adc2", "ea-adc3"),
 }
 # Since it seems not possible to only perform an adcman MPn calculation,
@@ -103,7 +103,7 @@ def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
         for density_order in test_case.gs_density_orders:
             generate_adc(
                 test_case, method, case, n_singlets=n_singlets,
-                n_triplets=n_triplets, n_spin_flip=n_spin_flip, 
+                n_triplets=n_triplets, n_spin_flip=n_spin_flip,
                 n_states=n_states, n_ea_states=n_ea_states,
                 n_ip_states=n_ip_states, dump_nstates=dump_nstates,
                 gs_density_order=density_order,
@@ -192,7 +192,7 @@ def generate_h2o_sto3g():
             test_case, method=method, dump_nstates=2,
             states_per_case=states.get(method.name, None), **n_states
         )
-    
+
     for method in _methods["ea"]:
         method = AdcMethod(method)
         if method.level < 2:

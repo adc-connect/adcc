@@ -98,7 +98,7 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
     else:
         method_name: str = method.name.split('-')[-1] # No cvs (yet)
     restricted = "rhf" in context[f"adc_{method.adc_type}"][method_name].keys()
-    
+
     # go through the different possible state kinds and import the states.
     data = {}
     for kind in state_kinds[method.adc_type][restricted]:

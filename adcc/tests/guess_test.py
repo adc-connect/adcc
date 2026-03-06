@@ -459,7 +459,7 @@ class TestGuess:
         # Make a list of diagonal indices, ordered by the corresponding
         # diagonal values
         diagonal = matrix.diagonal().get(block).to_ndarray()
-        
+
         # Doubles guesses are constructed from the 0th order diagonal
         if matrix.method.level > 1 and not matrix.method.name.endswith("adc2"):
             if block == "pphh":
@@ -474,7 +474,7 @@ class TestGuess:
                 diagonal = adcc.adc_ea.matrix.diagonal_pph_pph_0(
                     matrix.reference_state
                 ).pph.to_ndarray()
-        
+
         # Build list of indices, which would sort the diagonal
         order = np.argsort(diagonal.ravel())
         sidcs = list(zip(*np.unravel_index(order, diagonal.shape)))
@@ -542,7 +542,7 @@ class TestGuess:
             else:
                 sidcs = [
                     idx for idx in sidcs
-                    # aba / baa / bbb 
+                    # aba / baa / bbb
                     if any((
                         idx[0]  < noa and idx[1] >= nCa and idx[2]  < nva,
                         idx[0] >= noa and idx[1]  < nCa and idx[2]  < nva,
@@ -646,7 +646,7 @@ class TestGuess:
         spin_change = -0.5 if is_alpha else +0.5
         for n_guesses in range(3, max_guesses + 1):
             guesses = adcc.guess.guesses_from_diagonal(
-                matrix, n_guesses, block=block, spin_change=spin_change, 
+                matrix, n_guesses, block=block, spin_change=spin_change,
                 is_alpha=is_alpha
             )
             assert len(guesses) == n_guesses
@@ -836,7 +836,7 @@ class TestGuess:
             "hf_631g", case, method, block="pph", is_alpha=is_alpha,
             max_guesses=5
         )
-    
+
 
     #
     # Tests against reference values
@@ -1102,7 +1102,7 @@ class TestGuess:
     # against hard coded reference data. The test against numpy above should be
     # sufficient.
 
-    # Current workaround: Compare guess energies rather than exact ordering for 
+    # Current workaround: Compare guess energies rather than exact ordering for
     # these cases by calling 'base_reference_degenerate_{adc_type}()'
 
     @pytest.mark.parametrize("method", doubles_methods_pp)

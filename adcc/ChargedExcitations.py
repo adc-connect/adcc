@@ -53,8 +53,8 @@ class ChargedExcitation(ElectronicStates):
             Show the norms of the n particle (n-1) hole blocks of the charged
             excited states, by default ``True``.
 
-        excitation_name : str, optional
-            Defines the name of the energy property. 
+        excitation_type_name : str, optional
+            Defines the name of the energy property.
             'ionization potential'/'electron affinity' for IP/EA
         ssq : bool, optional
             Show the <S^2> values of the excited states,  by default ``False``.
@@ -117,7 +117,7 @@ class DetachedStates(ChargedExcitation):
             Show the norms of the n particle (n+1) hole blocks of the charged
             excited states, by default ``True``.
         """
-        assert (self.matrix.axis_blocks == ["h"] 
+        assert (self.matrix.axis_blocks == ["h"]
                 or self.matrix.axis_blocks == ["h", "phh"])
         columns = self.describe_helper(
             block_norms=block_norms,
@@ -137,7 +137,7 @@ class DetachedStates(ChargedExcitation):
                 state_info[-1] += ","
             state_info.append(conv)
         state_info = " ".join(state_info)
-        return self._describe(columns, state_info)  
+        return self._describe(columns, state_info)
 
 
 class AttachedStates(ChargedExcitation):
@@ -169,7 +169,7 @@ class AttachedStates(ChargedExcitation):
             Show the norms of the n particle (n+1) hole blocks of the charged
             excited states, by default ``True``.
         """
-        assert (self.matrix.axis_blocks == ["p"] 
+        assert (self.matrix.axis_blocks == ["p"]
                 or self.matrix.axis_blocks == ["p", "pph"])
         columns = self.describe_helper(
             block_norms=block_norms,
