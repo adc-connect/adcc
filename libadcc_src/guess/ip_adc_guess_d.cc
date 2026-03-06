@@ -199,8 +199,9 @@ void transfer_elements(const list1d_t& o, const list1d_t& v,
 
       // Ignore blocks where the targeted spin_change is not achieved
       mask<3> orb_type;
-      orb_type[0] = true;
-      orb_type[1] = true;
+      orb_type[0] = true;   // occ.
+      orb_type[1] = true;   // occ.
+      orb_type[2] = false;  // virt.
       if (base.get_spin_proj(orb_type, bidx) != dm_s) continue;
 
       // Check if the block is allowed in the symmetry of the guess
@@ -482,4 +483,6 @@ size_t ip_adc_guess_d(std::list<std::pair<libtensor::btensor<3, double>*, double
 
   return nguesses;
 }
+
 }  // namespace libadcc
+
