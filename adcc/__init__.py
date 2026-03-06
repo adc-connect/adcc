@@ -64,7 +64,7 @@ __all__ = ["run_adc", "InputError", "AdcMatrix",
            "linear_combination", "zeros_like", "direct_sum",
            "memory_pool", "set_n_threads", "get_n_threads", "AmplitudeVector",
            "HartreeFockProvider", "ExcitedStates", "State2States",
-           "ChargedExcitation", "DetachedStates", "AttachedStates"
+           "ChargedExcitation", "DetachedStates", "AttachedStates",
            "Excitation", "ElectronicTransition", "Tensor", "DictHfProvider",
            "DataHfProvider", "OneParticleOperator", "OneParticleDensity",
            "TwoParticleOperator", "TwoParticleDensity", "OperatorSymmetry",

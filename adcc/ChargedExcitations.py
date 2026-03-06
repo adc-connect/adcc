@@ -36,12 +36,10 @@ class ChargedExcitation(ElectronicStates):
         """Array of pole strengths of all computed states"""
         pass
 
-
     @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
     def _pole_strength(self, state_n: int) -> np.ndarray:
         """Computes the pole strength for a single state"""
         pass
-
 
     def describe_helper(self, block_norms=True, excitation_type_name="energy"):
         """
@@ -129,8 +127,9 @@ class DetachedStates(ChargedExcitation):
         if hasattr(self, "kind") and self.kind:
             state_info.append(self.kind)
         spin_type = "alpha" if self.is_alpha else "beta"
-        state_info.append(f"(ΔMS={self.spin_change:+.1f}), "
-                                  f"{spin_type} detachment")
+        state_info.append(
+            f"(ΔMS={self.spin_change:+.1f}), {spin_type} detachment"
+        )
         if hasattr(self, "converged"):
             conv = "converged" if self.converged else "NOT CONVERGED"
             if state_info:  # add separator to previous entry
@@ -181,8 +180,9 @@ class AttachedStates(ChargedExcitation):
         if hasattr(self, "kind") and self.kind:
             state_info.append(self.kind)
         spin_type = "alpha" if self.is_alpha else "beta"
-        state_info.append(f"(ΔMS={self.spin_change:+.1f}), "
-                                  f"{spin_type} attachment")
+        state_info.append(
+            f"(ΔMS={self.spin_change:+.1f}), {spin_type} attachment"
+        )
         if hasattr(self, "converged"):
             conv = "converged" if self.converged else "NOT CONVERGED"
             if state_info:  # add separator to previous entry
