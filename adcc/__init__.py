@@ -36,6 +36,8 @@ from .functions import (copy, direct_sum, dot, einsum, empty_like,
 from .memory_pool import memory_pool
 from .State2States import State2States
 from .ExcitedStates import ExcitedStates
+from .ChargedExcitations import (ChargedExcitation, DetachedStates,
+                                 AttachedStates)
 from .Excitation import Excitation
 from .ElectronicTransition import ElectronicTransition
 from .DataHfProvider import DataHfProvider, DictHfProvider
@@ -49,8 +51,9 @@ from .TwoParticleDensity import TwoParticleDensity
 from .opt_einsum_integration import register_with_opt_einsum
 
 # This has to be the last set of import
-from .guess import (guess_symmetries, guess_zero, guesses_any, guesses_singlet,
-                    guesses_spin_flip, guesses_triplet)
+from .guess import (guess_symmetries, guess_zero, guesses_any,
+                    guesses_singlet, guesses_spin_flip, guesses_triplet,
+                    guesses_doublet)
 from .workflow import run_adc
 from .exceptions import InputError
 
@@ -61,13 +64,17 @@ __all__ = ["run_adc", "InputError", "AdcMatrix",
            "linear_combination", "zeros_like", "direct_sum",
            "memory_pool", "set_n_threads", "get_n_threads", "AmplitudeVector",
            "HartreeFockProvider", "ExcitedStates", "State2States",
+           "ChargedExcitation", "DetachedStates", "AttachedStates",
            "Excitation", "ElectronicTransition", "Tensor", "DictHfProvider",
            "DataHfProvider", "OneParticleOperator", "OneParticleDensity",
            "TwoParticleOperator", "TwoParticleDensity", "OperatorSymmetry",
            "guesses_singlet", "guesses_triplet", "guesses_any",
-           "guess_symmetries", "guesses_spin_flip", "guess_zero", "LazyMp",
+           "guesses_doublet", "guess_symmetries", "guesses_spin_flip",
+           "guess_zero", "LazyMp",
            "adc0", "cis", "adc1", "adc2", "adc2x", "adc3",
            "cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x", "cvs_adc3",
+           "ip_adc0", "ip_adc1", "ip_adc2", "ip_adc2x", "ip_adc3",
+           "ea_adc0", "ea_adc1", "ea_adc2", "ea_adc2x", "ea_adc3",
            "banner"]
 
 __version__ = "0.16.1"
@@ -139,6 +146,56 @@ def cvs_adc2x(*args, **kwargs):
 @with_runadc_doc
 def cvs_adc3(*args, **kwargs):
     return run_adc(*args, **kwargs, method="cvs-adc3")
+
+
+@with_runadc_doc
+def ip_adc0(*args, **kwargs):
+    return run_adc(*args, **kwargs, method="ip-adc0")
+
+
+@with_runadc_doc
+def ip_adc1(*args, **kwargs):
+    return run_adc(*args, **kwargs, method="ip-adc1")
+
+
+@with_runadc_doc
+def ip_adc2(*args, **kwargs):
+    return run_adc(*args, **kwargs, method="ip-adc2")
+
+
+@with_runadc_doc
+def ip_adc2x(*args, **kwargs):
+    return run_adc(*args, **kwargs, method="ip-adc2x")
+
+
+@with_runadc_doc
+def ip_adc3(*args, **kwargs):
+    return run_adc(*args, **kwargs, method="ip-adc3")
+
+
+@with_runadc_doc
+def ea_adc0(*args, **kwargs):
+    return run_adc(*args, **kwargs, method="ea-adc0")
+
+
+@with_runadc_doc
+def ea_adc1(*args, **kwargs):
+    return run_adc(*args, **kwargs, method="ea-adc1")
+
+
+@with_runadc_doc
+def ea_adc2(*args, **kwargs):
+    return run_adc(*args, **kwargs, method="ea-adc2")
+
+
+@with_runadc_doc
+def ea_adc2x(*args, **kwargs):
+    return run_adc(*args, **kwargs, method="ea-adc2x")
+
+
+@with_runadc_doc
+def ea_adc3(*args, **kwargs):
+    return run_adc(*args, **kwargs, method="ea-adc3")
 
 
 def banner(colour=sys.stdout.isatty()):
