@@ -73,21 +73,35 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
     """
     # define the possible state kinds to import for each adc variant.
     state_kinds = {
-        "pp": [
-            ("singlets", True), ("triplets", True),  # restricted
+        "pp": {
+            True: ["singlets", "triplets"], # restricted
             # uhf and spin flip are located in the same ".../uhf/..." subtree
-            ("any_or_spinflip", False),  # unrestricted
-        ]
+            False: ["any_or_spinflip"],  # unrestricted
+        },
+        "ip": {
+            True: [""], # restricted
+            False: ["alphas", "betas"], # unrestricted
+        },
+        "ea": {
+            True: [""], # restricted
+            False: ["alphas", "betas"], # unrestricted
+        },
     }
     # Of course the kinds have to have a slightly different name in adcc....
-    kind_map = {"singlets": "singlet", "triplets": "triplet"}
+    kind_map = {"singlets": "singlet", "triplets": "triplet",
+        "alphas": "alpha", "betas": "beta"}
     # also the adcc methods have to be translated
-    method_name: str = method.name.replace("-", "_")  # cvs-adcn -> cvs_adcn
-    if method_name.endswith("adc2"):  # adc2 -> adc2s
-        method_name += "s"
+    if method.adc_type == "pp":
+        method_name: str = method.name.replace("-", "_")  # cvs-adcn -> cvs_adcn
+        if method_name.endswith("adc2"):  # adc2 -> adc2s (Only for PP)
+            method_name += "s"
+    else:
+        method_name: str = method.name.split('-')[-1] # No cvs (yet)
+    restricted = "rhf" in context[f"adc_{method.adc_type}"][method_name].keys()
+    
     # go through the different possible state kinds and import the states.
     data = {}
-    for kind, restricted in state_kinds[method.adc_type]:
+    for kind in state_kinds[method.adc_type][restricted]:
         states = _import_excited_states(
             context, method=method_name, only_full_mode=only_full_mode,
             adc_type=method.adc_type, import_nstates=import_nstates,
@@ -107,7 +121,13 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
 
         if kind == "any_or_spinflip":
             kind = "spin_flip" if is_spin_flip else "any"
-        data[kind_map.get(kind, kind)] = states
+        if method.adc_type == "pp":
+            data[kind_map.get(kind, kind)] = states
+        elif method.adc_type in ("ip", "ea"):
+            if restricted:
+                data["alpha"] = {"doublet": states}
+            else:
+                data[kind_map.get(kind, kind)] = {"any": states}
     if not data:
         raise RuntimeError(f"Could not find any states for {method.name} in "
                            f"{context.filename}.")
@@ -141,7 +161,8 @@ def _import_excited_states(context: h5py.File, method: str, only_full_mode: bool
         Only import the first n states from the context.
     state_kind: str, optional
         The multiplicity of the states, e.g., singlet or triplet for restricted
-        pp-adc calculations.
+        pp-adc calculations. In case of an unrestricted IP/EA-ADC calc. it is
+        "alphas" or "betas"
     restricted: bool, optional
         Whether the adc calculation is based on a restricted reference state.
     dims_pref: str, optional
@@ -149,13 +170,18 @@ def _import_excited_states(context: h5py.File, method: str, only_full_mode: bool
         tensors are exported too. The dimensions can be found by adding the given
         prefix to the context tree of the object.
     """
-    # build the path under which to find the exicted states
+    # build the path under which to find the excited states
     tree = [f"adc_{adc_type}", method]
     if restricted:
-        assert state_kind is not None  # needs to be defined for restricted calcs
-        tree.extend(["rhf", state_kind])
+        tree.append("rhf")
+        if adc_type == "pp":
+            assert state_kind is not None  # needs to be defined for restricted calcs
+            tree.append(state_kind)
     else:
         tree.append("uhf")
+        if adc_type in ("ip", "ea"):
+            assert state_kind is not None
+            tree.append(state_kind)
     tree.append("0")  # we assume that we only have a single irrep!!
     tree = "/".join(tree)
     # check that we have states to read and return if not
@@ -170,7 +196,12 @@ def _import_excited_states(context: h5py.File, method: str, only_full_mode: bool
     # context.
     data_to_read = {}
     for n in range(n_states):
-        state_tree = tree + f"/es{n}"
+        if adc_type == "pp":
+            state_tree = tree + f"/es{n}"
+        elif adc_type == "ip":
+            state_tree = tree + f"/ip{n}"
+        elif adc_type == "ea":
+            state_tree = tree + f"/ea{n}"
         # ensure that the state is converged
         _, converged = _extract_dataset(context[f"{state_tree}/converged"])
         if not converged:
@@ -247,10 +278,15 @@ def _import_state_to_state_data(context: h5py.File, method: str,
     # build the path under which to look for the state-to-state data.
     tree = [f"adc_{adc_type}", method]
     if restricted:
-        assert state_kind is not None  # needs to be defined for restricted calcs
-        tree.extend(["rhf", "isr", state_kind])
+        tree.extend(["rhf", "isr"])
+        if adc_type == "pp":
+            assert state_kind is not None  # needs to be defined for restricted calcs
+            tree.append(state_kind)
     else:
         tree.extend(["uhf", "isr"])
+        if adc_type in ("ip", "ea"):
+            assert state_kind is not None
+            tree.append(state_kind)
     tree.append("0-0")  # we assume that we only have a single irrep!
     tree = "/".join(tree)
     if tree not in context:
@@ -352,6 +388,8 @@ _excited_state_data = {
         "optdm/dm_bb_b": "ground_to_excited_tdm_bb_b",
         # transition dipole moment (vector): only when we have a optdm
         "tprop/dipole": "transition_dipole_moments",
+        # Pole strengths for IP/EA-ADC
+        "pole_strength": "pole_strengths",
         # doubles and triples part of the amplitude vector
         "u2": "eigenvectors_doubles",
         "u3": "eigenvectors_triples",

@@ -12,8 +12,12 @@ _testdata_dirname = "data"
 
 # the base methods for each adc_type for which to generate data
 # the different cases (cvs, fc, ...) are handled in the generate functions.
+# No need to test ip/ea-adc1 since it is equivalent to ip/ea-adc0
+# ip/ea-adc2x not implemented in Q-Chem
 _methods = {
-    "pp": ("adc0", "adc1", "adc2", "adc2x", "adc3")
+    "pp": ("adc0", "adc1", "adc2", "adc2x", "adc3"),
+    "ip": ("ip-adc0", "ip-adc2", "ip-adc3"), 
+    "ea": ("ea-adc0", "ea-adc2", "ea-adc3"),
 }
 # Since it seems not possible to only perform an adcman MPn calculation,
 # the ground state data has to be extracted from an adc(n) calculation.
@@ -35,6 +39,8 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
                  gs_density_order: int | None = None,
                  n_singlets: int = 0, n_triplets: int = 0,
                  n_spin_flip: int = 0, n_states: int = 0,
+                 n_ip_states: tuple[int, int] = (0, 0),
+                 n_ea_states: tuple[int, int] = (0, 0),
                  dump_nstates: int | None = None, **kwargs) -> None:
     """
     Generate and dump the excited state reference data for the given reference case
@@ -45,7 +51,8 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     datadir = Path(__file__).parent.parent / _testdata_dirname
     datafile = datadir / test_case.adcdata_file_name("adcman", method.name)
     hdf5_file = h5py.File(datafile, "a")  # Read/write if exists, create otherwise
-    if f"{case}/{gs_density_order}" in hdf5_file:
+    key = f"{case}/{gs_density_order}"
+    if key in hdf5_file:
         return None
     # skip cvs-adc(0), since it is not available in qchem.
     if "cvs" in case and method.level == 0:
@@ -61,9 +68,10 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
         method = AdcMethod(f"cvs-{method.name}")
     state_data, _ = run_qchem(
         test_case, method, case, import_states=True, import_gs=False,
-        n_singlets=n_singlets, n_triplets=n_triplets, n_spin_flip=n_spin_flip,
-        n_states=n_states, import_nstates=dump_nstates,
-        gs_density_order=gs_density_order, **kwargs
+        n_singlets=n_singlets, n_triplets=n_triplets, n_ip_states=n_ip_states,
+        n_ea_states=n_ea_states, n_spin_flip=n_spin_flip, n_states=n_states,
+        import_nstates=dump_nstates, gs_density_order=gs_density_order,
+        **kwargs
     )
     # the data returned from run_qchem should have already been imported
     # using the correct keys -> just dump them
@@ -74,6 +82,8 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
 def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
                      n_singlets: int = 0, n_triplets: int = 0,
                      n_spin_flip: int = 0, n_states: int = 0,
+                     n_ip_states: tuple[int, int] = (0, 0),
+                     n_ea_states: tuple[int, int] = (0, 0),
                      dump_nstates: int | None = None,
                      states_per_case: dict[str, dict[str, int]] | None = None,
                      **kwargs) -> None:
@@ -87,12 +97,16 @@ def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
             n_singlets = states_per_case[case].get("n_singlets", 0)
             n_triplets = states_per_case[case].get("n_triplets", 0)
             n_spin_flip = states_per_case[case].get("n_spin_flip", 0)
+            n_ea_states = states_per_case[case].get("n_ea_states", (0, 0))
+            n_ip_states = states_per_case[case].get("n_ip_states", (0, 0))
             n_states = states_per_case[case].get("n_states", 0)
         for density_order in test_case.gs_density_orders:
             generate_adc(
                 test_case, method, case, n_singlets=n_singlets,
-                n_triplets=n_triplets, n_spin_flip=n_spin_flip, n_states=n_states,
-                dump_nstates=dump_nstates, gs_density_order=density_order,
+                n_triplets=n_triplets, n_spin_flip=n_spin_flip, 
+                n_states=n_states, n_ea_states=n_ea_states,
+                n_ip_states=n_ip_states, dump_nstates=dump_nstates,
+                gs_density_order=density_order,
                 **kwargs
             )
 
@@ -171,6 +185,25 @@ def generate_h2o_sto3g():
             states_per_case=states.get(method.name, None), **n_states
         )
 
+    for method in _methods["ip"]:
+        method = AdcMethod(method)
+        n_states = {"n_ip_states": (3, 0)}
+        generate_adc_all(
+            test_case, method=method, dump_nstates=2,
+            states_per_case=states.get(method.name, None), **n_states
+        )
+    
+    for method in _methods["ea"]:
+        method = AdcMethod(method)
+        if method.level < 2:
+            n_states = {"n_ea_states": (1, 0)}
+        else:
+            n_states = {"n_ea_states": (3, 0)}
+        generate_adc_all(
+            test_case, method=method, dump_nstates=2,
+            states_per_case=states.get(method.name, None), **n_states
+        )
+
 
 def generate_h2o_def2tzvp():
     # RHF, Singlet, 43 basis functions: 5 occ, 38 virt.
@@ -187,6 +220,20 @@ def generate_h2o_def2tzvp():
             **n_states
         )
 
+    for method in _methods["ip"]:
+        method = AdcMethod(method)
+        n_states = {"n_ip_states": (3, 0)}
+        generate_adc_all(
+            test_case, method=method, dump_nstates=2, **n_states
+        )
+
+    for method in _methods["ea"]:
+        method = AdcMethod(method)
+        n_states = {"n_ea_states": (3, 0)}
+        generate_adc_all(
+            test_case, method=method, dump_nstates=2, **n_states
+        )
+
 
 def generate_cn_sto3g():
     # UHF, Doublet, 10 basis functions: (7a, 6b) occ, (3a, 4b) virt
@@ -199,6 +246,26 @@ def generate_cn_sto3g():
         generate_adc_all(
             test_case, method=method, dump_nstates=2, states_per_case=None,
             **n_states
+        )
+
+    for method in _methods["ip"]:
+        method = AdcMethod(method)
+        if method.level < 2:
+            n_states = {"n_ip_states": (2, 2)}
+        else:
+            n_states = {"n_ip_states": (3, 3)}
+        generate_adc_all(
+            test_case, method=method, dump_nstates=2, **n_states
+        )
+
+    for method in _methods["ea"]:
+        method = AdcMethod(method)
+        if method.level < 2:
+            n_states = {"n_ea_states": (2, 2)}
+        else:
+            n_states = {"n_ea_states": (3, 3)}
+        generate_adc_all(
+            test_case, method=method, dump_nstates=2, **n_states
         )
 
 
@@ -215,6 +282,20 @@ def generate_cn_ccpvdz():
             **n_states
         )
 
+    for method in _methods["ip"]:
+        method = AdcMethod(method)
+        n_states = {"n_ip_states": (3, 3)}
+        generate_adc_all(
+            test_case, method=method, dump_nstates=2, **n_states
+        )
+
+    for method in _methods["ea"]:
+        method = AdcMethod(method)
+        n_states = {"n_ea_states": (3, 3)}
+        generate_adc_all(
+            test_case, method=method, dump_nstates=2, **n_states
+        )
+
 
 def generate_hf_631g():
     # UHF, Triplet
@@ -227,6 +308,20 @@ def generate_hf_631g():
         generate_adc_all(
             test_case, method=method, dump_nstates=2, states_per_case=None,
             **n_states
+        )
+
+    for method in _methods["ip"]:
+        method = AdcMethod(method)
+        n_states = {"n_ip_states": (3, 3)}
+        generate_adc_all(
+            test_case, method=method, dump_nstates=2, **n_states
+        )
+
+    for method in _methods["ea"]:
+        method = AdcMethod(method)
+        n_states = {"n_ea_states": (3, 3)}
+        generate_adc_all(
+            test_case, method=method, dump_nstates=2, **n_states
         )
 
 
