@@ -22,7 +22,6 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 from scipy import constants
-import warnings
 
 from .import adc_ip, adc_ea
 from .ElectronicStates import TableColumn, ElectronicStates, _timer_name
