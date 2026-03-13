@@ -149,19 +149,22 @@ class ElectronicTransition(ElectronicStates):
             product_trace(comp, tdm) for comp in mag_dipole_integrals
         ])
 
-    @property
-    def transition_magnetic_dipole_moment_giao(self) -> np.ndarray:
+    def transition_magnetic_dipole_moment_giao(
+            self, gauge_origin="origin") -> np.ndarray:
         """
         Array of transition dipole moments employing a GIAO ansatz
         in the limit B=0 of all computed states
         """
         return np.array([
-            self._transition_magnetic_dipole_moment_giao(i)
+            self._transition_magnetic_dipole_moment_giao(
+                state_n=i, gauge_origin=gauge_origin
+            )
             for i in range(self.size)
         ])
 
     @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
-    def _transition_magnetic_dipole_moment_giao(self, state_n: int) -> np.ndarray:
+    def _transition_magnetic_dipole_moment_giao(
+            self, state_n: int, gauge_origin="origin") -> np.ndarray:
         """
         Computes the transition dipole moment employing a GIAO ansatz
         in the limit B=0 for a single state
@@ -169,8 +172,8 @@ class ElectronicTransition(ElectronicStates):
         if self.property_method.level == 0:
             warnings.warn("ADC(0) transition dipole moments are known to be "
                           "faulty in some cases.")
-        mag_dips_ints_1p = self.operators.magnetic_dipole_giao_1p
-        mag_dips_ints_2p = self.operators.magnetic_dipole_giao_2p
+        mag_dips_ints_1p = self.operators.magnetic_dipole_giao_1p(gauge_origin)
+        mag_dips_ints_2p = self.operators.magnetic_dipole_giao_2p(gauge_origin)
         tdm_1p = self._transition_dm(state_n)
         tdm_2p = self._transition_dm_2p(state_n)
         return np.array(
@@ -293,7 +296,7 @@ class ElectronicTransition(ElectronicStates):
         """Array of rotatory strengths in length gauge employing a GIAO ansatz
         in the limit B=0 of all computed states"""
         return np.array([
-            self._rotatory_strength_length(state_n=i)
+            self._rotatory_strength_length_giao(state_n=i)
             for i in range(self.size)
         ])
 
@@ -304,7 +307,9 @@ class ElectronicTransition(ElectronicStates):
         in the limit B=0for a single state
         """
         tdm = self._transition_dipole_moment(state_n)
-        magmom = self._transition_magnetic_dipole_moment_giao(state_n=state_n)
+        magmom = self._transition_magnetic_dipole_moment_giao(
+            state_n=state_n, gauge_origin="mass_center"
+        )
         return -1.0 * np.dot(tdm, magmom)
 
     @property
