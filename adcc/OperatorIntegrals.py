@@ -245,25 +245,6 @@ class OperatorIntegrals:
 
     @cached_property
     @timed_member_call("_import_timer")
-    def h_core(self) -> Tensor:
-        """Return the hcore in the atomic orbital basis."""
-        if "h_core" not in self.available:
-            raise NotImplementedError(f"h_core operator not implemented "
-                                      f"in {self.provider_ao.backend} backend.")
-
-        ao_operator = getattr(self.provider_ao, "h_core")
-        op_bb = replicate_ao_block(self.mospaces, ao_operator,
-                                   symmetry=OperatorSymmetry.HERMITIAN,
-                                   block="ab")
-        op_ff = OneParticleOperator(self.mospaces,
-                                    symmetry=OperatorSymmetry.HERMITIAN)
-        transform_operator_ao2mo(op_bb, op_ff, self._coefficients,
-                                 self._conv_tol)
-
-        return op_ff
-
-    @cached_property
-    @timed_member_call("_import_timer")
     def ssq_1p(self) -> OneParticleOperator:
         """Returns the one-particle part of the S^2 operator"""
         op = OneParticleOperator(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
@@ -400,43 +381,197 @@ class OperatorIntegrals:
         return self._import_dipole_like_operator(
             "electric_dipole_velocity", symmetry=OperatorSymmetry.ANTIHERMITIAN)
 
+    @cached_property
+    @timed_member_call("_import_timer")
+    def d_overlap_dB(self) -> Tensor:
+        """Return the differentiated overlap with respect to the magentic field
+        in the unmodified molecular orbital basis."""
+        return self._import_dipole_like_operator(
+            "d_overlap_dB", symmetry=OperatorSymmetry.ANTIHERMITIAN)
+
+    @cached_property
+    @timed_member_call("_import_timer")
+    def d_eri_dB(self) -> Tensor:
+        """Return the differentiated eri with respect to the magentic field
+        in the unmodified molecular orbital basis."""
+        return self._import_dipole_like_operator_2p(
+            "d_eri_dB", symmetry=OperatorSymmetry.ANTIHERMITIAN)
+
+    @cached_property
+    @timed_member_call("_import_timer")
+    def eri(self) -> Tensor:
+        """Return the differentiated eri with respect to the magentic field
+        in the unmodified molecular orbital basis."""
+        if "eri" not in self.available:
+            raise NotImplementedError(f"eri operator not implemented "
+                                      f"in {self.provider_ao.backend} backend.")
+        int2e = getattr(self.provider_ao, "eri").transpose((0, 2, 1, 3))
+        op_bbbb = replicate_ao_block(self.mospaces, int2e,
+                                     symmetry=OperatorSymmetry.HERMITIAN)
+        eri = TwoParticleOperator(self.mospaces,
+                                  symmetry=OperatorSymmetry.HERMITIAN)
+        transform_operator_ao2mo(op_bbbb, eri, self._coefficients,
+                                 self._conv_tol)
+        return eri
+
+    @cached_property
+    @timed_member_call("_import_timer")
+    def d_eri_dB_1p(self) -> Tensor:
+        """Return the differentiated eri with respect to the magentic field
+        in the unmodified molecular orbital basis."""
+        d_eri_dB = self.d_eri_dB
+        op = []
+        for comp in range(3):
+            op_ff = OneParticleOperator(self.mospaces,
+                                        symmetry=OperatorSymmetry.ANTIHERMITIAN)
+
+            for block in op_ff.canonical_blocks:
+                s1, s2 = split_spaces(block)
+                for s in self.mospaces.subspaces_occupied:
+                    temp = np.einsum("piqi->pq",
+                                     d_eri_dB[comp][s1 + s + s2 + s].to_ndarray())
+                    op_ff[block].set_from_ndarray(temp, self._conv_tol)
+
+            op.append(op_ff)
+        return tuple(op)
+
+    @cached_property
+    @timed_member_call("_import_timer")
+    def eri_1p(self) -> Tensor:
+        """Return the differentiated eri with respect to the magentic field
+        in the unmodified molecular orbital basis."""
+        eri = self.eri
+        op_ff = OneParticleOperator(self.mospaces,
+                                    symmetry=OperatorSymmetry.HERMITIAN)
+        for block in op_ff.canonical_blocks:
+            s1, s2 = split_spaces(block)
+            for s in self.mospaces.subspaces_occupied:
+                temp = np.einsum("piqi->pq",
+                                 eri[s1 + s + s2 + s].to_ndarray())
+                op_ff[block].set_from_ndarray(temp, self._conv_tol)
+        return op_ff
+
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
-    def magnetic_dipole_giao_1p(self, gauge_origin: str = "origin"
-                                ) -> tuple[OneParticleOperator, ...]:
+    def magnetic_dipole_giao_1p(self, hf,
+            gauge_origin: str = "origin") -> tuple[OneParticleOperator, ...]:
         """
         Return the 1-particle part of the magnetic dipole integrals (in GIAO)
         in the molecular orbital basis.
         """
-        part_1 = list(
-            self._import_dipole_like_operator(
-                "magnetic_dipole_giao_1p",
-                symmetry=OperatorSymmetry.ANTIHERMITIAN)
-        )
-        h_core = self.h_core
-        # W = -0.5 sum_i (R_\\nu - O)_i x r_i (Gleichung 25 mit 27 + 28 eingesetzt)
-        # dh. W_{i\tilde{j}} -> rechts zielindex OMO, links UMO (<\mu | r | \nu>)
-        W = self.W(gauge_origin)
+        d_T_dB = self.d_natural_connection_matrix_dB(gauge_origin)
+        d_h_dB = self.d_h_dB(gauge_origin)
+        d_eri_dB_1p = self.d_eri_dB_1p
+
+        mag_dip = []
         for comp in range(3):  # xyz
-            for block in part_1[comp].canonical_blocks:
-                s1, s2 = split_spaces(block)
-                part_2 = 0
+            mag_dip_comp = OneParticleOperator(
+                self.mospaces, symmetry=OperatorSymmetry.ANTIHERMITIAN
+            )
+
+            mag_dip_comp.vv = -1.0 * (
+                # N^3: V^3 / N^2: V^2
+                2 * einsum("cb,ac->ab", d_T_dB[comp].vv, hf.fvv).antisymmetrise()
+                # N^2: V^2 / N^2: V^2
+                + 2 * d_h_dB[comp].vv.antisymmetrise()
+                + d_eri_dB_1p[comp].vv
+            )
+
+            mag_dip_comp.oo = -1.0 * (
+                # N^3: O^3 / N^2: O^2
+                2 * einsum("kj,ik->ij", d_T_dB[comp].oo, hf.foo).antisymmetrise()
+                # N^2: O^2 / N^2: O^2
+                + 2 * d_h_dB[comp].oo.antisymmetrise()
+                + d_eri_dB_1p[comp].oo
+            )
+
+            mag_dip_comp.ov = -1.0 * (
+                # N^3: O^2V^1 / N^2: O^1V^1
+                einsum("ja,ij->ia", d_T_dB[comp].ov, hf.foo)
+                # N^3: O^1V^2 / N^2: V^2
+                + einsum("bi,ab->ia", d_T_dB[comp].vo, hf.fvv)
+                # N^2: O^1V^1 / N^2: O^1V^1
+                + d_h_dB[comp].ov
+                + d_eri_dB_1p[comp].ov
+            )
+            mag_dip.append(mag_dip_comp)
+        return tuple(mag_dip)
+
+    @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
+    def magnetic_dipole_giao_1p_n_minus_1(self, gauge_origin: str = "origin"
+                                            ) -> tuple[TwoParticleOperator, ...]:
+        n_occ = self.fock.oo.shape[1]
+        kronecker_delta = OneParticleOperator(self.mospaces,
+                                              symmetry=OperatorSymmetry.HERMITIAN)
+        for block in kronecker_delta.canonical_blocks:
+            s1, s2 = split_spaces(block)
+            if s1 == s2:
+                kronecker_delta[block].set_mask("ii", 1)
+
+        d_T_dB = self.d_natural_connection_matrix_dB(gauge_origin)
+        d_overlap_dB = self.d_overlap_dB
+        d_eri_dB_1p = self.d_eri_dB_1p
+
+        eri = self.eri
+        eri_1p = self.eri_1p
+
+        mag_dip = []
+        for comp in range(3):  # xyz
+            mag_dip_comp = TwoParticleOperator(
+                self.mospaces, symmetry=OperatorSymmetry.ANTIHERMITIAN
+            )
+            for block in mag_dip_comp.canonical_blocks:
+                s1, s2, s3, s4 = split_spaces(block)
+                # m = - dH/dB (minus mal minus = +)
+                mag_dip_comp[block] = 1 / (n_occ - 1) * (
+                    einsum("pq,rs->prqs",
+                           d_eri_dB_1p[comp].block(s1 + s3),
+                           kronecker_delta[s2 + s4])
+                    + einsum("pq,rs->prqs",
+                             eri_1p.block(s1 + s3),
+                             d_overlap_dB[comp][s2 + s4])
+                )
                 for s in self.mospaces.subspaces:
-                    # account for m = - 0.5 * l
-                    part_2 += -0.5 * (
-                        # 2 (Definition L) * (-1) (T^B)
-                        - 2 * (
-                            # one-index transformation p
-                            # -> complex conjugate -> *(-1)
-                            # W_{i\tilde{j}} -> rechts zielindex OMO
-                            - einsum("rp,rq->pq", W[comp][s + s1], h_core[s + s2])
-                            # one-index transformation q
-                            + einsum("pr,rq->pq", h_core[s1 + s], W[comp][s + s2])
-                        ))
+                    mag_dip_comp[block] += 1 / (n_occ - 1) * (
+                        - einsum("tp,tq,rs->prqs",
+                                 d_T_dB[comp].block(s + s1),
+                                 eri_1p.block(s + s2),
+                                 kronecker_delta[s3 + s4])
+                        + einsum("tq,pt,rs->prqs",
+                                 d_T_dB[comp].block(s + s2),
+                                 eri_1p.block(s1 + s),
+                                 kronecker_delta[s3 + s4])
+                        - einsum("sr,pq->prqs",
+                                 d_T_dB[comp].block(s4 + s3),
+                                 eri_1p.block(s1 + s2))
+                        + einsum("rs,pq->prqs",
+                                 d_T_dB[comp].block(s3 + s4),
+                                 eri_1p.block(s1 + s2))
+                    )
+                    for ss in self.mospaces.subspaces:
+                        mag_dip_comp[block] += 1 / (n_occ - 1) * (
+                        - einsum("ij,piqj,rs->prqs",
+                                 d_T_dB[comp].block(s + ss),
+                                 eri.block(s1 + s + s2 + ss),
+                                 kronecker_delta[s3 + s4])
+                        + einsum("ji,piqj,rs->prqs",
+                                 d_T_dB[comp].block(ss + s),
+                                 eri.block(s1 + s + s2 + ss),
+                                 kronecker_delta[s3 + s4])
+                        )
                 # assure antisymmetrisation
                 if s1 == s2:
-                    part_2 = 2 * part_2.antisymmetrise()
-                part_1[comp][block] += part_2
-        return tuple(part_1)
+                    mag_dip_comp[block] = 2 * mag_dip_comp.block(block)\
+                        .antisymmetrise(0, 1)
+                if s3 == s4:
+                    mag_dip_comp[block] = 2 * mag_dip_comp.block(block)\
+                        .antisymmetrise(2, 3)
+                if s1 == s2 == s3 == s4:
+                    mag_dip_comp[block] = 2 * mag_dip_comp.block(block)\
+                        .antisymmetrise([0, 2], [1, 3])
+            mag_dip.append(mag_dip_comp)
+        return tuple(mag_dip)
+
+
 
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
     def magnetic_dipole_giao_2p(self, gauge_origin: str = "origin"
@@ -445,56 +580,53 @@ class OperatorIntegrals:
         Return the 2-particle part of the magnetic dipole integrals (in GIAO)
         in the molecular orbital basis.
         """
-        part_1 = list(self._import_dipole_like_operator_2p(
-            "magnetic_dipole_giao_2p", symmetry=OperatorSymmetry.ANTIHERMITIAN))
-        # eri, get physicist notation
-        int2e = getattr(self.provider_ao, "eri").transpose((0, 2, 1, 3))
-        # from the integrals construct a antisymmetrized TwoParticleOperator
-        op_bbbb = replicate_ao_block(self.mospaces, int2e,
-                                     symmetry=OperatorSymmetry.HERMITIAN)
-        eri_operator = TwoParticleOperator(self.mospaces,
-                                           symmetry=OperatorSymmetry.HERMITIAN)
-        transform_operator_ao2mo(op_bbbb, eri_operator, self._coefficients,
-                                 self._conv_tol)
-        W = self.W(gauge_origin)
 
+        d_T_dB = self.d_natural_connection_matrix_dB(gauge_origin)
+        d_eri_dB = self.d_eri_dB
+
+        eri = self.eri
+
+        mag_dip = []
         for comp in range(3):  # xyz
-            for block in part_1[comp].canonical_blocks:
+            mag_dip_comp = TwoParticleOperator(
+                self.mospaces, symmetry=OperatorSymmetry.ANTIHERMITIAN
+            )
+            for block in mag_dip_comp.canonical_blocks:
+                # m = - dH/dB
+                mag_dip_comp[block] = - 0.25 * (
+                    d_eri_dB[comp].block(block)
+                )
+
                 s1, s2, s3, s4 = split_spaces(block)
-                part_2 = 0
                 for s in self.mospaces.subspaces:
-                    # m = - 0.5 * l
-                    part_2 += -0.5 * (
-                        # 2 (definition L) * (-1) (T^B) * 1/4 (double counting)
-                        - 2 * 0.25 * (
-                            # one-index transformation m
-                            # -> complex conjugate -> *(-1)
-                            - 1.0 * einsum(
-                                "om,onpq->mnpq",
-                                W[comp][s + s1], eri_operator[s + s2 + s3 + s4])
-                            # one-index transformation n
-                            # -> complex conjugate -> *(-1)
-                            - 1.0 * einsum(
-                                "on,mopq->mnpq",
-                                W[comp][s + s2], eri_operator[s1 + s + s3 + s4])
-                            # one-index transformation p
-                            + 1.0 * einsum(
-                                "op,mnoq->mnpq",
-                                W[comp][s + s3], eri_operator[s1 + s2 + s + s4])
-                            # one-index transformation q
-                            + 1.0 * einsum(
-                                "oq,mnpo->mnpq",
-                                W[comp][s + s4], eri_operator[s1 + s2 + s3 + s])
-                        ))
+                    # m = - dH/dB
+                    mag_dip_comp[block] += -0.25 * (
+                        - einsum("tp,tqrs->pqrs",
+                                 d_T_dB[comp].block(s + s1),
+                                 eri.block(s + s2 + s3 + s4))
+                        - einsum("tq,ptrs->pqrs",
+                                 d_T_dB[comp].block(s + s2),
+                                 eri.block(s1 + s + s3 + s4))
+                        + einsum("tr,pqts->pqrs",
+                                 d_T_dB[comp].block(s + s3),
+                                 eri.block(s1 + s2 + s + s4))
+                        + einsum("ts,pqrt->pqrs",
+                                 d_T_dB[comp].block(s + s4),
+                                 eri.block(s1 + s2 + s3 + s))
+                    )
+                # assure antisymmetrisation
                 # antisymmetrisation
                 if s1 == s2:
-                    part_2 = 2 * part_2.antisymmetrise(0, 1)
+                    mag_dip_comp[block] = 2 * mag_dip_comp.block(block)\
+                        .antisymmetrise(0, 1)
                 if s3 == s4:
-                    part_2 = 2 * part_2.antisymmetrise(2, 3)
+                    mag_dip_comp[block] = 2 * mag_dip_comp.block(block)\
+                        .antisymmetrise(2, 3)
                 if s1 == s2 == s3 == s4:
-                    part_2 = 2 * part_2.antisymmetrise([0, 2], [1, 3])
-                part_1[comp][block] += part_2
-        return tuple(part_1)
+                    mag_dip_comp[block] = 2 * mag_dip_comp.block(block)\
+                        .antisymmetrise([0, 2], [1, 3])
+            mag_dip.append(mag_dip_comp)
+        return tuple(mag_dip)
 
     def _import_g_origin_dep_dip_like_operator(
             self, integral: str, gauge_origin="origin",
@@ -547,9 +679,18 @@ class OperatorIntegrals:
         )
 
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
-    def W(self, gauge_origin="origin") -> tuple[OneParticleOperator, ...]:
+    def d_natural_connection_matrix_dB(
+            self, gauge_origin="origin") -> tuple[OneParticleOperator, ...]:
         return self._import_g_origin_dep_dip_like_operator(
-            integral="W", gauge_origin=gauge_origin,
+            integral="d_natural_connection_matrix_dB", gauge_origin=gauge_origin,
+            symmetry=OperatorSymmetry.NOSYMMETRY
+        )
+
+    @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
+    def d_h_dB(
+            self, gauge_origin="origin") -> tuple[OneParticleOperator, ...]:
+        return self._import_g_origin_dep_dip_like_operator(
+            integral="d_h_dB", gauge_origin=gauge_origin,
             symmetry=OperatorSymmetry.NOSYMMETRY
         )
 
