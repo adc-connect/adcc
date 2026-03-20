@@ -30,6 +30,7 @@ from .misc import cached_member_function
 from .OneParticleDensity import OneParticleDensity
 from .TwoParticleDensity import TwoParticleDensity
 from .NParticleOperator import product_trace
+from .AdcMethod import AdcMethod
 
 
 class ElectronicTransition(ElectronicStates):
@@ -170,16 +171,37 @@ class ElectronicTransition(ElectronicStates):
         in the limit B=0 for a single state
         """
         if self.property_method.level == 0:
-            warnings.warn("ADC(0) transition dipole moments are known to be "
+            warnings.warn("ADC(0) GIAO transition dipole moments are known to be "
                           "faulty in some cases.")
-        mag_dips_ints_1p = self.operators.magnetic_dipole_giao_1p(gauge_origin)
-        mag_dips_ints_2p = self.operators.magnetic_dipole_giao_2p(gauge_origin)
+
+        hf = self.reference_state
+        level = self.property_method.level
+        property_method_minus_1 = None
+
+        if level - 1 >= 0:
+            property_method_minus_1 = AdcMethod("adc" + str(level - 1))
+
+        mag_dips_ints_1p = self.operators.magnetic_dipole_giao_1p(hf, gauge_origin)
         tdm_1p = self._transition_dm(state_n)
-        tdm_2p = self._transition_dm_2p(state_n)
-        return np.array(
-            [product_trace(comp_1p, tdm_1p) + product_trace(comp_2p, tdm_2p)
-             for comp_1p, comp_2p in zip(mag_dips_ints_1p, mag_dips_ints_2p)]
+        tdm_mag = np.array(
+            [product_trace(comp_1p, tdm_1p) for comp_1p in mag_dips_ints_1p]
         )
+
+        if property_method_minus_1 is not None:
+            raise NotImplementedError("not yet done")
+            mag_dips_ints_1p_2p = \
+                self.operators.magnetic_dipole_giao_1p_n_minus_1(gauge_origin)
+            mag_dips_ints_2p = self.operators.magnetic_dipole_giao_2p(gauge_origin)
+            mag_dips_ints_2p_tot = mag_dips_ints_2p + mag_dips_ints_1p_2p
+            evec = self.excitation_vector[state_n]
+
+            property_method_minus_1 = AdcMethod("adc" + str(level - 1))
+            tdm_2p = self._module.transition_dm_2p(
+                        property_method_minus_1, self.ground_state, evec, self.matrix.intermediates)
+            tdm_mag += np.array(
+            [product_trace(comp_2p, tdm_2p) for comp_2p in mag_dips_ints_2p]
+            )
+        return np.array(tdm_mag)
 
     def transition_quadrupole_moment(self, gauge_origin="origin") -> np.ndarray:
         """Array of transition quadrupole moments of all computed states"""
