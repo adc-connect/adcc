@@ -238,7 +238,7 @@ class TestLazyMp:
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)
     def test_mp2_diffdm_mo(self, system: str, case: str, generator: str,
-                           instances: LazyMpCache):
+                        instances: LazyMpCache):
         refmp = testdata_cache._load_data(
             system=system, method="mp", case=case, source=generator
         )
@@ -256,7 +256,7 @@ class TestLazyMp:
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)
     def test_mp2_diffdm_ao(self, system: str, case: str, generator: str,
-                           instances: LazyMpCache):
+                            instances: LazyMpCache):
         refmp = testdata_cache._load_data(
             system=system, method="mp", case=case, source=generator
         )
