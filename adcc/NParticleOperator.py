@@ -549,7 +549,6 @@ def product_trace(op1, op2) -> float:
     for b, factor in factors.items():
         if op1.is_zero_block(b) or op2.is_zero_block(b):
             continue
-
         ret += (1 / math.factorial(op1.n_particle_op) ** 2 * factor
-                * op1.block(b).dot(op2.block(b)))
+                * op1[b].dot(op2[b]))
     return ret

@@ -189,17 +189,20 @@ class ElectronicTransition(ElectronicStates):
 
         if property_method_minus_1 is not None:
             raise NotImplementedError("not yet done")
-            mag_dips_ints_1p_2p = \
-                self.operators.magnetic_dipole_giao_1p_n_minus_1(gauge_origin)
-            mag_dips_ints_2p = self.operators.magnetic_dipole_giao_2p(gauge_origin)
-            mag_dips_ints_2p_tot = mag_dips_ints_2p + mag_dips_ints_1p_2p
             evec = self.excitation_vector[state_n]
-
-            property_method_minus_1 = AdcMethod("adc" + str(level - 1))
             tdm_2p = self._module.transition_dm_2p(
-                        property_method_minus_1, self.ground_state, evec, self.matrix.intermediates)
+                property_method_minus_1, self.ground_state, evec,
+                self.matrix.intermediates
+            )
+
+            mag_dips_ints_1p_2p = \
+                self.operators.magnetic_dipole_giao_1p_n_minus_1(hf, gauge_origin)
+            mag_dips_ints_2p = \
+                self.operators.magnetic_dipole_giao_2p(hf, gauge_origin)
+            mag_dips_ints_2p_tot = mag_dips_ints_2p + mag_dips_ints_1p_2p
+
             tdm_mag += np.array(
-            [product_trace(comp_2p, tdm_2p) for comp_2p in mag_dips_ints_2p]
+                [product_trace(comp_2p, tdm_2p) for comp_2p in mag_dips_ints_2p_tot]
             )
         return np.array(tdm_mag)
 
