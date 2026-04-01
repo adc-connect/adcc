@@ -153,8 +153,8 @@ class ElectronicTransition(ElectronicStates):
     def transition_magnetic_dipole_moment_giao(
             self, gauge_origin="origin") -> np.ndarray:
         """
-        Array of transition dipole moments employing a GIAO ansatz
-        in the limit B=0 of all computed states
+        Array of transition magnetic dipole moments within the unmodified
+        molecular orbital basis (GIAO).
         """
         return np.array([
             self._transition_magnetic_dipole_moment_giao(
@@ -167,8 +167,8 @@ class ElectronicTransition(ElectronicStates):
     def _transition_magnetic_dipole_moment_giao(
             self, state_n: int, gauge_origin="origin") -> np.ndarray:
         """
-        Computes the transition dipole moment employing a GIAO ansatz
-        in the limit B=0 for a single state
+        Computes the transition magnetic dipole moments within the unmodified
+        molecular orbital basis (GIAO) for a single state.
         """
         if self.property_method.level == 0:
             warnings.warn("ADC(0) GIAO transition dipole moments are known to be "
@@ -176,10 +176,10 @@ class ElectronicTransition(ElectronicStates):
 
         hf = self.reference_state
         level = self.property_method.level
-        property_method_minus_1 = None
+        p_method_minus_1 = None
 
         if level - 1 >= 0:
-            property_method_minus_1 = AdcMethod("adc" + str(level - 1))
+            p_method_minus_1 = AdcMethod("adc" + str(level - 1))
 
         mag_dips_ints_1p = self.operators.magnetic_dipole_giao_1p(hf, gauge_origin)
         tdm_1p = self._transition_dm(state_n)
@@ -187,19 +187,21 @@ class ElectronicTransition(ElectronicStates):
             [product_trace(comp_1p, tdm_1p) for comp_1p in mag_dips_ints_1p]
         )
 
-        if property_method_minus_1 is not None:
-            raise NotImplementedError("not yet done")
+        if p_method_minus_1 is not None:
+            warnings.warn("GIAO two-particle operators not yet implemented.")
             evec = self.excitation_vector[state_n]
             tdm_2p = self._module.transition_dm_2p(
-                property_method_minus_1, self.ground_state, evec,
+                p_method_minus_1, self.ground_state, evec,
                 self.matrix.intermediates
             )
 
             mag_dips_ints_1p_2p = \
-                self.operators.magnetic_dipole_giao_1p_n_minus_1(hf, gauge_origin)
+                self.operators.magnetic_dipole_giao_2p_n_minus_1(hf, gauge_origin)
             mag_dips_ints_2p = \
                 self.operators.magnetic_dipole_giao_2p(hf, gauge_origin)
-            mag_dips_ints_2p_tot = mag_dips_ints_2p + mag_dips_ints_1p_2p
+            mag_dips_ints_2p_tot = tuple(
+                a + b for a, b in zip(mag_dips_ints_2p, mag_dips_ints_1p_2p)
+            )
 
             tdm_mag += np.array(
                 [product_trace(comp_2p, tdm_2p) for comp_2p in mag_dips_ints_2p_tot]
