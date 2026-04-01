@@ -39,8 +39,7 @@ class PyScfOperatorIntegralProvider:
         "electric_quadrupole", "electric_quadrupole_traceless",
         "electric_quadrupole_velocity", "diamagnetic_magnetizability",
         "pe_induction_elec", "pcm_potential_elec",
-        "eri", "d_natural_connection_matrix_dB", "d_overlap_dB", "d_h_dB",
-        "d_eri_dB"
+        "d_natural_connection_matrix_dB", "d_overlap_dB", "d_h_dB", "d_eri_dB"
     )
 
     def __init__(self, scfres):
@@ -56,17 +55,6 @@ class PyScfOperatorIntegralProvider:
         """-sum_i r_i"""
         return tuple(
             -1.0 * self.scfres.mol.intor_symmetric('int1e_r', comp=3)
-        )
-
-    @property
-    def eri(self) -> np.ndarray:
-        """
-        Pyscf uses chemist notation for two electron integrals.
-        (\\mu \\nu | O | \\rho \\sigma)
-        sum_i sum_j 1/(r_i-r_j)
-        """
-        return (
-            self.scfres.mol.intor("int2e")
         )
 
     def d_natural_connection_matrix_dB(
@@ -105,7 +93,7 @@ class PyScfOperatorIntegralProvider:
         """
         LAO
         The imaginary part of the integral is returned.
-        0.5 sum_i (R_{bra} - R_{ket})_i x r_i
+        0.5 * sum_i [(R_{bra} - R_{ket}) x r_i]
         """
         r = self.scfres.mol.intor_symmetric("int1e_r", comp=3)  # (3, mu, nu)
 
@@ -130,41 +118,18 @@ class PyScfOperatorIntegralProvider:
         )
         return tuple(tensor)
 
-    def d_h_dB(self, gauge_origin="origin"):
+    @property
+    def d_h_dB(self):
         """
         LAO
         The imaginary part of the integral is returned.
-        0.5 * sum_i [(r_i-R_{ket}) x p_i] + (R_{ket} - O) x p_i
-                     + (R_{bra} - R_{ket}) x r_i h]
+        0.5 * sum_i ([(r_i-R_{ket}) x p_i] + (R_{bra} - R_{ket}) x r_i h])
         """
-        gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
-        with self.scfres.mol.with_common_orig(gauge_origin):
-            term1 = 0.5 * self.scfres.mol.intor('int1e_giao_irjxp', comp=3, hermi=0)
-            # commutator
-            nabla = self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
-            # (atom index, atom label, orbital label, cartesian comp)
-            ao_labels = self.scfres.mol.ao_labels(fmt=False)
-            ao_atom = np.array([x[0] for x in ao_labels])
-
-            coords = self.scfres.mol.atom_coords()
-            R_minus_O = coords[ao_atom] - gauge_origin  # (nu, 3)
-
-            # construct levi civita
-            epsilon = np.zeros((3, 3, 3))
-            epsilon[0, 1, 2] = epsilon[1, 2, 0] = epsilon[2, 0, 1] = 1
-            epsilon[0, 2, 1] = epsilon[1, 0, 2] = epsilon[2, 1, 0] = -1
-
-            # cross product:
-            # 0.5 * \epsilon_{kij}​(R_\nu​−O)_i​<\mu∣\nabla_j​∣\nu>
-            term2 = 0.5 * (
-                np.einsum("kij,ni,jmn->kmn", epsilon, R_minus_O, nabla)
-            )
-            # ich brauche hier die 2 um die richtige Symmetrie zu bekommen, weshalb?
-            term3 = 2 * self.scfres.mol.intor('int1e_igkin', comp=3, hermi=0)
-            # term 1, 2 and 3 are together antihermitian!
-            term4 = self.scfres.mol.intor('int1e_ignuc', comp=3, hermi=2)
-
-        return tuple(term1 + term2 + term3 + term4)
+        # term 0 and 1 are together antihermitian!
+        ints = 0.5 * self.scfres.mol.intor('int1e_giao_irjxp', comp=3, hermi=0)
+        ints += self.scfres.mol.intor('int1e_igkin', comp=3, hermi=0)
+        ints += self.scfres.mol.intor('int1e_ignuc', comp=3, hermi=2)
+        return tuple(ints)
 
     def magnetic_dipole(self, gauge_origin="origin") -> tuple[np.ndarray, ...]:
         """
@@ -182,7 +147,7 @@ class PyScfOperatorIntegralProvider:
         """
         LAO
         The imaginary part of the integral is returned. Pyscf uses chemist notation
-        for two electron integrals. (\\mu \\nu | \\hat{O} | \\rho \\sigma)
+        for two electron integrals: (\\mu \\nu | \\hat{O} | \\rho \\sigma).
         0.5 * sum_i sum_j [(R_\\mu - R_\\nu) x r_i
         + (R_\\rho - R_\\sigma) x r_j]/|(r_i - r_j)|
         """
