@@ -188,25 +188,19 @@ class ElectronicTransition(ElectronicStates):
         )
 
         if p_method_minus_1 is not None:
-            warnings.warn("GIAO two-particle operators not yet implemented.")
             evec = self.excitation_vector[state_n]
             tdm_2p = self._module.transition_dm_2p(
                 p_method_minus_1, self.ground_state, evec,
                 self.matrix.intermediates
             )
 
-            mag_dips_ints_1p_2p = \
-                self.operators.magnetic_dipole_giao_2p_n_minus_1(hf, gauge_origin)
             mag_dips_ints_2p = \
                 self.operators.magnetic_dipole_giao_2p(hf, gauge_origin)
-            mag_dips_ints_2p_tot = tuple(
-                a + b for a, b in zip(mag_dips_ints_2p, mag_dips_ints_1p_2p)
-            )
 
             tdm_mag += np.array(
-                [product_trace(comp_2p, tdm_2p) for comp_2p in mag_dips_ints_2p_tot]
+                [product_trace(comp_2p, tdm_2p) for comp_2p in mag_dips_ints_2p]
             )
-        return np.array(tdm_mag)
+        return tdm_mag
 
     def transition_quadrupole_moment(self, gauge_origin="origin") -> np.ndarray:
         """Array of transition quadrupole moments of all computed states"""
@@ -331,11 +325,11 @@ class ElectronicTransition(ElectronicStates):
     def _rotatory_strength_length_giao(self, state_n: int) -> np.float64:
         """
         Computes the rotatory strength in length gauge employing a GIAO ansatz
-        in the limit B=0for a single state
+        in the limit B=0 for a single state
         """
         tdm = self._transition_dipole_moment(state_n)
         magmom = self._transition_magnetic_dipole_moment_giao(
-            state_n=state_n, gauge_origin="mass_center"
+            state_n=state_n, gauge_origin="origin"
         )
         return -1.0 * np.dot(tdm, magmom)
 
