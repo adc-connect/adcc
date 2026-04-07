@@ -39,7 +39,7 @@ class PyScfOperatorIntegralProvider:
         "electric_quadrupole", "electric_quadrupole_traceless",
         "electric_quadrupole_velocity", "diamagnetic_magnetizability",
         "pe_induction_elec", "pcm_potential_elec",
-        "d_natural_connection_matrix_dB", "d_overlap_dB", "d_h_dB", "d_eri_dB"
+        "d_natural_connection_matrix_dB", "d_ovlp_dB", "d_h_dB", "d_eri_dB"
     )
 
     def __init__(self, scfres):
@@ -89,7 +89,7 @@ class PyScfOperatorIntegralProvider:
         return tuple(tensor)
 
     @property
-    def d_overlap_dB(self) -> tuple[np.ndarray, ...]:
+    def d_ovlp_dB(self) -> tuple[np.ndarray, ...]:
         """
         LAO
         The imaginary part of the integral is returned.
