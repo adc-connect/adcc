@@ -44,6 +44,12 @@ dependencies = [
 
 [project.optional-dependencies]
 tests = ["pytest", "pytest-cov", "pandas >= 0.25.0"]
+# building the tests requires the same dependencies as building libadcc
+# since we explicity call setup.py
+cpptest = [
+	"setuptools >= 77.0",
+	"pybind11 >= 2.6"
+]
 build_docs = [
 	"sphinx>=2", "breathe", "sphinxcontrib-bibtex",
 	"sphinx-automodapi", "sphinx-rtd-theme"
