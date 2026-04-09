@@ -52,6 +52,8 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     # skip cvs-adc(0), since it is not available in qchem.
     if "cvs" in case and method.level == 0:
         return None
+    if isr_order == 3 and "cvs" in case:
+        return None
     # gs_density_order is only available for adc(3) and adc(4)
     # and it is not available for cvs-adc
     if gs_density_order is not None and (method.level < 3 or "cvs" in case):
@@ -65,7 +67,7 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
 
     if f"{key}/{isr_order}" in hdf5_file:
         return None
-        
+
     print(f"Generating {method.name} (gs_density_order={gs_density_order}) "
           f"data for {case} {test_case.file_name}.") 
 
