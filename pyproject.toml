@@ -1,7 +1,7 @@
 [project]
 name = "adcc"
 description = "adcc:  Seamlessly connect your host program to ADC"
-version = "0.16.1"
+version = "0.17.0"
 dynamic = ["readme"]  # handled in setup.py
 keywords = [
 	"ADC", "algebraic-diagrammatic", "construction", "excited", "states",
@@ -74,7 +74,7 @@ exclude = [
 ]
 
 [tool.bumpversion]
-current_version = "0.16.1"
+current_version = "0.17.0"
 commit = true
 tag = true
 files = [
