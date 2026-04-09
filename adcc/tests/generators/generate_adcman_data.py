@@ -60,21 +60,14 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     if "cvs" in case and not method.is_core_valence_separated:
         method = AdcMethod(f"cvs-{method.name}")
     
-    isr_order_val = isr_order if isr_order is not None else min(method.level, 2)
+    isr_order_val = isr_order 
     key = f"{case}/{gs_density_order}"
 
-    hf = testdata_cache.reference(system=test_case, case=case)
-    _, kind = validate_state_parameters(
-        hf, n_states=n_states, n_singlets=n_singlets,
-        n_triplets=n_triplets, n_spin_flip=n_spin_flip
-    )
-    if f"{key}/{isr_order_val}/{kind}" in hdf5_file:
+    if f"{key}/{isr_order}" in hdf5_file:
         return None
+        
     print(f"Generating {method.name} (gs_density_order={gs_density_order}) "
-          f"data for {case} {test_case.file_name}.")
-
-    if "cvs" in case and not method.is_core_valence_separated:
-        method = AdcMethod(f"cvs-{method.name}")    
+          f"data for {case} {test_case.file_name}.") 
 
     if isr_order is not None:
         kwargs["isr_order"] = isr_order
@@ -89,8 +82,8 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     # using the correct keys -> just dump them
 
     for kind, kind_data in state_data.items():
-        isr_group = hdf5_file.require(f"{key}/{isr_order_val}/{kind}")
-        emplace_dict(kind_data, isr_group, compression="gzip")
+        kind_group = hdf5_file.require(f"{key}/{isr_order}/{kind}")
+        emplace_dict(kind_data, kind_group, compression="gzip")
 
 def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
                      n_singlets: int = 0, n_triplets: int = 0,
