@@ -26,37 +26,36 @@ from . import adc_pp
 from .ElectronicStates import _timer_name
 from .ElectronicTransition import ElectronicTransition
 from .misc import cached_member_function
-from .OneParticleOperator import OneParticleOperator
+from .OneParticleDensity import OneParticleDensity
+from .TwoParticleDensity import TwoParticleDensity
 
 
 class State2States(ElectronicTransition):
     def __init__(self, data, method=None, property_method=None, initial=0):
         """Construct a State2States class from some data obtained
-            from an interative solver or an :class:`ExcitedStates` object.
+        from an interative solver or an :class:`ExcitedStates` object.
+        The class provides access to ADC transition properties between
+        excited states, i.e., from the `initial` state to all higher-lying
+        excited states obtained from an ADC calculation.
+        By default the ADC method is extracted from the data object
+        and the property method in property_method is set equal to
+        this method, except ADC(3) where property_method=="adc2".
+        This can be overwritten using the parameters.
 
-            The class provides access to ADC transition properties between
-            excited states, i.e., from the `initial` state to all higher-lying
-            excited states obtained from an ADC calculation.
-
-            By default the ADC method is extracted from the data object
-            and the property method in property_method is set equal to
-            this method, except ADC(3) where property_method=="adc2".
-            This can be overwritten using the parameters.
-
-            Parameters
-            ----------
-            data
-                Any kind of iterative solver state. Typically derived off
-                a :class:`solver.EigenSolverStateBase`. Can also be an
-                :class:`ExcitedStates` object.
-            method : str, optional
-                Provide an explicit method parameter if data contains none.
-            property_method : str, optional
-                Provide an explicit method for property calculations to
-                override the automatic selection.
-            initial : int, optional
-                Provide the index of the excited state from which transitions
-                to all other higher-lying states are to be computed.
+        Parameters
+        ----------
+        data
+            Any kind of iterative solver state. Typically derived off
+            a :class:`solver.EigenSolverStateBase`. Can also be an
+            :class:`ExcitedStates` object.
+        method : str, optional
+            Provide an explicit method parameter if data contains none.
+        property_method : str, optional
+            Provide an explicit method for property calculations to
+            override the automatic selection.
+        initial : int, optional
+            Provide the index of the excited state from which transitions
+            to all other higher-lying states are to be computed.
         """
         super().__init__(data, method, property_method)
         self.initial = initial
@@ -104,14 +103,14 @@ class State2States(ElectronicTransition):
         return self._excitation_vector[self.initial + 1:]
 
     @property
-    def transition_dm(self) -> list[OneParticleOperator]:
+    def transition_dm(self) -> list[OneParticleDensity]:
         """
         List of transition density matrices from initial state to final state/s
         """
         return [self._transition_dm(final) for final in range(self.size)]
 
     @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
-    def _transition_dm(self, state_n: int) -> OneParticleOperator:
+    def _transition_dm(self, state_n: int) -> OneParticleDensity:
         """
         Computes the transition density matrices from initial state to a single
         final state
@@ -128,7 +127,33 @@ class State2States(ElectronicTransition):
             self.matrix.intermediates
         )
 
-    def _state_diffdm(self, state_n: int) -> OneParticleOperator:
+    @property
+    def transition_dm_2p(self) -> list[TwoParticleDensity]:
+        """
+        List of 2-particle transition density matrices from
+        initial state to final state/s
+        """
+        return [self._transition_dm_2p(final) for final in range(self.size)]
+
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _transition_dm_2p(self, state_n: int) -> TwoParticleDensity:
+        """
+        Computes the 2-particle transition density matrices
+        from initial state to a single final state
+        """
+        # NOTE: state_n is relative to the initial state, i.e.,
+        # 0 refers to initial_state + 1.
+        # This is necessary to enable the use of the implementations on
+        # the parent class.
+        state_n = self.initial + state_n + 1
+        return self._module.state2state_transition_dm_2p(
+            self.property_method, self.ground_state,
+            super().excitation_vector[self.initial],
+            super().excitation_vector[state_n],
+            self.matrix.intermediates
+        )
+
+    def _state_diffdm(self, state_n: int) -> OneParticleDensity:
         """
         The difference density matrix are not available through the
         :class:`State2States`

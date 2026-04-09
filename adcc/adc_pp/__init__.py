@@ -25,6 +25,7 @@ from .state_diffdm_2p import state_diffdm_2p
 from .transition_dm import transition_dm
 from .transition_dm_2p import transition_dm_2p
 from .state2state_transition_dm import state2state_transition_dm
+from .state2state_transition_dm_2p import state2state_transition_dm_2p
 from .modified_transition_moments import modified_transition_moments
 
 """
@@ -33,5 +34,6 @@ Submodule, which contains rather lengthy low-level kernels
 from the high-level objects in the adcc main module.
 """
 
-__all__ = ["state_diffdm", "state_diffdm_2p", "state2state_transition_dm",
+__all__ = ["state_diffdm", "state_diffdm_2p",
+           "state2state_transition_dm", "state2state_transition_dm_2p",
            "transition_dm", "transition_dm_2p", "modified_transition_moments"]

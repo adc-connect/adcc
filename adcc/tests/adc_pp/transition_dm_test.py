@@ -32,7 +32,8 @@ test_cases = testcases.get_by_filename("h2o_sto3g", "cn_sto3g")
 methods = ["adc0", "adc1", "adc2", "adc3"]
 
 
-@pytest.mark.parametrize("case", test_cases)
+@pytest.mark.parametrize("case", test_cases,
+                         ids=[f"{c.name}-{c.basis}" for c in test_cases])
 @pytest.mark.parametrize("method", methods)
 class TestTransitionDm:
     def test_adcn(self, method: str, case: str):
