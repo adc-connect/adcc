@@ -22,37 +22,31 @@
 ## ---------------------------------------------------------------------
 
 
-def get_valid_methods(methodtype: str = "adc"):
-    valid_prefixes = ["cvs"]
-    valid_bases = [methodtype + str(x) for x in range(4)] + [methodtype + "2x"]
-
-    ret = valid_bases + [p + "-" + m for p in valid_prefixes
-                         for m in valid_bases]
-    return ret
-
-
 class Method:
     def __init__(self, method, method_type):
-        self.available_methods = get_valid_methods(method_type)
-
-        if method not in self.available_methods:
-            raise ValueError("Invalid method " + str(method) + ". Only "
-                             + ",".join(self.available_methods) + " are known.")
-
+        # validate base method
         split = method.split("-")
+        if not split[-1].startswith(method_type):
+            raise ValueError(f"{split[-1]} is not a valid method type")
+
+        level = split[-1][3:]
+        if level == "2x":
+            self.level = 2
+        elif not level.isnumeric:
+            raise ValueError(f"{level} is not a valid method level")
+        else:
+            self.level = int(level)
+
         self.__base_method = split[-1]
+
+        # validate prefix
         split = split[:-1]
+        if split and "cvs" not in split:
+            raise ValueError(f"{split[0]} is not a valid method prefix")
+
         self.is_core_valence_separated = "cvs" in split
         # NOTE: added this to make the testdata generation ready for IP/EA
         self.adc_type = "pp"
-
-        try:
-            if self.__base_method.endswith("2x"):
-                self.level = 2
-            else:
-                self.level = int(self.__base_method[-1])
-        except ValueError:
-            raise ValueError("Not a valid base method: " + self.__base_method)
 
     @property
     def name(self):
@@ -82,6 +76,9 @@ class Method:
 class AdcMethod(Method):
     def __init__(self, method):
         super().__init__(method, "adc")
+        if self.level > 3:
+            raise NotImplementedError("Only ADC(0), ADC(1), ADC(2), ADC(2)-x, "
+                                      "and ADC(3) are available.")
 
     def at_level(self, newlevel):
         """
@@ -95,8 +92,15 @@ class AdcMethod(Method):
 
 
 class IsrMethod(Method):
-    def __init__(self, method):
+    def __init__(self, method, validate_level=True):
         super().__init__(method, "isr")
+
+        # Temporary workaround for tests
+        # TODO: remove once ISR(3) is fully implemented
+        if validate_level:
+            if self.level > 2:
+                raise NotImplementedError("Only ISR(0), ISR(1), and ISR(2) "
+                                          "are available.")
 
     def at_level(self, newlevel):
         """

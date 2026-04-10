@@ -29,7 +29,7 @@ from .Tensor import Tensor
 from .Symmetry import Symmetry
 from .MoSpaces import MoSpaces
 from .AdcMatrix import AdcMatrix
-from .AdcMethod import AdcMethod
+from .AdcMethod import AdcMethod, IsrMethod
 from .functions import (copy, direct_sum, dot, einsum, empty_like,
                         evaluate, lincomb, linear_combination, nosym_like,
                         ones_like, transpose, zeros_like)
@@ -55,7 +55,7 @@ from .workflow import run_adc
 from .exceptions import InputError
 
 __all__ = ["run_adc", "InputError", "AdcMatrix",
-           "AdcMethod", "Symmetry", "ReferenceState", "MoSpaces",
+           "AdcMethod", "IsrMethod", "Symmetry", "ReferenceState", "MoSpaces",
            "einsum", "copy", "dot", "empty_like", "evaluate",
            "lincomb", "nosym_like", "ones_like", "transpose",
            "linear_combination", "zeros_like", "direct_sum",

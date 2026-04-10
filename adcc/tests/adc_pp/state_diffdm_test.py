@@ -52,7 +52,11 @@ class TestStateDiffDm:
         n_states = len(state.excitation_energy)
         excitation_energy = np.zeros((n_states))
         if state.method.name == "adc3":
-            method = IsrMethod("isr3")
+            # TODO switch to ISR(3) implemntation
+            # so we don't forget to switch to the actual implementation
+            with pytest.raises(NotImplementedError):
+                method = IsrMethod("isr3")
+            method = IsrMethod("isr3", validate_level=False)
         else:
             method = state.property_method
         level = method.level

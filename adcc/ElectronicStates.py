@@ -83,10 +83,12 @@ class ElectronicStates:
             self.method: AdcMethod = AdcMethod(self.method)
 
         if property_method is None:
-            property_method = IsrMethod(self.method.name.replace("adc", "isr"))
             if self.method.level == 3:
                 # Auto-select ADC(2) properties for ADC(3) calc
-                property_method = property_method.at_level(2)
+                property_method = IsrMethod(
+                    self.method.name.replace("adc3", "isr2"))
+            else:
+                property_method = IsrMethod(self.method.name.replace("adc", "isr"))
         elif not isinstance(property_method, IsrMethod):
             property_method = IsrMethod(property_method)
         self._property_method: IsrMethod = property_method
