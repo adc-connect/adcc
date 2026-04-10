@@ -24,7 +24,7 @@ import numpy as np
 import pytest
 
 from adcc import block as b
-from adcc.AdcMethod import AdcMethod
+from adcc.AdcMethod import IsrMethod
 from adcc.functions import evaluate, einsum
 from adcc.OneParticleDensity import OneParticleDensity
 from adcc.NParticleOperator import OperatorSymmetry
@@ -51,12 +51,15 @@ class TestStateDiffDm:
         mp = state.ground_state
         n_states = len(state.excitation_energy)
         excitation_energy = np.zeros((n_states))
-        method = state.method
+        if state.method.name == "adc3":
+            method = IsrMethod("isr3")
+        else:
+            method = state.property_method
         level = method.level
 
         method_order_minus_one = None
         if level - 1 >= 0:
-            method_order_minus_one = AdcMethod("adc" + str(level - 1))
+            method_order_minus_one = IsrMethod("isr" + str(level - 1))
 
         for es in range(n_states):
             evec = state.excitation_vector[es]

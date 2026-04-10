@@ -3,7 +3,7 @@ from scipy import constants
 import warnings
 
 from .AdcMatrix import AdcMatrix
-from .AdcMethod import AdcMethod
+from .AdcMethod import AdcMethod, IsrMethod
 from .AmplitudeVector import AmplitudeVector
 from .FormatDominantElements import FormatDominantElements
 from .FormatIndex import (
@@ -83,14 +83,13 @@ class ElectronicStates:
             self.method: AdcMethod = AdcMethod(self.method)
 
         if property_method is None:
-            if self.method.level < 3:
-                property_method = self.method
-            else:
+            property_method = IsrMethod(self.method.name.replace("adc", "isr"))
+            if self.method.level == 3:
                 # Auto-select ADC(2) properties for ADC(3) calc
-                property_method = self.method.at_level(2)
-        elif not isinstance(property_method, AdcMethod):
-            property_method = AdcMethod(property_method)
-        self._property_method: AdcMethod = property_method
+                property_method = property_method.at_level(2)
+        elif not isinstance(property_method, IsrMethod):
+            property_method = IsrMethod(property_method)
+        self._property_method: IsrMethod = property_method
 
         # Special stuff for special solvers
         if isinstance(data, EigenSolverStateBase):
@@ -138,8 +137,8 @@ class ElectronicStates:
         return self._excitation_energy.size
 
     @property
-    def property_method(self) -> AdcMethod:
-        """The method used to evaluate ADC properties"""
+    def property_method(self) -> IsrMethod:
+        """The method used to evaluate ISR properties"""
         return self._property_method
 
     @property

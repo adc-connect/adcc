@@ -93,7 +93,7 @@ def adc0(*args, **kwargs):
 @with_runadc_doc
 def cis(*args, **kwargs):
     state = run_adc(*args, **kwargs, method="adc1")
-    return ExcitedStates(state, property_method="adc0")
+    return ExcitedStates(state, property_method="isr0")
 
 
 @with_runadc_doc

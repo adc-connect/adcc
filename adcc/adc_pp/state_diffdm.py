@@ -24,7 +24,7 @@ from math import sqrt
 
 from adcc import block as b
 from adcc.LazyMp import LazyMp
-from adcc.AdcMethod import AdcMethod
+from adcc.AdcMethod import IsrMethod
 from adcc.functions import einsum
 from adcc.Intermediates import Intermediates
 from adcc.AmplitudeVector import AmplitudeVector
@@ -34,7 +34,7 @@ from adcc.NParticleOperator import OperatorSymmetry
 from .util import check_doubles_amplitudes, check_singles_amplitudes
 
 
-def diffdm_adc0(mp, amplitude, intermediates):
+def diffdm_isr0(mp, amplitude, intermediates):
     # C is either c(ore) or o(ccupied)
     C = b.c if mp.has_core_occupied_space else b.o
     check_singles_amplitudes([C, b.v], amplitude)
@@ -46,22 +46,22 @@ def diffdm_adc0(mp, amplitude, intermediates):
     return dm
 
 
-def diffdm_adc2(mp, amplitude, intermediates):
-    dm = diffdm_adc0(mp, amplitude, intermediates)  # Get ADC(1) result
+def diffdm_isr2(mp, amplitude, intermediates):
+    dm = diffdm_isr0(mp, amplitude, intermediates)  # Get ISR(1) result
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
     u1, u2 = amplitude.ph, amplitude.pphh
 
     t2 = mp.t2(b.oovv)
     p0 = mp.mp2_diffdm
-    p1_oo = dm.oo.evaluate()  # ADC(1) diffdm
-    p1_vv = dm.vv.evaluate()  # ADC(1) diffdm
+    p1_oo = dm.oo.evaluate()  # ISR(1) diffdm
+    p1_vv = dm.vv.evaluate()  # ISR(1) diffdm
 
     # Zeroth order doubles contributions
     p2_oo = -einsum("ikab,jkab->ij", u2, u2)
     p2_vv = einsum("ijac,ijbc->ab", u2, u2)
     p2_ov = -2 * einsum("jb,ijab->ia", u1, u2).evaluate()
 
-    # ADC(2) ISR intermediate (TODO Move to intermediates)
+    # ISR(2) intermediate (TODO Move to intermediates)
     ru1 = einsum("ijab,jb->ia", t2, u1).evaluate()
 
     # Compute second-order contributions to the density matrix
@@ -96,14 +96,14 @@ def diffdm_adc2(mp, amplitude, intermediates):
     return dm
 
 
-def diffdm_cvs_adc2(mp, amplitude, intermediates):
-    dm = diffdm_adc0(mp, amplitude, intermediates)  # Get ADC(1) result
+def diffdm_cvs_isr2(mp, amplitude, intermediates):
+    dm = diffdm_isr0(mp, amplitude, intermediates)  # Get ISR(1) result
     check_doubles_amplitudes([b.o, b.c, b.v, b.v], amplitude)
     u1, u2 = amplitude.ph, amplitude.pphh
 
     t2 = mp.t2(b.oovv)
     p0 = intermediates.cvs_p0
-    p1_vv = dm.vv.evaluate()  # ADC(1) diffdm
+    p1_vv = dm.vv.evaluate()  # ISR(1) diffdm
 
     # Zeroth order doubles contributions
     p2_ov = -sqrt(2) * einsum("jb,ijab->ia", u1, u2)
@@ -112,36 +112,36 @@ def diffdm_cvs_adc2(mp, amplitude, intermediates):
     p2_vv = 2 * einsum("ijac,ijbc->ab", u2, u2)
 
     # Second order contributions
-    # cvs_adc2_dp_oo
+    # cvs_isr2_dp_oo
     dm.oo = p2_oo + einsum("ab,ikac,jkbc->ij", p1_vv, t2, t2)
 
-    dm.ov = p2_ov + (  # cvs_adc2_dp_ov
+    dm.ov = p2_ov + (  # cvs_isr2_dp_ov
         - einsum("ka,ab->kb", p0.ov, p1_vv)
         - einsum("lkdb,dl->kb", t2, p2_vo)
         + 1 / sqrt(2) * einsum("ib,klad,liad->kb", u1, t2, u2)
     )
 
-    dm.vv = p1_vv + p2_vv - 0.5 * (  # cvs_adc2_dp_vv
+    dm.vv = p1_vv + p2_vv - 0.5 * (  # cvs_isr2_dp_vv
         + einsum("cb,ac->ab", p1_vv, p0.vv)
         + einsum("cb,ac->ab", p0.vv, p1_vv)
         + einsum("ijbc,ijad,cd->ab", t2, t2, p1_vv)
     )
 
-    # Add 2nd order correction to CVS-ADC(1) diffdm
+    # Add 2nd order correction to CVS-ISR(1) diffdm
     dm.cc -= einsum("kIab,kJab->IJ", u2, u2)
     return dm
 
 
 # dict controlling the dispatch of the state_diffdm function
 DISPATCH = {
-    "adc0": diffdm_adc0,
-    "adc1": diffdm_adc0,       # same as ADC(0)
-    "adc2": diffdm_adc2,
-    "adc2x": diffdm_adc2,
-    "cvs-adc0": diffdm_adc0,
-    "cvs-adc1": diffdm_adc0,   # same as ADC(0)
-    "cvs-adc2": diffdm_cvs_adc2,
-    "cvs-adc2x": diffdm_cvs_adc2,
+    "isr0": diffdm_isr0,
+    "isr1": diffdm_isr0,       # same as ISR(0)
+    "isr2": diffdm_isr2,
+    "isr2x": diffdm_isr2,
+    "cvs-isr0": diffdm_isr0,
+    "cvs-isr1": diffdm_isr0,   # same as ISR(0)
+    "cvs-isr2": diffdm_cvs_isr2,
+    "cvs-isr2x": diffdm_cvs_isr2,
 }
 
 
@@ -152,8 +152,8 @@ def state_diffdm(method, ground_state, amplitude, intermediates=None):
 
     Parameters
     ----------
-    method : str, AdcMethod
-        The method to use for the computation (e.g. "adc2")
+    method : str, IsrMethod
+        The method to use for the computation (e.g. "isr2")
     ground_state : LazyMp
         The ground state upon which the excitation was based
     amplitude : AmplitudeVector
@@ -161,8 +161,8 @@ def state_diffdm(method, ground_state, amplitude, intermediates=None):
     intermediates : adcc.Intermediates
         Intermediates from the ADC calculation to reuse
     """
-    if not isinstance(method, AdcMethod):
-        method = AdcMethod(method)
+    if not isinstance(method, IsrMethod):
+        method = IsrMethod(method)
     if not isinstance(ground_state, LazyMp):
         raise TypeError("ground_state should be a LazyMp object.")
     if not isinstance(amplitude, AmplitudeVector):
