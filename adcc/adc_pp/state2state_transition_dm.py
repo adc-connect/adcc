@@ -50,8 +50,13 @@ def s2s_tdm_isr1(mp, amplitude_l, amplitude_r, intermediates):
         check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude_l, amplitude_r)
         ul1, ul2 = amplitude_l.ph, amplitude_l.pphh
         ur1, ur2 = amplitude_r.ph, amplitude_r.pphh
+<<<<<<< HEAD
         dm.ov += -2.0 * einsum("jb,ijab->ia", ul1, ur2)
         dm.vo += -2.0 * einsum("ijab,jb->ai", ul2, ur1)
+=======
+        dm.ov = -2.0 * einsum("jb,ijab->ia", ul1, ur2)
+        dm.vo = -2.0 * einsum("ijab,jb->ai", ul2, ur1)
+>>>>>>> 8cb3888 (include ISR(1)-d treatment in densities)
     except ValueError:
         pass
 
