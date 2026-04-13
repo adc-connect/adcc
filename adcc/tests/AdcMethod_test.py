@@ -35,7 +35,7 @@ isr_methods = [("isr1", None), ("isr2x", None), ("cvs-isr2", None),
                ("adc2", ValueError)]
 
 
-class TestMethod:
+class TestAdcMethod:
     @pytest.mark.parametrize("method, expected_exception", adc_methods)
     def test_validate_adcmethod(self, method, expected_exception):
         if expected_exception:
@@ -45,6 +45,17 @@ class TestMethod:
             adc_method = adcc.AdcMethod(method)
             assert adc_method.name == method
 
+    def test_adcmethod(self):
+        method = adcc.AdcMethod("adc2")
+        cvs_method = adcc.AdcMethod("cvs-adc2")
+
+        assert method.name == cvs_method.base_method.name
+
+        method_new_level = method.at_level(1)
+        assert method_new_level._method_base_name == method._method_base_name
+        assert method_new_level.level == 1
+
+class TestIsrMethod:
     @pytest.mark.parametrize("method, expected_exception", isr_methods)
     def test_validate_isrmethod(self, method, expected_exception):
         if expected_exception:
@@ -53,3 +64,13 @@ class TestMethod:
         else:
             isr_method = adcc.IsrMethod(method)
             assert isr_method.name == method
+
+    def test_isrmethod(self):
+        method = adcc.IsrMethod("isr2")
+        cvs_method = adcc.IsrMethod("cvs-isr2")
+
+        assert method.name == cvs_method.base_method.name
+
+        method_new_level = method.at_level(1)
+        assert method_new_level._method_base_name == method._method_base_name
+        assert method_new_level.level == 1

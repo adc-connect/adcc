@@ -23,12 +23,16 @@
 
 
 class Method:
-    def __init__(self, method, method_type):
-        # validate base method
+    def __init__(self, method: str, method_base_name: str):
+        assert len(method_base_name) == 3
+        self._method_base_name = method_base_name
+
+        # validate base method type
         split = method.split("-")
-        if not split[-1].startswith(method_type):
+        if not split[-1].startswith(self._method_base_name):
             raise ValueError(f"{split[-1]} is not a valid method type")
 
+        # validate method level
         level = split[-1][3:]
         if level == "2x":
             self.level = 2
@@ -37,11 +41,12 @@ class Method:
         else:
             self.level = int(level)
 
-        self.__base_method = split[-1]
+        self._base_method = self._method_base_name + level
+        assert self._base_method == split[-1]
 
         # validate prefix
         split = split[:-1]
-        if split and "cvs" not in split:
+        if split and split[0] not in ["cvs"]:
             raise ValueError(f"{split[0]} is not a valid method prefix")
 
         self.is_core_valence_separated = "cvs" in split
@@ -51,9 +56,9 @@ class Method:
     @property
     def name(self):
         if self.is_core_valence_separated:
-            return "cvs-" + self.__base_method
+            return "cvs-" + self._base_method
         else:
-            return self.__base_method
+            return self._base_method
 
     @property
     def base_method(self):
@@ -61,7 +66,17 @@ class Method:
         The base (full) method, i.e. with all approximations such as
         CVS stripped off.
         """
-        return AdcMethod(self.__base_method)
+        return self.__class__(self._base_method)
+
+    def at_level(self, newlevel: int):
+        """
+        Return an equivalent method, where only the level is changed
+        (e.g. calling this on a CVS method returns a CVS method)
+        """
+        if self.is_core_valence_separated:
+            return self.__class__("cvs-" + self._method_base_name + str(newlevel))
+        else:
+            return self.__class__(self._method_base_name + str(newlevel))
 
     def __eq__(self, other):
         return self.name == other.name
@@ -74,40 +89,16 @@ class Method:
 
 
 class AdcMethod(Method):
-    def __init__(self, method):
+    def __init__(self, method: str):
         super().__init__(method, "adc")
         if self.level > 3:
-            raise NotImplementedError("Only ADC(0), ADC(1), ADC(2), ADC(2)-x, "
-                                      "and ADC(3) are available.")
-
-    def at_level(self, newlevel):
-        """
-        Return an equivalent method, where only the level is changed
-        (e.g. calling this on a CVS method returns a CVS method)
-        """
-        if self.is_core_valence_separated:
-            return AdcMethod("cvs-adc" + str(newlevel))
-        else:
-            return AdcMethod("adc" + str(newlevel))
+            raise NotImplementedError(f"{method} not available, only ADC(0), "
+                                      "ADC(1), ADC(2), ADC(2)-x, and ADC(3).")
 
 
 class IsrMethod(Method):
-    def __init__(self, method, validate_level=True):
+    def __init__(self, method: str):
         super().__init__(method, "isr")
-
-        # Temporary workaround for tests
-        # TODO: remove once ISR(3) is fully implemented
-        if validate_level:
-            if self.level > 2:
-                raise NotImplementedError("Only ISR(0), ISR(1), and ISR(2) "
-                                          "are available.")
-
-    def at_level(self, newlevel):
-        """
-        Return an equivalent method, where only the level is changed
-        (e.g. calling this on a CVS method returns a CVS method)
-        """
-        if self.is_core_valence_separated:
-            return IsrMethod("cvs-isr" + str(newlevel))
-        else:
-            return IsrMethod("isr" + str(newlevel))
+        if self.level > 2:
+            raise NotImplementedError(f"{method} not available, "
+                                      "only ISR(0), ISR(1), and ISR(2).")
