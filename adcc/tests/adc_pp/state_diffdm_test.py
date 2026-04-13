@@ -84,14 +84,6 @@ class TestStateDiffDm:
             if method_order_minus_one is not None:
                 # two particle part
                 dens_2p = state_diffdm_2p(method_order_minus_one, mp, evec)
-                # go for ISR(1)-d for ADC(2)
-                if method_order_minus_one.level == 1:
-                    dens_2p.ooov += (
-                        - 2.0 * einsum("kb,ijab->ijka", evec.ph, evec.pphh)
-                    )
-                    dens_2p.ovvv += (
-                        - 2.0 * einsum("ja,ijbc->iabc", evec.ph, evec.pphh)
-                    )
                 for block in dens_2p.blocks:
                     # compute
                     # 1/4 [(1 - P_pq) (1 - P_rs) 1 / (n_occ - 1) <pi||ri> delta_qs]

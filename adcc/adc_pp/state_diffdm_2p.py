@@ -91,6 +91,24 @@ def diffdm_isr1_2p(mp, amplitude, intermediates):
             einsum("jk,ikab->ijab", p1_oo, t2)
         ).antisymmetrise(0, 1)
     )
+
+    try:
+        # ISR(1)-d
+        check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
+        u2 = amplitude.pphh
+
+        dm.ooov += (
+            # N^5: O^3V^2 / N^4: O^2V^2
+            - 2.0 * einsum("kb,ijab->ijka", u1, u2)
+        )
+
+        dm.ovvv += (
+            # N^5: O^2V^3 / N^4: O^1V^3
+            - 2.0 * einsum("ja,ijbc->iabc", u1, u2)
+        )
+    except ValueError:
+        # no doubles contribution
+        pass
     return dm
 
 
@@ -160,8 +178,6 @@ def diffdm_isr2_2p(mp, amplitude, intermediates):
         ).antisymmetrise(0, 1).antisymmetrise(2, 3).symmetrise([(0, 2), (1, 3)])
     )
     dm.ooov += (
-        # N^5: O^3V^2 / N^4: O^2V^2
-        - 2.0 * einsum("kb,ijab->ijka", u1, u2)
         # N^6: O^4V^2 / N^4: O^2V^2
         + 1.0 * einsum("ijkl,la->ijka", einsum("klbc,ijbc->ijkl", u2, t2), u1)
         # N^5: O^3V^2 / N^4: O^2V^2
@@ -293,8 +309,6 @@ def diffdm_isr2_2p(mp, amplitude, intermediates):
         ).symmetrise([(0, 2), (1, 3)])
     )
     dm.ovvv += (
-        # N^5: O^2V^3 / N^4: O^1V^3
-        - 2.0 * einsum("ja,ijbc->iabc", u1, u2)
         # N^6: O^3V^3 / N^4: O^1V^3
         + 1.0 * einsum("ijka,jkbc->iabc", einsum("id,jkad->ijka", u1, u2), t2)
         # N^5: O^2V^3 / N^4: O^1V^3

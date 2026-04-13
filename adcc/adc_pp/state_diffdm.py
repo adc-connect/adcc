@@ -46,8 +46,22 @@ def diffdm_isr0(mp, amplitude, intermediates):
     return dm
 
 
+def diffdm_isr1(mp, amplitude, intermediates):
+    dm = diffdm_isr0(mp, amplitude, intermediates)  # Get ISR(0) result
+
+    try:
+        # ISR(1)-d
+        check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
+        u1, u2 = amplitude.ph, amplitude.pphh
+        dm.ov += -2 * einsum("jb,ijab->ia", u1, u2)
+    except ValueError:
+        # no doubles contribution
+        pass
+    return dm
+
+
 def diffdm_isr2(mp, amplitude, intermediates):
-    dm = diffdm_isr0(mp, amplitude, intermediates)  # Get ISR(1) result
+    dm = diffdm_isr1(mp, amplitude, intermediates)  # Get ISR(1) result
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
     u1, u2 = amplitude.ph, amplitude.pphh
 
@@ -85,8 +99,7 @@ def diffdm_isr2(mp, amplitude, intermediates):
         ).symmetrise()
     )
 
-    dm.ov = (  # adc2_p_ov
-        + p2_ov
+    dm.ov += (  # adc2_p_ov
         - einsum("ijab,jb->ia", t2, p2_ov)
         - einsum("ib,ba->ia", p0.ov, p1_vv)
         + einsum("ij,ja->ia", p1_oo, p0.ov)
@@ -135,7 +148,7 @@ def diffdm_cvs_isr2(mp, amplitude, intermediates):
 # dict controlling the dispatch of the state_diffdm function
 DISPATCH = {
     "isr0": diffdm_isr0,
-    "isr1": diffdm_isr0,       # same as ISR(0)
+    "isr1": diffdm_isr1,
     "isr2": diffdm_isr2,
     "isr2x": diffdm_isr2,
     "cvs-isr0": diffdm_isr0,

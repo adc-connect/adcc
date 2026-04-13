@@ -43,9 +43,24 @@ def s2s_tdm_isr0(mp, amplitude_l, amplitude_r, intermediates):
     return dm
 
 
+def s2s_tdm_isr1(mp, amplitude_l, amplitude_r, intermediates):
+    dm = s2s_tdm_isr0(mp, amplitude_l, amplitude_r, intermediates)
+
+    try:
+        check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude_l, amplitude_r)
+        ul1, ul2 = amplitude_l.ph, amplitude_l.pphh
+        ur1, ur2 = amplitude_r.ph, amplitude_r.pphh
+        dm.ov = -2.0 * einsum("jb,ijab->ia", ul1, ur2)
+        dm.vo = -2.0 * einsum("ijab,jb->ai", ul2, ur1)
+    except ValueError:
+        pass
+
+    return dm
+
+
 def s2s_tdm_isr2(mp, amplitude_l, amplitude_r, intermediates):
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude_l, amplitude_r)
-    dm = s2s_tdm_isr0(mp, amplitude_l, amplitude_r, intermediates)
+    dm = s2s_tdm_isr1(mp, amplitude_l, amplitude_r, intermediates)
 
     ul1, ul2 = amplitude_l.ph, amplitude_l.pphh
     ur1, ur2 = amplitude_r.ph, amplitude_r.pphh
@@ -104,9 +119,9 @@ def s2s_tdm_isr2(mp, amplitude_l, amplitude_r, intermediates):
 
 # Ref: https://doi.org/10.1080/00268976.2013.859313
 DISPATCH = {"isr0": s2s_tdm_isr0,
-            "isr1": s2s_tdm_isr0,       # same as ADC(0)
+            "isr1": s2s_tdm_isr1,
             "isr2": s2s_tdm_isr2,
-            "isr2x": s2s_tdm_isr2,      # same as ADC(2)
+            "isr2x": s2s_tdm_isr2,      # same as ISR(2)
             }
 
 

@@ -40,30 +40,29 @@ def tdm_isr0(mp, amplitude, intermediates):
     check_singles_amplitudes([C, b.v], amplitude)
     u1 = amplitude.ph
 
-    # Transition density matrix for (CVS-)ADC(0)
+    # Transition density matrix for (CVS-)ISR(0)
     dm = OneParticleDensity(mp, symmetry=OperatorSymmetry.NOSYMMETRY)
     dm[b.v + C] = u1.transpose()
     return dm
 
 
 def tdm_isr1(mp, amplitude, intermediates):
-    dm = tdm_isr0(mp, amplitude, intermediates)  # Get ADC(0) result
+    dm = tdm_isr0(mp, amplitude, intermediates)  # Get ISR(0) result
     # isr1_dp0_ov
     dm.ov = -einsum("ijab,jb->ia", mp.t2(b.oovv), amplitude.ph)
     return dm
 
 
 def tdm_cvs_isr2(mp, amplitude, intermediates):
-    # Get CVS-ADC(1) result (same as CVS-ADC(0))
+    # Get CVS-ISR(1) result (same as CVS-ISR(0))
     dm = tdm_isr0(mp, amplitude, intermediates)
     check_doubles_amplitudes([b.o, b.c, b.v, b.v], amplitude)
-    u1 = amplitude.ph
-    u2 = amplitude.pphh
+    u1, u2 = amplitude.ph, amplitude.pphh
 
     t2 = mp.t2(b.oovv)
     p0 = intermediates.cvs_p0
 
-    # Compute CVS-ADC(2) tdm
+    # Compute CVS-ISR(2) tdm
     dm.oc = (  # cvs_isr2_dp0_oc
         - einsum("ja,Ia->jI", p0.ov, u1)
         + (1 / sqrt(2)) * einsum("kIab,jkab->jI", u2, t2)
@@ -75,16 +74,15 @@ def tdm_cvs_isr2(mp, amplitude, intermediates):
 
 
 def tdm_isr2(mp, amplitude, intermediates):
-    dm = tdm_isr1(mp, amplitude, intermediates)  # Get ADC(1) result
+    dm = tdm_isr1(mp, amplitude, intermediates)  # Get ISR(1) result
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
-    u1 = amplitude.ph
-    u2 = amplitude.pphh
+    u1, u2 = amplitude.ph, amplitude.pphh
 
     t2 = mp.t2(b.oovv)
     td2 = mp.td2(b.oovv)
     p0 = mp.mp2_diffdm
 
-    # Compute ADC(2) tdm
+    # Compute ISR(2) tdm
     dm.oo = (  # isr2_dp0_oo
         - einsum("ia,ja->ij", p0.ov, u1)
         - einsum("ikab,jkab->ji", u2, t2)
@@ -108,7 +106,7 @@ DISPATCH = {
     "isr2": tdm_isr2,
     "isr2x": tdm_isr2,
     "cvs-isr0": tdm_isr0,
-    "cvs-isr1": tdm_isr0,  # No extra contribs for CVS-ADC(1)
+    "cvs-isr1": tdm_isr0,  # No extra contribs for CVS-ISR(1)
     "cvs-isr2": tdm_cvs_isr2,
     "cvs-isr2x": tdm_cvs_isr2,
 }
