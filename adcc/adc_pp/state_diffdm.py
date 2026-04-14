@@ -114,8 +114,8 @@ def diffdm_cvs_isr1(mp, amplitude, intermediates):
 
     try:
         # ISR(1)-d
-        u1, u2 = amplitude.ph, amplitude.pphh
         check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
+        u1, u2 = amplitude.ph, amplitude.pphh
         p2_ov = -sqrt(2) * einsum("jb,ijab->ia", u1, u2)
         dm.ov = p2_ov
     except ValueError:
