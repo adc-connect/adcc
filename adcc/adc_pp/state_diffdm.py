@@ -109,6 +109,21 @@ def diffdm_isr2(mp, amplitude, intermediates):
     return dm
 
 
+def diffdm_cvs_isr1(mp, amplitude, intermediates):
+    dm = diffdm_isr0(mp, amplitude, intermediates)  # Get ISR(0) result
+
+    try:
+        # ISR(1)-d
+        u1, u2 = amplitude.ph, amplitude.pphh
+        check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
+        p2_ov = -sqrt(2) * einsum("jb,ijab->ia", u1, u2)
+        dm.ov = p2_ov
+    except ValueError:
+        # no doubles contribution
+        pass
+    return dm
+
+
 def diffdm_cvs_isr2(mp, amplitude, intermediates):
     dm = diffdm_isr0(mp, amplitude, intermediates)  # Get ISR(1) result
     check_doubles_amplitudes([b.o, b.c, b.v, b.v], amplitude)
@@ -152,7 +167,7 @@ DISPATCH = {
     "isr2": diffdm_isr2,
     "isr2x": diffdm_isr2,
     "cvs-isr0": diffdm_isr0,
-    "cvs-isr1": diffdm_isr0,   # same as ISR(0)
+    "cvs-isr1": diffdm_cvs_isr1,
     "cvs-isr2": diffdm_cvs_isr2,
     "cvs-isr2x": diffdm_cvs_isr2,
 }

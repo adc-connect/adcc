@@ -55,6 +55,7 @@ class TestAdcMethod:
         assert method_new_level._method_base_name == method._method_base_name
         assert method_new_level.level == 1
 
+
 class TestIsrMethod:
     @pytest.mark.parametrize("method, expected_exception", isr_methods)
     def test_validate_isrmethod(self, method, expected_exception):

@@ -22,13 +22,14 @@
 ## ---------------------------------------------------------------------
 import itertools
 import numpy as np
+from typing import Union
 
 import libadcc
 
 from .LazyMp import LazyMp
 from .adc_pp import matrix as ppmatrix
 from .timings import Timer, timed_member_call
-from .AdcMethod import AdcMethod
+from .AdcMethod import AdcMethod, IsrMethod
 from .functions import ones_like
 from .Intermediates import Intermediates
 from .AmplitudeVector import AmplitudeVector
@@ -72,18 +73,22 @@ class AdcMatrixlike:
     """
 
     _special_block_orders = {
-        "adc2x": {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 1},
+        "2x": {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 1},
     }
 
     @classmethod
-    def _default_block_orders(cls, method: AdcMethod) -> dict[str, int]:
+    def _default_block_orders(cls,
+                              method: Union[AdcMethod, IsrMethod]
+                              ) -> dict[str, int]:
         """
         Determines the default block orders for the given adc method.
         """
         # check if we have a special method like adc2x
         # I guess base_method should also contain the adc_type prefix so
         # we don't need to separate different adc_types
-        block_orders = cls._special_block_orders.get(method.base_method.name, None)
+        block_orders = cls._special_block_orders.get(
+            method.base_method.name[3:], None
+        )
         if block_orders is not None:
             return block_orders.copy()
         # otherwise assume that we have a "normal" PP/IP/...-ADC(n) method

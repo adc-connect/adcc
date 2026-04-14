@@ -23,7 +23,7 @@
 import libadcc
 
 from .AdcMatrix import AdcMatrixlike
-from .AdcMethod import AdcMethod
+from .AdcMethod import IsrMethod
 from .adc_pp import bmatrix as ppbmatrix
 from .AmplitudeVector import AmplitudeVector
 from .LazyMp import LazyMp
@@ -37,11 +37,11 @@ class IsrMatrix(AdcMatrixlike):
     def __init__(self, method, hf_or_mp, operator, block_orders=None):
         """
         Initialise an ISR matrix of a given one-particle operator
-        for the provided ADC method.
+        for the provided ISR method.
 
         Parameters
         ----------
-        method : str or adcc.AdcMethod
+        method : str or adcc.IsrMethod
             Method to use.
         hf_or_mp : adcc.ReferenceState or adcc.LazyMp
             HF reference or MP ground state.
@@ -60,8 +60,8 @@ class IsrMatrix(AdcMatrixlike):
                             "either a LazyMp, a ReferenceState or a "
                             "HartreeFockSolution_i.")
 
-        if not isinstance(method, AdcMethod):
-            method = AdcMethod(method)
+        if not isinstance(method, IsrMethod):
+            method = IsrMethod(method)
 
         if isinstance(operator, (list, tuple)):
             self.operator = tuple(operator)
