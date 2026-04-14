@@ -30,7 +30,7 @@ from .misc import cached_member_function
 from .OneParticleDensity import OneParticleDensity
 from .TwoParticleDensity import TwoParticleDensity
 from .NParticleOperator import product_trace
-from .AdcMethod import AdcMethod
+from .AdcMethod import IsrMethod
 
 
 class ElectronicTransition(ElectronicStates):
@@ -179,7 +179,7 @@ class ElectronicTransition(ElectronicStates):
         p_method_minus_1 = None
 
         if level - 1 >= 0:
-            p_method_minus_1 = AdcMethod("adc" + str(level - 1))
+            p_method_minus_1 = IsrMethod("isr" + str(level - 1))
 
         mag_dips_ints_1p = self.operators.magnetic_dipole_giao_1p(hf, gauge_origin)
         tdm_1p = self._transition_dm(state_n)
