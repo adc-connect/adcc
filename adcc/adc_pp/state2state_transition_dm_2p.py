@@ -22,7 +22,7 @@
 ## ---------------------------------------------------------------------
 from adcc import block as b
 from adcc.LazyMp import LazyMp
-from adcc.AdcMethod import AdcMethod
+from adcc.AdcMethod import IsrMethod
 from adcc.functions import einsum, zeros_like
 from adcc.Intermediates import Intermediates
 from adcc.AmplitudeVector import AmplitudeVector
@@ -32,7 +32,7 @@ from adcc.NParticleOperator import OperatorSymmetry
 from .util import check_doubles_amplitudes, check_singles_amplitudes
 
 
-def s2s_tdm_adc0_2p(mp, amplitude_l, amplitude_r, intermediates):
+def s2s_tdm_isr0_2p(mp, amplitude_l, amplitude_r, intermediates):
     check_singles_amplitudes([b.o, b.v], amplitude_l, amplitude_r)
     ul1 = amplitude_l.ph
     ur1 = amplitude_r.ph
@@ -56,9 +56,9 @@ def s2s_tdm_adc0_2p(mp, amplitude_l, amplitude_r, intermediates):
     return dm
 
 
-def s2s_tdm_adc1_2p(mp, amplitude_l, amplitude_r, intermediates):
+def s2s_tdm_isr1_2p(mp, amplitude_l, amplitude_r, intermediates):
     check_singles_amplitudes([b.o, b.v], amplitude_l, amplitude_r)
-    dm = s2s_tdm_adc0_2p(mp, amplitude_l, amplitude_r, intermediates)
+    dm = s2s_tdm_isr0_2p(mp, amplitude_l, amplitude_r, intermediates)
 
     ul1 = amplitude_l.ph
     ur1 = amplitude_r.ph
@@ -98,12 +98,36 @@ def s2s_tdm_adc1_2p(mp, amplitude_l, amplitude_r, intermediates):
             + 1 * einsum("ijka,kb->abij", einsum("kc,ijac->ijka", ur1, t2), ul1)
         ).antisymmetrise(0, 1)
     )
+
+    try:
+        check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude_l, amplitude_r)
+        ul2, ur2 = amplitude_l.pphh, amplitude_r.pphh
+        dm.ooov += (
+            # N^5: O^3V^2 / N^4: O^2V^2
+            - 2 * einsum("kb,ijab->ijka", ul1, ur2)
+        )
+        dm.ovoo += (
+            # N^5: O^3V^2 / N^4: O^2V^2
+            - 2 * einsum("jkab,ib->iajk", ul2, ur1)
+        )
+        dm.ovvv += (
+            # N^5: O^2V^3 / N^4: O^1V^3
+            - 2 * einsum("ja,ijbc->iabc", ul1, ur2)
+        )
+        dm.vvov += (
+            # N^5: O^2V^3 / N^4: O^1V^3
+            - 2 * einsum("ijab,jc->abic", ul2, ur1)
+        )
+
+    except ValueError:
+        pass
+
     return dm
 
 
-def s2s_tdm_adc2_2p(mp, amplitude_l, amplitude_r, intermediates):
+def s2s_tdm_isr2_2p(mp, amplitude_l, amplitude_r, intermediates):
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude_l, amplitude_r)
-    dm = s2s_tdm_adc1_2p(mp, amplitude_l, amplitude_r, intermediates)
+    dm = s2s_tdm_isr1_2p(mp, amplitude_l, amplitude_r, intermediates)
 
     ul1, ul2 = amplitude_l.ph, amplitude_l.pphh
     ur1, ur2 = amplitude_r.ph, amplitude_r.pphh
@@ -189,8 +213,6 @@ def s2s_tdm_adc2_2p(mp, amplitude_l, amplitude_r, intermediates):
     )
 
     dm.ooov += (
-        # N^5: O^3V^2 / N^4: O^2V^2
-        - 2 * einsum("kb,ijab->ijka", ul1, ur2)
         # N^6: O^4V^2 / N^4: O^2V^2
         + 1 * einsum("ijkl,la->ijka", einsum("klbc,ijbc->ijkl", ul2, t2), ur1)
         # N^5: O^3V^2 / N^4: O^2V^2
@@ -245,8 +267,6 @@ def s2s_tdm_adc2_2p(mp, amplitude_l, amplitude_r, intermediates):
     )
 
     dm.ovoo += (
-        # N^5: O^3V^2 / N^4: O^2V^2
-        - 2 * einsum("jkab,ib->iajk", ul2, ur1)
         # N^6: O^4V^2 / N^4: O^2V^2
         + 1 * einsum("ijkl,la->iajk", einsum("ilbc,jkbc->ijkl", ur2, t2), ul1)
         # N^5: O^3V^2 / N^4: O^2V^2
@@ -406,8 +426,6 @@ def s2s_tdm_adc2_2p(mp, amplitude_l, amplitude_r, intermediates):
     )
 
     dm.ovvv += (
-        # N^5: O^2V^3 / N^4: O^1V^3
-        - 2 * einsum("ja,ijbc->iabc", ul1, ur2)
         # N^6: O^3V^3 / N^4: O^1V^3
         + 1 * einsum("ijka,jkbc->iabc", einsum("jkad,id->ijka", ul2, ur1), t2)
         # N^5: O^2V^3 / N^4: O^1V^3
@@ -440,8 +458,6 @@ def s2s_tdm_adc2_2p(mp, amplitude_l, amplitude_r, intermediates):
     )
 
     dm.vvov += (
-        # N^5: O^2V^3 / N^4: O^1V^3
-        - 2 * einsum("ijab,jc->abic", ul2, ur1)
         # N^6: O^3V^3 / N^4: O^1V^3
         + 1 * einsum("ijkc,jkab->abic", einsum("id,jkcd->ijkc", ul1, ur2), t2)
         # N^5: O^2V^3 / N^4: O^1V^3
@@ -496,10 +512,10 @@ def s2s_tdm_adc2_2p(mp, amplitude_l, amplitude_r, intermediates):
     return dm
 
 
-DISPATCH = {"adc0": s2s_tdm_adc0_2p,
-            "adc1": s2s_tdm_adc1_2p,
-            "adc2": s2s_tdm_adc2_2p,
-            "adc2x": s2s_tdm_adc2_2p,      # same as ADC(2)
+DISPATCH = {"isr0": s2s_tdm_isr0_2p,
+            "isr1": s2s_tdm_isr1_2p,
+            "isr2": s2s_tdm_isr2_2p,
+            "isr2x": s2s_tdm_isr2_2p,      # same as ISR(2)
             }
 
 
@@ -511,8 +527,8 @@ def state2state_transition_dm_2p(method, ground_state, amplitude_from,
 
     Parameters
     ----------
-    method : str, AdcMethod
-        The method to use for the computation (e.g. "adc2")
+    method : str, IsrMethod
+        The method to use for the computation (e.g. "isr2")
     ground_state : LazyMp
         The ground state upon which the excitation was based
     amplitude_from : AmplitudeVector
@@ -522,8 +538,8 @@ def state2state_transition_dm_2p(method, ground_state, amplitude_from,
     intermediates : adcc.Intermediates
         Intermediates from the ADC calculation to reuse
     """
-    if not isinstance(method, AdcMethod):
-        method = AdcMethod(method)
+    if not isinstance(method, IsrMethod):
+        method = IsrMethod(method)
     if not isinstance(ground_state, LazyMp):
         raise TypeError("ground_state should be a LazyMp object.")
     if not isinstance(amplitude_from, AmplitudeVector):

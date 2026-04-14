@@ -22,7 +22,7 @@
 ## ---------------------------------------------------------------------
 from adcc import block as b
 from adcc.LazyMp import LazyMp
-from adcc.AdcMethod import AdcMethod
+from adcc.AdcMethod import IsrMethod
 from adcc.functions import einsum, zeros_like
 from adcc.Intermediates import Intermediates
 from adcc.AmplitudeVector import AmplitudeVector
@@ -32,7 +32,7 @@ from adcc.NParticleOperator import OperatorSymmetry
 from .util import check_doubles_amplitudes, check_singles_amplitudes
 
 
-def tdm_adc0_2p(mp, amplitude, intermediates):
+def tdm_isr0_2p(mp, amplitude, intermediates):
     check_singles_amplitudes([b.o, b.v], amplitude)
     u1 = amplitude.ph
 
@@ -47,8 +47,8 @@ def tdm_adc0_2p(mp, amplitude, intermediates):
     return dm
 
 
-def tdm_adc1_2p(mp, amplitude, intermediates):
-    dm = tdm_adc0_2p(mp, amplitude, intermediates)  # Get ADC(0) result
+def tdm_isr1_2p(mp, amplitude, intermediates):
+    dm = tdm_isr0_2p(mp, amplitude, intermediates)  # Get ADC(0) result
     u1 = amplitude.ph
 
     hf = mp.reference_state
@@ -69,11 +69,21 @@ def tdm_adc1_2p(mp, amplitude, intermediates):
         # N^5: O^2V^3 / N^4: O^1V^3
         - 1.0 * einsum("ja,ijbc->iabc", u1, t2)
     )
+
+    try:
+        check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude, amplitude)
+        u2 = amplitude.pphh
+        dm.vvoo += (
+            # N^4: O^2V^2 / N^4: O^2V^2
+            - 2.0 * einsum("ijab->abij", u2)
+        )
+    except ValueError:
+        pass
     return dm
 
 
-def tdm_adc2_2p(mp, amplitude, intermediates):
-    dm = tdm_adc1_2p(mp, amplitude, intermediates)  # Get ADC(1) result
+def tdm_isr2_2p(mp, amplitude, intermediates):
+    dm = tdm_isr1_2p(mp, amplitude, intermediates)  # Get ADC(1) result
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
     u1 = amplitude.ph
     u2 = amplitude.pphh
@@ -144,8 +154,6 @@ def tdm_adc2_2p(mp, amplitude, intermediates):
         - 1.0 * einsum("ja,ijbc->iabc", u1, td2)
     )
     dm.vvoo += (
-        # N^4: O^2V^2 / N^4: O^2V^2
-        - 2.0 * einsum("ijab->abij", u2)
         + 4.0 * (
             # N^4: O^2V^2 / N^4: O^2V^2
             + 1.0 * einsum("ia,jb->abij", u1, p0.ov)
@@ -171,10 +179,10 @@ def tdm_adc2_2p(mp, amplitude, intermediates):
 
 
 DISPATCH = {
-    "adc0": tdm_adc0_2p,
-    "adc1": tdm_adc1_2p,
-    "adc2": tdm_adc2_2p,
-    "adc2x": tdm_adc2_2p,
+    "isr0": tdm_isr0_2p,
+    "isr1": tdm_isr1_2p,
+    "isr2": tdm_isr2_2p,
+    "isr2x": tdm_isr2_2p,
 }
 
 
@@ -186,7 +194,7 @@ def transition_dm_2p(method, ground_state, amplitude, intermediates=None):
     Parameters
     ----------
     method : str, AdcMethod
-        The method to use for the computation (e.g. "adc2")
+        The method to use for the computation (e.g. "isr2")
     ground_state : LazyMp
         The ground state upon which the excitation was based
     amplitude : AmplitudeVector
@@ -194,8 +202,8 @@ def transition_dm_2p(method, ground_state, amplitude, intermediates=None):
     intermediates : adcc.Intermediates
         Intermediates from the ADC calculation to reuse
     """
-    if not isinstance(method, AdcMethod):
-        method = AdcMethod(method)
+    if not isinstance(method, IsrMethod):
+        method = IsrMethod(method)
     if not isinstance(ground_state, LazyMp):
         raise TypeError("ground_state should be a LazyMp object.")
     if not isinstance(amplitude, AmplitudeVector):
