@@ -28,7 +28,7 @@ import libadcc
 from .LazyMp import LazyMp
 from .adc_pp import matrix as ppmatrix
 from .timings import Timer, timed_member_call
-from .AdcMethod import AdcMethod, Method
+from .AdcMethod import AdcMethod, IsrMethod, Method
 from .functions import ones_like
 from .Intermediates import Intermediates
 from .AmplitudeVector import AmplitudeVector
@@ -73,6 +73,7 @@ class AdcMatrixlike:
 
     _special_block_orders = {
         "adc2x": {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 1},
+        "isr1s": {"ph_ph": 1, "ph_pphh": None, "pphh_ph": None, "pphh_pphh": None},
     }
 
     @classmethod
@@ -100,10 +101,23 @@ class AdcMatrixlike:
             raise ValueError(f"Unknown adc type {method.adc_type} for method "
                              f"{method.name}. Can not determine default block "
                              "orders.")
-        spaces = [
-            "p" * i + min_space + "h" * i
-            for i in range(0, (method.level.to_int() // 2) + 1)
-        ]
+        # ADC matrices have first-order coupling whereas ISR matrices
+        # have a zeroth-order coupling between adjacent excitation classes
+        # see https://doi.org/10.1063/1.1752875
+        if isinstance(method, AdcMethod):
+            # First-order coupling between adjacent excitation classes.
+            spaces = [
+                "p" * i + min_space + "h" * i
+                for i in range(0, (method.level.to_int() // 2) + 1)
+            ]
+        elif isinstance(method, IsrMethod):
+            # Zeroth-order coupling between adjacent excitation classes.
+            spaces = [
+                "p" * i + min_space + "h" * i
+                for i in range(0, ((method.level.to_int() + 1) // 2) + 1)
+            ]
+        else:
+            raise ValueError(f"Invalid method: {method.name}")
         # exploit the fact that the spaces are sorted from small to high:
         # If we walk the adc matrix in any direction we always have to subtract 1!
         # Therefore, we can determine the order according to the position of the
@@ -113,7 +127,8 @@ class AdcMatrixlike:
         for ((i1, bra), (i2, ket)) in \
                 itertools.product(enumerate(spaces), repeat=2):
             order = method.level.to_int() - i1 - i2
-            assert order >= 0
+            # For ISR matrices allow missing diagonal blocks.
+            order = None if order < 0 else order
             ret[f"{bra}_{ket}"] = order
         return ret
 
@@ -142,6 +157,7 @@ class AdcMatrixlike:
         for block, order in block_orders.items():
             if order is None:
                 continue
+            assert order >= 0
             # ensure that the block is valid for the given adc type
             bra, ket = block.split("_")
             if not cls._is_valid_space(bra, method) or \

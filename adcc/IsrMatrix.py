@@ -22,6 +22,8 @@
 ## ---------------------------------------------------------------------
 import libadcc
 
+from itertools import product
+
 from .AdcMatrix import AdcMatrixlike
 from .AdcMethod import IsrMethod
 from .adc_pp import bmatrix as ppbmatrix
@@ -99,15 +101,15 @@ class IsrMatrix(AdcMatrixlike):
             variant = None
             if self.is_core_valence_separated:
                 variant = "cvs"
-            blocks = [{
+            blocks = tuple({
                 block: ppbmatrix.block(self.ground_state, op,
                                        block.split("_"), order=order,
                                        variant=variant)
                 for block, order in self.block_orders.items() if order is not None
-            } for op in self.operator]
-            self.blocks = [{
+            } for op in self.operator)
+            self.blocks = tuple({
                 b: bl[b].apply for b in bl
-            } for bl in blocks]
+            } for bl in blocks)
 
     @timed_member_call()
     def matvec(self, v):
@@ -118,9 +120,17 @@ class IsrMatrix(AdcMatrixlike):
         If a list of OneParticleOperator objects was passed to the class
         instantiation operator, a list of AmplitudeVector objects is returned.
         """
+        # Check which blocks are present in the AmplitudeVector.
+        # Missing blocks can be treated as zero vectors, so their
+        # contribution to the matvec is zero and does not need to be computed.
+        avail_blocks = [f"{bra}_{ket}" for bra, ket in product(v.blocks, repeat=2)]
+        filtered_blocks = [
+            {blk: v for blk, v in comp.items() if blk in avail_blocks}
+            for comp in self.blocks
+        ]
         ret = [
             sum(block(v) for block in bl_ph.values())
-            for bl_ph in self.blocks
+            for bl_ph in filtered_blocks
         ]
         if len(ret) == 1:
             return ret[0]
@@ -138,7 +148,7 @@ class IsrMatrix(AdcMatrixlike):
                 AmplitudeVector(ph=-1.0 * mv.ph, pphh=-1.0 * mv.pphh)
                 for mv in self.matvec(v)
             ]
-            # operators without any symmetry
+        # operators without any symmetry
         else:
             return NotImplemented
 
