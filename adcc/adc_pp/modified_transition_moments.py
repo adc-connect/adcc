@@ -79,6 +79,7 @@ def mtm_cvs_isr2(mp, op, intermediates):
 
 DISPATCH = {
     "isr0": mtm_isr0,
+    "isr1s": mtm_isr1,  # Identical to ISR(1)
     "isr1": mtm_isr1,
     "isr2": mtm_isr2,
     "cvs-isr0": mtm_cvs_isr0,

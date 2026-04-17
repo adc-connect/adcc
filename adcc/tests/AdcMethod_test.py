@@ -55,6 +55,9 @@ class TestAdcMethod:
         assert method_new_level._method_base_name == method._method_base_name
         assert method_new_level.level.to_int() == 1
 
+        as_isr_method = method.as_method(adcc.IsrMethod)
+        assert isinstance(as_isr_method, adcc.IsrMethod)
+
 
 class TestIsrMethod:
     @pytest.mark.parametrize("method, expected_exception", isr_methods)
@@ -75,3 +78,6 @@ class TestIsrMethod:
         method_new_level = method.at_level(1)
         assert method_new_level._method_base_name == method._method_base_name
         assert method_new_level.level.to_int() == 1
+
+        as_adc_method = method.as_method(adcc.AdcMethod)
+        assert isinstance(as_adc_method, adcc.AdcMethod)

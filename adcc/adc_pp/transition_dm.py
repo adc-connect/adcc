@@ -102,6 +102,7 @@ def tdm_isr2(mp, amplitude, intermediates):
 
 DISPATCH = {
     "isr0": tdm_isr0,
+    "isr1s": tdm_isr1,  # Identical to ISR(1)
     "isr1": tdm_isr1,
     "isr2": tdm_isr2,
     "cvs-isr0": tdm_isr0,

@@ -162,9 +162,11 @@ def diffdm_cvs_isr2(mp, amplitude, intermediates):
 # dict controlling the dispatch of the state_diffdm function
 DISPATCH = {
     "isr0": diffdm_isr0,
+    "isr1s": diffdm_isr0,   # Identical to ISR(0)
     "isr1": diffdm_isr1,
     "isr2": diffdm_isr2,
     "cvs-isr0": diffdm_isr0,
+    "cvs-isr1s": diffdm_isr0,   # Identical to ISR(0)
     "cvs-isr1": diffdm_cvs_isr1,
     "cvs-isr2": diffdm_cvs_isr2,
 }
