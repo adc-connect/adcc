@@ -42,7 +42,7 @@ def diffdm_isr0_2p(mp, amplitude, intermediates):
 
     dm = TwoParticleDensity(mp, symmetry=OperatorSymmetry.HERMITIAN)
 
-    # ISR(1) diffdm
+    # one-particle ISR(0) diffdm
     p1_oo = -einsum("ia,la->il", u1, u1).evaluate()
     p1_vv = einsum("ka,kb->ab", u1, u1).evaluate()
 
@@ -69,7 +69,7 @@ def diffdm_isr1_2p(mp, amplitude, intermediates):
 
     t2 = mp.t2(b.oovv)
     # TODO move to intermediates!
-    # ISR(1) diffdm
+    # one-particle ISR(0) diffdm
     p1_oo = -einsum("ia,la->il", u1, u1).evaluate()
 
     # ISR(2) ISR intermediate (TODO Move to intermediates)
@@ -357,7 +357,6 @@ DISPATCH = {
     "isr0": diffdm_isr0_2p,
     "isr1": diffdm_isr1_2p,
     "isr2": diffdm_isr2_2p,
-    "isr2x": diffdm_isr2_2p,      # same as ISR(2)
 }
 
 

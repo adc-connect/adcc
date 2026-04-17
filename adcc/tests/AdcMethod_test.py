@@ -29,7 +29,7 @@ adc_methods = [("adc1", None), ("adc2x", None), ("cvs-adc3", None),
                ("xyz-adc2", ValueError), ("adc5", NotImplementedError),
                ("isr2", ValueError)]
 
-isr_methods = [("isr1", None), ("isr2x", None), ("cvs-isr2", None),
+isr_methods = [("isr1", None), ("cvs-isr2", None),
                ("adc", ValueError), ("cvs_isr2", ValueError),
                ("xyz-isr2", ValueError), ("isr5", NotImplementedError),
                ("adc2", ValueError)]
@@ -53,7 +53,7 @@ class TestAdcMethod:
 
         method_new_level = method.at_level(1)
         assert method_new_level._method_base_name == method._method_base_name
-        assert method_new_level.level == 1
+        assert method_new_level.level.to_int() == 1
 
 
 class TestIsrMethod:
@@ -74,4 +74,4 @@ class TestIsrMethod:
 
         method_new_level = method.at_level(1)
         assert method_new_level._method_base_name == method._method_base_name
-        assert method_new_level.level == 1
+        assert method_new_level.level.to_int() == 1

@@ -24,7 +24,7 @@ import numpy as np
 import pytest
 
 from adcc import block as b
-from adcc.AdcMethod import IsrMethod
+from adcc.AdcMethod import IsrMethod, MethodLevel
 from adcc.functions import evaluate, einsum
 from adcc.OneParticleDensity import OneParticleDensity
 from adcc.NParticleOperator import OperatorSymmetry
@@ -58,12 +58,11 @@ class TestStateDiffDm:
 
             # TODO switch to ISR(3) implementation
             method = IsrMethod("isr2")
-            method.level = 3
-            method._base_method = "isr3"
+            method.level = MethodLevel(3)
 
         else:
             method = state.property_method
-        level = method.level
+        level = method.level.to_int()
 
         method_order_minus_one = None
         if level - 1 >= 0:
@@ -72,7 +71,7 @@ class TestStateDiffDm:
         for es in range(n_states):
             evec = state.excitation_vector[es]
             # TODO switch to ISR(3) implemntation
-            if method.level == 3:
+            if method.level.to_int() == 3:
                 # so we don't forget to switch to the actual implementation
                 with pytest.raises(NotImplementedError):
                     state_diffdm(method, mp, evec)

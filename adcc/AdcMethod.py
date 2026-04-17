@@ -21,14 +21,44 @@
 ##
 ## ---------------------------------------------------------------------
 from typing import Optional, TypeVar
-
+from enum import Enum
 
 T = TypeVar("T", bound="Method")
+
+
+class MethodLevel(Enum):
+    # numeric levels
+    ZERO = 0
+    ONE = 1
+    TWO = 2
+    THREE = 3
+    FOUR = 4
+    FIVE = 5
+
+    # special levels
+    TWO_X = "2x"
+    ONE_S = "1s"
+    THREE_D = "3d"
+
+    def to_str(self) -> str:
+        return str(self.value)
+
+    def to_int(self) -> int:
+        # numerical methods
+        if isinstance(self.value, int):
+            return self.value
+        # return base int for special methods
+        elif isinstance(self.value, str):
+            return int(self.value[0])
+        else:
+            raise ValueError
 
 
 class Method:
     # this has to be set on the child classes
     _method_base_name: Optional[str] = None
+    max_level: int = 0
+    special_levels: tuple[MethodLevel, ...] = tuple()
 
     def __init__(self, method: str):
         assert self._method_base_name is not None
@@ -40,14 +70,12 @@ class Method:
 
         # validate method level
         level = split[-1][len(self._method_base_name):]
-        if level == "2x":
-            self.level: int = 2
-        elif not level.isnumeric:
-            raise ValueError(f"{level} is not a valid method level")
+        if level.isnumeric():
+            self.level: MethodLevel = MethodLevel(int(level))
         else:
-            self.level: int = int(level)
+            self.level: MethodLevel = MethodLevel(level)
+        self._validate_level(self.level)
 
-        self._base_method: str = self._method_base_name + level
         assert self._base_method == split[-1]
 
         # validate prefix
@@ -59,6 +87,17 @@ class Method:
         # NOTE: added this to make the testdata generation ready for IP/EA
         self.adc_type: str = "pp"
 
+    def _validate_level(self, level: MethodLevel) -> None:
+        if isinstance(level.value, int):
+            if level.value <= self.max_level:
+                return
+
+        # special cases
+        if level in self.special_levels:
+            return
+
+        raise NotImplementedError(f"{self._base_method} is not implemented.")
+
     @property
     def name(self) -> str:
         """The name of the Method as string."""
@@ -66,6 +105,10 @@ class Method:
             return "cvs-" + self._base_method
         else:
             return self._base_method
+
+    @property
+    def _base_method(self) -> str:
+        return self._method_base_name + self.level.to_str()
 
     @property
     def base_method(self: T) -> T:
@@ -109,19 +152,11 @@ class Method:
 
 class AdcMethod(Method):
     _method_base_name = "adc"
-
-    def __init__(self, method: str):
-        super().__init__(method)
-        if self.level > 3:
-            raise NotImplementedError(f"{method} not available, only ADC(0), "
-                                      "ADC(1), ADC(2), ADC(2)-x, and ADC(3).")
+    max_level = 3
+    special_levels = (MethodLevel.TWO_X,)
 
 
 class IsrMethod(Method):
     _method_base_name = "isr"
-
-    def __init__(self, method: str):
-        super().__init__(method)
-        if self.level > 2:
-            raise NotImplementedError(f"{method} not available, "
-                                      "only ISR(0), ISR(1), and ISR(2).")
+    max_level = 2
+    special_levels = (MethodLevel.ONE_S,)

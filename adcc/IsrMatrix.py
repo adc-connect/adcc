@@ -84,8 +84,7 @@ class IsrMatrix(AdcMatrixlike):
         self.block_orders = self._default_block_orders(self.method)
         if block_orders is None:
             # only implemented through PP-ADC(2)
-            if method.adc_type != "pp" or method.name.endswith("adc2x") \
-                    or method.level > 2:
+            if method.adc_type != "pp":
                 raise NotImplementedError("The B-matrix is not implemented "
                                           f"for method {method.name}.")
         else:

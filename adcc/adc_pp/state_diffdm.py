@@ -114,10 +114,10 @@ def diffdm_cvs_isr1(mp, amplitude, intermediates):
 
     try:
         # ISR(1)-d
-        check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
+        check_doubles_amplitudes([b.o, b.c, b.v, b.v], amplitude)
         u1, u2 = amplitude.ph, amplitude.pphh
         p2_ov = -sqrt(2) * einsum("jb,ijab->ia", u1, u2)
-        dm.ov = p2_ov
+        dm.ov += p2_ov
     except ValueError:
         # no doubles contribution
         pass
@@ -125,7 +125,7 @@ def diffdm_cvs_isr1(mp, amplitude, intermediates):
 
 
 def diffdm_cvs_isr2(mp, amplitude, intermediates):
-    dm = diffdm_isr0(mp, amplitude, intermediates)  # Get ISR(1) result
+    dm = diffdm_cvs_isr1(mp, amplitude, intermediates)  # Get cvs-ISR(1) result
     check_doubles_amplitudes([b.o, b.c, b.v, b.v], amplitude)
     u1, u2 = amplitude.ph, amplitude.pphh
 
@@ -134,22 +134,21 @@ def diffdm_cvs_isr2(mp, amplitude, intermediates):
     p1_vv = dm.vv.evaluate()  # ISR(1) diffdm
 
     # Zeroth order doubles contributions
-    p2_ov = -sqrt(2) * einsum("jb,ijab->ia", u1, u2)
     p2_vo = -sqrt(2) * einsum("ijab,jb->ai", u2, u1)
     p2_oo = -einsum("ljab,kjab->kl", u2, u2)
     p2_vv = 2 * einsum("ijac,ijbc->ab", u2, u2)
 
     # Second order contributions
     # cvs_isr2_dp_oo
-    dm.oo = p2_oo + einsum("ab,ikac,jkbc->ij", p1_vv, t2, t2)
+    dm.oo += p2_oo + einsum("ab,ikac,jkbc->ij", p1_vv, t2, t2)
 
-    dm.ov = p2_ov + (  # cvs_isr2_dp_ov
+    dm.ov += (  # cvs_isr2_dp_ov
         - einsum("ka,ab->kb", p0.ov, p1_vv)
         - einsum("lkdb,dl->kb", t2, p2_vo)
         + 1 / sqrt(2) * einsum("ib,klad,liad->kb", u1, t2, u2)
     )
 
-    dm.vv = p1_vv + p2_vv - 0.5 * (  # cvs_isr2_dp_vv
+    dm.vv += p2_vv - 0.5 * (  # cvs_isr2_dp_vv
         + einsum("cb,ac->ab", p1_vv, p0.vv)
         + einsum("cb,ac->ab", p0.vv, p1_vv)
         + einsum("ijbc,ijad,cd->ab", t2, t2, p1_vv)
@@ -165,11 +164,9 @@ DISPATCH = {
     "isr0": diffdm_isr0,
     "isr1": diffdm_isr1,
     "isr2": diffdm_isr2,
-    "isr2x": diffdm_isr2,
     "cvs-isr0": diffdm_isr0,
     "cvs-isr1": diffdm_cvs_isr1,
     "cvs-isr2": diffdm_cvs_isr2,
-    "cvs-isr2x": diffdm_cvs_isr2,
 }
 
 

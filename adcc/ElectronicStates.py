@@ -3,7 +3,7 @@ from scipy import constants
 import warnings
 
 from .AdcMatrix import AdcMatrix
-from .AdcMethod import AdcMethod, IsrMethod
+from .AdcMethod import AdcMethod, IsrMethod, MethodLevel
 from .AmplitudeVector import AmplitudeVector
 from .FormatDominantElements import FormatDominantElements
 from .FormatIndex import (
@@ -83,8 +83,10 @@ class ElectronicStates:
             self.method: AdcMethod = AdcMethod(self.method)
 
         if property_method is None:
-            if self.method.level == 3:
-                # Auto-select ISR(2) properties for ADC(3) calc
+            if self.method.level in [MethodLevel.TWO_X, MethodLevel.THREE]:
+                # Auto-select ISR(2) properties for ADC(2)-x and ADC(3) calc
+                warnings.warn(f"ISR({self.method.level.to_str()}) not implemented."
+                              f" Property method is selected as ISR(2).")
                 property_method = self.method.at_level(2).as_method(IsrMethod)
             else:
                 property_method = self.method.as_method(IsrMethod)
@@ -187,7 +189,7 @@ class ElectronicStates:
 
     def _state_dm(self, state_n: int) -> OneParticleDensity:
         """List of state density matrices of all computed states"""
-        mp_density = self.ground_state.density(self.property_method.level)
+        mp_density = self.ground_state.density(self.property_method.level.to_int())
         diffdm = self._state_diffdm(state_n)
         return mp_density + diffdm
 
@@ -213,7 +215,9 @@ class ElectronicStates:
 
     def _state_dm_2p(self, state_n: int) -> TwoParticleDensity:
         """List of two particle state density matrices of all computed states"""
-        mp_density = self.ground_state.density_2p(self.property_method.level)
+        mp_density = self.ground_state.density_2p(
+            self.property_method.level.to_int()
+        )
         diffdm = self._state_diffdm_2p(state_n)
         return mp_density + diffdm
 
@@ -226,10 +230,10 @@ class ElectronicStates:
     def _state_ssq(self, state_n: int) -> float:
         """Computes the <S^2> of a single state."""
         pmethod = self.property_method
-        if pmethod.level == 0:
+        if pmethod.level.to_int() == 0:
             gs_ssq = self.reference_state.ssq
         else:
-            gs_ssq = self.ground_state.ssq(pmethod.level)
+            gs_ssq = self.ground_state.ssq(pmethod.level.to_int())
 
         ssq_1p_op = self.operators.ssq_1p
         ssq_2p_op = self.operators.ssq_2p
@@ -248,10 +252,10 @@ class ElectronicStates:
     def _state_dipole_moment(self, state_n: int) -> np.ndarray:
         """Computes the state dipole moment for a single state"""
         pmethod = self.property_method
-        if pmethod.level == 0:
+        if pmethod.level.to_int() == 0:
             gs_dip_moment = self.reference_state.dipole_moment
         else:
-            gs_dip_moment = self.ground_state.dipole_moment(pmethod.level)
+            gs_dip_moment = self.ground_state.dipole_moment(pmethod.level.to_int())
 
         dipole_integrals = self.operators.electric_dipole
         ddm = self._state_diffdm(state_n)
