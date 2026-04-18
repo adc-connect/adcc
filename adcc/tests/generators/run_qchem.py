@@ -29,6 +29,8 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
               run_qchem_scf: bool = False,
               import_nstates: int | None = None, n_states: int = 0,
               n_singlets: int = 0, n_triplets: int = 0, n_spin_flip: int = 0,
+              n_ip_states: tuple[int, int] = (0, 0),
+              n_ea_states: tuple[int, int] = (0, 0),
               **kwargs) -> tuple[dict | None, dict | None]:
     """
     Run a qchem calculation for the given test case and method on top
@@ -120,6 +122,7 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
             n_core_orbitals=n_core_orbitals, n_frozen_core=n_frozen_core,
             n_frozen_virtual=n_frozen_virtual, any_states=n_states,
             singlet_states=n_singlets, triplet_states=n_triplets,
+            ip_states=n_ip_states, ea_states=n_ea_states,
             sf_states=n_spin_flip, run_qchem_scf=run_qchem_scf, **args
         )
         # call qchem and wait for completion
@@ -349,6 +352,8 @@ def generate_qchem_input_file(infile: str | Path, adc_method: AdcMethod, basis: 
                               bohr: bool = True, any_states: int = 0,
                               singlet_states: int = 0, triplet_states: int = 0,
                               sf_states: int = 0,
+                              ip_states: tuple[int, int] = (0,0),
+                              ea_states: tuple[int, int] = (0,0),
                               maxiter: int = 160, conv_tol: int = 10,
                               n_core_orbitals: int | None = None,
                               n_frozen_core: int | None = None,
@@ -405,6 +410,10 @@ def generate_qchem_input_file(infile: str | Path, adc_method: AdcMethod, basis: 
         singlet_states=singlet_states,
         triplet_states=triplet_states,
         sf_states=sf_states,
+        ip_states_alpha=ip_states[0],
+        ip_states_beta=ip_states[1],
+        ea_states_alpha=ea_states[0],
+        ea_states_beta=ea_states[1],
         n_guesses=nguess_singles,
         bohr=bohr,
         maxiter=maxiter,
@@ -441,6 +450,10 @@ ee_states                {any_states}
 ee_singlets              {singlet_states}
 ee_triplets              {triplet_states}
 sf_states                {sf_states}
+eom_ip_alpha             {ip_states_alpha}
+eom_ip_beta              {ip_states_beta}
+eom_ea_alpha             {ea_states_alpha}
+eom_ea_beta              {ea_states_beta}
 input_bohr               {bohr}
 sym_ignore               true
 adc_davidson_maxiter     {maxiter}
@@ -497,7 +510,17 @@ _method_dict = {
     "cvs-adc1": "cvs-adc(1)",
     "cvs-adc2": "cvs-adc(2)",
     "cvs-adc2x": "cvs-adc(2)-x",
-    "cvs-adc3": "cvs-adc(3)"
+    "cvs-adc3": "cvs-adc(3)",
+    "ip-adc0": "adc(0)",
+    "ip-adc1": "adc(1)",
+    "ip-adc2": "adc(2)",
+    "ip-adc2x": "adc(2)-x",
+    "ip-adc3": "adc(3)",
+    "ea-adc0": "adc(0)",
+    "ea-adc1": "adc(1)",
+    "ea-adc2": "adc(2)",
+    "ea-adc2x": "adc(2)-x",
+    "ea-adc3": "adc(3)",
 }
 
 _gs_density_order_dict = {

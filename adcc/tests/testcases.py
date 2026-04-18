@@ -92,6 +92,8 @@ class TestCase:
         # since cvs is not (yet) implemented for IP.
         if adc_type == "pp":
             return self.cases
+        elif adc_type in ("ip", "ea"):
+            return tuple(case for case in self.cases if "cvs" not in case)
         raise NotImplementedError(f"Filtering for adc type {adc_type} not "
                                   "implemented.")
 
@@ -110,14 +112,26 @@ class TestCase:
                     continue
                 assert component in requirements
                 assert getattr(self, requirements[component], None) is not None
-        # validate the PP-ADC kinds
+        # validate the IP/EA/PP-ADC kinds
         assert len(fields(self.kinds)) == 3
-        assert not self.kinds.ip
-        assert not self.kinds.ea
-        if self.restricted:
-            assert all(kind in ["singlet", "triplet"] for kind in self.kinds.pp)
-        else:
-            assert all(kind in ["any", "spin_flip"] for kind in self.kinds.pp)
+
+        if self.kinds.pp:
+            if self.restricted:
+                assert all(kind in ["singlet", "triplet"]
+                           for kind in self.kinds.pp)
+            else:
+                assert all(kind in ["any", "spin_flip"]
+                           for kind in self.kinds.pp)
+        if self.kinds.ip:
+            if self.restricted:
+                assert all(kind in ["doublet"] for kind in self.kinds.ip)
+            else:
+                assert all(kind in ["any"] for kind in self.kinds.ip)
+        if self.kinds.ea:
+            if self.restricted:
+                assert all(kind in ["doublet"] for kind in self.kinds.ea)
+            else:
+                assert all(kind in ["any"] for kind in self.kinds.ea)
 
 
 def kinds_to_nstates(kinds: tuple[str, ...]) -> list[str]:
@@ -125,9 +139,9 @@ def kinds_to_nstates(kinds: tuple[str, ...]) -> list[str]:
     Transforms the given kinds to a list of keywords to request states of the
     corresponding kind in an adc calculation.
     """
-    # singlet, triplet -> n_singlets, n_triplets
-    # any              -> n_states
-    # spin_flip        -> n_spin_flip
+    # singlet, doublet, triplet -> n_singlets, n_triplets
+    # any                       -> n_states
+    # spin_flip                 -> n_spin_flip
     ret = []
     for kind in kinds:
         if kind == "any":
@@ -197,8 +211,10 @@ _xyz = {
 def _init_test_cases() -> tuple[TestCase, ...]:
     test_cases: list[TestCase] = []
     # some shared data
-    restricted_kinds = Kinds(pp=("singlet", "triplet"))
-    unrestricted_kinds = Kinds(pp=("any",))
+    restricted_kinds = Kinds(pp=("singlet", "triplet"),
+                             ip=("doublet",),
+                             ea=("doublet",))
+    unrestricted_kinds = Kinds(pp=("any",), ip=("any",), ea=("any",))
     spin_flip_kinds = Kinds(pp=("spin_flip",))
     # CH2NH2
     ref_cases = ("gen", "cvs")

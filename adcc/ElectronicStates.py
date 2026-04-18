@@ -72,7 +72,8 @@ class ElectronicStates:
             self._timed_objects.append((datakey, data))
 
         # Copy some optional attributes
-        for optattr in ["converged", "spin_change", "kind", "n_iter"]:
+        for optattr in ["converged", "spin_change", "kind", "n_iter",
+                        "is_alpha"]:
             if hasattr(data, optattr):
                 setattr(self, optattr, getattr(data, optattr))
 
@@ -109,7 +110,7 @@ class ElectronicStates:
                 self._excitation_energy_uncorrected = \
                     data.excitation_energy.copy()
             if hasattr(data, "excitation_energy_uncorrected"):
-                self._excitation_energy_uncorrected =\
+                self._excitation_energy_uncorrected = \
                     data.excitation_energy_uncorrected.copy()
             if hasattr(data, "excitation_vector"):
                 self._excitation_vector = data.excitation_vector
@@ -455,7 +456,7 @@ class ElectronicStates:
             plots = spectrum.plot(style="discrete", **kwargs)
         return plots
 
-    def _describe(self, columns: list["TableColumn"]):
+    def _describe(self, columns: list["TableColumn"], state_info: list[str]):
         """
         Return a string providing a human-readable description of the class
 
@@ -481,25 +482,11 @@ class ElectronicStates:
                 columns[-1] = columns[-1].with_width(new_width)
                 table_width = corr_width
 
-        # - Format the header
         # Format the method
         method = self.method.name
         if self.property_method != self.method:
             method += f" ({self.property_method.name})"
-        # Format the state information: kind, spin_change and convergence
-        state_info = []
-        if hasattr(self, "kind") and self.kind:
-            state_info.append(self.kind)
-        if hasattr(self, "spin_change") and self.spin_change is not None and \
-                self.spin_change != 0:
-            state_info.append(f"(ΔMS={self.spin_change:+2d})")
-        if hasattr(self, "converged"):
-            conv = "converged" if self.converged else "NOT CONVERGED"
-            if state_info:  # add separator to previous entry
-                state_info[-1] += ","
-            state_info.append(conv)
-        state_info = " ".join(state_info)
-        # actually format the header
+        # Format the header
         if table_width > len(method) + 4:
             header = (  # -4 for the spaces
                 f"{method:s}    {state_info:>{str(table_width - len(method) - 4)}s}"
@@ -742,6 +729,38 @@ class FormatAmplitudeVector:
                 "oovv": (
                     "{} {} -> {} {}" + idx_spin_gap + "{}{}->{}{}"
                     + spin_coeff_gap + self.value_format
+                )
+            }
+        elif self.matrix.axis_blocks == ["h"]:
+            formats = {"o": (
+                "{} -> " + idx_spin_gap + "{}->"
+                + spin_coeff_gap + self.value_format
+            )}
+        elif self.matrix.axis_blocks == ["h", "phh"]:
+            formats = {
+                "o": (
+                    empty_idx + " {} -> " + empty_idx + idx_spin_gap
+                    + " {}-> " + spin_coeff_gap + self.value_format
+                ),
+                "oov": (
+                    "{} {} -> {}" + idx_spin_gap + "{}{}->{}"
+                    + spin_coeff_gap + self.value_format
+                )
+            }
+        elif self.matrix.axis_blocks == ["p"]:
+            formats = {"v": (
+                " -> {}" + idx_spin_gap + "->{}"
+                + spin_coeff_gap + self.value_format
+            )}
+        elif self.matrix.axis_blocks == ["p", "pph"]:
+            formats = {
+                "v": (
+                    empty_idx + " -> {} " + empty_idx + idx_spin_gap
+                    + " ->{} " + spin_coeff_gap + self.value_format
+                ),
+                "ovv": (
+                    "{} -> {} {}" + idx_spin_gap
+                    + "{}->{}{}" + spin_coeff_gap + self.value_format
                 )
             }
         else:

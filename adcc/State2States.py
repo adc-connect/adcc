@@ -22,7 +22,7 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
-from . import adc_pp
+from . import adc_pp, adc_ip, adc_ea
 from .ElectronicStates import _timer_name
 from .ElectronicTransition import ElectronicTransition
 from .misc import cached_member_function
@@ -65,6 +65,10 @@ class State2States(ElectronicTransition):
         # the module according to the method.
         if self.method.adc_type == "pp":
             self._module = adc_pp
+        elif self.method.adc_type == "ip":
+            self._module = adc_ip
+        elif self.method.adc_type == "ea":
+            self._module = adc_ea
         else:
             raise ValueError(f"Unknown adc_type {self.method.adc_type}.")
 

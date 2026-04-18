@@ -39,29 +39,48 @@ from . import testcases
 # -> independent of method, case (gen/cvs/fc/fv) and kind (singlet/triplet)
 # Actually, the tests should also be independent of the systems, because
 # we only load some already tested density and contract it with some operator.
-methods = ["adc2"]
+pp_methods = ["adc2"]
+ip_ea_methods = ["ip-adc2", "ea-adc2"]
 generators = ["adcman", "adcc"]
 
 test_cases = testcases.get_by_filename(
     "h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz", "hf_631g"
 )
-cases = [(case.file_name, "gen", kind)
+cases_pp = [(case.file_name, m, "gen", kind)
          for case in test_cases
-         for kind in ["singlet", "any", "spin_flip"] if kind in case.kinds.pp]
-unrestricted_cases = [
-    (case.file_name, "gen", kind)
+         for m in pp_methods
+         for kind in ["singlet", "any", "spin_flip"] if kind in case.kinds.pp
+]
+unrestricted_cases_pp = [
+    (case.file_name, m, "gen", kind, None)
     for case in test_cases if not case.restricted
+    for m in pp_methods
     for kind in ["singlet", "any", "spin_flip"] if kind in case.kinds.pp
 ]
+cases_ip_ea = [(case.file_name, m, "gen", kind, is_alpha) 
+    for case in test_cases
+    for m in ip_ea_methods
+    for kind in ["doublet", "any"] if kind in getattr(
+        case.kinds, AdcMethod(m).adc_type)
+    for is_alpha in ([True] if case.restricted else [True, False])
+]
+unrestricted_cases_ip_ea = [ 
+    (case.file_name, m, "gen", kind, is_alpha)
+    for case in test_cases if not case.restricted
+    for m in ip_ea_methods
+    for kind in ["doublet", "any"] if kind in getattr(
+        case.kinds, AdcMethod(m).adc_type)
+    for is_alpha in [True, False]
+]
+
 gauge_origins = ["origin", "mass_center", "charge_center"]
 
 
-@pytest.mark.parametrize("method", methods)
 class TestProperties:
     @pytest.mark.parametrize("generator", generators)
-    @pytest.mark.parametrize("system,case,kind", cases)
-    def test_transition_dipole_moments(self, system: str, case: str, kind: str,
-                                       method: str, generator: str):
+    @pytest.mark.parametrize("system,method,case,kind", cases_pp)
+    def test_transition_dipole_moments(self, system: str, method: str,
+                                       case: str, kind: str, generator: str):
         if "cvs" in case and AdcMethod(method).level == 0 and generator == "adcman":
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
 
@@ -92,9 +111,9 @@ class TestProperties:
             assert_allclose_signfix(res_tdm, ref_tdm, atol=1e-5)
 
     @pytest.mark.parametrize("generator", generators)
-    @pytest.mark.parametrize("system,case,kind", cases)
-    def test_oscillator_strengths(self, system: str, case: str, kind: str,
-                                  method: str, generator: str):
+    @pytest.mark.parametrize("system,method,case,kind", cases_pp)
+    def test_oscillator_strengths(self, system: str, method: str, case: str,
+                                  kind: str, generator: str):
         if "cvs" in case and AdcMethod(method).level == 0 and generator == "adcman":
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
 
@@ -121,11 +140,36 @@ class TestProperties:
             assert (
                 res_oscs[i] == pytest.approx(2. / 3. * ref_tdm_norm * refevals[i])
             )
+    
+    @pytest.mark.parametrize("generator", generators)
+    @pytest.mark.parametrize("system,method,case,kind,is_alpha", cases_ip_ea)
+    def test_pole_strengths(self, system: str, method: str, case: str,
+                            kind: str, is_alpha: bool, generator: str):
+        if generator == "adcman":
+            if method.endswith("adc2x"):
+                pytest.skip("No adcman reference data yet for IP/EA-ADC(2)-x")
+        refdata = testdata_cache._load_data(
+            system=system, method=method, case=case, source=generator,
+            is_alpha=is_alpha
+        )[kind]
+        state = testdata_cache._make_mock_adc_state(
+            system=system, method=method, case=case, kind=kind,
+            source=generator, is_alpha=is_alpha
+        )
+
+        res_pols = state.pole_strength
+        refevals = refdata["eigenvalues"]
+        ref_pols = refdata["pole_strengths"]
+
+        n_ref = len(state.excitation_vector)
+        for i in range(n_ref):
+            assert state.excitation_energy[i] == refevals[i]
+            assert res_pols[i] == pytest.approx(ref_pols[i])
 
     @pytest.mark.parametrize("generator", generators)
-    @pytest.mark.parametrize("system,case,kind", cases)
-    def test_state_dipole_moments(self, system: str, case: str, kind: str,
-                                  method: str, generator: str):
+    @pytest.mark.parametrize("system,method,case,kind", cases_pp)
+    def test_state_dipole_moments_pp(self, system: str, method: str, case: str,
+                                     kind: str, generator: str):
         if "cvs" in case and AdcMethod(method).level == 0 and generator == "adcman":
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
 
@@ -139,16 +183,41 @@ class TestProperties:
         res_dms = state.state_dipole_moment
         n_ref = len(state.excitation_vector)
         assert_allclose(res_dms, refdata["state_dipole_moments"][:n_ref], atol=1e-4)
-
-    @pytest.mark.parametrize("system,case,kind",
-                             [c for c in unrestricted_cases if "cvs" not in c[1]])
-    def test_state_ssq(self, system: str, case: str, kind: str,
-                       method: str):
+    
+    @pytest.mark.parametrize("generator", generators)
+    @pytest.mark.parametrize("system,method,case,kind,is_alpha", cases_ip_ea)
+    def test_state_dipole_moments_ip_ea(self, system: str, method: str, 
+                                        case: str, kind: str, is_alpha: bool,
+                                        generator: str):
+        if generator == "adcman":
+            if method.endswith("adc2x"):
+                pytest.skip("No adcman reference data yet for IP/EA-ADC(2)-x")
         refdata = testdata_cache._load_data(
-            system=system, method=method, case=case, source="adcc"
+            system=system, method=method, case=case, source=generator,
+            is_alpha=is_alpha
         )[kind]
         state = testdata_cache._make_mock_adc_state(
-            system=system, method=method, case=case, kind=kind, source="adcc"
+            system=system, method=method, case=case, kind=kind,
+            source=generator, is_alpha=is_alpha
+        )
+
+        res_dms = state.state_dipole_moment
+        n_ref = len(state.excitation_vector)
+        assert_allclose(res_dms, refdata["state_dipole_moments"][:n_ref], atol=1e-4)
+
+    @pytest.mark.parametrize("system,method,case,kind,is_alpha",
+                             [c for c in (unrestricted_cases_pp + 
+                                          unrestricted_cases_ip_ea)
+                              if "cvs" not in c[1]])
+    def test_state_ssq(self, system: str, case: str, kind: str,
+                       method: str, is_alpha: bool | None):
+        refdata = testdata_cache._load_data(
+            system=system, method=method, case=case, source="adcc",
+            is_alpha=is_alpha
+        )[kind]
+        state = testdata_cache._make_mock_adc_state(
+            system=system, method=method, case=case, kind=kind, source="adcc",
+            is_alpha=is_alpha
         )
 
         res_dms = state.state_ssq
@@ -157,11 +226,11 @@ class TestProperties:
 
     # CVS-ADC state2state tdm not implemented
     @pytest.mark.parametrize("generator", generators)
-    @pytest.mark.parametrize("system,case,kind", [c for c in cases
-                                                  if "cvs" not in c[1]])
-    def test_state2state_transition_dipole_moments(self, system: str, case: str,
-                                                   kind: str, method: str,
-                                                   generator: str):
+    @pytest.mark.parametrize("system,method,case,kind", [c for c in cases_pp
+                                                  if "cvs" not in c[2]])
+    def test_state2state_transition_dipole_moments_pp(
+        self, system: str, case: str, kind: str, method: str, generator: str):
+
         refdata = testdata_cache._load_data(
             system=system, method=method, case=case, source=generator
         )[kind]
@@ -184,6 +253,39 @@ class TestProperties:
                 assert_allclose_signfix(state2state.transition_dipole_moment[ii],
                                         fromi_ref[ii], atol=1e-4)
 
+    @pytest.mark.parametrize("generator", generators)
+    @pytest.mark.parametrize("system,method,case,kind,is_alpha", cases_ip_ea)
+    def test_state2state_transition_dipole_moments_ip_ea(
+        self, system: str, method: str, case: str, kind: str, is_alpha: bool,
+        generator: str):
+        if generator == "adcman":
+            if method.endswith("adc2x"):
+                pytest.skip("No adcman reference data yet for IP/EA-ADC(2)-x")
+        refdata = testdata_cache._load_data(
+            system=system, method=method, case=case, source=generator,
+            is_alpha=is_alpha
+        )[kind]
+        state = testdata_cache._make_mock_adc_state(
+            system=system, method=method, case=case, kind=kind,
+            source=generator, is_alpha=is_alpha
+        )
+
+        refevals = refdata["eigenvalues"]
+        if len(refevals) < 2:
+            pytest.skip("Less than two states available.")
+
+        state_to_state = refdata["state_to_state"]
+        for i in range(len(state.excitation_vector) - 1):
+            assert state.excitation_energy[i] == refevals[i]
+            fromi_ref = state_to_state[f"from_{i}"]["transition_dipole_moments"]
+
+            state2state = State2States(state, initial=i)
+            for ii, j in enumerate(range(i + 1, state.size)):
+                assert state.excitation_energy[j] == refevals[j]
+                assert_allclose_signfix(state2state.transition_dipole_moment[ii],
+                                        fromi_ref[ii], atol=1e-4)
+
+    @pytest.mark.parametrize("method", pp_methods)
     @pytest.mark.parametrize("case", ["gen", "cvs"])
     def test_magnetic_transition_dipole_moments_z_component(self, method: str,
                                                             case: str):
@@ -208,7 +310,7 @@ class TestProperties:
             assert tdm[2] < 1e-10
 
     # Only adcc reference data available.
-    @pytest.mark.parametrize("system,case,kind", cases)
+    @pytest.mark.parametrize("system,method,case,kind", cases_pp)
     def test_magnetic_transition_dipole_moments(self, system: str, case: str,
                                                 kind: str, method: str):
         refdata = testdata_cache._load_data(
@@ -229,7 +331,7 @@ class TestProperties:
                 )
 
     # Only adcc reference data available.
-    @pytest.mark.parametrize("system,case,kind", cases)
+    @pytest.mark.parametrize("system,method,case,kind", cases_pp)
     def test_transition_dipole_moments_velocity(self, system: str, case: str,
                                                 kind: str, method: str):
         refdata = testdata_cache._load_data(
@@ -248,7 +350,7 @@ class TestProperties:
             )
 
     # Only adcc reference data available.
-    @pytest.mark.parametrize("system,case,kind", cases)
+    @pytest.mark.parametrize("system,method,case,kind", cases_pp)
     def test_transition_quadrupole_moments(self, system: str, case: str,
                                            kind: str, method: str):
         refdata = testdata_cache._load_data(
@@ -269,7 +371,7 @@ class TestProperties:
                 )
 
     # Only adcc reference data available.
-    @pytest.mark.parametrize("system,case,kind", cases)
+    @pytest.mark.parametrize("system,method,case,kind", cases_pp)
     def test_rotatory_strengths(self, system: str, case: str, kind: str,
                                 method: str):
         refdata = testdata_cache._load_data(

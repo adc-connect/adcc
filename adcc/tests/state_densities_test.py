@@ -25,13 +25,17 @@ import numpy as np
 from pytest import approx
 
 from adcc import ExcitedStates, AdcMethod
+from adcc.ChargedExcitations import DetachedStates, AttachedStates
 from adcc.State2States import State2States
 
 from .testdata_cache import testdata_cache
 from . import testcases
 
 
-methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+pp_methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+# No need to test IP/EA-ADC(1) since it is equivalent to IP/EA-ADC(0)
+ip_ea_methods = [
+    t + m for t in ["ip-", "ea-"] for m in ["adc0", "adc2", "adc2x", "adc3"]]
 generators = ["adcman", "adcc"]
 
 
@@ -42,28 +46,77 @@ generators = ["adcman", "adcc"]
 test_cases = testcases.get_by_filename(
     "h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz", "hf_631g"
 )
-cases = [(case.file_name, c, kind)
-         for case in test_cases
-         for c in ["gen", "cvs"] if c in case.cases
-         for kind in ["singlet", "any", "spin_flip"] if kind in case.kinds.pp]
+cases_pp = [(case.file_name, m, c, kind)
+    for case in test_cases
+    for m in pp_methods
+    for c in ["gen", "cvs"] if c in case.cases
+    for kind in ["singlet", "any", "spin_flip"] if kind in case.kinds.pp
+]
+            
+cases_ip_ea = [(case.file_name, m, c, kind, is_alpha) 
+    for case in test_cases
+    for m in ip_ea_methods
+    for c in ["gen"] if c in case.cases
+    for kind in getattr(case.kinds, AdcMethod(m).adc_type)
+    for is_alpha in ([True] if case.restricted else [True, False])
+]
 
 
-@pytest.mark.parametrize("method", methods)
 @pytest.mark.parametrize("generator", generators)
 class TestStateDensities:
-    @pytest.mark.parametrize("system,case,kind", cases)
-    def test_state_diffdm(self, system: str, case: str, kind: str, method: str,
-                          generator: str):
+    @pytest.mark.parametrize("system,method,case,kind", cases_pp)
+    def test_state_diffdm_pp(self, system: str, method: str, case: str,
+                             kind: str, generator: str):
         if "cvs" in case and AdcMethod(method).level == 0 and generator == "adcman":
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
         refdata = testdata_cache._load_data(
             system=system, method=method, case=case, source=generator
         )[kind]
-        # construct a ExcitedStates instance using the eigenvalues and eigenstates
-        # from the reference data.
-        state: ExcitedStates = getattr(testdata_cache, f"{generator}_states")(
+        # construct an ExcitedStates instance 
+        # using the eigenvalues and eigenstates from the reference data.
+        state: ExcitedStates = getattr(
+            testdata_cache, f"{generator}_states")(
             system=system, method=method, case=case, kind=kind
-        )
+            )
+
+        # since refdata was used to build state we have to have the same amount
+        # of states
+        for i in range(len(state.excitation_vector)):
+            # Check that we are talking about the same state when
+            # comparing reference and computed
+            assert state.excitation_energy[i] == refdata["eigenvalues"][i]
+
+            dm_ao_a, dm_ao_b = state.state_diffdm[i].to_ao_basis()
+            assert dm_ao_a.to_ndarray() == approx(refdata["state_diffdm_bb_a"][i])
+            assert dm_ao_b.to_ndarray() == approx(refdata["state_diffdm_bb_b"][i])
+
+    @pytest.mark.parametrize("system,method,case,kind,is_alpha", cases_ip_ea)
+    def test_state_diffdm_ip_ea(self, system: str, method: str, case: str,
+                                kind: str, is_alpha: bool, generator: str):
+        if generator == "adcman":
+            if method.endswith("adc2x"):
+                pytest.skip("No adcman reference data yet for IP/EA-ADC(2)-x")
+        refdata = testdata_cache._load_data(
+            system=system, method=method, case=case, source=generator,
+            is_alpha=is_alpha
+        )[kind]
+        # construct an DetachedStates/AttachedStates instance 
+        # using the eigenvalues and eigenstates from the reference data.
+        if AdcMethod(method).adc_type == "ip":
+            state: DetachedStates = getattr(
+                testdata_cache, f"{generator}_states")(
+                    system=system, method=method, case=case, kind=kind,
+                    is_alpha=is_alpha
+                )
+        elif AdcMethod(method).adc_type == "ea":
+            state: AttachedStates = getattr(
+                testdata_cache, f"{generator}_states")(
+                    system=system, method=method, case=case, kind=kind,
+                    is_alpha=is_alpha
+                )
+        else:
+            raise ValueError(f"Unknown ADC method: {method.name}")
+
         # since refdata was used to build state we have to have the same amount
         # of states
         for i in range(len(state.excitation_vector)):
@@ -78,10 +131,10 @@ class TestStateDensities:
     # adcman does not compute the tdm for singlet -> triplet transitions,
     # because the transition dipole moment should be zero anyway
     # -> remove triplet tests
-    @pytest.mark.parametrize("system,case,kind",
-                             [c for c in cases if c[2] != "triplet"])
-    def test_ground_to_excited_tdm(self, system: str, case: str, kind: str,
-                                   method: str, generator: str):
+    @pytest.mark.parametrize("system,method,case,kind",
+                             [c for c in cases_pp if c[3] != "triplet"])
+    def test_ground_to_excited_tdm(self, system: str, method: str, case: str,
+                                   kind: str, generator: str):
         if "cvs" in case and AdcMethod(method).level == 0 and generator == "adcman":
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
         refdata = testdata_cache._load_data(
@@ -107,11 +160,10 @@ class TestStateDensities:
             assert (dm_ao_b == approx(ref_dm_b))
 
     # CVS state-to-state TDM is not implemented in adcc
-    @pytest.mark.parametrize("system,case,kind",
-                             [c for c in cases if "cvs" not in c[1]])
-    def test_state_to_state_tdm(self, system: str, case: str, kind: str,
-                                method: str, generator: str):
-
+    @pytest.mark.parametrize("system,method,case,kind",
+                             [c for c in cases_pp if "cvs" not in c[2]])
+    def test_state_to_state_tdm_pp(self, system: str, method: str, case: str,
+                                kind: str, generator: str):
         refdata = testdata_cache._load_data(
             system=system, method=method, case=case, source=generator
         )[kind]
@@ -124,6 +176,57 @@ class TestStateDensities:
         state: ExcitedStates = getattr(testdata_cache, f"{generator}_states")(
             system=system, method=method, case=case, kind=kind
         )
+        # since refdata was used to build state we have to have the same amount
+        # of states
+        for i in range(len(state.excitation_vector) - 1):
+            # Check that we are talking about the same state when
+            # comparing reference and computed
+            assert state.excitation_energy[i] == refdata["eigenvalues"][i]
+            fromi_ref_a = s2s_data[f"from_{i}"]["state_to_excited_tdm_bb_a"]
+            fromi_ref_b = s2s_data[f"from_{i}"]["state_to_excited_tdm_bb_b"]
+
+            state_to_state = State2States(state, initial=i)
+            for j, (ref_a, ref_b) in enumerate(zip(fromi_ref_a, fromi_ref_b)):
+                ito = i + j + 1
+                assert state.excitation_energy[ito] == refdata["eigenvalues"][ito]
+                ref_energy = refdata["eigenvalues"][ito] - refdata["eigenvalues"][i]
+                assert state_to_state.excitation_energy[j] == ref_energy
+                dm_ao_a, dm_ao_b = state_to_state.transition_dm[j].to_ao_basis()
+                np.testing.assert_allclose(dm_ao_a.to_ndarray(), ref_a, atol=1e-4)
+                np.testing.assert_allclose(dm_ao_b.to_ndarray(), ref_b, atol=1e-4)
+
+    @pytest.mark.parametrize("system,method,case,kind,is_alpha", cases_ip_ea)
+    def test_state_to_state_tdm_ip_ea(self, system: str, method: str, case: str,
+                                kind: str, is_alpha: bool, generator: str):
+        if generator == "adcman":
+            if method.endswith("adc2x"):
+                pytest.skip("No adcman reference data yet for IP/EA-ADC(2)-x")
+            
+        refdata = testdata_cache._load_data(
+            system=system, method=method, case=case, source=generator,
+            is_alpha=is_alpha
+        )[kind]
+        if len(refdata["eigenvalues"]) < 2:
+            pytest.skip("Less than two states available.")
+        s2s_data = refdata["state_to_state"]
+
+        # construct a ExcitedStates instance using the eigenvalues and eigenstates
+        # from the reference data.
+        if AdcMethod(method).adc_type == "ip":
+            state: DetachedStates = getattr(
+                testdata_cache, f"{generator}_states")(
+                    system=system, method=method, case=case, kind=kind,
+                    is_alpha=is_alpha
+                )
+        elif AdcMethod(method).adc_type == "ea":
+            state: AttachedStates = getattr(
+                testdata_cache, f"{generator}_states")(
+                    system=system, method=method, case=case, kind=kind,
+                    is_alpha=is_alpha
+                )
+        else:
+            raise ValueError(f"Unknown ADC method: {method.name}")
+
         # since refdata was used to build state we have to have the same amount
         # of states
         for i in range(len(state.excitation_vector) - 1):

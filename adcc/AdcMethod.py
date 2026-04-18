@@ -24,10 +24,13 @@
 
 def get_valid_methods():
     valid_prefixes = ["cvs"]
+    valid_adc_types = ["ip", "ea"]
     valid_bases = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 
-    ret = valid_bases + [p + "-" + m for p in valid_prefixes
-                         for m in valid_bases]
+    ret = (valid_bases 
+        + [p + "-" + m for p in valid_prefixes for m in valid_bases]
+        + [t + "-" + m for t in valid_adc_types for m in valid_bases]
+    )
     return ret
 
 
@@ -43,8 +46,13 @@ class AdcMethod:
         self.__base_method = split[-1]
         split = split[:-1]
         self.is_core_valence_separated = "cvs" in split
-        # NOTE: added this to make the testdata generation ready for IP/EA
-        self.adc_type = "pp"
+        
+        if "ip" in split:
+            self.adc_type = "ip"
+        elif "ea" in split:
+            self.adc_type = "ea"
+        else:
+            self.adc_type = "pp"
 
         try:
             if self.__base_method == "adc2x":
@@ -59,17 +67,22 @@ class AdcMethod:
         Return an equivalent method, where only the level is changed
         (e.g. calling this on a CVS method returns a CVS method)
         """
+        name_str = "adc"
+        if self.adc_type != "pp":
+            name_str = self.adc_type + "-" + "adc"
         if self.is_core_valence_separated:
-            return AdcMethod("cvs-adc" + str(newlevel))
+            return AdcMethod("cvs-" + name_str + str(newlevel))
         else:
-            return AdcMethod("adc" + str(newlevel))
+            return AdcMethod(name_str + str(newlevel))
 
     @property
     def name(self):
+        name = self.__base_method
+        if self.adc_type != "pp":
+            name = self.adc_type + "-" + name
         if self.is_core_valence_separated:
-            return "cvs-" + self.__base_method
-        else:
-            return self.__base_method
+            name = "cvs-" + name
+        return name
 
     @property
     def property_method(self):
@@ -89,6 +102,8 @@ class AdcMethod:
         The base (full) method, i.e. with all approximations such as
         CVS stripped off.
         """
+        if self.adc_type != "pp":
+            return AdcMethod(self.adc_type + "-" + self.__base_method)
         return AdcMethod(self.__base_method)
 
     def __eq__(self, other):

@@ -176,3 +176,25 @@ def get_canonical_block(bra: str, ket: str,
                 factor *= -1
     transpose = invert_transpose_tuple(transpose)
     return (canonical_block, factor, transpose)
+
+
+def get_block_name(spaces, order, variant, has_core_occupied_space):
+    """
+    Assembles name of block function with variant, spaces, and order.
+    Does some sanity checks.
+    """
+    if isinstance(variant, str):
+        variant = [variant]
+    elif variant is None:
+        variant = []
+
+    if has_core_occupied_space and "cvs" not in variant:
+        raise ValueError("Cannot run a general (non-core-valence approximated) "
+                         "ADC method on top of a ground state with a "
+                         "core-valence separation.")
+    if not has_core_occupied_space and "cvs" in variant:
+        raise ValueError("Cannot run a core-valence approximated ADC method on "
+                         "top of a ground state without a "
+                         "core-valence separation.")
+
+    return "_".join(["block"] + variant + spaces + [str(order)])
