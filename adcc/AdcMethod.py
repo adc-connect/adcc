@@ -80,17 +80,19 @@ class Method:
 
         # validate prefix
         split = split[:-1]
-        if split and split[0] not in ["cvs"]:
-            raise ValueError(f"{split[0]} is not a valid method prefix")
+        valid_prefixes: tuple[str, ...] = ("cvs",)
+        if len(split) > len(valid_prefixes):
+            raise ValueError(f"Invalid number of method prefixes provided in {split}.")
+        if any(pref not in valid_prefixes for pref in split):
+            raise ValueError(f"Invalid method prefix in {split}.")
 
         self.is_core_valence_separated: bool = "cvs" in split
         # NOTE: added this to make the testdata generation ready for IP/EA
         self.adc_type: str = "pp"
 
     def _validate_level(self, level: MethodLevel) -> None:
-        if isinstance(level.value, int):
-            if level.value <= self.max_level:
-                return
+        if isinstance(level.value, int) and level.value <= self.max_level:
+            return
 
         # special cases
         if level in self.special_levels:
@@ -108,6 +110,7 @@ class Method:
 
     @property
     def _base_method(self) -> str:
+        assert self._method_base_name is not None
         return self._method_base_name + self.level.to_str()
 
     @property

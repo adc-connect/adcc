@@ -77,9 +77,7 @@ class AdcMatrixlike:
     }
 
     @classmethod
-    def _default_block_orders(cls,
-                              method: Method
-                              ) -> dict[str, int]:
+    def _default_block_orders(cls, method: Method) -> dict[str, int]:
         """
         Determines the default block orders for the given adc method.
         """
