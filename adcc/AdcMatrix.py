@@ -29,7 +29,7 @@ from .LazyMp import LazyMp
 from .adc_pp import matrix as ppmatrix
 from .timings import Timer, timed_member_call
 from .AdcMethod import AdcMethod
-from .functions import ones_like
+from .functions import direct_sum, ones_like
 from .Intermediates import Intermediates
 from .AmplitudeVector import AmplitudeVector
 
@@ -745,3 +745,41 @@ class AdcMatrixProjected(AdcMatrix):
                                   "projected ADC matrices.")
         # TODO The way to implement this is to ask the inner matrix to
         #      a block_view and then wrap that in an AdcMatrixProjected.
+
+
+class Adc2MatrixFolded(AdcMatrix):
+    def __init__(self, matrix, omega=None):
+        assert matrix.method.name == "adc2"
+        super().__init__(matrix.method, matrix.ground_state,
+                       block_orders=matrix.block_orders,
+                       intermediates=matrix.intermediates,
+                       diagonal_precomputed=matrix.diagonal())
+        self.omega = omega
+    
+    def matvec(self, in_ampl):
+        diag = super().diagonal().pphh
+        e = diag.ones_like()
+        u2 = self.block_apply("pphh_ph", in_ampl.ph) / (e * self.omega - diag)
+        u1 = self.block_apply("ph_ph", in_ampl.ph) + self.block_apply("ph_pphh", u2)
+        return AmplitudeVector(ph=u1)
+    
+    # TODO: change to different preconditioner instead
+    def diagonal(self):
+        # block = "ph_ph"
+        # variant = None
+        # if self.is_core_valence_separated:
+        #     variant = "cvs"
+        # blocks = ppmatrix.block(self.ground_state, block.split("_"),
+        #                         order=0, intermediates=self.intermediates,
+        #                         variant=variant)
+        # self._diagonal: AmplitudeVector = sum(
+        #             bl.diagonal for bl in blocks.values() if bl.diagonal
+        #         )
+        #         self._diagonal.evaluate()
+        diag = AmplitudeVector(ph=direct_sum("a-i->ia", self.reference_state.fvv.diagonal(),
+                                             self.reference_state.foo.diagonal()))
+        return diag.evaluate()
+
+    def block_view(self, block):
+        raise NotImplementedError("Block-view not yet implemented for "
+                                  "folded ADC(2) matrices.")

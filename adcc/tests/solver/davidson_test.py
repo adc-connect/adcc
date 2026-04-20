@@ -27,6 +27,7 @@ import pytest
 from adcc import LazyMp
 from adcc.solver.davidson import jacobi_davidson, eigsh
 from adcc.misc import cached_property
+from adcc.AdcMatrix import Adc2MatrixFolded
 
 from ..testdata_cache import testdata_cache
 
@@ -127,3 +128,33 @@ class TestSolverDavidson(unittest.TestCase):
         assert n_states > 1
         assert res.converged
         assert res.eigenvalues[:n_states] == pytest.approx(ref_triplets[:n_states])
+        
+
+class TestSolverDavidsonFolded(unittest.TestCase):
+    @cached_property
+    def matrix(self):
+        return adcc.AdcMatrix(
+            "adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
+        )
+
+    @cached_property
+    def matrix_folded(self):
+        return Adc2MatrixFolded(self.matrix)
+
+    def test_adc2_singlets(self):
+        # Solve for singlets
+        n_states = 9
+        guesses = adcc.guesses_singlet(self.matrix, n_guesses=n_states, block="ph")
+        res = jacobi_davidson(self.matrix, guesses, n_ep=n_states)
+        print(res.eigenvalues[:n_states])
+        matrix_adc1 = adcc.AdcMatrix("adc1", self.matrix.ground_state)
+        guesses_adc1 = adcc.guesses_singlet(matrix_adc1, n_guesses=n_states, block="ph")
+        res_adc1 = jacobi_davidson(matrix_adc1, guesses_adc1, n_ep=n_states)
+        assert res_adc1.converged
+        guesses_folded = res_adc1.eigenvectors
+        guesses_omegas_folded = res_adc1.eigenvalues
+        res_folded = jacobi_davidson(self.matrix_folded, guesses_folded, n_ep=n_states, guess_omegas=guesses_omegas_folded, conv_tol_macro=1e-3, conv_tol=1e-6, max_subspace_diis=5)
+        print(res_folded.eigenvalues[:n_states])
+        print(res.eigenvalues[:n_states])
+        assert res_folded.eigenvalues[:n_states] == pytest.approx(res.eigenvalues[:n_states], rel=1e-9)
+
