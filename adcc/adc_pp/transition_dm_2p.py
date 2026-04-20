@@ -47,8 +47,8 @@ def tdm_isr0_2p(mp, amplitude, intermediates):
     return dm
 
 
-def tdm_isr1_2p(mp, amplitude, intermediates):
-    dm = tdm_isr0_2p(mp, amplitude, intermediates)  # Get ADC(0) result
+def tdm_isr1s_2p(mp, amplitude, intermediates):
+    dm = tdm_isr0_2p(mp, amplitude, intermediates)  # Get ISR(0) result
     u1 = amplitude.ph
 
     hf = mp.reference_state
@@ -69,6 +69,12 @@ def tdm_isr1_2p(mp, amplitude, intermediates):
         # N^5: O^2V^3 / N^4: O^1V^3
         - 1.0 * einsum("ja,ijbc->iabc", u1, t2)
     )
+
+    return dm
+
+
+def tdm_isr1_2p(mp, amplitude, intermediates):
+    dm = tdm_isr1s_2p(mp, amplitude, intermediates)  # Get ISR(1)-s result
 
     try:
         check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude, amplitude)
@@ -180,6 +186,7 @@ def tdm_isr2_2p(mp, amplitude, intermediates):
 
 DISPATCH = {
     "isr0": tdm_isr0_2p,
+    "isr1s": tdm_isr1s_2p,
     "isr1": tdm_isr1_2p,
     "isr2": tdm_isr2_2p,
     "isr2x": tdm_isr2_2p,
