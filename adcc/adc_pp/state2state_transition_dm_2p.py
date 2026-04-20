@@ -56,7 +56,7 @@ def s2s_tdm_isr0_2p(mp, amplitude_l, amplitude_r, intermediates):
     return dm
 
 
-def s2s_tdm_isr1_2p(mp, amplitude_l, amplitude_r, intermediates):
+def s2s_tdm_isr1s_2p(mp, amplitude_l, amplitude_r, intermediates):
     check_singles_amplitudes([b.o, b.v], amplitude_l, amplitude_r)
     dm = s2s_tdm_isr0_2p(mp, amplitude_l, amplitude_r, intermediates)
 
@@ -98,6 +98,13 @@ def s2s_tdm_isr1_2p(mp, amplitude_l, amplitude_r, intermediates):
             + 1 * einsum("ijka,kb->abij", einsum("kc,ijac->ijka", ur1, t2), ul1)
         ).antisymmetrise(0, 1)
     )
+
+    return dm
+
+
+def s2s_tdm_isr1_2p(mp, amplitude_l, amplitude_r, intermediates):
+    dm = s2s_tdm_isr1s_2p(mp, amplitude_l, amplitude_r, intermediates)
+    ul1, ur1 = amplitude_l.ph, amplitude_r.ph
 
     try:
         check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude_l, amplitude_r)
@@ -513,6 +520,7 @@ def s2s_tdm_isr2_2p(mp, amplitude_l, amplitude_r, intermediates):
 
 
 DISPATCH = {"isr0": s2s_tdm_isr0_2p,
+            "isr1s": s2s_tdm_isr1s_2p,
             "isr1": s2s_tdm_isr1_2p,
             "isr2": s2s_tdm_isr2_2p,
             "isr2x": s2s_tdm_isr2_2p,      # same as ISR(2)

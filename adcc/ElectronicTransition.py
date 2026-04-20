@@ -30,7 +30,6 @@ from .misc import cached_member_function
 from .OneParticleDensity import OneParticleDensity
 from .TwoParticleDensity import TwoParticleDensity
 from .NParticleOperator import product_trace
-from .AdcMethod import IsrMethod
 
 
 class ElectronicTransition(ElectronicStates):
@@ -92,7 +91,7 @@ class ElectronicTransition(ElectronicStates):
     @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
     def _transition_dipole_moment(self, state_n: int) -> np.ndarray:
         """Computes the transition dipole moment for a single state"""
-        if self.property_method.level == 0:
+        if self.property_method.level.to_int() == 0:
             warnings.warn("ADC(0) transition dipole moments are known to be "
                           "faulty in some cases.")
         dipole_integrals = self.operators.electric_dipole
@@ -117,7 +116,7 @@ class ElectronicTransition(ElectronicStates):
         Computes the transition dipole moments in the velocity gauge for a
         single state
         """
-        if self.property_method.level == 0:
+        if self.property_method.level.to_int() == 0:
             warnings.warn("ADC(0) transition velocity dipole moments "
                           "are known to be faulty in some cases.")
         dipole_integrals = self.operators.electric_dipole_velocity
@@ -170,16 +169,16 @@ class ElectronicTransition(ElectronicStates):
         Computes the transition magnetic dipole moments within the unmodified
         molecular orbital basis (GIAO) for a single state.
         """
-        if self.property_method.level == 0:
+        if self.property_method.level.to_int() == 0:
             warnings.warn("ADC(0) GIAO transition dipole moments are known to be "
                           "faulty in some cases.")
 
         hf = self.reference_state
-        level = self.property_method.level
+        level = self.property_method.level.to_int()
         p_method_minus_1 = None
 
         if level - 1 >= 0:
-            p_method_minus_1 = IsrMethod("isr" + str(level - 1))
+            p_method_minus_1 = self.property_method.at_level(level - 1)
 
         mag_dips_ints_1p = self.operators.magnetic_dipole_giao_1p(hf, gauge_origin)
         tdm_1p = self._transition_dm(state_n)
@@ -212,7 +211,7 @@ class ElectronicTransition(ElectronicStates):
     @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
     def _transition_quadrupole_moment(self, state_n: int, gauge_origin="origin"):
         """Computes the transition quadrupole moments for a single state"""
-        if self.property_method.level == 0:
+        if self.property_method.level.to_int() == 0:
             warnings.warn("ADC(0) transition quadrupole moments are known to be "
                           "faulty in some cases.")
         quadrupole_integrals = self.operators.electric_quadrupole(gauge_origin)
