@@ -36,9 +36,9 @@ class MethodLevel(Enum):
     FIVE = 5
 
     # special levels
-    TWO_X = "2x"
-    ONE_S = "1s"
-    THREE_D = "3d"
+    TWO_X = "2x"    # extended 2nd-order ADC: 2p2h-2p2h in 1st order
+    ONE_S = "1s"    # 1st-order ISR: in singles excitation space only
+    THREE_D = "3d"  # 3rd-order ISR: in singles/doubles excitation space only
 
     def to_str(self) -> str:
         return str(self.value)
@@ -82,7 +82,8 @@ class Method:
         split = split[:-1]
         valid_prefixes: tuple[str, ...] = ("cvs",)
         if len(split) > len(valid_prefixes):
-            raise ValueError(f"Invalid number of method prefixes provided in {split}.")
+            raise ValueError("Invalid number of method prefixes provided "
+                             f"in {split}.")
         if any(pref not in valid_prefixes for pref in split):
             raise ValueError(f"Invalid method prefix in {split}.")
 

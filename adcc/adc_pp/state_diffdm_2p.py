@@ -96,37 +96,8 @@ def diffdm_isr1s_2p(mp, amplitude, intermediates):
 
 
 def diffdm_isr1_2p(mp, amplitude, intermediates):
-    dm = diffdm_isr0_2p(mp, amplitude, intermediates)  # Get ISR(0) result
+    dm = diffdm_isr1s_2p(mp, amplitude, intermediates)  # Get ISR(1)-s result
     u1 = amplitude.ph
-
-    hf = mp.reference_state
-    d_oo = zeros_like(hf.foo)
-    d_oo.set_mask("ii", 1)
-
-    t2 = mp.t2(b.oovv)
-    # TODO move to intermediates!
-    # one-particle ISR(0) diffdm
-    p1_oo = -einsum("ia,la->il", u1, u1).evaluate()
-
-    # ISR(2) ISR intermediate (TODO Move to intermediates)
-    ru1 = einsum("ijab,jb->ia", t2, u1).evaluate()
-    # new ones
-    ru1_ooov = einsum("kc,ijac->ijka", u1, t2).evaluate()
-
-    dm.oovv += (
-        # N^4: O^2V^2 / N^4: O^2V^2
-        + 4.0 * (
-            einsum("ib,ja->ijab", ru1, u1)
-        ).antisymmetrise(0, 1).antisymmetrise(2, 3)
-        # N^5: O^3V^2 / N^4: O^2V^2
-        + 2.0 * (
-            einsum("ijka,kb->ijab", ru1_ooov, u1)
-        ).antisymmetrise(2, 3)
-        # N^5: O^3V^2 / N^4: O^2V^2
-        - 2.0 * (
-            einsum("jk,ikab->ijab", p1_oo, t2)
-        ).antisymmetrise(0, 1)
-    )
 
     try:
         # ISR(1)-d
