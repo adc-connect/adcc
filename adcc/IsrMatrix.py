@@ -22,8 +22,10 @@
 ## ---------------------------------------------------------------------
 import libadcc
 
+from itertools import product
+
 from .AdcMatrix import AdcMatrixlike
-from .AdcMethod import AdcMethod
+from .AdcMethod import IsrMethod
 from .adc_pp import bmatrix as ppbmatrix
 from .AmplitudeVector import AmplitudeVector
 from .LazyMp import LazyMp
@@ -37,11 +39,11 @@ class IsrMatrix(AdcMatrixlike):
     def __init__(self, method, hf_or_mp, operator, block_orders=None):
         """
         Initialise an ISR matrix of a given one-particle operator
-        for the provided ADC method.
+        for the provided ISR method.
 
         Parameters
         ----------
-        method : str or adcc.AdcMethod
+        method : str or adcc.IsrMethod
             Method to use.
         hf_or_mp : adcc.ReferenceState or adcc.LazyMp
             HF reference or MP ground state.
@@ -60,8 +62,8 @@ class IsrMatrix(AdcMatrixlike):
                             "either a LazyMp, a ReferenceState or a "
                             "HartreeFockSolution_i.")
 
-        if not isinstance(method, AdcMethod):
-            method = AdcMethod(method)
+        if not isinstance(method, IsrMethod):
+            method = IsrMethod(method)
 
         if isinstance(operator, (list, tuple)):
             self.operator = tuple(operator)
@@ -84,8 +86,7 @@ class IsrMatrix(AdcMatrixlike):
         self.block_orders = self._default_block_orders(self.method)
         if block_orders is None:
             # only implemented through PP-ADC(2)
-            if method.adc_type != "pp" or method.name.endswith("adc2x") \
-                    or method.level > 2:
+            if method.adc_type != "pp":
                 raise NotImplementedError("The B-matrix is not implemented "
                                           f"for method {method.name}.")
         else:
@@ -100,15 +101,15 @@ class IsrMatrix(AdcMatrixlike):
             variant = None
             if self.is_core_valence_separated:
                 variant = "cvs"
-            blocks = [{
+            blocks = tuple({
                 block: ppbmatrix.block(self.ground_state, op,
                                        block.split("_"), order=order,
                                        variant=variant)
                 for block, order in self.block_orders.items() if order is not None
-            } for op in self.operator]
-            self.blocks = [{
+            } for op in self.operator)
+            self.blocks = tuple({
                 b: bl[b].apply for b in bl
-            } for bl in blocks]
+            } for bl in blocks)
 
     @timed_member_call()
     def matvec(self, v):
@@ -119,9 +120,17 @@ class IsrMatrix(AdcMatrixlike):
         If a list of OneParticleOperator objects was passed to the class
         instantiation operator, a list of AmplitudeVector objects is returned.
         """
+        # Check which blocks are present in the AmplitudeVector.
+        # Missing blocks can be treated as zero vectors, so their
+        # contribution to the matvec is zero and does not need to be computed.
+        avail_blocks = [f"{bra}_{ket}" for bra, ket in product(v.blocks, repeat=2)]
+        filtered_blocks = [
+            {blk: v for blk, v in comp.items() if blk in avail_blocks}
+            for comp in self.blocks
+        ]
         ret = [
             sum(block(v) for block in bl_ph.values())
-            for bl_ph in self.blocks
+            for bl_ph in filtered_blocks
         ]
         if len(ret) == 1:
             return ret[0]
@@ -139,7 +148,7 @@ class IsrMatrix(AdcMatrixlike):
                 AmplitudeVector(ph=-1.0 * mv.ph, pphh=-1.0 * mv.pphh)
                 for mv in self.matvec(v)
             ]
-            # operators without any symmetry
+        # operators without any symmetry
         else:
             return NotImplemented
 

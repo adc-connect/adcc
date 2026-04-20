@@ -24,7 +24,7 @@ import numpy as np
 import pytest
 
 from adcc import block as b
-from adcc.AdcMethod import AdcMethod
+from adcc.AdcMethod import IsrMethod, MethodLevel
 from adcc.functions import evaluate, einsum
 from adcc.OneParticleDensity import OneParticleDensity
 from adcc.NParticleOperator import OperatorSymmetry
@@ -51,17 +51,27 @@ class TestStateDiffDm:
         mp = state.ground_state
         n_states = len(state.excitation_energy)
         excitation_energy = np.zeros((n_states))
-        method = state.method
-        level = method.level
+        if state.method.name == "adc3":
+            # so we don't forget to switch to the actual implementation
+            with pytest.raises(NotImplementedError):
+                method = IsrMethod("isr3")
+
+            # TODO switch to ISR(3) implementation
+            method = IsrMethod("isr2")
+            method.level = MethodLevel(3)
+
+        else:
+            method = state.property_method
+        level = method.level.to_int()
 
         method_order_minus_one = None
         if level - 1 >= 0:
-            method_order_minus_one = AdcMethod("adc" + str(level - 1))
+            method_order_minus_one = IsrMethod("isr" + str(level - 1))
 
         for es in range(n_states):
             evec = state.excitation_vector[es]
             # TODO switch to ISR(3) implemntation
-            if method.level == 3:
+            if method.level.to_int() == 3:
                 # so we don't forget to switch to the actual implementation
                 with pytest.raises(NotImplementedError):
                     state_diffdm(method, mp, evec)
@@ -77,14 +87,6 @@ class TestStateDiffDm:
             if method_order_minus_one is not None:
                 # two particle part
                 dens_2p = state_diffdm_2p(method_order_minus_one, mp, evec)
-                # go for ISR(1)-d for ADC(2)
-                if method_order_minus_one.level == 1:
-                    dens_2p.ooov += (
-                        - 2.0 * einsum("kb,ijab->ijka", evec.ph, evec.pphh)
-                    )
-                    dens_2p.ovvv += (
-                        - 2.0 * einsum("ja,ijbc->iabc", evec.ph, evec.pphh)
-                    )
                 for block in dens_2p.blocks:
                     # compute
                     # 1/4 [(1 - P_pq) (1 - P_rs) 1 / (n_occ - 1) <pi||ri> delta_qs]

@@ -226,7 +226,9 @@ class TestAdcMatrixInterface:
         # check that the blocks are correct
         blocks = matrix.axis_blocks
         if matrix.method.adc_type == "pp":
-            assert blocks == ["ph", "pphh", "ppphhh"][:matrix.method.level // 2 + 1]
+            assert blocks == (
+                ["ph", "pphh", "ppphhh"][:matrix.method.level.to_int() // 2 + 1]
+            )
         else:
             raise NotImplementedError(f"Unknown adc type {matrix.method.adc_type}.")
         assert sorted(matrix.axis_spaces.keys(), key=len) == blocks

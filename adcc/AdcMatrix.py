@@ -28,7 +28,7 @@ import libadcc
 from .LazyMp import LazyMp
 from .adc_pp import matrix as ppmatrix
 from .timings import Timer, timed_member_call
-from .AdcMethod import AdcMethod
+from .AdcMethod import AdcMethod, IsrMethod, Method
 from .functions import ones_like
 from .Intermediates import Intermediates
 from .AmplitudeVector import AmplitudeVector
@@ -73,17 +73,20 @@ class AdcMatrixlike:
 
     _special_block_orders = {
         "adc2x": {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 1},
+        "isr1s": {"ph_ph": 1, "ph_pphh": None, "pphh_ph": None, "pphh_pphh": None},
     }
 
     @classmethod
-    def _default_block_orders(cls, method: AdcMethod) -> dict[str, int]:
+    def _default_block_orders(cls, method: Method) -> dict[str, int]:
         """
         Determines the default block orders for the given adc method.
         """
         # check if we have a special method like adc2x
         # I guess base_method should also contain the adc_type prefix so
         # we don't need to separate different adc_types
-        block_orders = cls._special_block_orders.get(method.base_method.name, None)
+        block_orders = cls._special_block_orders.get(
+            method.base_method.name, None
+        )
         if block_orders is not None:
             return block_orders.copy()
         # otherwise assume that we have a "normal" PP/IP/...-ADC(n) method
@@ -96,9 +99,23 @@ class AdcMatrixlike:
             raise ValueError(f"Unknown adc type {method.adc_type} for method "
                              f"{method.name}. Can not determine default block "
                              "orders.")
-        spaces = [
-            "p" * i + min_space + "h" * i for i in range(0, (method.level // 2) + 1)
-        ]
+        # ADC matrices have first-order coupling whereas ISR matrices
+        # have a zeroth-order coupling between adjacent excitation classes
+        # see https://doi.org/10.1063/1.1752875
+        if isinstance(method, AdcMethod):
+            # First-order coupling between adjacent excitation classes.
+            spaces = [
+                "p" * i + min_space + "h" * i
+                for i in range(0, (method.level.to_int() // 2) + 1)
+            ]
+        elif isinstance(method, IsrMethod):
+            # Zeroth-order coupling between adjacent excitation classes.
+            spaces = [
+                "p" * i + min_space + "h" * i
+                for i in range(0, ((method.level.to_int() + 1) // 2) + 1)
+            ]
+        else:
+            raise ValueError(f"Invalid method: {method.name}")
         # exploit the fact that the spaces are sorted from small to high:
         # If we walk the adc matrix in any direction we always have to subtract 1!
         # Therefore, we can determine the order according to the position of the
@@ -107,26 +124,27 @@ class AdcMatrixlike:
         ret = {}
         for ((i1, bra), (i2, ket)) in \
                 itertools.product(enumerate(spaces), repeat=2):
-            order = method.level - i1 - i2
-            assert order >= 0
+            order = method.level.to_int() - i1 - i2
+            # For ISR matrices allow missing diagonal blocks.
+            order = None if order < 0 else order
             ret[f"{bra}_{ket}"] = order
         return ret
 
     @classmethod
     def _validate_block_orders(cls, block_orders: dict[str, int],
-                               method: AdcMethod,
+                               method: Method,
                                allow_missing_diagonal_blocks: bool = False) -> None:
         """
-        Validates that the given block_orders form a valid adc matrix for the given
-        adc method.
+        Validates that the given block_orders form a valid adc/isr matrix for the
+        given adc(isr) method.
 
         Parameters
         ----------
         block_orders: dict[str, int]
             The block orders to validate. Block orders should be of the form
             {'ph_ph': 2, 'ph_pphh': 1, ...}
-        method: AdcMethod
-            The adc method/adc type (PP-ADC, ...) for which to validate
+        method: Method
+            The adc/isr method/adc type (PP-ADC/ISR, ...) for which to validate
             the block_orders.
         allow_missing_diagonal_blocks: bool, optional
             If set, couplings between missing diagonal blocks are allowed, e.g.,
@@ -137,6 +155,7 @@ class AdcMatrixlike:
         for block, order in block_orders.items():
             if order is None:
                 continue
+            assert order >= 0
             # ensure that the block is valid for the given adc type
             bra, ket = block.split("_")
             if not cls._is_valid_space(bra, method) or \
@@ -164,11 +183,11 @@ class AdcMatrixlike:
                                  f"{ket_diag} are in the matrix too.")
 
     @classmethod
-    def _is_valid_space(cls, space: str, method: AdcMethod) -> bool:
+    def _is_valid_space(cls, space: str, method: Method) -> bool:
         """
         Checks whether the given space ('ph' for instance) is valid for the given
         adc method. Thereby we only verify that the space matches the adc_type of
-        adc method!
+        method!
         """
         n_particle, n_hole = space.count("p"), space.count("h")
         # ensure that the space is of the form pp...hh...
@@ -236,11 +255,7 @@ class AdcMatrix(AdcMatrixlike):
             self.intermediates = Intermediates(self.ground_state)
 
         self.block_orders = self._default_block_orders(self.method)
-        if block_orders is None:
-            if method.level > 3:
-                raise NotImplementedError("The ADC secular matrix is not "
-                                          f"implemented for method {method.name}.")
-        else:
+        if block_orders is not None:
             self.block_orders.update(block_orders)
         self._validate_block_orders(
             block_orders=self.block_orders, method=self.method,

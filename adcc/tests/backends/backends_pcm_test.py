@@ -119,7 +119,7 @@ class TestPCM:
             atol=1e-5
         )
 
-        state_cis = adcc.ExcitedStates(state, property_method="adc0")
+        state_cis = adcc.ExcitedStates(state, property_method="isr0")
         assert_allclose(
             state_cis.oscillator_strength,
             result["lr_osc_strength"], atol=1e-3

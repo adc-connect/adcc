@@ -24,28 +24,28 @@ from math import sqrt
 
 from adcc import block as b
 from adcc.LazyMp import LazyMp
-from adcc.AdcMethod import AdcMethod
+from adcc.AdcMethod import IsrMethod
 from adcc.functions import einsum, evaluate
 from adcc.Intermediates import Intermediates
 from adcc.AmplitudeVector import AmplitudeVector
 
 
-def mtm_adc0(mp, op, intermediates):
+def mtm_isr0(mp, op, intermediates):
     f1 = op.vo.transpose()
     return AmplitudeVector(ph=f1)
 
 
-def mtm_adc1(mp, op, intermediates):
-    ampl = mtm_adc0(mp, op, intermediates)
+def mtm_isr1(mp, op, intermediates):
+    ampl = mtm_isr0(mp, op, intermediates)
     f1 = - 1.0 * einsum("ijab,jb->ia", mp.t2(b.oovv), op.ov)
     return ampl + AmplitudeVector(ph=f1)
 
 
-def mtm_adc2(mp, op, intermediates):
+def mtm_isr2(mp, op, intermediates):
     t2 = mp.t2(b.oovv)
     p0 = mp.mp2_diffdm
 
-    ampl = mtm_adc1(mp, op, intermediates)
+    ampl = mtm_isr1(mp, op, intermediates)
     f1 = (
         + 0.5 * einsum("ijab,jkbc,ck->ia", t2, t2, op.vo)
         + 0.5 * einsum("ij,aj->ia", p0.oo, op.vo)
@@ -61,14 +61,14 @@ def mtm_adc2(mp, op, intermediates):
     return ampl + AmplitudeVector(ph=f1, pphh=f2)
 
 
-def mtm_cvs_adc0(mp, op, intermediates):
+def mtm_cvs_isr0(mp, op, intermediates):
     f1 = op.vc.transpose()
     return AmplitudeVector(ph=f1)
 
 
-def mtm_cvs_adc2(mp, op, intermediates):
+def mtm_cvs_isr2(mp, op, intermediates):
 
-    ampl = mtm_cvs_adc0(mp, op, intermediates)
+    ampl = mtm_cvs_isr0(mp, op, intermediates)
     f1 = (
         - 0.5 * einsum("bI,ab->Ia", op.vc, intermediates.cvs_p0.vv)
         - 1.0 * einsum("jI,ja->Ia", op.oc, intermediates.cvs_p0.ov)
@@ -78,24 +78,25 @@ def mtm_cvs_adc2(mp, op, intermediates):
 
 
 DISPATCH = {
-    "adc0": mtm_adc0,
-    "adc1": mtm_adc1,
-    "adc2": mtm_adc2,
-    "adc2x": mtm_adc2,  # Identical to ADC(2)
-    "cvs-adc0": mtm_cvs_adc0,
-    "cvs-adc1": mtm_cvs_adc0,  # Identical to CVS-ADC(0)
-    "cvs-adc2": mtm_cvs_adc2,
+    "isr0": mtm_isr0,
+    "isr1s": mtm_isr1,  # Identical to ISR(1)
+    "isr1": mtm_isr1,
+    "isr2": mtm_isr2,
+    "cvs-isr0": mtm_cvs_isr0,
+    "cvs-isr1s": mtm_cvs_isr0,  # Identical to CVS-ISR(0)
+    "cvs-isr1": mtm_cvs_isr0,  # Identical to CVS-ISR(0)
+    "cvs-isr2": mtm_cvs_isr2,
 }
 
 
 def modified_transition_moments(method, ground_state, operator=None,
                                 intermediates=None):
     """Compute the modified transition moments (MTM) for the provided
-    ADC method with reference to the passed ground state.
+    ISR method with reference to the passed ground state.
 
     Parameters
     ----------
-    method: adc.Method
+    method: adcc.IsrMethod
         Provide a method at which to compute the MTMs
     ground_state : adcc.LazyMp
         The MP ground state
@@ -109,8 +110,8 @@ def modified_transition_moments(method, ground_state, operator=None,
     -------
     adcc.AmplitudeVector or list of adcc.AmplitudeVector
     """
-    if not isinstance(method, AdcMethod):
-        method = AdcMethod(method)
+    if not isinstance(method, IsrMethod):
+        method = IsrMethod(method)
     if not isinstance(ground_state, LazyMp):
         raise TypeError("ground_state should be a LazyMp object.")
     if intermediates is None:

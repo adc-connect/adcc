@@ -78,10 +78,10 @@ class TestFunctionality:
         refmp = getattr(testdata_cache, f"{generator}_data")(
             system=system, method="mp", case=case
         )
-        if res.method.level >= 2:
+        if res.method.level.to_int() >= 2:
             assert res.ground_state.energy_correction(2) == \
                 approx(refmp["mp2"]["energy"])
-        if res.method.level >= 3:
+        if res.method.level.to_int() >= 3:
             if not res.method.is_core_valence_separated:
                 # TODO The latter check can be removed once CVS-MP3 energies
                 #      are implemented
@@ -126,7 +126,8 @@ class TestFunctionality:
     def test_functionality(self, system: str, case: str, method: str, kind: str,
                            generator: str):
         method: adcc.AdcMethod = adcc.AdcMethod(method)
-        if generator == "adcman" and "cvs" in case and method.level == 0:
+        if generator == "adcman" and "cvs" in case \
+                and method.level.to_int() == 0:
             pytest.skip("CVS-ADC(0) adcman data is not available")
 
         system: testcases.TestCase = testcases.get_by_filename(system).pop()
@@ -135,12 +136,12 @@ class TestFunctionality:
         kwargs = {n_states: 3}
         # only few states available for h2o sto3g
         if system.name == "h2o" and system.basis == "sto-3g":
-            if method.level < 2:  # adc0/adc1
+            if method.level.to_int() < 2:  # adc0/adc1
                 if "cvs" in case and "fv" in case:
                     kwargs[n_states] = 1
                 elif "cvs" in case:
                     kwargs[n_states] = 2
-            elif method.level < 4:  # adc2/adc3
+            elif method.level.to_int() < 4:  # adc2/adc3
                 if "cvs" in case and "fv" in case:  # only 5 states available
                     kwargs["n_guesses"] = 3
 
