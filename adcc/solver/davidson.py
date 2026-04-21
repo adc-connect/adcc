@@ -614,8 +614,8 @@ def state_specific_solver(matrix, state, max_subspace, max_iter,
             
             state_i.n_iter_diis += 1
             jacobi_step = evaluate(preconditioner @ state_i.residual)
-            if explicit_symmetrisation:
-                jacobi_step = explicit_symmetrisation.symmetrise(jacobi_step)
+            # if explicit_symmetrisation:
+            #     jacobi_step = explicit_symmetrisation.symmetrise(jacobi_step)
             corrected_vector = evaluate(state_i.eigenvector + jacobi_step)
             state_i.eigenvector = diis.extrapolate(corrected_vector, state_i.residual)
         print(state_i.residual_norm)

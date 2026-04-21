@@ -431,8 +431,9 @@ class AdcMatrix(AdcMatrixlike):
             ret["pphh"] = lambda v: v.antisymmetrise([(2, 3)])
         else:
             def symmetrise_generic_adc_doubles(invec):
-                # doubles part is antisymmetric wrt. (i,j,a,b) <-> (i,j,b,a)
-                scratch = invec.antisymmetrise([(2, 3)])
+                # doubles part is antisymmetric wrt. (i,j,a,b) <-> (j,i,a,b)
+                # and (i,j,a,b) <-> (i,j,b,a)
+                scratch = invec.antisymmetrise([(0, 1)]).antisymmetrise([(2, 3)])
                 # doubles part is symmetric wrt. (i,j,a,b) <-> (j,i,b,a)
                 return scratch.symmetrise([(0, 1), (2, 3)])
             ret["pphh"] = symmetrise_generic_adc_doubles
@@ -751,15 +752,18 @@ class Adc2MatrixFolded(AdcMatrix):
     def __init__(self, matrix, omega=None):
         assert matrix.method.name == "adc2"
         super().__init__(matrix.method, matrix.ground_state,
-                       block_orders=matrix.block_orders,
-                       intermediates=matrix.intermediates,
-                       diagonal_precomputed=matrix.diagonal())
+                         block_orders=matrix.block_orders,
+                         intermediates=matrix.intermediates,
+                         diagonal_precomputed=matrix.diagonal())
         self.omega = omega
+        # TODO: move to DavidsonState
+        from .solver.explicit_symmetrisation import IndexSymmetrisation
+        self.isymm = IndexSymmetrisation(matrix)
     
     def get_doubles_amplitudes(self, v_1):
         diag = super().diagonal().pphh
         e = diag.ones_like()
-        return self.block_apply("pphh_ph", v_1) / (e * self.omega - diag)
+        return (self.block_apply("pphh_ph", v_1) / (e * self.omega - diag))# .antisymmetrise(0, 1).antisymmetrise(2, 3).symmetrise([(0, 1), (2, 3)])
 
     def matvec(self, v):
         v_2 = self.get_doubles_amplitudes(v.ph)
@@ -787,6 +791,7 @@ class Adc2MatrixFolded(AdcMatrix):
         raise NotImplementedError("Block-view not yet implemented for "
                                   "folded ADC(2) matrices.")
 
+    # TODO: move to DavidsonState
     def unfold(self, v):
         v_1_norm2 = dot(v.ph, v.ph)
         v_2 = self.get_doubles_amplitudes(v.ph)
@@ -794,4 +799,4 @@ class Adc2MatrixFolded(AdcMatrix):
         renorm_factor = np.sqrt(1 / (v_1_norm2 + v_2_norm2))
         v1_renorm = v.ph * renorm_factor
         v2_renorm = v_2 * renorm_factor
-        return AmplitudeVector(ph=v1_renorm, pphh=v2_renorm)
+        return self.isymm.symmetrise(AmplitudeVector(ph=v1_renorm, pphh=v2_renorm))
