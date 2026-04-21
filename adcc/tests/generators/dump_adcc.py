@@ -2,6 +2,7 @@ import adcc
 from adcc.AdcMatrix import AdcMatrix
 from adcc.AmplitudeVector import AmplitudeVector
 from adcc.ExcitedStates import ExcitedStates
+from adcc.ElectronicStates import ElectronicStates
 from adcc.hdf5io import emplace_dict
 from adcc.LazyMp import LazyMp
 from adcc.State2States import State2States
@@ -117,10 +118,13 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
             eigenvectors[exdegree + 1].append(getattr(
                 states.excitation_vector[n], block  # type: ignore
             ).to_ndarray())
-    kind_data = {}
-    # eigenvalues
+       
+        kind_data = {}
+
+    #eigenvalues - isr independent
     kind_data["eigenvalues"] = states.excitation_energy[:n_states]
-    # state and transition dipole moments
+
+    #isr dependent properties
     kind_data["state_dipole_moments"] = states.state_dipole_moment[:n_states]
     kind_data["transition_dipole_moments"] = (
         states.transition_dipole_moment[:n_states]
@@ -137,15 +141,16 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
         kind_data[f"transition_quadrupole_moments_{g_origin}"] = (
             states.transition_quadrupole_moment(g_origin)[:n_states]
         )
-    # state diffdm and ground to excited state tdm
+    #state diffdm and ground to excited state tdm
     kind_data["state_diffdm_bb_a"] = np.asarray(dm_bb_a)
     kind_data["state_diffdm_bb_b"] = np.asarray(dm_bb_b)
     kind_data["ground_to_excited_tdm_bb_a"] = np.asarray(tdm_bb_a)
-    kind_data["ground_to_excited_tdm_bb_b"] = np.asarray(tdm_bb_b)
-    # dump the eigenvectors
+    kind_data["ground_to_excited_tdm_bb_b"] = np.asarray(tdm_bb_b)   
+
+    #eigenvectors - isr independent
     kind_data["eigenvectors_singles"] = np.asarray(eigenvectors[1])
     if 2 in eigenvectors:
-        kind_data["eigenvectors_doubles"] = np.asarray(eigenvectors[2])
+        kind_data["eigenvectors_doubles"] = np.asarray(eigenvectors[2])   
     # state to state tdm: not implemented for CVS
     if not states.method.is_core_valence_separated:
         for ifrom in range(n_states - 1):
@@ -159,6 +164,7 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
                 bb_a, bb_b = tdm.to_ao_basis(states.reference_state)
                 tdm_bb_a.append(bb_a.to_ndarray())
                 tdm_bb_b.append(bb_b.to_ndarray())
+    
             kind_data[f"state_to_state/from_{ifrom}/transition_dipole_moments"] = (
                 state2state.transition_dipole_moment[:n_states - ifrom - 1]
             )
@@ -168,12 +174,34 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
             kind_data[f"state_to_state/from_{ifrom}/state_to_excited_tdm_bb_b"] = (
                 np.asarray(tdm_bb_b)
             )
+
     # ssq for unrestriced calculation
-    if not states.reference_state.restricted \
-            and not states.method.is_core_valence_separated:
+    if (not states.reference_state.restricted \
+            and not states.method.is_core_valence_separated
+            and states._property_method.level <=2):
         kind_data["state_ssq"] = states.state_ssq
-    # write the data to hdf5
-    emplace_dict(kind_data, hdf5_file, compression="gzip")
+
+    #
+    # split ISR dependent (isr_data) and independent properties (global_data) 
+    # 
+
+    global_keys = [
+        "eigenvalues", 
+        "eigenvectors_singles", 
+        "eigenvectors_doubles",
+        ]
+
+    global_data = {k: v for k,v in kind_data.items() if k in global_keys}
+    isr_data = {k: v for k,v in kind_data.items() if k not in global_keys}
+
+    #write global data to hdf5
+    #emplace_dict(global_data, hdf5_file, compression="gzip")
+    for k, v in global_data.items():
+        if k not in hdf5_file:
+            emplace_dict({k: v}, hdf5_file, compression="gzip")
+    #write isr dependent data to hdf5
+    emplace_dict(isr_data, hdf5_file, compression="gzip")
+
     hdf5_file.attrs["adcc_version"] = adcc.__version__
 
 

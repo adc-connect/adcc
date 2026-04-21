@@ -3,7 +3,7 @@ from scipy import constants
 import warnings
 
 from .AdcMatrix import AdcMatrix
-from .AdcMethod import AdcMethod, IsrMethod, MethodLevel
+from .AdcMethod import AdcMethod, IsrMethod
 from .AmplitudeVector import AmplitudeVector
 from .FormatDominantElements import FormatDominantElements
 from .FormatIndex import (
@@ -38,8 +38,7 @@ class ElectronicStates:
 
     def __init__(self, data, method: str = None,
                  property_method: str = None,
-                 isr_order: int = None ) -> None:
-                
+                 isr_order: int = None) -> None:
         """
         Construct an ElectronicStates class from some data obtained from an
         iterative solver or another :class:`ElectronicStates` instance.
@@ -55,9 +54,9 @@ class ElectronicStates:
             Provide an explicit method for property calculations to
             override the automatic selection.
         isr_order : int, optional
-            Provide the ISR order for calculation of properties at a speciifc order 
+            Provide the ISR order for calculation of properties at a speciifc order
             corresponding to the ADC method.
-    """
+        """
         self.matrix: AdcMatrix = data.matrix
         self.ground_state: LazyMp = self.matrix.ground_state
         self.reference_state: ReferenceState = (
@@ -88,35 +87,24 @@ class ElectronicStates:
             self.method: AdcMethod = AdcMethod(self.method)
 
         if isr_order is not None:
-            if not isinstance(isr_order, int):  
+            if not isinstance(isr_order, int):
                 raise TypeError("isr_order must be an integer")
-            if self.method.level // 2 != isr_order // 2:
+            if int(self.method.level) // 2 != isr_order // 2:
                 raise ValueError("isr_order incompatible with method order")
 
         if property_method is None:
-<<<<<<< HEAD
-            if self.method.level in [MethodLevel.TWO_X, MethodLevel.THREE]:
-                # Auto-select ISR(2) properties for ADC(2)-x and ADC(3) calc
-                warnings.warn(f"ISR({self.method.level.to_str()}) not implemented."
-                              f" Property method is selected as ISR(2).")
-                property_method = self.method.at_level(2).as_method(IsrMethod)
-            else:
-                property_method = self.method.as_method(IsrMethod)
-        elif not isinstance(property_method, IsrMethod):
-            property_method = IsrMethod(property_method)
-        self._property_method: IsrMethod = property_method
-=======
             if isr_order is None:
                 assert self.method.level <= 3
                 isr_order = min(self.method.level, 2)
-            property_method = self.method.at_level(isr_order)
+            property_method = self.method.at_level(isr_order).as_method(IsrMethod)
         else:
             if isr_order is not None:
-                warning.warn("isr_order will be ignored if property_method is given")              
-            if not isinstance(property_method, AdcMethod):
-                property_method = AdcMethod(property_method)
-        self._property_method: AdcMethod = property_method
->>>>>>> 9b5d3e4 (isr_order is defined when it is None)
+                warnings.warn(
+                    "isr_order will be ignored if property_method is given"
+                )
+            if not isinstance(property_method, IsrMethod):
+                property_method = IsrMethod(property_method)
+        self._property_method: IsrMethod = property_method
 
         # Special stuff for special solvers
         if isinstance(data, EigenSolverStateBase):

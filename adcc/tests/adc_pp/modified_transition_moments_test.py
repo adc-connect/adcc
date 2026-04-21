@@ -24,12 +24,22 @@ import pytest
 import numpy as np
 
 from adcc.adc_pp.modified_transition_moments import modified_transition_moments
+from adcc import AdcMethod
 
 from ..testdata_cache import testdata_cache
 from .. import testcases
 
 
-methods = ["adc0", "adc1", "adc2"]
+methods = ["adc0", "adc1", "adc2", "adc3_isr2", "adc3"]
+
+def _method_isr(method: str):
+    """ Return (actual_method, isr_order) for the given method string. """
+    if method == "adc3_isr2":
+        return "adc3", 2
+    elif method == "adc3":
+        return "adc3", 3
+    else:
+        return method, None
 
 test_cases = testcases.get_by_filename(
     "h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz"
@@ -46,12 +56,18 @@ operator_kinds = ["electric", "magnetic"]
 @pytest.mark.parametrize("op_kind", operator_kinds)
 def test_modified_transition_moments(system: str, case: str, method: str, kind: str,
                                      op_kind: str):
+    actual_method, isr_order = _method_isr(method)
+    hdf5_key = "3" if method == "adc3" else "None"
+    if "cvs" in case and actual_method == "adc3":
+        pytest.skip("CVS-ADC(3) mtm not implemented yet")
+
     state = testdata_cache.adcc_states(
-        system=system, method=method, kind=kind, case=case
+        system=system, method=actual_method, kind=kind, case=case, isr_order=isr_order
     )
+    
     ref = testdata_cache.adcc_data(
-        system=system, method=method, case=case
-    )[kind]
+        system=system, method=actual_method, case=case
+    )[hdf5_key][kind]
 
     n_ref = len(state.excitation_vector)
     method = method.replace("adc", "isr")
@@ -66,10 +82,15 @@ def test_modified_transition_moments(system: str, case: str, method: str, kind: 
             f"Test not implemented for operator kind {op_kind}"
         )
 
-    if "cvs" in case and "cvs" not in method:
-        method = f"cvs-{method}"
+    if "cvs" in case and "cvs" not in actual_method:
+        actual_method = f"cvs-{actual_method}"
 
-    mtms = modified_transition_moments(method, state.ground_state, dips)
+    # mtms = modified_transition_moments(actual_method, state.ground_state, dips)
+    if isr_order is not None:
+        mtm_level = AdcMethod("adc3").at_level(isr_order).name
+    else:
+        mtm_level = actual_method
+    mtms = modified_transition_moments(mtm_level, state.ground_state, dips)
 
     for i in range(n_ref):
         # Computing the scalar product of the eigenvector
