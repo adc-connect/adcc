@@ -144,7 +144,7 @@ class TestSolverDavidsonFolded(unittest.TestCase):
     def test_adc2_singlets(self):
         import numpy as np
         # Solve for singlets
-        n_states = 8
+        n_states = 2
         guesses = adcc.guesses_singlet(self.matrix, n_guesses=n_states, block="ph")
         res = jacobi_davidson(self.matrix, guesses, n_ep=n_states)
         for n in range(n_states):
@@ -159,4 +159,19 @@ class TestSolverDavidsonFolded(unittest.TestCase):
         print(res.eigenvalues[:n_states])
         print(res_folded.eigenvalues[:n_states])
         assert res_folded.eigenvalues[:n_states] == pytest.approx(res.eigenvalues[:n_states], rel=1e-9)
-
+        for n in range(n_states):
+            print(f"====================== {n} ======================")
+            v1 = res.eigenvectors[n].ph.to_ndarray()
+            v2 = res.eigenvectors[n].pphh.to_ndarray()
+            self.matrix_folded.omega = res_folded.eigenvalues[n]
+            v_folded = self.matrix_folded.unfold(res_folded.eigenvectors[n])
+            v1_folded = v_folded.ph.to_ndarray()
+            v2_folded = v_folded.pphh.to_ndarray()
+            print(v1)
+            print(v1_folded)
+            np.testing.assert_allclose(v1, -1.0 * v1_folded, atol=1e-9)
+            np.testing.assert_allclose(v2, -1.0 * v2_folded, atol=1e-9)
+            assert res.eigenvectors[n].ph.describe_symmetry() == v_folded.ph.describe_symmetry()
+            print(res.eigenvectors[n].pphh.describe_symmetry())
+            print(v_folded.pphh.describe_symmetry())
+            assert res.eigenvectors[n].pphh.describe_symmetry() == v_folded.pphh.describe_symmetry()

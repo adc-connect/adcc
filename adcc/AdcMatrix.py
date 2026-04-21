@@ -29,7 +29,7 @@ from .LazyMp import LazyMp
 from .adc_pp import matrix as ppmatrix
 from .timings import Timer, timed_member_call
 from .AdcMethod import AdcMethod
-from .functions import direct_sum, ones_like
+from .functions import direct_sum, dot, ones_like
 from .Intermediates import Intermediates
 from .AmplitudeVector import AmplitudeVector
 
@@ -756,12 +756,15 @@ class Adc2MatrixFolded(AdcMatrix):
                        diagonal_precomputed=matrix.diagonal())
         self.omega = omega
     
-    def matvec(self, in_ampl):
+    def get_doubles_amplitudes(self, v_1):
         diag = super().diagonal().pphh
         e = diag.ones_like()
-        u2 = self.block_apply("pphh_ph", in_ampl.ph) / (e * self.omega - diag)
-        u1 = self.block_apply("ph_ph", in_ampl.ph) + self.block_apply("ph_pphh", u2)
-        return AmplitudeVector(ph=u1)
+        return self.block_apply("pphh_ph", v_1) / (e * self.omega - diag)
+
+    def matvec(self, v):
+        v_2 = self.get_doubles_amplitudes(v.ph)
+        sigma_1 = self.block_apply("ph_ph", v.ph) + self.block_apply("ph_pphh", v_2)
+        return AmplitudeVector(ph=sigma_1)
     
     # TODO: change to different preconditioner instead
     def diagonal(self):
@@ -783,3 +786,12 @@ class Adc2MatrixFolded(AdcMatrix):
     def block_view(self, block):
         raise NotImplementedError("Block-view not yet implemented for "
                                   "folded ADC(2) matrices.")
+
+    def unfold(self, v):
+        v_1_norm2 = dot(v.ph, v.ph)
+        v_2 = self.get_doubles_amplitudes(v.ph)
+        v_2_norm2 = dot(v_2, v_2)
+        renorm_factor = np.sqrt(1 / (v_1_norm2 + v_2_norm2))
+        v1_renorm = v.ph * renorm_factor
+        v2_renorm = v_2 * renorm_factor
+        return AmplitudeVector(ph=v1_renorm, pphh=v2_renorm)

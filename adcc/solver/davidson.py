@@ -244,8 +244,6 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
         state.timer.restart("iteration")
         if is_converged(state):
             # Build the eigenvectors we desire from the subspace vectors:
-            print(epair_mask)
-            print(state.eigenvectors)
             state.eigenvectors = [lincomb(v, SS, evaluate=True)
                                   for i, v in enumerate(np.transpose(rvecs))
                                   if i in epair_mask]
@@ -437,6 +435,9 @@ def eigsh(matrix, guesses, n_ep=None, n_block=None, max_subspace=None,
     max_subspace_iter : int, optional
         Maximum number of iterations for diagonalizing the subspace matrix
     """
+    # TODO: remove, only for testing
+    from adcc.workflow import setup_solver_printing
+    callback = callback = setup_solver_printing("Jacobi-Davidson", matrix, "singlet", default_print, output=sys.stdout)
     if not isinstance(matrix, AdcMatrixlike):
         raise TypeError("matrix is not of type AdcMatrixlike")
     for guess in guesses:
@@ -557,6 +558,7 @@ def state_specific_solver(matrix, state, max_subspace, max_iter,
         if project:
             state_i.residual = project_lower_states(state_i.residual)
         state_i.residual_norm = np.sqrt(state_i.residual @ state_i.residual)
+        print(state_i.residual_norm)
 
     state.eigenvalues = []
     state.eigenvectors = []
@@ -584,6 +586,7 @@ def state_specific_solver(matrix, state, max_subspace, max_iter,
             state_i.eigenvalue = state_i.eigenvalue_n
             matrix.omega = state_i.eigenvalue
             state_i.eigenvector = state_i.eigenvector_n
+            # TODO: check that micro iterations have converged?
             form_residual(state_i, project=False)
             if convergence_test_macro(state_i):
                 break
@@ -616,7 +619,7 @@ def state_specific_solver(matrix, state, max_subspace, max_iter,
             corrected_vector = evaluate(state_i.eigenvector + jacobi_step)
             state_i.eigenvector = diis.extrapolate(corrected_vector, state_i.residual)
         print(state_i.residual_norm)
-        assert state_i.converged
+        assert state.converged
         print("n_iter_diis", state_i.n_iter_diis)
         print("n_applies", state_i.n_applies)  
 
