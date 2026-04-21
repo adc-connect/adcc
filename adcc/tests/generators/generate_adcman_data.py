@@ -47,8 +47,8 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     datafile = datadir / test_case.adcdata_file_name("adcman", method.name)
     hdf5_file = h5py.File(datafile, "a")  # Read/write if exists, create otherwise
     
-    # if f"{case}/{gs_density_order}" in hdf5_file:
-    #     return None
+    if f"{case}/{gs_density_order}/{isr_order}" in hdf5_file:
+        return None
     # skip cvs-adc(0), since it is not available in qchem.
     if "cvs" in case and method.level is MethodLevel.ZERO:
         return None
@@ -63,30 +63,19 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     if "cvs" in case and not method.is_core_valence_separated:
         method = AdcMethod(f"cvs-{method.name}")
     
-    isr_order_val = isr_order 
-    key = f"{case}/{gs_density_order}"
-
-    if f"{key}/{isr_order}" in hdf5_file:
-        return None
-
-    print(f"Generating {method.name} (gs_density_order={gs_density_order}) "
+    print(f"Generating {method.name} (gs_density_order={gs_density_order}) (isr_order={isr_order}) "
           f"data for {case} {test_case.file_name}.") 
-
-    if isr_order is not None:
-        kwargs["isr_order"] = isr_order
 
     state_data, _ = run_qchem(
         test_case, method, case, import_states=True, import_gs=False,
         n_singlets=n_singlets, n_triplets=n_triplets, n_spin_flip=n_spin_flip,
         n_states=n_states, import_nstates=dump_nstates,
-        gs_density_order=gs_density_order, isr_order=isr_order, **kwargs
+        gs_density_order=gs_density_order, isr_maxorder=isr_order, **kwargs
     )
     # the data returned from run_qchem should have already been imported
     # using the correct keys -> just dump them
-
-    for kind, kind_data in state_data.items():
-        kind_group = hdf5_file.require(f"{key}/{isr_order}/{kind}")
-        emplace_dict(kind_data, kind_group, compression="gzip")
+    group = hdf5_file.create_group(key)
+    emplace_dict(kind_data, kind_group, compression="gzip")
 
 def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
                      n_singlets: int = 0, n_triplets: int = 0,

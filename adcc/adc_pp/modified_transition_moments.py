@@ -133,8 +133,8 @@ def mtm_adc3(mp, op, intermediates):
 	    - 0.5 * einsum("jkbc,ijkabc->ia", 
 			            einsum("jkbd,dc->jkbc", t2_1, d_vv), t3_2)  # N^6: O^3V^3 / N^6: O^3V^3
 	    - 0.25 * einsum("ijkl,jkla->ia", 
-			            einsum("ijcd,klcd->ijkl", t2_1, t2_1), 
-				            einsum("klab,jb->jkla", t2_1, d_ov))  # N^6: O^4V^2 / N^4: O^2V^2
+			             einsum("ijcd,klcd->ijkl", t2_1, t2_1), 
+				             einsum("klab,jb->jkla", t2_1, d_ov))  # N^6: O^4V^2 / N^4: O^2V^2
 	    + 1 * einsum("ai->ia", d_vo)  # N^2: O^1V^1 / N^2: O^1V^1
     )
 

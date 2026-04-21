@@ -172,7 +172,7 @@ def diffdm_isr3(mp, amplitude, intermediates):
    # third order dm correction
     p0_3 = mp.mp3_dm_correction
     p0_2 = mp.mp2_dm_correction #second order dm correction
-    
+
     dm.oo = ( #adc3_p_oo
 	    - 1 * einsum("ia,ja->ij", ur1, ur1)  
 	    - 2 * einsum("ikab,jkab->ij", ur2, ur2)  
@@ -336,6 +336,7 @@ def diffdm_isr3(mp, amplitude, intermediates):
 	       ).symmetrise()  
 
    )
+
     return dm
 
 def diffdm_cvs_adc3(mp, amplitude, intermediates):
