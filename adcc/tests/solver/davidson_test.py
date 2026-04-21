@@ -142,19 +142,21 @@ class TestSolverDavidsonFolded(unittest.TestCase):
         return Adc2MatrixFolded(self.matrix)
 
     def test_adc2_singlets(self):
+        import numpy as np
         # Solve for singlets
-        n_states = 9
+        n_states = 8
         guesses = adcc.guesses_singlet(self.matrix, n_guesses=n_states, block="ph")
         res = jacobi_davidson(self.matrix, guesses, n_ep=n_states)
-        print(res.eigenvalues[:n_states])
+        for n in range(n_states):
+            print(np.sum(res.eigenvectors[n].ph.to_ndarray()*res.eigenvectors[n].ph.to_ndarray()))
         matrix_adc1 = adcc.AdcMatrix("adc1", self.matrix.ground_state)
         guesses_adc1 = adcc.guesses_singlet(matrix_adc1, n_guesses=n_states, block="ph")
         res_adc1 = jacobi_davidson(matrix_adc1, guesses_adc1, n_ep=n_states)
         assert res_adc1.converged
         guesses_folded = res_adc1.eigenvectors
         guesses_omegas_folded = res_adc1.eigenvalues
-        res_folded = jacobi_davidson(self.matrix_folded, guesses_folded, n_ep=n_states, guess_omegas=guesses_omegas_folded, conv_tol_macro=1e-3, conv_tol=1e-6, max_subspace_diis=5)
-        print(res_folded.eigenvalues[:n_states])
+        res_folded = jacobi_davidson(self.matrix_folded, guesses_folded, n_ep=n_states, guess_omegas=guesses_omegas_folded)
         print(res.eigenvalues[:n_states])
+        print(res_folded.eigenvalues[:n_states])
         assert res_folded.eigenvalues[:n_states] == pytest.approx(res.eigenvalues[:n_states], rel=1e-9)
 

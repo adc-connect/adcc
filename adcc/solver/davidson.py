@@ -205,7 +205,6 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
                     Ass[j, i] = Ass[i, j]
 
     while state.n_iter < max_iter:
-        print(len(state.subspace_vectors))
         state.n_iter += 1
 
         assert len(SS) >= n_block
@@ -486,9 +485,13 @@ def eigsh(matrix, guesses, n_ep=None, n_block=None, max_subspace=None,
         ))
 
     state = DavidsonState(matrix, guesses)
+    def convergence_test(state):
+        state.residuals_converged = np.array(state.residual_norms) < conv_tol
+        state.converged = np.all(state.residuals_converged)
+        return state.converged
     if isinstance(matrix, Adc2MatrixFolded):
         state_specific_solver(matrix, state, max_subspace, max_iter,
-                              n_ep, n_block, conv_tol, which,
+                              n_ep, n_block, convergence_test, which,
                               callback=callback, preconditioner=preconditioner,
                               preconditioning_method=preconditioning_method,
                               debug_checks=debug_checks,
@@ -497,11 +500,6 @@ def eigsh(matrix, guesses, n_ep=None, n_block=None, max_subspace=None,
                               max_subspace_iter=max_subspace_iter,
                               **folded_args)
     else:
-        def convergence_test(state):
-            state.residuals_converged = state.residual_norms < conv_tol
-            state.converged = np.all(state.residuals_converged)
-            return state.converged
-
         davidson_iterations(matrix, state, max_subspace, max_iter,
                             n_ep=n_ep, n_block=n_block, is_converged=convergence_test,
                             which=which, callback=callback,
@@ -511,24 +509,22 @@ def eigsh(matrix, guesses, n_ep=None, n_block=None, max_subspace=None,
                             residual_min_norm=residual_min_norm,
                             explicit_symmetrisation=explicit_symmetrisation,
                             max_subspace_iter=max_subspace_iter)
-    print("CONVTOL", conv_tol)
     return state
 
 
 def state_specific_solver(matrix, state, max_subspace, max_iter,
-                          n_ep, n_block, conv_tol, which,
+                          n_ep, n_block, is_converged, which,
                           callback=None, preconditioner=None,
                           preconditioning_method="Davidson", debug_checks=False,
                           residual_min_norm=None, explicit_symmetrisation=None,
                           max_subspace_iter=None, guess_omegas=None,
-                          max_iter_macro=30, conv_tol_macro=1e-3,
-                          max_iter_diis=300, max_subspace_diis=10):
+                          max_iter_macro=50, conv_tol_macro=1e-3,
+                          max_iter_diis=300, max_subspace_diis=30, start_iter_diis=5):
     guesses = state.subspace_vectors
     # TODO
     print(guess_omegas)
     assert guess_omegas is not None
     assert len(guesses) == len(guess_omegas)
-
 
     def convergence_test_micro(state_i):
         if len(state_i.omegas_micro) < 2:
@@ -541,33 +537,36 @@ def state_specific_solver(matrix, state, max_subspace, max_iter,
         return state_i.converged_micro
 
     def convergence_test_macro(state_i):
-        print("here", state_i.residual_norm)
+        print(state_i.residual_norm)
         state_i.converged_macro = state_i.residual_norm < conv_tol_macro
         return state_i.converged_macro
 
-    def convergence_test(state_i):
-        print("this", state_i.residual_norm)
-        state_i.converged = state_i.residual_norm < conv_tol
-        return state_i.converged
-
-    def form_residual(state_i):
-        for v in state.eigenvectors:
-            state_i.eigenvector -= (state_i.eigenvector @ v) * v       
+    def form_residual(state_i, project):
+        def project_lower_states(v):
+            for u in state.eigenvectors:
+                v -= (v @ u) * u
+            return v
+        if project:
+            state_i.eigenvector = project_lower_states(state_i.eigenvector)
         vnorm = np.sqrt(state_i.eigenvector @ state_i.eigenvector)
         state_i.eigenvector = state_i.eigenvector / vnorm
         matvec = matrix @ state_i.eigenvector
         state_i.n_applies += 1
         state_i.eigenvalue = state_i.eigenvector @ matvec
         state_i.residual = matvec - (state_i.eigenvalue * state_i.eigenvector)
+        if project:
+            state_i.residual = project_lower_states(state_i.residual)
         state_i.residual_norm = np.sqrt(state_i.residual @ state_i.residual)
-        # matrix.omega = state_i.eigenvalue
 
     state.eigenvalues = []
     state.eigenvectors = []
+    state.residuals = []
+    state.residual_norms = []
     for n_state in range(n_ep):
         print(f"====================== {n_state} ======================")
-        matrix.omega = guess_omegas[n_state]
         state_i = DavidsonStateFolded(matrix, guesses, n_state)
+        matrix.omega = guess_omegas[n_state]
+        
         while state_i.n_iter_macro < max_iter_macro:
             state_i.n_iter_macro += 1
             state_i.omega_macro = matrix.omega
@@ -583,9 +582,9 @@ def state_specific_solver(matrix, state, max_subspace, max_iter,
                                 explicit_symmetrisation=explicit_symmetrisation,
                                 max_subspace_iter=max_subspace_iter)
             state_i.eigenvalue = state_i.eigenvalue_n
-            state_i.eigenvector = state_i.eigenvector_n
             matrix.omega = state_i.eigenvalue
-            form_residual(state_i)
+            state_i.eigenvector = state_i.eigenvector_n
+            form_residual(state_i, project=False)
             if convergence_test_macro(state_i):
                 break
             state_i.subspace_vectors = state_i.eigenvectors.copy()
@@ -595,9 +594,19 @@ def state_specific_solver(matrix, state, max_subspace, max_iter,
         assert state_i.converged_macro
         matrix.omega = state_i.eigenvalue
         preconditioner.update_shifts(0.0)
-        diis = DIIS(max_subspace=max_subspace_diis, start_iter=5)
+        state.eigenvalues.append(state_i.eigenvalue)
+        state.eigenvectors.append(state_i.eigenvector)
+        state.residuals.append(state_i.residual)
+        state.residual_norms.append(state_i.residual_norm)
+        diis = DIIS(max_subspace=max_subspace_diis, start_iter=start_iter_diis)
         while state_i.n_iter_diis < max_iter_diis:
-            if convergence_test(state_i):
+            form_residual(state_i, project=False)
+            matrix.omega = state_i.eigenvalue
+            state.eigenvalues[n_state] = state_i.eigenvalue
+            state.eigenvectors[n_state] = state_i.eigenvector
+            state.residuals[n_state] = state_i.residual
+            state.residual_norms[n_state] = state_i.residual_norm
+            if is_converged(state):
                 break
             
             state_i.n_iter_diis += 1
@@ -606,14 +615,10 @@ def state_specific_solver(matrix, state, max_subspace, max_iter,
                 jacobi_step = explicit_symmetrisation.symmetrise(jacobi_step)
             corrected_vector = evaluate(state_i.eigenvector + jacobi_step)
             state_i.eigenvector = diis.extrapolate(corrected_vector, state_i.residual)
-            form_residual(state_i)
-            matrix.omega = state_i.eigenvalue
-
+        print(state_i.residual_norm)
         assert state_i.converged
         print("n_iter_diis", state_i.n_iter_diis)
-        state.eigenvalues.append(state_i.eigenvalue)
-        state.eigenvectors.append(state_i.eigenvector)
-    
+        print("n_applies", state_i.n_applies)  
 
 
 def jacobi_davidson(*args, **kwargs):
