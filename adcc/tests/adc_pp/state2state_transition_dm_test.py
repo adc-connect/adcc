@@ -35,7 +35,7 @@ methods = ["adc0", "adc1", "adc2", "adc3"]
 @pytest.mark.parametrize("case", test_cases,
                          ids=[f"{c.name}-{c.basis}" for c in test_cases])
 @pytest.mark.parametrize("method", methods)
-class TestTransitionDm:
+class TestState2StateTransitionDm:
     def test_adcn(self, method: str, case: str):
         hf = testdata_cache.refstate(case, "gen")
         state = run_adc(hf, n_states=3, method=method)
@@ -79,4 +79,15 @@ class TestTransitionDm:
                 )
                 np.testing.assert_allclose(
                     state_tdm[es].vo.to_ndarray(), vo_1p, atol=1e-12
+                )
+
+                # no trace
+                oovv = state_tdm_2p[es].oovv.to_ndarray()
+                np.testing.assert_allclose(
+                    np.einsum("ijab->", oovv), 0.0, atol=1e-12
+                )
+
+                vvoo = state_tdm_2p[es].vvoo.to_ndarray()
+                np.testing.assert_allclose(
+                    np.einsum("ijab->", vvoo), 0.0, atol=1e-12
                 )

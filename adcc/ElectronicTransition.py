@@ -192,10 +192,23 @@ class ElectronicTransition(ElectronicStates):
                 p_method_minus_1, self.ground_state, evec,
                 self.matrix.intermediates
             )
+            tdm_1p_n_minus_1 = self._module.transition_dm(
+                p_method_minus_1, self.ground_state, evec,
+                self.matrix.intermediates
+            )
 
+            mag_dips_ints_1p_n_minus_1 = \
+                self.operators.magnetic_dipole_giao_2p_1p(hf, gauge_origin)
             mag_dips_ints_2p = \
                 self.operators.magnetic_dipole_giao_2p(hf, gauge_origin)
 
+            # one particle part
+            tdm_mag += np.array(
+                [product_trace(comp_1p, tdm_1p_n_minus_1)
+                    for comp_1p in mag_dips_ints_1p_n_minus_1]
+            )
+
+            # pure two particle part
             tdm_mag += np.array(
                 [product_trace(comp_2p, tdm_2p) for comp_2p in mag_dips_ints_2p]
             )
