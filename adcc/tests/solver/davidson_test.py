@@ -26,11 +26,9 @@ import pytest
 
 from adcc import LazyMp
 from adcc.solver.davidson import jacobi_davidson, eigsh
-from adcc.misc import cached_property, assert_allclose_signfix
-from adcc.AdcMatrix import Adc2MatrixFolded
+from adcc.misc import cached_property
 
 from ..testdata_cache import testdata_cache
-from ..projection_test import assert_equal_symmetry
 
 
 class TestSolverDavidson(unittest.TestCase):
@@ -129,46 +127,3 @@ class TestSolverDavidson(unittest.TestCase):
         assert n_states > 1
         assert res.converged
         assert res.eigenvalues[:n_states] == pytest.approx(ref_triplets[:n_states])
-        
-
-class TestSolverDavidsonFolded(unittest.TestCase):
-    @cached_property
-    def matrix(self):
-        return adcc.AdcMatrix(
-            "adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
-        )
-
-    @cached_property
-    def matrix_folded(self):
-        return Adc2MatrixFolded(self.matrix)
-
-    def test_adc2_singlets(self):
-        import numpy as np
-        # Solve for singlets
-        n_states = 8
-        guesses = adcc.guesses_singlet(self.matrix, n_guesses=n_states, block="ph")
-        res = jacobi_davidson(self.matrix, guesses, n_ep=n_states)
-        for n in range(n_states):
-            print(np.sum(res.eigenvectors[n].ph.to_ndarray()*res.eigenvectors[n].ph.to_ndarray()))
-        matrix_adc1 = adcc.AdcMatrix("adc1", self.matrix.ground_state)
-        guesses_adc1 = adcc.guesses_singlet(matrix_adc1, n_guesses=n_states, block="ph")
-        res_adc1 = jacobi_davidson(matrix_adc1, guesses_adc1, n_ep=n_states)
-        assert res_adc1.converged
-        guesses_folded = res_adc1.eigenvectors
-        guesses_omegas_folded = res_adc1.eigenvalues
-        res_folded = jacobi_davidson(self.matrix_folded, guesses_folded, n_ep=n_states, guess_omegas=guesses_omegas_folded)
-        print(res.eigenvalues[:n_states])
-        print(res_folded.eigenvalues[:n_states])
-        assert res_folded.eigenvalues[:n_states] == pytest.approx(res.eigenvalues[:n_states], rel=1e-9)
-        for n in range(n_states):
-            print(f"====================== {n} ======================")
-            v1 = res.eigenvectors[n].ph.to_ndarray()
-            v2 = res.eigenvectors[n].pphh.to_ndarray()
-            self.matrix_folded.omega = res_folded.eigenvalues[n]
-            v_folded = self.matrix_folded.unfold(res_folded.eigenvectors[n])
-            v1_folded = v_folded.ph.to_ndarray()
-            v2_folded = v_folded.pphh.to_ndarray()
-            assert_allclose_signfix(v1, v1_folded, atol=1e-9)
-            assert_allclose_signfix(v2, v2_folded, atol=1e-9)
-            assert res.eigenvectors[n].ph.describe_symmetry() == v_folded.ph.describe_symmetry()
-            assert_equal_symmetry(res.eigenvectors[n].pphh, v_folded.pphh)
