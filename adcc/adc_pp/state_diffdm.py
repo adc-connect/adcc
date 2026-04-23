@@ -23,7 +23,7 @@
 from math import sqrt
 
 from adcc import block as b
-from adcc.AdcMethod import IsrMethod, AdcMethod
+from adcc.AdcMethod import IsrMethod
 from adcc.AmplitudeVector import AmplitudeVector
 from adcc.functions import einsum
 from adcc.Intermediates import Intermediates
