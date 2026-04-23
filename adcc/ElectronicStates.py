@@ -3,7 +3,7 @@ from scipy import constants
 import warnings
 
 from .AdcMatrix import AdcMatrix
-from .AdcMethod import AdcMethod, IsrMethod
+from .AdcMethod import AdcMethod, IsrMethod, MethodLevel
 from .AmplitudeVector import AmplitudeVector
 from .FormatDominantElements import FormatDominantElements
 from .FormatIndex import (
@@ -86,24 +86,27 @@ class ElectronicStates:
         if not isinstance(self.method, AdcMethod):
             self.method: AdcMethod = AdcMethod(self.method)
 
-        if isr_order is not None:
-            if not isinstance(isr_order, int):
-                raise TypeError("isr_order must be an integer")
-            if int(self.method.level) // 2 != isr_order // 2:
-                raise ValueError("isr_order incompatible with method order")
-
         if property_method is None:
-            if isr_order is None:
-                assert self.method.level <= 3
-                isr_order = min(self.method.level, 2)
-            property_method = self.method.at_level(isr_order).as_method(IsrMethod)
+            if isr_order is not None:
+                property_method = self.method.at_level(
+                    isr_order).as_method(IsrMethod)
+            elif self.method.level in [MethodLevel.TWO_X, MethodLevel.THREE]:
+                warnings.warn(f"ISR({self.method.level.to_str()}) not implemented."
+                              f" Property method is selected as ISR(2).")
+                property_method = self.method.at_level(2).as_method(IsrMethod)
+            else:
+                property_method = self.method.as_method(IsrMethod)
         else:
             if isr_order is not None:
                 warnings.warn(
                     "isr_order will be ignored if property_method is given"
                 )
             if not isinstance(property_method, IsrMethod):
-                property_method = IsrMethod(property_method)
+                if isinstance(property_method, str):
+                    property_method = AdcMethod(
+                        property_method).as_method(IsrMethod)
+                else:
+                    property_method = property_method.as_method(IsrMethod)
         self._property_method: IsrMethod = property_method
 
         # Special stuff for special solvers
