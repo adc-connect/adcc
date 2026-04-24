@@ -87,26 +87,53 @@ class TestStateDiffDm:
             if method_order_minus_one is not None:
                 # two particle part
                 dens_2p = state_diffdm_2p(method_order_minus_one, mp, evec)
+                dens_1p = state_diffdm(method_order_minus_one, mp, evec)
+                for block in dens_1p.blocks:
+                    s1, s2 = split_spaces(block)
+                    eri_1p = np.einsum(
+                        "piqi->pq", hf.eri(f"{s1}o1{s2}o1").to_ndarray()
+                    )
+                    excitation_energy[es] -= np.einsum(
+                        "pq,pq->",
+                        eri_1p,
+                        dens_1p[block].to_ndarray()
+                    )
                 for block in dens_2p.blocks:
-                    # compute
-                    # 1/4 [(1 - P_pq) (1 - P_rs) 1 / (n_occ - 1) <pi||ri> delta_qs]
-                    #   * D^pq_rs
-                    # = 1 / (n_occ - 1) <pi||ri> D^pq_rq
-                    s1, s2, s3, s4 = split_spaces(block)
-                    if s2 == s4:
-                        eri_1p = np.einsum(
-                            "piqi->pq", hf.eri(f"{s1}o1{s3}o1").to_ndarray()
-                        )
-                        n_occ = hf.foo.shape[1]
-                        excitation_energy[es] -= 1 / (n_occ - 1) * np.einsum(
-                            "pr,pqrq->",
-                            eri_1p,
-                            dens_2p[block].to_ndarray()
-                        )
-                    # and the full 2e part
+                    # the full 2e part
                     excitation_energy[es] += 0.25 * einsum(
                         "pqrs,pqrs", dens_2p[block], hf.eri(block)
                     )
+
+                # reconstruct the 1-particle density from the 2-particle density
+                n_occ = hf.foo.shape[1]
+                d_oo = 1 / (n_occ - 1) * (
+                    np.einsum("ikjk->ij", dens_2p.oooo.to_ndarray())
+                    + np.einsum("icjc->ij", dens_2p.ovov.to_ndarray())
+                )
+                np.testing.assert_allclose(
+                    dens_1p.oo.to_ndarray(), d_oo, atol=1e-14
+                )
+                d_ov = 1 / (n_occ - 1) * (
+                    np.einsum("ikak->ia", dens_2p.oovo.to_ndarray())
+                    + np.einsum("icac->ia", dens_2p.ovvv.to_ndarray())
+                )
+                np.testing.assert_allclose(
+                    dens_1p.ov.to_ndarray(), d_ov, atol=1e-14
+                )
+                d_vo = 1 / (n_occ - 1) * (
+                    np.einsum("ikak->ia", dens_2p.vooo.to_ndarray())
+                    + np.einsum("icac->ia", dens_2p.vvov.to_ndarray())
+                )
+                np.testing.assert_allclose(
+                    dens_1p.vo.to_ndarray(), d_vo, atol=1e-14
+                )
+                d_vv = 1 / (n_occ - 1) * (
+                    np.einsum("ikak->ia", dens_2p.vovo.to_ndarray())
+                    + np.einsum("icac->ia", dens_2p.vvvv.to_ndarray())
+                )
+                np.testing.assert_allclose(
+                    dens_1p.vv.to_ndarray(), d_vv, atol=1e-14
+                )
         return excitation_energy
 
     def mp3_diffdm(self, mp) -> OneParticleDensity:
@@ -234,4 +261,4 @@ class TestStateDiffDm:
         )
         ref = state.excitation_energy_uncorrected
         adcn = self.calculate_adcn_excitation_energy(state)
-        np.testing.assert_allclose(adcn, ref, atol=1e-12)
+        np.testing.assert_allclose(adcn, ref, atol=1e-14)
