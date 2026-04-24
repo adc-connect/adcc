@@ -97,16 +97,23 @@ def diffdm_isr1s_2p(mp, amplitude, intermediates):
 
 def diffdm_isr1_2p(mp, amplitude, intermediates):
     dm = diffdm_isr1s_2p(mp, amplitude, intermediates)  # Get ISR(1)-s result
-    u1 = amplitude.ph
 
     try:
         # ISR(1)-d
         check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
-        u2 = amplitude.pphh
+        u1, u2 = amplitude.ph, amplitude.pphh
+
+        hf = mp.reference_state
+        d_oo = zeros_like(hf.foo)
+        d_oo.set_mask("ii", 1)
 
         dm.ooov += (
             # N^5: O^3V^2 / N^4: O^2V^2
             - 2.0 * einsum("kb,ijab->ijka", u1, u2)
+            # N^4: O^2V^2 / N^4: O^2V^2
+            - 4.0 * einsum(
+                "ja,ik->ijka", einsum("lb,jlab->ja", u1, u2), d_oo
+            ).antisymmetrise(0, 1)
         )
 
         dm.ovvv += (
@@ -190,8 +197,6 @@ def diffdm_isr2_2p(mp, amplitude, intermediates):
         # N^5: O^3V^2 / N^4: O^2V^2
         + 2.0 * einsum("kb,ijab->ijka", einsum("lc,klbc->kb", u1, u2), t2)
         + (
-            # N^4: O^2V^2 / N^4: O^2V^2
-            - 4.0 * einsum("ja,ik->ijka", einsum("lb,jlab->ja", u1, u2), d_oo)
             # N^5: O^3V^2 / N^4: O^2V^2
             + 2.0 * einsum("jk,ia->ijka", einsum("klbc,jlbc->jk", u2, t2), u1)
             # N^6: O^4V^2 / N^4: O^2V^2
