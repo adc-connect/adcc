@@ -169,21 +169,21 @@ def replicate_ao_block(mospaces, tensor,
             tensor_as = tensor + tensor_ex
             full_tensor = np.block([
                 [
-                    [
+                    [  # [aaaa, aaab], [aaba aabb]
                         [tensor_as, zerobk],
                         [zerobk, zerobk],
                     ],
-                    [
+                    [  # [abaa, abab], [abba, abbb]
                         [zerobk, tensor],
                         [tensor_ex, zerobk],
                     ],
                 ],
                 [
-                    [
+                    [  # [baaa, baab], [baba, babb]
                         [zerobk, tensor_ex],
                         [tensor, zerobk],
                     ],
-                    [
+                    [  # [bbaa, bbab], [bbba, bbbb]
                         [zerobk, zerobk],
                         [zerobk, tensor_as],
                     ],
@@ -192,8 +192,11 @@ def replicate_ao_block(mospaces, tensor,
             result.set_from_ndarray(full_tensor, 1e-14)
         else:
             raise NotImplementedError(
-                "Only one- and two-particle operators are implemented."
+                f"Invalid block {block}. Only 'ab' supported for 2-particle "
+                "operators."
             )
+    else:
+        raise NotImplementedError("Only 2 and 4 dimensional tensors supported.")
     return result
 
 
@@ -252,6 +255,12 @@ class OperatorIntegrals:
     @timed_member_call("_import_timer")
     def ssq_2p(self) -> TwoParticleOperator:
         """Returns the two-particle part of the S^2 operator"""
+        # currently not implemented for CVS
+        if any(sp not in ["o1", "v1"] for sp in self.mospaces.subspaces):
+            raise NotImplementedError("The 2-particle part of the SSq operator is "
+                                      "only implemented for the occupied and "
+                                      "virtual spaces, i.e., "
+                                      "CVS is not supported yet.")
         # Intermediates
         # S^aa, S^ab and S^bb (spin projected overlap matrices)
         ovlp_bb: Tensor = self.overlap_ao
