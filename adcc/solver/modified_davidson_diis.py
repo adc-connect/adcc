@@ -24,21 +24,20 @@ import warnings
 import numpy as np
 import scipy.linalg as la
 from .davidson import DavidsonState, davidson_iterations
-from .SolverStateBase import EigenSolverStateBase
 from .explicit_symmetrisation import IndexSymmetrisation
 from .fixed_point_diis import diis, default_print, DIISError, SubspaceError
 
 
-class ModifiedDavidsonState(EigenSolverStateBase):
-    def __init__(self, matrix):
-        super().__init__(matrix)
-        self.eigenvalues = []
-        self.eigenvectors = []
-        self.residual_norms = []
-        self.n_iter = []
-        self.n_applies = []
-        self.converged = []
-        self.n_iter_diis = []
+class ModifiedDavidsonDiisState:
+    def __init__(self, matrix, n_states):
+        self.matrix = matrix
+        self.eigenvalues = np.full((n_states, ), np.nan, dtype=np.float64)
+        self.eigenvectors = [None] * n_states
+        self.residual_norms = np.full((n_states, ), np.nan, dtype=np.float64)
+        self.converged = np.full((n_states, ), False, dtype=np.float64)
+        self.n_iter = np.full((n_states, ), 0, dtype=np.int64)
+        self.n_applies = np.full((n_states, ), 0, dtype=np.int64)
+        self.n_iter_diis = np.full((n_states, ), 0, dtype=np.int64)
 
 
 def convergence_test_modified_davidson(omega_macro, n_state, conv_tol_davidson):
@@ -131,16 +130,10 @@ def modified_davidson_diis(matrix, guess_vectors, guess_omegas,
             "".format(conv_tol, matrix.shape[1] * np.finfo(float).eps)
         ))
 
-    state = ModifiedDavidsonState(matrix)
+    state = ModifiedDavidsonDiisState(matrix, n_ep)
     for n_state in range(n_ep):
         print(f"====================== {n_state} ======================")
         matrix.omega = guess_omegas[n_state]
-        state.eigenvalues.append(None)
-        state.eigenvectors.append(None)
-        state.residual_norms.append(None)
-        state.n_iter.append(0)
-        state.n_applies.append(0)
-        state.converged.append(False)
         davidson_guesses = guess_vectors.copy()
         while state.n_iter[n_state] < max_davidson_runs:
             state.n_iter[n_state] += 1
@@ -168,7 +161,6 @@ def modified_davidson_diis(matrix, guess_vectors, guess_omegas,
             davidson_guesses = state_i.eigenvectors.copy()
 
         preconditioner.update_shifts(0.0)
-        state.n_iter_diis.append(0)
         try:
             state.eigenvectors[n_state] = diis(
                 diis_updater(state, n_state, preconditioner),

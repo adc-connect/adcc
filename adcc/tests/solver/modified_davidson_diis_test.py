@@ -111,9 +111,7 @@ class TestSolverModifiedDavidsonDiis(unittest.TestCase):
                                             guess_vectors_folded,
                                             guess_omegas_folded, n_ep=n_states,
                                             conv_tol=conv_tol,
-                                            conv_tol_davidson=1e-3,
-                                            preconditioner=JacobiPreconditioner,
-                                            max_iter_diis=500)
+                                            preconditioner=JacobiPreconditioner)
         assert res_folded.eigenvalues == pytest.approx(res.eigenvalues, abs=atol)
         for n in range(n_states):
             v1 = res.eigenvectors[n].ph.to_ndarray()
