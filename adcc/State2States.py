@@ -128,6 +128,34 @@ class State2States(ElectronicTransition):
         )
 
     @property
+    def transition_dm_at_level(self, level: int) -> list[OneParticleDensity]:
+        """
+        List of transition density matrices at a specific ISR level
+        from initial state to final state/s
+        """
+        return [self._transition_dm_at_level(final, level)
+                for final in range(self.size)]
+
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _transition_dm_at_level(self,
+                                state_n: int, level: int) -> OneParticleDensity:
+        """
+        Computes the transition density matrices at a specific ISR level
+        from initial state to a single final state
+        """
+        # NOTE: state_n is relative to the initial state, i.e.,
+        # 0 refers to initial_state + 1.
+        # This is necessary to enable the use of the implementations on
+        # the parent class.
+        state_n = self.initial + state_n + 1
+        return self._module.state2state_transition_dm(
+            self.property_method.at_level(level), self.ground_state,
+            super().excitation_vector[self.initial],
+            super().excitation_vector[state_n],
+            self.matrix.intermediates
+        )
+
+    @property
     def transition_dm_2p(self) -> list[TwoParticleDensity]:
         """
         List of 2-particle transition density matrices from
@@ -148,6 +176,34 @@ class State2States(ElectronicTransition):
         state_n = self.initial + state_n + 1
         return self._module.state2state_transition_dm_2p(
             self.property_method, self.ground_state,
+            super().excitation_vector[self.initial],
+            super().excitation_vector[state_n],
+            self.matrix.intermediates
+        )
+
+    @property
+    def transition_dm_2p_at_level(self, level: int) -> list[TwoParticleDensity]:
+        """
+        List of 2-particle transition density matrices at a specific ISR level
+        from initial state to final state/s
+        """
+        return [self._transition_dm_2p_at_level(final, level)
+                for final in range(self.size)]
+
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _transition_dm_2p_at_level(self,
+                                   state_n: int, level: int) -> TwoParticleDensity:
+        """
+        Computes the 2-particle transition density matrices at a specific ISR level
+        from initial state to a single final state
+        """
+        # NOTE: state_n is relative to the initial state, i.e.,
+        # 0 refers to initial_state + 1.
+        # This is necessary to enable the use of the implementations on
+        # the parent class.
+        state_n = self.initial + state_n + 1
+        return self._module.state2state_transition_dm_2p(
+            self.property_method.at_level(level), self.ground_state,
             super().excitation_vector[self.initial],
             super().excitation_vector[state_n],
             self.matrix.intermediates

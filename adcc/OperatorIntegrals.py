@@ -511,34 +511,46 @@ class OperatorIntegrals:
             # this minus sign is to go from m = - 0.5 l and l is 2 * d<E>/dB.
             # -> only one minus sign
             mag_dip_comp.vv = -1.0 * (
-                # N^3: V^3 / N^2: V^2
-                - 2 * einsum("cb,ac->ab",
-                             d_T_dB[comp].vv, eri_1p.vv).antisymmetrise()
-                - 2 * einsum("cb,ac->ab",
-                             d_T_dB[comp].ov, eri_1p.vo).antisymmetrise()
+                2 * (
+                    # N^4: O^2V^2 / N^4: O^2V^2
+                    + 1 * einsum("iajb,ji->ab", hf.ovov, d_T_dB[comp].oo)
+                    # N^3: V^3 / N^2: V^2
+                    + 1 * einsum("cb,ac->ab", d_T_dB[comp].vv, eri_1p.vv)
+                    # N^3: O^1V^2 / N^2: V^2
+                    + 1 * einsum("ib,ia->ab", d_T_dB[comp].ov, eri_1p.ov)
+                ).antisymmetrise()
                 # N^2: V^2 / N^2: V^2
-                + d_eri_dB_1p[comp].vv
+                - d_eri_dB_1p[comp].vv
             )
 
             mag_dip_comp.oo = -1.0 * (
-                # N^3: O^3 / N^2: O^2
-                - 2 * einsum("kj,ik->ij",
-                             d_T_dB[comp].oo, eri_1p.oo).antisymmetrise()
-                - 2 * einsum("kj,ik->ij",
-                             d_T_dB[comp].vo, eri_1p.ov).antisymmetrise()
+                2 * (
+                    # N^4: O^4 / N^4: O^4
+                    + 1 * einsum("ikjl,lk->ij", hf.oooo, d_T_dB[comp].oo)
+                    # N^3: O^2V^1 / N^2: O^1V^1
+                    + 1 * einsum("aj,ia->ij", d_T_dB[comp].vo, eri_1p.ov)
+                    # N^3: O^3 / N^2: O^2
+                    + 1 * einsum("kj,ik->ij", d_T_dB[comp].oo, eri_1p.oo)
+                ).antisymmetrise()
                 # N^2: O^2 / N^2: O^2
-                + d_eri_dB_1p[comp].oo
+                - d_eri_dB_1p[comp].oo
             )
 
             mag_dip_comp.ov = -1.0 * (
+                # N^4: O^3V^1 / N^4: O^3V^1
+                + 1 * einsum("ijka,jk->ia", hf.ooov, d_T_dB[comp].oo)
+                # N^4: O^3V^1 / N^4: O^3V^1
+                + 1 * einsum("ba,ib->ia", d_T_dB[comp].vv, eri_1p.ov)
                 # N^3: O^2V^1 / N^2: O^1V^1
-                - einsum("ja,ij->ia", d_T_dB[comp].ov, eri_1p.oo)
-                - einsum("ba,ib->ia", d_T_dB[comp].vv, eri_1p.ov)
+                + 1 * einsum("ja,ij->ia", d_T_dB[comp].ov, eri_1p.oo)
+                # N^4: O^3V^1 / N^4: O^3V^1
+                - 1 * einsum("ikja,jk->ia", hf.ooov, d_T_dB[comp].oo)
                 # N^3: O^1V^2 / N^2: V^2
-                + einsum("bi,ab->ia", d_T_dB[comp].vo, eri_1p.vv)
-                + einsum("ji,aj->ia", d_T_dB[comp].oo, eri_1p.vo)
+                - 1 * einsum("bi,ab->ia", d_T_dB[comp].vo, eri_1p.vv)
+                # N^3: O^2V^1 / N^2: O^1V^1
+                - 1 * einsum("ji,ja->ia", d_T_dB[comp].oo, eri_1p.ov)
                 # N^2: O^1V^1 / N^2: O^1V^1
-                + d_eri_dB_1p[comp].ov
+                - d_eri_dB_1p[comp].ov
             )
             mag_dip.append(mag_dip_comp)
 
@@ -551,21 +563,9 @@ class OperatorIntegrals:
         Return the 2-particle part of the magnetic dipole integrals in the
         unmodified molecular orbital basis (GIAO).
         """
-        # n_occ = hf.foo.shape[1]
-
-        # construct Kronecker delta
-        d = OneParticleOperator(self.mospaces,
-                                symmetry=OperatorSymmetry.HERMITIAN)
-        for block in d.canonical_blocks:
-            s1, s2 = split_spaces(block)
-            if s1 == s2:
-                d[block].set_mask("ii", 1)
 
         d_T_dB = self.d_natural_connection_matrix_dB(gauge_origin)
-        # d_ovlp_dB = self.d_ovlp_dB
         d_eri_dB = self.d_eri_dB
-        # d_eri_dB_1p = self.d_eri_dB_1p
-        # eri_1p = self.eri_1p(hf)
 
         mag_dip = []
         for comp in range(3):  # xyz
@@ -575,33 +575,6 @@ class OperatorIntegrals:
             # this minus sign is to go from m = - 0.5 l and l is 2 * d<E>/dB.
             # -> only one minus sign
             mag_dip_comp.vvvv = -1.0 * (
-                # # 1p part written as 2p part
-                # 1 / (n_occ - 1) * (
-                #     8 * (
-                #         # N^4: V^4 / N^4: V^4
-                #         + 1 * einsum("ad,bc->abcd", d_T_dB[comp].vv, eri_1p.vv)
-                #         # N^4: V^4 / N^4: V^4
-                #         + 1 * einsum("ad,bc->abcd",
-                #                      einsum("iajd,ji->ad",
-                #                             hf.ovov, d_T_dB[comp].oo), d.vv)
-                #         # N^4: V^4 / N^4: V^4
-                #         + 1 * einsum("ac,bd->abcd",
-                #                      einsum("ea,ce->ac",
-                #                             d_T_dB[comp].vv, eri_1p.vv), d.vv)
-                #         # N^4: V^4 / N^4: V^4
-                #         + 1 * einsum("ac,bd->abcd",
-                #                      einsum("ia,ic->ac",
-                #                             d_T_dB[comp].ov, eri_1p.ov), d.vv)
-                #     ).antisymmetrise(0, 1).antisymmetrise(2, 3)
-                #     .antisymmetrise([(0, 2), (1, 3)])
-                #     + 4 * (
-                #         # N^4: V^4 / N^4: V^4
-                #         + 1 * einsum("ad,bc->abcd", d_eri_dB_1p[comp].vv, d.vv)
-                #         # N^4: V^4 / N^4: V^4
-                #         + 1 * einsum("ad,bc->abcd",
-                #                      d_ovlp_dB[comp].vv, eri_1p.vv)
-                #     ).antisymmetrise(0, 1).antisymmetrise(2, 3)
-                # )
                 # pure 2p part
                 + 4 * (
                     # N^5: V^5 / N^4: V^4
@@ -616,56 +589,6 @@ class OperatorIntegrals:
             )
 
             mag_dip_comp.ovov = -1.0 * (
-                # 1p part written as 2p part
-                # 1 / (n_occ - 1) * (
-                #     2 * (
-                #         # N^4: O^2V^2 / N^4: O^2V^2
-                #         + 1 * einsum("aj,ib->iajb", d_T_dB[comp].vo, eri_1p.ov)
-                #         # N^4: O^2V^2 / N^4: O^2V^2
-                #         + 1 * einsum("ba,ij->iajb", d_T_dB[comp].vv, eri_1p.oo)
-                #         # N^4: O^2V^2 / N^4: O^2V^2
-                #         + 1 * einsum("ib,ja->iajb", d_T_dB[comp].ov, eri_1p.ov)
-                #         # N^4: O^2V^2 / N^4: O^2V^2
-                #         + 1 * einsum("ji,ab->iajb", d_T_dB[comp].oo, eri_1p.vv)
-                #         # N^4: O^2V^2 / N^4: O^2V^2
-                #         + 1 * einsum("ib,ja->iajb",
-                #                      d_ovlp_dB[comp].ov, eri_1p.ov)
-                #         # N^4: O^2V^2 / N^4: O^2V^2
-                #         + 1 * einsum("ij,ab->iajb",
-                #                      einsum("iljk,lk->ij",
-                #                             hf.oooo, d_T_dB[comp].oo), d.vv)
-                #         # N^4: O^2V^2 / N^4: O^2V^2
-                #         + 1 * einsum("ab,ij->iajb",
-                #                      einsum("kbla,lk->ab",
-                #                             hf.ovov, d_T_dB[comp].oo), d.oo)
-                #         # N^4: O^2V^2 / N^4: O^2V^2
-                #         + 1 * einsum("ab,ij->iajb",
-                #                      einsum("ca,bc->ab",
-                #                             d_T_dB[comp].vv, eri_1p.vv), d.oo)
-                #         # N^4: O^2V^2 / N^4: O^2V^2
-                #         + 1 * einsum("ij,ab->iajb",
-                #                      einsum("ci,jc->ij",
-                #                             d_T_dB[comp].vo, eri_1p.ov), d.vv)
-                #         # N^4: O^2V^2 / N^4: O^2V^2
-                #         + 1 * einsum("ab,ij->iajb",
-                #                      einsum("ka,kb->ab",
-                #                             d_T_dB[comp].ov, eri_1p.ov), d.oo)
-                #         # N^4: O^2V^2 / N^4: O^2V^2
-                #         + 1 * einsum("ij,ab->iajb",
-                #                      einsum("ki,jk->ij",
-                #                             d_T_dB[comp].oo, eri_1p.oo), d.vv)
-                #     ).antisymmetrise([(0, 2), (1, 3)])
-                #     + (
-                #         # N^4: O^2V^2 / N^4: O^2V^2
-                #         - 1 * einsum("ab,ij->iajb", d_eri_dB_1p[comp].vv, d.oo)
-                #         # N^4: O^2V^2 / N^4: O^2V^2
-                #         - 1 * einsum("ij,ab->iajb", d_eri_dB_1p[comp].oo, d.vv)
-                #         # N^4: O^2V^2 / N^4: O^2V^2
-                #         - 1 * einsum("ab,ij->iajb", d_ovlp_dB[comp].vv, eri_1p.oo)
-                #         # N^4: O^2V^2 / N^4: O^2V^2
-                #         - 1 * einsum("ij,ab->iajb", d_ovlp_dB[comp].oo, eri_1p.vv)
-                #     )
-                # )
                 # pure 2p part
                 + 2 * (
                     # N^5: O^2V^3 / N^4: O^2V^2
@@ -682,32 +605,6 @@ class OperatorIntegrals:
             )
 
             mag_dip_comp.oooo = -1.0 * (
-                # 1p part written as 2p part
-                # 1 / (n_occ - 1) * (
-                #     8 * (
-                #         # N^4: O^4 / N^4: O^4
-                #         + 1 * einsum("il,jk->ijkl", d_T_dB[comp].oo, eri_1p.oo)
-                #         # N^4: O^4 / N^4: O^4
-                #         + 1 * einsum("ik,jl->ijkl",
-                #                      einsum("imkn,mn->ik",
-                #                             hf.oooo, d_T_dB[comp].oo), d.oo)
-                #         # N^4: O^4 / N^4: O^4
-                #         + 1 * einsum("ik,jl->ijkl",
-                #                      einsum("ai,ka->ik",
-                #                             d_T_dB[comp].vo, eri_1p.ov), d.oo)
-                #         # N^4: O^4 / N^4: O^4
-                #         + 1 * einsum("ik,jl->ijkl",
-                #                      einsum("mi,km->ik",
-                #                             d_T_dB[comp].oo, eri_1p.oo), d.oo)
-                #     ).antisymmetrise(0, 1).antisymmetrise(2, 3)
-                #     .antisymmetrise([(0, 2), (1, 3)])
-                #     + 4 * (
-                #         # N^4: O^4 / N^4: O^4
-                #         + 1 * einsum("il,jk->ijkl", d_eri_dB_1p[comp].oo, d.oo)
-                #         # N^4: O^4 / N^4: O^4
-                #         + 1 * einsum("il,jk->ijkl", d_ovlp_dB[comp].oo, eri_1p.oo)
-                #     ).antisymmetrise(0, 1).antisymmetrise(2, 3)
-                # )
                 # pure 2p part
                 + 4 * (
                     # N^5: O^4V^1 / N^4: O^3
@@ -720,49 +617,6 @@ class OperatorIntegrals:
             )
 
             mag_dip_comp.ooov = -1.0 * (
-                # 1p part written as 2p part
-                # 1 / (n_occ - 1) * (
-                #     2 * (
-                #         # N^4: O^3V^1 / N^4: O^3V^1
-                #         + 1 * einsum("aj,ik->ijka", d_T_dB[comp].vo, eri_1p.oo)
-                #         # N^4: O^3V^1 / N^4: O^3V^1
-                #         + 1 * einsum("ia,jk->ijka", d_T_dB[comp].ov, eri_1p.oo)
-                #         # N^4: O^3V^1 / N^4: O^3V^1
-                #         + 1 * einsum("jk,ia->ijka", d_T_dB[comp].oo, eri_1p.ov)
-                #         # N^4: O^3V^1 / N^4: O^3V^1
-                #         + 1 * einsum("ki,ja->ijka", d_T_dB[comp].oo, eri_1p.ov)
-                #         # N^4: O^3V^1 / N^4: O^3V^1
-                #         + 1 * einsum("ia,jk->ijka", d_eri_dB_1p[comp].ov, d.oo)
-                #         # N^4: O^3V^1 / N^4: O^3V^1
-                #         + 1 * einsum("ia,jk->ijka", d_ovlp_dB[comp].ov, eri_1p.oo)
-                #         # N^4: O^3V^1 / N^4: O^3V^1
-                #         + 1 * einsum("jk,ia->ijka", d_ovlp_dB[comp].oo, eri_1p.ov)
-                #         # N^4: O^3V^1 / N^4: O^3V^1
-                #         + 1 * einsum("ia,jk->ijka",
-                #                      einsum("ilma,lm->ia",
-                #                             hf.ooov, d_T_dB[comp].oo), d.oo)
-                #         # N^4: O^3V^1 / N^4: O^3V^1
-                #         + 1 * einsum("ja,ik->ijka",
-                #                      einsum("jmla,lm->ja",
-                #                             hf.ooov, d_T_dB[comp].oo), d.oo)
-                #         # N^4: O^3V^1 / N^4: O^3V^1
-                #         + 1 * einsum("ia,jk->ijka",
-                #                      einsum("ba,ib->ia",
-                #                             d_T_dB[comp].vv, eri_1p.ov), d.oo)
-                #         # N^4: O^3V^1 / N^4: O^3V^1
-                #         + 1 * einsum("ja,ik->ijka",
-                #                      einsum("bj,ab->ja",
-                #                             d_T_dB[comp].vo, eri_1p.vv), d.oo)
-                #         # N^4: O^3V^1 / N^4: O^3V^1
-                #         + 1 * einsum("ia,jk->ijka",
-                #                      einsum("la,il->ia",
-                #                             d_T_dB[comp].ov, eri_1p.oo), d.oo)
-                #         # N^4: O^3V^1 / N^4: O^3V^1
-                #         + 1 * einsum("ja,ik->ijka",
-                #                      einsum("lj,la->ja",
-                #                             d_T_dB[comp].oo, eri_1p.ov), d.oo)
-                #     ).antisymmetrise(0, 1)
-                # )
                 # pure 2p part
                 + (
                     # N^5: O^3V^2 / N^4: O^3V^1
@@ -783,52 +637,8 @@ class OperatorIntegrals:
                     - 1 * einsum("jlka,li->ijka", hf.ooov, d_T_dB[comp].oo)
                 ).antisymmetrise(0, 1)
             )
-            # print(mag_dip_comp.ooov.to_ndarray()[0])
 
             mag_dip_comp.ovvv = -1.0 * (
-                # 1p part written as 2p part
-                # 1 / (n_occ - 1) * (
-                #     2 * (
-                #         # N^4: O^1V^3 / N^4: O^1V^3
-                #         + 1 * einsum("ab,ic->iabc", d_T_dB[comp].vv, eri_1p.ov)
-                #         # N^4: O^1V^3 / N^4: O^1V^3
-                #         + 1 * einsum("bi,ac->iabc", d_T_dB[comp].vo, eri_1p.vv)
-                #         # N^4: O^1V^3 / N^4: O^1V^3
-                #         + 1 * einsum("ca,ib->iabc", d_T_dB[comp].vv, eri_1p.ov)
-                #         # N^4: O^1V^3 / N^4: O^1V^3
-                #         + 1 * einsum("ic,ab->iabc", d_T_dB[comp].ov, eri_1p.vv)
-                #         # N^4: O^1V^3 / N^4: O^1V^3
-                #         + 1 * einsum("ic,ab->iabc", d_eri_dB_1p[comp].ov, d.vv)
-                #         # N^4: O^1V^3 / N^4: O^1V^3
-                #         + 1 * einsum("ab,ic->iabc", d_ovlp_dB[comp].vv, eri_1p.ov)
-                #         # N^4: O^1V^3 / N^4: O^1V^3
-                #         + 1 * einsum("ic,ab->iabc", d_ovlp_dB[comp].ov, eri_1p.vv)
-                #         # N^4: O^1V^3 / N^4: O^1V^3
-                #         + 1 * einsum("ic,ab->iabc",
-                #                      einsum("ijkc,jk->ic",
-                #                             hf.ooov, d_T_dB[comp].oo), d.vv)
-                #         # N^4: O^1V^3 / N^4: O^1V^3
-                #         + 1 * einsum("ib,ac->iabc",
-                #                      einsum("ikjb,jk->ib",
-                #                             hf.ooov, d_T_dB[comp].oo), d.vv)
-                #         # N^4: O^1V^3 / N^4: O^1V^3
-                #         + 1 * einsum("ic,ab->iabc",
-                #                      einsum("dc,id->ic",
-                #                             d_T_dB[comp].vv, eri_1p.ov), d.vv)
-                #         # N^4: O^1V^3 / N^4: O^1V^3
-                #         + 1 * einsum("ib,ac->iabc",
-                #                      einsum("di,bd->ib",
-                #                             d_T_dB[comp].vo, eri_1p.vv), d.vv)
-                #         # N^4: O^1V^3 / N^4: O^1V^3
-                #         + 1 * einsum("ic,ab->iabc",
-                #                      einsum("jc,ij->ic",
-                #                             d_T_dB[comp].ov, eri_1p.oo), d.vv)
-                #         # N^4: O^1V^3 / N^4: O^1V^3
-                #         + 1 * einsum("ib,ac->iabc",
-                #                      einsum("ji,jb->ib",
-                #                             d_T_dB[comp].oo, eri_1p.ov), d.vv)
-                #     ).antisymmetrise(2, 3)
-                # )
                 # pure 2p part
                 + (
                     # N^5: O^1V^4 / N^4: V^4
@@ -851,17 +661,6 @@ class OperatorIntegrals:
             )
 
             mag_dip_comp.oovv = -1.0 * (
-                # 1p part written as 2p part
-                # 1 / (n_occ - 1) * (
-                #     4 * (
-                #         # N^4: O^2V^2 / N^4: O^2V^2
-                #         + 1 * einsum("ai,jb->ijab", d_T_dB[comp].vo, eri_1p.ov)
-                #         # N^4: O^2V^2 / N^4: O^2V^2
-                #         + 1 * einsum("ib,ja->ijab", d_T_dB[comp].ov, eri_1p.ov)
-                #         # N^4: O^2V^2 / N^4: O^2V^2
-                #         + 1 * einsum("ib,ja->ijab", d_ovlp_dB[comp].ov, eri_1p.ov)
-                #     ).antisymmetrise(0, 1).antisymmetrise(2, 3)
-                # )
                 # pure 2p part
                 + 2 * (
                     # N^5: O^2V^3 / N^4: O^2V^2
