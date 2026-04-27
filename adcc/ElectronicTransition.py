@@ -65,6 +65,28 @@ class ElectronicTransition(ElectronicStates):
         )
 
     @property
+    def transition_dm_at_level(self, level: int) -> list[OneParticleDensity]:
+        """
+        List of one-particle transition density matrices
+        at a specific ISR level of all computed states
+        """
+
+        return [self._transition_dm_at_level(i, level) for i in range(self.size)]
+
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _transition_dm_at_level(self,
+                                state_n: int, level: int) -> OneParticleDensity:
+        """
+        Computes the one-particle tansition density matrix at a specific ISR level
+        for a single state
+        """
+        evec = self.excitation_vector[state_n]
+        return self._module.transition_dm(
+            self.property_method.at_level(level),
+            self.ground_state, evec, self.matrix.intermediates
+        )
+
+    @property
     def transition_dm_2p(self) -> list[TwoParticleDensity]:
         """
         List of two-particle transition density matrices of all computed states
@@ -79,6 +101,27 @@ class ElectronicTransition(ElectronicStates):
         evec = self.excitation_vector[state_n]
         return self._module.transition_dm_2p(
             self.property_method, self.ground_state, evec, self.matrix.intermediates
+        )
+
+    @property
+    def transition_dm_2p_at_level(self, level: int) -> list[TwoParticleDensity]:
+        """
+        List of two-particle transition density matrices at a specific ISR level
+        of all computed states
+        """
+        return [self._transition_dm_2p_at_level(i, level) for i in range(self.size)]
+
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _transition_dm_2p_at_level(self,
+                                   state_n: int, level: int) -> TwoParticleDensity:
+        """
+        Computes the two-particle tansition density matrix at a specific ISR level
+        for a single state
+        """
+        evec = self.excitation_vector[state_n]
+        return self._module.transition_dm_2p(
+            self.property_method.at_level(level),
+            self.ground_state, evec, self.matrix.intermediates
         )
 
     @property
@@ -175,10 +218,6 @@ class ElectronicTransition(ElectronicStates):
 
         hf = self.reference_state
         level = self.property_method.level.to_int()
-        p_method_minus_1 = None
-
-        if level - 1 >= 0:
-            p_method_minus_1 = self.property_method.at_level(level - 1)
 
         mag_dips_ints_1p = self.operators.magnetic_dipole_giao_1p(hf, gauge_origin)
         tdm_1p = self._transition_dm(state_n)
@@ -186,16 +225,9 @@ class ElectronicTransition(ElectronicStates):
             [product_trace(comp_1p, tdm_1p) for comp_1p in mag_dips_ints_1p]
         )
 
-        if p_method_minus_1 is not None:
-            evec = self.excitation_vector[state_n]
-            tdm_2p = self._module.transition_dm_2p(
-                p_method_minus_1, self.ground_state, evec,
-                self.matrix.intermediates
-            )
-            tdm_1p_n_minus_1 = self._module.transition_dm(
-                p_method_minus_1, self.ground_state, evec,
-                self.matrix.intermediates
-            )
+        if level - 1 >= 0:
+            tdm_2p = self._transition_dm_2p_at_level(state_n, level - 1)
+            tdm_1p_n_minus_1 = self._transition_dm_at_level(state_n, level - 1)
 
             mag_dips_ints_1p_n_minus_1 = \
                 self.operators.magnetic_dipole_giao_2p_1p(hf, gauge_origin)
