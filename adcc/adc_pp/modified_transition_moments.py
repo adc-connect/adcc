@@ -82,6 +82,7 @@ DISPATCH = {
     "isr1s": mtm_isr1,  # Identical to ISR(1)
     "isr1": mtm_isr1,
     "isr2": mtm_isr2,
+    "isr2d": mtm_isr2,  # Identical to ISR(2)
     "cvs-isr0": mtm_cvs_isr0,
     "cvs-isr1s": mtm_cvs_isr0,  # Identical to CVS-ISR(0)
     "cvs-isr1": mtm_cvs_isr0,  # Identical to CVS-ISR(0)

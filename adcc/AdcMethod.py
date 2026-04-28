@@ -37,8 +37,15 @@ class MethodLevel(Enum):
 
     # special levels
     TWO_X = "2x"    # extended 2nd-order ADC: 2p2h-2p2h in 1st order
-    ONE_S = "1s"    # 1st-order ISR: in singles excitation space only
-    THREE_D = "3d"  # 3rd-order ISR: in singles/doubles excitation space only
+    # 1st-order ISR: in singles excitation space only (starting from 1-particle
+    # operators, doubles are required for a consistent first-order description)
+    ONE_S = "1s"
+    # 2nd-order ISR: in doubles excitation space only (starting from 2-particle
+    # operators, triples are required for a consistent second-order description)
+    TWO_D = "2d"
+    # 3nd-order ISR: in doubles excitation space only (starting from 1-particle
+    # operators, triples are required for a consistent third-order description)
+    THREE_D = "3d"
 
     def to_str(self) -> str:
         return str(self.value)
@@ -163,4 +170,4 @@ class AdcMethod(Method):
 class IsrMethod(Method):
     _method_base_name = "isr"
     max_level = 2
-    special_levels = (MethodLevel.ONE_S,)
+    special_levels = (MethodLevel.ONE_S, MethodLevel.TWO_D)
