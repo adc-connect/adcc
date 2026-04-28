@@ -22,9 +22,17 @@
 ## ---------------------------------------------------------------------
 import libadcc
 
+from collections.abc import Sequence
+from typing import cast, Any, Protocol, TypeVar, TypeGuard
+import numpy as np
 import opt_einsum
 
 from .AmplitudeVector import AmplitudeVector
+
+
+def is_amplitude_sequence(tensors: Sequence[Any]
+                          ) -> TypeGuard[Sequence[AmplitudeVector]]:
+    return all(isinstance(t, AmplitudeVector) for t in tensors)
 
 
 def dot(a, b):
@@ -89,7 +97,19 @@ def nosym_like(a):
     return a.nosym_like()
 
 
-def lincomb(coefficients, tensors, evaluate=False):
+LincombT = TypeVar("LincombT", bound="SupportsLincomb")
+
+
+class SupportsLincomb(Protocol):
+    def __rmul__(self: LincombT, other: float) -> LincombT:
+        ...
+
+    def __add__(self: LincombT, other: LincombT) -> LincombT:
+        ...
+
+
+def lincomb(coefficients: np.ndarray[tuple[int], np.dtype[np.float64]],
+            tensors: Sequence[LincombT], evaluate: bool = False) -> LincombT:
     """
     Form a linear combination from a list of tensors.
 
@@ -116,13 +136,15 @@ def lincomb(coefficients, tensors, evaluate=False):
     if len(tensors) != len(coefficients):
         raise ValueError("Number of coefficient values does not match "
                          "number of tensors.")
-    if isinstance(tensors[0], AmplitudeVector):
-        return AmplitudeVector(**{
+    if is_amplitude_sequence(tensors):
+        blocks = tensors[0].blocks
+        assert all(t.blocks == blocks for t in tensors)
+        return cast(LincombT, AmplitudeVector(**{
             block: lincomb(coefficients, [ten[block] for ten in tensors],
                            evaluate=evaluate)
             for block in tensors[0].blocks
-        })
-    elif not isinstance(tensors[0], libadcc.Tensor):
+        }))
+    elif not all(isinstance(t, libadcc.Tensor) for t in tensors):
         raise TypeError("Tensor type not supported")
 
     if evaluate:
@@ -131,8 +153,10 @@ def lincomb(coefficients, tensors, evaluate=False):
     else:
         # Perform lazy evaluation on this linear combination
         start = float(coefficients[0]) * tensors[0]
-        return sum((float(c) * t
-                    for (c, t) in zip(coefficients[1:], tensors[1:])), start)
+        return sum(
+            (float(c) * t for (c, t) in zip(coefficients[1:], tensors[1:])),
+            start
+        )
 
 
 def linear_combination(*args, **kwargs):

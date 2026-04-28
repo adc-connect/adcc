@@ -20,6 +20,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+from collections.abc import Sequence
 
 
 class AmplitudeVector(dict):
@@ -87,7 +88,7 @@ class AmplitudeVector(dict):
         or the dot products with a list of AmplitudeVectors.
         In the latter case a np.ndarray is returned.
         """
-        if isinstance(other, list):
+        if isinstance(other, Sequence):
             # Make a list where the first index is all singles parts,
             # the second is all doubles parts and so on
             return sum(self[b].dot([av[b] for av in other]) for b in self.keys())
