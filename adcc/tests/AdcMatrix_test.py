@@ -28,7 +28,7 @@ from numpy.testing import assert_allclose
 from adcc.AdcMatrix import (
     AdcExtraTerm, AdcMatrixProjected, AdcMatrixShifted, AdcMatrixlike
 )
-from adcc.AdcMethod import AdcMethod
+from adcc.AdcMethod import AdcMethod, IsrMethod
 from adcc.Intermediates import Intermediates
 from adcc.adc_pp.matrix import AdcBlock
 
@@ -50,23 +50,75 @@ class TestBlockOrders:
         # verify the default methods
         for order in range(0, 4):
             block_orders = AdcMatrixlike._default_block_orders(
-                method=AdcMethod(f"adc{order}")
+                method=AdcMethod(f"adc{order}"), n_zeroth_order_off_diag_couplings=0
             )
             cvs_block_orders = AdcMatrixlike._default_block_orders(
-                method=AdcMethod(f"cvs-adc{order}")
+                method=AdcMethod(f"cvs-adc{order}"),
+                n_zeroth_order_off_diag_couplings=0
             )
             assert ref[order] == block_orders
             assert cvs_block_orders == block_orders
         # verify the special methods: adc2x
         block_orders = AdcMatrixlike._default_block_orders(
-            method=AdcMethod("adc2x")
+            method=AdcMethod("adc2x"), n_zeroth_order_off_diag_couplings=0
         )
         cvs_block_orders = AdcMatrixlike._default_block_orders(
-            method=AdcMethod("cvs-adc2x")
+            method=AdcMethod("cvs-adc2x"), n_zeroth_order_off_diag_couplings=0
         )
         ref = {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 1}
         assert block_orders == ref
         assert block_orders == cvs_block_orders
+        # also verify ISR matrices: 1-particle
+        ref = (
+            {"ph_ph": 0},  # ISR(0)
+            {"ph_ph": 1, "ph_pphh": 0, "pphh_ph": 0, "pphh_pphh": None},  # ISR(1)
+            {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 0}  # ISR(2)
+        )
+        for order in range(0, 3):
+            block_orders = AdcMatrixlike._default_block_orders(
+                method=IsrMethod(f"isr{order}"), n_zeroth_order_off_diag_couplings=1
+            )
+            cvs_block_orders = AdcMatrixlike._default_block_orders(
+                method=IsrMethod(f"cvs-isr{order}"),
+                n_zeroth_order_off_diag_couplings=1
+            )
+            assert ref[order] == block_orders
+            assert cvs_block_orders == block_orders
+        # also verify ISR matrices: 2-particle
+        ref = (
+            {"ph_ph": 0, "ph_pphh": None,
+             "pphh_ph": None, "pphh_pphh": None},  # ISR(0)
+            {"ph_ph": 1, "ph_pphh": 0, "pphh_ph": 0, "pphh_pphh": None},  # ISR(1)
+            {"ph_ph": 2, "ph_pphh": 1, "ph_ppphhh": 0,
+             "pphh_ph": 1, "pphh_pphh": 0, "pphh_ppphhh": None,
+             "ppphhh_ph": 0, "ppphhh_pphh": None, "ppphhh_ppphhh": None}  # ISR(2)
+        )
+        for order in range(0, 3):
+            block_orders = AdcMatrixlike._default_block_orders(
+                method=IsrMethod(f"isr{order}"), n_zeroth_order_off_diag_couplings=2
+            )
+            cvs_block_orders = AdcMatrixlike._default_block_orders(
+                method=IsrMethod(f"cvs-isr{order}"),
+                n_zeroth_order_off_diag_couplings=2
+            )
+            assert ref[order] == block_orders
+            assert cvs_block_orders == block_orders
+        # isr(1)-s
+        block_orders = AdcMatrixlike._default_block_orders(
+            method=IsrMethod("isr1s"), n_zeroth_order_off_diag_couplings=1
+        )
+        ref_isr1s = {
+            "ph_ph": 1, "ph_pphh": None, "pphh_ph": None, "pphh_pphh": None
+        }
+        assert block_orders == ref_isr1s
+        # isr(2)-d
+        block_orders = AdcMatrixlike._default_block_orders(
+            method=IsrMethod("isr2d"), n_zeroth_order_off_diag_couplings=2
+        )
+        ref_isr2d = {
+            "ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 0
+        }
+        assert block_orders == ref_isr2d
 
     def test_validate_block_orders(self):
         valid_block_orders = (

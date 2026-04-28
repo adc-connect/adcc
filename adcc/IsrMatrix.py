@@ -35,7 +35,6 @@ from .timings import Timer, timed_member_call
 
 
 class IsrMatrix(AdcMatrixlike):
-
     def __init__(self, method, hf_or_mp, operator, block_orders=None):
         """
         Initialise an ISR matrix of a given one-particle operator
@@ -83,7 +82,11 @@ class IsrMatrix(AdcMatrixlike):
         self.ndim = 2
         self.extra_terms = []
 
-        self.block_orders = self._default_block_orders(self.method)
+        n_particle_op = self.operator[0].n_particle_op
+        assert all(op.n_particle_op == n_particle_op for op in self.operator)
+        self.block_orders = self._default_block_orders(
+            self.method, n_zeroth_order_off_diag_couplings=n_particle_op
+        )
         if block_orders is None:
             # only implemented through PP-ADC(2)
             if method.adc_type != "pp":

@@ -28,7 +28,7 @@ import libadcc
 from .LazyMp import LazyMp
 from .adc_pp import matrix as ppmatrix
 from .timings import Timer, timed_member_call
-from .AdcMethod import AdcMethod, IsrMethod, Method
+from .AdcMethod import AdcMethod, Method
 from .functions import ones_like
 from .Intermediates import Intermediates
 from .AmplitudeVector import AmplitudeVector
@@ -74,12 +74,24 @@ class AdcMatrixlike:
     _special_block_orders = {
         "adc2x": {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 1},
         "isr1s": {"ph_ph": 1, "ph_pphh": None, "pphh_ph": None, "pphh_pphh": None},
+        "isr2d": {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 0},
     }
 
     @classmethod
-    def _default_block_orders(cls, method: Method) -> dict[str, int]:
+    def _default_block_orders(cls, method: Method,
+                              n_zeroth_order_off_diag_couplings: int
+                              ) -> dict[str, int]:
         """
         Determines the default block orders for the given adc method.
+
+        Parameters
+        ----------
+        method: Method
+            The method to generate default block orders for.
+        n_zeroth_order_off_diag_couplings: int
+            The number of coupling blocks in the ADC/ISR matrix with
+            non-vanishing zeroth-order contributions, e.g.,
+            0 for the secular matrix and 1 for the 1-particle ISR matrix.
         """
         # check if we have a special method like adc2x
         # I guess base_method should also contain the adc_type prefix so
@@ -99,23 +111,12 @@ class AdcMatrixlike:
             raise ValueError(f"Unknown adc type {method.adc_type} for method "
                              f"{method.name}. Can not determine default block "
                              "orders.")
-        # ADC matrices have first-order coupling whereas ISR matrices
-        # have a zeroth-order coupling between adjacent excitation classes
-        # see https://doi.org/10.1063/1.1752875
-        if isinstance(method, AdcMethod):
-            # First-order coupling between adjacent excitation classes.
-            spaces = [
-                "p" * i + min_space + "h" * i
-                for i in range(0, (method.level.to_int() // 2) + 1)
-            ]
-        elif isinstance(method, IsrMethod):
-            # Zeroth-order coupling between adjacent excitation classes.
-            spaces = [
-                "p" * i + min_space + "h" * i
-                for i in range(0, ((method.level.to_int() + 1) // 2) + 1)
-            ]
-        else:
-            raise ValueError(f"Invalid method: {method.name}")
+        n_spaces = (
+            ((method.level.to_int() + n_zeroth_order_off_diag_couplings) // 2) + 1
+        )
+        spaces = [
+            "p" * i + min_space + "h" * i for i in range(0, n_spaces)
+        ]
         # exploit the fact that the spaces are sorted from small to high:
         # If we walk the adc matrix in any direction we always have to subtract 1!
         # Therefore, we can determine the order according to the position of the
@@ -254,7 +255,9 @@ class AdcMatrix(AdcMatrixlike):
         if self.intermediates is None:
             self.intermediates = Intermediates(self.ground_state)
 
-        self.block_orders = self._default_block_orders(self.method)
+        self.block_orders = self._default_block_orders(
+            self.method, n_zeroth_order_off_diag_couplings=0
+        )
         if block_orders is not None:
             self.block_orders.update(block_orders)
         self._validate_block_orders(
