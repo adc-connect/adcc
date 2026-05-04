@@ -361,11 +361,17 @@ class TestAdcMatrixInterface:
         assert isinstance(blocks, list)
         assert len(blocks) >= 1
         if matrix.method.adc_type == "pp":
-            assert blocks == ["ph", "pphh", "ppphhh"][:matrix.method.level // 2 + 1]
+            assert blocks == (
+                ["ph", "pphh", "ppphhh"][:matrix.method.level.to_int() // 2 + 1]
+            )
         elif matrix.method.adc_type == "ip":
-            assert blocks == ["h", "phh", "pphhh"][:matrix.method.level // 2 + 1]
+            assert blocks == (
+                ["h", "phh", "pphhh"][:matrix.method.level.to_int() // 2 + 1]
+            )
         elif matrix.method.adc_type == "ea":
-            assert blocks == ["p", "pph", "ppphh"][:matrix.method.level // 2 + 1]
+            assert blocks == (
+                ["p", "pph", "ppphh"][:matrix.method.level.to_int() // 2 + 1]
+            )
         else:
             raise NotImplementedError(f"Unknown adc type {matrix.method.adc_type}.")
         assert sorted(matrix.axis_spaces.keys(), key=len) == blocks

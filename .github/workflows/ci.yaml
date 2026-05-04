@@ -68,7 +68,9 @@ jobs:
         run: |
           python -m pytest --allocator=libxm -k "TestFunctionality and h2o_sto3g"
       - name: Run C++ tests
-        run: python setup.py cpptest -v
+        run: |
+          python -m pip install --user .[cpptest]
+          python setup.py cpptest -v
       # Documentation build
       - name: Dependencies for documentation
         run: python -m pip install --user .[build_docs]

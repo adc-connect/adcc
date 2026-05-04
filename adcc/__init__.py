@@ -29,7 +29,7 @@ from .Tensor import Tensor
 from .Symmetry import Symmetry
 from .MoSpaces import MoSpaces
 from .AdcMatrix import AdcMatrix
-from .AdcMethod import AdcMethod
+from .AdcMethod import AdcMethod, IsrMethod
 from .functions import (copy, direct_sum, dot, einsum, empty_like,
                         evaluate, lincomb, linear_combination, nosym_like,
                         ones_like, transpose, zeros_like)
@@ -58,7 +58,7 @@ from .workflow import run_adc
 from .exceptions import InputError
 
 __all__ = ["run_adc", "InputError", "AdcMatrix",
-           "AdcMethod", "Symmetry", "ReferenceState", "MoSpaces",
+           "AdcMethod", "IsrMethod", "Symmetry", "ReferenceState", "MoSpaces",
            "einsum", "copy", "dot", "empty_like", "evaluate",
            "lincomb", "nosym_like", "ones_like", "transpose",
            "linear_combination", "zeros_like", "direct_sum",
@@ -77,7 +77,7 @@ __all__ = ["run_adc", "InputError", "AdcMatrix",
            "ea_adc0", "ea_adc1", "ea_adc2", "ea_adc2x", "ea_adc3",
            "banner"]
 
-__version__ = "0.16.1"
+__version__ = "0.17.0"
 __license__ = "GPL v3"
 __url__ = "https://adc-connect.org"
 __authors__ = ["Michael F. Herbst", "Maximilian Scheurer", "Jonas Leitner",
@@ -100,7 +100,7 @@ def adc0(*args, **kwargs):
 @with_runadc_doc
 def cis(*args, **kwargs):
     state = run_adc(*args, **kwargs, method="adc1")
-    return ExcitedStates(state, property_method="adc0")
+    return ExcitedStates(state, property_method="isr0")
 
 
 @with_runadc_doc

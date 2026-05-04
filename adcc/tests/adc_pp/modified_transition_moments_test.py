@@ -54,7 +54,7 @@ def test_modified_transition_moments(system: str, case: str, method: str, kind: 
     )[kind]
 
     n_ref = len(state.excitation_vector)
-
+    method = method.replace("adc", "isr")
     if op_kind == "electric":
         dips = state.reference_state.operators.electric_dipole
         ref_tdm = ref["transition_dipole_moments"]
