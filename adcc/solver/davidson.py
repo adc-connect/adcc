@@ -29,10 +29,11 @@ import scipy.linalg
 import scipy.sparse.linalg
 import numpy as np
 import warnings
+import math
 import sys
 
 from ..functions import evaluate, lincomb
-from ..timings import Timer
+from ..timings import strtime, strtime_short, Timer
 from .common import select_eigenpairs
 
 
@@ -44,7 +45,7 @@ Array1D = np.ndarray[tuple[int], np.dtype[np.float64]]
 Array1D_INT = np.ndarray[tuple[int], np.dtype[np.int64]]
 Array2D = np.ndarray[tuple[int, int], np.dtype[np.float64]]
 
-Vector = TypeVar("Vector", bound="DavidsonVector")
+VectorT = TypeVar("VectorT", bound="DavidsonVector")
 
 
 class DavidsonMatrix(Protocol):
@@ -52,23 +53,23 @@ class DavidsonMatrix(Protocol):
     def shape(self) -> tuple[int, int]:
         ...
 
-    def __matmul__(self, vectors: Sequence[Vector]) -> Sequence[Vector]:
+    def __matmul__(self, vectors: Sequence[VectorT]) -> Sequence[VectorT]:
         ...
 
 
 class DavidsonVector(Protocol):
-    def __matmul__(self: Vector, other: Vector | Sequence[Vector]) -> float:
+    def __matmul__(self: VectorT, other: VectorT | Sequence[VectorT]) -> float:
         ...
 
-    def __rmul__(self: Vector, other: float) -> Vector:
+    def __rmul__(self: VectorT, other: float) -> VectorT:
         ...
 
-    def __add__(self: Vector, other: Vector) -> Vector:
+    def __add__(self: VectorT, other: VectorT) -> VectorT:
         ...
 
 
 class DavidsonPreconditioner(Protocol):
-    def __matmul__(self, vectors: Sequence[Vector]) -> Sequence[Vector]:
+    def __matmul__(self, vectors: Sequence[VectorT]) -> Sequence[VectorT]:
         ...
 
 
@@ -88,7 +89,7 @@ class SupportsInstantiation(Protocol[PrecondT]):
 
 
 class DavidsonSymmetrisation(Protocol):
-    def symmetrise(self, vectors: Sequence[Vector]) -> Sequence[Vector]:
+    def symmetrise(self, vectors: Sequence[VectorT]) -> Sequence[VectorT]:
         ...
 
 
@@ -112,7 +113,7 @@ class Which(Enum):
     SM = "SM"
 
 
-class Davidson(Generic[Vector, PrecondT]):
+class Davidson(Generic[VectorT, PrecondT]):
     def __init__(self, matrix: DavidsonMatrix, n_states: int,
                  max_subspace_size: int, block_size: int,
                  n_max_subspace_iter: int | None, which: Which,
@@ -120,38 +121,59 @@ class Davidson(Generic[Vector, PrecondT]):
                  preconditioner: PrecondT | None = None,
                  explicit_symmetrisation: DavidsonSymmetrisation | None = None
                  ) -> None:
+        # some sanity checks
+        assert n_states > 0
+        assert max_subspace_size > 0
+        assert block_size > 0
+        assert n_max_subspace_iter is None or n_max_subspace_iter > 0
+        assert block_size >= n_states
+        assert max_subspace_size >= 2 * block_size
+        # the matrix for which to determine eigenpairs
         self.matrix: DavidsonMatrix = matrix
+        # parameters for the davidson configuration
         self.n_states: int = n_states
         self.max_subspace_size: int = max_subspace_size
         self.block_size: int = block_size
         self.n_max_subspace_iter: int | None = n_max_subspace_iter
         self.which: Which = which
-        self.debug_checks: bool = debug_checks
+        # preconditioning of the new subspace vectors
         self.preconditioner: PrecondT | None = preconditioner
         self.explicit_symmetrisation: DavidsonSymmetrisation | None = (
             explicit_symmetrisation
         )
         # data related to max_subspace_size
-        self.subspace_vectors: list[Vector] = []
-        self.mvps: list[Vector] = []
+        self.subspace_vectors: list[VectorT] = []
+        self.mvps: list[VectorT] = []
         self._projected_matrix: Array2D = np.full(
             (max_subspace_size, max_subspace_size), np.nan, dtype=np.float64
         )
+        # rayleigh ritz data
+        self.ritz_values: Array1D = np.full(
+            (n_states,), np.nan, dtype=np.float64
+        )
+        self.ritz_vectors: Array2D = np.full(
+            (max_subspace_size, max_subspace_size), np.nan, dtype=np.float64
+        )
+        # mask containing the indices of the relevant ritz eigenpairs
+        self.ritz_pair_mask: Array1D_INT = np.full(
+            (n_states,), fill_value=np.iinfo(np.int64).max, dtype=np.int64
+        )
+        # some debug information
+        self.debug_checks: bool = debug_checks
         self.subspace_orthogonality: float = float("NaN")
         # data related to the number of states
-        self.residuals: Sequence[Vector] = []
+        self.residuals: Sequence[VectorT] = []
         self.residual_norms: Array1D = np.full(
             (n_states,), np.nan, dtype=np.float64
         )
         self.eigenvalues: Array1D = np.full(
             (n_states,), np.nan, dtype=np.float64
         )
-        self.eigenvectors: Sequence[Vector] = []
+        self.eigenvectors: Sequence[VectorT] = []
         # timings and statistics
         self.n_iter: int = 0
         self.n_matrix_applies: int = 0
         self.timer: Timer = Timer()
-        self.converged: bool = False
         self.residuals_converged: np.ndarray[tuple[int], np.dtype[np.bool]] = (
             np.full((n_states,), False, dtype=np.bool)
         )
@@ -167,10 +189,21 @@ class Davidson(Generic[Vector, PrecondT]):
         return view
 
     @property
+    def converged(self) -> bool:
+        """Whether all residuals are converged."""
+        return bool(np.all(self.residuals_converged))
+
+    @property
     def need_collapse(self) -> bool:
+        """Whether growing the subpsace would exceed the maxuimum subspace sice."""
         return len(self.subspace_vectors) + self.block_size > self.max_subspace_size
 
-    def add_to_subspace(self, vectors: Sequence[Vector]) -> None:
+    def add_to_subspace(self, vectors: Sequence[VectorT]) -> None:
+        """
+        Add the given vectors to the subspace, compute the matrix vector
+        products and update the projected matrix.
+        This also increments the iteration counter.
+        """
         # add the given vectors to the subspace and update the projected
         # matrix. Also update the iteration counter
         if len(self.subspace_vectors) + len(vectors) > self.max_subspace_size:
@@ -202,7 +235,7 @@ class Davidson(Generic[Vector, PrecondT]):
         self.subspace_vectors.extend(vectors)
         assert len(self.subspace_vectors) <= self.max_subspace_size
 
-    def collapse_subspace(self, ritz_vectors: Array2D) -> None:
+    def collapse_subspace(self) -> None:
         """
         Collapse the subspace replacing the current subspace vectors
         using the provided ritz eigenvecators. Also updates the
@@ -214,14 +247,14 @@ class Davidson(Generic[Vector, PrecondT]):
             # evaluation of mvps
             self.subspace_vectors = [
                 lincomb(v, self.subspace_vectors, evaluate=True)
-                for v in np.transpose(ritz_vectors)
+                for v in np.transpose(self.ritz_vectors)
             ]
             assert len(self.subspace_vectors) <= self.max_subspace_size
             assert len(self.subspace_vectors) >= self.block_size
             # update the mvps without actually reevaluating them
             self.mvps = [
                 lincomb(v, self.mvps, evaluate=True)
-                for v in np.transpose(ritz_vectors)
+                for v in np.transpose(self.ritz_vectors)
             ]
             assert len(self.mvps) == len(self.subspace_vectors)
             # reset the projected matrix and recompute relevant entries
@@ -240,20 +273,18 @@ class Davidson(Generic[Vector, PrecondT]):
                 len(self.subspace_vectors):, len(self.subspace_vectors):
             ]))
 
-    def compute_residuals(self, ritz_values: Array1D,
-                          ritz_vectors: Array2D, epair_mask: Array1D_INT) -> None:
+    def compute_residuals(self) -> None:
         """
-        Compute the residuals using the given ritz eigenvalues and eigenvectors.
-        Updates eigenvalues, residuals and residual_norms.
+        Compute the residuals using the current ritz eigenvalues and eigenvectors.
         """
-        assert len(epair_mask) == self.n_states
+        assert len(self.ritz_pair_mask) == self.n_states
         with self.timer.record("residuals"):
-            vectors = np.transpose(ritz_vectors)
-            assert len(ritz_values) == len(vectors)
+            vectors = np.transpose(self.ritz_vectors)
+            assert len(self.ritz_values) == len(vectors)
             self.residuals = [
                 self._compute_residual(rval, vec)
-                for i, (rval, vec) in enumerate(zip(ritz_values, vectors))
-                if i in epair_mask
+                for i, (rval, vec) in enumerate(zip(self.ritz_values, vectors))
+                if i in self.ritz_pair_mask
             ]
             assert len(self.residuals) == self.n_states
             self.residual_norms = np.array([
@@ -261,7 +292,7 @@ class Davidson(Generic[Vector, PrecondT]):
             ])
             assert len(self.residual_norms) == self.n_states
 
-    def _compute_residual(self, ritz_value: float, ritz_vector: Array1D) -> Vector:
+    def _compute_residual(self, ritz_value: float, ritz_vector: Array1D) -> VectorT:
         # Form residuals, A * SS * v - λ * SS * v = Ax * v + SS * (-λ*v)
         coefficients = (
             np.hstack((ritz_vector, -ritz_value * ritz_vector))
@@ -270,19 +301,24 @@ class Davidson(Generic[Vector, PrecondT]):
             coefficients, self.mvps + self.subspace_vectors, evaluate=True
         )
 
-    def compute_eigenvectors(self, ritz_vectors: Array2D, mask: Array1D_INT):
+    def compute_eigenvectors(self) -> None:
         """
-        Compute the eigenvectors usign the given ritz vectors. Only consider
-        ritz vectors whose indices are in the mask.
+        Compute the eigenvectors for the current ritz eigenpairs.
         """
-        assert len(mask) == self.n_states
+        assert len(self.ritz_pair_mask) == self.n_states
         self.eigenvectors = [
             lincomb(v, self.subspace_vectors, evaluate=True)
-            for i, v in enumerate(np.transpose(ritz_vectors))
-            if i in mask
+            for i, v in enumerate(np.transpose(self.ritz_vectors))
+            if i in self.ritz_pair_mask
         ]
 
-    def solve_rayleigh_ritz(self) -> tuple[Array1D, Array2D]:
+    def solve_rayleigh_ritz(self) -> None:
+        """
+        Determine the eigenvalues and eigenstates of the projected matrix.
+        Note that only the eigenvalues are updated automatically, while
+        the eigenvalues of the Davidson procedure are only computed
+        on request.
+        """
         with self.timer.record("rayleigh_ritz"):
             matrix = self.projected_matrix
             if matrix.shape == (self.block_size, self.block_size):
@@ -292,9 +328,17 @@ class Davidson(Generic[Vector, PrecondT]):
                     matrix, k=self.block_size, which=self.which.value,
                     maxiter=self.n_max_subspace_iter
                 )
-        return ritz_values, ritz_vectors
+            self.ritz_values = ritz_values
+            self.ritz_vectors = ritz_vectors
+            # set the new eigenvalues and the mask
+            self.ritz_pair_mask = select_eigenpairs(
+                eigenvalues=ritz_values, n_ep=self.n_states, which=self.which.value
+            )
+            assert len(self.ritz_pair_mask) == self.n_states
+            self.eigenvalues = ritz_values[self.ritz_pair_mask]
+            assert len(self.eigenvalues) == self.n_states
 
-    def apply_preconditioner(self, ritz_values: Array1D) -> None:
+    def apply_preconditioner(self) -> None:
         """Apply the preconditioner to the current residual vectors."""
         with self.timer.record("preconditioner"):
             if self.preconditioner is not None:
@@ -304,9 +348,9 @@ class Davidson(Generic[Vector, PrecondT]):
                     # approaches the actual diagonal values (which are the
                     # eigenvalues for the ADC(2) doubles part if the coupling
                     # block are absent)
-                    self.preconditioner.update_shifts(ritz_values - 1e-6)
+                    self.preconditioner.update_shifts(self.ritz_values - 1e-6)
                 self.residuals = cast(
-                    list[Vector],
+                    list[VectorT],
                     evaluate(self.preconditioner @ self.residuals)
                 )
             if self.explicit_symmetrisation is not None:
@@ -314,12 +358,12 @@ class Davidson(Generic[Vector, PrecondT]):
                     self.residuals
                 )
 
-    def orthogonalise_residuals(self, residual_min_norm: float) -> list[Vector]:
+    def orthogonalise_residuals(self, residual_min_norm: float) -> list[VectorT]:
         """
         Orthogonalize the residuals with respect to the subspace and filter
         out residuals with a norm smaller than residual_min_norm.
         """
-        new_vectors: list[Vector] = []
+        new_vectors: list[VectorT] = []
         with self.timer.record("orthogonalisation"):
             assert len(self.residuals) >= self.block_size
             for i in range(self.block_size):
@@ -354,7 +398,7 @@ class Davidson(Generic[Vector, PrecondT]):
                 # Extend the subspace if the norm is sufficiently large
                 if proj_norm >= residual_min_norm:
                     new_vectors.append(cast(
-                        Vector,
+                        VectorT,
                         evaluate(proj_vec / proj_norm)
                     ))
             if self.debug_checks:
@@ -381,8 +425,25 @@ def default_print(davidson: Davidson, state: State,
         print("Niter n_ss  max_residual  time  Ritz values",
               file=file)
     elif state is state.NEXT_ITER:
-        pass
-    raise NotImplementedError
+        time_iter = davidson.timer.current("iteration")
+        fmt = "{n_iter:3d}  {ss_size:4d}  {residual:12.5g}  {tstr:5s}"
+        print(fmt.format(n_iter=davidson.n_iter, tstr=strtime_short(time_iter),
+                         ss_size=len(davidson.subspace_vectors),
+                         residual=np.max(davidson.residual_norms)),
+              "", davidson.eigenvalues[:7], file=file)
+        if not math.isnan(davidson.subspace_orthogonality):
+            print(33 * " " + "nonorth: {:5.3g}"
+                  "".format(davidson.subspace_orthogonality))
+    elif state is state.IS_CONVERGED:
+        soltime = davidson.timer.total("iteration")
+        print("=== Converged ===", file=file)
+        print("    Number of matrix applies:   ", davidson.n_matrix_applies,
+              file=file)
+        print("    Total solver time:          ", strtime(soltime), file=file)
+    elif state is state.RESTART:
+        print("=== Restart ===", file=file)
+    else:
+        raise NotImplementedError(f"Invalid state {state}")
 
 
 def no_print(davidson: Davidson, state: State, file: TextIO = sys.stdout) -> None:
@@ -390,16 +451,17 @@ def no_print(davidson: Davidson, state: State, file: TextIO = sys.stdout) -> Non
 
 
 def davidson_iterations(
-        matrix: DavidsonMatrix, guess_vectors: Sequence[Vector],
-        n_states: int, block_size: int, max_subspace_size: int,
-        is_converged: Callable[[Davidson], bool],
-        callback: DavidsonCallback | None = None,
-        which: Literal["SA", "LA", "LM", "SM"] | Which = "SA",
-        n_max_iterations: int = 70,
-        debug_checks: bool = False, residual_min_norm: float | None = None,
-        preconditioner: PrecondT | SupportsInstantiation[PrecondT] | None = None,
-        explicit_symmetrisation: DavidsonSymmetrisation | None = None,
-        n_max_subspace_iter: int | None = None):
+    matrix: DavidsonMatrix, guess_vectors: Sequence[VectorT],
+    n_states: int, block_size: int, max_subspace_size: int,
+    is_converged: Callable[[Davidson], bool],
+    callback: DavidsonCallback | None = None,
+    which: Literal["SA", "LA", "LM", "SM"] | Which = "SA",
+    n_max_iterations: int = 70,
+    debug_checks: bool = False, residual_min_norm: float | None = None,
+    preconditioner: PrecondT | SupportsInstantiation[PrecondT] | None = None,
+    explicit_symmetrisation: DavidsonSymmetrisation | None = None,
+    n_max_subspace_iter: int | None = None
+) -> Davidson[VectorT, PrecondT]:
 
     validate_davidson_params(
         guess_vectors=guess_vectors, n_states=n_states, block_size=block_size,
@@ -415,7 +477,7 @@ def davidson_iterations(
         preconditioner = preconditioner(matrix)
 
     # init the davidson and add the guess vectors to the subspace
-    davidson: Davidson[Vector, PrecondT] = Davidson(
+    davidson: Davidson[VectorT, PrecondT] = Davidson(
         matrix=matrix, n_states=n_states, max_subspace_size=max_subspace_size,
         block_size=block_size, n_max_subspace_iter=n_max_subspace_iter, which=which,
         debug_checks=debug_checks, preconditioner=preconditioner,
@@ -423,68 +485,51 @@ def davidson_iterations(
     )
     callback(davidson, State.START)
     davidson.timer.restart("iteration")
+    # compute the initial mvps and the projected matrix for the guess vectors
     davidson.add_to_subspace(guess_vectors)
 
     while True:
         # solve rayleigh_ritz and identify the n_states relevant
         # eigenvalues and vectors
-        ritz_values, ritz_vectors = davidson.solve_rayleigh_ritz()
-        epair_mask = select_eigenpairs(ritz_values, n_states, which.value)
-        davidson.eigenvalues = ritz_values[epair_mask]
-        assert len(davidson.eigenvalues) == davidson.n_states
+        davidson.solve_rayleigh_ritz()
         # compute the residuals for these relevant ritz eigenpairs
-        davidson.compute_residuals(
-            ritz_values=ritz_values, ritz_vectors=ritz_vectors,
-            epair_mask=epair_mask
-        )
+        davidson.compute_residuals()
         callback(davidson, State.NEXT_ITER)
         davidson.timer.restart("iteration")
         # check for convergence and return if necessary
         if is_converged(davidson):
-            davidson.compute_eigenvectors(
-                ritz_vectors=ritz_vectors, mask=epair_mask
-            )
-            davidson.converged = True
+            davidson.compute_eigenvectors()
             callback(davidson, State.IS_CONVERGED)
             davidson.timer.stop("iteration")
-            # TODO build some other object to return from the Davidson object
-            raise NotImplementedError
+            return davidson
         # maximum number of iterations reached? return
         if davidson.n_iter == n_max_iterations:
             warnings.warn(scipy.linalg.LinAlgWarning(
                 f"Maximum number of iterations (== {n_max_iterations}) "
                 "reached in davidson procedure."
             ))
-            davidson.compute_eigenvectors(
-                ritz_vectors=ritz_vectors, mask=epair_mask
-            )
+            davidson.compute_eigenvectors()
             davidson.timer.stop("iteration")
-            davidson.converged = False
-            # TODO build some other object to return from the Davidson object
-            raise NotImplementedError
+            return davidson
         # do we need to collapse the subspace?
         if davidson.need_collapse:
             callback(davidson, State.RESTART)
-            davidson.collapse_subspace(ritz_vectors=ritz_vectors)
+            davidson.collapse_subspace()
         # apply the preconditioner to the residuals
-        davidson.apply_preconditioner(ritz_values=ritz_values)
+        davidson.apply_preconditioner()
         # orthogonalise the new vectors
         new_vectors = davidson.orthogonalise_residuals(
             residual_min_norm=residual_min_norm
         )
         if len(new_vectors) == 0:
-            davidson.compute_eigenvectors(
-                ritz_vectors=ritz_vectors, mask=epair_mask
-            )
-            davidson.timer.stop("iteration")
-            davidson.converged = False
             warnings.warn(scipy.linalg.LinAlgWarning(
                 "Davidson procedure could not generate any further vectors for "
                 "the subspace. Iteration cannot be continued like this and will "
                 "be aborted without convergence. Try a different guess."
             ))
-            # TODO build some other object to return from the Davidson object
-            raise NotImplementedError
+            davidson.compute_eigenvectors()
+            davidson.timer.stop("iteration")
+            return davidson
         # add the new vectors to the subspace, compute the additional
         # matrix vector products and update the projected matrix
         davidson.add_to_subspace(new_vectors)
@@ -517,22 +562,22 @@ def validate_davidson_params(guess_vectors: Sequence[DavidsonVector],
 def default_convergence_check(conv_tol: float) -> Callable[[Davidson], bool]:
     def is_converged(davidson: Davidson) -> bool:
         davidson.residuals_converged = davidson.residual_norms < conv_tol
-        davidson.converged = bool(np.all(davidson.residuals_converged))
         return davidson.converged
     return is_converged
 
 
 def davidson(
-        matrix: DavidsonMatrix, guess_vectors: Sequence[DavidsonVector],
-        n_states: int | None = None, block_size: int | None = None,
-        max_subspace_size: int | None = None, conv_tol: float = 1e-9,
-        which: Literal["SA", "LA", "LM", "SM"] = "SA",
-        n_max_iterations: int = 70,
-        callback: DavidsonCallback | None = None,
-        preconditioner: PrecondT | SupportsInstantiation[PrecondT] | None = None,
-        debug_checks: bool = False, residual_min_norm: float | None = None,
-        explicit_symmetrisation: DavidsonSymmetrisation | None = None,
-        n_max_subspace_iter: int | None = None):
+    matrix: DavidsonMatrix, guess_vectors: Sequence[VectorT],
+    n_states: int | None = None, block_size: int | None = None,
+    max_subspace_size: int | None = None, conv_tol: float = 1e-9,
+    which: Literal["SA", "LA", "LM", "SM"] = "SA",
+    n_max_iterations: int = 70,
+    callback: DavidsonCallback | None = None,
+    preconditioner: PrecondT | SupportsInstantiation[PrecondT] | None = None,
+    debug_checks: bool = False, residual_min_norm: float | None = None,
+    explicit_symmetrisation: DavidsonSymmetrisation | None = None,
+    n_max_subspace_iter: int | None = None
+) -> Davidson[VectorT, PrecondT]:
     """
     Parameters
     ----------
