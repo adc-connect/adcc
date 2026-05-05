@@ -39,17 +39,17 @@ from . import testcases
 # -> independent of method, case (gen/cvs/fc/fv) and kind (singlet/triplet)
 # Actually, the tests should also be independent of the systems, because
 # we only load some already tested density and contract it with some operator.
-methods = ["adc0", "adc1", "adc2", "adc2x", "adc3_isr2", "adc3"]
+
+methods = [
+    ("adc0", None),
+    ("adc1", None),
+    ("adc2", None),
+    ("adc2x", None),
+    ("adc3", None),
+    ("adc3", 3),
+]
 generators = ["adcman", "adcc"]
 
-def _method_isr(method: str):
-    """ Return (actual_method, isr_order) for the given method string. """
-    if method == "adc3_isr2":
-        return "adc3", 2
-    elif method == "adc3":
-        return "adc3", 3
-    else:
-        return method, None
 
 test_cases = testcases.get_by_filename(
     "h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz", "hf_631g"
@@ -65,22 +65,26 @@ unrestricted_cases = [
 gauge_origins = ["origin", "mass_center", "charge_center"]
 
 
-@pytest.mark.parametrize("method", methods)
+@pytest.mark.parametrize("adc_method, isr_order", methods)
 class TestProperties:
     @pytest.mark.parametrize("generator", generators)
     @pytest.mark.parametrize("system,case,kind", cases)
     def test_transition_dipole_moments(self, system: str, case: str, kind: str,
-                                       method: str, generator: str):
-        actual_method, isr_order = _method_isr(method)
-        hdf5_key = "3" if method == "adc3" else "None"
-        if "cvs" in case and AdcMethod(actual_method).level == 0 and generator == "adcman":
+                                       adc_method: str, isr_order, generator: str):
+
+        isr_key = "3" if isr_order == 3 else "None"
+        if (
+            "cvs" in case
+            and AdcMethod(adc_method).level == 0
+            and generator == "adcman"
+        ):
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
         refdata = testdata_cache._load_data(
-            system=system, method=actual_method, case=case, source=generator
-        )[hdf5_key][kind]
+            system=system, method=adc_method, case=case, source=generator
+        )[isr_key][kind]
         state = testdata_cache._make_mock_adc_state(
-            system=system, method=actual_method, case=case, kind=kind, source=generator, isr_order=isr_order
-        )
+            system=system, method=adc_method, case=case,
+            kind=kind, source=generator, isr_order=isr_order)
 
         res_tdms = state.transition_dipole_moment
         refevals = refdata["eigenvalues"]
@@ -104,17 +108,21 @@ class TestProperties:
     @pytest.mark.parametrize("generator", generators)
     @pytest.mark.parametrize("system,case,kind", cases)
     def test_oscillator_strengths(self, system: str, case: str, kind: str,
-                                  method: str, generator: str):
-        actual_method, isr_order = _method_isr(method)
-        hdf5_key = "3" if method == "adc3" else "None"
-        if "cvs" in case and AdcMethod(actual_method).level == 0 and generator == "adcman":
+                                  adc_method: str, isr_order, generator: str):
+
+        isr_key = "3" if isr_order == 3 else "None"
+        if (
+            "cvs" in case
+            and AdcMethod(adc_method).level == 0
+            and generator == "adcman"
+        ):
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
         refdata = testdata_cache._load_data(
-            system=system, method=actual_method, case=case, source=generator
-        )[hdf5_key][kind]
+            system=system, method=adc_method, case=case, source=generator
+        )[isr_key][kind]
         state = testdata_cache._make_mock_adc_state(
-            system=system, method=actual_method, case=case, kind=kind, source=generator, isr_order=isr_order
-        )
+            system=system, method=adc_method, case=case, kind=kind,
+            source=generator, isr_order=isr_order)
 
         res_oscs = state.oscillator_strength
         refevals = refdata["eigenvalues"]
@@ -136,17 +144,21 @@ class TestProperties:
     @pytest.mark.parametrize("generator", generators)
     @pytest.mark.parametrize("system,case,kind", cases)
     def test_state_dipole_moments(self, system: str, case: str, kind: str,
-                                  method: str, generator: str):
-        actual_method, isr_order = _method_isr(method)
-        hdf5_key = "3" if method == "adc3" else "None"
-        if "cvs" in case and AdcMethod(actual_method).level == 0 and generator == "adcman":
+                                  adc_method: str, isr_order, generator: str):
+
+        isr_key = "3" if isr_order == 3 else "None"
+        if (
+            "cvs" in case
+            and AdcMethod(adc_method).level == 0
+            and generator == "adcman"
+        ):
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
         refdata = testdata_cache._load_data(
-            system=system, method=actual_method, case=case, source=generator
-        )[hdf5_key][kind]
+            system=system, method=adc_method, case=case, source=generator
+        )[isr_key][kind]
         state = testdata_cache._make_mock_adc_state(
-            system=system, method=actual_method, case=case, kind=kind, source=generator, isr_order=isr_order
-        )
+            system=system, method=adc_method, case=case,
+            kind=kind, source=generator, isr_order=isr_order)
 
         res_dms = state.state_dipole_moment
         n_ref = len(state.excitation_vector)
@@ -155,15 +167,17 @@ class TestProperties:
     @pytest.mark.parametrize("system,case,kind",
                              [c for c in unrestricted_cases if "cvs" not in c[1]])
     def test_state_ssq(self, system: str, case: str, kind: str,
-                       method: str):
-        actual_method, isr_order = _method_isr(method)
-        hdf5_key = "3" if method == "adc3" else "None"
+                       adc_method: str, isr_order):
+
+        isr_key = "3" if isr_order == 3 else "None"
         refdata = testdata_cache._load_data(
-            system=system, method=actual_method, case=case, source="adcc"
-        )[hdf5_key][kind]
+            system=system, method=adc_method, case=case, source="adcc"
+        )[isr_key][kind]
         state = testdata_cache._make_mock_adc_state(
-            system=system, method=actual_method, case=case, kind=kind, source="adcc"
+            system=system, method=adc_method, case=case, kind=kind, source="adcc"
         )
+        if "state_ssq" not in refdata:
+            pytest.skip("state_ssq not available for this method yet")
 
         res_dms = state.state_ssq
         n_ref = len(state.excitation_vector)
@@ -174,16 +188,16 @@ class TestProperties:
     @pytest.mark.parametrize("system,case,kind", [c for c in cases
                                                   if "cvs" not in c[1]])
     def test_state2state_transition_dipole_moments(self, system: str, case: str,
-                                                   kind: str, method: str,
-                                                   generator: str):
-        actual_method, isr_order = _method_isr(method)       
-        hdf5_key = "3" if method == "adc3" else "None"                           
+                                                   kind: str, adc_method: str,
+                                                   isr_order, generator: str):
+
+        isr_key = "3" if isr_order == 3 else "None"
         refdata = testdata_cache._load_data(
-            system=system, method=actual_method, case=case, source=generator
-        )[hdf5_key][kind]
+            system=system, method=adc_method, case=case, source=generator
+        )[isr_key][kind]
         state = testdata_cache._make_mock_adc_state(
-            system=system, method=actual_method, case=case, kind=kind, source=generator, isr_order=isr_order
-        )
+            system=system, method=adc_method, case=case,
+            kind=kind, source=generator, isr_order=isr_order)
 
         refevals = refdata["eigenvalues"]
         if len(refevals) < 2:
@@ -201,9 +215,9 @@ class TestProperties:
                                         fromi_ref[ii], atol=1e-4)
 
     @pytest.mark.parametrize("case", ["gen", "cvs"])
-    def test_magnetic_transition_dipole_moments_z_component(self, method: str,
-                                                            case: str):
-        actual_method, isr_order = _method_isr(method)
+    def test_magnetic_transition_dipole_moments_z_component(self, adc_method: str,
+                                                            isr_order, case: str):
+
         backend = ""
         xyz = """
             C 0 0 0
@@ -213,11 +227,12 @@ class TestProperties:
         scfres = run_hf(backend, xyz, basis)
 
         if "cvs" in case:
-            if "cvs" not in actual_method:
-                actual_method = f"cvs-{actual_method}"
-            state = run_adc(scfres, method=actual_method, n_singlets=5, core_orbitals=2)
+            if "cvs" not in adc_method:
+                adc_method = f"cvs-{adc_method}"
+            state = run_adc(scfres, method=adc_method,
+                            n_singlets=5, core_orbitals=2)
         else:
-            state = run_adc(scfres, method=actual_method, n_singlets=10)
+            state = run_adc(scfres, method=adc_method, n_singlets=10)
         tdms = state.transition_magnetic_dipole_moment("origin")
 
         # For linear molecules lying on the z-axis, the z-component must be zero
@@ -227,15 +242,16 @@ class TestProperties:
     # Only adcc reference data available.
     @pytest.mark.parametrize("system,case,kind", cases)
     def test_magnetic_transition_dipole_moments(self, system: str, case: str,
-                                                kind: str, method: str):
-        actual_method, isr_order = _method_isr(method)
-        hdf5_key = "3" if method == "adc3" else "None"
+                                                kind: str, adc_method: str,
+                                                isr_order):
+
+        isr_key = "3" if isr_order == 3 else "None"
         refdata = testdata_cache._load_data(
-            system=system, method=actual_method, case=case, source="adcc"
-        )[hdf5_key][kind]
+            system=system, method=adc_method, case=case, source="adcc"
+        )[isr_key][kind]
         state = testdata_cache._make_mock_adc_state(
-            system=system, method=actual_method, case=case, kind=kind, source="adcc", isr_order=isr_order
-        )
+            system=system, method=adc_method, case=case,
+            kind=kind, source="adcc", isr_order=isr_order)
 
         n_ref = len(state.excitation_vector)
         for g_origin in gauge_origins:
@@ -250,15 +266,16 @@ class TestProperties:
     # Only adcc reference data available.
     @pytest.mark.parametrize("system,case,kind", cases)
     def test_transition_dipole_moments_velocity(self, system: str, case: str,
-                                                kind: str, method: str):
-        actual_method, isr_order = _method_isr(method)
-        hdf5_key = "3" if method == "adc3" else "None"
+                                                kind: str, adc_method: str,
+                                                isr_order):
+
+        isr_key = "3" if isr_order == 3 else "None"
         refdata = testdata_cache._load_data(
-            system=system, method=actual_method, case=case, source="adcc"
-        )[hdf5_key][kind]
+            system=system, method=adc_method, case=case, source="adcc"
+        )[isr_key][kind]
         state = testdata_cache._make_mock_adc_state(
-            system=system, method=actual_method, case=case, kind=kind, source="adcc", isr_order=isr_order
-        )
+            system=system, method=adc_method, case=case,
+            kind=kind, source="adcc", isr_order=isr_order)
 
         res_dms = state.transition_dipole_moment_velocity
         n_ref = len(state.excitation_vector)
@@ -271,15 +288,16 @@ class TestProperties:
     # Only adcc reference data available.
     @pytest.mark.parametrize("system,case,kind", cases)
     def test_transition_quadrupole_moments(self, system: str, case: str,
-                                           kind: str, method: str):
-        actual_method, isr_order = _method_isr(method)
-        hdf5_key = "3" if method == "adc3" else "None"
+                                           kind: str, adc_method: str,
+                                           isr_order):
+
+        isr_key = "3" if isr_order == 3 else "None"
         refdata = testdata_cache._load_data(
-            system=system, method=actual_method, case=case, source="adcc"
-        )[hdf5_key][kind]
+            system=system, method=adc_method, case=case, source="adcc"
+        )[isr_key][kind]
         state = testdata_cache._make_mock_adc_state(
-            system=system, method=actual_method, case=case, kind=kind, source="adcc", isr_order=isr_order
-        )
+            system=system, method=adc_method, case=case, kind=kind,
+            source="adcc", isr_order=isr_order)
 
         n_ref = len(state.excitation_vector)
         for g_origin in gauge_origins:
@@ -294,15 +312,15 @@ class TestProperties:
     # Only adcc reference data available.
     @pytest.mark.parametrize("system,case,kind", cases)
     def test_rotatory_strengths(self, system: str, case: str, kind: str,
-                                method: str):
-        actual_method, isr_order = _method_isr(method)
-        hdf5_key = "3" if method == "adc3" else "None"
+                                adc_method: str, isr_order):
+
+        isr_key = "3" if isr_order == 3 else "None"
         refdata = testdata_cache._load_data(
-            system=system, method=actual_method, case=case, source="adcc", isr_order=isr_order
-        )[hdf5_key][kind]
+            system=system, method=adc_method, case=case, source="adcc"
+        )[isr_key][kind]
         state = testdata_cache._make_mock_adc_state(
-            system=system, method=actual_method, case=case, kind=kind, source="adcc", isr_order=isr_order
-        )
+            system=system, method=adc_method, case=case, kind=kind,
+            source="adcc", isr_order=isr_order)
 
         res_rots = state.rotatory_strength
         ref_tmdm = refdata["transition_magnetic_dipole_moments_origin"]
@@ -313,4 +331,3 @@ class TestProperties:
             assert state.excitation_energy[i] == refevals[i]
             ref_dot = np.dot(ref_tmdm[i], ref_tdmvel[i])
             assert res_rots[i] == pytest.approx(ref_dot / refevals[i])
-
