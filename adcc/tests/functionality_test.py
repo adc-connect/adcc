@@ -59,7 +59,7 @@ class TestFunctionality:
         refdata = getattr(testdata_cache, f"{generator}_data")(
             system=system, method=method, case=case
         )
-        #hdf5_key = "3" if method == "adc3" and "cvs" not in case else "None"
+
         hdf5_key = "None"
         ref: dict = refdata[hdf5_key][kind]
         n_ref = len(ref["eigenvalues"])
