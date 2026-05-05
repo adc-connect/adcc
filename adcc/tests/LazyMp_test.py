@@ -238,7 +238,7 @@ class TestLazyMp:
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)
     def test_mp2_diffdm_mo(self, system: str, case: str, generator: str,
-                        instances: LazyMpCache):
+                           instances: LazyMpCache):
         refmp = testdata_cache._load_data(
             system=system, method="mp", case=case, source=generator
         )
@@ -256,7 +256,7 @@ class TestLazyMp:
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)
     def test_mp2_diffdm_ao(self, system: str, case: str, generator: str,
-                            instances: LazyMpCache):
+                           instances: LazyMpCache):
         refmp = testdata_cache._load_data(
             system=system, method="mp", case=case, source=generator
         )
@@ -279,10 +279,11 @@ class TestLazyMp:
         assert_allclose(dm_α.to_ndarray(), refmp["mp2"]["dm_bb_a"], atol=1e-12)
         assert_allclose(dm_β.to_ndarray(), refmp["mp2"]["dm_bb_b"], atol=1e-12)
 
-    @pytest.mark.parametrize("system,case", [(s, c) for s, c in cases if "cvs" not in c])
+    @pytest.mark.parametrize("system,case",
+                             [(s, c) for s, c in cases if "cvs" not in c])
     @pytest.mark.parametrize("generator", generators)
     def test_mp3_diffdm_mo(self, system: str, case: str, generator: str,
-                                    instances: LazyMpCache):
+                           instances: LazyMpCache):
         refmp = testdata_cache._load_data(
             system=system, method="mp", case=case, source=generator
         )
@@ -290,17 +291,18 @@ class TestLazyMp:
 
         assert mp3diff.symmetry is OperatorSymmetry.HERMITIAN
 
-        blocks = ["o1o1", "o1v1", "v1v1"]  
+        blocks = ["o1o1", "o1v1", "v1v1"]
         for label in blocks:
-            key = f"dm_{label}"  
+
             assert_allclose(mp3diff[label].to_ndarray(),
                             refmp["mp3"]["dm_" + label], atol=1e-12)
         assert 'mp3_diffdm' in instances.get(system, case).timer.tasks
 
-    @pytest.mark.parametrize("system,case", [(s, c) for s, c in cases if "cvs" not in c])
+    @pytest.mark.parametrize("system,case",
+                             [(s, c) for s, c in cases if "cvs" not in c])
     @pytest.mark.parametrize("generator", generators)
     def test_mp3_diffdm_ao(self, system: str, case: str, generator: str,
-                              instances: LazyMpCache):
+                           instances: LazyMpCache):
 
         refmp = testdata_cache._load_data(
             system=system, method="mp", case=case, source=generator
