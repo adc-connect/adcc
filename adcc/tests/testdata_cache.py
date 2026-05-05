@@ -7,7 +7,7 @@ from adcc.misc import cached_member_function
 from adcc.ReferenceState import ReferenceState
 from adcc.solver import EigenSolverStateBase
 from adcc import hdf5io, guess_zero
-from adcc import AdcMethod
+from adcc.AdcMethod import AdcMethod, IsrMethod
 
 from pathlib import Path
 from typing import Optional, Union
@@ -160,8 +160,7 @@ class TestdataCache:
         return data
 
     def adcc_data(self, system: str, method: str, case: str,
-                  gs_density_order: Optional[int] = None,
-                  isr_order: Optional[int] = None) -> dict:
+                  gs_density_order: Optional[int] = None) -> dict:
         """
         Load the adcc reference data for the given system, method (mpn / adcn),
         reference case (cvs, fc, fv-cvs, ...) and optionally gs_density_order
@@ -227,20 +226,7 @@ class TestdataCache:
             )
         adc_data = isr_data.get(kind, None)
         if isr_order is None:
-            isr_order = min(AdcMethod(method).level, 2)
-        # if isr_order is None:
-        #     isr_order = min(AdcMethod(method).level, 2)
-        # isr_data = data.get(str(isr_order), None)
-        # if isr_data is None:
-        #     raise ValueError(
-        #         f"No data available for isr_order {isr_order} in case"
-        #         f"{method} {system}"
-        #     )
-        # adc_data = isr_data.get(kind, None)
-        # if adc_data is None:
-        #     raise ValueError(f"No data available for kind {kind} in {case} "
-                            #  f"{method} {system}.")
-        # load the reference state and build a matrix on top
+            isr_order = min(AdcMethod(method).level.to_int(), 2)
         if "cvs" in case and "cvs" not in method:
             method = f"cvs-{method}"
         refstate = self.refstate(system, case)
@@ -255,9 +241,7 @@ class TestdataCache:
         states.reference_state = refstate
         states.kind = kind
         states.eigenvalues = adc_data["eigenvalues"]
-
-        states._property_method = states.method.at_level(isr_order)
-
+        states._property_method = IsrMethod(f"isr{isr_order}")
 
         if refstate.restricted and kind == "singlet":
             symm = "symmetric"
@@ -313,7 +297,8 @@ class TestdataCache:
         """
         return self._make_mock_adc_state(
             system, method=method, case=case, kind=kind,
-            gs_density_order=gs_density_order, source="adcman"
+            gs_density_order=gs_density_order, source="adcman",
+            isr_order=isr_order
         )
 
 
