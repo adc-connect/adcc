@@ -30,7 +30,7 @@ from .guess import (guesses_any, guesses_singlet, guesses_spin_flip,
                     guesses_triplet)
 from .LazyMp import LazyMp
 from .AdcMatrix import AdcMatrix, AdcMatrixlike, AdcExtraTerm
-from .AdcMethod import AdcMethod
+from .AdcMethod import AdcMethod, IsrMethod, MethodLevel
 from .exceptions import InputError
 from .ExcitedStates import ExcitedStates
 from .ReferenceState import ReferenceState as adcc_ReferenceState
@@ -107,7 +107,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         Provide the guess vectors to be employed for the ADC run. Takes
         preference over `n_guesses` and `n_guesses_doubles`, such that these
         parameters are ignored.
-    
+
     isr_order: int, optional
         Order of the ISR expansion used for property calculations.
 
@@ -188,7 +188,7 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
 
     if isr_order is not None:
         if not isinstance(isr_order, int):
-            raise TypeError ("isr_order must be an integer")
+            raise TypeError("isr_order must be an integer")
         if isr_order < 0:
             raise ValueError("isr_order must be >=0")
 
@@ -218,7 +218,14 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         matrix, n_states, kind, guesses=guesses, n_guesses=n_guesses,
         n_guesses_doubles=n_guesses_doubles, conv_tol=conv_tol, output=output,
         eigensolver=eigensolver, **solverargs)
-    exstates = ExcitedStates(diagres, isr_order=isr_order)
+    if isr_order is not None:
+        property_method = matrix.method.at_level(isr_order).as_method(IsrMethod)
+    elif matrix.method.level in [MethodLevel.TWO_X, MethodLevel.THREE]:
+        property_method = matrix.method.at_level(2).as_method(IsrMethod)
+    else:
+        property_method = matrix.method.as_method(IsrMethod)
+
+    exstates = ExcitedStates(diagres, property_method=property_method)
     exstates.kind = kind
     exstates.spin_change = spin_change
 
