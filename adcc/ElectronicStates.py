@@ -37,8 +37,7 @@ class ElectronicStates:
     _state_view_cls: StateView = None
 
     def __init__(self, data, method: str = None,
-                 property_method: str = None,
-                 isr_order: int = None) -> None:
+                 property_method: str = None) -> None:
         """
         Construct an ElectronicStates class from some data obtained from an
         iterative solver or another :class:`ElectronicStates` instance.
@@ -53,9 +52,7 @@ class ElectronicStates:
         property_method : str, optional
             Provide an explicit method for property calculations to
             override the automatic selection.
-        isr_order : int, optional
-            Provide the ISR order for calculation of properties at a speciifc order
-            corresponding to the ADC method.
+
         """
         self.matrix: AdcMatrix = data.matrix
         self.ground_state: LazyMp = self.matrix.ground_state
@@ -87,26 +84,16 @@ class ElectronicStates:
             self.method: AdcMethod = AdcMethod(self.method)
 
         if property_method is None:
-            if isr_order is not None:
-                property_method = self.method.at_level(
-                    isr_order).as_method(IsrMethod)
-            elif self.method.level in [MethodLevel.TWO_X, MethodLevel.THREE]:
-                warnings.warn(f"ISR({self.method.level.to_str()}) not implemented."
-                              f" Property method is selected as ISR(2).")
+            if self.method.level in [MethodLevel.TWO_X, MethodLevel.THREE]:
+                warnings.warn(
+                    f"property_method defaults to ISR(2) for {self.method.name}."
+                )
                 property_method = self.method.at_level(2).as_method(IsrMethod)
             else:
                 property_method = self.method.as_method(IsrMethod)
-        else:
-            if isr_order is not None:
-                warnings.warn(
-                    "isr_order will be ignored if property_method is given"
-                )
-            if not isinstance(property_method, IsrMethod):
-                if isinstance(property_method, str):
-                    property_method = AdcMethod(
-                        property_method).as_method(IsrMethod)
-                else:
-                    property_method = property_method.as_method(IsrMethod)
+
+        if not isinstance(property_method, IsrMethod):
+            property_method = IsrMethod(property_method)
         self._property_method: IsrMethod = property_method
 
         # Special stuff for special solvers
