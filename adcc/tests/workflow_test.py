@@ -204,7 +204,7 @@ class TestWorkflow:
         kind = "singlet"
 
         refdata = testdata_cache.adcman_data(system, method=method, case=case)
-        ref_singlets = refdata[kind]["eigenvalues"]
+        ref_singlets = refdata["None"][kind]["eigenvalues"]
         n_states = min(len(ref_singlets), 3)
 
         matrix = adcc.AdcMatrix(method, testdata_cache.refstate(system, case=case))

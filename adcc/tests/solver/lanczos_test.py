@@ -39,7 +39,7 @@ class TestSolverLanczos(unittest.TestCase):
     def test_adc2_singlets(self):
         refdata = testdata_cache.adcman_data(
             system="h2o_sto3g", method="adc2", case="gen"
-        )["singlet"]
+        )["None"]["singlet"]
         matrix = adcc.AdcMatrix(
             "adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
         )
@@ -57,7 +57,7 @@ class TestSolverLanczos(unittest.TestCase):
     def test_adc2_triplets(self):
         refdata = testdata_cache.adcman_data(
             system="h2o_sto3g", method="adc2", case="gen"
-        )["triplet"]
+        )["None"]["triplet"]
         matrix = adcc.AdcMatrix(
             "adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
         )
@@ -75,7 +75,7 @@ class TestSolverLanczos(unittest.TestCase):
     def test_adc2_shift_invert_singlets(self):
         refdata = testdata_cache.adcman_data(
             system="h2o_sto3g", method="adc2", case="gen"
-        )["singlet"]
+        )["None"]["singlet"]
         matrix = adcc.AdcMatrix(
             "adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
         )
@@ -106,7 +106,7 @@ class TestSolverLanczos(unittest.TestCase):
     def test_adc2_shift_invert_triplets(self):
         refdata = testdata_cache.adcman_data(
             system="h2o_sto3g", method="adc2", case="gen"
-        )["triplet"]
+        )["None"]["triplet"]
         matrix = adcc.AdcMatrix(
             "adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
         )

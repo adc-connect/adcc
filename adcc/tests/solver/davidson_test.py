@@ -79,7 +79,7 @@ class TestSolverDavidson(unittest.TestCase):
         # converges in a single iteration to the correct eigenvalues
         refdata = testdata_cache.adcman_data(
             system="h2o_sto3g", method="adc0", case="gen"
-        )["singlet"]
+        )["None"]["singlet"]
 
         matrix = adcc.AdcMatrix(
             "adc0", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
@@ -101,7 +101,7 @@ class TestSolverDavidson(unittest.TestCase):
     def test_adc2_singlets(self):
         refdata = testdata_cache.adcman_data(
             system="h2o_sto3g", method="adc2", case="gen"
-        )["singlet"]
+        )["None"]["singlet"]
 
         # Solve for singlets
         guesses = adcc.guesses_singlet(self.matrix, n_guesses=9, block="ph")
@@ -116,7 +116,7 @@ class TestSolverDavidson(unittest.TestCase):
     def test_adc2_triplets(self):
         refdata = testdata_cache.adcman_data(
             system="h2o_sto3g", method="adc2", case="gen"
-        )["triplet"]
+        )["None"]["triplet"]
 
         # Solve for triplets
         guesses = adcc.guesses_triplet(self.matrix, n_guesses=10, block="ph")
