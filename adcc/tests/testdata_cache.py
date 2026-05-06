@@ -241,7 +241,10 @@ class TestdataCache:
         states.reference_state = refstate
         states.kind = kind
         states.eigenvalues = adc_data["eigenvalues"]
-        states._property_method = IsrMethod(f"isr{isr_order}")
+
+        states._property_method = IsrMethod(
+            f"{'cvs-' if 'cvs' in method else ''}isr{isr_order}"
+        )
 
         if refstate.restricted and kind == "singlet":
             symm = "symmetric"
