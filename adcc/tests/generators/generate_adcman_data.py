@@ -51,14 +51,14 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     if key in hdf5_file:
         return None
     # skip cvs-adc(0), since it is not available in qchem.
-    if "cvs" in case and method.level == 0:
+    if "cvs" in case and method.level is MethodLevel.ZERO:
         return None
     # skip cvs-adc(3), since it is not implemented yet.
     if isr_order == 3 and "cvs" in case:
         return None
     # gs_density_order is only available for adc(3) and adc(4)
     # and it is not available for cvs-adc
-    if gs_density_order is not None and (method.level < 3 or "cvs" in case):
+    if gs_density_order is not None and (method.level.to_int() < 3 or "cvs" in case):
         return None
     # add a cvs prefix to the method if necessary
     if "cvs" in case and not method.is_core_valence_separated:
@@ -177,7 +177,7 @@ def generate_h2o_sto3g():
             test_case, method=method, dump_nstates=2,
             states_per_case=states.get(method.name, None), **n_states
         )
-        if method.level == 3:
+        if method.level is MethodLevel.THREE:
             generate_adc_all(test_case, method=method, dump_nstates=2,
                              states_per_case=states.get(method.name, None),
                              isr_order=3, **n_states)
@@ -197,7 +197,7 @@ def generate_h2o_def2tzvp():
             test_case, method=method, dump_nstates=2, states_per_case=None,
             **n_states
         )
-        if method.level == 3:
+        if method.level is MethodLevel.THREE:
             generate_adc_all(test_case, method=method, dump_nstates=2,
                              states_per_case=None, isr_order=3, **n_states)
 
@@ -214,7 +214,7 @@ def generate_cn_sto3g():
             test_case, method=method, dump_nstates=2, states_per_case=None,
             **n_states
         )
-        if method.level == 3:
+        if method.level is MethodLevel.THREE:
             generate_adc_all(test_case, method=method, dump_nstates=2,
                              states_per_case=None, isr_order=3, **n_states)
 
@@ -229,7 +229,7 @@ def generate_cn_ccpvdz():
                     testcases.kinds_to_nstates(test_case.kinds[method.adc_type])}
         generate_adc_all(test_case, method=method, dump_nstates=2,
                          states_per_case=None, **n_states)
-        if method.level == 3:
+        if method.level is MethodLevel.THREE:
             generate_adc_all(test_case, method=method, dump_nstates=2,
                              states_per_case=None, isr_order=3, **n_states)
 
@@ -246,7 +246,7 @@ def generate_hf_631g():
             test_case, method=method, dump_nstates=2, states_per_case=None,
             **n_states
         )
-        if method.level == 3:
+        if method.level is MethodLevel.THREE:
             generate_adc_all(test_case, method=method, dump_nstates=2,
                              states_per_case=None, isr_order=3, **n_states)
 
@@ -263,7 +263,7 @@ def generate_formaldehyde_pe():
             generate_adc_all(test_case=test_case, method=method, dump_nstates=2,
                              states_per_case=None, pe_potfile=test_case.pe_potfile,
                              run_qchem_scf=True, **n_states)
-        if method.level == 3:
+        if method.level is MethodLevel.THREE:
             generate_adc_all(test_case, method=method, dump_nstates=2,
                              states_per_case=None, pe_potfile=test_case.pe_potfile,
                              run_qchem_scf=True, isr_order=3, **n_states)
