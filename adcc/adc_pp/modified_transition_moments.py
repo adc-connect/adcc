@@ -181,7 +181,7 @@ def mtm_isr3(mp, op, intermediates):
     return AmplitudeVector(ph=f1, pphh=f2)
 
 
-def mtm_cvs_isr33(mp, op, intermediates):
+def mtm_cvs_isr3(mp, op, intermediates):
     raise NotImplementedError("CVS-ADC(3) is not implemented yet")
 
 
