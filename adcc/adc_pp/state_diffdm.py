@@ -176,22 +176,19 @@ def diffdm_isr3(mp, amplitude, intermediates):
     dm.oo = (  # adc3_p_oo
         -1 * einsum("ia,ja->ij", ur1, ur1)
         - 2 * einsum("ikab,jkab->ij", ur2, ur2)
-        + 1
-        * einsum(
+        + 1 * einsum(
             "jklc,iklc->ij",
             einsum("lb,jkbc->jklc", ur1, t2_1),
             einsum("la,ikac->iklc", ur1, t2_1),
         )
-        + 0.5
-        * einsum(
+        + 0.5 * einsum(
             "ilbc,jlbc->ij",
             einsum(
                 "kl,ikbc->ilbc",
                 einsum("ka,la->kl", ur1, ur1), t2_1,
             ), t2_1,
         )
-        - 1
-        * einsum(
+        - 1 * einsum(
             "jc,ic->ij",
             einsum("lb,jlbc->jc", ur1, t2_1),
             einsum("ka,ikac->ic", ur1, t2_1),
@@ -200,34 +197,28 @@ def diffdm_isr3(mp, amplitude, intermediates):
             -2 * einsum("ib,jb->ij", einsum("ka,ikab->ib", ur1, ur2), t1_2)
             - 0.5 * einsum("ik,jk->ij", einsum("ia,ka->ik", ur1, ur1), p0_2.oo)
             - 0.5 * einsum("ik,jk->ij", einsum("ia,ka->ik", ur1, ur1), p0_3.oo)
-            + 1
-            * einsum(
+            + 1 * einsum(
                 "jklc,iklc->ij",
                 einsum("lb,jkbc->jklc", ur1, t2_2),
                 einsum("la,ikac->iklc", ur1, t2_1),
             )
-            + 0.5
-            * einsum(
+            + 0.5 * einsum(
                 "ilbc,jlbc->ij",
                 einsum("kl,ikbc->ilbc", einsum("ka,la->kl", ur1, ur1), t2_1), t2_2,
             )
-            + 0.5
-            * einsum(
+            + 0.5 * einsum(
                 "jb,ib->ij",
                 einsum("kc,jkbc->jb", einsum("la,klac->kc", ur1, t2_1), t2_1), ur1,
             )
-            + 0.5
-            * einsum(
+            + 0.5 * einsum(
                 "jb,ib->ij",
                 einsum("kc,jkbc->jb", einsum("la,klac->kc", ur1, t2_1), t2_2), ur1,
             )
-            + 0.5
-            * einsum(
+            + 0.5 * einsum(
                 "jb,ib->ij",
                 einsum("kc,jkbc->jb", einsum("la,klac->kc", ur1, t2_2), t2_1), ur1,
             )
-            - 1
-            * einsum(
+            - 1 * einsum(
                 "jc,ic->ij",
                 einsum("lb,jlbc->jc", ur1, t2_2),
                 einsum("ka,ikac->ic", ur1, t2_1),
@@ -248,101 +239,83 @@ def diffdm_isr3(mp, amplitude, intermediates):
         - 1 * einsum("ja,ij->ia", einsum("kb,jkab->ja", ur1, ur2), p0_2.oo)
         - 2 * einsum("kb,ikab->ia", einsum("jc,jkbc->kb", ur1, ur2), t2_1)
         - 2 * einsum("kb,ikab->ia", einsum("jc,jkbc->kb", ur1, ur2), t2_2)
-        + 1
-        * einsum(
+        + 1 * einsum(
             "kc,ikac->ia",
             einsum("jk,jc->kc", einsum("jb,kb->jk", ur1, ur1), t1_2), t2_1,
         )
-        + 1
-        * einsum(
+        + 1 * einsum(
             "kc,ikac->ia",
             einsum("jk,jc->kc", einsum("jb,kb->jk", ur1, t1_2), ur1), t2_1,
         )
-        + 0.5
-        * einsum(
+        + 0.5 * einsum(
             "il,la->ia",
             einsum(
                 "ikcd,klcd->il", einsum("jb,ijkbcd->ikcd", ur1, t3_2), t2_1), ur1,
         )
-        + 0.5
-        * einsum(
+        + 0.5 * einsum(
             "iklc,klac->ia",
             einsum("id,klcd->iklc", ur1, t2_1),
             einsum("jb,jklabc->klac", ur1, t3_2),
         )
-        + 0.5
-        * einsum(
+        + 0.5 * einsum(
             "ijkb,jkab->ia",
             einsum("id,jkbd->ijkb", einsum("lc,ilcd->id", ur1, t2_1), t2_1), ur2,
         )
-        + 0.5
-        * einsum(
+        + 0.5 * einsum(
             "ld,ilad->ia",
             einsum("jklb,jkbd->ld", einsum("lc,jkbc->jklb", ur1, ur2), t2_1), t2_1,
         )
-        + 0.5
-        * einsum(
+        + 0.5 * einsum(
             "il,la->ia",
             einsum("ikbc,klbc->il", ur2, t2_1),
             einsum("jd,jlad->la", ur1, t2_1),
         )
-        + 0.5
-        * einsum(
+        + 0.5 * einsum(
             "kd,ikad->ia",
             einsum("kl,ld->kd", einsum("jlbc,jkbc->kl", ur2, t2_1), ur1), t2_1,
         )
-        - 1
-        * einsum(
+        - 1 * einsum(
             "ij,ja->ia",
             einsum("ic,jc->ij", einsum("kb,ikbc->ic", ur1, t2_1), t1_2), ur1,
         )
-        - 1
-        * einsum(
+        - 1 * einsum(
             "ka,ik->ia",
             einsum("jc,jkac->ka", ur1, t2_1),
             einsum("ib,kb->ik", ur1, t1_2),
         )
-        - 1
-        * einsum(
+        - 1 * einsum(
             "kc,ikac->ia",
             einsum("ld,klcd->kc", ur1, t2_1),
             einsum("jb,ijkabc->ikac", ur1, t3_2),
         )
-        - 1
-        * einsum(
+        - 1 * einsum(
             "ijkc,jkac->ia",
             einsum("ikld,jlcd->ijkc", einsum("kb,ilbd->ikld", ur1, t2_1), t2_1),
             ur2,
         )
-        - 1
-        * einsum(
+        - 1 * einsum(
             "ijld,jlad->ia",
             einsum("ijkb,klbd->ijld", einsum("jc,ikbc->ijkb", ur1, ur2), t2_1),
             t2_1,
         )
-        - 1
-        * einsum(
+        - 1 * einsum(
             "kc,ikac->ia",
             einsum("jb,jkbc->kc", einsum("ld,jlbd->jb", ur1, ur2), t2_1), t2_1,
         )
-        - 0.5
-        * einsum(
+        - 0.5 * einsum(
             "jkbc,ijkabc->ia",
             einsum("jklc,lb->jkbc", einsum("ld,jkcd->jklc", ur1, t2_1), ur1), t3_2,
         )
-        - 0.5
-        * einsum(
+        - 0.5 * einsum(
             "jkbc,ijkabc->ia",
             einsum("jl,klbc->jkbc", einsum("jd,ld->jl", ur1, ur1), t2_1), t3_2,
         )
-        - 0.25
-        * einsum(
+        - 0.25 * einsum(
             "ijkl,jkla->ia",
             einsum("ilcd,jkcd->ijkl", t2_1, t2_1),
             einsum("lb,jkab->jkla", ur1, ur2),
         )
-        - 0.25
-        * einsum(
+        - 0.25 * einsum(
             "ijkl,jkla->ia",
             einsum("ijbc,klbc->ijkl", ur2, t2_1),
             einsum("jd,klad->jkla", ur1, t2_1),
@@ -351,56 +324,46 @@ def diffdm_isr3(mp, amplitude, intermediates):
     dm.vv = (  # adc3_p_vv
         +1 * einsum("ia,ib->ab", ur1, ur1)
         + 2 * einsum("ijac,ijbc->ab", ur2, ur2)
-        + 1
-        * einsum(
+        + 1 * einsum(
             "kb,ka->ab",
             einsum("jd,jkbd->kb", ur1, t2_1),
             einsum("ic,ikac->ka", ur1, t2_1),
         )
-        - 1
-        * einsum(
+        - 1 * einsum(
             "jkad,jkbd->ab",
             einsum("ij,ikad->jkad", einsum("ic,jc->ij", ur1, ur1), t2_1), t2_1,
         )
-        - 0.5
-        * einsum(
+        - 0.5 * einsum(
             "ijkb,ijka->ab",
             einsum("id,jkbd->ijkb", ur1, t2_1),
             einsum("ic,jkac->ijka", ur1, t2_1),
         )
-        + 2
-        * (
+        + 2 * (
             +2 * einsum("ja,jb->ab", einsum("ic,ijac->ja", ur1, ur2), t1_2)
             - 0.5 * einsum("ib,ia->ab", einsum("ic,bc->ib", ur1, p0_2.vv), ur1)
             - 0.5 * einsum("ib,ia->ab", einsum("ic,bc->ib", ur1, p0_3.vv), ur1)
-            + 1
-            * einsum(
+            + 1 * einsum(
                 "kb,ka->ab",
                 einsum("jd,jkbd->kb", ur1, t2_2),
                 einsum("ic,ikac->ka", ur1, t2_1),
             )
-            + 0.5
-            * einsum(
+            + 0.5 * einsum(
                 "ib,ia->ab",
                 einsum("kd,ikbd->ib", einsum("jc,jkcd->kd", ur1, t2_1), t2_1), ur1,
             )
-            + 0.5
-            * einsum(
+            + 0.5 * einsum(
                 "ib,ia->ab",
                 einsum("kd,ikbd->ib", einsum("jc,jkcd->kd", ur1, t2_2), t2_1), ur1,
             )
-            + 0.5
-            * einsum(
+            + 0.5 * einsum(
                 "ib,ia->ab",
                 einsum("kd,ikbd->ib", einsum("jc,jkcd->kd", ur1, t2_1), t2_2), ur1,
             )
-            - 1
-            * einsum(
+            - 1 * einsum(
                 "jkad,jkbd->ab",
                 einsum("ij,ikad->jkad", einsum("ic,jc->ij", ur1, ur1), t2_1), t2_2,
             )
-            - 0.5
-            * einsum(
+            - 0.5 * einsum(
                 "ijkb,ijka->ab",
                 einsum("id,jkbd->ijkb", ur1, t2_2),
                 einsum("ic,jkac->ijka", ur1, t2_1),

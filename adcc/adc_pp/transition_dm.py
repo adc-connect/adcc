@@ -144,20 +144,17 @@ def tdm_isr3(mp, amplitude, intermediates):
         + 0.5 * einsum("jc,ijac->ia", einsum("jb,bc->jc", ul1, p0_2_vv), t2_1)
         - 1 * einsum("ic,ac->ia", einsum("jb,ijbc->ic", ul1, t2_1), p0_2_vv)
         - 0.5 * einsum("kb,ikab->ia", einsum("jb,jk->kb", ul1, p0_2_oo), t2_1)
-        + 1
-        * einsum(
+        + 1 * einsum(
             "ijkc,jkac->ia",
             einsum("ijld,klcd->ijkc", einsum("jb,ilbd->ijld", ul1, t2_1), t2_1),
             t2_1,
         )
-        + 0.5
-        * einsum(
+        + 0.5 * einsum(
             "kd,ikad->ia",
             einsum("lc,klcd->kd", einsum("jb,jlbc->lc", ul1, t2_1), t2_1),
             t2_1,
         )
-        - 0.25
-        * einsum(
+        - 0.25 * einsum(
             "ijkl,jkla->ia",
             einsum("ijcd,klcd->ijkl", t2_1, t2_1),
             einsum("jb,klab->jkla", ul1, t2_1),
