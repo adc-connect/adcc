@@ -85,7 +85,7 @@ class IsrMatrix(AdcMatrixlike):
         n_particle_op = self.operator[0].n_particle_op
         assert all(op.n_particle_op == n_particle_op for op in self.operator)
         self.block_orders = self._default_block_orders(
-            self.method, n_zeroth_order_off_diag_couplings=n_particle_op
+            self.method, bandwidth=n_particle_op
         )
         if block_orders is None:
             # only implemented through PP-ADC(2)

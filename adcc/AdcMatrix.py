@@ -79,8 +79,7 @@ class AdcMatrixlike:
 
     @classmethod
     def _default_block_orders(cls, method: Method,
-                              n_zeroth_order_off_diag_couplings: int
-                              ) -> dict[str, int]:
+                              bandwidth: int) -> dict[str, int]:
         """
         Determines the default block orders for the given adc method.
 
@@ -111,8 +110,9 @@ class AdcMatrixlike:
             raise ValueError(f"Unknown adc type {method.adc_type} for method "
                              f"{method.name}. Can not determine default block "
                              "orders.")
+        assert bandwidth >= 0
         n_spaces = (
-            ((method.level.to_int() + n_zeroth_order_off_diag_couplings) // 2) + 1
+            ((method.level.to_int() + bandwidth) // 2) + 1
         )
         spaces = [
             "p" * i + min_space + "h" * i for i in range(0, n_spaces)
@@ -256,7 +256,7 @@ class AdcMatrix(AdcMatrixlike):
             self.intermediates = Intermediates(self.ground_state)
 
         self.block_orders = self._default_block_orders(
-            self.method, n_zeroth_order_off_diag_couplings=0
+            self.method, bandwidth=0
         )
         if block_orders is not None:
             self.block_orders.update(block_orders)

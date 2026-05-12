@@ -20,7 +20,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from typing import Optional, TypeVar
+from typing import Optional, Union, TypeVar
 from enum import Enum
 
 T = TypeVar("T", bound="Method")
@@ -43,7 +43,7 @@ class MethodLevel(Enum):
     # 2nd-order ISR: in doubles excitation space only (starting from 2-particle
     # operators, triples are required for a consistent second-order description)
     TWO_D = "2d"
-    # 3nd-order ISR: in doubles excitation space only (starting from 1-particle
+    # 3rd-order ISR: in doubles excitation space only (starting from 1-particle
     # operators, triples are required for a consistent third-order description)
     THREE_D = "3d"
 
@@ -111,8 +111,8 @@ class Method:
     @property
     def name(self) -> str:
         """The name of the Method as string."""
-        if self.is_core_valence_separated:
-            return "cvs-" + self._base_method
+        if self.prefixes:
+            return f"{self.prefixes}-{self._base_method}"
         else:
             return self._base_method
 
@@ -122,6 +122,14 @@ class Method:
         return self._method_base_name + self.level.to_str()
 
     @property
+    def prefixes(self) -> str:
+        """String containing all prefixes of the method separated by '-'."""
+        ret = []
+        if self.is_core_valence_separated:
+            ret.append("cvs")
+        return "-".join(ret)
+
+    @property
     def base_method(self: T) -> T:
         """
         The base (full) method, i.e. with all approximations such as
@@ -129,16 +137,20 @@ class Method:
         """
         return self.__class__(self._base_method)
 
-    def at_level(self: T, newlevel: int) -> T:
+    def at_level(self: T, newlevel: Union[int, str]) -> T:
         """
         Return an equivalent method, where only the level is changed
         (e.g. calling this on a CVS method returns a CVS method)
         """
         assert self._method_base_name is not None
-        if self.is_core_valence_separated:
-            return self.__class__("cvs-" + self._method_base_name + str(newlevel))
+        if self.prefixes:
+            return self.__class__(
+                f"{self.prefixes}-{self._method_base_name}{newlevel}"
+            )
         else:
-            return self.__class__(self._method_base_name + str(newlevel))
+            return self.__class__(
+                f"{self._method_base_name}{newlevel}"
+            )
 
     def as_method(self, method_cls: type[T]) -> T:
         """

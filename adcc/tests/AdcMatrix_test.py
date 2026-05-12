@@ -50,20 +50,20 @@ class TestBlockOrders:
         # verify the default methods
         for order in range(0, 4):
             block_orders = AdcMatrixlike._default_block_orders(
-                method=AdcMethod(f"adc{order}"), n_zeroth_order_off_diag_couplings=0
+                method=AdcMethod(f"adc{order}"), bandwidth=0
             )
             cvs_block_orders = AdcMatrixlike._default_block_orders(
                 method=AdcMethod(f"cvs-adc{order}"),
-                n_zeroth_order_off_diag_couplings=0
+                bandwidth=0
             )
             assert ref[order] == block_orders
             assert cvs_block_orders == block_orders
         # verify the special methods: adc2x
         block_orders = AdcMatrixlike._default_block_orders(
-            method=AdcMethod("adc2x"), n_zeroth_order_off_diag_couplings=0
+            method=AdcMethod("adc2x"), bandwidth=0
         )
         cvs_block_orders = AdcMatrixlike._default_block_orders(
-            method=AdcMethod("cvs-adc2x"), n_zeroth_order_off_diag_couplings=0
+            method=AdcMethod("cvs-adc2x"), bandwidth=0
         )
         ref = {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 1}
         assert block_orders == ref
@@ -76,11 +76,11 @@ class TestBlockOrders:
         )
         for order in range(0, 3):
             block_orders = AdcMatrixlike._default_block_orders(
-                method=IsrMethod(f"isr{order}"), n_zeroth_order_off_diag_couplings=1
+                method=IsrMethod(f"isr{order}"), bandwidth=1
             )
             cvs_block_orders = AdcMatrixlike._default_block_orders(
                 method=IsrMethod(f"cvs-isr{order}"),
-                n_zeroth_order_off_diag_couplings=1
+                bandwidth=1
             )
             assert ref[order] == block_orders
             assert cvs_block_orders == block_orders
@@ -95,17 +95,17 @@ class TestBlockOrders:
         )
         for order in range(0, 3):
             block_orders = AdcMatrixlike._default_block_orders(
-                method=IsrMethod(f"isr{order}"), n_zeroth_order_off_diag_couplings=2
+                method=IsrMethod(f"isr{order}"), bandwidth=2
             )
             cvs_block_orders = AdcMatrixlike._default_block_orders(
                 method=IsrMethod(f"cvs-isr{order}"),
-                n_zeroth_order_off_diag_couplings=2
+                bandwidth=2
             )
             assert ref[order] == block_orders
             assert cvs_block_orders == block_orders
         # isr(1)-s
         block_orders = AdcMatrixlike._default_block_orders(
-            method=IsrMethod("isr1s"), n_zeroth_order_off_diag_couplings=1
+            method=IsrMethod("isr1s"), bandwidth=1
         )
         ref_isr1s = {
             "ph_ph": 1, "ph_pphh": None, "pphh_ph": None, "pphh_pphh": None
@@ -113,7 +113,7 @@ class TestBlockOrders:
         assert block_orders == ref_isr1s
         # isr(2)-d
         block_orders = AdcMatrixlike._default_block_orders(
-            method=IsrMethod("isr2d"), n_zeroth_order_off_diag_couplings=2
+            method=IsrMethod("isr2d"), bandwidth=2
         )
         ref_isr2d = {
             "ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 0
