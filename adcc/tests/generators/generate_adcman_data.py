@@ -196,7 +196,7 @@ def generate_h2o_sto3g():
 
     for method in _methods["ea"]:
         method = AdcMethod(method)
-        if method.to_int() < 2:
+        if method.level.to_int() < 2:
             n_states = {"n_ea_states": (1, 0)}
         else:
             n_states = {"n_ea_states": (3, 0)}

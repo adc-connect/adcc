@@ -145,7 +145,7 @@ def generate_h2o_sto3g():
         for n_states in \
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
             per_case = None
-            if method.to_int() < 2:  # adc0/adc1
+            if method.level.to_int() < 2:  # adc0/adc1
                 per_case = {
                     case: {n_states: n} for case, n in states_per_case.items()
                 }
