@@ -174,19 +174,13 @@ def dump_excited_states(
                     tdm_bb_b.append(bb_b.to_ndarray())
                 kind_data[
                     f"state_to_state/from_{ifrom}/transition_dipole_moments"
-                ] = (
-                     state2state.transition_dipole_moment[:n_states - ifrom - 1]
-                )
+                ] = (state2state.transition_dipole_moment[:n_states - ifrom - 1])
                 kind_data[
                     f"state_to_state/from_{ifrom}/state_to_excited_tdm_bb_a"
-                ] = (
-                     np.asarray(tdm_bb_a)
-                )
+                ] = (np.asarray(tdm_bb_a))
                 kind_data[
                     f"state_to_state/from_{ifrom}/state_to_excited_tdm_bb_b"
-                ] = (
-                     np.asarray(tdm_bb_b)
-                )
+                ] = (np.asarray(tdm_bb_b))
         # ssq for unrestriced calculation
         if not states.reference_state.restricted \
                 and not states.method.is_core_valence_separated:

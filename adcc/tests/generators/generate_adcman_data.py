@@ -59,7 +59,8 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
         return None
     # gs_density_order is only available for adc(3) and adc(4)
     # and it is not available for cvs-adc
-    if gs_density_order is not None and (method.level.to_int() < 3 or "cvs" in case):
+    if gs_density_order is not None \
+            and (method.level.to_int() < 3 or "cvs" in case):
         return None
     print(f"Generating {method.name} (gs_density_order={gs_density_order}) "
           f"data for {case} {test_case.file_name}.")

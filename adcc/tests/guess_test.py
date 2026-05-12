@@ -460,7 +460,8 @@ class TestGuess:
         diagonal = matrix.diagonal().get(block).to_ndarray()
 
         # Doubles guesses are constructed from the 0th order diagonal
-        if matrix.method.level.to_int() > 1 and not matrix.method.name.endswith("adc2"):
+        if matrix.method.level.to_int() > 1 \
+                and not matrix.method.name.endswith("adc2"):
             if block == "pphh":
                 diagonal = adcc.adc_pp.matrix.diagonal_pphh_pphh_0(
                     matrix.reference_state

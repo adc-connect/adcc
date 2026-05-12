@@ -321,8 +321,8 @@ def generate_hf_631g():
                     testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
                 n_states = {n_states: 3}
                 generate_adc_all(
-                        test_case, method=method, dump_nstates=2,
-                        is_alpha=is_alpha, **n_states
+                    test_case, method=method, dump_nstates=2,
+                    is_alpha=is_alpha, **n_states
                 )
 
         for method in _methods["ea"]:
@@ -331,8 +331,8 @@ def generate_hf_631g():
                     testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
                 n_states = {n_states: 3}
                 generate_adc_all(
-                        test_case, method=method, dump_nstates=2,
-                        is_alpha=is_alpha, **n_states
+                    test_case, method=method, dump_nstates=2,
+                    is_alpha=is_alpha, **n_states
                 )
 
 

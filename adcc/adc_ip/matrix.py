@@ -131,7 +131,7 @@ def block_h_phh_1(hf, mp, intermediates):
     # M_{12}
     def apply(ampl):
         return AmplitudeVector(h=(
-           + 1 / sqrt(2) * einsum("jkib,jkb->i", hf.ooov, ampl.phh)))
+            + 1 / sqrt(2) * einsum("jkib,jkb->i", hf.ooov, ampl.phh)))
     return AdcBlock(apply, 0)
 
 

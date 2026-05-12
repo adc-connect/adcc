@@ -22,11 +22,11 @@
 ## ---------------------------------------------------------------------
 
 from ..AdcMethod import AdcMethod
-from typing import Optional
+from typing import Optional, Union
 
 
 def determine_spin_change(method: AdcMethod, kind: str,
-                          is_alpha: Optional[bool] = None) -> int | float:
+                          is_alpha: Optional[bool] = None) -> Union[int, float]:
     if method.adc_type == "pp":
         if kind == "spin_flip":
             return -1
