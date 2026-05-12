@@ -20,8 +20,10 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from typing import Optional, Union, TypeVar
+from collections import Counter
+from typing import Any, Optional, Union, TypeVar
 from enum import Enum
+
 
 T = TypeVar("T", bound="Method")
 
@@ -85,7 +87,7 @@ class Method:
 
         assert self._base_method == split[-1]
 
-        # validate prefix
+        # validate prefixes
         split = split[:-1]
         valid_prefixes: tuple[str, ...] = ("cvs",)
         if len(split) > len(valid_prefixes):
@@ -93,6 +95,9 @@ class Method:
                              f"in {split}.")
         if any(pref not in valid_prefixes for pref in split):
             raise ValueError(f"Invalid method prefix in {split}.")
+        if any(count != 1 for count in Counter(split).values()):
+            raise ValueError(f"Invalid method string {method}. Duplicate "
+                             f"prefix detected in {split}.")
 
         self.is_core_valence_separated: bool = "cvs" in split
         # NOTE: added this to make the testdata generation ready for IP/EA
@@ -163,14 +168,18 @@ class Method:
             self.name.replace(self._method_base_name, method_cls._method_base_name)
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, Method):
+            return NotImplemented
         return self.name == other.name
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any):
+        if not isinstance(other, Method):
+            return NotImplemented
         return self.name != other.name
 
-    def __repr__(self):
-        return "Method(name={})".format(self.name)
+    def __repr__(self) -> str:
+        return f"Method(name={self.name})"
 
 
 class AdcMethod(Method):

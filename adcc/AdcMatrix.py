@@ -87,7 +87,7 @@ class AdcMatrixlike:
         ----------
         method: Method
             The method to generate default block orders for.
-        n_zeroth_order_off_diag_couplings: int
+        bandwidth: int
             The number of coupling blocks in the ADC/ISR matrix with
             non-vanishing zeroth-order contributions, e.g.,
             0 for the secular matrix and 1 for the 1-particle ISR matrix.
@@ -111,9 +111,7 @@ class AdcMatrixlike:
                              f"{method.name}. Can not determine default block "
                              "orders.")
         assert bandwidth >= 0
-        n_spaces = (
-            ((method.level.to_int() + bandwidth) // 2) + 1
-        )
+        n_spaces = ((method.level.to_int() + bandwidth) // 2) + 1
         spaces = [
             "p" * i + min_space + "h" * i for i in range(0, n_spaces)
         ]
