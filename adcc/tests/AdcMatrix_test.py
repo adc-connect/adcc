@@ -115,8 +115,8 @@ class TestBlockOrders:
     def test_validate_block_orders_ip_ea(self):
         # Valid IP block orders
         valid_ip = (
-            {"h_h": 0}, # ip-adc0
-            {"h_h": 2, "h_phh": 1, "phh_h": 1, "phh_phh": 0}, # ip-adc2
+            {"h_h": 0},  # ip-adc0
+            {"h_h": 2, "h_phh": 1, "phh_h": 1, "phh_phh": 0},  # ip-adc2
         )
         for block_orders in valid_ip:
             AdcMatrixlike._validate_block_orders(
@@ -125,8 +125,8 @@ class TestBlockOrders:
 
         # Valid EA block orders
         valid_ea = (
-            {"p_p": 0}, # ea-adc0
-            {"p_p": 2, "p_pph": 1, "pph_p": 1, "pph_pph": 0}, # ea-adc2
+            {"p_p": 0},  # ea-adc0
+            {"p_p": 2, "p_pph": 1, "pph_p": 1, "pph_pph": 0},  # ea-adc2
         )
         for block_orders in valid_ea:
             AdcMatrixlike._validate_block_orders(
@@ -229,10 +229,12 @@ class TestAdcMatrix:
             kind = "any"  # we don't do the test for spin flip
         trial_vec = self.construct_trial_vec(system, case, method, kind)
         result = matrix @ trial_vec
-        assert_allclose(matdata["matvec_singles"], result.get(matrix.axis_blocks[0]).to_ndarray(),
+        assert_allclose(matdata["matvec_singles"],
+                        result.get(matrix.axis_blocks[0]).to_ndarray(),
                         rtol=1e-10, atol=1e-12)
         if "matvec_doubles" in matdata:
-            assert_allclose(matdata["matvec_doubles"], result.get(matrix.axis_blocks[1]).to_ndarray(),
+            assert_allclose(matdata["matvec_doubles"],
+                            result.get(matrix.axis_blocks[1]).to_ndarray(),
                             rtol=1e-10, atol=1e-12)
 
     def test_compute_block(self, system: str, case: str, method: str):
@@ -345,7 +347,7 @@ class TestAdcMatrixInterface:
         assert matrix.mospaces == reference_state.mospaces
 
     @pytest.mark.parametrize("method", pp_methods + ip_methods + ea_methods)
-    @pytest.mark.parametrize("case", ["gen"]) # No CVS for IP/EA
+    @pytest.mark.parametrize("case", ["gen"])  # No CVS for IP/EA
     @pytest.mark.parametrize("system", ["h2o_sto3g"])
     def test_properties(self, system: str, case: str, method: str):
         reference_state = testdata_cache.refstate(system=system, case=case)
@@ -434,7 +436,8 @@ class TestAdcMatrixInterface:
         elif matrix.method.adc_type == "ea":
             spin_change = 0.5
 
-        vectors = [adcc.guess_zero(matrix, spin_change=spin_change) for _ in range(3)]
+        vectors = [
+            adcc.guess_zero(matrix, spin_change=spin_change) for _ in range(3)]
         for vec in vectors:
             vec.set_random()
         v, w, x = vectors
@@ -469,8 +472,10 @@ class TestAdcMatrixInterface:
         assert diffv.get(blocks[1]).dot(diffv.get(blocks[1])) < 1e-12
 
         # Test apply
-        resv[blocks[0]] = matrix.block_apply(f"{blocks[0]}_{blocks[0]}", v.get(blocks[0]))
-        resv[blocks[0]] += matrix.block_apply(f"{blocks[0]}_{blocks[1]}", v.get(blocks[1]))
+        resv[blocks[0]] = matrix.block_apply(f"{blocks[0]}_{blocks[0]}",
+                                             v.get(blocks[0]))
+        resv[blocks[0]] += matrix.block_apply(f"{blocks[0]}_{blocks[1]}",
+                                              v.get(blocks[1]))
         refv = matrix.matvec(v)
         diffv = resv.get(blocks[0]) - refv.get(blocks[0])
         assert diffv.dot(diffv) < 1e-12
@@ -545,7 +550,7 @@ class TestAdcMatrixInterface:
 @pytest.mark.parametrize("system", ["h2o_sto3g", "cn_sto3g"])
 @pytest.mark.parametrize("method", ["adc3", "ip-adc3", "ea-adc3"])
 class TestAdcMatrixShifted:
-    def construct_matrices(self, system:str, method: str, shift: float):
+    def construct_matrices(self, system: str, method: str, shift: float):
         reference_state = testdata_cache.refstate(system, case="gen")
         ground_state = adcc.LazyMp(reference_state)
         matrix = adcc.AdcMatrix(method, ground_state)

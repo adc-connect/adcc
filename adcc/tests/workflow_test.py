@@ -418,7 +418,7 @@ class TestWorkflow:
         with pytest.raises(InputError):  # Too low tolerance
             # SCF tolerance = 1e-14 currently
             res = diagonalise_adcmatrix(matrix, n_states=9, kind=kind,
-                                        guesses=guesses,eigensolver="davidson",
+                                        guesses=guesses, eigensolver="davidson",
                                         conv_tol=1e-15)
 
         with pytest.raises(InputError):  # Wrong solver method
@@ -454,7 +454,7 @@ class TestWorkflow:
         with pytest.raises(InputError):  # Too low tolerance
             # SCF tolerance = 1e-14 currently
             res = diagonalise_adcmatrix(matrix, n_states=9, kind=kind,
-                                        guesses=guesses,eigensolver="davidson",
+                                        guesses=guesses, eigensolver="davidson",
                                         conv_tol=1e-15)
 
         with pytest.raises(InputError):  # Wrong solver method
@@ -489,7 +489,7 @@ class TestWorkflow:
         with pytest.raises(InputError):  # Too low tolerance
             # SCF tolerance = 1e-14 currently
             res = diagonalise_adcmatrix(matrix, n_states=9, kind=kind,
-                                        guesses=guesses,eigensolver="davidson",
+                                        guesses=guesses, eigensolver="davidson",
                                         conv_tol=1e-15)
 
         with pytest.raises(InputError):  # Wrong solver method

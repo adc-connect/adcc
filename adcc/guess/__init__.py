@@ -24,7 +24,7 @@ from .guess_zero import guess_symmetries, guess_zero
 from .guesses_from_diagonal import guesses_from_diagonal
 from .util import estimate_n_guesses, determine_spin_change
 
-__all__ = ["guess_zero", "guesses_from_diagonal", 
+__all__ = ["guess_zero", "guesses_from_diagonal",
            "get_spin_block_symmetrisation", "guesses_doublet",
            "guesses_singlet", "guesses_triplet", "guesses_any",
            "guesses_spin_flip", "guess_symmetries",
@@ -40,7 +40,7 @@ def get_spin_block_symmetrisation(kind: str) -> str:
         "singlet": "symmetric",
         "doublet": "none",
         "triplet": "antisymmetric",
-        "spin_flip":"none",
+        "spin_flip": "none",
         "any": "none"
     }
     try:
@@ -91,7 +91,7 @@ def guesses_doublet(matrix, n_guesses, block="h", is_alpha=True, **kwargs):
     return guesses_from_diagonal(
         matrix, n_guesses, block=block,
         is_alpha=is_alpha, spin_change=spin_change,
-        spin_block_symmetrisation= get_spin_block_symmetrisation("doublet"),
+        spin_block_symmetrisation=get_spin_block_symmetrisation("doublet"),
         **kwargs
     )
 
@@ -112,7 +112,7 @@ def guesses_triplet(matrix, n_guesses, block="ph", **kwargs):
     """
     return guesses_from_diagonal(
         matrix, n_guesses, block=block, spin_change=0,
-        spin_block_symmetrisation= get_spin_block_symmetrisation("triplet"),
+        spin_block_symmetrisation=get_spin_block_symmetrisation("triplet"),
         **kwargs
     )
 
@@ -137,6 +137,6 @@ def guesses_spin_flip(matrix, n_guesses, block="ph", **kwargs):
     """
     return guesses_from_diagonal(
         matrix, n_guesses, block=block, spin_change=-1,
-        spin_block_symmetrisation= get_spin_block_symmetrisation("spin_flip"),
+        spin_block_symmetrisation=get_spin_block_symmetrisation("spin_flip"),
         **kwargs
     )

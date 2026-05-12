@@ -203,13 +203,12 @@ class TestdataCache:
         )
 
     @cached_member_function()
-    def _make_mock_adc_state(
-        self, system: Union[str, testcases.TestCase],
-        method: str, case: str,
-        kind: str, source: str,
-        gs_density_order: Optional[int] = None,
-        is_alpha: Optional[bool] = None
-        ) -> ExcitedStates | AttachedStates | DetachedStates:
+    def _make_mock_adc_state(self, system: Union[str, testcases.TestCase],
+                             method: str, case: str,
+                             kind: str, source: str,
+                             gs_density_order: Optional[int] = None,
+                             is_alpha: Optional[bool] = None
+                             ) -> ExcitedStates | AttachedStates | DetachedStates:
         """
         Create an ExcitedStates/AttachedStates/DetachedStates instance for the
         given test case, method (adcn), reference case (gen/cvs/fc/...),

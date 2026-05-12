@@ -84,7 +84,8 @@ def guess_symmetries(matrix, spin_change=0, spin_block_symmetrisation="none"):
                          " You passed {}".format(spin_change))
 
     max_spin_change = 0.5 * len(matrix.axis_blocks[-1])
-    valid_spin_changes = [max_spin_change - i for i in range(int(2 * max_spin_change + 1))]
+    valid_spin_changes = [
+        max_spin_change - i for i in range(int(2 * max_spin_change + 1))]
 
     if spin_change not in valid_spin_changes:
         raise ValueError("spin_change for may only be one of "

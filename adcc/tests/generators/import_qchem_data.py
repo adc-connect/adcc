@@ -74,29 +74,29 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
     # define the possible state kinds to import for each adc variant.
     state_kinds = {
         "pp": {
-            True: ["singlets", "triplets"], # restricted
+            True: ["singlets", "triplets"],  # restricted
             # uhf and spin flip are located in the same ".../uhf/..." subtree
             False: ["any_or_spinflip"],  # unrestricted
         },
         "ip": {
-            True: [""], # restricted
-            False: ["alphas", "betas"], # unrestricted
+            True: [""],  # restricted
+            False: ["alphas", "betas"],  # unrestricted
         },
         "ea": {
-            True: [""], # restricted
-            False: ["alphas", "betas"], # unrestricted
+            True: [""],  # restricted
+            False: ["alphas", "betas"],  # unrestricted
         },
     }
     # Of course the kinds have to have a slightly different name in adcc....
     kind_map = {"singlets": "singlet", "triplets": "triplet",
-        "alphas": "alpha", "betas": "beta"}
+                "alphas": "alpha", "betas": "beta"}
     # also the adcc methods have to be translated
     if method.adc_type == "pp":
         method_name: str = method.name.replace("-", "_")  # cvs-adcn -> cvs_adcn
         if method_name.endswith("adc2"):  # adc2 -> adc2s (Only for PP)
             method_name += "s"
     else:
-        method_name: str = method.name.split('-')[-1] # No cvs (yet)
+        method_name: str = method.name.split('-')[-1]  # No cvs (yet)
     restricted = "rhf" in context[f"adc_{method.adc_type}"][method_name].keys()
 
     # go through the different possible state kinds and import the states.
@@ -175,7 +175,7 @@ def _import_excited_states(context: h5py.File, method: str, only_full_mode: bool
     if restricted:
         tree.append("rhf")
         if adc_type == "pp":
-            assert state_kind is not None  # needs to be defined for restricted calcs
+            assert state_kind is not None  # needs to be defined for restricted
             tree.append(state_kind)
     else:
         tree.append("uhf")
@@ -280,7 +280,7 @@ def _import_state_to_state_data(context: h5py.File, method: str,
     if restricted:
         tree.extend(["rhf", "isr"])
         if adc_type == "pp":
-            assert state_kind is not None  # needs to be defined for restricted calcs
+            assert state_kind is not None  # needs to be defined for restricted
             tree.append(state_kind)
     else:
         tree.extend(["uhf", "isr"])

@@ -80,7 +80,7 @@ class Method:
 
         # validate prefix
         split = split[:-1]
-        valid_prefixes: tuple[str, ...] = ("cvs","ip", "ea")
+        valid_prefixes: tuple[str, ...] = ("cvs", "ip", "ea")
         # Can be only "ip" or "ea", so number of prefixes is one less
         if len(split) > len(valid_prefixes) - 1:
             raise ValueError("Invalid number of method prefixes provided "

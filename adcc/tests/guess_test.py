@@ -58,7 +58,6 @@ class TestGuess:
         spin = determine_spin_change(method, kind="spin_flip")
         assert spin == -1.0
 
-
     def test_determine_spin_change_ip(self):
         from adcc.guess import determine_spin_change
 
@@ -461,7 +460,7 @@ class TestGuess:
         diagonal = matrix.diagonal().get(block).to_ndarray()
 
         # Doubles guesses are constructed from the 0th order diagonal
-        if matrix.method.level > 1 and not matrix.method.name.endswith("adc2"):
+        if matrix.method.level.to_int() > 1 and not matrix.method.name.endswith("adc2"):
             if block == "pphh":
                 diagonal = adcc.adc_pp.matrix.diagonal_pphh_pphh_0(
                     matrix.reference_state
@@ -483,7 +482,7 @@ class TestGuess:
         if block == "ph":
             if spin_flip:
                 sidcs = [idx for idx in sidcs
-                            if idx[0] < nCa and idx[1] >= nva]
+                         if idx[0] < nCa and idx[1] >= nva]
             else:
                 sidcs = [
                     idx for idx in sidcs
@@ -517,8 +516,8 @@ class TestGuess:
                 # cover the ccvv block in CVS-ADC.
                 if triplet and not mospaces.has_core_occupied_space:
                     sidcs = [idx for idx in sidcs
-                                if abs(idx[0] - idx[1]) != noa
-                                or abs(idx[2] - idx[3]) != nva]
+                             if abs(idx[0] - idx[1]) != noa
+                             or abs(idx[2] - idx[3]) != nva]
             sidcs = [idx for idx in sidcs if idx[2] != idx[3]]
             if not matrix.is_core_valence_separated:
                 sidcs = [idx for idx in sidcs if idx[0] != idx[1]]
@@ -535,17 +534,17 @@ class TestGuess:
                     idx for idx in sidcs
                     # aaa / abb / bab
                     if any((
-                        idx[0]  < noa and idx[1]  < nCa and idx[2]  < nva,
-                        idx[0]  < noa and idx[1] >= nCa and idx[2] >= nva,
-                        idx[0] >= noa and idx[1]  < nCa and idx[2] >= nva))
+                        idx[0] < noa and idx[1] < nCa and idx[2] < nva,
+                        idx[0] < noa and idx[1] >= nCa and idx[2] >= nva,
+                        idx[0] >= noa and idx[1] < nCa and idx[2] >= nva))
                 ]
             else:
                 sidcs = [
                     idx for idx in sidcs
                     # aba / baa / bbb
                     if any((
-                        idx[0]  < noa and idx[1] >= nCa and idx[2]  < nva,
-                        idx[0] >= noa and idx[1]  < nCa and idx[2]  < nva,
+                        idx[0] < noa and idx[1] >= nCa and idx[2] < nva,
+                        idx[0] >= noa and idx[1] < nCa and idx[2] < nva,
                         idx[0] >= noa and idx[1] >= nCa and idx[2] >= nva))
                 ]
             sidcs = [idx for idx in sidcs if idx[0] != idx[1]]
@@ -561,16 +560,16 @@ class TestGuess:
                 sidcs = [
                     idx for idx in sidcs
                     if any((
-                        idx[0]  < noa and idx[1]  < nva and idx[2]  < nva,
-                        idx[0] >= noa and idx[1]  < nva and idx[2] >= nva,
-                        idx[0] >= noa and idx[1] >= nva and idx[2]  < nva))
+                        idx[0] < noa and idx[1] < nva and idx[2] < nva,
+                        idx[0] >= noa and idx[1] < nva and idx[2] >= nva,
+                        idx[0] >= noa and idx[1] >= nva and idx[2] < nva))
                 ]
             else:
                 sidcs = [
                     idx for idx in sidcs
                     if any((
-                        idx[0]  < noa and idx[1]  < nva and idx[2] >= nva,
-                        idx[0]  < noa and idx[1] >= nva and idx[2]  < nva,
+                        idx[0] < noa and idx[1] < nva and idx[2] >= nva,
+                        idx[0] < noa and idx[1] >= nva and idx[2] < nva,
                         idx[0] >= noa and idx[1] >= nva and idx[2] >= nva))
                 ]
             sidcs = [idx for idx in sidcs if idx[1] != idx[2]]
@@ -761,7 +760,7 @@ class TestGuess:
     @pytest.mark.parametrize("case", cn_sto3g.filter_cases("ip"))
     @pytest.mark.parametrize("is_alpha", [True, False])
     def test_doubles_cn_ip(self, method: str, case: str, is_alpha: bool):
-        case="gen"
+        case = "gen"
         self.base_test_ip(
             "cn_sto3g", case, method, block="phh", is_alpha=is_alpha,
             max_guesses=5
@@ -836,7 +835,6 @@ class TestGuess:
             "hf_631g", case, method, block="pph", is_alpha=is_alpha,
             max_guesses=5
         )
-
 
     #
     # Tests against reference values
@@ -1123,7 +1121,8 @@ class TestGuess:
         hf = testdata_cache.refstate("cn_sto3g", case="gen")
         matrix = adcc.AdcMatrix(method=method, hf_or_mp=hf)
         if not method.endswith("adc2"):
-            matrix._diagonal = adcc.AdcMatrix(method="ip-adc2", hf_or_mp=hf).diagonal()
+            matrix._diagonal = adcc.AdcMatrix(
+                method="ip-adc2", hf_or_mp=hf).diagonal()
         self.base_reference_degenerate_ip(
             matrix=matrix, ref=self.get_ref_cn_ip(), is_alpha=is_alpha
         )
@@ -1134,7 +1133,8 @@ class TestGuess:
         hf = testdata_cache.refstate("cn_sto3g", case="gen")
         matrix = adcc.AdcMatrix(method=method, hf_or_mp=hf)
         if not method.endswith("adc2"):
-            matrix._diagonal = adcc.AdcMatrix(method="ea-adc2", hf_or_mp=hf).diagonal()
+            matrix._diagonal = adcc.AdcMatrix(
+                method="ea-adc2", hf_or_mp=hf).diagonal()
         self.base_reference_degenerate_ea(
             matrix=matrix, ref=self.get_ref_cn_ea(), is_alpha=is_alpha
         )

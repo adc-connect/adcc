@@ -55,11 +55,11 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     if key in hdf5_file:
         return None
     # skip cvs-adc(0), since it is not available in qchem.
-    if "cvs" in case and method.level == 0:
+    if "cvs" in case and method.level.to_int() == 0:
         return None
     # gs_density_order is only available for adc(3) and adc(4)
     # and it is not available for cvs-adc
-    if gs_density_order is not None and (method.level < 3 or "cvs" in case):
+    if gs_density_order is not None and (method.level.to_int() < 3 or "cvs" in case):
         return None
     print(f"Generating {method.name} (gs_density_order={gs_density_order}) "
           f"data for {case} {test_case.file_name}.")
@@ -195,7 +195,7 @@ def generate_h2o_sto3g():
 
     for method in _methods["ea"]:
         method = AdcMethod(method)
-        if method.level < 2:
+        if method.to_int() < 2:
             n_states = {"n_ea_states": (1, 0)}
         else:
             n_states = {"n_ea_states": (3, 0)}
@@ -250,7 +250,7 @@ def generate_cn_sto3g():
 
     for method in _methods["ip"]:
         method = AdcMethod(method)
-        if method.level < 2:
+        if method.level.to_int() < 2:
             n_states = {"n_ip_states": (2, 2)}
         else:
             n_states = {"n_ip_states": (3, 3)}
@@ -260,7 +260,7 @@ def generate_cn_sto3g():
 
     for method in _methods["ea"]:
         method = AdcMethod(method)
-        if method.level < 2:
+        if method.level.to_int() < 2:
             n_states = {"n_ea_states": (2, 2)}
         else:
             n_states = {"n_ea_states": (3, 3)}

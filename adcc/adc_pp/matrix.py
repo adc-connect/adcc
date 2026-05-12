@@ -65,7 +65,7 @@ def block(ground_state, spaces, order, variant=None, intermediates=None):
         intermediates = Intermediates(ground_state)
 
     fn = b.get_block_name(spaces, order, variant,
-        ground_state.has_core_occupied_space)
+                          ground_state.has_core_occupied_space)
 
     if fn not in globals():
         raise ValueError("Could not dispatch: "

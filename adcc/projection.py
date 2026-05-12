@@ -346,10 +346,10 @@ def transfer_cvs_to_full(state_matrix_cvs, matrix_full, vector=None, kind=None,
                              "ExcitedStates object.")
     if isinstance(vector, list):
         return [transfer_cvs_to_full(
-            state_matrix_cvs, matrix_full, v, kind,
-            spin_change=determine_spin_change(matrix_full.method, kind),
-            spin_block_symmetrisation=get_spin_block_symmetrisation(kind)
-            ) for v in vector]
+                state_matrix_cvs, matrix_full, v, kind,
+                spin_change=determine_spin_change(matrix_full.method, kind),
+                spin_block_symmetrisation=get_spin_block_symmetrisation(kind)
+                ) for v in vector]
 
     if isinstance(state_matrix_cvs, AdcMatrixlike):
         mospaces_cvs = state_matrix_cvs.mospaces

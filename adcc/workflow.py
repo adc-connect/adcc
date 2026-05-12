@@ -238,18 +238,16 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         )
     else:
         if len(guesses) < n_states:
-            raise InputError("Less guesses provided via guesses (== {}) "
-                            "than states to be computed (== {})"
-                            "".format(len(guesses), n_states))
+            raise InputError(f"Less guesses provided via guesses (=={len(guesses)}"
+                             f") than states to be computed (=={n_states})")
         if n_guesses is not None:
             warnings.warn("Ignoring n_guesses parameter, since guesses are "
-                        "explicitly provided.")
+                          "explicitly provided.")
         if n_guesses_doubles is not None:
             warnings.warn("Ignoring n_guesses_doubles parameter, since guesses"
-                        " are explicitly provided.")
+                          " are explicitly provided.")
         # Set spin_change to None since we don't know if guesses are provided
         spin_change = None
-
 
     diagres = diagonalise_adcmatrix(
         matrix, n_states, guesses, kind=kind, conv_tol=conv_tol,
@@ -471,32 +469,30 @@ def obtain_guesses_by_inspection(matrix, n_guesses, kind,
     n_guesses_doubles = n_guesses - len(guesses)
 
     if n_guesses_doubles > 0:
-        if matrix.method.level < 2:
+        if matrix.method.level.to_int() < 2:
             raise InputError("n_guesses_doubles > 0 is only sensible if the "
-                         "ADC method has a doubles block (i.e. it is *not*"
-                         " ADC(0), ADC(1) or a variant thereof.")
+                             "ADC method has a doubles block (i.e. it is *not*"
+                             " ADC(0), ADC(1) or a variant thereof.")
 
         guesses += guesses_from_diagonal(
             matrix, n_guesses_doubles, matrix.axis_blocks[1], kind,
             is_alpha, spin_change, spin_block_symmetrisation)
 
     if len(guesses) < n_guesses:
-        raise InputError("Less guesses found than requested: {} found, "
-                        "{} requested".format(
-                            len(guesses), n_guesses))
+        raise InputError(f"Less guesses found ({len(guesses)}) "
+                         f"than requested {n_guesses}")
     return guesses
 
 
-def construct_guesses(
-    matrix: AdcMatrix,
-    n_states: int,
-    kind: str,
-    spin_change: float,
-    n_guesses: int,
-    n_guesses_doubles: Optional[int] = None,
-    is_alpha: Optional[bool] = None,
-    eigensolver: Optional[str] = "davidson"
-    ) -> list[AmplitudeVector]:
+def construct_guesses(matrix: AdcMatrix,
+                      n_states: int,
+                      kind: str,
+                      spin_change: float,
+                      n_guesses: int,
+                      n_guesses_doubles: Optional[int] = None,
+                      is_alpha: Optional[bool] = None,
+                      eigensolver: Optional[str] = "davidson"
+                      ) -> list[AmplitudeVector]:
     """
     This function constructs appropriate guesses if not given.
     Returns a :class:`Guesses` object containing all crucial guess information.
@@ -508,8 +504,7 @@ def construct_guesses(
             n_guesses_per_state = 2
         else:
             n_guesses_per_state = 1
-        n_guesses = estimate_n_guesses(matrix, n_states,
-                                        n_guesses_per_state)
+        n_guesses = estimate_n_guesses(matrix, n_states, n_guesses_per_state)
 
     return obtain_guesses_by_inspection(
         matrix, n_guesses, kind, n_guesses_doubles, is_alpha, spin_change

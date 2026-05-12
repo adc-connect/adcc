@@ -45,7 +45,7 @@ def determine_spin_change(method: AdcMethod, kind: str,
 
 
 def estimate_n_guesses(matrix, n_states, n_guesses_per_state=2,
-                           singles_only=True) -> int:
+                       singles_only=True) -> int:
     """
     Implementation of a basic heuristic to find a good number of guess
     vectors to be searched for using the find_guesses function.
@@ -73,9 +73,9 @@ def estimate_n_guesses(matrix, n_states, n_guesses_per_state=2,
         n_virt_a = mospaces.n_orbs_alpha("v1")
         n_occ_a = mospaces.n_orbs_alpha(sp_occ)
         estimate = n_occ_a * n_virt_a
-        if matrix.method.level < 2 and matrix.method.adc_type != "pp":
+        if matrix.method.level.to_int() < 2 and matrix.method.adc_type != "pp":
             # Adjustment for IP- and EA-ADC(0/1) calculations
-            estimate = (n_occ_a if matrix.method.adc_type == "ip" 
+            estimate = (n_occ_a if matrix.method.adc_type == "ip"
                         else n_virt_a)
         n_guesses = min(n_guesses, estimate)
 

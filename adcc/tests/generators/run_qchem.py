@@ -64,11 +64,11 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
     """
     # sanitize the input
     assert method.is_core_valence_separated == ("cvs" in case)
-    if method.is_core_valence_separated and method.level == 0:
+    if method.is_core_valence_separated and method.level.to_int() == 0:
         raise ValueError("CVS-ADC(0) is not available in adcman.")
 
     if kwargs.get("gs_density_order", None) is not None:
-        if method.level < 3:
+        if method.level.to_int() < 3:
             raise ValueError("gs_density_order is only available for ADC(n) with "
                              "n > 2")
         if method.is_core_valence_separated:
@@ -352,8 +352,8 @@ def generate_qchem_input_file(infile: str | Path, adc_method: AdcMethod, basis: 
                               bohr: bool = True, any_states: int = 0,
                               singlet_states: int = 0, triplet_states: int = 0,
                               sf_states: int = 0,
-                              ip_states: tuple[int, int] = (0,0),
-                              ea_states: tuple[int, int] = (0,0),
+                              ip_states: tuple[int, int] = (0, 0),
+                              ea_states: tuple[int, int] = (0, 0),
                               maxiter: int = 160, conv_tol: int = 10,
                               n_core_orbitals: int | None = None,
                               n_frozen_core: int | None = None,

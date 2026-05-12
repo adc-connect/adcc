@@ -145,7 +145,7 @@ def generate_h2o_sto3g():
         for n_states in \
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
             per_case = None
-            if method.level < 2:  # adc0/adc1
+            if method.to_int() < 2:  # adc0/adc1
                 per_case = {
                     case: {n_states: n} for case, n in states_per_case.items()
                 }
@@ -154,7 +154,7 @@ def generate_h2o_sto3g():
             # 4 states available
             # -> reduce n_guesses for all ADC(2) and ADC(3) calculations
             kwargs = {}
-            if method.level >= 2:
+            if method.level.to_int() >= 2:
                 kwargs = {"n_guesses": 4}
             generate_adc_all(
                 test_case, method=method, dump_nstates=2, states_per_case=per_case,
@@ -167,21 +167,21 @@ def generate_h2o_sto3g():
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
             n_states = {n_states: 3}
             generate_adc_all(
-                    test_case, method=method, dump_nstates=2, is_alpha=True,
-                    **n_states
+                test_case, method=method, dump_nstates=2, is_alpha=True,
+                **n_states
             )
 
     for method in _methods["ea"]:
         method = AdcMethod(method)
         for n_states in \
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
-            if method.level < 2:
+            if method.level.to_int() < 2:
                 n_states = {n_states: 1}
             else:
                 n_states = {n_states: 3}
             generate_adc_all(
-                    test_case, method=method, dump_nstates=2, is_alpha=True,
-                    **n_states
+                test_case, method=method, dump_nstates=2, is_alpha=True,
+                **n_states
             )
 
 
@@ -207,8 +207,8 @@ def generate_h2o_def2tzvp():
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
             n_states = {n_states: 3}
             generate_adc_all(
-                    test_case, method=method, dump_nstates=2, is_alpha=True,
-                    **n_states
+                test_case, method=method, dump_nstates=2, is_alpha=True,
+                **n_states
             )
 
     for method in _methods["ea"]:
@@ -217,8 +217,8 @@ def generate_h2o_def2tzvp():
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
             n_states = {n_states: 3}
             generate_adc_all(
-                    test_case, method=method, dump_nstates=2, is_alpha=True,
-                    **n_states
+                test_case, method=method, dump_nstates=2, is_alpha=True,
+                **n_states
             )
 
 
@@ -240,27 +240,27 @@ def generate_cn_sto3g():
         for method in _methods["ip"]:
             method = AdcMethod(method)
             for n_states in \
-                testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
-                if method.level < 2:
+                    testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
+                if method.level.to_int() < 2:
                     n_states = {n_states: 2}
                 else:
                     n_states = {n_states: 3}
                 generate_adc_all(
-                        test_case, method=method, dump_nstates=2,
-                        is_alpha=is_alpha, **n_states
+                    test_case, method=method, dump_nstates=2,
+                    is_alpha=is_alpha, **n_states
                 )
 
         for method in _methods["ea"]:
             method = AdcMethod(method)
             for n_states in \
-                testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
-                if method.level < 2:
+                    testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
+                if method.level.to_int() < 2:
                     n_states = {n_states: 2}
                 else:
                     n_states = {n_states: 3}
                 generate_adc_all(
-                        test_case, method=method, dump_nstates=2,
-                        is_alpha=is_alpha, **n_states
+                    test_case, method=method, dump_nstates=2,
+                    is_alpha=is_alpha, **n_states
                 )
 
 
@@ -274,29 +274,29 @@ def generate_cn_ccpvdz():
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
             n_states = {n_states: 3}
             generate_adc_all(
-                test_case, method=method, dump_nstates=2, states_per_case=None,
-                **n_states
+                test_case, method=method, dump_nstates=2,
+                states_per_case=None, **n_states
             )
 
     for is_alpha in [True, False]:
         for method in _methods["ip"]:
             method = AdcMethod(method)
             for n_states in \
-                testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
+                    testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
                 n_states = {n_states: 3}
                 generate_adc_all(
-                        test_case, method=method, dump_nstates=2,
-                        is_alpha=is_alpha, **n_states
+                    test_case, method=method, dump_nstates=2,
+                    is_alpha=is_alpha, **n_states
                 )
 
         for method in _methods["ea"]:
             method = AdcMethod(method)
             for n_states in \
-                testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
+                    testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
                 n_states = {n_states: 3}
                 generate_adc_all(
-                        test_case, method=method, dump_nstates=2,
-                        is_alpha=is_alpha, **n_states
+                    test_case, method=method, dump_nstates=2,
+                    is_alpha=is_alpha, **n_states
                 )
 
 
@@ -318,7 +318,7 @@ def generate_hf_631g():
         for method in _methods["ip"]:
             method = AdcMethod(method)
             for n_states in \
-                testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
+                    testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
                 n_states = {n_states: 3}
                 generate_adc_all(
                         test_case, method=method, dump_nstates=2,
@@ -328,7 +328,7 @@ def generate_hf_631g():
         for method in _methods["ea"]:
             method = AdcMethod(method)
             for n_states in \
-                testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
+                    testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
                 n_states = {n_states: 3}
                 generate_adc_all(
                         test_case, method=method, dump_nstates=2,

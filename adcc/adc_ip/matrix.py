@@ -51,7 +51,7 @@ def block(ground_state, spaces, order, variant=None, intermediates=None):
         intermediates = Intermediates(ground_state)
 
     fn = b.get_block_name(spaces, order, variant,
-        ground_state.has_core_occupied_space)
+                          ground_state.has_core_occupied_space)
 
     if fn not in globals():
         raise ValueError("Could not dispatch: "
@@ -167,7 +167,7 @@ def block_h_phh_2(hf, mp, intermediates):
 
     def apply(ampl):
         return AmplitudeVector(h=(
-           + 1 / sqrt(2) * einsum("jkib,jkb->i", i2, ampl.phh)))
+            + 1 / sqrt(2) * einsum("jkib,jkb->i", i2, ampl.phh)))
     return AdcBlock(apply, 0)
 
 

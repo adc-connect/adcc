@@ -12,6 +12,7 @@ import h5py
 
 from typing import Union
 
+
 def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
                      only_full_mode: bool) -> None:
     """
@@ -67,7 +68,8 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
     hdf5_file.attrs["adcc_version"] = adcc.__version__
 
 
-def _pp_adc_properties(states: ExcitedStates, kind_data: dict, n_states: int) -> None:
+def _pp_adc_properties(states: ExcitedStates, kind_data: dict, n_states: int
+                       ) -> None:
     """Collects all properties that are unique for PP-ADC
     """
     tdm_bb_a = []  # Ground to Excited state tdm AO basis alpha part
@@ -106,8 +108,8 @@ def _ip_ea_adc_properties(states: Union[DetachedStates, AttachedStates],
 
 
 def dump_excited_states(
-    states: Union[ExcitedStates,DetachedStates, AttachedStates],
-    hdf5_file: h5py.Group, dump_nstates: int = None) -> None:
+        states: Union[ExcitedStates, DetachedStates, AttachedStates],
+        hdf5_file: h5py.Group, dump_nstates: int = None) -> None:
     """
     Dump the (charged) excited states data to the given hdf5 file/group.
     The number of states to dump can be given by dump_nstates. By default all states
@@ -170,14 +172,20 @@ def dump_excited_states(
                     bb_a, bb_b = tdm.to_ao_basis(states.reference_state)
                     tdm_bb_a.append(bb_a.to_ndarray())
                     tdm_bb_b.append(bb_b.to_ndarray())
-                kind_data[f"state_to_state/from_{ifrom}/transition_dipole_moments"] = (
-                    state2state.transition_dipole_moment[:n_states - ifrom - 1]
+                kind_data[
+                    f"state_to_state/from_{ifrom}/transition_dipole_moments"
+                ] = (
+                     state2state.transition_dipole_moment[:n_states - ifrom - 1]
                 )
-                kind_data[f"state_to_state/from_{ifrom}/state_to_excited_tdm_bb_a"] = (
-                    np.asarray(tdm_bb_a)
+                kind_data[
+                    f"state_to_state/from_{ifrom}/state_to_excited_tdm_bb_a"
+                ] = (
+                     np.asarray(tdm_bb_a)
                 )
-                kind_data[f"state_to_state/from_{ifrom}/state_to_excited_tdm_bb_b"] = (
-                    np.asarray(tdm_bb_b)
+                kind_data[
+                    f"state_to_state/from_{ifrom}/state_to_excited_tdm_bb_b"
+                ] = (
+                     np.asarray(tdm_bb_b)
                 )
         # ssq for unrestriced calculation
         if not states.reference_state.restricted \
