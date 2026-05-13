@@ -270,7 +270,7 @@ size_t build_guesses(list_t::iterator& cur_guess, list_t::iterator end,
                                          // and in case of ms == 1 (beta ionization)
                                          // bbb   baa   aba
                                          {1.0, -1.0, -1.0},    // quartet
-                                         {0.0, -1.0,  1.0},    // doublet 1
+                                         {0.0, -1.0, 1.0},     // doublet 1
                                          {-2.0, -1.0, -1.0}};  // doublet 2
 
       if (ms == -1) {  // alpha ionization
@@ -312,7 +312,7 @@ size_t build_guesses(list_t::iterator& cur_guess, list_t::iterator end,
                                          // aaa   abb   bab
                                          // and in case of ms == 1 (beta ionization)
                                          // bbb   baa   aba
-                                         {0.0, -1.0,  1.0},    // doublet 1
+                                         {0.0, -1.0, 1.0},     // doublet 1
                                          {-2.0, -1.0, -1.0}};  // doublet 2
 
       if (ms == -1) {  // alpha ionization

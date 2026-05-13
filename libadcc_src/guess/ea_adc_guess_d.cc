@@ -312,7 +312,7 @@ size_t build_guesses(list_t::iterator& cur_guess, list_t::iterator end,
                                          // aaa   bab   bba
                                          // and in case of ms == -1 (beta attachment)
                                          // bbb   aba   aab
-                                         {0.0, -1.0,  1.0},    // doublet 1
+                                         {0.0, -1.0, 1.0},     // doublet 1
                                          {-2.0, -1.0, -1.0}};  // doublet 2
 
       if (ms == 1) {  // alpha attachment
@@ -348,7 +348,7 @@ size_t build_guesses(list_t::iterator& cur_guess, list_t::iterator end,
                                          // aaa   bab   bba
                                          // and in case of ms == -1 (beta attachment)
                                          // bbb   aba   aab
-                                         {1.0, -1.0,  -1.0}};  // quartet
+                                         {1.0, -1.0, -1.0}};  // quartet
 
       if (ms == 1) {  // alpha attachment
         for (size_t i = 0; i < 1; i++) {
