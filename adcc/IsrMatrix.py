@@ -25,7 +25,7 @@ import libadcc
 from itertools import product
 
 from .AdcMatrix import AdcMatrixlike
-from .AdcMethod import IsrMethod
+from .AdcMethod import IsrMethod, AdcType
 from .adc_pp import bmatrix as ppbmatrix
 from .AmplitudeVector import AmplitudeVector
 from .LazyMp import LazyMp
@@ -35,7 +35,6 @@ from .timings import Timer, timed_member_call
 
 
 class IsrMatrix(AdcMatrixlike):
-
     def __init__(self, method, hf_or_mp, operator, block_orders=None):
         """
         Initialise an ISR matrix of a given one-particle operator
@@ -83,10 +82,14 @@ class IsrMatrix(AdcMatrixlike):
         self.ndim = 2
         self.extra_terms = []
 
-        self.block_orders = self._default_block_orders(self.method)
+        n_particle_op = self.operator[0].n_particle_op
+        assert all(op.n_particle_op == n_particle_op for op in self.operator)
+        self.block_orders = self._default_block_orders(
+            self.method, bandwidth=n_particle_op
+        )
         if block_orders is None:
             # only implemented through PP-ADC(2)
-            if method.adc_type != "pp":
+            if method.adc_type is not AdcType.PP:
                 raise NotImplementedError("The B-matrix is not implemented "
                                           f"for method {method.name}.")
         else:

@@ -23,6 +23,7 @@
 import numpy as np
 
 from . import adc_pp
+from .AdcMethod import AdcType
 from .ElectronicStates import _timer_name
 from .ElectronicTransition import ElectronicTransition
 from .misc import cached_member_function
@@ -63,7 +64,7 @@ class State2States(ElectronicTransition):
 
         # Since this class should be used for all adc_types we have to determine
         # the module according to the method.
-        if self.method.adc_type == "pp":
+        if self.method.adc_type is AdcType.PP:
             self._module = adc_pp
         else:
             raise ValueError(f"Unknown adc_type {self.method.adc_type}.")
