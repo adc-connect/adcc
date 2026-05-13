@@ -80,16 +80,21 @@ class Method:
 
         # validate prefix
         split = split[:-1]
-        valid_prefixes: tuple[str, ...] = ("cvs",)
-        if len(split) > len(valid_prefixes):
+        valid_prefixes: tuple[str, ...] = ("cvs", "ip", "ea")
+        # Can be only "ip" or "ea", so number of prefixes is one less
+        if len(split) > len(valid_prefixes) - 1:
             raise ValueError("Invalid number of method prefixes provided "
                              f"in {split}.")
         if any(pref not in valid_prefixes for pref in split):
-            raise ValueError(f"Invalid method prefix in {split}.")
+            raise ValueError(f"Invalid method prefix (combination) in {split}.")
 
         self.is_core_valence_separated: bool = "cvs" in split
-        # NOTE: added this to make the testdata generation ready for IP/EA
-        self.adc_type: str = "pp"
+        if "ip" in split:
+            self.adc_type = "ip"
+        elif "ea" in split:
+            self.adc_type = "ea"
+        else:
+            self.adc_type = "pp"
 
     def _validate_level(self, level: MethodLevel) -> None:
         if isinstance(level.value, int) and level.value <= self.max_level:
@@ -104,10 +109,12 @@ class Method:
     @property
     def name(self) -> str:
         """The name of the Method as string."""
+        name = self._base_method
+        if self.adc_type != "pp":
+            name = self.adc_type + "-" + name
         if self.is_core_valence_separated:
-            return "cvs-" + self._base_method
-        else:
-            return self._base_method
+            name = "cvs-" + name
+        return name
 
     @property
     def _base_method(self) -> str:
@@ -120,6 +127,8 @@ class Method:
         The base (full) method, i.e. with all approximations such as
         CVS stripped off.
         """
+        if self.adc_type != "pp":
+            return self.__class__(self.adc_type + "-" + self._base_method)
         return self.__class__(self._base_method)
 
     def at_level(self: T, newlevel: int) -> T:
@@ -128,14 +137,17 @@ class Method:
         (e.g. calling this on a CVS method returns a CVS method)
         """
         assert self._method_base_name is not None
+        name_str = self._method_base_name
+        if self.adc_type != "pp":
+            name_str = self.adc_type + "-" + "adc"
         if self.is_core_valence_separated:
-            return self.__class__("cvs-" + self._method_base_name + str(newlevel))
+            return self.__class__("cvs-" + name_str + str(newlevel))
         else:
-            return self.__class__(self._method_base_name + str(newlevel))
+            return self.__class__(name_str + str(newlevel))
 
     def as_method(self, method_cls: type[T]) -> T:
         """
-        Return a equivalent Method with the method base name replaced
+        Return an equivalent Method with the method base name replaced
         by the provided name.
         """
         assert self._method_base_name is not None

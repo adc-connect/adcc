@@ -62,7 +62,8 @@ class TestProperties:
     @pytest.mark.parametrize("system,case,kind", cases)
     def test_transition_dipole_moments(self, system: str, case: str, kind: str,
                                        method: str, generator: str):
-        if "cvs" in case and AdcMethod(method).level == 0 and generator == "adcman":
+        if "cvs" in case and AdcMethod(method).level.to_int() == 0 \
+                and generator == "adcman":
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
 
         refdata = testdata_cache._load_data(
@@ -95,7 +96,8 @@ class TestProperties:
     @pytest.mark.parametrize("system,case,kind", cases)
     def test_oscillator_strengths(self, system: str, case: str, kind: str,
                                   method: str, generator: str):
-        if "cvs" in case and AdcMethod(method).level == 0 and generator == "adcman":
+        if "cvs" in case and AdcMethod(method).level.to_int() == 0 \
+                and generator == "adcman":
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
 
         refdata = testdata_cache._load_data(
@@ -126,7 +128,8 @@ class TestProperties:
     @pytest.mark.parametrize("system,case,kind", cases)
     def test_state_dipole_moments(self, system: str, case: str, kind: str,
                                   method: str, generator: str):
-        if "cvs" in case and AdcMethod(method).level == 0 and generator == "adcman":
+        if "cvs" in case and AdcMethod(method).level.to_int() == 0 \
+                and generator == "adcman":
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
 
         refdata = testdata_cache._load_data(

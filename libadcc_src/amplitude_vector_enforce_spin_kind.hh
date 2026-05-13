@@ -37,6 +37,6 @@ namespace libadcc {
  * @param spin_kind   The kind of spin to enforce
  */
 void amplitude_vector_enforce_spin_kind(std::shared_ptr<Tensor> tensor, std::string block,
-                                        std::string spin_kind);
+                                        std::string spin_kind, bool is_ip);
 ///@}
 }  // namespace libadcc
