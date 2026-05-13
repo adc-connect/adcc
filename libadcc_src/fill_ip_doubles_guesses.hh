@@ -22,7 +22,6 @@
 
 namespace libadcc {
 
-
 /** Fill the passed vector of doubles blocks with doubles guesses using
  * the O and V matrices.
  *

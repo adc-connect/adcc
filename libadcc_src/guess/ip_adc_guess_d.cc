@@ -230,8 +230,8 @@ void transfer_elements(const list1d_t& o, const list1d_t& v, index_group_map_p2h
 
 size_t build_guesses(list_t::iterator& cur_guess, list_t::iterator end,
                      const index_group_p2h& ig, double value,
-                     const symmetry<3, double>& sym, bool a_spin,
-                     bool restricted, bool doublet, index_handler<3>& base) {
+                     const symmetry<3, double>& sym, bool a_spin, bool restricted,
+                     bool doublet, index_handler<3>& base) {
   bool sym_o;  // Are the two occupied indices identical
   determine_sym(sym, sym_o);
   const unsigned spin = determine_spin(restricted, doublet);  // Spin of the symmetry
@@ -269,21 +269,21 @@ size_t build_guesses(list_t::iterator& cur_guess, list_t::iterator end,
                                          // aaa   abb   bab
                                          // and in case of ms == 1 (beta ionization)
                                          // bbb   baa   aba
-                                         {  1.0, -1.0, -1.0},   // quartet
-                                         {  0.0, -1.0,  1.0},   // doublet 1
-                                         { -2.0, -1.0, -1.0}};  // doublet 2
+                                         {1.0, -1.0, -1.0},    // quartet
+                                         {0.0, -1.0,  1.0},    // doublet 1
+                                         {-2.0, -1.0, -1.0}};  // doublet 2
 
-        if (ms == -1) {  // alpha ionization
-          for (size_t i = 0; i < 3; i++) {
-            for (size_t j = 0; j < 3; j++)
-              lv[i].push_back(guess_element<3>(bidx[j], idx, coeff[i][j]));
-          }
-        } else {  // beta ionization
-          for (size_t i = 0; i < 3; i++) {
-            for (size_t j = 0; j < 3; j++)
-              lv[i].push_back(guess_element<3>(bidx[2 - j], idx, coeff[i][j]));
-          }
+      if (ms == -1) {  // alpha ionization
+        for (size_t i = 0; i < 3; i++) {
+          for (size_t j = 0; j < 3; j++)
+            lv[i].push_back(guess_element<3>(bidx[j], idx, coeff[i][j]));
         }
+      } else {  // beta ionization
+        for (size_t i = 0; i < 3; i++) {
+          for (size_t j = 0; j < 3; j++)
+            lv[i].push_back(guess_element<3>(bidx[2 - j], idx, coeff[i][j]));
+        }
+      }
     } else {
       // Form spin elements
       for (size_t i = 0; i < ig.size(); i++)
@@ -312,8 +312,8 @@ size_t build_guesses(list_t::iterator& cur_guess, list_t::iterator end,
                                          // aaa   abb   bab
                                          // and in case of ms == 1 (beta ionization)
                                          // bbb   baa   aba
-                                         {  0.0, -1.0,  1.0},   // doublet 1
-                                         { -2.0, -1.0, -1.0}};  // doublet 2
+                                         {0.0, -1.0,  1.0},    // doublet 1
+                                         {-2.0, -1.0, -1.0}};  // doublet 2
 
       if (ms == -1) {  // alpha ionization
         for (size_t i = 0; i < 2; i++) {
@@ -348,7 +348,7 @@ size_t build_guesses(list_t::iterator& cur_guess, list_t::iterator end,
                                          // aaa   abb   bab
                                          // and in case of ms == 1 (beta ionization)
                                          // bbb   baa   aba
-                                         {  1.0, -1.0,  -1.0}};  // quartet
+                                         {1.0, -1.0, -1.0}};  // quartet
 
       if (ms == -1) {  // alpha ionization
         for (size_t i = 0; i < 1; i++) {
@@ -369,7 +369,6 @@ size_t build_guesses(list_t::iterator& cur_guess, list_t::iterator end,
       }
     }
   }
-
 
   size_t i = 0;
   for (; i < lv.size() && cur_guess != end; i++, cur_guess++) {

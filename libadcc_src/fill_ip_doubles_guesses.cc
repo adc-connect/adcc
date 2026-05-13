@@ -63,7 +63,7 @@ size_t fill_ip_doubles_guesses(std::vector<std::shared_ptr<Tensor>> guesses_d,
     guesspairs.emplace_back(&(asbt3(guesses_d[i])), 0.0);
   }
 
-  if (abs(spin_change_twice) != 1){
+  if (abs(spin_change_twice) != 1) {
     throw not_implemented_error("spin_change ==" + std::to_string(spin_change_twice) +
                                 " has not been tested.");
   }
