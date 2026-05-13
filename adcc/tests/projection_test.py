@@ -28,6 +28,7 @@ import itertools
 import numpy as np
 from numpy.testing import assert_allclose
 
+from adcc.AdcMethod import AdcType
 from adcc.projection import Projector, SubspacePartitioning, transfer_cvs_to_full
 from adcc.HfCounterData import HfCounterData
 
@@ -215,7 +216,10 @@ class TestProjector(unittest.TestCase):
 test_cases = testcases.get_by_filename(
     "h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz"
 )
-cases = [(case.file_name, kind) for case in test_cases for kind in case.kinds["pp"]]
+cases = [
+    (case.file_name, kind) for case in test_cases
+    for kind in case.kinds[AdcType.PP]
+]
 
 
 @pytest.mark.parametrize("system,kind", cases)

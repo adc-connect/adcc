@@ -28,7 +28,7 @@ from numpy.testing import assert_allclose
 from adcc.AdcMatrix import (
     AdcExtraTerm, AdcMatrixProjected, AdcMatrixShifted, AdcMatrixlike
 )
-from adcc.AdcMethod import AdcMethod, IsrMethod
+from adcc.AdcMethod import AdcMethod, IsrMethod, AdcType
 from adcc.Intermediates import Intermediates
 from adcc.adc_pp.matrix import AdcBlock
 
@@ -221,7 +221,7 @@ class TestAdcMatrix:
         # the matrix data is only dumped once and not per kind
         # -> singlet/any for PP-ADC
         if matrix.reference_state.restricted:
-            if matrix.method.adc_type == "pp":
+            if matrix.method.adc_type is AdcType.PP:
                 kind = "singlet"
             else:
                 raise ValueError(f"Unknown adc type {matrix.method.adc_type}.")
@@ -241,7 +241,7 @@ class TestAdcMatrix:
         # matrix data is only dumped once and not per kind
         # -> singlet/any for PP-ADC
         if matrix.reference_state.restricted:
-            if matrix.method.adc_type == "pp":
+            if matrix.method.adc_type is AdcType.PP:
                 kind = "singlet"
             else:
                 raise ValueError(f"Unknwon adc type {matrix.method.adc_type}.")
@@ -277,7 +277,7 @@ class TestAdcMatrixInterface:
         assert matrix.is_core_valence_separated == ("cvs" in case)
         # check that the blocks are correct
         blocks = matrix.axis_blocks
-        if matrix.method.adc_type == "pp":
+        if matrix.method.adc_type is AdcType.PP:
             assert blocks == (
                 ["ph", "pphh", "ppphhh"][:matrix.method.level.to_int() // 2 + 1]
             )

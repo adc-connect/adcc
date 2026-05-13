@@ -25,7 +25,7 @@ import libadcc
 from itertools import product
 
 from .AdcMatrix import AdcMatrixlike
-from .AdcMethod import IsrMethod
+from .AdcMethod import IsrMethod, AdcType
 from .adc_pp import bmatrix as ppbmatrix
 from .AmplitudeVector import AmplitudeVector
 from .LazyMp import LazyMp
@@ -89,7 +89,7 @@ class IsrMatrix(AdcMatrixlike):
         )
         if block_orders is None:
             # only implemented through PP-ADC(2)
-            if method.adc_type != "pp":
+            if method.adc_type is not AdcType.PP:
                 raise NotImplementedError("The B-matrix is not implemented "
                                           f"for method {method.name}.")
         else:

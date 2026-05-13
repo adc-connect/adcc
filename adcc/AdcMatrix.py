@@ -28,7 +28,7 @@ import libadcc
 from .LazyMp import LazyMp
 from .adc_pp import matrix as ppmatrix
 from .timings import Timer, timed_member_call
-from .AdcMethod import AdcMethod, Method
+from .AdcMethod import AdcMethod, Method, AdcType
 from .functions import ones_like
 from .Intermediates import Intermediates
 from .AmplitudeVector import AmplitudeVector
@@ -104,12 +104,12 @@ class AdcMatrixlike:
         # - determine which spaces are available in the ADC(n) matrix
         #   starting from the given minimal space
         min_space = {
-            "pp": "ph"
+            AdcType.PP: "ph"
         }.get(method.adc_type, None)
         if min_space is None:
-            raise ValueError(f"Unknown adc type {method.adc_type} for method "
-                             f"{method.name}. Can not determine default block "
-                             "orders.")
+            raise ValueError(f"Unknown adc type {method.adc_type.to_str()} for "
+                             f"method {method.name}. Can not determine default "
+                             "block orders.")
         assert bandwidth >= 0
         n_spaces = ((method.level.to_int() + bandwidth) // 2) + 1
         spaces = [
@@ -160,7 +160,7 @@ class AdcMatrixlike:
             if not cls._is_valid_space(bra, method) or \
                     not cls._is_valid_space(ket, method):
                 raise ValueError(f"Invalid block {block} for a "
-                                 f"{method.adc_type} ADC matrix.")
+                                 f"{method.adc_type.to_str()} ADC matrix.")
             if bra == ket:  # done for diagonal blocks
                 continue
             # ensure that the matrix is symmetric
@@ -194,9 +194,9 @@ class AdcMatrixlike:
             return False
         # depending on the adc type n_particle and n_hole have to
         # be equal or differ e.g. by +-1 (IP/EA)
-        if method.adc_type == "pp":
+        if method.adc_type is AdcType.PP:
             return n_particle == n_hole
-        raise ValueError(f"Unknown adc type {method.adc_type} for method "
+        raise ValueError(f"Unknown adc type {method.adc_type.to_str()} for method "
                          f"{method.name}. Can not validate space.")
 
 

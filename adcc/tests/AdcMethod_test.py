@@ -27,7 +27,8 @@ import adcc
 adc_methods = [("adc1", None), ("adc2x", None), ("cvs-adc3", None),
                ("adc", ValueError), ("cvs_adc2", ValueError),
                ("xyz-adc2", ValueError), ("adc5", NotImplementedError),
-               ("isr2", ValueError)]
+               ("isr2", ValueError), ("mp-adc2", None), ("cvs-mp-adc2", None),
+               ("cvs-cvs-adc2", ValueError), ("adcc", ValueError)]
 
 isr_methods = [("isr1", None), ("cvs-isr2", None),
                ("adc", ValueError), ("cvs_isr2", ValueError),
@@ -43,7 +44,7 @@ class TestAdcMethod:
                 adcc.AdcMethod(method)
         else:
             adc_method = adcc.AdcMethod(method)
-            assert adc_method.name == method
+            assert adc_method.name == method.replace("mp-", "")
 
     def test_adcmethod(self):
         method = adcc.AdcMethod("adc2")

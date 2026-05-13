@@ -3,6 +3,8 @@ from dataclasses import dataclass, asdict, fields
 from pathlib import Path
 from typing import Optional
 
+from adcc.AdcMethod import AdcType
+
 
 # NOTE: Can't use a dict, because TestCase has to be hashable.
 @dataclass(frozen=True)
@@ -11,8 +13,8 @@ class Kinds:
     ip: tuple[str, ...] = tuple()
     ea: tuple[str, ...] = tuple()
 
-    def __getitem__(self, key: str):
-        return getattr(self, key)
+    def __getitem__(self, key: AdcType):
+        return getattr(self, key.to_str())
 
 
 @dataclass(frozen=True)
@@ -84,13 +86,13 @@ class TestCase:
             ret[key] = getattr(self, field)
         return ret
 
-    def filter_cases(self, adc_type: str) -> tuple[str, ...]:
+    def filter_cases(self, adc_type: AdcType) -> tuple[str, ...]:
         """
         Filter the available cases only returning cases that are relevant
         for the given adc_type.
         """
         # since cvs is not (yet) implemented for IP.
-        if adc_type == "pp":
+        if adc_type is AdcType.PP:
             return self.cases
         raise NotImplementedError(f"Filtering for adc type {adc_type} not "
                                   "implemented.")

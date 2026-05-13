@@ -67,6 +67,20 @@ class MethodLevel(Enum):
             raise ValueError(f"Unknown value type {type(self.value)}.")
 
 
+class AdcType(Enum):
+    PP = "pp"
+
+    def to_str(self) -> str:
+        return self.value
+
+
+class GroundStateType(Enum):
+    MP = "mp"
+
+    def to_str(self) -> str:
+        return self.value
+
+
 class Method:
     # this has to be set on the child classes
     _method_base_name: Optional[str] = None
@@ -87,13 +101,18 @@ class Method:
             self.level: MethodLevel = MethodLevel(int(level))
         else:
             self.level: MethodLevel = MethodLevel(level)
-        self._validate_level(self.level)
 
-        assert self._base_method == split[-1]
-
-        # validate prefixes
         split = split[:-1]
-        valid_prefixes: tuple[str, ...] = ("cvs",)
+        # validate and set the adc_type
+        try:
+            self.adc_type: AdcType = AdcType(split[-1])
+            split = split[:-1]
+        except (ValueError, IndexError):
+            self.adc_type: AdcType = AdcType("pp")
+
+        self._validate_level(self.level)
+        # validate prefixes
+        valid_prefixes: tuple[str, ...] = ("cvs", "mp")
         if len(split) > len(valid_prefixes):
             raise ValueError("Invalid number of method prefixes provided "
                              f"in {split}.")
@@ -102,10 +121,21 @@ class Method:
         if any(count != 1 for count in Counter(split).values()):
             raise ValueError(f"Invalid method string {method}. Duplicate "
                              f"prefix detected in {split}.")
-
+        # set and remove cvs
         self.is_core_valence_separated: bool = "cvs" in split
-        # NOTE: added this to make the testdata generation ready for IP/EA
-        self.adc_type: str = "pp"
+        if "cvs" in split:
+            split.remove("cvs")
+        # finally set and validate gs type (the only allowed prefix left
+        # at this point)
+        if split:
+            self.gs_type: GroundStateType = GroundStateType(split[0])
+            split.pop(0)
+        else:
+            self.gs_type: GroundStateType = GroundStateType("mp")
+        # at this point all prefixes should have been handled
+        if split:
+            raise ValueError(f"Invalid prefix in {split} detected."
+                             f"Parsed from method string {method}.")
 
     def _validate_level(self, level: MethodLevel) -> None:
         if isinstance(level.value, int) and level.value <= self.max_level:
@@ -128,7 +158,13 @@ class Method:
     @property
     def _base_method(self) -> str:
         assert self._method_base_name is not None
-        return self._method_base_name + self.level.to_str()
+        if self.adc_type is AdcType.PP:
+            return f"{self._method_base_name}{self.level.to_str()}"
+        else:
+            return (
+                f"{self.adc_type.to_str()}-"
+                f"{self._method_base_name}{self.level.to_str()}"
+            )
 
     @property
     def prefixes(self) -> str:
@@ -136,6 +172,8 @@ class Method:
         ret = []
         if self.is_core_valence_separated:
             ret.append("cvs")
+        if self.gs_type is not GroundStateType.MP:
+            ret.append(self.gs_type.to_str())
         return "-".join(ret)
 
     @property
