@@ -16,12 +16,28 @@ DATAFILES=(
     cn_sto3g_adcc_adc2.hdf5
     cn_sto3g_adcc_adc2x.hdf5
     cn_sto3g_adcc_adc3.hdf5
+    cn_sto3g_adcc_ip-adc0.hdf5
+    cn_sto3g_adcc_ip-adc2.hdf5
+    cn_sto3g_adcc_ip-adc2x.hdf5
+    cn_sto3g_adcc_ip-adc3.hdf5
+    cn_sto3g_adcc_ea-adc0.hdf5
+    cn_sto3g_adcc_ea-adc2.hdf5
+    cn_sto3g_adcc_ea-adc2x.hdf5
+    cn_sto3g_adcc_ea-adc3.hdf5
     cn_sto3g_adcc_mpdata.hdf5
     cn_sto3g_adcman_adc0.hdf5
     cn_sto3g_adcman_adc1.hdf5
     cn_sto3g_adcman_adc2.hdf5
     cn_sto3g_adcman_adc2x.hdf5
     cn_sto3g_adcman_adc3.hdf5
+    cn_sto3g_adcman_ip-adc0.hdf5
+    cn_sto3g_adcman_ip-adc2.hdf5
+    cn_sto3g_adcman_ip-adc2x.hdf5
+    cn_sto3g_adcman_ip-adc3.hdf5
+    cn_sto3g_adcman_ea-adc0.hdf5
+    cn_sto3g_adcman_ea-adc2.hdf5
+    cn_sto3g_adcman_ea-adc2x.hdf5
+    cn_sto3g_adcman_ea-adc3.hdf5
     cn_sto3g_adcman_mpdata.hdf5
     cn_sto3g_hfdata.hdf5
     cn_sto3g_hfimport.hdf5
@@ -35,12 +51,28 @@ DATAFILES=(
     h2o_sto3g_adcc_adc2.hdf5
     h2o_sto3g_adcc_adc2x.hdf5
     h2o_sto3g_adcc_adc3.hdf5
+    h2o_sto3g_adcc_ip-adc0.hdf5
+    h2o_sto3g_adcc_ip-adc2.hdf5
+    h2o_sto3g_adcc_ip-adc2x.hdf5
+    h2o_sto3g_adcc_ip-adc3.hdf5
+    h2o_sto3g_adcc_ea-adc0.hdf5
+    h2o_sto3g_adcc_ea-adc2.hdf5
+    h2o_sto3g_adcc_ea-adc2x.hdf5
+    h2o_sto3g_adcc_ea-adc3.hdf5
     h2o_sto3g_adcc_mpdata.hdf5
     h2o_sto3g_adcman_adc0.hdf5
     h2o_sto3g_adcman_adc1.hdf5
     h2o_sto3g_adcman_adc2.hdf5
     h2o_sto3g_adcman_adc2x.hdf5
     h2o_sto3g_adcman_adc3.hdf5
+    h2o_sto3g_adcman_ip-adc0.hdf5
+    h2o_sto3g_adcman_ip-adc2.hdf5
+    h2o_sto3g_adcman_ip-adc2x.hdf5
+    h2o_sto3g_adcman_ip-adc3.hdf5
+    h2o_sto3g_adcman_ea-adc0.hdf5
+    h2o_sto3g_adcman_ea-adc2.hdf5
+    h2o_sto3g_adcman_ea-adc2x.hdf5
+    h2o_sto3g_adcman_ea-adc3.hdf5
     h2o_sto3g_adcman_mpdata.hdf5
     h2o_sto3g_hfdata.hdf5
     h2o_sto3g_hfimport.hdf5
@@ -49,12 +81,28 @@ DATAFILES=(
     hf_631g_adcc_adc2.hdf5
     hf_631g_adcc_adc2x.hdf5
     hf_631g_adcc_adc3.hdf5
+    hf_631g_adcc_ip-adc0.hdf5
+    hf_631g_adcc_ip-adc2.hdf5
+    hf_631g_adcc_ip-adc2x.hdf5
+    hf_631g_adcc_ip-adc3.hdf5
+    hf_631g_adcc_ea-adc0.hdf5
+    hf_631g_adcc_ea-adc2.hdf5
+    hf_631g_adcc_ea-adc2x.hdf5
+    hf_631g_adcc_ea-adc3.hdf5
     hf_631g_adcc_mpdata.hdf5
     hf_631g_adcman_adc0.hdf5
     hf_631g_adcman_adc1.hdf5
     hf_631g_adcman_adc2.hdf5
     hf_631g_adcman_adc2x.hdf5
     hf_631g_adcman_adc3.hdf5
+    hf_631g_adcman_ip-adc0.hdf5
+    hf_631g_adcman_ip-adc2.hdf5
+    hf_631g_adcman_ip-adc2x.hdf5
+    hf_631g_adcman_ip-adc3.hdf5
+    hf_631g_adcman_ea-adc0.hdf5
+    hf_631g_adcman_ea-adc2.hdf5
+    hf_631g_adcman_ea-adc2x.hdf5
+    hf_631g_adcman_ea-adc3.hdf5
     hf_631g_adcman_mpdata.hdf5
     hf_631g_hfdata.hdf5
     r2methyloxirane_sto3g_hfdata.hdf5
@@ -65,12 +113,28 @@ DATAFILES_FULL=(
     cn_ccpvdz_adcc_adc2.hdf5
     cn_ccpvdz_adcc_adc2x.hdf5
     cn_ccpvdz_adcc_adc3.hdf5
+    cn_ccpvdz_adcc_ip-adc0.hdf5
+    cn_ccpvdz_adcc_ip-adc2.hdf5
+    cn_ccpvdz_adcc_ip-adc2x.hdf5
+    cn_ccpvdz_adcc_ip-adc3.hdf5
+    cn_ccpvdz_adcc_ea-adc0.hdf5
+    cn_ccpvdz_adcc_ea-adc2.hdf5
+    cn_ccpvdz_adcc_ea-adc2x.hdf5
+    cn_ccpvdz_adcc_ea-adc3.hdf5
     cn_ccpvdz_adcc_mpdata.hdf5
     cn_ccpvdz_adcman_adc0.hdf5
     cn_ccpvdz_adcman_adc1.hdf5
     cn_ccpvdz_adcman_adc2.hdf5
     cn_ccpvdz_adcman_adc2x.hdf5
     cn_ccpvdz_adcman_adc3.hdf5
+    cn_ccpvdz_adcman_ip-adc0.hdf5
+    cn_ccpvdz_adcman_ip-adc2.hdf5
+    cn_ccpvdz_adcman_ip-adc2x.hdf5
+    cn_ccpvdz_adcman_ip-adc3.hdf5
+    cn_ccpvdz_adcman_ea-adc0.hdf5
+    cn_ccpvdz_adcman_ea-adc2.hdf5
+    cn_ccpvdz_adcman_ea-adc2x.hdf5
+    cn_ccpvdz_adcman_ea-adc3.hdf5
     cn_ccpvdz_adcman_mpdata.hdf5
     cn_ccpvdz_hfdata.hdf5
     cn_ccpvdz_hfimport.hdf5
@@ -84,12 +148,28 @@ DATAFILES_FULL=(
     h2o_def2tzvp_adcc_adc2.hdf5
     h2o_def2tzvp_adcc_adc2x.hdf5
     h2o_def2tzvp_adcc_adc3.hdf5
+    h2o_def2tzvp_adcc_ip-adc0.hdf5
+    h2o_def2tzvp_adcc_ip-adc2.hdf5
+    h2o_def2tzvp_adcc_ip-adc2x.hdf5
+    h2o_def2tzvp_adcc_ip-adc3.hdf5
+    h2o_def2tzvp_adcc_ea-adc0.hdf5
+    h2o_def2tzvp_adcc_ea-adc2.hdf5
+    h2o_def2tzvp_adcc_ea-adc2x.hdf5
+    h2o_def2tzvp_adcc_ea-adc3.hdf5
     h2o_def2tzvp_adcc_mpdata.hdf5
     h2o_def2tzvp_adcman_adc0.hdf5
     h2o_def2tzvp_adcman_adc1.hdf5
     h2o_def2tzvp_adcman_adc2.hdf5
     h2o_def2tzvp_adcman_adc2x.hdf5
     h2o_def2tzvp_adcman_adc3.hdf5
+    h2o_def2tzvp_adcman_ip-adc0.hdf5
+    h2o_def2tzvp_adcman_ip-adc2.hdf5
+    h2o_def2tzvp_adcman_ip-adc2x.hdf5
+    h2o_def2tzvp_adcman_ip-adc3.hdf5
+    h2o_def2tzvp_adcman_ea-adc0.hdf5
+    h2o_def2tzvp_adcman_ea-adc2.hdf5
+    h2o_def2tzvp_adcman_ea-adc2x.hdf5
+    h2o_def2tzvp_adcman_ea-adc3.hdf5
     h2o_def2tzvp_adcman_mpdata.hdf5
     h2o_def2tzvp_hfdata.hdf5
     h2o_def2tzvp_hfimport.hdf5

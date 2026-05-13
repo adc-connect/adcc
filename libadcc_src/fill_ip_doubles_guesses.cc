@@ -25,11 +25,9 @@ namespace libadcc {
 
 size_t fill_ip_doubles_guesses(std::vector<std::shared_ptr<Tensor>> guesses_d,
                                std::shared_ptr<const MoSpaces> mospaces,
-                               std::shared_ptr<Tensor> d_o, 
-                               std::shared_ptr<Tensor> d_v,
+                               std::shared_ptr<Tensor> d_o, std::shared_ptr<Tensor> d_v,
                                bool a_spin, bool restricted, bool doublet,
-                               int spin_change_twice, 
-                               scalar_type degeneracy_tolerance) {
+                               int spin_change_twice, scalar_type degeneracy_tolerance) {
 
   size_t n_guesses = guesses_d.size();
   if (n_guesses == 0) return 0;
@@ -66,13 +64,12 @@ size_t fill_ip_doubles_guesses(std::vector<std::shared_ptr<Tensor>> guesses_d,
   }
 
   if (abs(spin_change_twice) != 1){
-    throw not_implemented_error("spin_change ==" + 
-      std::to_string(spin_change_twice) + " has not been tested.");
+    throw not_implemented_error("spin_change ==" + std::to_string(spin_change_twice) +
+                                " has not been tested.");
   }
 
-  return ip_adc_guess_d(guesspairs, asbt1(d_o), asbt1(d_v), sym_s, a_spin, 
-                        restricted, doublet, ab_d, spin_change_twice, 
-                        degeneracy_tolerance);
+  return ip_adc_guess_d(guesspairs, asbt1(d_o), asbt1(d_v), sym_s, a_spin, restricted,
+                        doublet, ab_d, spin_change_twice, degeneracy_tolerance);
 }
 
 }  // namespace libadcc

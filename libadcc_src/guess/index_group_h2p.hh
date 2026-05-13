@@ -114,8 +114,8 @@ class index_group_map_h2p {
   typedef std::multimap<double, index_group_h2p>::const_iterator iterator;
 
  private:
-  bool m_sym_v;         //!< Permutational anti-symmetry of virt indices
-  double m_thresh;      //!< Threshold for identical values
+  bool m_sym_v;     //!< Permutational anti-symmetry of virt indices
+  double m_thresh;  //!< Threshold for identical values
 
   std::multimap<double, index_group_h2p> m_idxmap;
 

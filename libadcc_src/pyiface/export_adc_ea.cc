@@ -32,9 +32,9 @@ void export_adc_ea(py::module& m) {
         "Apply the spin symmetrisation required to make the doubles and higher parts of "
         "an amplitude vector consist of components for a particular spin kind only.");
 
-  m.def("fill_ea_doubles_guesses", &fill_ea_doubles_guesses, "guesses_d"_a, 
-        "mospaces"_a, "d_o"_a, "d_v"_a, "a_spin"_a, "restricted"_a,
-        "doublet"_a, "spin_change_twice"_a, "degeneracy_tolerance"_a,
+  m.def("fill_ea_doubles_guesses", &fill_ea_doubles_guesses, "guesses_d"_a, "mospaces"_a,
+        "d_o"_a, "d_v"_a, "a_spin"_a, "restricted"_a, "doublet"_a, "spin_change_twice"_a,
+        "degeneracy_tolerance"_a,
         "Fill the passed vector of doubles blocks with doubles guesses using "
         "the O and V matrices, which are the two Fock matrices "
         "involved in the doubles block.\n\nguesses_d    Vectors of guesses, "

@@ -23,9 +23,9 @@ namespace libadcc {
 size_t ea_adc_guess_d(std::list<std::pair<libtensor::btensor<3, double>*, double>>& va,
                       libtensor::btensor_i<1, double>& d_o,
                       libtensor::btensor_i<1, double>& d_v,
-                      const libtensor::symmetry<3, double>& sym,
-                      bool a_spin, bool restricted, bool doublet,
-                      const libtensor::sequence<3, std::vector<bool>*>& ab,
-                      int dm_s, double degeneracy_tolerance);
+                      const libtensor::symmetry<3, double>& sym, bool a_spin,
+                      bool restricted, bool doublet,
+                      const libtensor::sequence<3, std::vector<bool>*>& ab, int dm_s,
+                      double degeneracy_tolerance);
 
 }  // namespace libadcc

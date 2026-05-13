@@ -33,7 +33,8 @@ mask<3> index_group_p2h::compute_spin_mask(size_t sp) {
   return m;
 }
 
-void index_group_map_p2h::add_index(double val, mask<3> spm, index<3> spidx, index<3> idx) {
+void index_group_map_p2h::add_index(double val, mask<3> spm, index<3> spidx,
+                                    index<3> idx) {
 
   find_canonical_index(spm, spidx, idx);
 
@@ -65,7 +66,7 @@ void index_group_map_p2h::add_index(double val, mask<3> spm, index<3> spidx, ind
 }
 
 void index_group_map_p2h::find_canonical_index(mask<3>& m, index<3>& spidx,
-                                             index<3>& idx) const {
+                                               index<3>& idx) const {
 
   if (m_sym_o) {
     if (spidx[0] == spidx[1]) {

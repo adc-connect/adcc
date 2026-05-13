@@ -114,8 +114,8 @@ class index_group_map_p2h {
   typedef std::multimap<double, index_group_p2h>::const_iterator iterator;
 
  private:
-  bool m_sym_o;         //!< Permutational anti-symmetry of occ indices
-  double m_thresh;      //!< Threshold for identical values
+  bool m_sym_o;     //!< Permutational anti-symmetry of occ indices
+  double m_thresh;  //!< Threshold for identical values
 
   std::multimap<double, index_group_p2h> m_idxmap;
 
