@@ -221,7 +221,8 @@ def modified_transition_moments(
         operator = [operator]
     if method.name not in DISPATCH:
         raise NotImplementedError(
-            "modified_transition_moments is not " f"implemented for {method.name}.")
+            f"modified_transition_moments is not implemented for {method.name}."
+        )
 
     ret = [DISPATCH[method.name](ground_state, op, intermediates)
            for op in operator]

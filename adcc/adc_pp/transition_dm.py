@@ -100,7 +100,7 @@ def tdm_isr2(mp, amplitude, intermediates):
     return dm
 
 
-def tdm_isr3(mp, amplitude, intermediates):
+def tdm_isr3d(mp, amplitude, intermediates):
     dm = tdm_isr2(mp, amplitude, intermediates)
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
 
@@ -175,12 +175,24 @@ def tdm_isr3(mp, amplitude, intermediates):
     return dm
 
 
+def tdm_isr3(mp, amplitude, intermediates):
+    dm = tdm_isr3d(mp, amplitude, intermediates)
+    try:
+        check_triples_amplitudes([b.o, b.o, b.o, b.v, b.v, b.v], amplitude)
+    except ValueError:
+        return dm
+    
+    raise NotImplementedError(
+        "Consistent ISR(3) including triples is not implemented yet."
+    )
+
+
 DISPATCH = {
     "isr0": tdm_isr0,
     "isr1s": tdm_isr1,  # Identical to ISR(1)
     "isr1": tdm_isr1,
     "isr2": tdm_isr2,
-    "isr3": tdm_isr3,
+    "isr3d": tdm_isr3d,
     "cvs-isr0": tdm_isr0,
     "cvs-isr1": tdm_isr0,  # No extra contribs for CVS-ISR(1)
     "cvs-isr2": tdm_cvs_isr2,
@@ -214,7 +226,7 @@ def transition_dm(method, ground_state, amplitude, intermediates=None):
 
     if method.name not in DISPATCH:
         raise NotImplementedError(
-            "transition_dm is not implemented " f"for {method.name}.")
+            f"transition_dm is not implemented for {method.name}.")
     else:
         ret = DISPATCH[method.name](ground_state, amplitude, intermediates)
         return ret.evaluate()
