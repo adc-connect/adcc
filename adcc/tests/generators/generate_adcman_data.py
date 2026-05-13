@@ -53,7 +53,7 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     # skip cvs-adc(0), since it is not available in qchem.
     if "cvs" in case and method.level is MethodLevel.ZERO:
         return None
-    # skip cvs-adc(3), since it is not implemented yet.
+    # skip cvs-isr(3), since it is not implemented yet.
     if isr_order == 3 and "cvs" in case:
         return None
     # gs_density_order is only available for adc(3) and adc(4)
