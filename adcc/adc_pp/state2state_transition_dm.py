@@ -116,7 +116,7 @@ def s2s_tdm_isr2(mp, amplitude_l, amplitude_r, intermediates):
     return dm
 
 
-def s2s_tdm_isr3(mp, amplitude_l, amplitude_r, intermediates):
+def s2s_tdm_isr3d(mp, amplitude_l, amplitude_r, intermediates):
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude_l, amplitude_r)
     dm = s2s_tdm_isr2(mp, amplitude_l, amplitude_r, intermediates)
 
@@ -139,7 +139,7 @@ def s2s_tdm_isr3(mp, amplitude_l, amplitude_r, intermediates):
     p0_3_ov = mp.mp3_dm_correction.ov
 
     dm.oo = (
-        -1 * einsum("ja,ia->ij", ul1, ur1)
+        - 1 * einsum("ja,ia->ij", ul1, ur1)
         - 2 * einsum("jkab,ikab->ij", ul2, ur2)
         - 2 * einsum("ib,jb->ij", einsum("ka,ikab->ib", ul1, ur2), t1_2)
         - 2 * einsum("jb,ib->ij", einsum("jkab,ka->jb", ul2, ur1), t1_2)
@@ -522,13 +522,26 @@ def s2s_tdm_isr3(mp, amplitude_l, amplitude_r, intermediates):
     return dm
 
 
+def s2s_tdm_isr3(mp, amplitude_l, amplitude_r, intermediates):
+    dm = s2s_tdm_isr3d(mp, amplitude_l, amplitude_r, intermediates)
+    try:
+        check_triples_amplitudes([b.o, b.o, b.o, b.v, b.v, b.v],
+                                 amplitude_l, amplitude_r)
+    except ValueError:
+        return dm
+
+    raise NotImplementedError(
+        "Consistent ISR(3) including triples is not implemented yet."
+    )
+
+
 # Ref: https://doi.org/10.1080/00268976.2013.859313
 DISPATCH = {
     "isr0": s2s_tdm_isr0,
     "isr1s": s2s_tdm_isr0,  # Identical to ISR(0)
     "isr1": s2s_tdm_isr1,
     "isr2": s2s_tdm_isr2,
-    "isr3": s2s_tdm_isr3,
+    "isr3d": s2s_tdm_isr3d,
 }
 
 
@@ -565,7 +578,7 @@ def state2state_transition_dm(
 
     if method.name not in DISPATCH:
         raise NotImplementedError(
-            "state2state_transition_dm is not implemented " f"for {method.name}.")
+            f"state2state_transition_dm is not implemented for {method.name}.")
     else:
         # final state is on the bra side/left (complex conjugate)
         # see ref https://doi.org/10.1080/00268976.2013.859313, appendix A2
