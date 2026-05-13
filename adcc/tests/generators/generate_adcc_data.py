@@ -73,7 +73,10 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     assert states.kind == kind  # maybe we predicted wrong?  # type: ignore
     if method.adc_type in ("ip", "ea"):
         key = f"{key}/{spin}"
-    if f"{key}/matrix" not in hdf5_file and spin == "alpha":
+    dump_matrix = (f"{key}/matrix" not in hdf5_file and (
+        method.adc_type == "pp" or (method.adc_type in ("ip", "ea") and is_alpha))
+    )
+    if dump_matrix:
         # the matrix data is only dumped once for each case and only for alpha.
         # I think it does not make sense to dump the data once for a singlet
         # and once for a triplet trial vector as well as an alpha and a beta one.
@@ -314,26 +317,27 @@ def generate_hf_631g():
                 **n_states
             )
 
-    for is_alpha in [True, False]:
-        for method in _methods["ip"]:
-            method = AdcMethod(method)
-            for n_states in \
-                    testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
-                n_states = {n_states: 3}
-                generate_adc_all(
-                    test_case, method=method, dump_nstates=2,
-                    is_alpha=is_alpha, **n_states
-                )
+    # TODO: PP spin-flip only
+    # for is_alpha in [True, False]:
+    #     for method in _methods["ip"]:
+    #         method = AdcMethod(method)
+    #         for n_states in \
+    #                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
+    #             n_states = {n_states: 3}
+    #             generate_adc_all(
+    #                 test_case, method=method, dump_nstates=2,
+    #                 is_alpha=is_alpha, **n_states
+    #             )
 
-        for method in _methods["ea"]:
-            method = AdcMethod(method)
-            for n_states in \
-                    testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
-                n_states = {n_states: 3}
-                generate_adc_all(
-                    test_case, method=method, dump_nstates=2,
-                    is_alpha=is_alpha, **n_states
-                )
+    #     for method in _methods["ea"]:
+    #         method = AdcMethod(method)
+    #         for n_states in \
+    #                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
+    #             n_states = {n_states: 3}
+    #             generate_adc_all(
+    #                 test_case, method=method, dump_nstates=2,
+    #                 is_alpha=is_alpha, **n_states
+    #             )
 
 
 def main():

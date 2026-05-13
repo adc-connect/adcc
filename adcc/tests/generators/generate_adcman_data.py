@@ -311,19 +311,20 @@ def generate_hf_631g():
             **n_states
         )
 
-    for method in _methods["ip"]:
-        method = AdcMethod(method)
-        n_states = {"n_ip_states": (3, 3)}
-        generate_adc_all(
-            test_case, method=method, dump_nstates=2, **n_states
-        )
+    # TODO: PP spin-flip only
+    # for method in _methods["ip"]:
+    #     method = AdcMethod(method)
+    #     n_states = {"n_ip_states": (3, 3)}
+    #     generate_adc_all(
+    #         test_case, method=method, dump_nstates=2, **n_states
+    #     )
 
-    for method in _methods["ea"]:
-        method = AdcMethod(method)
-        n_states = {"n_ea_states": (3, 3)}
-        generate_adc_all(
-            test_case, method=method, dump_nstates=2, **n_states
-        )
+    # for method in _methods["ea"]:
+    #     method = AdcMethod(method)
+    #     n_states = {"n_ea_states": (3, 3)}
+    #     generate_adc_all(
+    #         test_case, method=method, dump_nstates=2, **n_states
+    #     )
 
 
 def generate_formaldehyde_pe():
