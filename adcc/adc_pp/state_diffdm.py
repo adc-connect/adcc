@@ -393,6 +393,7 @@ DISPATCH = {
     "isr1": diffdm_isr1,
     "isr2": diffdm_isr2,
     "isr3d": diffdm_isr3d,
+    "isr3": diffdm_isr3,
     "cvs-isr0": diffdm_isr0,
     "cvs-isr1s": diffdm_isr0,  # Identical to ISR(0)
     "cvs-isr1": diffdm_cvs_isr1,

@@ -193,6 +193,7 @@ DISPATCH = {
     "isr1": tdm_isr1,
     "isr2": tdm_isr2,
     "isr3d": tdm_isr3d,
+    "isr3": tdm_isr3,
     "cvs-isr0": tdm_isr0,
     "cvs-isr1": tdm_isr0,  # No extra contribs for CVS-ISR(1)
     "cvs-isr2": tdm_cvs_isr2,

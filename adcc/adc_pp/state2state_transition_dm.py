@@ -542,6 +542,7 @@ DISPATCH = {
     "isr1": s2s_tdm_isr1,
     "isr2": s2s_tdm_isr2,
     "isr3d": s2s_tdm_isr3d,
+    "isr3": s2s_tdm_isr3,
 }
 
 
