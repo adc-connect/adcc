@@ -176,6 +176,7 @@ DISPATCH = {
     "isr1": mtm_isr1,
     "isr2": mtm_isr2,
     "isr3": mtm_isr3,
+    "isr3d": mtm_isr3,
     "cvs-isr0": mtm_cvs_isr0,
     "cvs-isr1s": mtm_cvs_isr0,  # Identical to CVS-ISR(0)
     "cvs-isr1": mtm_cvs_isr0,  # Identical to CVS-ISR(0)
