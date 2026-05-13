@@ -53,6 +53,10 @@ class MethodLevel(Enum):
         return str(self.value)
 
     def to_int(self) -> int:
+        """
+        Converts the level to an integer. This also resolves special
+        levels. For instance, 'TWO_X' resolves as 2.
+        """
         # numerical methods
         if isinstance(self.value, int):
             return self.value
@@ -60,7 +64,7 @@ class MethodLevel(Enum):
         elif isinstance(self.value, str):
             return int(self.value[0])
         else:
-            raise ValueError
+            raise ValueError(f"Unknown value type {type(self.value)}.")
 
 
 class Method:
