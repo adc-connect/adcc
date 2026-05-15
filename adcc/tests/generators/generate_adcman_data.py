@@ -1,7 +1,7 @@
 from adcc.tests.generators.run_qchem import run_qchem
 from adcc.tests import testcases
 
-from adcc.AdcMethod import AdcMethod
+from adcc.AdcMethod import AdcMethod, MethodLevel
 from adcc.hdf5io import emplace_dict
 
 from pathlib import Path
@@ -58,7 +58,8 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
         return None
     # gs_density_order is only available for adc(3) and adc(4)
     # and it is not available for cvs-adc
-    if gs_density_order is not None and (method.level.to_int() < 3 or "cvs" in case):
+    if gs_density_order is not None and (
+            method.level.to_int() < 3 or "cvs" in case):
         return None
     # add a cvs prefix to the method if necessary
     if "cvs" in case and not method.is_core_valence_separated:
