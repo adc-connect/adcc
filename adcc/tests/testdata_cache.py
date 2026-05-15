@@ -217,8 +217,7 @@ class TestdataCache:
             system, method=method, case=case, source=source,
             gs_density_order=gs_density_order
         )
-        hdf5_key = "None" if isr_order != 3 else "3"
-        isr_data = data.get(hdf5_key, None)
+        isr_data = data.get(str(isr_order), None)
         if isr_data is None:
             raise ValueError(
                 f"No data available for isr_order {isr_order} in case"
@@ -270,7 +269,7 @@ class TestdataCache:
                 evec[blocks[1]].set_from_ndarray(
                     adc_data["eigenvectors_doubles"][i], 1e-14
                 )
-        return ExcitedStates(states, property_method=states._property_method)
+        return ExcitedStates(states)
 
     def adcc_states(self, system: str, method: str, kind: str,
                     case: str, gs_density_order: Optional[int] = None,

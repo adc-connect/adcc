@@ -62,17 +62,16 @@ class TestStateDensities:
     def test_state_diffdm(self, system: str, case: str, kind: str, adc_method: str,
                           isr_order, generator: str):
 
-        isr_key = "3" if isr_order == 3 else "None"
         if (
             "cvs" in case and AdcMethod(adc_method).level.to_int() == 0
             and generator == "adcman"
         ):
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
-        if 'cvs' in case and adc_method == "adc3":
-            pytest.skip("CVS-ADC3 not implemented yet")
+        if 'cvs' in case and isr_order == 3:
+            pytest.skip("CVS-ISR(3) not implemented yet")
         refdata = testdata_cache._load_data(
             system=system, method=adc_method, case=case, source=generator
-        )[isr_key][kind]
+        )[str(isr_order)][kind]
 
         # construct a ExcitedStates instance using the eigenvalues and eigenstates
         # from the reference data.
@@ -99,18 +98,17 @@ class TestStateDensities:
     def test_ground_to_excited_tdm(self, system: str, case: str, kind: str,
                                    adc_method: str, isr_order, generator: str):
 
-        isr_key = "3" if isr_order == 3 else "None"
         if (
             "cvs" in case and AdcMethod(adc_method).level.to_int() == 0
             and generator == "adcman"
         ):
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
-        if 'cvs' in case and adc_method == "adc3":
-            pytest.skip("CVS-ADC3 not implemented yet")
+        if 'cvs' in case and isr_order == 3:
+            pytest.skip("CVS-ISR(3) not implemented yet")
 
         refdata = testdata_cache._load_data(
             system=system, method=adc_method, case=case, source=generator
-        )[isr_key][kind]
+        )[str(isr_order)][kind]
         # construct a ExcitedStates instance using the eigenvalues and eigenstates
         # from the reference data.
         state: ExcitedStates = getattr(testdata_cache, f"{generator}_states")(
@@ -136,10 +134,9 @@ class TestStateDensities:
     def test_state_to_state_tdm(self, system: str, case: str, kind: str,
                                 adc_method: str, isr_order, generator: str):
 
-        isr_key = "3" if isr_order == 3 else "None"
         refdata = testdata_cache._load_data(
             system=system, method=adc_method, case=case, source=generator
-        )[isr_key][kind]
+        )[str(isr_order)][kind]
         if len(refdata["eigenvalues"]) < 2:
             pytest.skip("Less than two states available.")
         s2s_data = refdata["state_to_state"]

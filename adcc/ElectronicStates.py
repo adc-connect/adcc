@@ -89,13 +89,14 @@ class ElectronicStates:
         if property_method is None:
             if self.method.level in [MethodLevel.TWO_X, MethodLevel.THREE]:
                 warnings.warn(
-                    f"property_method defaults to ISR(2) for {self.method.name}."
+                    "By default ISR(2) is selected as property method "
+                    f"for an {self.method.name} calculation."
                 )
                 property_method = self.method.at_level(2).as_method(IsrMethod)
             else:
                 property_method = self.method.as_method(IsrMethod)
 
-        if not isinstance(property_method, IsrMethod):
+        elif not isinstance(property_method, IsrMethod):
             property_method = IsrMethod(property_method)
         self._property_method: IsrMethod = property_method
 
