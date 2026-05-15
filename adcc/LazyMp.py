@@ -249,15 +249,15 @@ class LazyMp:
         elif level == 2:
             return self.mp2_diffdm
         elif level == 3:
-            return self.mp3_diffdm
+            return self.mp2_dm_correction + self.mp3_dm_correction
         else:
             raise NotImplementedError(
-                "diffdm for order above 3 not implemented yet."
+                "Only 2nd and 3rd-order difference densities are implemented."
             )
 
     @cached_property
     @timed_member_call(timer="timer")
-    def mp2_diffdm(self):
+    def mp2_dm_correction(self):
         """
         Return the MP2 difference density in the MO basis.
         """
@@ -308,13 +308,11 @@ class LazyMp:
         return evaluate(ret)
 
     @cached_property
-    @timed_member_call(timer='timer')
-    def mp2_dm_correction(self):
+    def mp2_diffdm(self):
         """
-        Returns the MP2 density correction at second order
-        which is same as the mp2_diffdm.
+        Returns the MP2 difference density in the MO basis
         """
-        return self.mp2_diffdm
+        return self.mp2_dm_correction
 
     @cached_property
     @timed_member_call(timer="timer")
@@ -467,20 +465,24 @@ class LazyMp:
         diffdm = self.diffdm_2p(level)
         return self.reference_state.density_2p + diffdm
 
+    @cached_member_function()
     def dipole_moment(self, level=2):
         """
         Return the MP dipole moment at the specified level of
         perturbation theory.
         """
-        if level in [0, 1]:
-            return self.reference_state.dipole_moment
-        elif level == 2:
-            return self.mp2_dipole_moment
-        elif level == 3:
-            return self.mp3_dipole_moment
-        else:
-            raise NotImplementedError("Only dipole moments for level 0, 1 and 2"
-                                      " are implemented.")
+        dipole_integrals = self.reference_state.operators.electric_dipole
+        density = self.density(level)
+        return self.reference_state.nuclear_dipole + np.array([
+            product_trace(comp, density) for comp in dipole_integrals
+        ])
+
+    @property
+    def mp2_dipole_moment(self):
+        """
+        Return the MP2 dipole moment.
+        """
+        return self.dipole_moment(2)
 
     @cached_member_function()
     def energy_correction(self, level=2):
@@ -553,14 +555,6 @@ class LazyMp:
     def mp2_density(self):
         return self.density(2)
 
-    @cached_property
-    def mp2_dipole_moment(self):
-        refstate = self.reference_state
-        dipole_integrals = refstate.operators.electric_dipole
-        mp2corr = np.array([product_trace(comp, self.mp2_diffdm)
-                            for comp in dipole_integrals])
-        return refstate.dipole_moment + mp2corr
-
     @cached_member_function()
     def ssq(self, level=2):
         """
@@ -577,14 +571,6 @@ class LazyMp:
         ssq_1p = product_trace(ssq_1p_op, self.density(0))
         ssq_2p = product_trace(ssq_2p_op, self.density_2p(level))
         return (ssq_1p + ssq_2p)
-
-    @cached_property
-    def mp3_dipole_moment(self):
-        refstate = self.reference_state
-        dipole_integrals = refstate.operators.electric_dipole
-        mp3corr = np.array([product_trace(comp, self.mp3_diffdm)
-                            for comp in dipole_integrals])
-        return refstate.dipole_moment + mp3corr
 
 #
 # Register cvs_p0 intermediate

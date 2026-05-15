@@ -60,8 +60,6 @@ class State2States(ElectronicTransition):
                 to all other higher-lying states are to be computed.
         """
 
-        if property_method is None and hasattr(data, '_property_method'):
-            property_method = data._property_method
         super().__init__(data, method, property_method)
         self.initial = initial
 

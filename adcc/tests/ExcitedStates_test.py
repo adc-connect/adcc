@@ -33,7 +33,7 @@ from .testdata_cache import testdata_cache
 class TestExcitedStates:
     def test_excitation_view(self):
         state = testdata_cache.adcc_states(
-            system="h2o_sto3g", method="adc3", case="gen", kind="singlet"
+            system="h2o_sto3g", method="adc2", case="gen", kind="singlet"
         )
 
         n_ref = len(state.excitation_vector)
@@ -70,7 +70,7 @@ class TestExcitedStates:
 
     def test_custom_excitation_energy_corrections(self):
         state = testdata_cache.adcc_states(
-            system="h2o_sto3g", method="adc3", kind="singlet", case="gen"
+            system="h2o_sto3g", method="adc2", kind="singlet", case="gen"
         )
 
         cc1 = EnergyCorrection("custom_correction1",
@@ -108,7 +108,7 @@ class TestExcitedStates:
 
     def test_dataframe_export(self, gauge_origin="origin"):
         state = testdata_cache.adcc_states(
-            system="h2o_sto3g", method="adc3", kind="singlet", case="gen"
+            system="h2o_sto3g", method="adc2", kind="singlet", case="gen"
         )
 
         df = state.to_dataframe()

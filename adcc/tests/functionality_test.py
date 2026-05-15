@@ -60,8 +60,7 @@ class TestFunctionality:
             system=system, method=method, case=case
         )
 
-        hdf5_key = "None"
-        ref: dict = refdata[hdf5_key][kind]
+        ref: dict = refdata["None"][kind]
         n_ref = len(ref["eigenvalues"])
 
         if "cvs" in case and "cvs" not in method:

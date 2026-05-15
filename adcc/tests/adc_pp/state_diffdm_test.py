@@ -47,10 +47,8 @@ class TestStateDiffDm:
         mp = state.ground_state
         n_states = len(state.excitation_energy)
         excitation_energy = np.zeros((n_states))
-        if state.method.name == "adc3":
-            method = IsrMethod("isr3")
-        else:
-            method = state.property_method
+
+        method = state.property_method
         level = method.level.to_int()
 
         method_order_minus_one = None
