@@ -74,7 +74,7 @@ class AdcMatrixlike:
     _special_block_orders = {
         "adc2x": {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 1},
         "isr1s": {"ph_ph": 1, "ph_pphh": None, "pphh_ph": None, "pphh_pphh": None},
-        "isr3": {"ph_ph": 3, "ph_pphh": 2, "pphh_ph": 2, "pphh_pphh": 1},
+        "isr3d": {"ph_ph": 3, "ph_pphh": 2, "pphh_ph": 2, "pphh_pphh": 1},
     }
 
     @classmethod
