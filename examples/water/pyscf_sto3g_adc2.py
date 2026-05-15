@@ -24,6 +24,3 @@ triplets = adcc.adc2(singlets.matrix, n_triplets=3)
 print(singlets.describe())
 print()
 print(triplets.describe())
-
-
-

@@ -24,7 +24,6 @@ import pytest
 import numpy as np
 
 from adcc.adc_pp.modified_transition_moments import modified_transition_moments
-from adcc.AdcMethod import AdcMethod
 
 from ..testdata_cache import testdata_cache
 from .. import testcases
@@ -55,7 +54,6 @@ operator_kinds = ["electric", "magnetic"]
 def test_modified_transition_moments(system: str, case: str, adc_method: str,
                                      isr_order, kind: str, op_kind: str):
 
-    isr_key = "3" if isr_order == 3 else "None"
     if "cvs" in case and adc_method == "adc3":
         pytest.skip("CVS-ADC(3) mtm not implemented yet")
 
@@ -65,7 +63,7 @@ def test_modified_transition_moments(system: str, case: str, adc_method: str,
 
     ref = testdata_cache.adcc_data(
         system=system, method=adc_method, case=case
-    )[isr_key][kind]
+    )[str(isr_order)][kind]
 
     n_ref = len(state.excitation_vector)
 
@@ -79,17 +77,8 @@ def test_modified_transition_moments(system: str, case: str, adc_method: str,
         raise NotImplementedError(
             f"Test not implemented for operator kind {op_kind}"
         )
-
-    if "cvs" in case and "cvs" not in adc_method:
-        adc_method = f"cvs-{adc_method}"
-    if isr_order is not None:
-        mtm_level = f"isr{isr_order}"
-    else:
-        level = min(AdcMethod(adc_method).level.to_int(), 2)
-        mtm_level = f"isr{level}"
-    if "cvs" in case:
-        mtm_level = f"cvs-{mtm_level}"
-    mtms = modified_transition_moments(mtm_level, state.ground_state, dips)
+    mtms = modified_transition_moments(state.property_method,
+                                       state.ground_state, dips)
 
     for i in range(n_ref):
         # Computing the scalar product of the eigenvector
