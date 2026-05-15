@@ -181,7 +181,7 @@ def tdm_isr3(mp, amplitude, intermediates):
         check_triples_amplitudes([b.o, b.o, b.o, b.v, b.v, b.v], amplitude)
     except ValueError:
         return dm
-    
+
     raise NotImplementedError(
         "Consistent ISR(3) including triples is not implemented yet."
     )

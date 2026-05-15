@@ -96,7 +96,7 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
     if dump_nstates is not None:
         n_states = min(n_states, dump_nstates)
 
-    kind_data =  {}
+    kind_data = {}
     dm_bb_a = []  # State diffdm AO basis alpha part
     dm_bb_b = []  # State diffdm AO basis beta part.
     tdm_bb_a = []  # Ground to Excited state tdm AO basis alpha part
@@ -118,7 +118,6 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
             eigenvectors[exdegree + 1].append(getattr(
                 states.excitation_vector[n], block  # type: ignore
             ).to_ndarray())
-
 
     # Eigenvalues
     kind_data["eigenvalues"] = states.excitation_energy[:n_states]
