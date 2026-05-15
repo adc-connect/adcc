@@ -29,7 +29,14 @@ from ..testdata_cache import testdata_cache
 from .. import testcases
 
 
-methods = ["adc0", "adc1", "adc2"]
+methods = [
+    ("adc0", None),
+    ("adc1", None),
+    ("adc2", None),
+    ("adc2x", None),
+    ("adc3", None),
+    ("adc3", 3),
+]
 
 test_cases = testcases.get_by_filename(
     "h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz"
@@ -41,20 +48,25 @@ cases = [(case.file_name, c, kind)
 operator_kinds = ["electric", "magnetic"]
 
 
-@pytest.mark.parametrize("method", methods)
+@pytest.mark.parametrize("adc_method, isr_order", methods)
 @pytest.mark.parametrize("system,case,kind", cases)
 @pytest.mark.parametrize("op_kind", operator_kinds)
-def test_modified_transition_moments(system: str, case: str, method: str, kind: str,
-                                     op_kind: str):
+def test_modified_transition_moments(system: str, case: str, adc_method: str,
+                                     isr_order, kind: str, op_kind: str):
+
+    if "cvs" in case and adc_method == "adc3":
+        pytest.skip("CVS-ADC(3) mtm not implemented yet")
+
     state = testdata_cache.adcc_states(
-        system=system, method=method, kind=kind, case=case
+        system=system, method=adc_method, kind=kind, case=case, isr_order=isr_order
     )
+
     ref = testdata_cache.adcc_data(
-        system=system, method=method, case=case
-    )[kind]
+        system=system, method=adc_method, case=case
+    )[str(isr_order)][kind]
 
     n_ref = len(state.excitation_vector)
-    method = method.replace("adc", "isr")
+
     if op_kind == "electric":
         dips = state.reference_state.operators.electric_dipole
         ref_tdm = ref["transition_dipole_moments"]
@@ -65,11 +77,8 @@ def test_modified_transition_moments(system: str, case: str, method: str, kind: 
         raise NotImplementedError(
             f"Test not implemented for operator kind {op_kind}"
         )
-
-    if "cvs" in case and "cvs" not in method:
-        method = f"cvs-{method}"
-
-    mtms = modified_transition_moments(method, state.ground_state, dips)
+    mtms = modified_transition_moments(state.property_method,
+                                       state.ground_state, dips)
 
     for i in range(n_ref):
         # Computing the scalar product of the eigenvector

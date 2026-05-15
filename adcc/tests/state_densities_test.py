@@ -31,7 +31,14 @@ from .testdata_cache import testdata_cache
 from . import testcases
 
 
-methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+methods = [
+    ("adc0", None),
+    ("adc1", None),
+    ("adc2", None),
+    ("adc2x", None),
+    ("adc3", None),
+    ("adc3", 3),
+]
 generators = ["adcman", "adcc"]
 
 
@@ -48,23 +55,30 @@ cases = [(case.file_name, c, kind)
          for kind in ["singlet", "any", "spin_flip"] if kind in case.kinds.pp]
 
 
-@pytest.mark.parametrize("method", methods)
+@pytest.mark.parametrize("adc_method, isr_order", methods)
 @pytest.mark.parametrize("generator", generators)
 class TestStateDensities:
     @pytest.mark.parametrize("system,case,kind", cases)
-    def test_state_diffdm(self, system: str, case: str, kind: str, method: str,
-                          generator: str):
-        if ("cvs" in case and AdcMethod(method).level.to_int() == 0
-                and generator == "adcman"):
+    def test_state_diffdm(self, system: str, case: str, kind: str, adc_method: str,
+                          isr_order, generator: str):
+
+        if (
+            "cvs" in case and AdcMethod(adc_method).level.to_int() == 0
+            and generator == "adcman"
+        ):
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
+        if 'cvs' in case and isr_order == 3:
+            pytest.skip("CVS-ISR(3) not implemented yet")
         refdata = testdata_cache._load_data(
-            system=system, method=method, case=case, source=generator
-        )[kind]
+            system=system, method=adc_method, case=case, source=generator
+        )[str(isr_order)][kind]
+
         # construct a ExcitedStates instance using the eigenvalues and eigenstates
         # from the reference data.
         state: ExcitedStates = getattr(testdata_cache, f"{generator}_states")(
-            system=system, method=method, case=case, kind=kind
-        )
+            system=system, method=adc_method, case=case,
+            kind=kind, isr_order=isr_order)
+
         # since refdata was used to build state we have to have the same amount
         # of states
         for i in range(len(state.excitation_vector)):
@@ -82,18 +96,24 @@ class TestStateDensities:
     @pytest.mark.parametrize("system,case,kind",
                              [c for c in cases if c[2] != "triplet"])
     def test_ground_to_excited_tdm(self, system: str, case: str, kind: str,
-                                   method: str, generator: str):
-        if ("cvs" in case and AdcMethod(method).level.to_int() == 0
-                and generator == "adcman"):
+                                   adc_method: str, isr_order, generator: str):
+
+        if (
+            "cvs" in case and AdcMethod(adc_method).level.to_int() == 0
+            and generator == "adcman"
+        ):
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
+        if 'cvs' in case and isr_order == 3:
+            pytest.skip("CVS-ISR(3) not implemented yet")
+
         refdata = testdata_cache._load_data(
-            system=system, method=method, case=case, source=generator
-        )[kind]
+            system=system, method=adc_method, case=case, source=generator
+        )[str(isr_order)][kind]
         # construct a ExcitedStates instance using the eigenvalues and eigenstates
         # from the reference data.
         state: ExcitedStates = getattr(testdata_cache, f"{generator}_states")(
-            system=system, method=method, case=case, kind=kind
-        )
+            system=system, method=adc_method, case=case,
+            kind=kind, isr_order=isr_order)
         # since refdata was used to build state we have to have the same amount
         # of states
         for i in range(len(state.excitation_vector)):
@@ -112,11 +132,11 @@ class TestStateDensities:
     @pytest.mark.parametrize("system,case,kind",
                              [c for c in cases if "cvs" not in c[1]])
     def test_state_to_state_tdm(self, system: str, case: str, kind: str,
-                                method: str, generator: str):
+                                adc_method: str, isr_order, generator: str):
 
         refdata = testdata_cache._load_data(
-            system=system, method=method, case=case, source=generator
-        )[kind]
+            system=system, method=adc_method, case=case, source=generator
+        )[str(isr_order)][kind]
         if len(refdata["eigenvalues"]) < 2:
             pytest.skip("Less than two states available.")
         s2s_data = refdata["state_to_state"]
@@ -124,8 +144,8 @@ class TestStateDensities:
         # construct a ExcitedStates instance using the eigenvalues and eigenstates
         # from the reference data.
         state: ExcitedStates = getattr(testdata_cache, f"{generator}_states")(
-            system=system, method=method, case=case, kind=kind
-        )
+            system=system, method=adc_method, case=case,
+            kind=kind, isr_order=isr_order)
         # since refdata was used to build state we have to have the same amount
         # of states
         for i in range(len(state.excitation_vector) - 1):
@@ -135,7 +155,8 @@ class TestStateDensities:
             fromi_ref_a = s2s_data[f"from_{i}"]["state_to_excited_tdm_bb_a"]
             fromi_ref_b = s2s_data[f"from_{i}"]["state_to_excited_tdm_bb_b"]
 
-            state_to_state = State2States(state, initial=i)
+            state_to_state = State2States(state, initial=i,
+                                          property_method=state._property_method)
             for j, (ref_a, ref_b) in enumerate(zip(fromi_ref_a, fromi_ref_b)):
                 ito = i + j + 1
                 assert state.excitation_energy[ito] == refdata["eigenvalues"][ito]

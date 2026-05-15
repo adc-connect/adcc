@@ -162,5 +162,5 @@ class AdcMethod(Method):
 
 class IsrMethod(Method):
     _method_base_name = "isr"
-    max_level = 2
-    special_levels = (MethodLevel.ONE_S,)
+    max_level = 3
+    special_levels = (MethodLevel.ONE_S, MethodLevel.THREE_D)

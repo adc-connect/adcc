@@ -58,6 +58,7 @@ class State2States(ElectronicTransition):
                 Provide the index of the excited state from which transitions
                 to all other higher-lying states are to be computed.
         """
+
         super().__init__(data, method, property_method)
         self.initial = initial
 

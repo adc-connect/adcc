@@ -4,7 +4,7 @@ from adcc.tests.generators.dump_adcc import (
 from adcc.tests.testdata_cache import testdata_cache
 from adcc.tests import testcases
 
-from adcc.AdcMethod import AdcMethod
+from adcc.AdcMethod import AdcMethod, MethodLevel
 from adcc.LazyMp import LazyMp
 from adcc.workflow import run_adc, validate_state_parameters
 from adcc import copy as adcc_copy
@@ -26,11 +26,14 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
                  gs_density_order: int | None = None,
                  n_states: int | None = None, n_singlets: int | None = None,
                  n_triplets: int | None = None, n_spin_flip: int | None = None,
-                 dump_nstates: int | None = None, **kwargs) -> None:
+                 dump_nstates: int | None = None,  isr_order: int | None = None,
+                 **kwargs) -> None:
     """
     Generate and dump the excited states reference data for the given reference case
     of the given test case if the data is not available already.
     """
+    if isr_order == 3 and "cvs" in case:
+        return
     datadir = Path(__file__).parent.parent / _testdata_dirname
     datafile = datadir / test_case.adcdata_file_name("adcc", method.name)
     hdf5_file = h5py.File(datafile, "a")  # Read/write if exists, create otherwise
@@ -44,7 +47,7 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
         n_spin_flip=n_spin_flip
     )
     key = f"{case}/{gs_density_order}"
-    if f"{key}/{kind}" in hdf5_file:
+    if f"{key}/{isr_order}/{kind}" in hdf5_file:
         return None
     print(f"Generating {method.name} data for {case} {test_case.file_name}.")
     # prepend cvs to the method if needed (otherwise we will get an error)
@@ -53,10 +56,10 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     # TODO: add the gs_density_order to the run_adc call once implemented
     # For now just use it to enforce the correct data structure in the hdf5 file
     assert gs_density_order is None
-    states = run_adc(
-        hf, method=method, n_states=n_states, n_singlets=n_singlets,
-        n_triplets=n_triplets, n_spin_flip=n_spin_flip, **kwargs
-    )
+    states = run_adc(hf, method=method, n_states=n_states, n_singlets=n_singlets,
+                     n_triplets=n_triplets, n_spin_flip=n_spin_flip,
+                     isr_order=isr_order, **kwargs)
+
     assert states.kind == kind  # maybe we predicted wrong?  # type: ignore
     if f"{key}/matrix" not in hdf5_file:
         # the matrix data is only dumped once for each case. I think it does not
@@ -66,7 +69,7 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
         trial_vec = adcc_copy(states.excitation_vector[0]).set_random()  # type: ignore # noqa: E501
         dump_matrix_testdata(states.matrix, trial_vec, matrix_group)
     # dump the excited states data
-    kind_group = hdf5_file.create_group(f"{key}/{states.kind}")  # type: ignore
+    kind_group = hdf5_file.create_group(f"{key}/{isr_order}/{states.kind}")
     dump_excited_states(states, kind_group, dump_nstates=dump_nstates)
 
 
@@ -75,6 +78,7 @@ def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
                      n_triplets: int | None = None, n_spin_flip: int | None = None,
                      dump_nstates: int | None = None,
                      states_per_case: dict[str, dict[str, int]] | None = None,
+                     isr_order: int | None = None,
                      **kwargs) -> None:
     """
     Generate and dump the excited states reference data for all reference cases
@@ -90,7 +94,8 @@ def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
             generate_adc(
                 test_case, method, case, n_states=n_states, n_singlets=n_singlets,
                 n_triplets=n_triplets, n_spin_flip=n_spin_flip,
-                dump_nstates=dump_nstates, gs_density_order=density_order, **kwargs
+                dump_nstates=dump_nstates, gs_density_order=density_order,
+                isr_order=isr_order, **kwargs
             )
 
 
@@ -126,7 +131,7 @@ def generate_h2o_sto3g():
         for n_states in \
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
             per_case = None
-            if method.level < 2:  # adc0/adc1
+            if method.level.to_int() < 2:  # adc0/adc1
                 per_case = {
                     case: {n_states: n} for case, n in states_per_case.items()
                 }
@@ -135,12 +140,16 @@ def generate_h2o_sto3g():
             # 4 states available
             # -> reduce n_guesses for all ADC(2) and ADC(3) calculations
             kwargs = {}
-            if method.level >= 2:
+            if method.level.to_int() >= 2:
                 kwargs = {"n_guesses": 4}
             generate_adc_all(
                 test_case, method=method, dump_nstates=2, states_per_case=per_case,
                 **n_states, **kwargs
             )
+            if method.level is MethodLevel.THREE:
+                generate_adc_all(test_case, method=method, dump_nstates=2,
+                                 states_per_case=per_case, isr_order=3,
+                                 **n_states, **kwargs)
 
 
 def generate_h2o_def2tzvp():
@@ -158,6 +167,9 @@ def generate_h2o_def2tzvp():
                 test_case, method=method, dump_nstates=2, states_per_case=None,
                 **n_states
             )
+            if method.level is MethodLevel.THREE:
+                generate_adc_all(test_case, method=method, dump_nstates=2,
+                                 states_per_case=None, isr_order=3, **n_states)
 
 
 def generate_cn_sto3g():
@@ -173,6 +185,9 @@ def generate_cn_sto3g():
                 test_case=test_case, method=method, dump_nstates=2,
                 states_per_case=None, **kwargs
             )
+            if method.level is MethodLevel.THREE:
+                generate_adc_all(test_case, method=method, dump_nstates=2,
+                                 states_per_case=None, isr_order=3, **kwargs)
 
 
 def generate_cn_ccpvdz():
@@ -188,6 +203,9 @@ def generate_cn_ccpvdz():
                 test_case, method=method, dump_nstates=2, states_per_case=None,
                 **n_states
             )
+            if method.level is MethodLevel.THREE:
+                generate_adc_all(test_case, method=method, dump_nstates=2,
+                                 states_per_case=None, isr_order=3, **n_states)
 
 
 def generate_hf_631g():
@@ -203,6 +221,9 @@ def generate_hf_631g():
                 test_case, method=method, dump_nstates=2, states_per_case=None,
                 **n_states
             )
+            if method.level is MethodLevel.THREE:
+                generate_adc_all(test_case, method=method, dump_nstates=2,
+                                 states_per_case=None, isr_order=3, **n_states)
 
 
 def main():
