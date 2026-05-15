@@ -26,9 +26,9 @@ from numpy.testing import assert_allclose
 from pytest import approx
 
 from adcc import block as b
-from adcc import LazyMp, OneParticleDensity, ReferenceState
+from adcc import LazyMp, ReferenceState
 from adcc import OperatorSymmetry
-from adcc.functions import einsum, evaluate
+from adcc.functions import einsum
 from adcc.backends import run_hf
 from adcc.MoSpaces import split_spaces
 
@@ -341,11 +341,7 @@ levels = [0, 1, 2, 3]
 class TestGroundstateDensity:
     def calculate_mpn_energy(self, mp, level):
         hf = mp.reference_state
-        if level == 3:
-            dens_1p = mp.density(2) + self.mp3_diffdm(mp)
-        else:
-            dens_1p = mp.density(level)
-
+        dens_1p = mp.density(level)
         energy = einsum("pq,pq", hf.foo, dens_1p.oo)
         energy += einsum("pq,pq", hf.fvv, dens_1p.vv)
 
@@ -372,24 +368,6 @@ class TestGroundstateDensity:
                     "pqrs,pqrs", dens_2p[block], hf.eri(block)
                 )
         return energy
-
-    def mp3_diffdm(self, mp) -> OneParticleDensity:
-        """
-        Return the MP3 difference density in the MO basis.
-        """
-        hf = mp.reference_state
-        # Only calculate the oo and vv block since the hf.fov block is zero anyways.
-        ret = OneParticleDensity(hf.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
-
-        ret.oo = (
-            # 3rd order
-            - einsum("ikab,jkab->ij", mp.t2oo, mp.td2(b.oovv)).symmetrise(0, 1)
-        )
-        ret.vv = (
-            # 3rd order
-            + einsum("ijac,ijbc->ab", mp.t2oo, mp.td2(b.oovv)).symmetrise(0, 1)
-        )
-        return evaluate(ret)
 
     def test_mpn_energy(self, system: str, level: int):
         system: testcases.TestCase = testcases.get_by_filename(system).pop()

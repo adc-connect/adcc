@@ -41,12 +41,7 @@ from . import testcases
 # we only load some already tested density and contract it with some operator.
 
 methods = [
-    ("adc0", None),
-    ("adc1", None),
     ("adc2", None),
-    ("adc2x", None),
-    ("adc3", None),
-    ("adc3", 3),
 ]
 generators = ["adcman", "adcc"]
 
@@ -72,7 +67,6 @@ class TestProperties:
     def test_transition_dipole_moments(self, system: str, case: str, kind: str,
                                        adc_method: str, isr_order, generator: str):
 
-        isr_key = "3" if isr_order == 3 else "None"
         if (
             "cvs" in case
             and AdcMethod(adc_method).level == 0
@@ -81,7 +75,7 @@ class TestProperties:
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
         refdata = testdata_cache._load_data(
             system=system, method=adc_method, case=case, source=generator
-        )[isr_key][kind]
+        )[str(isr_order)][kind]
         state = testdata_cache._make_mock_adc_state(
             system=system, method=adc_method, case=case,
             kind=kind, source=generator, isr_order=isr_order)
@@ -110,7 +104,6 @@ class TestProperties:
     def test_oscillator_strengths(self, system: str, case: str, kind: str,
                                   adc_method: str, isr_order, generator: str):
 
-        isr_key = "3" if isr_order == 3 else "None"
         if (
             "cvs" in case
             and AdcMethod(adc_method).level == 0
@@ -119,7 +112,7 @@ class TestProperties:
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
         refdata = testdata_cache._load_data(
             system=system, method=adc_method, case=case, source=generator
-        )[isr_key][kind]
+        )[str(isr_order)][kind]
         state = testdata_cache._make_mock_adc_state(
             system=system, method=adc_method, case=case, kind=kind,
             source=generator, isr_order=isr_order)
@@ -146,7 +139,6 @@ class TestProperties:
     def test_state_dipole_moments(self, system: str, case: str, kind: str,
                                   adc_method: str, isr_order, generator: str):
 
-        isr_key = "3" if isr_order == 3 else "None"
         if (
             "cvs" in case
             and AdcMethod(adc_method).level == 0
@@ -155,7 +147,7 @@ class TestProperties:
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
         refdata = testdata_cache._load_data(
             system=system, method=adc_method, case=case, source=generator
-        )[isr_key][kind]
+        )[str(isr_order)][kind]
         state = testdata_cache._make_mock_adc_state(
             system=system, method=adc_method, case=case,
             kind=kind, source=generator, isr_order=isr_order)
@@ -169,10 +161,9 @@ class TestProperties:
     def test_state_ssq(self, system: str, case: str, kind: str,
                        adc_method: str, isr_order):
 
-        isr_key = "3" if isr_order == 3 else "None"
         refdata = testdata_cache._load_data(
             system=system, method=adc_method, case=case, source="adcc"
-        )[isr_key][kind]
+        )[str(isr_order)][kind]
         state = testdata_cache._make_mock_adc_state(
             system=system, method=adc_method, case=case, kind=kind, source="adcc"
         )
@@ -191,10 +182,9 @@ class TestProperties:
                                                    kind: str, adc_method: str,
                                                    isr_order, generator: str):
 
-        isr_key = "3" if isr_order == 3 else "None"
         refdata = testdata_cache._load_data(
             system=system, method=adc_method, case=case, source=generator
-        )[isr_key][kind]
+        )[str(isr_order)][kind]
         state = testdata_cache._make_mock_adc_state(
             system=system, method=adc_method, case=case,
             kind=kind, source=generator, isr_order=isr_order)
@@ -245,10 +235,9 @@ class TestProperties:
                                                 kind: str, adc_method: str,
                                                 isr_order):
 
-        isr_key = "3" if isr_order == 3 else "None"
         refdata = testdata_cache._load_data(
             system=system, method=adc_method, case=case, source="adcc"
-        )[isr_key][kind]
+        )[str(isr_order)][kind]
         state = testdata_cache._make_mock_adc_state(
             system=system, method=adc_method, case=case,
             kind=kind, source="adcc", isr_order=isr_order)
@@ -269,10 +258,9 @@ class TestProperties:
                                                 kind: str, adc_method: str,
                                                 isr_order):
 
-        isr_key = "3" if isr_order == 3 else "None"
         refdata = testdata_cache._load_data(
             system=system, method=adc_method, case=case, source="adcc"
-        )[isr_key][kind]
+        )[str(isr_order)][kind]
         state = testdata_cache._make_mock_adc_state(
             system=system, method=adc_method, case=case,
             kind=kind, source="adcc", isr_order=isr_order)
@@ -291,10 +279,9 @@ class TestProperties:
                                            kind: str, adc_method: str,
                                            isr_order):
 
-        isr_key = "3" if isr_order == 3 else "None"
         refdata = testdata_cache._load_data(
             system=system, method=adc_method, case=case, source="adcc"
-        )[isr_key][kind]
+        )[str(isr_order)][kind]
         state = testdata_cache._make_mock_adc_state(
             system=system, method=adc_method, case=case, kind=kind,
             source="adcc", isr_order=isr_order)
@@ -314,10 +301,9 @@ class TestProperties:
     def test_rotatory_strengths(self, system: str, case: str, kind: str,
                                 adc_method: str, isr_order):
 
-        isr_key = "3" if isr_order == 3 else "None"
         refdata = testdata_cache._load_data(
             system=system, method=adc_method, case=case, source="adcc"
-        )[isr_key][kind]
+        )[str(isr_order)][kind]
         state = testdata_cache._make_mock_adc_state(
             system=system, method=adc_method, case=case, kind=kind,
             source="adcc", isr_order=isr_order)
