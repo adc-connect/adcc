@@ -93,7 +93,7 @@ class ElectronicTransition(ElectronicStates):
         """
         return [self._transition_dm_2p(i) for i in range(self.size)]
 
-    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    # @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
     def _transition_dm_2p(self, state_n: int) -> TwoParticleDensity:
         """
         Computes the two-particle tansition density matrix for a single state
@@ -111,7 +111,7 @@ class ElectronicTransition(ElectronicStates):
         """
         return [self._transition_dm_2p_at_level(i, level) for i in range(self.size)]
 
-    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    # @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
     def _transition_dm_2p_at_level(self,
                                    state_n: int, level: int) -> TwoParticleDensity:
         """
@@ -335,6 +335,31 @@ class ElectronicTransition(ElectronicStates):
         """
         tdm = self._transition_dipole_moment_velocity(state_n)
         magmom = self._transition_magnetic_dipole_moment(
+            state_n=state_n, gauge_origin="origin"
+        )
+        ee = self.excitation_energy[state_n]
+        return np.dot(tdm, magmom) / ee
+
+    @property
+    def rotatory_strength_giao(self) -> np.ndarray:
+        """
+        Array of rotatory strengths (in velocity gauge) of all computed states.
+        This property is gauge-origin invariant, thus, it is not possible to
+        select a gauge origin. (GIAO!!)
+        """
+        return np.array([
+            self._rotatory_strength_giao(i) for i in range(self.size)
+        ])
+
+    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    def _rotatory_strength_giao(self, state_n: int) -> np.float64:
+        """
+        Computes the rotatory strength (in velocity gauge) for a single state.
+        This property is gauge-origin invariant, thus, it is not possible to
+        select a gauge origin.
+        """
+        tdm = self._transition_dipole_moment_velocity(state_n)
+        magmom = self._transition_magnetic_dipole_moment_giao(
             state_n=state_n, gauge_origin="origin"
         )
         ee = self.excitation_energy[state_n]

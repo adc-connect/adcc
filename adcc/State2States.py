@@ -165,7 +165,7 @@ class State2States(ElectronicTransition):
         """
         return [self._transition_dm_2p(final) for final in range(self.size)]
 
-    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    # @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
     def _transition_dm_2p(self, state_n: int) -> TwoParticleDensity:
         """
         Computes the 2-particle transition density matrices
@@ -192,7 +192,7 @@ class State2States(ElectronicTransition):
         return [self._transition_dm_2p_at_level(final, level)
                 for final in range(self.size)]
 
-    @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
+    # @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
     def _transition_dm_2p_at_level(self,
                                    state_n: int, level: int) -> TwoParticleDensity:
         """

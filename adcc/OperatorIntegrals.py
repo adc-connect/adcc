@@ -430,6 +430,7 @@ class OperatorIntegrals:
                     temp += np.einsum("ipiq->pq",
                                       d_eri_dB[comp][s + s1 + s + s2].to_ndarray())
                 op_ff[block].set_from_ndarray(temp, self._conv_tol)
+                del temp
 
             op.append(op_ff)
         return tuple(op)
@@ -449,6 +450,7 @@ class OperatorIntegrals:
                 temp += np.einsum("ipiq->pq",
                                   hf.eri(s + s1 + s + s2).to_ndarray())
             op_ff[block].set_from_ndarray(temp, self._conv_tol)
+            del temp
         return op_ff
 
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
