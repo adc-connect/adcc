@@ -83,7 +83,8 @@ class ElectronicStates:
             self.method: AdcMethod = AdcMethod(self.method)
 
         if property_method is None:
-            if self.method.level in [MethodLevel.TWO_X, MethodLevel.THREE]:
+            if self.method.level in [MethodLevel.TWO_X, MethodLevel.THREE,
+                                     MethodLevel.FOUR]:
                 # Auto-select ISR(2) properties for ADC(2)-x and ADC(3) calc
                 warnings.warn(f"ISR({self.method.level.to_str()}) not implemented."
                               f" Property method is selected as ISR(2).")
