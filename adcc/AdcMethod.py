@@ -156,7 +156,7 @@ class Method:
 
 class AdcMethod(Method):
     _method_base_name = "adc"
-    max_level = 3
+    max_level = 4
     special_levels = (MethodLevel.TWO_X,)
 
 
