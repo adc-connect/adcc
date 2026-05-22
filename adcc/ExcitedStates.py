@@ -134,6 +134,13 @@ class ExcitedStates(ElectronicTransition):
                 header="|v2|^2", values=values.copy(), unit=""
             ))
             values.clear()
+        if block_norms and "ppphhh" in self.matrix.axis_blocks:
+            values.extend(f"{dot(vec.ppphhh, vec.ppphhh):^9.4f}"
+                          for vec in self.excitation_vector)
+            columns.append(TableColumn(
+                header="|v3|^2", values=values.copy(), unit=""
+            ))
+            values.clear()
         # the state dipole moment
         if state_dipole_moments and has_dipole:
             for dm in self.state_dipole_moment:

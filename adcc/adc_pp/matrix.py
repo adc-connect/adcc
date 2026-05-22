@@ -332,7 +332,7 @@ def block_pphh_ppphhh_1(hf, mp, intermediates):
 
 def block_ppphhh_pphh_1(hf, mp, intermediates):
     def apply(ampl):
-        ur2 = ampl.ppphhh
+        ur2 = ampl.pphh
         return AmplitudeVector(ppphhh=(
             9 * (
                 # N^7: O^4V^3 / N^6: O^3V^3
