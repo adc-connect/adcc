@@ -146,7 +146,9 @@ def block_ppphhh_ppphhh_0(hf, mp, intermediates):
     def apply(ampl):
         ur3 = ampl.ppphhh
         return AmplitudeVector(ppphhh=(
-            # 36 terms in total. Each term appears 12 times!
+            # Prefactor of 3: the antisymmetrisation generates 36 terms with
+            # an overall factor of 1/36, so each term appears with weight 1/12,
+            # yielding effectively 3 distinct terms.
             3 * (
                 # N^7: O^3V^4 / N^6: O^3V^3
                 + 1 * einsum("ijkabd,cd->ijkabc", ur3, hf.fvv)
@@ -334,6 +336,9 @@ def block_ppphhh_pphh_1(hf, mp, intermediates):
     def apply(ampl):
         ur2 = ampl.pphh
         return AmplitudeVector(ppphhh=(
+            # Prefactor of 9: the antisymmetrisation generates 36 terms with
+            # an overall factor of 1/36, so each term appears with weight 1/4,
+            # yielding effectively 9 distinct terms.
             9 * (
                 # N^7: O^4V^3 / N^6: O^3V^3
                 - 1 / 3 * einsum("ilab,jklc->ijkabc", ur2, hf.ooov)
@@ -388,8 +393,7 @@ def block_cvs_ph_ph_2(hf, mp, intermediates):
     return AdcBlock(apply, diagonal)
 
 
-def diagonal_pphh_pphh_2(hf):
-    # still 2p2h-2p2h 1st!!!!
+def diagonal_pphh_pphh_2(hf, mp):
     # Fock matrix and ovov diagonal term (sometimes called "intermediate diagonal")
     dinterm_ov = (direct_sum("a-i->ia", hf.fvv.diagonal(), hf.foo.diagonal())
                   - 2.0 * einsum("iaia->ia", hf.ovov)).evaluate()
@@ -403,9 +407,29 @@ def diagonal_pphh_pphh_2(hf):
         diag_oC = einsum("ijij->ij", hf.oooo).symmetrise()
 
     diag_vv = einsum("abab->ab", hf.vvvv).symmetrise()
+
+    # 2nd order intermediates
+    t2_1 = mp.t2(b.oovv)
+    dinterm_o = 0.5 * einsum("ikcd,ikcd->i", t2_1, hf.oovv).evaluate()
+    dinterm_ovv = einsum("jkab,jkab->jab", t2_1, hf.oovv).evaluate()
+
+    dinterm_v = 0.5 * einsum("klbc,klbc->b", t2_1, hf.oovv).evaluate()
+    dinterm_oov = einsum("ijac,ijac->ija", t2_1, hf.oovv).evaluate()
+
+    dinterm_oo = - 0.5 * einsum("ijcd,ijcd->ij", t2_1, hf.oovv).evaluate()
+    dinterm_vv = - 0.5 * einsum("klab,klab->ab", t2_1, hf.oovv).evaluate()
+
+    dinterm_ov_2 = - einsum("ikac,ikac->ia", t2_1, hf.oovv).evaluate()
+
     return AmplitudeVector(pphh=(
+        # 0th + 1st order
         + direct_sum("ia+Jb->iJab", dinterm_ov, dinterm_Cv).symmetrise(2, 3)
         + direct_sum("iJ+ab->iJab", diag_oC, diag_vv)
+        # 2nd order
+        + 2 * direct_sum("i+jab->ijab", dinterm_o, dinterm_ovv).symmetrise(0, 1)
+        + 2 * direct_sum("ija+b->ijab", dinterm_oov, dinterm_v).symmetrise(2, 3)
+        + direct_sum("ij+ab->ijab", dinterm_oo, dinterm_vv)
+        + 2 * direct_sum("ia+jb->ijab", dinterm_ov_2, dinterm_ov_2).symmetrise(2, 3)
     ))
 
 
@@ -475,7 +499,7 @@ def block_pphh_pphh_2(hf, mp, intermediates):
                                einsum("jkac,klcd->jlad", ur2, t2_1), hf.oovv)
             ).antisymmetrise(0, 1).antisymmetrise(2, 3)
         ))
-    return AdcBlock(apply, diagonal_pphh_pphh_2(hf))
+    return AdcBlock(apply, diagonal_pphh_pphh_2(hf, mp))
 
 
 #
