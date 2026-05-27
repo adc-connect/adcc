@@ -1113,7 +1113,7 @@ def adc3_pib(hf, mp, intermediates):
 
 @register_as_intermediate
 def adc4_m11(hf, mp, intermediates):
-    p0_2 = mp.diffdm(level=2)
+    p0_2 = mp.mp2_dm_correction
     p0_2_oo, p0_2_vv, t1_2 = p0_2.oo, p0_2.vv, p0_2.ov
 
     t2_1 = mp.t2(b.oovv)
@@ -1121,11 +1121,9 @@ def adc4_m11(hf, mp, intermediates):
     t2_3 = mp.td3(b.oovv)
     t3_2 = mp.tt2(b.ooovvv)
 
-    p0_3 = mp.diffdm(level=3)
+    p0_3 = mp.mp3_dm_correction
     p0_3_vv, p0_3_ov, p0_3_oo = p0_3.vv, p0_3.ov, p0_3.oo
 
-    # third order ph-ph matrix
-    m11 = intermediates.adc3_m11.evaluate()
     t2sq = einsum("ikac,jkbc->iajb", mp.t2oo, mp.t2oo).evaluate()
     t2eri_1 = mp.t2eri(b.ooov, b.vv).evaluate()
     t2eri_2 = mp.t2eri(b.ooov, b.ov).evaluate()
@@ -1141,10 +1139,90 @@ def adc4_m11(hf, mp, intermediates):
     d_oo.set_mask("ii", 1.0)
     d_vv.set_mask("aa", 1.0)
     return (
-        + m11
-        # fourth order terms
+        # 0th order
+        # N^4: O^2V^2 / N^4: O^2V^2
+        - 1 * einsum("ij,ab->iajb", hf.foo, d_vv)
+        # N^4: O^2V^2 / N^4: O^2V^2
+        + 1 * einsum("ab,ij->iajb", hf.fvv, d_oo)
+        # 1st order
+        # N^4: O^2V^2 / N^4: O^2V^2
+        - 1 * einsum("ibja->iajb", hf.ovov)
+        # 2nd order
         + 2 * (
-            ## ab factored
+            # N^5: O^3V^2 / N^4: O^2V^2
+            + 0.25 * einsum("ij,ab->iajb",
+                            einsum("ikcd,jkcd->ij", t2_1, hf.oovv), d_vv)
+            # N^5: O^2V^3 / N^4: O^2V^2
+            + 0.25 * einsum("ab,ij->iajb",
+                            einsum("klac,klbc->ab", t2_1, hf.oovv), d_oo)
+            # N^6: O^3V^3 / N^4: O^2V^2
+            - 0.5 * einsum("ikac,jkbc->iajb", t2_1, hf.oovv)
+        ).symmetrise((0, 2), (1, 3))
+        # 3rd order
+        # N^4: O^2V^2 / N^4: O^2V^2
+        - 1 * einsum("ij,ab->iajb", einsum("icjd,cd->ij", hf.ovov, p0_2_vv), d_vv)
+        # N^4: O^2V^2 / N^4: O^2V^2
+        - 1 * einsum("ij,ab->iajb", einsum("iljk,kl->ij", hf.oooo, p0_2_oo), d_vv)
+        # N^4: V^4 / N^4: V^4
+        + 1 * einsum("ab,ij->iajb", einsum("adbc,cd->ab", hf.vvvv, p0_2_vv), d_oo)
+        # N^4: O^2V^2 / N^4: O^2V^2
+        + 1 * einsum("ab,ij->iajb", einsum("kalb,kl->ab", hf.ovov, p0_2_oo), d_oo)
+        # N^6: O^2V^4 / N^4: V^4
+        - 1 * einsum("adbc,icjd->iajb", hf.vvvv, t2sq)
+        # N^6: O^4V^2 / N^4: O^2V^2
+        - 1 * einsum("iljk,kalb->iajb", hf.oooo, t2sq)
+        # N^6: O^2V^4 / N^4: V^4
+        + 0.5 * einsum("abcd,icjd->iajb",
+                       einsum("klac,klbd->abcd", t2_1, t2_1), hf.ovov)
+        # N^6: O^4V^2 / N^4: O^2V^2
+        + 0.5 * einsum("ijkl,kalb->iajb",
+                       einsum("ikcd,jlcd->ijkl", t2_1, t2_1), hf.ovov)
+        + 2 * (
+            # N^5: O^3V^2 / N^4: O^2V^2
+            + 0.5 * einsum("ij,ab->iajb",
+                           einsum("ikcd,jkdc->ij", t2_1, t2eri_4), d_vv)
+            # N^4: O^2V^2 / N^4: O^2V^2
+            - 1 * einsum("ij,ab->iajb", einsum("kc,ikjc->ij", t1_2, hf.ooov), d_vv)
+            # N^5: O^3V^2 / N^4: O^2V^2
+            - 1 / 8 * einsum("ij,ab->iajb",
+                             einsum("ikcd,jkcd->ij", t2_1, t2eri_3), d_vv)
+            # N^5: O^3V^2 / N^4: O^2V^2
+            + 0.25 * einsum("ij,ab->iajb",
+                            einsum("ikcd,jkcd->ij", t2_2, hf.oovv), d_vv)
+            # N^5: O^2V^3 / N^4: O^2V^2
+            + 0.5 * einsum("ab,ij->iajb",
+                           einsum("klac,klcb->ab", t2_1, t2eri_4), d_oo)
+            # N^4: O^1V^3 / N^4: O^1V^3
+            - 1 * einsum("ab,ij->iajb", einsum("kc,kabc->ab", t1_2, hf.ovvv), d_oo)
+            # N^5: O^2V^3 / N^4: O^2V^2
+            - 1 / 8 * einsum("ab,ij->iajb",
+                             einsum("klac,klbc->ab", t2_1, t2eri_5), d_oo)
+            # N^5: O^2V^3 / N^4: O^2V^2
+            + 0.25 * einsum("ab,ij->iajb",
+                            einsum("klac,klbc->ab", t2_2, hf.oovv), d_oo)
+            # N^5: O^3V^2 / N^4: O^2V^2
+            + 1 * einsum("ka,jkib->iajb", t1_2, hf.ooov)
+            # N^5: O^2V^3 / N^4: O^1V^3
+            + 1 * einsum("ic,jabc->iajb", t1_2, hf.ovvv)
+            # N^6: O^3V^3 / N^4: O^2V^2
+            + 0.5 * einsum("ikac,jkbc->iajb", t2_1, t2eri_4)
+            # N^6: O^3V^3 / N^4: O^2V^2
+            + 0.5 * einsum("ikac,kjcb->iajb", t2_1, t2eri_4)
+            # N^5: O^2V^3 / N^4: O^2V^2
+            + 0.5 * einsum("ibjc,ac->iajb", hf.ovov, p0_2_vv)
+            # N^6: O^3V^3 / N^4: O^2V^2
+            - 1 * einsum("ibkc,jcka->iajb", hf.ovov, t2sq)
+            # N^6: O^3V^3 / N^4: O^2V^2
+            - 0.5 * einsum("ikac,jkbc->iajb", t2_2, hf.oovv)
+            # N^5: O^3V^2 / N^4: O^2V^2
+            - 0.5 * einsum("ibka,jk->iajb", hf.ovov, p0_2_oo)
+            # N^6: O^3V^3 / N^4: O^2V^2
+            + 0.25 * einsum("ikac,jkbc->iajb", t2_1, t2eri_3)
+            # N^6: O^3V^3 / N^4: O^2V^2
+            + 0.25 * einsum("ikac,jkbc->iajb", t2_1, t2eri_5)
+        ).symmetrise((0, 2), (1, 3))
+        # 4th order
+        + 2.0 * (
             # N^4: O^2V^2 / N^4: O^2V^2
             + 0.5 * einsum("ij,ab->iajb",
                            einsum("kc,ikjc->ij", t1_2, t2eri_2), d_vv)
@@ -1223,7 +1301,6 @@ def adc4_m11(hf, mp, intermediates):
                               einsum("jklm,iklm->ij",
                                      einsum("lmef,jkef->jklm", t2_1, hf.oovv),
                                      einsum("ikcd,lmcd->iklm", t2_1, t2_1)), d_vv)
-            ## ij factored
             # N^4: O^1V^3 / N^4: O^1V^3
             - 1 * einsum("ab,ij->iajb",
                          einsum("kabc,kc->ab", hf.ovvv, p0_3_ov), d_oo)
@@ -1304,7 +1381,6 @@ def adc4_m11(hf, mp, intermediates):
                                             einsum("klde,mnde->klmn",
                                                    t2_1, t2_1), t2_1),
                                      hf.oovv), d_oo)
-            ## none factored
             # N^5: O^3V^2 / N^4: O^2V^2
             + 1 * einsum("ka,kjib->iajb", t1_2, t2eri_2)
             # N^5: O^2V^3 / N^4: O^1V^3
@@ -1487,16 +1563,14 @@ def adc4_m11(hf, mp, intermediates):
             + 0.25 * einsum("ijlm,lmab->iajb",
                             einsum("imcd,jlcd->ijlm", t2_1, t2_1),
                             einsum("klae,kmbe->lmab", t2_1, hf.oovv))
-        ).antisymmetrise([(0, 2), (1, 3)])
+        ).symmetrise((0, 2), (1, 3))
         + (
-            ## ab factored
             # N^4: O^2V^2 / N^4: O^2V^2
             - 1 * einsum("ij,ab->iajb",
                          einsum("idjc,cd->ij", hf.ovov, p0_3_vv), d_vv)
             # N^4: O^2V^2 / N^4: O^2V^2
             - 1 * einsum("ij,ab->iajb",
                          einsum("iljk,kl->ij", hf.oooo, p0_3_oo), d_vv)
-            ## ij factored
             # N^4: V^4 / N^4: V^4
             + 1 * einsum("ab,ij->iajb",
                          einsum("adbc,cd->ab", hf.vvvv, p0_3_vv), d_oo)
