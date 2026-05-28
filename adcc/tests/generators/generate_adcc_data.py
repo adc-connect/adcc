@@ -46,6 +46,8 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     key = f"{case}/{gs_density_order}"
     if f"{key}/{kind}" in hdf5_file:
         return None
+    if "cvs" in case and method.name == "adc4":
+        return None
     print(f"Generating {method.name} data for {case} {test_case.file_name}.")
     # prepend cvs to the method if needed (otherwise we will get an error)
     if "cvs" in case and not method.is_core_valence_separated:
@@ -121,7 +123,8 @@ def generate_h2o_sto3g():
     }
     test_case = testcases.get(n_expected_cases=1, name="h2o", basis="sto-3g").pop()
     generate_groundstate(test_case)
-    for method in _methods["pp"]:
+    methods_incl_adc4 = list(_methods["pp"]) + ["adc4"]
+    for method in methods_incl_adc4:
         method = AdcMethod(method)
         for n_states in \
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
@@ -164,7 +167,8 @@ def generate_cn_sto3g():
     # UHF, Doublet, 10 basis functions: (7a, 6b) occ, (3a, 4b) virt
     test_case = testcases.get(n_expected_cases=1, name="cn", basis="sto-3g").pop()
     generate_groundstate(test_case)
-    for method in _methods["pp"]:
+    methods_incl_adc4 = list(_methods["pp"]) + ["adc4"]
+    for method in methods_incl_adc4:
         method = AdcMethod(method)
         for n_states in \
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
@@ -207,10 +211,10 @@ def generate_hf_631g():
 
 def main():
     generate_h2o_sto3g()
-    generate_h2o_def2tzvp()
-    generate_cn_sto3g()
-    generate_cn_ccpvdz()
-    generate_hf_631g()
+    # generate_h2o_def2tzvp()
+    # generate_cn_sto3g()
+    # generate_cn_ccpvdz()
+    # generate_hf_631g()
 
 
 if __name__ == "__main__":

@@ -26,7 +26,7 @@ from .testdata_cache import testdata_cache
 
 import pytest
 
-methods = ["adc1", "adc2", "adc2x", "adc3"]
+methods = ["adc1", "adc2", "adc2x", "adc3", "adc4"]
 # only do the test for a single testcase
 h2o = testcases.get_by_filename("h2o_sto3g").pop()
 
@@ -39,6 +39,8 @@ class TestAdcMatrixBlockView:
         n_virt = 4
         spaces_ph = ["o1", "v1"]
         if "cvs" in case:
+            if method == "adc4":
+                pytest.skip("CVS-ADC(4) not implemented")
             n_occ = 2 * h2o.core_orbitals  # alpha and beta
             spaces_ph = ["o2", "v1"]
             if "cvs" not in method:
