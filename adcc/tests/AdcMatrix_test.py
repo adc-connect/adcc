@@ -46,9 +46,12 @@ class TestBlockOrders:
             {"ph_ph": 1},  # adc1
             {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 0},  # adc2
             {"ph_ph": 3, "ph_pphh": 2, "pphh_ph": 2, "pphh_pphh": 1},  # adc3
+            {"ph_ph": 4, "ph_pphh": 3, "pphh_ph": 3, "pphh_pphh": 2,
+             "ph_ppphhh": 2, "ppphhh_ph": 2, "pphh_ppphhh": 1,
+             "ppphhh_pphh": 1, "ppphhh_ppphhh": 0},  # adc4
         )
         # verify the default methods
-        for order in range(0, 4):
+        for order in range(0, 5):
             block_orders = AdcMatrixlike._default_block_orders(
                 method=AdcMethod(f"adc{order}")
             )
@@ -74,6 +77,9 @@ class TestBlockOrders:
             {"ph_ph": 1, "ph_pphh": None, "ppphhh_ppphhh": None},  # adc1
             {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 0},  # adc2
             {"ph_ph": 3, "ph_pphh": 2, "pphh_ph": 2, "pphh_pphh": 1},  # adc3
+            {"ph_ph": 4, "ph_pphh": 3, "pphh_ph": 3, "pphh_pphh": 2,
+             "ph_ppphhh": 2, "ppphhh_ph": 2, "pphh_ppphhh": 1,
+             "ppphhh_pphh": 1, "ppphhh_ppphhh": 0}, # adc4
         )
         for block_orders in valid_block_orders:
             AdcMatrixlike._validate_block_orders(block_orders, AdcMethod("adc0"))
@@ -114,7 +120,7 @@ class TestBlockOrders:
 
 
 h2o_sto3g = testcases.get_by_filename("h2o_sto3g").pop()
-methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+methods = ["adc0", "adc1", "adc2", "adc2x", "adc3", "adc4"]
 
 
 # Distinct implementations of the matrix equations only exist for the cases
@@ -144,12 +150,17 @@ class TestAdcMatrix:
         )
         blocks = states.matrix.axis_blocks
         out = states.excitation_vector[0].copy()
+        print(out.ppphhh.describe_symmetry())
         out[blocks[0]].set_from_ndarray(matdata["random_singles"])
         if len(blocks) > 1:
             out[blocks[1]].set_from_ndarray(matdata["random_doubles"])
+        if len(blocks) > 2:
+            out[blocks[2]].set_from_ndarray(matdata["random_triples"])
         return out
 
     def test_diagonal(self, system: str, case: str, method: str):
+        if "cvs" in case and method == "adc4":
+            pytest.skip("CVS-ADC(4) not implemented")
         matdata = self.load_matrix_data(system, case, method)
         matrix = self.construct_matrix(system, case, method)
         blocks = matrix.axis_blocks
@@ -163,7 +174,14 @@ class TestAdcMatrix:
             assert_allclose(matdata["diagonal_doubles"], diag_d.to_ndarray(),
                             rtol=1e-10, atol=1e-12)
 
+        if len(blocks) > 2:
+            diag_t = matrix.diagonal()[blocks[2]]
+            assert_allclose(matdata["diagonal_triples"], diag_t.to_ndarray(),
+                            rtol=1e-10, atol=1e-12)
+
     def test_matvec(self, system: str, case: str, method: str):
+        if "cvs" in case and method == "adc4":
+            pytest.skip("CVS-ADC(4) not implemented")
         matdata = self.load_matrix_data(system, case, method)
         matrix = self.construct_matrix(system, case, method)
         # the matrix data is only dumped once and not per kind
@@ -184,6 +202,8 @@ class TestAdcMatrix:
                             rtol=1e-10, atol=1e-12)
 
     def test_compute_block(self, system: str, case: str, method: str):
+        if "cvs" in case and method == "adc4":
+            pytest.skip("CVS-ADC(4) not implemented")
         matdata = self.load_matrix_data(system, case, method)
         matrix = self.construct_matrix(system, case, method)
         # matrix data is only dumped once and not per kind
@@ -215,6 +235,8 @@ class TestAdcMatrixInterface:
     @pytest.mark.parametrize("case", h2o_sto3g.cases)
     @pytest.mark.parametrize("system", ["h2o_sto3g"])
     def test_properties(self, system: str, case: str, method: str):
+        if "cvs" in case and method == "adc4":
+            pytest.skip("CVS-ADC(4) not implemented")
         reference_state = testdata_cache.refstate(system=system, case=case)
         ground_state = adcc.LazyMp(reference_state)
         if "cvs" in case and "cvs" not in method:
