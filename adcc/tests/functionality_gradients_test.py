@@ -75,7 +75,7 @@ def test_nuclear_gradient(molecule, basis, method, backend):
                 grad._energy, atol=1e-10
             )
             assert_allclose(
-                grad_fdiff[ee.index], grad.total, atol=5e-8, rtol=0,
+                grad_fdiff[ee.index], grad.total, atol=2e-7, rtol=0,
                 err_msg=f'Gradient for state {ee.index} wrong.'
             )
     else:

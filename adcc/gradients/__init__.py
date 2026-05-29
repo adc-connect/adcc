@@ -120,7 +120,7 @@ class GradientResult:
         return elec_dip + self.reference_state.nuclear_dipole
 
 
-def nuclear_gradient(excitation_or_mp):
+def nuclear_gradient(excitation_or_mp, conv_tol=1e-9):
     if isinstance(excitation_or_mp, LazyMp):
         mp = excitation_or_mp
     elif isinstance(excitation_or_mp, Excitation):
@@ -136,7 +136,7 @@ def nuclear_gradient(excitation_or_mp):
 
     with timer.record("orbital_response"):
         rhs = orbital_response_rhs(hf, g1a, g2a).evaluate()
-        lam = orbital_response(hf, rhs)
+        lam = orbital_response(hf, rhs, conv_tol=conv_tol)
 
     # orbital-relaxed OPDM (without reference state)
     g1o = g1a.copy()

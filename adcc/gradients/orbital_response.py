@@ -326,16 +326,16 @@ class OrbitalResponsePinv:
         return invec / self.df
 
 
-def orbital_response(hf, rhs):
+def orbital_response(hf, rhs, conv_tol=1e-9, **solver_kwargs):
     """
     Solves the orbital response equations
     for a given reference state and right-hand side
     """
-    # TODO: pass solver arguments
     A = OrbitalResponseMatrix(hf)
     Pinv = OrbitalResponsePinv(hf)
     x0 = (Pinv @ rhs).evaluate()
     lam = conjugate_gradient(A, rhs=rhs, x0=x0, Pinv=Pinv,
+                             conv_tol=conv_tol,
                              explicit_symmetrisation=None,
-                             callback=default_print)
+                             callback=default_print, **solver_kwargs)
     return lam.solution
