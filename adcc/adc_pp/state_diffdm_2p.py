@@ -32,8 +32,11 @@ from .util import (
     check_doubles_amplitudes, check_singles_amplitudes, check_triples_amplitudes
 )
 
+from typing import Optional, Union
 
-def diffdm_isr0_2p(mp, amplitude, intermediates):
+
+def diffdm_isr0_2p(mp: LazyMp, amplitude: AmplitudeVector,
+                   intermediates: Intermediates) -> TwoParticleDensity:
     check_singles_amplitudes([b.o, b.v], amplitude)
     u1 = amplitude.ph
 
@@ -60,7 +63,8 @@ def diffdm_isr0_2p(mp, amplitude, intermediates):
     return dm
 
 
-def diffdm_isr1s_2p(mp, amplitude, intermediates):
+def diffdm_isr1s_2p(mp: LazyMp, amplitude: AmplitudeVector,
+                    intermediates: Intermediates) -> TwoParticleDensity:
     dm = diffdm_isr0_2p(mp, amplitude, intermediates)  # Get ISR(0) result
     u1 = amplitude.ph
 
@@ -96,7 +100,8 @@ def diffdm_isr1s_2p(mp, amplitude, intermediates):
     return dm
 
 
-def diffdm_isr1_2p(mp, amplitude, intermediates):
+def diffdm_isr1_2p(mp: LazyMp, amplitude: AmplitudeVector,
+                   intermediates: Intermediates) -> TwoParticleDensity:
     dm = diffdm_isr1s_2p(mp, amplitude, intermediates)  # Get ISR(1)-s result
 
     try:
@@ -127,7 +132,8 @@ def diffdm_isr1_2p(mp, amplitude, intermediates):
     return dm
 
 
-def diffdm_isr2d_2p(mp, amplitude, intermediates):
+def diffdm_isr2d_2p(mp: LazyMp, amplitude: AmplitudeVector,
+                    intermediates: Intermediates) -> TwoParticleDensity:
     dm = diffdm_isr1_2p(mp, amplitude, intermediates)  # Get ISR(1) result
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
     u1, u2 = amplitude.ph, amplitude.pphh
@@ -390,7 +396,9 @@ DISPATCH = {
 }
 
 
-def state_diffdm_2p(method, ground_state, amplitude, intermediates=None):
+def state_diffdm_2p(method: Union[str, IsrMethod], ground_state: LazyMp,
+                    amplitude: AmplitudeVector,
+                    intermediates: Optional[Intermediates] = None):
     """
     Compute the two-particle difference density matrix of an excited state
     in the MO basis.
