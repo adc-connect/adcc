@@ -73,12 +73,28 @@ class AdcType(Enum):
     def to_str(self) -> str:
         return self.value
 
+    @classmethod
+    def is_valid_adc_type(cls, adc_type: str) -> bool:
+        try:
+            cls(adc_type)
+            return True
+        except ValueError:
+            return False
+
 
 class GroundStateType(Enum):
     MP = "mp"
 
     def to_str(self) -> str:
         return self.value
+
+    @classmethod
+    def is_valid_gs_type(cls, gs_type: str) -> bool:
+        try:
+            cls(gs_type)
+            return True
+        except ValueError:
+            return False
 
 
 class Method:
@@ -88,9 +104,16 @@ class Method:
     special_levels: tuple[MethodLevel, ...] = tuple()
 
     def __init__(self, method: str):
+        """
+        Constructs a Method validating and decomposing the given method string.
+        Valid method strings are of the form
+        [prefixes]-[adc_type]-[method_base_name][level]
+        with the individual components separated by '-'.
+        """
         assert self._method_base_name is not None
 
-        # validate base method type
+        # validate base method type, which has to be the last part of the
+        # method string
         split = method.split("-")
         if not split[-1].startswith(self._method_base_name):
             raise ValueError(f"{split[-1]} is not a valid method type")
@@ -103,39 +126,50 @@ class Method:
             self.level: MethodLevel = MethodLevel(level)
 
         split = split[:-1]
-        # validate and set the adc_type
-        try:
+        # validate and set the adc_type, which has to be the last entry of split,
+        # i.e., the method string has to end with e.g. ip-adc2
+        self.adc_type: AdcType = AdcType.PP
+        if split and AdcType.is_valid_adc_type(split[-1]):
             self.adc_type: AdcType = AdcType(split[-1])
             split = split[:-1]
-        except (ValueError, IndexError):
-            self.adc_type: AdcType = AdcType("pp")
-
-        self._validate_level(self.level)
+        # Therefore, all remaining prefixes at this point can not be
+        # a valid adc_type
+        if any(AdcType.is_valid_adc_type(pref) for pref in split):
+            raise ValueError(
+                f"Invalid method string {method}. ADC type (e.g. 'pp') either "
+                "provided twice or in wrong position. Valid method strings "
+                f"have to end with e.g. 'pp-adc2'."
+            )
         # validate prefixes
         valid_prefixes: tuple[str, ...] = ("cvs", "mp")
-        if len(split) > len(valid_prefixes):
-            raise ValueError("Invalid number of method prefixes provided "
-                             f"in {split}.")
         if any(pref not in valid_prefixes for pref in split):
-            raise ValueError(f"Invalid method prefix in {split}.")
+            raise ValueError(f"Invalid method prefix in {split}. Valid prefixes "
+                             f"are {valid_prefixes}.")
         if any(count != 1 for count in Counter(split).values()):
             raise ValueError(f"Invalid method string {method}. Duplicate "
                              f"prefix detected in {split}.")
         # set and remove cvs
         self.is_core_valence_separated: bool = "cvs" in split
-        if "cvs" in split:
+        if self.is_core_valence_separated:
             split.remove("cvs")
-        # finally set and validate gs type (the only allowed prefix left
-        # at this point)
+        # deal with the gs_type
+        self.gs_type: GroundStateType = GroundStateType.MP
+        for pref in split:
+            if GroundStateType.is_valid_gs_type(pref):
+                self.gs_type: GroundStateType = GroundStateType(pref)
+                split.remove(pref)
+                break
+        # The remaining prefixes can not be a ground state type anymore
+        if any(GroundStateType.is_valid_gs_type(pref) for pref in split):
+            raise ValueError(f"Invalid method string {method}. Ground state "
+                             "type (e.g. 'mp') provided twice.")
+        # at this point all prefixes should have been handled and removed
         if split:
-            self.gs_type: GroundStateType = GroundStateType(split[0])
-            split.pop(0)
-        else:
-            self.gs_type: GroundStateType = GroundStateType("mp")
-        # at this point all prefixes should have been handled
-        if split:
-            raise ValueError(f"Invalid prefix in {split} detected."
-                             f"Parsed from method string {method}.")
+            raise ValueError(f"Invalid method prefixes detected: {split}."
+                             f"Parsed from method string '{method}'.")
+        # ensure that the level is valid for the given method
+        # this also depends on the adc type, gs_type and possibly other prefixes
+        self._validate_level(self.level)
 
     def _validate_level(self, level: MethodLevel) -> None:
         if isinstance(level.value, int) and level.value <= self.max_level:
@@ -145,7 +179,7 @@ class Method:
         if level in self.special_levels:
             return
 
-        raise NotImplementedError(f"{self._base_method} is not implemented.")
+        raise NotImplementedError(f"{self.name} method is not implemented.")
 
     @property
     def name(self) -> str:
