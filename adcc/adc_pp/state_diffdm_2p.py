@@ -373,7 +373,7 @@ def diffdm_isr2d_2p(mp: LazyMp, amplitude: AmplitudeVector,
 
 def diffdm_isr2_2p(mp: LazyMp, amplitude: AmplitudeVector,
                    intermediates: Intermediates) -> TwoParticleDensity:
-    dm = diffdm_isr2d_2p(mp, amplitude, intermediates)  # Get ISR(1) result
+    dm = diffdm_isr2d_2p(mp, amplitude, intermediates)  # Get ISR(2)-d result
     # evaluate additional contributions from the S-T block
     # if the vector has a triples component
     try:
