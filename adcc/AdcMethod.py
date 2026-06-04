@@ -97,11 +97,14 @@ class GroundStateType(Enum):
             return False
 
 
+_level_key = tuple[AdcType, GroundStateType, bool]
+
+
 class Method:
     # this has to be set on the child classes
     _method_base_name: Optional[str] = None
-    max_level: int = 0
-    special_levels: tuple[MethodLevel, ...] = tuple()
+    _max_levels: dict[_level_key, int] = {}
+    _special_levels: dict[_level_key, tuple[MethodLevel, ...]] = {}
 
     def __init__(self, method: str):
         """
@@ -172,13 +175,18 @@ class Method:
         self._validate_level(self.level)
 
     def _validate_level(self, level: MethodLevel) -> None:
-        if isinstance(level.value, int) and level.value <= self.max_level:
-            return
-
-        # special cases
-        if level in self.special_levels:
-            return
-
+        # the common key for the lookup of the max level and special level
+        # depending on the parsed method string
+        key = (self.adc_type, self.gs_type, self.is_core_valence_separated)
+        if isinstance(level.value, int):
+            max_level = self._max_levels.get(key, None)
+            if max_level is not None and level.value <= max_level:
+                return
+        else:
+            # we have a special method
+            special_levels = self._special_levels.get(key, None)
+            if special_levels is not None and level in special_levels:
+                return
         raise NotImplementedError(f"{self.name} method is not implemented.")
 
     @property
@@ -260,11 +268,31 @@ class Method:
 
 class AdcMethod(Method):
     _method_base_name = "adc"
-    max_level = 3
-    special_levels = (MethodLevel.TWO_X,)
+    _max_levels = {
+        # adc_type,      gs_type,         cvs
+        (AdcType.PP, GroundStateType.MP, False): 3,
+        (AdcType.PP, GroundStateType.MP, True): 3
+    }
+    _special_levels = {
+        # adc_type,      gs_type,         cvs
+        (AdcType.PP, GroundStateType.MP, False): (MethodLevel.TWO_X,),
+        (AdcType.PP, GroundStateType.MP, True): (MethodLevel.TWO_X,)
+    }
 
 
 class IsrMethod(Method):
     _method_base_name = "isr"
-    max_level = 2
-    special_levels = (MethodLevel.ONE_S, MethodLevel.TWO_D)
+    _max_levels = {
+        # adc_type,      gs_type,         cvs
+        (AdcType.PP, GroundStateType.MP, False): 2,
+        (AdcType.PP, GroundStateType.MP, True): 2
+    }
+    _special_levels = {
+        # adc_type,      gs_type,         cvs
+        (AdcType.PP, GroundStateType.MP, False): (
+            MethodLevel.ONE_S, MethodLevel.TWO_D
+        ),
+        (AdcType.PP, GroundStateType.MP, True): (
+            MethodLevel.ONE_S, MethodLevel.TWO_D
+        )
+    }
