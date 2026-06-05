@@ -21,6 +21,7 @@
 ##
 ## ---------------------------------------------------------------------
 from collections import Counter
+from dataclasses import dataclass
 from typing import Any, Optional, Union, TypeVar
 from enum import Enum
 
@@ -97,14 +98,28 @@ class GroundStateType(Enum):
             return False
 
 
-_level_key = tuple[AdcType, GroundStateType, bool]
+@dataclass(frozen=True)
+class LevelSpec:
+    max_level: Optional[int] = None
+    special_levels: tuple[MethodLevel, ...] = tuple()
+
+    def supports(self, level: MethodLevel) -> bool:
+        if isinstance(level.value, int):
+            return self.max_level is not None and level.value <= self.max_level
+        return level in self.special_levels
+
+
+@dataclass(frozen=True)
+class LevelKey:
+    adc_type: AdcType
+    gs_type: GroundStateType
+    cvs: bool
 
 
 class Method:
     # this has to be set on the child classes
     _method_base_name: Optional[str] = None
-    _max_levels: dict[_level_key, int] = {}
-    _special_levels: dict[_level_key, tuple[MethodLevel, ...]] = {}
+    _supported_levels: dict[LevelKey, LevelSpec] = {}
 
     def __init__(self, method: str):
         """
@@ -175,18 +190,13 @@ class Method:
         self._validate_level(self.level)
 
     def _validate_level(self, level: MethodLevel) -> None:
-        # the common key for the lookup of the max level and special level
-        # depending on the parsed method string
-        key = (self.adc_type, self.gs_type, self.is_core_valence_separated)
-        if isinstance(level.value, int):
-            max_level = self._max_levels.get(key, None)
-            if max_level is not None and level.value <= max_level:
-                return
-        else:
-            # we have a special method
-            special_levels = self._special_levels.get(key, None)
-            if special_levels is not None and level in special_levels:
-                return
+        key = LevelKey(
+            adc_type=self.adc_type, gs_type=self.gs_type,
+            cvs=self.is_core_valence_separated
+        )
+        spec = self._supported_levels.get(key, None)
+        if spec is not None and spec.supports(level):
+            return
         raise NotImplementedError(f"{self.name} method is not implemented.")
 
     @property
@@ -268,31 +278,43 @@ class Method:
 
 class AdcMethod(Method):
     _method_base_name = "adc"
-    _max_levels = {
-        # adc_type,      gs_type,         cvs
-        (AdcType.PP, GroundStateType.MP, False): 3,
-        (AdcType.PP, GroundStateType.MP, True): 3
-    }
-    _special_levels = {
-        # adc_type,      gs_type,         cvs
-        (AdcType.PP, GroundStateType.MP, False): (MethodLevel.TWO_X,),
-        (AdcType.PP, GroundStateType.MP, True): (MethodLevel.TWO_X,)
+    _supported_levels = {
+        LevelKey(
+            adc_type=AdcType.PP,
+            gs_type=GroundStateType.MP,
+            cvs=False
+        ): LevelSpec(
+            max_level=3,
+            special_levels=(MethodLevel.TWO_X,)
+        ),
+        LevelKey(
+            adc_type=AdcType.PP,
+            gs_type=GroundStateType.MP,
+            cvs=True
+        ): LevelSpec(
+            max_level=3,
+            special_levels=(MethodLevel.TWO_X,)
+        )
     }
 
 
 class IsrMethod(Method):
     _method_base_name = "isr"
-    _max_levels = {
-        # adc_type,      gs_type,         cvs
-        (AdcType.PP, GroundStateType.MP, False): 2,
-        (AdcType.PP, GroundStateType.MP, True): 2
-    }
-    _special_levels = {
-        # adc_type,      gs_type,         cvs
-        (AdcType.PP, GroundStateType.MP, False): (
-            MethodLevel.ONE_S, MethodLevel.TWO_D
+    _supported_levels = {
+        LevelKey(
+            adc_type=AdcType.PP,
+            gs_type=GroundStateType.MP,
+            cvs=False
+        ): LevelSpec(
+            max_level=2,
+            special_levels=(MethodLevel.ONE_S, MethodLevel.TWO_D)
         ),
-        (AdcType.PP, GroundStateType.MP, True): (
-            MethodLevel.ONE_S, MethodLevel.TWO_D
+        LevelKey(
+            adc_type=AdcType.PP,
+            gs_type=GroundStateType.MP,
+            cvs=True
+        ): LevelSpec(
+            max_level=2,
+            special_levels=(MethodLevel.ONE_S, MethodLevel.TWO_D)
         )
     }
