@@ -379,21 +379,7 @@ class LazyMp:
         mp2_dm = self.mp2_dm_correction
         mp3_dm = self.mp3_dm_correction
 
-        ret.oo = (
-            mp2_dm.oo  # 2nd order
-            # 3rd order
-            + mp3_dm.oo
-        )
-        ret.ov = (
-            mp2_dm.ov  # 2nd order
-            + mp3_dm.ov  # 3rd order
-        )
-        ret.vv = (
-            mp2_dm.vv  # 2nd order
-            # 3rd order
-            + mp3_dm.vv
-        )
-        return evaluate(ret)
+        return evaluate(mp2_dm + mp3_dm)
 
     @cached_property
     @timed_member_call(timer="timer")
