@@ -33,7 +33,7 @@ from . import testcases
 from .testdata_cache import testdata_cache
 
 # The methods to test
-methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+methods = ["adc0", "adc1", "adc2", "adc2x", "adc3", "adc4"]
 
 # The different reference data that we test against
 generators = ["adcman", "adcc"]
@@ -53,6 +53,8 @@ cases = [
 class TestFunctionality:
     def base_test(self, system: testcases.TestCase, case: str, method: str,
                   kind: str, generator: str, **args):
+        if "cvs" in case and method == "adc4":
+            pytest.skip("CVS-ADC(4) not implemented")
         # build a ReferenceState that is already aware of the case (cvs/...)
         hf = testdata_cache.refstate(system, case=case)
         # load the adc refdata
@@ -125,6 +127,8 @@ class TestFunctionality:
 
     def test_functionality(self, system: str, case: str, method: str, kind: str,
                            generator: str):
+        if "cvs" in case and method == "adc4":
+            pytest.skip("CVS-ADC(4) not implemented")
         method: adcc.AdcMethod = adcc.AdcMethod(method)
         if generator == "adcman" and "cvs" in case \
                 and method.level.to_int() == 0:

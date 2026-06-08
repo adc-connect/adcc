@@ -198,7 +198,8 @@ def generate_hf_631g():
     # UHF, Triplet
     test_case = testcases.get(n_expected_cases=1, name="hf").pop()
     generate_groundstate(test_case)
-    for method in _methods["pp"]:
+    methods_incl_adc4 = list(_methods["pp"]) + ["adc4"]
+    for method in methods_incl_adc4:
         method = AdcMethod(method)
         for n_states in \
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
@@ -212,9 +213,9 @@ def generate_hf_631g():
 def main():
     generate_h2o_sto3g()
     # generate_h2o_def2tzvp()
-    # generate_cn_sto3g()
+    generate_cn_sto3g()
     # generate_cn_ccpvdz()
-    # generate_hf_631g()
+    generate_hf_631g()
 
 
 if __name__ == "__main__":

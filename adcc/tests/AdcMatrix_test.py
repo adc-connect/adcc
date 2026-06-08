@@ -131,7 +131,7 @@ class TestBlockOrders:
             {"ph_ph": 3, "ph_pphh": 2, "pphh_ph": 2, "pphh_pphh": 1},  # adc3
             {"ph_ph": 4, "ph_pphh": 3, "pphh_ph": 3, "pphh_pphh": 2,
              "ph_ppphhh": 2, "ppphhh_ph": 2, "pphh_ppphhh": 1,
-             "ppphhh_pphh": 1, "ppphhh_ppphhh": 0}, # adc4
+             "ppphhh_pphh": 1, "ppphhh_ppphhh": 0},  # adc4
         )
         for block_orders in valid_block_orders:
             AdcMatrixlike._validate_block_orders(block_orders, AdcMethod("adc0"))
@@ -202,7 +202,6 @@ class TestAdcMatrix:
         )
         blocks = states.matrix.axis_blocks
         out = states.excitation_vector[0].copy()
-        print(out.ppphhh.describe_symmetry())
         out[blocks[0]].set_from_ndarray(matdata["random_singles"])
         if len(blocks) > 1:
             out[blocks[1]].set_from_ndarray(matdata["random_doubles"])
@@ -252,6 +251,9 @@ class TestAdcMatrix:
         if "matvec_doubles" in matdata:
             assert_allclose(matdata["matvec_doubles"], result.pphh.to_ndarray(),
                             rtol=1e-10, atol=1e-12)
+        if "matvec_triples" in matdata:
+            assert_allclose(matdata["matvec_triples"], result.ppphhh.to_ndarray(),
+                            rtol=1e-10, atol=1e-12)
 
     def test_compute_block(self, system: str, case: str, method: str):
         if "cvs" in case and method == "adc4":
@@ -271,8 +273,8 @@ class TestAdcMatrix:
             system, case=case, method=method, kind=kind
         )
         blocks = matrix.axis_blocks
-        for b1, i1 in [("s", 0), ("d", 1)][:len(blocks)]:
-            for b2, i2 in [("s", 0), ("d", 1)][:len(blocks)]:
+        for b1, i1 in [("s", 0), ("d", 1), ("t", 2)][:len(blocks)]:
+            for b2, i2 in [("s", 0), ("d", 1), ("t", 2)][:len(blocks)]:
                 res = matrix.block_apply(
                     f"{blocks[i1]}_{blocks[i2]}", trial_vec[blocks[i2]]
                 )
