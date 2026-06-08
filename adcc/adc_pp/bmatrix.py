@@ -133,6 +133,9 @@ def block_pphh_ph_0(ground_state, op):
 block_ph_ph_1 = block_ph_ph_0
 
 
+block_pphh_pphh_1 = block_pphh_pphh_0
+
+
 #
 # 1st order coupling
 #
@@ -183,12 +186,6 @@ def block_pphh_ph_1(ground_state, op):
 
 
 #
-# 1st order doubles block
-#
-block_pphh_pphh_1 = block_pphh_pphh_0
-
-
-#
 # 2nd order main
 #
 def block_ph_ph_2(ground_state, op):
@@ -231,7 +228,7 @@ def block_ph_ph_2(ground_state, op):
 
 
 #
-# Second order coupling
+# 2nd order coupling
 #
 def block_ph_pphh_2(ground_state, op):
 
@@ -357,27 +354,21 @@ def block_pphh_ph_2(ground_state, op):
         return AmplitudeVector(
             pphh=0.5 * (
                 # zeroth order
-                # Apply (1 - P_ij - P_ab + P_ijP_ab) to:
                 4 * einsum(
                     "ja,bi->ijab", ur1, d_vo
                 ).antisymmetrise(0, 1).antisymmetrise(2, 3)
                 # N^4: O^2V^2 / N^4: O^2V^2
-                # first order
-                # Apply (1 - P_ij - P_ab + P_ijP_ab) to:
                 + 4 * einsum(
                     "jb,ia->ijab", einsum("jkbc,kc->jb", t2_1, d_ov), ur1
                 ).antisymmetrise(0, 1).antisymmetrise(2, 3)
                 # N^4: O^2V^2 / N^4: O^2V^2
-                # Apply (1 - P_ab) to:
                 + 2 * einsum(
                     "ijkb,ka->ijab", einsum("ijbc,kc->ijkb", t2_1, d_ov), ur1
                 ).antisymmetrise(2, 3)  # N^5: O^3V^2 / N^4: O^2V^2
-                # Apply (1 - P_ij) to:
                 + 2 * einsum(
                     "ik,jkab->ijab", einsum("ic,kc->ik", ur1, d_ov), t2_1
                 ).antisymmetrise(0, 1)  # N^5: O^3V^2 / N^4: O^2V^2
                 # second order
-                # Apply (1 - P_ij - P_ab + P_ijP_ab) to:
                 + 4 * (
                     +1 * einsum(
                         "jb,ia->ijab", einsum("kb,kj->jb", t1_2, d_oo), ur1
@@ -404,7 +395,6 @@ def block_pphh_ph_2(ground_state, op):
                         "ijkb,ak->ijab", einsum("ic,jbkc->ijkb", ur1, t2sq), d_vo
                     )  # N^5: O^3V^2 / N^4: O^2V^2
                 ).antisymmetrise(0, 1).antisymmetrise(2, 3)
-                # Apply (1 - P_ab) to:
                 + 2 * (
                     +1 * einsum(
                         "ijkb,ka->ijab", einsum("ijbc,kc->ijkb", t2_2, d_ov), ur1
@@ -431,7 +421,6 @@ def block_pphh_ph_2(ground_state, op):
                         ), d_vo,
                     )  # N^6: O^4V^2 / N^4: O^2V^2
                 ).antisymmetrise(2, 3)
-                # Apply (1 - P_ij) to:
                 + 2 * (
                     +1 * einsum(
                         "ik,jkab->ijab", einsum("ic,kc->ik", ur1, d_ov), t2_2
@@ -461,7 +450,7 @@ def block_pphh_ph_2(ground_state, op):
 
 
 #
-# Third order main
+# 3rd order main
 #
 def block_ph_ph_3(ground_state, op):
 

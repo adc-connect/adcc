@@ -206,6 +206,28 @@ class TestLazyMp:
                         refmp["mp2"]["td_o1o1v1v1"], atol=1e-12)
         assert "td2/o1o1v1v1" in instances.get(system, case).timer.tasks
 
+    @pytest.mark.parametrize("system,case", cases)
+    @pytest.mark.parametrize("generator", generators)
+    def test_td3(self, system: str, case: str, generator: str,
+                 instances: LazyMpCache):
+        refmp = testdata_cache._load_data(
+            system=system, method="mp", case=case, source=generator
+        )
+        assert_allclose(instances.get(system, case).td3("o1o1v1v1").to_ndarray(),
+                        refmp["mp3"]["td_o1o1v1v1"], atol=1e-12)
+        assert "td3/o1o1v1v1" in instances.get(system, case).timer.tasks
+
+    @pytest.mark.parametrize("system,case", cases)
+    @pytest.mark.parametrize("generator", generators)
+    def test_sigma_inf_ov(self, system: str, case: str, generator: str,
+                          instances: LazyMpCache):
+        refmp = testdata_cache._load_data(
+            system=system, method="mp", case=case, source=generator
+        )
+        assert_allclose(instances.get(system, case).sigma_inf_ov(3).to_ndarray(),
+                        refmp["mp3"]["sigma_inf_ov"], atol=1e-12)
+        assert "sigma_inf_ov/3" in instances.get(system, case).timer.tasks
+
     @pytest.mark.parametrize("system,case,generator", tt2_cases)
     def test_tt2(self, system: str, case: str, generator: str,
                  instances: LazyMpCache):
