@@ -561,8 +561,6 @@ class LazyMp:
 #
 # Register cvs_p0 intermediate
 #
-
-
 @register_as_intermediate
 def cvs_p0(hf, mp, intermediates):
     # NOTE: equal to mp2_diffdm if CVS applied for the density
