@@ -318,3 +318,6 @@ class IsrMethod(Method):
             special_levels=(MethodLevel.ONE_S, MethodLevel.TWO_D)
         )
     }
+    max_level = 3
+    special_levels = (MethodLevel.ONE_S,)
+# TODO ISR3d
