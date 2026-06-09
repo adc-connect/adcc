@@ -749,6 +749,24 @@ class FormatAmplitudeVector:
                     + spin_coeff_gap + self.value_format
                 )
             }
+        elif self.matrix.axis_blocks == ["ph", "pphh", "ppphhh"]:
+            formats = {
+                "ov": (
+                    "{} " + empty_idx + empty_idx + " -> {} " + empty_idx
+                    + empty_idx
+                    + idx_spin_gap + "{}  ->{}  " + spin_coeff_gap
+                    + self.value_format
+                ),
+                "oovv": (
+                    "{} {} " + empty_idx + "-> {} {}" + empty_idx
+                    + idx_spin_gap + "{}{} ->{}{} "
+                    + spin_coeff_gap + self.value_format
+                ),
+                "ooovvv": (
+                    "{} {} {} -> {} {} {}" + idx_spin_gap + "{}{}{}->{}{}{}"
+                    + spin_coeff_gap + self.value_format
+                )
+            }
         else:
             raise NotImplementedError("Unknown ADC matrix structure")
 
