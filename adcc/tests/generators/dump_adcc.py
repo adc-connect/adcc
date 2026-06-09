@@ -49,6 +49,9 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
     # MP3 data
     if not ground_state.has_core_occupied_space:
         gs_data[f"{gs}3/energy"] = ground_state.energy_correction(3)
+    # MP4 data
+    if not ground_state.has_core_occupied_space and not only_full_mode:
+        gs_data[f"{gs}4/energy"] = ground_state.energy_correction(4)
     # MP2 density: MO basis
     diffdm = ground_state.diffdm(2, apply_cvs=False)
     for block in diffdm.blocks_nonzero:
@@ -247,7 +250,6 @@ def dump_matrix_testdata(matrix: AdcMatrix, trial_vec: AmplitudeVector,
     if len(blocks) > 1:
         data["random_doubles"] = trial_vec[blocks[1]].to_ndarray()
     if len(blocks) > 2:
-        print(trial_vec[blocks[2]].describe_symmetry())
         data["random_triples"] = trial_vec[blocks[2]].to_ndarray()
     # write the data to hdf5
     emplace_dict(data, hdf5_file, compression="gzip")

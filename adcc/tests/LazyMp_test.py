@@ -100,7 +100,7 @@ class TestLazyMp:
         with pytest.raises(NotImplementedError):
             mp.td2(b.ccvv)
         with pytest.raises(NotImplementedError):
-            mp.energy_correction(4)
+            mp.energy_correction(5)
 
     #
     # Generic
@@ -143,6 +143,20 @@ class TestLazyMp:
         assert (
             instances.get(system, case).energy_correction(3)
             == approx(refmp["mp3"]["energy"])
+        )
+
+    # MP4 energy not implemented for CVS
+    @pytest.mark.parametrize("system,case", non_cvs_small_cases)
+    # no reference data yet for adcman
+    @pytest.mark.parametrize("generator", "adcc")
+    def test_mp4_energy(self, system: str, case: str, generator: str,
+                        instances: LazyMpCache):
+        refmp = testdata_cache._load_data(
+            system=system, method="mp", case=case, source=generator
+        )
+        assert (
+            instances.get(system, case).energy_correction(4)
+            == approx(refmp["mp4"]["energy"])
         )
 
     # Ssq only implemented for unrestricted case, no adcman reference
@@ -378,13 +392,7 @@ levels = [0, 1, 2, 3]
 class TestGroundstateDensity:
     def calculate_mpn_energy(self, mp, level):
         hf = mp.reference_state
-        if level == 3:
-            # TODO move to ISR(3) implementation
-            with pytest.raises(NotImplementedError):
-                mp.density(level)
-            dens_1p = mp.density(2) + self.mp3_diffdm(mp)
-        else:
-            dens_1p = mp.density(level)
+        dens_1p = mp.density(level)
 
         energy = einsum("pq,pq", hf.foo, dens_1p.oo)
         energy += einsum("pq,pq", hf.fvv, dens_1p.vv)
@@ -412,24 +420,6 @@ class TestGroundstateDensity:
                     "pqrs,pqrs", dens_2p[block], hf.eri(block)
                 )
         return energy
-
-    def mp3_diffdm(self, mp) -> OneParticleDensity:
-        """
-        Return the MP3 difference density in the MO basis.
-        """
-        hf = mp.reference_state
-        # Only calculate the oo and vv block since the hf.fov block is zero anyways.
-        ret = OneParticleDensity(hf.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
-
-        ret.oo = (
-            # 3rd order
-            - einsum("ikab,jkab->ij", mp.t2oo, mp.td2(b.oovv)).symmetrise(0, 1)
-        )
-        ret.vv = (
-            # 3rd order
-            + einsum("ijac,ijbc->ab", mp.t2oo, mp.td2(b.oovv)).symmetrise(0, 1)
-        )
-        return evaluate(ret)
 
     def test_mpn_energy(self, system: str, level: int):
         system: testcases.TestCase = testcases.get_by_filename(system).pop()

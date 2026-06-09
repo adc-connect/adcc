@@ -252,6 +252,8 @@ class LazyMp(GroundState):
                      (1.0, hf.ccvv, self.t2cc)]
         elif level == 3 and not is_cvs:
             terms = [(1.0, hf.oovv, self.td2(b.oovv))]
+        elif level == 4 and not is_cvs:
+            terms = [(1.0, hf.oovv, self.td3(b.oovv))]
         else:
             method = "CVS-MP" if is_cvs else "MP"
             raise NotImplementedError(f"{method} energy correction for level "

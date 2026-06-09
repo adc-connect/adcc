@@ -13,13 +13,13 @@ _testdata_dirname = "data"
 # the base methods for each adc_type for which to generate data
 # the different cases (cvs, fc, ...) are handled in the generate functions.
 _methods = {
-    "pp": ("adc0", "adc1", "adc2", "adc2x", "adc3")
+    "pp": ("adc0", "adc1", "adc2", "adc2x", "adc3", "adc4")
 }
 # Since it seems not possible to only perform an adcman MPn calculation,
 # the ground state data has to be extracted from an adc(n) calculation.
 # The method given below is used for this. The pt order should be rather high
 # to ensure that all desired MP properties are generated.
-_gs_data_method = "adc3"
+_gs_data_method = "adc4"
 # since adc4 is not available as method in adcc and density_order=3
 # does not require the tt2 amplitudes. We either have to use ISR3
 # or density_order=4 to activate the calculation of tt2 amplitudes.
@@ -54,6 +54,12 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     # and it is not available for cvs-adc
     if gs_density_order is not None and \
             (method.level.to_int() < 3 or "cvs" in case):
+        return None
+    # CVS-ADC(4) not available
+    if "cvs" in case and method.name == "adc4":
+        return None
+    # Generate adc4 reference only for small testcases
+    if test_case.only_full_mode and method.name == "adc4":
         return None
     print(f"Generating {method.name} (gs_density_order={gs_density_order}) "
           f"data for {case} {test_case.file_name}.")
