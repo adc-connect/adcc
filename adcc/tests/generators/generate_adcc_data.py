@@ -126,7 +126,7 @@ def generate_h2o_sto3g():
         for n_states in \
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
             per_case = None
-            if method.level < 2:  # adc0/adc1
+            if method.level.to_int() < 2:  # adc0/adc1
                 per_case = {
                     case: {n_states: n} for case, n in states_per_case.items()
                 }
@@ -135,7 +135,7 @@ def generate_h2o_sto3g():
             # 4 states available
             # -> reduce n_guesses for all ADC(2) and ADC(3) calculations
             kwargs = {}
-            if method.level >= 2:
+            if method.level.to_int() >= 2:
                 kwargs = {"n_guesses": 4}
             generate_adc_all(
                 test_case, method=method, dump_nstates=2, states_per_case=per_case,

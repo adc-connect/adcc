@@ -20,19 +20,23 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from adcc import block as b
-from adcc.LazyMp import LazyMp
-from adcc.AdcMethod import IsrMethod
-from adcc.functions import einsum, zeros_like
-from adcc.Intermediates import Intermediates
-from adcc.AmplitudeVector import AmplitudeVector
-from adcc.TwoParticleDensity import TwoParticleDensity
-from adcc.NParticleOperator import OperatorSymmetry
+from .. import block as b
+from ..LazyMp import LazyMp
+from ..AdcMethod import IsrMethod
+from ..functions import einsum, zeros_like
+from ..Intermediates import Intermediates
+from ..AmplitudeVector import AmplitudeVector
+from ..TwoParticleDensity import TwoParticleDensity
+from ..NParticleOperator import OperatorSymmetry
+from .util import (
+    check_doubles_amplitudes, check_singles_amplitudes, check_triples_amplitudes
+)
 
-from .util import check_doubles_amplitudes, check_singles_amplitudes
+from typing import Optional, Union
 
 
-def diffdm_isr0_2p(mp, amplitude, intermediates):
+def diffdm_isr0_2p(mp: LazyMp, amplitude: AmplitudeVector,
+                   intermediates: Intermediates) -> TwoParticleDensity:
     check_singles_amplitudes([b.o, b.v], amplitude)
     u1 = amplitude.ph
 
@@ -59,7 +63,8 @@ def diffdm_isr0_2p(mp, amplitude, intermediates):
     return dm
 
 
-def diffdm_isr1s_2p(mp, amplitude, intermediates):
+def diffdm_isr1s_2p(mp: LazyMp, amplitude: AmplitudeVector,
+                    intermediates: Intermediates) -> TwoParticleDensity:
     dm = diffdm_isr0_2p(mp, amplitude, intermediates)  # Get ISR(0) result
     u1 = amplitude.ph
 
@@ -95,7 +100,8 @@ def diffdm_isr1s_2p(mp, amplitude, intermediates):
     return dm
 
 
-def diffdm_isr1_2p(mp, amplitude, intermediates):
+def diffdm_isr1_2p(mp: LazyMp, amplitude: AmplitudeVector,
+                   intermediates: Intermediates) -> TwoParticleDensity:
     dm = diffdm_isr1s_2p(mp, amplitude, intermediates)  # Get ISR(1)-s result
 
     try:
@@ -126,7 +132,8 @@ def diffdm_isr1_2p(mp, amplitude, intermediates):
     return dm
 
 
-def diffdm_isr2_2p(mp, amplitude, intermediates):
+def diffdm_isr2d_2p(mp: LazyMp, amplitude: AmplitudeVector,
+                    intermediates: Intermediates) -> TwoParticleDensity:
     dm = diffdm_isr1_2p(mp, amplitude, intermediates)  # Get ISR(1) result
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
     u1, u2 = amplitude.ph, amplitude.pphh
@@ -364,16 +371,34 @@ def diffdm_isr2_2p(mp, amplitude, intermediates):
     return dm
 
 
+def diffdm_isr2_2p(mp: LazyMp, amplitude: AmplitudeVector,
+                   intermediates: Intermediates) -> TwoParticleDensity:
+    dm = diffdm_isr2d_2p(mp, amplitude, intermediates)  # Get ISR(2)-d result
+    # evaluate additional contributions from the S-T block
+    # if the vector has a triples component
+    try:
+        check_triples_amplitudes([b.o, b.o, b.o, b.v, b.v, b.v], amplitude)
+    except ValueError:
+        return dm
+    u1, u3 = amplitude.ph, amplitude.ppphhh
+    # N^6: O^3V^3 / N^6: O^3V^3
+    dm.oovv += - 6 * einsum("kc,ijkabc->ijab", u1, u3)
+    return dm
+
+
 # dict controlling the dispatch of the state_diffdm function
 DISPATCH = {
     "isr0": diffdm_isr0_2p,
     "isr1s": diffdm_isr1s_2p,
     "isr1": diffdm_isr1_2p,
+    "isr2d": diffdm_isr2d_2p,
     "isr2": diffdm_isr2_2p,
 }
 
 
-def state_diffdm_2p(method, ground_state, amplitude, intermediates=None):
+def state_diffdm_2p(method: Union[str, IsrMethod], ground_state: LazyMp,
+                    amplitude: AmplitudeVector,
+                    intermediates: Optional[Intermediates] = None):
     """
     Compute the two-particle difference density matrix of an excited state
     in the MO basis.

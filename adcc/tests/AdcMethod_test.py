@@ -22,12 +22,16 @@
 ## ---------------------------------------------------------------------
 import pytest
 
-import adcc
+from adcc.AdcMethod import AdcMethod, AdcType, GroundStateType, IsrMethod
+
 
 adc_methods = [("adc1", None), ("adc2x", None), ("cvs-adc3", None),
                ("adc", ValueError), ("cvs_adc2", ValueError),
                ("xyz-adc2", ValueError), ("adc5", NotImplementedError),
-               ("isr2", ValueError)]
+               ("isr2", ValueError), ("mp-adc2", None), ("cvs-mp-adc2", None),
+               ("cvs-cvs-adc2", ValueError), ("adcc", ValueError),
+               ("pp-adc2", None), ("ee-adc2", ValueError),
+               ("mp-pp-adc2", None), ("pp-mp-adc2", ValueError)]
 
 isr_methods = [("isr1", None), ("cvs-isr2", None),
                ("adc", ValueError), ("cvs_isr2", ValueError),
@@ -40,23 +44,32 @@ class TestAdcMethod:
     def test_validate_adcmethod(self, method, expected_exception):
         if expected_exception:
             with pytest.raises(expected_exception):
-                adcc.AdcMethod(method)
+                AdcMethod(method)
         else:
-            adc_method = adcc.AdcMethod(method)
-            assert adc_method.name == method
+            adc_method = AdcMethod(method)
+            assert adc_method.name == method.replace("mp-", "").replace("pp-", "")
+            assert adc_method.adc_type is AdcType.PP
+            assert adc_method.gs_type is GroundStateType.MP
 
     def test_adcmethod(self):
-        method = adcc.AdcMethod("adc2")
-        cvs_method = adcc.AdcMethod("cvs-adc2")
+        method = AdcMethod("adc2")
+        cvs_method = AdcMethod("cvs-adc2")
 
         assert method.name == cvs_method.base_method.name
+        assert method.adc_type is AdcType.PP
+        assert method.gs_type is GroundStateType.MP
 
         method_new_level = method.at_level(1)
         assert method_new_level._method_base_name == method._method_base_name
         assert method_new_level.level.to_int() == 1
+        assert method_new_level.adc_type is AdcType.PP
+        assert method_new_level.gs_type is GroundStateType.MP
 
-        as_isr_method = method.as_method(adcc.IsrMethod)
-        assert isinstance(as_isr_method, adcc.IsrMethod)
+        as_isr_method = method.as_method(IsrMethod)
+        assert isinstance(as_isr_method, IsrMethod)
+        assert as_isr_method.name == "isr2"
+        assert as_isr_method.adc_type is AdcType.PP
+        assert as_isr_method.gs_type is GroundStateType.MP
 
 
 class TestIsrMethod:
@@ -64,20 +77,26 @@ class TestIsrMethod:
     def test_validate_isrmethod(self, method, expected_exception):
         if expected_exception:
             with pytest.raises(expected_exception):
-                adcc.IsrMethod(method)
+                IsrMethod(method)
         else:
-            isr_method = adcc.IsrMethod(method)
+            isr_method = IsrMethod(method)
             assert isr_method.name == method
+            assert isr_method.adc_type is AdcType.PP
+            assert isr_method.gs_type is GroundStateType.MP
 
     def test_isrmethod(self):
-        method = adcc.IsrMethod("isr2")
-        cvs_method = adcc.IsrMethod("cvs-isr2")
+        method = IsrMethod("isr2")
+        cvs_method = IsrMethod("cvs-isr2")
 
         assert method.name == cvs_method.base_method.name
 
         method_new_level = method.at_level(1)
         assert method_new_level._method_base_name == method._method_base_name
         assert method_new_level.level.to_int() == 1
+        assert method.adc_type is AdcType.PP
+        assert method.gs_type is GroundStateType.MP
 
-        as_adc_method = method.as_method(adcc.AdcMethod)
-        assert isinstance(as_adc_method, adcc.AdcMethod)
+        as_adc_method = method.as_method(AdcMethod)
+        assert isinstance(as_adc_method, AdcMethod)
+        assert as_adc_method.adc_type is AdcType.PP
+        assert as_adc_method.gs_type is GroundStateType.MP

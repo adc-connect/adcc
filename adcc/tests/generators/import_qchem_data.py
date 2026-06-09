@@ -1,4 +1,4 @@
-from adcc.AdcMethod import AdcMethod
+from adcc.AdcMethod import AdcMethod, AdcType
 from adcc.hdf5io import _extract_dataset
 
 from collections.abc import Hashable
@@ -73,7 +73,7 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
     """
     # define the possible state kinds to import for each adc variant.
     state_kinds = {
-        "pp": [
+        AdcType.PP: [
             ("singlets", True), ("triplets", True),  # restricted
             # uhf and spin flip are located in the same ".../uhf/..." subtree
             ("any_or_spinflip", False),  # unrestricted
@@ -115,7 +115,7 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
 
 
 def _import_excited_states(context: h5py.File, method: str, only_full_mode: bool,
-                           adc_type: str = "pp",
+                           adc_type: AdcType = AdcType.PP,
                            import_nstates: int | None = None,
                            state_kind: str | None = None, restricted: bool = True,
                            dims_pref: str = "dims/") -> None | dict[str, Any]:
@@ -135,7 +135,7 @@ def _import_excited_states(context: h5py.File, method: str, only_full_mode: bool
         Indicates whether the data to read is for a test case that only
         runs in full mode. Since these systems are typically quite large
         one might not want to import all data for these cases.
-    adc_type: str, optional
+    adc_type: AdcType, optional
         Which type of adc calculation has been performed, e.g., pp.
     import_nstates: int, optional
         Only import the first n states from the context.
@@ -150,7 +150,7 @@ def _import_excited_states(context: h5py.File, method: str, only_full_mode: bool
         prefix to the context tree of the object.
     """
     # build the path under which to find the exicted states
-    tree = [f"adc_{adc_type}", method]
+    tree = [f"adc_{adc_type.to_str()}", method]
     if restricted:
         assert state_kind is not None  # needs to be defined for restricted calcs
         tree.extend(["rhf", state_kind])
@@ -208,7 +208,7 @@ def _import_excited_states(context: h5py.File, method: str, only_full_mode: bool
 
 def _import_state_to_state_data(context: h5py.File, method: str,
                                 only_full_mode: bool,
-                                adc_type: str = "pp",
+                                adc_type: AdcType = AdcType.PP,
                                 import_nstates: int | None = None,
                                 state_kind: str | None = None,
                                 restricted: bool = True,
@@ -230,7 +230,7 @@ def _import_state_to_state_data(context: h5py.File, method: str,
         Indicates whether the data to read is for a test case that only
         runs in full mode. Since these systems are typically quite large
         one might not want to import all data for these cases.
-    adc_type: str, optional
+    adc_type: AdcType, optional
         Which type of adc calculation has been performed, e.g., pp.
     import_nstates: int, optional
         Only import the first n states from the context.
@@ -245,7 +245,7 @@ def _import_state_to_state_data(context: h5py.File, method: str,
         prefix to the context tree of the object.
     """
     # build the path under which to look for the state-to-state data.
-    tree = [f"adc_{adc_type}", method]
+    tree = [f"adc_{adc_type.to_str()}", method]
     if restricted:
         assert state_kind is not None  # needs to be defined for restricted calcs
         tree.extend(["rhf", "isr", state_kind])

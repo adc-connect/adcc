@@ -24,6 +24,7 @@ import numpy as np
 from scipy import constants
 
 from .import adc_pp
+from .AdcMethod import AdcType
 from .ElectronicStates import TableColumn
 from .ElectronicTransition import ElectronicTransition
 from .functions import dot
@@ -35,7 +36,7 @@ class ExcitedStates(ElectronicTransition):
     def __init__(self, data, method: str = None, property_method: str = None):
         super().__init__(data, method, property_method)
 
-        if self.method.adc_type != "pp":
+        if self.method.adc_type is not AdcType.PP:
             raise ValueError("ExcitedStates computes excited state properties "
                              "for PP-ADC. Got the non-PP-ADC method "
                              f"{self.method.name}")
