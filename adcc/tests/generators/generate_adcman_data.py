@@ -178,7 +178,7 @@ def generate_h2o_sto3g():
             test_case, method=method, dump_nstates=2,
             states_per_case=states.get(method.name, None), **n_states
         )
-        if method.level == 3:
+        if method.level is MethodLevel.THREE:
             generate_adc_all(test_case, method=method, dump_nstates=2,
                              states_per_case=states.get(method.name, None),
                              isr_order=3, **n_states)
@@ -198,7 +198,7 @@ def generate_h2o_def2tzvp():
             test_case, method=method, dump_nstates=2, states_per_case=None,
             **n_states
         )
-        if method.level == 3:
+        if method.level is MethodLevel.THREE:
             generate_adc_all(test_case, method=method, dump_nstates=2,
                              states_per_case=None, isr_order=3, **n_states)
 
@@ -215,7 +215,7 @@ def generate_cn_sto3g():
             test_case, method=method, dump_nstates=2, states_per_case=None,
             **n_states
         )
-        if method.level == 3:
+        if method.level is MethodLevel.THREE:
             generate_adc_all(test_case, method=method, dump_nstates=2,
                              states_per_case=None, isr_order=3, **n_states)
 
@@ -230,7 +230,7 @@ def generate_cn_ccpvdz():
                     testcases.kinds_to_nstates(test_case.kinds[method.adc_type])}
         generate_adc_all(test_case, method=method, dump_nstates=2,
                          states_per_case=None, **n_states)
-        if method.level == 3:
+        if method.level is MethodLevel.THREE:
             generate_adc_all(test_case, method=method, dump_nstates=2,
                              states_per_case=None, isr_order=3, **n_states)
 
@@ -247,7 +247,7 @@ def generate_hf_631g():
             test_case, method=method, dump_nstates=2, states_per_case=None,
             **n_states
         )
-        if method.level == 3:
+        if method.level is MethodLevel.THREE:
             generate_adc_all(test_case, method=method, dump_nstates=2,
                              states_per_case=None, isr_order=3, **n_states)
 
@@ -264,7 +264,7 @@ def generate_formaldehyde_pe():
             generate_adc_all(test_case=test_case, method=method, dump_nstates=2,
                              states_per_case=None, pe_potfile=test_case.pe_potfile,
                              run_qchem_scf=True, **n_states)
-        if method.level == 3:
+        if method.level is MethodLevel.THREE:
             generate_adc_all(test_case, method=method, dump_nstates=2,
                              states_per_case=None, pe_potfile=test_case.pe_potfile,
                              run_qchem_scf=True, isr_order=3, **n_states)
