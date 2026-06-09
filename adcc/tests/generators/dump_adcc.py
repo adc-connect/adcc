@@ -69,7 +69,7 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
         for block in dm_blocks:
             blk = block.split("_")[-1]
             gs_data[f"{gs}3/{block}"] = ground_state.mp3_diffdm[blk].to_ndarray()
-    # MP3 density: AO basis
+        # MP3 density: AO basis
         dm_bb_a, dm_bb_b = ground_state.mp3_diffdm.to_ao_basis(
             ground_state.reference_state
         )

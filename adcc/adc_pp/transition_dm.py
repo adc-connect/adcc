@@ -31,7 +31,7 @@ from adcc.LazyMp import LazyMp
 from adcc.NParticleOperator import OperatorSymmetry
 from adcc.OneParticleDensity import OneParticleDensity
 
-from .util import check_doubles_amplitudes, check_singles_amplitudes
+from .util import check_doubles_amplitudes, check_singles_amplitudes, check_triples_amplitudes
 
 
 def tdm_isr0(mp, amplitude, intermediates):

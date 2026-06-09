@@ -32,7 +32,7 @@ from adcc.NParticleOperator import OperatorSymmetry
 from adcc.OneParticleDensity import OneParticleDensity
 
 
-from .util import check_doubles_amplitudes, check_singles_amplitudes
+from .util import check_doubles_amplitudes, check_singles_amplitudes, check_triples_amplitudes
 
 
 def diffdm_isr0(mp, amplitude, intermediates):
@@ -173,29 +173,9 @@ def diffdm_isr3d(mp, amplitude, intermediates):
     p0_3 = mp.mp3_dm_correction  # third order dm correction
     p0_2 = mp.mp2_dm_correction  # second order dm correction
 
-    dm.oo = (  # adc3_p_oo
-        -1 * einsum("ia,ja->ij", ur1, ur1)
-        - 2 * einsum("ikab,jkab->ij", ur2, ur2)
-        + 1 * einsum(
-            "jklc,iklc->ij",
-            einsum("lb,jkbc->jklc", ur1, t2_1),
-            einsum("la,ikac->iklc", ur1, t2_1),
-        )
-        + 0.5 * einsum(
-            "ilbc,jlbc->ij",
-            einsum(
-                "kl,ikbc->ilbc",
-                einsum("ka,la->kl", ur1, ur1), t2_1,
-            ), t2_1,
-        )
-        - 1 * einsum(
-            "jc,ic->ij",
-            einsum("lb,jlbc->jc", ur1, t2_1),
-            einsum("ka,ikac->ic", ur1, t2_1),
-        )
+    dm.oo += (  # adc3_p_oo
         + 2 * (
             -2 * einsum("ib,jb->ij", einsum("ka,ikab->ib", ur1, ur2), t1_2)
-            - 0.5 * einsum("ik,jk->ij", einsum("ia,ka->ik", ur1, ur1), p0_2.oo)
             - 0.5 * einsum("ik,jk->ij", einsum("ia,ka->ik", ur1, ur1), p0_3.oo)
             + 1 * einsum(
                 "jklc,iklc->ij",
@@ -205,10 +185,6 @@ def diffdm_isr3d(mp, amplitude, intermediates):
             + 0.5 * einsum(
                 "ilbc,jlbc->ij",
                 einsum("kl,ikbc->ilbc", einsum("ka,la->kl", ur1, ur1), t2_1), t2_2,
-            )
-            + 0.5 * einsum(
-                "jb,ib->ij",
-                einsum("kc,jkbc->jb", einsum("la,klac->kc", ur1, t2_1), t2_1), ur1,
             )
             + 0.5 * einsum(
                 "jb,ib->ij",
@@ -225,19 +201,13 @@ def diffdm_isr3d(mp, amplitude, intermediates):
             )
         ).symmetrise()
     )
-    dm.ov = (  # adc3_p_ov
-        -2 * einsum("jb,ijab->ia", ur1, ur2)
-        + 1 * einsum("ik,ka->ia", einsum("jkbc,ijbc->ik", ur2, t2_1), ur1)
+    dm.ov += (  # adc3_p_ov
         + 1 * einsum("ik,ka->ia", einsum("jkbc,ijbc->ik", ur2, t2_2), ur1)
-        + 1 * einsum("ijkb,jkab->ia", einsum("ic,jkbc->ijkb", ur1, ur2), t2_1)
         + 1 * einsum("ijkb,jkab->ia", einsum("ic,jkbc->ijkb", ur1, ur2), t2_2)
         + 1 * einsum("ib,ab->ia", einsum("jc,ijbc->ib", ur1, ur2), p0_2.vv)
-        - 1 * einsum("ij,ja->ia", einsum("jb,ib->ij", ur1, t1_2), ur1)
         - 1 * einsum("ij,ja->ia", einsum("jb,ib->ij", ur1, p0_3.ov), ur1)
-        - 1 * einsum("ij,ja->ia", einsum("ib,jb->ij", ur1, ur1), t1_2)
         - 1 * einsum("ij,ja->ia", einsum("ib,jb->ij", ur1, ur1), p0_3.ov)
         - 1 * einsum("ja,ij->ia", einsum("kb,jkab->ja", ur1, ur2), p0_2.oo)
-        - 2 * einsum("kb,ikab->ia", einsum("jc,jkbc->kb", ur1, ur2), t2_1)
         - 2 * einsum("kb,ikab->ia", einsum("jc,jkbc->kb", ur1, ur2), t2_2)
         + 1 * einsum(
             "kc,ikac->ia",
@@ -321,35 +291,15 @@ def diffdm_isr3d(mp, amplitude, intermediates):
             einsum("jd,klad->jkla", ur1, t2_1),
         )
     )
-    dm.vv = (  # adc3_p_vv
-        +1 * einsum("ia,ib->ab", ur1, ur1)
-        + 2 * einsum("ijac,ijbc->ab", ur2, ur2)
-        + 1 * einsum(
-            "kb,ka->ab",
-            einsum("jd,jkbd->kb", ur1, t2_1),
-            einsum("ic,ikac->ka", ur1, t2_1),
-        )
-        - 1 * einsum(
-            "jkad,jkbd->ab",
-            einsum("ij,ikad->jkad", einsum("ic,jc->ij", ur1, ur1), t2_1), t2_1,
-        )
-        - 0.5 * einsum(
-            "ijkb,ijka->ab",
-            einsum("id,jkbd->ijkb", ur1, t2_1),
-            einsum("ic,jkac->ijka", ur1, t2_1),
-        )
+    dm.vv += (  # adc3_p_vv
         + 2 * (
             +2 * einsum("ja,jb->ab", einsum("ic,ijac->ja", ur1, ur2), t1_2)
-            - 0.5 * einsum("ib,ia->ab", einsum("ic,bc->ib", ur1, p0_2.vv), ur1)
+            # - 0.5 * einsum("ib,ia->ab", einsum("ic,bc->ib", ur1, p0_2.vv), ur1)
             - 0.5 * einsum("ib,ia->ab", einsum("ic,bc->ib", ur1, p0_3.vv), ur1)
             + 1 * einsum(
                 "kb,ka->ab",
                 einsum("jd,jkbd->kb", ur1, t2_2),
                 einsum("ic,ikac->ka", ur1, t2_1),
-            )
-            + 0.5 * einsum(
-                "ib,ia->ab",
-                einsum("kd,ikbd->ib", einsum("jc,jkcd->kd", ur1, t2_1), t2_1), ur1,
             )
             + 0.5 * einsum(
                 "ib,ia->ab",
