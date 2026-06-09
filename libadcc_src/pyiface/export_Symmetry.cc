@@ -146,13 +146,16 @@ void export_Symmetry(py::module& m) {
         "where M is an n_bas x n_bas block and is indentical in upper-left\n"
         "and lower-right.\n"
         "\n"
-        "mospaces_ptr     MoSpaces pointer\n"
-        "n_bas            Number of AO basis functions\n"
-        "symmetry         Is the tensor symmetric (only in effect if both space\n"
-        "                 axes identical). false disables a setup of permutational\n"
-        "                 symmetry.\n"
-        "n_particle_op    NParticleOperator\n"
-        "blocks           Spin blocks to include. Valid are \"ab\", \"a\" and \"b\".");
+        "mospaces_ptr      MoSpaces pointer\n"
+        "n_bas             Number of AO basis functions\n"
+        "operator_symmetry Is the tensor symmetric (hermitian/antihermitian, only\n"
+        "                  in effect if both space axes identical).\n"
+        "                  Nosymmetry disables a setup of permutational symmetry.\n"
+        "n_particle_op     NParticleOperator\n"
+        "blocks            Which blocks of the operator to return. Valid values\n"
+        "                  are 'ab' to return a tensor for both alpha and beta\n"
+        "                  block as a block-diagonal tensor, 'a' to only return a\n"
+        "                  tensor for only alpha block.\n");
   m.def("make_symmetry_triples", &make_symmetry_triples,
         "Return the Symmetry object like it would be set up for the passed subspace \n"
         "of a triples amplitude tensor.\n"

@@ -99,6 +99,10 @@ class HartreeFockProvider(HartreeFockSolution_i):
         This function is called to signal that potential cached data could now be flushed to save memory or other resources.
         This can be used to purge e.g. intermediates for the computation of electron-repulsion integral tensor data.
         """
+    def get_backend(self) -> str:
+        """
+        Return the identifier of the SCF backend. Must be overridden in Python subclasses.
+        """
     def get_conv_tol(self) -> float:
         """
         Returns the tolerance value used for SCF convergence. Should be roughly equivalent to the l2 norm of the Pulay error.
@@ -868,13 +872,16 @@ def make_symmetry_operator_basis(
     where M is an n_bas x n_bas block and is indentical in upper-left
     and lower-right.
 
-    mospaces_ptr     MoSpaces pointer
-    n_bas            Number of AO basis functions
-    symmetry         Is the tensor symmetric (only in effect if both space
-                     axes identical). false disables a setup of permutational
-                     symmetry.
-    n_particle_op    NParticleOperator
-    blocks           Spin blocks to include. Valid are "ab", "a" and "b".
+    mospaces_ptr      MoSpaces pointer
+    n_bas             Number of AO basis functions
+    operator_symmetry Is the tensor symmetric (hermitian/antihermitian, only
+                      in effect if both space axes identical).
+                      Nosymmetry disables a setup of permutational symmetry.
+    n_particle_op     NParticleOperator
+    blocks            Which blocks of the operator to return. Valid values
+                      are 'ab' to return a tensor for both alpha and beta
+                      block as a block-diagonal tensor, 'a' to only return a
+                      tensor for only alpha block.
     """
 
 def make_symmetry_orbital_coefficients(
