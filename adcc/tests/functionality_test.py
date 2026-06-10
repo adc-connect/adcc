@@ -138,6 +138,8 @@ class TestFunctionality:
             pytest.skip("CVS-ADC(0) adcman data is not available")
 
         system: testcases.TestCase = testcases.get_by_filename(system).pop()
+        if system.only_full_mode and method.name == "adc4":
+            pytest.skip("ADC(4) reference only available for small testcases.")
         n_states = testcases.kinds_to_nstates([kind]).pop()
 
         kwargs = {n_states: 3}
