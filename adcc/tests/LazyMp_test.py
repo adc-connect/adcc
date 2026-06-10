@@ -182,8 +182,8 @@ class TestLazyMp:
 
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)
-    def test_t2(self, system: str, case: str, generator: str,
-                instances: LazyMpCache):
+    def test_td1(self, system: str, case: str, generator: str,
+                 instances: LazyMpCache):
         refmp = testdata_cache._load_data(
             system=system, method="mp", case=case, source=generator
         )
@@ -193,7 +193,7 @@ class TestLazyMp:
         for label in blocks:
             assert_allclose(instances.get(system, case).t2(label).to_ndarray(),
                             refmp["mp1"][f"t_{label}"], atol=1e-12)
-            assert f"t2/{label}" in instances.get(system, case).timer.tasks
+            assert f"td1/{label}" in instances.get(system, case).timer.tasks
 
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)
@@ -251,7 +251,7 @@ class TestLazyMp:
         for label in blocks:
             assert_allclose(mp2diff[label].to_ndarray(),
                             refmp["mp2"]["dm_" + label], atol=1e-12)
-        assert "mp2_diffdm" in instances.get(system, case).timer.tasks
+        assert "second_order_dm_correction" in instances.get(system, case).timer.tasks
 
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)
@@ -291,7 +291,7 @@ class TestLazyMp:
         timer = instances.get("h2o_sto3g", "gen").timer
         assert "energy_correction/2" in timer.tasks
         assert "energy_correction/3" in timer.tasks
-        assert len(timer.intervals("t2/o1o1v1v1")) == 1
+        assert len(timer.intervals("td1/o1o1v1v1")) == 1
         assert len(timer.intervals("td2/o1o1v1v1")) == 1
         assert len(timer.intervals("energy_correction/2")) == 1
         assert len(timer.intervals("energy_correction/3")) == 1
