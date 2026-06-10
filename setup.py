@@ -39,7 +39,8 @@ from pathlib import Path
 
 from setuptools import Command, setup
 
-from pybind11.setup_helpers import Pybind11Extension, build_ext
+from pybind11.setup_helpers import Pybind11Extension
+from pybind11.setup_helpers import build_ext as _Pybind11BuildExt
 
 
 log = logging.getLogger()
@@ -531,6 +532,16 @@ def is_conda_build():
         os.environ.get("CONDA_BUILD", None) == "1"
         or os.environ.get("CONDA_EXE", None) is not None
     )
+
+
+class build_ext(_Pybind11BuildExt):
+    def run(self):
+        super().run()
+        # copy the libadcc stub file next to the executable to include it
+        # in the bdist next to the executable
+        pyi_src = Path(__file__).parent / "libadcc.pyi"
+        if pyi_src.is_file():
+            shutil.copy(str(pyi_src), str(Path(self.build_lib) / "libadcc.pyi"))
 
 
 def read_readme():
