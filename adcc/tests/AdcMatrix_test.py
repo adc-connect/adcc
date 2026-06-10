@@ -55,12 +55,13 @@ class TestBlockOrders:
             block_orders = AdcMatrixlike._default_block_orders(
                 method=AdcMethod(f"adc{order}"), bandwidth=0
             )
-            cvs_block_orders = AdcMatrixlike._default_block_orders(
-                method=AdcMethod(f"cvs-adc{order}"),
-                bandwidth=0
-            )
+            if order != 4:
+                cvs_block_orders = AdcMatrixlike._default_block_orders(
+                    method=AdcMethod(f"cvs-adc{order}"),
+                    bandwidth=0
+                )
+                assert cvs_block_orders == block_orders
             assert ref[order] == block_orders
-            assert cvs_block_orders == block_orders
         # verify the special methods: adc2x
         block_orders = AdcMatrixlike._default_block_orders(
             method=AdcMethod("adc2x"), bandwidth=0

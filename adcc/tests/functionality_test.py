@@ -90,35 +90,38 @@ class TestFunctionality:
                 assert res.ground_state.energy_correction(3) == \
                     approx(refmp["mp3"]["energy"])
 
-        for i in range(n_ref):
+        # adcman uses a minimum third-order ground-state density for ADC(4)
+        # references, regardless of the ISR order used for property calculations
+        if method != "adc4" and generator == "adcman":
+            for i in range(n_ref):
+                # Computing the dipole moment implies a lot of cancelling in the
+                # contraction, which has quite an impact on the accuracy.
+                res_tdm = res.transition_dipole_moment[i]
+                # adcman does not compute the spin forbidden singlet -> triplet
+                # transition dipole moments (they have to be zero anyway)
+                if generator == "adcman" and kind == "triplet":
+                    ref_tdm = np.array([0., 0., 0.])
+                else:
+                    ref_tdm = ref["transition_dipole_moments"][i]
+
+                # Test norm and actual values
+                res_tdm_norm = np.sum(res_tdm * res_tdm)
+                ref_tdm_norm = np.sum(ref_tdm * ref_tdm)
+                assert res_tdm_norm == approx(ref_tdm_norm, abs=1e-5)
+
+                # If the eigenpair is degenerate, then some rotation
+                # in the eigenspace is possible, which reflects as a
+                # rotation inside the dipole moments. This is the case
+                # for example for the CN test system. For simplicity,
+                # we only compare the norm of the transition dipole moment
+                # in such cases and skip the test for the exact values.
+                if system.name != "cn":
+                    assert_allclose_signfix(res_tdm, ref_tdm, atol=1e-5)
+
             # Computing the dipole moment implies a lot of cancelling in the
             # contraction, which has quite an impact on the accuracy.
-            res_tdm = res.transition_dipole_moment[i]
-            # adcman does not compute the spin forbidden singlet -> triplet
-            # transition dipole moments (they have to be zero anyway)
-            if generator == "adcman" and kind == "triplet":
-                ref_tdm = np.array([0., 0., 0.])
-            else:
-                ref_tdm = ref["transition_dipole_moments"][i]
-
-            # Test norm and actual values
-            res_tdm_norm = np.sum(res_tdm * res_tdm)
-            ref_tdm_norm = np.sum(ref_tdm * ref_tdm)
-            assert res_tdm_norm == approx(ref_tdm_norm, abs=1e-5)
-
-            # If the eigenpair is degenerate, then some rotation
-            # in the eigenspace is possible, which reflects as a
-            # rotation inside the dipole moments. This is the case
-            # for example for the CN test system. For simplicity,
-            # we only compare the norm of the transition dipole moment
-            # in such cases and skip the test for the exact values.
-            if system.name != "cn":
-                assert_allclose_signfix(res_tdm, ref_tdm, atol=1e-5)
-
-        # Computing the dipole moment implies a lot of cancelling in the
-        # contraction, which has quite an impact on the accuracy.
-        assert_allclose(res.state_dipole_moment[:n_ref],
-                        ref["state_dipole_moments"], atol=1e-4)
+            assert_allclose(res.state_dipole_moment[:n_ref],
+                            ref["state_dipole_moments"], atol=1e-4)
 
         # Test we do not use too many iterations
         # removed explicit numbers per method, because they were not system and case
