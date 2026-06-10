@@ -29,7 +29,11 @@ from adcc.LazyMp import LazyMp
 from adcc.NParticleOperator import OperatorSymmetry
 from adcc.OneParticleDensity import OneParticleDensity
 
-from .util import check_doubles_amplitudes, check_singles_amplitudes, check_triples_amplitudes
+from .util import (
+    check_doubles_amplitudes,
+    check_singles_amplitudes,
+    check_triples_amplitudes
+)
 
 
 def s2s_tdm_isr0(mp, amplitude_l, amplitude_r, intermediates):
@@ -138,20 +142,11 @@ def s2s_tdm_isr3d(mp, amplitude_l, amplitude_r, intermediates):
     p0_3_vv = mp.mp3_dm_correction.vv
     p0_3_ov = mp.mp3_dm_correction.ov
 
-    dm.oo = (
-        - 1 * einsum("ja,ia->ij", ul1, ur1)
-        - 2 * einsum("jkab,ikab->ij", ul2, ur2)
+    dm.oo += (
         - 2 * einsum("ib,jb->ij", einsum("ka,ikab->ib", ul1, ur2), t1_2)
         - 2 * einsum("jb,ib->ij", einsum("jkab,ka->jb", ul2, ur1), t1_2)
-        - 0.5 * einsum("jk,ik->ij", einsum("ja,ka->jk", ul1, ur1), p0_2_oo)
         - 0.5 * einsum("jk,ik->ij", einsum("ja,ka->jk", ul1, ur1), p0_3_oo)
-        - 0.5 * einsum("ik,jk->ij", einsum("ka,ia->ik", ul1, ur1), p0_2_oo)
         - 0.5 * einsum("ik,jk->ij", einsum("ka,ia->ik", ul1, ur1), p0_3_oo)
-        + 1 * einsum(
-            "jklc,iklc->ij",
-            einsum("lb,jkbc->jklc", ur1, t2_1),
-            einsum("la,ikac->iklc", ul1, t2_1),
-        )
         + 1 * einsum(
             "jklc,iklc->ij",
             einsum("lb,jkbc->jklc", ur1, t2_2),
@@ -168,19 +163,9 @@ def s2s_tdm_isr3d(mp, amplitude_l, amplitude_r, intermediates):
             t2_2,
         )
         + 0.5 * einsum(
-            "ikbc,jkbc->ij",
-            einsum("kl,ilbc->ikbc", einsum("la,ka->kl", ul1, ur1), t2_1),
-            t2_1,
-        )
-        + 0.5 * einsum(
             "jlbc,ilbc->ij",
             einsum("kl,jkbc->jlbc", einsum("la,ka->kl", ul1, ur1), t2_1),
             t2_2,
-        )
-        + 0.5 * einsum(
-            "jb,ib->ij",
-            einsum("kc,jkbc->jb", einsum("la,klac->kc", ul1, t2_1), t2_1),
-            ur1,
         )
         + 0.5 * einsum(
             "jb,ib->ij",
@@ -200,17 +185,7 @@ def s2s_tdm_isr3d(mp, amplitude_l, amplitude_r, intermediates):
         - 1 * einsum(
             "jc,ic->ij",
             einsum("kb,jkbc->jc", ur1, t2_1),
-            einsum("la,ilac->ic", ul1, t2_1),
-        )
-        - 1 * einsum(
-            "jc,ic->ij",
-            einsum("kb,jkbc->jc", ur1, t2_1),
             einsum("la,ilac->ic", ul1, t2_2),
-        )
-        - 0.5 * einsum(
-            "ia,ja->ij",
-            einsum("lc,ilac->ia", einsum("kb,klbc->lc", ur1, t2_1), t2_1),
-            ul1,
         )
         - 0.5 * einsum(
             "ia,ja->ij",
@@ -223,20 +198,11 @@ def s2s_tdm_isr3d(mp, amplitude_l, amplitude_r, intermediates):
             ul1,
         )
     )
-    dm.vv = (
-        +1 * einsum("ia,ib->ab", ul1, ur1)
-        + 2 * einsum("ijac,ijbc->ab", ul2, ur2)
+    dm.vv += (
         - 2 * einsum("ia,ib->ab", einsum("ijac,jc->ia", ul2, ur1), t1_2)
         + 2 * einsum("jb,ja->ab", einsum("ic,ijbc->jb", ul1, ur2), t1_2)
-        - 0.5 * einsum("ib,ia->ab", einsum("ic,bc->ib", ur1, p0_2_vv), ul1)
         - 0.5 * einsum("ib,ia->ab", einsum("ic,bc->ib", ur1, p0_3_vv), ul1)
-        - 0.5 * einsum("ia,ib->ab", einsum("ic,ac->ia", ul1, p0_2_vv), ur1)
         - 0.5 * einsum("ia,ib->ab", einsum("ic,ac->ia", ul1, p0_3_vv), ur1)
-        + 1 * einsum(
-            "ka,kb->ab",
-            einsum("jd,jkad->ka", ur1, t2_1),
-            einsum("ic,ikbc->kb", ul1, t2_1),
-        )
         + 1 * einsum(
             "ka,kb->ab",
             einsum("jd,jkad->ka", ur1, t2_1),
@@ -246,11 +212,6 @@ def s2s_tdm_isr3d(mp, amplitude_l, amplitude_r, intermediates):
             "ka,kb->ab",
             einsum("jc,jkac->ka", ur1, t2_2),
             einsum("id,ikbd->kb", ul1, t2_1),
-        )
-        + 0.5 * einsum(
-            "ib,ia->ab",
-            einsum("kd,ikbd->ib", einsum("jc,jkcd->kd", ur1, t2_1), t2_1),
-            ul1,
         )
         + 0.5 * einsum(
             "ib,ia->ab",
@@ -265,11 +226,6 @@ def s2s_tdm_isr3d(mp, amplitude_l, amplitude_r, intermediates):
         - 1 * einsum(
             "ikad,ikbd->ab",
             einsum("ij,jkad->ikad", einsum("ic,jc->ij", ul1, ur1), t2_1),
-            t2_1,
-        )
-        - 1 * einsum(
-            "ikad,ikbd->ab",
-            einsum("ij,jkad->ikad", einsum("ic,jc->ij", ul1, ur1), t2_1),
             t2_2,
         )
         - 1 * einsum(
@@ -280,17 +236,7 @@ def s2s_tdm_isr3d(mp, amplitude_l, amplitude_r, intermediates):
         - 0.5 * einsum(
             "ijka,ijkb->ab",
             einsum("id,jkad->ijka", ur1, t2_1),
-            einsum("ic,jkbc->ijkb", ul1, t2_1),
-        )
-        - 0.5 * einsum(
-            "ijka,ijkb->ab",
-            einsum("id,jkad->ijka", ur1, t2_1),
             einsum("ic,jkbc->ijkb", ul1, t2_2),
-        )
-        - 0.5 * einsum(
-            "ja,jb->ab",
-            einsum("kc,jkac->ja", einsum("id,ikcd->kc", ul1, t2_1), t2_1),
-            ur1,
         )
         - 0.5 * einsum(
             "ja,jb->ab",
@@ -308,19 +254,13 @@ def s2s_tdm_isr3d(mp, amplitude_l, amplitude_r, intermediates):
             einsum("id,jkbd->ijkb", ul1, t2_1),
         )
     )
-    dm.ov = (
-        -2 * einsum("jb,ijab->ia", ul1, ur2)
+    dm.ov += (
         + 1 * einsum("ib,ab->ia", einsum("jc,ijbc->ib", ul1, ur2), p0_2_vv)
-        - 1 * einsum("ij,ja->ia", einsum("jb,ib->ij", ul1, t1_2), ur1)
         - 1 * einsum("ij,ja->ia", einsum("jb,ib->ij", ul1, p0_3_ov), ur1)
-        - 1 * einsum("ij,ja->ia", einsum("jb,ib->ij", ul1, ur1), t1_2)
         - 1 * einsum("ij,ja->ia", einsum("jb,ib->ij", ul1, ur1), p0_3_ov)
         - 1 * einsum("ja,ij->ia", einsum("kb,jkab->ja", ul1, ur2), p0_2_oo)
-        - 1 * einsum("ij,ja->ia", einsum("jkbc,ikbc->ij", ul2, t2_1), ur1)
         - 1 * einsum("ij,ja->ia", einsum("jkbc,ikbc->ij", ul2, t2_2), ur1)
-        - 1 * einsum("ijkc,jkac->ia", einsum("jkbc,ib->ijkc", ul2, ur1), t2_1)
         - 1 * einsum("ijkc,jkac->ia", einsum("jkbc,ib->ijkc", ul2, ur1), t2_2)
-        - 2 * einsum("kb,ikab->ia", einsum("jkbc,jc->kb", ul2, ur1), t2_1)
         - 2 * einsum("kb,ikab->ia", einsum("jkbc,jc->kb", ul2, ur1), t2_2)
         + 1 * einsum(
             "kc,ikac->ia",
@@ -414,19 +354,13 @@ def s2s_tdm_isr3d(mp, amplitude_l, amplitude_r, intermediates):
         )
     )
 
-    dm.vo = (
-        -2 * einsum("ijab,jb->ai", ul2, ur1)
-        + 1 * einsum("ik,ka->ai", einsum("jkbc,ijbc->ik", ur2, t2_1), ul1)
+    dm.vo += (
         + 1 * einsum("ik,ka->ai", einsum("jkbc,ijbc->ik", ur2, t2_2), ul1)
-        + 1 * einsum("ijkb,jkab->ai", einsum("ic,jkbc->ijkb", ul1, ur2), t2_1)
         + 1 * einsum("ijkb,jkab->ai", einsum("ic,jkbc->ijkb", ul1, ur2), t2_2)
         + 1 * einsum("ka,ik->ai", einsum("jkab,jb->ka", ul2, ur1), p0_2_oo)
         + 1 * einsum("ib,ab->ai", einsum("ijbc,jc->ib", ul2, ur1), p0_2_vv)
-        - 1 * einsum("ij,ja->ai", einsum("jb,ib->ij", ur1, t1_2), ul1)
         - 1 * einsum("ij,ja->ai", einsum("jb,ib->ij", ur1, p0_3_ov), ul1)
-        - 1 * einsum("ij,ja->ai", einsum("ib,jb->ij", ul1, ur1), t1_2)
         - 1 * einsum("ij,ja->ai", einsum("ib,jb->ij", ul1, ur1), p0_3_ov)
-        + 2 * einsum("jb,ijab->ai", einsum("kc,jkbc->jb", ul1, ur2), t2_1)
         + 2 * einsum("jb,ijab->ai", einsum("kc,jkbc->jb", ul1, ur2), t2_2)
         + 1 * einsum(
             "jc,ijac->ai",

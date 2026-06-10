@@ -79,6 +79,8 @@ def mtm_cvs_isr2(mp, op, intermediates):
 
 def mtm_isr3(mp, op, intermediates):
 
+    f1 = mtm_isr2(mp, op, intermediates).ph
+    f2 = mtm_isr2(mp, op, intermediates).pphh
     # mp amplitudes
     t1_2 = mp.diffdm(level=2).ov
     t2_1 = mp.t2(b.oovv)
@@ -94,18 +96,11 @@ def mtm_isr3(mp, op, intermediates):
     p0_3_oo, p0_3_vv, p0_3_ov = p0_3.oo, p0_3.vv, p0_3.ov
     p0_2_oo, p0_2_vv = p0_2.oo, p0_2.vv
 
-    f1 = (
-        +1 * einsum("ib,ab->ia", t1_2, d_vv)  # N^3: O^1V^2 / N^2: V^2
+    f1 += (
         + 1 * einsum("ab,ib->ia", d_vv, p0_3_ov)  # N^3: O^1V^2 / N^2: V^2
-        + 0.5 * einsum("aj,ij->ia", d_vo, p0_2_oo)  # N^3: O^2V^1 / N^2: O^1V^1
         + 0.5 * einsum("aj,ij->ia", d_vo, p0_3_oo)  # N^3: O^2V^1 / N^2: O^1V^1
-        + 0.5 * einsum("bj,iajb->ia", d_vo, t2sq)  # N^4: O^2V^2 / N^4: O^2V^2
-        - 1 * einsum("ijab,jb->ia", t2_1, d_ov)  # N^4: O^2V^2 / N^4: O^2V^2
-        - 1 * einsum("ja,ji->ia", t1_2, d_oo)  # N^3: O^2V^1 / N^2: O^1V^1
-        - 1 * einsum("ijab,jb->ia", t2_2, d_ov)  # N^4: O^2V^2 / N^4: O^2V^2
         - 1 * einsum("ijab,jb->ia", t2_3, d_ov)  # N^4: O^2V^2 / N^4: O^2V^2
         - 1 * einsum("ji,ja->ia", d_oo, p0_3_ov)  # N^3: O^2V^1 / N^2: O^1V^1
-        - 0.5 * einsum("bi,ab->ia", d_vo, p0_2_vv)  # N^3: O^1V^2 / N^2: V^2
         - 0.5 * einsum("bi,ab->ia", d_vo, p0_3_vv)  # N^3: O^1V^2 / N^2: V^2
         + 1 * einsum(
             "jb,ijab->ia", einsum("kb,jk->jb", t1_2, d_oo), t2_1
@@ -148,18 +143,14 @@ def mtm_isr3(mp, op, intermediates):
             einsum("ijcd,klcd->ijkl", t2_1, t2_1),
             einsum("klab,jb->jkla", t2_1, d_ov),
         )  # N^6: O^4V^2 / N^4: O^2V^2
-        + 1 * einsum("ai->ia", d_vo)  # N^2: O^1V^1 / N^2: O^1V^1
     )
 
-    f2 = (  # (1 - P_ij)
+    f2 += (
         2 * (
-            0.5 * einsum("jkab,ki->ijab", t2_1, d_oo)  # N^5: O^3V^2 / N^4: O^2V^2
-            + 0.5 * einsum("jkab,ki->ijab", t2_2, d_oo)  # N^5: O^3V^2 / N^4: O^2V^2
+            0.5 * einsum("jkab,ki->ijab", t2_2, d_oo)  # N^5: O^3V^2 / N^4: O^2V^2
         ).antisymmetrise(0, 1)
-        # (1 - P_ab)
         + 2 * (
-            0.5 * einsum("ijac,bc->ijab", t2_1, d_vv)  # N^5: O^2V^3 / N^4: O^2V^2
-            + 0.5 * einsum("ijac,bc->ijab", t2_2, d_vv)  # N^5: O^2V^3 / N^4: O^2V^2
+            0.5 * einsum("ijac,bc->ijab", t2_2, d_vv)  # N^5: O^2V^3 / N^4: O^2V^2
         ).antisymmetrise(2, 3)
         - 0.5 * einsum("ijkabc,kc->ijab", t3_2, d_ov)  # N^6: O^3V^3 / N^6: O^3V^3
     )

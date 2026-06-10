@@ -306,17 +306,16 @@ class IsrMethod(Method):
             gs_type=GroundStateType.MP,
             cvs=False
         ): LevelSpec(
-            max_level=2,
-            special_levels=(MethodLevel.ONE_S, MethodLevel.TWO_D)
+            max_level=3,
+            special_levels=(MethodLevel.ONE_S, MethodLevel.TWO_D, MethodLevel.THREE_D)
         ),
         LevelKey(
             adc_type=AdcType.PP,
             gs_type=GroundStateType.MP,
             cvs=True
         ): LevelSpec(
-            max_level=2,
-            special_levels=(MethodLevel.ONE_S, MethodLevel.TWO_D)
+            max_level=3,
+            special_levels=(MethodLevel.ONE_S, MethodLevel.TWO_D, MethodLevel.THREE_D)
         )
     }
-    max_level = 3
-    special_levels = (MethodLevel.ONE_S, MethodLevel.THREE_D)
+

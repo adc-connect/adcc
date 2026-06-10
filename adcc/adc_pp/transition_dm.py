@@ -31,7 +31,11 @@ from adcc.LazyMp import LazyMp
 from adcc.NParticleOperator import OperatorSymmetry
 from adcc.OneParticleDensity import OneParticleDensity
 
-from .util import check_doubles_amplitudes, check_singles_amplitudes, check_triples_amplitudes
+from .util import (
+    check_doubles_amplitudes,
+    check_singles_amplitudes,
+    check_triples_amplitudes
+)
 
 
 def tdm_isr0(mp, amplitude, intermediates):
@@ -101,7 +105,7 @@ def tdm_isr2(mp, amplitude, intermediates):
 
 
 def tdm_isr3d(mp, amplitude, intermediates):
-    dm = tdm_isr2(mp, amplitude, intermediates)
+    dm = tdm_isr2(mp, amplitude, intermediates) # Get ISR(2) result
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
 
     ul1, ul2 = amplitude.ph, amplitude.pphh  # adc amplitudes
@@ -119,25 +123,20 @@ def tdm_isr3d(mp, amplitude, intermediates):
     p0_2_oo = mp.mp2_dm_correction.oo
     p0_2_vv = mp.mp2_dm_correction.vv
 
-    dm.oo = (
-        -1 * einsum("ja,ia->ij", ul1, t1_2)
+    # Compute ISR(3d) tdm
+    dm.oo += (
         - 1 * einsum("ja,ia->ij", ul1, p0_3_ov)
-        - 1 * einsum("jkab,ikab->ij", ul2, t2_1)
         - 1 * einsum("jkab,ikab->ij", ul2, t2_2)
         + 1 * einsum("ia,ja->ij", einsum("kb,ikab->ia", ul1, t2_1), t1_2)
         + 0.5 * einsum("ikbc,jkbc->ij", einsum("la,iklabc->ikbc", ul1, t3_2), t2_1)
     )
-    dm.vv = (
-        +1 * einsum("ia,ib->ab", ul1, t1_2)
+    dm.vv += (
         + 1 * einsum("ia,ib->ab", ul1, p0_3_ov)
-        + 1 * einsum("ijac,ijbc->ab", ul2, t2_1)
         + 1 * einsum("ijac,ijbc->ab", ul2, t2_2)
         + 0.5 * einsum("ikbc,ikac->ab", einsum("jd,ijkbcd->ikbc", ul1, t3_2), t2_1)
         - 1 * einsum("ib,ia->ab", einsum("jc,ijbc->ib", ul1, t2_1), t1_2)
     )
-    dm.ov = (
-        -1 * einsum("jb,ijab->ia", ul1, t2_1)
-        - 1 * einsum("jb,ijab->ia", ul1, t2_2)
+    dm.ov += (
         - 1 * einsum("jb,ijab->ia", ul1, t2_3)
         - 0.5 * einsum("jkbc,ijkabc->ia", ul2, t3_2)
         + 1 * einsum("ka,ik->ia", einsum("jb,jkab->ka", ul1, t2_1), p0_2_oo)
@@ -161,15 +160,11 @@ def tdm_isr3d(mp, amplitude, intermediates):
         )
     )
 
-    dm.vo = (
-        +0.5 * einsum("ja,ij->ai", ul1, p0_2_oo)
+    dm.vo += (
         + 0.5 * einsum("ja,ij->ai", ul1, p0_3_oo)
-        - 0.5 * einsum("ib,ab->ai", ul1, p0_2_vv)
         - 0.5 * einsum("ib,ab->ai", ul1, p0_3_vv)
         + 0.5 * einsum("kc,ikac->ai", einsum("jb,jkbc->kc", ul1, t2_2), t2_1)
-        + 0.5 * einsum("jb,ijab->ai", einsum("kc,jkbc->jb", ul1, t2_1), t2_1)
         + 0.5 * einsum("jb,ijab->ai", einsum("kc,jkbc->jb", ul1, t2_1), t2_2)
-        + 1 * einsum("ia->ai", ul1)
     )
 
     return dm
