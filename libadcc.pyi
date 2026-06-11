@@ -934,11 +934,3 @@ def tensordot(a: Tensor, b: Tensor) -> typing.Any: ...
 def trace(subscripts: str, tensor: Tensor) -> float: ...
 @typing.overload
 def trace(tensor: Tensor) -> float: ...
-
-__backend__: dict = {
-    "name": "libtensorlight",
-    "version": "3.0.1",
-    "authors": "Evgeny Epifanovsky, Michael Wormit, Dmitry Zuev Sam Manzer, Ilya Kaliman, Michael F. Herbst and Maximilian Scheurer",
-    "features": ["libxm"],
-    "blas": "Intel10_64lp_seq",
-}
