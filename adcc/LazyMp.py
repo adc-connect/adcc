@@ -56,7 +56,7 @@ class LazyMp(GroundState):
         elif split[0] == b.c:
             return self.ts2_cv
         raise NotImplementedError(
-            "Second-order MP singles amplitudes not implemented for space"
+            "Second-order MP singles amplitudes not implemented for space "
             f"'{space}'."
         )
 
@@ -177,11 +177,10 @@ class LazyMp(GroundState):
                      (1.0, hf.ccvv, self.t2cc)]
         elif level == 3 and not is_cvs:
             terms = [(1.0, hf.oovv, self.td2(b.oovv))]
-        elif level == 3 and is_cvs:
-            raise NotImplementedError("CVS-MP3 energy correction not implemented.")
         else:
-            raise NotImplementedError(f"MP energy correction for level {level} "
-                                      "not implemented.")
+            method = "CVS-MP" if is_cvs else "MP"
+            raise NotImplementedError(f"{method} energy correction for level "
+                                      f"{level} not implemented.")
         return sum(
             -0.25 * pref * eri.dot(t2)
             for pref, eri, t2 in terms

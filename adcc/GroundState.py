@@ -58,7 +58,7 @@ class GroundState:
         )
 
     def t2(self, space: str) -> libadcc.Tensor:
-        """First-order ground state doubles amplitudes."""
+        """Alias for td1 for backwards compatiblity."""
         return self.td1(space)
 
     @property
