@@ -847,10 +847,9 @@ def make_symmetry_operator(arg0: MoSpaces, arg1: str, arg2: str, arg3: str) -> S
 
       mospaces    MoSpaces object
       space       Space string (e.g. o1v1)
-      symmetry    Describes the symmetry of the tensor (only in effect if both               subspaces
-                  of the space string are identical).              nosymmetry
-                  hermitian
-                  antihermitian
+      symmetry    Describes the symmetry of the tensor (only in effect if both
+                  subspaces of the space string are identical).
+                  Valid are "nosymmetry", "hermitian" and "antihermitian".
       cartesian_transformation
                   The cartesian function according to which the operator transforms.
 
@@ -941,5 +940,5 @@ __backend__: dict = {
     "version": "3.0.1",
     "authors": "Evgeny Epifanovsky, Michael Wormit, Dmitry Zuev Sam Manzer, Ilya Kaliman, Michael F. Herbst and Maximilian Scheurer",
     "features": ["libxm"],
-    "blas": "Apple",
+    "blas": "Intel10_64lp_seq",
 }
