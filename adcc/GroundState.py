@@ -171,7 +171,7 @@ class GroundState:
         """
         dm = self.density(level)
         dipole_integrals = self.reference_state.operators.electric_dipole
-        return np.array([
+        return self.reference_state.nuclear_dipole + np.array([
             product_trace(comp, dm) for comp in dipole_integrals
         ])
 
@@ -236,13 +236,14 @@ class GroundState:
         ret = OneParticleDensity(
             self.mospaces, symmetry=OperatorSymmetry.HERMITIAN
         )
-        # NOTE: the following 3 blocks are equivalent to the cvs_p0 intermediates
         ret.oo = -0.5 * einsum("ikab,jkab->ij", self.t2oo, self.t2oo)
         ret.ov = self.ts2(b.ov)
         ret.vv = 0.5 * einsum("ijac,ijbc->ab", self.t2oo, self.t2oo)
 
         if self.has_core_occupied_space:
-            # additional terms to "revert" CVS for ground state density
+            # additional terms since we don't apply the CVS approximation
+            # for the GS density. Within the CVS approximation all of the
+            # following terms vanish!
             ret.oo += -0.5 * einsum("iLab,jLab->ij", self.t2oc, self.t2oc)
             ret.vv += (
                 + 0.5 * einsum("IJac,IJbc->ab", self.t2cc, self.t2cc)
