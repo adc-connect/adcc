@@ -134,6 +134,22 @@ class TestPyscf:
             operator_import_from_ao_test(mf, list(ao_quad),
                                          "electric_quadrupole", gauge_origin)
 
+            # Test electric quadrupole traceless
+            with mf.mol.with_common_orig(gauge_origin):
+                r_r = mf.mol.intor_symmetric('int1e_rr', comp=9)
+                r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
+                r_quadr = mf.mol.intor_symmetric('int1e_r2', comp=1)
+                r_quadr_matrix = np.zeros_like(r_r)
+                for i in range(3):
+                    r_quadr_matrix[i][i] = r_quadr
+                term = 0.5 * (3 * r_r - r_quadr_matrix)
+                ao_quad_traceless = (
+                    -1.0 * np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
+                )
+            operator_import_from_ao_test(mf, list(ao_quad_traceless),
+                                         "electric_quadrupole_traceless",
+                                         gauge_origin)
+
     @pytest.mark.parametrize("system", h2o, ids=[case.file_name for case in h2o])
     def test_rhf(self, system: testcases.TestCase):
         mf = adcc.backends.run_hf("pyscf", system.xyz, system.basis)

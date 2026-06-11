@@ -98,8 +98,9 @@ class TestPsi4:
             assert_almost_equal(eri_perm, eri)
 
     def operators_test(self, wfn):
-        # Test electric dipole
         mints = psi4.core.MintsHelper(wfn.basisset())
+
+        # Test electric dipole
         ao_dip = [np.array(comp) for comp in mints.ao_dipole()]
         operator_import_from_ao_test(wfn, ao_dip)
 
@@ -111,6 +112,19 @@ class TestPsi4:
         ao_dip = [-1.0 * np.array(comp) for comp in mints.ao_nabla()]
         operator_import_from_ao_test(wfn, ao_dip,
                                      operator="electric_dipole_velocity")
+
+        # Test electric quadrupole
+        u = [np.asarray(comp) for comp in mints.ao_quadrupole()]
+        # Expand 6 upper-triangular components to 9 symmetric matrix entries.
+        ao_quad = u[:3] + [u[1], u[3], u[4]] + [u[2], u[4], u[5]]
+        operator_import_from_ao_test(wfn, ao_quad, "electric_quadrupole")
+
+        # Test electric quadrupole traceless
+        u = [np.asarray(comp) for comp in mints.ao_traceless_quadrupole()]
+        # Expand 6 upper-triangular components to 9 symmetric matrix entries.
+        ao_quad_traceless = u[:3] + [u[1], u[3], u[4]] + [u[2], u[4], u[5]]
+        operator_import_from_ao_test(wfn, ao_quad_traceless,
+                                     "electric_quadrupole_traceless")
 
     @pytest.mark.parametrize("system", h2o, ids=[case.file_name for case in h2o])
     def test_rhf(self, system: testcases.TestCase):

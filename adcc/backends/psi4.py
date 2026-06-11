@@ -34,7 +34,8 @@ from ..OneParticleOperator import OneParticleOperator
 
 class Psi4OperatorIntegralProvider:
     available: tuple[str, ...] = (
-        "electric_dipole", "electric_dipole_velocity", "magnetic_dipole",
+        "overlap", "electric_dipole", "electric_dipole_velocity", "magnetic_dipole",
+        "electric_quadrupole", "electric_quadrupole_traceless",
         "pe_induction_elec", "pcm_potential_elec"
     )
 
@@ -42,6 +43,10 @@ class Psi4OperatorIntegralProvider:
         self.wfn = wfn
         self.backend = "psi4"
         self.mints = psi4.core.MintsHelper(self.wfn)
+
+    @property
+    def overlap(self) -> np.ndarray:
+        return np.asarray(self.mints.ao_overlap())
 
     @property
     def electric_dipole(self) -> tuple[np.ndarray, ...]:
@@ -69,6 +74,32 @@ class Psi4OperatorIntegralProvider:
         -sum_i p_i
         """
         return tuple(-1.0 * np.asarray(comp) for comp in self.mints.ao_nabla())
+
+    def electric_quadrupole(self, gauge_origin="origin") -> tuple[np.ndarray, ...]:
+        """-sum_i r_{i, alpha} r_{i, beta}"""
+        # TODO: Gauge origin?
+        if gauge_origin != (0.0, 0.0, 0.0) and gauge_origin != "origin":
+            raise NotImplementedError('Only (0.0, 0.0, 0.0) can be selected as'
+                                      ' gauge origin.')
+        # Expand 6 upper-triangular components to 9 symmetric matrix entries.
+        u = [np.asarray(comp) for comp in self.mints.ao_quadrupole()]
+        full = u[:3] + [u[1], u[3], u[4]] + [u[2], u[4], u[5]]
+        return tuple(full)
+
+    def electric_quadrupole_traceless(self, gauge_origin="origin"
+                                      ) -> tuple[np.ndarray, ...]:
+        """
+        -0.5 * sum_i (3 * r_{i, alpha} r_{i, beta}
+        - delta_{alpha, beta} r_{i}^2)
+        """
+        # TODO: Gauge origin?
+        if gauge_origin != (0.0, 0.0, 0.0) and gauge_origin != "origin":
+            raise NotImplementedError('Only (0.0, 0.0, 0.0) can be selected as'
+                                      ' gauge origin.')
+        # Expand 6 upper-triangular components to 9 symmetric matrix entries.
+        u = [np.asarray(comp) for comp in self.mints.ao_traceless_quadrupole()]
+        full = u[:3] + [u[1], u[3], u[4]] + [u[2], u[4], u[5]]
+        return tuple(full)
 
     def pe_induction_elec(self, dm: OneParticleOperator) -> psi4.core.Matrix:
         if not hasattr(self.wfn, "pe_state"):

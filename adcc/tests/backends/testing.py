@@ -154,7 +154,7 @@ def operator_import_from_ao_test(scfres, ao_dict, operator="electric_dipole",
 
     if operator in ["magnetic_dipole"]:
         int_imported = getattr(refstate.operators, operator)(gauge_origin)
-    elif operator in ["electric_quadrupole"]:
+    elif operator in ["electric_quadrupole", "electric_quadrupole_traceless"]:
         callback = getattr(refstate.operators, operator)(gauge_origin)
         # flatten the list of lists of OneParticleOperators
         int_imported = [quad for quads in callback for quad in quads]
