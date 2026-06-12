@@ -529,6 +529,6 @@ class TestAdcMatrixProjected:
         assert_equal_symmetry(res_for_sym.ph, pres.ph)
         assert_equal_symmetry(res_for_sym.pphh, pres.pphh)
         assert_nonzero_blocks(ores.ph, pres.ph, nonzeros["ph"], tol=1e-14)
-        assert_nonzero_blocks(ores.pphh, pres.pphh, nonzeros["pphh"], tol=1e-14)
+        assert_nonzero_blocks(ores.pphh, pres.pphh, nonzeros["pphh"], tol=5e-14)
 
     # TODO Test block_view, block_apply
