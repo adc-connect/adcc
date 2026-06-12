@@ -150,6 +150,38 @@ class TestPyscf:
                                          "electric_quadrupole_traceless",
                                          gauge_origin)
 
+            # Test electric quadrupole velocity
+            with mf.mol.with_common_orig(gauge_origin):
+                r_p = mf.mol.intor('int1e_irp', comp=9, hermi=0)
+                r_p = np.reshape(r_p, (3, 3, r_p.shape[1], r_p.shape[1]))
+                ovlp = mf.mol.intor_symmetric('int1e_ovlp', comp=1)
+                ovlp_matrix = np.zeros_like(r_p)
+                for i in range(3):
+                    ovlp_matrix[i][i] = ovlp
+                term = r_p + r_p.transpose(1, 0, 2, 3) - ovlp_matrix
+                ao_quad_vel = (
+                    -1.0 * np.reshape(term, (9, ovlp.shape[0], ovlp.shape[0]))
+                )
+            operator_import_from_ao_test(mf, list(ao_quad_vel),
+                                         "electric_quadrupole_velocity",
+                                         gauge_origin)
+
+            # Test diamagnetic magnetizability
+            with mf.mol.with_common_orig(gauge_origin):
+                r_r = mf.mol.intor_symmetric('int1e_rr', comp=9)
+                r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
+                r_quadr = mf.mol.intor_symmetric('int1e_r2', comp=1)
+                r_quadr_matrix = np.zeros_like(r_r)
+                for i in range(3):
+                    r_quadr_matrix[i][i] = r_quadr
+                term = 0.25 * (r_quadr_matrix - r_r)
+                diag_mag = (
+                    np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
+                )
+            operator_import_from_ao_test(mf, list(diag_mag),
+                                         "diamagnetic_magnetizability",
+                                         gauge_origin)
+
     @pytest.mark.parametrize("system", h2o, ids=[case.file_name for case in h2o])
     def test_rhf(self, system: testcases.TestCase):
         mf = adcc.backends.run_hf("pyscf", system.xyz, system.basis)

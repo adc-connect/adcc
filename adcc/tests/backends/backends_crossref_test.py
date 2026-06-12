@@ -244,7 +244,6 @@ def compare_adc_results(adc_results, atol):
             np.testing.assert_allclose(actual_mod, desired_mod)
 
         fixed_signs = None
-        fixed_signs_2d = None
         # test properties
         # the signs of the transition moments can differ between different ADC
         # calculations (due to the eigenvectors), but this should be uniform for
@@ -323,7 +322,7 @@ def compare_adc_results(adc_results, atol):
                 fixed_signs = fixed_signs_new
             else:
                 # sign is consistent across all matrix elements of a state.
-                assert_allclose_signs(fixed_signs_new[:,:,0], fixed_signs)
+                assert_allclose_signs(fixed_signs_new[:, :, 0], fixed_signs)
 
         if (
             not state1.reference_state.restricted
@@ -331,10 +330,7 @@ def compare_adc_results(adc_results, atol):
         ):
             if "overlap" in state1.operators.available and \
                     "overlap" in state2.operators.available:
-                assert_allclose(
-                        state1.state_ssq,
-                        state2.state_ssq,
-                        atol=atol)
+                assert_allclose(state1.state_ssq, state2.state_ssq, atol=atol)
 
         # Only in two backends the gauge origin selection is implemented.
         if len(set(comb) & set(backends_with_gauge_origin)) == 2:
