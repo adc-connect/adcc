@@ -31,10 +31,13 @@ from adcc.functions import einsum
 
 def ao_pair_index(p, q):
     """
-    Return the PySCF ``aosym=\"s2kl\"`` packed AO-pair index.
+    Return the packed index of the symmetric AO pair ``(p, q)``.
 
-    PySCF stores the lower-triangular ket pair ``(max(p, q), min(p, q))``
-    at ``max(p, q) * (max(p, q) + 1) // 2 + min(p, q)``.
+    AO pairs are stored in lower-triangular order: the pair is identified by
+    ``(max(p, q), min(p, q))`` and mapped to
+    ``max(p, q) * (max(p, q) + 1) // 2 + min(p, q)``.  This is the conventional
+    symmetric-pair packing of a derivative-ERI backend that exposes only one
+    entry per symmetric ket pair (matching, e.g., PySCF ``aosym=\"s2kl\"``).
     """
     p, q = np.maximum(p, q), np.minimum(p, q)
     return p * (p + 1) // 2 + q
@@ -42,7 +45,7 @@ def ao_pair_index(p, q):
 
 def ao_pair_indices(nao):
     """
-    Return arrays ``q, s`` enumerating PySCF lower-triangular AO pairs.
+    Return arrays ``q, s`` enumerating the lower-triangular AO pairs.
     """
     q, s = np.tril_indices(nao)
     return q.astype(np.intp, copy=False), s.astype(np.intp, copy=False)
@@ -280,14 +283,15 @@ class TwoParticleDensityMatrix:
     @staticmethod
     def ao_pair_density_from_dense(g2_ao_1, g2_ao_2, out=None):
         """
-        Pack the effective AO density for PySCF derivative ERI contraction.
+        Pack the effective AO density for a derivative-ERI contraction.
 
         The effective density is stored in the order
         ``D[p,r,q,s] = g2_ao_1[p,q,r,s] - g2_ao_2[p,q,s,r]``.  The last two
-        AO indices are packed according to PySCF ``aosym=\"s2kl\"``.  For an
-        off-diagonal ket pair ``q != s`` the packed entry contains the sum of
-        both full-density entries because PySCF stores only one integral for
-        the symmetric ket pair.
+        AO indices are packed into the lower-triangular ket pair ``q,s`` (see
+        :func:`ao_pair_index`).  For an off-diagonal ket pair ``q != s`` the
+        packed entry holds the sum of both full-density orderings, since a
+        symmetric-ket-pair integral layout stores only one entry per pair (the
+        layout used, e.g., by PySCF ``aosym=\"s2kl\"``).
         """
         nao = g2_ao_1.shape[0]
         npair = nao * (nao + 1) // 2
@@ -327,7 +331,7 @@ class TwoParticleDensityMatrix:
         Transform directly to packed AO-pair effective density.
 
         This is the memory-bounded counterpart of ``to_ao_basis()`` for the
-        PySCF gradient contraction.  It reproduces the spin cases from
+        gradient two-electron contraction.  It reproduces the spin cases from
         ``__transform_to_ao`` without forming the two full AO rank-4 TPDMs:
 
         - ``g2_ao_1``: ``aaaa``, ``bbbb``, ``abab``, ``baba``
@@ -335,9 +339,11 @@ class TwoParticleDensityMatrix:
 
         The returned/filled array has shape ``(nao, nao, nao * (nao + 1) // 2)``
         and contains ``D[p,r,q,s] = g2_ao_1[p,q,r,s] - g2_ao_2[p,q,s,r]`` with
-        the ``q,s`` ket pair packed in PySCF ``aosym=\"s2kl\"`` order.  Existing
-        block prefactors in this ``TwoParticleDensityMatrix`` are assumed to
-        have been applied upstream and are not changed here.
+        the ``q,s`` ket pair packed in lower-triangular order (see
+        :func:`ao_pair_index`; this matches a symmetric-ket-pair integral
+        layout such as PySCF ``aosym=\"s2kl\"``).  Existing block prefactors in
+        this ``TwoParticleDensityMatrix`` are assumed to have been applied
+        upstream and are not changed here.
 
         Each MO axis of the spin-orbital TPDM splits into a leading alpha range
         ``[0, n_alpha)`` and a trailing beta range ``[n_alpha, n_orbs)``; the
