@@ -85,7 +85,7 @@ class ElectronicStates:
 
         if property_method is None and hasattr(data, '_property_method'):
             property_method = data._property_method
-        
+
         if property_method is None:
             if self.method.level in [MethodLevel.TWO_X, MethodLevel.THREE]:
                 warnings.warn(

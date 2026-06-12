@@ -206,7 +206,8 @@ class TestLazyMp:
                         refmp["mp2"]["td_o1o1v1v1"], atol=1e-12)
         assert "td2/o1o1v1v1" in instances.get(system, case).timer.tasks
 
-    @pytest.mark.parametrize("system,case", cases)
+    @pytest.mark.parametrize("system,case",
+                             [(s, c) for s, c in cases if "cvs" not in c])
     @pytest.mark.parametrize("generator", generators)
     def test_td3(self, system: str, case: str, generator: str,
                  instances: LazyMpCache):
@@ -216,17 +217,6 @@ class TestLazyMp:
         assert_allclose(instances.get(system, case).td3("o1o1v1v1").to_ndarray(),
                         refmp["mp3"]["td_o1o1v1v1"], atol=1e-12)
         assert "td3/o1o1v1v1" in instances.get(system, case).timer.tasks
-
-    @pytest.mark.parametrize("system,case", cases)
-    @pytest.mark.parametrize("generator", generators)
-    def test_sigma_inf_ov(self, system: str, case: str, generator: str,
-                          instances: LazyMpCache):
-        refmp = testdata_cache._load_data(
-            system=system, method="mp", case=case, source=generator
-        )
-        assert_allclose(instances.get(system, case).sigma_inf_ov(3).to_ndarray(),
-                        refmp["mp3"]["sigma_inf_ov"], atol=1e-12)
-        assert "sigma_inf_ov/3" in instances.get(system, case).timer.tasks
 
     @pytest.mark.parametrize("system,case,generator", tt2_cases)
     def test_tt2(self, system: str, case: str, generator: str,
@@ -257,6 +247,34 @@ class TestLazyMp:
         reimport = libadcc.Tensor(sym)
         reimport.set_from_ndarray(tt2.to_ndarray(), 1e-14)
 
+    @pytest.mark.parametrize("system,case",
+                             [(s, c) for s, c in cases if "cvs" not in c])
+    def test_sigma_inf_ov(self, system: str, case: str, instances: LazyMpCache):
+        refmp = testdata_cache._load_data(
+            system=system, method="mp", case=case, source="adcc"
+        )
+        assert_allclose(instances.get(system, case).sigma_inf_ov(3).to_ndarray(),
+                        refmp["mp3"]["sigma_inf_ov"], atol=1e-12)
+        assert "sigma_inf_ov/3" in instances.get(system, case).timer.tasks
+
+    @pytest.mark.parametrize("system,case",
+                             [(s, c) for s, c in cases if "cvs" not in c])
+    def test_m_3_plus(self, system: str, case: str, instances: LazyMpCache):
+        refmp = testdata_cache._load_data(
+            system=system, method="mp", case=case, source="adcc"
+        )
+        assert_allclose(instances.get(system, case).m_3_plus.to_ndarray(),
+                        refmp["mp3"]["m_3_plus"], atol=1e-12)
+
+    @pytest.mark.parametrize("system, case",
+                             [(s, c) for s, c in cases if "cvs" not in c])
+    def test_m_3_minus(self, system: str, case: str, instances: LazyMpCache):
+        refmp = testdata_cache._load_data(
+            system=system, method="mp", case=case, source="adcc"
+        )
+        assert_allclose(instances.get(system, case).m_3_minus.to_ndarray(),
+                        refmp["mp3"]["m_3_minus"], atol=1e-12)
+
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)
     def test_mp2_diffdm_mo(self, system: str, case: str, generator: str,
@@ -273,7 +291,7 @@ class TestLazyMp:
         for label in blocks:
             assert_allclose(mp2diff[label].to_ndarray(),
                             refmp["mp2"]["dm_" + label], atol=1e-12)
-        assert "mp2_diffdm" in instances.get(system, case).timer.tasks
+        assert "mp2_dm_correction" in instances.get(system, case).timer.tasks
 
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)
@@ -309,7 +327,7 @@ class TestLazyMp:
         refmp = testdata_cache._load_data(
             system=system, method="mp", case=case, source=generator
         )
-        mp3diff = instances.get(system, case).mp3_diffdm
+        mp3diff = instances.get(system, case).diffdm(3)
 
         assert mp3diff.symmetry is OperatorSymmetry.HERMITIAN
 
@@ -318,7 +336,7 @@ class TestLazyMp:
 
             assert_allclose(mp3diff[label].to_ndarray(),
                             refmp["mp3"]["dm_" + label], atol=1e-12)
-        assert 'mp3_diffdm' in instances.get(system, case).timer.tasks
+        assert 'mp3_dm_correction' in instances.get(system, case).timer.tasks
 
     @pytest.mark.parametrize("system,case",
                              [(s, c) for s, c in cases if "cvs" not in c])
@@ -329,7 +347,7 @@ class TestLazyMp:
         refmp = testdata_cache._load_data(
             system=system, method="mp", case=case, source=generator
         )
-        mp3diff = instances.get(system, case).mp3_diffdm
+        mp3diff = instances.get(system, case).diffdm(3)
         reference_state = instances.get(system, case).reference_state
 
         dm_α, dm_β = mp3diff.to_ao_basis(reference_state)

@@ -307,7 +307,8 @@ class IsrMethod(Method):
             cvs=False
         ): LevelSpec(
             max_level=3,
-            special_levels=(MethodLevel.ONE_S, MethodLevel.TWO_D, MethodLevel.THREE_D)
+            special_levels=(MethodLevel.ONE_S, MethodLevel.TWO_D,
+                            MethodLevel.THREE_D)
         ),
         LevelKey(
             adc_type=AdcType.PP,
@@ -315,7 +316,7 @@ class IsrMethod(Method):
             cvs=True
         ): LevelSpec(
             max_level=3,
-            special_levels=(MethodLevel.ONE_S, MethodLevel.TWO_D, MethodLevel.THREE_D)
+            special_levels=(MethodLevel.ONE_S, MethodLevel.TWO_D,
+                            MethodLevel.THREE_D)
         )
     }
-

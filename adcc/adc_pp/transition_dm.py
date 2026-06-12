@@ -105,7 +105,7 @@ def tdm_isr2(mp, amplitude, intermediates):
 
 
 def tdm_isr3d(mp, amplitude, intermediates):
-    dm = tdm_isr2(mp, amplitude, intermediates) # Get ISR(2) result
+    dm = tdm_isr2(mp, amplitude, intermediates)  # Get ISR(2) result
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
 
     ul1, ul2 = amplitude.ph, amplitude.pphh  # adc amplitudes

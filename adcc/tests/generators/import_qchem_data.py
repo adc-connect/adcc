@@ -411,6 +411,8 @@ _mp_data = {
     "mp3/opdm/dm_o1o1": "mp3/dm_o1o1",
     "mp3/opdm/dm_o1v1": "mp3/dm_o1v1",
     "mp3/opdm/dm_v1v1": "mp3/dm_v1v1",
+    # MP3 doubles amplitude at third order
+    "mp3/td_o1o1v1v1": "mp3/td_o1o1v1v1",
     # MP3 dipole vector
     "mp3/prop/dipole": "mp3/dipole",
     # sigma4+ density in the AO basis
