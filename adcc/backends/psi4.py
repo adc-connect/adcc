@@ -60,8 +60,11 @@ class Psi4OperatorIntegralProvider:
         """
         # TODO: Gauge origin?
         if gauge_origin != (0.0, 0.0, 0.0) and gauge_origin != "origin":
-            raise NotImplementedError('Only (0.0, 0.0, 0.0) can be selected as'
-                                      ' gauge origin.')
+            raise NotImplementedError(
+                "For Psi4 only the origin (0.0, 0.0, 0.0) can be selected as"
+                " gauge origin for the magnetic dipole operator. "
+                f"{gauge_origin} is not valid."
+            )
         return tuple(
             0.5 * np.asarray(comp)
             for comp in self.mints.ao_angular_momentum()
@@ -79,12 +82,15 @@ class Psi4OperatorIntegralProvider:
         """-sum_i r_{i, alpha} r_{i, beta}"""
         # TODO: Gauge origin?
         if gauge_origin != (0.0, 0.0, 0.0) and gauge_origin != "origin":
-            raise NotImplementedError('Only (0.0, 0.0, 0.0) can be selected as'
-                                      ' gauge origin.')
+            raise NotImplementedError(
+                "For Psi4 only the origin (0.0, 0.0, 0.0) can be selected as"
+                " gauge origin for the electric quadrupole operator. "
+                f"{gauge_origin} is not valid."
+            )
         # Expand 6 upper-triangular components to 9 symmetric matrix entries.
         u = [np.asarray(comp) for comp in self.mints.ao_quadrupole()]
-        full = u[:3] + [u[1], u[3], u[4]] + [u[2], u[4], u[5]]
-        return tuple(full)
+        assert len(u) == 6
+        return (u[0], u[1], u[2], u[1], u[3], u[4], u[2], u[4], u[5])
 
     def electric_quadrupole_traceless(self, gauge_origin="origin"
                                       ) -> tuple[np.ndarray, ...]:
@@ -94,12 +100,15 @@ class Psi4OperatorIntegralProvider:
         """
         # TODO: Gauge origin?
         if gauge_origin != (0.0, 0.0, 0.0) and gauge_origin != "origin":
-            raise NotImplementedError('Only (0.0, 0.0, 0.0) can be selected as'
-                                      ' gauge origin.')
+            raise NotImplementedError(
+                "For Psi4 only the origin (0.0, 0.0, 0.0) can be selected as"
+                " gauge origin for the traceless electric quadrupole operator. "
+                f"{gauge_origin} is not valid."
+            )
         # Expand 6 upper-triangular components to 9 symmetric matrix entries.
         u = [np.asarray(comp) for comp in self.mints.ao_traceless_quadrupole()]
-        full = u[:3] + [u[1], u[3], u[4]] + [u[2], u[4], u[5]]
-        return tuple(full)
+        assert len(u) == 6
+        return (u[0], u[1], u[2], u[1], u[3], u[4], u[2], u[4], u[5])
 
     def pe_induction_elec(self, dm: OneParticleOperator) -> psi4.core.Matrix:
         if not hasattr(self.wfn, "pe_state"):

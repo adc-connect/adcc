@@ -326,7 +326,7 @@ def compare_adc_results(adc_results, atol):
 
         if (
             not state1.reference_state.restricted
-            and set(state1.reference_state.mospaces.subspaces) == {"o1", "v1"}
+            and not state1.reference_state.has_core_occupied_space
         ):
             if "overlap" in state1.operators.available and \
                     "overlap" in state2.operators.available:
