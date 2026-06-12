@@ -26,9 +26,9 @@ from numpy.testing import assert_allclose
 from pytest import approx
 
 from adcc import block as b
-from adcc import LazyMp, OneParticleDensity, ReferenceState
+from adcc import LazyMp, ReferenceState
 from adcc import OperatorSymmetry
-from adcc.functions import einsum, evaluate
+from adcc.functions import einsum
 from adcc.backends import run_hf
 from adcc.MoSpaces import split_spaces
 

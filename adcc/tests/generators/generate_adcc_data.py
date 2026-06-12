@@ -213,9 +213,9 @@ def generate_hf_631g():
 
 def main():
     generate_h2o_sto3g()
-    # generate_h2o_def2tzvp()
+    generate_h2o_def2tzvp()
     generate_cn_sto3g()
-    # generate_cn_ccpvdz()
+    generate_cn_ccpvdz()
     generate_hf_631g()
 
 

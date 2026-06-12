@@ -166,34 +166,37 @@ class LazyMp(GroundState):
         ).symmetrise(0, 1)
 
         ampl = (
-            + 2 * (  # (1 - P_ij)
+            + 2 * (
                 # N^5: O^2V^3 / N^4: O^1V^3
                 + 1 * einsum('icab,jc->ijab', hf.ovvv, t1_2)
                 # N^7: O^4V^3 / N^6: O^3V^3
                 + 0.5 * einsum('klic,jklabc->ijab', hf.ooov, t3_2)
-                + 0.5 * einsum('ilab,jl->ijab', t2_1,  # N^5: O^3V^2 / N^4: O^2V^2
+                # N^5: O^3V^2 / N^4: O^2V^2
+                + 0.5 * einsum('ilab,jl->ijab', t2_1,
                                einsum('klcd,jkcd->jl', hf.oovv, t2_1))
             )
-            + 4 * (  # (1 - P_ij) (1 - P_ab)
+            + 4 * (
                 # N^6: O^3V^3 / N^4: O^2V^2
                 + 1 * einsum('icka,jkbc->ijab', hf.ovov, t2_2)
             )
-            + 2 * (  # (1 - P_ab)
+            + 2 * (
                 # N^5: O^3V^2 / N^4: O^2V^2
                 + 1 * einsum('ijka,kb->ijab', hf.ooov, t1_2)
                 # N^7: O^3V^4 / N^6: O^3V^3
                 + 0.5 * einsum('kacd,ijkbcd->ijab', hf.ovvv, t3_2)
-                + 1 * einsum('ikbd,jkad->ijab', t2_1,  # N^6: O^3V^3 / N^4: O^2V^2
+                # N^6: O^3V^3 / N^4: O^2V^2
+                + 1 * einsum('ikbd,jkad->ijab', t2_1,
                              einsum('klcd,jlac->jkad', hf.oovv, t2_1))
-                + 0.5 * einsum('ijad,bd->ijab', t2_1,  # N^5: O^2V^3 / N^4: O^2V^2
+                # N^5: O^2V^3 / N^4: O^2V^2
+                + 0.5 * einsum('ijad,bd->ijab', t2_1,
                                einsum('klcd,klbc->bd', hf.oovv, t2_1))
             )
-            # no symmetry operations required
             # N^6: O^2V^4 / N^4: V^4
             - 0.5 * einsum('abcd,ijcd->ijab', hf.vvvv, t2_2)
             # N^6: O^4V^2 / N^4: O^2V^2
             - 0.5 * einsum('ijkl,klab->ijab', hf.oooo, t2_2)
-            + 0.25 * einsum('klab,ijkl->ijab', t2_1,  # N^6: O^4V^2 / N^4: O^2V^2
+            # N^6: O^4V^2 / N^4: O^2V^2
+            + 0.25 * einsum('klab,ijkl->ijab', t2_1,
                             einsum('klcd,ijcd->ijkl', hf.oovv, t2_1))
         ).antisymmetrise(0, 1).antisymmetrise(2, 3)
         return ampl / denom
