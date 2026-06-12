@@ -338,6 +338,14 @@ class TwoParticleDensityMatrix:
         the ``q,s`` ket pair packed in PySCF ``aosym=\"s2kl\"`` order.  Existing
         block prefactors in this ``TwoParticleDensityMatrix`` are assumed to
         have been applied upstream and are not changed here.
+
+        Each MO axis of the spin-orbital TPDM splits into a leading alpha range
+        ``[0, n_alpha)`` and a trailing beta range ``[n_alpha, n_orbs)``; the
+        spin-blocked MO coefficients are non-zero only on the matching range.
+        For every spin case we therefore extract just the relevant rank-4 spin
+        sub-block via :meth:`Tensor.export_block` and contract it with the
+        compacted (non-zero-row) coefficients, instead of densifying the full
+        zero-padded block.
         """
         if not len(self.blocks_nonzero):
             raise ValueError("At least one non-zero block is needed to "
@@ -357,6 +365,62 @@ class TwoParticleDensityMatrix:
                 raise ValueError("Invalid output shape for packed AO-pair density.")
             out[...] = 0
 
+        # Compact each spin-blocked coefficient matrix to its non-zero MO rows.
+        # For spin-blocked coefficients these rows are contiguous and coincide
+        # with the alpha (``[0, n_alpha)``) or beta (``[n_alpha, n_orbs)``)
+        # range of the corresponding MO axis, so the same range slices the TPDM
+        # spin sub-block.  ``compact[(space, spin)] = (coeff_rows, lo, hi)``.
+        compact = {}
+        for sp in self.orbital_subspaces:
+            for spin in ("a", "b"):
+                c = np.asarray(coeff_map[f"{sp}_{spin}"])
+                nz = np.nonzero(np.any(c != 0.0, axis=1))[0]
+                if nz.size == 0:
+                    compact[(sp, spin)] = (None, 0, 0)
+                else:
+                    lo, hi = int(nz[0]), int(nz[-1]) + 1
+                    compact[(sp, spin)] = (c[lo:hi], lo, hi)
+
+        direct_spin_cases = [
+            ("a", "a", "a", "a"),
+            ("b", "b", "b", "b"),
+            ("a", "b", "a", "b"),
+            ("b", "a", "b", "a"),
+        ]
+        exchange_spin_cases = [
+            ("a", "a", "a", "a"),
+            ("b", "b", "b", "b"),
+            ("a", "b", "b", "a"),
+            ("b", "a", "a", "b"),
+        ]
+
+        # Pre-extract every required rank-4 spin sub-block exactly once (each is
+        # only the non-zero-row portion of a block, i.e. a small fraction of the
+        # zero-padded block and far smaller than a dense AO tensor).  Caching
+        # them keeps the transform memory-bounded by the sub-block sizes plus a
+        # single pair chunk, while avoiding repeated extraction across chunks.
+        subblocks = {}   # (block, spins) -> rank-4 ndarray or None
+        coeff_sets = {}  # (block, spins) -> [coeff_rows, ...]
+        for block in self.blocks_nonzero:
+            spaces = split_spaces(block)
+            ten_obj = self.block(block)
+            has_export_block = hasattr(ten_obj, "export_block")
+            dense_block = None if has_export_block else np.asarray(ten_obj)
+            for spins in set(direct_spin_cases) | set(exchange_spin_cases):
+                ranges = [compact[(sp, spin)] for sp, spin in zip(spaces, spins)]
+                coeff_sets[(block, spins)] = [r[0] for r in ranges]
+                if any(r[0] is None for r in ranges):
+                    subblocks[(block, spins)] = None
+                    continue
+                starts = [r[1] for r in ranges]
+                ends = [r[2] for r in ranges]
+                if has_export_block:
+                    subblocks[(block, spins)] = ten_obj.export_block(starts, ends)
+                else:
+                    subblocks[(block, spins)] = dense_block[tuple(
+                        slice(s, e) for s, e in zip(starts, ends)
+                    )]
+
         qall, sall = ao_pair_indices(nao)
         for start in range(0, npair, pair_chunk_size):
             stop = min(start + pair_chunk_size, npair)
@@ -364,64 +428,48 @@ class TwoParticleDensityMatrix:
             sidx = sall[start:stop]
             chunk = np.zeros((nao, nao, stop - start), dtype=out.dtype)
 
+            offdiag = qidx != sidx
+            any_offdiag = bool(np.any(offdiag))
+            if any_offdiag:
+                qswap = sidx[offdiag]
+                sswap = qidx[offdiag]
+                swapped = np.zeros(
+                    (nao, nao, np.count_nonzero(offdiag)), dtype=out.dtype
+                )
+
             for block in self.blocks_nonzero:
-                s1, s2, s3, s4 = split_spaces(block)
-                tensor = self[block]
-                if hasattr(tensor, "to_ndarray"):
-                    tensor = tensor.to_ndarray()
-                tensor = np.asarray(tensor)
-                cc = coeff_map
-
-                direct_spin_cases = [
-                    ("a", "a", "a", "a"),
-                    ("b", "b", "b", "b"),
-                    ("a", "b", "a", "b"),
-                    ("b", "a", "b", "a"),
-                ]
-                exchange_spin_cases = [
-                    ("a", "a", "a", "a"),
-                    ("b", "b", "b", "b"),
-                    ("a", "b", "b", "a"),
-                    ("b", "a", "a", "b"),
-                ]
-                spaces = (s1, s2, s3, s4)
-
                 for spins in direct_spin_cases:
-                    coeffs = [cc[f"{sp}_{spin}"] for sp, spin in zip(spaces, spins)]
+                    sub = subblocks[(block, spins)]
+                    if sub is None:
+                        continue
+                    coeffs = coeff_sets[(block, spins)]
                     self._add_direct_pair_transform(
-                        chunk, tensor, *coeffs, qidx, sidx, +1.0, False
+                        chunk, sub, *coeffs, qidx, sidx, +1.0, False
                     )
+                    if any_offdiag:
+                        self._add_direct_pair_transform(
+                            swapped, sub, *coeffs, qswap, sswap, +1.0, False
+                        )
                 for spins in exchange_spin_cases:
-                    coeffs = [cc[f"{sp}_{spin}"] for sp, spin in zip(spaces, spins)]
+                    sub = subblocks[(block, spins)]
+                    if sub is None:
+                        continue
+                    coeffs = coeff_sets[(block, spins)]
                     self._add_direct_pair_transform(
-                        chunk, tensor, *coeffs, qidx, sidx, -1.0, True
+                        chunk, sub, *coeffs, qidx, sidx, -1.0, True
                     )
+                    if any_offdiag:
+                        self._add_direct_pair_transform(
+                            swapped, sub, *coeffs, qswap, sswap, -1.0, True
+                        )
 
-                offdiag = qidx != sidx
-                if np.any(offdiag):
-                    qswap = sidx[offdiag]
-                    sswap = qidx[offdiag]
-                    swapped = np.zeros(
-                        (nao, nao, np.count_nonzero(offdiag)), dtype=out.dtype
-                    )
-                    for spins in direct_spin_cases:
-                        coeffs = [
-                            cc[f"{sp}_{spin}"] for sp, spin in zip(spaces, spins)
-                        ]
-                        self._add_direct_pair_transform(
-                            swapped, tensor, *coeffs, qswap, sswap, +1.0, False
-                        )
-                    for spins in exchange_spin_cases:
-                        coeffs = [
-                            cc[f"{sp}_{spin}"] for sp, spin in zip(spaces, spins)
-                        ]
-                        self._add_direct_pair_transform(
-                            swapped, tensor, *coeffs, qswap, sswap, -1.0, True
-                        )
-                    chunk[:, :, offdiag] += swapped
+            if any_offdiag:
+                chunk[:, :, offdiag] += swapped
 
             out[:, :, start:stop] += chunk
         return out
+
+
 
     def __iadd__(self, other):
         if self.mospaces != other.mospaces:
