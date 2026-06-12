@@ -22,6 +22,7 @@
 ## ---------------------------------------------------------------------
 import os
 import tempfile
+import warnings
 import numpy as np
 
 from mpi4py import MPI
@@ -109,6 +110,11 @@ class VeloxChemHFProvider(HartreeFockProvider):
         # Do not forget the next line,
         # otherwise weird errors result
         super().__init__()
+        warnings.warn(
+            "The VeloxChem interface does not work with new VeloxChem versions "
+            "and is no longer maintained. It will be removed in the future.",
+            DeprecationWarning
+        )
 
         self.scfdrv = scfdrv
         self.mol_orbs = self.scfdrv.mol_orbs

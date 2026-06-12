@@ -540,9 +540,10 @@ DISPATCH = {
     "isr0": s2s_tdm_isr0,
     "isr1s": s2s_tdm_isr0,  # Identical to ISR(0)
     "isr1": s2s_tdm_isr1,
+    "isr2d": s2s_tdm_isr2,  # Identical to ISR(2)
     "isr2": s2s_tdm_isr2,
     "isr3d": s2s_tdm_isr3d,
-    "isr3": s2s_tdm_isr3,
+    "isr3": s2s_tdm_isr3,  # Identical to ISR(3d) for now
 }
 
 

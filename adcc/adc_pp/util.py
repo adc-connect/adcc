@@ -20,33 +20,44 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+from ..AmplitudeVector import AmplitudeVector
 
 
-def check_singles_amplitudes(spaces, *amplitudes):
+def check_singles_amplitudes(spaces: list[str], *amplitudes: AmplitudeVector):
     check_have_singles_block(*amplitudes)
     check_singles_subspaces(spaces, *amplitudes)
 
 
-def check_doubles_amplitudes(spaces, *amplitudes):
+def check_doubles_amplitudes(spaces: list[str], *amplitudes: AmplitudeVector):
     check_have_doubles_block(*amplitudes)
     check_doubles_subspaces(spaces, *amplitudes)
 
 
-def check_have_singles_block(*amplitudes):
+def check_triples_amplitudes(spaces: list[str], *amplitudes: AmplitudeVector):
+    check_have_triples_block(*amplitudes)
+    check_triples_subspaces(spaces, *amplitudes)
+
+
+def check_have_singles_block(*amplitudes: AmplitudeVector):
     if any("ph" not in amplitude.blocks for amplitude in amplitudes):
         raise ValueError("ADC(0) level and "
                          "beyond expects an excitation amplitude with a "
                          "singles part.")
 
 
-def check_have_doubles_block(*amplitudes):
+def check_have_doubles_block(*amplitudes: AmplitudeVector):
     if any("pphh" not in amplitude.blocks for amplitude in amplitudes):
         raise ValueError("ADC(2) level and "
                          "beyond expects an excitation amplitude with a "
                          "singles and a doubles part.")
 
 
-def check_singles_subspaces(spaces, *amplitudes):
+def check_have_triples_block(*amplitudes: AmplitudeVector):
+    if any("ppphhh" not in amplitude.blocks for amplitude in amplitudes):
+        raise ValueError("Expected an excitation amplitude with a triples part.")
+
+
+def check_singles_subspaces(spaces: list[str], *amplitudes: AmplitudeVector):
     for amplitude in amplitudes:
         u1 = amplitude.ph
         if u1.subspaces != spaces:
@@ -55,10 +66,19 @@ def check_singles_subspaces(spaces, *amplitudes):
                              "was expected.")
 
 
-def check_doubles_subspaces(spaces, *amplitudes):
+def check_doubles_subspaces(spaces: list[str], *amplitudes: AmplitudeVector):
     for amplitude in amplitudes:
         u2 = amplitude.pphh
         if u2.subspaces != spaces:
             raise ValueError("Mismatch in subspaces doubles part "
                              f"(== {u2.subspaces}), where "
+                             f"{spaces} was expected.")
+
+
+def check_triples_subspaces(spaces: list[str], *amplitudes: AmplitudeVector):
+    for amplitude in amplitudes:
+        u3 = amplitude.ppphhh
+        if u3.subspaces != spaces:
+            raise ValueError("Mismatch in subspaces triples part "
+                             f"(== {u3.subspaces}), where "
                              f"{spaces} was expected.")
