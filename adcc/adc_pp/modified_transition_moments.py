@@ -177,8 +177,9 @@ DISPATCH = {
 }
 
 
-def modified_transition_moments(method, ground_state, operator=None,
-                                intermediates=None):
+def modified_transition_moments(
+    method, ground_state, operator=None, intermediates=None
+):
     """Compute the modified transition moments (MTM) for the provided
     ISR method with reference to the passed ground state.
 

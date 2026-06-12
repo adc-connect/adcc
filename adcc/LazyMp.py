@@ -369,6 +369,20 @@ class LazyMp:
 
     @cached_property
     @timed_member_call(timer="timer")
+    def mp3_diffdm(self) -> OneParticleDensity:
+        """
+        Return the MP3 difference density in the MO basis.
+        """
+        if self.has_core_occupied_space:
+            raise NotImplementedError("MP3 density not implemented for CVS.")
+        ret = OneParticleDensity(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
+        mp2_dm = self.mp2_dm_correction
+        mp3_dm = self.mp3_dm_correction
+
+        return evaluate(mp2_dm + mp3_dm)
+
+    @cached_property
+    @timed_member_call(timer="timer")
     def mp1_dm_correction_2p(self) -> TwoParticleDensity:
         """
         Return the two-particle MP1 difference density correction in the MO basis.

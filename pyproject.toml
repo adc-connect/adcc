@@ -1,7 +1,7 @@
 [project]
 name = "adcc"
 description = "adcc:  Seamlessly connect your host program to ADC"
-version = "0.17.0"
+version = "0.17.1"
 dynamic = ["readme"]  # handled in setup.py
 keywords = [
 	"ADC", "algebraic-diagrammatic", "construction", "excited", "states",
@@ -55,6 +55,7 @@ build_docs = [
 	"sphinx-automodapi", "sphinx-rtd-theme"
 ]
 analysis = ["matplotlib >= 3.0", "pandas >= 0.25.0"]
+build_stub = ["ruff", "pybind11-stubgen"]
 
 [project.urls]
 Homepage = "https://adc-connect.org"
@@ -74,7 +75,7 @@ exclude = [
 ]
 
 [tool.bumpversion]
-current_version = "0.17.0"
+current_version = "0.17.1"
 commit = true
 tag = true
 files = [

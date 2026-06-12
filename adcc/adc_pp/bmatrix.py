@@ -186,6 +186,12 @@ def block_pphh_ph_1(ground_state, op):
 
 
 #
+# 1st order doubles block
+#
+block_pphh_pphh_1 = block_pphh_pphh_0
+
+
+#
 # 2nd order main
 #
 def block_ph_ph_2(ground_state, op):
