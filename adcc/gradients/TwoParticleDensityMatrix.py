@@ -404,8 +404,6 @@ class TwoParticleDensityMatrix:
         for block in self.blocks_nonzero:
             spaces = split_spaces(block)
             ten_obj = self.block(block)
-            has_export_block = hasattr(ten_obj, "export_block")
-            dense_block = None if has_export_block else np.asarray(ten_obj)
             for spins in set(direct_spin_cases) | set(exchange_spin_cases):
                 ranges = [compact[(sp, spin)] for sp, spin in zip(spaces, spins)]
                 coeff_sets[(block, spins)] = [r[0] for r in ranges]
@@ -414,12 +412,7 @@ class TwoParticleDensityMatrix:
                     continue
                 starts = [r[1] for r in ranges]
                 ends = [r[2] for r in ranges]
-                if has_export_block:
-                    subblocks[(block, spins)] = ten_obj.export_block(starts, ends)
-                else:
-                    subblocks[(block, spins)] = dense_block[tuple(
-                        slice(s, e) for s, e in zip(starts, ends)
-                    )]
+                subblocks[(block, spins)] = ten_obj.export_block(starts, ends)
 
         qall, sall = ao_pair_indices(nao)
         for start in range(0, npair, pair_chunk_size):
@@ -438,38 +431,28 @@ class TwoParticleDensityMatrix:
                 )
 
             for block in self.blocks_nonzero:
-                for spins in direct_spin_cases:
-                    sub = subblocks[(block, spins)]
-                    if sub is None:
-                        continue
-                    coeffs = coeff_sets[(block, spins)]
-                    self._add_direct_pair_transform(
-                        chunk, sub, *coeffs, qidx, sidx, +1.0, False
-                    )
-                    if any_offdiag:
+                for spin_cases, sign, exchange in (
+                        (direct_spin_cases, +1.0, False),
+                        (exchange_spin_cases, -1.0, True)):
+                    for spins in spin_cases:
+                        sub = subblocks[(block, spins)]
+                        if sub is None:
+                            continue
+                        coeffs = coeff_sets[(block, spins)]
                         self._add_direct_pair_transform(
-                            swapped, sub, *coeffs, qswap, sswap, +1.0, False
+                            chunk, sub, *coeffs, qidx, sidx, sign, exchange
                         )
-                for spins in exchange_spin_cases:
-                    sub = subblocks[(block, spins)]
-                    if sub is None:
-                        continue
-                    coeffs = coeff_sets[(block, spins)]
-                    self._add_direct_pair_transform(
-                        chunk, sub, *coeffs, qidx, sidx, -1.0, True
-                    )
-                    if any_offdiag:
-                        self._add_direct_pair_transform(
-                            swapped, sub, *coeffs, qswap, sswap, -1.0, True
-                        )
+                        if any_offdiag:
+                            self._add_direct_pair_transform(
+                                swapped, sub, *coeffs, qswap, sswap, sign,
+                                exchange
+                            )
 
             if any_offdiag:
                 chunk[:, :, offdiag] += swapped
 
             out[:, :, start:stop] += chunk
         return out
-
-
 
     def __iadd__(self, other):
         if self.mospaces != other.mospaces:

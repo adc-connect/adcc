@@ -20,6 +20,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import glob
+import os
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pytest
@@ -77,6 +80,21 @@ def _random_tpdm(refstate, blocks=(b.oooo, b.oovv, b.ovov)):
         tensor.set_random()
         g2[blk] = tensor
     return g2
+
+
+def _direct_gradient_inputs(mp):
+    """Inputs for ``correlated_gradient_direct`` from an ``LazyMp``.
+
+    Returns ``(g1_ao, w_ao, g2_total)`` where the one-electron AO matrices are
+    zero (the storage/validation tests only exercise the two-electron packed
+    density path) and ``g2_total`` is the real MP2 two-particle density matrix
+    with its block prefactors applied, as built by ``nuclear_gradient``.
+    """
+    grad = adcc.nuclear_gradient(mp, tei_contraction="full_ao")
+    nao = mp.reference_state.gradient_provider.mol.nao_nr()
+    g1_ao = np.zeros((nao, nao))
+    w_ao = np.zeros((nao, nao))
+    return g1_ao, w_ao, grad.g2
 
 
 def _two_stage_packed_density(g2, refstate):
@@ -271,7 +289,6 @@ def test_open_shell_packed_contraction_matches_dense_reference():
     assert_allclose(packed_tei, full.two_electron, atol=1e-10)
 
 
-
 # ---------------------------------------------------------------------------
 # export_block: dense sub-block / spin-subblock tensor view (C++)
 #
@@ -353,3 +370,131 @@ def test_export_block_validates_arguments():
         # end exceeds shape
         tensor.export_block([0, 0, 0, 0],
                             [shape[0] + 1, shape[1], shape[2], shape[3]])
+
+
+# ---------------------------------------------------------------------------
+# Out-of-core (HDF5) packed-density storage and API validation
+#
+# These pin the new tei_pair_density_storage="hdf5" path (equivalence with the
+# in-memory path and scratch-file cleanup) and the user-facing validation
+# contracts of the new keyword arguments.
+# ---------------------------------------------------------------------------
+
+
+def test_direct_gradient_hdf5_matches_memory(tmp_path):
+    """The out-of-core HDF5 storage path must match the in-memory path.
+
+    Exercises the h5py-dataset writes inside ``to_ao_pair_density`` (the
+    ``out[...] = 0`` reset and the ``out[:, :, start:stop] += chunk``
+    read-modify-write), which behave differently for an HDF5 dataset than for
+    a plain ndarray.
+    """
+    hf = cached_backend_hf("pyscf", "h2o_sto3g", conv_tol=1e-11)
+    mp = adcc.LazyMp(adcc.ReferenceState(hf))
+
+    memory = adcc.nuclear_gradient(
+        mp, tei_contraction="direct", tei_pair_density_storage="memory"
+    )
+    hdf5 = adcc.nuclear_gradient(
+        mp, tei_contraction="direct", tei_pair_density_storage="hdf5",
+        tei_pair_chunk_size=3
+    )
+
+    assert_allclose(hdf5.total, memory.total, atol=1e-10)
+    assert_allclose(hdf5.components.two_electron,
+                    memory.components.two_electron, atol=1e-10)
+
+
+def test_direct_gradient_hdf5_removes_scratch_file(tmp_path):
+    """The temporary HDF5 scratch file must be removed after contraction."""
+    hf = cached_backend_hf("pyscf", "h2o_sto3g", conv_tol=1e-11)
+    mp = adcc.LazyMp(adcc.ReferenceState(hf))
+    provider = hf.gradient_provider
+
+    g1_ao, w_ao, g2_total = _direct_gradient_inputs(mp)
+    before = set(glob.glob(os.path.join(str(tmp_path), "adcc_pyscf_gradient_*")))
+    provider.correlated_gradient_direct(
+        g1_ao, w_ao, g2_total, refstate=adcc.ReferenceState(hf),
+        pair_density_storage="hdf5", scratch_directory=str(tmp_path)
+    )
+    after = set(glob.glob(os.path.join(str(tmp_path), "adcc_pyscf_gradient_*")))
+    assert before == after, "scratch HDF5 file was not cleaned up"
+
+
+def test_direct_gradient_hdf5_default_pair_chunk_is_bounded():
+    """The hdf5 path must not silently use the full npair working buffer.
+
+    Out-of-core storage only offloads the output density; if the in-memory
+    working chunk defaulted to the full ``npair`` it would defeat the memory
+    bound.  The hdf5 path therefore selects a bounded default chunk size.
+    """
+    hf = cached_backend_hf("pyscf", "h2o_sto3g", conv_tol=1e-11)
+    mp = adcc.LazyMp(adcc.ReferenceState(hf))
+    provider = hf.gradient_provider
+    g1_ao, w_ao, g2_total = _direct_gradient_inputs(mp)
+
+    nao = provider.mol.nao_nr()
+    npair = nao * (nao + 1) // 2
+
+    captured = {}
+    original = g2_total.to_ao_pair_density
+
+    def spy(refstate_or_coefficients=None, pair_chunk_size=None, out=None):
+        captured["pair_chunk_size"] = pair_chunk_size
+        return original(refstate_or_coefficients,
+                        pair_chunk_size=pair_chunk_size, out=out)
+
+    g2_total.to_ao_pair_density = spy
+    provider.correlated_gradient_direct(
+        g1_ao, w_ao, g2_total, refstate=adcc.ReferenceState(hf),
+        pair_density_storage="hdf5"
+    )
+    assert captured["pair_chunk_size"] is not None
+    assert captured["pair_chunk_size"] <= npair
+
+
+def test_nuclear_gradient_rejects_invalid_tei_contraction():
+    hf = cached_backend_hf("pyscf", "h2o_sto3g", conv_tol=1e-11)
+    mp = adcc.LazyMp(adcc.ReferenceState(hf))
+    with pytest.raises(ValueError, match="Invalid tei_contraction"):
+        adcc.nuclear_gradient(mp, tei_contraction="bogus")
+
+
+def test_correlated_gradient_direct_rejects_invalid_storage():
+    hf = cached_backend_hf("pyscf", "h2o_sto3g", conv_tol=1e-11)
+    mp = adcc.LazyMp(adcc.ReferenceState(hf))
+    provider = hf.gradient_provider
+    g1_ao, w_ao, g2_total = _direct_gradient_inputs(mp)
+    with pytest.raises(ValueError, match="pair_density_storage"):
+        provider.correlated_gradient_direct(
+            g1_ao, w_ao, g2_total, refstate=adcc.ReferenceState(hf),
+            pair_density_storage="bogus"
+        )
+
+
+def test_contract_tei_rejects_non_positive_shell_chunk():
+    hf = cached_backend_hf("pyscf", "h2o_sto3g", conv_tol=1e-11)
+    provider = hf.gradient_provider
+    nao = provider.mol.nao_nr()
+    npair = nao * (nao + 1) // 2
+    pair_density = np.zeros((nao, nao, npair))
+    with pytest.raises(ValueError, match="shell_chunk_size"):
+        provider._contract_tei_with_packed_density(
+            pair_density, shell_chunk_size=0
+        )
+
+
+def test_to_ao_pair_density_rejects_non_positive_pair_chunk():
+    hf = cached_backend_hf("pyscf", "h2o_sto3g", conv_tol=1e-11)
+    refstate = adcc.ReferenceState(hf)
+    g2 = _random_tpdm(refstate)
+    with pytest.raises(ValueError, match="pair_chunk_size"):
+        g2.to_ao_pair_density(refstate, pair_chunk_size=0)
+
+
+def test_to_ao_pair_density_rejects_bad_output_shape():
+    hf = cached_backend_hf("pyscf", "h2o_sto3g", conv_tol=1e-11)
+    refstate = adcc.ReferenceState(hf)
+    g2 = _random_tpdm(refstate)
+    with pytest.raises(ValueError, match="Invalid output shape"):
+        g2.to_ao_pair_density(refstate, out=np.zeros((1, 1, 1)))

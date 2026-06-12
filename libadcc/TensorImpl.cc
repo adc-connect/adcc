@@ -1258,7 +1258,6 @@ void TensorImpl<N>::export_block(const std::vector<size_t>& start,
       lt::dense_tensor_rd_ctrl<N, scalar_type> blkctrl(cblock);
       const scalar_type* sptr           = blkctrl.req_const_dataptr();
       const lt::dimensions<N> cblk_dims = cblock.get_dims();
-      const size_t cblk_size            = cblk_dims.get_size();
 
       // Walk every block of the orbit (each is a destination block in the
       // full dense tensor).
@@ -1315,7 +1314,6 @@ void TensorImpl<N>::export_block(const std::vector<size_t>& start,
           src_in_block.permute(inv_perm);
           const size_t src_abs =
                 lt::abs_index<N>(src_in_block, cblk_dims).get_abs_index();
-          (void)cblk_size;
           memptr[out_abs] = coeff * sptr[src_abs];
         }
       }
@@ -1325,8 +1323,6 @@ void TensorImpl<N>::export_block(const std::vector<size_t>& start,
     ctrl.ret_const_block(canon_idx);
   }
 }
-
-
 
 template <size_t N>
 void TensorImpl<N>::import_from(const scalar_type* memptr, size_t size,

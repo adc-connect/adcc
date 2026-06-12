@@ -20,6 +20,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import contextlib
 import os
 import tempfile
 
@@ -48,12 +49,9 @@ class PyScfGradientProvider:
     def _empty_gradient(self):
         natoms = self.mol.natm
         return {
-            "N": np.zeros((natoms, 3)),
             "S": np.zeros((natoms, 3)),
             "T+V": np.zeros((natoms, 3)),
-            "OEI": np.zeros((natoms, 3)),
             "TEI": np.zeros((natoms, 3)),
-            "Total": np.zeros((natoms, 3)),
         }
 
     def _add_one_electron_terms(self, gradient_components, g1_ao, w_ao,
@@ -129,6 +127,7 @@ class PyScfGradientProvider:
         nao = pair_density.shape[0]
         qidx, sidx = ao_pair_indices(nao)
         offdiag = qidx != sidx
+        any_offdiag = bool(np.any(offdiag))
         density_slice = np.asarray(pair_density[a0:a1, :, :]).copy()
         density_slice += np.asarray(pair_density[:, a0:a1, :]).transpose(1, 0, 2)
 
@@ -136,8 +135,8 @@ class PyScfGradientProvider:
             for b in range(nao):
                 pair_ab = int(ao_pair_index(a, b))
                 ket_as_bra = np.asarray(pair_density[:, :, pair_ab])
-                term = ket_as_bra[qidx, sidx].copy()
-                if np.any(offdiag):
+                term = ket_as_bra[qidx, sidx]
+                if any_offdiag:
                     term[offdiag] += ket_as_bra[sidx[offdiag], qidx[offdiag]]
                 if a == b:
                     term *= 2.0
@@ -178,12 +177,6 @@ class PyScfGradientProvider:
                 )
         return tei
 
-    def ao_pair_density_from_dense(self, g2_ao_1, g2_ao_2, out=None):
-        from adcc.gradients.TwoParticleDensityMatrix import TwoParticleDensityMatrix
-        return TwoParticleDensityMatrix.ao_pair_density_from_dense(
-            g2_ao_1, g2_ao_2, out=out
-        )
-
     def correlated_gradient_direct(self, g1_ao, w_ao, g2, refstate=None,
                                    shell_chunk_size=1, pair_chunk_size=None,
                                    pair_density_storage="memory",
@@ -193,23 +186,47 @@ class PyScfGradientProvider:
 
         The TPDM is transformed block-by-block to the packed AO-pair effective
         density.  It never forms ``g2_ao_1``/``g2_ao_2`` or the full derivative
-        ERI tensor.  ``pair_density_storage=\"hdf5\"`` stores the packed density
-        in a temporary HDF5 file under ``scratch_directory`` (or the system temp
-        directory) and removes it after contraction.
+        ERI tensor.
+
+        ``pair_density_storage`` selects where the packed AO-pair density is
+        kept:
+
+        - ``"memory"`` (default): an in-memory ``(nao, nao, npair)`` array.
+        - ``"hdf5"``: a temporary HDF5 file under ``scratch_directory`` (or the
+          ``PYSCF_TMPDIR`` / system temp directory), removed after contraction.
+
+        Note that out-of-core storage only bounds the packed *output* density.
+        The transform's in-memory working buffer is sized by ``pair_chunk_size``
+        (the number of AO pairs processed at once).  When ``pair_chunk_size`` is
+        left unset, the ``"hdf5"`` path therefore picks a bounded default so the
+        working buffer does not grow to the full ``(nao, nao, npair)`` size; the
+        ``"memory"`` path keeps the full ``npair`` chunk.
         """
+        valid_storage = {"memory", "hdf5"}
+        if pair_density_storage not in valid_storage:
+            raise ValueError(
+                f"pair_density_storage needs to be one of "
+                f"{sorted(valid_storage)}."
+            )
+
         Gradient = self._empty_gradient()
         gradient = grad.RHF(self.scfres)
         self._add_one_electron_terms(Gradient, g1_ao, w_ao, gradient)
 
         nao = self.mol.nao_nr()
         npair = nao * (nao + 1) // 2
+        if pair_chunk_size is None and pair_density_storage == "hdf5":
+            # Bound the in-memory working buffer for the out-of-core path
+            # instead of silently allocating the full (nao, nao, npair) chunk.
+            pair_chunk_size = min(npair, 256)
+
         h5file = None
         h5path = None
         pair_density = None
         try:
             if pair_density_storage == "memory":
                 pair_density = np.zeros((nao, nao, npair))
-            elif pair_density_storage in ("hdf5", "outcore"):
+            else:  # "hdf5"
                 scratch_directory = scratch_directory or os.environ.get(
                     "PYSCF_TMPDIR", tempfile.gettempdir()
                 )
@@ -224,9 +241,6 @@ class PyScfGradientProvider:
                     "pair_density", shape=(nao, nao, npair), dtype="f8",
                     chunks=(min(nao, 16), min(nao, 16), min(npair, 256))
                 )
-            else:
-                raise ValueError("pair_density_storage needs to be 'memory' "
-                                 "or 'hdf5'.")
 
             g2.to_ao_pair_density(
                 refstate, pair_chunk_size=pair_chunk_size, out=pair_density
@@ -235,13 +249,14 @@ class PyScfGradientProvider:
                 pair_density, shell_chunk_size=shell_chunk_size
             )
         finally:
+            # Cleanup must not mask an exception raised inside the try block
+            # (e.g. an out-of-space write error followed by a failing flush).
             if h5file is not None:
-                h5file.close()
+                with contextlib.suppress(Exception):
+                    h5file.close()
             if h5path is not None:
-                try:
+                with contextlib.suppress(OSError):
                     os.unlink(h5path)
-                except FileNotFoundError:
-                    pass
         return self._final_gradient_components(gradient, Gradient)
 
 

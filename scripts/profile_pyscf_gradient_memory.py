@@ -25,10 +25,10 @@ import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import numpy as np
-from pyscf import gto, scf
+import numpy as np  # noqa: E402
+from pyscf import gto, scf  # noqa: E402
 
-import adcc
+import adcc  # noqa: E402
 
 
 WATER_GEOMETRY = """
@@ -121,7 +121,7 @@ def main():
     parser.add_argument("--pair-chunk-size", type=int, default=None)
     parser.add_argument(
         "--pair-density-storage", default="memory",
-        choices=["memory", "hdf5", "outcore"],
+        choices=["memory", "hdf5"],
     )
     parser.add_argument(
         "--compare-to", choices=["direct", "full_ao"],
