@@ -115,8 +115,7 @@ def main():
     parser.add_argument("--n-singlets", type=int, default=1)
     parser.add_argument("--state-index", type=int, default=0)
     parser.add_argument(
-        "--tei-contraction", default="direct",
-        choices=["auto", "direct", "shell_batched", "full_ao"],
+        "--tei-contraction", default="direct", choices=["direct", "full_ao"],
     )
     parser.add_argument("--shell-chunk-size", type=int, default=1)
     parser.add_argument("--pair-chunk-size", type=int, default=None)
@@ -125,7 +124,7 @@ def main():
         choices=["memory", "hdf5", "outcore"],
     )
     parser.add_argument(
-        "--compare-to", choices=["direct", "shell_batched", "full_ao"],
+        "--compare-to", choices=["direct", "full_ao"],
         help="Optional correctness comparison. Not recommended for memray runs.",
     )
     parser.add_argument(

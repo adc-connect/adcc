@@ -48,38 +48,21 @@ def _random_ao_inputs(nao):
     return g1_ao, w_ao, g2_ao_1, g2_ao_2
 
 
-def test_shell_batched_tei_matches_full_pyscf_reference():
+def test_packed_ao_pair_contraction_matches_full_pyscf_reference():
     hf = cached_backend_hf("pyscf", "h2o_sto3g", conv_tol=1e-11)
     provider = hf.gradient_provider
     inputs = _random_ao_inputs(hf.n_bas)
+    _, _, g2_ao_1, g2_ao_2 = inputs
 
     full = provider.correlated_gradient(*inputs)
-    shell_batched = provider.correlated_gradient_shell_batched(
-        *inputs, shell_chunk_size=2
-    )
-
-    assert_allclose(shell_batched.two_electron, full.two_electron, atol=1e-10)
-    assert_allclose(shell_batched.hcore, full.hcore, atol=1e-12)
-    assert_allclose(shell_batched.overlap, full.overlap, atol=1e-12)
-
-
-def test_packed_ao_pair_contraction_matches_shell_batched_dense_path():
-    hf = cached_backend_hf("pyscf", "h2o_sto3g", conv_tol=1e-11)
-    provider = hf.gradient_provider
-    _, _, g2_ao_1, g2_ao_2 = _random_ao_inputs(hf.n_bas)
-
     pair_density = TwoParticleDensityMatrix.ao_pair_density_from_dense(
         g2_ao_1, g2_ao_2
     )
     packed_tei = provider._contract_tei_with_packed_density(
         pair_density, shell_chunk_size=2
     )
-    shell_batched = provider.correlated_gradient_shell_batched(
-        np.zeros((hf.n_bas, hf.n_bas)), np.zeros((hf.n_bas, hf.n_bas)),
-        g2_ao_1, g2_ao_2, shell_chunk_size=2
-    )
 
-    assert_allclose(packed_tei, shell_batched.two_electron, atol=1e-10)
+    assert_allclose(packed_tei, full.two_electron, atol=1e-10)
 
 
 def test_direct_mp2_pair_density_matches_dense_ao_transform():

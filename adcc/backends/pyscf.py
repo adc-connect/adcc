@@ -178,20 +178,6 @@ class PyScfGradientProvider:
                 )
         return tei
 
-    def correlated_gradient_shell_batched(self, g1_ao, w_ao, g2_ao_1, g2_ao_2,
-                                          shell_chunk_size=1):
-        """
-        PySCF-only shell-batched TEI path using existing dense AO TPDM inputs.
-        """
-        Gradient = self._empty_gradient()
-        gradient = grad.RHF(self.scfres)
-        self._add_one_electron_terms(Gradient, g1_ao, w_ao, gradient)
-        pair_density = self.ao_pair_density_from_dense(g2_ao_1, g2_ao_2)
-        Gradient["TEI"] += self._contract_tei_with_packed_density(
-            pair_density, shell_chunk_size=shell_chunk_size
-        )
-        return self._final_gradient_components(gradient, Gradient)
-
     def ao_pair_density_from_dense(self, g2_ao_1, g2_ao_2, out=None):
         from adcc.gradients.TwoParticleDensityMatrix import TwoParticleDensityMatrix
         return TwoParticleDensityMatrix.ao_pair_density_from_dense(
