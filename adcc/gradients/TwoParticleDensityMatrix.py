@@ -29,6 +29,25 @@ from adcc.Tensor import Tensor
 from adcc.functions import einsum
 
 
+def ao_pair_index(p, q):
+    """
+    Return the PySCF ``aosym=\"s2kl\"`` packed AO-pair index.
+
+    PySCF stores the lower-triangular ket pair ``(max(p, q), min(p, q))``
+    at ``max(p, q) * (max(p, q) + 1) // 2 + min(p, q)``.
+    """
+    p, q = np.maximum(p, q), np.minimum(p, q)
+    return p * (p + 1) // 2 + q
+
+
+def ao_pair_indices(nao):
+    """
+    Return arrays ``q, s`` enumerating PySCF lower-triangular AO pairs.
+    """
+    q, s = np.tril_indices(nao)
+    return q.astype(np.intp, copy=False), s.astype(np.intp, copy=False)
+
+
 class TwoParticleDensityMatrix:
     """
     Two-particle density matrix (TPDM) used for gradient evaluations
@@ -228,6 +247,181 @@ class TwoParticleDensityMatrix:
             return self.__transform_to_ao(self.reference_state)
         else:
             raise TypeError("Argument type not supported.")
+
+    def _ao_coefficient_map(self, refstate_or_coefficients=None):
+        """Return AO coefficient matrices as NumPy arrays."""
+        if refstate_or_coefficients is None:
+            if not hasattr(self, "reference_state"):
+                raise ValueError("Argument reference_state is required if no "
+                                 "reference_state is stored in the "
+                                 "TwoParticleDensityMatrix")
+            refstate_or_coefficients = self.reference_state
+
+        if isinstance(refstate_or_coefficients, libadcc.ReferenceState):
+            hf = refstate_or_coefficients
+            coeff_map = {}
+            for sp in self.orbital_subspaces:
+                coeff_map[sp + "_a"] = hf.orbital_coefficients_alpha(
+                    sp + "b"
+                ).to_ndarray()
+                coeff_map[sp + "_b"] = hf.orbital_coefficients_beta(
+                    sp + "b"
+                ).to_ndarray()
+        elif isinstance(refstate_or_coefficients, dict):
+            coeff_map = {}
+            for key, coeff in refstate_or_coefficients.items():
+                if hasattr(coeff, "to_ndarray"):
+                    coeff = coeff.to_ndarray()
+                coeff_map[key] = np.asarray(coeff)
+        else:
+            raise TypeError("Argument type not supported.")
+        return coeff_map
+
+    @staticmethod
+    def ao_pair_density_from_dense(g2_ao_1, g2_ao_2, out=None):
+        """
+        Pack the effective AO density for PySCF derivative ERI contraction.
+
+        The effective density is stored in the order
+        ``D[p,r,q,s] = g2_ao_1[p,q,r,s] - g2_ao_2[p,q,s,r]``.  The last two
+        AO indices are packed according to PySCF ``aosym=\"s2kl\"``.  For an
+        off-diagonal ket pair ``q != s`` the packed entry contains the sum of
+        both full-density entries because PySCF stores only one integral for
+        the symmetric ket pair.
+        """
+        nao = g2_ao_1.shape[0]
+        npair = nao * (nao + 1) // 2
+        if out is None:
+            out = np.zeros(
+                (nao, nao, npair), dtype=np.result_type(g2_ao_1, g2_ao_2)
+            )
+        else:
+            out[...] = 0
+        qidx, sidx = ao_pair_indices(nao)
+        for pair, (q, s) in enumerate(zip(qidx, sidx)):
+            out[:, :, pair] += g2_ao_1[:, q, :, s]
+            out[:, :, pair] -= g2_ao_2[:, q, s, :]
+            if q != s:
+                out[:, :, pair] += g2_ao_1[:, s, :, q]
+                out[:, :, pair] -= g2_ao_2[:, s, q, :]
+        return out
+
+    @staticmethod
+    def _add_direct_pair_transform(out, tensor, c1, c2, c3, c4,
+                                   qidx, sidx, sign, exchange):
+        """Accumulate one spin case into a packed AO-pair density chunk."""
+        if exchange:
+            right = c2[:, qidx][:, None, :] * c3[:, sidx][None, :, :]
+            out += sign * np.einsum(
+                "ip,lr,ijkl,jkm->prm", c1, c4, tensor, right, optimize=True
+            )
+        else:
+            right = c2[:, qidx][:, None, :] * c4[:, sidx][None, :, :]
+            out += sign * np.einsum(
+                "ip,kr,ijkl,jlm->prm", c1, c3, tensor, right, optimize=True
+            )
+
+    def to_ao_pair_density(self, refstate_or_coefficients=None,
+                           pair_chunk_size=None, out=None):
+        """
+        Transform directly to packed AO-pair effective density.
+
+        This is the memory-bounded counterpart of ``to_ao_basis()`` for the
+        PySCF gradient contraction.  It reproduces the spin cases from
+        ``__transform_to_ao`` without forming the two full AO rank-4 TPDMs:
+
+        - ``g2_ao_1``: ``aaaa``, ``bbbb``, ``abab``, ``baba``
+        - ``g2_ao_2``: ``aaaa``, ``bbbb``, ``abba``, ``baab``
+
+        The returned/filled array has shape ``(nao, nao, nao * (nao + 1) // 2)``
+        and contains ``D[p,r,q,s] = g2_ao_1[p,q,r,s] - g2_ao_2[p,q,s,r]`` with
+        the ``q,s`` ket pair packed in PySCF ``aosym=\"s2kl\"`` order.  Existing
+        block prefactors in this ``TwoParticleDensityMatrix`` are assumed to
+        have been applied upstream and are not changed here.
+        """
+        if not len(self.blocks_nonzero):
+            raise ValueError("At least one non-zero block is needed to "
+                             "transform the TwoParticleDensityMatrix.")
+        coeff_map = self._ao_coefficient_map(refstate_or_coefficients)
+        nao = next(iter(coeff_map.values())).shape[1]
+        npair = nao * (nao + 1) // 2
+        if pair_chunk_size is None:
+            pair_chunk_size = npair
+        if pair_chunk_size <= 0:
+            raise ValueError("pair_chunk_size needs to be positive.")
+
+        if out is None:
+            out = np.zeros((nao, nao, npair), dtype=float)
+        else:
+            if out.shape != (nao, nao, npair):
+                raise ValueError("Invalid output shape for packed AO-pair density.")
+            out[...] = 0
+
+        qall, sall = ao_pair_indices(nao)
+        for start in range(0, npair, pair_chunk_size):
+            stop = min(start + pair_chunk_size, npair)
+            qidx = qall[start:stop]
+            sidx = sall[start:stop]
+            chunk = np.zeros((nao, nao, stop - start), dtype=out.dtype)
+
+            for block in self.blocks_nonzero:
+                s1, s2, s3, s4 = split_spaces(block)
+                tensor = self[block]
+                if hasattr(tensor, "to_ndarray"):
+                    tensor = tensor.to_ndarray()
+                tensor = np.asarray(tensor)
+                cc = coeff_map
+
+                direct_spin_cases = [
+                    ("a", "a", "a", "a"),
+                    ("b", "b", "b", "b"),
+                    ("a", "b", "a", "b"),
+                    ("b", "a", "b", "a"),
+                ]
+                exchange_spin_cases = [
+                    ("a", "a", "a", "a"),
+                    ("b", "b", "b", "b"),
+                    ("a", "b", "b", "a"),
+                    ("b", "a", "a", "b"),
+                ]
+                spaces = (s1, s2, s3, s4)
+
+                for spins in direct_spin_cases:
+                    coeffs = [cc[f"{sp}_{spin}"] for sp, spin in zip(spaces, spins)]
+                    self._add_direct_pair_transform(
+                        chunk, tensor, *coeffs, qidx, sidx, +1.0, False
+                    )
+                for spins in exchange_spin_cases:
+                    coeffs = [cc[f"{sp}_{spin}"] for sp, spin in zip(spaces, spins)]
+                    self._add_direct_pair_transform(
+                        chunk, tensor, *coeffs, qidx, sidx, -1.0, True
+                    )
+
+                offdiag = qidx != sidx
+                if np.any(offdiag):
+                    qswap = sidx[offdiag]
+                    sswap = qidx[offdiag]
+                    swapped = np.zeros(
+                        (nao, nao, np.count_nonzero(offdiag)), dtype=out.dtype
+                    )
+                    for spins in direct_spin_cases:
+                        coeffs = [
+                            cc[f"{sp}_{spin}"] for sp, spin in zip(spaces, spins)
+                        ]
+                        self._add_direct_pair_transform(
+                            swapped, tensor, *coeffs, qswap, sswap, +1.0, False
+                        )
+                    for spins in exchange_spin_cases:
+                        coeffs = [
+                            cc[f"{sp}_{spin}"] for sp, spin in zip(spaces, spins)
+                        ]
+                        self._add_direct_pair_transform(
+                            swapped, tensor, *coeffs, qswap, sswap, -1.0, True
+                        )
+                    chunk[:, :, offdiag] += swapped
+
+            out[:, :, start:stop] += chunk
+        return out
 
     def __iadd__(self, other):
         if self.mospaces != other.mospaces:

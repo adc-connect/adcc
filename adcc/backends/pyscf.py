@@ -20,11 +20,16 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import os
+import tempfile
+
+import h5py
 import numpy as np
 
 from libadcc import HartreeFockProvider
 from adcc.misc import cached_property
 from adcc.gradients import GradientComponents
+from adcc.gradients.TwoParticleDensityMatrix import ao_pair_index, ao_pair_indices
 
 from .EriBuilder import EriBuilder
 from ..exceptions import InvalidReference
@@ -40,38 +45,60 @@ class PyScfGradientProvider:
         self.mol = self.scfres.mol
         self.backend = "pyscf"
 
-    def correlated_gradient(self, g1_ao, w_ao, g2_ao_1, g2_ao_2):
+    def _empty_gradient(self):
         natoms = self.mol.natm
-        Gradient = {}
-        Gradient["N"] = np.zeros((natoms, 3))
-        Gradient["S"] = np.zeros((natoms, 3))
-        Gradient["T+V"] = np.zeros((natoms, 3))
-        Gradient["OEI"] = np.zeros((natoms, 3))
-        Gradient["TEI"] = np.zeros((natoms, 3))
-        Gradient["Total"] = np.zeros((natoms, 3))
+        return {
+            "N": np.zeros((natoms, 3)),
+            "S": np.zeros((natoms, 3)),
+            "T+V": np.zeros((natoms, 3)),
+            "OEI": np.zeros((natoms, 3)),
+            "TEI": np.zeros((natoms, 3)),
+            "Total": np.zeros((natoms, 3)),
+        }
 
-        # TODO: does RHF/UHF matter here?
-        gradient = grad.RHF(self.scfres)
-        hcore_deriv = gradient.hcore_generator()
+    def _add_one_electron_terms(self, gradient_components, g1_ao, w_ao,
+                                pyscf_gradient):
+        hcore_deriv = pyscf_gradient.hcore_generator()
         Sx = -1.0 * self.mol.intor('int1e_ipovlp', aosym='s1')
-        ERIx = -1.0 * self.mol.intor('int2e_ip1', aosym='s1')
-
         ao_slices = self.mol.aoslice_by_atom()
-        for ia in range(natoms):
-            # TODO: only contract/compute with specific slices
-            # of density matrices (especially TPDM)
-            # this requires a lot of work however...
+        for ia in range(self.mol.natm):
             k0, k1 = ao_slices[ia, 2:]
 
             # derivative of the overlap matrix
             Sx_a = np.zeros_like(Sx)
             Sx_a[:, k0:k1] = Sx[:, k0:k1]
             Sx_a += Sx_a.transpose(0, 2, 1)
-            Gradient["S"][ia] += np.einsum("xpq,pq->x", Sx_a, w_ao)
+            gradient_components["S"][ia] += np.einsum(
+                "xpq,pq->x", Sx_a, w_ao
+            )
 
             # derivative of the core Hamiltonian
             Hx_a = hcore_deriv(ia)
-            Gradient["T+V"][ia] += np.einsum("xpq,pq->x", Hx_a, g1_ao)
+            gradient_components["T+V"][ia] += np.einsum(
+                "xpq,pq->x", Hx_a, g1_ao
+            )
+
+    def _final_gradient_components(self, pyscf_gradient, gradient_components):
+        return GradientComponents(
+            self.mol.natm, pyscf_gradient.grad_nuc(), gradient_components["S"],
+            gradient_components["T+V"], gradient_components["TEI"]
+        )
+
+    def correlated_gradient(self, g1_ao, w_ao, g2_ao_1, g2_ao_2):
+        """Full-AO reference path. Allocates the full derivative ERI tensor."""
+        Gradient = self._empty_gradient()
+
+        # TODO: does RHF/UHF matter here?
+        gradient = grad.RHF(self.scfres)
+        self._add_one_electron_terms(Gradient, g1_ao, w_ao, gradient)
+        ERIx = -1.0 * self.mol.intor('int2e_ip1', aosym='s1')
+
+        ao_slices = self.mol.aoslice_by_atom()
+        for ia in range(self.mol.natm):
+            # TODO: only contract/compute with specific slices
+            # of density matrices (especially TPDM)
+            # this requires a lot of work however...
+            k0, k1 = ao_slices[ia, 2:]
 
             # derivatives of the ERIs
             ERIx_a = np.zeros_like(ERIx)
@@ -87,11 +114,149 @@ class PyScfGradientProvider:
             Gradient["TEI"][ia] -= np.einsum(
                 "pqrs,xpsqr->x", g2_ao_2, ERIx_a, optimize=True
             )
-        ret = GradientComponents(
-            natoms, gradient.grad_nuc(), Gradient["S"],
-            Gradient["T+V"], Gradient["TEI"]
+        return self._final_gradient_components(gradient, Gradient)
+
+    def _symmetrized_density_slice(self, pair_density, a0, a1):
+        """
+        Build the four-center derivative-symmetrized packed density slice.
+
+        ``pair_density`` stores ``D[p,r,q,s]`` with packed ket pair ``q,s``.
+        For a derivative integral block ``E[a,b,q,s]`` this returns the packed
+        equivalent of
+
+        ``D[a,b,q,s] + D[b,a,s,q] + D[q,s,a,b] + D[s,q,b,a]``.
+        """
+        nao = pair_density.shape[0]
+        qidx, sidx = ao_pair_indices(nao)
+        offdiag = qidx != sidx
+        density_slice = np.asarray(pair_density[a0:a1, :, :]).copy()
+        density_slice += np.asarray(pair_density[:, a0:a1, :]).transpose(1, 0, 2)
+
+        for local_a, a in enumerate(range(a0, a1)):
+            for b in range(nao):
+                pair_ab = int(ao_pair_index(a, b))
+                ket_as_bra = np.asarray(pair_density[:, :, pair_ab])
+                term = ket_as_bra[qidx, sidx].copy()
+                if np.any(offdiag):
+                    term[offdiag] += ket_as_bra[sidx[offdiag], qidx[offdiag]]
+                if a == b:
+                    term *= 2.0
+                density_slice[local_a, b, :] += term
+        return density_slice
+
+    def _contract_tei_with_packed_density(self, pair_density,
+                                          shell_chunk_size=1):
+        """
+        Contract derivative ERIs with packed AO-pair effective density.
+
+        PySCF only packs the ket pair for ``aosym=\"s2kl\"``.  Off-diagonal
+        packed density entries therefore contain the sum of both ket orders.
+        Shell slices are kept atom-local so atom AO and shell ranges cannot be
+        mixed accidentally.
+        """
+        if shell_chunk_size <= 0:
+            raise ValueError("shell_chunk_size needs to be positive.")
+        tei = np.zeros((self.mol.natm, 3))
+        ao_slices = self.mol.aoslice_by_atom()
+        ao_loc = self.mol.ao_loc_nr()
+        nbas = self.mol.nbas
+
+        for ia in range(self.mol.natm):
+            sh0, sh1 = ao_slices[ia, :2]
+            for p0 in range(sh0, sh1, shell_chunk_size):
+                p1 = min(p0 + shell_chunk_size, sh1)
+                a0, a1 = ao_loc[p0], ao_loc[p1]
+                shls_slice = (p0, p1, 0, nbas, 0, nbas, 0, nbas)
+                erix = -1.0 * self.mol.intor(
+                    'int2e_ip1', comp=3, aosym='s2kl', shls_slice=shls_slice
+                )
+                density_slice = self._symmetrized_density_slice(
+                    pair_density, a0, a1
+                )
+                tei[ia] += np.einsum(
+                    "xabk,abk->x", erix, density_slice, optimize=True
+                )
+        return tei
+
+    def correlated_gradient_shell_batched(self, g1_ao, w_ao, g2_ao_1, g2_ao_2,
+                                          shell_chunk_size=1):
+        """
+        PySCF-only shell-batched TEI path using existing dense AO TPDM inputs.
+        """
+        Gradient = self._empty_gradient()
+        gradient = grad.RHF(self.scfres)
+        self._add_one_electron_terms(Gradient, g1_ao, w_ao, gradient)
+        pair_density = self.ao_pair_density_from_dense(g2_ao_1, g2_ao_2)
+        Gradient["TEI"] += self._contract_tei_with_packed_density(
+            pair_density, shell_chunk_size=shell_chunk_size
         )
-        return ret
+        return self._final_gradient_components(gradient, Gradient)
+
+    def ao_pair_density_from_dense(self, g2_ao_1, g2_ao_2, out=None):
+        from adcc.gradients.TwoParticleDensityMatrix import TwoParticleDensityMatrix
+        return TwoParticleDensityMatrix.ao_pair_density_from_dense(
+            g2_ao_1, g2_ao_2, out=out
+        )
+
+    def correlated_gradient_direct(self, g1_ao, w_ao, g2, refstate=None,
+                                   shell_chunk_size=1, pair_chunk_size=None,
+                                   pair_density_storage="memory",
+                                   scratch_directory=None):
+        """
+        Direct PySCF gradient path from the MO/block-sparse TPDM.
+
+        The TPDM is transformed block-by-block to the packed AO-pair effective
+        density.  It never forms ``g2_ao_1``/``g2_ao_2`` or the full derivative
+        ERI tensor.  ``pair_density_storage=\"hdf5\"`` stores the packed density
+        in a temporary HDF5 file under ``scratch_directory`` (or the system temp
+        directory) and removes it after contraction.
+        """
+        Gradient = self._empty_gradient()
+        gradient = grad.RHF(self.scfres)
+        self._add_one_electron_terms(Gradient, g1_ao, w_ao, gradient)
+
+        nao = self.mol.nao_nr()
+        npair = nao * (nao + 1) // 2
+        h5file = None
+        h5path = None
+        pair_density = None
+        try:
+            if pair_density_storage == "memory":
+                pair_density = np.zeros((nao, nao, npair))
+            elif pair_density_storage in ("hdf5", "outcore"):
+                scratch_directory = scratch_directory or os.environ.get(
+                    "PYSCF_TMPDIR", tempfile.gettempdir()
+                )
+                tmp = tempfile.NamedTemporaryFile(
+                    prefix="adcc_pyscf_gradient_", suffix=".h5",
+                    dir=scratch_directory, delete=False
+                )
+                h5path = tmp.name
+                tmp.close()
+                h5file = h5py.File(h5path, "w")
+                pair_density = h5file.create_dataset(
+                    "pair_density", shape=(nao, nao, npair), dtype="f8",
+                    chunks=(min(nao, 16), min(nao, 16), min(npair, 256))
+                )
+            else:
+                raise ValueError("pair_density_storage needs to be 'memory' "
+                                 "or 'hdf5'.")
+
+            g2.to_ao_pair_density(
+                refstate, pair_chunk_size=pair_chunk_size, out=pair_density
+            )
+            Gradient["TEI"] += self._contract_tei_with_packed_density(
+                pair_density, shell_chunk_size=shell_chunk_size
+            )
+        finally:
+            if h5file is not None:
+                h5file.close()
+            if h5path is not None:
+                try:
+                    os.unlink(h5path)
+                except FileNotFoundError:
+                    pass
+        return self._final_gradient_components(gradient, Gradient)
 
 
 class PyScfOperatorIntegralProvider:

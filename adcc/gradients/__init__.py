@@ -120,7 +120,9 @@ class GradientResult:
         return elec_dip + self.reference_state.nuclear_dipole
 
 
-def nuclear_gradient(excitation_or_mp, conv_tol=1e-9):
+def nuclear_gradient(excitation_or_mp, conv_tol=1e-9, tei_contraction="auto",
+                     tei_shell_chunk_size=1, tei_pair_chunk_size=None,
+                     tei_pair_density_storage="memory"):
     if isinstance(excitation_or_mp, LazyMp):
         mp = excitation_or_mp
     elif isinstance(excitation_or_mp, Excitation):
@@ -201,16 +203,54 @@ def nuclear_gradient(excitation_or_mp, conv_tol=1e-9):
             g2a.vvvv *= 0.25
             g2_total = evaluate(g2_hf + g2a + g2_oresp)
 
+    provider = hf.gradient_provider
+    valid_tei_contractions = {"auto", "direct", "shell_batched", "full_ao"}
+    if tei_contraction not in valid_tei_contractions:
+        raise ValueError(
+            f"Invalid tei_contraction '{tei_contraction}'. Valid values are "
+            f"{sorted(valid_tei_contractions)}."
+        )
+    if tei_contraction == "auto":
+        if getattr(provider, "backend", None) == "pyscf" \
+                and hasattr(provider, "correlated_gradient_direct"):
+            tei_contraction = "direct"
+        else:
+            tei_contraction = "full_ao"
+    if tei_contraction == "direct" and not hasattr(
+            provider, "correlated_gradient_direct"):
+        raise NotImplementedError(
+            "tei_contraction='direct' is currently only available for PySCF."
+        )
+    if tei_contraction == "shell_batched" and not hasattr(
+            provider, "correlated_gradient_shell_batched"):
+        raise NotImplementedError(
+            "tei_contraction='shell_batched' is currently only available for PySCF."
+        )
+
     with timer.record("transform_ao"):
-        g2_ao_1, g2_ao_2 = g2_total.to_ao_basis()
-        g2_ao_1, g2_ao_2 = g2_ao_1.to_ndarray(), g2_ao_2.to_ndarray()
         g1_ao = sum(g1.to_ao_basis(hf)).to_ndarray()
         w_ao = sum(w.to_ao_basis(hf)).to_ndarray()
+        if tei_contraction in {"full_ao", "shell_batched"}:
+            g2_ao_1, g2_ao_2 = g2_total.to_ao_basis()
+            g2_ao_1, g2_ao_2 = g2_ao_1.to_ndarray(), g2_ao_2.to_ndarray()
 
     with timer.record("contract_integral_derivatives"):
-        grad = hf.gradient_provider.correlated_gradient(
-            g1_ao, w_ao, g2_ao_1, g2_ao_2
-        )
+        if tei_contraction == "direct":
+            grad = provider.correlated_gradient_direct(
+                g1_ao, w_ao, g2_total, refstate=hf,
+                shell_chunk_size=tei_shell_chunk_size,
+                pair_chunk_size=tei_pair_chunk_size,
+                pair_density_storage=tei_pair_density_storage,
+            )
+        elif tei_contraction == "shell_batched":
+            grad = provider.correlated_gradient_shell_batched(
+                g1_ao, w_ao, g2_ao_1, g2_ao_2,
+                shell_chunk_size=tei_shell_chunk_size,
+            )
+        else:
+            grad = provider.correlated_gradient(
+                g1_ao, w_ao, g2_ao_1, g2_ao_2
+            )
 
     ret = GradientResult(excitation_or_mp, grad, g1, g2_total,
                          timer, g1a=g1a, g2a=g2a)
