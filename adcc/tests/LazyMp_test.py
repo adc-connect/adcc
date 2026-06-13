@@ -250,6 +250,10 @@ class TestLazyMp:
             blocks.extend(["o1o2", "o2o2", "o2v1"])
         assert sorted(blocks) == sorted(mp2diff.blocks_nonzero)
         for label in blocks:
+            # in adcman for some reason the non-canonical co block is
+            # calculated instead of the canonical oc block
+            if generator == "adcman" and label == "o1o2":
+                label = "o2o1"
             assert_allclose(mp2diff[label].to_ndarray(),
                             refmp["mp2"]["dm_" + label], atol=1e-12)
         assert ("second_order_dm_correction/False" in
@@ -296,6 +300,9 @@ class TestLazyMp:
         assert_allclose(dm_β.to_ndarray(), refmp["mp2"]["dm_bb_b"], atol=1e-12)
 
         # Also test the CVS-MP AO densities (with the CVS approximation)
+        # but this data is not available from adcman!
+        if generator == "adcman":
+            return
         refmp = testdata_cache._load_data(
             system=system, method="mp", case=case, source=generator
         )
