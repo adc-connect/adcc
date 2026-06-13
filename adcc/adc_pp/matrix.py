@@ -107,13 +107,21 @@ block_cvs_ph_ph_0 = block_ph_ph_0
 
 
 def diagonal_pphh_pphh_0(hf):
-    # Note: adcman similarly does not symmetrise the occupied indices
-    #       (for both CVS and general ADC)
+    # since we use orbital energies to construct the diagonal,
+    # we have to symmetrise both occupied and virtual indices!
+    # (for dfs a single symmetrisation would be fine)
+    # -> distinct treatment of CVS-ADC
+    # If the occupied indices are not symmetrised the preconditioned
+    # residuals do no longer have the correct symmetry in the davidson:
+    # the antisymmetry of the occupied indices is missing
     fCC = hf.fcc if hf.has_core_occupied_space else hf.foo
-    res = direct_sum("-i-J+a+b->iJab",
-                     hf.foo.diagonal(), fCC.diagonal(),
-                     hf.fvv.diagonal(), hf.fvv.diagonal())
-    return AmplitudeVector(pphh=res.symmetrise(2, 3))
+    res = direct_sum(
+        "-i-J+a+b->iJab",
+        hf.foo.diagonal(), fCC.diagonal(), hf.fvv.diagonal(), hf.fvv.diagonal()
+    ).symmetrise(2, 3)
+    if not hf.has_core_occupied_space:
+        res = res.symmetrise(0, 1)
+    return AmplitudeVector(pphh=res)
 
 
 def block_pphh_pphh_0(hf, mp, intermediates):
@@ -188,6 +196,8 @@ def diagonal_pphh_pphh_1(hf):
 
     diag_vv = einsum("abab->ab", hf.vvvv).symmetrise()
     return AmplitudeVector(pphh=(
+        # Both objects are 'df like' and thus it is sufficient to either symmetrise
+        # the occupied or virtual indices
         + direct_sum("ia+Jb->iJab", dinterm_ov, dinterm_Cv).symmetrise(2, 3)
         + direct_sum("iJ+ab->iJab", diag_oC, diag_vv)
     ))
