@@ -4,7 +4,7 @@
 trap "exit 1" TERM
 export SCRIPT_PID=$$
 
-SOURCE="https://wwwagdreuw.iwr.uni-heidelberg.de/adcc_test_data/0.7.4/"
+SOURCE="https://wwwagdreuw.iwr.uni-heidelberg.de/adcc_test_data/groundstate/"
 
 SHAFILE="SHA256SUMS"
 
