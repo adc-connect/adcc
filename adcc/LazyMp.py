@@ -48,24 +48,31 @@ class LazyMp(GroundState):
             hf.eri(space) / direct_sum("ia+jb->ijab", eia, ejb).symmetrise((2, 3))
         )
 
-    def ts2(self, space: str) -> libadcc.Tensor:
+    def ts2(self, space: str, apply_cvs: bool = False) -> libadcc.Tensor:
+        """
+        Computes the second-order MP singles amplitudes.
+        """
         split = split_spaces(space)
         assert len(split) == 2 and split[1] == b.v
         if split[0] == b.o:
-            return self.ts2_ov
+            return self.ts2_ov(apply_cvs=apply_cvs)
         elif split[0] == b.c:
-            return self.ts2_cv
+            return self.ts2_cv(apply_cvs=apply_cvs)
         raise NotImplementedError(
             "Second-order MP singles amplitudes not implemented for space "
             f"'{space}'."
         )
 
-    @cached_property
-    @timed_member_call(timer="timer")
-    def ts2_ov(self) -> libadcc.Tensor:
+    @cached_member_function()
+    def ts2_ov(self, apply_cvs: bool = False) -> libadcc.Tensor:
         """
         Computes the ov block of the second-order MP singles amplitudes.
         """
+        if apply_cvs and not self.reference_state.has_core_occupied_space:
+            raise RuntimeError("Cannot apply the CVS approximation to a "
+                               "ground state build on top of a HF reference state "
+                               "without a core space.")
+
         hf = self.reference_state
         t2oo = self.td1(b.oovv)
         denom = -self.df(b.ov)
@@ -78,7 +85,7 @@ class LazyMp(GroundState):
         # additional terms since we don't apply the CVS approximation
         # for the ground state
         # (all of the following terms vanish within the approximation)
-        if self.has_core_occupied_space:
+        if self.has_core_occupied_space and not apply_cvs:
             t2oc = self.td1(b.ocvv)
             t2cc = self.td1(b.ccvv)
             res += (
@@ -91,13 +98,16 @@ class LazyMp(GroundState):
             )
         return (res / denom).evaluate()
 
-    @cached_property
-    @timed_member_call(timer="timer")
-    def ts2_cv(self) -> libadcc.Tensor:
+    @cached_member_function()
+    def ts2_cv(self, apply_cvs: bool = False) -> libadcc.Tensor:
         """
         Computes the cv block of the second-order MP singles amplitudes.
         """
         assert self.has_core_occupied_space
+        if apply_cvs:
+            raise RuntimeError("The 'cv' block of the second-order MP singles "
+                               "amplitude vanishes within the CVS approximation."
+                               "Probably you don't want to compute it at all.")
         hf = self.reference_state
         t2oo = self.td1(b.oovv)
         t2oc = self.td1(b.ocvv)
@@ -229,21 +239,3 @@ class LazyMp(GroundState):
     @property
     def mp2_dipole_moment(self):
         return self.dipole_moment(level=2)
-
-
-#
-# Register cvs_p0 intermediate
-#
-@register_as_intermediate
-def cvs_p0(hf: ReferenceState, mp: LazyMp, intermediates: Intermediates
-           ) -> OneParticleDensity:
-    # NOTE: equal to mp2_diffdm if the CVS approximation is applied for the density
-    # This is also MP specific!
-    # TODO: This needs to be solved differenty. Maybe add some parameter
-    # apply_cvs to the density and the amplitude methods
-    ret = OneParticleDensity(hf.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
-    ret.oo = -0.5 * einsum("ikab,jkab->ij", mp.t2oo, mp.t2oo)
-    ret.ov = -0.5 * (+ einsum("ijbc,jabc->ia", mp.t2oo, hf.ovvv)
-                     + einsum("jkib,jkab->ia", hf.ooov, mp.t2oo)) / mp.df(b.ov)
-    ret.vv = 0.5 * einsum("ijac,ijbc->ab", mp.t2oo, mp.t2oo)
-    return ret

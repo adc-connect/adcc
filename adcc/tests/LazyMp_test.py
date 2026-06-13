@@ -251,7 +251,8 @@ class TestLazyMp:
         for label in blocks:
             assert_allclose(mp2diff[label].to_ndarray(),
                             refmp["mp2"]["dm_" + label], atol=1e-12)
-        assert "second_order_dm_correction" in instances.get(system, case).timer.tasks
+        assert ("second_order_dm_correction/False" in
+                instances.get(system, case).timer.tasks)
 
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)

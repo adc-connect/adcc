@@ -60,7 +60,7 @@ def tdm_cvs_isr2(mp, amplitude, intermediates):
     u1, u2 = amplitude.ph, amplitude.pphh
 
     t2 = mp.t2(b.oovv)
-    p0 = intermediates.cvs_p0
+    p0 = mp.second_order_dm_correction(apply_cvs=True)
 
     # Compute CVS-ISR(2) tdm
     dm.oc = (  # cvs_isr2_dp0_oc
