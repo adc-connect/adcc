@@ -24,14 +24,9 @@ import libadcc
 import numpy as np
 
 from .GroundState import GroundState
-from .Intermediates import Intermediates, register_as_intermediate
 from .MoSpaces import split_spaces
-from .NParticleOperator import OperatorSymmetry
-from .OneParticleDensity import OneParticleDensity
-from .ReferenceState import ReferenceState
 from .functions import direct_sum, einsum
-from .misc import cached_member_function, cached_property
-from .timings import timed_member_call
+from .misc import cached_member_function
 from . import block as b
 
 
@@ -68,7 +63,7 @@ class LazyMp(GroundState):
         """
         Computes the ov block of the second-order MP singles amplitudes.
         """
-        if apply_cvs and not self.reference_state.has_core_occupied_space:
+        if apply_cvs and not self.has_core_occupied_space:
             raise RuntimeError("Cannot apply the CVS approximation to a "
                                "ground state build on top of a HF reference state "
                                "without a core space.")

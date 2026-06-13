@@ -242,16 +242,30 @@ class TestLazyMp:
         refmp = testdata_cache._load_data(
             system=system, method="mp", case=case, source=generator
         )
-        mp2diff = instances.get(system, case).mp2_diffdm
+        mp2diff = instances.get(system, case).diffdm(2, apply_cvs=False)
 
         assert mp2diff.symmetry is OperatorSymmetry.HERMITIAN
         blocks = ["o1o1", "o1v1", "v1v1"]
         if "cvs" in case:
-            blocks.extend(["o2o1", "o2o2", "o2v1"])
+            blocks.extend(["o1o2", "o2o2", "o2v1"])
+        assert sorted(blocks) == sorted(mp2diff.blocks_nonzero)
         for label in blocks:
             assert_allclose(mp2diff[label].to_ndarray(),
                             refmp["mp2"]["dm_" + label], atol=1e-12)
         assert ("second_order_dm_correction/False" in
+                instances.get(system, case).timer.tasks)
+
+        if "cvs" not in case:
+            return
+        # also test CVS-MP densities
+        mp2diff = instances.get(system, case).diffdm(2, apply_cvs=True)
+        assert mp2diff.symmetry is OperatorSymmetry.HERMITIAN
+        blocks = ["o1o1", "o1v1", "v1v1"]
+        assert sorted(blocks) == sorted(mp2diff.blocks_nonzero)
+        for label in blocks:
+            assert_allclose(mp2diff[label].to_ndarray(),
+                            refmp["cvs-mp2"]["dm_" + label], atol=1e-12)
+        assert ("second_order_dm_correction/True" in
                 instances.get(system, case).timer.tasks)
 
     @pytest.mark.parametrize("system,case", cases)
@@ -261,7 +275,7 @@ class TestLazyMp:
         refmp = testdata_cache._load_data(
             system=system, method="mp", case=case, source=generator
         )
-        mp2diff = instances.get(system, case).mp2_diffdm
+        mp2diff = instances.get(system, case).diffdm(2, apply_cvs=False)
         reference_state = instances.get(system, case).reference_state
 
         dm_α, dm_β = mp2diff.to_ao_basis(reference_state)
@@ -271,6 +285,7 @@ class TestLazyMp:
         if "cvs" not in case:
             return
         # CVS MP(2) densities in AOs should be equal to the non-CVS one
+        # since we don't apply the CVS approximation
         non_cvs_case = "-".join(c for c in case.split("-") if c != "cvs")
         if not non_cvs_case:
             non_cvs_case = "gen"
@@ -279,6 +294,17 @@ class TestLazyMp:
         )
         assert_allclose(dm_α.to_ndarray(), refmp["mp2"]["dm_bb_a"], atol=1e-12)
         assert_allclose(dm_β.to_ndarray(), refmp["mp2"]["dm_bb_b"], atol=1e-12)
+
+        # Also test the CVS-MP AO densities (with the CVS approximation)
+        refmp = testdata_cache._load_data(
+            system=system, method="mp", case=case, source=generator
+        )
+        mp2diff = instances.get(system, case).diffdm(2, apply_cvs=True)
+        reference_state = instances.get(system, case).reference_state
+
+        dm_α, dm_β = mp2diff.to_ao_basis(reference_state)
+        assert_allclose(dm_α.to_ndarray(), refmp["cvs-mp2"]["dm_bb_a"], atol=1e-12)
+        assert_allclose(dm_β.to_ndarray(), refmp["cvs-mp2"]["dm_bb_b"], atol=1e-12)
 
     #
     # Cache

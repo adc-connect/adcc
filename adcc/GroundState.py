@@ -26,8 +26,8 @@ from .OneParticleDensity import OneParticleDensity
 from .ReferenceState import ReferenceState
 from .TwoParticleDensity import TwoParticleDensity
 from .functions import direct_sum, einsum, zeros_like
-from .misc import cached_member_function, cached_property
-from .timings import Timer, timed_member_call
+from .misc import cached_member_function
+from .timings import Timer
 from . import block as b
 
 import libadcc
@@ -240,7 +240,7 @@ class GroundState:
         Return the second-order contribution to the ground state
         difference density in the MO basis.
         """
-        if apply_cvs and not self.reference_state.has_core_occupied_space:
+        if apply_cvs and not self.has_core_occupied_space:
             raise RuntimeError("Cannot apply the CVS approximation to a "
                                "ground state build on top of a HF reference state "
                                "without a core space.")
@@ -282,7 +282,7 @@ class GroundState:
         Return the two-particle first-order difference density correction
         in the MO basis.
         """
-        if self.reference_state.has_core_occupied_space:
+        if self.has_core_occupied_space:
             raise NotImplementedError("First-order 2-particle DM correction not "
                                       "implemented for a ground state with "
                                       "core orbitals.")
@@ -300,7 +300,7 @@ class GroundState:
         Return the two-particle second-order difference density correction
         in the MO basis.
         """
-        if self.reference_state.has_core_occupied_space:
+        if self.has_core_occupied_space:
             raise NotImplementedError("Second-order 2-particle DM correction not "
                                       "implemented for a ground state with "
                                       "core orbitals.")
