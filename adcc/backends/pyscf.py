@@ -51,7 +51,7 @@ class PyScfGradientProvider:
         return {
             "S": np.zeros((natoms, 3)),
             "T+V": np.zeros((natoms, 3)),
-            "TEI": np.zeros((natoms, 3)),
+            "ERI": np.zeros((natoms, 3)),
         }
 
     def _add_one_electron_terms(self, gradient_components, g1_ao, w_ao,
@@ -79,7 +79,7 @@ class PyScfGradientProvider:
     def _final_gradient_components(self, pyscf_gradient, gradient_components):
         return GradientComponents(
             self.mol.natm, pyscf_gradient.grad_nuc(), gradient_components["S"],
-            gradient_components["T+V"], gradient_components["TEI"]
+            gradient_components["T+V"], gradient_components["ERI"]
         )
 
     def correlated_gradient(self, g1_ao, w_ao, g2_ao_1, g2_ao_2):
@@ -106,10 +106,10 @@ class PyScfGradientProvider:
                 + ERIx_a.transpose(0, 3, 4, 1, 2)
                 + ERIx_a.transpose(0, 4, 3, 2, 1)
             )
-            Gradient["TEI"][ia] += np.einsum(
+            Gradient["ERI"][ia] += np.einsum(
                 "pqrs,xprqs->x", g2_ao_1, ERIx_a, optimize=True
             )
-            Gradient["TEI"][ia] -= np.einsum(
+            Gradient["ERI"][ia] -= np.einsum(
                 "pqrs,xpsqr->x", g2_ao_2, ERIx_a, optimize=True
             )
         return self._final_gradient_components(gradient, Gradient)
@@ -143,7 +143,7 @@ class PyScfGradientProvider:
                 density_slice[local_a, b, :] += term
         return density_slice
 
-    def _contract_tei_with_packed_density(self, pair_density,
+    def _contract_eri_with_packed_density(self, pair_density,
                                           shell_chunk_size=1):
         """
         Contract derivative ERIs with packed AO-pair effective density.
@@ -155,7 +155,7 @@ class PyScfGradientProvider:
         """
         if shell_chunk_size <= 0:
             raise ValueError("shell_chunk_size needs to be positive.")
-        tei = np.zeros((self.mol.natm, 3))
+        eri_grad = np.zeros((self.mol.natm, 3))
         ao_slices = self.mol.aoslice_by_atom()
         ao_loc = self.mol.ao_loc_nr()
         nbas = self.mol.nbas
@@ -172,10 +172,10 @@ class PyScfGradientProvider:
                 density_slice = self._symmetrized_density_slice(
                     pair_density, a0, a1
                 )
-                tei[ia] += np.einsum(
+                eri_grad[ia] += np.einsum(
                     "xabk,abk->x", erix, density_slice, optimize=True
                 )
-        return tei
+        return eri_grad
 
     def correlated_gradient_direct(self, g1_ao, w_ao, g2, refstate=None,
                                    shell_chunk_size=1, pair_chunk_size=None,
@@ -245,7 +245,7 @@ class PyScfGradientProvider:
             g2.to_ao_pair_density(
                 refstate, pair_chunk_size=pair_chunk_size, out=pair_density
             )
-            Gradient["TEI"] += self._contract_tei_with_packed_density(
+            Gradient["ERI"] += self._contract_eri_with_packed_density(
                 pair_density, shell_chunk_size=shell_chunk_size
             )
         finally:

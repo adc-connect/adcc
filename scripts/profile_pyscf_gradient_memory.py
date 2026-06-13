@@ -5,11 +5,11 @@ Playground script for profiling PySCF/adcc gradient memory with memray.
 Example commands:
 
     python scripts/profile_pyscf_gradient_memory.py --molecule benzene \
-        --basis sto-3g --tei-contraction direct --memray-output direct.bin
+        --basis sto-3g --eri-contraction direct --memray-output direct.bin
     python -m memray flamegraph direct.bin
 
     python scripts/profile_pyscf_gradient_memory.py --molecule benzene \
-        --basis sto-3g --tei-contraction full_ao --memray-output full_ao.bin
+        --basis sto-3g --eri-contraction full_ao --memray-output full_ao.bin
     python -m memray summary full_ao.bin
 
 The script uses memray's in-process tracker when ``--memray-output`` is given,
@@ -77,15 +77,15 @@ def gradient_target(scfres, method, conv_tol, n_singlets, state_index):
     return states.excitations[state_index]
 
 
-def compute_gradient(target, args, tei_contraction):
+def compute_gradient(target, args, eri_contraction):
     start = time.perf_counter()
     grad = adcc.nuclear_gradient(
         target,
         conv_tol=args.conv_tol,
-        tei_contraction=tei_contraction,
-        tei_shell_chunk_size=args.shell_chunk_size,
-        tei_pair_chunk_size=args.pair_chunk_size,
-        tei_pair_density_storage=args.pair_density_storage,
+        eri_contraction=eri_contraction,
+        eri_shell_chunk_size=args.shell_chunk_size,
+        eri_pair_chunk_size=args.pair_chunk_size,
+        eri_pair_density_storage=args.pair_density_storage,
     )
     elapsed = time.perf_counter() - start
     return grad, elapsed
@@ -115,7 +115,7 @@ def main():
     parser.add_argument("--n-singlets", type=int, default=1)
     parser.add_argument("--state-index", type=int, default=0)
     parser.add_argument(
-        "--tei-contraction", default="direct", choices=["direct", "full_ao"],
+        "--eri-contraction", default="direct", choices=["direct", "full_ao"],
     )
     parser.add_argument("--shell-chunk-size", type=int, default=1)
     parser.add_argument("--pair-chunk-size", type=int, default=None)
@@ -152,10 +152,10 @@ def main():
         print(f"Tracking gradient allocations with memray: {args.memray_output}")
         with memray.Tracker(
                 args.memray_output, native_traces=args.memray_native):
-            grad, elapsed = compute_gradient(target, args, args.tei_contraction)
+            grad, elapsed = compute_gradient(target, args, args.eri_contraction)
     else:
-        grad, elapsed = compute_gradient(target, args, args.tei_contraction)
-    print_result(args.tei_contraction, grad, elapsed)
+        grad, elapsed = compute_gradient(target, args, args.eri_contraction)
+    print_result(args.eri_contraction, grad, elapsed)
 
     if args.compare_to:
         ref, ref_elapsed = compute_gradient(target, args, args.compare_to)

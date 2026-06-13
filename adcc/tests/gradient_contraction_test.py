@@ -90,7 +90,7 @@ def _direct_gradient_inputs(mp):
     density path) and ``g2_total`` is the real MP2 two-particle density matrix
     with its block prefactors applied, as built by ``nuclear_gradient``.
     """
-    grad = adcc.nuclear_gradient(mp, tei_contraction="full_ao")
+    grad = adcc.nuclear_gradient(mp, eri_contraction="full_ao")
     nao = mp.reference_state.gradient_provider.mol.nao_nr()
     g1_ao = np.zeros((nao, nao))
     w_ao = np.zeros((nao, nao))
@@ -154,17 +154,17 @@ def test_packed_ao_pair_contraction_matches_full_pyscf_reference():
     pair_density = TwoParticleDensityMatrix.ao_pair_density_from_dense(
         g2_ao_1, g2_ao_2
     )
-    packed_tei = provider._contract_tei_with_packed_density(
+    packed_eri = provider._contract_eri_with_packed_density(
         pair_density, shell_chunk_size=2
     )
 
-    assert_allclose(packed_tei, full.two_electron, atol=1e-10)
+    assert_allclose(packed_eri, full.two_electron, atol=1e-10)
 
 
 def test_direct_mp2_pair_density_matches_dense_ao_transform():
     hf = cached_backend_hf("pyscf", "h2o_sto3g", conv_tol=1e-11)
     mp = adcc.LazyMp(adcc.ReferenceState(hf))
-    gradient = adcc.nuclear_gradient(mp, tei_contraction="full_ao")
+    gradient = adcc.nuclear_gradient(mp, eri_contraction="full_ao")
 
     g2_ao_1, g2_ao_2 = gradient.g2.to_ao_basis()
     dense_pair_density = TwoParticleDensityMatrix.ao_pair_density_from_dense(
@@ -181,10 +181,10 @@ def test_direct_mp2_gradient_matches_full_ao_fallback():
     hf = cached_backend_hf("pyscf", "h2o_sto3g", conv_tol=1e-11)
     mp = adcc.LazyMp(adcc.ReferenceState(hf))
 
-    full = adcc.nuclear_gradient(mp, tei_contraction="full_ao")
+    full = adcc.nuclear_gradient(mp, eri_contraction="full_ao")
     direct = adcc.nuclear_gradient(
-        mp, tei_contraction="direct", tei_shell_chunk_size=2,
-        tei_pair_chunk_size=5
+        mp, eri_contraction="direct", eri_shell_chunk_size=2,
+        eri_pair_chunk_size=5
     )
 
     assert_allclose(direct.total, full.total, atol=1e-10)
@@ -261,7 +261,7 @@ def test_packed_density_independent_of_pair_chunk_size(pair_chunk_size):
 
 
 def test_open_shell_packed_contraction_matches_dense_reference():
-    """Full packed-density TEI contraction must match the dense path (UHF).
+    """Full packed-density ERI contraction must match the dense path (UHF).
 
     This anchors the end-to-end two-electron gradient for an open-shell
     reference, downstream of the packed density, so the ERI-side contraction
@@ -282,11 +282,11 @@ def test_open_shell_packed_contraction_matches_dense_reference():
     pair_density = TwoParticleDensityMatrix.ao_pair_density_from_dense(
         g2_ao_1, g2_ao_2
     )
-    packed_tei = provider._contract_tei_with_packed_density(
+    packed_eri = provider._contract_eri_with_packed_density(
         pair_density, shell_chunk_size=2
     )
 
-    assert_allclose(packed_tei, full.two_electron, atol=1e-10)
+    assert_allclose(packed_eri, full.two_electron, atol=1e-10)
 
 
 # ---------------------------------------------------------------------------
@@ -375,7 +375,7 @@ def test_export_block_validates_arguments():
 # ---------------------------------------------------------------------------
 # Out-of-core (HDF5) packed-density storage and API validation
 #
-# These pin the new tei_pair_density_storage="hdf5" path (equivalence with the
+# These pin the new eri_pair_density_storage="hdf5" path (equivalence with the
 # in-memory path and scratch-file cleanup) and the user-facing validation
 # contracts of the new keyword arguments.
 # ---------------------------------------------------------------------------
@@ -393,11 +393,11 @@ def test_direct_gradient_hdf5_matches_memory(tmp_path):
     mp = adcc.LazyMp(adcc.ReferenceState(hf))
 
     memory = adcc.nuclear_gradient(
-        mp, tei_contraction="direct", tei_pair_density_storage="memory"
+        mp, eri_contraction="direct", eri_pair_density_storage="memory"
     )
     hdf5 = adcc.nuclear_gradient(
-        mp, tei_contraction="direct", tei_pair_density_storage="hdf5",
-        tei_pair_chunk_size=3
+        mp, eri_contraction="direct", eri_pair_density_storage="hdf5",
+        eri_pair_chunk_size=3
     )
 
     assert_allclose(hdf5.total, memory.total, atol=1e-10)
@@ -453,11 +453,11 @@ def test_direct_gradient_hdf5_default_pair_chunk_is_bounded():
     assert captured["pair_chunk_size"] <= npair
 
 
-def test_nuclear_gradient_rejects_invalid_tei_contraction():
+def test_nuclear_gradient_rejects_invalid_eri_contraction():
     hf = cached_backend_hf("pyscf", "h2o_sto3g", conv_tol=1e-11)
     mp = adcc.LazyMp(adcc.ReferenceState(hf))
-    with pytest.raises(ValueError, match="Invalid tei_contraction"):
-        adcc.nuclear_gradient(mp, tei_contraction="bogus")
+    with pytest.raises(ValueError, match="Invalid eri_contraction"):
+        adcc.nuclear_gradient(mp, eri_contraction="bogus")
 
 
 def test_correlated_gradient_direct_rejects_invalid_storage():
@@ -472,14 +472,14 @@ def test_correlated_gradient_direct_rejects_invalid_storage():
         )
 
 
-def test_contract_tei_rejects_non_positive_shell_chunk():
+def test_contract_eri_rejects_non_positive_shell_chunk():
     hf = cached_backend_hf("pyscf", "h2o_sto3g", conv_tol=1e-11)
     provider = hf.gradient_provider
     nao = provider.mol.nao_nr()
     npair = nao * (nao + 1) // 2
     pair_density = np.zeros((nao, nao, npair))
     with pytest.raises(ValueError, match="shell_chunk_size"):
-        provider._contract_tei_with_packed_density(
+        provider._contract_eri_with_packed_density(
             pair_density, shell_chunk_size=0
         )
 

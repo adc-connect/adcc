@@ -120,9 +120,9 @@ class GradientResult:
         return elec_dip + self.reference_state.nuclear_dipole
 
 
-def nuclear_gradient(excitation_or_mp, conv_tol=1e-9, tei_contraction=None,
-                     tei_shell_chunk_size=1, tei_pair_chunk_size=None,
-                     tei_pair_density_storage="memory"):
+def nuclear_gradient(excitation_or_mp, conv_tol=1e-9, eri_contraction=None,
+                     eri_shell_chunk_size=1, eri_pair_chunk_size=None,
+                     eri_pair_density_storage="memory"):
     if isinstance(excitation_or_mp, LazyMp):
         mp = excitation_or_mp
     elif isinstance(excitation_or_mp, Excitation):
@@ -152,7 +152,7 @@ def nuclear_gradient(excitation_or_mp, conv_tol=1e-9, tei_contraction=None,
     with timer.record("energy_weighted_density_matrix"):
         w = energy_weighted_density_matrix(hf, g1o, g2a)
 
-    # build two-particle density matrices for contraction with TEI
+    # build two-particle density matrices for contraction with ERIs
     # prefactors see eqs 17 and A4 in 10.1063/1.5085117
     with timer.record("form_tpdm"):
         g2_hf = TwoParticleDensityMatrix(hf)
@@ -204,38 +204,38 @@ def nuclear_gradient(excitation_or_mp, conv_tol=1e-9, tei_contraction=None,
             g2_total = evaluate(g2_hf + g2a + g2_oresp)
 
     provider = hf.gradient_provider
-    if tei_contraction is None:
+    if eri_contraction is None:
         if getattr(provider, "backend", None) == "pyscf" \
                 and hasattr(provider, "correlated_gradient_direct"):
-            tei_contraction = "direct"
+            eri_contraction = "direct"
         else:
-            tei_contraction = "full_ao"
-    valid_tei_contractions = {"direct", "full_ao"}
-    if tei_contraction not in valid_tei_contractions:
+            eri_contraction = "full_ao"
+    valid_eri_contractions = {"direct", "full_ao"}
+    if eri_contraction not in valid_eri_contractions:
         raise ValueError(
-            f"Invalid tei_contraction '{tei_contraction}'. Valid values are "
-            f"{sorted(valid_tei_contractions)}."
+            f"Invalid eri_contraction '{eri_contraction}'. Valid values are "
+            f"{sorted(valid_eri_contractions)}."
         )
-    if tei_contraction == "direct" and not hasattr(
+    if eri_contraction == "direct" and not hasattr(
             provider, "correlated_gradient_direct"):
         raise NotImplementedError(
-            "tei_contraction='direct' is currently only available for PySCF."
+            "eri_contraction='direct' is currently only available for PySCF."
         )
 
     with timer.record("transform_ao"):
         g1_ao = sum(g1.to_ao_basis(hf)).to_ndarray()
         w_ao = sum(w.to_ao_basis(hf)).to_ndarray()
-        if tei_contraction == "full_ao":
+        if eri_contraction == "full_ao":
             g2_ao_1, g2_ao_2 = g2_total.to_ao_basis()
             g2_ao_1, g2_ao_2 = g2_ao_1.to_ndarray(), g2_ao_2.to_ndarray()
 
     with timer.record("contract_integral_derivatives"):
-        if tei_contraction == "direct":
+        if eri_contraction == "direct":
             grad = provider.correlated_gradient_direct(
                 g1_ao, w_ao, g2_total, refstate=hf,
-                shell_chunk_size=tei_shell_chunk_size,
-                pair_chunk_size=tei_pair_chunk_size,
-                pair_density_storage=tei_pair_density_storage,
+                shell_chunk_size=eri_shell_chunk_size,
+                pair_chunk_size=eri_pair_chunk_size,
+                pair_density_storage=eri_pair_density_storage,
             )
         else:
             grad = provider.correlated_gradient(

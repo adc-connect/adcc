@@ -53,7 +53,7 @@ class Psi4GradientProvider:
         Gradient["T"] = np.zeros((natoms, 3))
         Gradient["V"] = np.zeros((natoms, 3))
         Gradient["OEI"] = np.zeros((natoms, 3))
-        Gradient["TEI"] = np.zeros((natoms, 3))
+        Gradient["ERI"] = np.zeros((natoms, 3))
         Gradient["Total"] = np.zeros((natoms, 3))
 
         # 1st Derivative of Nuclear Repulsion
@@ -86,15 +86,15 @@ class Psi4GradientProvider:
             deriv2 = self.mints.ao_tei_deriv1(atom)
             for p in range(3):
                 deriv2_np = np.asarray(deriv2[p])
-                Gradient["TEI"][atom, p] += np.einsum(
+                Gradient["ERI"][atom, p] += np.einsum(
                     'pqrs,prqs->', g2_ao_1, deriv2_np, optimize=True
                 )
-                Gradient["TEI"][atom, p] -= np.einsum(
+                Gradient["ERI"][atom, p] -= np.einsum(
                     'pqrs,psqr->', g2_ao_2, deriv2_np, optimize=True
                 )
         ret = GradientComponents(
             natoms, Gradient["N"], Gradient["S"],
-            Gradient["T"] + Gradient["V"], Gradient["TEI"]
+            Gradient["T"] + Gradient["V"], Gradient["ERI"]
         )
         return ret
 
