@@ -112,6 +112,27 @@ static py::array_t<scalar_type> Tensor_to_ndarray(const Tensor& self) {
   return res;
 }
 
+static py::array_t<scalar_type> Tensor_export_block(const Tensor& self,
+                                                    std::vector<size_t> start,
+                                                    std::vector<size_t> end) {
+  const size_t ndim = self.ndim();
+  if (start.size() != ndim || end.size() != ndim) {
+    throw invalid_argument("start and end must each have one entry per tensor axis.");
+  }
+  std::vector<py::ssize_t> ext(ndim);
+  size_t total = 1;
+  for (size_t i = 0; i < ndim; ++i) {
+    if (end[i] < start[i]) {
+      throw invalid_argument("end must not be smaller than start along any axis.");
+    }
+    ext[i] = static_cast<py::ssize_t>(end[i] - start[i]);
+    total *= (end[i] - start[i]);
+  }
+  py::array_t<scalar_type> res(ext);
+  self.export_block(start, end, res.mutable_data(), total);
+  return res;
+}
+
 static ten_ptr Tensor_from_ndarray_tol(
       ten_ptr self,
       py::array_t<scalar_type, py::array::c_style | py::array::forcecast> in_array,
@@ -471,6 +492,10 @@ void export_Tensor(py::module& m) {
         .def("antisymmetrise", &Tensor_antisymmetrise_2)
         .def("to_ndarray", &Tensor_to_ndarray,
              "Export the tensor data to a standard np::ndarray by making a copy.")
+        .def("export_block", &Tensor_export_block, "start"_a, "end"_a,
+             "Export a dense sub-block of the tensor (half-open per-axis range "
+             "[start, end)) to a np::ndarray, respecting the full tensor "
+             "symmetry, without materialising the full dense tensor.")
         .def("set_from_ndarray", &Tensor_from_ndarray,
              "Set all tensor elements from a standard np::ndarray by making a copy. "
              "Provide an optional tolerance argument to increase the tolerance for the "
