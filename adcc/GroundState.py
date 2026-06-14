@@ -286,6 +286,7 @@ class GroundState:
             raise NotImplementedError("First-order 2-particle DM correction not "
                                       "implemented for a ground state with "
                                       "core orbitals.")
+        assert not apply_cvs  # TODO: once implemented for core orbitals
         ret = TwoParticleDensity(
             self.mospaces, symmetry=OperatorSymmetry.HERMITIAN
         )
@@ -304,6 +305,7 @@ class GroundState:
             raise NotImplementedError("Second-order 2-particle DM correction not "
                                       "implemented for a ground state with "
                                       "core orbitals.")
+        assert not apply_cvs  # TODO: once implemented for core orbitals
         hf: ReferenceState = self.reference_state
         ret = TwoParticleDensity(
             self.mospaces, symmetry=OperatorSymmetry.HERMITIAN

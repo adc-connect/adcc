@@ -66,6 +66,16 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
         dm_bb_a, dm_bb_b = diffdm.to_ao_basis(ground_state.reference_state)
         gs_data[f"cvs-{gs}2/dm_bb_a"] = dm_bb_a.to_ndarray()
         gs_data[f"cvs-{gs}2/dm_bb_b"] = dm_bb_b.to_ndarray()
+    # 2p diffdms: not implemented for the core space currently
+    if not only_full_mode and not ground_state.has_core_occupied_space:
+        # MP1 2p density: MO basis
+        diffdm = ground_state.diffdm_2p(level=1, apply_cvs=False)
+        for block in diffdm.blocks_nonzero:
+            gs_data[f"{gs}1/2p_dm_{block}"] = diffdm[block].to_ndarray()
+        # MP2 2p density: MO basis
+        diffdm = ground_state.diffdm_2p(level=2, apply_cvs=False)
+        for block in diffdm.blocks_nonzero:
+            gs_data[f"{gs}2/2p_dm_{block}"] = diffdm[block].to_ndarray()
     # write the data to hdf5
     emplace_dict(gs_data, hdf5_file, compression="gzip")
     hdf5_file.attrs["adcc_version"] = adcc.__version__

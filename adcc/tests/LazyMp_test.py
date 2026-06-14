@@ -47,6 +47,9 @@ small_cases = [
     (case.file_name, c) for case in test_cases if not case.only_full_mode
     for c in ["gen", "cvs"]
 ]
+non_cvs_small_cases = [
+    (system, case) for system, case in small_cases if "cvs" not in case
+]
 large_cases = [
     (case.file_name, c) for case in test_cases if case.only_full_mode
     for c in ["gen", "cvs"]
@@ -312,6 +315,41 @@ class TestLazyMp:
         dm_α, dm_β = mp2diff.to_ao_basis(reference_state)
         assert_allclose(dm_α.to_ndarray(), refmp["cvs-mp2"]["dm_bb_a"], atol=1e-12)
         assert_allclose(dm_β.to_ndarray(), refmp["cvs-mp2"]["dm_bb_b"], atol=1e-12)
+
+    @pytest.mark.parametrize("system,case", non_cvs_small_cases)
+    @pytest.mark.parametrize("level", [1, 2])
+    def test_mpn_diffdm_2p_mo(self, system: str, case: str, level: int,
+                              instances: LazyMpCache):
+        # consistency tests for the 2p diffdm in the MO basis
+        refmp = testdata_cache.adcc_data(
+            system=system, method="mp", case=case
+        )
+        diffdm = instances.get(system, case).diffdm_2p(
+            level=level, apply_cvs=False
+        )
+        blocks = {
+            1: ["o1o1v1v1"],
+            2: ["o1o1o1o1", "o1o1o1v1", "o1o1v1v1", "o1v1o1v1", "v1v1v1v1"],
+        }[level]
+        assert diffdm.symmetry is OperatorSymmetry.HERMITIAN
+        assert blocks == diffdm.blocks_nonzero
+        for label in blocks:
+            assert_allclose(
+                diffdm[label].to_ndarray(),
+                refmp[f"mp{level}"][f"2p_dm_{label}"],
+                atol=1e-12
+            )
+        fname = {
+            1: "first_order_dm_correction_2p",
+            2: "second_order_dm_correction_2p",
+        }
+        for lev in range(1, level + 1):
+            assert f"{fname[lev]}/False" in instances.get(system, case).timer.tasks
+        # TODO: add test for CVS-MP 2p density once implemented
+        with pytest.raises((NotImplementedError, AssertionError)):
+            diffdm = instances.get(system, case).diffdm_2p(
+                level=level, apply_cvs=True
+            )
 
     #
     # Cache
