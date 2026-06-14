@@ -54,6 +54,7 @@ class GradientComponents:
             return ret
         for c in self.custom:
             ret += self.custom[c]
+        return ret
 
     @property
     def one_electron(self):

@@ -144,7 +144,10 @@ def _two_stage_packed_density(g2, refstate):
     return out
 
 
-def test_packed_ao_pair_contraction_matches_full_pyscf_reference():
+@pytest.mark.parametrize("shell_chunk_size", [1, 2, 1000])
+def test_packed_ao_pair_contraction_matches_full_pyscf_reference(
+    shell_chunk_size,
+):
     hf = cached_backend_hf("pyscf", "h2o_sto3g", conv_tol=1e-11)
     provider = hf.gradient_provider
     inputs = _random_ao_inputs(hf.n_bas)
@@ -155,7 +158,7 @@ def test_packed_ao_pair_contraction_matches_full_pyscf_reference():
         g2_ao_1, g2_ao_2
     )
     packed_eri = provider._contract_eri_with_packed_density(
-        pair_density, shell_chunk_size=2
+        pair_density, shell_chunk_size=shell_chunk_size
     )
 
     assert_allclose(packed_eri, full.two_electron, atol=1e-10)
@@ -260,7 +263,10 @@ def test_packed_density_independent_of_pair_chunk_size(pair_chunk_size):
     assert_allclose(chunked, reference, atol=1e-12)
 
 
-def test_open_shell_packed_contraction_matches_dense_reference():
+@pytest.mark.parametrize("shell_chunk_size", [1, 2, 1000])
+def test_open_shell_packed_contraction_matches_dense_reference(
+    shell_chunk_size,
+):
     """Full packed-density ERI contraction must match the dense path (UHF).
 
     This anchors the end-to-end two-electron gradient for an open-shell
@@ -283,7 +289,7 @@ def test_open_shell_packed_contraction_matches_dense_reference():
         g2_ao_1, g2_ao_2
     )
     packed_eri = provider._contract_eri_with_packed_density(
-        pair_density, shell_chunk_size=2
+        pair_density, shell_chunk_size=shell_chunk_size
     )
 
     assert_allclose(packed_eri, full.two_electron, atol=1e-10)
@@ -370,6 +376,15 @@ def test_export_block_validates_arguments():
         # end exceeds shape
         tensor.export_block([0, 0, 0, 0],
                             [shape[0] + 1, shape[1], shape[2], shape[3]])
+
+    # Zero-size ranges must return correctly shaped empty arrays.
+    empty_all = tensor.export_block([0, 0, 0, 0], [0, 0, 0, 0])
+    assert empty_all.shape == (0, 0, 0, 0)
+    empty_one = tensor.export_block([0, 0, 0, 0],
+                                    [0, shape[1], shape[2], shape[3]])
+    assert empty_one.shape == (0, shape[1], shape[2], shape[3])
+    assert_allclose(empty_one, np.empty((0, shape[1], shape[2], shape[3])),
+                    atol=1e-12)
 
 
 # ---------------------------------------------------------------------------
