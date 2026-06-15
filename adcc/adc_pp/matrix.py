@@ -408,7 +408,7 @@ def adc2_i2(hf, mp, intermediates):
 def adc3_i1(hf, mp, intermediates):
     # Used for both CVS and general
     td2 = mp.td2(b.oovv)
-    p0 = intermediates.cvs_p0 if hf.has_core_occupied_space else mp.mp2_diffdm
+    p0 = mp.second_order_dm_correction(apply_cvs=hf.has_core_occupied_space)
 
     t2eri_sum = (
         + einsum("jicb->ijcb", mp.t2eri(b.oovv, b.ov))  # t2eri4
@@ -444,7 +444,7 @@ def adc3_i2(hf, mp, intermediates):
 
 
 def cvs_adc3_i2(hf, mp, intermediates):
-    cvs_p0 = intermediates.cvs_p0
+    cvs_p0 = mp.second_order_dm_correction(apply_cvs=True)
     return (
         + 2.0 * einsum("kIJa,ka->IJ", hf.occv, cvs_p0.ov).symmetrise()
         - 1.0 * einsum("kIlJ,kl->IJ", hf.ococ, cvs_p0.oo)
@@ -504,6 +504,7 @@ def cvs_adc3_m11(hf, mp, intermediates):
     i1 = adc3_i1(hf, mp, intermediates).evaluate()
     i2 = cvs_adc3_i2(hf, mp, intermediates).evaluate()
     t2sq = einsum("ikac,jkbc->iajb", mp.t2oo, mp.t2oo).evaluate()
+    cvs_p0 = mp.second_order_dm_correction(apply_cvs=True)
 
     # Build two Kronecker deltas
     d_cc = zeros_like(hf.fcc)
@@ -516,8 +517,8 @@ def cvs_adc3_m11(hf, mp, intermediates):
         - einsum("IJ,ab->IaJb", hf.fcc - i2, d_vv)
         - einsum("JaIb->IaJb", hf.cvcv)
         + (  # symmetrise I<>J and a<>b
-            + einsum("JaIc,bc->IaJb", hf.cvcv, intermediates.cvs_p0.vv)
-            - einsum("kIJa,kb->IaJb", hf.occv, 2.0 * intermediates.cvs_p0.ov)
+            + einsum("JaIc,bc->IaJb", hf.cvcv, cvs_p0.vv)
+            - einsum("kIJa,kb->IaJb", hf.occv, 2.0 * cvs_p0.ov)
         ).symmetrise((0, 2), (1, 3))
         # TODO This hack is done to avoid opt_einsum being smart and instantiating
         #      a tensor of dimension 6 (to avoid the vvvv tensor) in some cases,

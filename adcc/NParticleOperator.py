@@ -90,6 +90,8 @@ class NParticleOperator:
                                                  (O^\\dagger = -O)
             Default is `OperatorSymmetry.HERMITIAN`.
         """
+        from .block import get_canonical_block
+
         self._n_particle_op = n_particle_op
         if hasattr(spaces, "mospaces"):
             self.mospaces = spaces.mospaces
@@ -122,7 +124,6 @@ class NParticleOperator:
         self._canonical_blocks: dict[str, CanonicalBlock] = {}
 
         for block in blocks:
-            from .block import get_canonical_block
             bra = block[:2 * self.n_particle_op]
             ket = block[2 * self.n_particle_op:]
             canonical_block, factor, transpose = get_canonical_block(
