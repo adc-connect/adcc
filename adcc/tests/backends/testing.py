@@ -21,6 +21,7 @@
 ##
 ## ---------------------------------------------------------------------
 import adcc
+from adcc.NParticleOperator import OperatorSymmetry
 import numpy as np
 
 from collections import namedtuple
@@ -153,7 +154,10 @@ def operator_import_from_ao_test(scfres, ao_dict, operator="electric_dipole",
 
     if operator in ["magnetic_dipole"]:
         int_imported = getattr(refstate.operators, operator)(gauge_origin)
-    elif operator in ["electric_quadrupole"]:
+    elif operator in [
+        "electric_quadrupole", "electric_quadrupole_traceless",
+        "electric_quadrupole_velocity", "diamagnetic_magnetizability"
+    ]:
         callback = getattr(refstate.operators, operator)(gauge_origin)
         # flatten the list of lists of OneParticleOperators
         int_imported = [quad for quads in callback for quad in quads]
@@ -173,12 +177,12 @@ def operator_import_from_ao_test(scfres, ao_dict, operator="electric_dipole",
         int_mock = {"o1o1": int_oo, "o1v1": int_ov, "v1v1": int_vv}
 
         int_imported_comp = int_imported[i]
-        if not int_imported_comp.is_symmetric:
+        if int_imported_comp.symmetry is not OperatorSymmetry.HERMITIAN:
             int_vo = np.einsum('ib,ba,ja->ij', virta, ao_component, occa)
             int_vo += np.einsum('ib,ba,ja->ij', virtb, ao_component, occb)
             int_mock["v1o1"] = int_vo
 
-        for b in int_imported_comp.blocks:
+        for b in int_imported_comp.canonical_blocks:
             np.testing.assert_allclose(
                 int_mock[b], int_imported_comp[b].to_ndarray(),
                 atol=refstate.conv_tol

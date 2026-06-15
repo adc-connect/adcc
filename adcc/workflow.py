@@ -139,6 +139,9 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         Maximal subspace size
     max_iter : int, optional
         Maximal number of iterations
+    max_subspace_iter : int, optional
+        Maximum number of iterations for diagonalizing the subspace matrix
+        during the Davidson solver procedure
 
     Returns
     -------

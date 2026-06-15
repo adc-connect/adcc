@@ -21,9 +21,14 @@
 ##
 ## ---------------------------------------------------------------------
 import unittest
+import pytest
 
+from adcc import ReferenceState
 from adcc.MoSpaces import expand_spaceargs
 from adcc.HfCounterData import HfCounterData
+from adcc.backends import run_hf
+
+from . import testcases
 
 
 class TestReferenceState(unittest.TestCase):
@@ -175,3 +180,20 @@ class TestReferenceState(unittest.TestCase):
         assert res["frozen_core"] == [0, 1, 3, 5, 70, 71, 73, 75]
         assert res["core_orbitals"] == [2, 6, 72, 76]
         assert res["frozen_virtual"] == [67, 69, 137, 139]
+
+
+systems = ["cn_sto3g", "cn_ccpvdz"]
+
+
+@pytest.mark.parametrize("system", systems)
+def test_ssq_reference_state(system):
+    system: testcases.TestCase = testcases.get_by_filename(system).pop()
+    # we need to run the scf calculation since we don't store the <S^2> values
+    scfres = run_hf("pyscf", system.xyz, system.basis, multiplicity=2)
+    hf = ReferenceState(scfres)
+
+    ref_ssq, _ = scfres.spin_square()
+
+    hf_ssq = hf.ssq
+
+    assert hf_ssq == pytest.approx(ref_ssq)

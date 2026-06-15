@@ -1,17 +1,20 @@
 from collections import Counter
 from dataclasses import dataclass, asdict, fields
 from pathlib import Path
+from typing import Optional
+
+from adcc.AdcMethod import AdcType
 
 
 # NOTE: Can't use a dict, because TestCase has to be hashable.
 @dataclass(frozen=True)
 class Kinds:
-    pp: tuple[str] = tuple()
-    ip: tuple[str] = tuple()
-    ea: tuple[str] = tuple()
+    pp: tuple[str, ...] = tuple()
+    ip: tuple[str, ...] = tuple()
+    ea: tuple[str, ...] = tuple()
 
-    def __getitem__(self, key: str):
-        return getattr(self, key)
+    def __getitem__(self, key: AdcType):
+        return getattr(self, key.to_str())
 
 
 @dataclass(frozen=True)
@@ -24,13 +27,13 @@ class TestCase:
     basis: str
     restricted: bool
     only_full_mode: bool  # whether to run the test case only in full mode
-    pe_potfile: str = None
-    core_orbitals: int = None
-    frozen_core: int = None
-    frozen_virtual: int = None
+    pe_potfile: Optional[str] = None
+    core_orbitals: Optional[int] = None
+    frozen_core: Optional[int] = None
+    frozen_virtual: Optional[int] = None
     # the different cases for which to generate mp/adc reference data
     # generic, cvs, frozen core (fc), frozen virtual (fv), ...
-    cases: tuple[str] = ("gen",)
+    cases: tuple[str, ...] = ("gen",)
     # the available state kinds for the test system per adc type
     kinds: Kinds = Kinds()
     # the ground state density orders to generate data for, e.g.,
@@ -83,13 +86,13 @@ class TestCase:
             ret[key] = getattr(self, field)
         return ret
 
-    def filter_cases(self, adc_type: str) -> tuple[str]:
+    def filter_cases(self, adc_type: AdcType) -> tuple[str, ...]:
         """
         Filter the available cases only returning cases that are relevant
         for the given adc_type.
         """
-        # since cvs is not (yet) implemented for IP/EA.
-        if adc_type == "pp":
+        # since cvs is not (yet) implemented for IP.
+        if adc_type is AdcType.PP:
             return self.cases
         raise NotImplementedError(f"Filtering for adc type {adc_type} not "
                                   "implemented.")
@@ -119,7 +122,7 @@ class TestCase:
             assert all(kind in ["any", "spin_flip"] for kind in self.kinds.pp)
 
 
-def kinds_to_nstates(kinds: tuple[str]) -> list[str]:
+def kinds_to_nstates(kinds: tuple[str, ...]) -> list[str]:
     """
     Transforms the given kinds to a list of keywords to request states of the
     corresponding kind in an adc calculation.
@@ -193,7 +196,7 @@ _xyz = {
 }
 
 
-def _init_test_cases() -> tuple[TestCase]:
+def _init_test_cases() -> tuple[TestCase, ...]:
     test_cases: list[TestCase] = []
     # some shared data
     restricted_kinds = Kinds(pp=("singlet", "triplet"))

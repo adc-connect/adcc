@@ -27,7 +27,9 @@ from .Tensor import Tensor
 from .MoSpaces import MoSpaces
 from .backends import import_scf_results
 from .OperatorIntegrals import OperatorIntegrals
-from .OneParticleOperator import OneParticleOperator, product_trace
+from .OneParticleDensity import OneParticleDensity
+from .TwoParticleDensity import TwoParticleDensity
+from .NParticleOperator import product_trace, OperatorSymmetry
 
 import libadcc
 
@@ -152,7 +154,8 @@ class ReferenceState(libadcc.ReferenceState):
 
         self.operators = OperatorIntegrals(
             hfdata.operator_integral_provider, self._mospaces,
-            self.orbital_coefficients, self.conv_tol
+            self.orbital_coefficients, self.orbital_coefficients_alpha,
+            self.orbital_coefficients_beta, self.conv_tol
         )
 
         self.environment = None  # no environment attached by default
@@ -207,12 +210,32 @@ class ReferenceState(libadcc.ReferenceState):
         """
         Return the Hartree-Fock density in the MO basis
         """
-        density = OneParticleOperator(self.mospaces, is_symmetric=True)
-        for block in density.blocks:
-            sym = libadcc.make_symmetry_operator(self.mospaces, block, True, "1")
+        density = OneParticleDensity(self.mospaces,
+                                     symmetry=OperatorSymmetry.HERMITIAN)
+        for block in density.canonical_blocks:
+            sym = libadcc.make_symmetry_operator(self.mospaces, block,
+                                                 density.symmetry.to_str(), "1")
             density[block] = Tensor(sym)
         for ss in self.mospaces.subspaces_occupied:
             density[ss + ss].set_mask("ii", 1)
+        density.reference_state = self
+        return density
+
+    @property
+    def density_2p(self):
+        """
+        Return the two-particle Hartree-Fock density in the MO basis
+        """
+        density = TwoParticleDensity(self.mospaces,
+                                     symmetry=OperatorSymmetry.HERMITIAN)
+        for block in density.canonical_blocks:
+            sym = libadcc.make_symmetry_operator(self.mospaces, block,
+                                                 density.symmetry.to_str(), "1")
+            density[block] = Tensor(sym)
+        for ss in self.mospaces.subspaces_occupied:
+            density[ss + ss + ss + ss].set_mask("ijij", 1)
+            density[ss + ss + ss + ss].set_mask("ijji", -1)
+            density[ss + ss + ss + ss].set_mask("iijj", 0)
         density.reference_state = self
         return density
 
@@ -230,5 +253,20 @@ class ReferenceState(libadcc.ReferenceState):
         if isinstance(gauge_origin, str):
             gauge_origin = self.gauge_origin_to_xyz(gauge_origin)
         return super().nuclear_quadrupole(gauge_origin)
+
+    @cached_property
+    def ssq(self):
+        """
+        Return <S^2> of the HF reference state.
+        """
+        if self.restricted:
+            raise NotImplementedError(
+                "<S^2> is not implemented for restricted HF references."
+            )
+        ssq_1p_op = self.operators.ssq_1p
+        ssq_2p_op = self.operators.ssq_2p
+        ssq_1p = product_trace(ssq_1p_op, self.density)
+        ssq_2p = product_trace(ssq_2p_op, self.density_2p)
+        return (ssq_1p + ssq_2p)
 
 # TODO some nice describe method

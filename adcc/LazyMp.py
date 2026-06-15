@@ -23,13 +23,15 @@
 import libadcc
 import numpy as np
 
-from .functions import direct_sum, evaluate, einsum
+from .functions import direct_sum, evaluate, einsum, zeros_like
 from .misc import cached_property, cached_member_function
 from .ReferenceState import ReferenceState
-from .OneParticleOperator import OneParticleOperator, product_trace
+from .OneParticleDensity import OneParticleDensity
+from .TwoParticleDensity import TwoParticleDensity
+from .NParticleOperator import product_trace, OperatorSymmetry
 from .Intermediates import register_as_intermediate
 from .timings import Timer, timed_member_call
-from .MoSpaces import split_spaces
+from .MoSpaces import MoSpaces, split_spaces
 from . import block as b
 
 
@@ -43,10 +45,10 @@ class LazyMp:
         if not isinstance(hf, ReferenceState):
             raise TypeError("hf needs to be a ReferenceState "
                             "or a HartreeFockSolution_i")
-        self.reference_state = hf
-        self.mospaces = hf.mospaces
-        self.timer = Timer()
-        self.has_core_occupied_space = hf.has_core_occupied_space
+        self.reference_state: ReferenceState = hf
+        self.mospaces: MoSpaces = hf.mospaces
+        self.timer: Timer = Timer()
+        self.has_core_occupied_space: bool = hf.has_core_occupied_space
 
     def __getattr__(self, attr):
         # Shortcut some quantities, which are needed most often
@@ -56,7 +58,7 @@ class LazyMp:
         else:
             raise AttributeError
 
-    @cached_member_function
+    @cached_member_function()
     def df(self, space):
         """Delta Fock matrix"""
         hf = self.reference_state
@@ -65,7 +67,7 @@ class LazyMp:
         fv = hf.fock(s2 + s2).diagonal()
         return direct_sum("-i+a->ia", fC, fv)
 
-    @cached_member_function
+    @cached_member_function()
     def t2(self, space):
         """T2 amplitudes"""
         hf = self.reference_state
@@ -77,7 +79,7 @@ class LazyMp:
             hf.eri(space) / direct_sum("ia+jb->ijab", eia, ejb).symmetrise((2, 3))
         )
 
-    @cached_member_function
+    @cached_member_function()
     def td2(self, space):
         """Return the T^D_2 term"""
         if space != b.oovv:
@@ -93,7 +95,35 @@ class LazyMp:
             - 0.5 * self.t2eri(b.oovv, b.oo)
         ) / denom
 
-    @cached_member_function
+    @cached_member_function()
+    def tt2(self, space: str):
+        """
+        Return the second order MP triples amplitudes for the given space
+        (e.g. o1o1o1v1v1v1).
+        """
+        if space != b.ooovvv:
+            raise NotImplementedError("Second order MP triples amplitudes not "
+                                      f"implemented for space {space}.")
+        hf = self.reference_state
+        df = self.df(b.ov)
+        t2_1 = self.t2(b.oovv)
+        # denom = a + b + c - i - j - k   //   df = i - a
+        denom = - 1 * direct_sum(
+            "ia,jkbc->ijkabc", df, direct_sum("jb,kc->jkbc", df, df)
+        ).symmetrise(0, 1, 2).symmetrise(3, 4, 5)
+        # prefactor of 9, because we have 9 terms each in the expression, while the
+        # antisymmetrisation generates 36 terms and introduces a prefactor of 1/36.
+        # Each of the 9 terms is therefore generated 4 times.
+        # The scaling in the comments is given as: [comp_scaling] / [mem_scaling]
+        numerator = (
+            # N^7: O^3V^4 / N^6: O^3V^3
+            + 9 * einsum('idab,jkcd->ijkabc', hf.ovvv, t2_1)
+            # N^7: O^4V^3 / N^6: O^3V^3
+            + 9 * einsum('ijla,klbc->ijkabc', hf.ooov, t2_1)
+        ).antisymmetrise(0, 1, 2).antisymmetrise(3, 4, 5)
+        return numerator / denom
+
+    @cached_member_function()
     def t2eri(self, space, contraction):
         """
         Return the T2 tensor with ERI tensor contraction intermediates.
@@ -122,10 +152,11 @@ class LazyMp:
     @timed_member_call(timer="timer")
     def mp2_diffdm(self):
         """
-        Return the MP2 differensce density in the MO basis.
+        Return the MP2 difference density in the MO basis.
         """
         hf = self.reference_state
-        ret = OneParticleOperator(self.mospaces, is_symmetric=True)
+        ret = OneParticleDensity(self.mospaces,
+                                 symmetry=OperatorSymmetry.HERMITIAN)
         # NOTE: the following 3 blocks are equivalent to the cvs_p0 intermediates
         # defined at the end of this file
         ret.oo = -0.5 * einsum("ikab,jkab->ij", self.t2oo, self.t2oo)
@@ -154,9 +185,9 @@ class LazyMp:
                 + einsum("kIab,kJab->IJ", self.t2oc, self.t2oc)
                 + einsum('LIab,LJab->IJ', self.t2cc, self.t2cc)
             )
-            ret.co = -0.5 * (
-                + einsum("kIab,kjab->Ij", self.t2oc, self.t2oo)
-                + einsum("ILab,jLab->Ij", self.t2cc, self.t2oc)
+            ret.oc = -0.5 * (
+                + einsum("kIab,kjab->jI", self.t2oc, self.t2oo)
+                + einsum("ILab,jLab->jI", self.t2cc, self.t2oc)
             )
             ret.cv = -0.5 * (
                 - einsum("jIbc,jabc->Ia", self.t2oc, hf.ovvv)
@@ -182,6 +213,76 @@ class LazyMp:
             raise NotImplementedError("Only densities for level 0, 1 and 2"
                                       " are implemented.")
 
+    @cached_property
+    @timed_member_call(timer="timer")
+    def mp1_dm_correction_2p(self) -> TwoParticleDensity:
+        """
+        Return the two-particle MP1 difference density correction in the MO basis.
+        """
+        ret = TwoParticleDensity(self.mospaces,
+                                 symmetry=OperatorSymmetry.HERMITIAN)
+        ret.oovv = -1.0 * self.t2oo
+        return ret.evaluate()
+
+    @cached_property
+    @timed_member_call(timer="timer")
+    def mp2_dm_correction_2p(self) -> TwoParticleDensity:
+        """
+        Return the two-particle MP2 difference density correction in the MO basis.
+        """
+        hf: ReferenceState = self.reference_state
+        ret = TwoParticleDensity(self.mospaces,
+                                 symmetry=OperatorSymmetry.HERMITIAN)
+        p0: OneParticleDensity = self.mp2_diffdm
+
+        # constuct Kronecker Delta
+        d_oo = zeros_like(hf.foo)
+        d_oo.set_mask("ii", 1)
+
+        ret.oooo = (
+            + 4.0 * einsum("ik,jl->ijkl", p0.oo, d_oo)
+            .antisymmetrise(0, 1).antisymmetrise(2, 3)
+            + 0.5 * einsum("ijab,klab->ijkl", self.t2oo, self.t2oo)
+        )
+        ret.ooov = (
+            + 2.0 * einsum("ja,ik->ijka", p0.ov, d_oo).antisymmetrise(0, 1)
+        )
+        ret.oovv = (
+            - 1.0 * self.td2(b.oovv)
+        )
+        ret.ovov = (
+            + 1.0 * einsum("ab,ij->iajb", p0.vv, d_oo)
+            - 1.0 * einsum("jkac,ikbc->iajb", self.t2oo, self.t2oo)
+        )
+        ret.vvvv = (
+            + 0.5 * einsum("ijab,ijcd->abcd", self.t2oo, self.t2oo)
+        )
+        return evaluate(ret)
+
+    def diffdm_2p(self, level=2) -> TwoParticleDensity:
+        """
+        Return the two-particle MP difference density in the MO basis with all
+        corrections up to the specified order of perturbation theory.
+        """
+        if level == 1:
+            return self.mp1_dm_correction_2p
+        elif level == 2:
+            return (self.mp1_dm_correction_2p
+                    + self.mp2_dm_correction_2p)
+        else:
+            raise NotImplementedError("Only first and second-order two-particle "
+                                      "density corrections are implemented.")
+
+    def density_2p(self, level=2) -> TwoParticleDensity:
+        """
+        Return the two-particle MP density in the MO basis with all corrections
+        up to the specified order of perturbation theory.
+        """
+        if level == 0:
+            return self.reference_state.density_2p
+        diffdm = self.diffdm_2p(level)
+        return self.reference_state.density_2p + diffdm
+
     def dipole_moment(self, level=2):
         """
         Return the MP dipole moment at the specified level of
@@ -195,7 +296,7 @@ class LazyMp:
             raise NotImplementedError("Only dipole moments for level 0, 1 and 2"
                                       " are implemented.")
 
-    @cached_member_function
+    @cached_member_function()
     def energy_correction(self, level=2):
         """Obtain the MP energy correction at a particular level"""
         if level > 3:
@@ -274,6 +375,23 @@ class LazyMp:
                             for comp in dipole_integrals])
         return refstate.dipole_moment + mp2corr
 
+    @cached_member_function()
+    def ssq(self, level=2):
+        """
+        Return <S^2> of the ground state.
+        """
+        if self.reference_state.restricted:
+            raise NotImplementedError(
+                "<S^2> is not implemented for restricted HF references."
+            )
+        ssq_1p_op = self.reference_state.operators.ssq_1p
+        ssq_2p_op = self.reference_state.operators.ssq_2p
+        # the trace of the second-order (and higher) correction to the RDM1
+        # is zero -> no influence on top of HF density for ground state
+        ssq_1p = product_trace(ssq_1p_op, self.density(0))
+        ssq_2p = product_trace(ssq_2p_op, self.density_2p(level))
+        return (ssq_1p + ssq_2p)
+
 
 #
 # Register cvs_p0 intermediate
@@ -281,7 +399,7 @@ class LazyMp:
 @register_as_intermediate
 def cvs_p0(hf, mp, intermediates):
     # NOTE: equal to mp2_diffdm if CVS applied for the density
-    ret = OneParticleOperator(hf.mospaces, is_symmetric=True)
+    ret = OneParticleDensity(hf.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
     ret.oo = -0.5 * einsum("ikab,jkab->ij", mp.t2oo, mp.t2oo)
     ret.ov = -0.5 * (+ einsum("ijbc,jabc->ia", mp.t2oo, hf.ovvv)
                      + einsum("jkib,jkab->ia", hf.ooov, mp.t2oo)) / mp.df(b.ov)

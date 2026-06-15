@@ -435,9 +435,9 @@ std::shared_ptr<Tensor> ReferenceState::fock(const std::string& space) const {
     RecordTime rec(m_timer, "import/fock/" + space);
     // Fock operator is symmetric wrt. index permutation and transforms
     // as the totally symmetric irrep
-    const bool symmetric = true;
+    const std::string symmetry = "hermitian";
     std::shared_ptr<Symmetry> sym_ptr =
-          make_symmetry_operator(m_mo_ptr, space, symmetric, "1");
+          make_symmetry_operator(m_mo_ptr, space, symmetry, "1");
     std::shared_ptr<Tensor> fock    = make_tensor_zero(sym_ptr);
     const HartreeFockSolution_i& hf = *m_hfsoln_ptr;
 

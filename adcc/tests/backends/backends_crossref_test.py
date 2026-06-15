@@ -306,6 +306,32 @@ def compare_adc_results(adc_results, atol):
             else:
                 assert_allclose_signs(fixed_signs_new, fixed_signs)
 
+        if "electric_quadrupole" in state1.operators.available and \
+                "electric_quadrupole" in state2.operators.available:
+            for i in range(len(state1.transition_quadrupole_moment("origin"))):
+                assert_allclose_signfix(
+                    state1.transition_quadrupole_moment("origin")[i],
+                    state2.transition_quadrupole_moment("origin")[i],
+                    atol=atol)
+            fixed_signs_new = fix_signs(
+                state1.transition_quadrupole_moment("origin"),
+                state2.transition_quadrupole_moment("origin"),
+                atol=atol
+            )
+            if fixed_signs is None:
+                fixed_signs = fixed_signs_new
+            else:
+                # sign is consistent across all matrix elements of a state.
+                assert_allclose_signs(fixed_signs_new[:, :, 0], fixed_signs)
+
+        if (
+            not state1.reference_state.restricted
+            and not state1.reference_state.has_core_occupied_space
+        ):
+            if "overlap" in state1.operators.available and \
+                    "overlap" in state2.operators.available:
+                assert_allclose(state1.state_ssq, state2.state_ssq, atol=atol)
+
         # Only in two backends the gauge origin selection is implemented.
         if len(set(comb) & set(backends_with_gauge_origin)) == 2:
             gauge_origins = ["origin", "mass_center", "charge_center"]

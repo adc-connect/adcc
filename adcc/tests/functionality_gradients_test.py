@@ -65,10 +65,10 @@ def test_nuclear_gradient(molecule, basis, method, backend):
                             atol=conv_tol)
             # check energy computed with unrelaxed densities
             gs_corr = 0.0
-            if ee.method.level > 0:
+            if ee.method.level.to_int() > 0:
                 # compute the ground state contribution
                 # to the correlation energy
-                gs_energy = ee.ground_state.energy(ee.method.level)
+                gs_energy = ee.ground_state.energy(ee.method.level.to_int())
                 gs_corr = gs_energy - ee.reference_state.energy_scf
             assert_allclose(
                 gs_corr + ee.excitation_energy,

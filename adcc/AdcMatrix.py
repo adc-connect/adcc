@@ -20,13 +20,15 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import libadcc
+import itertools
 import numpy as np
+
+import libadcc
 
 from .LazyMp import LazyMp
 from .adc_pp import matrix as ppmatrix
 from .timings import Timer, timed_member_call
-from .AdcMethod import AdcMethod
+from .AdcMethod import AdcMethod, Method, AdcType
 from .functions import ones_like
 from .Intermediates import Intermediates
 from .AmplitudeVector import AmplitudeVector
@@ -68,19 +70,137 @@ class AdcMatrixlike:
     """
     Base class marker for all objects like ADC matrices.
     """
-    pass
+
+    _special_block_orders = {
+        "adc2x": {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 1},
+        "isr1s": {"ph_ph": 1, "ph_pphh": None, "pphh_ph": None, "pphh_pphh": None},
+        "isr2d": {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 0},
+    }
+
+    @classmethod
+    def _default_block_orders(cls, method: Method,
+                              bandwidth: int) -> dict[str, int]:
+        """
+        Determines the default block orders for the given adc method.
+
+        Parameters
+        ----------
+        method: Method
+            The method to generate default block orders for.
+        bandwidth: int
+            The number of coupling blocks in the ADC/ISR matrix with
+            non-vanishing zeroth-order contributions, e.g.,
+            0 for the secular matrix and 1 for the 1-particle ISR matrix.
+        """
+        # check if we have a special method like adc2x
+        # I guess base_method should also contain the adc_type prefix so
+        # we don't need to separate different adc_types
+        block_orders = cls._special_block_orders.get(
+            method.base_method.name, None
+        )
+        if block_orders is not None:
+            return block_orders.copy()
+        # otherwise assume that we have a "normal" PP/IP/...-ADC(n) method
+        # - determine which spaces are available in the ADC(n) matrix
+        #   starting from the given minimal space
+        min_space = {
+            AdcType.PP: "ph"
+        }.get(method.adc_type, None)
+        if min_space is None:
+            raise ValueError(f"Unknown adc type {method.adc_type.to_str()} for "
+                             f"method {method.name}. Can not determine default "
+                             "block orders.")
+        assert bandwidth >= 0
+        n_spaces = ((method.level.to_int() + bandwidth) // 2) + 1
+        spaces = [
+            "p" * i + min_space + "h" * i for i in range(0, n_spaces)
+        ]
+        # exploit the fact that the spaces are sorted from small to high:
+        # If we walk the adc matrix in any direction we always have to subtract 1!
+        # Therefore, we can determine the order according to the position of the
+        # spaces: maxorder - 0 for singles, maxorder - 2 for doubles and
+        # maxorder - 3 for the doubles/triples coupling
+        ret = {}
+        for ((i1, bra), (i2, ket)) in \
+                itertools.product(enumerate(spaces), repeat=2):
+            order = method.level.to_int() - i1 - i2
+            # For ISR matrices allow missing diagonal blocks.
+            order = None if order < 0 else order
+            ret[f"{bra}_{ket}"] = order
+        return ret
+
+    @classmethod
+    def _validate_block_orders(cls, block_orders: dict[str, int],
+                               method: Method,
+                               allow_missing_diagonal_blocks: bool = False) -> None:
+        """
+        Validates that the given block_orders form a valid adc/isr matrix for the
+        given adc(isr) method.
+
+        Parameters
+        ----------
+        block_orders: dict[str, int]
+            The block orders to validate. Block orders should be of the form
+            {'ph_ph': 2, 'ph_pphh': 1, ...}
+        method: Method
+            The adc/isr method/adc type (PP-ADC/ISR, ...) for which to validate
+            the block_orders.
+        allow_missing_diagonal_blocks: bool, optional
+            If set, couplings between missing diagonal blocks are allowed, e.g.,
+            {'ph_ph': 1, 'ph_pphh': 0, 'pphh_ph': 0}
+            will be valid although there is a coupling between the 'ph_ph' block
+            and the missing 'pphh_pphh' block. (default: False)
+        """
+        for block, order in block_orders.items():
+            if order is None:
+                continue
+            assert order >= 0
+            # ensure that the block is valid for the given adc type
+            bra, ket = block.split("_")
+            if not cls._is_valid_space(bra, method) or \
+                    not cls._is_valid_space(ket, method):
+                raise ValueError(f"Invalid block {block} for a "
+                                 f"{method.adc_type.to_str()} ADC matrix.")
+            if bra == ket:  # done for diagonal blocks
+                continue
+            # ensure that the matrix is symmetric
+            inv_block = f"{ket}_{bra}"
+            inv_order = block_orders.get(inv_block, None)
+            if inv_order is None or inv_order != order:
+                raise ValueError(f"{block} and {inv_block} should always have "
+                                 "the same order.")
+            if allow_missing_diagonal_blocks:
+                continue
+            # ensure that we have no coupling between missing diagonal blocks
+            bra_diag = f"{bra}_{bra}"
+            ket_diag = f"{ket}_{ket}"
+            bra_diag_order = block_orders.get(bra_diag, None)
+            ket_diag_order = block_orders.get(ket_diag, None)
+            if bra_diag_order is None or ket_diag_order is None:
+                raise ValueError(f"Can only have a couling block {block} "
+                                 f"if both diagonal blocks {bra_diag} and "
+                                 f"{ket_diag} are in the matrix too.")
+
+    @classmethod
+    def _is_valid_space(cls, space: str, method: Method) -> bool:
+        """
+        Checks whether the given space ('ph' for instance) is valid for the given
+        adc method. Thereby we only verify that the space matches the adc_type of
+        method!
+        """
+        n_particle, n_hole = space.count("p"), space.count("h")
+        # ensure that the space is of the form pp...hh...
+        if ("p" * n_particle + "h" * n_hole) != space:
+            return False
+        # depending on the adc type n_particle and n_hole have to
+        # be equal or differ e.g. by +-1 (IP/EA)
+        if method.adc_type is AdcType.PP:
+            return n_particle == n_hole
+        raise ValueError(f"Unknown adc type {method.adc_type.to_str()} for method "
+                         f"{method.name}. Can not validate space.")
 
 
 class AdcMatrix(AdcMatrixlike):
-    # Default perturbation-theory orders for the matrix blocks (== standard ADC-PP).
-    default_block_orders = {
-        #             ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),
-        "adc0":  dict(ph_ph=0, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
-        "adc1":  dict(ph_ph=1, ph_pphh=None, pphh_ph=None, pphh_pphh=None),  # noqa: E501
-        "adc2":  dict(ph_ph=2, ph_pphh=1,    pphh_ph=1,    pphh_pphh=0),     # noqa: E501
-        "adc2x": dict(ph_ph=2, ph_pphh=1,    pphh_ph=1,    pphh_pphh=1),     # noqa: E501
-        "adc3":  dict(ph_ph=3, ph_pphh=2,    pphh_ph=2,    pphh_pphh=1),     # noqa: E501
-    }
 
     def __init__(self, method, hf_or_mp, block_orders=None, intermediates=None,
                  diagonal_precomputed=None):
@@ -133,25 +253,15 @@ class AdcMatrix(AdcMatrixlike):
         if self.intermediates is None:
             self.intermediates = Intermediates(self.ground_state)
 
-        # Determine orders of PT in the blocks
-        if block_orders is None:
-            block_orders = self.default_block_orders[method.base_method.name]
-        else:
-            tmp_orders = self.default_block_orders[method.base_method.name].copy()
-            tmp_orders.update(block_orders)
-            block_orders = tmp_orders
-
-        # Sanity checks on block_orders
-        for block in block_orders.keys():
-            if block not in ("ph_ph", "ph_pphh", "pphh_ph", "pphh_pphh"):
-                raise ValueError(f"Invalid block order key: {block}")
-        if block_orders["ph_pphh"] != block_orders["pphh_ph"]:
-            raise ValueError("ph_pphh and pphh_ph should always have "
-                             "the same order")
-        if block_orders["ph_pphh"] is not None \
-           and block_orders["pphh_pphh"] is None:
-            raise ValueError("pphh_pphh cannot be None if ph_pphh isn't.")
-        self.block_orders = block_orders
+        self.block_orders = self._default_block_orders(
+            self.method, bandwidth=0
+        )
+        if block_orders is not None:
+            self.block_orders.update(block_orders)
+        self._validate_block_orders(
+            block_orders=self.block_orders, method=self.method,
+            allow_missing_diagonal_blocks=False
+        )
 
         # Build the blocks and diagonals
         with self.timer.record("build"):
@@ -166,12 +276,13 @@ class AdcMatrix(AdcMatrixlike):
             }
             self.blocks = {bl: blocks[bl].apply for bl in blocks}
             if diagonal_precomputed:
-                self.__diagonal = diagonal_precomputed
+                self._diagonal: AmplitudeVector = diagonal_precomputed
             else:
-                self.__diagonal = sum(bl.diagonal for bl in blocks.values()
-                                      if bl.diagonal)
-                self.__diagonal.evaluate()
-            self.__init_space_data(self.__diagonal)
+                self._diagonal: AmplitudeVector = sum(
+                    bl.diagonal for bl in blocks.values() if bl.diagonal
+                )
+                self._diagonal.evaluate()
+            self._init_space_data(self._diagonal)
 
     def __iadd__(self, other):
         """In-place addition of an :py:class:`AdcExtraTerm`
@@ -195,8 +306,8 @@ class AdcMatrix(AdcMatrixlike):
             self.blocks[sp] = patched_apply
         other_diagonal = sum(bl.diagonal for bl in other.blocks.values()
                              if bl.diagonal)
-        self.__diagonal = self.__diagonal + other_diagonal
-        self.__diagonal.evaluate()
+        self._diagonal = self._diagonal + other_diagonal
+        self._diagonal.evaluate()
         self.extra_terms.append(other)
         return self
 
@@ -226,7 +337,7 @@ class AdcMatrix(AdcMatrixlike):
     def __radd__(self, other):
         return self.__add__(other)
 
-    def __init_space_data(self, diagonal):
+    def _init_space_data(self, diagonal):
         """Update the cached data regarding the spaces of the ADC matrix"""
         self.axis_spaces = {}
         self.axis_lengths = {}
@@ -259,7 +370,7 @@ class AdcMatrix(AdcMatrixlike):
 
     def diagonal(self):
         """Return the diagonal of the ADC matrix"""
-        return self.__diagonal
+        return self._diagonal
 
     def block_apply(self, block, tensor):
         """

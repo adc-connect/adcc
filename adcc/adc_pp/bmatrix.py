@@ -35,9 +35,9 @@ __all__ = ["block"]
 
 """
 `apply` is a function mapping an AmplitudeVector to the contribution of this
-block to the result of applying the ADC matrix.
+block to the result of applying the ISR matrix.
 """
-AdcBlock = namedtuple("AdcBlock", ["apply"])
+IsrBlock = namedtuple("IsrBlock", ["apply"])
 
 
 def block(ground_state, operator, spaces, order, variant=None):
@@ -69,7 +69,9 @@ def block(ground_state, operator, spaces, order, variant=None):
 
     if fn not in globals():
         raise ValueError("Could not dispatch: "
-                         f"spaces={spaces} order={order} variant={variant}")
+                         f"spaces={spaces} order={order} variant={variant}. "
+                         "Probably the B-matrix is not implemented for the "
+                         "requested method.")
     return globals()[fn](ground_state, operator)
 
 
@@ -82,7 +84,7 @@ def block_ph_ph_0(ground_state, op):
             + 1.0 * einsum('ic,ac->ia', ampl.ph, op.vv)
             - 1.0 * einsum('ka,ki->ia', ampl.ph, op.oo)
         ))
-    return AdcBlock(apply)
+    return IsrBlock(apply)
 
 
 def block_pphh_pphh_0(ground_state, op):
@@ -97,7 +99,7 @@ def block_pphh_pphh_0(ground_state, op):
                 + 2.0 * einsum('kiab,kj->ijab', ampl.pphh, op.oo)
             ).antisymmetrise(0, 1)
         ))
-    return AdcBlock(apply)
+    return IsrBlock(apply)
 
 
 #
@@ -109,25 +111,20 @@ def block_ph_pphh_0(ground_state, op):
             - 2.0 * einsum('ilad,ld->ia', ampl.pphh, op.ov)
             + 2.0 * einsum('ilca,lc->ia', ampl.pphh, op.ov)
         ))
-    return AdcBlock(apply)
+    return IsrBlock(apply)
 
 
 def block_pphh_ph_0(ground_state, op):
-    if op.is_symmetric:
-        op_vo = op.ov.transpose()
-    else:
-        op_vo = op.vo
-
     def apply(ampl):
         return AmplitudeVector(pphh=0.5 * (
             (
-                - 1.0 * einsum('ia,bj->ijab', ampl.ph, op_vo)
-                + 1.0 * einsum('ja,bi->ijab', ampl.ph, op_vo)
-                + 1.0 * einsum('ib,aj->ijab', ampl.ph, op_vo)
-                - 1.0 * einsum('jb,ai->ijab', ampl.ph, op_vo)
+                - 1.0 * einsum('ia,bj->ijab', ampl.ph, op.vo)
+                + 1.0 * einsum('ja,bi->ijab', ampl.ph, op.vo)
+                + 1.0 * einsum('ib,aj->ijab', ampl.ph, op.vo)
+                - 1.0 * einsum('jb,ai->ijab', ampl.ph, op.vo)
             ).antisymmetrise(0, 1).antisymmetrise(2, 3)
         ))
-    return AdcBlock(apply)
+    return IsrBlock(apply)
 
 
 #
@@ -140,10 +137,6 @@ block_ph_ph_1 = block_ph_ph_0
 # 1st order coupling
 #
 def block_ph_pphh_1(ground_state, op):
-    if op.is_symmetric:
-        op_vo = op.ov.transpose()
-    else:
-        op_vo = op.vo
     t2 = ground_state.t2(b.oovv)
 
     def apply(ampl):
@@ -152,29 +145,25 @@ def block_ph_pphh_1(ground_state, op):
             - 2.0 * einsum('ilad,ld->ia', ampl.pphh, op.ov)
             + 2.0 * einsum('ilca,lc->ia', ampl.pphh, op.ov)
             # first order
-            + 2.0 * einsum('ilad,lndf,fn->ia', ampl.pphh, t2, op_vo)
-            - 2.0 * einsum('ilca,lncf,fn->ia', ampl.pphh, t2, op_vo)
-            - 2.0 * einsum('klad,kled,ei->ia', ampl.pphh, t2, op_vo)
-            - 2.0 * einsum('ilcd,nlcd,an->ia', ampl.pphh, t2, op_vo)
+            + 2.0 * einsum('ilad,lndf,fn->ia', ampl.pphh, t2, op.vo)
+            - 2.0 * einsum('ilca,lncf,fn->ia', ampl.pphh, t2, op.vo)
+            - 2.0 * einsum('klad,kled,ei->ia', ampl.pphh, t2, op.vo)
+            - 2.0 * einsum('ilcd,nlcd,an->ia', ampl.pphh, t2, op.vo)
         ))
-    return AdcBlock(apply)
+    return IsrBlock(apply)
 
 
 def block_pphh_ph_1(ground_state, op):
-    if op.is_symmetric:
-        op_vo = op.ov.transpose()
-    else:
-        op_vo = op.vo
     t2 = ground_state.t2(b.oovv)
 
     def apply(ampl):
         return AmplitudeVector(pphh=0.5 * (
             (
                 # zeroth order
-                - 1.0 * einsum('ia,bj->ijab', ampl.ph, op_vo)
-                + 1.0 * einsum('ja,bi->ijab', ampl.ph, op_vo)
-                + 1.0 * einsum('ib,aj->ijab', ampl.ph, op_vo)
-                - 1.0 * einsum('jb,ai->ijab', ampl.ph, op_vo)
+                - 1.0 * einsum('ia,bj->ijab', ampl.ph, op.vo)
+                + 1.0 * einsum('ja,bi->ijab', ampl.ph, op.vo)
+                + 1.0 * einsum('ib,aj->ijab', ampl.ph, op.vo)
+                - 1.0 * einsum('jb,ai->ijab', ampl.ph, op.vo)
                 # first order
                 + 1.0 * einsum('ia,jnbf,nf->ijab', ampl.ph, t2, op.ov)
                 - 1.0 * einsum('ja,inbf,nf->ijab', ampl.ph, t2, op.ov)
@@ -190,17 +179,13 @@ def block_pphh_ph_1(ground_state, op):
                 + 1.0 * einsum('jc,niab,nc->ijab', ampl.ph, t2, op.ov)
             ).antisymmetrise(0, 1)
         ))
-    return AdcBlock(apply)
+    return IsrBlock(apply)
 
 
 #
 # 2nd order main
 #
 def block_ph_ph_2(ground_state, op):
-    if op.is_symmetric:
-        op_vo = op.ov.transpose()
-    else:
-        op_vo = op.vo
     p0 = ground_state.mp2_diffdm
     t2 = ground_state.t2(b.oovv)
 
@@ -211,8 +196,8 @@ def block_ph_ph_2(ground_state, op):
             - 1.0 * einsum('ka,ki->ia', ampl.ph, op.oo)
             # 2nd order
             # (2,1)
-            - 1.0 * einsum('ic,jc,aj->ia', ampl.ph, p0.ov, op_vo)
-            - 1.0 * einsum('ka,kb,bi->ia', ampl.ph, p0.ov, op_vo)
+            - 1.0 * einsum('ic,jc,aj->ia', ampl.ph, p0.ov, op.vo)
+            - 1.0 * einsum('ka,kb,bi->ia', ampl.ph, p0.ov, op.vo)
             - 1.0 * einsum('ic,ja,jc->ia', ampl.ph, p0.ov, op.ov)  # h.c.
             - 1.0 * einsum('ka,ib,kb->ia', ampl.ph, p0.ov, op.ov)  # h.c.
             # (2,2)
@@ -236,4 +221,4 @@ def block_ph_ph_2(ground_state, op):
             - 1.0 * einsum('kc,kncf,imaf,mn->ia', ampl.ph, t2, t2, op.oo)
             + 1.0 * einsum('kc,knce,inaf,ef->ia', ampl.ph, t2, t2, op.vv)
         ))
-    return AdcBlock(apply)
+    return IsrBlock(apply)

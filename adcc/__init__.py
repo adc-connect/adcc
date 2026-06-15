@@ -29,7 +29,7 @@ from .Tensor import Tensor
 from .Symmetry import Symmetry
 from .MoSpaces import MoSpaces
 from .AdcMatrix import AdcMatrix
-from .AdcMethod import AdcMethod
+from .AdcMethod import AdcMethod, IsrMethod
 from .functions import (copy, direct_sum, dot, einsum, empty_like,
                         evaluate, lincomb, linear_combination, nosym_like,
                         ones_like, transpose, zeros_like)
@@ -41,7 +41,11 @@ from .ElectronicTransition import ElectronicTransition
 from .DataHfProvider import DataHfProvider, DictHfProvider
 from .ReferenceState import ReferenceState
 from .AmplitudeVector import AmplitudeVector
+from .NParticleOperator import OperatorSymmetry
 from .OneParticleOperator import OneParticleOperator
+from .OneParticleDensity import OneParticleDensity
+from .TwoParticleOperator import TwoParticleOperator
+from .TwoParticleDensity import TwoParticleDensity
 from .opt_einsum_integration import register_with_opt_einsum
 from .gradients import nuclear_gradient
 
@@ -52,14 +56,15 @@ from .workflow import run_adc
 from .exceptions import InputError
 
 __all__ = ["run_adc", "InputError", "AdcMatrix",
-           "AdcMethod", "Symmetry", "ReferenceState", "MoSpaces",
+           "AdcMethod", "IsrMethod", "Symmetry", "ReferenceState", "MoSpaces",
            "einsum", "copy", "dot", "empty_like", "evaluate",
            "lincomb", "nosym_like", "ones_like", "transpose",
            "linear_combination", "zeros_like", "direct_sum",
            "memory_pool", "set_n_threads", "get_n_threads", "AmplitudeVector",
            "HartreeFockProvider", "ExcitedStates", "State2States",
            "Excitation", "ElectronicTransition", "Tensor", "DictHfProvider",
-           "DataHfProvider", "OneParticleOperator",
+           "DataHfProvider", "OneParticleOperator", "OneParticleDensity",
+           "TwoParticleOperator", "TwoParticleDensity", "OperatorSymmetry",
            "guesses_singlet", "guesses_triplet", "guesses_any",
            "guess_symmetries", "guesses_spin_flip", "guess_zero", "LazyMp",
            "adc0", "cis", "adc1", "adc2", "adc2x", "adc3",
@@ -67,12 +72,12 @@ __all__ = ["run_adc", "InputError", "AdcMatrix",
            "nuclear_gradient",
            "banner"]
 
-__version__ = "0.15.17"
+__version__ = "0.17.1"
 __license__ = "GPL v3"
 __url__ = "https://adc-connect.org"
 __authors__ = ["Michael F. Herbst", "Maximilian Scheurer", "Jonas Leitner",
                "Antonia Papapostolou", "Friederike Schneider",
-               "Adrian L. Dempwolff"]
+               "Adrian L. Dempwolff", "Adrian J. Müller"]
 __email__ = "developers@adc-connect.org"
 __contributors__ = []
 
@@ -90,7 +95,7 @@ def adc0(*args, **kwargs):
 @with_runadc_doc
 def cis(*args, **kwargs):
     state = run_adc(*args, **kwargs, method="adc1")
-    return ExcitedStates(state, property_method="adc0")
+    return ExcitedStates(state, property_method="isr0")
 
 
 @with_runadc_doc

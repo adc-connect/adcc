@@ -22,22 +22,27 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
-from libadcc import MoSpaces, ReferenceState
+from .MoSpaces import MoSpaces
+from .ReferenceState import ReferenceState
 
 
 class FormatIndexBase:
     def __init__(self, *args, **kwargs):
         pass
 
-    def optimise_formatting(self, space_index_pairs):
+    def optimise_formatting(self, *space_index_pairs: tuple[str, int]) -> None:
         pass
 
     def format(self, space, idx, concat_spin=True):
         raise NotImplementedError("Implement the format function.")
 
+    @property
+    def max_n_characters(self) -> int:
+        raise NotImplementedError("Implement the max_n_character method.")
+
 
 class FormatIndexHfProvider(FormatIndexBase):
-    def __init__(self, refstate, max_digits=1):
+    def __init__(self, refstate: ReferenceState, max_digits: int = 1):
         """
         Format the given index for the given orbital subspace
         looking up it's equivalent index in the HF Provider's
@@ -46,10 +51,8 @@ class FormatIndexHfProvider(FormatIndexBase):
 
         Parameters
         ----------
-
-        refstate : adcc.ReferenceState
+        refstate : ReferenceState
             ReferenceState to use to get host program information
-
         max_digits : int, optional
             Number of digits to reserve for the host index
         """
@@ -60,16 +63,16 @@ class FormatIndexHfProvider(FormatIndexBase):
         self.base_index = 0
         self.mospaces = refstate.mospaces
         self.max_digits = max_digits
-        self.noa = self.mospaces.n_orbs_alpha("f")
+        self.noa: int = self.mospaces.n_orbs_alpha("f")
 
-    def _translate_index(self, space, idx):
+    def _translate_index(self, space: str, idx: int) -> tuple[int, str]:
         ihf = self.mospaces.map_index_hf_provider[space][idx]
         if ihf < self.noa:
             return self.base_index + ihf, "a"
         else:
             return self.base_index + ihf - self.noa, "b"
 
-    def optimise_formatting(self, space_index_pairs):
+    def optimise_formatting(self, *space_index_pairs: tuple[str, int]) -> None:
         """
         Optimise the formatting parameters of this class in order to be able to
         nicely produce equivalently formatted tensor format strings for all the
@@ -81,8 +84,13 @@ class FormatIndexHfProvider(FormatIndexBase):
                                      for space, idx in space_index_pairs)))
         self.max_digits = max(log_max_idx, self.max_digits, 1)
 
-    def format(self, space, idx, concat_spin=True):
-        """Format the provided space-index pair and return resulting string"""
+    def format(self, space: str, idx: int,
+               concat_spin: bool = True) -> tuple[str, str]:
+        """
+        Format the given index that belongs to the given space.
+        Return a tuple containing the formatted index and the corresponding
+        formatted spin.
+        """
         fstr = "{:" + str(self.max_digits) + "d}"
         tidx, spin = self._translate_index(space, idx)
         if concat_spin:
@@ -91,7 +99,7 @@ class FormatIndexHfProvider(FormatIndexBase):
             return fstr.format(tidx), spin
 
     @property
-    def max_n_characters(self):
+    def max_n_characters(self) -> int:
         """
         The maximum number of characters needed for a formatted index (excluding
         the "a" or "b" spin string) according to the current optimised formatting.
@@ -100,17 +108,15 @@ class FormatIndexHfProvider(FormatIndexBase):
 
 
 class FormatIndexAdcc(FormatIndexBase):
-    def __init__(self, refstate_or_mospaces, max_digits=1):
+    def __init__(self, refstate_or_mospaces, max_digits: int = 1):
         """
         Format the given index for the given orbital subspace
         by simply pretty-printing the passed space and index data.
 
         Parameters
         ----------
-
-        refstate_or_mospaces : adcc.ReferenceState or adcc.MoSpaces
+        refstate_or_mospaces : ReferenceState or MoSpaces
             ReferenceState to use to get host program information
-
         max_digits : int, optional
             Number of digits to reserve for the host index
         """
@@ -122,14 +128,14 @@ class FormatIndexAdcc(FormatIndexBase):
             raise TypeError(f"Unsupported type: {str(refstate_or_mospaces)}")
         self.max_digits = max_digits
 
-    def _translate_index(self, space, idx):
+    def _translate_index(self, space: str, idx: int) -> tuple[str, int, str]:
         noa = self.mospaces.n_orbs_alpha(space)
         if idx < noa:
             return space, idx, "a"
         else:
             return space, idx - noa, "b"
 
-    def optimise_formatting(self, space_index_pairs):
+    def optimise_formatting(self, *space_index_pairs: tuple[str, int]):
         """
         Optimise the formatting parameters of this class in order to be able to
         nicely produce equivalently formatted tensor format strings for all the
@@ -142,8 +148,13 @@ class FormatIndexAdcc(FormatIndexBase):
         log_max_idx = int(np.log(max(1, maxlen)))
         self.max_digits = max(log_max_idx, self.max_digits, 1)
 
-    def format(self, space, idx, concat_spin=True):
-        """Format the provided space-index pair and return resulting string"""
+    def format(self, space: str, idx: int,
+               concat_spin: bool = True) -> tuple[str, str]:
+        """
+        Format the given index that belongs to the given space.
+        Return a tuple containing the formatted index and the corresponding
+        formatted spin.
+        """
         fstr = "({:2s} {:" + str(self.max_digits) + "d})"
         space, tidx, spin = self._translate_index(space, idx)
         if concat_spin:
@@ -152,7 +163,7 @@ class FormatIndexAdcc(FormatIndexBase):
             return fstr.format(space, tidx), spin
 
     @property
-    def max_n_characters(self):
+    def max_n_characters(self) -> int:
         """
         The maximum number of characters needed for a formatted index (excluding
         the "a" or "b" spin string) according to the current optimised formatting.
@@ -161,7 +172,8 @@ class FormatIndexAdcc(FormatIndexBase):
 
 
 class FormatIndexHomoLumo(FormatIndexBase):
-    def __init__(self, refstate, max_digits=1, use_hoco=True):
+    def __init__(self, refstate: ReferenceState, max_digits: int = 1,
+                 use_hoco: bool = True):
         """
         Format the given index for the given orbital subspace
         by translating it into a form HOMO-1, LUMO+4 and so on.
@@ -173,7 +185,6 @@ class FormatIndexHomoLumo(FormatIndexBase):
         ----------
         refstate : adcc.ReferenceState
             ReferenceState to use to get host program information
-
         max_digits : int, optional
             Number of digits to reserve for the HOMO/LUMO/HOCO
             offset.
@@ -184,10 +195,10 @@ class FormatIndexHomoLumo(FormatIndexBase):
         """
         if not isinstance(refstate, ReferenceState):
             raise TypeError(f"Unsupported type: {str(refstate)}")
-        self.mospaces = refstate.mospaces
-        self.maxlen_offset = max_digits + 1  # + 1 for "+"/"-" string
-        self.n_alpha = refstate.n_alpha
-        self.n_beta = refstate.n_beta
+        self.mospaces: MoSpaces = refstate.mospaces
+        self.maxlen_offset: int = max_digits + 1  # + 1 for "+"/"-" string
+        self.n_alpha: int = refstate.n_alpha
+        self.n_beta: int = refstate.n_beta
         self.use_hoco = use_hoco
 
         if not self.mospaces.has_core_occupied_space:
@@ -202,7 +213,7 @@ class FormatIndexHomoLumo(FormatIndexBase):
                              "for closed-shell references with an Aufbau "
                              "occupation")
 
-    def _translate_index(self, space, idx):
+    def _translate_index(self, space: str, idx: int) -> tuple[str, str, str]:
         # Deal with core-occupied orbitals first:
         if self.use_hoco and space == "o2":
             noa = self.mospaces.n_orbs_alpha("o2")
@@ -236,7 +247,7 @@ class FormatIndexHomoLumo(FormatIndexBase):
             elif ifull > ilumo:
                 return "LUMO", "+" + str(ifull - ilumo), spin
 
-    def optimise_formatting(self, space_index_pairs):
+    def optimise_formatting(self, *space_index_pairs: tuple[str, int]) -> None:
         """
         Optimise the formatting parameters of this class in order to be able to
         nicely produce equivalently formatted tensor format strings for all the
@@ -248,7 +259,13 @@ class FormatIndexHomoLumo(FormatIndexBase):
                      for space, idx in space_index_pairs)
         self.maxlen_offset = max(maxlen, self.maxlen_offset, 2)
 
-    def format(self, space, idx, concat_spin=True):
+    def format(self, space: str, idx: int,
+               concat_spin: bool = True) -> tuple[str, str]:
+        """
+        Format the given index that belongs to the given space.
+        Return a tuple containing the formatted index and the corresponding
+        formatted spin.
+        """
         word, offset, spin = self._translate_index(space, idx)
         fmt = "{:s}{:>" + str(self.maxlen_offset) + "s}"
         if concat_spin:
@@ -257,9 +274,9 @@ class FormatIndexHomoLumo(FormatIndexBase):
             return fmt.format(word, offset), spin
 
     @property
-    def max_n_characters(self):
+    def max_n_characters(self) -> int:
         """
         The maximum number of characters needed for a formatted index (excluding
         the "a" or "b" spin string) according to the current optimised formatting.
         """
-        return 4 + self.maxlen_offset
+        return 4 + self.maxlen_offset  # +4 for HOMO/LUMO/HOCO

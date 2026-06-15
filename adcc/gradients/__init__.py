@@ -29,7 +29,8 @@ from adcc.Excitation import Excitation
 from adcc.timings import Timer
 from adcc.functions import einsum, evaluate
 
-from adcc.OneParticleOperator import OneParticleOperator, product_trace
+from adcc.OneParticleDensity import OneParticleDensity
+from adcc.NParticleOperator import OperatorSymmetry, product_trace
 from .TwoParticleDensityMatrix import TwoParticleDensityMatrix
 from .orbital_response import (
     orbital_response, orbital_response_rhs, energy_weighted_density_matrix
@@ -66,10 +67,10 @@ class GradientComponents:
 class GradientResult:
     excitation_or_mp: Union[LazyMp, Excitation]
     components: GradientComponents
-    g1: OneParticleOperator
+    g1: OneParticleDensity
     g2: TwoParticleDensityMatrix
     timer: Timer
-    g1a: Optional[OneParticleOperator] = None
+    g1a: Optional[OneParticleDensity] = None
     g2a: Optional[TwoParticleDensityMatrix] = None
 
     @property
@@ -146,6 +147,13 @@ def nuclear_gradient(excitation_or_mp, conv_tol=1e-9, eri_contraction=None,
     g1o.ov = 0.5 * lam.ov
     if hf.has_core_occupied_space:
         g1o.cv = 0.5 * lam.cv
+        # For NOSYMMETRY operators (CVS-ADC1+), explicitly set transpose blocks
+        if g1o.symmetry == OperatorSymmetry.NOSYMMETRY:
+            from adcc.functions import transpose
+            g1o.vo = transpose(g1o.ov)
+            g1o.vc = transpose(g1o.cv)
+            if not g1o.is_zero_block("o2o1"):
+                g1o.oc = transpose(g1o.co)
     # orbital-relaxed OPDM (including reference state)
     g1 = g1o.copy()
     g1 += hf.density

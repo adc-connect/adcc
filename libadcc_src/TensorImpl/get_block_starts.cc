@@ -18,7 +18,6 @@
 //
 
 #include "get_block_starts.hh"
-#include "../exceptions.hh"
 
 namespace libadcc {
 namespace lt = libtensor;
@@ -51,6 +50,8 @@ INSTANTIATE(1)
 INSTANTIATE(2)
 INSTANTIATE(3)
 INSTANTIATE(4)
+INSTANTIATE(5)
+INSTANTIATE(6)
 
 #undef INSTANTIATE
 
