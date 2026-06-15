@@ -143,28 +143,16 @@ def block_cvs_pphh_pphh_0(hf, mp, intermediates):
     return AdcBlock(apply, diagonal_pphh_pphh_0(hf))
 
 
-def diagonal_ppphhh_ppphhh_0(hf):
-    res = direct_sum("-i-j-k+a+b+c->ijkabc",
-                     hf.foo.diagonal(), hf.foo.diagonal(), hf.foo.diagonal(),
-                     hf.fvv.diagonal(), hf.fvv.diagonal(), hf.fvv.diagonal())
-    return AmplitudeVector(ppphhh=res.symmetrise(0, 1, 2).symmetrise(3, 4, 5))
+def diagonal_ppphhh_ppphhh_0(intermediates):
+    return AmplitudeVector(ppphhh=intermediates.df3)
 
 
 def block_ppphhh_ppphhh_0(hf, mp, intermediates):
     def apply(ampl):
         ur3 = ampl.ppphhh
-        return AmplitudeVector(ppphhh=(
-            # Prefactor of 3: the antisymmetrisation generates 36 terms with
-            # an overall factor of 1/36, so each term appears with weight 1/12,
-            # yielding effectively 3 distinct terms.
-            3 * (
-                # N^7: O^3V^4 / N^6: O^3V^3
-                + 1 * einsum("ijkabd,cd->ijkabc", ur3, hf.fvv)
-                # N^7: O^4V^3 / N^6: O^3V^3
-                + 1 * einsum("iklabc,jl->ijkabc", ur3, hf.foo)
-            ).antisymmetrise(0, 1, 2).antisymmetrise(3, 4, 5)
-        ))
-    return AdcBlock(apply, diagonal_ppphhh_ppphhh_0(hf))
+        diag = intermediates.df3
+        return AmplitudeVector(ppphhh=diag * ur3)
+    return AdcBlock(apply, diagonal_ppphhh_ppphhh_0(intermediates))
 
 
 #
@@ -1559,3 +1547,12 @@ def adc4_m11(hf, mp, intermediates):
 @register_as_intermediate
 def t2sq(hf, mp, intermediates):
     return einsum("ikac,jkbc->iajb", mp.t2oo, mp.t2oo).evaluate()
+
+
+@register_as_intermediate
+def df3(hf, mp, intermediates):
+    return direct_sum(
+        "-i-j-k+a+b+c->ijkabc",
+        hf.foo.diagonal(), hf.foo.diagonal(), hf.foo.diagonal(),
+        hf.fvv.diagonal(), hf.fvv.diagonal(), hf.fvv.diagonal()
+    ).symmetrise(0, 1, 2).symmetrise(3, 4, 5).evaluate()

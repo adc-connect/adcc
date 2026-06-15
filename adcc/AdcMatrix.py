@@ -450,8 +450,7 @@ class AdcMatrix(AdcMatrixlike):
                 # doubles part is antisymmetric wrt. (i,j,a,b) <-> (i,j,b,a)
                 # doubles part is antisymmetric wrt. (i,j,a,b) <-> (j,i,a,b)
                 scratch = invec.antisymmetrise([(2, 3)]).antisymmetrise([(0, 1)])
-                # doubles part is symmetric wrt. (i,j,a,b) <-> (j,i,b,a)
-                return scratch.symmetrise([(0, 1), (2, 3)])
+                return scratch
             ret["pphh"] = symmetrise_generic_adc_doubles
 
             def symmetrise_generic_adc_triples(invec):
@@ -460,9 +459,6 @@ class AdcMatrix(AdcMatrixlike):
                 scratch = (
                     invec.antisymmetrise([(0, 1, 2)]).antisymmetrise([(3, 4, 5)])
                 )
-                # triples part is symmetric wrt. permutations of (i,j,k) and
-                # permutations of (a,b,c)
-                # -> symmetrisation not implemented for more than one index triple.
                 return scratch
             ret["ppphhh"] = symmetrise_generic_adc_triples
         return ret
