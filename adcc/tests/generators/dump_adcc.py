@@ -174,7 +174,7 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
     # ssq for unrestriced calculation
     if (
         not states.reference_state.restricted
-        and set(states.reference_state.mospaces.subspaces) == {"o1", "v1"}
+        and not states.has_core_occupied_space
     ):
         kind_data["state_ssq"] = states.state_ssq
     # write the data to hdf5

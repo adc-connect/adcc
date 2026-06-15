@@ -18,7 +18,10 @@ _testdata_dirname = "data"
 # the base methods for each adc_type for which to generate data
 # the different cases (cvs, fc, ...) are handled in the generate functions.
 _methods = {
-    "pp": ("adc0", "adc1", "adc2", "adc2x", "adc3", "adc4")
+    "pp": ("adc0", "adc1", "adc2", "adc2x", "adc3")
+}
+_small_cases_methods = {
+    "pp": _methods["pp"] + ("adc4",)
 }
 
 
@@ -48,9 +51,6 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
         return None
     # CVS-ADC(4) not available
     if "cvs" in case and method.name == "adc4":
-        return None
-    # Generate adc4 reference only for small testcases
-    if test_case.only_full_mode and method.name == "adc4":
         return None
     print(f"Generating {method.name} data for {case} {test_case.file_name}.")
     # prepend cvs to the method if needed (otherwise we will get an error)
@@ -127,7 +127,7 @@ def generate_h2o_sto3g():
     }
     test_case = testcases.get(n_expected_cases=1, name="h2o", basis="sto-3g").pop()
     generate_groundstate(test_case)
-    for method in _methods["pp"]:
+    for method in _small_cases_methods["pp"]:
         method = AdcMethod(method)
         for n_states in \
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
@@ -170,7 +170,7 @@ def generate_cn_sto3g():
     # UHF, Doublet, 10 basis functions: (7a, 6b) occ, (3a, 4b) virt
     test_case = testcases.get(n_expected_cases=1, name="cn", basis="sto-3g").pop()
     generate_groundstate(test_case)
-    for method in _methods["pp"]:
+    for method in _small_cases_methods["pp"]:
         method = AdcMethod(method)
         for n_states in \
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
@@ -200,7 +200,7 @@ def generate_hf_631g():
     # UHF, Triplet
     test_case = testcases.get(n_expected_cases=1, name="hf").pop()
     generate_groundstate(test_case)
-    for method in _methods["pp"]:
+    for method in _small_cases_methods["pp"]:
         method = AdcMethod(method)
         for n_states in \
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
