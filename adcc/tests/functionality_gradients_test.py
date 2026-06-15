@@ -20,9 +20,6 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import unittest
-import itertools
-
 import adcc
 import adcc.backends
 
@@ -40,6 +37,7 @@ backends = [b for b in adcc.backends.available()
 molecules = gradient_data["molecules"]
 basissets = gradient_data["basissets"]
 methods = gradient_data["methods"]
+
 
 @pytest.mark.skipif(len(backends) == 0, reason="No backend found.")
 @pytest.mark.parametrize("backend", backends)
