@@ -32,6 +32,7 @@ from . import block as b
 
 import libadcc
 
+from typing import Union
 import numpy as np
 
 
@@ -39,7 +40,7 @@ class GroundState:
     """
     Base class representing the ground state.
     """
-    def __init__(self, hf: ReferenceState | libadcc.HartreeFockSolution_i):
+    def __init__(self, hf: Union[ReferenceState, libadcc.HartreeFockSolution_i]):
         if isinstance(hf, libadcc.HartreeFockSolution_i):
             hf = ReferenceState(hf)
         if not isinstance(hf, ReferenceState):
@@ -129,7 +130,8 @@ class GroundState:
                 f"diffdm of level {level} is not available."
             )
 
-    def density(self, level: int = 2, apply_cvs: bool = False) -> OneParticleDensity:
+    def density(self, level: int = 2,
+                apply_cvs: bool = False) -> OneParticleDensity:
         """
         Return the ground state density in the MO basis with all corrections
         up to the specified order of perturbation theory.
