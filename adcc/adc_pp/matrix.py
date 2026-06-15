@@ -1041,6 +1041,7 @@ def cvs_adc3_m11(hf, mp, intermediates):
     i1 = adc3_i1(hf, mp, intermediates).evaluate()
     i2 = cvs_adc3_i2(hf, mp, intermediates).evaluate()
     t2sq = intermediates.t2sq
+    cvs_p0 = mp.second_order_dm_correction(apply_cvs=True)
 
     # Build two Kronecker deltas
     d_cc = zeros_like(hf.fcc)
@@ -1095,7 +1096,7 @@ def adc3_pib(hf, mp, intermediates):
 
 @register_as_intermediate
 def adc4_m11(hf, mp, intermediates):
-    p0_2 = mp.mp2_dm_correction
+    p0_2 = mp.mp2_diffdm
     p0_2_oo, p0_2_vv, t1_2 = p0_2.oo, p0_2.vv, p0_2.ov
 
     t2_1 = mp.t2(b.oovv)
