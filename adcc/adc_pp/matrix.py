@@ -147,7 +147,7 @@ def diagonal_ppphhh_ppphhh_0(hf):
     res = direct_sum("-i-j-k+a+b+c->ijkabc",
                      hf.foo.diagonal(), hf.foo.diagonal(), hf.foo.diagonal(),
                      hf.fvv.diagonal(), hf.fvv.diagonal(), hf.fvv.diagonal())
-    return AmplitudeVector(ppphhh=res.symmetrise(3, 4, 5))
+    return AmplitudeVector(ppphhh=res.symmetrise(0, 1, 2).symmetrise(3, 4, 5))
 
 
 def block_ppphhh_ppphhh_0(hf, mp, intermediates):
