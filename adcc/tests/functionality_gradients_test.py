@@ -49,13 +49,18 @@ def test_nuclear_gradient(molecule, basis, method, backend):
 
     energy_ref = grad_ref["energy"]
     grad_fdiff = grad_ref["gradient"]
-    kwargs = grad_ref["config"]
+    kwargs = dict(grad_ref["config"])
     conv_tol = kwargs["conv_tol"]
 
     scfres = cached_backend_hf(backend, f"{molecule}_{basis}", conv_tol=1e-11)
     print(kwargs)
 
     if "adc" in method:
+        # Request exactly as many states as reference data is available for.
+        # Some CVS cases (e.g. h2o/sto3g cvs-adc0/adc1) support fewer states
+        # than the default n_singlets, so cap the request accordingly.
+        if "n_singlets" in kwargs:
+            kwargs["n_singlets"] = len(energy_ref)
         state = adcc.run_adc(scfres, method=method, **kwargs)
         for ee in state.excitations:
             grad = adcc.nuclear_gradient(ee)

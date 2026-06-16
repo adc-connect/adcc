@@ -247,8 +247,12 @@ class TestLazyMp:
         assert mp2diff.symmetry is OperatorSymmetry.HERMITIAN
         blocks = ["o1o1", "o1v1", "v1v1"]
         if "cvs" in case:
-            blocks.extend(["o2o1", "o2o2", "o2v1"])
+            blocks.extend(["o1o2", "o2o2", "o2v1"])
         for label in blocks:
+            # in adcman for some reason the non-canonical co block is
+            # calculated instead of the canonical oc block
+            if generator == "adcman" and label == "o1o2":
+                label = "o2o1"
             assert_allclose(mp2diff[label].to_ndarray(),
                             refmp["mp2"]["dm_" + label], atol=1e-12)
         assert "mp2_diffdm" in instances.get(system, case).timer.tasks
