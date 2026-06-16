@@ -41,7 +41,7 @@ class FormatDominantElements:
         else:
             raise TypeError("index_format needs to be of type FormatIndexBase")
 
-    def optimise_formatting(self, spaces_tensor_pairs):
+    def optimise_formatting(self, *spaces_tensor_pairs: tuple[tuple[str], Tensor]):
         """
         Optimise the formatting parameters of this class and the index_format
         class in order to be able to nicely produce equivalently formatted tensor
@@ -49,8 +49,7 @@ class FormatDominantElements:
 
         This function can be called multiple times.
         """
-        if not isinstance(spaces_tensor_pairs, list):
-            return self.optimise_formatting([spaces_tensor_pairs])
+        assert all(len(pair) == 2 for pair in spaces_tensor_pairs)
 
         for spaces, tensor in spaces_tensor_pairs:
             if not isinstance(spaces, (tuple, list)) or \
@@ -58,22 +57,27 @@ class FormatDominantElements:
                 raise TypeError("spaces_tensor_pairs should be a list of "
                                 "(spaces tuples, Tensor) tuples")
             for indices, _ in _tensor_select_below_absmax(tensor, self.tolerance):
+                assert len(indices) == len(spaces)
                 self.index_format.optimise_formatting(
-                    [(spaces[j], idx) for j, idx in enumerate(indices)])
+                    *((sp, idx) for sp, idx in zip(spaces, indices))
+                )
 
-    def format_as_list(self, spaces, tensor):
-        """Raw-format the dominant tensor elements as a list of tuples with one
+    def format_as_list(self, spaces: tuple[str], tensor: Tensor) -> list[str]:
+        """
+        Raw-format the dominant tensor elements as a list of tuples with one
         tuple for each element. Each tuple has three entries, the formatted
-        indices, the formatted spins and the value"""
+        indices, the formatted spins and the value
+        """
         ret = []
         for indices, value in _tensor_select_below_absmax(tensor, self.tolerance):
-            formatted = tuple(self.index_format.format(spaces[j], idx,
+            assert len(indices) == len(spaces)
+            formatted = tuple(self.index_format.format(sp, idx,
                                                        concat_spin=False)
-                              for j, idx in enumerate(indices))
+                              for sp, idx in zip(spaces, indices))
             ret.append(tuple(zip(*formatted)) + (value, ))
         return ret
 
-    def format(self, spaces, tensor):
+    def format(self, spaces: tuple[str], tensor: Tensor) -> str:
         """
         Return a multiline string representing the dominant tensor elements.
         The tensor index is formatted according to the index format passed

@@ -48,13 +48,13 @@ class TestAdcMatrixDenseExport:
             method = f"cvs-{method}"
         method: adcc.AdcMethod = adcc.AdcMethod(method)
         n_states = 7
-        if method.level == 1:  # only few states available
+        if method.level.to_int() == 1:  # only few states available
             n_states = 5
             if method.is_core_valence_separated:
                 n_states = 1 if "fv" in case else 2
             elif "fc" in case and "fv" in case:
                 n_states = 4
-        elif method.level == 2 and method.is_core_valence_separated:
+        elif method.level.to_int() == 2 and method.is_core_valence_separated:
             # there seems to be a difference for higher cvs-adc2 states...
             n_states = 3
 

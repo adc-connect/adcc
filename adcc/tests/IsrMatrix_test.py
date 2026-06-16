@@ -48,7 +48,7 @@ class TestIsrMatrix:
         state = testdata_cache.adcc_states(
             system=system, method=method, kind=kind, case=case
         )
-
+        method = method.replace("adc", "isr")
         n_ref = len(state.excitation_vector)
         mp = state.ground_state
         if operator_kind == "electric":  # example of a symmetric operator
@@ -96,6 +96,8 @@ class TestIsrMatrixInterface(unittest.TestCase):
         state = testdata_cache.adcc_states(
             system=system, method=method, kind=kind, case="gen"
         )
+
+        method = "isr2"
         assert len(state.excitation_vector) > 1
         mp = state.ground_state
         dips = state.reference_state.operators.electric_dipole

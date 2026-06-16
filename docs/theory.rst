@@ -62,7 +62,7 @@ for an excited state :math:`n` or the transition density matrices
 between state :math:`m` and :math:`n`,
 in the molecular orbital (MO) basis :cite:`Schirmer2004,Wormit2014`.
 Contracting these densities with the MO representation :math:`\mat{O}`
-of a one-particle operator :math:`\Op{O}` allow to compute arbitrary
+of a one-particle operator :math:`\Op{O}` allow computing arbitrary
 state properties :math:`T^{n}`
 or transition properties :math:`T^{n\leftarrow m}` through
 
@@ -80,7 +80,7 @@ may be contracted with :math:`\mat{\rho}^{n\leftarrow m}` to
 obtain the transition dipole moment between
 states :math:`m` and :math:`n` and from this the oscillator strength.
 Linear and non-linear molecular response properties,
-e.g., static polarizabilities or two-photon absorption cross-sections,
+e.g., static polarisabilities or two-photon absorption cross-sections,
 are also accessible via this framework
 :cite:`Trofimov2006,Knippenberg2012,Fransson2017`.
 
@@ -176,7 +176,7 @@ established the ability of calculating non-resonant
 X-ray emission spectra :cite:`Fransson2019`
 and resonant inelastic X-ray scattering :cite:`Rehn2017a`.
 Other variants of ADC include spin-flip :cite:`Lefrancois2015`,
-where a modified Davidson guess allows to treat processes of
+where a modified Davidson guess allows treating processes of
 simultaneous excitation and spin-flip, tackling few-reference problems
 in an elegant and consistent way :cite:`Lefrancois2016,Lefrancois2017`.
 Similar to other CI-like methods the range of orbitals which are considered

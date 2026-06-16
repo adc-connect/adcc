@@ -20,9 +20,6 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import unittest
-import itertools
-
 import adcc
 import adcc.backends
 
@@ -41,6 +38,7 @@ molecules = gradient_data["molecules"]
 basissets = gradient_data["basissets"]
 methods = gradient_data["methods"]
 
+
 @pytest.mark.skipif(len(backends) == 0, reason="No backend found.")
 @pytest.mark.parametrize("backend", backends)
 @pytest.mark.parametrize("method", methods)
@@ -51,13 +49,18 @@ def test_nuclear_gradient(molecule, basis, method, backend):
 
     energy_ref = grad_ref["energy"]
     grad_fdiff = grad_ref["gradient"]
-    kwargs = grad_ref["config"]
+    kwargs = dict(grad_ref["config"])
     conv_tol = kwargs["conv_tol"]
 
     scfres = cached_backend_hf(backend, f"{molecule}_{basis}", conv_tol=1e-11)
     print(kwargs)
 
     if "adc" in method:
+        # Request exactly as many states as reference data is available for.
+        # Some CVS cases (e.g. h2o/sto3g cvs-adc0/adc1) support fewer states
+        # than the default n_singlets, so cap the request accordingly.
+        if "n_singlets" in kwargs:
+            kwargs["n_singlets"] = len(energy_ref)
         state = adcc.run_adc(scfres, method=method, **kwargs)
         for ee in state.excitations:
             grad = adcc.nuclear_gradient(ee)
@@ -65,10 +68,10 @@ def test_nuclear_gradient(molecule, basis, method, backend):
                             atol=conv_tol)
             # check energy computed with unrelaxed densities
             gs_corr = 0.0
-            if ee.method.level > 0:
+            if ee.method.level.to_int() > 0:
                 # compute the ground state contribution
                 # to the correlation energy
-                gs_energy = ee.ground_state.energy(ee.method.level)
+                gs_energy = ee.ground_state.energy(ee.method.level.to_int())
                 gs_corr = gs_energy - ee.reference_state.energy_scf
             assert_allclose(
                 gs_corr + ee.excitation_energy,

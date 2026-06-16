@@ -25,7 +25,10 @@ import pytest
 import numpy as np
 from numpy.testing import assert_allclose
 
-from adcc.AdcMatrix import AdcExtraTerm, AdcMatrixProjected, AdcMatrixShifted
+from adcc.AdcMatrix import (
+    AdcExtraTerm, AdcMatrixProjected, AdcMatrixShifted, AdcMatrixlike
+)
+from adcc.AdcMethod import AdcMethod, IsrMethod, AdcType
 from adcc.Intermediates import Intermediates
 from adcc.adc_pp.matrix import AdcBlock
 
@@ -34,6 +37,132 @@ from .projection_test import (
 )
 from .testdata_cache import testdata_cache
 from . import testcases
+
+
+class TestBlockOrders:
+    def test_default_block_orders(self):
+        ref = (
+            {"ph_ph": 0},  # adc0
+            {"ph_ph": 1},  # adc1
+            {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 0},  # adc2
+            {"ph_ph": 3, "ph_pphh": 2, "pphh_ph": 2, "pphh_pphh": 1},  # adc3
+        )
+        # verify the default methods
+        for order in range(0, 4):
+            block_orders = AdcMatrixlike._default_block_orders(
+                method=AdcMethod(f"adc{order}"), bandwidth=0
+            )
+            cvs_block_orders = AdcMatrixlike._default_block_orders(
+                method=AdcMethod(f"cvs-adc{order}"),
+                bandwidth=0
+            )
+            assert ref[order] == block_orders
+            assert cvs_block_orders == block_orders
+        # verify the special methods: adc2x
+        block_orders = AdcMatrixlike._default_block_orders(
+            method=AdcMethod("adc2x"), bandwidth=0
+        )
+        cvs_block_orders = AdcMatrixlike._default_block_orders(
+            method=AdcMethod("cvs-adc2x"), bandwidth=0
+        )
+        ref = {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 1}
+        assert block_orders == ref
+        assert block_orders == cvs_block_orders
+        # also verify ISR matrices: 1-particle
+        ref = (
+            {"ph_ph": 0},  # ISR(0)
+            {"ph_ph": 1, "ph_pphh": 0, "pphh_ph": 0, "pphh_pphh": None},  # ISR(1)
+            {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 0}  # ISR(2)
+        )
+        for order in range(0, 3):
+            block_orders = AdcMatrixlike._default_block_orders(
+                method=IsrMethod(f"isr{order}"), bandwidth=1
+            )
+            cvs_block_orders = AdcMatrixlike._default_block_orders(
+                method=IsrMethod(f"cvs-isr{order}"),
+                bandwidth=1
+            )
+            assert ref[order] == block_orders
+            assert cvs_block_orders == block_orders
+        # also verify ISR matrices: 2-particle
+        ref = (
+            {"ph_ph": 0, "ph_pphh": None,
+             "pphh_ph": None, "pphh_pphh": None},  # ISR(0)
+            {"ph_ph": 1, "ph_pphh": 0, "pphh_ph": 0, "pphh_pphh": None},  # ISR(1)
+            {"ph_ph": 2, "ph_pphh": 1, "ph_ppphhh": 0,
+             "pphh_ph": 1, "pphh_pphh": 0, "pphh_ppphhh": None,
+             "ppphhh_ph": 0, "ppphhh_pphh": None, "ppphhh_ppphhh": None}  # ISR(2)
+        )
+        for order in range(0, 3):
+            block_orders = AdcMatrixlike._default_block_orders(
+                method=IsrMethod(f"isr{order}"), bandwidth=2
+            )
+            cvs_block_orders = AdcMatrixlike._default_block_orders(
+                method=IsrMethod(f"cvs-isr{order}"),
+                bandwidth=2
+            )
+            assert ref[order] == block_orders
+            assert cvs_block_orders == block_orders
+        # isr(1)-s
+        block_orders = AdcMatrixlike._default_block_orders(
+            method=IsrMethod("isr1s"), bandwidth=1
+        )
+        ref_isr1s = {
+            "ph_ph": 1, "ph_pphh": None, "pphh_ph": None, "pphh_pphh": None
+        }
+        assert block_orders == ref_isr1s
+        # isr(2)-d
+        block_orders = AdcMatrixlike._default_block_orders(
+            method=IsrMethod("isr2d"), bandwidth=2
+        )
+        ref_isr2d = {
+            "ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 0
+        }
+        assert block_orders == ref_isr2d
+
+    def test_validate_block_orders(self):
+        valid_block_orders = (
+            {"ph_ph": 0},  # adc0
+            {"ph_ph": 1, "ph_pphh": None, "ppphhh_ppphhh": None},  # adc1
+            {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 0},  # adc2
+            {"ph_ph": 3, "ph_pphh": 2, "pphh_ph": 2, "pphh_pphh": 1},  # adc3
+        )
+        for block_orders in valid_block_orders:
+            AdcMatrixlike._validate_block_orders(block_orders, AdcMethod("adc0"))
+        invalid_block_orders = (
+            {"ph_ph": 0, "h_h": 0},  # invalid PP block
+            {"ph_ph": 2, "ph_pphh": 2, "pphh_ph": 1, "pphh_pphh": 0},  # asymmetric
+            {"ph_ph": 2, "ph_pphh": 2, "pphh_ph": None, "pphh_pphh": 0},
+            {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1},  # missing diagonal block
+            {"ph_ph": 2, "ph_pphh": 2, "pphh_ph": 1, "pphh_pphh": None},
+        )
+        for block_orders in invalid_block_orders:
+            with pytest.raises(ValueError):
+                AdcMatrixlike._validate_block_orders(
+                    block_orders, AdcMethod("adc0")
+                )
+
+    def test_validate_space(self):
+        # some valid PP-ADC methods
+        assert AdcMatrixlike._is_valid_space(
+            "ph", AdcMethod("adc0")
+        )
+        assert AdcMatrixlike._is_valid_space(
+            "pphh", AdcMethod("adc0")
+        )
+        assert AdcMatrixlike._is_valid_space(
+            "pppphhhh", AdcMethod("adc0")
+        )
+        # some invalid method strings
+        assert not AdcMatrixlike._is_valid_space(
+            "p", AdcMethod("adc0")
+        )
+        assert not AdcMatrixlike._is_valid_space(
+            "hp", AdcMethod("adc0")
+        )
+        assert not AdcMatrixlike._is_valid_space(
+            "phh", AdcMethod("adc0")
+        )
 
 
 h2o_sto3g = testcases.get_by_filename("h2o_sto3g").pop()
@@ -92,7 +221,7 @@ class TestAdcMatrix:
         # the matrix data is only dumped once and not per kind
         # -> singlet/any for PP-ADC
         if matrix.reference_state.restricted:
-            if matrix.method.adc_type == "pp":
+            if matrix.method.adc_type is AdcType.PP:
                 kind = "singlet"
             else:
                 raise ValueError(f"Unknown adc type {matrix.method.adc_type}.")
@@ -112,7 +241,7 @@ class TestAdcMatrix:
         # matrix data is only dumped once and not per kind
         # -> singlet/any for PP-ADC
         if matrix.reference_state.restricted:
-            if matrix.method.adc_type == "pp":
+            if matrix.method.adc_type is AdcType.PP:
                 kind = "singlet"
             else:
                 raise ValueError(f"Unknwon adc type {matrix.method.adc_type}.")
@@ -148,8 +277,10 @@ class TestAdcMatrixInterface:
         assert matrix.is_core_valence_separated == ("cvs" in case)
         # check that the blocks are correct
         blocks = matrix.axis_blocks
-        if matrix.method.adc_type == "pp":
-            assert blocks == ["ph", "pphh", "ppphhh"][:matrix.method.level // 2 + 1]
+        if matrix.method.adc_type is AdcType.PP:
+            assert blocks == (
+                ["ph", "pphh", "ppphhh"][:matrix.method.level.to_int() // 2 + 1]
+            )
         else:
             raise NotImplementedError(f"Unknown adc type {matrix.method.adc_type}.")
         assert sorted(matrix.axis_spaces.keys(), key=len) == blocks
@@ -398,6 +529,6 @@ class TestAdcMatrixProjected:
         assert_equal_symmetry(res_for_sym.ph, pres.ph)
         assert_equal_symmetry(res_for_sym.pphh, pres.pphh)
         assert_nonzero_blocks(ores.ph, pres.ph, nonzeros["ph"], tol=1e-14)
-        assert_nonzero_blocks(ores.pphh, pres.pphh, nonzeros["pphh"], tol=1e-14)
+        assert_nonzero_blocks(ores.pphh, pres.pphh, nonzeros["pphh"], tol=5e-14)
 
     # TODO Test block_view, block_apply

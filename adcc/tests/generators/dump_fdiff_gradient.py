@@ -93,7 +93,8 @@ def fdiff_gradient(molecule, method, basis, step=1e-4, **kwargs):
 
     # run unperturbed system
     scfres = adcc.backends.run_hf(
-        'pyscf', molecule.xyz, basis, conv_tol=conv_tol, conv_tol_grad=conv_tol * 10,
+        'pyscf', molecule.xyz, basis,
+        conv_tol=conv_tol, conv_tol_grad=conv_tol * 10,
         charge=molecule.charge, multiplicity=molecule.multiplicity
     )
     if "adc" in method:
@@ -183,7 +184,7 @@ def main():
                 }
                 ret[molname][basis][method] = cont
         ret[molname]["xyz"] = molecule.xyz
-    
+
     dump_file = Path(__file__).parent.parent / "data" / "gradient_data.json"
     with open(dump_file, "w") as fout:
         json.dump(ret, fout)

@@ -37,7 +37,7 @@ using the `conda-forge <https://anaconda.org/conda-forge/>`_ channel:
    conda install -c conda-forge adcc
 
 This should work on a recent Debian, Ubuntu or macOS
-and with python 3.7, 3.8 or 3.9.
+and with Python 3.9 and newer.
 
 .. warning::
 
@@ -139,12 +139,12 @@ Installing PySCF
 ................
 
 A **PySCF installation** can be achieved following the
-`PySCF quickstart guide <https://pyscf.github.io/quickstart.html>`_.
+`PySCF installation guide <https://pyscf.org/user/install.html>`_.
 E.g. if you are using ``pip`` this boils down to
 
 .. code-block:: shell
 
-   pip install pyscf
+   pip install --prefer-binary pyscf
 
 
 Finishing the setup

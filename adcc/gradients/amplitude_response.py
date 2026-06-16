@@ -23,9 +23,10 @@
 from math import sqrt
 
 from adcc.functions import einsum, direct_sum, evaluate
+from adcc.NParticleOperator import OperatorSymmetry
 
 from .TwoParticleDensityMatrix import TwoParticleDensityMatrix
-from adcc.OneParticleOperator import OneParticleOperator
+from adcc.OneParticleDensity import OneParticleDensity
 from adcc.LazyMp import LazyMp
 from adcc.Excitation import Excitation
 import adcc.block as b
@@ -248,7 +249,7 @@ def t2bar_oovv_cvs_adc2(exci, g1a_adc0):
 def ampl_relaxed_dms_mp2(mp):
     hf = mp.reference_state
     t2 = mp.t2(b.oovv)
-    g1a = OneParticleOperator(hf)
+    g1a = OneParticleDensity(hf)
     g2a = TwoParticleDensityMatrix(hf)
     g1a.oo = -0.5 * einsum('ikab,jkab->ij', t2, t2)
     g1a.vv = 0.5 * einsum('ijac,ijbc->ab', t2, t2)
@@ -259,7 +260,7 @@ def ampl_relaxed_dms_mp2(mp):
 def ampl_relaxed_dms_adc0(exci):
     hf = exci.reference_state
     u = exci.excitation_vector
-    g1a = OneParticleOperator(hf)
+    g1a = OneParticleDensity(hf)
     g2a = TwoParticleDensityMatrix(hf)
     # g2a is not required for the adc0 gradient,
     # but expected by amplitude_relaxed_densities
@@ -271,7 +272,7 @@ def ampl_relaxed_dms_adc0(exci):
 def ampl_relaxed_dms_adc1(exci):
     hf = exci.reference_state
     u = exci.excitation_vector
-    g1a = OneParticleOperator(hf)
+    g1a = OneParticleDensity(hf)
     g2a = TwoParticleDensityMatrix(hf)
     g1a.oo = - 1.0 * einsum("ia,ja->ij", u.ph, u.ph)
     g1a.vv = + 1.0 * einsum("ia,ib->ab", u.ph, u.ph)
@@ -455,7 +456,7 @@ def ampl_relaxed_dms_adc3(exci):
 def ampl_relaxed_dms_cvs_adc0(exci):
     hf = exci.reference_state
     u = exci.excitation_vector
-    g1a = OneParticleOperator(hf)
+    g1a = OneParticleDensity(hf)
     g2a = TwoParticleDensityMatrix(hf)
     # g2a is not required for cvs-adc0 gradient,
     # but expected by amplitude_relaxed_densities
@@ -467,7 +468,7 @@ def ampl_relaxed_dms_cvs_adc0(exci):
 def ampl_relaxed_dms_cvs_adc1(exci):
     hf = exci.reference_state
     u = exci.excitation_vector
-    g1a = OneParticleOperator(hf)
+    g1a = OneParticleDensity(hf, symmetry=OperatorSymmetry.NOSYMMETRY)
     g2a = TwoParticleDensityMatrix(hf)
     g2a.cvcv = - 1.0 * einsum("Ja,Ib->IaJb", u.ph, u.ph)
     g1a.cc = - 1.0 * einsum("Ia,Ja->IJ", u.ph, u.ph)
@@ -479,6 +480,8 @@ def ampl_relaxed_dms_cvs_adc1(exci):
     fo = hf.fock(b.oo).diagonal()
     fco = direct_sum("-j+I->jI", fc, fo).evaluate()
     g1a.co = - 1.0 * einsum('JbKc,ibKc->Ji', g2a.cvcv, hf.ovcv) / fco
+    from adcc.functions import transpose
+    g1a.oc = transpose(g1a.co)
     return g1a, g2a
 
 
@@ -486,7 +489,7 @@ def ampl_relaxed_dms_cvs_adc2(exci):
     hf = exci.reference_state
     mp = exci.ground_state
     u = exci.excitation_vector
-    g1a = OneParticleOperator(hf)
+    g1a = OneParticleDensity(hf, symmetry=OperatorSymmetry.NOSYMMETRY)
     g2a = TwoParticleDensityMatrix(hf)
 
     # Determine the t-amplitudes and multipliers:
@@ -563,6 +566,8 @@ def ampl_relaxed_dms_cvs_adc2(exci):
         - 0.5 * einsum('ikab,kJab->Ji', g2a.oovv, hf.ocvv)
         + 0.5 * einsum('iabc,Jabc->Ji', g2a.ovvv, hf.cvvv)
     ) / fco
+    from adcc.functions import transpose
+    g1a.oc = transpose(g1a.co)
 
     return g1a, g2a
 
@@ -571,7 +576,7 @@ def ampl_relaxed_dms_cvs_adc2x(exci):
     hf = exci.reference_state
     mp = exci.ground_state
     u = exci.excitation_vector
-    g1a = OneParticleOperator(hf)
+    g1a = OneParticleDensity(hf, symmetry=OperatorSymmetry.NOSYMMETRY)
     g2a = TwoParticleDensityMatrix(hf)
 
     # Determine the t-amplitudes and multipliers:
@@ -658,6 +663,8 @@ def ampl_relaxed_dms_cvs_adc2x(exci):
         - 1.0 * einsum('iKlM,JKMl->Ji', g2a.ococ, hf.ccco)
         + 1.0 * einsum('iakb,kbJa->Ji', g2a.ovov, hf.ovcv)
     ) / fco
+    from adcc.functions import transpose
+    g1a.oc = transpose(g1a.co)
 
     return g1a, g2a
 

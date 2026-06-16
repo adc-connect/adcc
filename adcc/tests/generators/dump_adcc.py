@@ -10,11 +10,15 @@ import numpy as np
 import h5py
 
 
-def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group) -> None:
+def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
+                     only_full_mode: bool) -> None:
     """
     Dump the MP data to the given hdf5 file/group. Data is dumped sorted by the
     perturbation theoretical orders of the quantity, e.g., mp1/t_o1o1v1v1 for
     the first order doubles amplitudes.
+    The only_full_mode flag indicates whether the underlying test case is only
+    run in full mode. Typically tests that run in full mode are larger
+    and therefore not all test data might be dumped in that case.
     """
     gs = "mp"
 
@@ -22,6 +26,8 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group) -> None:
     # MP1 data
     gs_data[f"{gs}1/df_o1v1"] = ground_state.df("o1v1").to_ndarray()
     gs_data[f"{gs}1/t_o1o1v1v1"] = ground_state.t2("o1o1v1v1").to_ndarray()
+    if not ground_state.reference_state.restricted:
+        gs_data[f"{gs}1/ssq"] = ground_state.ssq(1)
     # CVS-MP1 data
     if ground_state.has_core_occupied_space:
         gs_data[f"{gs}1/df_o2v1"] = ground_state.df("o2v1").to_ndarray()
@@ -31,6 +37,13 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group) -> None:
     gs_data[f"{gs}2/energy"] = ground_state.energy_correction(2)
     gs_data[f"{gs}2/dipole"] = ground_state.dipole_moment(2)
     gs_data[f"{gs}2/td_o1o1v1v1"] = ground_state.td2("o1o1v1v1").to_ndarray()
+    if not ground_state.reference_state.restricted:
+        gs_data[f"{gs}2/ssq"] = ground_state.ssq(2)
+    if not only_full_mode:
+        # triples take a lot of memory for the larger test cases
+        gs_data[f"{gs}2/tt_o1o1o1v1v1v1"] = (
+            ground_state.tt2("o1o1o1v1v1v1").to_ndarray()
+        )
     # MP3 data
     if not ground_state.has_core_occupied_space:
         gs_data[f"{gs}3/energy"] = ground_state.energy_correction(3)
@@ -53,14 +66,14 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group) -> None:
 
 
 def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
-                        dump_nstates: int = None) -> None:
+                        dump_nstates: int | None = None) -> None:
     """
     Dump the excited states data to the given hdf5 file/group.
     The number of states to dump can be given by dump_nstates. By default all states
     are dumped.
     """
     # ensure that the calculation converged on a nonzero result
-    assert states.converged
+    assert states.converged  # type: ignore
     assert all(abs(e) > 1e-12 for e in states.excitation_energy)
 
     n_states = len(states.excitation_energy)
@@ -85,9 +98,9 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
         for exdegree, block in enumerate(states.matrix.axis_blocks):
             if exdegree + 1 not in eigenvectors:
                 eigenvectors[exdegree + 1] = []
-            eigenvectors[exdegree + 1].append(
-                getattr(states.excitation_vector[n], block).to_ndarray()
-            )
+            eigenvectors[exdegree + 1].append(getattr(
+                states.excitation_vector[n], block  # type: ignore
+            ).to_ndarray())
     kind_data = {}
     # eigenvalues
     kind_data["eigenvalues"] = states.excitation_energy[:n_states]
@@ -139,6 +152,10 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
             kind_data[f"state_to_state/from_{ifrom}/state_to_excited_tdm_bb_b"] = (
                 np.asarray(tdm_bb_b)
             )
+    # ssq for unrestriced calculation
+    if not states.reference_state.restricted \
+            and not states.method.is_core_valence_separated:
+        kind_data["state_ssq"] = states.state_ssq
     # write the data to hdf5
     emplace_dict(kind_data, hdf5_file, compression="gzip")
     hdf5_file.attrs["adcc_version"] = adcc.__version__
@@ -174,9 +191,9 @@ def dump_matrix_testdata(matrix: AdcMatrix, trial_vec: AmplitudeVector,
         ).to_ndarray()
     # compute the full mvp
     matvec = matrix.matvec(trial_vec)
-    data["matvec_singles"] = matvec[blocks[0]].to_ndarray()
+    data["matvec_singles"] = matvec[blocks[0]].to_ndarray()  # type: ignore
     if len(blocks) > 1:
-        data["matvec_doubles"] = matvec[blocks[1]].to_ndarray()
+        data["matvec_doubles"] = matvec[blocks[1]].to_ndarray()  # type: ignore
     # compute the diagonal
     data["diagonal_singles"] = matrix.diagonal()[blocks[0]].to_ndarray()
     if len(blocks) > 1:

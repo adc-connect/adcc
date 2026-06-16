@@ -25,7 +25,7 @@ The interface for this is:
 .. autoclass:: adcc.HartreeFockProvider
     :members:
 
-Examples in the adcc source code for these interface are
+Examples in the adcc source code for these interfaces are
 located in the
 `adcc/backend folder <https://github.com/adc-connect/adcc/tree/master/adcc/backends>`_.
 For example `pyscf.py <https://github.com/adc-connect/adcc/blob/master/adcc/backends/pyscf.py>`_

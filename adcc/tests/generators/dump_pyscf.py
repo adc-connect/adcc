@@ -74,8 +74,11 @@ def dump_pyscf(scfres: scf.hf.SCF, hdf5_file: h5py.Group):
     # get the MO coefsfs, MO energies, Fock matrix in the AO basis and the
     # occupation numbers.
     mo_occ = scfres.mo_occ
+    assert isinstance(mo_occ, np.ndarray)
     mo_energy = scfres.mo_energy
+    assert isinstance(mo_energy, np.ndarray)
     mo_coeff = scfres.mo_coeff
+    assert isinstance(mo_coeff, np.ndarray)
     fock_bb = scfres.get_fock()
 
     # pyscf only keeps occupation and mo energies once if restriced,
@@ -148,6 +151,7 @@ def dump_pyscf(scfres: scf.hf.SCF, hdf5_file: h5py.Group):
 
     # compute full ERI tensor (with really everything)
     eri = ao2mo.general(eri_ao, (cf_bf, cf_bf, cf_bf, cf_bf), compact=False)
+    assert isinstance(eri, np.ndarray)
     eri = eri.reshape(n_orbs, n_orbs, n_orbs, n_orbs)
     del eri_ao
 
@@ -233,6 +237,8 @@ def dump_pyscf(scfres: scf.hf.SCF, hdf5_file: h5py.Group):
         data["magnetic_moments"]["mag_1_charge_center"] = (
             -0.5 * scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
         )
+
+    data["overlap"] = scfres.mol.intor_symmetric('int1e_ovlp')
 
     hdf5io.emplace_dict(data, hdf5_file, compression="gzip")
     hdf5_file.attrs["backend"] = "pyscf"

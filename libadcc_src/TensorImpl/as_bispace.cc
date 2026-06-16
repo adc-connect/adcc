@@ -117,7 +117,7 @@ IdedBispace<3 * N> bispace_product(const IdedBispace<N>& x, const IdedBispace<N>
 
 template <size_t N>
 lt::bispace<N> make_sym_bispace_aux(std::vector<IdedBispace<1>>) {
-  throw not_implemented_error("Not implemented for N != 1, 2, 3, 4");
+  throw not_implemented_error("Not implemented for N != 1, 2, 3, 4, 6");
 }
 
 template <>
@@ -140,6 +140,14 @@ lt::bispace<4> make_sym_bispace_aux(std::vector<IdedBispace<1>> spaces1d) {
   auto pair01 = bispace_product(spaces1d[0], spaces1d[1]);
   auto pair23 = bispace_product(spaces1d[2], spaces1d[3]);
   return bispace_product(pair01, pair23);
+}
+
+template <>
+lt::bispace<6> make_sym_bispace_aux(std::vector<IdedBispace<1>> spaces1d) {
+  // NOTE: only tested for 6 dimensional amplitude vectors (triples)!
+  auto triple012 = bispace_product(spaces1d[0], spaces1d[1], spaces1d[2]);
+  auto triple345 = bispace_product(spaces1d[3], spaces1d[4], spaces1d[5]);
+  return bispace_product(triple012, triple345);
 }
 
 }  // namespace
@@ -169,6 +177,8 @@ INSTANTIATE(1)
 INSTANTIATE(2)
 INSTANTIATE(3)
 INSTANTIATE(4)
+INSTANTIATE(5)
+INSTANTIATE(6)
 
 #undef INSTANTIATE
 

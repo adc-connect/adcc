@@ -21,7 +21,8 @@
 ##
 ## ---------------------------------------------------------------------
 import adcc.block as b
-from adcc.OneParticleOperator import OneParticleOperator
+from adcc.OneParticleDensity import OneParticleDensity
+from adcc.NParticleOperator import OperatorSymmetry
 from adcc.functions import direct_sum, einsum, evaluate
 from adcc.AmplitudeVector import AmplitudeVector
 from adcc.solver.conjugate_gradient import conjugate_gradient, default_print
@@ -112,7 +113,7 @@ def orbital_response_rhs(hf, g1a, g2a):
 
 def energy_weighted_density_matrix(hf, g1o, g2a):
     if hf.has_core_occupied_space:
-        w = OneParticleOperator(hf)
+        w = OneParticleDensity(hf, symmetry=OperatorSymmetry.NOSYMMETRY)
         w.cc = - 0.5 * (
             + einsum("JKab,IKab->IJ", g2a.ccvv, hf.ccvv)
             + einsum("kJab,kIab->IJ", g2a.ocvv, hf.ocvv)
@@ -217,6 +218,12 @@ def energy_weighted_density_matrix(hf, g1o, g2a):
             - einsum("jcab,jcIb->Ia", g2a.ovvv, hf.ovcv)
             - einsum("jakb,jIkb->Ia", g2a.ovov, hf.ocov)  # cvs-adc2x
         )
+        # For NOSYMMETRY operators, explicitly set transpose blocks
+        # to maintain the same AO transform behaviour as the old HERMITIAN code
+        from adcc.functions import transpose
+        w.vo = transpose(w.ov)
+        w.vc = transpose(w.cv)
+        w.oc = transpose(w.co)
     else:
         gi_oo = -0.5 * (
             + 1.0 * einsum("jklm,iklm->ij", hf.oooo, g2a.oooo)
@@ -236,7 +243,7 @@ def energy_weighted_density_matrix(hf, g1o, g2a):
         )
         gi_oo = gi_oo.evaluate()
         gi_vv = gi_vv.evaluate()
-        w = OneParticleOperator(hf)
+        w = OneParticleDensity(hf)
         w.ov = 0.5 * (
             - 2.0 * einsum("ij,ja->ia", hf.foo, g1o.ov)
             + 1.0 * einsum("ijkl,klja->ia", hf.oooo, g2a.ooov)

@@ -10,7 +10,7 @@ Overview of adcc
 
 .. note::
    For each logical section of adcc, some nice overview should be given
-   in a separate pagce.
+   in a separate page.
 
 For documentation how to connect host programs to adcc,
 see :ref:`hostprograms`.

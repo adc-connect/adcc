@@ -4,7 +4,7 @@ on:
     branches: [master]
   pull_request:
   schedule:
-    - cron:  '0 4 * * 6'  # Run every Sunday
+    - cron:  '0 4 * * 6'  # Run every Saturday
 
 jobs:
   #
@@ -17,9 +17,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {version: '3.11', os: ubuntu-latest, documentation: True}
+          - {version: '3.13', os: ubuntu-latest, documentation: True}
           - {version: '3.9', os: ubuntu-latest, documentation: False}
-          - {version: '3.11', os: macos-13 , documentation: False}
+          - {version: '3.13', os: macos-latest, documentation: False}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -42,29 +42,25 @@ jobs:
         if: contains( matrix.os, 'ubuntu')
       - name: Install system dependencies on macOS
         # coreutils for sha256sum for update_testdata.sh
-        run:  brew install ccache doxygen lcov coreutils
+        run:  brew install ccache doxygen lcov coreutils llvm
         if: contains( matrix.os, 'macos')
       #
       - name: Dump siteconfig with coverage flags for C++
         run: |
           mkdir $HOME/.adcc/
           echo 'coverage = True' > $HOME/.adcc/siteconfig.py
-      - name: Hard-code download url for MacOS
-        run: |
-          echo "libtensor_url = \"$BASE_URL/$VERSION_URL\"" >> $HOME/.adcc/siteconfig.py
-        env:
-          BASE_URL: https://github.com/adc-connect/libtensor/releases/download
-          VERSION_URL: v3.0.1/libtensorlight-3.0.1-macosx_10_15_x86_64.tar.gz
-        if: contains( matrix.os, 'macos')
       - name: Install python dependencies
         run: |
           export PATH="/usr/local/opt/ccache/libexec:$PATH"
           export PATH="/usr/lib/ccache:$PATH"
           python -m pip install --user pyscf cppe wheel
+          python -m pip install --user -U setuptools
       #
       - name: Install package
         run: |
           pip install --user .[tests]
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Run python tests with std allocator
         run: |
           python -m pytest --cov=adcc
@@ -72,20 +68,21 @@ jobs:
         run: |
           python -m pytest --allocator=libxm -k "TestFunctionality and h2o_sto3g"
       - name: Run C++ tests
-        run: python setup.py cpptest -v
+        run: |
+          python -m pip install --user .[cpptest]
+          python setup.py cpptest -v
       # Documentation build
       - name: Dependencies for documentation
         run: python -m pip install --user .[build_docs]
         if: matrix.documentation
       - name: Build documentation
         run: |
-          cd docs && doxygen && cd ..
-          sphinx-build -M html docs build/sphinx
+          ./setup.py build_docs
         if: matrix.documentation
       - name: Upload documentation artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: build/sphinx/html
+          path: build/docs/html
         if: matrix.documentation
       #
       - name: Upload coverage to codecov
@@ -96,7 +93,7 @@ jobs:
           pip install codecov
           codecov -X gcov
           lcov --keep-going --directory . --capture --output-file coverage.info
-          lcov --ignore-errors unused --remove coverage.info '/opt/*' '/Applications/*' '/Library/*' '/usr/*' "${HOME}"'/.cache/*' "${HOME}"'/.local/*' "${PWD}"'/build/*' "${PWD}"'/libadcc/tests/*' --output-file coverage.info
+          lcov --ignore-errors unused --remove coverage.info '/opt/*' '/Applications/*' '/Library/*' '/usr/*' '/tmp/*' "${HOME}"'/.cache/*' "${HOME}"'/.local/*' "${PWD}"'/build/*' "${PWD}"'/libadcc_src/tests/*' --output-file coverage.info
           lcov --list coverage.info
           codecov -X gcov -f coverage.info
         env:
@@ -142,8 +139,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {version: '3.11', os: ubuntu-latest, documentation: False}
-          - {version: '3.11', os: macos-13 , documentation: False}
+          - {version: '3.13', os: ubuntu-latest, documentation: False}
+          - {version: '3.13', os: macos-latest, documentation: False}
     defaults:
       run:
         shell: bash -l {0}
@@ -152,8 +149,8 @@ jobs:
       - name: Patch compiler in Conda environment file
         if: contains( matrix.os, 'macos')
         run: |
-          sed -E -i.bak "s;gcc_linux-64;clang_osx-64;g" conda/environment.yml
-          sed -E -i.bak "s;gxx_linux-64;clangxx_osx-64;g" conda/environment.yml
+          sed -E -i.bak "s;gcc_linux-64;clang_osx-arm64;g" conda/environment.yml
+          sed -E -i.bak "s;gxx_linux-64;clangxx_osx-arm64;g" conda/environment.yml
       - uses: conda-incubator/setup-miniconda@v3
         with:
           activate-environment: adcc-dev
@@ -163,10 +160,6 @@ jobs:
           miniforge-version: latest
           python-version: ${{ matrix.version }}
           auto-activate-base: false
-      # - name: Dump siteconfig with coverage flags for C++
-      #   run: |
-      #     mkdir $HOME/.adcc/
-      #     echo 'coverage = True' > $HOME/.adcc/siteconfig.py
       - name: Install Psi4 from c-f
         run: |
           mamba install psi4 pyddx -c conda-forge -c conda-forge/label/libint_dev
@@ -185,25 +178,6 @@ jobs:
           # NOTE: pcmsolver not 'linked' with Psi4 1.8
           pytest -k "not pcm"
           # python setup.py cpptest -v  # TODO: currently doesn't compile...
-      #
-      # - name: Upload coverage to codecov
-      #   run: |
-      #     pip install codecov
-      #     codecov -X gcov
-      #     lcov --directory . --capture --output-file coverage.info
-      #     lcov --remove coverage.info '/opt/*' '/Applications/*' '/Library/*' '/usr/*' "${HOME}"'/.cache/*' "${HOME}"'/.local/*' "${PWD}"'/build/*' "${PWD}"'/libadcc/tests/*' --output-file coverage.info
-      #     lcov --list coverage.info
-      #     codecov -X gcov -f coverage.info
-      #
-      # - name: Upload coverage to coveralls
-      #   # Note: Needs to be after the above step, because it parses the coverage.info
-      #   run: |
-      #     pip install coveralls
-      #     sudo gem install coveralls-lcov
-      #     coveralls-lcov -v -n coverage.info > coverage.json
-      #     coveralls --service=github --merge=coverage.json
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   #
   # Test source code formatting
@@ -215,14 +189,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.13'
       - name: Install dependencies
         run: |
           pip install flake8
           sudo apt-get install clang-format
       - run: flake8
       - name: Checking C++ files with clang-format
-        working-directory: libadcc
+        working-directory: libadcc_src
         run: |
           clang-format --version
           find . -type f \( -name '*.cc' -o -name '*.hh' \) -print0 | xargs -r0 clang-format -i

@@ -10,8 +10,9 @@ dependencies:
   - libtensorlight >=3.0.1
   - pybind11 >=2.6
   - pip
+  - pkg-config
   # Run
-  - numpy >=1.14
+  - numpy >=2.0
   - scipy >=1.2
   - tqdm >=4.30
   - h5py >=2.9

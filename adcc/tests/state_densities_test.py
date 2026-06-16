@@ -54,7 +54,8 @@ class TestStateDensities:
     @pytest.mark.parametrize("system,case,kind", cases)
     def test_state_diffdm(self, system: str, case: str, kind: str, method: str,
                           generator: str):
-        if "cvs" in case and AdcMethod(method).level == 0 and generator == "adcman":
+        if ("cvs" in case and AdcMethod(method).level.to_int() == 0
+                and generator == "adcman"):
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
         refdata = testdata_cache._load_data(
             system=system, method=method, case=case, source=generator
@@ -82,7 +83,8 @@ class TestStateDensities:
                              [c for c in cases if c[2] != "triplet"])
     def test_ground_to_excited_tdm(self, system: str, case: str, kind: str,
                                    method: str, generator: str):
-        if "cvs" in case and AdcMethod(method).level == 0 and generator == "adcman":
+        if ("cvs" in case and AdcMethod(method).level.to_int() == 0
+                and generator == "adcman"):
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
         refdata = testdata_cache._load_data(
             system=system, method=method, case=case, source=generator

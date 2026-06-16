@@ -42,7 +42,8 @@ class Spectrum:
     #  support element-wise multiplication, division, addition /
     #                   subtraction of spectra ?
 
-    def __init__(self, x, y, *args, **kwargs):
+    def __init__(self, x, y, *args, xlabel: str = None, ylabel: str = None,
+                 **kwargs):
         """Pass spectrum data to initialise the class.
 
         To allow the copy and other functions to work properly, all arguments
@@ -61,8 +62,8 @@ class Spectrum:
         """
         self.x = np.array(x).flatten()
         self.y = np.array(y).flatten()
-        self.xlabel = "x"
-        self.ylabel = "y"
+        self.xlabel = "x" if xlabel is None else xlabel
+        self.ylabel = "y" if ylabel is None else ylabel
         if self.x.size != self.y.size:
             raise ValueError("Sizes of x and y mismatch: {} versus {}."
                              "".format(self.x.size, self.y.size))
@@ -103,13 +104,25 @@ class Spectrum:
                 scale = width / 0.272
                 return scale * shapefctn(x, x0, width)
 
+        # the min and max of the underlying spectrum
+        xmin_disc = np.min(self.x)
+        xmax_disc = np.max(self.x)
+        # determine a padding that is added to the left and right of the lowest
+        # and highest point of the discrete spectrum, respectively.
+        # But only if the user did not provide any data for min/max!
         if xmin is None:
-            xmin = np.min(self.x)
+            xmin = xmin_disc
+            xmin_padding = max((xmax_disc - xmin_disc) / 10, 5 * width)
+        else:
+            xmin_padding = 0
         if xmax is None:
-            xmax = np.max(self.x)
-        xextra = (xmax - xmin) / 10
+            xmax = xmax_disc
+            xmax_padding = max((xmax_disc - xmin_disc) / 10, 5 * width)
+        else:
+            xmax_padding = 0
+
         n_points = min(5000, max(500, int(1000 * (xmax - xmin))))
-        x = np.linspace(xmin - xextra, xmax + xextra, n_points)
+        x = np.linspace(xmin - xmin_padding, xmax + xmax_padding, n_points)
 
         y = 0
         for center, value in zip(self.x, self.y):
@@ -122,10 +135,10 @@ class Spectrum:
 
     def copy(self):
         """Return a consistent copy of the object."""
-        cpy = self.__class__(self.x, self.y, *self._args, **self._kwargs)
-        cpy.xlabel = self.xlabel
-        cpy.ylabel = self.ylabel
-        return cpy
+        return self.__class__(
+            self.x, self.y, *self._args, xlabel=self.xlabel, ylabel=self.ylabel,
+            **self._kwargs
+        )
 
     @requires_module("matplotlib")
     def plot(self, *args, style=None, **kwargs):
