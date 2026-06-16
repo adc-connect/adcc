@@ -1,4 +1,4 @@
-from adcc.AdcMethod import AdcMethod, AdcType
+	from adcc.AdcMethod import AdcMethod, AdcType
 from adcc.hdf5io import _extract_dataset
 
 from collections.abc import Hashable
@@ -411,8 +411,6 @@ _mp_data = {
     "mp3/opdm/dm_o1o1": "mp3/dm_o1o1",
     "mp3/opdm/dm_o1v1": "mp3/dm_o1v1",
     "mp3/opdm/dm_v1v1": "mp3/dm_v1v1",
-    # MP3 doubles amplitude at third order
-    "mp3/td_o1o1v1v1": "mp3/td_o1o1v1v1",
     # MP3 dipole vector
     "mp3/prop/dipole": "mp3/dipole",
     # sigma4+ density in the AO basis
@@ -430,4 +428,6 @@ _mp_data = {
 _mp_data_large = {
     # MP2 triples amplitudes
     "mp2/tt2_o1o1o1v1v1v1": "mp2/tt_o1o1o1v1v1v1",
+    # MP3 doubles amplitude at third order
+    "mp3/td_o1o1v1v1": "mp3/td_o1o1v1v1",
 }
