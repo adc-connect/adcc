@@ -195,6 +195,38 @@ def test_direct_mp2_gradient_matches_full_ao_fallback():
                     full.components.two_electron, atol=1e-10)
 
 
+def test_restricted_fast_path_matches_eight_case_transform():
+    """RHF fast path must reproduce the legacy eight-spin-case transform."""
+    hf = cached_backend_hf("pyscf", "h2o_sto3g", conv_tol=1e-11)
+    refstate = adcc.ReferenceState(hf)
+    assert refstate.restricted
+    mp = adcc.LazyMp(refstate)
+    gradient = adcc.nuclear_gradient(mp, eri_contraction="full_ao")
+    g2 = gradient.g2
+
+    # A raw coefficient dict has no restricted flag and therefore exercises the
+    # legacy eight-case spin expansion with the same fused contraction order.
+    coeffs = g2._ao_coefficient_map(refstate)
+    eight_case = g2.to_ao_pair_density(coeffs, pair_chunk_size=5)
+    fast_path = g2.to_ao_pair_density(refstate, pair_chunk_size=5)
+
+    assert_allclose(fast_path, eight_case, atol=1e-12)
+
+
+def test_restricted_coefficient_dict_uses_full_spin_expansion():
+    """Coefficient dictionaries must not enable the RHF-only shortcut."""
+    hf = cached_backend_hf("pyscf", "h2o_sto3g", conv_tol=1e-11)
+    refstate = adcc.ReferenceState(hf)
+    assert refstate.restricted
+
+    g2 = _random_tpdm(refstate)
+    coeffs = g2._ao_coefficient_map(refstate)
+    reference = _two_stage_packed_density(g2, refstate)
+    produced = g2.to_ao_pair_density(coeffs, pair_chunk_size=3)
+
+    assert_allclose(produced, reference, atol=1e-10)
+
+
 # ---------------------------------------------------------------------------
 # Guardrail tests (milestone m0)
 #
@@ -241,7 +273,10 @@ def test_packed_density_matches_two_stage_staging_contract(system):
 
     g2 = _random_tpdm(refstate)
     reference = _two_stage_packed_density(g2, refstate)
-    produced = g2.to_ao_pair_density(refstate, pair_chunk_size=3)
+    coeffs_or_refstate = (
+        g2._ao_coefficient_map(refstate) if refstate.restricted else refstate
+    )
+    produced = g2.to_ao_pair_density(coeffs_or_refstate, pair_chunk_size=3)
 
     assert_allclose(produced, reference, atol=1e-10)
 
