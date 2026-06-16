@@ -488,13 +488,16 @@ TEST_CASE("Test Tensor interface", "[tensor]") {
     libtensor::btod_import_raw<4>(TensorTestData::a.data(), bia3333.get_bis().get_dims())
           .perform(*in_4d_ptr);
 
-    std::shared_ptr<Tensor> in_tensor_4d_ptr = wrap_libtensor(adcmem_ptr, ax3333, in_4d_ptr);
+    std::shared_ptr<Tensor> in_tensor_4d_ptr =
+          wrap_libtensor(adcmem_ptr, ax3333, in_4d_ptr);
 
     auto in_6d_ptr = std::make_shared<libtensor::btensor<6, scalar_type>>(bib333333);
-    libtensor::btod_import_raw<6>(TensorTestData::b.data(), bib333333.get_bis().get_dims())
+    libtensor::btod_import_raw<6>(TensorTestData::b.data(),
+                                  bib333333.get_bis().get_dims())
           .perform(*in_6d_ptr);
 
-    std::shared_ptr<Tensor> in_tensor_6d_ptr = wrap_libtensor(adcmem_ptr, ax333333, in_6d_ptr);
+    std::shared_ptr<Tensor> in_tensor_6d_ptr =
+          wrap_libtensor(adcmem_ptr, ax333333, in_6d_ptr);
 
     SECTION("symmetrise_to function") {
       SECTION("symmetrise_to (0,1)") {
