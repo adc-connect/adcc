@@ -1181,9 +1181,15 @@ std::shared_ptr<Tensor> TensorImpl<N>::symmetrise(
         return 1. / 6. *
                lt::expr::symm(std::get<0>(parsed), std::get<1>(parsed),
                               std::get<2>(parsed), lthis);
+      } else if (permutations.size() == 2) {
+        const auto parsed =
+              parse_permutation<3, 2>(m_axes, strip_safe<N>(label), permutations);
+        return 1. / 6. *
+               lt::expr::symm(std::get<0>(parsed), std::get<1>(parsed),
+                              std::get<2>(parsed), lthis);
       } else {
         throw runtime_error(
-              "Symmetrisation not implemented for more than one index triple.");
+              "Symmetrisation not implemented for more than two index triple.");
       }
     } else {
       throw runtime_error(
@@ -1232,6 +1238,12 @@ std::shared_ptr<Tensor> TensorImpl<N>::antisymmetrise(
       if (permutations.size() == 1) {
         const auto parsed =
               parse_permutation<3, 1>(m_axes, strip_safe<N>(label), permutations);
+        return 1. / 6. *
+               lt::expr::asymm(std::get<0>(parsed), std::get<1>(parsed),
+                               std::get<2>(parsed), lthis);
+      } else if (permutations.size() == 2) {
+        const auto parsed =
+              parse_permutation<3, 2>(m_axes, strip_safe<N>(label), permutations);
         return 1. / 6. *
                lt::expr::asymm(std::get<0>(parsed), std::get<1>(parsed),
                                std::get<2>(parsed), lthis);

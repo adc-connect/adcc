@@ -41,6 +41,18 @@ a_asym_012 = 1 / 6 * (
     - a.transpose((2, 1, 0, 3)) + a.transpose((2, 0, 1, 3))
 )
 
+b = np.random.randn(N, N, N, N, N, N)
+b_sym_012_345 = 1 / 6 * (
+    b + b.transpose((0, 2, 1, 3, 5, 4))
+    + b.transpose((1, 0, 2, 4, 3, 5)) + b.transpose((1, 2, 0, 4, 5, 3))
+    + b.transpose((2, 1, 0, 5, 4, 3)) + b.transpose((2, 0, 1, 5, 3, 4))
+)
+b_asym_012_345 = 1 / 6 * (
+    b - b.transpose((0, 2, 1, 3, 5, 4))
+    - b.transpose((1, 0, 2, 4, 3, 5)) + b.transpose((1, 2, 0, 4, 5, 3))
+    - b.transpose((2, 1, 0, 5, 4, 3)) + b.transpose((2, 0, 1, 5, 3, 4))
+)
+
 #
 #
 #
@@ -94,6 +106,12 @@ with open("./TensorTestData.cc", "w") as f:
             + npprint(a_sym_012.ravel()) + "};")
     f.write("std::vector<double> TensorTestData::a_asym_012 = {"
             + npprint(a_asym_012.ravel()) + "};")
+    f.write("std::vector<double> TensorTestData::b = {"
+            + npprint(b.ravel()) + "};")
+    f.write("std::vector<double> TensorTestData::b_sym_012_345 = {"
+            + npprint(b_sym_012_345.ravel()) + "};")
+    f.write("std::vector<double> TensorTestData::b_asym_012_345 = {"
+            + npprint(b_asym_012_345.ravel()) + "};")
     f.write("\n}\n}")
 
 

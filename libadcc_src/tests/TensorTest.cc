@@ -480,32 +480,52 @@ TEST_CASE("Test Tensor interface", "[tensor]") {
   SECTION("symmetrise and antisymmetrisation") {
     libtensor::bispace<1> bis3(TensorTestData::N);
     libtensor::bispace<4> bia3333(bis3 | bis3 | bis3 | bis3);
+    libtensor::bispace<6> bib333333(bis3 | bis3 | bis3 | bis3 | bis3 | bis3);
     std::vector<AxisInfo> ax3333(4, {"x", TensorTestData::N});
+    std::vector<AxisInfo> ax333333(6, {"x", TensorTestData::N});
 
-    auto in_ptr = std::make_shared<libtensor::btensor<4, scalar_type>>(bia3333);
+    auto in_4d_ptr = std::make_shared<libtensor::btensor<4, scalar_type>>(bia3333);
     libtensor::btod_import_raw<4>(TensorTestData::a.data(), bia3333.get_bis().get_dims())
-          .perform(*in_ptr);
+          .perform(*in_4d_ptr);
 
-    std::shared_ptr<Tensor> in_tensor_ptr = wrap_libtensor(adcmem_ptr, ax3333, in_ptr);
+    std::shared_ptr<Tensor> in_tensor_4d_ptr = wrap_libtensor(adcmem_ptr, ax3333, in_4d_ptr);
+
+    auto in_6d_ptr = std::make_shared<libtensor::btensor<6, scalar_type>>(bib333333);
+    libtensor::btod_import_raw<6>(TensorTestData::b.data(), bib333333.get_bis().get_dims())
+          .perform(*in_6d_ptr);
+
+    std::shared_ptr<Tensor> in_tensor_6d_ptr = wrap_libtensor(adcmem_ptr, ax333333, in_6d_ptr);
 
     SECTION("symmetrise_to function") {
       SECTION("symmetrise_to (0,1)") {
-        std::shared_ptr<Tensor> out_tensor_ptr = in_tensor_ptr->symmetrise({{0, 1}});
+        std::shared_ptr<Tensor> out_tensor_ptr = in_tensor_4d_ptr->symmetrise({{0, 1}});
         CHECK_ELEMENTWISE(out_tensor_ptr, TensorTestData::a_sym_01[i]);
       }
 
       SECTION("symmetrise_to {(0,1), (2,3)}") {
         std::shared_ptr<Tensor> out_tensor_ptr =
-              in_tensor_ptr->symmetrise({{0, 1}, {2, 3}});
+              in_tensor_4d_ptr->symmetrise({{0, 1}, {2, 3}});
         CHECK_ELEMENTWISE(out_tensor_ptr, TensorTestData::a_sym_01_23[i]);
       }
 
       SECTION("symmetrise_to (0,1,2)") {
         // the 6 fold symmetrisation seems to introduce some problems
         // regarding the precision -> can not compare with full precision
-        std::shared_ptr<Tensor> out_tensor_ptr = in_tensor_ptr->symmetrise({{0, 1, 2}});
+        std::shared_ptr<Tensor> out_tensor_ptr =
+              in_tensor_4d_ptr->symmetrise({{0, 1, 2}});
         CHECK_ELEMENTWISE(out_tensor_ptr,
                           Catch::Detail::Approx(TensorTestData::a_sym_012[i])
+                                .margin(1e-14)
+                                .epsilon(1e-14));
+      }
+
+      SECTION("symmetrise_to {(0,1,2), (3,4,5)}") {
+        // the 6 fold symmetrisation seems to introduce some problems
+        // regarding the precision -> can not compare with full precision
+        std::shared_ptr<Tensor> out_tensor_ptr =
+              in_tensor_6d_ptr->symmetrise({{0, 1, 2}, {3, 4, 5}});
+        CHECK_ELEMENTWISE(out_tensor_ptr,
+                          Catch::Detail::Approx(TensorTestData::b_sym_012_345[i])
                                 .margin(1e-14)
                                 .epsilon(1e-14));
       }
@@ -513,13 +533,14 @@ TEST_CASE("Test Tensor interface", "[tensor]") {
 
     SECTION("antisymmetrise_to function") {
       SECTION("antisymmetrise_to (0,1)") {
-        std::shared_ptr<Tensor> out_tensor_ptr = in_tensor_ptr->antisymmetrise({{0, 1}});
+        std::shared_ptr<Tensor> out_tensor_ptr =
+              in_tensor_4d_ptr->antisymmetrise({{0, 1}});
         CHECK_ELEMENTWISE(out_tensor_ptr, TensorTestData::a_asym_01[i]);
       }
 
       SECTION("antisymmetrise_to {(0,1), (2,3)}") {
         std::shared_ptr<Tensor> out_tensor_ptr =
-              in_tensor_ptr->antisymmetrise({{0, 1}, {2, 3}});
+              in_tensor_4d_ptr->antisymmetrise({{0, 1}, {2, 3}});
         CHECK_ELEMENTWISE(out_tensor_ptr, TensorTestData::a_asym_01_23[i]);
       }
 
@@ -527,9 +548,20 @@ TEST_CASE("Test Tensor interface", "[tensor]") {
         // the 6 fold anti-symmetrisation seems to introduce some problems
         // regarding the precision -> can not compare with full precision
         std::shared_ptr<Tensor> out_tensor_ptr =
-              in_tensor_ptr->antisymmetrise({{0, 1, 2}});
+              in_tensor_4d_ptr->antisymmetrise({{0, 1, 2}});
         CHECK_ELEMENTWISE(out_tensor_ptr,
                           Catch::Detail::Approx(TensorTestData::a_asym_012[i])
+                                .margin(1e-14)
+                                .epsilon(1e-14));
+      }
+
+      SECTION("antisymmetrise_to {(0,1,2), (3,4,5)}") {
+        // the 6 fold anti-symmetrisation seems to introduce some problems
+        // regarding the precision -> can not compare with full precision
+        std::shared_ptr<Tensor> out_tensor_ptr =
+              in_tensor_6d_ptr->antisymmetrise({{0, 1, 2}, {3, 4, 5}});
+        CHECK_ELEMENTWISE(out_tensor_ptr,
+                          Catch::Detail::Approx(TensorTestData::b_asym_012_345[i])
                                 .margin(1e-14)
                                 .epsilon(1e-14));
       }
