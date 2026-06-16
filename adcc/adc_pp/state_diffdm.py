@@ -134,7 +134,7 @@ def diffdm_cvs_isr2(mp, amplitude, intermediates):
     u1, u2 = amplitude.ph, amplitude.pphh
 
     t2 = mp.t2(b.oovv)
-    p0 = intermediates.cvs_p0
+    p0 = mp.second_order_dm_correction(apply_cvs=True)
     p1_vv = dm.vv.evaluate()  # ISR(1) diffdm
 
     # Zeroth order doubles contributions

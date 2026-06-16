@@ -398,6 +398,10 @@ _mp_data = {
     "mp2/opdm/dm_o2o1": "mp2/dm_o2o1",
     "mp2/opdm/dm_o2o2": "mp2/dm_o2o2",
     "mp2/opdm/dm_o2v1": "mp2/dm_o2v1",
+    # CVS-MP2 density (within the CVS-approximation) in the MO basis
+    "mp2/cv_p_o1o1": "cvs-mp2/dm_o1o1",
+    "mp2/cv_p_o1v1": "cvs-mp2/dm_o1v1",
+    "mp2/cv_p_v1v1": "cvs-mp2/dm_v1v1",
     # MP2 dipole vector
     "mp2/prop/dipole": "mp2/dipole",
     # MP2 doubles amplitudes

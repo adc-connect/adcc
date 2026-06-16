@@ -26,11 +26,9 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
     # MP1 data
     gs_data[f"{gs}1/df_o1v1"] = ground_state.df("o1v1").to_ndarray()
     gs_data[f"{gs}1/t_o1o1v1v1"] = ground_state.t2("o1o1v1v1").to_ndarray()
-    if not ground_state.reference_state.restricted:
-        try:
-            gs_data[f"{gs}1/ssq"] = ground_state.ssq(1)
-        except NotImplementedError:
-            pass
+    if not ground_state.reference_state.restricted and \
+            not ground_state.has_core_occupied_space:
+        gs_data[f"{gs}1/ssq"] = ground_state.ssq(1)
     # CVS-MP1 data
     if ground_state.has_core_occupied_space:
         gs_data[f"{gs}1/df_o2v1"] = ground_state.df("o2v1").to_ndarray()
@@ -40,11 +38,9 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
     gs_data[f"{gs}2/energy"] = ground_state.energy_correction(2)
     gs_data[f"{gs}2/dipole"] = ground_state.dipole_moment(2)
     gs_data[f"{gs}2/td_o1o1v1v1"] = ground_state.td2("o1o1v1v1").to_ndarray()
-    if not ground_state.reference_state.restricted:
-        try:
-            gs_data[f"{gs}2/ssq"] = ground_state.ssq(2)
-        except NotImplementedError:
-            pass
+    if not ground_state.reference_state.restricted and \
+            not ground_state.has_core_occupied_space:
+        gs_data[f"{gs}2/ssq"] = ground_state.ssq(2)
     if not only_full_mode:
         # triples take a lot of memory for the larger test cases
         gs_data[f"{gs}2/tt_o1o1o1v1v1v1"] = (
@@ -60,19 +56,22 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
         if not only_full_mode:
             gs_data[f"{gs}3/td_o1o1v1v1"] = ground_state.td3("o1o1v1v1").to_ndarray()
     # MP2 density: MO basis
-    dm_blocks = ["dm_o1o1", "dm_o1v1", "dm_v1v1"]
-    if ground_state.has_core_occupied_space:
-        dm_blocks.extend(["dm_o2o1", "dm_o2o2", "dm_o2v1"])
-    for block in dm_blocks:
-        blk = block.split("_")[-1]
-        gs_data[f"{gs}2/{block}"] = ground_state.mp2_diffdm[blk].to_ndarray()
+    diffdm = ground_state.diffdm(2, apply_cvs=False)
+    for block in diffdm.blocks_nonzero:
+        gs_data[f"{gs}2/dm_{block}"] = diffdm[block].to_ndarray()
     # MP2 density: AO basis
-    dm_bb_a, dm_bb_b = ground_state.mp2_diffdm.to_ao_basis(
-        ground_state.reference_state
-    )
+    dm_bb_a, dm_bb_b = diffdm.to_ao_basis(ground_state.reference_state)
     gs_data[f"{gs}2/dm_bb_a"] = dm_bb_a.to_ndarray()
     gs_data[f"{gs}2/dm_bb_b"] = dm_bb_b.to_ndarray()
-
+    if ground_state.has_core_occupied_space:
+        # CVS-MP2 density: MO basis
+        diffdm = ground_state.diffdm(2, apply_cvs=True)
+        for block in diffdm.blocks_nonzero:
+            gs_data[f"cvs-{gs}2/dm_{block}"] = diffdm[block].to_ndarray()
+        # CVS-MP2 density: AO basis
+        dm_bb_a, dm_bb_b = diffdm.to_ao_basis(ground_state.reference_state)
+        gs_data[f"cvs-{gs}2/dm_bb_a"] = dm_bb_a.to_ndarray()
+        gs_data[f"cvs-{gs}2/dm_bb_b"] = dm_bb_b.to_ndarray()
     if not ground_state.has_core_occupied_space:
         # MP3 density: MO basis
         dm_blocks = ["dm_o1o1", "dm_o1v1", "dm_v1v1"]
@@ -86,7 +85,16 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
         )
         gs_data[f"{gs}3/dm_bb_a"] = dm_bb_a.to_ndarray()
         gs_data[f"{gs}3/dm_bb_b"] = dm_bb_b.to_ndarray()
-
+    # 2p diffdms: not implemented for the core space currently
+    if not only_full_mode and not ground_state.has_core_occupied_space:
+        # MP1 2p density: MO basis
+        diffdm = ground_state.diffdm_2p(level=1, apply_cvs=False)
+        for block in diffdm.blocks_nonzero:
+            gs_data[f"{gs}1/2p_dm_{block}"] = diffdm[block].to_ndarray()
+        # MP2 2p density: MO basis
+        diffdm = ground_state.diffdm_2p(level=2, apply_cvs=False)
+        for block in diffdm.blocks_nonzero:
+            gs_data[f"{gs}2/2p_dm_{block}"] = diffdm[block].to_ndarray()
     # write the data to hdf5
     emplace_dict(gs_data, hdf5_file, compression="gzip")
     hdf5_file.attrs["adcc_version"] = adcc.__version__

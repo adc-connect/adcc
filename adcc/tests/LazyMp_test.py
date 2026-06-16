@@ -47,6 +47,9 @@ small_cases = [
     (case.file_name, c) for case in test_cases if not case.only_full_mode
     for c in ["gen", "cvs"]
 ]
+non_cvs_small_cases = [
+    (system, case) for system, case in small_cases if "cvs" not in case
+]
 large_cases = [
     (case.file_name, c) for case in test_cases if case.only_full_mode
     for c in ["gen", "cvs"]
@@ -182,8 +185,8 @@ class TestLazyMp:
 
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)
-    def test_t2(self, system: str, case: str, generator: str,
-                instances: LazyMpCache):
+    def test_td1(self, system: str, case: str, generator: str,
+                 instances: LazyMpCache):
         refmp = testdata_cache._load_data(
             system=system, method="mp", case=case, source=generator
         )
@@ -193,7 +196,7 @@ class TestLazyMp:
         for label in blocks:
             assert_allclose(instances.get(system, case).t2(label).to_ndarray(),
                             refmp["mp1"][f"t_{label}"], atol=1e-12)
-            assert f"t2/{label}" in instances.get(system, case).timer.tasks
+            assert f"td1/{label}" in instances.get(system, case).timer.tasks
 
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)
@@ -282,16 +285,35 @@ class TestLazyMp:
         refmp = testdata_cache._load_data(
             system=system, method="mp", case=case, source=generator
         )
-        mp2diff = instances.get(system, case).mp2_diffdm
+        mp2diff = instances.get(system, case).diffdm(2, apply_cvs=False)
 
         assert mp2diff.symmetry is OperatorSymmetry.HERMITIAN
         blocks = ["o1o1", "o1v1", "v1v1"]
         if "cvs" in case:
-            blocks.extend(["o2o1", "o2o2", "o2v1"])
+            blocks.extend(["o1o2", "o2o2", "o2v1"])
+        assert sorted(blocks) == sorted(mp2diff.blocks_nonzero)
         for label in blocks:
+            # in adcman for some reason the non-canonical co block is
+            # calculated instead of the canonical oc block
+            if generator == "adcman" and label == "o1o2":
+                label = "o2o1"
             assert_allclose(mp2diff[label].to_ndarray(),
                             refmp["mp2"]["dm_" + label], atol=1e-12)
-        assert "mp2_dm_correction" in instances.get(system, case).timer.tasks
+        assert ("second_order_dm_correction/False" in
+                instances.get(system, case).timer.tasks)
+
+        if "cvs" not in case:
+            return
+        # also test CVS-MP densities
+        mp2diff = instances.get(system, case).diffdm(2, apply_cvs=True)
+        assert mp2diff.symmetry is OperatorSymmetry.HERMITIAN
+        blocks = ["o1o1", "o1v1", "v1v1"]
+        assert sorted(blocks) == sorted(mp2diff.blocks_nonzero)
+        for label in blocks:
+            assert_allclose(mp2diff[label].to_ndarray(),
+                            refmp["cvs-mp2"]["dm_" + label], atol=1e-12)
+        assert ("second_order_dm_correction/True" in
+                instances.get(system, case).timer.tasks)
 
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)
@@ -300,7 +322,7 @@ class TestLazyMp:
         refmp = testdata_cache._load_data(
             system=system, method="mp", case=case, source=generator
         )
-        mp2diff = instances.get(system, case).mp2_diffdm
+        mp2diff = instances.get(system, case).diffdm(2, apply_cvs=False)
         reference_state = instances.get(system, case).reference_state
 
         dm_α, dm_β = mp2diff.to_ao_basis(reference_state)
@@ -310,6 +332,7 @@ class TestLazyMp:
         if "cvs" not in case:
             return
         # CVS MP(2) densities in AOs should be equal to the non-CVS one
+        # since we don't apply the CVS approximation
         non_cvs_case = "-".join(c for c in case.split("-") if c != "cvs")
         if not non_cvs_case:
             non_cvs_case = "gen"
@@ -318,6 +341,19 @@ class TestLazyMp:
         )
         assert_allclose(dm_α.to_ndarray(), refmp["mp2"]["dm_bb_a"], atol=1e-12)
         assert_allclose(dm_β.to_ndarray(), refmp["mp2"]["dm_bb_b"], atol=1e-12)
+        # Also test the CVS-MP AO densities (with the CVS approximation)
+        # but this data is not available from adcman!
+        if generator == "adcman":
+            return
+        refmp = testdata_cache._load_data(
+            system=system, method="mp", case=case, source=generator
+        )
+        mp2diff = instances.get(system, case).diffdm(2, apply_cvs=True)
+        reference_state = instances.get(system, case).reference_state
+
+        dm_α, dm_β = mp2diff.to_ao_basis(reference_state)
+        assert_allclose(dm_α.to_ndarray(), refmp["cvs-mp2"]["dm_bb_a"], atol=1e-12)
+        assert_allclose(dm_β.to_ndarray(), refmp["cvs-mp2"]["dm_bb_b"], atol=1e-12)
 
     @pytest.mark.parametrize("system,case",
                              [(s, c) for s, c in cases if "cvs" not in c])
@@ -354,6 +390,41 @@ class TestLazyMp:
         assert_allclose(dm_α.to_ndarray(), refmp["mp3"]["dm_bb_a"], atol=1e-12)
         assert_allclose(dm_β.to_ndarray(), refmp["mp3"]["dm_bb_b"], atol=1e-12)
 
+    @pytest.mark.parametrize("system,case", non_cvs_small_cases)
+    @pytest.mark.parametrize("level", [1, 2])
+    def test_mpn_diffdm_2p_mo(self, system: str, case: str, level: int,
+                              instances: LazyMpCache):
+        # consistency tests for the 2p diffdm in the MO basis
+        refmp = testdata_cache.adcc_data(
+            system=system, method="mp", case=case
+        )
+        diffdm = instances.get(system, case).diffdm_2p(
+            level=level, apply_cvs=False
+        )
+        blocks = {
+            1: ["o1o1v1v1"],
+            2: ["o1o1o1o1", "o1o1o1v1", "o1o1v1v1", "o1v1o1v1", "v1v1v1v1"],
+        }[level]
+        assert diffdm.symmetry is OperatorSymmetry.HERMITIAN
+        assert blocks == diffdm.blocks_nonzero
+        for label in blocks:
+            assert_allclose(
+                diffdm[label].to_ndarray(),
+                refmp[f"mp{level}"][f"2p_dm_{label}"],
+                atol=1e-12
+            )
+        fname = {
+            1: "first_order_dm_correction_2p",
+            2: "second_order_dm_correction_2p",
+        }
+        for lev in range(1, level + 1):
+            assert f"{fname[lev]}/False" in instances.get(system, case).timer.tasks
+        # TODO: add test for CVS-MP 2p density once implemented
+        with pytest.raises((NotImplementedError, AssertionError)):
+            diffdm = instances.get(system, case).diffdm_2p(
+                level=level, apply_cvs=True
+            )
+
     #
     # Cache
     #
@@ -366,7 +437,7 @@ class TestLazyMp:
         timer = instances.get("h2o_sto3g", "gen").timer
         assert "energy_correction/2" in timer.tasks
         assert "energy_correction/3" in timer.tasks
-        assert len(timer.intervals("t2/o1o1v1v1")) == 1
+        assert len(timer.intervals("td1/o1o1v1v1")) == 1
         assert len(timer.intervals("td2/o1o1v1v1")) == 1
         assert len(timer.intervals("energy_correction/2")) == 1
         assert len(timer.intervals("energy_correction/3")) == 1
