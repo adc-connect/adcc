@@ -54,10 +54,11 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
     if not ground_state.has_core_occupied_space:
         gs_data[f"{gs}3/energy"] = ground_state.energy_correction(3)
         gs_data[f"{gs}3/dipole"] = ground_state.dipole_moment(3)
-        gs_data[f"{gs}3/td_o1o1v1v1"] = ground_state.td3("o1o1v1v1").to_ndarray()
         gs_data[f"{gs}3/sigma_inf_ov"] = ground_state.sigma_inf_ov(3).to_ndarray()
         gs_data[f"{gs}3/m_3_plus"] = ground_state.m_3_plus.to_ndarray()
         gs_data[f"{gs}3/m_3_minus"] = ground_state.m_3_minus.to_ndarray()
+        if not only_full_mode:
+            gs_data[f"{gs}3/td_o1o1v1v1"] = ground_state.td3("o1o1v1v1").to_ndarray()
     # MP2 density: MO basis
     dm_blocks = ["dm_o1o1", "dm_o1v1", "dm_v1v1"]
     if ground_state.has_core_occupied_space:

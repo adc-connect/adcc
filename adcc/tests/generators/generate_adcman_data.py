@@ -15,11 +15,15 @@ _testdata_dirname = "data"
 _methods = {
     "pp": ("adc0", "adc1", "adc2", "adc2x", "adc3")
 }
+_small_cases_methods = {
+    "pp": _methods["pp"] + ("adc4",)
+}
 # Since it seems not possible to only perform an adcman MPn calculation,
 # the ground state data has to be extracted from an adc(n) calculation.
 # The method given below is used for this. The pt order should be rather high
 # to ensure that all desired MP properties are generated.
-_gs_data_method = "adc3"
+_gs_data_method = "adc4"
+_cvs_gs_data_method = "adc3"
 # since adc4 is not available as method in adcc and density_order=3
 # does not require the tt2 amplitudes. We either have to use ISR3
 # or density_order=4 to activate the calculation of tt2 amplitudes.
@@ -122,7 +126,7 @@ def generate_groundstate(test_case: testcases.TestCase) -> None:
         # data for all gs_density_orders
         # However: for CVS the gs_density_order is not available
         if "cvs" in case:
-            method = f"cvs-{_gs_data_method}"
+            method = f"cvs-{_cvs_gs_data_method}"
             isr_maxorder = None
             gs_density_orders = (None,)
         else:
@@ -168,7 +172,7 @@ def generate_h2o_sto3g():
     }
     test_case = testcases.get(n_expected_cases=1, name="h2o", basis="sto-3g").pop()
     generate_groundstate(test_case)
-    for method in _methods["pp"]:
+    for method in _small_cases_methods["pp"]:
         method = AdcMethod(method)
         # get the number of states for all kinds -> Generate the data in a single
         # adcman calculation
@@ -207,7 +211,7 @@ def generate_cn_sto3g():
     # UHF, Doublet, 10 basis functions: (7a, 6b) occ, (3a, 4b) virt
     test_case = testcases.get(n_expected_cases=1, name="cn", basis="sto-3g").pop()
     generate_groundstate(test_case)
-    for method in _methods["pp"]:
+    for method in _small_cases_methods["pp"]:
         method = AdcMethod(method)
         n_states = {kind: 3 for kind in
                     testcases.kinds_to_nstates(test_case.kinds[method.adc_type])}
@@ -239,7 +243,7 @@ def generate_hf_631g():
     # UHF, Triplet
     test_case = testcases.get(n_expected_cases=1, name="hf").pop()
     generate_groundstate(test_case)
-    for method in _methods["pp"]:
+    for method in _small_cases_methods["pp"]:
         method = AdcMethod(method)
         n_states = {kind: 3 for kind in
                     testcases.kinds_to_nstates(test_case.kinds[method.adc_type])}
@@ -254,7 +258,12 @@ def generate_hf_631g():
 
 def generate_formaldehyde_pe():
     for test_case in testcases.get(n_expected_cases=2, name="formaldehyde"):
-        for method in _methods["pp"]:
+        if test_case.only_full_mode:
+            methods = _methods
+        else:
+            methods = _small_cases_methods
+
+        for method in methods["pp"]:
             method = AdcMethod(method)
             n_states = {
                 kind: 3 for kind in

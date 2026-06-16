@@ -207,7 +207,7 @@ class TestLazyMp:
         assert "td2/o1o1v1v1" in instances.get(system, case).timer.tasks
 
     @pytest.mark.parametrize("system,case",
-                             [(s, c) for s, c in cases if "cvs" not in c])
+                             [(s, c) for s, c in small_cases if "cvs" not in c])
     @pytest.mark.parametrize("generator", generators)
     def test_td3(self, system: str, case: str, generator: str,
                  instances: LazyMpCache):
