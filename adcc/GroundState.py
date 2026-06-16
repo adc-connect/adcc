@@ -115,37 +115,6 @@ class GroundState:
             f"{self.__class__.__name__} class."
         )
 
-    @property
-    def m_3_plus(self) -> libadcc.Tensor:
-        """
-        Third order contribution to the ov block of the N+1 part of the dynamic
-        self-energy.
-        """
-        raise NotImplementedError(
-            "Third order contribution to the ov block of the N+1 part of the "
-            "dynamic self-energy not implemented on "
-            f"{self.__class__.__name__} class."
-        )
-
-    @property
-    def m_3_minus(self) -> libadcc.Tensor:
-        """
-        Third order contribution to the ov block of the N-1 part of the dynamic
-        self-energy.
-        """
-        raise NotImplementedError(
-            "Third order contribution to the ov block of the N-1 part of the "
-            "dynamic self-energy not implemented on "
-            f"{self.__class__.__name__} class."
-        )
-
-    def sigma_inf_ov(self, level: int) -> libadcc.Tensor:
-        """The ov part of the static self-energy."""
-        raise NotImplementedError(
-            "The ov part of the static self-energy not implemented on "
-            f"{self.__class__.__name__} class."
-        )
-
     def diffdm(self, level: int = 2, apply_cvs: bool = False) -> OneParticleDensity:
         """
         Return the ground state difference denstiy in the MO basis
@@ -270,6 +239,47 @@ class GroundState:
                                       f"'{contraction}'.")
         contraction_str, eri_block = expressions[key]
         return einsum(contraction_str, self.t2oo, hf.eri(eri_block))
+
+    @property
+    def m_3_plus(self) -> libadcc.Tensor:
+        """
+        Third order contribution to the ov block of the N+1 part of the dynamic
+        self-energy.
+        """
+        return (
+            + 1 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.ov))
+            + 0.5 * einsum(
+                "ijbc,jabc->ia", self.td2(b.oovv), self.reference_state.ovvv
+            )
+            - 0.25 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.oo))
+        )
+
+    @property
+    def m_3_minus(self) -> libadcc.Tensor:
+        """
+        Third order contribution to the ov block of the N-1 part of the dynamic
+        self-energy.
+        """
+        return (
+            + 0.5 * einsum(
+                "jkab,jkib->ia", self.td2(b.oovv), self.reference_state.ooov
+            )
+            - 1 * einsum("jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.ov))
+            - 0.25 * einsum("jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.vv))
+        )
+
+    @cached_member_function()
+    def sigma_inf_ov(self, level: int) -> libadcc.Tensor:
+        """The ov part of the static self-energy."""
+        hf = self.reference_state
+        dm = self.diffdm(level - 1)
+
+        return (
+            - einsum("ijka,jk->ia", hf.ooov, dm.oo)
+            + einsum("ijab,jb->ia", hf.oovv, dm.ov)
+            - einsum("ibja,jb->ia", hf.ovov, dm.ov)
+            + einsum("ibac,bc->ia", hf.ovvv, dm.vv)
+        )
 
     @cached_member_function()
     def second_order_dm_correction(self, apply_cvs: bool = False

@@ -26,7 +26,7 @@ import numpy as np
 from .GroundState import GroundState
 from .MoSpaces import split_spaces
 from .functions import direct_sum, einsum
-from .misc import cached_member_function, cached_property
+from .misc import cached_member_function
 from . import block as b
 
 
@@ -238,50 +238,6 @@ class LazyMp(GroundState):
             + 9 * einsum('ijla,klbc->ijkabc', hf.ooov, t2_1)
         ).antisymmetrise(0, 1, 2).antisymmetrise(3, 4, 5)
         return numerator / denom
-
-    @cached_property
-    def m_3_plus(self) -> libadcc.Tensor:
-        """
-        Third order contribution to the ov block of the N+1 part of the dynamic
-        self-energy.
-        """
-        # NOTE: m_3_plus, m_3_minus have to be implemented on LazyMp so we can
-        # use them for the evaluation of the MP3 density: We can't add an
-        # Intermediate instance to LazyMp (circular reference -> memory leak)!
-        return (
-            + 1 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.ov))
-            + 0.5 * einsum(
-                "ijbc,jabc->ia", self.td2(b.oovv), self.reference_state.ovvv
-            )
-            - 0.25 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.oo))
-        )
-
-    @cached_property
-    def m_3_minus(self) -> libadcc.Tensor:
-        """
-        Third order contribution to the ov block of the N-1 part of the dynamic
-        self-energy.
-        """
-        return (
-            + 0.5 * einsum(
-                "jkab,jkib->ia", self.td2(b.oovv), self.reference_state.ooov
-            )
-            - 1 * einsum("jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.ov))
-            - 0.25 * einsum("jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.vv))
-        )
-
-    @cached_member_function()
-    def sigma_inf_ov(self, level: int) -> libadcc.Tensor:
-        """The ov part of the static self-energy."""
-        hf = self.reference_state
-        dm = self.diffdm(level - 1)
-
-        return (
-            - einsum("ijka,jk->ia", hf.ooov, dm.oo)
-            + einsum("ijab,jb->ia", hf.oovv, dm.ov)
-            - einsum("ibja,jb->ia", hf.ovov, dm.ov)
-            + einsum("ibac,bc->ia", hf.ovvv, dm.vv)
-        )
 
     @cached_member_function()
     def energy_correction(self, level: int = 2) -> float:

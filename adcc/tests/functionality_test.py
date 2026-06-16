@@ -89,6 +89,12 @@ class TestFunctionality:
                 #      are implemented
                 assert res.ground_state.energy_correction(3) == \
                     approx(refmp["mp3"]["energy"])
+        if res.method.level.to_int() >= 4:
+            if not res.method.is_core_valence_separated:
+                # TODO The latter check can be removed once CVS-MP3 energies
+                #      are implemented
+                assert res.ground_state.energy_correction(4) == \
+                    approx(refmp["mp4"]["energy"])
 
         for i in range(n_ref):
             # Computing the dipole moment implies a lot of cancelling in the
@@ -100,12 +106,10 @@ class TestFunctionality:
                 ref_tdm = np.array([0., 0., 0.])
             else:
                 ref_tdm = ref["transition_dipole_moments"][i]
-
             # Test norm and actual values
             res_tdm_norm = np.sum(res_tdm * res_tdm)
             ref_tdm_norm = np.sum(ref_tdm * ref_tdm)
             assert res_tdm_norm == approx(ref_tdm_norm, abs=1e-5)
-
             # If the eigenpair is degenerate, then some rotation
             # in the eigenspace is possible, which reflects as a
             # rotation inside the dipole moments. This is the case
@@ -114,11 +118,10 @@ class TestFunctionality:
             # in such cases and skip the test for the exact values.
             if system.name != "cn":
                 assert_allclose_signfix(res_tdm, ref_tdm, atol=1e-5)
-
-            # Computing the dipole moment implies a lot of cancelling in the
-            # contraction, which has quite an impact on the accuracy.
-            assert_allclose(res.state_dipole_moment[:n_ref],
-                            ref["state_dipole_moments"], atol=1e-4)
+        # Computing the dipole moment implies a lot of cancelling in the
+        # contraction, which has quite an impact on the accuracy.
+        assert_allclose(res.state_dipole_moment[:n_ref],
+                        ref["state_dipole_moments"], atol=1e-4)
 
         # Test we do not use too many iterations
         # removed explicit numbers per method, because they were not system and case
