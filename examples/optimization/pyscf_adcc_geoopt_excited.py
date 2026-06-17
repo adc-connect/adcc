@@ -29,7 +29,8 @@ def make_scf(mol):
 def print_geometry(title, mol):
     print(f"\n{title} (Bohr):")
     for i, xyz in enumerate(mol.atom_coords(unit="Bohr")):
-        print(f"{mol.atom_symbol(i):2s} {xyz[0]:16.10f} {xyz[1]:16.10f} {xyz[2]:16.10f}")
+        print(f"{mol.atom_symbol(i):2s} "
+              f"{xyz[0]:16.10f} {xyz[1]:16.10f} {xyz[2]:16.10f}")
 
 
 def make_energy_gradient(scanner):

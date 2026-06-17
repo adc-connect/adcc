@@ -36,7 +36,7 @@ from .orbital_response import (
     orbital_response, orbital_response_rhs, energy_weighted_density_matrix
 )
 from .amplitude_response import amplitude_relaxed_densities
-from .scanner import (ExcitedStateTarget, GroundStateTarget,
+from .scanner import (ExcitedStateTarget, GroundStateTarget,  # noqa: F401
                       NuclearGradientScanner, density_overlap_score,
                       nuclear_gradient_scanner)
 
