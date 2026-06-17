@@ -68,17 +68,17 @@ def test_density_overlap_score_uses_absolute_transition_phase():
 
 def test_scanner_requires_pyscf_scf_object():
     with pytest.raises(TypeError, match="PySCF SCF object"):
-        adcc.nuclear_gradient_scanner(_h2o_scf().mol, method="mp2")
+        adcc.NuclearGradientScanner(_h2o_scf().mol, method="mp2")
 
 
 def test_scanner_validates_coordinate_shape():
-    scanner = adcc.nuclear_gradient_scanner(_h2o_scf(), method="mp2")
+    scanner = adcc.NuclearGradientScanner(_h2o_scf(), method="mp2")
     with pytest.raises(ValueError, match="Expected coordinates"):
         scanner(np.zeros((2, 3)))
 
 
 def test_ground_state_scanner_matches_explicit_gradient_loop():
-    scanner = adcc.nuclear_gradient_scanner(
+    scanner = adcc.NuclearGradientScanner(
         _h2o_scf(), method="mp2", gradient_kwargs={"eri_contraction": "full_ao"},
     )
     coords = scanner.initial_coords
@@ -93,7 +93,7 @@ def test_ground_state_scanner_matches_explicit_gradient_loop():
 
 
 def test_calc_new_returns_geometric_engine_shape():
-    scanner = adcc.nuclear_gradient_scanner(
+    scanner = adcc.NuclearGradientScanner(
         _h2o_scf(), method="mp2", gradient_kwargs={"eri_contraction": "full_ao"},
     )
     result = scanner.calc_new(scanner.initial_coords.ravel())
@@ -103,7 +103,7 @@ def test_calc_new_returns_geometric_engine_shape():
 
 
 def test_run_adc_kwargs_are_forwarded_with_native_names():
-    scanner = adcc.nuclear_gradient_scanner(
+    scanner = adcc.NuclearGradientScanner(
         _h2o_scf(), method="adc2", n_singlets=2, conv_tol=1e-7,
         follow="index", gradient_kwargs={"eri_contraction": "full_ao"},
     )
@@ -121,7 +121,7 @@ def test_tracking_descriptor_keeps_independent_mol_snapshot():
         transition_dm_ao = FakeAoOperator()
         state_diffdm_ao = FakeAoOperator()
 
-    scanner = adcc.nuclear_gradient_scanner(_h2o_scf(), method="adc2")
+    scanner = adcc.NuclearGradientScanner(_h2o_scf(), method="adc2")
     mol = scanner.base_mol.copy()
     descriptor = scanner._descriptor(FakeExcitation(), mol)
     old_coords = descriptor.mol.atom_coords(unit="Bohr").copy()
@@ -137,13 +137,13 @@ def test_unconverged_scf_raises():
     mf.max_cycle = 1
     mf.conv_tol = 1e-12
     mf.conv_tol_grad = 1e-10
-    scanner = adcc.nuclear_gradient_scanner(mf, method="mp2")
+    scanner = adcc.NuclearGradientScanner(mf, method="mp2")
     with pytest.raises(RuntimeError, match="did not converge"):
         scanner(scanner.initial_coords)
 
 
 def test_excited_state_scanner_matches_explicit_gradient_loop():
-    scanner = adcc.nuclear_gradient_scanner(
+    scanner = adcc.NuclearGradientScanner(
         _h2o_scf(), method="adc2", n_singlets=3, state_index=0,
         follow="index", conv_tol=1e-9,
         gradient_kwargs={"eri_contraction": "full_ao"},
@@ -165,7 +165,7 @@ def test_excited_state_scanner_matches_explicit_gradient_loop():
 
 
 def test_overlap_tracking_follows_same_state_character():
-    scanner = adcc.nuclear_gradient_scanner(
+    scanner = adcc.NuclearGradientScanner(
         _h2o_scf(), method="adc2", n_singlets=3, state_index=1,
         follow="overlap", conv_tol=1e-9,
         gradient_kwargs={"eri_contraction": "full_ao"},
@@ -187,7 +187,7 @@ def test_overlap_tracking_follows_same_state_character():
 
 
 def test_overlap_tracking_continuous_under_small_displacement():
-    scanner = adcc.nuclear_gradient_scanner(
+    scanner = adcc.NuclearGradientScanner(
         _h2o_scf(), method="adc2", n_singlets=3, state_index=0,
         follow="overlap", conv_tol=1e-9,
         gradient_kwargs={"eri_contraction": "full_ao"},
@@ -207,7 +207,7 @@ def test_overlap_tracking_continuous_under_small_displacement():
 
 
 def test_overlap_tracking_below_min_score_raises():
-    scanner = adcc.nuclear_gradient_scanner(
+    scanner = adcc.NuclearGradientScanner(
         _h2o_scf(), method="adc2", n_singlets=3, state_index=0,
         follow="overlap", tracking_min_score=2.0, conv_tol=1e-9,
         gradient_kwargs={"eri_contraction": "full_ao"},
@@ -218,7 +218,7 @@ def test_overlap_tracking_below_min_score_raises():
 
 
 def test_overlap_tracking_ambiguous_gap_raises():
-    scanner = adcc.nuclear_gradient_scanner(
+    scanner = adcc.NuclearGradientScanner(
         _h2o_scf(), method="adc2", n_singlets=3, state_index=0,
         follow="overlap", tracking_min_gap=10.0, conv_tol=1e-9,
         gradient_kwargs={"eri_contraction": "full_ao"},
@@ -229,7 +229,7 @@ def test_overlap_tracking_ambiguous_gap_raises():
 
 
 def test_scf_guess_continuity_updates_previous_state():
-    scanner = adcc.nuclear_gradient_scanner(
+    scanner = adcc.NuclearGradientScanner(
         _h2o_scf(), method="mp2", gradient_kwargs={"eri_contraction": "full_ao"},
     )
 
@@ -269,7 +269,7 @@ def test_overlap_tracking_follows_reordered_root_by_overlap():
     # Prove that overlap tracking follows a physical state whose *positional*
     # index differs from the originally requested ``state_index``: the seeded
     # descriptor matches candidate #1, while the requested state_index is 0.
-    scanner = adcc.nuclear_gradient_scanner(
+    scanner = adcc.NuclearGradientScanner(
         _h2o_scf(), method="adc2", n_singlets=3, state_index=0,
         follow="overlap",
     )
@@ -327,18 +327,18 @@ def test_overlap_tracking_follows_reordered_root_by_overlap():
 ])
 def test_ground_state_level_other_than_two_is_rejected(kwargs):
     with pytest.raises(NotImplementedError, match="MP2 ground-state"):
-        adcc.nuclear_gradient_scanner(_h2o_scf(), **kwargs)
+        adcc.NuclearGradientScanner(_h2o_scf(), **kwargs)
 
 
 def test_invalid_follow_raises_eagerly_at_construction():
     with pytest.raises(ValueError, match="overlap.*index"):
-        adcc.nuclear_gradient_scanner(
+        adcc.NuclearGradientScanner(
             _h2o_scf(), method="adc2", n_singlets=2, follow="bogus",
         )
 
 
 def test_state_index_out_of_range_raises():
-    scanner = adcc.nuclear_gradient_scanner(
+    scanner = adcc.NuclearGradientScanner(
         _h2o_scf(), method="adc2", n_singlets=2, state_index=5,
         follow="index", conv_tol=1e-9,
         gradient_kwargs={"eri_contraction": "full_ao"},
@@ -348,7 +348,7 @@ def test_state_index_out_of_range_raises():
 
 
 def test_empty_excitations_raises_runtime_error():
-    scanner = adcc.nuclear_gradient_scanner(_h2o_scf(), method="adc2")
+    scanner = adcc.NuclearGradientScanner(_h2o_scf(), method="adc2")
     states = types.SimpleNamespace(excitations=[])
     with pytest.raises(RuntimeError, match="did not return any excited states"):
         scanner._select_excitation(states, scanner.base_mol.copy())
@@ -360,7 +360,7 @@ def test_empty_excitations_raises_runtime_error():
 ])
 def test_ground_state_run_adc_kwargs_emit_runtime_warning(kwargs):
     with pytest.warns(RuntimeWarning, match="Ignoring run_adc"):
-        adcc.nuclear_gradient_scanner(_h2o_scf(), **kwargs)
+        adcc.NuclearGradientScanner(_h2o_scf(), **kwargs)
 
 
 # ---------------------------------------------------------------------------
@@ -385,7 +385,7 @@ def test_safe_ao_ndarray_swallows_unavailable_channels():
 
 
 def test_tracking_score_records_unavailable_and_raises_when_both_missing():
-    scanner = adcc.nuclear_gradient_scanner(_h2o_scf(), method="adc2")
+    scanner = adcc.NuclearGradientScanner(_h2o_scf(), method="adc2")
     mol = scanner.base_mol.copy()
     previous = _TrackingDescriptor(mol=mol.copy(),
                                    transition_dm=None, state_diffdm=None)

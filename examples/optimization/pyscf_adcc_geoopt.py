@@ -26,7 +26,7 @@ mf = scf.RHF(mol)
 mf.conv_tol = 1e-11
 mf.conv_tol_grad = 1e-9
 
-scanner = adcc.nuclear_gradient_scanner(mf, method="mp2")
+scanner = adcc.NuclearGradientScanner(mf, method="mp2")
 
 
 def energy_and_gradient(mol_at_step):

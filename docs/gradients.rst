@@ -50,7 +50,7 @@ Geometry optimisation scanners
 ------------------------------
 
 For geometry optimisers it is useful to expose the whole PySCF/adcc/gradient
-loop as a single callable.  :py:func:`adcc.nuclear_gradient_scanner` takes a
+loop as a single callable.  :py:class:`adcc.NuclearGradientScanner` takes a
 configured PySCF SCF object as its template and accepts Cartesian coordinates in
 Bohr.  It returns ``(energy, gradient)`` in Hartree and Hartree/Bohr:
 
@@ -60,7 +60,7 @@ Bohr.  It returns ``(energy, gradient)`` in Hartree and Hartree/Bohr:
     scfres.conv_tol = 1e-11
     scfres.conv_tol_grad = 1e-9
 
-    scanner = adcc.nuclear_gradient_scanner(
+    scanner = adcc.NuclearGradientScanner(
         scfres,
         method="adc2",
         state_index=0,

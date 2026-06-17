@@ -85,7 +85,6 @@ class _TrackingDescriptor:
 class NuclearGradientScanner:
     """Callable scanner returning adcc energies and nuclear gradients.
 
-    Parameters are usually created through :func:`nuclear_gradient_scanner`.
     ``scfres`` is a configured PySCF SCF object.  Its molecule and SCF settings
     are used as the template for every scanner call; only the nuclear geometry
     changes.  Coordinates are Cartesian in Bohr, energies are Hartree and
@@ -102,7 +101,7 @@ class NuclearGradientScanner:
         self._pyscf = _import_pyscf()
         if not _is_pyscf_scf(self._pyscf, scfres):
             raise TypeError(
-                "nuclear_gradient_scanner expects a PySCF SCF object, e.g. "
+                "NuclearGradientScanner expects a PySCF SCF object, e.g. "
                 "scf.RHF(mol), as its first argument."
             )
         if not hasattr(scfres, "as_scanner"):
@@ -326,16 +325,6 @@ class NuclearGradientScanner:
         return score / weight
 
 
-def nuclear_gradient_scanner(*args, **kwargs) -> NuclearGradientScanner:
-    """Create a PySCF/adcc nuclear-gradient scanner.
-
-    The first argument is a configured PySCF SCF object.  Keyword arguments not
-    consumed by the scanner are forwarded unchanged to :func:`adcc.run_adc` for
-    excited-state targets.
-    """
-    return NuclearGradientScanner(*args, **kwargs)
-
-
 def density_overlap_score(old_dm, new_dm, s_cross, *, s_old=None, s_new=None,
                           use_abs=False) -> float:
     """Cosine-like overlap of AO-basis density matrices at two geometries.
@@ -400,7 +389,7 @@ def _import_pyscf():
         from pyscf import gto, scf
     except ImportError as exc:  # pragma: no cover - depends on optional dep
         raise ModuleNotFoundError(
-            "nuclear_gradient_scanner currently requires PySCF. Install PySCF "
+            "NuclearGradientScanner currently requires PySCF. Install PySCF "
             "and pass a configured PySCF SCF object."
         ) from exc
     return _PyscfModules(gto=gto, scf=scf)

@@ -37,11 +37,10 @@ from .orbital_response import (
 )
 from .amplitude_response import amplitude_relaxed_densities
 from .scanner import (ExcitedStateTarget, GroundStateTarget,
-                      NuclearGradientScanner, density_overlap_score,
-                      nuclear_gradient_scanner)
+                      NuclearGradientScanner, density_overlap_score)
 
 __all__ = [
-    "nuclear_gradient", "nuclear_gradient_scanner", "NuclearGradientScanner",
+    "nuclear_gradient", "NuclearGradientScanner",
     "GroundStateTarget", "ExcitedStateTarget", "density_overlap_score",
 ]
 

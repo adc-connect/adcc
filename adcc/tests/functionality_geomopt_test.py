@@ -22,7 +22,7 @@
 ## ---------------------------------------------------------------------
 """End-to-end geometry-optimisation smoke tests.
 
-These drive the :func:`adcc.nuclear_gradient_scanner` through geomeTRIC (via
+These drive the :class:`adcc.NuclearGradientScanner` through geomeTRIC (via
 PySCF's geomopt bridge) and are skipped cleanly when either optional dependency
 is unavailable.
 """
@@ -67,7 +67,7 @@ def test_ground_state_optimization_reaches_stationary_point():
     from pyscf.geomopt import as_pyscf_method, geometric_solver
 
     scfres = _h2o_scf()
-    scanner = adcc.nuclear_gradient_scanner(scfres, method="mp2")
+    scanner = adcc.NuclearGradientScanner(scfres, method="mp2")
 
     def energy_and_gradient(mol_at_step):
         return scanner(mol_at_step.atom_coords(unit="Bohr"))
@@ -87,7 +87,7 @@ def test_ground_state_optimization_reaches_stationary_point():
 def test_calc_new_drives_geometric_internal_engine():
     # Exercise the geomeTRIC custom-engine calc_new contract directly: flattened
     # Bohr coordinates in, energy plus flattened Hartree/Bohr gradient out.
-    scanner = adcc.nuclear_gradient_scanner(_h2o_scf(), method="mp2")
+    scanner = adcc.NuclearGradientScanner(_h2o_scf(), method="mp2")
     result = scanner.calc_new(scanner.initial_coords.ravel())
     assert set(result) == {"energy", "gradient"}
     assert np.isfinite(result["energy"])
@@ -98,7 +98,7 @@ def test_excited_state_optimization_tracks_state_across_steps():
     from pyscf.geomopt import as_pyscf_method, geometric_solver
 
     scfres = _h2o_scf()
-    scanner = adcc.nuclear_gradient_scanner(
+    scanner = adcc.NuclearGradientScanner(
         scfres, method="adc2", n_singlets=3, state_index=0,
         follow="overlap", conv_tol=1e-8,
         gradient_kwargs={"eri_contraction": "full_ao"},

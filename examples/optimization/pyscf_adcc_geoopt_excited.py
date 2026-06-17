@@ -5,7 +5,7 @@ This example reproduces the s-trans-butadiene setup used as a geometry
 optimisation showcase by Rehn & Dreuw (*J. Chem. Phys.* 150, 174110, 2019).
 It first relaxes the molecule on the MP2 ground-state surface and then uses that
 geometry as the starting point for an ADC(2) excited-state optimisation.  The
-:func:`adcc.nuclear_gradient_scanner` is built from a configured PySCF SCF
+:class:`adcc.NuclearGradientScanner` is built from a configured PySCF SCF
 object, so PySCF owns all SCF settings while adcc keyword arguments are passed
 unchanged to :func:`adcc.run_adc`.
 
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     # Stage 1: relax the ground-state structure at MP2 level.  This provides a
     # much better starting point for the subsequent state-specific optimisation
     # than the arbitrary input geometry.
-    mp2_scanner = adcc.nuclear_gradient_scanner(
+    mp2_scanner = adcc.NuclearGradientScanner(
         make_scf(mol),
         method="mp2",
         gradient_kwargs={"conv_tol": 1e-7},
@@ -99,7 +99,7 @@ if __name__ == "__main__":
     # Stage 2: optimise the lowest singlet ADC(2) state.  Requesting a few
     # singlet roots lets the scanner compare candidates and follow the same
     # physical state if root ordering changes along the optimisation.
-    adc_scanner = adcc.nuclear_gradient_scanner(
+    adc_scanner = adcc.NuclearGradientScanner(
         make_scf(mol_mp2),
         method="adc2",
         state_index=0,
