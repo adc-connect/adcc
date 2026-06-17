@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Excited-state geometry optimisation with adcc gradients.
 
-This example first relaxes water on the MP2 ground-state surface and then uses
-that geometry as the starting point for an ADC(2) excited-state optimisation.
-The :func:`adcc.nuclear_gradient_scanner` is built from a configured PySCF SCF
+This example reproduces the s-trans-butadiene setup used as a geometry
+optimisation showcase by Rehn & Dreuw (*J. Chem. Phys.* 150, 174110, 2019).
+It first relaxes the molecule on the MP2 ground-state surface and then uses that
+geometry as the starting point for an ADC(2) excited-state optimisation.  The
+:func:`adcc.nuclear_gradient_scanner` is built from a configured PySCF SCF
 object, so PySCF owns all SCF settings while adcc keyword arguments are passed
 unchanged to :func:`adcc.run_adc`.
 
@@ -52,13 +54,21 @@ def make_energy_gradient(scanner):
 
 # Use Bohr coordinates and keep molecular symmetry disabled so the optimizer's
 # Cartesian frame and the gradient frame stay identical during the scan.
+# s-trans-butadiene (C4H6), planar all-trans conformation.
 mol = gto.M(
     atom="""
-    O  0.000000000000  0.000000000000  0.000000000000
-    H  0.000000000000  0.000000000000  1.795239827225
-    H  1.693194615993  0.000000000000 -0.599043184453
+C     -3.4705405625     0.4297233578    -0.0000000000
+C     -1.1911517402    -0.6904425316     0.0000000000
+C      1.1911517402     0.6904425315     0.0000000000
+C      3.4705405625    -0.4297233578    -0.0000000000
+H     -3.6579517613     2.4744185046    -0.0000000000
+H     -5.2070544325    -0.6589625683     0.0000000000
+H     -1.0698622893    -2.7464869632     0.0000000000
+H      1.0698622893     2.7464869632     0.0000000000
+H      3.6579517613    -2.4744185046    -0.0000000000
+H      5.2070544325     0.6589625682     0.0000000000
     """,
-    basis="cc-pvdz",
+    basis="6-31G*",
     unit="Bohr",
     symmetry=False,
     verbose=0,
