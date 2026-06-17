@@ -1364,6 +1364,133 @@ void TensorImpl<N>::export_to(scalar_type* memptr, size_t size) const {
 }
 
 template <size_t N>
+void TensorImpl<N>::export_block(const std::vector<size_t>& start,
+                                 const std::vector<size_t>& end, scalar_type* memptr,
+                                 size_t size) const {
+  if (start.size() != N || end.size() != N) {
+    throw invalid_argument("start and end must each have exactly " + std::to_string(N) +
+                           " entries.");
+  }
+
+  // Compute requested sub-block extents and the row-major output strides.
+  std::array<size_t, N> ext;
+  std::array<size_t, N> out_strides;
+  size_t total = 1;
+  for (size_t i = 0; i < N; ++i) {
+    if (end[i] < start[i]) {
+      throw invalid_argument("end must not be smaller than start along any axis.");
+    }
+    if (end[i] > shape()[i]) {
+      throw invalid_argument("end exceeds the tensor shape along axis " +
+                             std::to_string(i) + ".");
+    }
+    ext[i] = end[i] - start[i];
+    total *= ext[i];
+  }
+  if (size != total) {
+    throw invalid_argument("The memory provided (== " + std::to_string(size) +
+                           ") does not agree with the requested sub-block size (== " +
+                           std::to_string(total) + ").");
+  }
+  if (total == 0) return;
+
+  out_strides[N - 1] = 1;
+  for (size_t i = N - 1; i > 0; --i) {
+    out_strides[i - 1] = out_strides[i] * ext[i];
+  }
+
+  // Default to zero: requested elements falling onto symmetry-forbidden or zero
+  // blocks must come out as zero.
+  std::fill(memptr, memptr + total, scalar_type(0));
+
+  lt::block_tensor_ctrl<N, scalar_type> ctrl(*libtensor_ptr());
+  const lt::block_index_space<N>& bis = libtensor_ptr()->get_bis();
+  lt::dimensions<N> bidims(bis.get_block_index_dims());
+
+  // This mirrors btod_export (the routine behind export_to / to_ndarray): for
+  // every non-zero canonical block, scatter the block data to all blocks of its
+  // symmetry orbit, applying the orbit permutation and scalar transform. The
+  // difference here is that we only write elements that fall inside the
+  // requested [start, end) window, and into a compact sub-block buffer.
+  lt::orbit_list<N, scalar_type> orbitlist(ctrl.req_const_symmetry());
+  lt::index<N> canon_idx;
+  for (auto oit = orbitlist.begin(); oit != orbitlist.end(); ++oit) {
+    orbitlist.get_index(oit, canon_idx);
+    if (ctrl.req_is_zero_block(canon_idx)) continue;
+    lt::orbit<N, scalar_type> obit(ctrl.req_const_symmetry(), canon_idx);
+
+    auto& cblock = ctrl.req_const_block(canon_idx);
+    {
+      lt::dense_tensor_rd_ctrl<N, scalar_type> blkctrl(cblock);
+      const scalar_type* sptr           = blkctrl.req_const_dataptr();
+      const lt::dimensions<N> cblk_dims = cblock.get_dims();
+
+      // Walk every block of the orbit (each is a destination block in the
+      // full dense tensor).
+      for (auto j = obit.begin(); j != obit.end(); ++j) {
+        lt::abs_index<N> aidx(obit.get_abs_index(j), bidims);
+        const lt::tensor_transf<N, scalar_type>& tr = obit.get_transf(j);
+        lt::index<N> dst_start(bis.get_block_start(aidx.get_index()));
+        lt::dimensions<N> dst_dims(bis.get_block_dims(aidx.get_index()));
+
+        // Does this destination block intersect the requested window?
+        std::array<size_t, N> lo, hi;
+        bool empty = false;
+        for (size_t i = 0; i < N; ++i) {
+          const size_t blo = dst_start[i];
+          const size_t bhi = dst_start[i] + dst_dims[i];
+          lo[i]            = std::max(blo, start[i]);
+          hi[i]            = std::min(bhi, end[i]);
+          if (lo[i] >= hi[i]) {
+            empty = true;
+            break;
+          }
+        }
+        if (empty) continue;
+
+        // Inverse permutation maps a destination (output) index back to the
+        // source (canonical block) index, exactly as btod_export::copy_block.
+        lt::permutation<N> inv_perm(tr.get_perm());
+        inv_perm.invert();
+        const scalar_type coeff = tr.get_scalar_tr().get_coeff();
+
+        std::array<size_t, N> isect_ext;
+        size_t isect_total = 1;
+        for (size_t i = 0; i < N; ++i) {
+          isect_ext[i] = hi[i] - lo[i];
+          isect_total *= isect_ext[i];
+        }
+
+        for (size_t flat = 0; flat < isect_total; ++flat) {
+          // Decode flat -> per-axis destination index within the intersection.
+          lt::index<N> dst_in_block;  // index within the destination block
+          size_t out_abs = 0;
+          for (size_t i = 0; i < N; ++i) {
+            size_t stride = 1;
+            for (size_t k = i + 1; k < N; ++k) stride *= isect_ext[k];
+            const size_t off    = (flat / stride) % isect_ext[i];
+            const size_t abs_ix = lo[i] + off;  // absolute tensor index on axis i
+            dst_in_block[i]     = abs_ix - dst_start[i];
+            out_abs += (abs_ix - start[i]) * out_strides[i];
+          }
+
+          // Map destination in-block index to the source (canonical) in-block
+          // index via the inverse permutation.
+          lt::index<N> src_in_block(dst_in_block);
+          src_in_block.permute(inv_perm);
+          const size_t src_abs =
+                lt::abs_index<N>(src_in_block, cblk_dims).get_abs_index();
+          memptr[out_abs] = coeff * sptr[src_abs];
+        }
+      }
+
+      blkctrl.ret_const_dataptr(sptr);
+    }
+    ctrl.ret_const_block(canon_idx);
+  }
+}
+
+template <size_t N>
 void TensorImpl<N>::import_from(const scalar_type* memptr, size_t size,
                                 scalar_type tolerance, bool symmetry_check) {
   if (this->size() != size) {

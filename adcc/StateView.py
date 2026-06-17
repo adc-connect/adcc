@@ -40,6 +40,11 @@ class StateView:
         return self._parent_state.excitation_energy[self.index]
 
     @property
+    def total_energy(self) -> float:
+        """Total energy (ground state + excitation) of this state"""
+        return self._parent_state._total_energy(self.index)
+
+    @property
     def excitation_energy_uncorrected(self):
         """Excitation energy without any corrections in atomic units"""
         return self._parent_state._excitation_energy_uncorrected[self.index]
