@@ -38,33 +38,33 @@ from .util import (
 )
 
 
-def tdm_isr0(mp, amplitude, intermediates):
+def tdm_isr0(ground_state, amplitude, intermediates):
     # C is either c(ore) or o(ccupied)
-    C = b.c if mp.has_core_occupied_space else b.o
+    C = b.c if ground_state.has_core_occupied_space else b.o
     check_singles_amplitudes([C, b.v], amplitude)
     u1 = amplitude.ph
 
     # Transition density matrix for (CVS-)ISR(0)
-    dm = OneParticleDensity(mp, symmetry=OperatorSymmetry.NOSYMMETRY)
+    dm = OneParticleDensity(ground_state, symmetry=OperatorSymmetry.NOSYMMETRY)
     dm[b.v + C] = u1.transpose()
     return dm
 
 
-def tdm_isr1(mp, amplitude, intermediates):
-    dm = tdm_isr0(mp, amplitude, intermediates)  # Get ISR(0) result
+def tdm_isr1(ground_state, amplitude, intermediates):
+    dm = tdm_isr0(ground_state, amplitude, intermediates)  # Get ISR(0) result
     # isr1_dp0_ov
-    dm.ov = -einsum("ijab,jb->ia", mp.t2(b.oovv), amplitude.ph)
+    dm.ov = -einsum("ijab,jb->ia", ground_state.t2(b.oovv), amplitude.ph)
     return dm
 
 
-def tdm_cvs_isr2(mp, amplitude, intermediates):
+def tdm_cvs_isr2(ground_state, amplitude, intermediates):
     # Get CVS-ISR(1) result (same as CVS-ISR(0))
-    dm = tdm_isr0(mp, amplitude, intermediates)
+    dm = tdm_isr0(ground_state, amplitude, intermediates)
     check_doubles_amplitudes([b.o, b.c, b.v, b.v], amplitude)
     u1, u2 = amplitude.ph, amplitude.pphh
 
-    t2 = mp.t2(b.oovv)
-    p0 = mp.second_order_dm_correction(apply_cvs=True)
+    t2 = ground_state.t2(b.oovv)
+    p0 = ground_state.second_order_dm_correction(apply_cvs=True)
 
     # Compute CVS-ISR(2) tdm
     dm.oc = (  # cvs_isr2_dp0_oc
@@ -77,14 +77,14 @@ def tdm_cvs_isr2(mp, amplitude, intermediates):
     return dm
 
 
-def tdm_isr2(mp, amplitude, intermediates):
-    dm = tdm_isr1(mp, amplitude, intermediates)  # Get ISR(1) result
+def tdm_isr2(ground_state, amplitude, intermediates):
+    dm = tdm_isr1(ground_state, amplitude, intermediates)  # Get ISR(1) result
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
     u1, u2 = amplitude.ph, amplitude.pphh
 
-    t2 = mp.t2(b.oovv)
-    td2 = mp.td2(b.oovv)
-    p0 = mp.mp2_diffdm
+    t2 = ground_state.t2(b.oovv)
+    td2 = ground_state.td2(b.oovv)
+    p0 = ground_state.second_order_dm_correction()
 
     # Compute ISR(2) tdm
     dm.oo = (  # isr2_dp0_oo
@@ -104,24 +104,24 @@ def tdm_isr2(mp, amplitude, intermediates):
     return dm
 
 
-def tdm_isr3d(mp, amplitude, intermediates):
-    dm = tdm_isr2(mp, amplitude, intermediates)  # Get ISR(2) result
+def tdm_isr3d(ground_state, amplitude, intermediates):
+    dm = tdm_isr2(ground_state, amplitude, intermediates)  # Get ISR(2) result
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
 
     ul1, ul2 = amplitude.ph, amplitude.pphh  # adc amplitudes
 
-    t1_2 = mp.diffdm(level=2).ov
-    t2_1 = mp.t2(b.oovv)
-    t2_2 = mp.td2(b.oovv)
-    t3_2 = mp.tt2(b.ooovvv)
-    t2_3 = mp.td3(b.oovv)
+    t1_2 = ground_state.diffdm(level=2).ov
+    t2_1 = ground_state.t2(b.oovv)
+    t2_2 = ground_state.td2(b.oovv)
+    t3_2 = ground_state.tt2(b.ooovvv)
+    t2_3 = ground_state.td3(b.oovv)
 
-    p0_3_ov = mp.mp3_dm_correction.ov
-    p0_3_oo = mp.mp3_dm_correction.oo
-    p0_3_vv = mp.mp3_dm_correction.vv
+    p0_3_ov = ground_state.third_order_dm_correction().ov
+    p0_3_oo = ground_state.third_order_dm_correction().oo
+    p0_3_vv = ground_state.third_order_dm_correction().vv
 
-    p0_2_oo = mp.mp2_dm_correction.oo
-    p0_2_vv = mp.mp2_dm_correction.vv
+    p0_2_oo = ground_state.second_order_dm_correction().oo
+    p0_2_vv = ground_state.second_order_dm_correction().vv
 
     # Compute ISR(3d) tdm
     dm.oo += (
@@ -170,8 +170,8 @@ def tdm_isr3d(mp, amplitude, intermediates):
     return dm
 
 
-def tdm_isr3(mp, amplitude, intermediates):
-    dm = tdm_isr3d(mp, amplitude, intermediates)
+def tdm_isr3(ground_state, amplitude, intermediates):
+    dm = tdm_isr3d(ground_state, amplitude, intermediates)
     try:
         check_triples_amplitudes([b.o, b.o, b.o, b.v, b.v, b.v], amplitude)
     except ValueError:

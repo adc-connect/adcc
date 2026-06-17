@@ -195,7 +195,7 @@ block_pphh_pphh_1 = block_pphh_pphh_0
 # 2nd order main
 #
 def block_ph_ph_2(ground_state, op):
-    p0 = ground_state.mp2_diffdm
+    p0 = ground_state.second_order_dm_correction()
     t2 = ground_state.t2(b.oovv)
 
     def apply(ampl):
@@ -248,7 +248,7 @@ def block_ph_pphh_2(ground_state, op):
         ground_state.t2oo,
         ground_state.t2oo).evaluate()
 
-    p0_2 = ground_state.mp2_dm_correction
+    p0_2 = ground_state.second_order_dm_correction()
     p0_2_vv, p0_2_oo = p0_2.vv, p0_2.oo
 
     def apply(ampl):
@@ -352,7 +352,7 @@ def block_pphh_ph_2(ground_state, op):
         ground_state.t2oo,
         ground_state.t2oo).evaluate()
 
-    p0_2 = ground_state.mp2_dm_correction
+    p0_2 = ground_state.second_order_dm_correction()
     p0_2_vv, p0_2_oo = p0_2.vv, p0_2.oo
 
     def apply(ampl):
@@ -471,10 +471,10 @@ def block_ph_ph_3(ground_state, op):
         ground_state.t2oo,
         ground_state.t2oo).evaluate()
 
-    p0_2 = ground_state.mp2_dm_correction
+    p0_2 = ground_state.second_order_dm_correction()
     p0_2_vv, p0_2_oo = p0_2.vv, p0_2.oo
 
-    p0_3 = ground_state.mp3_dm_correction
+    p0_3 = ground_state.third_order_dm_correction()
     p0_3_vv, p0_3_ov, p0_3_oo = p0_3.vv, p0_3.ov, p0_3.oo
 
     def apply(ampl):

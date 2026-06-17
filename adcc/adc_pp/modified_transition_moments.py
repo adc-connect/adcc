@@ -30,29 +30,29 @@ from adcc.Intermediates import Intermediates
 from adcc.LazyMp import LazyMp
 
 
-def mtm_isr0(mp, op, intermediates):
+def mtm_isr0(ground_state, op, intermediates):
     f1 = op.vo.transpose()
     return AmplitudeVector(ph=f1)
 
 
-def mtm_isr1(mp, op, intermediates):
-    ampl = mtm_isr0(mp, op, intermediates)
-    f1 = - 1.0 * einsum("ijab,jb->ia", mp.t2(b.oovv), op.ov)
+def mtm_isr1(ground_state, op, intermediates):
+    ampl = mtm_isr0(ground_state, op, intermediates)
+    f1 = - 1.0 * einsum("ijab,jb->ia", ground_state.t2(b.oovv), op.ov)
     return ampl + AmplitudeVector(ph=f1)
 
 
-def mtm_isr2(mp, op, intermediates):
-    t2 = mp.t2(b.oovv)
-    p0 = mp.mp2_diffdm
+def mtm_isr2(ground_state, op, intermediates):
+    t2 = ground_state.t2(b.oovv)
+    p0 = ground_state.second_order_dm_correction()
 
-    ampl = mtm_isr1(mp, op, intermediates)
+    ampl = mtm_isr1(ground_state, op, intermediates)
     f1 = (
         + 0.5 * einsum("ijab,jkbc,ck->ia", t2, t2, op.vo)
         + 0.5 * einsum("ij,aj->ia", p0.oo, op.vo)
         - 0.5 * einsum("bi,ab->ia", op.vo, p0.vv)
         + 1.0 * einsum("ib,ab->ia", p0.ov, op.vv)
         - 1.0 * einsum("ji,ja->ia", op.oo, p0.ov)
-        - 1.0 * einsum("ijab,jb->ia", mp.td2(b.oovv), op.ov)
+        - 1.0 * einsum("ijab,jb->ia", ground_state.td2(b.oovv), op.ov)
     )
     f2 = (
         + 1.0 * einsum("ijac,bc->ijab", t2, op.vv).antisymmetrise(2, 3)
@@ -61,39 +61,43 @@ def mtm_isr2(mp, op, intermediates):
     return ampl + AmplitudeVector(ph=f1, pphh=f2)
 
 
-def mtm_cvs_isr0(mp, op, intermediates):
+def mtm_cvs_isr0(ground_state, op, intermediates):
     f1 = op.vc.transpose()
     return AmplitudeVector(ph=f1)
 
 
-def mtm_cvs_isr2(mp, op, intermediates):
+def mtm_cvs_isr2(ground_state, op, intermediates):
 
-    ampl = mtm_cvs_isr0(mp, op, intermediates)
-    cvs_p0 = mp.second_order_dm_correction(apply_cvs=True)
+    ampl = mtm_cvs_isr0(ground_state, op, intermediates)
+    cvs_p0 = ground_state.second_order_dm_correction(apply_cvs=True)
     f1 = (
         - 0.5 * einsum("bI,ab->Ia", op.vc, cvs_p0.vv)
         - 1.0 * einsum("jI,ja->Ia", op.oc, cvs_p0.ov)
     )
-    f2 = (1 / sqrt(2)) * einsum("kI,kjab->jIab", op.oc, mp.t2(b.oovv))
+    f2 = (1 / sqrt(2)) * einsum("kI,kjab->jIab", op.oc, ground_state.t2(b.oovv))
     return ampl + AmplitudeVector(ph=f1, pphh=f2)
 
 
-def mtm_isr3(mp, op, intermediates):
+def mtm_isr3(ground_state, op, intermediates):
 
-    f1 = mtm_isr2(mp, op, intermediates).ph
-    f2 = mtm_isr2(mp, op, intermediates).pphh
-    # mp amplitudes
-    t1_2 = mp.diffdm(level=2).ov
-    t2_1 = mp.t2(b.oovv)
-    t2_3 = mp.td3(b.oovv)
-    t2_2 = mp.td2(b.oovv)
-    t3_2 = mp.tt2(b.ooovvv)
-    t2sq = einsum("ikac,jkbc->iajb", mp.t2oo, mp.t2oo).evaluate()
+    f1 = mtm_isr2(ground_state, op, intermediates).ph
+    f2 = mtm_isr2(ground_state, op, intermediates).pphh
+    # ground_state amplitudes
+    t1_2 = ground_state.diffdm(level=2).ov
+    t2_1 = ground_state.t2(b.oovv)
+    t2_3 = ground_state.td3(b.oovv)
+    t2_2 = ground_state.td2(b.oovv)
+    t3_2 = ground_state.tt2(b.ooovvv)
+    t2sq = einsum(
+        "ikac,jkbc->iajb",
+        ground_state.t2oo,
+        ground_state.t2oo,
+    ).evaluate()
 
     d_vv, d_vo, d_ov, d_oo = op.vv, op.vo, op.ov, op.oo  # density operators
 
-    p0_3 = mp.mp3_dm_correction
-    p0_2 = mp.mp2_dm_correction
+    p0_3 = ground_state.third_order_dm_correction()
+    p0_2 = ground_state.second_order_dm_correction()
     p0_3_oo, p0_3_vv, p0_3_ov = p0_3.oo, p0_3.vv, p0_3.ov
     p0_2_oo, p0_2_vv = p0_2.oo, p0_2.vv
 
@@ -158,7 +162,7 @@ def mtm_isr3(mp, op, intermediates):
     return AmplitudeVector(ph=f1, pphh=f2)
 
 
-def mtm_cvs_isr3(mp, op, intermediates):
+def mtm_cvs_isr3(ground_state, op, intermediates):
     raise NotImplementedError("CVS-ADC(3) is not implemented yet")
 
 

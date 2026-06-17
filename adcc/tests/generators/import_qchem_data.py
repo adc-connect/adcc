@@ -1,4 +1,4 @@
-	from adcc.AdcMethod import AdcMethod, AdcType
+from adcc.AdcMethod import AdcMethod, AdcType
 from adcc.hdf5io import _extract_dataset
 
 from collections.abc import Hashable

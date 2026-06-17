@@ -372,7 +372,8 @@ class TestLazyMp:
 
             assert_allclose(mp3diff[label].to_ndarray(),
                             refmp["mp3"]["dm_" + label], atol=1e-12)
-        assert 'mp3_dm_correction' in instances.get(system, case).timer.tasks
+            assert "third_order_dm_correction/False" in (
+                instances.get(system, case).timer.tasks)
 
     @pytest.mark.parametrize("system,case",
                              [(s, c) for s, c in cases if "cvs" not in c])

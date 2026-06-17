@@ -38,20 +38,20 @@ from .util import (
 )
 
 
-def diffdm_isr0(mp, amplitude, intermediates):
+def diffdm_isr0(ground_state, amplitude, intermediates):
     # C is either c(ore) or o(ccupied)
-    C = b.c if mp.has_core_occupied_space else b.o
+    C = b.c if ground_state.has_core_occupied_space else b.o
     check_singles_amplitudes([C, b.v], amplitude)
     u1 = amplitude.ph
 
-    dm = OneParticleDensity(mp, symmetry=OperatorSymmetry.HERMITIAN)
+    dm = OneParticleDensity(ground_state, symmetry=OperatorSymmetry.HERMITIAN)
     dm[C + C] = -einsum("ia,ja->ij", u1, u1)
     dm.vv = einsum("ia,ib->ab", u1, u1)
     return dm
 
 
-def diffdm_isr1(mp, amplitude, intermediates):
-    dm = diffdm_isr0(mp, amplitude, intermediates)  # Get ISR(0) result
+def diffdm_isr1(ground_state, amplitude, intermediates):
+    dm = diffdm_isr0(ground_state, amplitude, intermediates)  # Get ISR(0) result
 
     try:
         # ISR(1)-d
@@ -64,13 +64,13 @@ def diffdm_isr1(mp, amplitude, intermediates):
     return dm
 
 
-def diffdm_isr2(mp, amplitude, intermediates):
-    dm = diffdm_isr1(mp, amplitude, intermediates)  # Get ISR(1) result
+def diffdm_isr2(ground_state, amplitude, intermediates):
+    dm = diffdm_isr1(ground_state, amplitude, intermediates)  # Get ISR(1) result
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
     u1, u2 = amplitude.ph, amplitude.pphh
 
-    t2 = mp.t2(b.oovv)
-    p0 = mp.mp2_diffdm
+    t2 = ground_state.t2(b.oovv)
+    p0 = ground_state.second_order_dm_correction()
     p1_oo = dm.oo.evaluate()  # ISR(1) diffdm
     p1_vv = dm.vv.evaluate()  # ISR(1) diffdm
 
@@ -113,8 +113,8 @@ def diffdm_isr2(mp, amplitude, intermediates):
     return dm
 
 
-def diffdm_cvs_isr1(mp, amplitude, intermediates):
-    dm = diffdm_isr0(mp, amplitude, intermediates)  # Get ISR(0) result
+def diffdm_cvs_isr1(ground_state, amplitude, intermediates):
+    dm = diffdm_isr0(ground_state, amplitude, intermediates)  # Get ISR(0) result
 
     try:
         # ISR(1)-d
@@ -128,13 +128,14 @@ def diffdm_cvs_isr1(mp, amplitude, intermediates):
     return dm
 
 
-def diffdm_cvs_isr2(mp, amplitude, intermediates):
-    dm = diffdm_cvs_isr1(mp, amplitude, intermediates)  # Get cvs-ISR(1) result
+def diffdm_cvs_isr2(ground_state, amplitude, intermediates):
+    dm = diffdm_cvs_isr1(ground_state,
+                         amplitude, intermediates)  # Get cvs-ISR(1) result
     check_doubles_amplitudes([b.o, b.c, b.v, b.v], amplitude)
     u1, u2 = amplitude.ph, amplitude.pphh
 
-    t2 = mp.t2(b.oovv)
-    p0 = mp.second_order_dm_correction(apply_cvs=True)
+    t2 = ground_state.t2(b.oovv)
+    p0 = ground_state.second_order_dm_correction(apply_cvs=True)
     p1_vv = dm.vv.evaluate()  # ISR(1) diffdm
 
     # Zeroth order doubles contributions
@@ -163,18 +164,19 @@ def diffdm_cvs_isr2(mp, amplitude, intermediates):
     return dm
 
 
-def diffdm_isr3d(mp, amplitude, intermediates):
-    dm = diffdm_isr2(mp, amplitude, intermediates)  # starts from ADC2 values
+def diffdm_isr3d(ground_state, amplitude, intermediates):
+    dm = diffdm_isr2(ground_state,
+                     amplitude, intermediates)  # starts from ADC2 values
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
     ur1, ur2 = amplitude.ph, amplitude.pphh  # ADC amplitudes
 
-    t2_1 = mp.t2(b.oovv)  # first order doubles
-    t1_2 = mp.diffdm(level=2).ov  # second order singles
-    t2_2 = mp.td2(b.oovv)  # second order doubles
-    t3_2 = mp.tt2(b.ooovvv)  # second order triples
+    t2_1 = ground_state.t2(b.oovv)  # first order doubles
+    t1_2 = ground_state.diffdm(level=2).ov  # second order singles
+    t2_2 = ground_state.td2(b.oovv)  # second order doubles
+    t3_2 = ground_state.tt2(b.ooovvv)  # second order triples
 
-    p0_3 = mp.mp3_dm_correction  # third order dm correction
-    p0_2 = mp.mp2_dm_correction  # second order dm correction
+    p0_3 = ground_state.third_order_dm_correction()  # third order dm correction
+    p0_2 = ground_state.second_order_dm_correction()  # second order dm correction
 
     dm.oo += (  # adc3_p_oo
         + 2 * (
@@ -327,8 +329,8 @@ def diffdm_isr3d(mp, amplitude, intermediates):
     return dm
 
 
-def diffdm_isr3(mp, amplitude, intermediates):
-    dm = diffdm_isr3d(mp, amplitude, intermediates)
+def diffdm_isr3(ground_state, amplitude, intermediates):
+    dm = diffdm_isr3d(ground_state, amplitude, intermediates)
     try:
         check_triples_amplitudes([b.o, b.o, b.o, b.v, b.v, b.v], amplitude)
     except ValueError:

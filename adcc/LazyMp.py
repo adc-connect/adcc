@@ -174,7 +174,7 @@ class LazyMp(GroundState):
                                       f"space{space}")
         hf = self.reference_state
         t2_1 = self.t2(b.oovv)
-        t1_2 = self.mp2_diffdm.ov
+        t1_2 = self.ts2(b.ov)
         t2_2 = self.td2(b.oovv)
         t3_2 = self.tt2(b.ooovvv)
 
@@ -283,3 +283,10 @@ class LazyMp(GroundState):
     @property
     def mp2_dipole_moment(self):
         return self.dipole_moment(level=2)
+
+    @property
+    def mp3_diffdm(self):
+        """
+        Return thye MP3 difference density in the MO basis
+        """
+        return self.diffdm(3)

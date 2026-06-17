@@ -26,7 +26,7 @@ from .OneParticleDensity import OneParticleDensity
 from .ReferenceState import ReferenceState
 from .TwoParticleDensity import TwoParticleDensity
 from .functions import direct_sum, einsum, zeros_like
-from .misc import cached_member_function
+from .misc import cached_member_function, cached_property
 from .timings import Timer
 from . import block as b
 
@@ -91,6 +91,13 @@ class GroundState:
             f"{self.__class__.__name__} class."
         )
 
+    def td3(self, space: str) -> libadcc.Tensor:
+        """Third-order ground state doubles amplitudes"""
+        raise NotImplementedError(
+            "Third-order ground state doubles amplitudes not implemented on "
+            f"{self.__class__.__name__} class. "
+        )
+
     def tt2(self, space: str) -> libadcc.Tensor:
         """Second-order ground state triples amplitudes"""
         raise NotImplementedError(
@@ -125,7 +132,10 @@ class GroundState:
         elif level == 2:
             return self.second_order_dm_correction(apply_cvs=apply_cvs)
         elif level == 3:
-            return self.second_order_dm_correction + self.third_order_dm_correction
+            return (
+                self.second_order_dm_correction()
+                + self.third_order_dm_correction()
+            )
         else:
             raise NotImplementedError(
                 "Only second-order density corection is implemented. "
@@ -323,7 +333,8 @@ class GroundState:
         return ret.evaluate()
 
     @cached_member_function()
-    def third_order_dm_correction(self, apply_cvs: bool = False) -> OneParticleOperator:
+    def third_order_dm_correction(self,
+                                  apply_cvs: bool = False) -> OneParticleDensity:
         """
         Return the third order correction to the ground state density.
         """

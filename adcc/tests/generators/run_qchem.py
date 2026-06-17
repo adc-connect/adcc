@@ -493,6 +493,7 @@ _method_dict = {
     "adc2": "adc(2)",
     "adc2x": "adc(2)-x",
     "adc3": "adc(3)",
+    "adc4": "adc(4)",
     "cvs-adc0": "cvs-adc(0)",
     "cvs-adc1": "cvs-adc(1)",
     "cvs-adc2": "cvs-adc(2)",

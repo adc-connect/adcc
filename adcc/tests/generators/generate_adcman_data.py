@@ -16,7 +16,7 @@ _methods = {
     "pp": ("adc0", "adc1", "adc2", "adc2x", "adc3")
 }
 _small_cases_methods = {
-    "pp": _methods["pp"] + ("adc4",)
+    "pp": _methods["pp"]
 }
 # Since it seems not possible to only perform an adcman MPn calculation,
 # the ground state data has to be extracted from an adc(n) calculation.

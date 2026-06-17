@@ -36,19 +36,19 @@ from .util import (
 )
 
 
-def s2s_tdm_isr0(mp, amplitude_l, amplitude_r, intermediates):
+def s2s_tdm_isr0(ground_state, amplitude_l, amplitude_r, intermediates):
     check_singles_amplitudes([b.o, b.v], amplitude_l, amplitude_r)
     ul1 = amplitude_l.ph
     ur1 = amplitude_r.ph
 
-    dm = OneParticleDensity(mp, symmetry=OperatorSymmetry.NOSYMMETRY)
+    dm = OneParticleDensity(ground_state, symmetry=OperatorSymmetry.NOSYMMETRY)
     dm.oo = -einsum('ja,ia->ij', ul1, ur1)
     dm.vv = einsum('ia,ib->ab', ul1, ur1)
     return dm
 
 
-def s2s_tdm_isr1(mp, amplitude_l, amplitude_r, intermediates):
-    dm = s2s_tdm_isr0(mp, amplitude_l, amplitude_r, intermediates)
+def s2s_tdm_isr1(ground_state, amplitude_l, amplitude_r, intermediates):
+    dm = s2s_tdm_isr0(ground_state, amplitude_l, amplitude_r, intermediates)
 
     try:
         check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude_l, amplitude_r)
@@ -62,15 +62,15 @@ def s2s_tdm_isr1(mp, amplitude_l, amplitude_r, intermediates):
     return dm
 
 
-def s2s_tdm_isr2(mp, amplitude_l, amplitude_r, intermediates):
+def s2s_tdm_isr2(ground_state, amplitude_l, amplitude_r, intermediates):
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude_l, amplitude_r)
-    dm = s2s_tdm_isr1(mp, amplitude_l, amplitude_r, intermediates)
+    dm = s2s_tdm_isr1(ground_state, amplitude_l, amplitude_r, intermediates)
 
     ul1, ul2 = amplitude_l.ph, amplitude_l.pphh
     ur1, ur2 = amplitude_r.ph, amplitude_r.pphh
 
-    t2 = mp.t2(b.oovv)
-    p0 = mp.mp2_diffdm
+    t2 = ground_state.t2(b.oovv)
+    p0 = ground_state.second_order_dm_correction()
     p1_oo = dm.oo.evaluate()  # ADC(1) tdm
     p1_vv = dm.vv.evaluate()  # ADC(1) tdm
 
@@ -120,27 +120,27 @@ def s2s_tdm_isr2(mp, amplitude_l, amplitude_r, intermediates):
     return dm
 
 
-def s2s_tdm_isr3d(mp, amplitude_l, amplitude_r, intermediates):
+def s2s_tdm_isr3d(ground_state, amplitude_l, amplitude_r, intermediates):
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude_l, amplitude_r)
-    dm = s2s_tdm_isr2(mp, amplitude_l, amplitude_r, intermediates)
+    dm = s2s_tdm_isr2(ground_state, amplitude_l, amplitude_r, intermediates)
 
     # ADC amplitudes
     ul1, ul2 = amplitude_l.ph, amplitude_l.pphh
     ur1, ur2 = amplitude_r.ph, amplitude_r.pphh
 
-    t2_1 = mp.t2(b.oovv)
-    t1_2 = mp.diffdm(level=2).ov
-    t2_2 = mp.td2(b.oovv)
-    t3_2 = mp.tt2(b.ooovvv)
+    t2_1 = ground_state.t2(b.oovv)
+    t1_2 = ground_state.diffdm(level=2).ov
+    t2_2 = ground_state.td2(b.oovv)
+    t3_2 = ground_state.tt2(b.ooovvv)
 
     # mp2 second order correction
-    p0_2_oo = mp.mp2_diffdm.oo
-    p0_2_vv = mp.mp2_diffdm.vv
+    p0_2_oo = ground_state.second_order_dm_correction().oo
+    p0_2_vv = ground_state.second_order_dm_correction().vv
 
     # third order correction
-    p0_3_oo = mp.mp3_dm_correction.oo
-    p0_3_vv = mp.mp3_dm_correction.vv
-    p0_3_ov = mp.mp3_dm_correction.ov
+    p0_3_oo = ground_state.third_order_dm_correction().oo
+    p0_3_vv = ground_state.third_order_dm_correction().vv
+    p0_3_ov = ground_state.third_order_dm_correction().ov
 
     dm.oo += (
         - 2 * einsum("ib,jb->ij", einsum("ka,ikab->ib", ul1, ur2), t1_2)
@@ -456,8 +456,8 @@ def s2s_tdm_isr3d(mp, amplitude_l, amplitude_r, intermediates):
     return dm
 
 
-def s2s_tdm_isr3(mp, amplitude_l, amplitude_r, intermediates):
-    dm = s2s_tdm_isr3d(mp, amplitude_l, amplitude_r, intermediates)
+def s2s_tdm_isr3(ground_state, amplitude_l, amplitude_r, intermediates):
+    dm = s2s_tdm_isr3d(ground_state, amplitude_l, amplitude_r, intermediates)
     try:
         check_triples_amplitudes([b.o, b.o, b.o, b.v, b.v, b.v],
                                  amplitude_l, amplitude_r)

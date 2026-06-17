@@ -54,7 +54,8 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
         gs_data[f"{gs}3/m_3_plus"] = ground_state.m_3_plus.to_ndarray()
         gs_data[f"{gs}3/m_3_minus"] = ground_state.m_3_minus.to_ndarray()
         if not only_full_mode:
-            gs_data[f"{gs}3/td_o1o1v1v1"] = ground_state.td3("o1o1v1v1").to_ndarray()
+            gs_data[f"{gs}3/td_o1o1v1v1"] = (
+                ground_state.td3("o1o1v1v1").to_ndarray())
     # MP2 density: MO basis
     diffdm = ground_state.diffdm(2, apply_cvs=False)
     for block in diffdm.blocks_nonzero:
@@ -78,9 +79,9 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
 
         for block in dm_blocks:
             blk = block.split("_")[-1]
-            gs_data[f"{gs}3/{block}"] = ground_state.mp3_diffdm[blk].to_ndarray()
+            gs_data[f"{gs}3/{block}"] = ground_state.diffdm(3)[blk].to_ndarray()
         # MP3 density: AO basis
-        dm_bb_a, dm_bb_b = ground_state.mp3_diffdm.to_ao_basis(
+        dm_bb_a, dm_bb_b = ground_state.diffdm(3).to_ao_basis(
             ground_state.reference_state
         )
         gs_data[f"{gs}3/dm_bb_a"] = dm_bb_a.to_ndarray()
