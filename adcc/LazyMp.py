@@ -340,13 +340,6 @@ class LazyMp(GroundState):
     def mp2_dipole_moment(self):
         return self.dipole_moment(level=2)
 
-    @property
-    def mp3_diffdm(self):
-        """
-        Return the MP3 difference density in the MO basis.
-        """
-        return self.diffdm(3)
-
     @cached_member_function()
     def third_order_dm_correction(self, apply_cvs: bool = False
                                   ) -> OneParticleDensity:

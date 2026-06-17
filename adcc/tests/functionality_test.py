@@ -89,12 +89,18 @@ class TestFunctionality:
                 #      are implemented
                 assert res.ground_state.energy_correction(3) == \
                     approx(refmp["mp3"]["energy"])
+            else:
+                with pytest.raises(NotImplementedError):
+                    res.ground_state.energy_correction(3)
         if res.method.level.to_int() >= 4:
             if not res.method.is_core_valence_separated:
-                # TODO The latter check can be removed once CVS-MP3 energies
+                # TODO The latter check can be removed once CVS-MP4 energies
                 #      are implemented
                 assert res.ground_state.energy_correction(4) == \
                     approx(refmp["mp4"]["energy"])
+            else:
+                with pytest.raises(NotImplementedError):
+                    res.ground_state.energy_correction(4)
 
         for i in range(n_ref):
             # Computing the dipole moment implies a lot of cancelling in the

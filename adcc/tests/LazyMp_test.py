@@ -147,8 +147,7 @@ class TestLazyMp:
 
     # MP4 energy not implemented for CVS
     @pytest.mark.parametrize("system,case", non_cvs_small_cases)
-    # no reference data yet for adcman
-    @pytest.mark.parametrize("generator", ["adcc"])
+    @pytest.mark.parametrize("generator", generators)
     def test_mp4_energy(self, system: str, case: str, generator: str,
                         instances: LazyMpCache):
         refmp = testdata_cache._load_data(

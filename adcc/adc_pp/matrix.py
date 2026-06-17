@@ -1105,7 +1105,7 @@ def adc4_m11(hf, mp, intermediates):
     t3_2 = mp.tt2(b.ooovvv)
 
     # MP3 diffdm
-    p0 = mp.mp3_diffdm
+    p0 = mp.diffdm(3)
     p0_vv, p0_ov, p0_oo = p0.vv, p0.ov, p0.oo
 
     t2sq = intermediates.t2sq
