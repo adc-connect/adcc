@@ -22,15 +22,16 @@
 ## ---------------------------------------------------------------------
 """Geometry-optimisation scanner for adcc nuclear gradients.
 
-The scanner owns the per-geometry PySCF -> adcc -> gradient loop.  It is
-intentionally PySCF-only for now, because the production direct nuclear-gradient
-path is PySCF-only as well.
+The scanner owns the per-geometry PySCF -> adcc -> gradient loop.  Users pass a
+configured PySCF SCF object, whose settings define how SCF is performed at every
+geometry.  adcc-specific keyword arguments are forwarded unchanged to
+:func:`adcc.run_adc` for excited-state targets.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 import warnings
 
 import numpy as np
@@ -52,36 +53,14 @@ class ExcitedStateTarget:
 
     method: str
     state_index: int = 0
-    n_states: Optional[int] = None
-    kind: str = "any"
-    n_singlets: Optional[int] = None
-    n_triplets: Optional[int] = None
-    n_spin_flip: Optional[int] = None
-    core_orbitals: Any = None
-    frozen_core: Any = None
-    frozen_virtual: Any = None
-    conv_tol: Optional[float] = None
-    environment: Any = None
-    solverargs: dict[str, Any] = field(default_factory=dict)
+    run_adc_kwargs: dict[str, Any] = field(default_factory=dict)
 
-    def run_adc_kwargs(self) -> dict[str, Any]:
+    def kwargs(self) -> dict[str, Any]:
         """Return keyword arguments forwarded to :func:`adcc.run_adc`."""
-        ret = {
-            "method": self.method,
-            "n_states": self.n_states,
-            "kind": self.kind,
-            "n_singlets": self.n_singlets,
-            "n_triplets": self.n_triplets,
-            "n_spin_flip": self.n_spin_flip,
-            "core_orbitals": self.core_orbitals,
-            "frozen_core": self.frozen_core,
-            "frozen_virtual": self.frozen_virtual,
-            "conv_tol": self.conv_tol,
-            "environment": self.environment,
-            "output": None,
-        }
-        ret.update(self.solverargs)
-        return {key: value for key, value in ret.items() if value is not None}
+        ret = dict(self.run_adc_kwargs)
+        ret["method"] = self.method
+        ret.setdefault("output", None)
+        return ret
 
 
 @dataclass
@@ -99,71 +78,50 @@ class _TrackingDescriptor:
     state_diffdm: Optional[np.ndarray]
 
 
-@dataclass
-class _ScfSettings:
-    conv_tol: float
-    conv_tol_grad: Optional[float]
-    max_cycle: int
-    verbose: int
-    attributes: dict[str, Any]
-
-
 class NuclearGradientScanner:
     """Callable scanner returning adcc energies and nuclear gradients.
 
     Parameters are usually created through :func:`nuclear_gradient_scanner`.
-    The scanner accepts Cartesian coordinates in Bohr and returns an energy in
-    Hartree and a gradient in Hartree/Bohr.
+    ``scfres`` is a configured PySCF SCF object.  Its molecule and SCF settings
+    are used as the template for every scanner call; only the nuclear geometry
+    changes.  Coordinates are Cartesian in Bohr, energies are Hartree and
+    gradients are Hartree/Bohr.
     """
 
-    def __init__(self, mol_template=None, *, scf_template=None,
-                 scf_factory: Optional[Callable[[Any], Any]] = None,
+    def __init__(self, scfres, *,
                  target: GroundStateTarget | ExcitedStateTarget | str | None = None,
                  method: Optional[str] = None, state_index: int = 0,
-                 mp_level: int = 2, n_states: Optional[int] = None,
-                 kind: str = "any", n_singlets: Optional[int] = None,
-                 n_triplets: Optional[int] = None,
-                 n_spin_flip: Optional[int] = None, core_orbitals: Any = None,
-                 frozen_core: Any = None, frozen_virtual: Any = None,
-                 adc_conv_tol: Optional[float] = None, environment: Any = None,
-                 scf_type: Optional[str] = None, scf_conv_tol: Optional[float] = None,
-                 scf_conv_tol_grad: Optional[float] = None,
-                 scf_max_cycle: Optional[int] = None, symmetry: Any = None,
-                 verbose: Optional[int] = None, follow: str = "overlap",
+                 mp_level: int = 2, follow: str = "overlap",
                  tracking_min_score: float = 0.0, tracking_min_gap: float = 0.0,
                  gradient_kwargs: Optional[dict[str, Any]] = None,
-                 adc_solverargs: Optional[dict[str, Any]] = None):
+                 **run_adc_kwargs):
         self._pyscf = _import_pyscf()
-        self.scf_factory = scf_factory
-        self.scf_type = scf_type
-        self._requested_symmetry = symmetry
+        if not _is_pyscf_scf(self._pyscf, scfres):
+            raise TypeError(
+                "nuclear_gradient_scanner expects a PySCF SCF object, e.g. "
+                "scf.RHF(mol), as its first argument."
+            )
+        if not hasattr(scfres, "as_scanner"):
+            raise TypeError("The provided PySCF SCF object has no as_scanner method.")
+
+        self.scf_template = scfres
+        self.scf_scanner = scfres.as_scanner()
+        self.base_mol = scfres.mol.copy()
+        self.atom_symbols = [self.base_mol.atom_symbol(i)
+                             for i in range(self.base_mol.natm)]
+        self.initial_coords = np.asarray(
+            self.base_mol.atom_coords(unit="Bohr"), dtype=float
+        )
+
         self.follow = follow
         self.tracking_min_score = tracking_min_score
         self.tracking_min_gap = tracking_min_gap
         self.gradient_kwargs = dict(gradient_kwargs or {})
-        self.last_tracking: Optional[TrackingResult] = None
-
-        if scf_template is None and _is_pyscf_scf(self._pyscf, mol_template):
-            scf_template = mol_template
-            mol_template = scf_template.mol
-        if scf_template is not None and mol_template is None:
-            mol_template = scf_template.mol
-        if mol_template is None:
-            raise ValueError("mol_template or scf_template needs to be provided.")
-
-        self._init_mol_template(mol_template)
-        self.scf_class = type(scf_template) if scf_template is not None else None
-        self.scf_settings = self._capture_scf_settings(
-            scf_template, scf_conv_tol, scf_conv_tol_grad, scf_max_cycle, verbose
-        )
         self.target = self._normalise_target(
-            target, method, state_index, mp_level, n_states, kind, n_singlets,
-            n_triplets, n_spin_flip, core_orbitals, frozen_core, frozen_virtual,
-            adc_conv_tol, environment, adc_solverargs or {}
+            target, method, state_index, mp_level, run_adc_kwargs
         )
 
         self.previous_scf = None
-        self.previous_dm = None
         self.previous_states = None
         self.previous_excitation: Optional[Excitation] = None
         self.previous_descriptor: Optional[_TrackingDescriptor] = None
@@ -171,6 +129,7 @@ class NuclearGradientScanner:
         self.last_states = None
         self.last_excitation = None
         self.last_gradient = None
+        self.last_tracking: Optional[TrackingResult] = None
 
     @property
     def natoms(self) -> int:
@@ -192,7 +151,6 @@ class NuclearGradientScanner:
         self.last_scf = scfres
         self.last_gradient = grad
         self.previous_scf = scfres
-        self.previous_dm = scfres.make_rdm1()
         if isinstance(target, Excitation):
             self.previous_states = self.last_states
             self.previous_excitation = target
@@ -208,76 +166,26 @@ class NuclearGradientScanner:
         energy, gradient = self(coords)
         return {"energy": energy, "gradient": np.asarray(gradient).ravel()}
 
-    def _init_mol_template(self, mol):
-        self.atom_symbols = [mol.atom_symbol(i) for i in range(mol.natm)]
-        self.basis = mol.basis
-        self.ecp = getattr(mol, "ecp", None)
-        self.charge = mol.charge
-        self.spin = mol.spin
-        self.cart = bool(getattr(mol, "cart", False))
-        self.symmetry = (getattr(mol, "symmetry", False)
-                         if self._requested_symmetry is None
-                         else self._requested_symmetry)
-        self.output = getattr(mol, "output", None)
-        self.max_memory = getattr(mol, "max_memory", None)
-        self.initial_coords = np.asarray(mol.atom_coords(unit="Bohr"), dtype=float)
-
-    def _capture_scf_settings(self, scf_template, conv_tol, conv_tol_grad,
-                              max_cycle, verbose):
-        attributes = {}
-        if scf_template is not None:
-            for attr in [
-                "diis_space", "diis_start_cycle", "damp", "level_shift",
-                "direct_scf", "init_guess", "max_memory",
-            ]:
-                if hasattr(scf_template, attr):
-                    attributes[attr] = getattr(scf_template, attr)
-            default_conv_tol = scf_template.conv_tol
-            default_conv_tol_grad = getattr(scf_template, "conv_tol_grad", None)
-            default_max_cycle = scf_template.max_cycle
-            default_verbose = scf_template.verbose
-        else:
-            default_conv_tol = 1e-11
-            default_conv_tol_grad = 1e-9
-            default_max_cycle = 150
-            default_verbose = 0
-        return _ScfSettings(
-            conv_tol=default_conv_tol if conv_tol is None else conv_tol,
-            conv_tol_grad=(default_conv_tol_grad if conv_tol_grad is None
-                           else conv_tol_grad),
-            max_cycle=default_max_cycle if max_cycle is None else max_cycle,
-            verbose=default_verbose if verbose is None else verbose,
-            attributes=attributes,
-        )
-
-    def _normalise_target(self, target, method, state_index, mp_level, n_states,
-                          kind, n_singlets, n_triplets, n_spin_flip,
-                          core_orbitals, frozen_core, frozen_virtual,
-                          adc_conv_tol, environment, solverargs):
+    def _normalise_target(self, target, method, state_index, mp_level,
+                          run_adc_kwargs):
         if isinstance(target, (GroundStateTarget, ExcitedStateTarget)):
             return target
         if isinstance(target, str):
             if target.lower().startswith("mp"):
-                try:
-                    level = int(target.lower().removeprefix("mp"))
-                except ValueError:
-                    level = mp_level
-                return GroundStateTarget(level=level)
+                return GroundStateTarget(level=_mp_level(target, mp_level))
             method = target
         if method is None or method.lower().startswith("mp"):
-            if method and method.lower().startswith("mp"):
-                try:
-                    mp_level = int(method.lower().removeprefix("mp"))
-                except ValueError:
-                    pass
+            if method is not None:
+                mp_level = _mp_level(method, mp_level)
+            if run_adc_kwargs:
+                warnings.warn(
+                    "Ignoring run_adc keyword arguments for ground-state MP "
+                    "scanner target.", RuntimeWarning,
+                )
             return GroundStateTarget(level=mp_level)
         return ExcitedStateTarget(
-            method=method, state_index=state_index, n_states=n_states, kind=kind,
-            n_singlets=n_singlets, n_triplets=n_triplets,
-            n_spin_flip=n_spin_flip, core_orbitals=core_orbitals,
-            frozen_core=frozen_core, frozen_virtual=frozen_virtual,
-            conv_tol=adc_conv_tol, environment=environment,
-            solverargs=dict(solverargs),
+            method=method, state_index=state_index,
+            run_adc_kwargs=dict(run_adc_kwargs),
         )
 
     def _coords_array(self, coords):
@@ -291,69 +199,28 @@ class NuclearGradientScanner:
             )
         return coords
 
-    def _build_mol(self, coords):
-        gto = self._pyscf.gto
-        atom = [(sym, tuple(map(float, xyz)))
-                for sym, xyz in zip(self.atom_symbols, coords)]
-        kwargs = {
-            "atom": atom,
-            "basis": self.basis,
-            "unit": "Bohr",
-            "spin": self.spin,
-            "charge": self.charge,
-            "symmetry": self.symmetry,
-            "parse_arg": False,
-            "dump_input": False,
-            "verbose": self.scf_settings.verbose,
-            "cart": self.cart,
-        }
-        if self.ecp:
-            kwargs["ecp"] = self.ecp
-        mol = gto.M(**kwargs)
-        if self.max_memory is not None:
-            mol.max_memory = self.max_memory
-        return mol
-
-    def _build_scf(self, mol):
-        scf = self._pyscf.scf
-        if self.scf_factory is not None:
-            mf = self.scf_factory(mol)
-        elif self.scf_class is not None:
-            mf = self.scf_class(mol)
-        elif self.scf_type is not None:
-            scf_type = self.scf_type.upper()
-            if not hasattr(scf, scf_type):
-                raise ValueError(f"Unknown PySCF SCF type '{self.scf_type}'.")
-            mf = getattr(scf, scf_type)(mol)
-        else:
-            mf = scf.HF(mol)
-        mf.conv_tol = self.scf_settings.conv_tol
-        if self.scf_settings.conv_tol_grad is not None:
-            mf.conv_tol_grad = self.scf_settings.conv_tol_grad
-        mf.max_cycle = self.scf_settings.max_cycle
-        mf.verbose = self.scf_settings.verbose
-        for attr, value in self.scf_settings.attributes.items():
-            if hasattr(mf, attr):
-                setattr(mf, attr, value)
-        return mf
+    def _mol_at(self, coords):
+        # PySCF's set_geom_ preserves the original Mole settings (basis, charge,
+        # spin, symmetry setting, unit conventions, etc.) and changes only atom
+        # coordinates.  This keeps the scanner interface anchored on the user's
+        # configured PySCF object rather than mirroring PySCF keyword arguments.
+        return self.base_mol.set_geom_(coords, unit="Bohr", inplace=False)
 
     def _run_scf(self, coords):
-        mol = self._build_mol(coords)
-        mf = self._build_scf(mol)
-        if self.previous_dm is None:
-            mf.kernel()
-        else:
-            mf.kernel(dm0=self.previous_dm)
-        if not mf.converged:
+        mol = self._mol_at(coords)
+        self.scf_scanner(mol)
+        if not self.scf_scanner.converged:
             raise RuntimeError("PySCF SCF did not converge at scanner geometry.")
-        return mf
+        # Snapshot the current scanner state for adcc.  The scanner itself is
+        # reused on the next geometry to keep PySCF's orbital/density continuity.
+        return self.scf_scanner.undo_scanner()
 
     def _build_target(self, scfres):
         if isinstance(self.target, GroundStateTarget):
             from adcc import LazyMp, ReferenceState
             return LazyMp(ReferenceState(scfres))
         from adcc import run_adc
-        states = run_adc(scfres, **self.target.run_adc_kwargs())
+        states = run_adc(scfres, **self.target.kwargs())
         self.last_states = states
         excitation = self._select_excitation(states, scfres.mol)
         self.last_excitation = excitation
@@ -434,7 +301,9 @@ class NuclearGradientScanner:
 def nuclear_gradient_scanner(*args, **kwargs) -> NuclearGradientScanner:
     """Create a PySCF/adcc nuclear-gradient scanner.
 
-    See :class:`NuclearGradientScanner` for the coordinate and unit contract.
+    The first argument is a configured PySCF SCF object.  Keyword arguments not
+    consumed by the scanner are forwarded unchanged to :func:`adcc.run_adc` for
+    excited-state targets.
     """
     return NuclearGradientScanner(*args, **kwargs)
 
@@ -481,14 +350,20 @@ def _safe_ao_ndarray(excitation, attr):
         return None
 
 
+def _mp_level(method, default):
+    try:
+        return int(method.lower().removeprefix("mp"))
+    except ValueError:
+        return default
+
+
 def _import_pyscf():
     try:
         from pyscf import gto, scf
     except ImportError as exc:  # pragma: no cover - depends on optional dep
         raise ModuleNotFoundError(
             "nuclear_gradient_scanner currently requires PySCF. Install PySCF "
-            "or pass a PySCF template object in an environment where PySCF is "
-            "available."
+            "and pass a configured PySCF SCF object."
         ) from exc
     return _PyscfModules(gto=gto, scf=scf)
 

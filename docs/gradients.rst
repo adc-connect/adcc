@@ -50,33 +50,37 @@ Geometry optimisation scanners
 ------------------------------
 
 For geometry optimisers it is useful to expose the whole PySCF/adcc/gradient
-loop as a single callable.  :py:func:`adcc.nuclear_gradient_scanner` creates a
-stateful PySCF-based scanner which accepts Cartesian coordinates in Bohr and
-returns ``(energy, gradient)`` in Hartree and Hartree/Bohr:
+loop as a single callable.  :py:func:`adcc.nuclear_gradient_scanner` takes a
+configured PySCF SCF object as its template and accepts Cartesian coordinates in
+Bohr.  It returns ``(energy, gradient)`` in Hartree and Hartree/Bohr:
 
 .. code-block:: python
 
+    scfres = scf.RHF(mol)
+    scfres.conv_tol = 1e-11
+    scfres.conv_tol_grad = 1e-9
+
     scanner = adcc.nuclear_gradient_scanner(
-        mol_template=mol,
+        scfres,
         method="adc2",
         state_index=0,
         n_singlets=3,
-        scf_conv_tol=1e-11,
+        conv_tol=1e-7,  # forwarded unchanged to adcc.run_adc
     )
 
     energy, gradient = scanner(mol.atom_coords())
 
-The scanner rebuilds the PySCF molecule at every geometry while keeping the
-original molecular and SCF settings fixed (basis, charge, spin/reference type,
-symmetry setting and SCF convergence options).  For geomeTRIC optimisations it
-is usually safest to construct the template molecule with ``symmetry=False`` or
-pass ``symmetry=False`` explicitly.  After the first step it seeds
-SCF from the previous converged density, which improves orbital continuity.
-For excited states the scanner stores the previous :class:`adcc.ExcitedStates`
-and selected :class:`adcc.Excitation`; by default it follows the state by
-comparing AO-basis transition and state-difference densities across geometries
-using PySCF AO cross-overlap integrals.  A fixed-index mode is available via
-``follow="index"`` for debugging or well-separated states.
+The scanner uses PySCF's scanner machinery to rerun the SCF calculation at each
+new geometry with the original SCF object settings.  This keeps the SCF
+interface on the PySCF object, where users already configure basis, charge,
+spin/reference type, symmetry behaviour and convergence options.  For geomeTRIC
+optimisations it is usually safest to construct the PySCF molecule with
+``symmetry=False``.  PySCF's scanner also provides the SCF guess continuity
+between geometry steps.  For excited states the scanner stores the previous
+:class:`adcc.ExcitedStates` and selected :class:`adcc.Excitation`; by default it
+follows the state by comparing AO-basis transition and state-difference densities
+across geometries using PySCF AO cross-overlap integrals.  A fixed-index mode is
+available via ``follow="index"`` for debugging or well-separated states.
 
 The same object also implements geomeTRIC's custom-engine ``calc_new`` protocol:
 

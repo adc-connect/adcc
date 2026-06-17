@@ -34,16 +34,21 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def _h2o_mol():
-    from pyscf import gto
-    return gto.M(
+def _h2o_scf():
+    from pyscf import gto, scf
+    mol = gto.M(
         atom="""
         O 0 0 0
         H 0 0 1.795239827225189
         H 1.693194615993441 0 -0.599043184453037
         """,
-        basis="sto-3g", unit="Bohr", verbose=0, parse_arg=False,
+        basis="sto-3g", unit="Bohr", symmetry=False,
+        verbose=0, parse_arg=False,
     )
+    mf = scf.RHF(mol)
+    mf.conv_tol = 1e-11
+    mf.conv_tol_grad = 1e-9
+    return mf
 
 
 def test_density_overlap_score_uses_absolute_transition_phase():
@@ -54,16 +59,20 @@ def test_density_overlap_score_uses_absolute_transition_phase():
     assert density_overlap_score(dm, -dm, s, use_abs=True) == pytest.approx(1.0)
 
 
+def test_scanner_requires_pyscf_scf_object():
+    with pytest.raises(TypeError, match="PySCF SCF object"):
+        adcc.nuclear_gradient_scanner(_h2o_scf().mol, method="mp2")
+
+
 def test_scanner_validates_coordinate_shape():
-    scanner = adcc.nuclear_gradient_scanner(_h2o_mol(), method="mp2")
+    scanner = adcc.nuclear_gradient_scanner(_h2o_scf(), method="mp2")
     with pytest.raises(ValueError, match="Expected coordinates"):
         scanner(np.zeros((2, 3)))
 
 
 def test_ground_state_scanner_matches_explicit_gradient_loop():
     scanner = adcc.nuclear_gradient_scanner(
-        _h2o_mol(), method="mp2", scf_conv_tol=1e-11,
-        scf_conv_tol_grad=1e-9, gradient_kwargs={"eri_contraction": "full_ao"},
+        _h2o_scf(), method="mp2", gradient_kwargs={"eri_contraction": "full_ao"},
     )
     coords = scanner.initial_coords
 
@@ -78,10 +87,18 @@ def test_ground_state_scanner_matches_explicit_gradient_loop():
 
 def test_calc_new_returns_geometric_engine_shape():
     scanner = adcc.nuclear_gradient_scanner(
-        _h2o_mol(), method="mp2", scf_conv_tol=1e-11,
-        scf_conv_tol_grad=1e-9, gradient_kwargs={"eri_contraction": "full_ao"},
+        _h2o_scf(), method="mp2", gradient_kwargs={"eri_contraction": "full_ao"},
     )
     result = scanner.calc_new(scanner.initial_coords.ravel())
     assert set(result) == {"energy", "gradient"}
     assert isinstance(result["energy"], float)
     assert result["gradient"].shape == (9,)
+
+
+def test_run_adc_kwargs_are_forwarded_with_native_names():
+    scanner = adcc.nuclear_gradient_scanner(
+        _h2o_scf(), method="adc2", n_singlets=2, conv_tol=1e-7,
+        follow="index", gradient_kwargs={"eri_contraction": "full_ao"},
+    )
+    assert scanner.target.kwargs()["conv_tol"] == pytest.approx(1e-7)
+    assert scanner.target.kwargs()["n_singlets"] == 2
