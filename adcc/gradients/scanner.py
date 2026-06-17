@@ -68,6 +68,11 @@ class TrackingResult:
 
     index: int
     scores: np.ndarray
+    best_score: float = 0.0
+    gap: float = float("inf")
+    previous_index: Optional[int] = None
+    switched: bool = False
+    unavailable_channels: tuple[str, ...] = ()
 
 
 @dataclass
@@ -101,7 +106,9 @@ class NuclearGradientScanner:
                 "scf.RHF(mol), as its first argument."
             )
         if not hasattr(scfres, "as_scanner"):
-            raise TypeError("The provided PySCF SCF object has no as_scanner method.")
+            raise TypeError(
+                "The provided PySCF SCF object has no as_scanner method."
+            )
 
         self.scf_template = scfres
         self.scf_scanner = scfres.as_scanner()
@@ -113,6 +120,8 @@ class NuclearGradientScanner:
         )
 
         self.follow = follow
+        if self.follow not in ("overlap", "index"):
+            raise ValueError("follow needs to be 'overlap' or 'index'.")
         self.tracking_min_score = tracking_min_score
         self.tracking_min_gap = tracking_min_gap
         self.gradient_kwargs = dict(gradient_kwargs or {})
@@ -121,9 +130,8 @@ class NuclearGradientScanner:
         )
 
         self.previous_scf = None
-        self.previous_states = None
-        self.previous_excitation: Optional[Excitation] = None
         self.previous_descriptor: Optional[_TrackingDescriptor] = None
+        self.previous_index: Optional[int] = None
         self.last_scf = None
         self.last_states = None
         self.last_excitation = None
@@ -151,9 +159,11 @@ class NuclearGradientScanner:
         self.last_gradient = grad
         self.previous_scf = scfres
         if isinstance(target, Excitation):
-            self.previous_states = self.last_states
-            self.previous_excitation = target
             self.previous_descriptor = self._descriptor(target, scfres.mol)
+            if self.last_tracking is not None:
+                self.previous_index = self.last_tracking.index
+            else:
+                self.previous_index = self.target.state_index
         return float(energy), np.asarray(grad.total)
 
     def calc_new(self, coords):
@@ -168,10 +178,10 @@ class NuclearGradientScanner:
     def _normalise_target(self, target, method, state_index, mp_level,
                           run_adc_kwargs):
         if isinstance(target, (GroundStateTarget, ExcitedStateTarget)):
+            if isinstance(target, GroundStateTarget):
+                _check_ground_state_level(target.level)
             return target
         if isinstance(target, str):
-            if target.lower().startswith("mp"):
-                return GroundStateTarget(level=_mp_level(target, mp_level))
             method = target
         if method is None or method.lower().startswith("mp"):
             if method is not None:
@@ -181,6 +191,7 @@ class NuclearGradientScanner:
                     "Ignoring run_adc keyword arguments for ground-state MP "
                     "scanner target.", RuntimeWarning,
                 )
+            _check_ground_state_level(mp_level)
             return GroundStateTarget(level=mp_level)
         return ExcitedStateTarget(
             method=method, state_index=state_index,
@@ -216,7 +227,7 @@ class NuclearGradientScanner:
 
     def _build_target(self, scfres):
         if isinstance(self.target, GroundStateTarget):
-            from adcc import LazyMp, ReferenceState
+            from adcc import ReferenceState
             return LazyMp(ReferenceState(scfres))
         from adcc import run_adc
         states = run_adc(scfres, **self.target.kwargs())
@@ -238,26 +249,38 @@ class NuclearGradientScanner:
                 )
             self.last_tracking = None
             return excitations[index]
-        if self.follow != "overlap":
-            raise ValueError("follow needs to be 'overlap' or 'index'.")
+        unavailable: set[str] = set()
         scores = np.array([
             self._tracking_score(self.previous_descriptor,
-                                 self._descriptor(excitation, mol), mol)
+                                 self._descriptor(excitation, mol), mol,
+                                 unavailable)
             for excitation in excitations
         ])
         order = np.argsort(scores)[::-1]
         best = int(order[0])
-        self.last_tracking = TrackingResult(best, scores)
+        gap = (scores[best] - scores[int(order[1])]
+               if len(order) > 1 else float("inf"))
+        # Always record a diagnostic so silent state switching is observable on
+        # every call via ``last_tracking`` (best score, gap to second-best and
+        # whether the followed positional index changed).
+        switched = (self.previous_index is not None
+                    and best != self.previous_index)
+        self.last_tracking = TrackingResult(
+            index=best, scores=scores, best_score=float(scores[best]),
+            gap=float(gap), previous_index=self.previous_index,
+            switched=bool(switched),
+            unavailable_channels=tuple(sorted(unavailable)),
+        )
         if scores[best] < self.tracking_min_score:
             raise RuntimeError(
                 "Root tracking failed: best state-character overlap "
                 f"{scores[best]:.6g} is below threshold "
                 f"{self.tracking_min_score:.6g}."
             )
-        if len(order) > 1 and scores[best] - scores[int(order[1])] < self.tracking_min_gap:
+        if len(order) > 1 and gap < self.tracking_min_gap:
             raise RuntimeError(
                 "Root tracking is ambiguous: best and second-best overlaps "
-                f"differ by {scores[best] - scores[int(order[1])]:.6g}."
+                f"differ by {gap:.6g}."
             )
         return excitations[best]
 
@@ -271,23 +294,26 @@ class NuclearGradientScanner:
             state_diffdm=_safe_ao_ndarray(excitation, "state_diffdm_ao"),
         )
 
-    def _tracking_score(self, previous, current, current_mol):
+    def _tracking_score(self, previous, current, current_mol, unavailable=None):
         s_cross = self._pyscf.gto.intor_cross(
             "int1e_ovlp", previous.mol, current_mol
         )
+        s_old = previous.mol.intor_symmetric("int1e_ovlp")
+        s_new = current_mol.intor_symmetric("int1e_ovlp")
         score = 0.0
         weight = 0
-        for old, new, use_abs in [
-            (previous.transition_dm, current.transition_dm, True),
-            (previous.state_diffdm, current.state_diffdm, False),
+        for name, old, new, use_abs in [
+            ("transition_dm_ao", previous.transition_dm,
+             current.transition_dm, True),
+            ("state_diffdm_ao", previous.state_diffdm,
+             current.state_diffdm, False),
         ]:
             if old is None or new is None:
+                if unavailable is not None:
+                    unavailable.add(name)
                 continue
             channel = density_overlap_score(
-                old, new, s_cross,
-                s_old=previous.mol.intor_symmetric("int1e_ovlp"),
-                s_new=current_mol.intor_symmetric("int1e_ovlp"),
-                use_abs=use_abs,
+                old, new, s_cross, s_old=s_old, s_new=s_new, use_abs=use_abs,
             )
             if np.isfinite(channel):
                 score += channel
@@ -344,12 +370,22 @@ def _safe_ao_ndarray(excitation, attr):
     try:
         value = getattr(excitation, attr)
         return value.to_ndarray()
-    except Exception as exc:  # pragma: no cover - exercised by optional paths
-        warnings.warn(
-            f"Could not compute {attr} for root tracking: {exc}",
-            RuntimeWarning,
-        )
+    except (AttributeError, NotImplementedError):
+        # The operator/attribute is genuinely unavailable for this method.  The
+        # degradation is recorded per call on ``last_tracking`` (see
+        # ``_tracking_score``), so it stays observable on every call rather than
+        # being deduplicated by Python's warning filter.  Any other exception
+        # signals a real bug and is allowed to propagate.
         return None
+
+
+def _check_ground_state_level(level):
+    if level != 2:
+        raise NotImplementedError(
+            "adcc only provides MP2 ground-state nuclear gradients, so the "
+            f"scanner cannot pair an MP{level} energy with an MP2 gradient. "
+            "Use level=2 for a ground-state MP target."
+        )
 
 
 def _mp_level(method, default):

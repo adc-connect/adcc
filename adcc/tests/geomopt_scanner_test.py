@@ -20,13 +20,20 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import types
+
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
 import adcc
 import adcc.backends
-from adcc.gradients.scanner import density_overlap_score
+from adcc.gradients.scanner import (
+    GroundStateTarget,
+    _TrackingDescriptor,
+    _safe_ao_ndarray,
+    density_overlap_score,
+)
 
 
 pytestmark = pytest.mark.skipif(
@@ -237,3 +244,175 @@ def test_scf_guess_continuity_updates_previous_state():
     scanner(displaced)
     energy_back, _ = scanner(scanner.initial_coords)
     assert energy_back == pytest.approx(energy_first, abs=1e-9)
+
+
+# ---------------------------------------------------------------------------
+# Root-reorder tracking (FINDING 4)
+# ---------------------------------------------------------------------------
+
+class _FakeAoOperator:
+    def __init__(self, matrix):
+        self._matrix = matrix
+
+    def to_ndarray(self):
+        return self._matrix
+
+
+class _FakeExcitation:
+    def __init__(self, index, transition_dm, state_diffdm):
+        self.index = index
+        self.transition_dm_ao = _FakeAoOperator(transition_dm)
+        self.state_diffdm_ao = _FakeAoOperator(state_diffdm)
+
+
+def test_overlap_tracking_follows_reordered_root_by_overlap():
+    # Prove that overlap tracking follows a physical state whose *positional*
+    # index differs from the originally requested ``state_index``: the seeded
+    # descriptor matches candidate #1, while the requested state_index is 0.
+    scanner = adcc.nuclear_gradient_scanner(
+        _h2o_scf(), method="adc2", n_singlets=3, state_index=0,
+        follow="overlap",
+    )
+    nao = scanner.base_mol.nao
+
+    def projector(i):
+        m = np.zeros((nao, nao))
+        m[i, i] = 1.0
+        return m
+
+    # The previously-followed physical state has this character.
+    seed_transition = projector(0)
+    seed_diffdm = projector(1)
+    scanner.previous_descriptor = _TrackingDescriptor(
+        mol=scanner.base_mol.copy(),
+        transition_dm=seed_transition, state_diffdm=seed_diffdm,
+    )
+    scanner.previous_index = 0
+
+    # Candidate roots: index 1 carries the seeded character (energy ordering
+    # swapped so it is no longer at positional index 0).
+    candidates = [
+        _FakeExcitation(0, projector(2), projector(3)),
+        _FakeExcitation(1, seed_transition.copy(), seed_diffdm.copy()),
+        _FakeExcitation(2, projector(4), projector(5)),
+    ]
+    states = types.SimpleNamespace(excitations=candidates)
+
+    selected = scanner._select_excitation(states, scanner.base_mol.copy())
+
+    # Tracking must pick the reordered root (positional index 1) by overlap,
+    # which differs from the requested state_index (0).
+    assert selected.index == 1
+    assert scanner.target.state_index == 0
+    assert scanner.last_tracking is not None
+    assert scanner.last_tracking.index == 1
+    assert scanner.last_tracking.index != scanner.target.state_index
+    assert np.argmax(scanner.last_tracking.scores) == 1
+    # New diagnostic fields are populated and observable on every call.
+    assert scanner.last_tracking.best_score == pytest.approx(1.0)
+    assert scanner.last_tracking.gap > 0.0
+    assert np.isfinite(scanner.last_tracking.gap)
+    assert scanner.last_tracking.previous_index == 0
+    assert scanner.last_tracking.switched is True
+
+
+# ---------------------------------------------------------------------------
+# Validation / construction-time branches (FINDING 10)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("kwargs", [
+    {"target": "mp3"},
+    {"method": "mp3"},
+    {"target": GroundStateTarget(level=3)},
+])
+def test_ground_state_level_other_than_two_is_rejected(kwargs):
+    with pytest.raises(NotImplementedError, match="MP2 ground-state"):
+        adcc.nuclear_gradient_scanner(_h2o_scf(), **kwargs)
+
+
+def test_invalid_follow_raises_eagerly_at_construction():
+    with pytest.raises(ValueError, match="overlap.*index"):
+        adcc.nuclear_gradient_scanner(
+            _h2o_scf(), method="adc2", n_singlets=2, follow="bogus",
+        )
+
+
+def test_state_index_out_of_range_raises():
+    scanner = adcc.nuclear_gradient_scanner(
+        _h2o_scf(), method="adc2", n_singlets=2, state_index=5,
+        follow="index", conv_tol=1e-9,
+        gradient_kwargs={"eri_contraction": "full_ao"},
+    )
+    with pytest.raises(ValueError, match="out of range"):
+        scanner(scanner.initial_coords)
+
+
+def test_empty_excitations_raises_runtime_error():
+    scanner = adcc.nuclear_gradient_scanner(_h2o_scf(), method="adc2")
+    states = types.SimpleNamespace(excitations=[])
+    with pytest.raises(RuntimeError, match="did not return any excited states"):
+        scanner._select_excitation(states, scanner.base_mol.copy())
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"method": "mp2", "n_singlets": 3},
+    {"target": "mp2", "n_singlets": 3},
+])
+def test_ground_state_run_adc_kwargs_emit_runtime_warning(kwargs):
+    with pytest.warns(RuntimeWarning, match="Ignoring run_adc"):
+        adcc.nuclear_gradient_scanner(_h2o_scf(), **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# Density-overlap scoring branches (FINDING 10)
+# ---------------------------------------------------------------------------
+
+def test_safe_ao_ndarray_swallows_unavailable_channels():
+    class FailingOperator:
+        def to_ndarray(self):
+            raise NotImplementedError("not available")
+
+    class Excitation:
+        transition_dm_ao = FailingOperator()
+
+        @property
+        def state_diffdm_ao(self):
+            raise AttributeError("no diffdm")
+
+    excitation = Excitation()
+    assert _safe_ao_ndarray(excitation, "transition_dm_ao") is None
+    assert _safe_ao_ndarray(excitation, "state_diffdm_ao") is None
+
+
+def test_tracking_score_records_unavailable_and_raises_when_both_missing():
+    scanner = adcc.nuclear_gradient_scanner(_h2o_scf(), method="adc2")
+    mol = scanner.base_mol.copy()
+    previous = _TrackingDescriptor(mol=mol.copy(),
+                                   transition_dm=None, state_diffdm=None)
+    current = _TrackingDescriptor(mol=mol.copy(),
+                                  transition_dm=None, state_diffdm=None)
+    unavailable = set()
+    with pytest.raises(RuntimeError, match="neither transition_dm_ao"):
+        scanner._tracking_score(previous, current, mol, unavailable)
+    # Both channels are surfaced as unavailable before the weight==0 failure.
+    assert unavailable == {"transition_dm_ao", "state_diffdm_ao"}
+
+
+def test_density_overlap_score_zero_density_returns_nan():
+    zero = np.zeros((2, 2))
+    s = np.eye(2)
+    assert np.isnan(density_overlap_score(zero, np.eye(2), s))
+
+
+def test_density_overlap_score_nonidentity_metrics_matches_hand_value():
+    old = np.array([[1.0, 0.0], [0.0, 0.0]])
+    new = np.array([[1.0, 0.0], [0.0, 0.0]])
+    s_cross = np.array([[0.9, 0.1], [0.1, 0.9]])
+    s_old = np.array([[1.0, 0.2], [0.2, 1.0]])
+    s_new = np.array([[1.0, 0.3], [0.3, 1.0]])
+
+    # numerator = (D_old . s_cross . D_new . s_cross), norms use s_old/s_new.
+    # With single populated diagonal element: numerator = s_cross[0,0]**2 = 0.81,
+    # old_norm = s_old[0,0]**2 = 1.0, new_norm = s_new[0,0]**2 = 1.0.
+    score = density_overlap_score(old, new, s_cross, s_old=s_old, s_new=s_new)
+    assert score == pytest.approx(0.81)

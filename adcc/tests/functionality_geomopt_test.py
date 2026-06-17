@@ -92,3 +92,36 @@ def test_calc_new_drives_geometric_internal_engine():
     assert set(result) == {"energy", "gradient"}
     assert np.isfinite(result["energy"])
     assert result["gradient"].shape == (3 * scanner.natoms,)
+
+
+def test_excited_state_optimization_tracks_state_across_steps():
+    from pyscf.geomopt import as_pyscf_method, geometric_solver
+
+    scfres = _h2o_scf()
+    scanner = adcc.nuclear_gradient_scanner(
+        scfres, method="adc2", n_singlets=3, state_index=0,
+        follow="overlap", conv_tol=1e-8,
+        gradient_kwargs={"eri_contraction": "full_ao"},
+    )
+
+    seen_energies = []
+
+    def energy_and_gradient(mol_at_step):
+        energy, gradient = scanner(mol_at_step.atom_coords(unit="Bohr"))
+        seen_energies.append(scanner.last_excitation.excitation_energy)
+        return energy, gradient
+
+    method = as_pyscf_method(scfres.mol, energy_and_gradient)
+
+    # The optimisation does not need to fully converge here; a few steps are
+    # enough to exercise root tracking across geometries.
+    geometric_solver.optimize(
+        method, maxsteps=3,
+        convergence_grms=1e-4, convergence_gmax=2e-4,
+    )
+
+    # Multiple scanner calls were made and state tracking stayed active.
+    assert len(seen_energies) >= 2
+    assert scanner.last_tracking is not None
+    # The followed excitation energy must stay finite and positive every step.
+    assert all(np.isfinite(omega) and omega > 0.0 for omega in seen_energies)
