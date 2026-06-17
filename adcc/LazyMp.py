@@ -354,10 +354,11 @@ class LazyMp(GroundState):
         Return the third-order MP contribution to the ground state
         difference density in the MO basis.
         """
-        if apply_cvs:
+        if self.has_core_occupied_space:
             raise NotImplementedError(
                 "CVS-MP3 difference density not implemented yet"
             )
+        assert not apply_cvs
 
         ret = OneParticleDensity(
             self.mospaces, symmetry=OperatorSymmetry.HERMITIAN

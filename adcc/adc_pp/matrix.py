@@ -1547,7 +1547,7 @@ def adc4_m11(hf, mp, intermediates):
 
 @register_as_intermediate
 def t2sq(hf, mp, intermediates):
-    return einsum("ikac,jkbc->iajb", mp.t2oo, mp.t2oo).evaluate()
+    return einsum("ikac,jkbc->iajb", mp.t2oo, mp.t2oo)
 
 
 @register_as_intermediate
@@ -1556,4 +1556,4 @@ def df3(hf, mp, intermediates):
         "-i-j-k+a+b+c->ijkabc",
         hf.foo.diagonal(), hf.foo.diagonal(), hf.foo.diagonal(),
         hf.fvv.diagonal(), hf.fvv.diagonal(), hf.fvv.diagonal()
-    ).symmetrise(0, 1, 2).symmetrise(3, 4, 5).evaluate()
+    ).symmetrise(0, 1, 2).symmetrise(3, 4, 5)

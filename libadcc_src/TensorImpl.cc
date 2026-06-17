@@ -1249,7 +1249,7 @@ std::shared_ptr<Tensor> TensorImpl<N>::antisymmetrise(
                                std::get<2>(parsed), lthis);
       } else {
         throw runtime_error(
-              "Antisymmetrisation not implemented for more than one index triple.");
+              "Antisymmetrisation not implemented for more than two index triple.");
       }
     } else {
       throw runtime_error(
