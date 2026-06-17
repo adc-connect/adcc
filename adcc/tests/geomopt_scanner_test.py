@@ -122,3 +122,118 @@ def test_tracking_descriptor_keeps_independent_mol_snapshot():
     mol.set_geom_(old_coords + 0.1, unit="Bohr")
 
     assert_allclose(descriptor.mol.atom_coords(unit="Bohr"), old_coords)
+
+
+def test_unconverged_scf_raises():
+    from pyscf import scf
+    mf = scf.RHF(_h2o_scf().mol)
+    mf.max_cycle = 1
+    mf.conv_tol = 1e-12
+    mf.conv_tol_grad = 1e-10
+    scanner = adcc.nuclear_gradient_scanner(mf, method="mp2")
+    with pytest.raises(RuntimeError, match="did not converge"):
+        scanner(scanner.initial_coords)
+
+
+def test_excited_state_scanner_matches_explicit_gradient_loop():
+    scanner = adcc.nuclear_gradient_scanner(
+        _h2o_scf(), method="adc2", n_singlets=3, state_index=0,
+        follow="index", conv_tol=1e-9,
+        gradient_kwargs={"eri_contraction": "full_ao"},
+    )
+
+    energy, gradient = scanner(scanner.initial_coords)
+
+    # Fixed-index selection must pick exactly the requested positional state.
+    assert scanner.last_excitation.index == 0
+    assert scanner.last_tracking is None
+
+    states = adcc.run_adc(scanner.last_scf, method="adc2", n_singlets=3,
+                          conv_tol=1e-9)
+    explicit = adcc.nuclear_gradient(states.excitations[0],
+                                     eri_contraction="full_ao")
+    assert energy == pytest.approx(states.excitations[0].total_energy, abs=1e-7)
+    assert gradient.shape == (3, 3)
+    assert_allclose(gradient, explicit.total, atol=1e-7)
+
+
+def test_overlap_tracking_follows_same_state_character():
+    scanner = adcc.nuclear_gradient_scanner(
+        _h2o_scf(), method="adc2", n_singlets=3, state_index=1,
+        follow="overlap", conv_tol=1e-9,
+        gradient_kwargs={"eri_contraction": "full_ao"},
+    )
+
+    # First call seeds the tracker from the positional index.
+    scanner(scanner.initial_coords)
+    assert scanner.last_excitation.index == 1
+    assert scanner.last_tracking is None
+
+    # Second call at the same geometry must follow the seeded state via density
+    # overlap.  At identical geometry the matching state has self-overlap ~1.
+    scanner(scanner.initial_coords)
+    assert scanner.last_tracking is not None
+    assert scanner.last_tracking.index == 1
+    scores = scanner.last_tracking.scores
+    assert np.argmax(scores) == 1
+    assert scores[1] == pytest.approx(1.0, abs=1e-3)
+
+
+def test_overlap_tracking_continuous_under_small_displacement():
+    scanner = adcc.nuclear_gradient_scanner(
+        _h2o_scf(), method="adc2", n_singlets=3, state_index=0,
+        follow="overlap", conv_tol=1e-9,
+        gradient_kwargs={"eri_contraction": "full_ao"},
+    )
+
+    scanner(scanner.initial_coords)
+    omega_initial = scanner.last_excitation.excitation_energy
+
+    displaced = scanner.initial_coords.copy()
+    displaced[0, 2] += 0.02
+    scanner(displaced)
+
+    # The followed state should remain the same physical state, i.e. its
+    # excitation energy must not jump discontinuously between candidates.
+    assert scanner.last_tracking is not None
+    assert abs(scanner.last_excitation.excitation_energy - omega_initial) < 0.05
+
+
+def test_overlap_tracking_below_min_score_raises():
+    scanner = adcc.nuclear_gradient_scanner(
+        _h2o_scf(), method="adc2", n_singlets=3, state_index=0,
+        follow="overlap", tracking_min_score=2.0, conv_tol=1e-9,
+        gradient_kwargs={"eri_contraction": "full_ao"},
+    )
+    scanner(scanner.initial_coords)  # seed
+    with pytest.raises(RuntimeError, match="below threshold"):
+        scanner(scanner.initial_coords)
+
+
+def test_overlap_tracking_ambiguous_gap_raises():
+    scanner = adcc.nuclear_gradient_scanner(
+        _h2o_scf(), method="adc2", n_singlets=3, state_index=0,
+        follow="overlap", tracking_min_gap=10.0, conv_tol=1e-9,
+        gradient_kwargs={"eri_contraction": "full_ao"},
+    )
+    scanner(scanner.initial_coords)  # seed
+    with pytest.raises(RuntimeError, match="ambiguous"):
+        scanner(scanner.initial_coords)
+
+
+def test_scf_guess_continuity_updates_previous_state():
+    scanner = adcc.nuclear_gradient_scanner(
+        _h2o_scf(), method="mp2", gradient_kwargs={"eri_contraction": "full_ao"},
+    )
+
+    energy_first, _ = scanner(scanner.initial_coords)
+    assert scanner.previous_scf is scanner.last_scf
+
+    # Move away and return: the scanner reuses one PySCF scanner object across
+    # geometries (orbital/guess continuity), and the surface stays consistent so
+    # the energy at the original geometry is reproduced.
+    displaced = scanner.initial_coords.copy()
+    displaced[0, 2] += 0.05
+    scanner(displaced)
+    energy_back, _ = scanner(scanner.initial_coords)
+    assert energy_back == pytest.approx(energy_first, abs=1e-9)
