@@ -102,3 +102,23 @@ def test_run_adc_kwargs_are_forwarded_with_native_names():
     )
     assert scanner.target.kwargs()["conv_tol"] == pytest.approx(1e-7)
     assert scanner.target.kwargs()["n_singlets"] == 2
+    assert "output" not in scanner.target.kwargs()
+
+
+def test_tracking_descriptor_keeps_independent_mol_snapshot():
+    class FakeAoOperator:
+        def to_ndarray(self):
+            return np.eye(7)
+
+    class FakeExcitation:
+        transition_dm_ao = FakeAoOperator()
+        state_diffdm_ao = FakeAoOperator()
+
+    scanner = adcc.nuclear_gradient_scanner(_h2o_scf(), method="adc2")
+    mol = scanner.base_mol.copy()
+    descriptor = scanner._descriptor(FakeExcitation(), mol)
+    old_coords = descriptor.mol.atom_coords(unit="Bohr").copy()
+
+    mol.set_geom_(old_coords + 0.1, unit="Bohr")
+
+    assert_allclose(descriptor.mol.atom_coords(unit="Bohr"), old_coords)

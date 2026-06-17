@@ -59,7 +59,6 @@ class ExcitedStateTarget:
         """Return keyword arguments forwarded to :func:`adcc.run_adc`."""
         ret = dict(self.run_adc_kwargs)
         ret["method"] = self.method
-        ret.setdefault("output", None)
         return ret
 
 
@@ -263,8 +262,11 @@ class NuclearGradientScanner:
         return excitations[best]
 
     def _descriptor(self, excitation, mol):
+        # PySCF SCF scanner objects mutate their internal Mole in-place between
+        # geometries.  Keep an independent copy for cross-overlap root tracking;
+        # otherwise the "previous" AO basis silently turns into the current one.
         return _TrackingDescriptor(
-            mol=mol,
+            mol=mol.copy(),
             transition_dm=_safe_ao_ndarray(excitation, "transition_dm_ao"),
             state_diffdm=_safe_ao_ndarray(excitation, "state_diffdm_ao"),
         )
