@@ -1,9 +1,9 @@
-name: adcc39
+name: adcc310
 channels:
   - adcc
   - psi4/label/dev
   - defaults
 dependencies:
-  - python=3.9
+  - python=3.10
   - psi4
   - adcc
