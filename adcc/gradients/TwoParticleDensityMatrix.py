@@ -337,6 +337,12 @@ class TwoParticleDensityMatrix:
         - ``g2_ao_1``: ``aaaa``, ``bbbb``, ``abab``, ``baba``
         - ``g2_ao_2``: ``aaaa``, ``bbbb``, ``abba``, ``baab``
 
+        For restricted references, equivalent spin cases are merged and
+        accumulated with their spin multiplicity (``aaaa``/``abab`` for
+        ``g2_ao_1`` and ``aaaa``/``abba`` for ``g2_ao_2``, each with a factor
+        of two).  Raw coefficient dictionaries do not carry a trustworthy
+        restricted/unrestricted flag and therefore use the full spin expansion.
+
         The returned/filled array has shape ``(nao, nao, nao * (nao + 1) // 2)``
         and contains ``D[p,r,q,s] = g2_ao_1[p,q,r,s] - g2_ao_2[p,q,s,r]`` with
         the ``q,s`` ket pair packed in lower-triangular order (see
@@ -356,6 +362,16 @@ class TwoParticleDensityMatrix:
         if not len(self.blocks_nonzero):
             raise ValueError("At least one non-zero block is needed to "
                              "transform the TwoParticleDensityMatrix.")
+        restricted_refstate = None
+        if isinstance(refstate_or_coefficients, libadcc.ReferenceState):
+            restricted_refstate = refstate_or_coefficients
+        elif (refstate_or_coefficients is None
+              and hasattr(self, "reference_state")):
+            restricted_refstate = self.reference_state
+        use_restricted_fast_path = bool(
+            getattr(restricted_refstate, "restricted", False)
+        )
+
         coeff_map = self._ao_coefficient_map(refstate_or_coefficients)
         nao = next(iter(coeff_map.values())).shape[1]
         npair = nao * (nao + 1) // 2
@@ -387,18 +403,32 @@ class TwoParticleDensityMatrix:
                     lo, hi = int(nz[0]), int(nz[-1]) + 1
                     compact[(sp, spin)] = (c[lo:hi], lo, hi)
 
-        direct_spin_cases = [
-            ("a", "a", "a", "a"),
-            ("b", "b", "b", "b"),
-            ("a", "b", "a", "b"),
-            ("b", "a", "b", "a"),
-        ]
-        exchange_spin_cases = [
-            ("a", "a", "a", "a"),
-            ("b", "b", "b", "b"),
-            ("a", "b", "b", "a"),
-            ("b", "a", "a", "b"),
-        ]
+        if use_restricted_fast_path:
+            direct_spin_cases = [
+                (("a", "a", "a", "a"), 2.0),
+                (("a", "b", "a", "b"), 2.0),
+            ]
+            exchange_spin_cases = [
+                (("a", "a", "a", "a"), 2.0),
+                (("a", "b", "b", "a"), 2.0),
+            ]
+        else:
+            direct_spin_cases = [
+                (("a", "a", "a", "a"), 1.0),
+                (("b", "b", "b", "b"), 1.0),
+                (("a", "b", "a", "b"), 1.0),
+                (("b", "a", "b", "a"), 1.0),
+            ]
+            exchange_spin_cases = [
+                (("a", "a", "a", "a"), 1.0),
+                (("b", "b", "b", "b"), 1.0),
+                (("a", "b", "b", "a"), 1.0),
+                (("b", "a", "a", "b"), 1.0),
+            ]
+        required_spin_cases = {
+            spins for spin_cases in (direct_spin_cases, exchange_spin_cases)
+            for spins, _ in spin_cases
+        }
 
         # Pre-extract every required rank-4 spin sub-block exactly once (each is
         # only the non-zero-row portion of a block, i.e. a small fraction of the
@@ -410,7 +440,7 @@ class TwoParticleDensityMatrix:
         for block in self.blocks_nonzero:
             spaces = split_spaces(block)
             ten_obj = self.block(block)
-            for spins in set(direct_spin_cases) | set(exchange_spin_cases):
+            for spins in required_spin_cases:
                 ranges = [compact[(sp, spin)] for sp, spin in zip(spaces, spins)]
                 coeff_sets[(block, spins)] = [r[0] for r in ranges]
                 if any(r[0] is None for r in ranges):
@@ -440,18 +470,20 @@ class TwoParticleDensityMatrix:
                 for spin_cases, sign, exchange in (
                         (direct_spin_cases, +1.0, False),
                         (exchange_spin_cases, -1.0, True)):
-                    for spins in spin_cases:
+                    for spins, prefactor in spin_cases:
                         sub = subblocks[(block, spins)]
                         if sub is None:
                             continue
                         coeffs = coeff_sets[(block, spins)]
+                        scaled_sign = sign * prefactor
                         self._add_direct_pair_transform(
-                            chunk, sub, *coeffs, qidx, sidx, sign, exchange
+                            chunk, sub, *coeffs, qidx, sidx, scaled_sign,
+                            exchange
                         )
                         if any_offdiag:
                             self._add_direct_pair_transform(
-                                swapped, sub, *coeffs, qswap, sswap, sign,
-                                exchange
+                                swapped, sub, *coeffs, qswap, sswap,
+                                scaled_sign, exchange
                             )
 
             if any_offdiag:

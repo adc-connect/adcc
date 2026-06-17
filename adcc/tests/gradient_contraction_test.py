@@ -32,6 +32,7 @@ import adcc.backends
 import adcc.block as b
 from adcc.backends import have_backend
 from adcc.MoSpaces import split_spaces
+from adcc.Tensor import Tensor
 from adcc.gradients.TwoParticleDensityMatrix import (
     TwoParticleDensityMatrix, ao_pair_indices,
 )
@@ -82,6 +83,49 @@ def _random_tpdm(refstate, blocks=(b.oooo, b.oovv, b.ovov)):
     return g2
 
 
+def _random_tpdm_with_distinct_spin_blocks(
+    refstate, blocks=(b.oooo, b.oovv, b.ovov)
+):
+    """
+    Build a ``TwoParticleDensityMatrix`` whose ``aaaa`` and ``bbbb`` spin
+    sub-blocks are independent random data.
+
+    This intentionally bypasses the spin-block maps that a restricted
+    ``ReferenceState`` would impose, so ``aaaa != bbbb`` and the full
+    eight-spin-case transform cannot be silently replaced by the restricted
+    fast path.
+    """
+    g2 = TwoParticleDensityMatrix(refstate)
+    g2.reference_state = refstate
+    rng = np.random.default_rng(20240612)
+    for blk in blocks:
+        tensor = Tensor(refstate.mospaces, blk)
+        tensor.set_from_ndarray(rng.standard_normal(tensor.shape), 1e-14)
+        g2[blk] = tensor
+    return g2
+
+
+def _perturbed_restricted_coefficient_map(
+    g2, refstate, magnitude=1e-2, seed=20240613
+):
+    """
+    Return a coefficient map based on a restricted reference but with a
+    deliberately different beta spatial coefficient matrix.
+
+    This makes a raw coefficient dict distinguishable from the reference-state
+    fast path, which assumes alpha and beta spatial coefficients are identical.
+    """
+    cc = g2._ao_coefficient_map(refstate)
+    rng = np.random.default_rng(seed)
+    perturbed = {}
+    for sp in g2.orbital_subspaces:
+        perturbed[f"{sp}_a"] = cc[f"{sp}_a"].copy()
+        beta = cc[f"{sp}_b"].copy()
+        beta += magnitude * rng.standard_normal(beta.shape)
+        perturbed[f"{sp}_b"] = beta
+    return perturbed
+
+
 def _direct_gradient_inputs(mp):
     """Inputs for ``correlated_gradient_direct`` from an ``LazyMp``.
 
@@ -97,7 +141,7 @@ def _direct_gradient_inputs(mp):
     return g1_ao, w_ao, grad.g2
 
 
-def _two_stage_packed_density(g2, refstate):
+def _two_stage_packed_density(g2, refstate, coeff_map=None):
     """
     Dense two-stage reference for the packed AO-pair effective density.
 
@@ -106,8 +150,16 @@ def _two_stage_packed_density(g2, refstate):
     ``(q, s) -> (lambda, sigma)`` transform + ``s2kl`` pack, so it pins the
     *staging contract* that the libtensor-based refactor (milestones m2/m3)
     must reproduce, independently of the current fused implementation.
+
+    An optional ``coeff_map`` can be supplied to exercise the transform with
+    non-default (e.g. deliberately alpha/beta-asymmetric) coefficients.
     """
-    cc = g2._ao_coefficient_map(refstate)
+    if coeff_map is None:
+        cc = g2._ao_coefficient_map(refstate)
+    else:
+        cc = {
+            key: np.asarray(coeff) for key, coeff in coeff_map.items()
+        }
     nao = next(iter(cc.values())).shape[1]
     npair = nao * (nao + 1) // 2
     qall, sall = ao_pair_indices(nao)
@@ -195,6 +247,46 @@ def test_direct_mp2_gradient_matches_full_ao_fallback():
                     full.components.two_electron, atol=1e-10)
 
 
+def test_restricted_fast_path_matches_eight_case_transform():
+    """RHF fast path must reproduce the legacy eight-spin-case transform."""
+    hf = cached_backend_hf("pyscf", "h2o_sto3g", conv_tol=1e-11)
+    refstate = adcc.ReferenceState(hf)
+    assert refstate.restricted
+    mp = adcc.LazyMp(refstate)
+    gradient = adcc.nuclear_gradient(mp, eri_contraction="full_ao")
+    g2 = gradient.g2
+
+    # A raw coefficient dict has no restricted flag and therefore exercises the
+    # legacy eight-case spin expansion with the same fused contraction order.
+    coeffs = g2._ao_coefficient_map(refstate)
+    eight_case = g2.to_ao_pair_density(coeffs, pair_chunk_size=5)
+    fast_path = g2.to_ao_pair_density(refstate, pair_chunk_size=5)
+
+    assert_allclose(fast_path, eight_case, atol=1e-12)
+
+
+def test_restricted_coefficient_dict_uses_full_spin_expansion():
+    """Coefficient dictionaries must not enable the RHF-only shortcut.
+
+    A raw dict has no reliable restricted flag, so the implementation must
+    use the full eight-spin-case expansion even when the underlying
+    reference is restricted.  The test uses different alpha/beta spatial
+    coefficients and a TPDM with distinct ``aaaa``/``bbbb`` sub-blocks so
+    that an accidental fast-path activation would produce a numerically
+    different result.
+    """
+    hf = cached_backend_hf("pyscf", "h2o_sto3g", conv_tol=1e-11)
+    refstate = adcc.ReferenceState(hf)
+    assert refstate.restricted
+
+    g2 = _random_tpdm_with_distinct_spin_blocks(refstate)
+    coeffs = _perturbed_restricted_coefficient_map(g2, refstate)
+    reference = _two_stage_packed_density(g2, refstate, coeff_map=coeffs)
+    produced = g2.to_ao_pair_density(coeffs, pair_chunk_size=3)
+
+    assert_allclose(produced, reference, atol=1e-10)
+
+
 # ---------------------------------------------------------------------------
 # Guardrail tests (milestone m0)
 #
@@ -227,21 +319,34 @@ def test_open_shell_pair_density_matches_dense_ao_transform():
     assert_allclose(direct_pair_density, dense_pair_density, atol=1e-10)
 
 
-@pytest.mark.parametrize("system", ["h2o_sto3g", "cn_sto3g"])
-def test_packed_density_matches_two_stage_staging_contract(system):
+@pytest.mark.parametrize("system,use_coeff_dict", [
+    ("h2o_sto3g", True),
+    ("h2o_sto3g", False),
+    ("cn_sto3g", False),
+])
+def test_packed_density_matches_two_stage_staging_contract(system, use_coeff_dict):
     """Packed density must equal an explicit bra/ket two-stage transform.
 
     This pins the staging contract (bra half-transform ``(p,r)->(mu,nu)`` then
     ket transform + ``s2kl`` pack) that milestones m2/m3 must reproduce when
     the transform is lifted into libtensor, independently of the current fused
     einsum implementation.
+
+    For restricted references the test runs both via a raw coefficient dict
+    (full eight-spin-case path) and via the reference state (restricted fast
+    path), so the fast path is checked against an independent reference on
+    generic random TPDM data.
     """
     hf = cached_backend_hf("pyscf", system, conv_tol=1e-11)
     refstate = adcc.ReferenceState(hf)
 
     g2 = _random_tpdm(refstate)
     reference = _two_stage_packed_density(g2, refstate)
-    produced = g2.to_ao_pair_density(refstate, pair_chunk_size=3)
+    if use_coeff_dict:
+        coeffs_or_refstate = g2._ao_coefficient_map(refstate)
+    else:
+        coeffs_or_refstate = refstate
+    produced = g2.to_ao_pair_density(coeffs_or_refstate, pair_chunk_size=3)
 
     assert_allclose(produced, reference, atol=1e-10)
 
