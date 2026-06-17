@@ -21,11 +21,11 @@ jobs:
           - {version: '3.9', os: ubuntu-latest, documentation: False}
           - {version: '3.13', os: macos-latest, documentation: False}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.version }}
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         env:
           cache-name: cache-artifacts
         with:
@@ -80,7 +80,7 @@ jobs:
           ./setup.py build_docs
         if: matrix.documentation
       - name: Upload documentation artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: build/docs/html
         if: matrix.documentation
@@ -128,7 +128,7 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
   #
   # Test Conda Python
   #
@@ -145,13 +145,13 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Patch compiler in Conda environment file
         if: contains( matrix.os, 'macos')
         run: |
           sed -E -i.bak "s;gcc_linux-64;clang_osx-arm64;g" conda/environment.yml
           sed -E -i.bak "s;gxx_linux-64;clangxx_osx-arm64;g" conda/environment.yml
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: conda-incubator/setup-miniconda@v4
         with:
           activate-environment: adcc-dev
           environment-file: conda/environment.yml
@@ -186,8 +186,8 @@ jobs:
     name: Code style
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
       - name: Install dependencies
