@@ -47,7 +47,9 @@ from .OneParticleDensity import OneParticleDensity
 from .TwoParticleOperator import TwoParticleOperator
 from .TwoParticleDensity import TwoParticleDensity
 from .opt_einsum_integration import register_with_opt_einsum
-from .gradients import nuclear_gradient
+from .gradients import (ExcitedStateTarget, GroundStateTarget,
+                        NuclearGradientScanner, nuclear_gradient,
+                        nuclear_gradient_scanner)
 
 # This has to be the last set of import
 from .guess import (guess_symmetries, guess_zero, guesses_any, guesses_singlet,
@@ -69,7 +71,8 @@ __all__ = ["run_adc", "InputError", "AdcMatrix",
            "guess_symmetries", "guesses_spin_flip", "guess_zero", "LazyMp",
            "adc0", "cis", "adc1", "adc2", "adc2x", "adc3",
            "cvs_adc0", "cvs_adc1", "cvs_adc2", "cvs_adc2x", "cvs_adc3",
-           "nuclear_gradient",
+           "nuclear_gradient", "nuclear_gradient_scanner",
+           "NuclearGradientScanner", "GroundStateTarget", "ExcitedStateTarget",
            "banner"]
 
 __version__ = "0.17.1"

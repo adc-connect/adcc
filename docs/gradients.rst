@@ -46,6 +46,50 @@ instead:
 The returned object exposes the total gradient via ``grad.total`` as well as
 the individual one- and two-electron contributions.
 
+Geometry optimisation scanners
+------------------------------
+
+For geometry optimisers it is useful to expose the whole PySCF/adcc/gradient
+loop as a single callable.  :py:func:`adcc.nuclear_gradient_scanner` creates a
+stateful PySCF-based scanner which accepts Cartesian coordinates in Bohr and
+returns ``(energy, gradient)`` in Hartree and Hartree/Bohr:
+
+.. code-block:: python
+
+    scanner = adcc.nuclear_gradient_scanner(
+        mol_template=mol,
+        method="adc2",
+        state_index=0,
+        n_singlets=3,
+        scf_conv_tol=1e-11,
+    )
+
+    energy, gradient = scanner(mol.atom_coords())
+
+The scanner rebuilds the PySCF molecule at every geometry while keeping the
+original molecular and SCF settings fixed (basis, charge, spin/reference type,
+symmetry setting and SCF convergence options).  For geomeTRIC optimisations it
+is usually safest to construct the template molecule with ``symmetry=False`` or
+pass ``symmetry=False`` explicitly.  After the first step it seeds
+SCF from the previous converged density, which improves orbital continuity.
+For excited states the scanner stores the previous :class:`adcc.ExcitedStates`
+and selected :class:`adcc.Excitation`; by default it follows the state by
+comparing AO-basis transition and state-difference densities across geometries
+using PySCF AO cross-overlap integrals.  A fixed-index mode is available via
+``follow="index"`` for debugging or well-separated states.
+
+The same object also implements geomeTRIC's custom-engine ``calc_new`` protocol:
+
+.. code-block:: python
+
+    result = scanner.calc_new(mol.atom_coords().ravel())
+    # result == {"energy": energy, "gradient": gradient.ravel()}
+
+geomeTRIC remains an optional dependency; the plain scanner only requires the
+PySCF backend.  Minimum-energy crossing point workflows can be built from two
+scanner targets because geomeTRIC's penalty-constrained formulation only needs
+the two state energies and gradients, not derivative couplings.
+
 The two-electron term can be evaluated with two different strategies, selected
 through the ``eri_contraction`` keyword (see
 :ref:`gradients-eri-contraction` below). For the PySCF backend the

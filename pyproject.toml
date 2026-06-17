@@ -55,6 +55,7 @@ build_docs = [
 	"sphinx-automodapi", "sphinx-rtd-theme"
 ]
 analysis = ["matplotlib >= 3.0", "pandas >= 0.25.0"]
+geomopt = ["geometric"]
 build_stub = ["ruff", "pybind11-stubgen"]
 
 [project.urls]
