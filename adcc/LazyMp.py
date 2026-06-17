@@ -25,8 +25,10 @@ import numpy as np
 
 from .GroundState import GroundState
 from .MoSpaces import split_spaces
+from .NParticleOperator import OperatorSymmetry
+from .OneParticleDensity import OneParticleDensity
 from .functions import direct_sum, einsum
-from .misc import cached_member_function
+from .misc import cached_member_function, cached_property
 from . import block as b
 
 
@@ -239,6 +241,34 @@ class LazyMp(GroundState):
         ).antisymmetrise(0, 1, 2).antisymmetrise(3, 4, 5)
         return numerator / denom
 
+    @cached_property
+    def m_3_plus(self) -> libadcc.Tensor:
+        """
+        Third order MP contribution to the ov block of the N+1 part of the
+        dynamic self-energy.
+        """
+        return (
+            + 1 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.ov))
+            + 0.5 * einsum(
+                "ijbc,jabc->ia", self.td2(b.oovv), self.reference_state.ovvv
+            )
+            - 0.25 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.oo))
+        )
+
+    @cached_property
+    def m_3_minus(self) -> libadcc.Tensor:
+        """
+        Third order MP contribution to the ov block of the N-1 part of the
+        dynamic self-energy.
+        """
+        return (
+            + 0.5 * einsum(
+                "jkab,jkib->ia", self.td2(b.oovv), self.reference_state.ooov
+            )
+            - 1 * einsum("jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.ov))
+            - 0.25 * einsum("jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.vv))
+        )
+
     @cached_member_function()
     def energy_correction(self, level: int = 2) -> float:
         """Obtain the MP energy correction at a particular level"""
@@ -316,3 +346,35 @@ class LazyMp(GroundState):
         Return the MP3 difference density in the MO basis.
         """
         return self.diffdm(3)
+
+    @cached_member_function()
+    def third_order_dm_correction(self, apply_cvs: bool = False
+                                  ) -> OneParticleDensity:
+        """
+        Return the third-order MP contribution to the ground state
+        difference density in the MO basis.
+        """
+        if apply_cvs:
+            raise NotImplementedError(
+                "CVS-MP3 difference density not implemented yet"
+            )
+
+        ret = OneParticleDensity(
+            self.mospaces, symmetry=OperatorSymmetry.HERMITIAN
+        )
+
+        ret.oo = (
+            - einsum("ikab,jkab->ij", self.t2oo,
+                     self.td2(b.oovv)).symmetrise(0, 1)
+        )
+        ret.ov = (
+            - (self.sigma_inf_ov(3) + self.m_3_plus + self.m_3_minus
+               ) / self.df(b.ov)
+        )
+
+        ret.vv = (
+            + einsum("ijac,ijbc->ab", self.t2oo,
+                     self.td2(b.oovv)).symmetrise(0, 1)
+        )
+
+        return ret.evaluate()

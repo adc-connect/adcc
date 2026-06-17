@@ -243,29 +243,25 @@ class GroundState:
     @property
     def m_3_plus(self) -> libadcc.Tensor:
         """
-        Third order contribution to the ov block of the N+1 part of the dynamic
-        self-energy.
+        Third order contribution to the ov block of the N+1 part of the
+        dynamic self-energy.
         """
-        return (
-            + 1 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.ov))
-            + 0.5 * einsum(
-                "ijbc,jabc->ia", self.td2(b.oovv), self.reference_state.ovvv
-            )
-            - 0.25 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.oo))
+        raise NotImplementedError(
+            "Third order contribution to the ov block of the N+1 part "
+            "of the dynamic self-energy not implemented on "
+            f"{self.__class__.__name__} class."
         )
 
     @property
     def m_3_minus(self) -> libadcc.Tensor:
         """
-        Third order contribution to the ov block of the N-1 part of the dynamic
-        self-energy.
+        Third order contribution to the ov block of the N-1 part of the
+        dynamic self-energy.
         """
-        return (
-            + 0.5 * einsum(
-                "jkab,jkib->ia", self.td2(b.oovv), self.reference_state.ooov
-            )
-            - 1 * einsum("jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.ov))
-            - 0.25 * einsum("jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.vv))
+        raise NotImplementedError(
+            "Third order contribution to the ov block of the N-1 part "
+            "of the dynamic self-energy not implemented on "
+            f"{self.__class__.__name__} class."
         )
 
     @cached_member_function()
@@ -323,34 +319,17 @@ class GroundState:
         ret.reference_state = self.reference_state
         return ret.evaluate()
 
-    @cached_member_function()
     def third_order_dm_correction(self, apply_cvs: bool = False
                                   ) -> OneParticleDensity:
         """
         Return the third-order contribution to the ground state
         difference density in the MO basis.
         """
-
-        if apply_cvs:
-            raise NotImplementedError(
-                "CVS-MP3 difference density not implemented yet"
-            )
-
-        ret = OneParticleDensity(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
-
-        ret.oo = (
-            - einsum("ikab,jkab->ij", self.t2oo, self.td2(b.oovv)).symmetrise(0, 1)
+        raise NotImplementedError(
+            "Third-order contribution to the ground state difference "
+            "density in the MO basis not implemented on "
+            f"{self.__class__.__name__} class."
         )
-        ret.ov = (
-            - (self.sigma_inf_ov(3) + self.m_3_plus + self.m_3_minus
-               ) / self.df(b.ov)
-        )
-
-        ret.vv = (
-            + einsum("ijac,ijbc->ab", self.t2oo, self.td2(b.oovv)).symmetrise(0, 1)
-        )
-
-        return ret.evaluate()
 
     @cached_member_function()
     def first_order_dm_correction_2p(self, apply_cvs: bool = False
