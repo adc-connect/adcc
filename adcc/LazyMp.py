@@ -39,6 +39,14 @@ class LazyMp(GroundState):
         assert all(s == b.v for s in sp[2:])
         eia = self.df(sp[0] + b.v)
         ejb = self.df(sp[1] + b.v)
+        # since ia and jb are connected on the df objects, it is sufficient
+        # to only symmetrise the virtual orbitals resulting in
+        # ia jb + ib ja
+        # which is identical to the expression if only the occupied indices
+        # would have been symmetrised
+        # -> resulting expression has both ij and ab symmetry
+        # if we instead would build the denominator from orbital energies
+        # occupied and virtual indices both have to be symmetrized!
         return (
             hf.eri(space) / direct_sum("ia+jb->ijab", eia, ejb).symmetrise((2, 3))
         )
@@ -129,6 +137,8 @@ class LazyMp(GroundState):
             raise NotImplementedError("T^D_2 term not implemented "
                                       f"for space {space}.")
         t2erit = self.t2eri(b.oovv, b.ov).transpose((1, 0, 2, 3))
+        # since we use dfs to build the denominator, the symmetrisation
+        # of either occ or virt indices is sufficient
         denom = direct_sum(
             'ia,jb->ijab', self.df(b.ov), self.df(b.ov)
         ).symmetrise(0, 1)
@@ -151,6 +161,16 @@ class LazyMp(GroundState):
         df = self.df(b.ov)
         t2_1 = self.t2(b.oovv)
         # denom = a + b + c - i - j - k   //   df = i - a
+        # For a triples denom, we have to explicitly symmetrise both occupied
+        # and virtual indices even if we use dfs in the construction!
+        # If the construction would use a tertiary direct_sum operation this
+        # should not be necessary! However, for nested binary operations,
+        # the outer direct_sum acts on a 2D df and a 4D df. Therefore, the
+        # symmetrisations of the occupied and virtual orbital spaces
+        # produce distinct expressions and thus have both to applied
+        # to obtain the correct symmetry.
+        # occ:  ia jkbc + ia kjbc + ja ikbc + ja kibc + ka jibc + ka ijbc
+        # virt: ia jkbc + ia jkcb + ib jkac + ib jkca + ic jkba + ic jkab
         denom = - 1 * direct_sum(
             "ia,jkbc->ijkabc", df, direct_sum("jb,kc->jkbc", df, df)
         ).symmetrise(0, 1, 2).symmetrise(3, 4, 5)
