@@ -29,7 +29,7 @@ _cvs_gs_data_method = "adc3"
 # or density_order=4 to activate the calculation of tt2 amplitudes.
 # However, density_order=4 requires many more amplitudes and is therefore
 # more expensive than ISR3
-_gs_data_isr_maxorder = 3
+_gs_data_isr_maxorder = None
 # Once we have other flavours or the MP4 density implemented, we will need to
 # perform multiple MP calculations to obtain all the data.
 _gs_data_density_orders = (None,)
