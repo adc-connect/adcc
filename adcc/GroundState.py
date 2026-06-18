@@ -26,7 +26,7 @@ from .OneParticleDensity import OneParticleDensity
 from .ReferenceState import ReferenceState
 from .TwoParticleDensity import TwoParticleDensity
 from .functions import direct_sum, einsum, zeros_like
-from .misc import cached_member_function
+from .misc import cached_member_function, cached_property
 from .timings import Timer
 from . import block as b
 
@@ -240,28 +240,32 @@ class GroundState:
         contraction_str, eri_block = expressions[key]
         return einsum(contraction_str, self.t2oo, hf.eri(eri_block))
 
-    @property
+    @cached_property
     def m_3_plus(self) -> libadcc.Tensor:
         """
         Third order contribution to the ov block of the N+1 part of the
         dynamic self-energy.
         """
-        raise NotImplementedError(
-            "Third order contribution to the ov block of the N+1 part "
-            "of the dynamic self-energy not implemented on "
-            f"{self.__class__.__name__} class."
+        return (
+            + 1 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.ov))
+            + 0.5 * einsum(
+                "ijbc,jabc->ia", self.td2(b.oovv), self.reference_state.ovvv
+            )
+            - 0.25 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.oo))
         )
 
-    @property
+    @cached_property
     def m_3_minus(self) -> libadcc.Tensor:
         """
         Third order contribution to the ov block of the N-1 part of the
         dynamic self-energy.
         """
-        raise NotImplementedError(
-            "Third order contribution to the ov block of the N-1 part "
-            "of the dynamic self-energy not implemented on "
-            f"{self.__class__.__name__} class."
+        return (
+            + 0.5 * einsum(
+                "jkab,jkib->ia", self.td2(b.oovv), self.reference_state.ooov
+            )
+            - 1 * einsum("jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.ov))
+            - 0.25 * einsum("jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.vv))
         )
 
     @cached_member_function()
