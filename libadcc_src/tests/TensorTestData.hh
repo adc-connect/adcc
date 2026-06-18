@@ -50,6 +50,17 @@ struct TensorTestData {
 
   /** The anti-symmetrisation of above tensor along axis 0, 1 and 2 */
   static std::vector<double> a_asym_012;
+
+  /** A rank-6 tensor of test data */
+  static std::vector<double> b;
+
+  /** The symmetrisation of above tensor by permuting simultaneously
+   *  axes 0 / 1 and 2 and 3 / 4 / 5 */
+  static std::vector<double> b_sym_012_345;
+
+  /** The anti-symmetrisation of above tensor by permuting simultaneously
+   *  axes 0 / 1 and 2 and 3 / 4 / 5 */
+  static std::vector<double> b_asym_012_345;
 };
 
 }  // namespace tests

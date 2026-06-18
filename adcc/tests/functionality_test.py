@@ -33,7 +33,7 @@ from . import testcases
 from .testdata_cache import testdata_cache
 
 # The methods to test
-methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+methods = ["adc0", "adc1", "adc2", "adc2x", "adc3", "adc4"]
 
 # The different reference data that we test against
 generators = ["adcman", "adcc"]
@@ -53,6 +53,8 @@ cases = [
 class TestFunctionality:
     def base_test(self, system: testcases.TestCase, case: str, method: str,
                   kind: str, generator: str, **args):
+        if "cvs" in case and method == "adc4":
+            pytest.skip("CVS-ADC(4) not implemented")
         # build a ReferenceState that is already aware of the case (cvs/...)
         hf = testdata_cache.refstate(system, case=case)
         # load the adc refdata
@@ -87,6 +89,18 @@ class TestFunctionality:
                 #      are implemented
                 assert res.ground_state.energy_correction(3) == \
                     approx(refmp["mp3"]["energy"])
+            else:
+                with pytest.raises(NotImplementedError):
+                    res.ground_state.energy_correction(3)
+        if res.method.level.to_int() >= 4:
+            if not res.method.is_core_valence_separated:
+                # TODO The latter check can be removed once CVS-MP4 energies
+                #      are implemented
+                assert res.ground_state.energy_correction(4) == \
+                    approx(refmp["mp4"]["energy"])
+            else:
+                with pytest.raises(NotImplementedError):
+                    res.ground_state.energy_correction(4)
 
         for i in range(n_ref):
             # Computing the dipole moment implies a lot of cancelling in the
@@ -98,12 +112,10 @@ class TestFunctionality:
                 ref_tdm = np.array([0., 0., 0.])
             else:
                 ref_tdm = ref["transition_dipole_moments"][i]
-
             # Test norm and actual values
             res_tdm_norm = np.sum(res_tdm * res_tdm)
             ref_tdm_norm = np.sum(ref_tdm * ref_tdm)
             assert res_tdm_norm == approx(ref_tdm_norm, abs=1e-5)
-
             # If the eigenpair is degenerate, then some rotation
             # in the eigenspace is possible, which reflects as a
             # rotation inside the dipole moments. This is the case
@@ -112,7 +124,6 @@ class TestFunctionality:
             # in such cases and skip the test for the exact values.
             if system.name != "cn":
                 assert_allclose_signfix(res_tdm, ref_tdm, atol=1e-5)
-
         # Computing the dipole moment implies a lot of cancelling in the
         # contraction, which has quite an impact on the accuracy.
         assert_allclose(res.state_dipole_moment[:n_ref],
@@ -125,12 +136,16 @@ class TestFunctionality:
 
     def test_functionality(self, system: str, case: str, method: str, kind: str,
                            generator: str):
+        if "cvs" in case and method == "adc4":
+            pytest.skip("CVS-ADC(4) not implemented")
         method: adcc.AdcMethod = adcc.AdcMethod(method)
         if generator == "adcman" and "cvs" in case \
                 and method.level.to_int() == 0:
             pytest.skip("CVS-ADC(0) adcman data is not available")
 
         system: testcases.TestCase = testcases.get_by_filename(system).pop()
+        if system.only_full_mode and method.name == "adc4":
+            pytest.skip("ADC(4) reference only available for small testcases.")
         n_states = testcases.kinds_to_nstates([kind]).pop()
 
         kwargs = {n_states: 3}

@@ -25,6 +25,8 @@ import numpy as np
 
 from .GroundState import GroundState
 from .MoSpaces import split_spaces
+from .NParticleOperator import OperatorSymmetry
+from .OneParticleDensity import OneParticleDensity
 from .functions import direct_sum, einsum
 from .misc import cached_member_function
 from . import block as b
@@ -149,6 +151,59 @@ class LazyMp(GroundState):
         ) / denom
 
     @cached_member_function()
+    def td3(self, space: str) -> libadcc.Tensor:
+        """Return the third order MP doubles amplitudes for the given space
+        (e.g. o1o1v1v1)."""
+        if space != b.oovv:
+            raise NotImplementedError("Third order MP doubles amplitude not "
+                                      f"imlemented for space{space}")
+        hf = self.reference_state
+        t2_1 = self.t2(b.oovv)
+        t1_2 = self.mp2_diffdm.ov
+        t2_2 = self.td2(b.oovv)
+        t3_2 = self.tt2(b.ooovvv)
+
+        denom = direct_sum(
+            'ia,jb->ijab', self.df(b.ov), self.df(b.ov)
+        ).symmetrise(0, 1)
+
+        ampl = (
+            + 2 * (
+                # N^5: O^2V^3 / N^4: O^1V^3
+                + 1 * einsum('icab,jc->ijab', hf.ovvv, t1_2)
+                # N^7: O^4V^3 / N^6: O^3V^3
+                + 0.5 * einsum('klic,jklabc->ijab', hf.ooov, t3_2)
+                # N^5: O^3V^2 / N^4: O^2V^2
+                + 0.5 * einsum('ilab,jl->ijab', t2_1,
+                               einsum('klcd,jkcd->jl', hf.oovv, t2_1))
+            )
+            + 4 * (
+                # N^6: O^3V^3 / N^4: O^2V^2
+                + 1 * einsum('icka,jkbc->ijab', hf.ovov, t2_2)
+            )
+            + 2 * (
+                # N^5: O^3V^2 / N^4: O^2V^2
+                + 1 * einsum('ijka,kb->ijab', hf.ooov, t1_2)
+                # N^7: O^3V^4 / N^6: O^3V^3
+                + 0.5 * einsum('kacd,ijkbcd->ijab', hf.ovvv, t3_2)
+                # N^6: O^3V^3 / N^4: O^2V^2
+                + 1 * einsum('ikbd,jkad->ijab', t2_1,
+                             einsum('klcd,jlac->jkad', hf.oovv, t2_1))
+                # N^5: O^2V^3 / N^4: O^2V^2
+                + 0.5 * einsum('ijad,bd->ijab', t2_1,
+                               einsum('klcd,klbc->bd', hf.oovv, t2_1))
+            )
+            # N^6: O^2V^4 / N^4: V^4
+            - 0.5 * einsum('abcd,ijcd->ijab', hf.vvvv, t2_2)
+            # N^6: O^4V^2 / N^4: O^2V^2
+            - 0.5 * einsum('ijkl,klab->ijab', hf.oooo, t2_2)
+            # N^6: O^4V^2 / N^4: O^2V^2
+            + 0.25 * einsum('klab,ijkl->ijab', t2_1,
+                            einsum('klcd,ijcd->ijkl', hf.oovv, t2_1))
+        ).antisymmetrise(0, 1).antisymmetrise(2, 3)
+        return ampl / denom
+
+    @cached_member_function()
     def tt2(self, space: str) -> libadcc.Tensor:
         """
         Return the second order MP triples amplitudes for the given space
@@ -202,6 +257,8 @@ class LazyMp(GroundState):
                      (1.0, hf.ccvv, self.t2cc)]
         elif level == 3 and not is_cvs:
             terms = [(1.0, hf.oovv, self.td2(b.oovv))]
+        elif level == 4 and not is_cvs:
+            terms = [(1.0, hf.oovv, self.td3(b.oovv))]
         else:
             method = "CVS-MP" if is_cvs else "MP"
             raise NotImplementedError(f"{method} energy correction for level "
@@ -254,3 +311,36 @@ class LazyMp(GroundState):
     @property
     def mp2_dipole_moment(self):
         return self.dipole_moment(level=2)
+
+    @cached_member_function()
+    def third_order_dm_correction(self, apply_cvs: bool = False
+                                  ) -> OneParticleDensity:
+        """
+        Return the third-order MP contribution to the ground state
+        difference density in the MO basis.
+        """
+        if self.has_core_occupied_space:
+            raise NotImplementedError(
+                "CVS-MP3 difference density not implemented yet"
+            )
+        assert not apply_cvs
+
+        ret = OneParticleDensity(
+            self.mospaces, symmetry=OperatorSymmetry.HERMITIAN
+        )
+
+        ret.oo = (
+            - einsum("ikab,jkab->ij", self.t2oo,
+                     self.td2(b.oovv)).symmetrise(0, 1)
+        )
+        ret.ov = (
+            - (self.sigma_inf_ov(3) + self.m_3_plus + self.m_3_minus
+               ) / self.df(b.ov)
+        )
+
+        ret.vv = (
+            + einsum("ijac,ijbc->ab", self.t2oo,
+                     self.td2(b.oovv)).symmetrise(0, 1)
+        )
+
+        return ret.evaluate()
