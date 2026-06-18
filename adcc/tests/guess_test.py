@@ -34,8 +34,8 @@ from . import testcases
 
 
 # The methods to test
-singles_methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
-doubles_methods = ["adc2", "adc2x", "adc3"]
+singles_methods = ["adc0", "adc1", "adc2", "adc2x", "adc3", "adc4"]
+doubles_methods = ["adc2", "adc2x", "adc3", "adc4"]
 # the testcases
 h2o_sto3g = testcases.get_by_filename("h2o_sto3g").pop()
 cn_sto3g = testcases.get_by_filename("cn_sto3g").pop()
@@ -331,6 +331,8 @@ class TestGuess:
     @pytest.mark.parametrize("method", singles_methods)
     @pytest.mark.parametrize("case", h2o_sto3g.cases)
     def test_singles_h2o(self, method: str, case: str):
+        if "cvs" in case and method == "adc4":
+            pytest.skip("CVS-ADC(4) not implemented")
         guesses = {  # fewer guesses available
             "fv-cvs": 1, "cvs": 2, "fc": 8, "fv": 5, "fc-fv": 4, "fc-cvs": 2,
             "fc-fv-cvs": 1
@@ -343,6 +345,8 @@ class TestGuess:
     @pytest.mark.parametrize("method", doubles_methods)
     @pytest.mark.parametrize("case", h2o_sto3g.cases)
     def test_doubles_h2o(self, method: str, case: str):
+        if "cvs" in case and method == "adc4":
+            pytest.skip("CVS-ADC(4) not implemented")
         guesses = {  # fewer ocvv guesses available
             "fv-cvs": 4, "fc-fv-cvs": 3
         }
@@ -354,6 +358,8 @@ class TestGuess:
     @pytest.mark.parametrize("method", singles_methods)
     @pytest.mark.parametrize("case", cn_sto3g.cases)
     def test_singles_cn(self, method: str, case: str):
+        if "cvs" in case and method == "adc4":
+            pytest.skip("CVS-ADC(4) not implemented")
         guesses = {  # fewer guesses available
             "cvs": 7, "fc-cvs": 7, "fv-cvs": 5, "fc-fv-cvs": 5
         }
@@ -365,6 +371,8 @@ class TestGuess:
     @pytest.mark.parametrize("method", doubles_methods)
     @pytest.mark.parametrize("case", cn_sto3g.cases)
     def test_doubles_cn(self, method: str, case: str):
+        if "cvs" in case and method == "adc4":
+            pytest.skip("CVS-ADC(4) not implemented")
         self.base_test_no_spin_change(
             system="cn_sto3g", case=case, method=method, block="pphh",
             max_guesses=5
@@ -373,6 +381,8 @@ class TestGuess:
     @pytest.mark.parametrize("method", singles_methods)
     @pytest.mark.parametrize("case", hf_631g.cases)
     def test_singles_hf(self, method: str, case: str):
+        if "cvs" in case and method == "adc4":
+            pytest.skip("CVS-ADC(4) not implemented")
         self.base_test_spin_flip(
             system="hf_631g", case=case, method=method, block="ph",
             max_guesses=10
@@ -381,6 +391,8 @@ class TestGuess:
     @pytest.mark.parametrize("method", doubles_methods)
     @pytest.mark.parametrize("case", hf_631g.cases)
     def test_doubles_hf(self, method: str, case: str):
+        if "cvs" in case and method == "adc4":
+            pytest.skip("CVS-ADC(4) not implemented")
         self.base_test_spin_flip(
             system="hf_631g", case=case, method=method, block="pphh",
             max_guesses=5

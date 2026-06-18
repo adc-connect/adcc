@@ -88,6 +88,8 @@ def guess_symmetries(matrix, spin_change=0, spin_block_symmetrisation="none"):
         max_spin_change = 1
     if "pphh" in matrix.axis_blocks:
         max_spin_change = 2
+    if "ppphhh" in matrix.axis_blocks:
+        max_spin_change = 3
     if spin_change > max_spin_change:
         raise ValueError("spin_change for singles guesses may only be in the "
                          f"range [{-max_spin_change}, {max_spin_change}] and "
@@ -101,6 +103,11 @@ def guess_symmetries(matrix, spin_change=0, spin_block_symmetrisation="none"):
         )
     if "pphh" in matrix.axis_blocks:
         symmetries["pphh"] = guess_symmetry_doubles(
+            matrix, spin_change=spin_change,
+            spin_block_symmetrisation=spin_block_symmetrisation
+        )
+    if "ppphhh" in matrix.axis_blocks:
+        symmetries["ppphhh"] = guess_symmetry_triples(
             matrix, spin_change=spin_change,
             spin_block_symmetrisation=spin_block_symmetrisation
         )
@@ -159,6 +166,66 @@ def guess_symmetry_doubles(matrix, spin_change=0,
         permutations.append("-jiab")
     if spaces_d[2] == spaces_d[3]:
         permutations.append("-ijba")
+    if len(permutations) > 1:
+        symmetry.permutations = permutations
+    return symmetry
+
+
+def guess_symmetry_triples(matrix, spin_change=0,
+                           spin_block_symmetrisation="none"):
+    spaces_t = matrix.axis_spaces["ppphhh"]
+    symmetry = Symmetry(matrix.mospaces, "".join(spaces_t))
+    symmetry.irreps_allowed = ["A"]
+
+    if spin_change != 0 and spin_block_symmetrisation != "none":
+        raise NotImplementedError("spin_symmetrisation != 'none' only "
+                                  "implemented for spin_change == 0")
+
+    if spin_change == 0 \
+       and spin_block_symmetrisation in ("symmetric", "antisymmetric"):
+        fac = 1 if spin_block_symmetrisation == "symmetric" else -1
+        # Spin mapping between blocks where alpha and beta are just mirrored
+        symmetry.spin_block_maps = [("aaaaaa", "bbbbbb", fac),
+                                    ("aabaab", "bbabba", fac),
+                                    ("aababa", "bbabab", fac),
+                                    ("aabbaa", "bbaabb", fac),
+                                    ("abaaab", "babbba", fac),
+                                    ("abaaba", "babbab", fac),
+                                    ("ababaa", "bababb", fac),
+                                    ("baaaab", "abbbba", fac),
+                                    ("baaaba", "abbbab", fac),
+                                    ("baabaa", "abbabb", fac)]
+
+        # Mark blocks which change spin as forbidden
+        symmetry.spin_blocks_forbidden = [
+            "aaaaab", "aaaaba", "aaabaa",  # 0/1
+            "aabaaa", "abaaaa", "baaaaa",  # 1/0
+            "aaaabb", "aaabab", "aaabba",  # 0/2
+            "abbaaa", "babaaa", "bbaaaa",  # 2/0
+            "aaabbb",                      # 0/3
+            "bbbaaa",                      # 3/0
+            "aababb", "aabbab", "aabbba",  # 1/2
+            "abaabb", "ababab", "ababba",  # 1/2
+            "baaabb", "baabab", "baabba",  # 1/2
+            "abbaab", "abbaba", "abbbaa",  # 2/1
+            "babaab", "bababa", "babbaa",  # 2/1
+            "bbaaab", "bbaaba", "bbabaa",  # 2/1
+            "aabbbb", "ababbb", "baabbb",  # 1/3
+            "bbbaab", "bbbaba", "bbbbaa",  # 3/1
+            "abbbbb", "babbbb", "bbabbb",  # 2/3
+            "bbbabb", "bbbbab", "bbbbba",  # 3/2
+        ]
+
+    # Add index permutation symmetry:
+    permutations = ["ijkabc"]
+    if spaces_t[0] == spaces_t[1]:
+        permutations.append("-jikabc")
+    if spaces_t[1] == spaces_t[2]:
+        permutations.append("-ikjabc")
+    if spaces_t[3] == spaces_t[4]:
+        permutations.append("-ijkbac")
+    if spaces_t[4] == spaces_t[5]:
+        permutations.append("-ijkacb")
     if len(permutations) > 1:
         symmetry.permutations = permutations
     return symmetry

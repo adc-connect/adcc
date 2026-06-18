@@ -49,6 +49,9 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
     # MP3 data
     if not ground_state.has_core_occupied_space:
         gs_data[f"{gs}3/energy"] = ground_state.energy_correction(3)
+    # MP4 data
+    if not ground_state.has_core_occupied_space and not only_full_mode:
+        gs_data[f"{gs}4/energy"] = ground_state.energy_correction(4)
     # MP2 density: MO basis
     diffdm = ground_state.diffdm(2, apply_cvs=False)
     for block in diffdm.blocks_nonzero:
@@ -169,8 +172,10 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
                 np.asarray(tdm_bb_b)
             )
     # ssq for unrestriced calculation
-    if not states.reference_state.restricted \
-            and not states.method.is_core_valence_separated:
+    if (
+        not states.reference_state.restricted
+        and not states.ground_state.has_core_occupied_space
+    ):
         kind_data["state_ssq"] = states.state_ssq
     # write the data to hdf5
     emplace_dict(kind_data, hdf5_file, compression="gzip")
@@ -205,19 +210,47 @@ def dump_matrix_testdata(matrix: AdcMatrix, trial_vec: AmplitudeVector,
         data["result_dd"] = matrix.block_apply(
             doubles_doubles, trial_vec[blocks[1]]
         ).to_ndarray()
+    if len(blocks) > 2:  # we have triples
+        assert blocks[2] in trial_vec
+        singles_triples = f"{blocks[0]}_{blocks[2]}"
+        data["result_st"] = matrix.block_apply(
+            singles_triples, trial_vec[blocks[2]]
+        ).to_ndarray()
+        triples_singles = f"{blocks[2]}_{blocks[0]}"
+        data["result_ts"] = matrix.block_apply(
+            triples_singles, trial_vec[blocks[0]]
+        ).to_ndarray()
+        doubles_triples = f"{blocks[1]}_{blocks[2]}"
+        data["result_dt"] = matrix.block_apply(
+            doubles_triples, trial_vec[blocks[2]]
+        ).to_ndarray()
+        triples_doubles = f"{blocks[2]}_{blocks[1]}"
+        data["result_td"] = matrix.block_apply(
+            triples_doubles, trial_vec[blocks[1]]
+        ).to_ndarray()
+        triples_triples = f"{blocks[2]}_{blocks[2]}"
+        data["result_tt"] = matrix.block_apply(
+            triples_triples, trial_vec[blocks[2]]
+        ).to_ndarray()
     # compute the full mvp
     matvec = matrix.matvec(trial_vec)
     data["matvec_singles"] = matvec[blocks[0]].to_ndarray()  # type: ignore
     if len(blocks) > 1:
         data["matvec_doubles"] = matvec[blocks[1]].to_ndarray()  # type: ignore
+    if len(blocks) > 2:
+        data["matvec_triples"] = matvec[blocks[2]].to_ndarray()  # type: ignore
     # compute the diagonal
     data["diagonal_singles"] = matrix.diagonal()[blocks[0]].to_ndarray()
     if len(blocks) > 1:
         data["diagonal_doubles"] = matrix.diagonal()[blocks[1]].to_ndarray()
+    if len(blocks) > 2:
+        data["diagonal_triples"] = matrix.diagonal()[blocks[2]].to_ndarray()
     # dump the trial vector
     data["random_singles"] = trial_vec[blocks[0]].to_ndarray()
     if len(blocks) > 1:
         data["random_doubles"] = trial_vec[blocks[1]].to_ndarray()
+    if len(blocks) > 2:
+        data["random_triples"] = trial_vec[blocks[2]].to_ndarray()
     # write the data to hdf5
     emplace_dict(data, hdf5_file, compression="gzip")
     hdf5_file.attrs["adcc_version"] = adcc.__version__

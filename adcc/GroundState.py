@@ -26,7 +26,7 @@ from .OneParticleDensity import OneParticleDensity
 from .ReferenceState import ReferenceState
 from .TwoParticleDensity import TwoParticleDensity
 from .functions import direct_sum, einsum, zeros_like
-from .misc import cached_member_function
+from .misc import cached_member_function, cached_property
 from .timings import Timer
 from . import block as b
 
@@ -124,6 +124,11 @@ class GroundState:
             raise ValueError(f"Difference density of order {level} vanishes.")
         elif level == 2:
             return self.second_order_dm_correction(apply_cvs=apply_cvs)
+        elif level == 3:
+            return (
+                self.second_order_dm_correction(apply_cvs=apply_cvs)
+                + self.third_order_dm_correction(apply_cvs=apply_cvs)
+            )
         else:
             raise NotImplementedError(
                 "Only second-order density corection is implemented. "
@@ -235,6 +240,47 @@ class GroundState:
         contraction_str, eri_block = expressions[key]
         return einsum(contraction_str, self.t2oo, hf.eri(eri_block))
 
+    @cached_property
+    def m_3_plus(self) -> libadcc.Tensor:
+        """
+        Third order contribution to the ov block of the N+1 part of the
+        dynamic self-energy.
+        """
+        return (
+            + 1 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.ov))
+            + 0.5 * einsum(
+                "ijbc,jabc->ia", self.td2(b.oovv), self.reference_state.ovvv
+            )
+            - 0.25 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.oo))
+        )
+
+    @cached_property
+    def m_3_minus(self) -> libadcc.Tensor:
+        """
+        Third order contribution to the ov block of the N-1 part of the
+        dynamic self-energy.
+        """
+        return (
+            + 0.5 * einsum(
+                "jkab,jkib->ia", self.td2(b.oovv), self.reference_state.ooov
+            )
+            - 1 * einsum("jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.ov))
+            - 0.25 * einsum("jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.vv))
+        )
+
+    @cached_member_function()
+    def sigma_inf_ov(self, level: int) -> libadcc.Tensor:
+        """The ov part of the static self-energy."""
+        hf = self.reference_state
+        dm = self.diffdm(level - 1)
+
+        return (
+            - einsum("ijka,jk->ia", hf.ooov, dm.oo)
+            + einsum("ijab,jb->ia", hf.oovv, dm.ov)
+            - einsum("ibja,jb->ia", hf.ovov, dm.ov)
+            + einsum("ibac,bc->ia", hf.ovvv, dm.vv)
+        )
+
     @cached_member_function()
     def second_order_dm_correction(self, apply_cvs: bool = False
                                    ) -> OneParticleDensity:
@@ -276,6 +322,18 @@ class GroundState:
             ret.cv = self.ts2(b.cv, apply_cvs=apply_cvs)
         ret.reference_state = self.reference_state
         return ret.evaluate()
+
+    def third_order_dm_correction(self, apply_cvs: bool = False
+                                  ) -> OneParticleDensity:
+        """
+        Return the third-order contribution to the ground state
+        difference density in the MO basis.
+        """
+        raise NotImplementedError(
+            "Third-order contribution to the ground state difference "
+            "density in the MO basis not implemented on "
+            f"{self.__class__.__name__} class."
+        )
 
     @cached_member_function()
     def first_order_dm_correction_2p(self, apply_cvs: bool = False
