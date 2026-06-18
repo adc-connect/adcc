@@ -100,7 +100,7 @@ class TestLazyMp:
         with pytest.raises(NotImplementedError):
             mp.td2(b.ccvv)
         with pytest.raises(NotImplementedError):
-            mp.energy_correction(4)
+            mp.energy_correction(5)
 
     #
     # Generic
@@ -143,6 +143,19 @@ class TestLazyMp:
         assert (
             instances.get(system, case).energy_correction(3)
             == approx(refmp["mp3"]["energy"])
+        )
+
+    # MP4 energy not implemented for CVS
+    @pytest.mark.parametrize("system,case", non_cvs_small_cases)
+    @pytest.mark.parametrize("generator", generators)
+    def test_mp4_energy(self, system: str, case: str, generator: str,
+                        instances: LazyMpCache):
+        refmp = testdata_cache._load_data(
+            system=system, method="mp", case=case, source=generator
+        )
+        assert (
+            instances.get(system, case).energy_correction(4)
+            == approx(refmp["mp4"]["energy"])
         )
 
     # Ssq only implemented for unrestricted case, no adcman reference

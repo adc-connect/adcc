@@ -1,7 +1,7 @@
 [project]
 name = "adcc"
 description = "adcc:  Seamlessly connect your host program to ADC"
-version = "0.17.1"
+version = "0.18.0"
 dynamic = ["readme"]  # handled in setup.py
 keywords = [
 	"ADC", "algebraic-diagrammatic", "construction", "excited", "states",
@@ -24,7 +24,6 @@ classifiers = [
 	"Intended Audience :: Science/Research",
 	"Topic :: Scientific/Engineering :: Chemistry",
 	"Topic :: Education",
-	"Programming Language :: Python :: 3.9",
 	"Programming Language :: Python :: 3.10",
 	"Programming Language :: Python :: 3.11",
 	"Programming Language :: Python :: 3.12",
@@ -32,7 +31,7 @@ classifiers = [
 	"Operating System :: MacOS :: MacOS X",
 	"Operating System :: POSIX :: Linux",
 ]
-requires-python = ">= 3.9"
+requires-python = ">= 3.10"
 dependencies = [
 	"opt_einsum >= 3.0",
 	"numpy >= 2.0",
@@ -75,7 +74,7 @@ exclude = [
 ]
 
 [tool.bumpversion]
-current_version = "0.17.1"
+current_version = "0.18.0"
 commit = true
 tag = true
 files = [

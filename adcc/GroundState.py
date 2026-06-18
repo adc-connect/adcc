@@ -133,8 +133,8 @@ class GroundState:
             return self.second_order_dm_correction(apply_cvs=apply_cvs)
         elif level == 3:
             return (
-                self.second_order_dm_correction()
-                + self.third_order_dm_correction()
+                self.second_order_dm_correction(apply_cvs=apply_cvs)
+                + self.third_order_dm_correction(apply_cvs=apply_cvs)
             )
         else:
             raise NotImplementedError(
@@ -250,11 +250,9 @@ class GroundState:
     @cached_property
     def m_3_plus(self) -> libadcc.Tensor:
         """
-        Third order contribution to the ov block of the N+1 part of the dynamic
-        self-energy.
+        Third order contribution to the ov block of the N+1 part of the
+        dynamic self-energy.
         """
-        # NOTE: m_3_plus, m_3_minus have to be implemented on GroundState so we can
-        # use them for the evaluation of the MP3 density
         return (
             + 1 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.ov))
             + 0.5 * einsum(
@@ -266,8 +264,8 @@ class GroundState:
     @cached_property
     def m_3_minus(self) -> libadcc.Tensor:
         """
-        Third order contribution to the ov block of the N-1 part of the dynamic
-        self-energy.
+        Third order contribution to the ov block of the N-1 part of the
+        dynamic self-energy.
         """
         return (
             + 0.5 * einsum(
@@ -331,6 +329,18 @@ class GroundState:
             ret.cv = self.ts2(b.cv, apply_cvs=apply_cvs)
         ret.reference_state = self.reference_state
         return ret.evaluate()
+
+    def third_order_dm_correction(self, apply_cvs: bool = False
+                                  ) -> OneParticleDensity:
+        """
+        Return the third-order contribution to the ground state
+        difference density in the MO basis.
+        """
+        raise NotImplementedError(
+            "Third-order contribution to the ground state difference "
+            "density in the MO basis not implemented on "
+            f"{self.__class__.__name__} class."
+        )
 
     @cached_member_function()
     def third_order_dm_correction(self,

@@ -25,6 +25,8 @@ import numpy as np
 
 from .GroundState import GroundState
 from .MoSpaces import split_spaces
+from .NParticleOperator import OperatorSymmetry
+from .OneParticleDensity import OneParticleDensity
 from .functions import direct_sum, einsum
 from .misc import cached_member_function
 from . import block as b
@@ -39,6 +41,14 @@ class LazyMp(GroundState):
         assert all(s == b.v for s in sp[2:])
         eia = self.df(sp[0] + b.v)
         ejb = self.df(sp[1] + b.v)
+        # since ia and jb are connected on the df objects, it is sufficient
+        # to only symmetrise the virtual orbitals resulting in
+        # ia jb + ib ja
+        # which is identical to the expression if only the occupied indices
+        # would have been symmetrised
+        # -> resulting expression has both ij and ab symmetry
+        # if we instead would build the denominator from orbital energies
+        # occupied and virtual indices both have to be symmetrized!
         return (
             hf.eri(space) / direct_sum("ia+jb->ijab", eia, ejb).symmetrise((2, 3))
         )
@@ -129,6 +139,8 @@ class LazyMp(GroundState):
             raise NotImplementedError("T^D_2 term not implemented "
                                       f"for space {space}.")
         t2erit = self.t2eri(b.oovv, b.ov).transpose((1, 0, 2, 3))
+        # since we use dfs to build the denominator, the symmetrisation
+        # of either occ or virt indices is sufficient
         denom = direct_sum(
             'ia,jb->ijab', self.df(b.ov), self.df(b.ov)
         ).symmetrise(0, 1)
@@ -137,6 +149,59 @@ class LazyMp(GroundState):
             - 0.5 * self.t2eri(b.oovv, b.vv)
             - 0.5 * self.t2eri(b.oovv, b.oo)
         ) / denom
+
+    @cached_member_function()
+    def td3(self, space: str) -> libadcc.Tensor:
+        """Return the third order MP doubles amplitudes for the given space
+        (e.g. o1o1v1v1)."""
+        if space != b.oovv:
+            raise NotImplementedError("Third order MP doubles amplitude not "
+                                      f"imlemented for space{space}")
+        hf = self.reference_state
+        t2_1 = self.t2(b.oovv)
+        t1_2 = self.mp2_diffdm.ov
+        t2_2 = self.td2(b.oovv)
+        t3_2 = self.tt2(b.ooovvv)
+
+        denom = direct_sum(
+            'ia,jb->ijab', self.df(b.ov), self.df(b.ov)
+        ).symmetrise(0, 1)
+
+        ampl = (
+            + 2 * (
+                # N^5: O^2V^3 / N^4: O^1V^3
+                + 1 * einsum('icab,jc->ijab', hf.ovvv, t1_2)
+                # N^7: O^4V^3 / N^6: O^3V^3
+                + 0.5 * einsum('klic,jklabc->ijab', hf.ooov, t3_2)
+                # N^5: O^3V^2 / N^4: O^2V^2
+                + 0.5 * einsum('ilab,jl->ijab', t2_1,
+                               einsum('klcd,jkcd->jl', hf.oovv, t2_1))
+            )
+            + 4 * (
+                # N^6: O^3V^3 / N^4: O^2V^2
+                + 1 * einsum('icka,jkbc->ijab', hf.ovov, t2_2)
+            )
+            + 2 * (
+                # N^5: O^3V^2 / N^4: O^2V^2
+                + 1 * einsum('ijka,kb->ijab', hf.ooov, t1_2)
+                # N^7: O^3V^4 / N^6: O^3V^3
+                + 0.5 * einsum('kacd,ijkbcd->ijab', hf.ovvv, t3_2)
+                # N^6: O^3V^3 / N^4: O^2V^2
+                + 1 * einsum('ikbd,jkad->ijab', t2_1,
+                             einsum('klcd,jlac->jkad', hf.oovv, t2_1))
+                # N^5: O^2V^3 / N^4: O^2V^2
+                + 0.5 * einsum('ijad,bd->ijab', t2_1,
+                               einsum('klcd,klbc->bd', hf.oovv, t2_1))
+            )
+            # N^6: O^2V^4 / N^4: V^4
+            - 0.5 * einsum('abcd,ijcd->ijab', hf.vvvv, t2_2)
+            # N^6: O^4V^2 / N^4: O^2V^2
+            - 0.5 * einsum('ijkl,klab->ijab', hf.oooo, t2_2)
+            # N^6: O^4V^2 / N^4: O^2V^2
+            + 0.25 * einsum('klab,ijkl->ijab', t2_1,
+                            einsum('klcd,ijcd->ijkl', hf.oovv, t2_1))
+        ).antisymmetrise(0, 1).antisymmetrise(2, 3)
+        return ampl / denom
 
     @cached_member_function()
     def tt2(self, space: str) -> libadcc.Tensor:
@@ -151,6 +216,16 @@ class LazyMp(GroundState):
         df = self.df(b.ov)
         t2_1 = self.t2(b.oovv)
         # denom = a + b + c - i - j - k   //   df = i - a
+        # For a triples denom, we have to explicitly symmetrise both occupied
+        # and virtual indices even if we use dfs in the construction!
+        # If the construction would use a tertiary direct_sum operation this
+        # should not be necessary! However, for nested binary operations,
+        # the outer direct_sum acts on a 2D df and a 4D df. Therefore, the
+        # symmetrisations of the occupied and virtual orbital spaces
+        # produce distinct expressions and thus have both to applied
+        # to obtain the correct symmetry.
+        # occ:  ia jkbc + ia kjbc + ja ikbc + ja kibc + ka jibc + ka ijbc
+        # virt: ia jkbc + ia jkcb + ib jkac + ib jkca + ic jkba + ic jkab
         denom = - 1 * direct_sum(
             "ia,jkbc->ijkabc", df, direct_sum("jb,kc->jkbc", df, df)
         ).symmetrise(0, 1, 2).symmetrise(3, 4, 5)
@@ -231,6 +306,8 @@ class LazyMp(GroundState):
                      (1.0, hf.ccvv, self.t2cc)]
         elif level == 3 and not is_cvs:
             terms = [(1.0, hf.oovv, self.td2(b.oovv))]
+        elif level == 4 and not is_cvs:
+            terms = [(1.0, hf.oovv, self.td3(b.oovv))]
         else:
             method = "CVS-MP" if is_cvs else "MP"
             raise NotImplementedError(f"{method} energy correction for level "
@@ -284,9 +361,35 @@ class LazyMp(GroundState):
     def mp2_dipole_moment(self):
         return self.dipole_moment(level=2)
 
-    @property
-    def mp3_diffdm(self):
+    @cached_member_function()
+    def third_order_dm_correction(self, apply_cvs: bool = False
+                                  ) -> OneParticleDensity:
         """
-        Return thye MP3 difference density in the MO basis
+        Return the third-order MP contribution to the ground state
+        difference density in the MO basis.
         """
-        return self.diffdm(3)
+        if self.has_core_occupied_space:
+            raise NotImplementedError(
+                "CVS-MP3 difference density not implemented yet"
+            )
+        assert not apply_cvs
+
+        ret = OneParticleDensity(
+            self.mospaces, symmetry=OperatorSymmetry.HERMITIAN
+        )
+
+        ret.oo = (
+            - einsum("ikab,jkab->ij", self.t2oo,
+                     self.td2(b.oovv)).symmetrise(0, 1)
+        )
+        ret.ov = (
+            - (self.sigma_inf_ov(3) + self.m_3_plus + self.m_3_minus
+               ) / self.df(b.ov)
+        )
+
+        ret.vv = (
+            + einsum("ijac,ijbc->ab", self.t2oo,
+                     self.td2(b.oovv)).symmetrise(0, 1)
+        )
+
+        return ret.evaluate()

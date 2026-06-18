@@ -64,6 +64,8 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
     assert method.is_core_valence_separated == ("cvs" in case)
     if method.is_core_valence_separated and method.level is MethodLevel.ZERO:
         raise ValueError("CVS-ADC(0) is not available in adcman.")
+    if method.is_core_valence_separated and method.level is MethodLevel.FOUR:
+        raise ValueError("CVS-ADC(4) is not available in adcman.")
 
     if kwargs.get("gs_density_order", None) is not None:
         if method.level.to_int() < 3:

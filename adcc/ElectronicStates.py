@@ -86,11 +86,11 @@ class ElectronicStates:
         if property_method is None and hasattr(data, '_property_method'):
             property_method = data._property_method
         if property_method is None:
-            if self.method.level in [MethodLevel.TWO_X, MethodLevel.THREE]:
-                warnings.warn(
-                    "By default ISR(2) is selected as property method "
-                    f"for an {self.method.name} calculation."
-                )
+            if self.method.level in [MethodLevel.TWO_X, MethodLevel.THREE,
+                                     MethodLevel.FOUR]:
+                # Auto-select ISR(2) properties for ADC(2)-x and ADC(3) calc
+                warnings.warn(f"ISR({self.method.level.to_str()}) not implemented."
+                              f" Property method is selected as ISR(2).")
                 property_method = self.method.at_level(2).as_method(IsrMethod)
             else:
                 property_method = self.method.as_method(IsrMethod)
@@ -750,6 +750,24 @@ class FormatAmplitudeVector:
                 ),
                 "oovv": (
                     "{} {} -> {} {}" + idx_spin_gap + "{}{}->{}{}"
+                    + spin_coeff_gap + self.value_format
+                )
+            }
+        elif self.matrix.axis_blocks == ["ph", "pphh", "ppphhh"]:
+            formats = {
+                "ov": (
+                    "{} " + empty_idx + empty_idx + " -> {} " + empty_idx
+                    + empty_idx
+                    + idx_spin_gap + "{}  ->{}  " + spin_coeff_gap
+                    + self.value_format
+                ),
+                "oovv": (
+                    "{} {} " + empty_idx + "-> {} {}" + empty_idx
+                    + idx_spin_gap + "{}{} ->{}{} "
+                    + spin_coeff_gap + self.value_format
+                ),
+                "ooovvv": (
+                    "{} {} {} -> {} {} {}" + idx_spin_gap + "{}{}{}->{}{}{}"
                     + spin_coeff_gap + self.value_format
                 )
             }

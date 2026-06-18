@@ -16,7 +16,7 @@ _methods = {
     "pp": ("adc0", "adc1", "adc2", "adc2x", "adc3")
 }
 _small_cases_methods = {
-    "pp": _methods["pp"]
+    "pp": _methods["pp"] + ("adc4",)
 }
 # Since it seems not possible to only perform an adcman MPn calculation,
 # the ground state data has to be extracted from an adc(n) calculation.
@@ -65,6 +65,11 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     if gs_density_order is not None and (
             method.level.to_int() < 3 or "cvs" in case):
         return None
+    # CVS-ADC(4) not available
+    if "cvs" in case and method.level.to_int() > 3:
+        return None
+    print(f"Generating {method.name} (gs_density_order={gs_density_order}) "
+          f"data for {case} {test_case.file_name}.")
     # add a cvs prefix to the method if necessary
     if "cvs" in case and not method.is_core_valence_separated:
         method = AdcMethod(f"cvs-{method.name}")
