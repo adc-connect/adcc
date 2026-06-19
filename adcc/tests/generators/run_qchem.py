@@ -357,7 +357,7 @@ def generate_qchem_input_file(infile: str | Path, adc_method: AdcMethod, basis: 
                               n_frozen_virtual: int | None = None,
                               max_ss: int | None = None,
                               gs_density_order: int | str | None = None,
-                              isr_order: int | None = None,
+                              isr_order: MethodLevel | None = None,
                               run_qchem_scf: bool = False) -> None:
     """
     Generates a qchem input file for the given test case and method.
@@ -377,7 +377,7 @@ def generate_qchem_input_file(infile: str | Path, adc_method: AdcMethod, basis: 
     if gs_density_order is not None:  # append density order to the method
         method += f"\nadc_gs_density_order     {gs_density_order}"
     if isr_order is not None:  # and isr_max_order
-        method += f"\nadc_isr_order            {isr_order}"
+        method += f"\nadc_isr_order            {_isr_order_dict[isr_order]}"
 
     qsys_mem = "{:d}gb".format(max(memory // 1000, 1) + 5)
     qsys_vmem = qsys_mem
@@ -489,7 +489,7 @@ $basis
 $end
 """
 
-_method_dict = {
+_method_dict: dict[str, str] = {
     "adc0": "adc(0)",
     "adc1": "adc(1)",
     "adc2": "adc(2)",
@@ -503,6 +503,11 @@ _method_dict = {
     "cvs-adc3": "cvs-adc(3)"
 }
 
-_gs_density_order_dict = {
+_isr_order_dict: dict[MethodLevel, str] = {
+    MethodLevel.THREE: "3",
+    MethodLevel.THREE_D: "THREE_D",
+}
+
+_gs_density_order_dict: dict[str, str] = {
     "sigma4+": "sigma_4_plus"
 }

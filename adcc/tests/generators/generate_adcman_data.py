@@ -24,12 +24,7 @@ _small_cases_methods = {
 # to ensure that all desired MP properties are generated.
 _gs_data_method = "adc4"
 _cvs_gs_data_method = "adc3"
-# since adc4 is not available as method in adcc and density_order=3
-# does not require the tt2 amplitudes. We either have to use ISR3
-# or density_order=4 to activate the calculation of tt2 amplitudes.
-# However, density_order=4 requires many more amplitudes and is therefore
-# more expensive than ISR3
-_gs_data_isr_order = None
+_gs_data_isr_order: MethodLevel | None = None
 # Once we have other flavours or the MP4 density implemented, we will need to
 # perform multiple MP calculations to obtain all the data.
 _gs_data_density_orders = (None,)
@@ -123,11 +118,11 @@ def generate_groundstate(test_case: testcases.TestCase) -> None:
         # However: for CVS the gs_density_order is not available
         if "cvs" in case:
             method = f"cvs-{_cvs_gs_data_method}"
-            isr_order = None
+            isr_order: MethodLevel | None = None
             gs_density_orders = (None,)
         else:
             method = _gs_data_method
-            isr_order = _gs_data_isr_order
+            isr_order: MethodLevel | None = _gs_data_isr_order
             gs_density_orders = _gs_data_density_orders
         method = AdcMethod(method)
 
