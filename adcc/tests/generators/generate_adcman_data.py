@@ -29,7 +29,7 @@ _cvs_gs_data_method = "adc3"
 # or density_order=4 to activate the calculation of tt2 amplitudes.
 # However, density_order=4 requires many more amplitudes and is therefore
 # more expensive than ISR3
-_gs_data_isr_maxorder = None
+_gs_data_isr_order = None
 # Once we have other flavours or the MP4 density implemented, we will need to
 # perform multiple MP calculations to obtain all the data.
 _gs_data_density_orders = (None,)
@@ -123,11 +123,11 @@ def generate_groundstate(test_case: testcases.TestCase) -> None:
         # However: for CVS the gs_density_order is not available
         if "cvs" in case:
             method = f"cvs-{_cvs_gs_data_method}"
-            isr_maxorder = None
+            isr_order = None
             gs_density_orders = (None,)
         else:
             method = _gs_data_method
-            isr_maxorder = _gs_data_isr_maxorder
+            isr_order = _gs_data_isr_order
             gs_density_orders = _gs_data_density_orders
         method = AdcMethod(method)
 
@@ -137,7 +137,7 @@ def generate_groundstate(test_case: testcases.TestCase) -> None:
             _, data = run_qchem(
                 test_case, method=method, case=case, import_states=False,
                 import_gs=True, gs_density_order=density_order,
-                isr_maxorder=isr_maxorder
+                isr_order=isr_order
             )
             assert data is not None
             # add the newly generated data to the gs_data
