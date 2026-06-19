@@ -28,6 +28,7 @@ from libadcc import MoIndexTranslation
 from itertools import groupby
 
 from ..AdcMatrix import AdcMatrixlike
+from ..AdcMethod import AdcType
 from .guess_zero import guess_zero
 
 
@@ -295,7 +296,7 @@ def guesses_from_diagonal_doubles(matrix, n_guesses, block="pphh", kind=None,
     # Extract doubles parts
     guesses_d = [gv.get(block) for gv in ret]
 
-    if matrix.method.adc_type == "pp":
+    if matrix.method.adc_type is AdcType.PP:
         # PP-ADC
         spaces_d = matrix.axis_spaces[block]
         # Build delta-Fock matrices
@@ -313,8 +314,8 @@ def guesses_from_diagonal_doubles(matrix, n_guesses, block="pphh", kind=None,
         d_v = matrix.reference_state.fvv.diagonal()
         doublet = (kind == "doublet")
         is_restricted = matrix.reference_state.restricted
-        double_guess_func = {"ip": libadcc.fill_ip_doubles_guesses,
-                             "ea": libadcc.fill_ea_doubles_guesses}
+        double_guess_func = {AdcType.IP: libadcc.fill_ip_doubles_guesses,
+                             AdcType.EA: libadcc.fill_ea_doubles_guesses}
         n_found = double_guess_func[matrix.method.adc_type](
             guesses_d, matrix.mospaces, d_o, d_v, is_alpha, is_restricted,
             doublet, spin_change_twice, degeneracy_tolerance)

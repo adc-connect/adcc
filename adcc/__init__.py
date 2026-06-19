@@ -77,7 +77,7 @@ __all__ = ["run_adc", "InputError", "AdcMatrix",
            "ea_adc0", "ea_adc1", "ea_adc2", "ea_adc2x", "ea_adc3",
            "banner"]
 
-__version__ = "0.17.0"
+__version__ = "0.18.0"
 __license__ = "GPL v3"
 __url__ = "https://adc-connect.org"
 __authors__ = ["Michael F. Herbst", "Maximilian Scheurer", "Jonas Leitner",
@@ -121,6 +121,11 @@ def adc2x(*args, **kwargs):
 @with_runadc_doc
 def adc3(*args, **kwargs):
     return run_adc(*args, **kwargs, method="adc3")
+
+
+@with_runadc_doc
+def adc4(*args, **kwargs):
+    return run_adc(*args, **kwargs, method="adc4")
 
 
 @with_runadc_doc

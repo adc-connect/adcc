@@ -24,6 +24,7 @@ from libadcc import amplitude_vector_enforce_spin_kind
 
 from adcc import evaluate
 from adcc.AmplitudeVector import AmplitudeVector
+from adcc.AdcMethod import AdcType
 
 # TODO
 #    This interface is not that great and leads to duplicate information
@@ -77,7 +78,7 @@ class IndexSpinSymmetrisation(IndexSymmetrisation):
         super().__init__(matrix)
         self.enforce_spin_kind = enforce_spin_kind
         # Bool to distinguish IP/EA if 'spin_kind=='doublet'
-        self.is_ip_adc = matrix.method.adc_type == "ip"
+        self.is_ip_adc = matrix.method.adc_type is AdcType.IP
 
     def symmetrise(self, new_vectors):
         if isinstance(new_vectors, AmplitudeVector):

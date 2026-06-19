@@ -60,7 +60,7 @@ def tdm_cvs_isr2(mp, amplitude, intermediates):
     u1, u2 = amplitude.ph, amplitude.pphh
 
     t2 = mp.t2(b.oovv)
-    p0 = intermediates.cvs_p0
+    p0 = mp.second_order_dm_correction(apply_cvs=True)
 
     # Compute CVS-ISR(2) tdm
     dm.oc = (  # cvs_isr2_dp0_oc
@@ -104,9 +104,11 @@ DISPATCH = {
     "isr0": tdm_isr0,
     "isr1s": tdm_isr1,  # Identical to ISR(1)
     "isr1": tdm_isr1,
+    "isr2d": tdm_isr2,  # Identical to ISR(2)
     "isr2": tdm_isr2,
     "cvs-isr0": tdm_isr0,
     "cvs-isr1": tdm_isr0,  # No extra contribs for CVS-ISR(1)
+    "cvs-isr2d": tdm_cvs_isr2,  # Identical to CVS-ISR(2)
     "cvs-isr2": tdm_cvs_isr2,
 }
 

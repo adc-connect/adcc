@@ -28,14 +28,15 @@ from numpy.testing import assert_array_equal
 
 import adcc
 import adcc.guess
+from adcc.AdcMethod import AdcType
 
 from .testdata_cache import testdata_cache
 from . import testcases
 
 
 # The methods to test
-singles_methods_pp = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
-doubles_methods_pp = ["adc2", "adc2x", "adc3"]
+singles_methods_pp = ["adc0", "adc1", "adc2", "adc2x", "adc3", "adc4"]
+doubles_methods_pp = ["adc2", "adc2x", "adc3", "adc4"]
 singles_methods_ip = ["ip-adc0", "ip-adc1", "ip-adc2", "ip-adc2x", "ip-adc3"]
 doubles_methods_ip = ["ip-adc2", "ip-adc2x", "ip-adc3"]
 singles_methods_ea = ["ea-adc0", "ea-adc1", "ea-adc2", "ea-adc2x", "ea-adc3"]
@@ -92,7 +93,7 @@ class TestGuess:
         method = adcc.AdcMethod("adc2")
         method.adc_type = "bla"
 
-        with pytest.raises(ValueError, match="Unknown ADC method"):
+        with pytest.raises(ValueError, match="Unknown ADC type"):
             determine_spin_change(method, kind="any")
 
     def test_estimate_n_guesses_pp(self):
@@ -677,6 +678,8 @@ class TestGuess:
     @pytest.mark.parametrize("method", singles_methods_pp)
     @pytest.mark.parametrize("case", h2o_sto3g.cases)
     def test_singles_h2o_pp(self, method: str, case: str):
+        if "cvs" in case and method == "adc4":
+            pytest.skip("CVS-ADC(4) not implemented")
         guesses = {  # fewer guesses available
             "fv-cvs": 1, "cvs": 2, "fc": 8, "fv": 5, "fc-fv": 4, "fc-cvs": 2,
             "fc-fv-cvs": 1
@@ -689,6 +692,8 @@ class TestGuess:
     @pytest.mark.parametrize("method", doubles_methods_pp)
     @pytest.mark.parametrize("case", h2o_sto3g.cases)
     def test_doubles_h2o_pp(self, method: str, case: str):
+        if "cvs" in case and method == "adc4":
+            pytest.skip("CVS-ADC(4) not implemented")
         guesses = {  # fewer ocvv guesses available
             "fv-cvs": 4, "fc-fv-cvs": 3
         }
@@ -698,7 +703,7 @@ class TestGuess:
         )
 
     @pytest.mark.parametrize("method", singles_methods_ip)
-    @pytest.mark.parametrize("case", h2o_sto3g.filter_cases("ip"))
+    @pytest.mark.parametrize("case", h2o_sto3g.filter_cases(AdcType.IP))
     def test_singles_h2o_ip(self, method: str, case: str):
         self.base_test_ip(
             "h2o_sto3g", case, method, block="h", is_alpha=True,
@@ -706,7 +711,7 @@ class TestGuess:
         )
 
     @pytest.mark.parametrize("method", doubles_methods_ip)
-    @pytest.mark.parametrize("case", h2o_sto3g.filter_cases("ip"))
+    @pytest.mark.parametrize("case", h2o_sto3g.filter_cases(AdcType.IP))
     def test_doubles_h2o_ip(self, method: str, case: str):
         self.base_test_ip(
             "h2o_sto3g", case, method, block="phh", is_alpha=True,
@@ -714,7 +719,7 @@ class TestGuess:
         )
 
     @pytest.mark.parametrize("method", singles_methods_ea)
-    @pytest.mark.parametrize("case", h2o_sto3g.filter_cases("ea"))
+    @pytest.mark.parametrize("case", h2o_sto3g.filter_cases(AdcType.EA))
     def test_singles_h2o_ea(self, method: str, case: str):
         self.base_test_ea(
             "h2o_sto3g", case, method, block="p", is_alpha=True,
@@ -722,7 +727,7 @@ class TestGuess:
         )
 
     @pytest.mark.parametrize("method", doubles_methods_ea)
-    @pytest.mark.parametrize("case", h2o_sto3g.filter_cases("ea"))
+    @pytest.mark.parametrize("case", h2o_sto3g.filter_cases(AdcType.EA))
     def test_doubles_h2o_ea(self, method: str, case: str):
         self.base_test_ea(
             "h2o_sto3g", case, method, block="pph", is_alpha=True,
@@ -732,6 +737,8 @@ class TestGuess:
     @pytest.mark.parametrize("method", singles_methods_pp)
     @pytest.mark.parametrize("case", cn_sto3g.cases)
     def test_singles_cn_pp(self, method: str, case: str):
+        if "cvs" in case and method == "adc4":
+            pytest.skip("CVS-ADC(4) not implemented")
         guesses = {  # fewer guesses available
             "cvs": 7, "fc-cvs": 7, "fv-cvs": 5, "fc-fv-cvs": 5
         }
@@ -743,13 +750,15 @@ class TestGuess:
     @pytest.mark.parametrize("method", doubles_methods_pp)
     @pytest.mark.parametrize("case", cn_sto3g.cases)
     def test_doubles_cn_pp(self, method: str, case: str):
+        if "cvs" in case and method == "adc4":
+            pytest.skip("CVS-ADC(4) not implemented")
         self.base_test_no_spin_change(
             system="cn_sto3g", case=case, method=method, block="pphh",
             max_guesses=5
         )
 
     @pytest.mark.parametrize("method", singles_methods_ip)
-    @pytest.mark.parametrize("case", cn_sto3g.filter_cases("ip"))
+    @pytest.mark.parametrize("case", cn_sto3g.filter_cases(AdcType.IP))
     @pytest.mark.parametrize("is_alpha", [True, False])
     def test_singles_cn_ip(self, method: str, case: str, is_alpha: bool):
         self.base_test_ip(
@@ -758,7 +767,7 @@ class TestGuess:
         )
 
     @pytest.mark.parametrize("method", doubles_methods_ip)
-    @pytest.mark.parametrize("case", cn_sto3g.filter_cases("ip"))
+    @pytest.mark.parametrize("case", cn_sto3g.filter_cases(AdcType.IP))
     @pytest.mark.parametrize("is_alpha", [True, False])
     def test_doubles_cn_ip(self, method: str, case: str, is_alpha: bool):
         case = "gen"
@@ -768,7 +777,7 @@ class TestGuess:
         )
 
     @pytest.mark.parametrize("method", singles_methods_ea)
-    @pytest.mark.parametrize("case", cn_sto3g.filter_cases("ea"))
+    @pytest.mark.parametrize("case", cn_sto3g.filter_cases(AdcType.EA))
     @pytest.mark.parametrize("is_alpha", [True, False])
     def test_singles_cn_ea(self, method: str, case: str, is_alpha: bool):
         self.base_test_ea(
@@ -777,7 +786,7 @@ class TestGuess:
         )
 
     @pytest.mark.parametrize("method", doubles_methods_ea)
-    @pytest.mark.parametrize("case", cn_sto3g.filter_cases("ea"))
+    @pytest.mark.parametrize("case", cn_sto3g.filter_cases(AdcType.EA))
     @pytest.mark.parametrize("is_alpha", [True, False])
     def test_doubles_cn_ea(self, method: str, case: str, is_alpha: bool):
         self.base_test_ea(
@@ -788,6 +797,8 @@ class TestGuess:
     @pytest.mark.parametrize("method", singles_methods_pp)
     @pytest.mark.parametrize("case", hf_631g.cases)
     def test_singles_hf_pp(self, method: str, case: str):
+        if "cvs" in case and method == "adc4":
+            pytest.skip("CVS-ADC(4) not implemented")
         self.base_test_spin_flip(
             system="hf_631g", case=case, method=method, block="ph",
             max_guesses=10
@@ -796,13 +807,15 @@ class TestGuess:
     @pytest.mark.parametrize("method", doubles_methods_pp)
     @pytest.mark.parametrize("case", hf_631g.cases)
     def test_doubles_hf_pp(self, method: str, case: str):
+        if "cvs" in case and method == "adc4":
+            pytest.skip("CVS-ADC(4) not implemented")
         self.base_test_spin_flip(
             system="hf_631g", case=case, method=method, block="pphh",
             max_guesses=5
         )
 
     @pytest.mark.parametrize("method", singles_methods_ip)
-    @pytest.mark.parametrize("case", hf_631g.filter_cases("ip"))
+    @pytest.mark.parametrize("case", hf_631g.filter_cases(AdcType.IP))
     @pytest.mark.parametrize("is_alpha", [True, False])
     def test_singles_hf_ip(self, method: str, case: str, is_alpha: bool):
         self.base_test_ip(
@@ -811,7 +824,7 @@ class TestGuess:
         )
 
     @pytest.mark.parametrize("method", doubles_methods_ip)
-    @pytest.mark.parametrize("case", hf_631g.filter_cases("ip"))
+    @pytest.mark.parametrize("case", hf_631g.filter_cases(AdcType.IP))
     @pytest.mark.parametrize("is_alpha", [True, False])
     def test_doubles_hf_ip(self, method: str, case: str, is_alpha: bool):
         self.base_test_ip(
@@ -820,7 +833,7 @@ class TestGuess:
         )
 
     @pytest.mark.parametrize("method", singles_methods_ea)
-    @pytest.mark.parametrize("case", hf_631g.filter_cases("ea"))
+    @pytest.mark.parametrize("case", hf_631g.filter_cases(AdcType.EA))
     @pytest.mark.parametrize("is_alpha", [True, False])
     def test_singles_hf_ea(self, method: str, case: str, is_alpha: bool):
         self.base_test_ea(
@@ -829,7 +842,7 @@ class TestGuess:
         )
 
     @pytest.mark.parametrize("method", doubles_methods_ea)
-    @pytest.mark.parametrize("case", hf_631g.filter_cases("ea"))
+    @pytest.mark.parametrize("case", hf_631g.filter_cases(AdcType.EA))
     @pytest.mark.parametrize("is_alpha", [True, False])
     def test_doubles_hf_ea(self, method: str, case: str, is_alpha: bool):
         self.base_test_ea(

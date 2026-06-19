@@ -32,7 +32,7 @@ from .guess import (determine_spin_change, estimate_n_guesses,
                     guesses_from_diagonal, get_spin_block_symmetrisation)
 from .LazyMp import LazyMp
 from .AdcMatrix import AdcMatrix, AdcMatrixlike, AdcExtraTerm
-from .AdcMethod import AdcMethod
+from .AdcMethod import AdcMethod, AdcType
 from .AmplitudeVector import AmplitudeVector
 from .exceptions import InputError
 from .ExcitedStates import ExcitedStates
@@ -254,11 +254,11 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         output=output, eigensolver=eigensolver, is_alpha=is_alpha,
         **solverargs)
 
-    if matrix.method.adc_type == "pp":
+    if matrix.method.adc_type is AdcType.PP:
         exstates = ExcitedStates(diagres)
-    elif matrix.method.adc_type == "ip":
+    elif matrix.method.adc_type is AdcType.IP:
         exstates = DetachedStates(diagres, is_alpha)
-    elif matrix.method.adc_type == "ea":
+    elif matrix.method.adc_type is AdcType.EA:
         exstates = AttachedStates(diagres, is_alpha)
     else:
         raise ValueError(f"Unknown ADC method: {matrix.method.name}")
@@ -395,7 +395,7 @@ def validate_state_parameters(matrix, n_states=None, n_singlets=None,
         n_states = n_spin_flip
 
     # Check for IP- and EA-ADC parameter is_alpha
-    if adc_type == "pp":
+    if adc_type is AdcType.PP:
         if is_alpha is not None:
             raise InputError("is_alpha may only be set for IP- and EA-ADC "
                              "calculations")
@@ -427,10 +427,10 @@ def validate_state_parameters(matrix, n_states=None, n_singlets=None,
         raise InputError("kind==spin_flip is only valid for "
                          "ADC calculations in combination with an unrestricted"
                          " ground state.")
-    if kind in ["spin_flip", "singlet", "triplet"] and adc_type != "pp":
+    if kind in ["spin_flip", "singlet", "triplet"] and adc_type is not AdcType.PP:
         raise InputError("kind==singlet, kind==triplet, and kind==spin_flip "
                          "are only valid for PP-ADC calculations.")
-    if kind == "doublet" and adc_type == "pp":
+    if kind == "doublet" and adc_type is AdcType.PP:
         raise InputError("kind==doublet is only valid for IP/EA-ADC "
                          "calculations in combination with a restricted "
                          "ground state.")
@@ -595,7 +595,7 @@ def setup_environment(matrix, environment):
     Setup environment matrix terms and/or energy corrections.
     Internal function called from run_adc.
     """
-    if environment and matrix.method.adc_type != "pp":
+    if environment and matrix.method.adc_type is not AdcType.PP:
         raise NotImplementedError("Environment for IP- and EA-ADC calculations"
                                   " not implemented.")
 

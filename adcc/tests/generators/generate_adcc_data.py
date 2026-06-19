@@ -4,7 +4,7 @@ from adcc.tests.generators.dump_adcc import (
 from adcc.tests.testdata_cache import testdata_cache
 from adcc.tests import testcases
 
-from adcc.AdcMethod import AdcMethod
+from adcc.AdcMethod import AdcMethod, AdcType
 from adcc.AdcMatrix import AdcMatrixlike
 from adcc.LazyMp import LazyMp
 from adcc.workflow import run_adc, validate_state_parameters
@@ -23,6 +23,9 @@ _methods = {
     "pp": ("adc0", "adc1", "adc2", "adc2x", "adc3"),
     "ip": ("ip-adc0", "ip-adc2", "ip-adc2x", "ip-adc3"),
     "ea": ("ea-adc0", "ea-adc2", "ea-adc2x", "ea-adc3"),
+}
+_small_cases_methods = {
+    "pp": _methods["pp"] + ("adc4",)
 }
 
 
@@ -54,10 +57,13 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     key = f"{case}/{gs_density_order}"
     if f"{key}/{kind}" in hdf5_file:
         return None
-    if method.adc_type in ("ip", "ea"):
+    if method.adc_type in (AdcType.IP, AdcType.EA):
         spin = "alpha" if is_alpha else "beta"
         if f"{key}/{spin}/{kind}" in hdf5_file:
             return None
+    # CVS-ADC(4) not available
+    if "cvs" in case and method.name == "adc4":
+        return None
     print(f"Generating {method.name} data for {case} {test_case.file_name}.")
     # prepend cvs to the method if needed (otherwise we will get an error)
     if "cvs" in case and not method.is_core_valence_separated:
@@ -71,10 +77,11 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
         is_alpha=is_alpha, **kwargs
     )
     assert states.kind == kind  # maybe we predicted wrong?  # type: ignore
-    if method.adc_type in ("ip", "ea"):
+    if method.adc_type in (AdcType.IP, AdcType.EA):
         key = f"{key}/{spin}"
     dump_matrix = (f"{key}/matrix" not in hdf5_file and (
-        method.adc_type == "pp" or (method.adc_type in ("ip", "ea") and is_alpha))
+        method.adc_type is AdcType.PP or (
+            method.adc_type in (AdcType.IP, AdcType.EA) and is_alpha))
     )
     if dump_matrix:
         # the matrix data is only dumped once for each case and only for alpha.
@@ -143,7 +150,7 @@ def generate_h2o_sto3g():
     }
     test_case = testcases.get(n_expected_cases=1, name="h2o", basis="sto-3g").pop()
     generate_groundstate(test_case)
-    for method in _methods["pp"]:
+    for method in _small_cases_methods["pp"]:
         method = AdcMethod(method)
         for n_states in \
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
@@ -229,7 +236,7 @@ def generate_cn_sto3g():
     # UHF, Doublet, 10 basis functions: (7a, 6b) occ, (3a, 4b) virt
     test_case = testcases.get(n_expected_cases=1, name="cn", basis="sto-3g").pop()
     generate_groundstate(test_case)
-    for method in _methods["pp"]:
+    for method in _small_cases_methods["pp"]:
         method = AdcMethod(method)
         for n_states in \
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
@@ -307,7 +314,7 @@ def generate_hf_631g():
     # UHF, Triplet
     test_case = testcases.get(n_expected_cases=1, name="hf").pop()
     generate_groundstate(test_case)
-    for method in _methods["pp"]:
+    for method in _small_cases_methods["pp"]:
         method = AdcMethod(method)
         for n_states in \
                 testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):

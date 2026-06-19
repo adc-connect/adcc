@@ -21,27 +21,27 @@
 ##
 ## ---------------------------------------------------------------------
 
-from ..AdcMethod import AdcMethod
+from ..AdcMethod import AdcMethod, AdcType
 from typing import Optional, Union
 
 
 def determine_spin_change(method: AdcMethod, kind: str,
                           is_alpha: Optional[bool] = None) -> Union[int, float]:
-    if method.adc_type == "pp":
+    if method.adc_type is AdcType.PP:
         if kind == "spin_flip":
             return -1
         else:
             return 0
-    elif method.adc_type == "ip":
+    elif method.adc_type is AdcType.IP:
         if is_alpha is None:
             raise TypeError("'is_alpha' has to be True|False for IP-ADC")
         return +0.5 - int(is_alpha)
-    elif method.adc_type == "ea":
+    elif method.adc_type is AdcType.EA:
         if is_alpha is None:
             raise TypeError("'is_alpha' has to be True|False for EA-ADC")
         return -0.5 + int(is_alpha)
     else:
-        raise ValueError(f"Unknown ADC method: {method.name}")
+        raise ValueError(f"Unknown ADC type: {method.adc_type}")
 
 
 def estimate_n_guesses(matrix, n_states, n_guesses_per_state=2,
@@ -73,9 +73,12 @@ def estimate_n_guesses(matrix, n_states, n_guesses_per_state=2,
         n_virt_a = mospaces.n_orbs_alpha("v1")
         n_occ_a = mospaces.n_orbs_alpha(sp_occ)
         estimate = n_occ_a * n_virt_a
-        if matrix.method.level.to_int() < 2 and matrix.method.adc_type != "pp":
+        if (
+            matrix.method.level.to_int() < 2 and
+            matrix.method.adc_type is not AdcType.PP
+        ):
             # Adjustment for IP- and EA-ADC(0/1) calculations
-            estimate = (n_occ_a if matrix.method.adc_type == "ip"
+            estimate = (n_occ_a if matrix.method.adc_type is AdcType.IP
                         else n_virt_a)
         n_guesses = min(n_guesses, estimate)
 

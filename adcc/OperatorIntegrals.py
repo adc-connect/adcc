@@ -255,8 +255,8 @@ class OperatorIntegrals:
     @timed_member_call("_import_timer")
     def ssq_2p(self) -> TwoParticleOperator:
         """Returns the two-particle part of the S^2 operator"""
-        # currently not implemented for CVS
-        if any(sp not in ["o1", "v1"] for sp in self.mospaces.subspaces):
+        # currently not implemented for CVS (but fc and fv should be fine)
+        if "o2" in self.mospaces.subspaces:
             raise NotImplementedError("The 2-particle part of the SSq operator is "
                                       "only implemented for the occupied and "
                                       "virtual spaces, i.e., "

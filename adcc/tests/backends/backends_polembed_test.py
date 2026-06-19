@@ -44,7 +44,7 @@ except ImportError:
 backends = [b for b in adcc.backends.available()
             if b not in ["molsturm", "veloxchem"]]
 
-methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+methods = ["adc0", "adc1", "adc2", "adc2x", "adc3", "adc4"]
 
 
 @pytest.mark.skipif(not has_cppe, reason="CPPE not found")
@@ -55,7 +55,8 @@ class TestPolarizableEmbedding:
     @pytest.mark.parametrize("method", methods)
     def test_perturbative(self, system: str, method: str, backend: str):
         test_case = testcases.get_by_filename(system).pop()
-
+        if test_case.only_full_mode and method == "adc4":
+            pytest.skip("ADC(4) reference only available for small testcases.")
         refdata = testdata_cache.adcman_data(
             system=system, method=method, case="gen"
         )["singlet"]

@@ -2,7 +2,7 @@
 import pytest
 from numpy.testing import assert_allclose
 
-from adcc.AdcMethod import AdcMethod
+from adcc.AdcMethod import AdcMethod, AdcType
 from adcc.ChargedExcitations import DetachedStates, AttachedStates
 
 from .testdata_cache import testdata_cache
@@ -26,7 +26,7 @@ cases_ip_ea = [
 def test_ip_ea_basic_interface(system, method, case, kind):
     adc_type = AdcMethod(method).adc_type
 
-    if adc_type == "ip":
+    if adc_type is AdcType.IP:
         state = testdata_cache.adcc_states(
             system=system,
             method=method,
@@ -35,7 +35,7 @@ def test_ip_ea_basic_interface(system, method, case, kind):
             is_alpha=True,
         )
         assert isinstance(state, DetachedStates)
-    elif adc_type == "ea":
+    elif adc_type is AdcType.EA:
         state = testdata_cache.adcc_states(
             system=system,
             method=method,
@@ -68,19 +68,19 @@ def test_ip_ea_describe(system, method, case, kind):
 
     adc_type = AdcMethod(method).adc_type
     # Only test restricted alpha
-    if adc_type == "ip":
+    if adc_type is AdcType.IP:
         state.spin_change = -0.5
-    elif adc_type == "ea":
+    elif adc_type is AdcType.EA:
         state.spin_change = 0.5
 
     desc = state.describe()
 
     assert state.kind in desc.lower()
 
-    if adc_type == "ip":
+    if adc_type is AdcType.IP:
         assert "ionization" in desc.lower()
         assert "detachment" in desc.lower()
-    elif adc_type == "ea":
+    elif adc_type is AdcType.EA:
         assert "affinity" in desc.lower()
         assert "attachment" in desc.lower()
 

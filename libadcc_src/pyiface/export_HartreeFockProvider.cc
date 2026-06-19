@@ -457,7 +457,7 @@ void export_HartreeFockProvider(py::module& m) {
              "Transforms a string specifying the gauge origin to a tuple containing "
              "the x, y, z Cartesian components.")
         //
-        .def("fill_occupation_f", &HartreeFockProvider::fill_orben_f,
+        .def("fill_occupation_f", &HartreeFockProvider::fill_occupation_f,
              "Fill the passed numpy array of size `(2 * nf, )` with the occupation "
              "number for each SCF orbital.")
         .def("fill_orben_f", &HartreeFockProvider::fill_orben_f,
@@ -497,6 +497,9 @@ void export_HartreeFockProvider(py::module& m) {
              "Returns whether `fill_eri_phys_asym_ffff` function is implemented and "
              "should be used(*True*) or whether antisymmetrisation should be done inside "
              "adcc starting from the `fill_eri_ffff` function (*False*)")
+        .def("get_backend", &HartreeFockProvider::get_backend,
+             "Return the identifier of the SCF backend. Must be overridden in Python "
+             "subclasses.")
         .def("flush_cache", &HartreeFockProvider::flush_cache,
              "This function is called to signal that potential cached data could now be "
              "flushed to save memory or other resources.\nThis can be used to purge e.g. "

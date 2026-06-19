@@ -27,6 +27,7 @@ from .import adc_ip, adc_ea
 from .ElectronicStates import TableColumn, ElectronicStates, _timer_name
 from .functions import dot
 from .misc import cached_member_function
+from .AdcMethod import AdcType
 
 
 class ChargedExcitation(ElectronicStates):
@@ -100,7 +101,7 @@ class DetachedStates(ChargedExcitation):
         self.is_alpha = is_alpha
         super().__init__(data, method, property_method)
 
-        if self.method.adc_type != "ip":
+        if self.method.adc_type is not AdcType.IP:
             raise ValueError("DetachedStates computes excited state properties"
                              " for IP-ADC. Got the non-IP-ADC method "
                              f"{self.method.name}")
@@ -147,7 +148,7 @@ class AttachedStates(ChargedExcitation):
         self.is_alpha = is_alpha
         super().__init__(data, method, property_method)
 
-        if self.method.adc_type != "ea":
+        if self.method.adc_type is not AdcType.EA:
             raise ValueError("DetachedStates computes excited state properties"
                              " for EA-ADC. Got the non-EA-ADC method "
                              f"{self.method.name}")

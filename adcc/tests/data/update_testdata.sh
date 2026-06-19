@@ -4,7 +4,7 @@
 trap "exit 1" TERM
 export SCRIPT_PID=$$
 
-SOURCE="https://wwwagdreuw.iwr.uni-heidelberg.de/adcc_test_data/0.8.0/"
+SOURCE="https://wwwagdreuw.iwr.uni-heidelberg.de/adcc_test_data/ip_ea/"
 
 SHAFILE="SHA256SUMS"
 
@@ -16,6 +16,7 @@ DATAFILES=(
     cn_sto3g_adcc_adc2.hdf5
     cn_sto3g_adcc_adc2x.hdf5
     cn_sto3g_adcc_adc3.hdf5
+    cn_sto3g_adcc_adc4.hdf5
     cn_sto3g_adcc_ip-adc0.hdf5
     cn_sto3g_adcc_ip-adc2.hdf5
     cn_sto3g_adcc_ip-adc2x.hdf5
@@ -30,6 +31,7 @@ DATAFILES=(
     cn_sto3g_adcman_adc2.hdf5
     cn_sto3g_adcman_adc2x.hdf5
     cn_sto3g_adcman_adc3.hdf5
+    cn_sto3g_adcman_adc4.hdf5
     cn_sto3g_adcman_ip-adc0.hdf5
     cn_sto3g_adcman_ip-adc2.hdf5
     cn_sto3g_adcman_ip-adc3.hdf5
@@ -44,11 +46,13 @@ DATAFILES=(
     formaldehyde_sto3g_adcman_adc2.hdf5
     formaldehyde_sto3g_adcman_adc2x.hdf5
     formaldehyde_sto3g_adcman_adc3.hdf5
+    formaldehyde_sto3g_adcman_adc4.hdf5
     h2o_sto3g_adcc_adc0.hdf5
     h2o_sto3g_adcc_adc1.hdf5
     h2o_sto3g_adcc_adc2.hdf5
     h2o_sto3g_adcc_adc2x.hdf5
     h2o_sto3g_adcc_adc3.hdf5
+    h2o_sto3g_adcc_adc4.hdf5
     h2o_sto3g_adcc_ip-adc0.hdf5
     h2o_sto3g_adcc_ip-adc2.hdf5
     h2o_sto3g_adcc_ip-adc2x.hdf5
@@ -63,6 +67,7 @@ DATAFILES=(
     h2o_sto3g_adcman_adc2.hdf5
     h2o_sto3g_adcman_adc2x.hdf5
     h2o_sto3g_adcman_adc3.hdf5
+    h2o_sto3g_adcman_adc4.hdf5
     h2o_sto3g_adcman_ip-adc0.hdf5
     h2o_sto3g_adcman_ip-adc2.hdf5
     h2o_sto3g_adcman_ip-adc3.hdf5
@@ -77,12 +82,14 @@ DATAFILES=(
     hf_631g_adcc_adc2.hdf5
     hf_631g_adcc_adc2x.hdf5
     hf_631g_adcc_adc3.hdf5
+    hf_631g_adcc_adc4.hdf5
     hf_631g_adcc_mpdata.hdf5
     hf_631g_adcman_adc0.hdf5
     hf_631g_adcman_adc1.hdf5
     hf_631g_adcman_adc2.hdf5
     hf_631g_adcman_adc2x.hdf5
     hf_631g_adcman_adc3.hdf5
+    hf_631g_adcman_adc4.hdf5
     hf_631g_adcman_mpdata.hdf5
     hf_631g_hfdata.hdf5
     r2methyloxirane_sto3g_hfdata.hdf5

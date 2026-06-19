@@ -5,7 +5,7 @@ from adcc.tests.generators.qchem_savedir import QchemSavedir
 from adcc.tests import testcases
 
 from adcc.hdf5io import _extract_dataset
-from adcc.AdcMethod import AdcMethod
+from adcc.AdcMethod import AdcMethod, MethodLevel
 from adcc import ReferenceState
 
 from collections.abc import Sequence
@@ -64,8 +64,10 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
     """
     # sanitize the input
     assert method.is_core_valence_separated == ("cvs" in case)
-    if method.is_core_valence_separated and method.level.to_int() == 0:
+    if method.is_core_valence_separated and method.level is MethodLevel.ZERO:
         raise ValueError("CVS-ADC(0) is not available in adcman.")
+    if method.is_core_valence_separated and method.level is MethodLevel.FOUR:
+        raise ValueError("CVS-ADC(4) is not available in adcman.")
 
     if kwargs.get("gs_density_order", None) is not None:
         if method.level.to_int() < 3:
@@ -506,6 +508,7 @@ _method_dict = {
     "adc2": "adc(2)",
     "adc2x": "adc(2)-x",
     "adc3": "adc(3)",
+    "adc4": "adc(4)",
     "cvs-adc0": "cvs-adc(0)",
     "cvs-adc1": "cvs-adc(1)",
     "cvs-adc2": "cvs-adc(2)",

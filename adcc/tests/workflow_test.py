@@ -26,6 +26,7 @@ from pytest import approx
 
 from adcc import InputError
 from .testdata_cache import testdata_cache
+from adcc.AdcMethod import AdcType
 
 
 class TestWorkflow:
@@ -270,7 +271,7 @@ class TestWorkflow:
         res = construct_adcmatrix(hfdata, method="adc3")
         assert isinstance(res, adcc.AdcMatrix)
         assert res.method == adcc.AdcMethod("adc3")
-        assert res.method.adc_type == "pp"
+        assert res.method.adc_type is AdcType.PP
         assert res.axis_blocks == ["ph", "pphh"]
         assert res.mospaces.core_orbitals == []
         assert res.mospaces.frozen_core == []
@@ -279,21 +280,21 @@ class TestWorkflow:
         res = construct_adcmatrix(hfdata, method="cvs-adc3", core_orbitals=1)
         assert isinstance(res, adcc.AdcMatrix)
         assert res.method == adcc.AdcMethod("cvs-adc3")
-        assert res.method.adc_type == "pp"
+        assert res.method.adc_type is AdcType.PP
         assert res.axis_blocks == ["ph", "pphh"]
         assert res.mospaces.core_orbitals == [0, 7]
         assert res.mospaces.frozen_core == []
         assert res.mospaces.frozen_virtual == []
 
         res = construct_adcmatrix(hfdata, method="adc2", frozen_core=1)
-        assert res.method.adc_type == "pp"
+        assert res.method.adc_type is AdcType.PP
         assert res.axis_blocks == ["ph", "pphh"]
         assert res.mospaces.core_orbitals == []
         assert res.mospaces.frozen_core == [0, 7]
         assert res.mospaces.frozen_virtual == []
 
         res = construct_adcmatrix(hfdata, method="adc2", frozen_virtual=1)
-        assert res.method.adc_type == "pp"
+        assert res.method.adc_type is AdcType.PP
         assert res.axis_blocks == ["ph", "pphh"]
         assert res.mospaces.core_orbitals == []
         assert res.mospaces.frozen_core == []
@@ -301,7 +302,7 @@ class TestWorkflow:
 
         res = construct_adcmatrix(hfdata, method="adc2", frozen_virtual=1,
                                   frozen_core=1)
-        assert res.method.adc_type == "pp"
+        assert res.method.adc_type is AdcType.PP
         assert res.axis_blocks == ["ph", "pphh"]
         assert res.mospaces.core_orbitals == []
         assert res.mospaces.frozen_core == [0, 7]
@@ -310,7 +311,7 @@ class TestWorkflow:
         res = construct_adcmatrix(hfdata, method="ip-adc3")
         assert isinstance(res, adcc.AdcMatrix)
         assert res.method == adcc.AdcMethod("ip-adc3")
-        assert res.method.adc_type == "ip"
+        assert res.method.adc_type is AdcType.IP
         assert res.axis_blocks == ["h", "phh"]
         assert res.mospaces.core_orbitals == []
         assert res.mospaces.frozen_core == []
@@ -319,7 +320,7 @@ class TestWorkflow:
         res = construct_adcmatrix(hfdata, method="ea-adc2")
         assert isinstance(res, adcc.AdcMatrix)
         assert res.method == adcc.AdcMethod("ea-adc2")
-        assert res.method.adc_type == "ea"
+        assert res.method.adc_type is AdcType.EA
         assert res.axis_blocks == ["p", "pph"]
         assert res.mospaces.core_orbitals == []
         assert res.mospaces.frozen_core == []

@@ -24,6 +24,7 @@ import numpy as np
 from scipy import constants
 
 from .import adc_pp
+from .AdcMethod import AdcType
 from .ElectronicStates import TableColumn
 from .ElectronicTransition import ElectronicTransition
 from .functions import dot
@@ -35,7 +36,7 @@ class ExcitedStates(ElectronicTransition):
     def __init__(self, data, method: str = None, property_method: str = None):
         super().__init__(data, method, property_method)
 
-        if self.method.adc_type != "pp":
+        if self.method.adc_type is not AdcType.PP:
             raise ValueError("ExcitedStates computes excited state properties "
                              "for PP-ADC. Got the non-PP-ADC method "
                              f"{self.method.name}")
@@ -132,6 +133,13 @@ class ExcitedStates(ElectronicTransition):
                           for vec in self.excitation_vector)
             columns.append(TableColumn(
                 header="|v2|^2", values=values.copy(), unit=""
+            ))
+            values.clear()
+        if block_norms and "ppphhh" in self.matrix.axis_blocks:
+            values.extend(f"{dot(vec.ppphhh, vec.ppphhh):^9.4f}"
+                          for vec in self.excitation_vector)
+            columns.append(TableColumn(
+                header="|v3|^2", values=values.copy(), unit=""
             ))
             values.clear()
         # the state dipole moment

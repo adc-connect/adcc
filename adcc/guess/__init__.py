@@ -23,6 +23,7 @@
 from .guess_zero import guess_symmetries, guess_zero
 from .guesses_from_diagonal import guesses_from_diagonal
 from .util import estimate_n_guesses, determine_spin_change
+from ..AdcMethod import AdcType
 
 __all__ = ["guess_zero", "guesses_from_diagonal",
            "get_spin_block_symmetrisation", "guesses_doublet",
@@ -84,9 +85,9 @@ def guesses_doublet(matrix, n_guesses, block="h", is_alpha=True, **kwargs):
                 IP-/EA-ADC calculation.
     kwargs      Any other argument understood by guesses_from_diagonal.
     """
-    if matrix.method.adc_type == "ip":
+    if matrix.method.adc_type is AdcType.IP:
         spin_change = -0.5
-    elif matrix.method.adc_type == "ea":
+    elif matrix.method.adc_type is AdcType.EA:
         spin_change = 0.5
     return guesses_from_diagonal(
         matrix, n_guesses, block=block,

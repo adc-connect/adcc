@@ -1,7 +1,7 @@
 from . import testcases
 
 from adcc.AdcMatrix import AdcMatrix
-from adcc.AdcMethod import AdcMethod
+from adcc.AdcMethod import AdcMethod, AdcType
 from adcc.ExcitedStates import ExcitedStates
 from adcc.ChargedExcitations import AttachedStates, DetachedStates
 from adcc.LazyMp import LazyMp
@@ -150,7 +150,7 @@ class TestdataCache:
         else:  # adc data is one level deeper than mpdata: gs_density_order
             datafile = datadir / system.adcdata_file_name(source, method)
             key = f"{case}/{gs_density_order}"
-            if AdcMethod(method).adc_type in ("ip", "ea"):
+            if AdcMethod(method).adc_type in (AdcType.IP, AdcType.EA):
                 assert isinstance(is_alpha, bool)
                 spin = "alpha" if is_alpha else "beta"
                 key = f"{case}/{gs_density_order}/{spin}"
@@ -283,11 +283,11 @@ class TestdataCache:
                     adc_data["eigenvectors_doubles"][i], 1e-14
                 )
 
-        if matrix.method.adc_type == "pp":
+        if matrix.method.adc_type is AdcType.PP:
             return ExcitedStates(states)
-        elif matrix.method.adc_type == "ip":
+        elif matrix.method.adc_type is AdcType.IP:
             return DetachedStates(states, is_alpha)
-        elif matrix.method.adc_type == "ea":
+        elif matrix.method.adc_type is AdcType.EA:
             return AttachedStates(states, is_alpha)
         else:
             raise ValueError(f"Unknown ADC method: {method.name}")

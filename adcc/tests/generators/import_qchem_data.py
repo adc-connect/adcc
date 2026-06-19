@@ -1,4 +1,4 @@
-from adcc.AdcMethod import AdcMethod
+from adcc.AdcMethod import AdcMethod, AdcType
 from adcc.hdf5io import _extract_dataset
 
 from collections.abc import Hashable
@@ -73,16 +73,16 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
     """
     # define the possible state kinds to import for each adc variant.
     state_kinds = {
-        "pp": {
+        AdcType.PP: {
             True: ["singlets", "triplets"],  # restricted
             # uhf and spin flip are located in the same ".../uhf/..." subtree
             False: ["any_or_spinflip"],  # unrestricted
         },
-        "ip": {
+        AdcType.IP: {
             True: [""],  # restricted
             False: ["alphas", "betas"],  # unrestricted
         },
-        "ea": {
+        AdcType.EA: {
             True: [""],  # restricted
             False: ["alphas", "betas"],  # unrestricted
         },
@@ -91,7 +91,7 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
     kind_map = {"singlets": "singlet", "triplets": "triplet",
                 "alphas": "alpha", "betas": "beta"}
     # also the adcc methods have to be translated
-    if method.adc_type == "pp":
+    if method.adc_type is AdcType.PP:
         method_name: str = method.name.replace("-", "_")  # cvs-adcn -> cvs_adcn
         if method_name.endswith("adc2"):  # adc2 -> adc2s (Only for PP)
             method_name += "s"
@@ -121,9 +121,9 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
 
         if kind == "any_or_spinflip":
             kind = "spin_flip" if is_spin_flip else "any"
-        if method.adc_type == "pp":
+        if method.adc_type is AdcType.PP:
             data[kind_map.get(kind, kind)] = states
-        elif method.adc_type in ("ip", "ea"):
+        elif method.adc_type in (AdcType.IP, AdcType.EA):
             if restricted:
                 data["alpha"] = {"doublet": states}
             else:
@@ -135,7 +135,7 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
 
 
 def _import_excited_states(context: h5py.File, method: str, only_full_mode: bool,
-                           adc_type: str = "pp",
+                           adc_type: AdcType = AdcType.PP,
                            import_nstates: int | None = None,
                            state_kind: str | None = None, restricted: bool = True,
                            dims_pref: str = "dims/") -> None | dict[str, Any]:
@@ -155,7 +155,7 @@ def _import_excited_states(context: h5py.File, method: str, only_full_mode: bool
         Indicates whether the data to read is for a test case that only
         runs in full mode. Since these systems are typically quite large
         one might not want to import all data for these cases.
-    adc_type: str, optional
+    adc_type: AdcType, optional
         Which type of adc calculation has been performed, e.g., pp.
     import_nstates: int, optional
         Only import the first n states from the context.
@@ -170,16 +170,16 @@ def _import_excited_states(context: h5py.File, method: str, only_full_mode: bool
         tensors are exported too. The dimensions can be found by adding the given
         prefix to the context tree of the object.
     """
-    # build the path under which to find the excited states
-    tree = [f"adc_{adc_type}", method]
+    # build the path under which to find the exicted states
+    tree = [f"adc_{adc_type.to_str()}", method]
     if restricted:
         tree.append("rhf")
-        if adc_type == "pp":
+        if adc_type is AdcType.PP:
             assert state_kind is not None  # needs to be defined for restricted
             tree.append(state_kind)
     else:
         tree.append("uhf")
-        if adc_type in ("ip", "ea"):
+        if adc_type in (AdcType.IP, AdcType.EA):
             assert state_kind is not None
             tree.append(state_kind)
     tree.append("0")  # we assume that we only have a single irrep!!
@@ -196,11 +196,11 @@ def _import_excited_states(context: h5py.File, method: str, only_full_mode: bool
     # context.
     data_to_read = {}
     for n in range(n_states):
-        if adc_type == "pp":
+        if adc_type is AdcType.PP:
             state_tree = tree + f"/es{n}"
-        elif adc_type == "ip":
+        elif adc_type is AdcType.IP:
             state_tree = tree + f"/ip{n}"
-        elif adc_type == "ea":
+        elif adc_type is AdcType.EA:
             state_tree = tree + f"/ea{n}"
         # ensure that the state is converged
         _, converged = _extract_dataset(context[f"{state_tree}/converged"])
@@ -239,7 +239,7 @@ def _import_excited_states(context: h5py.File, method: str, only_full_mode: bool
 
 def _import_state_to_state_data(context: h5py.File, method: str,
                                 only_full_mode: bool,
-                                adc_type: str = "pp",
+                                adc_type: AdcType = AdcType.PP,
                                 import_nstates: int | None = None,
                                 state_kind: str | None = None,
                                 restricted: bool = True,
@@ -261,7 +261,7 @@ def _import_state_to_state_data(context: h5py.File, method: str,
         Indicates whether the data to read is for a test case that only
         runs in full mode. Since these systems are typically quite large
         one might not want to import all data for these cases.
-    adc_type: str, optional
+    adc_type: AdcType, optional
         Which type of adc calculation has been performed, e.g., pp.
     import_nstates: int, optional
         Only import the first n states from the context.
@@ -276,15 +276,15 @@ def _import_state_to_state_data(context: h5py.File, method: str,
         prefix to the context tree of the object.
     """
     # build the path under which to look for the state-to-state data.
-    tree = [f"adc_{adc_type}", method]
+    tree = [f"adc_{adc_type.to_str()}", method]
     if restricted:
         tree.extend(["rhf", "isr"])
-        if adc_type == "pp":
+        if adc_type is AdcType.PP:
             assert state_kind is not None  # needs to be defined for restricted
             tree.append(state_kind)
     else:
         tree.extend(["uhf", "isr"])
-        if adc_type in ("ip", "ea"):
+        if adc_type in (AdcType.IP, AdcType.EA):
             assert state_kind is not None
             tree.append(state_kind)
     tree.append("0-0")  # we assume that we only have a single irrep!
@@ -436,6 +436,10 @@ _mp_data = {
     "mp2/opdm/dm_o2o1": "mp2/dm_o2o1",
     "mp2/opdm/dm_o2o2": "mp2/dm_o2o2",
     "mp2/opdm/dm_o2v1": "mp2/dm_o2v1",
+    # CVS-MP2 density (within the CVS-approximation) in the MO basis
+    "mp2/cv_p_o1o1": "cvs-mp2/dm_o1o1",
+    "mp2/cv_p_o1v1": "cvs-mp2/dm_o1v1",
+    "mp2/cv_p_v1v1": "cvs-mp2/dm_v1v1",
     # MP2 dipole vector
     "mp2/prop/dipole": "mp2/dipole",
     # MP2 doubles amplitudes
@@ -466,4 +470,6 @@ _mp_data = {
 _mp_data_large = {
     # MP2 triples amplitudes
     "mp2/tt2_o1o1o1v1v1v1": "mp2/tt_o1o1o1v1v1v1",
+    # MP4
+    "mp4/energy": "mp4/energy",
 }
