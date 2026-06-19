@@ -42,7 +42,7 @@ methods = [
     ("adc4", "3d")
 ]
 generators = ["adcman", "adcc"]
-
+large_cases = ("h2o_def2tzvp", "cn_ccpvdz")
 
 # There are only distinct density matrix implementations for the
 # "gen" and "cvs" cases
@@ -69,6 +69,8 @@ class TestStateDensities:
             and generator == "adcman"
         ):
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
+        if adc_method == "adc4" and system in large_cases:
+            pytest.ski("ADC(4) reference data not generated for large cases.")
         if 'cvs' in case and isr_order in (3, "3d"):
             pytest.skip("CVS-ISR(3) not implemented yet")
         if "cvs" in case and adc_method == "adc4":
@@ -107,6 +109,8 @@ class TestStateDensities:
             and generator == "adcman"
         ):
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
+        if adc_method == "adc4" and system in large_cases:
+            pytest.ski("ADC(4) reference data not generated for large cases.")
         if 'cvs' in case and isr_order in (3, "3d"):
             pytest.skip("CVS-ISR(3) not implemented yet")
         if "cvs" in case and adc_method == "adc4":
@@ -146,7 +150,8 @@ class TestStateDensities:
         if len(refdata["eigenvalues"]) < 2:
             pytest.skip("Less than two states available.")
         s2s_data = refdata["state_to_state"]
-
+        if adc_method == "adc4" and system in large_cases:
+            pytest.ski("ADC(4) reference data not generated for large cases.")
         # construct a ExcitedStates instance using the eigenvalues and eigenstates
         # from the reference data.
         state: ExcitedStates = getattr(testdata_cache, f"{generator}_states")(

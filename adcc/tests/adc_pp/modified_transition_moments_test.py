@@ -58,8 +58,6 @@ def test_modified_transition_moments(system: str, case: str, adc_method: str,
 
     if "cvs" in case and adc_method in ("adc3", "adc4"):
         pytest.skip("CVS-ADC(3)/ADC(4) mtm not implemented yet")
-    if adc_method == "adc4":  # this requires ppphhh block
-        pytest.skip("mtm for ADC(4) not implemented yet.")
     state = testdata_cache.adcc_states(
         system=system, method=adc_method, kind=kind, case=case, isr_order=isr_order
     )
@@ -88,7 +86,9 @@ def test_modified_transition_moments(system: str, case: str, adc_method: str,
         # and the modified transition moments yields
         # the transition dipole moment (doi.org/10.1063/1.1752875)
         excivec = state.excitation_vector[i]
-        res_tdm = np.array([excivec @ mtms[i] for i in range(3)])
+        res_tdm = np.array([mtms[i] @ excivec for i in range(3)])
+        # mtms[i] and excivec are switched here for now because
+        # when adc_method = "adc4", excivec has ppphhh block
 
         # Test norm and actual values
         res_tdm_norm = np.sum(res_tdm * res_tdm)
