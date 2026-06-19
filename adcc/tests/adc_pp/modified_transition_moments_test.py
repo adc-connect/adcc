@@ -36,6 +36,8 @@ methods = [
     ("adc2x", None),
     ("adc3", None),
     ("adc3", 3),
+    ("adc4", None),
+    ("adc4", "3d"),
 ]
 
 test_cases = testcases.get_by_filename(
@@ -54,9 +56,10 @@ operator_kinds = ["electric", "magnetic"]
 def test_modified_transition_moments(system: str, case: str, adc_method: str,
                                      isr_order, kind: str, op_kind: str):
 
-    if "cvs" in case and adc_method == "adc3":
-        pytest.skip("CVS-ADC(3) mtm not implemented yet")
-
+    if "cvs" in case and adc_method in ("adc3", "adc4"):
+        pytest.skip("CVS-ADC(3)/ADC(4) mtm not implemented yet")
+    if adc_method == "adc4":  # this requires ppphhh block
+        pytest.skip("mtm for ADC(4) not implemented yet.")
     state = testdata_cache.adcc_states(
         system=system, method=adc_method, kind=kind, case=case, isr_order=isr_order
     )

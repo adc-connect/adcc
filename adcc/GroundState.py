@@ -343,35 +343,6 @@ class GroundState:
         )
 
     @cached_member_function()
-    def third_order_dm_correction(self,
-                                  apply_cvs: bool = False) -> OneParticleDensity:
-        """
-        Return the third order correction to the ground state density.
-        """
-
-        if self.has_core_occupied_space:
-            raise NotImplementedError(
-                "CV2-MP3 difference density not implemented yet"
-            )
-        assert not apply_cvs
-
-        ret = OneParticleDensity(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
-
-        ret.oo = (
-            - einsum("ikab,jkab->ij", self.t2oo, self.td2(b.oovv)).symmetrise(0, 1)
-        )
-        ret.ov = (
-            - (self.sigma_inf_ov(3) + self.m_3_plus + self.m_3_minus
-               ) / self.df(b.ov)
-        )
-
-        ret.vv = (
-            + einsum("ijac,ijbc->ab", self.t2oo, self.td2(b.oovv)).symmetrise(0, 1)
-        )
-
-        return ret.evaluate()
-
-    @cached_member_function()
     def first_order_dm_correction_2p(self, apply_cvs: bool = False
                                      ) -> TwoParticleDensity:
         """

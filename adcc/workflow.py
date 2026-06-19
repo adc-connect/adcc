@@ -211,7 +211,11 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
 
     property_method = None
     if isr_order is not None:
-        property_method = matrix.method.at_level(isr_order).as_method(IsrMethod)
+        if isinstance(isr_order, str):
+            cvs_prefix = "cvs-" if matrix.method.is_core_valence_separated else ""
+            property_method = IsrMethod(f"{cvs_prefix}isr{isr_order}")
+        else:
+            property_method = matrix.method.at_level(isr_order).as_method(IsrMethod)
     diagres = diagonalise_adcmatrix(
         matrix, n_states, kind, guesses=guesses, n_guesses=n_guesses,
         n_guesses_doubles=n_guesses_doubles, conv_tol=conv_tol, output=output,

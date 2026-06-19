@@ -150,11 +150,14 @@ def generate_h2o_sto3g():
                 kwargs = {"n_guesses": 4}
             generate_adc_all(
                 test_case, method=method, dump_nstates=2, states_per_case=per_case,
-                **n_states, **kwargs
-            )
-            if method.level is MethodLevel.THREE:
+                **n_states, **kwargs)
+            if method.level in [MethodLevel.THREE]:
                 generate_adc_all(test_case, method=method, dump_nstates=2,
                                  states_per_case=per_case, isr_order=3,
+                                 **n_states, **kwargs)
+            elif method.level in [MethodLevel.FOUR]:
+                generate_adc_all(test_case, method=method, dump_nstates=2,
+                                 states_per_case=per_case, isr_order="3d",
                                  **n_states, **kwargs)
 
 
@@ -171,11 +174,13 @@ def generate_h2o_def2tzvp():
             n_states = {n_states: 3}
             generate_adc_all(
                 test_case, method=method, dump_nstates=2, states_per_case=None,
-                **n_states
-            )
-            if method.level is MethodLevel.THREE:
+                **n_states)
+            if method.level in [MethodLevel.THREE]:
                 generate_adc_all(test_case, method=method, dump_nstates=2,
                                  states_per_case=None, isr_order=3, **n_states)
+            elif method.level in [MethodLevel.FOUR]:
+                generate_adc_all(test_case, method=method, dump_nstates=2,
+                                 states_per_case=None, isr_order="3d", **n_states)
 
 
 def generate_cn_sto3g():
@@ -189,11 +194,13 @@ def generate_cn_sto3g():
             kwargs = {n_states: 3}
             generate_adc_all(
                 test_case=test_case, method=method, dump_nstates=2,
-                states_per_case=None, **kwargs
-            )
-            if method.level is MethodLevel.THREE:
+                states_per_case=None, **kwargs)
+            if method.level in [MethodLevel.THREE]:
                 generate_adc_all(test_case, method=method, dump_nstates=2,
                                  states_per_case=None, isr_order=3, **kwargs)
+            elif method.level in [MethodLevel.FOUR]:
+                generate_adc_all(test_case, method=method, dump_nstates=2,
+                                 states_per_case=None, isr_order="3d", **kwargs)
 
 
 def generate_cn_ccpvdz():
@@ -207,11 +214,13 @@ def generate_cn_ccpvdz():
             n_states = {n_states: 3}
             generate_adc_all(
                 test_case, method=method, dump_nstates=2, states_per_case=None,
-                **n_states
-            )
-            if method.level is MethodLevel.THREE:
+                **n_states)
+            if method.level in [MethodLevel.THREE]:
                 generate_adc_all(test_case, method=method, dump_nstates=2,
                                  states_per_case=None, isr_order=3, **n_states)
+            elif method.level in [MethodLevel.FOUR]:
+                generate_adc_all(test_case, method=method, dump_nstates=2,
+                                 states_per_case=None, isr_order="3d", **n_states)
 
 
 def generate_hf_631g():
@@ -225,11 +234,13 @@ def generate_hf_631g():
             n_states = {n_states: 3}
             generate_adc_all(
                 test_case, method=method, dump_nstates=2, states_per_case=None,
-                **n_states
-            )
-            if method.level is MethodLevel.THREE:
+                **n_states)
+            if method.level in [MethodLevel.THREE]:
                 generate_adc_all(test_case, method=method, dump_nstates=2,
                                  states_per_case=None, isr_order=3, **n_states)
+            elif method.level in [MethodLevel.FOUR]:
+                generate_adc_all(test_case, method=method, dump_nstates=2,
+                                 states_per_case=None, isr_order="3d", **n_states)
 
 
 def main():

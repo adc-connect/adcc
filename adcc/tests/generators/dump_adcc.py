@@ -204,7 +204,10 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
         not states.reference_state.restricted
         and not states.ground_state.has_core_occupied_space
     ):
-        kind_data["state_ssq"] = states.state_ssq
+        try:
+            kind_data["state_ssq"] = states.state_ssq
+        except NotImplementedError:
+            pass
     # write the data to hdf5
     emplace_dict(kind_data, hdf5_file, compression="gzip")
     hdf5_file.attrs["adcc_version"] = adcc.__version__

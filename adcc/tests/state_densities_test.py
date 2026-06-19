@@ -38,6 +38,8 @@ methods = [
     ("adc2x", None),
     ("adc3", None),
     ("adc3", 3),
+    ("adc4", None),
+    ("adc4", "3d")
 ]
 generators = ["adcman", "adcc"]
 
@@ -67,8 +69,10 @@ class TestStateDensities:
             and generator == "adcman"
         ):
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
-        if 'cvs' in case and isr_order == 3:
+        if 'cvs' in case and isr_order in (3, "3d"):
             pytest.skip("CVS-ISR(3) not implemented yet")
+        if "cvs" in case and adc_method == "adc4":
+            pytest.skip("CVS-ADC(4) not implemented yet")
         refdata = testdata_cache._load_data(
             system=system, method=adc_method, case=case, source=generator
         )[str(isr_order)][kind]
@@ -103,8 +107,10 @@ class TestStateDensities:
             and generator == "adcman"
         ):
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
-        if 'cvs' in case and isr_order == 3:
+        if 'cvs' in case and isr_order in (3, "3d"):
             pytest.skip("CVS-ISR(3) not implemented yet")
+        if "cvs" in case and adc_method == "adc4":
+            pytest.skip("CVS-ADC(4) not implemented yet")
 
         refdata = testdata_cache._load_data(
             system=system, method=adc_method, case=case, source=generator
