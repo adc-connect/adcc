@@ -2,7 +2,7 @@
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2020 by the adcc authors
+## Copyright (C) 2026 by the adcc authors
 ##
 ## This file is part of adcc.
 ##
@@ -29,7 +29,7 @@ from adcc.Intermediates import Intermediates, register_as_intermediate
 from adcc.AmplitudeVector import AmplitudeVector
 
 #
-# Dispatch routine lives in 'adc_pp/matrix.py'
+# An explanation of the dispatch structure can be found in `adc_pp/matrix.py`
 #
 __all__ = ["block"]
 
@@ -38,7 +38,7 @@ AdcBlock = namedtuple("AdcBlock", ["apply", "diagonal"])
 
 def block(ground_state, spaces, order, variant=None, intermediates=None):
     """
-    Gets ground state, potentially intermediates, spaces (ph, pphh and so on)
+    Gets ground state, potentially intermediates, spaces (h, phh and so on)
     and the perturbation theory order for the block,
     variant is "cvs" or sth like that.
 
@@ -65,7 +65,6 @@ def block(ground_state, spaces, order, variant=None, intermediates=None):
 # 0th order main
 #
 def block_h_h_0(hf, mp, intermediates):
-    # M_{11}
     def apply(ampl):
         return AmplitudeVector(h=-einsum("ij,j->i", hf.foo, ampl.h))
     diagonal = AmplitudeVector(h=-hf.foo.diagonal())
@@ -80,7 +79,6 @@ def diagonal_phh_phh_0(hf):
 
 
 def block_phh_phh_0(hf, mp, intermediates):
-    # M_{22}
     def apply(ampl):
         return AmplitudeVector(phh=(
             + einsum("ab,ijb->ija", hf.fvv, ampl.phh)
@@ -93,7 +91,7 @@ def block_phh_phh_0(hf, mp, intermediates):
 # 1st order main
 #
 def block_h_h_1(hf, mp, intermediates):
-    # M_{11}, same as ADC(0)
+    # Same as ADC(0)
     return block_h_h_0(hf, mp, intermediates)
 
 
@@ -112,7 +110,6 @@ def diagonal_phh_phh_1(hf):
 
 
 def block_phh_phh_1(hf, mp, intermediates):
-    # M_{22}
     def apply(ampl):
         return AmplitudeVector(phh=(
             + einsum("ac,ijc->ija", hf.fvv, ampl.phh)
@@ -128,7 +125,6 @@ def block_phh_phh_1(hf, mp, intermediates):
 # 1st order coupling
 #
 def block_h_phh_1(hf, mp, intermediates):
-    # M_{12}
     def apply(ampl):
         return AmplitudeVector(h=(
             + 1 / sqrt(2) * einsum("jkib,jkb->i", hf.ooov, ampl.phh)))
@@ -136,7 +132,6 @@ def block_h_phh_1(hf, mp, intermediates):
 
 
 def block_phh_h_1(hf, mp, intermediates):
-    # M_{21}
     def apply(ampl):
         return AmplitudeVector(phh=(
             + 1 / sqrt(2) * einsum("ijka,k->ija", hf.ooov, ampl.h)))
@@ -147,7 +142,6 @@ def block_phh_h_1(hf, mp, intermediates):
 # 2nd order main
 #
 def block_h_h_2(hf, mp, intermediates):
-    # M_{11}
     # Intermediate can be found in 'adc_pp/matrix.py'
     i1 = - intermediates.adc2_i2
     diagonal = AmplitudeVector(h=i1.diagonal())
@@ -209,12 +203,12 @@ def adc3_ip_i1(hf, mp, intermediates):
             + einsum("jkab,kiab->ij", mp.t2oo, mp.t2eri(b.oovv, b.ov))
             - 2 * einsum("jkab,ikab->ij", mp.t2oo, mp.t2eri(b.oovv, b.ov))
         ).symmetrise()
-        - intermediates.sigma_oo
+        - intermediates.sigma_inf_oo
     )
 
 
 @register_as_intermediate
-def sigma_oo(hf, mp, intermediates):
+def sigma_inf_oo(hf, mp, intermediates):
     # Static self-energy, oo part \Sigma_{ij}(\infty)
     p0 = mp.mp2_diffdm
     return (einsum("ikjl,kl->ij", hf.oooo, p0.oo)

@@ -60,8 +60,6 @@ def guesses_singlet(matrix, n_guesses, block="ph", **kwargs):
                 vectors are returned if this many could not be found.
     block       Diagonal block to use for obtaining the guesses
                 (typically "ph" or "pphh").
-    is_alpha    Is the detached/attached electron alpha spin for the respective
-                IP-/EA-ADC calculation.
     kwargs      Any other argument understood by guesses_from_diagonal.
     """
     return guesses_from_diagonal(
@@ -89,6 +87,8 @@ def guesses_doublet(matrix, n_guesses, block="h", is_alpha=True, **kwargs):
         spin_change = -0.5
     elif matrix.method.adc_type is AdcType.EA:
         spin_change = 0.5
+    else:
+        raise ValueError(f"Invalid doublet ADC type: {matrix.method.adc_type}")
     return guesses_from_diagonal(
         matrix, n_guesses, block=block,
         is_alpha=is_alpha, spin_change=spin_change,
@@ -107,8 +107,6 @@ def guesses_triplet(matrix, n_guesses, block="ph", **kwargs):
                 vectors are returned if this many could not be found.
     block       Diagonal block to use for obtaining the guesses
                 (typically "ph" or "pphh").
-    is_alpha    Is the detached/attached electron alpha spin for the respective
-                IP-/EA-ADC calculation.
     kwargs      Any other argument understood by guesses_from_diagonal.
     """
     return guesses_from_diagonal(
@@ -132,8 +130,6 @@ def guesses_spin_flip(matrix, n_guesses, block="ph", **kwargs):
                 vectors are returned if this many could not be found.
     block       Diagonal block to use for obtaining the guesses
                 (typically "ph" or "pphh").
-    is_alpha    Is the detached/attached electron alpha spin for the respective
-                IP-/EA-ADC calculation.
     kwargs      Any other argument understood by guesses_from_diagonal.
     """
     return guesses_from_diagonal(

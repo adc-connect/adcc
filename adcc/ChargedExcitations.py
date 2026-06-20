@@ -2,7 +2,7 @@
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2019 by the adcc authors
+## Copyright (C) 2026 by the adcc authors
 ##
 ## This file is part of adcc.
 ##
@@ -42,7 +42,7 @@ class ChargedExcitation(ElectronicStates):
         """Computes the pole strength for a single state"""
         pass
 
-    def describe_helper(self, block_norms=True, excitation_type_name="energy"):
+    def _describe_helper(self, block_norms=True, excitation_type_name="energy"):
         """
         Creates and returns the to be printed columns
 
@@ -55,8 +55,6 @@ class ChargedExcitation(ElectronicStates):
         excitation_type_name : str, optional
             Defines the name of the energy property.
             'ionization potential'/'electron affinity' for IP/EA
-        ssq : bool, optional
-            Show the <S^2> values of the excited states,  by default ``False``.
         """
         # Collect the columns to print
         columns: list[TableColumn] = []

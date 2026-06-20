@@ -81,8 +81,8 @@ def guess_symmetries(matrix, spin_change=0, spin_block_symmetrisation="none"):
                          "ADC calculations on top of restricted reference "
                          "states.")
     if int(spin_change * 2) / 2 != spin_change:
-        raise ValueError("Only integer or half-integer spin_change is allowed."
-                         " You passed {}".format(spin_change))
+        raise ValueError("Only integer or half-integer spin_change is allowed. "
+                         "You passed {}".format(spin_change))
 
     max_spin_change = 0.5 * len(matrix.axis_blocks[-1])
     valid_spin_changes = [
@@ -93,16 +93,16 @@ def guess_symmetries(matrix, spin_change=0, spin_block_symmetrisation="none"):
                          f"{valid_spin_changes}, and not {spin_change}.")
 
     symmetries = {}
-    block = matrix.axis_blocks[0]
-    symmetries[block] = guess_symmetry_singles(
+    singles = matrix.axis_blocks[0]
+    symmetries[singles] = guess_symmetry_singles(
         matrix, spin_change=spin_change,
-        spin_block_symmetrisation=spin_block_symmetrisation, block=block
+        spin_block_symmetrisation=spin_block_symmetrisation, block=singles
     )
     if len(matrix.axis_blocks) >= 2:
-        block = matrix.axis_blocks[1]
-        symmetries[block] = guess_symmetry_doubles(
+        doubles = matrix.axis_blocks[1]
+        symmetries[doubles] = guess_symmetry_doubles(
             matrix, spin_change=spin_change,
-            spin_block_symmetrisation=spin_block_symmetrisation, block=block
+            spin_block_symmetrisation=spin_block_symmetrisation, block=doubles
         )
     if "ppphhh" in matrix.axis_blocks:
         symmetries["ppphhh"] = guess_symmetry_triples(

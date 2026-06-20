@@ -28,6 +28,7 @@ from numpy.testing import assert_array_equal
 
 import adcc
 import adcc.guess
+from adcc.guess import determine_spin_change, estimate_n_guesses
 from adcc.AdcMethod import AdcType
 
 from .testdata_cache import testdata_cache
@@ -49,18 +50,18 @@ hf_631g = testcases.get_by_filename("hf_631g").pop()
 
 class TestGuess:
     def test_determine_spin_change_pp(self):
-        from adcc.guess import determine_spin_change
-
         method = adcc.AdcMethod("adc2")
 
         spin = determine_spin_change(method, kind="singlet")
+        assert spin == 0.0
+
+        spin = determine_spin_change(method, kind="triplet")
         assert spin == 0.0
 
         spin = determine_spin_change(method, kind="spin_flip")
         assert spin == -1.0
 
     def test_determine_spin_change_ip(self):
-        from adcc.guess import determine_spin_change
 
         method = adcc.AdcMethod("ip-adc2")
 
@@ -74,7 +75,6 @@ class TestGuess:
             determine_spin_change(method, kind="any", is_alpha=None)
 
     def test_determine_spin_change_ea(self):
-        from adcc.guess import determine_spin_change
 
         method = adcc.AdcMethod("ea-adc2")
 
@@ -88,7 +88,6 @@ class TestGuess:
             determine_spin_change(method, kind="any", is_alpha=None)
 
     def test_determine_spin_change_unknown_adc_type(self):
-        from adcc.guess import determine_spin_change
 
         method = adcc.AdcMethod("adc2")
         method.adc_type = "bla"
@@ -111,8 +110,6 @@ class TestGuess:
             assert i <= estimate_n_guesses(matrix, n_states=i, singles_only=True)
 
     def test_estimate_n_guesses_ip(self):
-        from adcc.guess import estimate_n_guesses
-
         refstate = testdata_cache.refstate("h2o_sto3g", case="gen")
         ground_state = adcc.LazyMp(refstate)
         matrix = adcc.AdcMatrix("ip-adc2", ground_state)

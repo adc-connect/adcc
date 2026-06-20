@@ -181,7 +181,6 @@ def get_canonical_block(bra: str, ket: str,
 def get_block_name(spaces, order, variant, has_core_occupied_space):
     """
     Assembles name of block function with variant, spaces, and order.
-    Does some sanity checks.
     """
     if isinstance(variant, str):
         variant = [variant]

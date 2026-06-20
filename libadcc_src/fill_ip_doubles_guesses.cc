@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2020 by the adcc authors
+// Copyright (C) 2026 by the adcc authors
 //
 // This file is part of adcc.
 //

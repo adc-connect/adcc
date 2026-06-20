@@ -2,7 +2,7 @@
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2018 by the adcc authors
+## Copyright (C) 2026 by the adcc authors
 ##
 ## This file is part of adcc.
 ##
@@ -26,12 +26,12 @@ from typing import Optional, Union
 
 
 def determine_spin_change(method: AdcMethod, kind: str,
-                          is_alpha: Optional[bool] = None) -> Union[int, float]:
+                          is_alpha: Optional[bool] = None) -> float:
     if method.adc_type is AdcType.PP:
         if kind == "spin_flip":
-            return -1
+            return -1.0
         else:
-            return 0
+            return 0.0
     elif method.adc_type is AdcType.IP:
         if is_alpha is None:
             raise TypeError("'is_alpha' has to be True|False for IP-ADC")
