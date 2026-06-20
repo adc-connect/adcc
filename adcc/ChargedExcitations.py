@@ -116,7 +116,7 @@ class DetachedStates(ChargedExcitation):
         """
         assert (self.matrix.axis_blocks == ["h"]
                 or self.matrix.axis_blocks == ["h", "phh"])
-        columns = self.describe_helper(
+        columns = self._describe_helper(
             block_norms=block_norms,
             excitation_type_name="ionization potential")
 
@@ -169,7 +169,7 @@ class AttachedStates(ChargedExcitation):
         """
         assert (self.matrix.axis_blocks == ["p"]
                 or self.matrix.axis_blocks == ["p", "pph"])
-        columns = self.describe_helper(
+        columns = self._describe_helper(
             block_norms=block_norms,
             excitation_type_name="electron affinity")
 
