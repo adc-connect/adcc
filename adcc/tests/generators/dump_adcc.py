@@ -202,8 +202,8 @@ def dump_excited_states(
                 ] = (np.asarray(tdm_bb_b))
         # ssq for unrestriced calculation
         if (
-        not states.reference_state.restricted
-        and not states.ground_state.has_core_occupied_space
+            not states.reference_state.restricted
+            and not states.ground_state.has_core_occupied_space
         ):
             kind_data["state_ssq"] = states.state_ssq
     # write the data to hdf5

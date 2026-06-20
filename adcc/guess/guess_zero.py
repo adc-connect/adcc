@@ -128,8 +128,8 @@ def guess_symmetry_singles(matrix, spin_change=0,
         symmetry.spin_blocks_forbidden = ["ab", "ba"]
 
     elif (
-        matrix.method.adc_type is not AdcType.PP and
-        matrix.reference_state.restricted
+        matrix.method.adc_type is not AdcType.PP
+        and matrix.reference_state.restricted
     ):
         # IP- and EA-ADC
         # attach/detach alpha electron

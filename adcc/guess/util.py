@@ -22,7 +22,7 @@
 ## ---------------------------------------------------------------------
 
 from ..AdcMethod import AdcMethod, AdcType
-from typing import Optional, Union
+from typing import Optional
 
 
 def determine_spin_change(method: AdcMethod, kind: str,
@@ -74,8 +74,8 @@ def estimate_n_guesses(matrix, n_states, n_guesses_per_state=2,
         n_occ_a = mospaces.n_orbs_alpha(sp_occ)
         estimate = n_occ_a * n_virt_a
         if (
-            matrix.method.level.to_int() < 2 and
-            matrix.method.adc_type is not AdcType.PP
+            matrix.method.level.to_int() < 2
+            and matrix.method.adc_type is not AdcType.PP
         ):
             # Adjustment for IP- and EA-ADC(0/1) calculations
             estimate = (n_occ_a if matrix.method.adc_type is AdcType.IP

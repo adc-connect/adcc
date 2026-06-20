@@ -236,8 +236,6 @@ class Method:
         The base (full) method, i.e. with all approximations such as
         CVS stripped off.
         """
-        # if self.adc_type is not AdcType.PP:
-        #     return self.__class__(self.adc_type.to_str() + "-" + self._base_method)
         return self.__class__(self._base_method)
 
     def at_level(self: T, newlevel: Union[int, str]) -> T:
