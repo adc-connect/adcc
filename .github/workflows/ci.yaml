@@ -162,7 +162,9 @@ jobs:
           auto-activate-base: false
       - name: Install Psi4 from c-f
         run: |
-          mamba install psi4 pyddx -c conda-forge -c conda-forge/label/libint_dev
+          # fix qcelemental version to get the CI running with psi4 1.10.2
+          # remove later again!
+          mamba install psi4 qcelemental=0.30.1 pyddx -c conda-forge -c conda-forge/label/libint_dev
           psi4 --version
           python -c "import psi4"
       - name: Install system dependencies on macOS
