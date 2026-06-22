@@ -89,13 +89,22 @@ if __name__ == "__main__":
         states=(0, 1),       # first two spin-flip states: S0 (singlet GS)
         #                       and S1 (first excited singlet) -- a MECI
         n_spin_flip=4,        # spin-flip ADC, unrestricted reference only
-        follow="overlap",
-        conv_tol=1e-7,
-        gradient_kwargs={"eri_contraction": "direct", "conv_tol": 1e-7},
+        # For a MECI pair the two surfaces are the adiabatically lowest states
+        # at each geometry (the seam is defined by an energy-ordered degeneracy,
+        # not by fixed state character).  Density-overlap tracking -- which
+        # serves single-surface optimization -- would *fight* the adiabatic
+        # reordering near the seam and flip a slot onto a higher root.  Instead
+        # follow="index" returns positional roots (0, 1) and lets the scanner
+        # energy-sort them, exactly the contract geomeTRIC's conical-intersection
+        # engine expects from its sub-engines.
+        follow="index",
+        conv_tol=1e-8,
+        gradient_kwargs={"eri_contraction": "direct", "conv_tol": 1e-8},
     )
     # The default penalty uses the smoothed Levine--Coe--Martinez form, the same
-    # formulation as geomeTRIC's built-in conical-intersection engine.
-    objective = adcc.MECPObjective(paired)
+    # formulation as geomeTRIC's built-in conical-intersection engine.  A larger
+    # sigma enforces the degeneracy harder for a tighter final gap.
+    objective = adcc.MECPObjective(paired, sigma=200.0, alpha=0.025)
 
     def energy_and_gradient(mol_at_step):
         energy, gradient = objective(mol_at_step.atom_coords(unit="Bohr"))
@@ -108,9 +117,9 @@ if __name__ == "__main__":
     method = as_pyscf_method(mol, energy_and_gradient)
     mol_ci = geometric_solver.optimize(
         method,
-        maxsteps=100,
-        convergence_grms=1e-4,
-        convergence_gmax=2e-4,
+        maxsteps=50,
+        convergence_grms=3e-5,
+        convergence_gmax=1e-4,
     )
     print_geometry("S0/S1 MECI geometry", mol_ci)
 

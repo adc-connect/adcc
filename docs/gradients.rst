@@ -157,6 +157,18 @@ seam).  Use ``n_spin_flip`` in place of ``n_singlets`` for these scans.  The
 worked example in ``examples/optimization/pyscf_adcc_mecp.py`` follows this
 spin-flip setup on twisted ethylene.
 
+.. note::
+
+   For a MECI pair use ``follow="index"`` (the adiabatically lowest roots), not
+   ``follow="overlap"``.  The crossing seam is defined by a degeneracy of the
+   *energy-ordered* pair, so the two tracked surfaces should simply be the
+   two lowest roots at each geometry; the single-surface density-overlap tracker
+   is meant to preserve a *fixed* state character across a geometry change --
+   exactly what a MECI optimiser should *not* do near the seam, where it would
+   fight the adiabatic reordering and push a slot onto a higher root.  This
+   matches the contract geomeTRIC's ``ConicalIntersection`` engine expects from
+   its sub-engines ("roots 0 and 1, energy-sorted").
+
 The two-electron term can be evaluated with two different strategies, selected
 through the ``eri_contraction`` keyword (see
 :ref:`gradients-eri-contraction` below). For the PySCF backend the
