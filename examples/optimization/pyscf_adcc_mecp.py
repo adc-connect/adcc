@@ -1,14 +1,23 @@
 #!/usr/bin/env python3
-"""Minimum-energy crossing point (MECP) of the S0/S1 seam with adcc gradients.
+"""Spin-flip ADC conical-intersection optimisation with adcc gradients.
 
-This example locates the minimum on the crossing seam between the ground state
-S0 and the first excited singlet S1 of twisted ethylene (C2H4) -- the textbook
-S0/S1 MECP / conical-intersection system -- using the paired-state scanner and
-the Levine--Coe--Martinez penalty objective.  The
-:class:`adcc.PairedStateGradientScanner` evaluates the ground-state MP2 surface
-and one tracked ADC excited surface at a single geometry from a single SCF +
-single ADC, and :class:`adcc.MECPObjective` combines them into one
-``(energy, gradient)`` for geomeTRIC.  **No derivative couplings** are required.
+This example locates the S0/S1 conical intersection of twisted ethylene
+(C2H4), the textbook minimal MECI system, using a **spin-flip ADC** setup:
+
+* the Hartree--Fock reference is the **triplet** ground state (unrestricted
+  SCF, ``spin = 2``), the natural diradical reference for the twisted geometry;
+* a single spin-flip ADC(2) solve produces both the singlet ground state
+  ``S0`` (the first spin-flip state) and the first excited singlet ``S1``;
+* the :class:`adcc.PairedStateGradientScanner` evaluates these two surfaces at
+  one geometry from a single SCF + single ADC, and
+  :class:`adcc.MECPObjective` combines them into one ``(energy, gradient)``
+  for geomeTRIC's penalty conical-intersection driver.
+
+Because both surfaces come from the *same* spin-flip ADC solve, the
+S0/S1 crossing is treated as a proper excited/excited MECI -- no separate
+ground-state surface is optimised, which avoids the convergence problems of a
+ground/excited MECP formulation near the diradical region.  **No derivative
+couplings** are required.
 
 geomeTRIC is optional; install it separately, e.g. ``pip install geometric`` or
 ``pip install adcc[geomopt]`` once the optional extra is available.
@@ -21,8 +30,14 @@ from pyscf import gto, scf
 from pyscf.geomopt import as_pyscf_method, geometric_solver
 
 
-def twisted_ethylene(twist_deg=80.0, basis="sto-3g"):
-    """Build a twisted ethylene PySCF SCF near the S1/S0 crossing seam."""
+def twisted_ethylene(twist_deg=90.0, basis="6-31g"):
+    """Build an unrestricted triplet-HF ethylene near the S0/S1 crossing seam.
+
+    The triplet is the diradical reference for spin-flip ADC: the first
+    spin-flip state recovers the closed-shell singlet ground state ``S0`` and
+    the next one the first excited singlet ``S1``, so the S0/S1 crossing is
+    accessible as a single-solve excited/excited MECI.
+    """
     tw = np.deg2rad(twist_deg)
     c1 = np.array([0.0, 0.0, 0.0])
     c2 = np.array([1.34, 0.0, 0.0])
@@ -46,9 +61,10 @@ def twisted_ethylene(twist_deg=80.0, basis="sto-3g"):
     )
     mol = gto.M(
         atom=atom_str, basis=basis, unit="Angstrom",
+        spin=2,            # 2S = 2 -> triplet reference for spin-flip ADC
         symmetry=False, verbose=0, parse_arg=False,
     )
-    mf = scf.RHF(mol)
+    mf = scf.UHF(mol)
     mf.conv_tol = 1e-10
     mf.conv_tol_grad = 1e-7
     mf.max_cycles = 250
@@ -63,15 +79,16 @@ def print_geometry(title, mol):
 
 
 if __name__ == "__main__":
-    scfres = twisted_ethylene(twist_deg=80.0, basis="6-31g")
+    scfres = twisted_ethylene(twist_deg=90.0, basis="6-31g")
     mol = scfres.mol
-    print_geometry("Initial twisted geometry", mol)
+    print_geometry("Initial twisted geometry (triplet reference)", mol)
 
     paired = adcc.PairedStateGradientScanner(
         scfres,
         method="adc2",
-        lower="mp2", upper=0,   # S0 (MP2 ground) + S1 (1st tracked excited)
-        n_singlets=3,
+        states=(0, 1),       # first two spin-flip states: S0 (singlet GS)
+        #                       and S1 (first excited singlet) -- a MECI
+        n_spin_flip=4,        # spin-flip ADC, unrestricted reference only
         follow="overlap",
         conv_tol=1e-7,
         gradient_kwargs={"eri_contraction": "direct", "conv_tol": 1e-7},
@@ -95,10 +112,9 @@ if __name__ == "__main__":
         convergence_grms=1e-4,
         convergence_gmax=2e-4,
     )
-    print_geometry("S0/S1 MECP geometry", mol_ci)
+    print_geometry("S0/S1 MECI geometry", mol_ci)
 
-    # Report the final two surfaces (MP2 ground S0 + tracked excited S1) at the
-    # located geometry.
+    # Report the final two spin-flip surfaces (S0 + S1) at the located geometry.
     (e_lo, _), (e_hi, _) = paired(mol_ci.atom_coords(unit="Bohr"))
     print(f"\nFinal surface energies: S0 = {e_lo:.10f} Eh, "
           f"S1 = {e_hi:.10f} Eh, gap = {abs(e_hi - e_lo):.2e} Eh")

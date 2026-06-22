@@ -146,8 +146,16 @@ smoothing::
     method = as_pyscf_method(mol, lambda m: objective(m.atom_coords(unit="Bohr")))
     mol_ci = geometric_solver.optimize(method, maxsteps=20)
 
-A complete worked example is provided in
-``examples/optimization/pyscf_adcc_mecp.py``.
+**Spin-flip ADC for S0/S1 conical intersections.**  Because both surfaces of a
+MECI pair come from a single ADC solve, the cleanest route to an S0/S1 crossing
+is a *spin-flip* ADC calculation from a triplet unrestricted Hartree--Fock
+reference: the first spin-flip state recovers the closed-shell singlet ground
+state ``S0`` and the next one the first excited singlet ``S1``, so the S0/S1 CI
+is optimised as an excited/excited MECI (no separate ground-state surface, which
+avoids the convergence problems of a ground/excited MECP near a diradical
+seam).  Use ``n_spin_flip`` in place of ``n_singlets`` for these scans.  The
+worked example in ``examples/optimization/pyscf_adcc_mecp.py`` follows this
+spin-flip setup on twisted ethylene.
 
 The two-electron term can be evaluated with two different strategies, selected
 through the ``eri_contraction`` keyword (see
