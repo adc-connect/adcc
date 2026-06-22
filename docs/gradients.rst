@@ -117,7 +117,7 @@ convenience::
         method="adc2",
         states=(0, 1),       # two tracked excited states (MECI)
         n_singlets=5,
-        follow="overlap",
+        follow="index",      # two lowest adiabatic roots, energy-sorted
     )
     (e_lower, g_lower), (e_upper, g_upper) = paired(mol.atom_coords())
 

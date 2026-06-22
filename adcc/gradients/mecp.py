@@ -86,13 +86,23 @@ def mecp_penalty(e_lower, g_lower, e_upper, g_upper, *, sigma=DEFAULT_SIGMA,
     seam (``E_dif = 0``); the ``sigma`` weight controls how hard the degeneracy
     is enforced versus minimising the average energy.
 
-    At exact degeneracy (``e_upper == e_lower``) the penalty and its gradient
-    vanish, leaving ``E_obj = E_avg`` and ``G_obj = G_avg`` -- the objective
-    reduces to an average-surface optimisation pinned to the crossing.  This
-    includes the ``alpha == 0`` raw energy-difference mode: the limiting
-    penalty ``sigma * E_dif`` tends to zero as ``E_dif -> 0`` even though the
-    un-guarded expression ``sigma * E_dif**2 / (E_dif + 0)`` is ``0/0`` there,
-    so the exact-degeneracy point is short-circuited explicitly below.
+    At exact degeneracy (``e_upper == e_lower``) the penalty energy vanishes.
+    For the smoothed mode (``alpha > 0``) the penalty *gradient* vanishes there
+    too, so the objective reduces to an average-surface optimisation
+    (``E_obj = E_avg``, ``G_obj = G_avg``) pinned to the crossing -- the LCM
+    objective is continuously extended to the seam.
+
+    The raw energy-difference mode (``alpha == 0``) is the singular limit of the
+    same formula and is evaluated in closed form as
+    ``E_pen = sigma * E_dif / n_states2`` and ``G_pen = sigma * G_dif /
+    n_states2`` -- with no division, so the sub-DBL_MIN underflow regime is
+    handled as well as the exact ``E_dif == 0`` point.  In this mode the
+    penalty energy still vanishes at the seam, but its gradient tends to the
+    constant ``sigma * G_dif`` (the force that pins the optimiser to the
+    crossing) and is *not* dropped at degeneracy; this is the genuine
+    continuous extension, not a vanishing one.  ``alpha == 0`` therefore gives
+    a harder, non-smooth penalty; ``alpha > 0`` smooths it to a vanishing
+    gradient exactly at the seam.
 
     Parameters
     ----------
@@ -127,16 +137,24 @@ def mecp_penalty(e_lower, g_lower, e_upper, g_upper, *, sigma=DEFAULT_SIGMA,
     g_avg = 0.5 * (g_lower + g_upper)
 
     # Smoothed penalty (Levine--Coe--Martinez / geomeTRIC ConicalIntersection).
-    # At exact degeneracy the penalty term and its gradient vanish by
-    # construction (the LCM objective is continuously extended to the seam).
-    # This is the only singular point: with alpha == 0 the raw
-    # energy-difference mode would otherwise evaluate 0.0 / .0 here, so we
-    # short-circuit the seam explicitly.  The guard also covers the (only
-    # theoretical) sub-DBL_MIN underflow where e_dif**2 flushes to zero while
-    # alpha == 0.
-    if e_dif == 0.0 or (alpha == 0.0 and abs(e_dif) < 1e-300):
-        e_pen = 0.0
-        g_pen_scale = 0.0
+    #
+    # For alpha > 0 the smoothed formula is well-defined everywhere (denom =
+    # E_dif + alpha >= alpha > 0); at exact degeneracy (E_dif == 0) the penalty
+    # energy *and its gradient* vanish by construction, so the objective
+    # reduces to the average surface -- the LCM objective is continuously
+    # extended to the seam.
+    #
+    # The raw energy-difference mode (alpha == 0) is the singular limit: the
+    # un-guarded expression sigma * E_dif**2 / E_dif would be 0/0 at the seam.
+    # Its genuine continuous extension is the linear penalty sigma * E_dif:
+    # the energy still vanishes at the seam, but the gradient tends to the
+    # constant sigma * G_dif -- the force that pins the optimiser to the
+    # crossing -- and must NOT be dropped at E_dif == 0.  Evaluate this branch
+    # without any division so the sub-DBL_MIN underflow regime (E_dif**2
+    # flushing to zero in float64) is handled too, not just the exact point.
+    if alpha == 0.0:
+        e_pen = sigma * e_dif / _N_STATES2
+        g_pen_scale = sigma / _N_STATES2
     else:
         denom = e_dif + alpha
         e_pen = sigma * (e_dif * e_dif) / (denom * _N_STATES2)

@@ -656,33 +656,54 @@ def test_penalty_matches_geometric_oracle_at_degeneracy():
 # Exact-degeneracy guard at alpha == 0 (findings 1 & 5) and finiteness guards.
 # ---------------------------------------------------------------------------
 
-def test_penalty_alpha_zero_exact_degeneracy_collapses_to_average():
-    # At (alpha == 0, e_dif == 0) the raw energy-difference mode would
-    # otherwise evaluate 0.0 / 0.0; the guard short-circuits to the average
-    # surface so the penalty vanishes exactly, matching the docstring.
+def test_penalty_alpha_zero_exact_degeneracy_keeps_penalty_gradient():
+    # At (alpha == 0, e_dif == 0) the raw energy-difference mode is evaluated in
+    # closed form (no division): the penalty energy vanishes, but its gradient
+    # tends to the constant sigma * G_dif -- the force that pins the optimiser
+    # to the crossing -- which must NOT be dropped at the seam.  The objective
+    # gradient is therefore G_avg + sigma * G_dif, the genuine continuous
+    # extension, not the bare average surface.
     g_lo = np.array([[1.0, 0.0, 0.0]])
     g_hi = np.array([[0.0, 2.0, 0.0]])
     e = -1.2
-    energy, gradient = mecp_penalty(e, g_lo, e, g_hi, sigma=2.0, alpha=0.0)
-    assert energy == pytest.approx(e)
-    assert_allclose(gradient, 0.5 * (g_lo + g_hi))
+    sigma = 2.0
+    energy, gradient = mecp_penalty(e, g_lo, e, g_hi, sigma=sigma, alpha=0.0)
+    assert energy == pytest.approx(e)  # penalty energy vanishes at the seam
+    assert_allclose(gradient, 0.5 * (g_lo + g_hi) + sigma * (g_hi - g_lo))
 
 
 def test_penalty_alpha_zero_near_degeneracy_is_finite():
-    # The sub-DBL_MIN underflow guard (-- abs(e_dif) < 1e-300 with alpha == 0)
-    # must also short-circuit rather than produce 0.0 / 0.0.
-    tiny = 1e-310  # e_dif ** 2 flushes to zero in float64
+    # The alpha == 0 raw mode carries no division, so the whole sub-DBL_MIN
+    # underflow regime (E_dif**2 flushing to zero in float64) -- not just the
+    # exact E_dif == 0 point -- is well-defined rather than 0.0 / 0.0.
+    tiny = 1e-310  # E_dif ** 2 flushes to zero in float64
     energy, gradient = mecp_penalty(
         -1.2, np.zeros(3), -1.2 + tiny, np.zeros(3), sigma=2.0, alpha=0.0,
     )
     assert np.isfinite(energy)
+    assert_allclose(gradient, np.zeros(3))
 
     def efun(off):
         return mecp_penalty(-1.2, np.zeros(3), -1.2 + off, np.zeros(3),
                             sigma=2.0, alpha=0.0)[0]
 
-    # The limit from outside the guard (alpha == 0) is the average as off -> 0.
+    # The limit from outside the exact point (alpha == 0) is the average as
+    # off -> 0 (the penalty energy sigma * off vanishes).
     assert efun(tiny) == pytest.approx(-1.2, abs=1e-6)
+
+
+def test_penalty_alpha_zero_underflow_regime_is_finite():
+    # Regression for the former ZeroDivisionError gap: with the old short-
+    # circuit (abs(E_dif) < 1e-300) a value of E_dif in [1e-300, ~7e-162) still
+    # made denom ** 2 underflow to zero while alpha == 0, raising 0.0 / 0.0.
+    # The no-division raw mode handles the whole regime.  1e-200 sits squarely
+    # in the former gap (E_dif ** 2 flushes to zero, but no division happens).
+    tiny = 1e-200
+    energy, gradient = mecp_penalty(
+        -1.2, np.zeros(3), -1.2 + tiny, np.zeros(3), sigma=2.0, alpha=0.0,
+    )
+    assert np.isfinite(energy)
+    assert_allclose(gradient, np.zeros(3))
 
 
 def test_penalty_rejects_non_finite_energies():

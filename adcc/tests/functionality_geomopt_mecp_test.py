@@ -94,9 +94,14 @@ def test_paired_scanner_objective_drives_meci_optimization():
     from pyscf.geomopt import as_pyscf_method, geometric_solver
 
     scfres = _ethylene_scf()
+    # follow="index" for a MECI pair (the recommended setting, matching the
+    # example and the docs note): the two lowest adiabatic roots, energy-sorted,
+    # the contract geomeTRIC's ConicalIntersection engine expects from its
+    # sub-engines.  (follow="overlap" for a MECI pair is a documented footgun --
+    # see the PairedStateGradientScanner construction warning.)
     scanner = adcc.PairedStateGradientScanner(
         scfres, method="adc2", states=(0, 1), n_singlets=3,
-        follow="overlap", conv_tol=1e-8,
+        follow="index", conv_tol=1e-8,
         gradient_kwargs={"eri_contraction": "full_ao"},
     )
     objective = adcc.MECPObjective(scanner)  # default LCM penalty
@@ -105,6 +110,11 @@ def test_paired_scanner_objective_drives_meci_optimization():
 
     def energy_and_gradient(mol_at_step):
         energy, gradient = objective(mol_at_step.atom_coords(unit="Bohr"))
+        # The penalty must hand geomeTRIC a finite objective every step; a
+        # diverging run (the regression that motivated the MECI follow='overlap'
+        # warning) surfaces here rather than as a silent blow-up.
+        assert np.isfinite(energy)
+        assert np.all(np.isfinite(gradient))
         e_lo, e_hi = objective.last_pair[0][0], objective.last_pair[1][0]
         seen_gaps.append(abs(e_hi - e_lo))
         return energy, gradient
@@ -118,11 +128,15 @@ def test_paired_scanner_objective_drives_meci_optimization():
     # Multiple steps ran and both surfaces were evaluated every step.
     assert len(seen_gaps) >= 2
     assert all(np.isfinite(gap) for gap in seen_gaps)
-    assert scanner.last_trackings is not None
-    # Tracking across steps kept the two followed roots distinct throughout.
-    slot0, slot1 = scanner.last_trackings
-    assert slot0 is not None and slot1 is not None
-    assert slot0.index != slot1.index
+    # The penalty optimisation should drive the gap down (or at least not let
+    # it blow up) -- "driving toward the seam", not merely "did not crash".  A
+    # generous factor keeps the assertion robust over a tiny 3-step line search
+    # while still catching a diverging run that doubles or triples the gap.
+    assert seen_gaps[-1] <= 2.0 * seen_gaps[0] + 1e-9
+    # follow="index" keeps the two lowest adiabatic roots structurally distinct
+    # (index mode records no per-step tracking diagnostic, by design); the
+    # energy-sorted pair stays apart.
+    assert objective.last_pair[0][0] <= objective.last_pair[1][0]
 
 
 def test_mecp_objective_calc_new_contract_end_to_end():
@@ -155,8 +169,15 @@ def test_mecp_ground_excited_pair_drives_optimization():
     )
     objective = adcc.MECPObjective(scanner)
 
+    seen_gaps = []
+
     def energy_and_gradient(mol_at_step):
-        return objective(mol_at_step.atom_coords(unit="Bohr"))
+        energy, gradient = objective(mol_at_step.atom_coords(unit="Bohr"))
+        assert np.isfinite(energy)
+        assert np.all(np.isfinite(gradient))
+        e_lo, e_hi = objective.last_pair[0][0], objective.last_pair[1][0]
+        seen_gaps.append(abs(e_hi - e_lo))
+        return energy, gradient
 
     method = as_pyscf_method(scfres.mol, energy_and_gradient)
     # A couple of steps confirm the MECP objective drives geomeTRIC without
@@ -169,3 +190,7 @@ def test_mecp_ground_excited_pair_drives_optimization():
     e_lo, e_hi = objective.last_pair[0][0], objective.last_pair[1][0]
     assert np.isfinite(e_lo) and np.isfinite(e_hi)
     assert e_lo <= e_hi
+    # Multiple steps ran and the gap did not blow up (driving toward the seam).
+    assert len(seen_gaps) >= 2
+    assert all(np.isfinite(gap) for gap in seen_gaps)
+    assert seen_gaps[-1] <= 2.0 * seen_gaps[0] + 1e-9
