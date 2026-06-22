@@ -37,6 +37,7 @@ module; this file owns only the paired scanner and its target dataclasses.
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 from typing import Any, Optional, Sequence
 
@@ -187,6 +188,31 @@ class PairedStateGradientScanner(NuclearGradientScanner):
             target, method, states, state_indices, lower, upper, mp_level,
             run_adc_kwargs,
         )
+
+        # Density-overlap tracking is designed for the single-surface scanner
+        # (follow one fixed state character across geometries).  For an
+        # excited/excited MECI pair the seam is defined by a degeneracy of the
+        # energy-ordered two lowest roots, not by fixed state character, so
+        # tracking by overlap fights the adiabatic reordering near the seam --
+        # once the two roots' densities blur together it can lock a slot onto a
+        # higher root and the optimisation diverges.  Use follow="index" (the
+        # scanner energy-sorts the positional roots and the penalty drives the
+        # gap), which is the contract geomeTRIC's ConicalIntersection engine
+        # expects from its sub-engines.
+        if self.follow == "overlap" and isinstance(
+                self.paired_target, PairedExcitedStateTarget):
+            warnings.warn(
+                "follow='overlap' is not recommended for a MECI pair "
+                "(excited/excited): near the crossing seam the two tracked "
+                "roots' densities become near-degenerate and overlap tracking "
+                "can flip a slot onto a higher root, diverging the penalty "
+                "optimisation. Use follow='index' (the two lowest adiabatic "
+                "roots, energy-sorted) for MECI optimisations; this is also "
+                "what geomeTRIC's ConicalIntersection engine expects from its "
+                "sub-engines.",
+                UserWarning,
+                stacklevel=2,
+            )
 
         # Plural tracking state.  For MECP slot 0 (ground) is never tracked:
         # its descriptor / index stay ``None`` forever.

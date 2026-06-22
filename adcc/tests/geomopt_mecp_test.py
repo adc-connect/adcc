@@ -292,6 +292,7 @@ def test_paired_calc_new_returns_both_surfaces():
     assert result["gradient_upper"].shape == (9,)
 
 
+@pytest.mark.filterwarnings("ignore::UserWarning")
 def test_paired_excited_overlap_tracking_seeds_and_tracks_both_slots():
     scanner = adcc.PairedStateGradientScanner(
         _h2o_scf(), method="adc2", states=(0, 1), n_singlets=3,
@@ -358,6 +359,7 @@ class _FakeExcitation:
         self.excitation_energy = omega
 
 
+@pytest.mark.filterwarnings("ignore::UserWarning")
 def test_distinctness_guard_keeps_slots_apart_under_collapse():
     # Both previous descriptors would, independently, best-match candidate 0.
     # The joint selection must keep the two roots distinct: one slot takes 0,
@@ -497,6 +499,42 @@ def test_paired_invalid_follow_raises_eagerly():
     with pytest.raises(ValueError, match="overlap.*index"):
         adcc.PairedStateGradientScanner(
             _h2o_scf(), method="adc2", states=(0, 1), follow="bogus",
+        )
+
+
+def test_paired_meci_overlap_follow_emits_warning():
+    # follow="overlap" fights the adiabatic energy-ordering that defines a MECI
+    # seam and can flip a slot onto a higher root near degeneracy.  The scanner
+    # warns (it does not raise -- the user may know what they are doing for
+    # well-separated states) and points at follow="index".
+    with pytest.warns(UserWarning, match="follow='overlap' is not recommended"):
+        adcc.PairedStateGradientScanner(
+            _h2o_scf(), method="adc2", states=(0, 1), n_singlets=3,
+            follow="overlap",
+        )
+
+
+def test_paired_mecp_overlap_follow_does_not_warn():
+    # The warning is specific to the excited/excited MECI pair.  A ground/excited
+    # MECP only tracks one (excited) root, so follow="overlap" is a legitimate
+    # choice there and must not warn.
+    import warnings as _w
+    with _w.catch_warnings():
+        _w.simplefilter("error", UserWarning)
+        adcc.PairedStateGradientScanner(
+            _h2o_scf(), method="adc2", lower="mp2", upper=0, n_singlets=3,
+            follow="overlap",
+        )
+
+
+def test_paired_meci_index_follow_does_not_warn():
+    # The recommended setting for a MECI pair must not warn.
+    import warnings as _w
+    with _w.catch_warnings():
+        _w.simplefilter("error", UserWarning)
+        adcc.PairedStateGradientScanner(
+            _h2o_scf(), method="adc2", states=(0, 1), n_singlets=3,
+            follow="index",
         )
 
 
@@ -665,6 +703,7 @@ def test_penalty_rejects_non_finite_gradients():
 # Paired threshold enforcement (finding 3) for MECI and MECP overlap tracking.
 # ---------------------------------------------------------------------------
 
+@pytest.mark.filterwarnings("ignore::UserWarning")
 def test_paired_overlap_tracking_below_min_score_raises():
     scanner = adcc.PairedStateGradientScanner(
         _h2o_scf(), method="adc2", states=(0, 1), n_singlets=3,
@@ -676,6 +715,7 @@ def test_paired_overlap_tracking_below_min_score_raises():
         scanner(scanner.initial_coords)
 
 
+@pytest.mark.filterwarnings("ignore::UserWarning")
 def test_paired_overlap_tracking_ambiguous_gap_raises():
     scanner = adcc.PairedStateGradientScanner(
         _h2o_scf(), method="adc2", states=(0, 1), n_singlets=3,
@@ -713,6 +753,7 @@ def test_mecp_overlap_tracking_ambiguous_gap_raises():
 # tracking_min_gap with only two states (finding 4).
 # ---------------------------------------------------------------------------
 
+@pytest.mark.filterwarnings("ignore::UserWarning")
 def test_tracking_min_gap_raises_when_only_two_excited_states():
     # n_singlets == 2 leaves no per-channel alternative to compare a gap
     # against; requesting ambiguity detection must surface that clearly.
@@ -726,6 +767,7 @@ def test_tracking_min_gap_raises_when_only_two_excited_states():
         scanner(scanner.initial_coords)
 
 
+@pytest.mark.filterwarnings("ignore::UserWarning")
 def test_tracking_min_gap_inert_at_two_states_with_default():
     # With the default tracking_min_gap == 0 the two-state case does not raise;
     # the per-channel gap is reported as inf (no measurable alternative).
@@ -771,6 +813,7 @@ def test_mecp_overlap_tracking_seeds_and_tracks_excited_root():
     assert excited_tr.switched is False
 
 
+@pytest.mark.filterwarnings("ignore::UserWarning")
 def test_paired_overlap_tracking_records_per_channel_diagnostics():
     scanner = adcc.PairedStateGradientScanner(
         _h2o_scf(), method="adc2", states=(0, 1), n_singlets=3,
@@ -947,6 +990,7 @@ def test_paired_meci_duplicate_index_mode_raises_distinctness():
 # Joint tie-break toward the smaller excitation-energy gap (finding 13).
 # ---------------------------------------------------------------------------
 
+@pytest.mark.filterwarnings("ignore::UserWarning")
 def test_joint_selection_tie_break_prefers_smaller_excitation_gap(monkeypatch):
     # Both slots track via overlap with two distinct ordered pairs tied on the
     # summed overlap score but differing in excitation-energy gap; the joint
