@@ -612,3 +612,382 @@ def test_penalty_matches_geometric_oracle_at_degeneracy():
     # Sanity: the oracle itself collapsed to the average at the seam.
     assert e_oracle == pytest.approx(-1.2, abs=1e-13)
     assert_allclose(g_oracle, 0.5 * (np.asarray(grads[0]) + np.asarray(grads[1])))
+
+
+# ---------------------------------------------------------------------------
+# Exact-degeneracy guard at alpha == 0 (findings 1 & 5) and finiteness guards.
+# ---------------------------------------------------------------------------
+
+def test_penalty_alpha_zero_exact_degeneracy_collapses_to_average():
+    # At (alpha == 0, e_dif == 0) the raw energy-difference mode would
+    # otherwise evaluate 0.0 / 0.0; the guard short-circuits to the average
+    # surface so the penalty vanishes exactly, matching the docstring.
+    g_lo = np.array([[1.0, 0.0, 0.0]])
+    g_hi = np.array([[0.0, 2.0, 0.0]])
+    e = -1.2
+    energy, gradient = mecp_penalty(e, g_lo, e, g_hi, sigma=2.0, alpha=0.0)
+    assert energy == pytest.approx(e)
+    assert_allclose(gradient, 0.5 * (g_lo + g_hi))
+
+
+def test_penalty_alpha_zero_near_degeneracy_is_finite():
+    # The sub-DBL_MIN underflow guard (-- abs(e_dif) < 1e-300 with alpha == 0)
+    # must also short-circuit rather than produce 0.0 / 0.0.
+    tiny = 1e-310  # e_dif ** 2 flushes to zero in float64
+    energy, gradient = mecp_penalty(
+        -1.2, np.zeros(3), -1.2 + tiny, np.zeros(3), sigma=2.0, alpha=0.0,
+    )
+    assert np.isfinite(energy)
+
+    def efun(off):
+        return mecp_penalty(-1.2, np.zeros(3), -1.2 + off, np.zeros(3),
+                            sigma=2.0, alpha=0.0)[0]
+
+    # The limit from outside the guard (alpha == 0) is the average as off -> 0.
+    assert efun(tiny) == pytest.approx(-1.2, abs=1e-6)
+
+
+def test_penalty_rejects_non_finite_energies():
+    g = np.zeros(3)
+    with pytest.raises(RuntimeError, match="non-finite"):
+        mecp_penalty(float("nan"), g, -1.0, g)
+    with pytest.raises(RuntimeError, match="non-finite"):
+        mecp_penalty(-1.0, g, float("inf"), g)
+
+
+def test_penalty_rejects_non_finite_gradients():
+    with pytest.raises(RuntimeError, match="non-finite"):
+        mecp_penalty(-1.3, np.array([float("nan"), 0.0, 0.0]), -1.1,
+                     np.zeros(3))
+
+
+# ---------------------------------------------------------------------------
+# Paired threshold enforcement (finding 3) for MECI and MECP overlap tracking.
+# ---------------------------------------------------------------------------
+
+def test_paired_overlap_tracking_below_min_score_raises():
+    scanner = adcc.PairedStateGradientScanner(
+        _h2o_scf(), method="adc2", states=(0, 1), n_singlets=3,
+        follow="overlap", tracking_min_score=2.0, conv_tol=1e-9,
+        gradient_kwargs={"eri_contraction": "full_ao"},
+    )
+    scanner(scanner.initial_coords)  # seed
+    with pytest.raises(RuntimeError, match="below threshold"):
+        scanner(scanner.initial_coords)
+
+
+def test_paired_overlap_tracking_ambiguous_gap_raises():
+    scanner = adcc.PairedStateGradientScanner(
+        _h2o_scf(), method="adc2", states=(0, 1), n_singlets=3,
+        follow="overlap", tracking_min_gap=10.0, conv_tol=1e-9,
+        gradient_kwargs={"eri_contraction": "full_ao"},
+    )
+    scanner(scanner.initial_coords)  # seed
+    with pytest.raises(RuntimeError, match="ambiguous"):
+        scanner(scanner.initial_coords)
+
+
+def test_mecp_overlap_tracking_below_min_score_raises():
+    scanner = adcc.PairedStateGradientScanner(
+        _h2o_scf(), method="adc2", lower="mp2", upper=0, n_singlets=3,
+        follow="overlap", tracking_min_score=2.0, conv_tol=1e-9,
+        gradient_kwargs={"eri_contraction": "full_ao"},
+    )
+    scanner(scanner.initial_coords)  # seed (ground never tracked)
+    with pytest.raises(RuntimeError, match="below threshold"):
+        scanner(scanner.initial_coords)
+
+
+def test_mecp_overlap_tracking_ambiguous_gap_raises():
+    scanner = adcc.PairedStateGradientScanner(
+        _h2o_scf(), method="adc2", lower="mp2", upper=0, n_singlets=3,
+        follow="overlap", tracking_min_gap=10.0, conv_tol=1e-9,
+        gradient_kwargs={"eri_contraction": "full_ao"},
+    )
+    scanner(scanner.initial_coords)  # seed
+    with pytest.raises(RuntimeError, match="ambiguous"):
+        scanner(scanner.initial_coords)
+
+
+# ---------------------------------------------------------------------------
+# tracking_min_gap with only two states (finding 4).
+# ---------------------------------------------------------------------------
+
+def test_tracking_min_gap_raises_when_only_two_excited_states():
+    # n_singlets == 2 leaves no per-channel alternative to compare a gap
+    # against; requesting ambiguity detection must surface that clearly.
+    scanner = adcc.PairedStateGradientScanner(
+        _h2o_scf(), method="adc2", states=(0, 1), n_singlets=2,
+        follow="overlap", tracking_min_gap=0.5, conv_tol=1e-9,
+        gradient_kwargs={"eri_contraction": "full_ao"},
+    )
+    scanner(scanner.initial_coords)  # seed (no tracking yet)
+    with pytest.raises(RuntimeError, match="at least three computed excited"):
+        scanner(scanner.initial_coords)
+
+
+def test_tracking_min_gap_inert_at_two_states_with_default():
+    # With the default tracking_min_gap == 0 the two-state case does not raise;
+    # the per-channel gap is reported as inf (no measurable alternative).
+    scanner = adcc.PairedStateGradientScanner(
+        _h2o_scf(), method="adc2", states=(0, 1), n_singlets=2,
+        follow="overlap", conv_tol=1e-9,
+        gradient_kwargs={"eri_contraction": "full_ao"},
+    )
+    scanner(scanner.initial_coords)
+    scanner(scanner.initial_coords)
+    slot0, slot1 = scanner.last_trackings
+    assert slot0 is not None and slot1 is not None
+    assert slot0.gap == float("inf")
+    assert slot1.gap == float("inf")
+    assert slot0.index != slot1.index
+
+
+# ---------------------------------------------------------------------------
+# MECP excited-root overlap tracking (finding 2) and per-channel diagnostics.
+# ---------------------------------------------------------------------------
+
+def test_mecp_overlap_tracking_seeds_and_tracks_excited_root():
+    scanner = adcc.PairedStateGradientScanner(
+        _h2o_scf(), method="adc2", lower="mp2", upper=0, n_singlets=3,
+        follow="overlap", conv_tol=1e-9,
+        gradient_kwargs={"eri_contraction": "full_ao"},
+    )
+    # Seed call: ground is never tracked; the excited side falls back to its
+    # positional seed index because there is no previous descriptor yet.
+    scanner(scanner.initial_coords)
+    assert scanner.last_trackings == (None, None)
+    assert scanner.last_excitations[0] is None
+    assert scanner.last_excitations[1] is not None
+
+    # Second call at the same geometry: the excited side tracks via overlap.
+    scanner(scanner.initial_coords)
+    ground_tr, excited_tr = scanner.last_trackings
+    assert ground_tr is None             # ground remains untracked
+    assert excited_tr is not None
+    assert excited_tr.index == 0         # the seeded S1 character
+    assert excited_tr.best_score == pytest.approx(1.0, abs=1e-3)
+    assert excited_tr.previous_index == 0
+    assert excited_tr.switched is False
+
+
+def test_paired_overlap_tracking_records_per_channel_diagnostics():
+    scanner = adcc.PairedStateGradientScanner(
+        _h2o_scf(), method="adc2", states=(0, 1), n_singlets=3,
+        follow="overlap", conv_tol=1e-9,
+        gradient_kwargs={"eri_contraction": "full_ao"},
+    )
+    scanner(scanner.initial_coords)  # seed
+    scanner(scanner.initial_coords)  # track both slots via overlap
+    slot0, slot1 = scanner.last_trackings
+    assert slot0 is not None and slot1 is not None
+    assert slot0.index != slot1.index
+    # Per-channel diagnostics that catch a silent root flip.
+    for slot in (slot0, slot1):
+        assert np.isfinite(slot.gap)
+        assert slot.gap >= 0.0
+    assert slot0.previous_index == 0
+    assert slot1.previous_index == 1
+    assert slot0.switched is False
+    assert slot1.switched is False
+
+
+# ---------------------------------------------------------------------------
+# Energy-sorting reorder branch (finding 8) via synthetic surface injection.
+# ---------------------------------------------------------------------------
+
+class _FakeSurface:
+    """A non-LazyMp target with a scalar total_energy and (ignored) extras."""
+
+    def __init__(self, total_energy):
+        self.total_energy = total_energy
+
+
+class _FakeGradResult:
+    def __init__(self, total):
+        self.total = np.asarray(total, dtype=float)
+
+
+def _patched_paired_scanner(monkeypatch, energies):
+    """Build a paired scanner whose __call__ uses fake, injected surfaces.
+
+    ``_run_scf`` and ``_build_target`` are stubbed so the energy path runs on
+    controlled ``total_energy`` values, and the gradient eval is stubbed to a
+    zero gradient.  This isolates the energy-sorting / finiteness logic of
+    ``PairedStateGradientScanner.__call__`` from any SCF/ADC machinery.
+    """
+    scanner = adcc.PairedStateGradientScanner(
+        _h2o_scf(), method="adc2", states=(0, 1), n_singlets=3,
+        follow="index", conv_tol=1e-9,
+    )
+    monkeypatch.setattr(scanner, "_run_scf", lambda coords: object())
+    targets = tuple(_FakeSurface(e) for e in energies)
+    monkeypatch.setattr(scanner, "_build_target", lambda scfres: targets)
+    import adcc.gradients as gradients_mod
+    monkeypatch.setattr(
+        gradients_mod, "nuclear_gradient",
+        lambda t, **kwargs: _FakeGradResult(np.zeros((3, 3))),
+    )
+    return scanner
+
+
+def test_paired_call_energy_sorts_and_records_last_pair_order(monkeypatch):
+    # Slot 1 carries the lower energy; __call__ must return it as the lower
+    # surface while keeping last_energies in slot order.
+    e_slot0, e_slot1 = -1.1, -1.3  # slot 1 is lower
+    scanner = _patched_paired_scanner(monkeypatch, (e_slot0, e_slot1))
+    (e_lo, g_lo), (e_hi, g_hi) = scanner(scanner.initial_coords)
+    assert e_lo == pytest.approx(e_slot1)
+    assert e_hi == pytest.approx(e_slot0)
+    assert scanner.last_pair_order == (1, 0)         # energy-sorted insertion
+    assert scanner.last_energies == (e_slot0, e_slot1)  # slot order preserved
+
+
+def test_paired_call_default_slot_order_when_already_sorted(monkeypatch):
+    scanner = _patched_paired_scanner(monkeypatch, (-1.3, -1.1))  # slot0 lower
+    (e_lo, _), (e_hi, _) = scanner(scanner.initial_coords)
+    assert e_lo == pytest.approx(-1.3)
+    assert e_hi == pytest.approx(-1.1)
+    assert scanner.last_pair_order == (0, 1)
+
+
+# ---------------------------------------------------------------------------
+# Non-finite surface guard in the scanner (finding 7, paired-side).
+# ---------------------------------------------------------------------------
+
+def test_paired_scanner_rejects_non_finite_energy(monkeypatch):
+    import adcc.gradients as gradients_mod
+    scanner = adcc.PairedStateGradientScanner(
+        _h2o_scf(), method="adc2", states=(0, 1), n_singlets=3, follow="index",
+    )
+    monkeypatch.setattr(scanner, "_run_scf", lambda coords: object())
+    monkeypatch.setattr(
+        scanner, "_build_target",
+        lambda scfres: (_FakeSurface(float("inf")), _FakeSurface(-1.0)),
+    )
+    monkeypatch.setattr(
+        gradients_mod, "nuclear_gradient",
+        lambda t, **kwargs: _FakeGradResult(np.zeros((3, 3))),
+    )
+    with pytest.raises(RuntimeError, match="Non-finite surface result"):
+        scanner(scanner.initial_coords)
+
+
+def test_paired_scanner_rejects_non_finite_gradient(monkeypatch):
+    import adcc.gradients as gradients_mod
+    scanner = adcc.PairedStateGradientScanner(
+        _h2o_scf(), method="adc2", states=(0, 1), n_singlets=3, follow="index",
+    )
+    monkeypatch.setattr(scanner, "_run_scf", lambda coords: object())
+    monkeypatch.setattr(
+        scanner, "_build_target",
+        lambda scfres: (_FakeSurface(-1.0), _FakeSurface(-2.0)),
+    )
+    monkeypatch.setattr(
+        gradients_mod, "nuclear_gradient",
+        lambda t, **kwargs: _FakeGradResult(np.full((3, 3), float("nan"))),
+    )
+    with pytest.raises(RuntimeError, match="Non-finite surface result"):
+        scanner(scanner.initial_coords)
+
+
+# ---------------------------------------------------------------------------
+# MECP lower normalisation branches and out-of-range upper (finding 10).
+# ---------------------------------------------------------------------------
+
+def test_paired_mecp_lower_as_ground_state_target():
+    from adcc.gradients import GroundStateTarget
+    scanner = adcc.PairedStateGradientScanner(
+        _h2o_scf(), method="adc2", lower=GroundStateTarget(level=2), upper=0,
+    )
+    assert isinstance(scanner.paired_target, PairedGroundExcitedStateTarget)
+    assert scanner.paired_target.level == 2
+
+
+def test_paired_mecp_lower_as_int_level():
+    scanner = adcc.PairedStateGradientScanner(
+        _h2o_scf(), method="adc2", lower=2, upper=0,
+    )
+    assert isinstance(scanner.paired_target, PairedGroundExcitedStateTarget)
+    assert scanner.paired_target.level == 2
+
+
+def test_paired_mecp_lower_bad_type_raises():
+    with pytest.raises(TypeError, match="lower must be"):
+        adcc.PairedStateGradientScanner(
+            _h2o_scf(), method="adc2", lower=1.5, upper=0,
+        )
+
+
+def test_paired_mecp_upper_out_of_range_raises():
+    scanner = adcc.PairedStateGradientScanner(
+        _h2o_scf(), method="adc2", lower="mp2", upper=5, n_singlets=2,
+        follow="index", conv_tol=1e-9,
+    )
+    with pytest.raises(ValueError, match="out of range"):
+        scanner(scanner.initial_coords)
+
+
+# ---------------------------------------------------------------------------
+# Distinctness guard on duplicate positional seeds (finding 11).
+# ---------------------------------------------------------------------------
+
+def test_paired_meci_duplicate_index_mode_raises_distinctness():
+    # In pure index mode with states=(0, 0) both slots want the same root;
+    # the distinctness guard must raise rather than silently collapse.
+    scanner = adcc.PairedStateGradientScanner(
+        _h2o_scf(), method="adc2", states=(0, 0), n_singlets=3,
+        follow="index", conv_tol=1e-9,
+    )
+    with pytest.raises(RuntimeError, match="collapsed onto state"):
+        scanner(scanner.initial_coords)
+
+
+# ---------------------------------------------------------------------------
+# Joint tie-break toward the smaller excitation-energy gap (finding 13).
+# ---------------------------------------------------------------------------
+
+def test_joint_selection_tie_break_prefers_smaller_excitation_gap(monkeypatch):
+    # Both slots track via overlap with two distinct ordered pairs tied on the
+    # summed overlap score but differing in excitation-energy gap; the joint
+    # selection must prefer the pair closer to the seam (smaller gap) even
+    # though it is neither the first-iterated nor the lowest-index pair.
+    scanner = adcc.PairedStateGradientScanner(
+        _h2o_scf(), method="adc2", states=(0, 1), n_singlets=4,
+        follow="overlap", conv_tol=1e-9,
+    )
+    nao = scanner.base_mol.nao
+
+    # Score table keyed by the previous descriptor identity + candidate index:
+    # slot0 likes {0, 2}, slot1 likes {1, 3} -> four ordered pairs tie at 1.0.
+    sentinel0, sentinel1 = object(), object()
+    score_map = {
+        id(sentinel0): [1.0, 0.0, 1.0, 0.0],
+        id(sentinel1): [0.0, 1.0, 0.0, 1.0],
+    }
+    omegas = [0.10, 0.20, 0.11, 0.19]
+    # Paired gap analysis: (0,1)=0.10 (0,3)=0.09 (2,1)=0.09 (2,3)=0.08 smallest.
+
+    # _descriptor returns the candidate index so _tracking_score can map it
+    # back to a controlled score without fabricating density matrices.
+    monkeypatch.setattr(
+        scanner, "_descriptor", lambda excitation, mol: excitation.index,
+    )
+    monkeypatch.setattr(
+        scanner, "_tracking_score",
+        lambda prev, current, mol, unavailable:
+            float(score_map[id(prev)][current]),
+    )
+    # Ensure score_vectors are built (follow == "overlap" AND prev is not None).
+    scanner.previous_descriptors = (sentinel0, sentinel1)
+    scanner.previous_indices = (0, 1)
+
+    candidates = [
+        _FakeExcitation(i, np.zeros((nao, nao)), np.zeros((nao, nao)), omegas[i])
+        for i in range(4)
+    ]
+    states = types.SimpleNamespace(excitations=candidates)
+    chosen, _descriptors, _trackings = scanner._select_excitations(
+        states, scanner.base_mol.copy()
+    )
+    assert tuple(chosen) == (2, 3)  # smallest excitation-energy-gap pair

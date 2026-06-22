@@ -243,6 +243,17 @@ class PairedStateGradientScanner(NuclearGradientScanner):
         self.last_gradients = tuple(grads)
         self.last_energies = tuple(energies)
 
+        # Guard against non-finite surface results *before* the energy sort:
+        # np.argsort silently reorders slots on NaN, which would otherwise let a
+        # borderline ADC solve hand misleading (lower, upper) pairs -- and a
+        # NaN objective -- to geomeTRIC.
+        for slot, e in enumerate(energies):
+            if not np.isfinite(e) or not np.all(np.isfinite(grads[slot])):
+                raise RuntimeError(
+                    f"Non-finite surface result on paired slot {slot} "
+                    f"(energy={e!r}); cannot drive a penalty optimisation."
+                )
+
         order = np.argsort(energies)
         lo, hi = int(order[0]), int(order[1])
         self.last_pair_order = (lo, hi)
@@ -504,12 +515,20 @@ class PairedStateGradientScanner(NuclearGradientScanner):
                 continue
             other = chosen[1 - slot]
             # Gap to the best *alternative* root available to this slot, i.e.
-            # excluding the partner's selected root (the distinctness guard
-            # means there is always at least one other candidate here).
+            # excluding the partner's selected root.  When exactly two excited
+            # states were computed (n == 2) each slot is forced onto the
+            # partner's leftover root, so no per-channel "best vs second-best"
+            # gap is measurable here: ``remaining`` is empty.
             remaining = [k for k in range(n) if k != idx and k != other]
             if remaining:
                 second = max(remaining, key=lambda k: sv[k])
                 gap = float(sv[idx] - sv[second])
+            elif self.tracking_min_gap > 0:
+                raise RuntimeError(
+                    f"tracking_min_gap > 0 needs at least three computed "
+                    f"excited states to measure a per-channel gap for paired "
+                    f"slot {slot} (only {n} available)."
+                )
             else:
                 gap = float("inf")
             prev_idx = self.previous_indices[slot]
@@ -568,8 +587,15 @@ class PairedStateGradientScanner(NuclearGradientScanner):
         ])
         order = np.argsort(scores)[::-1]
         best = int(order[0])
-        gap = (float(scores[best] - scores[int(order[1])])
-               if len(order) > 1 else float("inf"))
+        if len(order) > 1:
+            gap = float(scores[best] - scores[int(order[1])])
+        elif self.tracking_min_gap > 0:
+            raise RuntimeError(
+                "tracking_min_gap > 0 needs at least two computed excited "
+                f"states to measure a gap (only {n} available)."
+            )
+        else:
+            gap = float("inf")
         switched = prev_index is not None and best != prev_index
         tracking = TrackingResult(
             index=best, scores=scores, best_score=float(scores[best]), gap=gap,

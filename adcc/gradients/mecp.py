@@ -88,7 +88,11 @@ def mecp_penalty(e_lower, g_lower, e_upper, g_upper, *, sigma=DEFAULT_SIGMA,
 
     At exact degeneracy (``e_upper == e_lower``) the penalty and its gradient
     vanish, leaving ``E_obj = E_avg`` and ``G_obj = G_avg`` -- the objective
-    reduces to an average-surface optimisation pinned to the crossing.
+    reduces to an average-surface optimisation pinned to the crossing.  This
+    includes the ``alpha == 0`` raw energy-difference mode: the limiting
+    penalty ``sigma * E_dif`` tends to zero as ``E_dif -> 0`` even though the
+    un-guarded expression ``sigma * E_dif**2 / (E_dif + 0)`` is ``0/0`` there,
+    so the exact-degeneracy point is short-circuited explicitly below.
 
     Parameters
     ----------
@@ -123,17 +127,33 @@ def mecp_penalty(e_lower, g_lower, e_upper, g_upper, *, sigma=DEFAULT_SIGMA,
     g_avg = 0.5 * (g_lower + g_upper)
 
     # Smoothed penalty (Levine--Coe--Martinez / geomeTRIC ConicalIntersection).
-    # At e_dif == 0 the penalty term and its gradient vanish by construction.
-    denom = e_dif + alpha
-    e_pen = sigma * (e_dif * e_dif) / (denom * _N_STATES2)
-    g_pen_scale = (
-        sigma * (e_dif * e_dif + 2.0 * alpha * e_dif)
-        / (denom * denom * _N_STATES2)
-    )
+    # At exact degeneracy the penalty term and its gradient vanish by
+    # construction (the LCM objective is continuously extended to the seam).
+    # This is the only singular point: with alpha == 0 the raw
+    # energy-difference mode would otherwise evaluate 0.0 / .0 here, so we
+    # short-circuit the seam explicitly.  The guard also covers the (only
+    # theoretical) sub-DBL_MIN underflow where e_dif**2 flushes to zero while
+    # alpha == 0.
+    if e_dif == 0.0 or (alpha == 0.0 and abs(e_dif) < 1e-300):
+        e_pen = 0.0
+        g_pen_scale = 0.0
+    else:
+        denom = e_dif + alpha
+        e_pen = sigma * (e_dif * e_dif) / (denom * _N_STATES2)
+        g_pen_scale = (
+            sigma * (e_dif * e_dif + 2.0 * alpha * e_dif)
+            / (denom * denom * _N_STATES2)
+        )
     g_pen = g_pen_scale * g_dif
 
     e_obj = e_avg + e_pen
     g_obj = g_avg + g_pen
+    if not np.isfinite(e_obj) or not np.all(np.isfinite(g_obj)):
+        raise RuntimeError(
+            "mecp_penalty produced a non-finite objective (E_obj="
+            f"{e_obj!r}, e_lower={e_lower!r}, e_upper={e_upper!r}); a "
+            "non-finite state energy or gradient reached the penalty."
+        )
     return float(e_obj), np.asarray(g_obj, dtype=float)
 
 

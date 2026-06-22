@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Minimum-energy conical intersection (MECI) optimisation with adcc gradients.
+"""Minimum-energy crossing point (MECP) of the S0/S1 seam with adcc gradients.
 
-This example locates a conical-intersection seam point of twisted ethylene
-(C2H4), the textbook minimal MECI system, using the paired-state scanner and the
-Levine--Coe--Martinez penalty objective.  The
-:class:`adcc.PairedStateGradientScanner` evaluates two excited-state surfaces at
-one geometry from a single SCF + single
-ADC, and :class:`adcc.MECPObjective` combines them into one
+This example locates the minimum on the crossing seam between the ground state
+S0 and the first excited singlet S1 of twisted ethylene (C2H4) -- the textbook
+S0/S1 MECP / conical-intersection system -- using the paired-state scanner and
+the Levine--Coe--Martinez penalty objective.  The
+:class:`adcc.PairedStateGradientScanner` evaluates the ground-state MP2 surface
+and one tracked ADC excited surface at a single geometry from a single SCF +
+single ADC, and :class:`adcc.MECPObjective` combines them into one
 ``(energy, gradient)`` for geomeTRIC.  **No derivative couplings** are required.
 
 geomeTRIC is optional; install it separately, e.g. ``pip install geometric`` or
@@ -50,6 +51,7 @@ def twisted_ethylene(twist_deg=80.0, basis="sto-3g"):
     mf = scf.RHF(mol)
     mf.conv_tol = 1e-10
     mf.conv_tol_grad = 1e-7
+    mf.max_cycles = 250
     return mf
 
 
@@ -61,18 +63,18 @@ def print_geometry(title, mol):
 
 
 if __name__ == "__main__":
-    scfres = twisted_ethylene(twist_deg=80.0)
+    scfres = twisted_ethylene(twist_deg=80.0, basis="6-31g")
     mol = scfres.mol
     print_geometry("Initial twisted geometry", mol)
 
     paired = adcc.PairedStateGradientScanner(
         scfres,
         method="adc2",
-        states=(0, 1),       # two tracked excited states (MECI)
-        n_singlets=4,
+        lower="mp2", upper=0,   # S0 (MP2 ground) + S1 (1st tracked excited)
+        n_singlets=3,
         follow="overlap",
-        conv_tol=1e-8,
-        gradient_kwargs={"eri_contraction": "full_ao", "conv_tol": 1e-7},
+        conv_tol=1e-7,
+        gradient_kwargs={"eri_contraction": "direct", "conv_tol": 1e-7},
     )
     # The default penalty uses the smoothed Levine--Coe--Martinez form, the same
     # formulation as geomeTRIC's built-in conical-intersection engine.
@@ -89,13 +91,14 @@ if __name__ == "__main__":
     method = as_pyscf_method(mol, energy_and_gradient)
     mol_ci = geometric_solver.optimize(
         method,
-        maxsteps=40,
+        maxsteps=100,
         convergence_grms=1e-4,
         convergence_gmax=2e-4,
     )
-    print_geometry("MECI geometry", mol_ci)
+    print_geometry("S0/S1 MECP geometry", mol_ci)
 
-    # Report the final two surfaces at the located geometry.
+    # Report the final two surfaces (MP2 ground S0 + tracked excited S1) at the
+    # located geometry.
     (e_lo, _), (e_hi, _) = paired(mol_ci.atom_coords(unit="Bohr"))
-    print(f"\nFinal surface energies: lower = {e_lo:.10f} Eh, "
-          f"upper = {e_hi:.10f} Eh, gap = {abs(e_hi - e_lo):.2e} Eh")
+    print(f"\nFinal surface energies: S0 = {e_lo:.10f} Eh, "
+          f"S1 = {e_hi:.10f} Eh, gap = {abs(e_hi - e_lo):.2e} Eh")
