@@ -358,7 +358,8 @@ def generate_qchem_input_file(infile: str | Path, adc_method: AdcMethod, basis: 
                               max_ss: int | None = None,
                               gs_density_order: int | str | None = None,
                               isr_order: MethodLevel | None = None,
-                              run_qchem_scf: bool = False) -> None:
+                              run_qchem_scf: bool = False,
+                              davidson_thresh: int = 14) -> None:
     """
     Generates a qchem input file for the given test case and method.
     """
@@ -412,6 +413,7 @@ def generate_qchem_input_file(infile: str | Path, adc_method: AdcMethod, basis: 
         maxiter=maxiter,
         conv_tol=conv_tol,
         max_ss=max_ss,
+        davidson_thresh=davidson_thresh,
         charge=charge,
         multiplicity=multiplicity,
         cc_rest_occ=n_core_orbitals,
@@ -449,6 +451,7 @@ adc_davidson_maxiter     {maxiter}
 adc_davidson_conv        {conv_tol}
 adc_nguess_singles       {n_guesses}
 adc_davidson_maxsubspace {max_ss}
+adc_davidson_thresh      {davidson_thresh}
 adc_prop_es              true
 adc_prop_es2es           true
 cc_rest_occ              {cc_rest_occ}
