@@ -90,9 +90,64 @@ The same object also implements geomeTRIC's custom-engine ``calc_new`` protocol:
     # result == {"energy": energy, "gradient": gradient.ravel()}
 
 geomeTRIC remains an optional dependency; the plain scanner only requires the
-PySCF backend.  Minimum-energy crossing point workflows can be built from two
-scanner targets because geomeTRIC's penalty-constrained formulation only needs
-the two state energies and gradients, not derivative couplings.
+PySCF backend.
+
+.. _gradients-mecp:
+
+Minimum-energy crossing points (MECP/MECI)
+------------------------------------------
+
+The :class:`adcc.PairedStateGradientScanner` evaluates *two* electronic
+surfaces at one geometry from a single SCF and a single ADC (or, for a
+ground/excited MECP, one ``LazyMp`` plus one ADC) and returns both
+``(energy, gradient)`` pairs.  It reuses the single-surface scanner's SCF
+lifecycle and AO density-overlap root tracking, and adds a **joint distinct root
+selection** with a distinctness guard so the two followed roots never collapse
+onto the same candidate state -- the key complication when two surfaces become
+degenerate at a conical-intersection seam.
+
+No derivative (non-adiabatic) couplings are required: the penalty-function
+family of MECP/MECI optimisers only needs the two state energies and their
+gradients.  Two normalised target forms are supported.  For an excited/excited
+MECI pair the two roots come from one ADC solve via the ``states=(i, j)``
+convenience::
+
+    paired = adcc.PairedStateGradientScanner(
+        scfres,
+        method="adc2",
+        states=(0, 1),       # two tracked excited states (MECI)
+        n_singlets=5,
+        follow="overlap",
+    )
+    (e_lower, g_lower), (e_upper, g_upper) = paired(mol.atom_coords())
+
+For a ground/excited MECP pair the ground surface is always MP2 (the only level
+with an analytic gradient in adcc and is evaluated via :class:`adcc.LazyMp`)
+paired with a single tracked excited root::
+
+    paired = adcc.PairedStateGradientScanner(
+        scfres,
+        method="adc2",
+        lower="mp2", upper=0,  # MP2 ground + excited root 0 (MECP)
+        n_singlets=5,
+        follow="overlap",
+    )
+
+To drive a geomeTRIC optimisation, wrap the paired scanner in an
+:class:`adcc.MECPObjective`.  This combines the two surfaces into a single
+penalty ``(energy, gradient)`` using the smoothed Levine--Coe--Martinez penalty
+(the same form as geomeTRIC's built-in conical-intersection engine), with the
+``sigma`` and ``alpha`` parameters tuning the penalty strength and seam
+smoothing::
+
+    from pyscf.geomopt import as_pyscf_method, geometric_solver
+
+    objective = adcc.MECPObjective(paired)
+    method = as_pyscf_method(mol, lambda m: objective(m.atom_coords(unit="Bohr")))
+    mol_ci = geometric_solver.optimize(method, maxsteps=20)
+
+A complete worked example is provided in
+``examples/optimization/pyscf_adcc_mecp.py``.
 
 The two-electron term can be evaluated with two different strategies, selected
 through the ``eri_contraction`` keyword (see

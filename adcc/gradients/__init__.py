@@ -38,10 +38,16 @@ from .orbital_response import (
 from .amplitude_response import amplitude_relaxed_densities
 from .scanner import (ExcitedStateTarget, GroundStateTarget,
                       NuclearGradientScanner, density_overlap_score)
+from .paired_scanner import (PairedExcitedStateTarget,
+                            PairedGroundExcitedStateTarget,
+                            PairedStateGradientScanner)
+from .mecp import mecp_penalty, MECPObjective
 
 __all__ = [
     "nuclear_gradient", "NuclearGradientScanner",
     "GroundStateTarget", "ExcitedStateTarget", "density_overlap_score",
+    "PairedStateGradientScanner", "PairedExcitedStateTarget",
+    "PairedGroundExcitedStateTarget", "mecp_penalty", "MECPObjective",
 ]
 
 
