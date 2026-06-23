@@ -77,14 +77,11 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
         gs_data[f"cvs-{gs}2/dm_bb_a"] = dm_bb_a.to_ndarray()
         gs_data[f"cvs-{gs}2/dm_bb_b"] = dm_bb_b.to_ndarray()
     if not ground_state.has_core_occupied_space:
-        # MP3 density: MO basis
-        dm_blocks = ["dm_o1o1", "dm_o1v1", "dm_v1v1"]
-
-        for block in dm_blocks:
-            blk = block.split("_")[-1]
-            gs_data[f"{gs}3/{block}"] = ground_state.diffdm(3)[blk].to_ndarray()
+        diffdm = ground_state.diffdm(3, apply_cvs=False)
+        for block in diffdm.blocks_nonzero:
+            gs_data[f"{gs}3/dm_{block}"] = diffdm[block].to_ndarray()
         # MP3 density: AO basis
-        dm_bb_a, dm_bb_b = ground_state.diffdm(3).to_ao_basis(
+        dm_bb_a, dm_bb_b = diffdm.to_ao_basis(
             ground_state.reference_state
         )
         gs_data[f"{gs}3/dm_bb_a"] = dm_bb_a.to_ndarray()
