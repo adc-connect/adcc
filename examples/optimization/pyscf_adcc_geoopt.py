@@ -29,13 +29,10 @@ mf.conv_tol_grad = 1e-9
 scanner = adcc.NuclearGradientScanner(mf, method="mp2")
 
 
-def energy_and_gradient(mol_at_step):
-    """PySCF geomopt callback: return energy and gradient for a Mole."""
-    return scanner(mol_at_step.atom_coords(unit="Bohr"))
-
-
 if __name__ == "__main__":
-    method = as_pyscf_method(mol, energy_and_gradient)
+    # The scanner accepts a PySCF Mole directly (it reads atom_coords in Bohr),
+    # so it can be passed straight to as_pyscf_method without a wrapper.
+    method = as_pyscf_method(mol, scanner)
     mol_eq = geometric_solver.optimize(method, maxsteps=20)
 
     print("\nOptimised geometry (Bohr):")

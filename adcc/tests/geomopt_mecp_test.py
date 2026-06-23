@@ -238,6 +238,63 @@ def test_mecp_objective_accepts_custom_penalty():
 # Paired-engine mechanics (one SCF + one ADC, two surfaces).
 # ---------------------------------------------------------------------------
 
+def test_scanner_accepts_pyscf_mole_directly():
+    # The scanner reads ``atom_coords(unit="Bohr")`` on a PySCF ``Mole``, so it
+    # plugs straight into ``as_pyscf_method`` without a hand-rolled wrapper.
+    scfres = _h2o_scf()
+    scanner = adcc.PairedStateGradientScanner(
+        scfres, method="adc2", states=(0, 1), n_singlets=3,
+        follow="index", conv_tol=1e-9,
+        gradient_kwargs={"eri_contraction": "full_ao"},
+    )
+    pair_via_mole = scanner(scfres.mol)
+    pair_via_coords = scanner(scanner.initial_coords)
+    # Passing the Mole must give the same result as passing its Bohr coords.
+    assert pair_via_mole[0][0] == pytest.approx(pair_via_coords[0][0], abs=1e-10)
+    assert pair_via_mole[1][0] == pytest.approx(pair_via_coords[1][0], abs=1e-10)
+    assert_allclose(pair_via_mole[0][1], pair_via_coords[0][1], atol=1e-10)
+
+
+def test_mecp_objective_accepts_pyscf_mole_directly():
+    # The objective forwards the Mole to its paired scanner, so it too can be
+    # passed straight to ``as_pyscf_method``.
+    scfres = _h2o_scf()
+    scanner = adcc.PairedStateGradientScanner(
+        scfres, method="adc2", states=(0, 1), n_singlets=3,
+        follow="index", conv_tol=1e-9,
+        gradient_kwargs={"eri_contraction": "full_ao"},
+    )
+    objective = adcc.MECPObjective(scanner)
+    e_via_mole, g_via_mole = objective(scfres.mol)
+    e_via_coords, g_via_coords = objective(scanner.initial_coords)
+    assert e_via_mole == pytest.approx(e_via_coords, abs=1e-10)
+    assert_allclose(g_via_mole, g_via_coords, atol=1e-10)
+
+
+def test_mecp_objective_step_callback_is_invoked():
+    # The opt-in per-step hook receives the objective's (energy, gradient) and
+    # runs *after* last_pair is populated, so it can read the seam gap.
+    scanner = adcc.PairedStateGradientScanner(
+        _h2o_scf(), method="adc2", states=(0, 1), n_singlets=3,
+        follow="index", conv_tol=1e-9,
+        gradient_kwargs={"eri_contraction": "full_ao"},
+    )
+    objective = adcc.MECPObjective(scanner)
+    seen = []
+
+    def _cb(e, g):
+        # last_pair is already set when the callback fires.
+        lo, hi = objective.last_pair
+        seen.append((e, float(np.asarray(g).ravel()[0]), abs(hi[0] - lo[0])))
+
+    objective.step_callback = _cb
+    objective(scanner.initial_coords)
+    assert len(seen) == 1
+    assert seen[0][0] == pytest.approx(objective.last_energy, abs=1e-12)
+    assert np.isfinite(seen[0][1])
+    assert np.isfinite(seen[0][2])
+
+
 def _assert_independent_match(scanner):
     states = adcc.run_adc(scanner.last_scf,
                           **scanner.paired_target.kwargs())

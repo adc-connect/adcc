@@ -106,15 +106,18 @@ if __name__ == "__main__":
     # sigma enforces the degeneracy harder for a tighter final gap.
     objective = adcc.MECPObjective(paired, sigma=200.0, alpha=0.025)
 
-    def energy_and_gradient(mol_at_step):
-        energy, gradient = objective(mol_at_step.atom_coords(unit="Bohr"))
+    # Optional per-step "is it converging?" printer attached as a callback; read
+    # the seam gap off objective.last_pair.  The objective accepts a PySCF Mole
+    # directly (forwarded to the paired scanner), so it plugs straight into
+    # as_pyscf_method without a wrapper.
+    def _print_step(energy, gradient):
         e_lo, e_hi = objective.last_pair[0][0], objective.last_pair[1][0]
         gnorm = float((gradient ** 2).sum() ** 0.5)
         print(f"E_pen = {energy:.12f} Eh, |g| = {gnorm:.6e} Eh/Bohr, "
               f"gap = {abs(e_hi - e_lo):.6e} Eh")
-        return energy, gradient
+    objective.step_callback = _print_step
 
-    method = as_pyscf_method(mol, energy_and_gradient)
+    method = as_pyscf_method(mol, objective)
     mol_ci = geometric_solver.optimize(
         method,
         maxsteps=50,

@@ -102,6 +102,31 @@ def test_calc_new_returns_geometric_engine_shape():
     assert result["gradient"].shape == (9,)
 
 
+def test_scanner_accepts_pyscf_mole_directly():
+    # The scanner reads atom_coords(unit="Bohr") on a PySCF Mole, so it can be
+    # passed straight to as_pyscf_method without a hand-rolled wrapper.
+    scfres = _h2o_scf()
+    scanner = adcc.NuclearGradientScanner(
+        scfres, method="mp2", gradient_kwargs={"eri_contraction": "full_ao"},
+    )
+    e_via_mole, g_via_mole = scanner(scfres.mol)
+    e_via_coords, g_via_coords = scanner(scanner.initial_coords)
+    assert e_via_mole == pytest.approx(e_via_coords, abs=1e-10)
+    assert_allclose(g_via_mole, g_via_coords, atol=1e-10)
+
+
+def test_scanner_step_callback_is_invoked_with_energy_and_gradient():
+    scanner = adcc.NuclearGradientScanner(
+        _h2o_scf(), method="mp2", gradient_kwargs={"eri_contraction": "full_ao"},
+    )
+    seen = []
+    scanner.step_callback = lambda e, g: seen.append((e, float(np.asarray(g).sum())))
+    e, g = scanner(scanner.initial_coords)
+    assert len(seen) == 1
+    assert seen[0][0] == pytest.approx(e, abs=1e-12)
+    assert seen[0][1] == pytest.approx(float(np.asarray(g).sum()), abs=1e-10)
+
+
 def test_run_adc_kwargs_are_forwarded_with_native_names():
     scanner = adcc.NuclearGradientScanner(
         _h2o_scf(), method="adc2", n_singlets=2, conv_tol=1e-7,

@@ -31,7 +31,7 @@ geometry.  adcc-specific keyword arguments are forwarded unchanged to
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 import warnings
 
 import numpy as np
@@ -137,6 +137,12 @@ class NuclearGradientScanner:
         self.last_gradient = None
         self.last_tracking: Optional[TrackingResult] = None
 
+        # Optional opt-in per-step hook, invoked as ``cb(energy, gradient)`` at
+        # the end of every ``__call__``.  Lets examples/tests attach a one-line
+        # "is it converging?" printer (energy / gradient norm / seam gap) without
+        # a hand-rolled wrapping function around the scanner.
+        self.step_callback: Optional[Callable] = None
+
     @property
     def natoms(self) -> int:
         return len(self.atom_symbols)
@@ -163,6 +169,9 @@ class NuclearGradientScanner:
                 self.previous_index = self.last_tracking.index
             else:
                 self.previous_index = self.target.state_index
+
+        if self.step_callback is not None:
+            self.step_callback(float(energy), np.asarray(grad.total))
         return float(energy), np.asarray(grad.total)
 
     def calc_new(self, coords):
@@ -198,6 +207,14 @@ class NuclearGradientScanner:
         )
 
     def _coords_array(self, coords):
+        # Accept a PySCF ``Mole`` (or anything exposing ``atom_coords``) so the
+        # scanner can be plugged straight into ``as_pyscf_method`` /
+        # ``geometric_solver.optimize`` without a hand-rolled wrapper extracting
+        # Bohr coordinates.  The array path below is unchanged for callers that
+        # already pass a Cartesian array.
+        ac = getattr(coords, "atom_coords", None)
+        if callable(ac) and not isinstance(coords, np.ndarray):
+            coords = ac(unit="Bohr")
         coords = np.asarray(coords, dtype=float)
         if coords.shape == (3 * self.natoms,):
             coords = coords.reshape(self.natoms, 3)

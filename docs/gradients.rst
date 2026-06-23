@@ -143,8 +143,15 @@ smoothing::
     from pyscf.geomopt import as_pyscf_method, geometric_solver
 
     objective = adcc.MECPObjective(paired)
-    method = as_pyscf_method(mol, lambda m: objective(m.atom_coords(unit="Bohr")))
+    method = as_pyscf_method(mol, objective)
     mol_ci = geometric_solver.optimize(method, maxsteps=20)
+
+The scanner and objective accept a PySCF ``Mole`` directly (they read
+``atom_coords(unit="Bohr")``), so they plug straight into
+:func:`pyscf.geomopt.as_pyscf_method` without a hand-rolled wrapper.  For an
+optional per-step "is it converging?" printout set a ``step_callback`` hook
+(``cb(energy, gradient)``); the worked examples in
+``examples/optimization/`` show both patterns.
 
 **Spin-flip ADC for S0/S1 conical intersections.**  Because both surfaces of a
 MECI pair come from a single ADC solve, the cleanest route to an S0/S1 crossing

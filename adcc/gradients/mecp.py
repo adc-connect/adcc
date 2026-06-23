@@ -217,6 +217,13 @@ class MECPObjective:
         self.last_gradient = None
         self.last_pair = None  # ((e_lower, g_lower), (e_upper, g_upper))
 
+        # Optional opt-in per-step hook, invoked as ``cb(energy, gradient)`` at
+        # the end of every ``__call__``.  Lets examples/tests attach a one-line
+        # "is it converging?" printer (penalty energy / gradient norm / seam gap,
+        # which is readable off ``self.last_pair``) without a hand-rolled
+        # wrapping function around the objective.
+        self.step_callback: Optional[Callable] = None
+
     def __call__(self, coords):
         """Return ``(energy, gradient)`` for Cartesian coordinates in Bohr."""
         (e_lower, g_lower), (e_upper, g_upper) = self.scanner(coords)
@@ -227,6 +234,8 @@ class MECPObjective:
         )
         self.last_energy = e_obj
         self.last_gradient = np.asarray(g_obj)
+        if self.step_callback is not None:
+            self.step_callback(e_obj, self.last_gradient)
         return e_obj, np.asarray(g_obj)
 
     def calc_new(self, coords):

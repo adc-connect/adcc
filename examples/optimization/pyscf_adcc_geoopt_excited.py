@@ -33,10 +33,14 @@ def print_geometry(title, mol):
               f"{xyz[0]:16.10f} {xyz[1]:16.10f} {xyz[2]:16.10f}")
 
 
-def make_energy_gradient(scanner):
-    """PySCF geomopt callback: return energy and gradient for a Mole."""
-    def energy_and_gradient(mol_at_step):
-        energy, gradient = scanner(mol_at_step.atom_coords(unit="Bohr"))
+def report_step(scanner):
+    """Optional per-step "is it converging?" printer attached as a callback.
+
+    Implemented as a closure over the scanner so it can read the just-evaluated
+    excitation (``scanner.last_excitation``); the scanner invokes it as
+    ``cb(energy, gradient)`` at the end of every ``__call__``.
+    """
+    def _cb(energy, gradient):
         excitation = scanner.last_excitation
         state_info = ""
         if excitation is not None:
@@ -49,8 +53,7 @@ def make_energy_gradient(scanner):
             f"{float((gradient ** 2).sum() ** 0.5):.6e} Eh/Bohr"
             f"{state_info}"
         )
-        return energy, gradient
-    return energy_and_gradient
+    return _cb
 
 
 # Use Bohr coordinates and keep molecular symmetry disabled so the optimizer's
@@ -87,7 +90,8 @@ if __name__ == "__main__":
         method="mp2",
         gradient_kwargs={"conv_tol": 1e-7},
     )
-    mp2_method = as_pyscf_method(mol, make_energy_gradient(mp2_scanner))
+    mp2_scanner.step_callback = report_step(mp2_scanner)
+    mp2_method = as_pyscf_method(mol, mp2_scanner)
     mol_mp2 = geometric_solver.optimize(
         mp2_method,
         maxsteps=20,
@@ -108,7 +112,8 @@ if __name__ == "__main__":
         conv_tol=1e-6,
         gradient_kwargs={"conv_tol": 1e-7},
     )
-    adc_method = as_pyscf_method(mol_mp2, make_energy_gradient(adc_scanner))
+    adc_scanner.step_callback = report_step(adc_scanner)
+    adc_method = as_pyscf_method(mol_mp2, adc_scanner)
     mol_adc = geometric_solver.optimize(
         adc_method,
         maxsteps=20,
