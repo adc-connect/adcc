@@ -33,15 +33,35 @@ from adcc.OneParticleDensity import OneParticleDensity
 from adcc.NParticleOperator import OperatorSymmetry, product_trace
 from .TwoParticleDensityMatrix import TwoParticleDensityMatrix
 from .orbital_response import (
-    orbital_response, orbital_response_rhs, energy_weighted_density_matrix
+    orbital_response,
+    orbital_response_rhs,
+    energy_weighted_density_matrix,
 )
 from .amplitude_response import amplitude_relaxed_densities
-from .scanner import (ExcitedStateTarget, GroundStateTarget,
-                      NuclearGradientScanner, density_overlap_score)
+from .scanner import (
+    ExcitedStateTarget,
+    GroundStateTarget,
+    NuclearGradientScanner,
+    density_overlap_score,
+)
+from .paired_scanner import (
+    PairedExcitedStateTarget,
+    PairedGroundExcitedStateTarget,
+    PairedStateGradientScanner,
+)
+from .mecp import mecp_penalty, MECPObjective
 
 __all__ = [
-    "nuclear_gradient", "NuclearGradientScanner",
-    "GroundStateTarget", "ExcitedStateTarget", "density_overlap_score",
+    "nuclear_gradient",
+    "NuclearGradientScanner",
+    "GroundStateTarget",
+    "ExcitedStateTarget",
+    "density_overlap_score",
+    "PairedStateGradientScanner",
+    "PairedExcitedStateTarget",
+    "PairedGroundExcitedStateTarget",
+    "mecp_penalty",
+    "MECPObjective",
 ]
 
 
@@ -89,11 +109,9 @@ class GradientResult:
         """Compute energy based on density matrices
         for testing purposes"""
         if self.g1a is None:
-            raise ValueError("No unrelaxed one-particle "
-                             "density available.")
+            raise ValueError("No unrelaxed one-particle density available.")
         if self.g2a is None:
-            raise ValueError("No unrelaxed two-particle "
-                             "density available.")
+            raise ValueError("No unrelaxed two-particle density available.")
         ret = 0.0
         hf = self.reference_state
         for b in self.g1a.blocks_nonzero:
@@ -111,8 +129,7 @@ class GradientResult:
     def dipole_moment_unrelaxed(self):
         """Returns the unrelaxed electric dipole moment"""
         if self.g1a is None:
-            raise ValueError("No unrelaxed one-particle "
-                             "density available.")
+            raise ValueError("No unrelaxed one-particle density available.")
         hf = self.reference_state
         return self.__dipole_moment_electric(self.g1a + hf.density)
 
@@ -123,22 +140,26 @@ class GradientResult:
 
     def __dipole_moment_electric(self, dm):
         dips = self.reference_state.operators.electric_dipole
-        elec_dip = -1.0 * np.array(
-            [product_trace(dm, dip) for dip in dips]
-        )
+        elec_dip = -1.0 * np.array([product_trace(dm, dip) for dip in dips])
         return elec_dip + self.reference_state.nuclear_dipole
 
 
-def nuclear_gradient(excitation_or_mp, conv_tol=1e-9, eri_contraction=None,
-                     eri_shell_chunk_size=1, eri_pair_chunk_size=None,
-                     eri_pair_density_storage="memory"):
+def nuclear_gradient(
+    excitation_or_mp,
+    conv_tol=1e-9,
+    eri_contraction=None,
+    eri_shell_chunk_size=1,
+    eri_pair_chunk_size=None,
+    eri_pair_density_storage="memory",
+):
     if isinstance(excitation_or_mp, LazyMp):
         mp = excitation_or_mp
     elif isinstance(excitation_or_mp, Excitation):
         mp = excitation_or_mp.ground_state
     else:
-        raise TypeError("Gradient can only be computed for "
-                        "Excitation or LazyMp object.")
+        raise TypeError(
+            "Gradient can only be computed for Excitation or LazyMp object."
+        )
 
     timer = Timer()
     hf = mp.reference_state
@@ -157,6 +178,7 @@ def nuclear_gradient(excitation_or_mp, conv_tol=1e-9, eri_contraction=None,
         # For NOSYMMETRY operators (CVS-ADC1+), explicitly set transpose blocks
         if g1o.symmetry == OperatorSymmetry.NOSYMMETRY:
             from adcc.functions import transpose
+
             g1o.vo = transpose(g1o.ov)
             g1o.vc = transpose(g1o.cv)
             if not g1o.is_zero_block("o2o1"):
@@ -177,16 +199,17 @@ def nuclear_gradient(excitation_or_mp, conv_tol=1e-9, eri_contraction=None,
         if hf.has_core_occupied_space:
             delta_IJ = hf.density.cc
 
-            g2_hf.oooo = 0.25 * (- einsum("li,jk->ijkl", delta_ij, delta_ij)
-                                 + einsum("ki,jl->ijkl", delta_ij, delta_ij))
+            g2_hf.oooo = 0.25 * (
+                -einsum("li,jk->ijkl", delta_ij, delta_ij)
+                + einsum("ki,jl->ijkl", delta_ij, delta_ij)
+            )
             g2_hf.cccc = -0.5 * einsum("IK,JL->IJKL", delta_IJ, delta_IJ)
             g2_hf.ococ = -1.0 * einsum("ik,JL->iJkL", delta_ij, delta_IJ)
 
             g2_oresp.cccc = einsum("IK,JL->IJKL", delta_IJ, g1o.cc + delta_IJ)
-            g2_oresp.ococ = (
-                + einsum("ik,JL->iJkL", delta_ij, g1o.cc + 2.0 * delta_IJ)
-                + einsum("ik,JL->iJkL", g1o.oo, delta_IJ)
-            )
+            g2_oresp.ococ = +einsum(
+                "ik,JL->iJkL", delta_ij, g1o.cc + 2.0 * delta_IJ
+            ) + einsum("ik,JL->iJkL", g1o.oo, delta_IJ)
             g2_oresp.oooo = einsum("ij,kl->kilj", delta_ij, g1o.oo)
             g2_oresp.ovov = einsum("ij,ab->iajb", delta_ij, g1o.vv)
             g2_oresp.cvcv = einsum("IJ,ab->IaJb", delta_IJ, g1o.vv)
@@ -205,13 +228,16 @@ def nuclear_gradient(excitation_or_mp, conv_tol=1e-9, eri_contraction=None,
 
             g2_total = evaluate(g2_hf + g2a + g2_oresp)
         else:
-            g2_hf.oooo = 0.25 * (- einsum("li,jk->ijkl", delta_ij, delta_ij)
-                                 + einsum("ki,jl->ijkl", delta_ij, delta_ij))
+            g2_hf.oooo = 0.25 * (
+                -einsum("li,jk->ijkl", delta_ij, delta_ij)
+                + einsum("ki,jl->ijkl", delta_ij, delta_ij)
+            )
 
             g2_oresp.oooo = einsum("ij,kl->kilj", delta_ij, g1o.oo)
             g2_oresp.ovov = einsum("ij,ab->iajb", delta_ij, g1o.vv)
-            g2_oresp.ooov = (- einsum("kj,ia->ijka", delta_ij, g1o.ov)
-                             + einsum("ki,ja->ijka", delta_ij, g1o.ov))
+            g2_oresp.ooov = -einsum("kj,ia->ijka", delta_ij, g1o.ov) + einsum(
+                "ki,ja->ijka", delta_ij, g1o.ov
+            )
 
             # scale for contraction with integrals
             g2a.oovv *= 0.5
@@ -221,8 +247,9 @@ def nuclear_gradient(excitation_or_mp, conv_tol=1e-9, eri_contraction=None,
 
     provider = hf.gradient_provider
     if eri_contraction is None:
-        if getattr(provider, "backend", None) == "pyscf" \
-                and hasattr(provider, "correlated_gradient_direct"):
+        if getattr(provider, "backend", None) == "pyscf" and hasattr(
+            provider, "correlated_gradient_direct"
+        ):
             eri_contraction = "direct"
         else:
             eri_contraction = "full_ao"
@@ -233,7 +260,8 @@ def nuclear_gradient(excitation_or_mp, conv_tol=1e-9, eri_contraction=None,
             f"{sorted(valid_eri_contractions)}."
         )
     if eri_contraction == "direct" and not hasattr(
-            provider, "correlated_gradient_direct"):
+        provider, "correlated_gradient_direct"
+    ):
         raise NotImplementedError(
             "eri_contraction='direct' is currently only available for PySCF."
         )
@@ -248,16 +276,18 @@ def nuclear_gradient(excitation_or_mp, conv_tol=1e-9, eri_contraction=None,
     with timer.record("contract_integral_derivatives"):
         if eri_contraction == "direct":
             grad = provider.correlated_gradient_direct(
-                g1_ao, w_ao, g2_total, refstate=hf,
+                g1_ao,
+                w_ao,
+                g2_total,
+                refstate=hf,
                 shell_chunk_size=eri_shell_chunk_size,
                 pair_chunk_size=eri_pair_chunk_size,
                 pair_density_storage=eri_pair_density_storage,
             )
         else:
-            grad = provider.correlated_gradient(
-                g1_ao, w_ao, g2_ao_1, g2_ao_2
-            )
+            grad = provider.correlated_gradient(g1_ao, w_ao, g2_ao_1, g2_ao_2)
 
-    ret = GradientResult(excitation_or_mp, grad, g1, g2_total,
-                         timer, g1a=g1a, g2a=g2a)
+    ret = GradientResult(
+        excitation_or_mp, grad, g1, g2_total, timer, g1a=g1a, g2a=g2a
+    )
     return ret
