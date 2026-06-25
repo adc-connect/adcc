@@ -70,7 +70,7 @@ class TestStateDensities:
         ):
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
         if adc_method == "adc4" and system in large_cases:
-            pytest.ski("ADC(4) reference data not generated for large cases.")
+            pytest.skip("ADC(4) reference data not available for large cases.")
         if 'cvs' in case and isr_order in (3, "3d"):
             pytest.skip("CVS-ISR(3) not implemented yet")
         if "cvs" in case and adc_method == "adc4":
@@ -110,7 +110,7 @@ class TestStateDensities:
         ):
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
         if adc_method == "adc4" and system in large_cases:
-            pytest.ski("ADC(4) reference data not generated for large cases.")
+            pytest.skip("ADC(4) reference data not available for large cases.")
         if 'cvs' in case and isr_order in (3, "3d"):
             pytest.skip("CVS-ISR(3) not implemented yet")
         if "cvs" in case and adc_method == "adc4":
@@ -151,7 +151,7 @@ class TestStateDensities:
             pytest.skip("Less than two states available.")
         s2s_data = refdata["state_to_state"]
         if adc_method == "adc4" and system in large_cases:
-            pytest.ski("ADC(4) reference data not generated for large cases.")
+            pytest.skip("ADC(4) reference data not available for large cases.")
         # construct a ExcitedStates instance using the eigenvalues and eigenstates
         # from the reference data.
         state: ExcitedStates = getattr(testdata_cache, f"{generator}_states")(
@@ -166,8 +166,7 @@ class TestStateDensities:
             fromi_ref_a = s2s_data[f"from_{i}"]["state_to_excited_tdm_bb_a"]
             fromi_ref_b = s2s_data[f"from_{i}"]["state_to_excited_tdm_bb_b"]
 
-            state_to_state = State2States(state, initial=i,
-                                          property_method=state._property_method)
+            state_to_state = State2States(state, initial=i)
             for j, (ref_a, ref_b) in enumerate(zip(fromi_ref_a, fromi_ref_b)):
                 ito = i + j + 1
                 assert state.excitation_energy[ito] == refdata["eigenvalues"][ito]

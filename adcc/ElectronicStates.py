@@ -83,7 +83,7 @@ class ElectronicStates:
         if not isinstance(self.method, AdcMethod):
             self.method: AdcMethod = AdcMethod(self.method)
 
-        if property_method is None and hasattr(data, '_property_method'):
+        if property_method is None and isinstance(data, ElectronicStates):
             property_method = data._property_method
         if property_method is None:
             if self.method.level in [MethodLevel.TWO_X, MethodLevel.THREE,

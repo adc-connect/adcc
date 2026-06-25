@@ -132,8 +132,7 @@ class TestLazyMp:
         )
 
     # MP3 energy not implemented for CVS
-    @pytest.mark.parametrize("system,case", [(s, c) for s, c in cases
-                                             if "cvs" not in c])
+    @pytest.mark.parametrize("system,case", non_cvs_small_cases)
     @pytest.mark.parametrize("generator", generators)
     def test_mp3_energy(self, system: str, case: str, generator: str,
                         instances: LazyMpCache):
@@ -222,8 +221,7 @@ class TestLazyMp:
                         refmp["mp2"]["td_o1o1v1v1"], atol=1e-12)
         assert "td2/o1o1v1v1" in instances.get(system, case).timer.tasks
 
-    @pytest.mark.parametrize("system,case",
-                             [(s, c) for s, c in small_cases if "cvs" not in c])
+    @pytest.mark.parametrize("system,case", non_cvs_small_cases)
     @pytest.mark.parametrize("generator", generators)
     def test_td3(self, system: str, case: str, generator: str,
                  instances: LazyMpCache):
@@ -263,8 +261,7 @@ class TestLazyMp:
         reimport = libadcc.Tensor(sym)
         reimport.set_from_ndarray(tt2.to_ndarray(), 1e-14)
 
-    @pytest.mark.parametrize("system,case",
-                             [(s, c) for s, c in cases if "cvs" not in c])
+    @pytest.mark.parametrize("system,case", non_cvs_small_cases)
     def test_sigma_inf_ov(self, system: str, case: str, instances: LazyMpCache):
         refmp = testdata_cache._load_data(
             system=system, method="mp", case=case, source="adcc"
@@ -273,8 +270,7 @@ class TestLazyMp:
                         refmp["mp3"]["sigma_inf_ov"], atol=1e-12)
         assert "sigma_inf_ov/3" in instances.get(system, case).timer.tasks
 
-    @pytest.mark.parametrize("system,case",
-                             [(s, c) for s, c in cases if "cvs" not in c])
+    @pytest.mark.parametrize("system,case", non_cvs_small_cases)
     def test_m_3_plus(self, system: str, case: str, instances: LazyMpCache):
         refmp = testdata_cache._load_data(
             system=system, method="mp", case=case, source="adcc"
@@ -282,8 +278,7 @@ class TestLazyMp:
         assert_allclose(instances.get(system, case).m_3_plus.to_ndarray(),
                         refmp["mp3"]["m_3_plus"], atol=1e-12)
 
-    @pytest.mark.parametrize("system, case",
-                             [(s, c) for s, c in cases if "cvs" not in c])
+    @pytest.mark.parametrize("system, case", non_cvs_small_cases)
     def test_m_3_minus(self, system: str, case: str, instances: LazyMpCache):
         refmp = testdata_cache._load_data(
             system=system, method="mp", case=case, source="adcc"
@@ -368,8 +363,7 @@ class TestLazyMp:
         assert_allclose(dm_α.to_ndarray(), refmp["cvs-mp2"]["dm_bb_a"], atol=1e-12)
         assert_allclose(dm_β.to_ndarray(), refmp["cvs-mp2"]["dm_bb_b"], atol=1e-12)
 
-    @pytest.mark.parametrize("system,case",
-                             [(s, c) for s, c in cases if "cvs" not in c])
+    @pytest.mark.parametrize("system,case", non_cvs_small_cases)
     @pytest.mark.parametrize("generator", generators)
     def test_mp3_diffdm_mo(self, system: str, case: str, generator: str,
                            instances: LazyMpCache):
@@ -388,8 +382,7 @@ class TestLazyMp:
             assert "third_order_dm_correction/False" in (
                 instances.get(system, case).timer.tasks)
 
-    @pytest.mark.parametrize("system,case",
-                             [(s, c) for s, c in cases if "cvs" not in c])
+    @pytest.mark.parametrize("system,case", non_cvs_small_cases)
     @pytest.mark.parametrize("generator", generators)
     def test_mp3_diffdm_ao(self, system: str, case: str, generator: str,
                            instances: LazyMpCache):

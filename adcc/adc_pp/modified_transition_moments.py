@@ -80,19 +80,14 @@ def mtm_cvs_isr2(ground_state, op, intermediates):
 
 def mtm_isr3(ground_state, op, intermediates):
 
-    f1 = mtm_isr2(ground_state, op, intermediates).ph
-    f2 = mtm_isr2(ground_state, op, intermediates).pphh
+    res = mtm_isr2(ground_state, op, intermediates)
     # ground_state amplitudes
     t1_2 = ground_state.diffdm(level=2).ov
     t2_1 = ground_state.t2(b.oovv)
     t2_3 = ground_state.td3(b.oovv)
     t2_2 = ground_state.td2(b.oovv)
     t3_2 = ground_state.tt2(b.ooovvv)
-    t2sq = einsum(
-        "ikac,jkbc->iajb",
-        ground_state.t2oo,
-        ground_state.t2oo,
-    ).evaluate()
+    t2sq = ground_state.t2sq
 
     d_vv, d_vo, d_ov, d_oo = op.vv, op.vo, op.ov, op.oo  # density operators
 
@@ -101,7 +96,7 @@ def mtm_isr3(ground_state, op, intermediates):
     p0_3_oo, p0_3_vv, p0_3_ov = p0_3.oo, p0_3.vv, p0_3.ov
     p0_2_oo, p0_2_vv = p0_2.oo, p0_2.vv
 
-    f1 += (
+    res.ph += (
         + 1 * einsum("ab,ib->ia", d_vv, p0_3_ov)  # N^3: O^1V^2 / N^2: V^2
         + 0.5 * einsum("aj,ij->ia", d_vo, p0_3_oo)  # N^3: O^2V^1 / N^2: O^1V^1
         - 1 * einsum("ijab,jb->ia", t2_3, d_ov)  # N^4: O^2V^2 / N^4: O^2V^2
@@ -150,7 +145,7 @@ def mtm_isr3(ground_state, op, intermediates):
         )  # N^6: O^4V^2 / N^4: O^2V^2
     )
 
-    f2 += (
+    res.pphh += (
         2 * (
             0.5 * einsum("jkab,ki->ijab", t2_2, d_oo)  # N^5: O^3V^2 / N^4: O^2V^2
         ).antisymmetrise(0, 1)
@@ -159,7 +154,7 @@ def mtm_isr3(ground_state, op, intermediates):
         ).antisymmetrise(2, 3)
         - 0.5 * einsum("ijkabc,kc->ijab", t3_2, d_ov)  # N^6: O^3V^3 / N^6: O^3V^3
     )
-    return AmplitudeVector(ph=f1, pphh=f2)
+    return res
 
 
 def mtm_cvs_isr3(ground_state, op, intermediates):

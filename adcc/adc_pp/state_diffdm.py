@@ -171,7 +171,7 @@ def diffdm_isr3d(ground_state, amplitude, intermediates):
     ur1, ur2 = amplitude.ph, amplitude.pphh  # ADC amplitudes
 
     t2_1 = ground_state.t2(b.oovv)  # first order doubles
-    t1_2 = ground_state.diffdm(level=2).ov  # second order singles
+    t1_2 = ground_state.ts2(b.ov)  # second order singles
     t2_2 = ground_state.td2(b.oovv)  # second order doubles
     t3_2 = ground_state.tt2(b.ooovvv)  # second order triples
 

@@ -433,7 +433,7 @@ _mp_data_large = {
     # MP2 triples amplitudes
     "mp2/tt2_o1o1o1v1v1v1": "mp2/tt_o1o1o1v1v1v1",
     # MP3 doubles amplitude at third order
-    "mp3/td3_o1o1v1v1": "mp3/td3_o1o1v1v1",
+    "mp3/td3_o1o1v1v1": "mp3/td_o1o1v1v1",
     # MP4
     "mp4/energy": "mp4/energy",
 }

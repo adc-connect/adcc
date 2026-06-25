@@ -7,7 +7,7 @@ from adcc.misc import cached_member_function
 from adcc.ReferenceState import ReferenceState
 from adcc.solver import EigenSolverStateBase
 from adcc import hdf5io, guess_zero
-from adcc.AdcMethod import AdcMethod, IsrMethod
+from adcc.AdcMethod import IsrMethod
 
 from pathlib import Path
 from typing import Optional, Union
@@ -220,12 +220,15 @@ class TestdataCache:
         isr_data = data.get(str(isr_order), None)
         if isr_data is None:
             raise ValueError(
-                f"No data available for isr_order {isr_order} in case"
+                f"No data available for isr_order {isr_order} in case "
                 f"{method} {system}"
             )
         adc_data = isr_data.get(kind, None)
-        if isr_order is None:
-            isr_order = min(AdcMethod(method).level.to_int(), 2)
+        if adc_data is None:
+            raise ValueError(
+                f"No data available for kind {kind} in case "
+                f"{method} {system}"
+            )
         if "cvs" in case and "cvs" not in method:
             method = f"cvs-{method}"
         refstate = self.refstate(system, case)
@@ -241,9 +244,10 @@ class TestdataCache:
         states.kind = kind
         states.eigenvalues = adc_data["eigenvalues"]
 
-        states._property_method = IsrMethod(
-            f"{'cvs-' if 'cvs' in method else ''}isr{isr_order}"
-        )
+        if isr_order is not None:
+            states._property_method = IsrMethod(
+                f"{'cvs-' if 'cvs' in method else ''}isr{isr_order}"
+            )
 
         if refstate.restricted and kind == "singlet":
             symm = "symmetric"

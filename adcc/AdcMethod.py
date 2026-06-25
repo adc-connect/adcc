@@ -241,15 +241,9 @@ class Method:
         Return an equivalent method, where only the level is changed
         (e.g. calling this on a CVS method returns a CVS method)
         """
-        assert self._method_base_name is not None
-        if self.prefixes:
-            return self.__class__(
-                f"{self.prefixes}-{self._method_base_name}{newlevel}"
-            )
-        else:
-            return self.__class__(
-                f"{self._method_base_name}{newlevel}"
-            )
+        return self.__class__(self.name.replace(
+            self.level.to_str(), str(newlevel)
+        ))
 
     def as_method(self, method_cls: type[T]) -> T:
         """
@@ -261,6 +255,19 @@ class Method:
         return method_cls(
             self.name.replace(self._method_base_name, method_cls._method_base_name)
         )
+
+    def as_method_at_level(self, method_cls: type[T],
+                           newlevel: Union[int, str]) -> T:
+        """
+        Return an equivalent method, at the given level, preserving any prefices
+        (e.g. cvs-) of this method.
+        """
+        assert self._method_base_name is not None
+        assert method_cls._method_base_name is not None
+        return method_cls(self.name.replace(
+            f"{self._method_base_name}{self.level.to_str()}",
+            f"{method_cls._method_base_name}{newlevel}"
+        ))
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Method):
@@ -315,8 +322,7 @@ class IsrMethod(Method):
             gs_type=GroundStateType.MP,
             cvs=True
         ): LevelSpec(
-            max_level=3,
-            special_levels=(MethodLevel.ONE_S, MethodLevel.TWO_D,
-                            MethodLevel.THREE_D)
+            max_level=2,
+            special_levels=(MethodLevel.ONE_S, MethodLevel.TWO_D)
         )
     }

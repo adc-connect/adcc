@@ -186,12 +186,6 @@ def block_pphh_ph_1(ground_state, op):
 
 
 #
-# 1st order doubles block
-#
-block_pphh_pphh_1 = block_pphh_pphh_0
-
-
-#
 # 2nd order main
 #
 def block_ph_ph_2(ground_state, op):
@@ -240,13 +234,10 @@ def block_ph_pphh_2(ground_state, op):
 
     d_vo, d_ov, d_oo, d_vv = op.vo, op.ov, op.oo, op.vv
 
-    t1_2 = ground_state.diffdm(level=2).ov
+    t1_2 = ground_state.ts2(b.ov)
     t2_1 = ground_state.t2(b.oovv)
     t2_2 = ground_state.td2(b.oovv)
-    t2sq = einsum(
-        "ikac,jkbc->iajb",
-        ground_state.t2oo,
-        ground_state.t2oo).evaluate()
+    t2sq = ground_state.t2sq
 
     p0_2 = ground_state.second_order_dm_correction()
     p0_2_vv, p0_2_oo = p0_2.vv, p0_2.oo
@@ -343,14 +334,11 @@ def block_ph_pphh_2(ground_state, op):
 def block_pphh_ph_2(ground_state, op):
     d_vo, d_ov, d_oo, d_vv = op.vo, op.ov, op.oo, op.vv
 
-    t1_2 = ground_state.diffdm(level=2).ov
+    t1_2 = ground_state.ts2(b.ov)
     t2_1 = ground_state.t2(b.oovv)
     t2_2 = ground_state.td2(b.oovv)
 
-    t2sq = einsum(
-        "ikac,jkbc->iajb",
-        ground_state.t2oo,
-        ground_state.t2oo).evaluate()
+    t2sq = ground_state.t2sq
 
     p0_2 = ground_state.second_order_dm_correction()
     p0_2_vv, p0_2_oo = p0_2.vv, p0_2.oo
@@ -462,14 +450,11 @@ def block_ph_ph_3(ground_state, op):
 
     d_vo, d_ov, d_oo, d_vv = op.vo, op.ov, op.oo, op.vv
 
-    t1_2 = ground_state.diffdm(level=2).ov
+    t1_2 = ground_state.ts2(b.ov)
     t2_1 = ground_state.t2(b.oovv)
     t2_2 = ground_state.td2(b.oovv)
     t3_2 = ground_state.tt2(b.ooovvv)
-    t2sq = einsum(
-        "ikac,jkbc->iajb",
-        ground_state.t2oo,
-        ground_state.t2oo).evaluate()
+    t2sq = ground_state.t2sq
 
     p0_2 = ground_state.second_order_dm_correction()
     p0_2_vv, p0_2_oo = p0_2.vv, p0_2.oo

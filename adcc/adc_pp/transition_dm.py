@@ -33,8 +33,7 @@ from adcc.OneParticleDensity import OneParticleDensity
 
 from .util import (
     check_doubles_amplitudes,
-    check_singles_amplitudes,
-    check_triples_amplitudes
+    check_singles_amplitudes
 )
 
 
@@ -104,13 +103,13 @@ def tdm_isr2(ground_state, amplitude, intermediates):
     return dm
 
 
-def tdm_isr3d(ground_state, amplitude, intermediates):
+def tdm_isr3(ground_state, amplitude, intermediates):
     dm = tdm_isr2(ground_state, amplitude, intermediates)  # Get ISR(2) result
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
 
     ul1, ul2 = amplitude.ph, amplitude.pphh  # adc amplitudes
 
-    t1_2 = ground_state.diffdm(level=2).ov
+    t1_2 = ground_state.ts2(b.ov)
     t2_1 = ground_state.t2(b.oovv)
     t2_2 = ground_state.td2(b.oovv)
     t3_2 = ground_state.tt2(b.ooovvv)
@@ -170,25 +169,13 @@ def tdm_isr3d(ground_state, amplitude, intermediates):
     return dm
 
 
-def tdm_isr3(ground_state, amplitude, intermediates):
-    dm = tdm_isr3d(ground_state, amplitude, intermediates)
-    try:
-        check_triples_amplitudes([b.o, b.o, b.o, b.v, b.v, b.v], amplitude)
-    except ValueError:
-        return dm
-
-    raise NotImplementedError(
-        "Consistent ISR(3) including triples is not implemented yet."
-    )
-
-
 DISPATCH = {
     "isr0": tdm_isr0,
     "isr1s": tdm_isr1,  # Identical to ISR(1)
     "isr1": tdm_isr1,
     "isr2d": tdm_isr2,  # Identical to ISR(2)
     "isr2": tdm_isr2,
-    "isr3d": tdm_isr3d,
+    "isr3d": tdm_isr3,
     "isr3": tdm_isr3,
     "cvs-isr0": tdm_isr0,
     "cvs-isr1": tdm_isr0,  # No extra contribs for CVS-ISR(1)

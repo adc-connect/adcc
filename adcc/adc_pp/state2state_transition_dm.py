@@ -129,7 +129,7 @@ def s2s_tdm_isr3d(ground_state, amplitude_l, amplitude_r, intermediates):
     ur1, ur2 = amplitude_r.ph, amplitude_r.pphh
 
     t2_1 = ground_state.t2(b.oovv)
-    t1_2 = ground_state.diffdm(level=2).ov
+    t1_2 = ground_state.ts2(b.ov)
     t2_2 = ground_state.td2(b.oovv)
     t3_2 = ground_state.tt2(b.ooovvv)
 

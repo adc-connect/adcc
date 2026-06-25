@@ -20,6 +20,10 @@ _testdata_dirname = "data"
 _methods = {
     "pp": ("adc0", "adc1", "adc2", "adc2x", "adc3")
 }
+_isr_orders = {
+    MethodLevel.THREE: (None, 3),
+    MethodLevel.FOUR: (None, "3d"),
+}
 _small_cases_methods = {
     "pp": _methods["pp"] + ("adc4",)
 }
@@ -35,8 +39,6 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     Generate and dump the excited states reference data for the given reference case
     of the given test case if the data is not available already.
     """
-    if isr_order == 3 and "cvs" in case:
-        return
     datadir = Path(__file__).parent.parent / _testdata_dirname
     datafile = datadir / test_case.adcdata_file_name("adcc", method.name)
     hdf5_file = h5py.File(datafile, "a")  # Read/write if exists, create otherwise
@@ -51,6 +53,9 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     )
     key = f"{case}/{gs_density_order}"
     if f"{key}/{isr_order}/{kind}" in hdf5_file:
+        return None
+    # CVS-ISR(3) not available
+    if isr_order in (3, "3d") and "cvs" in case:
         return None
     # CVS-ADC(4) not available
     if "cvs" in case and method.name == "adc4":
@@ -151,13 +156,9 @@ def generate_h2o_sto3g():
             generate_adc_all(
                 test_case, method=method, dump_nstates=2, states_per_case=per_case,
                 **n_states, **kwargs)
-            if method.level in [MethodLevel.THREE]:
+            for isr_order in _isr_orders.get(method.level, (None,)):
                 generate_adc_all(test_case, method=method, dump_nstates=2,
-                                 states_per_case=per_case, isr_order=3,
-                                 **n_states, **kwargs)
-            elif method.level in [MethodLevel.FOUR]:
-                generate_adc_all(test_case, method=method, dump_nstates=2,
-                                 states_per_case=per_case, isr_order="3d",
+                                 states_per_case=per_case, isr_order=isr_order,
                                  **n_states, **kwargs)
 
 
@@ -175,12 +176,10 @@ def generate_h2o_def2tzvp():
             generate_adc_all(
                 test_case, method=method, dump_nstates=2, states_per_case=None,
                 **n_states)
-            if method.level in [MethodLevel.THREE]:
+            for isr_order in _isr_orders.get(method.level, (None,)):
                 generate_adc_all(test_case, method=method, dump_nstates=2,
-                                 states_per_case=None, isr_order=3, **n_states)
-            elif method.level in [MethodLevel.FOUR]:
-                generate_adc_all(test_case, method=method, dump_nstates=2,
-                                 states_per_case=None, isr_order="3d", **n_states)
+                                 states_per_case=None, isr_order=isr_order,
+                                 **n_states)
 
 
 def generate_cn_sto3g():
@@ -195,12 +194,10 @@ def generate_cn_sto3g():
             generate_adc_all(
                 test_case=test_case, method=method, dump_nstates=2,
                 states_per_case=None, **kwargs)
-            if method.level in [MethodLevel.THREE]:
+            for isr_order in _isr_orders.get(method.level, (None,)):
                 generate_adc_all(test_case, method=method, dump_nstates=2,
-                                 states_per_case=None, isr_order=3, **kwargs)
-            elif method.level in [MethodLevel.FOUR]:
-                generate_adc_all(test_case, method=method, dump_nstates=2,
-                                 states_per_case=None, isr_order="3d", **kwargs)
+                                 states_per_case=None, isr_order=isr_order,
+                                 **kwargs)
 
 
 def generate_cn_ccpvdz():
@@ -215,12 +212,10 @@ def generate_cn_ccpvdz():
             generate_adc_all(
                 test_case, method=method, dump_nstates=2, states_per_case=None,
                 **n_states)
-            if method.level in [MethodLevel.THREE]:
+            for isr_order in _isr_orders.get(method.level, (None,)):
                 generate_adc_all(test_case, method=method, dump_nstates=2,
-                                 states_per_case=None, isr_order=3, **n_states)
-            elif method.level in [MethodLevel.FOUR]:
-                generate_adc_all(test_case, method=method, dump_nstates=2,
-                                 states_per_case=None, isr_order="3d", **n_states)
+                                 states_per_case=None, isr_order=isr_order,
+                                 **n_states)
 
 
 def generate_hf_631g():
@@ -235,12 +230,10 @@ def generate_hf_631g():
             generate_adc_all(
                 test_case, method=method, dump_nstates=2, states_per_case=None,
                 **n_states)
-            if method.level in [MethodLevel.THREE]:
+            for isr_order in _isr_orders.get(method.level, (None,)):
                 generate_adc_all(test_case, method=method, dump_nstates=2,
-                                 states_per_case=None, isr_order=3, **n_states)
-            elif method.level in [MethodLevel.FOUR]:
-                generate_adc_all(test_case, method=method, dump_nstates=2,
-                                 states_per_case=None, isr_order="3d", **n_states)
+                                 states_per_case=None, isr_order=isr_order,
+                                 **n_states)
 
 
 def main():
