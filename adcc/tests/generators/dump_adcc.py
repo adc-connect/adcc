@@ -102,11 +102,15 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
 
 
 def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
+                        only_full_mode: bool,
                         dump_nstates: int | None = None) -> None:
     """
     Dump the excited states data to the given hdf5 file/group.
     The number of states to dump can be given by dump_nstates. By default all states
     are dumped.
+    The only_full_mode flag indicates whether the underlying test case is only
+    run in full mode. Typically tests that run in full mode are larger
+    and therefore not all test data might be dumped in that case.
     """
     # ensure that the calculation converged on a nonzero result
     assert states.converged  # type: ignore
@@ -169,8 +173,10 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
     kind_data["eigenvectors_singles"] = np.asarray(eigenvectors[1])
     if 2 in eigenvectors:
         kind_data["eigenvectors_doubles"] = np.asarray(eigenvectors[2])
-
-    # state2state tdm: not implemented for CVS
+    # only dump triples for small systems
+    if 3 in eigenvectors and not only_full_mode:
+        kind_data["eigenvectors_triples"] = np.asarray(eigenvectors[3])
+    # state to state tdm: not implemented for CVS
     if not states.method.is_core_valence_separated:
         for ifrom in range(n_states - 1):
             state2state = State2States(states,

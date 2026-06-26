@@ -81,7 +81,8 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
         dump_matrix_testdata(states.matrix, trial_vec, matrix_group)
     # dump the excited states data
     kind_group = hdf5_file.create_group(f"{key}/{isr_order}/{states.kind}")
-    dump_excited_states(states, kind_group, dump_nstates=dump_nstates)
+    dump_excited_states(states, kind_group, only_full_mode=test_case.only_full_mode,
+                        dump_nstates=dump_nstates)
 
 
 def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,

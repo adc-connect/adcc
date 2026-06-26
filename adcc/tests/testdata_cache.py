@@ -273,6 +273,10 @@ class TestdataCache:
                 evec[blocks[1]].set_from_ndarray(
                     adc_data["eigenvectors_doubles"][i], 1e-14
                 )
+            if len(blocks) > 2:
+                evec[blocks[2]].set_from_ndarray(
+                    adc_data["eigenvectors_triples"][i], 1e-14
+                )
         return ExcitedStates(states)
 
     def adcc_states(self, system: str, method: str, kind: str,
