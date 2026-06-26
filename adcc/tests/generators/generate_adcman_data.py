@@ -16,8 +16,8 @@ _methods = {
     "pp": ("adc0", "adc1", "adc2", "adc2x", "adc3")
 }
 _isr_orders = {
-    MethodLevel.THREE: (None, 3),
-    MethodLevel.FOUR: (None, "3d"),
+    MethodLevel.THREE: (None, MethodLevel.THREE),
+    MethodLevel.FOUR: (None, MethodLevel.THREE_D),
 }
 _small_cases_methods = {
     "pp": _methods["pp"] + ("adc4",)
@@ -67,8 +67,6 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     # CVS-ADC(4) not available
     if "cvs" in case and method.level.to_int() > 3:
         return None
-    print(f"Generating {method.name} (gs_density_order={gs_density_order}) "
-          f"data for {case} {test_case.file_name}.")
     # add a cvs prefix to the method if necessary
     if "cvs" in case and not method.is_core_valence_separated:
         method = AdcMethod(f"cvs-{method.name}")
@@ -80,7 +78,7 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
         test_case, method, case, import_states=True, import_gs=False,
         n_singlets=n_singlets, n_triplets=n_triplets, n_spin_flip=n_spin_flip,
         n_states=n_states, import_nstates=dump_nstates,
-        gs_density_order=gs_density_order, isr_maxorder=isr_order, **kwargs
+        gs_density_order=gs_density_order, isr_order=isr_order, **kwargs
     )
     # the data returned from run_qchem should have already been imported
     # using the correct keys -> just dump them

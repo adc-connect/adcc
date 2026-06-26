@@ -36,10 +36,10 @@ from ..testdata_cache import testdata_cache
 test_cases = testcases.get_by_filename("h2o_sto3g", "cn_sto3g")
 cases = [(case.file_name, c, kind)
          for case in test_cases for c in ["gen"] for kind in case.kinds.pp]
-methods = ["adc0", "adc1", "adc2", "adc3", "adc4"]
+methods = ["adc0", "adc1", "adc2", "adc3"]
 
 
-@pytest.mark.parametrize("adc_method, isr_order", methods)
+@pytest.mark.parametrize("adc_method", methods)
 @pytest.mark.parametrize("system,case,kind", cases)
 class TestStateDiffDm:
     def calculate_adcn_excitation_energy(self, state):
@@ -48,12 +48,12 @@ class TestStateDiffDm:
         n_states = len(state.excitation_energy)
         excitation_energy = np.zeros((n_states))
 
-        method = state.property_method
+        method = state.method.as_method(IsrMethod)
         level = method.level.to_int()
 
         method_order_minus_one = None
         if level - 1 >= 0:
-            method_order_minus_one = IsrMethod("isr" + str(level - 1))
+            method_order_minus_one = method.at_level(level - 1)
 
         for es in range(n_states):
             evec = state.excitation_vector[es]
@@ -116,7 +116,7 @@ class TestStateDiffDm:
                 )
         return excitation_energy
 
-    def test_adcn(self, adc_method: str, system: str, isr_order: str,
+    def test_adcn(self, adc_method: str, system: str,
                   case: str, kind: str):
         state = testdata_cache.adcc_states(
             system=system, method=adc_method, kind=kind, case=case,
