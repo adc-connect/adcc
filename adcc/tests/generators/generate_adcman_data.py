@@ -39,7 +39,7 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
                  n_singlets: int = 0, n_triplets: int = 0,
                  n_spin_flip: int = 0, n_states: int = 0,
                  dump_nstates: int | None = None,
-                 isr_order: int | None = None, **kwargs) -> None:
+                 isr_order: MethodLevel | None = None, **kwargs) -> None:
     """
     Generate and dump the excited state reference data for the given reference case
     of the given test case if the data doesn't exist already.
@@ -57,7 +57,7 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     if "cvs" in case and method.level is MethodLevel.ZERO:
         return None
     # skip cvs-isr(3) and cvs-isr3d, since it is not implemented yet.
-    if isr_order in (3, "3d") and "cvs" in case:
+    if isr_order in (MethodLevel.THREE, MethodLevel.THREE_D) and "cvs" in case:
         return None
     # gs_density_order is only available for adc(3) and adc(4)
     # and it is not available for cvs-adc
@@ -91,7 +91,7 @@ def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
                      n_spin_flip: int = 0, n_states: int = 0,
                      dump_nstates: int | None = None,
                      states_per_case: dict[str, dict[str, int]] | None = None,
-                     isr_order: int | None = None, **kwargs) -> None:
+                     isr_order: MethodLevel | None = None, **kwargs) -> None:
     """
     Generate and dump the excited state reference data for all relevant
     reference cases of the given test case.
