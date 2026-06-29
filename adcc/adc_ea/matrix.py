@@ -95,20 +95,25 @@ def block_p_p_1(hf, mp, intermediates):
 
 
 def diagonal_pph_pph_1(hf):
-    # TODO
-    pass
+    return AmplitudeVector(pph=(
+        + 2.0 * direct_sum(
+            "-ia+b->iab", einsum("iaia->ia", hf.ovov), hf.fvv.diagonal())
+        + 1.0 * direct_sum(
+            "-i+ab->iab", hf.foo.diagonal(), einsum("abab->ab", hf.vvvv))
+        ).symmetrise(1, 2)
+    )
 
 
 def block_pph_pph_1(hf, mp, intermediates):
     def apply(ampl):
         return AmplitudeVector(pph=(
             - einsum("jab,ij->iab", ampl.pph, hf.foo)
-            + 2 * einsum("ac,icb->iab", hf.fvv, ampl.pph).antisymmetrise(1, 2)
+            + 2.0 * einsum("ac,icb->iab", hf.fvv, ampl.pph).antisymmetrise(1, 2)
             + 0.5 * einsum("abcd,icd->iab", hf.vvvv, ampl.pph)
-            - 2 * einsum("icka,kcb->iab", hf.ovov, ampl.pph
+            - 2.0 * einsum("icka,kcb->iab", hf.ovov, ampl.pph
                          ).antisymmetrise(1, 2)
         ))
-    return AdcBlock(apply, diagonal_pph_pph_0(hf))
+    return AdcBlock(apply, diagonal_pph_pph_1(hf))
 
 
 #

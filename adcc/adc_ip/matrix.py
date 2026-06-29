@@ -96,26 +96,22 @@ def block_h_h_1(hf, mp, intermediates):
 
 
 def diagonal_phh_phh_1(hf):
-    fCC = hf.fcc if hf.has_core_occupied_space else hf.foo
-    i1 = direct_sum("-i-J+a->iJa",
-                    hf.foo.diagonal(), fCC.diagonal(), hf.fvv.diagonal())
-
-    # Build Kronecker delta
-    d_vv = zeros_like(hf.fvv)
-    d_vv.set_mask("aa", 1.0)
-
-    i2 = einsum("ijij,aa->ija", hf.oooo, d_vv)
-    res = i1 + i2
-    return AmplitudeVector(phh=res.symmetrise(0, 1))
+    return AmplitudeVector(phh=(
+        - 2.0 * direct_sum(
+            "i+ja->ija", hf.foo.diagonal(), einsum("iaia->ia", hf.ovov))
+        + 1.0 * direct_sum(
+            "ij+a->ija", einsum("ijij->ij", hf.oooo), hf.fvv.diagonal())
+        ).symmetrise(0, 1)
+    )
 
 
 def block_phh_phh_1(hf, mp, intermediates):
     def apply(ampl):
         return AmplitudeVector(phh=(
             + einsum("ac,ijc->ija", hf.fvv, ampl.phh)
-            - 2 * einsum("ik,kja->ija", hf.foo, ampl.phh).antisymmetrise(0, 1)
+            - 2.0 * einsum("ik,kja->ija", hf.foo, ampl.phh).antisymmetrise(0, 1)
             + 0.5 * einsum("ijkl,kla->ija", hf.oooo, ampl.phh)
-            - 2 * einsum("kaic,kjc->ija", hf.ovov, ampl.phh
+            - 2.0 * einsum("kaic,kjc->ija", hf.ovov, ampl.phh
                          ).antisymmetrise(0, 1)
         ))
     return AdcBlock(apply, diagonal_phh_phh_1(hf))
