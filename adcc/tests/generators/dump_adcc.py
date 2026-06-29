@@ -119,7 +119,7 @@ def _pp_adc_properties(states: ExcitedStates, kind_data: dict, n_states: int
     kind_data["ground_to_excited_tdm_bb_b"] = np.asarray(tdm_bb_b)
 
 
-def _ip_ea_adc_properties(states: Union[DetachedStates, AttachedStates],
+def _ip_ea_adc_properties(states: DetachedStates | AttachedStates,
                           kind_data: dict, n_states: int) -> None:
     """Collects all properties that are unique for IP/EA-ADC
     """
@@ -127,12 +127,16 @@ def _ip_ea_adc_properties(states: Union[DetachedStates, AttachedStates],
 
 
 def dump_excited_states(
-        states: Union[ExcitedStates, DetachedStates, AttachedStates],
-        hdf5_file: h5py.Group, dump_nstates: int = None) -> None:
+        states: ExcitedStates | DetachedStates | AttachedStates,
+        hdf5_file: h5py.Group, only_full_mode: bool,
+        dump_nstates: int = None) -> None:
     """
     Dump the (charged) excited states data to the given hdf5 file/group.
     The number of states to dump can be given by dump_nstates. By default all states
     are dumped.
+    The only_full_mode flag indicates whether the underlying test case is only
+    run in full mode. Typically tests that run in full mode are larger
+    and therefore not all test data might be dumped in that case.
     """
     # ensure that the calculation converged on a nonzero result
     assert states.converged
@@ -171,6 +175,9 @@ def dump_excited_states(
     kind_data["eigenvectors_singles"] = np.asarray(eigenvectors[1])
     if 2 in eigenvectors:
         kind_data["eigenvectors_doubles"] = np.asarray(eigenvectors[2])
+    # only dump triples for small systems
+    if 3 in eigenvectors and not only_full_mode:
+        kind_data["eigenvectors_triples"] = np.asarray(eigenvectors[3])
     if isinstance(states, ExcitedStates):
         # state and transition dipole moments
         kind_data["state_dipole_moments"] = states.state_dipole_moment[:n_states]
