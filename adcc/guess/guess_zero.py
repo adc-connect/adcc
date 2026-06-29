@@ -35,14 +35,14 @@ def guess_zero(matrix, spin_change=0, spin_block_symmetrisation="none"):
     spin_change  The spin change to enforce in an excitation.
                  Typical values are 0 (singlet/triplet/any) and -1 (spin-flip).
     spin_block_symmetrisation
-                 Symmetrisation to enforce between equivalent spin blocks,
-                 which all yield the desired spin_change. E.g. if
-                 spin_change == 0, then both the alpha->alpha and beta->beta
-                 blocks of the singles part of the excitation vector achieve a
-                 spin change of 0. The symmetry specified with this parameter
-                 will then be imposed between the a-a and b-b blocks. Valid
-                 values are "none", "symmetric" and "antisymmetric", where
-                 "none" enforces no particular symmetry.
+                 Symmetrisation to enforce between equivalent spin blocks, which
+                 all yield the desired spin_change. E.g. if spin_change == 0,
+                 then both the alpha->alpha and beta->beta blocks of the singles
+                 part of the excitation vector achieve a spin change of 0.
+                 The symmetry specified with this parameter will then be imposed
+                 between the a-a and b-b blocks. Valid values are "none",
+                 "symmetric" and "antisymmetric", where "none" enforces
+                 no particular symmetry.
     """
     return AmplitudeVector(**{
         block: Tensor(sym) for block, sym in guess_symmetries(
@@ -61,14 +61,14 @@ def guess_symmetries(matrix, spin_change=0, spin_block_symmetrisation="none"):
     spin_change  The spin change to enforce in an excitation.
                  Typical values are 0 (singlet/triplet/any) and -1 (spin-flip).
     spin_block_symmetrisation
-                 Symmetrisation to enforce between equivalent spin blocks,
-                 which all yield the desired spin_change. E.g. if
-                 spin_change == 0, then both the alpha->alpha and beta->beta
-                 blocks of the singles part of the excitation vector achieve a
-                 spin change of 0. The symmetry specified with this parameter
-                 will then be imposed between the a-a and b-b blocks. Valid
-                 values are "none", "symmetric" and "antisymmetric", where
-                 "none" enforces no particular symmetry.
+                 Symmetrisation to enforce between equivalent spin blocks, which
+                 all yield the desired spin_change. E.g. if spin_change == 0,
+                 then both the alpha->alpha and beta->beta blocks of the singles
+                 part of the excitation vector achieve a spin change of 0.
+                 The symmetry specified with this parameter will then be imposed
+                 between the a-a and b-b blocks. Valid values are "none",
+                 "symmetric" and "antisymmetric", where "none" enforces
+                 no particular symmetry.
     """
     if not isinstance(matrix, AdcMatrixlike):
         raise TypeError("matrix needs to be of type AdcMatrixlike")
