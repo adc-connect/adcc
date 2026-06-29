@@ -50,10 +50,11 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     datafile = datadir / test_case.adcdata_file_name("adcman", method.name)
     hdf5_file = h5py.File(datafile, "a")  # Read/write if exists, create otherwise
 
-    key = f"{case}/{gs_density_order}/{isr_order.to_str}"
+    isr_order_key = isr_order.to_str if isr_order is not None else None
+    key = f"{case}/{gs_density_order}/{isr_order_key}"
     if key in hdf5_file:
         return None
-    # skip cvs-adc(0), since it is not available in qchem.
+    # skip cvs-adc(0), since it is not available in qchem
     if "cvs" in case and method.level is MethodLevel.ZERO:
         return None
     # skip cvs-isr(3) and cvs-isr3d, since it is not implemented yet.
@@ -72,7 +73,7 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
         method = AdcMethod(f"cvs-{method.name}")
 
     print(f"Generating {method.name} (gs_density_order={gs_density_order}) "
-          f"(isr_order={isr_order.to_str}) data for {case} {test_case.file_name}.")
+          f"(isr_order={isr_order}) data for {case} {test_case.file_name}.")
 
     state_data, _ = run_qchem(
         test_case, method, case, import_states=True, import_gs=False,
