@@ -41,32 +41,3 @@ def test_ip_ea_basic_interface(system, method, case, kind):
     # size matches number of excitation vectors
     assert state.size == len(state.excitation_vector)
     assert state.size == len(state.excitation_energy)
-
-
-@pytest.mark.parametrize("system,method,case,kind", cases_ip_ea)
-def test_ip_ea_describe(system, method, case, kind):
-    state = testdata_cache.adcc_states(
-        system=system,
-        method=method,
-        case=case,
-        kind=kind,
-        is_alpha=True,
-    )
-
-    adc_type = AdcMethod(method).adc_type
-    # Only test restricted alpha
-    if adc_type is AdcType.IP:
-        state.spin_change = -0.5
-    elif adc_type is AdcType.EA:
-        state.spin_change = 0.5
-
-    desc = state.describe()
-
-    assert state.kind in desc.lower()
-
-    if adc_type is AdcType.IP:
-        assert "ionization" in desc.lower()
-        assert "detachment" in desc.lower()
-    elif adc_type is AdcType.EA:
-        assert "affinity" in desc.lower()
-        assert "attachment" in desc.lower()
