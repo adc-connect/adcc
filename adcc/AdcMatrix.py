@@ -27,6 +27,8 @@ import libadcc
 
 from .LazyMp import LazyMp
 from .adc_pp import matrix as ppmatrix
+from .adc_ip import matrix as ipmatrix
+from .adc_ea import matrix as eamatrix
 from .timings import Timer, timed_member_call
 from .AdcMethod import AdcMethod, Method, AdcType
 from .functions import ones_like
@@ -73,6 +75,8 @@ class AdcMatrixlike:
 
     _special_block_orders = {
         "adc2x": {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 1},
+        "ip-adc2x": {"h_h": 2, "h_phh": 1, "phh_h": 1, "phh_phh": 1},
+        "ea-adc2x": {"p_p": 2, "p_pph": 1, "pph_p": 1, "pph_pph": 1},
         "isr1s": {"ph_ph": 1, "ph_pphh": None, "pphh_ph": None, "pphh_pphh": None},
         "isr2d": {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 0},
     }
@@ -104,7 +108,9 @@ class AdcMatrixlike:
         # - determine which spaces are available in the ADC(n) matrix
         #   starting from the given minimal space
         min_space = {
-            AdcType.PP: "ph"
+            AdcType.PP: "ph",
+            AdcType.IP: "h",
+            AdcType.EA: "p",
         }.get(method.adc_type, None)
         if min_space is None:
             raise ValueError(f"Unknown adc type {method.adc_type.to_str()} for "
@@ -196,6 +202,10 @@ class AdcMatrixlike:
         # be equal or differ e.g. by +-1 (IP/EA)
         if method.adc_type is AdcType.PP:
             return n_particle == n_hole
+        elif method.adc_type is AdcType.IP:
+            return n_particle == n_hole - 1
+        elif method.adc_type is AdcType.EA:
+            return n_particle == n_hole + 1
         raise ValueError(f"Unknown adc type {method.adc_type.to_str()} for method "
                          f"{method.name}. Can not validate space.")
 
@@ -268,11 +278,19 @@ class AdcMatrix(AdcMatrixlike):
             variant = None
             if self.is_core_valence_separated:
                 variant = "cvs"
+            # Directly import block dispatch functions?
+            BLOCK_DISPATCH = {
+                AdcType.PP: ppmatrix.block,
+                AdcType.IP: ipmatrix.block,
+                AdcType.EA: eamatrix.block}
+            block_dispatch_fun = BLOCK_DISPATCH[self.method.adc_type]
             blocks = {
-                block: ppmatrix.block(self.ground_state, block.split("_"),
-                                      order=order, intermediates=self.intermediates,
-                                      variant=variant)
-                for block, order in self.block_orders.items() if order is not None
+                block: block_dispatch_fun(self.ground_state, block.split("_"),
+                                          order=order,
+                                          intermediates=self.intermediates,
+                                          variant=variant)
+                for block, order in self.block_orders.items()
+                if order is not None
             }
             self.blocks = {bl: blocks[bl].apply for bl in blocks}
             if diagonal_precomputed:
@@ -442,33 +460,57 @@ class AdcMatrix(AdcMatrixlike):
         Returns a dictionary block identifier -> function
         """
         ret = {}
-        if self.is_core_valence_separated:
-            # CVS doubles part is antisymmetric wrt. (i,K,a,b) <-> (i,K,b,a)
-            ret["pphh"] = lambda v: v.antisymmetrise([(2, 3)])
-        else:
-            def symmetrise_generic_adc_doubles(invec):
-                # doubles part is antisymmetric wrt. (i,j,a,b) <-> (i,j,b,a)
-                # doubles part is antisymmetric wrt. (i,j,a,b) <-> (j,i,a,b)
-                scratch = invec.antisymmetrise([(0, 1)]).antisymmetrise([(2, 3)])
-                # doubles part is symmetric wrt. (i,j,a,b) <-> (j,i,b,a)
-                return scratch.symmetrise([(0, 1), (2, 3)])
-            ret["pphh"] = symmetrise_generic_adc_doubles
+        if self.method.adc_type is AdcType.PP:
+            if self.is_core_valence_separated:
+                # CVS doubles part is antisymmetric wrt. (i,K,a,b) <-> (i,K,b,a)
+                ret["pphh"] = lambda v: v.antisymmetrise([(2, 3)])
+            else:
+                def symmetrise_generic_adc_doubles(invec):
+                    # doubles part is antisymmetric wrt. (i,j,a,b) <-> (i,j,b,a)
+                    # doubles part is antisymmetric wrt. (i,j,a,b) <-> (j,i,a,b)
+                    scratch = invec.antisymmetrise([(0, 1)]).antisymmetrise(
+                        [(2, 3)])
+                    # doubles part is symmetric wrt. (i,j,a,b) <-> (j,i,b,a)
+                    return scratch.symmetrise([(0, 1), (2, 3)])
+                ret["pphh"] = symmetrise_generic_adc_doubles
 
-            def symmetrise_generic_adc_triples(invec):
-                # triples part is antisymmetric wrt. permutations of (i,j,k)
-                # and wrt. permutations of (a,b,c)
-                scratch = (
-                    invec.antisymmetrise([(0, 1, 2)]).antisymmetrise([(3, 4, 5)])
-                )
-                # triples part is symmetric wrt. permutations of (i,j,k) and
-                # permutations of (a,b,c)
-                # NOTE: The doubles fix the (numerical) symmetry with a single
-                # symmetrise call. This is not possible for triples, since the
-                # following symmetrise call only covers 6 of the 18
-                # even permutations generated by the 2 antisymmetrise calls above:
-                # ijkabc + ikjacb + jikbac + jkibca + kijcab + kjicba
-                return scratch.symmetrise([(0, 1, 2), (3, 4, 5)])
-            ret["ppphhh"] = symmetrise_generic_adc_triples
+                def symmetrise_generic_adc_triples(invec):
+                    # triples part is antisymmetric wrt. permutations of (i,j,k)
+                    # and wrt. permutations of (a,b,c)
+                    scratch = (
+                        invec.antisymmetrise([(0, 1, 2)]).antisymmetrise(
+                            [(3, 4, 5)])
+                    )
+                    # triples part is symmetric wrt. permutations of (i,j,k) and
+                    # permutations of (a,b,c)
+                    # NOTE: The doubles fix the (numerical) symmetry with a single
+                    # symmetrise call. This is not possible for triples, since the
+                    # following symmetrise call only covers 6 of the 18
+                    # even permutations generated by the 2 antisymmetrise calls
+                    # above:
+                    # ijkabc + ikjacb + jikbac + jkibca + kijcab + kjicba
+                    return scratch.symmetrise([(0, 1, 2), (3, 4, 5)])
+                ret["ppphhh"] = symmetrise_generic_adc_triples
+        elif self.method.adc_type is AdcType.IP:
+            if not self.is_core_valence_separated:
+                def symmetrise_generic_adc_doubles(invec):
+                    # doubles part is antisymmetric wrt. (i,j,a) <-> (j,i,a)
+                    return invec.antisymmetrise([(0, 1)])
+                ret["phh"] = symmetrise_generic_adc_doubles
+
+                def symmetrise_generic_adc_triples(invec):
+                    # TODO
+                    pass
+        elif self.method.adc_type is AdcType.EA:
+            if not self.is_core_valence_separated:
+                def symmetrise_generic_adc_doubles(invec):
+                    # doubles part is antisymmetric wrt. (i,a,b) <-> (i,a,b)
+                    return invec.antisymmetrise([(1, 2)])
+                ret["pph"] = symmetrise_generic_adc_doubles
+
+                def symmetrise_generic_adc_triples(invec):
+                    # TODO
+                    pass
         return ret
 
     def dense_basis(self, axis_blocks=None, ordering="adcc"):

@@ -26,7 +26,9 @@ class AmplitudeVector(dict):
     def __init__(self, **kwargs):
         """
         Construct an AmplitudeVector. Typical use cases are
-        ``AmplitudeVector(ph=tensor_singles, pphh=tensor_doubles)``.
+        ``AmplitudeVector(ph=tensor_singles, pphh=tensor_doubles)``. For IP-ADC
+        ``AmplitudeVector(h=tensor_singles, phh=tensor_doubles)``, and for
+        EA-ADC ``AmplitudeVector(p=tensor_singles, pph=tensor_doubles)``
         """
         super().__init__(**kwargs)
 

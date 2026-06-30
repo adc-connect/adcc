@@ -70,6 +70,8 @@ class MethodLevel(Enum):
 
 class AdcType(Enum):
     PP = "pp"
+    IP = "ip"
+    EA = "ea"
 
     def to_str(self) -> str:
         return self.value
@@ -253,7 +255,7 @@ class Method:
 
     def as_method(self, method_cls: type[T]) -> T:
         """
-        Return a equivalent Method with the method base name replaced
+        Return an equivalent Method with the method base name replaced
         by the provided name.
         """
         assert self._method_base_name is not None
@@ -294,7 +296,23 @@ class AdcMethod(Method):
         ): LevelSpec(
             max_level=3,
             special_levels=(MethodLevel.TWO_X,)
-        )
+        ),
+        LevelKey(
+            adc_type=AdcType.IP,
+            gs_type=GroundStateType.MP,
+            cvs=False
+        ): LevelSpec(
+            max_level=3,
+            special_levels=(MethodLevel.TWO_X,)
+        ),
+        LevelKey(
+            adc_type=AdcType.EA,
+            gs_type=GroundStateType.MP,
+            cvs=False
+        ): LevelSpec(
+            max_level=3,
+            special_levels=(MethodLevel.TWO_X,)
+        ),
     }
 
 
@@ -316,5 +334,21 @@ class IsrMethod(Method):
         ): LevelSpec(
             max_level=2,
             special_levels=(MethodLevel.ONE_S, MethodLevel.TWO_D)
+        ),
+        LevelKey(
+            adc_type=AdcType.IP,
+            gs_type=GroundStateType.MP,
+            cvs=False
+        ): LevelSpec(
+            max_level=2,
+            special_levels=None
+        ),
+        LevelKey(
+            adc_type=AdcType.EA,
+            gs_type=GroundStateType.MP,
+            cvs=False
+        ): LevelSpec(
+            max_level=2,
+            special_levels=None
         )
     }

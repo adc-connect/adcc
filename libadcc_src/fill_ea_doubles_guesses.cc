@@ -17,24 +17,25 @@
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include "fill_pp_doubles_guesses.hh"
+#include "fill_ea_doubles_guesses.hh"
 #include "TensorImpl.hh"
-#include "guess/adc_guess_d.hh"
+#include "guess/ea_adc_guess_d.hh"
 
 namespace libadcc {
 
-size_t fill_pp_doubles_guesses(std::vector<std::shared_ptr<Tensor>> guesses_d,
+size_t fill_ea_doubles_guesses(std::vector<std::shared_ptr<Tensor>> guesses_d,
                                std::shared_ptr<const MoSpaces> mospaces,
-                               std::shared_ptr<Tensor> df1, std::shared_ptr<Tensor> df2,
+                               std::shared_ptr<Tensor> d_o, std::shared_ptr<Tensor> d_v,
+                               bool a_spin, bool restricted, bool doublet,
                                int spin_change_twice, scalar_type degeneracy_tolerance) {
 
   size_t n_guesses = guesses_d.size();
   if (n_guesses == 0) return 0;
 
-  // Make a copy of the singles symmetry
-  libtensor::block_tensor_ctrl<4, scalar_type> ctrl(asbt4(guesses_d[0]));
-  libtensor::symmetry<4, scalar_type> sym_s(ctrl.req_const_symmetry().get_bis());
-  libtensor::so_copy<4, scalar_type>(ctrl.req_const_symmetry()).perform(sym_s);
+  // Make a copy of the doubles symmetry
+  libtensor::block_tensor_ctrl<3, scalar_type> ctrl(asbt3(guesses_d[0]));
+  libtensor::symmetry<3, scalar_type> sym_s(ctrl.req_const_symmetry().get_bis());
+  libtensor::so_copy<3, scalar_type>(ctrl.req_const_symmetry()).perform(sym_s);
 
   // Make ab pointers object
   auto make_ab = [](const MoSpaces& mo, const std::string& space) {
@@ -48,26 +49,27 @@ size_t fill_pp_doubles_guesses(std::vector<std::shared_ptr<Tensor>> guesses_d,
 
   const std::vector<std::string> spaces_d = guesses_d[0]->subspaces();
   std::vector<std::vector<bool>> abvectors;
-  for (size_t i = 0; i < 4; ++i) {
+  for (size_t i = 0; i < 3; ++i) {
     abvectors.push_back(make_ab(*mospaces, spaces_d[i]));
   }
-  libtensor::sequence<4, std::vector<bool>*> ab_d;
-  for (size_t i = 0; i < 4; ++i) {
+  libtensor::sequence<3, std::vector<bool>*> ab_d;
+  for (size_t i = 0; i < 3; ++i) {
     ab_d[i] = &abvectors[i];
   }
 
   // Make singles list data structure
-  std::list<std::pair<libtensor::btensor<4, double>*, double>> guesspairs;
+  std::list<std::pair<libtensor::btensor<3, double>*, double>> guesspairs;
   for (size_t i = 0; i < n_guesses; i++) {
-    guesspairs.emplace_back(&(asbt4(guesses_d[i])), 0.0);
+    guesspairs.emplace_back(&(asbt3(guesses_d[i])), 0.0);
   }
 
-  if (spin_change_twice != -2 && spin_change_twice != 0) {
-    throw not_implemented_error("spin_change == -1 has not been tested.");
+  if (abs(spin_change_twice) != 1) {
+    throw not_implemented_error("spin_change ==" + std::to_string(spin_change_twice) +
+                                " has not been tested.");
   }
 
-  return adc_guess_d(guesspairs, asbt2(df1), asbt2(df2), sym_s, ab_d, spin_change_twice,
-                     degeneracy_tolerance);
+  return ea_adc_guess_d(guesspairs, asbt1(d_o), asbt1(d_v), sym_s, a_spin, restricted,
+                        doublet, ab_d, spin_change_twice, degeneracy_tolerance);
 }
 
 }  // namespace libadcc

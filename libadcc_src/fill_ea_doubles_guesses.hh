@@ -23,24 +23,27 @@
 namespace libadcc {
 
 /** Fill the passed vector of doubles blocks with doubles guesses using
- * the delta-Fock matrices df1 and df2, which are the two delta-Fock matrices
- * involved in the doubles block.
+ * the O and V matrices.
  *
- * guesses_d    Vectors of guesses, all elements are assumed to be initialised to zero
- *              and the symmetry is assumed to be properly set up.
- * mospaces     Mospaces object
- * df02         Delta-Fock between spaces 0 and 2 of the ADC matrix
- * df13         Delta-Fock between spaces 1 and 3 of the ADC matrix
- * spin_change_twice   Twice the value of the spin change to enforce in an excitation.
+ * guesses_d             Vectors of guesses, all elements are assumed to be initialised
+ *                       to zero and the symmetry is assumed to be properly set up.
+ * mospaces              Mospaces object
+ * d_o                   Fock matrix to construct guesses from (occ.)
+ * d_v                   Fock matrix to construct guesses from (virt.)
+ * a_spin                If alpha ionization (false: beta)
+ * restricted            Is this a restricted calculation
+ * doublet               Doublet or quartet states (only in case of restricted calc.)
+ * spin_change_twice     Twice the value of spin change to enforce in an excitation.
  * degeneracy_tolerance  Tolerance for two entries of the diagonal to be considered
  *                       degenerate, i.e. identical.
  *
  * \returns  The number of guess vectors which have been properly initialised
  *           (the others are invalid and should be discarded).
  */
-size_t fill_pp_doubles_guesses(std::vector<std::shared_ptr<Tensor>> guesses_d,
+size_t fill_ea_doubles_guesses(std::vector<std::shared_ptr<Tensor>> guesses_d,
                                std::shared_ptr<const MoSpaces> mospaces,
-                               std::shared_ptr<Tensor> df1, std::shared_ptr<Tensor> df2,
+                               std::shared_ptr<Tensor> d_o, std::shared_ptr<Tensor> d_v,
+                               bool a_spin, bool restricted, bool doublet,
                                int spin_change_twice, scalar_type degeneracy_tolerance);
 
 }  // namespace libadcc

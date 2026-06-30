@@ -23,6 +23,7 @@
 from adcc import AmplitudeVector, Symmetry, Tensor
 
 from ..AdcMatrix import AdcMatrixlike
+from ..AdcMethod import AdcType
 
 
 def guess_zero(matrix, spin_change=0, spin_block_symmetrisation="none"):
@@ -83,28 +84,25 @@ def guess_symmetries(matrix, spin_change=0, spin_block_symmetrisation="none"):
         raise ValueError("Only integer or half-integer spin_change is allowed. "
                          "You passed {}".format(spin_change))
 
-    max_spin_change = 0
-    if "ph" in matrix.axis_blocks:
-        max_spin_change = 1
-    if "pphh" in matrix.axis_blocks:
-        max_spin_change = 2
-    if "ppphhh" in matrix.axis_blocks:
-        max_spin_change = 3
-    if spin_change > max_spin_change:
-        raise ValueError("spin_change for singles guesses may only be in the "
-                         f"range [{-max_spin_change}, {max_spin_change}] and "
-                         f"not {spin_change}.")
+    max_spin_change = 0.5 * len(matrix.axis_blocks[-1])
+    valid_spin_changes = [
+        max_spin_change - i for i in range(int(2 * max_spin_change + 1))]
+
+    if spin_change not in valid_spin_changes:
+        raise ValueError("spin_change may only be one of "
+                         f"{valid_spin_changes}, and not {spin_change}.")
 
     symmetries = {}
-    if "ph" in matrix.axis_blocks:
-        symmetries["ph"] = guess_symmetry_singles(
+    singles = matrix.axis_blocks[0]
+    symmetries[singles] = guess_symmetry_singles(
+        matrix, spin_change=spin_change,
+        spin_block_symmetrisation=spin_block_symmetrisation, block=singles
+    )
+    if len(matrix.axis_blocks) >= 2:
+        doubles = matrix.axis_blocks[1]
+        symmetries[doubles] = guess_symmetry_doubles(
             matrix, spin_change=spin_change,
-            spin_block_symmetrisation=spin_block_symmetrisation
-        )
-    if "pphh" in matrix.axis_blocks:
-        symmetries["pphh"] = guess_symmetry_doubles(
-            matrix, spin_change=spin_change,
-            spin_block_symmetrisation=spin_block_symmetrisation
+            spin_block_symmetrisation=spin_block_symmetrisation, block=doubles
         )
     if "ppphhh" in matrix.axis_blocks:
         symmetries["ppphhh"] = guess_symmetry_triples(
@@ -115,24 +113,36 @@ def guess_symmetries(matrix, spin_change=0, spin_block_symmetrisation="none"):
 
 
 def guess_symmetry_singles(matrix, spin_change=0,
-                           spin_block_symmetrisation="none"):
-    symmetry = Symmetry(matrix.mospaces, "".join(matrix.axis_spaces["ph"]))
+                           spin_block_symmetrisation="none", block="ph"):
+    symmetry = Symmetry(matrix.mospaces, "".join(matrix.axis_spaces[block]))
     symmetry.irreps_allowed = ["A"]
+
     if spin_change != 0 and spin_block_symmetrisation != "none":
         raise NotImplementedError("spin_symmetrisation != 'none' only "
                                   "implemented for spin_change == 0")
-    elif spin_block_symmetrisation == "symmetric":
-        symmetry.spin_block_maps = [("aa", "bb", 1)]
+
+    if spin_block_symmetrisation in ("symmetric", "antisymmetric"):
+        # PP-ADC
+        fac = 1 if spin_block_symmetrisation == "symmetric" else -1
+        symmetry.spin_block_maps = [("aa", "bb", fac)]
         symmetry.spin_blocks_forbidden = ["ab", "ba"]
-    elif spin_block_symmetrisation == "antisymmetric":
-        symmetry.spin_block_maps = [("aa", "bb", -1)]
-        symmetry.spin_blocks_forbidden = ["ab", "ba"]
+
+    elif (
+        matrix.method.adc_type is not AdcType.PP
+        and matrix.reference_state.restricted
+    ):
+        # IP- and EA-ADC
+        # attach/detach alpha electron
+        # forbidden beta blocks (["a"]) not needed because for a
+        # restricted reference only alpha states will be computed
+        symmetry.spin_blocks_forbidden = ["b"]
+
     return symmetry
 
 
 def guess_symmetry_doubles(matrix, spin_change=0,
-                           spin_block_symmetrisation="none"):
-    spaces_d = matrix.axis_spaces["pphh"]
+                           spin_block_symmetrisation="none", block="pphh"):
+    spaces_d = matrix.axis_spaces[block]
     symmetry = Symmetry(matrix.mospaces, "".join(spaces_d))
     symmetry.irreps_allowed = ["A"]
 
@@ -140,34 +150,82 @@ def guess_symmetry_doubles(matrix, spin_change=0,
         raise NotImplementedError("spin_symmetrisation != 'none' only "
                                   "implemented for spin_change == 0")
 
-    if spin_change == 0 \
-       and spin_block_symmetrisation in ("symmetric", "antisymmetric"):
-        fac = 1 if spin_block_symmetrisation == "symmetric" else -1
-        # Spin mapping between blocks where alpha and beta are just mirrored
-        symmetry.spin_block_maps = [("aaaa", "bbbb", fac),
-                                    ("abab", "baba", fac),
-                                    ("abba", "baab", fac)]
+    if matrix.method.adc_type is AdcType.PP:
+        # PP-ADC
+        if spin_block_symmetrisation in ("symmetric", "antisymmetric"):
+            fac = 1 if spin_block_symmetrisation == "symmetric" else -1
+            # Spin mapping between blocks where alpha and beta are mirrored
+            symmetry.spin_block_maps = [("aaaa", "bbbb", fac),
+                                        ("abab", "baba", fac),
+                                        ("abba", "baab", fac)]
 
-        # Mark blocks which change spin as forbidden
-        symmetry.spin_blocks_forbidden = ["aabb",  # spin_change +2
-                                          "bbaa",  # spin_change -2
-                                          "aaab",  # spin_change +1
-                                          "aaba",  # spin_change +1
-                                          "abaa",  # spin_change -1
-                                          "baaa",  # spin_change -1
-                                          "abbb",  # spin_change +1
-                                          "babb",  # spin_change +1
-                                          "bbab",  # spin_change -1
-                                          "bbba"]  # spin_change -1
+            # Mark blocks which change spin as forbidden
+            symmetry.spin_blocks_forbidden = ["aabb",  # spin_change -2
+                                              "bbaa",  # spin_change +2
+                                              "aaab",  # spin_change -1
+                                              "aaba",  # spin_change -1
+                                              "abaa",  # spin_change +1
+                                              "baaa",  # spin_change +1
+                                              "abbb",  # spin_change -1
+                                              "babb",  # spin_change -1
+                                              "bbab",  # spin_change +1
+                                              "bbba"]  # spin_change +1
 
-    # Add index permutation symmetry:
-    permutations = ["ijab"]
-    if spaces_d[0] == spaces_d[1]:
-        permutations.append("-jiab")
-    if spaces_d[2] == spaces_d[3]:
-        permutations.append("-ijba")
-    if len(permutations) > 1:
-        symmetry.permutations = permutations
+        # Add index permutation symmetry:
+        permutations = ["ijab"]
+        if spaces_d[0] == spaces_d[1]:
+            permutations.append("-jiab")
+        if spaces_d[2] == spaces_d[3]:
+            permutations.append("-ijba")
+        if len(permutations) > 1:
+            symmetry.permutations = permutations
+
+    elif matrix.method.adc_type is AdcType.IP:
+        # IP-ADC
+        # No spin mapping between blocks
+        symmetry.spin_block_maps = []
+
+        # Mark blocks which change spin incorrectly as forbidden
+        if matrix.reference_state.restricted:  # kind=doublet
+            # detach alpha electron
+            # forbidden beta ionization blocks not needed because for a
+            # restricted reference only alpha states will be computed
+            symmetry.spin_blocks_forbidden = ["aab",  # spin_change -3/2
+                                              "bba",  # spin_change +3/2
+                                              "aba",  # spin_change +1/2
+                                              "baa",  # spin_change +1/2
+                                              "bbb"]  # spin_change +1/2
+
+        # Add index permutation symmetry:
+        permutations = ["ija"]
+        if spaces_d[0] == spaces_d[1]:
+            permutations.append("-jia")
+        if len(permutations) > 1:
+            symmetry.permutations = permutations
+
+    elif matrix.method.adc_type is AdcType.EA:
+        # EA-ADC
+        # No spin mapping between blocks
+        symmetry.spin_block_maps = []
+
+        # Mark blocks which change spin incorrectly as forbidden
+        if matrix.reference_state.restricted:  # kind=doublet
+            # attach alpha electron
+            # forbidden beta attachment blocks not needed because for a
+            # restricted reference only alpha states will be computed
+            symmetry.spin_blocks_forbidden = ["baa",  # spin_change +3/2
+                                              "abb",  # spin_change -3/2
+                                              "aab",  # spin_change -1/2
+                                              "aba",  # spin_change -1/2
+                                              "bbb"]  # spin_change -1/2
+
+        # Add index permutation symmetry:
+        permutations = ["iab"]
+        if spaces_d[1] == spaces_d[2]:
+            permutations.append("-iba")
+        if len(permutations) > 1:
+            symmetry.permutations = permutations
+
     return symmetry
 
 
