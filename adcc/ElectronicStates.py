@@ -161,6 +161,19 @@ class ElectronicStates:
         return self._excitation_energy
 
     @property
+    def total_energy(self):
+        """Total energies (ground state + excitation) of all computed states"""
+        return np.array([self._total_energy(i) for i in range(self.size)])
+
+    def _total_energy(self, state_n: int) -> float:
+        """Computes the total energy for a single state"""
+        if self.method.level == MethodLevel.ZERO:
+            return (self._excitation_energy[state_n]
+                    + self.reference_state.energy_scf)
+        return (self._excitation_energy[state_n]
+                + self.ground_state.energy(self.method.level.to_int()))
+
+    @property
     def excitation_energy_uncorrected(self):
         """Excitation energies without any corrections in atomic units"""
         return self._excitation_energy_uncorrected

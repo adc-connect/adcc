@@ -1,5 +1,7 @@
 from __future__ import annotations
+import collections.abc
 import numpy
+import numpy.typing
 import pybind11_stubgen.typing_ext
 import typing
 
@@ -712,6 +714,14 @@ class Tensor:
     def evaluate(self) -> Tensor:
         """
         Ensure the tensor to be fully evaluated and resilient in memory. Usually happens automatically when needed. Might be useful for fine-tuning, however.
+        """
+    def export_block(
+        self,
+        start: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex],
+        end: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex],
+    ) -> numpy.typing.NDArray[numpy.float64]:
+        """
+        Export a dense sub-block of the tensor (half-open per-axis range [start, end)) to a np::ndarray, respecting the full tensor symmetry, without materialising the full dense tensor.
         """
     def is_allowed(self, arg0: tuple) -> bool:
         """
