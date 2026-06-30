@@ -24,7 +24,7 @@ from math import sqrt
 from collections import namedtuple
 
 from adcc import block as b
-from adcc.functions import direct_sum, einsum, zeros_like
+from adcc.functions import direct_sum, einsum
 from adcc.Intermediates import Intermediates, register_as_intermediate
 from adcc.AmplitudeVector import AmplitudeVector
 
@@ -101,8 +101,7 @@ def diagonal_phh_phh_1(hf):
             "i+ja->ija", hf.foo.diagonal(), einsum("iaia->ia", hf.ovov))
         + 1.0 * direct_sum(
             "ij+a->ija", einsum("ijij->ij", hf.oooo), hf.fvv.diagonal())
-        ).symmetrise(0, 1)
-    )
+    ).symmetrise(0, 1))
 
 
 def block_phh_phh_1(hf, mp, intermediates):
@@ -111,8 +110,7 @@ def block_phh_phh_1(hf, mp, intermediates):
             + einsum("ac,ijc->ija", hf.fvv, ampl.phh)
             - 2.0 * einsum("ik,kja->ija", hf.foo, ampl.phh).antisymmetrise(0, 1)
             + 0.5 * einsum("ijkl,kla->ija", hf.oooo, ampl.phh)
-            - 2.0 * einsum("kaic,kjc->ija", hf.ovov, ampl.phh
-                         ).antisymmetrise(0, 1)
+            - 2.0 * einsum("kaic,kjc->ija", hf.ovov, ampl.phh).antisymmetrise(0, 1)
         ))
     return AdcBlock(apply, diagonal_phh_phh_1(hf))
 

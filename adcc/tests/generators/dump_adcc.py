@@ -10,8 +10,6 @@ from adcc.State2States import State2States
 import numpy as np
 import h5py
 
-from typing import Union
-
 
 def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
                      only_full_mode: bool) -> None:

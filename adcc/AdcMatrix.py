@@ -396,8 +396,7 @@ class AdcMatrix(AdcMatrixlike):
         with another AmplitudeVector or Tensor. Non-matching blocks
         in the AmplitudeVector will be ignored.
         """
-        # TODO: Allow AmplitudeVector?
-        if not isinstance(tensor, (libadcc.Tensor, AmplitudeVector)):
+        if not isinstance(tensor, libadcc.Tensor):
             raise TypeError("tensor should be an adcc.Tensor")
 
         with self.timer.record(f"apply/{block}"):
