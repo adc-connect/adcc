@@ -50,7 +50,7 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     datafile = datadir / test_case.adcdata_file_name("adcman", method.name)
     hdf5_file = h5py.File(datafile, "a")  # Read/write if exists, create otherwise
 
-    isr_order_key = isr_order.to_str if isr_order is not None else None
+    isr_order_key = isr_order.to_str() if isr_order is not None else None
     key = f"{case}/{gs_density_order}/{isr_order_key}"
     if key in hdf5_file:
         return None
