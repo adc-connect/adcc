@@ -23,44 +23,47 @@
 from math import sqrt
 
 from adcc import block as b
-from adcc.LazyMp import LazyMp
 from adcc.AdcMethod import IsrMethod
+from adcc.AmplitudeVector import AmplitudeVector
 from adcc.functions import einsum
 from adcc.Intermediates import Intermediates
-from adcc.AmplitudeVector import AmplitudeVector
-from adcc.OneParticleDensity import OneParticleDensity
+from adcc.LazyMp import LazyMp
 from adcc.NParticleOperator import OperatorSymmetry
+from adcc.OneParticleDensity import OneParticleDensity
 
-from .util import check_doubles_amplitudes, check_singles_amplitudes
+from .util import (
+    check_doubles_amplitudes,
+    check_singles_amplitudes
+)
 
 
-def tdm_isr0(mp, amplitude, intermediates):
+def tdm_isr0(ground_state, amplitude, intermediates):
     # C is either c(ore) or o(ccupied)
-    C = b.c if mp.has_core_occupied_space else b.o
+    C = b.c if ground_state.has_core_occupied_space else b.o
     check_singles_amplitudes([C, b.v], amplitude)
     u1 = amplitude.ph
 
     # Transition density matrix for (CVS-)ISR(0)
-    dm = OneParticleDensity(mp, symmetry=OperatorSymmetry.NOSYMMETRY)
+    dm = OneParticleDensity(ground_state, symmetry=OperatorSymmetry.NOSYMMETRY)
     dm[b.v + C] = u1.transpose()
     return dm
 
 
-def tdm_isr1(mp, amplitude, intermediates):
-    dm = tdm_isr0(mp, amplitude, intermediates)  # Get ISR(0) result
+def tdm_isr1(ground_state, amplitude, intermediates):
+    dm = tdm_isr0(ground_state, amplitude, intermediates)  # Get ISR(0) result
     # isr1_dp0_ov
-    dm.ov = -einsum("ijab,jb->ia", mp.t2(b.oovv), amplitude.ph)
+    dm.ov = -einsum("ijab,jb->ia", ground_state.t2(b.oovv), amplitude.ph)
     return dm
 
 
-def tdm_cvs_isr2(mp, amplitude, intermediates):
+def tdm_cvs_isr2(ground_state, amplitude, intermediates):
     # Get CVS-ISR(1) result (same as CVS-ISR(0))
-    dm = tdm_isr0(mp, amplitude, intermediates)
+    dm = tdm_isr0(ground_state, amplitude, intermediates)
     check_doubles_amplitudes([b.o, b.c, b.v, b.v], amplitude)
     u1, u2 = amplitude.ph, amplitude.pphh
 
-    t2 = mp.t2(b.oovv)
-    p0 = mp.second_order_dm_correction(apply_cvs=True)
+    t2 = ground_state.t2(b.oovv)
+    p0 = ground_state.second_order_dm_correction(apply_cvs=True)
 
     # Compute CVS-ISR(2) tdm
     dm.oc = (  # cvs_isr2_dp0_oc
@@ -73,14 +76,14 @@ def tdm_cvs_isr2(mp, amplitude, intermediates):
     return dm
 
 
-def tdm_isr2(mp, amplitude, intermediates):
-    dm = tdm_isr1(mp, amplitude, intermediates)  # Get ISR(1) result
+def tdm_isr2(ground_state, amplitude, intermediates):
+    dm = tdm_isr1(ground_state, amplitude, intermediates)  # Get ISR(1) result
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
     u1, u2 = amplitude.ph, amplitude.pphh
 
-    t2 = mp.t2(b.oovv)
-    td2 = mp.td2(b.oovv)
-    p0 = mp.mp2_diffdm
+    t2 = ground_state.t2(b.oovv)
+    td2 = ground_state.td2(b.oovv)
+    p0 = ground_state.second_order_dm_correction()
 
     # Compute ISR(2) tdm
     dm.oo = (  # isr2_dp0_oo
@@ -100,12 +103,80 @@ def tdm_isr2(mp, amplitude, intermediates):
     return dm
 
 
+def tdm_isr3(ground_state, amplitude, intermediates):
+    dm = tdm_isr2(ground_state, amplitude, intermediates)  # Get ISR(2) result
+    check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
+
+    ul1, ul2 = amplitude.ph, amplitude.pphh  # adc amplitudes
+
+    t1_2 = ground_state.ts2(b.ov)
+    t2_1 = ground_state.t2(b.oovv)
+    t2_2 = ground_state.td2(b.oovv)
+    t3_2 = ground_state.tt2(b.ooovvv)
+    t2_3 = ground_state.td3(b.oovv)
+
+    p0_3_ov = ground_state.third_order_dm_correction().ov
+    p0_3_oo = ground_state.third_order_dm_correction().oo
+    p0_3_vv = ground_state.third_order_dm_correction().vv
+
+    p0_2_oo = ground_state.second_order_dm_correction().oo
+    p0_2_vv = ground_state.second_order_dm_correction().vv
+
+    # Compute ISR(3d) tdm
+    dm.oo += (
+        - 1 * einsum("ja,ia->ij", ul1, p0_3_ov)
+        - 1 * einsum("jkab,ikab->ij", ul2, t2_2)
+        + 1 * einsum("ia,ja->ij", einsum("kb,ikab->ia", ul1, t2_1), t1_2)
+        + 0.5 * einsum("ikbc,jkbc->ij", einsum("la,iklabc->ikbc", ul1, t3_2), t2_1)
+    )
+    dm.vv += (
+        + 1 * einsum("ia,ib->ab", ul1, p0_3_ov)
+        + 1 * einsum("ijac,ijbc->ab", ul2, t2_2)
+        + 0.5 * einsum("ikbc,ikac->ab", einsum("jd,ijkbcd->ikbc", ul1, t3_2), t2_1)
+        - 1 * einsum("ib,ia->ab", einsum("jc,ijbc->ib", ul1, t2_1), t1_2)
+    )
+    dm.ov += (
+        - 1 * einsum("jb,ijab->ia", ul1, t2_3)
+        - 0.5 * einsum("jkbc,ijkabc->ia", ul2, t3_2)
+        + 1 * einsum("ka,ik->ia", einsum("jb,jkab->ka", ul1, t2_1), p0_2_oo)
+        + 0.5 * einsum("jc,ijac->ia", einsum("jb,bc->jc", ul1, p0_2_vv), t2_1)
+        - 1 * einsum("ic,ac->ia", einsum("jb,ijbc->ic", ul1, t2_1), p0_2_vv)
+        - 0.5 * einsum("kb,ikab->ia", einsum("jb,jk->kb", ul1, p0_2_oo), t2_1)
+        + 1 * einsum(
+            "ijkc,jkac->ia",
+            einsum("ijld,klcd->ijkc", einsum("jb,ilbd->ijld", ul1, t2_1), t2_1),
+            t2_1,
+        )
+        + 0.5 * einsum(
+            "kd,ikad->ia",
+            einsum("lc,klcd->kd", einsum("jb,jlbc->lc", ul1, t2_1), t2_1),
+            t2_1,
+        )
+        - 0.25 * einsum(
+            "ijkl,jkla->ia",
+            einsum("ijcd,klcd->ijkl", t2_1, t2_1),
+            einsum("jb,klab->jkla", ul1, t2_1),
+        )
+    )
+
+    dm.vo += (
+        + 0.5 * einsum("ja,ij->ai", ul1, p0_3_oo)
+        - 0.5 * einsum("ib,ab->ai", ul1, p0_3_vv)
+        + 0.5 * einsum("kc,ikac->ai", einsum("jb,jkbc->kc", ul1, t2_2), t2_1)
+        + 0.5 * einsum("jb,ijab->ai", einsum("kc,jkbc->jb", ul1, t2_1), t2_2)
+    )
+
+    return dm
+
+
 DISPATCH = {
     "isr0": tdm_isr0,
     "isr1s": tdm_isr1,  # Identical to ISR(1)
     "isr1": tdm_isr1,
     "isr2d": tdm_isr2,  # Identical to ISR(2)
     "isr2": tdm_isr2,
+    "isr3d": tdm_isr3,
+    "isr3": tdm_isr3,
     "cvs-isr0": tdm_isr0,
     "cvs-isr1": tdm_isr0,  # No extra contribs for CVS-ISR(1)
     "cvs-isr2d": tdm_cvs_isr2,  # Identical to CVS-ISR(2)
@@ -139,8 +210,8 @@ def transition_dm(method, ground_state, amplitude, intermediates=None):
         intermediates = Intermediates(ground_state)
 
     if method.name not in DISPATCH:
-        raise NotImplementedError("transition_dm is not implemented "
-                                  f"for {method.name}.")
+        raise NotImplementedError(
+            f"transition_dm is not implemented for {method.name}.")
     else:
         ret = DISPATCH[method.name](ground_state, amplitude, intermediates)
         return ret.evaluate()

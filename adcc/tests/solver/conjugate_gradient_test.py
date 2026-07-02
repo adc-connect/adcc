@@ -38,7 +38,7 @@ class TestConjugateGradient:
     def base_adc2(self, kind: str, guess_function: callable):
         refdata = testdata_cache.adcman_data(
             system="h2o_sto3g", method="adc2", case="gen"
-        )[kind]
+        )["None"][kind]
         matrix = adcc.AdcMatrix(
             "adc2", testdata_cache.refstate("h2o_sto3g", case="gen")
         )

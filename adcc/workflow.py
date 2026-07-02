@@ -30,7 +30,7 @@ from .guess import (guesses_any, guesses_singlet, guesses_spin_flip,
                     guesses_triplet)
 from .LazyMp import LazyMp
 from .AdcMatrix import AdcMatrix, AdcMatrixlike, AdcExtraTerm
-from .AdcMethod import AdcMethod
+from .AdcMethod import AdcMethod, IsrMethod
 from .exceptions import InputError
 from .ExcitedStates import ExcitedStates
 from .ReferenceState import ReferenceState as adcc_ReferenceState
@@ -43,7 +43,7 @@ __all__ = ["run_adc"]
 
 
 def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
-            eigensolver=None, guesses=None, n_guesses=None,
+            eigensolver=None, guesses=None, n_guesses=None, isr_order=None,
             n_guesses_doubles=None, output=sys.stdout, core_orbitals=None,
             frozen_core=None, frozen_virtual=None, method=None,
             n_singlets=None, n_triplets=None, n_spin_flip=None,
@@ -107,6 +107,10 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         Provide the guess vectors to be employed for the ADC run. Takes
         preference over `n_guesses` and `n_guesses_doubles`, such that these
         parameters are ignored.
+
+    isr_order: int or str, optional
+        Order of the ISR expansion used for property calculations.
+        Can be an integer (e.g. 3 for ISR(3)) or a string (e.g. "isr1s")
 
     output : stream, optional
         Python stream to which output will be written. If `None` all output
@@ -205,11 +209,16 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     if env_matrix_term:
         matrix += env_matrix_term
 
+    property_method = None
+    if isr_order is not None:
+        property_method = matrix.method.as_method_at_level(IsrMethod, isr_order)
+
     diagres = diagonalise_adcmatrix(
         matrix, n_states, kind, guesses=guesses, n_guesses=n_guesses,
         n_guesses_doubles=n_guesses_doubles, conv_tol=conv_tol, output=output,
         eigensolver=eigensolver, **solverargs)
-    exstates = ExcitedStates(diagres)
+
+    exstates = ExcitedStates(diagres, property_method=property_method)
     exstates.kind = kind
     exstates.spin_change = spin_change
 

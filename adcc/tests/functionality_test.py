@@ -61,7 +61,8 @@ class TestFunctionality:
         refdata = getattr(testdata_cache, f"{generator}_data")(
             system=system, method=method, case=case
         )
-        ref: dict = refdata[kind]
+
+        ref: dict = refdata["None"][kind]
         n_ref = len(ref["eigenvalues"])
 
         if "cvs" in case and "cvs" not in method:

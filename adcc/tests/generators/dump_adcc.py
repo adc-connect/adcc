@@ -49,6 +49,13 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
     # MP3 data
     if not ground_state.has_core_occupied_space:
         gs_data[f"{gs}3/energy"] = ground_state.energy_correction(3)
+        gs_data[f"{gs}3/dipole"] = ground_state.dipole_moment(3)
+        gs_data[f"{gs}3/sigma_inf_ov"] = ground_state.sigma_inf_ov(3).to_ndarray()
+        gs_data[f"{gs}3/m_3_plus"] = ground_state.m_3_plus.to_ndarray()
+        gs_data[f"{gs}3/m_3_minus"] = ground_state.m_3_minus.to_ndarray()
+        if not only_full_mode:
+            gs_data[f"{gs}3/td_o1o1v1v1"] = (
+                ground_state.td3("o1o1v1v1").to_ndarray())
     # MP4 data
     if not ground_state.has_core_occupied_space and not only_full_mode:
         gs_data[f"{gs}4/energy"] = ground_state.energy_correction(4)
@@ -69,6 +76,16 @@ def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,
         dm_bb_a, dm_bb_b = diffdm.to_ao_basis(ground_state.reference_state)
         gs_data[f"cvs-{gs}2/dm_bb_a"] = dm_bb_a.to_ndarray()
         gs_data[f"cvs-{gs}2/dm_bb_b"] = dm_bb_b.to_ndarray()
+    if not ground_state.has_core_occupied_space:
+        diffdm = ground_state.diffdm(3, apply_cvs=False)
+        for block in diffdm.blocks_nonzero:
+            gs_data[f"{gs}3/dm_{block}"] = diffdm[block].to_ndarray()
+        # MP3 density: AO basis
+        dm_bb_a, dm_bb_b = diffdm.to_ao_basis(
+            ground_state.reference_state
+        )
+        gs_data[f"{gs}3/dm_bb_a"] = dm_bb_a.to_ndarray()
+        gs_data[f"{gs}3/dm_bb_b"] = dm_bb_b.to_ndarray()
     # 2p diffdms: not implemented for the core space currently
     if not only_full_mode and not ground_state.has_core_occupied_space:
         # MP1 2p density: MO basis
@@ -103,6 +120,7 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
     if dump_nstates is not None:
         n_states = min(n_states, dump_nstates)
 
+    kind_data = {}
     dm_bb_a = []  # State diffdm AO basis alpha part
     dm_bb_b = []  # State diffdm AO basis beta part.
     tdm_bb_a = []  # Ground to Excited state tdm AO basis alpha part
@@ -124,10 +142,11 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
             eigenvectors[exdegree + 1].append(getattr(
                 states.excitation_vector[n], block  # type: ignore
             ).to_ndarray())
-    kind_data = {}
-    # eigenvalues
+
+    # Eigenvalues
     kind_data["eigenvalues"] = states.excitation_energy[:n_states]
-    # state and transition dipole moments
+
+    # Dipole moments
     kind_data["state_dipole_moments"] = states.state_dipole_moment[:n_states]
     kind_data["transition_dipole_moments"] = (
         states.transition_dipole_moment[:n_states]
@@ -144,12 +163,13 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
         kind_data[f"transition_quadrupole_moments_{g_origin}"] = (
             states.transition_quadrupole_moment(g_origin)[:n_states]
         )
-    # state diffdm and ground to excited state tdm
+    # state_diffdm and ground to excited state tdm
     kind_data["state_diffdm_bb_a"] = np.asarray(dm_bb_a)
     kind_data["state_diffdm_bb_b"] = np.asarray(dm_bb_b)
     kind_data["ground_to_excited_tdm_bb_a"] = np.asarray(tdm_bb_a)
     kind_data["ground_to_excited_tdm_bb_b"] = np.asarray(tdm_bb_b)
-    # dump the eigenvectors
+
+    # Eigenvectors
     kind_data["eigenvectors_singles"] = np.asarray(eigenvectors[1])
     if 2 in eigenvectors:
         kind_data["eigenvectors_doubles"] = np.asarray(eigenvectors[2])
@@ -159,7 +179,9 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
     # state to state tdm: not implemented for CVS
     if not states.method.is_core_valence_separated:
         for ifrom in range(n_states - 1):
-            state2state = State2States(states, initial=ifrom)
+            state2state = State2States(states,
+                                       property_method=states._property_method,
+                                       initial=ifrom)
             # extract the tdms for the desired states
             tdm_bb_a = []
             tdm_bb_b = []
@@ -169,6 +191,7 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
                 bb_a, bb_b = tdm.to_ao_basis(states.reference_state)
                 tdm_bb_a.append(bb_a.to_ndarray())
                 tdm_bb_b.append(bb_b.to_ndarray())
+
             kind_data[f"state_to_state/from_{ifrom}/transition_dipole_moments"] = (
                 state2state.transition_dipole_moment[:n_states - ifrom - 1]
             )
@@ -178,12 +201,15 @@ def dump_excited_states(states: ExcitedStates, hdf5_file: h5py.Group,
             kind_data[f"state_to_state/from_{ifrom}/state_to_excited_tdm_bb_b"] = (
                 np.asarray(tdm_bb_b)
             )
+
     # ssq for unrestriced calculation
     if (
         not states.reference_state.restricted
         and not states.ground_state.has_core_occupied_space
+        and states._property_method.level.to_int() <= 2
     ):
         kind_data["state_ssq"] = states.state_ssq
+
     # write the data to hdf5
     emplace_dict(kind_data, hdf5_file, compression="gzip")
     hdf5_file.attrs["adcc_version"] = adcc.__version__

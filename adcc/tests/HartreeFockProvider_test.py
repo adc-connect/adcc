@@ -35,7 +35,7 @@ class TestHartreeFockProvider(unittest.TestCase):
         hf = DataHfProvider(testdata_cache._load_hfdata(system))
         refdata = testdata_cache.adcman_data(
             system, method="adc2", case="gen"
-        )["singlet"]
+        )["None"]["singlet"]
 
         res = adcc.adc2(hf, n_singlets=9, **args)
         assert isinstance(res, ExcitedStates)
@@ -46,7 +46,7 @@ class TestHartreeFockProvider(unittest.TestCase):
 
         refdata = testdata_cache.adcc_data(
             system, method="adc2", case="gen"
-        )["singlet"]
+        )["None"]["singlet"]
         ref = refdata["eigenvalues"]
         assert res.excitation_energy[:len(ref)] == approx(ref)
 

@@ -52,7 +52,8 @@ class ElectronicStates:
         property_method : str, optional
             Provide an explicit method for property calculations to
             override the automatic selection.
-    """
+
+        """
         self.matrix: AdcMatrix = data.matrix
         self.ground_state: LazyMp = self.matrix.ground_state
         self.reference_state: ReferenceState = (
@@ -82,6 +83,8 @@ class ElectronicStates:
         if not isinstance(self.method, AdcMethod):
             self.method: AdcMethod = AdcMethod(self.method)
 
+        if property_method is None and hasattr(data, '_property_method'):
+            property_method = data._property_method
         if property_method is None:
             if self.method.level in [MethodLevel.TWO_X, MethodLevel.THREE,
                                      MethodLevel.FOUR]:
@@ -91,6 +94,7 @@ class ElectronicStates:
                 property_method = self.method.at_level(2).as_method(IsrMethod)
             else:
                 property_method = self.method.as_method(IsrMethod)
+
         elif not isinstance(property_method, IsrMethod):
             property_method = IsrMethod(property_method)
         self._property_method: IsrMethod = property_method

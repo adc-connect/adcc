@@ -132,8 +132,7 @@ class TestLazyMp:
         )
 
     # MP3 energy not implemented for CVS
-    @pytest.mark.parametrize("system,case", [(s, c) for s, c in cases
-                                             if "cvs" not in c])
+    @pytest.mark.parametrize("system,case", non_cvs_small_cases)
     @pytest.mark.parametrize("generator", generators)
     def test_mp3_energy(self, system: str, case: str, generator: str,
                         instances: LazyMpCache):
@@ -222,6 +221,17 @@ class TestLazyMp:
                         refmp["mp2"]["td_o1o1v1v1"], atol=1e-12)
         assert "td2/o1o1v1v1" in instances.get(system, case).timer.tasks
 
+    @pytest.mark.parametrize("system,case", non_cvs_small_cases)
+    @pytest.mark.parametrize("generator", generators)
+    def test_td3(self, system: str, case: str, generator: str,
+                 instances: LazyMpCache):
+        refmp = testdata_cache._load_data(
+            system=system, method="mp", case=case, source=generator
+        )
+        assert_allclose(instances.get(system, case).td3("o1o1v1v1").to_ndarray(),
+                        refmp["mp3"]["td_o1o1v1v1"], atol=1e-12)
+        assert "td3/o1o1v1v1" in instances.get(system, case).timer.tasks
+
     @pytest.mark.parametrize("system,case,generator", tt2_cases)
     def test_tt2(self, system: str, case: str, generator: str,
                  instances: LazyMpCache):
@@ -250,6 +260,31 @@ class TestLazyMp:
         sym = libadcc.make_symmetry_triples(mp.mospaces, "o1o1o1v1v1v1")
         reimport = libadcc.Tensor(sym)
         reimport.set_from_ndarray(tt2.to_ndarray(), 1e-14)
+
+    @pytest.mark.parametrize("system,case", non_cvs_small_cases)
+    def test_sigma_inf_ov(self, system: str, case: str, instances: LazyMpCache):
+        refmp = testdata_cache._load_data(
+            system=system, method="mp", case=case, source="adcc"
+        )
+        assert_allclose(instances.get(system, case).sigma_inf_ov(3).to_ndarray(),
+                        refmp["mp3"]["sigma_inf_ov"], atol=1e-12)
+        assert "sigma_inf_ov/3" in instances.get(system, case).timer.tasks
+
+    @pytest.mark.parametrize("system,case", non_cvs_small_cases)
+    def test_m_3_plus(self, system: str, case: str, instances: LazyMpCache):
+        refmp = testdata_cache._load_data(
+            system=system, method="mp", case=case, source="adcc"
+        )
+        assert_allclose(instances.get(system, case).m_3_plus.to_ndarray(),
+                        refmp["mp3"]["m_3_plus"], atol=1e-12)
+
+    @pytest.mark.parametrize("system, case", non_cvs_small_cases)
+    def test_m_3_minus(self, system: str, case: str, instances: LazyMpCache):
+        refmp = testdata_cache._load_data(
+            system=system, method="mp", case=case, source="adcc"
+        )
+        assert_allclose(instances.get(system, case).m_3_minus.to_ndarray(),
+                        refmp["mp3"]["m_3_minus"], atol=1e-12)
 
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)
@@ -314,7 +349,6 @@ class TestLazyMp:
         )
         assert_allclose(dm_α.to_ndarray(), refmp["mp2"]["dm_bb_a"], atol=1e-12)
         assert_allclose(dm_β.to_ndarray(), refmp["mp2"]["dm_bb_b"], atol=1e-12)
-
         # Also test the CVS-MP AO densities (with the CVS approximation)
         # but this data is not available from adcman!
         if generator == "adcman":
@@ -328,6 +362,40 @@ class TestLazyMp:
         dm_α, dm_β = mp2diff.to_ao_basis(reference_state)
         assert_allclose(dm_α.to_ndarray(), refmp["cvs-mp2"]["dm_bb_a"], atol=1e-12)
         assert_allclose(dm_β.to_ndarray(), refmp["cvs-mp2"]["dm_bb_b"], atol=1e-12)
+
+    @pytest.mark.parametrize("system,case", non_cvs_small_cases)
+    @pytest.mark.parametrize("generator", generators)
+    def test_mp3_diffdm_mo(self, system: str, case: str, generator: str,
+                           instances: LazyMpCache):
+        refmp = testdata_cache._load_data(
+            system=system, method="mp", case=case, source=generator
+        )
+        mp3diff = instances.get(system, case).diffdm(3)
+
+        assert mp3diff.symmetry is OperatorSymmetry.HERMITIAN
+
+        blocks = ["o1o1", "o1v1", "v1v1"]
+        for label in blocks:
+
+            assert_allclose(mp3diff[label].to_ndarray(),
+                            refmp["mp3"]["dm_" + label], atol=1e-12)
+            assert "third_order_dm_correction/False" in (
+                instances.get(system, case).timer.tasks)
+
+    @pytest.mark.parametrize("system,case", non_cvs_small_cases)
+    @pytest.mark.parametrize("generator", generators)
+    def test_mp3_diffdm_ao(self, system: str, case: str, generator: str,
+                           instances: LazyMpCache):
+
+        refmp = testdata_cache._load_data(
+            system=system, method="mp", case=case, source=generator
+        )
+        mp3diff = instances.get(system, case).diffdm(3)
+        reference_state = instances.get(system, case).reference_state
+
+        dm_α, dm_β = mp3diff.to_ao_basis(reference_state)
+        assert_allclose(dm_α.to_ndarray(), refmp["mp3"]["dm_bb_a"], atol=1e-12)
+        assert_allclose(dm_β.to_ndarray(), refmp["mp3"]["dm_bb_b"], atol=1e-12)
 
     @pytest.mark.parametrize("system,case", non_cvs_small_cases)
     @pytest.mark.parametrize("level", [1, 2])
@@ -392,7 +460,6 @@ class TestGroundstateDensity:
     def calculate_mpn_energy(self, mp, level):
         hf = mp.reference_state
         dens_1p = mp.density(level)
-
         energy = einsum("pq,pq", hf.foo, dens_1p.oo)
         energy += einsum("pq,pq", hf.fvv, dens_1p.vv)
 

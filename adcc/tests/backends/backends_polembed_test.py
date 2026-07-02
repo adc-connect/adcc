@@ -59,7 +59,7 @@ class TestPolarizableEmbedding:
             pytest.skip("ADC(4) reference only available for small testcases.")
         refdata = testdata_cache.adcman_data(
             system=system, method=method, case="gen"
-        )["singlet"]
+        )["None"]["singlet"]
 
         assert test_case.pe_potfile is not None
         pe_options = {"potfile": test_case.pe_potfile}

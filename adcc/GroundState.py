@@ -91,6 +91,13 @@ class GroundState:
             f"{self.__class__.__name__} class."
         )
 
+    def td3(self, space: str) -> libadcc.Tensor:
+        """Third-order ground state doubles amplitudes"""
+        raise NotImplementedError(
+            "Third-order ground state doubles amplitudes not implemented on "
+            f"{self.__class__.__name__} class. "
+        )
+
     def tt2(self, space: str) -> libadcc.Tensor:
         """Second-order ground state triples amplitudes"""
         raise NotImplementedError(
@@ -241,11 +248,20 @@ class GroundState:
         return einsum(contraction_str, self.t2oo, hf.eri(eri_block))
 
     @cached_property
+    def t2sq(self) -> libadcc.Tensor:
+        """
+        Return the t2^2 intermediate.
+        """
+        return einsum("ikac, jkbc->iajb", self.t2oo, self.t2oo).evaluate()
+
+    @cached_property
     def m_3_plus(self) -> libadcc.Tensor:
         """
         Third order contribution to the ov block of the N+1 part of the
         dynamic self-energy.
         """
+        if self.has_core_occupied_space:
+            raise NotImplementedError("m_3_plus not implemented for CVS.")
         return (
             + 1 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.ov))
             + 0.5 * einsum(
@@ -260,6 +276,8 @@ class GroundState:
         Third order contribution to the ov block of the N-1 part of the
         dynamic self-energy.
         """
+        if self.has_core_occupied_space:
+            raise NotImplementedError("m_3_minus not implemented for CVS.")
         return (
             + 0.5 * einsum(
                 "jkab,jkib->ia", self.td2(b.oovv), self.reference_state.ooov
@@ -271,6 +289,8 @@ class GroundState:
     @cached_member_function()
     def sigma_inf_ov(self, level: int) -> libadcc.Tensor:
         """The ov part of the static self-energy."""
+        if self.has_core_occupied_space:
+            raise NotImplementedError("sigma_inf_ov not implemented for CVS.")
         hf = self.reference_state
         dm = self.diffdm(level - 1)
 
