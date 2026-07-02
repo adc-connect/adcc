@@ -43,6 +43,7 @@ methods = [
 test_cases = testcases.get_by_filename(
     "h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz"
 )
+large_cases = ("h2o_def2tzvp", "cn_ccpvdz")
 cases = [(case.file_name, c, kind)
          for case in test_cases for c in ["gen", "cvs"]
          for kind in ["singlet", "any"] if kind in case.kinds.pp]
@@ -56,6 +57,8 @@ operator_kinds = ["electric", "magnetic"]
 def test_modified_transition_moments(system: str, case: str, adc_method: str,
                                      isr_order, kind: str, op_kind: str):
 
+    if adc_method == "adc4" and system in large_cases:
+        pytest.skip("ADC(4) reference data not available for large cases.")
     if "cvs" in case and adc_method in ("adc3", "adc4"):
         pytest.skip("CVS-ADC(3)/ADC(4) mtm not implemented yet")
     state = testdata_cache.adcc_states(

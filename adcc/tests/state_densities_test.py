@@ -144,14 +144,14 @@ class TestStateDensities:
     def test_state_to_state_tdm(self, system: str, case: str, kind: str,
                                 adc_method: str, isr_order, generator: str):
 
+        if adc_method == "adc4" and system in large_cases:
+            pytest.skip("ADC(4) reference data not available for large cases.")
         refdata = testdata_cache._load_data(
             system=system, method=adc_method, case=case, source=generator
         )[str(isr_order)][kind]
         if len(refdata["eigenvalues"]) < 2:
             pytest.skip("Less than two states available.")
         s2s_data = refdata["state_to_state"]
-        if adc_method == "adc4" and system in large_cases:
-            pytest.skip("ADC(4) reference data not available for large cases.")
         # construct a ExcitedStates instance using the eigenvalues and eigenstates
         # from the reference data.
         state: ExcitedStates = getattr(testdata_cache, f"{generator}_states")(
