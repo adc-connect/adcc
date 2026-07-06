@@ -91,7 +91,7 @@ class ElectronicStates:
                 # Auto-select ISR(2) properties for ADC(2)-x and ADC(3) calc
                 warnings.warn(f"ISR({self.method.level.to_str()}) not implemented."
                               f" Property method is selected as ISR(2).")
-                property_method = self.method.at_level(2).as_method(IsrMethod)
+                property_method = self.method.as_method_at_level(IsrMethod, 2)
             else:
                 property_method = self.method.as_method(IsrMethod)
 

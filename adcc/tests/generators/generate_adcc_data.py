@@ -21,6 +21,10 @@ _methods = {
     "pp": ("adc0", "adc1", "adc2", "adc2x", "adc3")
 }
 _isr_orders = {
+    MethodLevel.ZERO: (None,),
+    MethodLevel.ONE: (None,),
+    MethodLevel.TWO: (None,),
+    MethodLevel.TWO_X: (None,),
     MethodLevel.THREE: (None, 3),
     MethodLevel.FOUR: (None, "3d"),
 }
@@ -157,7 +161,7 @@ def generate_h2o_sto3g():
             generate_adc_all(
                 test_case, method=method, dump_nstates=2, states_per_case=per_case,
                 **n_states, **kwargs)
-            for isr_order in _isr_orders.get(method.level, (None,)):
+            for isr_order in _isr_orders[method.level]:
                 generate_adc_all(test_case, method=method, dump_nstates=2,
                                  states_per_case=per_case, isr_order=isr_order,
                                  **n_states, **kwargs)
@@ -177,7 +181,7 @@ def generate_h2o_def2tzvp():
             generate_adc_all(
                 test_case, method=method, dump_nstates=2, states_per_case=None,
                 **n_states)
-            for isr_order in _isr_orders.get(method.level, (None,)):
+            for isr_order in _isr_orders[method.level]:
                 generate_adc_all(test_case, method=method, dump_nstates=2,
                                  states_per_case=None, isr_order=isr_order,
                                  **n_states)
@@ -195,7 +199,7 @@ def generate_cn_sto3g():
             generate_adc_all(
                 test_case=test_case, method=method, dump_nstates=2,
                 states_per_case=None, **kwargs)
-            for isr_order in _isr_orders.get(method.level, (None,)):
+            for isr_order in _isr_orders[method.level]:
                 generate_adc_all(test_case, method=method, dump_nstates=2,
                                  states_per_case=None, isr_order=isr_order,
                                  **kwargs)
@@ -213,7 +217,7 @@ def generate_cn_ccpvdz():
             generate_adc_all(
                 test_case, method=method, dump_nstates=2, states_per_case=None,
                 **n_states)
-            for isr_order in _isr_orders.get(method.level, (None,)):
+            for isr_order in _isr_orders[method.level]:
                 generate_adc_all(test_case, method=method, dump_nstates=2,
                                  states_per_case=None, isr_order=isr_order,
                                  **n_states)
@@ -231,7 +235,7 @@ def generate_hf_631g():
             generate_adc_all(
                 test_case, method=method, dump_nstates=2, states_per_case=None,
                 **n_states)
-            for isr_order in _isr_orders.get(method.level, (None,)):
+            for isr_order in _isr_orders[method.level]:
                 generate_adc_all(test_case, method=method, dump_nstates=2,
                                  states_per_case=None, isr_order=isr_order,
                                  **n_states)

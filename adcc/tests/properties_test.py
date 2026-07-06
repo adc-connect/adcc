@@ -27,7 +27,7 @@ from numpy.testing import assert_allclose
 from adcc.State2States import State2States
 from adcc.backends import run_hf
 from adcc.misc import assert_allclose_signfix
-from adcc import run_adc, AdcMethod
+from adcc import run_adc, AdcMethod, MethodLevel
 
 from .testdata_cache import testdata_cache
 from . import testcases
@@ -68,7 +68,7 @@ class TestProperties:
 
         if (
             "cvs" in case
-            and AdcMethod(adc_method).level == 0
+            and AdcMethod(adc_method).level is MethodLevel.ZERO
             and generator == "adcman"
         ):
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
@@ -105,7 +105,7 @@ class TestProperties:
 
         if (
             "cvs" in case
-            and AdcMethod(adc_method).level == 0
+            and AdcMethod(adc_method).level is MethodLevel.ZERO
             and generator == "adcman"
         ):
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
@@ -140,7 +140,7 @@ class TestProperties:
 
         if (
             "cvs" in case
-            and AdcMethod(adc_method).level == 0
+            and AdcMethod(adc_method).level is MethodLevel.ZERO
             and generator == "adcman"
         ):
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
@@ -165,9 +165,6 @@ class TestProperties:
         state = testdata_cache._make_mock_adc_state(
             system=system, method=adc_method, case=case, kind=kind, source="adcc"
         )
-        if "state_ssq" not in refdata:
-            pytest.skip("state_ssq not available for this method yet")
-
         res_dms = state.state_ssq
         n_ref = len(state.excitation_vector)
         assert_allclose(res_dms, refdata["state_ssq"][:n_ref], atol=1e-6)

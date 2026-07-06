@@ -115,12 +115,11 @@ def tdm_isr3(ground_state, amplitude, intermediates):
     t3_2 = ground_state.tt2(b.ooovvv)
     t2_3 = ground_state.td3(b.oovv)
 
-    p0_3_ov = ground_state.third_order_dm_correction().ov
-    p0_3_oo = ground_state.third_order_dm_correction().oo
-    p0_3_vv = ground_state.third_order_dm_correction().vv
+    p0_2 = ground_state.second_order_dm_correction()
+    p0_2_vv, p0_2_oo = p0_2.vv, p0_2.oo
 
-    p0_2_oo = ground_state.second_order_dm_correction().oo
-    p0_2_vv = ground_state.second_order_dm_correction().vv
+    p0_3 = ground_state.third_order_dm_correction()
+    p0_3_vv, p0_3_ov, p0_3_oo = p0_3.vv, p0_3.ov, p0_3.oo
 
     # Compute ISR(3d) tdm
     dm.oo += (

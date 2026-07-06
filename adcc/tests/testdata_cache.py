@@ -226,7 +226,7 @@ class TestdataCache:
         adc_data = isr_data.get(kind, None)
         if adc_data is None:
             raise ValueError(
-                f"No data available for kind {kind} in case "
+                f"No data available for isr_order {isr_order} in case "
                 f"{method} {system}"
             )
         if "cvs" in case and "cvs" not in method:
@@ -245,9 +245,8 @@ class TestdataCache:
         states.eigenvalues = adc_data["eigenvalues"]
 
         if isr_order is not None:
-            states._property_method = IsrMethod(
-                f"{'cvs-' if 'cvs' in method else ''}isr{isr_order}"
-            )
+            states._property_method = method.as_method_at_level(IsrMethod,
+                                                                isr_order)
 
         if refstate.restricted and kind == "singlet":
             symm = "symmetric"
