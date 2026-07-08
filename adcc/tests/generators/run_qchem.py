@@ -506,9 +506,9 @@ _method_dict: dict[str, str] = {
     "cvs-adc3": "cvs-adc(3)"
 }
 
-_isr_order_dict: dict[int | int, str] = {
-    MethodLevel.THREE: "3",
-    MethodLevel.THREE_D: "3d",
+_isr_order_dict: dict[int | str, str] = {
+        3 : "3",
+        "3d": "3d",
 }
 
 _gs_density_order_dict: dict[str, str] = {
