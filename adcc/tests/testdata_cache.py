@@ -7,7 +7,7 @@ from adcc.misc import cached_member_function
 from adcc.ReferenceState import ReferenceState
 from adcc.solver import EigenSolverStateBase
 from adcc import hdf5io, guess_zero
-from adcc.AdcMethod import IsrMethod
+from adcc.AdcMethod import IsrMethod, AdcMethod
 
 from pathlib import Path
 from typing import Optional, Union
@@ -245,7 +245,7 @@ class TestdataCache:
         states.eigenvalues = adc_data["eigenvalues"]
 
         if isr_order is not None:
-            states._property_method = method.as_method_at_level(IsrMethod,
+            states._property_method = AdcMethod(method).as_method_at_level(IsrMethod,
                                                                 isr_order)
 
         if refstate.restricted and kind == "singlet":
