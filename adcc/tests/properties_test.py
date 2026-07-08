@@ -28,7 +28,7 @@ from adcc.State2States import State2States
 from adcc.backends import run_hf
 from adcc.misc import assert_allclose_signfix
 from adcc import run_adc, AdcMethod
-from adcc.AdcMethod import  MethodLevel
+from adcc.AdcMethod import MethodLevel
 from .testdata_cache import testdata_cache
 from . import testcases
 

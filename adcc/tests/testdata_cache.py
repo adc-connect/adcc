@@ -245,8 +245,8 @@ class TestdataCache:
         states.eigenvalues = adc_data["eigenvalues"]
 
         if isr_order is not None:
-            states._property_method = AdcMethod(method).as_method_at_level(IsrMethod,
-                                                                isr_order)
+            states._property_method = AdcMethod(method).as_method_at_level(
+                IsrMethod, isr_order)
 
         if refstate.restricted and kind == "singlet":
             symm = "symmetric"

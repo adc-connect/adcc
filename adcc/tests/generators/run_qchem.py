@@ -507,8 +507,8 @@ _method_dict: dict[str, str] = {
 }
 
 _isr_order_dict: dict[int | str, str] = {
-        3 : "3",
-        "3d": "3d",
+    3: "3",
+    "3d": "THREE_D"
 }
 
 _gs_density_order_dict: dict[str, str] = {
