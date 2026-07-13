@@ -100,6 +100,8 @@ class TensorImpl : public Tensor {
         size_t n, bool unique_by_symmetry) const override;
 
   void export_to(scalar_type* memptr, size_t size) const override;
+  void export_block(const std::vector<size_t>& start, const std::vector<size_t>& end,
+                    scalar_type* memptr, size_t size) const override;
   void import_from(const scalar_type* memptr, size_t size, scalar_type tolerance,
                    bool symmetry_check) override;
   virtual void import_from(

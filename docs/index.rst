@@ -90,6 +90,7 @@ Contents
    installation
    calculations
    theory
+   gradients
    benchmarks
    topics
 

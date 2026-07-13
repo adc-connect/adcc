@@ -95,6 +95,21 @@ class Excitation(StateView):
         )
 
     @property
+    def ground_state(self):
+        """The ground state (LazyMp) of the parent ElectronicStates"""
+        return self._parent_state.ground_state
+
+    @property
+    def reference_state(self):
+        """The HF reference state of the parent ElectronicStates"""
+        return self._parent_state.reference_state
+
+    @property
+    def method(self):
+        """The ADC method of the parent ElectronicStates"""
+        return self._parent_state.method
+
+    @property
     def oscillator_strength(self) -> np.float64:
         """The oscillator strength"""
         return self._parent_state._oscillator_strength(self.index)

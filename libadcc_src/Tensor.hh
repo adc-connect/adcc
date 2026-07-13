@@ -322,6 +322,31 @@ class Tensor {
     export_to(output.data(), output.size());
   }
 
+  /** Extract a dense sub-block of the tensor into plain memory.
+   *
+   *  The sub-block is described by a half-open per-axis range
+   *  ``[start[i], end[i])``. This allows extracting e.g. a single spin
+   *  sub-block (such as the alpha-beta-alpha-beta block of a 4-index tensor)
+   *  without materialising the full dense tensor via ``export_to``.
+   *
+   *  The full tensor symmetry is respected: requested elements that map onto a
+   *  non-canonical or zero block are filled with the symmetry-implied value
+   *  (including sign/scalar transformations), exactly as ``get_element`` would
+   *  return them.
+   *
+   *  \param start    Per-axis start index (inclusive), one entry per dimension.
+   *  \param end      Per-axis end index (exclusive), one entry per dimension.
+   *  \param memptr   Dense memory location to fill. At least
+   *                  ``prod(end[i] - start[i])`` elements are assumed.
+   *  \param size     Size of the dense memory provided.
+   *
+   *  \note The data is stored in row-major (C-like) format with respect to the
+   *        requested sub-block extents ``end[i] - start[i]``.
+   */
+  virtual void export_block(const std::vector<size_t>& start,
+                            const std::vector<size_t>& end, scalar_type* memptr,
+                            size_t size) const = 0;
+
   /** Import the tensor from plain memory provided by the given
    *  pointer. The memory will be copied and all existing data overwritten.
    *  If symmetry_check is true, the process will check that the data has the
