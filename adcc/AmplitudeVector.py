@@ -171,10 +171,10 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
         # tensor operations in the backend are curently not really in-place
         # erase all blocks that are missing in other and update the common blocks
         if isinstance(other, AmplitudeVector):
-            for block, tensor in self.items():
-                if block in other:
-                    self[block] = tensor.__mul__(other[block])
-                else:
+            for block in self.keys() | other.keys():
+                if block in self and block in other:
+                    self[block] = self[block].__mul__(other[block])
+                elif block in self:
                     del self[block]
         elif isinstance(other, libadcc.Tensor):
             for block, tensor in self.items():
@@ -309,8 +309,6 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
                         f"zero blocks. Self contains {self.blocks}. Other contains "
                         f"{other.blocks}."
                     )
-                else:  # 0 / x
-                    del self[block]
         elif isinstance(other, libadcc.Tensor):
             for block, tensor in self.items():
                 self[block] = tensor.__truediv__(other)
