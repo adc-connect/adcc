@@ -20,7 +20,8 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from typing import Sequence, overload
+from collections.abc import Sequence
+from typing import overload
 import numpy as np
 
 import libadcc
@@ -105,7 +106,7 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
         ...
 
     def dot(
-        self, other: Sequence["AmplitudeVector"] | "AmplitudeVector"
+        self, other: "Sequence[AmplitudeVector] | AmplitudeVector"
     ) -> np.ndarray[tuple[int], np.dtype[np.float64]] | float:
         """
         Return the dot product with another AmplitudeVector
@@ -123,7 +124,8 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
                     ret[idx] += tensor.dot([other[i][block] for i in idx])
             return ret
         return sum(
-            self[b].dot(other[b]) for b in sorted(self.keys() & other.keys())
+            (self[b].dot(other[b]) for b in sorted(self.keys() & other.keys())),
+            0.0  # so we always return a float even when the intersection is empty
         )
 
     @overload
@@ -137,7 +139,7 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
         ...
 
     def __matmul__(
-        self, other: Sequence["AmplitudeVector"] | "AmplitudeVector"
+        self, other: "Sequence[AmplitudeVector] | AmplitudeVector"
     ) -> np.ndarray[tuple[int], np.dtype[np.float64]] | float:
         if isinstance(other, AmplitudeVector):
             return self.dot(other)
@@ -293,8 +295,8 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
                     f"{other.blocks}."
                 )
             ret = {
-                block: self[block].__truediv__(other[block])
-                for block in self.keys() & other.keys()
+                block: tensor.__truediv__(other[block])
+                for block, tensor in self.items()
             }
         else:
             ret = {block: self[block].__truediv__(other) for block in self.keys()}
@@ -324,4 +326,7 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
         return self
 
     def __repr__(self):
-        return "AmplitudeVector(" + "=..., ".join(self.blocks) + "=...)"
+        if self:
+            return f"AmplitudeVector({'=..., '.join(self.blocks)}=...)"
+        else:  # empty vector
+            return "AmplitudeVector()"
