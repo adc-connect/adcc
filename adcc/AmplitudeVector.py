@@ -114,10 +114,17 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
         Only blocks common to self and other are considered for the dot product.
         """
         if isinstance(other, Sequence):
-            return np.fromiter(
-                (self.dot(ten) for ten in other), dtype=np.float64, count=len(other)
-            )
-        return sum(self[b].dot(other[b]) for b in self.keys() & other.keys())
+            ret = np.zeros(len(other))
+            for block, tensor in self.items():
+                idx = [i for i, vec in enumerate(other) if block in vec]
+                if idx:
+                    # use "fast path" that computes the overlap with
+                    # multiple tensors at once in the backend
+                    ret[idx] += tensor.dot([other[i][block] for i in idx])
+            return ret
+        return sum(
+            self[b].dot(other[b]) for b in sorted(self.keys() & other.keys())
+        )
 
     @overload
     def __matmul__(self, other: "AmplitudeVector") -> float:
@@ -168,7 +175,7 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
     def __imul__(
         self, other: "AmplitudeVector | libadcc.Tensor | float"
     ) -> "AmplitudeVector":
-        # tensor operations in the backend are curently not really in-place
+        # tensor operations in the backend are currently not really in-place
         # erase all blocks that are missing in other and update the common blocks
         if isinstance(other, AmplitudeVector):
             for block in self.keys() | other.keys():
@@ -300,15 +307,14 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
         # missing block in other: x / 0 -> division by zero
         # missing block in self: 0 / x = 0 -> fine but not in result
         if isinstance(other, AmplitudeVector):
-            for block in self.keys() | other.keys():
-                if block in self and block in other:
-                    self[block] = self[block].__truediv__(other[block])
-                elif block in self:  # x / 0
-                    raise ZeroDivisionError(
-                        "Divisian by zero, since missing blocks are treated as "
-                        f"zero blocks. Self contains {self.blocks}. Other contains "
-                        f"{other.blocks}."
-                    )
+            if any(block not in other for block in self.keys()):
+                raise ZeroDivisionError(
+                    "Divisian by zero, since missing blocks are treated as "
+                    f"zero blocks. Self contains {self.blocks}. Other contains "
+                    f"{other.blocks}."
+                )
+            for block, tensor in self.items():
+                self[block] = tensor.__truediv__(other[block])
         elif isinstance(other, libadcc.Tensor):
             for block, tensor in self.items():
                 self[block] = tensor.__truediv__(other)
