@@ -413,7 +413,7 @@ void export_HartreeFockProvider(py::module& m) {
         .def_property_readonly("conv_tol", &HartreeFockSolution_i::conv_tol)
         .def_property_readonly("restricted", &HartreeFockSolution_i::restricted)
         .def_property_readonly("energy_scf", &HartreeFockSolution_i::energy_scf)
-        .def_property_readonly("energy_scf",
+        .def_property_readonly("nuclear_repulsion_energy",
                                &HartreeFockSolution_i::nuclear_repulsion_energy)
         .def_property_readonly("spin_multiplicity",
                                &HartreeFockSolution_i::spin_multiplicity)
