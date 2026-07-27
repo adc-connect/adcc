@@ -276,7 +276,7 @@ class LazyMp(GroundState):
         assert level >= 0
         if level == 0:
             # Sum of orbital energies ...
-            return np.einsum(
+            return self.reference_state.nuclear_repulsion_energy + np.einsum(
                 "i->", self.reference_state.foo.diagonal().to_ndarray()
             )
 

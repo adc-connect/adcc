@@ -488,23 +488,13 @@ class TestGroundstateDensity:
         return energy
 
     def test_mpn_energy(self, system: str, level: int):
-        system: testcases.TestCase = testcases.get_by_filename(system).pop()
-        # we need to run the scf calculation since we don't store the nuclear energy
-        scfres = run_hf("pyscf", system.xyz,
-                        system.basis, multiplicity=system.multiplicity)
-        hf = ReferenceState(scfres)
+        hf = testdata_cache.refstate(system, case="gen")
         mp = LazyMp(hf)
 
-        if level == 0:
-            ref = (
-                + 1.0 * scfres.energy_nuc()
-                + sum(hf.foo.diagonal().to_ndarray())
-            )
-        else:
-            ref = mp.energy(level=level)
+        ref = mp.energy(level=level)
 
         energy = (
-            + 1.0 * scfres.energy_nuc()
+            hf.nuclear_repulsion_energy
             + self.calculate_mpn_energy(mp, level=level)
         )
         assert energy == pytest.approx(ref)
