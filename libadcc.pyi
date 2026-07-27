@@ -125,6 +125,10 @@ class HartreeFockProvider(HartreeFockSolution_i):
         """
         Returns the nuclear multipole of the requested order. For `0` returns the total nuclear charge as an array of size 1, for `1` returns the nuclear dipole moment as an array of size 3.
         """
+    def get_nuclear_repulsion_energy(self) -> float:
+        """
+        Returns the nuclear repulsion energy.
+        """
     def get_restricted(self) -> bool:
         """
         Return *True* for a restricted SCF calculation, *False* otherwise.
@@ -520,6 +524,11 @@ class ReferenceState:
         """
     @property
     def nuclear_dipole(self) -> numpy.ndarray[numpy.float64]: ...
+    @property
+    def nuclear_repulsion_energy(self) -> float:
+        """
+        The nuclear repulsion energy
+        """
     @property
     def nuclear_total_charge(self) -> float: ...
     @property

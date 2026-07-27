@@ -105,6 +105,11 @@ class ReferenceState {
   /** Final total SCF energy */
   double energy_scf() const { return m_hfsoln_ptr->energy_scf(); }
 
+  /** Nuclear repulsion energy */
+  double nuclear_repulsion_energy() const {
+    return m_hfsoln_ptr->nuclear_repulsion_energy();
+  }
+
   /** String identifying the backend used for the computation */
   std::string backend() const { return m_hfsoln_ptr->backend(); }
 

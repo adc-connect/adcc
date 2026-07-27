@@ -43,6 +43,9 @@ class HartreeFockProvider : public HartreeFockSolution_i {
   bool restricted() const override { return get_restricted(); }
   size_t spin_multiplicity() const override { return get_spin_multiplicity(); }
   real_type energy_scf() const override { return get_energy_scf(); }
+  real_type nuclear_repulsion_energy() const override {
+    return get_nuclear_repulsion_energy();
+  }
 
   //
   // Translate C++-like interface to python-like interface
@@ -262,6 +265,7 @@ class HartreeFockProvider : public HartreeFockSolution_i {
   virtual bool get_restricted() const                                               = 0;
   virtual size_t get_spin_multiplicity() const                                      = 0;
   virtual real_type get_energy_scf() const                                          = 0;
+  virtual real_type get_nuclear_repulsion_energy() const                            = 0;
   virtual std::string get_backend() const                                           = 0;
 
   virtual void fill_occupation_f(py::array out) const                         = 0;
@@ -305,6 +309,10 @@ class PyHartreeFockProvider : public HartreeFockProvider {
   }
   real_type get_energy_scf() const override {
     PYBIND11_OVERLOAD_PURE(real_type, HartreeFockProvider, get_energy_scf, );
+  }
+  real_type get_nuclear_repulsion_energy() const override {
+    PYBIND11_OVERLOAD_PURE(real_type, HartreeFockProvider,
+                           get_nuclear_repulsion_energy, );
   }
   void fill_occupation_f(py::array out) const override {
     PYBIND11_OVERLOAD_PURE(void, HartreeFockProvider, fill_occupation_f, out);
@@ -405,6 +413,8 @@ void export_HartreeFockProvider(py::module& m) {
         .def_property_readonly("conv_tol", &HartreeFockSolution_i::conv_tol)
         .def_property_readonly("restricted", &HartreeFockSolution_i::restricted)
         .def_property_readonly("energy_scf", &HartreeFockSolution_i::energy_scf)
+        .def_property_readonly("energy_scf",
+                               &HartreeFockSolution_i::nuclear_repulsion_energy)
         .def_property_readonly("spin_multiplicity",
                                &HartreeFockSolution_i::spin_multiplicity)
         .def_property_readonly("n_orbs_alpha", &HartreeFockSolution_i::n_orbs_alpha)
@@ -437,6 +447,9 @@ void export_HartreeFockProvider(py::module& m) {
              "Return *True* for a restricted SCF calculation, *False* otherwise.")
         .def("get_energy_scf", &HartreeFockProvider::get_energy_scf,
              "Returns the final total SCF energy (sum of electronic and nuclear terms.")
+        .def("get_nuclear_repulsion_energy",
+             &HartreeFockProvider::get_nuclear_repulsion_energy,
+             "Returns the nuclear repulsion energy.")
         .def("get_spin_multiplicity", &HartreeFockProvider::get_spin_multiplicity,
              "Returns the spin multiplicity of the HF ground state. A value of 0* (for "
              "unknown) should be supplied for unrestricted calculations.")
