@@ -67,7 +67,7 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
         return self
 
     @property
-    def needs_evaluation(self) -> "bool":
+    def needs_evaluation(self) -> bool:
         return any(t.needs_evaluation for _, t in self.items())
 
     def ones_like(self) -> "AmplitudeVector":
@@ -290,7 +290,7 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
         if isinstance(other, AmplitudeVector):
             if any(block not in other for block in self.keys()):
                 raise ZeroDivisionError(
-                    "Divisian by zero, since missing blocks are treated as "
+                    "Division by zero, since missing blocks are treated as "
                     f"zero blocks. Self contains {self.blocks}. Other contains "
                     f"{other.blocks}."
                 )
@@ -311,7 +311,7 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
         if isinstance(other, AmplitudeVector):
             if any(block not in other for block in self.keys()):
                 raise ZeroDivisionError(
-                    "Divisian by zero, since missing blocks are treated as "
+                    "Division by zero, since missing blocks are treated as "
                     f"zero blocks. Self contains {self.blocks}. Other contains "
                     f"{other.blocks}."
                 )
