@@ -40,7 +40,7 @@ class TestDataHfProvdier(unittest.TestCase):
         bdict = dict()
         for key in ["restricted", "conv_tol", "occupation_f", "orbcoeff_fb",
                     "orben_f", "fock_ff", "eri_ffff", "energy_scf",
-                    "spin_multiplicity"]:
+                    "nuclear_repulsion_energy", "spin_multiplicity"]:
             bdict[key] = data[key]
 
         dmmp = data["multipoles"]
@@ -75,6 +75,8 @@ class TestDataHfProvdier(unittest.TestCase):
 
                 # Optional keys
                 h5f.create_dataset("energy_scf", data=data["energy_scf"])
+                h5f.create_dataset("nuclear_repulsion_energy",
+                                   data=data["nuclear_repulsion_energy"])
                 h5f.create_dataset("spin_multiplicity",
                                    data=data["spin_multiplicity"])
 

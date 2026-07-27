@@ -86,6 +86,11 @@ def compare_refstate_with_reference(system: str, case: str,
     assert refstate.n_beta == sum(data["occupation_f"][refstate.n_orbs_alpha:])
     assert refstate.conv_tol == atol  # because atol is set to be the SCF conv_tol
     assert_allclose(refstate.energy_scf, data["energy_scf"], atol=atol)
+    assert_allclose(
+        refstate.nuclear_repulsion_energy,
+        data["nuclear_repulsion_energy"],
+        atol=atol
+    )
     assert refstate.mospaces.subspaces == subspaces
 
     multipoles = data['multipoles']

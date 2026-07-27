@@ -58,6 +58,7 @@ struct HFSolutionMock : public HartreeFockSolution_i {
     throw not_implemented_error("Not implemented.");
   }
   real_type energy_scf() const override { return 0; }
+  real_type nuclear_repulsion_energy() const override { return 0; }
   void occupation_f(scalar_type* buffer, size_t size) const override {
     if (exposed_occupation.size() != size) {
       throw runtime_error(

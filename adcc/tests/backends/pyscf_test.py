@@ -45,6 +45,9 @@ class TestPyscf:
         hfdata = adcc.backends.import_scf_results(scfres)
         assert hfdata.backend == "pyscf"
 
+        assert hfdata.energy_scf == scfres.e_tot
+        assert hfdata.nuclear_repulsion_energy == scfres.energy_nuc()
+
         n_orbs_alpha = hfdata.n_orbs_alpha
         fock_bb = scfres.get_fock()
         if hfdata.restricted:

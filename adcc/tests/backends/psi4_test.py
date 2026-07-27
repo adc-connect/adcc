@@ -57,6 +57,8 @@ class TestPsi4:
                           == hfdata.orben_f[hfdata.n_orbs_alpha:])
 
         assert hfdata.energy_scf == wfn.energy()
+        assert (hfdata.nuclear_repulsion_energy ==
+                wfn.molecule().nuclear_repulsion_energy())
         assert hfdata.spin_multiplicity == wfn.molecule().multiplicity()
 
         # occupation_f
