@@ -168,6 +168,9 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
     ) -> "AmplitudeVector":
         if isinstance(other, AmplitudeVector):
             return other.__mul__(self)
+        # This path is not reachable currently, because the libadcc backend
+        # raises a TypeError instead of returning NotImplemented.
+        # Thus, the reflective operations are not called in this case.
         elif isinstance(other, libadcc.Tensor):
             ret = {block: other.__mul__(tensor) for block, tensor in self.items()}
         else:  # float
@@ -214,6 +217,9 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
     ) -> "AmplitudeVector":
         if isinstance(other, AmplitudeVector):
             return other.__add__(self)
+        # This path is not reachable currently, because the libadcc backend
+        # raises a TypeError instead of returning NotImplemented.
+        # Thus, the reflective operations are not called in this case.
         elif isinstance(other, libadcc.Tensor):
             ret = {block: other.__add__(tensor) for block, tensor in self.items()}
         else:  # float
@@ -258,6 +264,9 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
     ) -> "AmplitudeVector":
         if isinstance(other, AmplitudeVector):
             return other.__sub__(self)
+        # This path is not reachable currently, because the libadcc backend
+        # raises a TypeError instead of returning NotImplemented.
+        # Thus, the reflective operations are not called in this case.
         elif isinstance(other, libadcc.Tensor):
             ret = {block: other.__sub__(tensor) for block, tensor in self.items()}
         else:  # float
