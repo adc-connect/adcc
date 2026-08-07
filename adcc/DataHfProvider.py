@@ -139,7 +139,7 @@ class DataHfProvider(HartreeFockProvider):
         9. **energy_scf** (`float`): Final total SCF energy of both electronic
            and nuclear energy terms. (default: `0.0`)
         10. **nuclear_repulsion_energy** (`float`): The nuclear repulsion energy.
-           (default: `0.0`)
+            (default: `0.0`)
         11. **multipoles**: Container with electric and nuclear
             multipole moments. Can be another dictionary or simply an HDF5
             group.

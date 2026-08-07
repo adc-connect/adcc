@@ -26,10 +26,8 @@ from numpy.testing import assert_allclose
 from pytest import approx
 
 from adcc import block as b
-from adcc import LazyMp, ReferenceState
-from adcc import OperatorSymmetry
+from adcc import OperatorSymmetry, LazyMp
 from adcc.functions import einsum
-from adcc.backends import run_hf
 from adcc.MoSpaces import split_spaces
 
 from .testdata_cache import testdata_cache
