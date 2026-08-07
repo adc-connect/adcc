@@ -42,6 +42,7 @@ def dump_pyscf(scfres: scf.hf.SCF, hdf5_file: h5py.Group):
     hfprovider: PyScfHFProvider = import_scf(scfres)
 
     data["energy_scf"] = hfprovider.get_energy_scf()
+    data["nuclear_repulsion_energy"] = hfprovider.get_nuclear_repulsion_energy()
 
     # Determine the number of orbitals
     n_orbs = hfprovider.n_orbs

@@ -26,10 +26,8 @@ from numpy.testing import assert_allclose
 from pytest import approx
 
 from adcc import block as b
-from adcc import LazyMp, ReferenceState
-from adcc import OperatorSymmetry
+from adcc import OperatorSymmetry, LazyMp
 from adcc.functions import einsum
-from adcc.backends import run_hf
 from adcc.MoSpaces import split_spaces
 
 from .testdata_cache import testdata_cache
@@ -488,23 +486,13 @@ class TestGroundstateDensity:
         return energy
 
     def test_mpn_energy(self, system: str, level: int):
-        system: testcases.TestCase = testcases.get_by_filename(system).pop()
-        # we need to run the scf calculation since we don't store the nuclear energy
-        scfres = run_hf("pyscf", system.xyz,
-                        system.basis, multiplicity=system.multiplicity)
-        hf = ReferenceState(scfres)
+        hf = testdata_cache.refstate(system, case="gen")
         mp = LazyMp(hf)
 
-        if level == 0:
-            ref = (
-                + 1.0 * scfres.energy_nuc()
-                + sum(hf.foo.diagonal().to_ndarray())
-            )
-        else:
-            ref = mp.energy(level=level)
+        ref = mp.energy(level=level)
 
         energy = (
-            + 1.0 * scfres.energy_nuc()
+            hf.nuclear_repulsion_energy
             + self.calculate_mpn_energy(mp, level=level)
         )
         assert energy == pytest.approx(ref)

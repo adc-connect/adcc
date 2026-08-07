@@ -135,6 +135,9 @@ void export_ReferenceState(py::module& m) {
                                "SCF convergence tolererance")
         .def_property_readonly("energy_scf", &ReferenceState::energy_scf,
                                "Final total SCF energy")
+        .def_property_readonly("nuclear_repulsion_energy",
+                               &ReferenceState::nuclear_repulsion_energy,
+                               "The nuclear repulsion energy")
         //
         .def("orbital_energies", &ReferenceState::orbital_energies,
              "Return the orbital energies corresponding to the provided space")

@@ -148,6 +148,10 @@ class HartreeFockSolution_i {
    * This energy should contain the nuclear repulsion energy contribution.
    */
   virtual real_type energy_scf() const = 0;
+
+  /** Return the nuclear repulsion energy.
+   */
+  virtual real_type nuclear_repulsion_energy() const = 0;
   ///@}
 
   /** \name Access to quantities in an MO basis */

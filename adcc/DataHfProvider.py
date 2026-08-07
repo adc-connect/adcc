@@ -138,7 +138,9 @@ class DataHfProvider(HartreeFockProvider):
 
         9. **energy_scf** (`float`): Final total SCF energy of both electronic
            and nuclear energy terms. (default: `0.0`)
-        10. **multipoles**: Container with electric and nuclear
+        10. **nuclear_repulsion_energy** (`float`): The nuclear repulsion energy.
+            (default: `0.0`)
+        11. **multipoles**: Container with electric and nuclear
             multipole moments. Can be another dictionary or simply an HDF5
             group.
 
@@ -150,7 +152,7 @@ class DataHfProvider(HartreeFockProvider):
               - **nuc_1** (`array` size `(3, )`: Nuclear dipole moment
 
             The defaults for all entries are all-zero multipoles.
-        11. **spin_multiplicity** (`int`): The spin mulitplicity of the HF
+        12. **spin_multiplicity** (`int`): The spin mulitplicity of the HF
             ground state described by the data. A value of `0` (for unknown)
             should be supplied for unrestricted calculations.
             (default: 1 for restricted and 0 for unrestricted calculations)
@@ -283,6 +285,9 @@ class DataHfProvider(HartreeFockProvider):
 
     def get_energy_scf(self):
         return get_scalar_value(self.data, "energy_scf", 0.0)
+
+    def get_nuclear_repulsion_energy(self):
+        return get_scalar_value(self.data, "nuclear_repulsion_energy", 0.0)
 
     def get_nuclear_multipole(self, order: int, gauge_origin: str) -> np.ndarray:
         key = f"multipoles/nuclear_{order}"
