@@ -292,7 +292,7 @@ class PyScfHFProvider(HartreeFockProvider):
     def get_energy_scf(self):
         return float(self.scfres.e_tot)
 
-    def get_nuclear_repulsion_energy(self) -> float:
+    def get_nuclear_repulsion_energy(self):
         return float(self.scfres.energy_nuc())
 
     def get_spin_multiplicity(self):

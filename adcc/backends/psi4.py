@@ -241,7 +241,7 @@ class Psi4HFProvider(HartreeFockProvider):
     def get_energy_scf(self):
         return self.wfn.energy()
 
-    def get_nuclear_repulsion_energy(self) -> float:
+    def get_nuclear_repulsion_energy(self):
         return self.wfn.molecule().nuclear_repulsion_energy()
 
     def get_spin_multiplicity(self):

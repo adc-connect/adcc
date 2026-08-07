@@ -47,6 +47,7 @@ class TestPyscf:
 
         assert hfdata.energy_scf == scfres.e_tot
         assert hfdata.nuclear_repulsion_energy == scfres.energy_nuc()
+        assert hfdata.spin_multiplicity == int(scfres.mol.spin) + 1
 
         n_orbs_alpha = hfdata.n_orbs_alpha
         fock_bb = scfres.get_fock()
