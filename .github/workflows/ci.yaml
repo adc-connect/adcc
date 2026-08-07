@@ -165,7 +165,7 @@ jobs:
         # https://github.com/psi4/psi4/issues/3474
         # is fixed
         run: |
-          mamba install psi4 pyddx "libcx-c=7.0.0" -c conda-forge -c conda-forge/label/libint_dev
+          mamba install psi4 pyddx "libxc-c=7.0.0" -c conda-forge -c conda-forge/label/libint_dev
           psi4 --version
           python -c "import psi4"
       - name: Install system dependencies on macOS
