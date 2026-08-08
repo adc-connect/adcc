@@ -29,14 +29,17 @@ namespace py = pybind11;
 
 void export_Symmetry(py::module& m) {
 
-  py::class_<Symmetry, std::shared_ptr<Symmetry>>(
-        m, "Symmetry", "Container for Tensor symmetry information")
+  py::class_<Symmetry, std::shared_ptr<Symmetry>> symmetry(
+        m, "Symmetry", "Container for Tensor symmetry information");
+  symmetry
         .def(py::init<std::shared_ptr<const MoSpaces>, const std::string&>(),
+             py::arg("mospaces_ptr"), py::arg("space"),
              "Construct a Symmetry class from an MoSpaces object and the identifier for "
              "the space (e.g. o1o1, v1o1, o3v2o1v1, ...). Python binding to "
              ":cpp:class:`libadcc::Symmetry`.")
         .def(py::init<std::shared_ptr<const MoSpaces>, const std::string&,
                       std::map<std::string, std::pair<size_t, size_t>>>(),
+             py::arg("mospaces_ptr"), py::arg("space"), py::arg("extra_axes_orbs"),
              "Construct a Symmetry class from an MoSpaces object, a space string and a "
              "map to supply the number of orbitals for some additional axes.\nFor the "
              "additional axis the pair contains either two numbers (for the number of "
@@ -60,12 +63,15 @@ void export_Symmetry(py::module& m) {
         .def("describe", &Symmetry::describe, "Return a descriptive string.")
         //
         .def_property("irreps_allowed", &Symmetry::irreps_allowed,
-                      &Symmetry::set_irreps_allowed,
+                      py::cpp_function(&Symmetry::set_irreps_allowed,
+                                       py::is_method(symmetry), py::arg("irreps")),
                       "The list of irreducible representations, for which the tensor "
                       "shall be non-zero. If this is *not* set, i.e. an empty list, all "
                       "irreps will be allowed.")
         .def_property(
-              "permutations", &Symmetry::permutations, &Symmetry::set_permutations,
+              "permutations", &Symmetry::permutations,
+              py::cpp_function(&Symmetry::set_permutations, py::is_method(symmetry),
+                               py::arg("permutations")),
               "The list of index permutations, which do not change the tensor.\n"
               "A minus may be used to indicate anti-symmetric\n"
               "permutations with respect to the first (reference) permutation.\n"
@@ -76,13 +82,15 @@ void export_Symmetry(py::module& m) {
               "the symmetry. Beware that the check for errors and conflicts\n"
               "is only rudimentary at the moment.")
         .def_property("spin_block_maps", &Symmetry::spin_block_maps,
-                      &Symmetry::set_spin_block_maps,
+                      py::cpp_function(&Symmetry::set_spin_block_maps,
+                                       py::is_method(symmetry), py::arg("spin_maps")),
                       "A list of tuples of the form (\"aaaa\", \"bbbb\", -1.0), i.e.\n"
                       "two spin blocks followed by a factor. This maps the second onto "
                       "the first\n"
                       "with a factor of -1.0 between them.")
         .def_property("spin_blocks_forbidden", &Symmetry::spin_blocks_forbidden,
-                      &Symmetry::set_spin_blocks_forbidden,
+                      py::cpp_function(&Symmetry::set_spin_blocks_forbidden,
+                                       py::is_method(symmetry), py::arg("forbidden")),
                       "List of spin-blocks, which are marked forbidden (i.e. enforce "
                       "them to stay zero).\n"
                       "Blocks are given as a string in the letters 'a' and 'b', e.g. "

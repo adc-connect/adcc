@@ -595,13 +595,16 @@ class Symmetry:
     Container for Tensor symmetry information
     """
     @typing.overload
-    def __init__(self, arg0: MoSpaces, arg1: str) -> None:
+    def __init__(self, mospaces_ptr: MoSpaces, space: str) -> None:
         """
         Construct a Symmetry class from an MoSpaces object and the identifier for the space (e.g. o1o1, v1o1, o3v2o1v1, ...). Python binding to :cpp:class:`libadcc::Symmetry`.
         """
     @typing.overload
     def __init__(
-        self, arg0: MoSpaces, arg1: str, arg2: dict[str, tuple[int, int]]
+        self,
+        mospaces_ptr: MoSpaces,
+        space: str,
+        extra_axes_orbs: dict[str, tuple[int, int]],
     ) -> None:
         """
         Construct a Symmetry class from an MoSpaces object, a space string and a map to supply the number of orbitals for some additional axes.
@@ -628,7 +631,7 @@ class Symmetry:
         The list of irreducible representations, for which the tensor shall be non-zero. If this is *not* set, i.e. an empty list, all irreps will be allowed.
         """
     @irreps_allowed.setter
-    def irreps_allowed(self, arg1: list[str]) -> None: ...
+    def irreps_allowed(self, irreps: list[str]) -> None: ...
     @property
     def mospaces(self) -> MoSpaces:
         """
@@ -653,7 +656,7 @@ class Symmetry:
         is only rudimentary at the moment.
         """
     @permutations.setter
-    def permutations(self, arg1: list[str]) -> None: ...
+    def permutations(self, permutations: list[str]) -> None: ...
     @property
     def shape(self) -> tuple[int, ...]:
         """
@@ -672,7 +675,7 @@ class Symmetry:
         with a factor of -1.0 between them.
         """
     @spin_block_maps.setter
-    def spin_block_maps(self, arg1: list[tuple[str, str, float]]) -> None: ...
+    def spin_block_maps(self, spin_maps: list[tuple[str, str, float]]) -> None: ...
     @property
     def spin_blocks_forbidden(self) -> list[str]:
         """
@@ -680,7 +683,7 @@ class Symmetry:
         Blocks are given as a string in the letters 'a' and 'b', e.g. ["aaba", "abba"]
         """
     @spin_blocks_forbidden.setter
-    def spin_blocks_forbidden(self, arg1: list[str]) -> None: ...
+    def spin_blocks_forbidden(self, forbidden: list[str]) -> None: ...
 
 class Tensor:
     """
