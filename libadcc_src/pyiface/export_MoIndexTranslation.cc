@@ -21,10 +21,16 @@
 #include "util.hh"
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/typing.h>
 
 namespace libadcc {
 
 namespace py = pybind11;
+
+// Type definition used throughout the interface
+using IdxTuple   = py::typing::Tuple<size_t, py::ellipsis>;     // tuple[int, ...]
+using RangePair  = py::typing::Tuple<size_t, size_t>;           // tuple[int, int]
+using RangeTuple = py::typing::Tuple<RangePair, py::ellipsis>;  // one pair per dimension
 
 static std::vector<size_t> parse_tuple(size_t ndim, const py::tuple& tuple) {
   if (tuple.size() != ndim) {
@@ -40,7 +46,7 @@ static std::vector<size_t> parse_tuple(size_t ndim, const py::tuple& tuple) {
   return ret;
 }
 
-static py::tuple convert_range_to_tuples(const SimpleRange& range) {
+static RangeTuple convert_range_to_tuples(const SimpleRange& range) {
   py::tuple ret(range.size());
   for (size_t i = 0; i < range.size(); ++i) {
     ret[i] = py::make_tuple(range[i].first, range[i].second);
@@ -48,8 +54,9 @@ static py::tuple convert_range_to_tuples(const SimpleRange& range) {
   return ret;
 }
 
-static py::list MoIndexTranslation_map_range_to_hf_provider(
-      std::shared_ptr<MoIndexTranslation> self, py::tuple ranges) {
+static py::typing::List<py::typing::Dict<py::str, RangeTuple>>
+MoIndexTranslation_map_range_to_hf_provider(std::shared_ptr<MoIndexTranslation> self,
+                                            RangeTuple ranges) {
   if (ranges.size() != self->ndim()) {
     throw py::value_error("Number of elements passed in the index range tuple (== " +
                           std::to_string(ranges.size()) + ") and dimensionality (== " +
@@ -97,13 +104,18 @@ void export_MoIndexTranslation(py::module& m) {
         "subspaces, indexing convention in the HF Provider / SCF host program, ... "
         "Python binding to :cpp:class:`libadcc::MoIndexTranslation`.")
         .def(py::init<std::shared_ptr<const MoSpaces>, const std::string&>(),
+             py::arg("mospaces_ptr"), py::arg("space"),
              "Construct a MoIndexTranslation class from an MoSpaces object and the "
              "identifier for "
              "the space (e.g. o1o1, v1o1, o3v2o1v1, ...)")
         .def(py::init<std::shared_ptr<const MoSpaces>, const std::vector<std::string>&>(),
+             py::arg("mospaces_ptr"), py::arg("subspaces"),
              "Construct a MoIndexTranslation class from an MoSpaces object and the "
              "list of identifiers for the space (e.g. [\"o1\", \"o1\"] ...)")
-        .def_property_readonly("subspaces", &MoIndexTranslation::subspaces)
+        .def_property_readonly("subspaces", &MoIndexTranslation::subspaces,
+                               "Return the space supplied on initialisation split into "
+                               "the subspace along each dimension, e.g. [\"o1\", \"v1\"] "
+                               "for the space \"o1v1\".")
         .def_property_readonly("mospaces", &MoIndexTranslation::mospaces_ptr,
                                "Return the MoSpaces object supplied on initialisation")
         .def_property_readonly("space", &MoIndexTranslation::space,
@@ -119,25 +131,28 @@ void export_MoIndexTranslation(py::module& m) {
         //
         .def(
               "full_index_of",
-              [](std::shared_ptr<MoIndexTranslation> self, py::tuple tpl) {
+              [](std::shared_ptr<MoIndexTranslation> self, IdxTuple tpl) {
                 return shape_tuple(self->full_index_of(parse_tuple(self->ndim(), tpl)));
               },
+              py::arg("tpl"),
               "Map an index given in the space, which was passed upon construction, to "
               "the corresponding index in the full MO index range (the ffff space).")
         .def(
               "block_index_of",
-              [](std::shared_ptr<MoIndexTranslation> self, py::tuple tpl) {
+              [](std::shared_ptr<MoIndexTranslation> self, IdxTuple tpl) {
                 return shape_tuple(self->block_index_of(parse_tuple(self->ndim(), tpl)));
               },
+              py::arg("tpl"),
               "Get the block index of an index, i.e. get the index which points to the "
               "block of the tensor in which the element with the passed index is "
               "contained in.")
         .def(
               "block_index_spatial_of",
-              [](std::shared_ptr<MoIndexTranslation> self, py::tuple tpl) {
+              [](std::shared_ptr<MoIndexTranslation> self, IdxTuple tpl) {
                 return shape_tuple(
                       self->block_index_spatial_of(parse_tuple(self->ndim(), tpl)));
               },
+              py::arg("tpl"),
               "Get the spatial block index of an index\n"
               "\n"
               "The spatial block index is the result of block_index_of modulo the spin "
@@ -150,79 +165,95 @@ void export_MoIndexTranslation(py::module& m) {
               "map to the same value upon a call of this function.")
         .def(
               "inblock_index_of",
-              [](std::shared_ptr<MoIndexTranslation> self, py::tuple tpl) {
+              [](std::shared_ptr<MoIndexTranslation> self, IdxTuple tpl) {
                 return shape_tuple(
                       self->inblock_index_of(parse_tuple(self->ndim(), tpl)));
               },
+              py::arg("tpl"),
               "Get the in-block index, i.e. the index within the tensor block.")
         .def(
               "spin_of",
-              [](std::shared_ptr<MoIndexTranslation> self, py::tuple tpl) {
+              [](std::shared_ptr<MoIndexTranslation> self, IdxTuple tpl) {
                 return self->spin_of(parse_tuple(self->ndim(), tpl));
               },
+              py::arg("tpl"),
               "Get the spin block of each of the index components as a string.")
         .def(
               "split",
-              [](std::shared_ptr<MoIndexTranslation> self, py::tuple tpl) {
+              [](std::shared_ptr<MoIndexTranslation> self,
+                 IdxTuple tpl) -> py::typing::Tuple<IdxTuple, IdxTuple> {
                 auto splitted = self->split(parse_tuple(self->ndim(), tpl));
                 return py::make_tuple(shape_tuple(splitted.first),
                                       shape_tuple(splitted.second));
               },
-              "Split an index into block index and in-block index")
+              py::arg("tpl"), "Split an index into block index and in-block index")
         .def(
               "split_spin",
-              [](std::shared_ptr<MoIndexTranslation> self, py::tuple tpl) {
+              [](std::shared_ptr<MoIndexTranslation> self,
+                 IdxTuple tpl) -> py::typing::Tuple<py::str, IdxTuple, IdxTuple> {
                 auto splitted = self->split_spin(parse_tuple(self->ndim(), tpl));
                 return py::make_tuple(std::get<0>(splitted),
                                       shape_tuple(std::get<1>(splitted)),
                                       shape_tuple(std::get<2>(splitted)));
               },
+              py::arg("tpl"),
               "Split an index into a spin block descriptor, a spatial block index and an "
               "in-block index.")
         .def(
               "combine",
-              [](std::shared_ptr<MoIndexTranslation> self, py::tuple bidx,
-                 py::tuple ibidx) {
+              [](std::shared_ptr<MoIndexTranslation> self, IdxTuple bidx,
+                 IdxTuple ibidx) {
                 return shape_tuple(self->combine(parse_tuple(self->ndim(), bidx),
                                                  parse_tuple(self->ndim(), ibidx)));
               },
+              py::arg("bidx"), py::arg("ibidx"),
               "Combine a block index and an in-block index into the appropriate index. "
               "Effectively undoes the effect of 'split'.")
         .def(
               "combine",
               [](std::shared_ptr<MoIndexTranslation> self, std::string spin_block,
-                 py::tuple bidx, py::tuple ibidx) {
+                 IdxTuple bidx, IdxTuple ibidx) {
                 return shape_tuple(self->combine(spin_block,
                                                  parse_tuple(self->ndim(), bidx),
                                                  parse_tuple(self->ndim(), ibidx)));
               },
+              py::arg("spin_block"), py::arg("bidx"), py::arg("ibidx"),
               "Combine a spin block (given as a string of 'a's or 'b's), a spatial-only "
               "block index and an in-block index into the appropriate index. Essentially "
               "undoes the effect of 'spin_of', 'block_index_spatial_of' and "
               "'inblock_index_of'.")
         .def(
               "hf_provider_index_of",
-              [](std::shared_ptr<MoIndexTranslation> self, py::tuple index) {
+              [](std::shared_ptr<MoIndexTranslation> self, IdxTuple index) {
                 return shape_tuple(
                       self->hf_provider_index_of(parse_tuple(self->ndim(), index)));
               },
+              py::arg("index"),
               "Map an index (given in the space passed upon construction) to the "
               "indexing "
               "convention of the host program provided to adcc as the HF provider.")
         //
         .def("map_range_to_hf_provider", &MoIndexTranslation_map_range_to_hf_provider,
+             py::arg("ranges"),
              "Map a range of indices to host program indices, i.e. the indexing "
              "convention\n"
              "used in the HfProvider, which provides the SCF data to adcc.\n"
              "\n"
              "Since the mapping between subspace and host program indices might not be "
              "contiguous,\n"
-             "a list of pairs of ranges is returned. In each pair, the first entry "
-             "represents a\n"
-             "range of indices (indexed in the MO subspace) and the second entry "
-             "represents\n"
-             "the equivalent range of indices in the Hartree-Fock provider these are "
-             "mapped to.\n"
+             "a list of range mappings is returned. Each mapping is a dict with the "
+             "keys\n"
+             "'from' and 'to': 'from' holds a range of indices (indexed in the MO "
+             "subspace)\n"
+             "and 'to' the equivalent range of indices in the Hartree-Fock provider "
+             "these are\n"
+             "mapped to. Both are given as a tuple of half-open [start, end) index "
+             "pairs, one\n"
+             "pair for each dimension, i.e. in the same format as the `ranges` "
+             "argument.\n"
+             "\n"
+             "For example, for a two-dimensional space:\n"
+             "  [{'from': ((0, 1), (0, 1)), 'to': ((0, 1), (2, 3))}, ...]\n"
              "\n"
              "  ranges    Tuple of pairs of indices: One index pair for each dimension. "
              "Each\n"

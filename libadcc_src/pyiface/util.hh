@@ -22,6 +22,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/typing.h>
 #include <vector>
 
 namespace libadcc {
@@ -29,7 +30,7 @@ namespace libadcc {
 namespace py = pybind11;
 
 /** Make a py::tuple from a vector representing the shape */
-py::tuple shape_tuple(const std::vector<size_t>& shape);
+py::typing::Tuple<size_t, py::ellipsis> shape_tuple(const std::vector<size_t>& shape);
 
 /** Convert a list of tensors to a vector of shared pointers to Tensor */
 template <typename Listlike>

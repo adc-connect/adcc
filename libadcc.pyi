@@ -210,20 +210,20 @@ class MoIndexTranslation:
     Helper object to extract information from indices into orbitals subspaces and to map them between different indexing conventions (full MO space, MO subspaces, indexing convention in the HF Provider / SCF host program, ... Python binding to :cpp:class:`libadcc::MoIndexTranslation`.
     """
     @typing.overload
-    def __init__(self, arg0: MoSpaces, arg1: str) -> None:
+    def __init__(self, mospaces_ptr: MoSpaces, space: str) -> None:
         """
         Construct a MoIndexTranslation class from an MoSpaces object and the identifier for the space (e.g. o1o1, v1o1, o3v2o1v1, ...)
         """
     @typing.overload
-    def __init__(self, arg0: MoSpaces, arg1: list[str]) -> None:
+    def __init__(self, mospaces_ptr: MoSpaces, subspaces: list[str]) -> None:
         """
         Construct a MoIndexTranslation class from an MoSpaces object and the list of identifiers for the space (e.g. ["o1", "o1"] ...)
         """
-    def block_index_of(self, arg0: tuple) -> tuple:
+    def block_index_of(self, tpl: tuple[int, ...]) -> tuple[int, ...]:
         """
         Get the block index of an index, i.e. get the index which points to the block of the tensor in which the element with the passed index is contained in.
         """
-    def block_index_spatial_of(self, arg0: tuple) -> tuple:
+    def block_index_spatial_of(self, tpl: tuple[int, ...]) -> tuple[int, ...]:
         """
         Get the spatial block index of an index
 
@@ -234,36 +234,45 @@ class MoIndexTranslation:
         map to the same value upon a call of this function.
         """
     @typing.overload
-    def combine(self, arg0: tuple, arg1: tuple) -> tuple:
+    def combine(self, bidx: tuple[int, ...], ibidx: tuple[int, ...]) -> tuple[int, ...]:
         """
         Combine a block index and an in-block index into the appropriate index. Effectively undoes the effect of 'split'.
         """
     @typing.overload
-    def combine(self, arg0: str, arg1: tuple, arg2: tuple) -> tuple:
+    def combine(
+        self, spin_block: str, bidx: tuple[int, ...], ibidx: tuple[int, ...]
+    ) -> tuple[int, ...]:
         """
         Combine a spin block (given as a string of 'a's or 'b's), a spatial-only block index and an in-block index into the appropriate index. Essentially undoes the effect of 'spin_of', 'block_index_spatial_of' and 'inblock_index_of'.
         """
-    def full_index_of(self, arg0: tuple) -> tuple:
+    def full_index_of(self, tpl: tuple[int, ...]) -> tuple[int, ...]:
         """
         Map an index given in the space, which was passed upon construction, to the corresponding index in the full MO index range (the ffff space).
         """
-    def hf_provider_index_of(self, arg0: tuple) -> tuple:
+    def hf_provider_index_of(self, index: tuple[int, ...]) -> tuple[int, ...]:
         """
         Map an index (given in the space passed upon construction) to the indexing convention of the host program provided to adcc as the HF provider.
         """
-    def inblock_index_of(self, arg0: tuple) -> tuple:
+    def inblock_index_of(self, tpl: tuple[int, ...]) -> tuple[int, ...]:
         """
         Get the in-block index, i.e. the index within the tensor block.
         """
-    def map_range_to_hf_provider(self, arg0: tuple) -> list:
+    def map_range_to_hf_provider(
+        self, ranges: tuple[tuple[int, int], ...]
+    ) -> list[dict[str, tuple[tuple[int, int], ...]]]:
         """
         Map a range of indices to host program indices, i.e. the indexing convention
         used in the HfProvider, which provides the SCF data to adcc.
 
         Since the mapping between subspace and host program indices might not be contiguous,
-        a list of pairs of ranges is returned. In each pair, the first entry represents a
-        range of indices (indexed in the MO subspace) and the second entry represents
-        the equivalent range of indices in the Hartree-Fock provider these are mapped to.
+        a list of range mappings is returned. Each mapping is a dict with the keys
+        'from' and 'to': 'from' holds a range of indices (indexed in the MO subspace)
+        and 'to' the equivalent range of indices in the Hartree-Fock provider these are
+        mapped to. Both are given as a tuple of half-open [start, end) index pairs, one
+        pair for each dimension, i.e. in the same format as the `ranges` argument.
+
+        For example, for a two-dimensional space:
+          [{'from': ((0, 1), (0, 1)), 'to': ((0, 1), (2, 3))}, ...]
 
           ranges    Tuple of pairs of indices: One index pair for each dimension. Each
                     pair describes the range of indices along one axis, which should be
@@ -271,15 +280,17 @@ class MoIndexTranslation:
                     be thought of as a half-open interval [start, end), where start and
                     end are the indexed passed as a pair to the function.
         """
-    def spin_of(self, arg0: tuple) -> str:
+    def spin_of(self, tpl: tuple[int, ...]) -> str:
         """
         Get the spin block of each of the index components as a string.
         """
-    def split(self, arg0: tuple) -> tuple:
+    def split(self, tpl: tuple[int, ...]) -> tuple[tuple[int, ...], tuple[int, ...]]:
         """
         Split an index into block index and in-block index
         """
-    def split_spin(self, arg0: tuple) -> tuple:
+    def split_spin(
+        self, tpl: tuple[int, ...]
+    ) -> tuple[str, tuple[int, ...], tuple[int, ...]]:
         """
         Split an index into a spin block descriptor, a spatial block index and an in-block index.
         """
@@ -294,7 +305,7 @@ class MoIndexTranslation:
         Return the number of dimensions.
         """
     @property
-    def shape(self) -> tuple:
+    def shape(self) -> tuple[int, ...]:
         """
         Return the length along each dimension.
         """
@@ -304,7 +315,10 @@ class MoIndexTranslation:
         Return the space supplied on initialisation.
         """
     @property
-    def subspaces(self) -> list[str]: ...
+    def subspaces(self) -> list[str]:
+        """
+        Return the space supplied on initialisation split into the subspace along each dimension, e.g. ["o1", "v1"] for the space "o1v1".
+        """
 
 class MoSpaces:
     """
@@ -638,7 +652,7 @@ class Symmetry:
     @permutations.setter
     def permutations(self, arg1: list[str]) -> None: ...
     @property
-    def shape(self) -> tuple:
+    def shape(self) -> tuple[int, ...]:
         """
         Return the shape of tensors constructed from this symmetry.
         """
