@@ -326,11 +326,11 @@ class MoSpaces:
     """
     def __init__(
         self,
-        arg0: HartreeFockSolution_i,
-        arg1: AdcMemory,
-        arg2: list[int],
-        arg3: list[int],
-        arg4: list[int],
+        hf: HartreeFockSolution_i,
+        adcmem_ptr: AdcMemory,
+        core_orbitals: list[int],
+        frozen_core_orbitals: list[int],
+        frozen_virtuals: list[int],
     ) -> None:
         """
         Construct an MoSpaces object from a HartreeFockSolution_i, a pointer to
@@ -353,15 +353,15 @@ class MoSpaces:
                           in the ADC calculation. The same number of alpha and beta
                           orbitals has to be selected.
         """
-    def n_orbs(self, arg0: str) -> int:
+    def n_orbs(self, space: str) -> int:
         """
         The number of orbitals in a particular orbital subspace
         """
-    def n_orbs_alpha(self, arg0: str) -> int:
+    def n_orbs_alpha(self, space: str) -> int:
         """
         The number of alpha orbitals in a particular orbital subspace
         """
-    def n_orbs_beta(self, arg0: str) -> int:
+    def n_orbs_beta(self, space: str) -> int:
         """
         The number of beta orbitals in a particular orbital subspace
         """

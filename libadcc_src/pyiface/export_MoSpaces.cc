@@ -32,6 +32,8 @@ void export_MoSpaces(py::module& m) {
         "information about them. Python binding to :cpp:class:`libadcc::MoSpaces`.")
         .def(py::init<const HartreeFockSolution_i&, std::shared_ptr<const AdcMemory>,
                       std::vector<size_t>, std::vector<size_t>, std::vector<size_t>>(),
+             py::arg("hf"), py::arg("adcmem_ptr"), py::arg("core_orbitals"),
+             py::arg("frozen_core_orbitals"), py::arg("frozen_virtuals"),
              "Construct an MoSpaces object from a HartreeFockSolution_i, a pointer to\n"
              "an AdcMemory object.\n"
              "\n"
@@ -56,11 +58,11 @@ void export_MoSpaces(py::module& m) {
              "beta\n"
              "                  orbitals has to be selected.\n")
         //
-        .def("n_orbs", &MoSpaces::n_orbs,
+        .def("n_orbs", &MoSpaces::n_orbs, py::arg("space"),
              "The number of orbitals in a particular orbital subspace")
-        .def("n_orbs_alpha", &MoSpaces::n_orbs_alpha,
+        .def("n_orbs_alpha", &MoSpaces::n_orbs_alpha, py::arg("space"),
              "The number of alpha orbitals in a particular orbital subspace")
-        .def("n_orbs_beta", &MoSpaces::n_orbs_beta,
+        .def("n_orbs_beta", &MoSpaces::n_orbs_beta, py::arg("space"),
              "The number of beta orbitals in a particular orbital subspace")
         //
         .def_readonly("point_group", &MoSpaces::point_group,
