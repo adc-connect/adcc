@@ -359,7 +359,7 @@ class PyHartreeFockProvider : public HartreeFockProvider {
   }
 };
 
-static py::array_t<scalar_type> HartreeFockSolution_i_occupation_f(
+static NDArray<scalar_type, 1> HartreeFockSolution_i_occupation_f(
       const HartreeFockSolution_i& self) {
   py::array_t<scalar_type> ret(self.n_orbs());
   self.occupation_f(ret.mutable_data(), self.n_orbs());
@@ -384,21 +384,21 @@ static size_t count_electrons(const HartreeFockSolution_i& self, bool count_beta
   return ret;
 }
 
-static py::array_t<scalar_type> HartreeFockSolution_i_orben_f(
+static NDArray<scalar_type, 1> HartreeFockSolution_i_orben_f(
       const HartreeFockSolution_i& self) {
   py::array_t<scalar_type> ret(self.n_orbs());
   self.orben_f(ret.mutable_data(), self.n_orbs());
   return ret;
 }
 
-static py::array_t<scalar_type> HartreeFockSolution_i_orbcoeff_fb(
+static NDArray<scalar_type, 2> HartreeFockSolution_i_orbcoeff_fb(
       const HartreeFockSolution_i& self) {
   py::array_t<scalar_type> ret({self.n_orbs(), self.n_bas()});
   self.orbcoeff_fb(ret.mutable_data(), self.n_orbs() * self.n_bas());
   return ret;
 }
 
-static py::array_t<scalar_type> HartreeFockSolution_i_fock_ff(
+static NDArray<scalar_type, 2> HartreeFockSolution_i_fock_ff(
       const HartreeFockSolution_i& self) {
   py::array_t<scalar_type> ret({self.n_orbs(), self.n_orbs()});
   self.fock_ff(0, self.n_orbs(), 0, self.n_orbs(),
