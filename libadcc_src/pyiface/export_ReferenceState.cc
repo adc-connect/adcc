@@ -19,6 +19,7 @@
 
 #include "../ReferenceState.hh"
 #include "hartree_fock_solution_hack.hh"
+#include "ndarray.hh"
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -55,13 +56,16 @@ py::object convert_timer(const Timer& timer) {
 
 void export_ReferenceState(py::module& m) {
 
-  py::class_<ReferenceState, std::shared_ptr<ReferenceState>>(
+  py::class_<ReferenceState, std::shared_ptr<ReferenceState>> reference_state(
         m, "ReferenceState",
         "Class representing information about the reference state for adcc. Python "
         "binding to"
-        ":cpp:class:`libadcc::ReferenceState`.")
+        ":cpp:class:`libadcc::ReferenceState`.");
+  reference_state
         .def(py::init<std::shared_ptr<const HartreeFockSolution_i>,
                       std::shared_ptr<const MoSpaces>, bool>(),
+             py::arg("hfsoln_ptr"), py::arg("mo_ptr"),
+             py::arg("symmetry_check_on_import"),
              "Setup a ReferenceStateject using an MoSpaces object.\n"
              "\n"
              "hfsoln_ptr        Pointer to the Interface to the host program,\n"
@@ -112,25 +116,30 @@ void export_ReferenceState(py::module& m) {
               "nuclear_total_charge",
               [](const ReferenceState& ref) { return ref.nuclear_multipole(0)[0]; })
         .def_property_readonly("nuclear_dipole",
-                               [](const ReferenceState& ref) {
+                               [](const ReferenceState& ref) -> NDArray<scalar_type, 1> {
                                  py::array_t<scalar_type> ret(std::vector<ssize_t>{3});
                                  auto res = ref.nuclear_multipole(1);
                                  std::copy(res.begin(), res.end(), ret.mutable_data());
                                  return ret;
                                })
-        .def("nuclear_quadrupole",
-             [](const ReferenceState& ref, std::array<scalar_type, 3> gauge_origin) {
-               py::array_t<scalar_type> ret(std::vector<ssize_t>{6});
-               auto res = ref.nuclear_multipole(2, gauge_origin);
-               std::copy(res.begin(), res.end(), ret.mutable_data());
-               return ret;
-             })
-        .def("gauge_origin_to_xyz",
-             [](const ReferenceState& ref, std::string gauge_origin) {
-               auto vec = ref.gauge_origin_to_xyz(gauge_origin);
-               // Make sure a tuple is returned
-               return py::make_tuple(vec[0], vec[1], vec[2]);
-             })
+        .def(
+              "nuclear_quadrupole",
+              [](const ReferenceState& ref,
+                 std::tuple<scalar_type, scalar_type, scalar_type> gauge_origin)
+                    -> NDArray<scalar_type, 1> {
+                py::array_t<scalar_type> ret(std::vector<ssize_t>{6});
+                auto res = ref.nuclear_multipole(2, gauge_origin);
+                std::copy(res.begin(), res.end(), ret.mutable_data());
+                return ret;
+              },
+              py::arg("gauge_origin"))
+        .def(
+              "gauge_origin_to_xyz",
+              [](const ReferenceState& ref, std::string gauge_origin)
+                    -> std::tuple<scalar_type, scalar_type, scalar_type> {
+                return ref.gauge_origin_to_xyz(gauge_origin);
+              },
+              py::arg("gauge_origin"))
         .def_property_readonly("conv_tol", &ReferenceState::conv_tol,
                                "SCF convergence tolererance")
         .def_property_readonly("energy_scf", &ReferenceState::energy_scf,
@@ -139,20 +148,23 @@ void export_ReferenceState(py::module& m) {
                                &ReferenceState::nuclear_repulsion_energy,
                                "The nuclear repulsion energy")
         //
-        .def("orbital_energies", &ReferenceState::orbital_energies,
+        .def("orbital_energies", &ReferenceState::orbital_energies, py::arg("space"),
              "Return the orbital energies corresponding to the provided space")
         .def("orbital_coefficients", &ReferenceState::orbital_coefficients,
+             py::arg("space"),
              "Return the molecular orbital coefficients corresponding to the provided "
              "space (alpha and beta coefficients are returned)")
         .def("orbital_coefficients_alpha", &ReferenceState::orbital_coefficients_alpha,
+             py::arg("space"),
              "Return the alpha molecular orbital coefficients corresponding to the "
              "provided space")
         .def("orbital_coefficients_beta", &ReferenceState::orbital_coefficients_beta,
+             py::arg("space"),
              "Return the beta molecular orbital coefficients corresponding to the "
              "provided space")
-        .def("fock", &ReferenceState::fock,
+        .def("fock", &ReferenceState::fock, py::arg("space"),
              "Return the Fock matrix block corresponding to the provided space.")
-        .def("eri", &ReferenceState::eri,
+        .def("eri", &ReferenceState::eri, py::arg("space"),
              "Return the ERI (electron-repulsion integrals) tensor block corresponding "
              "to the provided space.")
         //
@@ -162,18 +174,22 @@ void export_ReferenceState(py::module& m) {
              "is requested by a call to above fock() or eri() functions. This function "
              "call, however, instructs the class to immediately import *all* such "
              "blocks. Typically you do not want to do this.")
-        .def_property("cached_fock_blocks", &ReferenceState::cached_fock_blocks,
-                      &ReferenceState::set_cached_fock_blocks,
-                      "Get or set the list of momentarily cached Fock matrix blocks\n"
-                      "\n"
-                      "Setting this property allows to drop fock matrix blocks if they "
-                      "are no longer needed to save memory.")
-        .def_property("cached_eri_blocks", &ReferenceState::cached_eri_blocks,
-                      &ReferenceState::set_cached_eri_blocks,
-                      "Get or set the list of momentarily cached ERI tensor blocks\n"
-                      "\n"
-                      "Setting this property allows to drop ERI tensor blocks if they "
-                      "are no longer needed to save memory.")
+        .def_property(
+              "cached_fock_blocks", &ReferenceState::cached_fock_blocks,
+              py::cpp_function(&ReferenceState::set_cached_fock_blocks,
+                               py::is_method(reference_state), py::arg("newlist")),
+              "Get or set the list of momentarily cached Fock matrix blocks\n"
+              "\n"
+              "Setting this property allows to drop fock matrix blocks if they "
+              "are no longer needed to save memory.")
+        .def_property(
+              "cached_eri_blocks", &ReferenceState::cached_eri_blocks,
+              py::cpp_function(&ReferenceState::set_cached_eri_blocks,
+                               py::is_method(reference_state), py::arg("newlist")),
+              "Get or set the list of momentarily cached ERI tensor blocks\n"
+              "\n"
+              "Setting this property allows to drop ERI tensor blocks if they "
+              "are no longer needed to save memory.")
         .def("flush_hf_cache", &ReferenceState::flush_hf_cache,
              "Tell the contained HartreeFockSolution_i object (which was passed upon "
              "construction), that a larger amount of import operations is done and that "

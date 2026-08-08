@@ -1,6 +1,5 @@
 from __future__ import annotations
 import numpy
-import pybind11_stubgen.typing_ext
 import typing
 
 __all__: list[str] = [
@@ -433,7 +432,12 @@ class ReferenceState:
     """
     Class representing information about the reference state for adcc. Python binding to:cpp:class:`libadcc::ReferenceState`.
     """
-    def __init__(self, arg0: HartreeFockSolution_i, arg1: MoSpaces, arg2: bool) -> None:
+    def __init__(
+        self,
+        hfsoln_ptr: HartreeFockSolution_i,
+        mo_ptr: MoSpaces,
+        symmetry_check_on_import: bool,
+    ) -> None:
         """
         Setup a ReferenceStateject using an MoSpaces object.
 
@@ -450,7 +454,7 @@ class ReferenceState:
                           from the host programs. Do not enable this unless you know
                           that you really want to.
         """
-    def eri(self, arg0: str) -> Tensor:
+    def eri(self, space: str) -> Tensor:
         """
         Return the ERI (electron-repulsion integrals) tensor block corresponding to the provided space.
         """
@@ -458,32 +462,31 @@ class ReferenceState:
         """
         Tell the contained HartreeFockSolution_i object (which was passed upon construction), that a larger amount of import operations is done and that the next request for further imports will most likely take some time, such that intermediate caches can now be flushed to save some memory or other resources.
         """
-    def fock(self, arg0: str) -> Tensor:
+    def fock(self, space: str) -> Tensor:
         """
         Return the Fock matrix block corresponding to the provided space.
         """
-    def gauge_origin_to_xyz(self, arg0: str) -> tuple: ...
+    def gauge_origin_to_xyz(self, gauge_origin: str) -> tuple[float, float, float]: ...
     def import_all(self) -> None:
         """
         Normally the class only imports the Fock matrix blocks and electron-repulsion integrals of a particular space combination when this is requested by a call to above fock() or eri() functions. This function call, however, instructs the class to immediately import *all* such blocks. Typically you do not want to do this.
         """
     def nuclear_quadrupole(
-        self,
-        arg0: typing.Annotated[list[float], pybind11_stubgen.typing_ext.FixedSize(3)],
-    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]: ...
-    def orbital_coefficients(self, arg0: str) -> Tensor:
+        self, gauge_origin: tuple[float, float, float]
+    ) -> numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]]: ...
+    def orbital_coefficients(self, space: str) -> Tensor:
         """
         Return the molecular orbital coefficients corresponding to the provided space (alpha and beta coefficients are returned)
         """
-    def orbital_coefficients_alpha(self, arg0: str) -> Tensor:
+    def orbital_coefficients_alpha(self, space: str) -> Tensor:
         """
         Return the alpha molecular orbital coefficients corresponding to the provided space
         """
-    def orbital_coefficients_beta(self, arg0: str) -> Tensor:
+    def orbital_coefficients_beta(self, space: str) -> Tensor:
         """
         Return the beta molecular orbital coefficients corresponding to the provided space
         """
-    def orbital_energies(self, arg0: str) -> Tensor:
+    def orbital_energies(self, space: str) -> Tensor:
         """
         Return the orbital energies corresponding to the provided space
         """
@@ -500,7 +503,7 @@ class ReferenceState:
         Setting this property allows to drop ERI tensor blocks if they are no longer needed to save memory.
         """
     @cached_eri_blocks.setter
-    def cached_eri_blocks(self, arg1: list[str]) -> None: ...
+    def cached_eri_blocks(self, newlist: list[str]) -> None: ...
     @property
     def cached_fock_blocks(self) -> list[str]:
         """
@@ -509,7 +512,7 @@ class ReferenceState:
         Setting this property allows to drop fock matrix blocks if they are no longer needed to save memory.
         """
     @cached_fock_blocks.setter
-    def cached_fock_blocks(self, arg1: list[str]) -> None: ...
+    def cached_fock_blocks(self, newlist: list[str]) -> None: ...
     @property
     def conv_tol(self) -> float:
         """
@@ -563,7 +566,7 @@ class ReferenceState:
     @property
     def nuclear_dipole(
         self,
-    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]: ...
+    ) -> numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]]: ...
     @property
     def nuclear_repulsion_energy(self) -> float:
         """

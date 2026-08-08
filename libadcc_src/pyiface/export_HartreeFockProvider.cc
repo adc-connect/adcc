@@ -19,6 +19,7 @@
 
 #include "../HartreeFockSolution_i.hh"
 #include "../exceptions.hh"
+#include "hartree_fock_solution_hack.hh"
 #include "ndarray.hh"
 #include "util.hh"
 #include <pybind11/pybind11.h>
@@ -50,10 +51,10 @@ class HartreeFockProvider : public HartreeFockSolution_i {
   //
   // Translate C++-like interface to python-like interface
   //
-  void nuclear_multipole(size_t order, std::array<scalar_type, 3> gauge_origin,
+  void nuclear_multipole(size_t order,
+                         std::tuple<scalar_type, scalar_type, scalar_type> gauge_origin,
                          scalar_type* buffer, size_t size) const override {
-    py::array_t<scalar_type> ret = get_nuclear_multipole(
-          order, {gauge_origin[0], gauge_origin[1], gauge_origin[2]});
+    py::array_t<scalar_type> ret = get_nuclear_multipole(order, gauge_origin);
     if (static_cast<ssize_t>(size) != ret.size()) {
       throw dimension_mismatch("Array size (==" + std::to_string(ret.size()) +
                                ") does not agree with buffer size (" +
@@ -62,10 +63,9 @@ class HartreeFockProvider : public HartreeFockSolution_i {
     std::copy(ret.data(), ret.data() + size, buffer);
   }
 
-  const std::array<scalar_type, 3> gauge_origin_to_xyz(
+  const std::tuple<scalar_type, scalar_type, scalar_type> gauge_origin_to_xyz(
         std::string gauge_origin) const override {
-    const auto xyz = transform_gauge_origin_to_xyz(py::cast(gauge_origin));
-    return {std::get<0>(xyz), std::get<1>(xyz), std::get<2>(xyz)};
+    return transform_gauge_origin_to_xyz(py::cast(gauge_origin));
   }
 
   void occupation_f(scalar_type* buffer, size_t size) const override {
