@@ -51,7 +51,7 @@ class AdcMemory:
         Get or set the batch size for contraction, i.e. the number of elements handled simultaneously in a tensor contraction.
         """
     @contraction_batch_size.setter
-    def contraction_batch_size(self, arg1: int) -> None: ...
+    def contraction_batch_size(self, bsize: int) -> None: ...
     @property
     def max_block_size(self) -> int:
         """
