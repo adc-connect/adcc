@@ -70,27 +70,45 @@ class HartreeFockProvider(HartreeFockSolution_i):
     In the remaining documentation we denote with `nf` the value returned by `get_n_orbs_alpha()` and with `nb` the value returned by `get_nbas()`.
     """
     def __init__(self) -> None: ...
-    def fill_eri_ffff(self, arg0: tuple, arg1: numpy.ndarray) -> None:
+    def fill_eri_ffff(
+        self,
+        slices: tuple[slice, slice, slice, slice],
+        out: numpy.ndarray[tuple[int, int, int, int], numpy.dtype[numpy.float64]],
+    ) -> None:
         """
         Fill the passed numpy array `arg1` with a part of the electron-repulsion integral tensor in the molecular orbital basis. The indexing convention is the chemist's notation, i.e. the index tuple `(i,j,k,l)` refers to the integral :math:`(ij|kl)`. The block to store is specified by the provided tuple of ranges `arg0`, which gives the range of indices to place into the buffer along each of the axis. The index counting is done in spin orbitals, so the full range in each axis is `range(0, 2 * nf)`.
         """
-    def fill_eri_phys_asym_ffff(self, arg0: tuple, arg1: numpy.ndarray) -> None:
+    def fill_eri_phys_asym_ffff(
+        self,
+        slices: tuple[slice, slice, slice, slice],
+        out: numpy.ndarray[tuple[int, int, int, int], numpy.dtype[numpy.float64]],
+    ) -> None:
         """
         Fill the passed numpy array `arg1` with a part of the **antisymmetrised** electron-repulsion integral tensor in the molecular orbital basis. The indexing convention is the physicist's notation, i.e. the index tuple `(i,j,k,l)` refers to the integral :math:`\\langle ij||kl \\rangle`. The block to store is specified by the provided tuple of ranges `arg0`, which gives the range of indices to place into the buffer along each of the axis. The index counting is done in spin orbitals, so the full range in each axis is `range(0, 2 * nf)`.
         """
-    def fill_fock_ff(self, arg0: tuple, arg1: numpy.ndarray) -> None:
+    def fill_fock_ff(
+        self,
+        slices: tuple[slice, slice],
+        out: numpy.ndarray[tuple[int, int], numpy.dtype[numpy.float64]],
+    ) -> None:
         """
         Fill the passed numpy array `arg1` with a part of the Fock matrix in the molecular orbital basis. The block to store is specified by the provided tuple of ranges `arg0`, which gives the range of indices to place into the buffer along each of the axis. The index counting is done in spin orbitals, so the full range in each axis is `range(0, 2 * nf)`. The implementation should not assume that the alpha-beta and beta-alpha blocks are not accessed even though they are zero by spin symmetry.
         """
-    def fill_occupation_f(self, arg0: numpy.ndarray) -> None:
+    def fill_occupation_f(
+        self, out: numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]]
+    ) -> None:
         """
         Fill the passed numpy array of size `(2 * nf, )` with the occupation number for each SCF orbital.
         """
-    def fill_orbcoeff_fb(self, arg0: numpy.ndarray) -> None:
+    def fill_orbcoeff_fb(
+        self, out: numpy.ndarray[tuple[int, int], numpy.dtype[numpy.float64]]
+    ) -> None:
         """
         Fill the passed numpy array of size `(2 * nf, nb)` with the SCF orbital coefficients, i.e. the uniform transform from the one-particle basis to the molecular orbitals.
         """
-    def fill_orben_f(self, arg0: numpy.ndarray) -> None:
+    def fill_orben_f(
+        self, out: numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]]
+    ) -> None:
         """
         Fill the passed numpy array of size `(2 * nf, )` with the SCF orbital energies.
         """
@@ -120,8 +138,8 @@ class HartreeFockProvider(HartreeFockSolution_i):
         Returns the number of HF *spin* orbitals of alpha spin. It is assumed the same number of beta spin orbitals are used. This value is abbreviated by `nf` in the documentation.
         """
     def get_nuclear_multipole(
-        self, arg0: int, arg1: tuple
-    ) -> numpy.ndarray[numpy.float64]:
+        self, order: int, gauge_origin: tuple[float, float, float] = (0, 0, 0)
+    ) -> numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]]:
         """
         Returns the nuclear multipole of the requested order. For `0` returns the total nuclear charge as an array of size 1, for `1` returns the nuclear dipole moment as an array of size 3.
         """
@@ -141,7 +159,9 @@ class HartreeFockProvider(HartreeFockSolution_i):
         """
         Returns whether `fill_eri_phys_asym_ffff` function is implemented and should be used(*True*) or whether antisymmetrisation should be done inside adcc starting from the `fill_eri_ffff` function (*False*)
         """
-    def transform_gauge_origin_to_xyz(self, arg0: str) -> tuple:
+    def transform_gauge_origin_to_xyz(
+        self, gauge_origin: str
+    ) -> tuple[float, float, float]:
         """
         Transforms a string specifying the gauge origin to a tuple containing the x, y, z Cartesian components.
         """
@@ -157,7 +177,7 @@ class HartreeFockSolution_i:
     @property
     def energy_scf(self) -> float: ...
     @property
-    def fock_ff(self) -> numpy.ndarray[numpy.float64]: ...
+    def fock_ff(self) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]: ...
     @property
     def n_alpha(self) -> int: ...
     @property
@@ -173,11 +193,11 @@ class HartreeFockSolution_i:
     @property
     def nuclear_repulsion_energy(self) -> float: ...
     @property
-    def occupation_f(self) -> numpy.ndarray[numpy.float64]: ...
+    def occupation_f(self) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]: ...
     @property
-    def orbcoeff_fb(self) -> numpy.ndarray[numpy.float64]: ...
+    def orbcoeff_fb(self) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]: ...
     @property
-    def orben_f(self) -> numpy.ndarray[numpy.float64]: ...
+    def orben_f(self) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]: ...
     @property
     def restricted(self) -> bool: ...
     @property
@@ -434,7 +454,7 @@ class ReferenceState:
     def nuclear_quadrupole(
         self,
         arg0: typing.Annotated[list[float], pybind11_stubgen.typing_ext.FixedSize(3)],
-    ) -> numpy.ndarray[numpy.float64]: ...
+    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]: ...
     def orbital_coefficients(self, arg0: str) -> Tensor:
         """
         Return the molecular orbital coefficients corresponding to the provided space (alpha and beta coefficients are returned)
@@ -525,7 +545,9 @@ class ReferenceState:
         Number of beta orbitals
         """
     @property
-    def nuclear_dipole(self) -> numpy.ndarray[numpy.float64]: ...
+    def nuclear_dipole(
+        self,
+    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]: ...
     @property
     def nuclear_repulsion_energy(self) -> float:
         """
@@ -718,7 +740,9 @@ class Tensor:
     @typing.overload
     def dot(self, arg0: Tensor) -> float: ...
     @typing.overload
-    def dot(self, arg0: list) -> numpy.ndarray[numpy.float64]: ...
+    def dot(
+        self, arg0: list
+    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]: ...
     def empty_like(self) -> Tensor: ...
     def evaluate(self) -> Tensor:
         """
@@ -747,13 +771,15 @@ class Tensor:
         Select the n minimal elements.
         """
     @typing.overload
-    def set_from_ndarray(self, arg0: numpy.ndarray) -> Tensor:
+    def set_from_ndarray(
+        self, arg0: numpy.ndarray[typing.Any, numpy.dtype[typing.Any]]
+    ) -> Tensor:
         """
         Set all tensor elements from a standard np::ndarray by making a copy. Provide an optional tolerance argument to increase the tolerance for the check for symmetry consistency.
         """
     @typing.overload
     def set_from_ndarray(
-        self, arg0: numpy.ndarray[numpy.float64], arg1: float
+        self, arg0: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]], arg1: float
     ) -> Tensor:
         """
         Set all tensor elements from a standard np::ndarray by making a copy. Provide an optional tolerance argument to increase the tolerance for the check for symmetry consistency.
@@ -774,7 +800,7 @@ class Tensor:
     def symmetrise(self, arg0: list) -> Tensor: ...
     @typing.overload
     def symmetrise(self, *args) -> Tensor: ...
-    def to_ndarray(self) -> numpy.ndarray[numpy.float64]:
+    def to_ndarray(self) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]:
         """
         Export the tensor data to a standard np::ndarray by making a copy.
         """
@@ -841,7 +867,7 @@ def get_n_threads_total() -> int:
     """
 
 def linear_combination_strict(
-    coefficients: numpy.ndarray[numpy.float64], tensors: list
+    coefficients: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]], tensors: list
 ) -> Tensor: ...
 def make_symmetry_eri(arg0: MoSpaces, arg1: str) -> Symmetry:
     """

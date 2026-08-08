@@ -2,7 +2,7 @@
 set -e
 
 cd ..
-pybind11-stubgen libadcc -o .
+pybind11-stubgen --numpy-array-use-type-var libadcc -o .
 # Remove the __backend__ module-level variable added by ExportAdcc.cc
 python3 -c """
 import re, pathlib
