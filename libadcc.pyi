@@ -952,18 +952,20 @@ class Tensor:
     @property
     def subspaces(self) -> list[str]: ...
 
-def amplitude_vector_enforce_spin_kind(arg0: Tensor, arg1: str, arg2: str) -> None:
+def amplitude_vector_enforce_spin_kind(
+    doubles_tensor: Tensor, block: str, spin_kind: str
+) -> None:
     """
     Apply the spin symmetrisation required to make the doubles and higher parts of an amplitude vector consist of components for a particular spin kind only.
     """
 
 def direct_sum(a: Tensor, b: Tensor) -> Tensor: ...
-def evaluate(arg0: Tensor) -> Tensor: ...
+def evaluate(tensor: Tensor) -> Tensor: ...
 def fill_pp_doubles_guesses(
     guesses_d: collections.abc.Sequence[Tensor],
     mospaces: MoSpaces,
-    df02: Tensor,
-    df13: Tensor,
+    df1: Tensor,
+    df2: Tensor,
     spin_change_twice: typing.SupportsInt | typing.SupportsIndex,
     degeneracy_tolerance: typing.SupportsFloat | typing.SupportsIndex,
 ) -> int:
@@ -990,28 +992,35 @@ def get_n_threads_total() -> int:
     """
 
 def linear_combination_strict(
-    coefficients: typing.Annotated[numpy.typing.ArrayLike, numpy.float64], tensors: list
+    coefficients: typing.Annotated[numpy.typing.ArrayLike, numpy.float64],
+    tensors: list[Tensor],
 ) -> Tensor: ...
-def make_symmetry_eri(arg0: MoSpaces, arg1: str) -> Symmetry:
+def make_symmetry_eri(mospaces_ptr: MoSpaces, space: str) -> Symmetry:
     """
     Return the Symmetry object like it would be set up for the passed subspace
     of the electron-repulsion tensor.
 
-      mospaces    MoSpaces object
-      space       Space string (e.g. o1v1o1v1)
+      mospaces_ptr    MoSpaces object
+      space           Space string (e.g. o1v1o1v1)
     """
 
-def make_symmetry_operator(arg0: MoSpaces, arg1: str, arg2: str, arg3: str) -> Symmetry:
+def make_symmetry_operator(
+    mospaces_ptr: MoSpaces,
+    space: str,
+    operator_symmetry: str,
+    cartesian_transformation: str,
+) -> Symmetry:
     """
     Return the Symmetry object for an orbital subspace block of a one-particle operator
 
-      mospaces    MoSpaces object
-      space       Space string (e.g. o1v1)
-      symmetry    Describes the symmetry of the tensor (only in effect if both
-                  subspaces of the space string are identical).
-                  Valid are "nosymmetry", "hermitian" and "antihermitian".
+      mospaces_ptr  MoSpaces object
+      space         Space string (e.g. o1v1)
+      operator_symmetry
+                    Describes the symmetry of the tensor (only in effect if both
+                    subspaces of the space string are identical).
+                    Valid are "nosymmetry", "hermitian" and "antihermitian".
       cartesian_transformation
-                  The cartesian function according to which the operator transforms.
+                    The cartesian function according to which the operator transforms.
 
     Valid cartesian_transformation values include:
          "1"                   Totally symmetric (default)
@@ -1021,11 +1030,11 @@ def make_symmetry_operator(arg0: MoSpaces, arg1: str, arg2: str, arg3: str) -> S
     """
 
 def make_symmetry_operator_basis(
-    arg0: MoSpaces,
-    arg1: typing.SupportsInt | typing.SupportsIndex,
-    arg2: str,
-    arg3: typing.SupportsInt | typing.SupportsIndex,
-    arg4: str,
+    mospaces_ptr: MoSpaces,
+    n_bas: typing.SupportsInt | typing.SupportsIndex,
+    operator_symmetry: str,
+    n_particle_op: typing.SupportsInt | typing.SupportsIndex,
+    blocks: str,
 ) -> Symmetry:
     """
     Return the symmetry object for an operator in the AO basis. The object will
@@ -1039,7 +1048,7 @@ def make_symmetry_operator_basis(
     n_bas             Number of AO basis functions
     operator_symmetry Is the tensor symmetric (hermitian/antihermitian, only
                       in effect if both space axes identical).
-                      Nosymmetry disables a setup of permutational symmetry.
+                      Nosymmetry disables a setup of 'bra-ket' symmetry.
     n_particle_op     NParticleOperator
     blocks            Which blocks of the operator to return. Valid values
                       are 'ab' to return a tensor for both alpha and beta
@@ -1048,57 +1057,59 @@ def make_symmetry_operator_basis(
     """
 
 def make_symmetry_orbital_coefficients(
-    arg0: MoSpaces,
-    arg1: str,
-    arg2: typing.SupportsInt | typing.SupportsIndex,
-    arg3: str,
+    mospaces_ptr: MoSpaces,
+    space: str,
+    n_bas: typing.SupportsInt | typing.SupportsIndex,
+    blocks: str = "ab",
 ) -> Symmetry:
     """
     Return the Symmetry object like it would be set up for the passed subspace
     of the orbital coefficients tensor.
 
-      mospaces    MoSpaces object
-      space       Space string (e.g. o1b)
-      n_bas       Number of basis functions
-      blocks      Spin blocks to include. Valid are "ab", "a" and "b".
+      mospaces_ptr    MoSpaces object
+      space           Space string (e.g. o1b)
+      n_bas           Number of basis functions
+      blocks          Spin blocks to include. Valid are "ab", "a" and "b".
     """
 
-def make_symmetry_orbital_energies(arg0: MoSpaces, arg1: str) -> Symmetry:
+def make_symmetry_orbital_energies(mospaces_ptr: MoSpaces, space: str) -> Symmetry:
     """
     Return the Symmetry object like it would be set up for the passed subspace
     of the orbital energies tensor.
 
-      mospaces    MoSpaces object
-      space       space string (e.g. o1)
+      mospaces_ptr    MoSpaces object
+      space           space string (e.g. o1)
     """
 
-def make_symmetry_triples(arg0: MoSpaces, arg1: str) -> Symmetry:
+def make_symmetry_triples(mospaces_ptr: MoSpaces, space: str) -> Symmetry:
     """
     Return the Symmetry object like it would be set up for the passed subspace
     of a triples amplitude tensor.
 
-      mospaces    MoSpaces object
-      space       Space string (e.g. o1o1o1v1v1v1)
+      mospaces_ptr    MoSpaces object
+      space           Space string (e.g. o1o1o1v1v1v1)
     """
 
-def set_n_threads(arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+def set_n_threads(n_threads: typing.SupportsInt | typing.SupportsIndex) -> None:
     """
     Set the number of running worker threads used by adcc
     """
 
-def set_n_threads_total(arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+def set_n_threads_total(n_total: typing.SupportsInt | typing.SupportsIndex) -> None:
     """
     Set the total number of threads (running and sleeping) used by adcc. This will disappear in the future. Do not rely on it.
     """
 
 @typing.overload
-def tensordot(a: Tensor, b: Tensor, axes: collections.abc.Iterable) -> typing.Any: ...
+def tensordot(
+    a: Tensor, b: Tensor, axes: collections.abc.Iterable[collections.abc.Iterable[int]]
+) -> Tensor | float: ...
 @typing.overload
 def tensordot(
     a: Tensor, b: Tensor, axes: typing.SupportsInt | typing.SupportsIndex
-) -> typing.Any: ...
+) -> Tensor | float: ...
 @typing.overload
-def tensordot(a: Tensor, b: Tensor) -> typing.Any: ...
+def tensordot(a: Tensor, b: Tensor) -> Tensor | float: ...
 @typing.overload
 def trace(subscripts: str, tensor: Tensor) -> float: ...
 @typing.overload

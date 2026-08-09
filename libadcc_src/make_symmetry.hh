@@ -95,7 +95,7 @@ std::shared_ptr<Symmetry> make_symmetry_operator(
  * \param n_bas               Number of AO basis functions
  * \param operator_symmetry   Is the tensor symmetric (hermitian/antihermitian, only
  *                            in effect if both space axes identical).
- *                            Nosymmetry disables a setup of permutational symmetry.
+ *                            Nosymmetry disables a setup of 'bra-ket' symmetry.
  * \param n_particle_op       NParticle Operator
  * \param blocks              Which blocks of the operator to return. Valid values
  *                            are "ab" to return a tensor for both alpha and beta

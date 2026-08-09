@@ -118,8 +118,7 @@ static py::array_t<scalar_type> Tensor_to_ndarray(const Tensor& self) {
 }
 
 static ten_ptr Tensor_from_ndarray_tol(
-      ten_ptr self,
-      py::array_t<scalar_type, py::array::c_style | py::array::forcecast> in_array,
+      ten_ptr self, py::array_t<scalar_type, py::array::c_style> in_array,
       double symmetry_tolerance) {
   py::ssize_t nd = in_array.ndim();
   if (nd < 1) throw invalid_argument("Cannot import from 0D array.");
@@ -133,8 +132,7 @@ static ten_ptr Tensor_from_ndarray_tol(
 }
 
 static ten_ptr Tensor_from_ndarray(
-      ten_ptr self,
-      py::array_t<scalar_type, py::array::c_style | py::array::forcecast> in_array) {
+      ten_ptr self, py::array_t<scalar_type, py::array::c_style> in_array) {
   return Tensor_from_ndarray_tol(self, in_array, 0.0);
 }
 
@@ -205,7 +203,8 @@ static ten_ptr Tensor_antisymmetrise_2(const Tensor& self,
   return self.antisymmetrise(parse_permutations(permutations));
 }
 
-static py::object tensordot_1(ten_ptr a, ten_ptr b, py::iterable axes) {
+static py::typing::Union<ten_ptr, scalar_type> tensordot_1(
+      ten_ptr a, ten_ptr b, py::typing::Iterable<py::typing::Iterable<py::int_>> axes) {
   if (py::len(axes) != 2) {
     throw invalid_argument("axes needs to be an iterable of length 2");
   }
@@ -225,7 +224,8 @@ static py::object tensordot_1(ten_ptr a, ten_ptr b, py::iterable axes) {
     return py::cast(res.tensor_ptr);
   }
 }
-static py::object tensordot_2(ten_ptr a, ten_ptr b, size_t axes) {
+static py::typing::Union<ten_ptr, scalar_type> tensordot_2(ten_ptr a, ten_ptr b,
+                                                           size_t axes) {
   std::vector<size_t> a_axes;
   std::vector<size_t> b_axes;
   for (size_t i = 0; i < axes; ++i) {
@@ -241,7 +241,9 @@ static py::object tensordot_2(ten_ptr a, ten_ptr b, size_t axes) {
   }
 }
 
-static py::object tensordot_3(ten_ptr a, ten_ptr b) { return tensordot_2(a, b, 2); }
+static py::typing::Union<ten_ptr, scalar_type> tensordot_3(ten_ptr a, ten_ptr b) {
+  return tensordot_2(a, b, 2);
+}
 
 static ten_ptr Tensor_diagonal(ten_ptr ten, py::Args<py::int_> permutations) {
   std::vector<size_t> axes;
@@ -254,12 +256,12 @@ static ten_ptr Tensor_diagonal(ten_ptr ten, py::Args<py::int_> permutations) {
   return ten->diagonal(axes);
 }
 
-static ten_ptr direct_sum(ten_ptr a, ten_ptr b) { return a->direct_sum(b); }
+static auto direct_sum(ten_ptr a, ten_ptr b) { return a->direct_sum(b); }
 
-static double Tensor_trace_1(std::string subscripts, const Tensor& tensor) {
+static auto Tensor_trace_1(std::string subscripts, const Tensor& tensor) {
   return tensor.trace(subscripts);
 }
-static double Tensor_trace_2(const Tensor& tensor) {
+static auto Tensor_trace_2(const Tensor& tensor) {
   if (tensor.ndim() != 2) {
     throw invalid_argument(
           "trace function without arguments may only be used for matrices.");
@@ -268,7 +270,8 @@ static double Tensor_trace_2(const Tensor& tensor) {
 }
 
 static ten_ptr linear_combination_strict(
-      py::array_t<scalar_type, py::array::c_style> coefficients, py::list tensors) {
+      py::array_t<scalar_type, py::array::c_style> coefficients,
+      py::typing::List<Tensor> tensors) {
 
   if (coefficients.ndim() != 1) {
     throw invalid_argument("coefficients array needs to have exactly one dimension.");
@@ -277,7 +280,9 @@ static ten_ptr linear_combination_strict(
   const scalar_type* in_data = coefficients.data();
   std::vector<scalar_type> scalars(in_size);
   std::copy(in_data, in_data + in_size, scalars.data());
-  std::vector<ten_ptr> parsed = extract_tensors(tensors);
+  std::vector<ten_ptr> parsed = extract_tensors<py::list>(tensors);
+
+  if (parsed.empty()) throw runtime_error("No tensors parsed during linear combination");
 
   auto ret = parsed[0]->zeros_like();
   ret->add_linear_combination(scalars, parsed);
@@ -551,7 +556,7 @@ void export_Tensor(py::module& m) {
         //
         ;
 
-  m.def("evaluate", &evaluate);
+  m.def("evaluate", &evaluate, py::arg("tensor"));
   m.def("tensordot", &tensordot_1, "a"_a, "b"_a, "axes"_a);
   m.def("tensordot", &tensordot_2, "a"_a, "b"_a, "axes"_a);
   m.def("tensordot", &tensordot_3, "a"_a, "b"_a);
