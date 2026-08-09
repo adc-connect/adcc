@@ -1,5 +1,7 @@
 from __future__ import annotations
+import collections.abc
 import numpy
+import numpy.typing
 import typing
 
 __all__: list[str] = [
@@ -37,7 +39,10 @@ class AdcMemory:
     def __init__(self) -> None: ...
     def __repr__(self) -> str: ...
     def initialise(
-        self, pagefile_directory: str, max_block_size: int, allocator: str
+        self,
+        pagefile_directory: str,
+        max_block_size: typing.SupportsInt | typing.SupportsIndex,
+        allocator: str,
     ) -> None: ...
     @property
     def allocator(self) -> str:
@@ -50,7 +55,9 @@ class AdcMemory:
         Get or set the batch size for contraction, i.e. the number of elements handled simultaneously in a tensor contraction.
         """
     @contraction_batch_size.setter
-    def contraction_batch_size(self, bsize: int) -> None: ...
+    def contraction_batch_size(
+        self, bsize: typing.SupportsInt | typing.SupportsIndex
+    ) -> None: ...
     @property
     def max_block_size(self) -> int:
         """
@@ -137,7 +144,13 @@ class HartreeFockProvider(HartreeFockSolution_i):
         Returns the number of HF *spin* orbitals of alpha spin. It is assumed the same number of beta spin orbitals are used. This value is abbreviated by `nf` in the documentation.
         """
     def get_nuclear_multipole(
-        self, order: int, gauge_origin: tuple[float, float, float] = (0, 0, 0)
+        self,
+        order: typing.SupportsInt | typing.SupportsIndex,
+        gauge_origin: tuple[
+            typing.SupportsFloat | typing.SupportsIndex,
+            typing.SupportsFloat | typing.SupportsIndex,
+            typing.SupportsFloat | typing.SupportsIndex,
+        ] = (0, 0, 0),
     ) -> numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]]:
         """
         Returns the nuclear multipole of the requested order. For `0` returns the total nuclear charge as an array of size 1, for `1` returns the nuclear dipole moment as an array of size 3.
@@ -214,15 +227,21 @@ class MoIndexTranslation:
         Construct a MoIndexTranslation class from an MoSpaces object and the identifier for the space (e.g. o1o1, v1o1, o3v2o1v1, ...)
         """
     @typing.overload
-    def __init__(self, mospaces_ptr: MoSpaces, subspaces: list[str]) -> None:
+    def __init__(
+        self, mospaces_ptr: MoSpaces, subspaces: collections.abc.Sequence[str]
+    ) -> None:
         """
         Construct a MoIndexTranslation class from an MoSpaces object and the list of identifiers for the space (e.g. ["o1", "o1"] ...)
         """
-    def block_index_of(self, tpl: tuple[int, ...]) -> tuple[int, ...]:
+    def block_index_of(
+        self, tpl: tuple[typing.SupportsInt | typing.SupportsIndex, ...]
+    ) -> tuple[int, ...]:
         """
         Get the block index of an index, i.e. get the index which points to the block of the tensor in which the element with the passed index is contained in.
         """
-    def block_index_spatial_of(self, tpl: tuple[int, ...]) -> tuple[int, ...]:
+    def block_index_spatial_of(
+        self, tpl: tuple[typing.SupportsInt | typing.SupportsIndex, ...]
+    ) -> tuple[int, ...]:
         """
         Get the spatial block index of an index
 
@@ -233,31 +252,51 @@ class MoIndexTranslation:
         map to the same value upon a call of this function.
         """
     @typing.overload
-    def combine(self, bidx: tuple[int, ...], ibidx: tuple[int, ...]) -> tuple[int, ...]:
+    def combine(
+        self,
+        bidx: tuple[typing.SupportsInt | typing.SupportsIndex, ...],
+        ibidx: tuple[typing.SupportsInt | typing.SupportsIndex, ...],
+    ) -> tuple[int, ...]:
         """
         Combine a block index and an in-block index into the appropriate index. Effectively undoes the effect of 'split'.
         """
     @typing.overload
     def combine(
-        self, spin_block: str, bidx: tuple[int, ...], ibidx: tuple[int, ...]
+        self,
+        spin_block: str,
+        bidx: tuple[typing.SupportsInt | typing.SupportsIndex, ...],
+        ibidx: tuple[typing.SupportsInt | typing.SupportsIndex, ...],
     ) -> tuple[int, ...]:
         """
         Combine a spin block (given as a string of 'a's or 'b's), a spatial-only block index and an in-block index into the appropriate index. Essentially undoes the effect of 'spin_of', 'block_index_spatial_of' and 'inblock_index_of'.
         """
-    def full_index_of(self, tpl: tuple[int, ...]) -> tuple[int, ...]:
+    def full_index_of(
+        self, tpl: tuple[typing.SupportsInt | typing.SupportsIndex, ...]
+    ) -> tuple[int, ...]:
         """
         Map an index given in the space, which was passed upon construction, to the corresponding index in the full MO index range (the ffff space).
         """
-    def hf_provider_index_of(self, index: tuple[int, ...]) -> tuple[int, ...]:
+    def hf_provider_index_of(
+        self, index: tuple[typing.SupportsInt | typing.SupportsIndex, ...]
+    ) -> tuple[int, ...]:
         """
         Map an index (given in the space passed upon construction) to the indexing convention of the host program provided to adcc as the HF provider.
         """
-    def inblock_index_of(self, tpl: tuple[int, ...]) -> tuple[int, ...]:
+    def inblock_index_of(
+        self, tpl: tuple[typing.SupportsInt | typing.SupportsIndex, ...]
+    ) -> tuple[int, ...]:
         """
         Get the in-block index, i.e. the index within the tensor block.
         """
     def map_range_to_hf_provider(
-        self, ranges: tuple[tuple[int, int], ...]
+        self,
+        ranges: tuple[
+            tuple[
+                typing.SupportsInt | typing.SupportsIndex,
+                typing.SupportsInt | typing.SupportsIndex,
+            ],
+            ...,
+        ],
     ) -> list[dict[str, tuple[tuple[int, int], ...]]]:
         """
         Map a range of indices to host program indices, i.e. the indexing convention
@@ -279,16 +318,20 @@ class MoIndexTranslation:
                     be thought of as a half-open interval [start, end), where start and
                     end are the indexed passed as a pair to the function.
         """
-    def spin_of(self, tpl: tuple[int, ...]) -> str:
+    def spin_of(
+        self, tpl: tuple[typing.SupportsInt | typing.SupportsIndex, ...]
+    ) -> str:
         """
         Get the spin block of each of the index components as a string.
         """
-    def split(self, tpl: tuple[int, ...]) -> tuple[tuple[int, ...], tuple[int, ...]]:
+    def split(
+        self, tpl: tuple[typing.SupportsInt | typing.SupportsIndex, ...]
+    ) -> tuple[tuple[int, ...], tuple[int, ...]]:
         """
         Split an index into block index and in-block index
         """
     def split_spin(
-        self, tpl: tuple[int, ...]
+        self, tpl: tuple[typing.SupportsInt | typing.SupportsIndex, ...]
     ) -> tuple[str, tuple[int, ...], tuple[int, ...]]:
         """
         Split an index into a spin block descriptor, a spatial block index and an in-block index.
@@ -327,9 +370,15 @@ class MoSpaces:
         self,
         hf: HartreeFockSolution_i,
         adcmem_ptr: AdcMemory,
-        core_orbitals: list[int],
-        frozen_core_orbitals: list[int],
-        frozen_virtuals: list[int],
+        core_orbitals: collections.abc.Sequence[
+            typing.SupportsInt | typing.SupportsIndex
+        ],
+        frozen_core_orbitals: collections.abc.Sequence[
+            typing.SupportsInt | typing.SupportsIndex
+        ],
+        frozen_virtuals: collections.abc.Sequence[
+            typing.SupportsInt | typing.SupportsIndex
+        ],
     ) -> None:
         """
         Construct an MoSpaces object from a HartreeFockSolution_i, a pointer to
@@ -472,7 +521,12 @@ class ReferenceState:
         Normally the class only imports the Fock matrix blocks and electron-repulsion integrals of a particular space combination when this is requested by a call to above fock() or eri() functions. This function call, however, instructs the class to immediately import *all* such blocks. Typically you do not want to do this.
         """
     def nuclear_quadrupole(
-        self, gauge_origin: tuple[float, float, float]
+        self,
+        gauge_origin: tuple[
+            typing.SupportsFloat | typing.SupportsIndex,
+            typing.SupportsFloat | typing.SupportsIndex,
+            typing.SupportsFloat | typing.SupportsIndex,
+        ],
     ) -> numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]]: ...
     def orbital_coefficients(self, space: str) -> Tensor:
         """
@@ -503,7 +557,7 @@ class ReferenceState:
         Setting this property allows to drop ERI tensor blocks if they are no longer needed to save memory.
         """
     @cached_eri_blocks.setter
-    def cached_eri_blocks(self, newlist: list[str]) -> None: ...
+    def cached_eri_blocks(self, newlist: collections.abc.Sequence[str]) -> None: ...
     @property
     def cached_fock_blocks(self) -> list[str]:
         """
@@ -512,7 +566,7 @@ class ReferenceState:
         Setting this property allows to drop fock matrix blocks if they are no longer needed to save memory.
         """
     @cached_fock_blocks.setter
-    def cached_fock_blocks(self, newlist: list[str]) -> None: ...
+    def cached_fock_blocks(self, newlist: collections.abc.Sequence[str]) -> None: ...
     @property
     def conv_tol(self) -> float:
         """
@@ -604,7 +658,13 @@ class Symmetry:
         self,
         mospaces_ptr: MoSpaces,
         space: str,
-        extra_axes_orbs: dict[str, tuple[int, int]],
+        extra_axes_orbs: collections.abc.Mapping[
+            str,
+            tuple[
+                typing.SupportsInt | typing.SupportsIndex,
+                typing.SupportsInt | typing.SupportsIndex,
+            ],
+        ],
     ) -> None:
         """
         Construct a Symmetry class from an MoSpaces object, a space string and a map to supply the number of orbitals for some additional axes.
@@ -631,7 +691,7 @@ class Symmetry:
         The list of irreducible representations, for which the tensor shall be non-zero. If this is *not* set, i.e. an empty list, all irreps will be allowed.
         """
     @irreps_allowed.setter
-    def irreps_allowed(self, irreps: list[str]) -> None: ...
+    def irreps_allowed(self, irreps: collections.abc.Sequence[str]) -> None: ...
     @property
     def mospaces(self) -> MoSpaces:
         """
@@ -656,7 +716,7 @@ class Symmetry:
         is only rudimentary at the moment.
         """
     @permutations.setter
-    def permutations(self, permutations: list[str]) -> None: ...
+    def permutations(self, permutations: collections.abc.Sequence[str]) -> None: ...
     @property
     def shape(self) -> tuple[int, ...]:
         """
@@ -675,7 +735,12 @@ class Symmetry:
         with a factor of -1.0 between them.
         """
     @spin_block_maps.setter
-    def spin_block_maps(self, spin_maps: list[tuple[str, str, float]]) -> None: ...
+    def spin_block_maps(
+        self,
+        spin_maps: collections.abc.Sequence[
+            tuple[str, str, typing.SupportsFloat | typing.SupportsIndex]
+        ],
+    ) -> None: ...
     @property
     def spin_blocks_forbidden(self) -> list[str]:
         """
@@ -683,72 +748,92 @@ class Symmetry:
         Blocks are given as a string in the letters 'a' and 'b', e.g. ["aaba", "abba"]
         """
     @spin_blocks_forbidden.setter
-    def spin_blocks_forbidden(self, forbidden: list[str]) -> None: ...
+    def spin_blocks_forbidden(
+        self, forbidden: collections.abc.Sequence[str]
+    ) -> None: ...
 
 class Tensor:
     """
     Class representing the Tensor objects used for computations in adcc
     """
-
-    flags: list[str]
     @typing.overload
-    def __add__(self, arg0: float) -> Tensor: ...
+    def __add__(
+        self, number: typing.SupportsFloat | typing.SupportsIndex
+    ) -> Tensor: ...
     @typing.overload
-    def __add__(self, arg0: Tensor) -> Tensor: ...
-    def __getitem__(self, arg0: tuple) -> float:
+    def __add__(self, other: Tensor) -> Tensor: ...
+    def __getitem__(self, idcs: tuple[int, ...]) -> float:
         """
         Get a tensor element or a slice of tensor elements.
         """
-    def __iadd__(self, arg0: Tensor) -> Tensor: ...
-    def __imul__(self, arg0: float) -> Tensor: ...
-    def __init__(self, arg0: Symmetry) -> None:
+    def __iadd__(self, other: Tensor) -> Tensor: ...
+    def __imul__(
+        self, number: typing.SupportsFloat | typing.SupportsIndex
+    ) -> Tensor: ...
+    def __init__(self, symmetry: Symmetry) -> None:
         """
         Construct a Tensor object using a Symmetry object describing its symmetry properties.
         The returned object is not guaranteed to contain initialised memory. Python binding to :cpp:class:`libadcc::Tensor`
         """
-    def __isub__(self, arg0: Tensor) -> Tensor: ...
-    def __itruediv__(self, arg0: float) -> Tensor: ...
+    def __isub__(self, other: Tensor) -> Tensor: ...
+    def __itruediv__(
+        self, number: typing.SupportsFloat | typing.SupportsIndex
+    ) -> Tensor: ...
     def __len__(self) -> int: ...
-    def __matmul__(self, arg0: Tensor) -> Tensor: ...
+    def __matmul__(self, other: Tensor) -> Tensor: ...
     @typing.overload
-    def __mul__(self, arg0: float) -> Tensor: ...
+    def __mul__(
+        self, number: typing.SupportsFloat | typing.SupportsIndex
+    ) -> Tensor: ...
     @typing.overload
-    def __mul__(self, arg0: Tensor) -> Tensor:
+    def __mul__(self, other: Tensor) -> Tensor:
         """
         Multiply two tensors elementwise.
         """
     def __neg__(self) -> Tensor: ...
     def __pos__(self) -> Tensor: ...
-    def __radd__(self, arg0: float) -> Tensor: ...
-    def __repr__(self) -> typing.Any: ...
-    def __rmul__(self, arg0: float) -> Tensor: ...
-    def __rsub__(self, arg0: float) -> Tensor: ...
-    def __setitem__(self, arg0: tuple, arg1: float) -> float:
+    def __radd__(
+        self, number: typing.SupportsFloat | typing.SupportsIndex
+    ) -> Tensor: ...
+    def __repr__(self) -> str: ...
+    def __rmul__(
+        self, number: typing.SupportsFloat | typing.SupportsIndex
+    ) -> Tensor: ...
+    def __rsub__(
+        self, number: typing.SupportsFloat | typing.SupportsIndex
+    ) -> Tensor: ...
+    def __setitem__(
+        self, idcs: tuple[int, ...], value: typing.SupportsFloat | typing.SupportsIndex
+    ) -> None:
         """
         Set a tensor element or a slice of tensor elements. The operation will adhere symmetry, i.e. alter all elements equivalent by symmetry at once.
         """
-    def __str__(self) -> typing.Any: ...
+    def __str__(self) -> str: ...
     @typing.overload
-    def __sub__(self, arg0: float) -> Tensor: ...
+    def __sub__(
+        self, number: typing.SupportsFloat | typing.SupportsIndex
+    ) -> Tensor: ...
     @typing.overload
-    def __sub__(self, arg0: Tensor) -> Tensor: ...
+    def __sub__(self, other: Tensor) -> Tensor: ...
     @typing.overload
-    def __truediv__(self, arg0: float) -> Tensor: ...
+    def __truediv__(
+        self, number: typing.SupportsFloat | typing.SupportsIndex
+    ) -> Tensor: ...
     @typing.overload
-    def __truediv__(self, arg0: Tensor) -> Tensor:
+    def __truediv__(self, other: Tensor) -> Tensor:
         """
         Divide two tensors elementwise.
         """
     @typing.overload
-    def antisymmetrise(self, arg0: list) -> Tensor: ...
+    def antisymmetrise(self, permutations: list[int] | list[list[int]]) -> Tensor: ...
     @typing.overload
-    def antisymmetrise(self, *args) -> Tensor: ...
+    def antisymmetrise(self, *args: int) -> Tensor: ...
     def copy(self) -> Tensor:
         """
         Returns a deep copy of the tensor.
         """
     @typing.overload
-    def describe_expression(self, arg0: str) -> str:
+    def describe_expression(self, stage: str) -> str:
         """
         Return a string providing a hopefully descriptive representation of the tensor expression stored inside the object.
         """
@@ -758,50 +843,60 @@ class Tensor:
         """
         Return a string providing a hopefully descriptive representation of the symmetry information stored inside the tensor.
         """
-    def diagonal(self, *args) -> Tensor: ...
+    def diagonal(self, *args: int) -> Tensor: ...
     @typing.overload
-    def dot(self, arg0: Tensor) -> float: ...
+    def dot(self, other: Tensor) -> float: ...
     @typing.overload
     def dot(
-        self, arg0: list
-    ) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]: ...
+        self, tensors: list[Tensor]
+    ) -> numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]]: ...
     def empty_like(self) -> Tensor: ...
     def evaluate(self) -> Tensor:
         """
         Ensure the tensor to be fully evaluated and resilient in memory. Usually happens automatically when needed. Might be useful for fine-tuning, however.
         """
-    def is_allowed(self, arg0: tuple) -> bool:
+    def is_allowed(self, idcs: tuple[int, ...]) -> bool:
         """
         Is a particular index allowed by symmetry
         """
     def nosym_like(self) -> Tensor: ...
     def ones_like(self) -> Tensor: ...
-    def select_n_absmax(self, arg0: int) -> list:
+    def select_n_absmax(
+        self, n: typing.SupportsInt | typing.SupportsIndex
+    ) -> list[tuple[list[int], float]]:
         """
         Select the n absolute maximal elements.
         """
-    def select_n_absmin(self, arg0: int) -> list:
+    def select_n_absmin(
+        self, n: typing.SupportsInt | typing.SupportsIndex
+    ) -> list[tuple[list[int], float]]:
         """
         Select the n absolute minimal elements.
         """
-    def select_n_max(self, arg0: int) -> list:
+    def select_n_max(
+        self, n: typing.SupportsInt | typing.SupportsIndex
+    ) -> list[tuple[list[int], float]]:
         """
         Select the n maximal elements.
         """
-    def select_n_min(self, arg0: int) -> list:
+    def select_n_min(
+        self, n: typing.SupportsInt | typing.SupportsIndex
+    ) -> list[tuple[list[int], float]]:
         """
         Select the n minimal elements.
         """
     @typing.overload
     def set_from_ndarray(
-        self, arg0: numpy.ndarray[typing.Any, numpy.dtype[typing.Any]]
+        self, in_array: typing.Annotated[numpy.typing.ArrayLike, numpy.float64]
     ) -> Tensor:
         """
-        Set all tensor elements from a standard np::ndarray by making a copy. Provide an optional tolerance argument to increase the tolerance for the check for symmetry consistency.
+        Set all tensor elements from a standard np::ndarray by making a copy.
         """
     @typing.overload
     def set_from_ndarray(
-        self, arg0: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]], arg1: float
+        self,
+        in_array: typing.Annotated[numpy.typing.ArrayLike, numpy.float64],
+        symmetry_tolerance: typing.SupportsFloat | typing.SupportsIndex,
     ) -> Tensor:
         """
         Set all tensor elements from a standard np::ndarray by making a copy. Provide an optional tolerance argument to increase the tolerance for the check for symmetry consistency.
@@ -810,7 +905,9 @@ class Tensor:
         """
         Set the tensor as immutable, allowing some optimisations to be performed.
         """
-    def set_mask(self, arg0: str, arg1: float) -> None:
+    def set_mask(
+        self, mask: str, value: typing.SupportsFloat | typing.SupportsIndex
+    ) -> None:
         """
         Set all elements corresponding to an index mask, which is given by a string eg. 'iijkli' sets elements T_{iijkli}
         """
@@ -819,20 +916,24 @@ class Tensor:
         Set all tensor elements to random data, adhering to the internal symmetry.
         """
     @typing.overload
-    def symmetrise(self, arg0: list) -> Tensor: ...
+    def symmetrise(self, permutations: list[int] | list[list[int]]) -> Tensor: ...
     @typing.overload
-    def symmetrise(self, *args) -> Tensor: ...
-    def to_ndarray(self) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]]:
+    def symmetrise(self, *args: int) -> Tensor: ...
+    def to_ndarray(self) -> numpy.typing.NDArray[numpy.float64]:
         """
         Export the tensor data to a standard np::ndarray by making a copy.
         """
     @typing.overload
     def transpose(self) -> Tensor: ...
     @typing.overload
-    def transpose(self, arg0: tuple) -> Tensor: ...
+    def transpose(self, axes: tuple[int, ...]) -> Tensor: ...
     def zeros_like(self) -> Tensor: ...
     @property
     def T(self) -> Tensor: ...
+    @property
+    def flags(self) -> list[str]: ...
+    @flags.setter
+    def flags(self, new_flags: collections.abc.Sequence[str]) -> None: ...
     @property
     def mutable(self) -> bool: ...
     @property
@@ -843,7 +944,7 @@ class Tensor:
         Does the tensor need evaluation or is it fully evaluated and resilient in memory.
         """
     @property
-    def shape(self) -> tuple: ...
+    def shape(self) -> tuple[int, ...]: ...
     @property
     def size(self) -> int: ...
     @property
@@ -859,12 +960,12 @@ def amplitude_vector_enforce_spin_kind(arg0: Tensor, arg1: str, arg2: str) -> No
 def direct_sum(a: Tensor, b: Tensor) -> Tensor: ...
 def evaluate(arg0: Tensor) -> Tensor: ...
 def fill_pp_doubles_guesses(
-    guesses_d: list[Tensor],
+    guesses_d: collections.abc.Sequence[Tensor],
     mospaces: MoSpaces,
     df02: Tensor,
     df13: Tensor,
-    spin_change_twice: int,
-    degeneracy_tolerance: float,
+    spin_change_twice: typing.SupportsInt | typing.SupportsIndex,
+    degeneracy_tolerance: typing.SupportsFloat | typing.SupportsIndex,
 ) -> int:
     """
     Fill the passed vector of doubles blocks with doubles guesses using the delta-Fock matrices df02 and df13, which are the two delta-Fock matrices involved in the doubles block.
@@ -889,7 +990,7 @@ def get_n_threads_total() -> int:
     """
 
 def linear_combination_strict(
-    coefficients: numpy.ndarray[typing.Any, numpy.dtype[numpy.float64]], tensors: list
+    coefficients: typing.Annotated[numpy.typing.ArrayLike, numpy.float64], tensors: list
 ) -> Tensor: ...
 def make_symmetry_eri(arg0: MoSpaces, arg1: str) -> Symmetry:
     """
@@ -920,7 +1021,11 @@ def make_symmetry_operator(arg0: MoSpaces, arg1: str, arg2: str, arg3: str) -> S
     """
 
 def make_symmetry_operator_basis(
-    arg0: MoSpaces, arg1: int, arg2: str, arg3: int, arg4: str
+    arg0: MoSpaces,
+    arg1: typing.SupportsInt | typing.SupportsIndex,
+    arg2: str,
+    arg3: typing.SupportsInt | typing.SupportsIndex,
+    arg4: str,
 ) -> Symmetry:
     """
     Return the symmetry object for an operator in the AO basis. The object will
@@ -943,7 +1048,10 @@ def make_symmetry_operator_basis(
     """
 
 def make_symmetry_orbital_coefficients(
-    arg0: MoSpaces, arg1: str, arg2: int, arg3: str
+    arg0: MoSpaces,
+    arg1: str,
+    arg2: typing.SupportsInt | typing.SupportsIndex,
+    arg3: str,
 ) -> Symmetry:
     """
     Return the Symmetry object like it would be set up for the passed subspace
@@ -973,20 +1081,22 @@ def make_symmetry_triples(arg0: MoSpaces, arg1: str) -> Symmetry:
       space       Space string (e.g. o1o1o1v1v1v1)
     """
 
-def set_n_threads(arg0: int) -> None:
+def set_n_threads(arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
     """
     Set the number of running worker threads used by adcc
     """
 
-def set_n_threads_total(arg0: int) -> None:
+def set_n_threads_total(arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
     """
     Set the total number of threads (running and sleeping) used by adcc. This will disappear in the future. Do not rely on it.
     """
 
 @typing.overload
-def tensordot(a: Tensor, b: Tensor, axes: typing.Iterable) -> typing.Any: ...
+def tensordot(a: Tensor, b: Tensor, axes: collections.abc.Iterable) -> typing.Any: ...
 @typing.overload
-def tensordot(a: Tensor, b: Tensor, axes: int) -> typing.Any: ...
+def tensordot(
+    a: Tensor, b: Tensor, axes: typing.SupportsInt | typing.SupportsIndex
+) -> typing.Any: ...
 @typing.overload
 def tensordot(a: Tensor, b: Tensor) -> typing.Any: ...
 @typing.overload

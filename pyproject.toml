@@ -47,7 +47,7 @@ tests = ["pytest", "pytest-cov", "pandas >= 0.25.0"]
 # since we explicity call setup.py
 cpptest = [
 	"setuptools >= 77.0",
-	"pybind11 >= 2.6"
+	"pybind11 >= 3.0"
 ]
 build_docs = [
 	"sphinx>=2", "breathe", "sphinxcontrib-bibtex",
@@ -64,7 +64,7 @@ Homepage = "https://adc-connect.org"
 [build-system]
 requires = [
 	"setuptools >= 77.0",  # due to license
-	"pybind11 >= 2.6"
+	"pybind11 >= 3.0"
 ]
 build-backend = "setuptools.build_meta"
 
