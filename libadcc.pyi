@@ -144,13 +144,7 @@ class HartreeFockProvider(HartreeFockSolution_i):
         Returns the number of HF *spin* orbitals of alpha spin. It is assumed the same number of beta spin orbitals are used. This value is abbreviated by `nf` in the documentation.
         """
     def get_nuclear_multipole(
-        self,
-        order: typing.SupportsInt | typing.SupportsIndex,
-        gauge_origin: tuple[
-            typing.SupportsFloat | typing.SupportsIndex,
-            typing.SupportsFloat | typing.SupportsIndex,
-            typing.SupportsFloat | typing.SupportsIndex,
-        ] = (0.0, 0.0, 0.0),
+        self, order: int, gauge_origin: tuple[float, float, float] = (0.0, 0.0, 0.0)
     ) -> numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]]:
         """
         Returns the nuclear multipole of the requested order. For `0` returns the total nuclear charge as an array of size 1, for `1` returns the nuclear dipole moment as an array of size 3.

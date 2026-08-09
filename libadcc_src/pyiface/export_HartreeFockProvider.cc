@@ -260,8 +260,8 @@ class HartreeFockProvider : public HartreeFockSolution_i {
   virtual size_t get_n_orbs_alpha() const = 0;
   virtual size_t get_n_bas() const        = 0;
   virtual NDArray<scalar_type, 1> get_nuclear_multipole(
-        size_t order,
-        std::tuple<scalar_type, scalar_type, scalar_type> gauge_origin) const = 0;
+        py::int_ order,
+        std::tuple<py::float_, py::float_, py::float_> gauge_origin) const = 0;
   virtual const std::tuple<scalar_type, scalar_type, scalar_type>
   transform_gauge_origin_to_xyz(py::str gauge_origin) const = 0;
   virtual real_type get_conv_tol() const                    = 0;
@@ -298,8 +298,8 @@ class PyHartreeFockProvider : public HartreeFockProvider {
     PYBIND11_OVERLOAD_PURE(size_t, HartreeFockProvider, get_n_bas, );
   }
   NDArray<scalar_type, 1> get_nuclear_multipole(
-        size_t order,
-        std::tuple<scalar_type, scalar_type, scalar_type> gauge_origin) const override {
+        py::int_ order,
+        std::tuple<py::float_, py::float_, py::float_> gauge_origin) const override {
     PYBIND11_OVERLOAD_PURE(PYBIND11_TYPE(NDArray<scalar_type, 1>), HartreeFockProvider,
                            get_nuclear_multipole, order, gauge_origin);
   }
