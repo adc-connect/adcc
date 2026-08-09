@@ -41,8 +41,8 @@ class AdcMemory:
     def initialise(
         self,
         pagefile_directory: str,
-        max_block_size: typing.SupportsInt | typing.SupportsIndex,
-        allocator: str,
+        max_block_size: typing.SupportsInt | typing.SupportsIndex = 16,
+        allocator: str = "standard",
     ) -> None: ...
     @property
     def allocator(self) -> str:
@@ -82,7 +82,7 @@ class HartreeFockProvider(HartreeFockSolution_i):
         out: numpy.ndarray[tuple[int, int, int, int], numpy.dtype[numpy.float64]],
     ) -> None:
         """
-        Fill the passed numpy array `arg1` with a part of the electron-repulsion integral tensor in the molecular orbital basis. The indexing convention is the chemist's notation, i.e. the index tuple `(i,j,k,l)` refers to the integral :math:`(ij|kl)`. The block to store is specified by the provided tuple of ranges `arg0`, which gives the range of indices to place into the buffer along each of the axis. The index counting is done in spin orbitals, so the full range in each axis is `range(0, 2 * nf)`.
+        Fill the passed numpy array `out` with a part of the electron-repulsion integral tensor in the molecular orbital basis. The indexing convention is the chemist's notation, i.e. the index tuple `(i,j,k,l)` refers to the integral :math:`(ij|kl)`. The block to store is specified by the provided tuple of ranges `slices`, which gives the range of indices to place into the buffer along each of the axis. The index counting is done in spin orbitals, so the full range in each axis is `range(0, 2 * nf)`.
         """
     def fill_eri_phys_asym_ffff(
         self,
@@ -90,7 +90,7 @@ class HartreeFockProvider(HartreeFockSolution_i):
         out: numpy.ndarray[tuple[int, int, int, int], numpy.dtype[numpy.float64]],
     ) -> None:
         """
-        Fill the passed numpy array `arg1` with a part of the **antisymmetrised** electron-repulsion integral tensor in the molecular orbital basis. The indexing convention is the physicist's notation, i.e. the index tuple `(i,j,k,l)` refers to the integral :math:`\\langle ij||kl \\rangle`. The block to store is specified by the provided tuple of ranges `arg0`, which gives the range of indices to place into the buffer along each of the axis. The index counting is done in spin orbitals, so the full range in each axis is `range(0, 2 * nf)`.
+        Fill the passed numpy array `out` with a part of the **antisymmetrised** electron-repulsion integral tensor in the molecular orbital basis. The indexing convention is the physicist's notation, i.e. the index tuple `(i,j,k,l)` refers to the integral :math:`\\langle ij||kl \\rangle`. The block to store is specified by the provided tuple of ranges `slices`, which gives the range of indices to place into the buffer along each of the axis. The index counting is done in spin orbitals, so the full range in each axis is `range(0, 2 * nf)`.
         """
     def fill_fock_ff(
         self,
@@ -98,7 +98,7 @@ class HartreeFockProvider(HartreeFockSolution_i):
         out: numpy.ndarray[tuple[int, int], numpy.dtype[numpy.float64]],
     ) -> None:
         """
-        Fill the passed numpy array `arg1` with a part of the Fock matrix in the molecular orbital basis. The block to store is specified by the provided tuple of ranges `arg0`, which gives the range of indices to place into the buffer along each of the axis. The index counting is done in spin orbitals, so the full range in each axis is `range(0, 2 * nf)`. The implementation should not assume that the alpha-beta and beta-alpha blocks are not accessed even though they are zero by spin symmetry.
+        Fill the passed numpy array `out` with a part of the Fock matrix in the molecular orbital basis. The block to store is specified by the provided tuple of ranges `slices`, which gives the range of indices to place into the buffer along each of the axis. The index counting is done in spin orbitals, so the full range in each axis is `range(0, 2 * nf)`. The implementation should not assume that the alpha-beta and beta-alpha blocks are not accessed even though they are zero by spin symmetry.
         """
     def fill_occupation_f(
         self, out: numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]]
@@ -150,7 +150,7 @@ class HartreeFockProvider(HartreeFockSolution_i):
             typing.SupportsFloat | typing.SupportsIndex,
             typing.SupportsFloat | typing.SupportsIndex,
             typing.SupportsFloat | typing.SupportsIndex,
-        ] = (0, 0, 0),
+        ] = (0.0, 0.0, 0.0),
     ) -> numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]]:
         """
         Returns the nuclear multipole of the requested order. For `0` returns the total nuclear charge as an array of size 1, for `1` returns the nuclear dipole moment as an array of size 3.
@@ -222,13 +222,13 @@ class MoIndexTranslation:
     Helper object to extract information from indices into orbitals subspaces and to map them between different indexing conventions (full MO space, MO subspaces, indexing convention in the HF Provider / SCF host program, ... Python binding to :cpp:class:`libadcc::MoIndexTranslation`.
     """
     @typing.overload
-    def __init__(self, mospaces_ptr: MoSpaces, space: str) -> None:
+    def __init__(self, mospaces: MoSpaces, space: str) -> None:
         """
         Construct a MoIndexTranslation class from an MoSpaces object and the identifier for the space (e.g. o1o1, v1o1, o3v2o1v1, ...)
         """
     @typing.overload
     def __init__(
-        self, mospaces_ptr: MoSpaces, subspaces: collections.abc.Sequence[str]
+        self, mospaces: MoSpaces, subspaces: collections.abc.Sequence[str]
     ) -> None:
         """
         Construct a MoIndexTranslation class from an MoSpaces object and the list of identifiers for the space (e.g. ["o1", "o1"] ...)
@@ -369,7 +369,7 @@ class MoSpaces:
     def __init__(
         self,
         hf: HartreeFockSolution_i,
-        adcmem_ptr: AdcMemory,
+        adcmem: AdcMemory,
         core_orbitals: collections.abc.Sequence[
             typing.SupportsInt | typing.SupportsIndex
         ],
@@ -384,7 +384,7 @@ class MoSpaces:
         Construct an MoSpaces object from a HartreeFockSolution_i, a pointer to
         an AdcMemory object.
 
-        adcmem_ptr        ADC memory keep-alive object to be used in all Tensors
+        adcmem            ADC memory keep-alive object to be used in all Tensors
                           constructed using this MoSpaces object.
         core_orbitals     List of orbitals indices (in the full fock space, original
                           ordering of the hf object), which defines the orbitals to
@@ -483,17 +483,17 @@ class ReferenceState:
     """
     def __init__(
         self,
-        hfsoln_ptr: HartreeFockSolution_i,
-        mo_ptr: MoSpaces,
+        hfsoln: HartreeFockSolution_i,
+        mo: MoSpaces,
         symmetry_check_on_import: bool,
     ) -> None:
         """
         Setup a ReferenceStateject using an MoSpaces object.
 
-        hfsoln_ptr        Pointer to the Interface to the host program,
+        hfsoln            Pointer to the Interface to the host program,
                           providing the HartreeFockSolution data, which
                           will be provided by this object.
-        mo_ptr            MoSpaces object containing info about the MoSpace setup
+        mo                MoSpaces object containing info about the MoSpace setup
                           and the point group symmetry.
         symmetry_check_on_import
                           Should symmetry of the imported objects be checked
@@ -649,14 +649,14 @@ class Symmetry:
     Container for Tensor symmetry information
     """
     @typing.overload
-    def __init__(self, mospaces_ptr: MoSpaces, space: str) -> None:
+    def __init__(self, mospaces: MoSpaces, space: str) -> None:
         """
         Construct a Symmetry class from an MoSpaces object and the identifier for the space (e.g. o1o1, v1o1, o3v2o1v1, ...). Python binding to :cpp:class:`libadcc::Symmetry`.
         """
     @typing.overload
     def __init__(
         self,
-        mospaces_ptr: MoSpaces,
+        mospaces: MoSpaces,
         space: str,
         extra_axes_orbs: collections.abc.Mapping[
             str,
@@ -762,7 +762,9 @@ class Tensor:
     ) -> Tensor: ...
     @typing.overload
     def __add__(self, other: Tensor) -> Tensor: ...
-    def __getitem__(self, idcs: tuple[int, ...]) -> float:
+    def __getitem__(
+        self, idcs: tuple[typing.SupportsInt | typing.SupportsIndex, ...]
+    ) -> float:
         """
         Get a tensor element or a slice of tensor elements.
         """
@@ -803,7 +805,9 @@ class Tensor:
         self, number: typing.SupportsFloat | typing.SupportsIndex
     ) -> Tensor: ...
     def __setitem__(
-        self, idcs: tuple[int, ...], value: typing.SupportsFloat | typing.SupportsIndex
+        self,
+        idcs: tuple[typing.SupportsInt | typing.SupportsIndex, ...],
+        value: typing.SupportsFloat | typing.SupportsIndex,
     ) -> None:
         """
         Set a tensor element or a slice of tensor elements. The operation will adhere symmetry, i.e. alter all elements equivalent by symmetry at once.
@@ -825,7 +829,11 @@ class Tensor:
         Divide two tensors elementwise.
         """
     @typing.overload
-    def antisymmetrise(self, permutations: list[int] | list[list[int]]) -> Tensor: ...
+    def antisymmetrise(
+        self,
+        permutations: collections.abc.Iterable[int]
+        | collections.abc.Iterable[collections.abc.Iterable[int]],
+    ) -> Tensor: ...
     @typing.overload
     def antisymmetrise(self, *args: int) -> Tensor: ...
     def copy(self) -> Tensor:
@@ -855,7 +863,9 @@ class Tensor:
         """
         Ensure the tensor to be fully evaluated and resilient in memory. Usually happens automatically when needed. Might be useful for fine-tuning, however.
         """
-    def is_allowed(self, idcs: tuple[int, ...]) -> bool:
+    def is_allowed(
+        self, idcs: tuple[typing.SupportsInt | typing.SupportsIndex, ...]
+    ) -> bool:
         """
         Is a particular index allowed by symmetry
         """
@@ -916,7 +926,11 @@ class Tensor:
         Set all tensor elements to random data, adhering to the internal symmetry.
         """
     @typing.overload
-    def symmetrise(self, permutations: list[int] | list[list[int]]) -> Tensor: ...
+    def symmetrise(
+        self,
+        permutations: collections.abc.Iterable[int]
+        | collections.abc.Iterable[collections.abc.Iterable[int]],
+    ) -> Tensor: ...
     @typing.overload
     def symmetrise(self, *args: int) -> Tensor: ...
     def to_ndarray(self) -> numpy.typing.NDArray[numpy.float64]:
@@ -926,7 +940,9 @@ class Tensor:
     @typing.overload
     def transpose(self) -> Tensor: ...
     @typing.overload
-    def transpose(self, axes: tuple[int, ...]) -> Tensor: ...
+    def transpose(
+        self, axes: tuple[typing.SupportsInt | typing.SupportsIndex, ...]
+    ) -> Tensor: ...
     def zeros_like(self) -> Tensor: ...
     @property
     def T(self) -> Tensor: ...
@@ -970,12 +986,12 @@ def fill_pp_doubles_guesses(
     degeneracy_tolerance: typing.SupportsFloat | typing.SupportsIndex,
 ) -> int:
     """
-    Fill the passed vector of doubles blocks with doubles guesses using the delta-Fock matrices df02 and df13, which are the two delta-Fock matrices involved in the doubles block.
+    Fill the passed vector of doubles blocks with doubles guesses using the delta-Fock matrices df1 and df2, which are the two delta-Fock matrices involved in the doubles block.
 
     guesses_d    Vectors of guesses, all elements are assumed to be initialised to zero and the symmetry is assumed to be properly set up.
     mospaces     Mospaces object
-    df02         Delta-Fock between spaces 0 and 2 of the ADC matrix
-    df13         Delta-Fock between spaces 1 and 3 of the ADC matrix
+    df1         Delta-Fock between spaces 0 and 2 of the ADC matrix
+    df2         Delta-Fock between spaces 1 and 3 of the ADC matrix
     spin_change_twice   Twice the value of the spin change to enforce in an excitation.
     degeneracy_tolerance  Tolerance for two entries of the diagonal to be considered degenerate, i.e. identical.
     Returns     The number of guess vectors which have been properly initialised (the others are invalid and should be discarded).
@@ -995,17 +1011,17 @@ def linear_combination_strict(
     coefficients: typing.Annotated[numpy.typing.ArrayLike, numpy.float64],
     tensors: list[Tensor],
 ) -> Tensor: ...
-def make_symmetry_eri(mospaces_ptr: MoSpaces, space: str) -> Symmetry:
+def make_symmetry_eri(mospaces: MoSpaces, space: str) -> Symmetry:
     """
     Return the Symmetry object like it would be set up for the passed subspace
     of the electron-repulsion tensor.
 
-      mospaces_ptr    MoSpaces object
-      space           Space string (e.g. o1v1o1v1)
+      mospaces    MoSpaces object
+      space       Space string (e.g. o1v1o1v1)
     """
 
 def make_symmetry_operator(
-    mospaces_ptr: MoSpaces,
+    mospaces: MoSpaces,
     space: str,
     operator_symmetry: str,
     cartesian_transformation: str,
@@ -1013,14 +1029,14 @@ def make_symmetry_operator(
     """
     Return the Symmetry object for an orbital subspace block of a one-particle operator
 
-      mospaces_ptr  MoSpaces object
-      space         Space string (e.g. o1v1)
+      mospaces    MoSpaces object
+      space       Space string (e.g. o1v1)
       operator_symmetry
-                    Describes the symmetry of the tensor (only in effect if both
-                    subspaces of the space string are identical).
-                    Valid are "nosymmetry", "hermitian" and "antihermitian".
+                  Describes the symmetry of the tensor (only in effect if both
+                  subspaces of the space string are identical).
+                  Valid are "nosymmetry", "hermitian" and "antihermitian".
       cartesian_transformation
-                    The cartesian function according to which the operator transforms.
+                  The cartesian function according to which the operator               transforms.
 
     Valid cartesian_transformation values include:
          "1"                   Totally symmetric (default)
@@ -1030,7 +1046,7 @@ def make_symmetry_operator(
     """
 
 def make_symmetry_operator_basis(
-    mospaces_ptr: MoSpaces,
+    mospaces: MoSpaces,
     n_bas: typing.SupportsInt | typing.SupportsIndex,
     operator_symmetry: str,
     n_particle_op: typing.SupportsInt | typing.SupportsIndex,
@@ -1044,7 +1060,7 @@ def make_symmetry_operator_basis(
     where M is an n_bas x n_bas block and is indentical in upper-left
     and lower-right.
 
-    mospaces_ptr      MoSpaces pointer
+    mospaces          MoSpaces pointer
     n_bas             Number of AO basis functions
     operator_symmetry Is the tensor symmetric (hermitian/antihermitian, only
                       in effect if both space axes identical).
@@ -1057,7 +1073,7 @@ def make_symmetry_operator_basis(
     """
 
 def make_symmetry_orbital_coefficients(
-    mospaces_ptr: MoSpaces,
+    mospaces: MoSpaces,
     space: str,
     n_bas: typing.SupportsInt | typing.SupportsIndex,
     blocks: str = "ab",
@@ -1066,28 +1082,28 @@ def make_symmetry_orbital_coefficients(
     Return the Symmetry object like it would be set up for the passed subspace
     of the orbital coefficients tensor.
 
-      mospaces_ptr    MoSpaces object
-      space           Space string (e.g. o1b)
-      n_bas           Number of basis functions
-      blocks          Spin blocks to include. Valid are "ab", "a" and "b".
+      mospaces    MoSpaces object
+      space       Space string (e.g. o1b)
+      n_bas       Number of basis functions
+      blocks      Spin blocks to include. Valid are "ab", "a" and "b".
     """
 
-def make_symmetry_orbital_energies(mospaces_ptr: MoSpaces, space: str) -> Symmetry:
+def make_symmetry_orbital_energies(mospaces: MoSpaces, space: str) -> Symmetry:
     """
     Return the Symmetry object like it would be set up for the passed subspace
     of the orbital energies tensor.
 
-      mospaces_ptr    MoSpaces object
-      space           space string (e.g. o1)
+      mospaces    MoSpaces object
+      space       space string (e.g. o1)
     """
 
-def make_symmetry_triples(mospaces_ptr: MoSpaces, space: str) -> Symmetry:
+def make_symmetry_triples(mospaces: MoSpaces, space: str) -> Symmetry:
     """
     Return the Symmetry object like it would be set up for the passed subspace
     of a triples amplitude tensor.
 
-      mospaces_ptr    MoSpaces object
-      space           Space string (e.g. o1o1o1v1v1v1)
+      mospaces    MoSpaces object
+      space       Space string (e.g. o1o1o1v1v1v1)
     """
 
 def set_n_threads(n_threads: typing.SupportsInt | typing.SupportsIndex) -> None:

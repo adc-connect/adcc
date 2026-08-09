@@ -29,7 +29,6 @@
 namespace libadcc {
 
 namespace py = pybind11;
-using namespace pybind11::literals;
 typedef std::shared_ptr<Tensor> ten_ptr;
 
 using Permutations =
@@ -558,14 +557,14 @@ void export_Tensor(py::module& m) {
         ;
 
   m.def("evaluate", &evaluate, py::arg("tensor"));
-  m.def("tensordot", &tensordot_1, "a"_a, "b"_a, "axes"_a);
-  m.def("tensordot", &tensordot_2, "a"_a, "b"_a, "axes"_a);
-  m.def("tensordot", &tensordot_3, "a"_a, "b"_a);
-  m.def("direct_sum", &direct_sum, "a"_a, "b"_a);
-  m.def("trace", &Tensor_trace_1, "subscripts"_a, "tensor"_a);
-  m.def("trace", &Tensor_trace_2, "tensor"_a);
-  m.def("linear_combination_strict", &linear_combination_strict, "coefficients"_a,
-        "tensors"_a);
+  m.def("tensordot", &tensordot_1, py::arg("a"), py::arg("b"), py::arg("axes"));
+  m.def("tensordot", &tensordot_2, py::arg("a"), py::arg("b"), py::arg("axes"));
+  m.def("tensordot", &tensordot_3, py::arg("a"), py::arg("b"));
+  m.def("direct_sum", &direct_sum, py::arg("a"), py::arg("b"));
+  m.def("trace", &Tensor_trace_1, py::arg("subscripts"), py::arg("tensor"));
+  m.def("trace", &Tensor_trace_2, py::arg("tensor"));
+  m.def("linear_combination_strict", &linear_combination_strict, py::arg("coefficients"),
+        py::arg("tensors"));
 }
 
 }  // namespace libadcc

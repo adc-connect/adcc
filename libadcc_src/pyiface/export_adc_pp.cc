@@ -25,7 +25,6 @@
 namespace libadcc {
 
 namespace py = pybind11;
-using namespace pybind11::literals;
 
 void export_adc_pp(py::module& m) {
   m.def("amplitude_vector_enforce_spin_kind", &amplitude_vector_enforce_spin_kind,
@@ -33,8 +32,9 @@ void export_adc_pp(py::module& m) {
         "Apply the spin symmetrisation required to make the doubles and higher parts of "
         "an amplitude vector consist of components for a particular spin kind only.");
 
-  m.def("fill_pp_doubles_guesses", &fill_pp_doubles_guesses, "guesses_d"_a, "mospaces"_a,
-        "df1"_a, "df2"_a, "spin_change_twice"_a, "degeneracy_tolerance"_a,
+  m.def("fill_pp_doubles_guesses", &fill_pp_doubles_guesses, py::arg("guesses_d"),
+        py::arg("mospaces"), py::arg("df1"), py::arg("df2"), py::arg("spin_change_twice"),
+        py::arg("degeneracy_tolerance"),
         "Fill the passed vector of doubles blocks with doubles guesses using the "
         "delta-Fock matrices df1 and df2, which are the two delta-Fock matrices "
         "involved in the doubles block.\n\nguesses_d    Vectors of guesses, all elements "
