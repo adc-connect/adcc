@@ -32,12 +32,12 @@ void export_MoSpaces(py::module& m) {
         "information about them. Python binding to :cpp:class:`libadcc::MoSpaces`.")
         .def(py::init<const HartreeFockSolution_i&, std::shared_ptr<const AdcMemory>,
                       std::vector<size_t>, std::vector<size_t>, std::vector<size_t>>(),
-             py::arg("hf"), py::arg("adcmem_ptr"), py::arg("core_orbitals"),
+             py::arg("hf"), py::arg("adcmem"), py::arg("core_orbitals"),
              py::arg("frozen_core_orbitals"), py::arg("frozen_virtuals"),
              "Construct an MoSpaces object from a HartreeFockSolution_i, a pointer to\n"
              "an AdcMemory object.\n"
              "\n"
-             "adcmem_ptr        ADC memory keep-alive object to be used in all Tensors\n"
+             "adcmem            ADC memory keep-alive object to be used in all Tensors\n"
              "                  constructed using this MoSpaces object.\n"
              "core_orbitals     List of orbitals indices (in the full fock space, "
              "original\n"

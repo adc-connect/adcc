@@ -59,7 +59,7 @@ void export_AdcMemory(py::module& m) {
                       "Get or set the batch size for contraction, i.e. the number of "
                       "elements handled simultaneously in a tensor contraction.")
         .def("initialise", &AdcMemory::initialise, "pagefile_directory"_a,
-             "max_block_size"_a, "allocator"_a)
+             "max_block_size"_a = 16, "allocator"_a = "standard")
         .def("__repr__", &AdcMemory___repr__)
         //
         ;

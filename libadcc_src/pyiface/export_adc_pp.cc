@@ -36,11 +36,11 @@ void export_adc_pp(py::module& m) {
   m.def("fill_pp_doubles_guesses", &fill_pp_doubles_guesses, "guesses_d"_a, "mospaces"_a,
         "df1"_a, "df2"_a, "spin_change_twice"_a, "degeneracy_tolerance"_a,
         "Fill the passed vector of doubles blocks with doubles guesses using the "
-        "delta-Fock matrices df02 and df13, which are the two delta-Fock matrices "
+        "delta-Fock matrices df1 and df2, which are the two delta-Fock matrices "
         "involved in the doubles block.\n\nguesses_d    Vectors of guesses, all elements "
         "are assumed to be initialised to zero and the symmetry is assumed to be "
-        "properly set up.\nmospaces     Mospaces object\ndf02         Delta-Fock between "
-        "spaces 0 and 2 of the ADC matrix\ndf13         Delta-Fock between spaces 1 and "
+        "properly set up.\nmospaces     Mospaces object\ndf1         Delta-Fock between "
+        "spaces 0 and 2 of the ADC matrix\ndf2         Delta-Fock between spaces 1 and "
         "3 of the ADC matrix\nspin_change_twice   Twice the value of the spin change to "
         "enforce in an excitation.\ndegeneracy_tolerance  Tolerance for two entries of "
         "the diagonal to be considered degenerate, i.e. identical.\nReturns     The "

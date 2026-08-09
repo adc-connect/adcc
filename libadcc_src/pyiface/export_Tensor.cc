@@ -32,8 +32,9 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 typedef std::shared_ptr<Tensor> ten_ptr;
 
-using Permutations = py::typing::Union<py::typing::List<py::int_>,
-                                       py::typing::List<py::typing::List<py::int_>>>;
+using Permutations =
+      py::typing::Union<py::typing::Iterable<py::int_>,
+                        py::typing::Iterable<py::typing::Iterable<py::int_>>>;
 
 static std::vector<std::vector<size_t>> parse_permutations(
       const Permutations& permutations) {
@@ -164,7 +165,7 @@ static ten_ptr Tensor_transpose_1(const Tensor& self) {
 }
 
 static ten_ptr Tensor_transpose_2(const Tensor& self,
-                                  py::typing::Tuple<py::int_, py::ellipsis> axes) {
+                                  py::typing::Tuple<py::ssize_t, py::ellipsis> axes) {
   std::vector<size_t> vec_axes(py::len(axes));
   for (size_t i = 0; i < py::len(axes); ++i) {
     vec_axes[i] = axes[i].cast<size_t>();
@@ -325,17 +326,17 @@ static ElementList Tensor_select_n_absmax(const ten_ptr& self, size_t n) {
 }
 
 static bool Tensor_is_allowed(const ten_ptr& self,
-                              py::typing::Tuple<py::int_, py::ellipsis> idcs) {
+                              py::typing::Tuple<py::ssize_t, py::ellipsis> idcs) {
   return self->is_element_allowed(convert_index_tuple(self, idcs));
 }
 
 static scalar_type Tensor__getitem__(const ten_ptr& self,
-                                     py::typing::Tuple<py::int_, py::ellipsis> idcs) {
+                                     py::typing::Tuple<py::ssize_t, py::ellipsis> idcs) {
   return self->get_element(convert_index_tuple(self, idcs));
 }
 
 static void Tensor__setitem__(const ten_ptr& self,
-                              py::typing::Tuple<py::int_, py::ellipsis> idcs,
+                              py::typing::Tuple<py::ssize_t, py::ellipsis> idcs,
                               scalar_type value) {
   self->set_element(convert_index_tuple(self, idcs), value);
 }

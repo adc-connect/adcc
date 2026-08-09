@@ -64,14 +64,13 @@ void export_ReferenceState(py::module& m) {
   reference_state
         .def(py::init<std::shared_ptr<const HartreeFockSolution_i>,
                       std::shared_ptr<const MoSpaces>, bool>(),
-             py::arg("hfsoln_ptr"), py::arg("mo_ptr"),
-             py::arg("symmetry_check_on_import"),
+             py::arg("hfsoln"), py::arg("mo"), py::arg("symmetry_check_on_import"),
              "Setup a ReferenceStateject using an MoSpaces object.\n"
              "\n"
-             "hfsoln_ptr        Pointer to the Interface to the host program,\n"
+             "hfsoln            Pointer to the Interface to the host program,\n"
              "                  providing the HartreeFockSolution data, which\n"
              "                  will be provided by this object.\n"
-             "mo_ptr            MoSpaces object containing info about the MoSpace setup\n"
+             "mo                MoSpaces object containing info about the MoSpace setup\n"
              "                  and the point group symmetry.\n"
              "symmetry_check_on_import\n"
              "                  Should symmetry of the imported objects be checked\n"

@@ -28,9 +28,9 @@ namespace libadcc {
 namespace py = pybind11;
 
 // Type definition used throughout the interface
-using IdxTuple   = py::typing::Tuple<size_t, py::ellipsis>;     // tuple[int, ...]
-using RangePair  = py::typing::Tuple<size_t, size_t>;           // tuple[int, int]
-using RangeTuple = py::typing::Tuple<RangePair, py::ellipsis>;  // one pair per dimension
+using IdxTuple   = py::typing::Tuple<py::ssize_t, py::ellipsis>;
+using RangePair  = py::typing::Tuple<py::ssize_t, py::ssize_t>;
+using RangeTuple = py::typing::Tuple<RangePair, py::ellipsis>;
 
 static std::vector<size_t> parse_tuple(size_t ndim, const py::tuple& tuple) {
   if (tuple.size() != ndim) {
@@ -104,12 +104,12 @@ void export_MoIndexTranslation(py::module& m) {
         "subspaces, indexing convention in the HF Provider / SCF host program, ... "
         "Python binding to :cpp:class:`libadcc::MoIndexTranslation`.")
         .def(py::init<std::shared_ptr<const MoSpaces>, const std::string&>(),
-             py::arg("mospaces_ptr"), py::arg("space"),
+             py::arg("mospaces"), py::arg("space"),
              "Construct a MoIndexTranslation class from an MoSpaces object and the "
              "identifier for "
              "the space (e.g. o1o1, v1o1, o3v2o1v1, ...)")
         .def(py::init<std::shared_ptr<const MoSpaces>, const std::vector<std::string>&>(),
-             py::arg("mospaces_ptr"), py::arg("subspaces"),
+             py::arg("mospaces"), py::arg("subspaces"),
              "Construct a MoIndexTranslation class from an MoSpaces object and the "
              "list of identifiers for the space (e.g. [\"o1\", \"o1\"] ...)")
         .def_property_readonly("subspaces", &MoIndexTranslation::subspaces,

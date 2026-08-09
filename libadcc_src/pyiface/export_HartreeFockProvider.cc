@@ -300,7 +300,7 @@ class PyHartreeFockProvider : public HartreeFockProvider {
   NDArray<scalar_type, 1> get_nuclear_multipole(
         size_t order,
         std::tuple<scalar_type, scalar_type, scalar_type> gauge_origin) const override {
-    PYBIND11_OVERLOAD_PURE(py::array_t<scalar_type>, HartreeFockProvider,
+    PYBIND11_OVERLOAD_PURE(PYBIND11_TYPE(NDArray<scalar_type, 1>), HartreeFockProvider,
                            get_nuclear_multipole, order, gauge_origin);
   }
   const std::tuple<scalar_type, scalar_type, scalar_type> transform_gauge_origin_to_xyz(
@@ -476,7 +476,7 @@ void export_HartreeFockProvider(py::module& m) {
              "Returns the number of *spatial* one-electron basis functions. This value "
              "is abbreviated by `nb` in the documentation.")
         .def("get_nuclear_multipole", &HartreeFockProvider::get_nuclear_multipole,
-             py::arg("order"), py::arg("gauge_origin") = py::make_tuple(0, 0, 0),
+             py::arg("order"), py::arg("gauge_origin") = py::make_tuple(0.0, 0.0, 0.0),
              "Returns the nuclear multipole of the requested order. For `0` returns the "
              "total nuclear charge as an array of size 1, for `1` returns the nuclear "
              "dipole moment as an array of size 3.")
@@ -498,32 +498,32 @@ void export_HartreeFockProvider(py::module& m) {
              "the molecular orbitals.")
         .def("fill_fock_ff", &HartreeFockProvider::fill_fock_ff, py::arg("slices"),
              py::arg("out"),
-             "Fill the passed numpy array `arg1` with a part of the Fock matrix in the "
+             "Fill the passed numpy array `out` with a part of the Fock matrix in the "
              "molecular orbital basis. The block to store is specified by the provided "
-             "tuple of ranges `arg0`, which gives the range of indices to place into the "
-             "buffer along each of the axis. The index counting is done in spin "
+             "tuple of ranges `slices`, which gives the range of indices to place into "
+             "the buffer along each of the axis. The index counting is done in spin "
              "orbitals, so the full range in each axis is `range(0, 2 * nf)`. The "
              "implementation should not assume that the alpha-beta and beta-alpha blocks "
              "are not accessed even though they are zero by spin symmetry.")
         .def("fill_eri_ffff", &HartreeFockProvider::fill_eri_ffff, py::arg("slices"),
              py::arg("out"),
-             "Fill the passed numpy array `arg1` with a part of the electron-repulsion "
+             "Fill the passed numpy array `out` with a part of the electron-repulsion "
              "integral tensor in the molecular orbital basis. "
              "The indexing convention is the chemist's notation, i.e. the index tuple "
              "`(i,j,k,l)` refers to the integral :math:`(ij|kl)`. "
              "The block to store is specified by the provided "
-             "tuple of ranges `arg0`, which gives the range of indices to place into the "
-             "buffer along each of the axis. The index counting is done in spin "
+             "tuple of ranges `slices`, which gives the range of indices to place into "
+             "the buffer along each of the axis. The index counting is done in spin "
              "orbitals, so the full range in each axis is `range(0, 2 * nf)`.")
         .def("fill_eri_phys_asym_ffff", &HartreeFockProvider::fill_eri_phys_asym_ffff,
              py::arg("slices"), py::arg("out"),
-             "Fill the passed numpy array `arg1` with a part of the **antisymmetrised** "
+             "Fill the passed numpy array `out` with a part of the **antisymmetrised** "
              "electron-repulsion integral tensor in the molecular orbital basis. "
              "The indexing convention is the physicist's notation, i.e. the index tuple "
              "`(i,j,k,l)` refers to the integral :math:`\\langle ij||kl \\rangle`. "
              "The block to store is specified by the provided "
-             "tuple of ranges `arg0`, which gives the range of indices to place into the "
-             "buffer along each of the axis. The index counting is done in spin "
+             "tuple of ranges `slices`, which gives the range of indices to place into "
+             "the buffer along each of the axis. The index counting is done in spin "
              "orbitals, so the full range in each axis is `range(0, 2 * nf)`.")
         .def("has_eri_phys_asym_ffff", &HartreeFockProvider::has_eri_phys_asym_ffff,
              "Returns whether `fill_eri_phys_asym_ffff` function is implemented and "
