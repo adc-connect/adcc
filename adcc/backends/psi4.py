@@ -20,8 +20,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from typing import Literal, SupportsFloat, SupportsIndex, SupportsInt
+from typing import Literal
 import numpy as np
+
 import psi4
 
 import libadcc
@@ -42,6 +43,7 @@ QuadrupoleLike = tuple[
     Array2D, Array2D, Array2D,
     Array2D, Array2D, Array2D,
 ]
+Coordinate = tuple[float, float, float]
 Environment = Literal["pe", "pcm"]
 EnvironmentImplementation = Literal["cppe", "ddx", "pcmsolver"]
 
@@ -68,7 +70,8 @@ class Psi4OperatorIntegralProvider:
         x, y, z = self.mints.ao_dipole()  # list
         return np.asarray(x), np.asarray(y), np.asarray(z)
 
-    def magnetic_dipole(self, gauge_origin="origin") -> DipoleLike:
+    def magnetic_dipole(self,
+                        gauge_origin: Coordinate | str = "origin") -> DipoleLike:
         """
         The imaginary part of the integral is returned.
         -0.5 * sum_i r_i x p_i
@@ -92,7 +95,9 @@ class Psi4OperatorIntegralProvider:
         x, y, z = self.mints.ao_nabla()  # list
         return -1.0 * np.asarray(x), -1.0 * np.asarray(y), -1.0 * np.asarray(z)
 
-    def electric_quadrupole(self, gauge_origin="origin") -> QuadrupoleLike:
+    def electric_quadrupole(
+        self, gauge_origin: Coordinate | str = "origin"
+    ) -> QuadrupoleLike:
         """-sum_i r_{i, alpha} r_{i, beta}"""
         # TODO: Gauge origin?
         if gauge_origin != (0.0, 0.0, 0.0) and gauge_origin != "origin":
@@ -106,8 +111,9 @@ class Psi4OperatorIntegralProvider:
         assert len(u) == 6
         return (u[0], u[1], u[2], u[1], u[3], u[4], u[2], u[4], u[5])
 
-    def electric_quadrupole_traceless(self, gauge_origin="origin"
-                                      ) -> QuadrupoleLike:
+    def electric_quadrupole_traceless(
+        self, gauge_origin: Coordinate | str = "origin"
+    ) -> QuadrupoleLike:
         """
         -0.5 * sum_i (3 * r_{i, alpha} r_{i, beta}
         - delta_{alpha, beta} r_{i}^2)
@@ -274,9 +280,8 @@ class Psi4HFProvider(libadcc.HartreeFockProvider):
 
     def get_nuclear_multipole(
         self, order: int,
-        gauge_origin: tuple[float, float, float] = (0.0, 0.0, 0.0)
+        gauge_origin: Coordinate = (0.0, 0.0, 0.0)
     ) -> Array1D:
-        order = int(order)
         molecule = self.wfn.molecule()
         if order == 0:
             # The function interface needs to be a np.array on return
@@ -331,7 +336,7 @@ class Psi4HFProvider(libadcc.HartreeFockProvider):
         self.eri_builder.flush_cache()
 
 
-def import_scf(wfn):
+def import_scf(wfn: psi4.core.HF):
     if not isinstance(wfn, psi4.core.HF):
         raise InvalidReference(
             "Only psi4.core.HF and its subtypes are supported references in "
