@@ -197,12 +197,13 @@ class PyScfEriBuilder(EriBuilder):
     def __init__(self, scfres: scf.hf.SCF, n_orbs: int, n_orbs_alpha: int,
                  n_alpha: int, n_beta: int, restricted: bool):
         self.scfres: scf.hf.SCF = scfres
+        self.mo_coeff: tuple[Array2D, Array2D]
         if restricted:
-            self.mo_coeff: tuple[Array2D, Array2D] = cast(
+            self.mo_coeff = cast(
                 tuple[Array2D, Array2D], (self.scfres.mo_coeff, self.scfres.mo_coeff)
             )
         else:
-            self.mo_coeff: tuple[Array2D, Array2D] = cast(
+            self.mo_coeff = cast(
                 tuple[Array2D, Array2D], self.scfres.mo_coeff
             )
         super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted)
@@ -410,7 +411,7 @@ class PyScfHFProvider(libadcc.HartreeFockProvider):
         self.eri_builder.flush_cache()
 
 
-def import_scf(scfres: scf.hf.SCF):
+def import_scf(scfres: scf.hf.SCF) -> PyScfHFProvider:
     # TODO The error messages here could be a bit more verbose
 
     if not isinstance(scfres, scf.hf.SCF):

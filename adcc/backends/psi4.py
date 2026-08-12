@@ -299,7 +299,7 @@ class Psi4HFProvider(libadcc.HartreeFockProvider):
             raise NotImplementedError("get_nuclear_multipole with order > 1")
 
     def transform_gauge_origin_to_xyz(self, gauge_origin: str
-                                      ) -> tuple[float, float, float]:
+                                      ) -> Coordinate:
         raise NotImplementedError("transform_gauge_origin_to_xyz not implemented.")
 
     def fill_orbcoeff_fb(self, out: Array2D) -> None:
@@ -334,14 +334,14 @@ class Psi4HFProvider(libadcc.HartreeFockProvider):
                                 out: Array4D) -> None:
         raise NotImplementedError("fill_eri_phys_asym_ffff not implemented.")
 
-    def has_eri_phys_asym_ffff(self):
+    def has_eri_phys_asym_ffff(self) -> bool:
         return False
 
-    def flush_cache(self):
+    def flush_cache(self) -> None:
         self.eri_builder.flush_cache()
 
 
-def import_scf(wfn: psi4.core.HF):
+def import_scf(wfn: psi4.core.HF) -> Psi4HFProvider:
     if not isinstance(wfn, psi4.core.HF):
         raise InvalidReference(
             "Only psi4.core.HF and its subtypes are supported references in "
@@ -376,7 +376,7 @@ def import_scf(wfn: psi4.core.HF):
 
 def run_hf(xyz: str, basis: str, charge: int = 0, multiplicity: int = 1,
            conv_tol: float = 1e-11, conv_tol_grad: float = 1e-9,
-           max_iter: int = 150, pe_options: dict | None = None):
+           max_iter: int = 150, pe_options: dict | None = None) -> psi4.core.HF:
     basissets = {
         "sto3g": "sto-3g",
         "def2tzvp": "def2-tzvp",
