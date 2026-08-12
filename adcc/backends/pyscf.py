@@ -20,7 +20,6 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from collections.abc import Sequence
 from typing import cast, Literal
 import numpy as np
 
@@ -29,7 +28,7 @@ from pyscf.solvent import ddcosmo
 
 import libadcc
 
-from .EriBuilder import EriBuilder
+from .EriBuilder import EriBuilder, Block4D, Spin4D
 from ..exceptions import InvalidReference
 from ..ElectronicStates import EnergyCorrection
 
@@ -200,7 +199,8 @@ class PyScfEriBuilder(EriBuilder):
         self.mo_coeff: tuple[Array2D, Array2D]
         if restricted:
             self.mo_coeff = cast(
-                tuple[Array2D, Array2D], (self.scfres.mo_coeff, self.scfres.mo_coeff)
+                tuple[Array2D, Array2D],
+                (self.scfres.mo_coeff, self.scfres.mo_coeff)
             )
         else:
             self.mo_coeff = cast(
@@ -217,10 +217,7 @@ class PyScfEriBuilder(EriBuilder):
             "Vb": self.mo_coeff[1][:, self.n_beta:],
         }
 
-    def compute_mo_eri(self, blocks: Sequence[Literal["O", "V"]],
-                       spins: Sequence[Literal["a", "b"]]) -> Array4D:
-        assert len(blocks) == 4
-        assert len(spins) == 4
+    def compute_mo_eri(self, blocks: Block4D, spins: Spin4D) -> Array4D:
         coeffs = tuple(self.coefficients[blocks[i] + spins[i]] for i in range(4))
         # TODO Pyscf uses HDF5 internal to do the AO2MO here we read it all
         #      into memory. This wastes memory and could be avoided if temporary
@@ -309,7 +306,7 @@ class PyScfHFProvider(libadcc.HartreeFockProvider):
             conv_tol = self.scfres.conv_tol
         else:
             conv_tol = max(self.scfres.conv_tol, self.scfres.conv_tol_grad**2)
-        return conv_tol
+        return float(conv_tol)
 
     def get_restricted(self) -> bool:
         if isinstance(self.scfres.mo_occ, list):
