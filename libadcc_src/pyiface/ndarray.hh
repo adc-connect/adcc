@@ -30,21 +30,24 @@ namespace py = pybind11;
 
 // Small wrapper around py::array_t to enable the correct
 // type hints for the dimensionality of numpy arrays in the stub file.
-// Important difference: In contrast to py::array_t<T> other types are not
+// The dtype is handled exactly like in py::array_t<T>, i.e. other types are
 // silently casted (and copied) to T if necessary (e.g. int -> double).
-// Instead this class throws if it is constructed from e.g. std::array_t<int>
+// The dimensionality on the other hand is never adapted: constructing from an
+// array with a different ndim throws.
 template <typename T, size_t Ndim>
 class NDArray : public py::array_t<T> {
   static_assert(Ndim > 0, "NDArray requires at least one dimension");
 
  public:
-  // Needed by the type caster: it builds the value via reinterpret_borrow /
-  // reinterpret_steal, which require the (handle, borrowed_t/stolen_t) ctors.
-  using py::array_t<T>::array_t;
+  // Constructors:
+  // Needed by the type caster: it default-constructs via reinterpret_steal and
+  // loads via reinterpret_borrow (after check_ passed), so both are required as
+  // soon as NDArray appears as a function *parameter* (fill_*).
+  NDArray(py::handle h, py::object::borrowed_t b) : py::array_t<T>(h, b) {}
+  NDArray(py::handle h, py::object::stolen_t s) : py::array_t<T>(h, s) {}
 
   // Converting constructor.
-  NDArray(py::array array)
-        : py::array_t<T>(py::reinterpret_borrow<py::array_t<T>>(validate(array))) {}
+  NDArray(py::array array) : py::array_t<T>(validate(array)) {}
 
   // Hides py::array_t<T>::check_, which only validates the dtype. isinstance<NDArray>
   // dispatches to this, i.e., the type caster (which builds the value through
@@ -57,7 +60,6 @@ class NDArray : public py::array_t<T> {
 
  private:
   static const py::array& validate(const py::array& array) {
-    if (!py::isinstance<py::array_t<T>>(array)) throw runtime_error("Invalid array type");
     if (array.ndim() != static_cast<py::ssize_t>(Ndim)) {
       throw dimension_mismatch("Expected a " + std::to_string(Ndim) +
                                "-dimensional array, but got " +
@@ -73,20 +75,20 @@ namespace detail {
 
 // Create a string of Ndim "int, int, ..." as shape for the np.ndarray type hint
 template <size_t Ndim>
-struct NdimName {
-  // NdimName<0> would underflow to NdimName<SIZE_MAX> (Ndim == 1 is specialized below)
-  static_assert(Ndim > 1, "NDArray requires at least one dimension");
-  static constexpr auto value = NdimName<Ndim - 1>::value + const_name(", int");
-};
+constexpr auto ndim_name() {
+  // ndim_name<0> would underflow to ndim_name<SIZE_MAX> (Ndim == 1 is specialized below)
+  static_assert(Ndim > 0, "NDArray requires at least one dimension");
+  return ndim_name<Ndim - 1>() + const_name(", int");
+}
 template <>
-struct NdimName<1> {
-  static constexpr auto value = const_name("int");
-};
+constexpr auto ndim_name<1>() {
+  return const_name("int");
+}
 
 template <typename T, std::size_t Ndim>
 struct handle_type_name<libadcc::NDArray<T, Ndim>> {
-  static constexpr auto name = const_name("numpy.ndarray[tuple[") +
-                               NdimName<Ndim>::value + const_name("], numpy.dtype[") +
+  static constexpr auto name = const_name("numpy.ndarray[tuple[") + ndim_name<Ndim>() +
+                               const_name("], numpy.dtype[") +
                                npy_format_descriptor<T>::name + const_name("]]");
 };
 
