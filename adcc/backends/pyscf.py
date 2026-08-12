@@ -20,6 +20,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+from collections.abc import Sequence
 from typing import cast, Literal
 import numpy as np
 
@@ -193,16 +194,21 @@ class PyScfOperatorIntegralProvider:
 # TODO: refactor ERI builder to be more general
 # IntegralBuilder would be good
 class PyScfEriBuilder(EriBuilder):
-    def __init__(self, scfres, n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted):
-        self.scfres = scfres
+    def __init__(self, scfres: scf.hf.SCF, n_orbs: int, n_orbs_alpha: int,
+                 n_alpha: int, n_beta: int, restricted: bool):
+        self.scfres: scf.hf.SCF = scfres
         if restricted:
-            self.mo_coeff = (self.scfres.mo_coeff, self.scfres.mo_coeff)
+            self.mo_coeff: tuple[Array2D, Array2D] = cast(
+                tuple[Array2D, Array2D], (self.scfres.mo_coeff, self.scfres.mo_coeff)
+            )
         else:
-            self.mo_coeff = self.scfres.mo_coeff
+            self.mo_coeff: tuple[Array2D, Array2D] = cast(
+                tuple[Array2D, Array2D], self.scfres.mo_coeff
+            )
         super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted)
 
     @property
-    def coefficients(self):
+    def coefficients(self) -> dict[Literal["Oa", "Ob", "Va", "Vb"], Array2D]:
         return {
             "Oa": self.mo_coeff[0][:, :self.n_alpha],
             "Ob": self.mo_coeff[1][:, :self.n_beta],
@@ -210,7 +216,10 @@ class PyScfEriBuilder(EriBuilder):
             "Vb": self.mo_coeff[1][:, self.n_beta:],
         }
 
-    def compute_mo_eri(self, blocks, spins):
+    def compute_mo_eri(self, blocks: Sequence[Literal["O", "V"]],
+                       spins: Sequence[Literal["a", "b"]]) -> Array4D:
+        assert len(blocks) == 4
+        assert len(spins) == 4
         coeffs = tuple(self.coefficients[blocks[i] + spins[i]] for i in range(4))
         # TODO Pyscf uses HDF5 internal to do the AO2MO here we read it all
         #      into memory. This wastes memory and could be avoided if temporary

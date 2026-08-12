@@ -20,6 +20,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+from collections.abc import Sequence
 from typing import Literal
 import numpy as np
 
@@ -155,13 +156,14 @@ class Psi4OperatorIntegralProvider:
 
 
 class Psi4EriBuilder(EriBuilder):
-    def __init__(self, wfn, n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted):
-        self.wfn = wfn
-        self.mints = psi4.core.MintsHelper(self.wfn)
+    def __init__(self, wfn: psi4.core.HF, n_orbs: int, n_orbs_alpha: int,
+                 n_alpha: int, n_beta: int, restricted: bool):
+        self.wfn: psi4.core.HF = wfn
+        self.mints: psi4.core.MintsHelper = psi4.core.MintsHelper(self.wfn)
         super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted)
 
     @property
-    def coefficients(self):
+    def coefficients(self) -> dict[Literal["Oa", "Ob", "Va", "Vb"], psi4.core.Matrix]:
         return {
             "Oa": self.wfn.Ca_subset("AO", "OCC"),
             "Ob": self.wfn.Cb_subset("AO", "OCC"),
@@ -169,7 +171,10 @@ class Psi4EriBuilder(EriBuilder):
             "Vb": self.wfn.Cb_subset("AO", "VIR"),
         }
 
-    def compute_mo_eri(self, blocks, spins):
+    def compute_mo_eri(self, blocks: Sequence[Literal["O", "V"]],
+                       spins: Sequence[Literal["a", "b"]]) -> Array4D:
+        assert len(blocks) == 4
+        assert len(spins) == 4
         coeffs = tuple(self.coefficients[blocks[i] + spins[i]] for i in range(4))
         return np.asarray(self.mints.mo_eri(*coeffs))
 
