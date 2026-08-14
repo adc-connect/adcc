@@ -255,7 +255,9 @@ class OperatorIntegrals:
     @timed_member_call("_import_timer")
     def ssq_2p(self) -> TwoParticleOperator:
         """Returns the two-particle part of the S^2 operator"""
-        # currently not implemented for CVS (but fc and fv should be fine)
+        # NOTE: the implementation might also work for CVS. But double check
+        # once CVS 2p densities are implemented before removing the
+        # exception.
         if "o2" in self.mospaces.subspaces:
             raise NotImplementedError("The 2-particle part of the SSq operator is "
                                       "only implemented for the occupied and "
@@ -263,6 +265,11 @@ class OperatorIntegrals:
                                       "CVS is not supported yet.")
         # Intermediates
         # S^aa, S^ab and S^bb (spin projected overlap matrices)
+        # NOTE: For UHF, the diagonal spin blocks of the overlap matrix
+        # (in the MO basis) are diagonal.
+        # Only the off-diagonal spin blocks contain off-diagonal elements!
+        # (For RHF, the off-diagonal spin blocks are also diagonal in the MO basis)
+        # -> apply the UHF assumptions below
         ovlp_bb: Tensor = self.overlap_ao
         coeff_map = {}
         for sp in self.mospaces.subspaces:
@@ -288,35 +295,42 @@ class OperatorIntegrals:
         S_aa_minus_bb = S_aa - S_bb
 
         op = TwoParticleOperator(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
-        op.oooo = (
-            + 1.0 * einsum("ik,jl->ijkl", S_aa_minus_bb.oo,  S_aa_minus_bb.oo)
-            # exploit symmetry S_ab.oo = S_ba.oo.T
-            + 4.0 * einsum("ik,jl->ijkl", S_ab.oo.T, S_ab.oo)
-        ).antisymmetrise(2, 3)
-        op.ooov = (
-            + 2.0 * einsum("ik,ja->ijka", S_ab.oo.T, S_ab.ov)
-            + 2.0 * einsum("ik,ja->ijka", S_ab.oo, S_ab.vo.T)
-        ).antisymmetrise(0, 1)
-        op.oovv = (
-            + 2.0 * einsum("ia,jb->ijab", S_ab.vo.T, S_ab.ov)
-            + 2.0 * einsum("ia,jb->ijab", S_ab.ov, S_ab.vo.T)
-        ).antisymmetrise(2, 3)
-        op.ovov = (
-            + 0.5 * einsum("ij,ab->iajb", S_aa_minus_bb.oo, S_aa_minus_bb.vv)
-            + 1.0 * einsum("ij,ab->iajb", S_ab.oo.T, S_ab.vv)
-            + 1.0 * einsum("ij,ab->iajb", S_ab.oo, S_ab.vv.T)
-            - 1.0 * einsum("ib,aj->iajb", S_ab.vo.T, S_ab.vo)
-            - 1.0 * einsum("ib,aj->iajb", S_ab.ov, S_ab.ov.T)
-        )
-        op.ovvv = (
-            + 2.0 * einsum("ib,ac->iabc", S_ab.vo.T, S_ab.vv)
-            + 2.0 * einsum("ib,ac->iabc", S_ab.ov, S_ab.vv.T)
-        ).antisymmetrise(2, 3)
-        op.vvvv = (
-            + 1.0 * einsum("ac,bd->abcd", S_aa_minus_bb.vv, S_aa_minus_bb.vv)
-            # exploit symmetry S_ab.vv = S_ba.vv.T
-            + 4.0 * einsum("ac,bd->abcd", S_ab.vv, S_ab.vv.T)
-        ).antisymmetrise(2, 3)
+        for block in op.canonical_blocks:
+            p, q, r, s = split_spaces(block)
+            # + S^ba_pr S^ab_qs + S^ba_qs S^ab_pr
+            # - S^ba_ps S^ab_qr - S^ba_qr S^ab_ps
+            # first generate the 2 terms with a positive sign:
+            # since we only have S^ab: S^ba = (S^ab).transpose
+            res = einsum("rp,qs->pqrs", S_ab[r + p], S_ab[q + s])
+            if p == q and r == s:
+                res = 2.0 * res.symmetrise((0, 1), (2, 3))
+            else:
+                res += 1.0 * einsum("pr,sq->pqrs", S_ab[p + r], S_ab[s + q])
+            # + 0.5 * D_pr D_qs - 0.5 * D_ps D_qr
+            # D = S^aa - S^bb is diagonal in the MO basis
+            # -> only add/subtract when the spaces match
+            if p == r and q == s:
+                res += 0.5 * einsum(
+                    "pr,qs->pqrs", S_aa_minus_bb[p + r], S_aa_minus_bb[q + s]
+                )
+            # then deal with the terms with negative sign:
+            # 2 S^ab terms and the single D term
+            if p == q:
+                res = 2.0 * res.antisymmetrise(0, 1)
+            elif r == s:
+                res = 2.0 * res.antisymmetrise(2, 3)
+            else:
+                # always subtract the S^ab contributions
+                res += (
+                    - einsum("sp,qr->pqrs", S_ab[s + p], S_ab[q + r])
+                    - einsum("ps,rq->pqrs", S_ab[p + s], S_ab[r + q])
+                )
+                # conditionally subtract the D contribution
+                if p == s and q == r:
+                    res -= 0.5 * einsum(
+                        "ps,qr->pqrs", S_aa_minus_bb[p + s], S_aa_minus_bb[q + r]
+                    )
+            op[block] = res
         return op
 
     def _import_dipole_like_operator(
