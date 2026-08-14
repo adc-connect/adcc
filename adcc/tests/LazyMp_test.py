@@ -37,9 +37,11 @@ from . import testcases
 test_cases = testcases.get_by_filename(
     "h2o_sto3g", "cn_sto3g", "h2o_def2tzvp", "cn_ccpvdz"
 )
+# Include all test cases (not only CVS) to verify the SSQ operator implementation
+# for the other (fc, fv, ...) cases
 unrestricted_cases = [
     (case.file_name, c) for case in test_cases if not case.restricted
-    for c in ["gen", "cvs"]
+    for c in case.cases
 ]
 small_cases = [
     (case.file_name, c) for case in test_cases if not case.only_full_mode
