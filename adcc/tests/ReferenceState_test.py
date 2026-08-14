@@ -185,15 +185,22 @@ class TestReferenceState(unittest.TestCase):
 systems = ["cn_sto3g", "cn_ccpvdz"]
 
 
+# <S^2> of the HF determinant does not depend on the orbital space partitioning
 @pytest.mark.parametrize("system", systems)
 def test_ssq_reference_state(system):
-    system: testcases.TestCase = testcases.get_by_filename(system).pop()
+    testcase: testcases.TestCase = testcases.get_by_filename(system).pop()
     # we need to run the scf calculation since we don't store the <S^2> values
-    scfres = run_hf("pyscf", system.xyz, system.basis, multiplicity=2)
-    hf = ReferenceState(scfres)
-
+    scfres = run_hf("pyscf", testcase.xyz, testcase.basis, multiplicity=2)
     ref_ssq, _ = scfres.spin_square()
-
-    hf_ssq = hf.ssq
-
-    assert hf_ssq == pytest.approx(ref_ssq)
+    # generic case
+    hf = ReferenceState(scfres)
+    assert hf.ssq == pytest.approx(ref_ssq)
+    # frozen_core
+    hf = ReferenceState(scfres, frozen_core=1)
+    assert hf.ssq == pytest.approx(ref_ssq)
+    # frozen_virtual
+    hf = ReferenceState(scfres, frozen_virtual=1)
+    assert hf.ssq == pytest.approx(ref_ssq)
+    # frozen_core + frozen_virtual
+    hf = ReferenceState(scfres, frozen_core=1, frozen_virtual=1)
+    assert hf.ssq == pytest.approx(ref_ssq)
