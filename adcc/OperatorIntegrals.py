@@ -268,7 +268,7 @@ class OperatorIntegrals:
         # NOTE: For UHF, the diagonal spin blocks of the overlap matrix
         # (in the MO basis) are diagonal.
         # Only the off-diagonal spin blocks contain off-diagonal elements!
-        # (For RHF, the off-diagonal spin blocks are also diagonal in the MO basis)
+        # (For RHF, the off-diagonal spin blocks are also diagonal!)
         # -> apply the UHF assumptions below
         ovlp_bb: Tensor = self.overlap_ao
         coeff_map = {}
@@ -291,7 +291,7 @@ class OperatorIntegrals:
         transform_operator_ao2mo_spin_projected(ovlp_bb, S_bb, coeff_map, "bb",
                                                 self._conv_tol)
 
-        # additional intermediate
+        # additional intermediate (is diagonal)
         S_aa_minus_bb = S_aa - S_bb
 
         op = TwoParticleOperator(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
@@ -305,17 +305,22 @@ class OperatorIntegrals:
             if p == q and r == s:
                 res = 2.0 * res.symmetrise((0, 1), (2, 3))
             else:
-                res += 1.0 * einsum("pr,sq->pqrs", S_ab[p + r], S_ab[s + q])
+                res += 1.0 * einsum("sq,pr->pqrs", S_ab[s + q], S_ab[p + r])
             # + 0.5 * D_pr D_qs - 0.5 * D_ps D_qr
             # D = S^aa - S^bb is diagonal in the MO basis
-            # -> only add/subtract when the spaces match
+            # -> only consider when the spaces match
             if p == r and q == s:
                 res += 0.5 * einsum(
                     "pr,qs->pqrs", S_aa_minus_bb[p + r], S_aa_minus_bb[q + s]
                 )
             # then deal with the terms with negative sign:
             # 2 S^ab terms and the single D term
-            if p == q:
+            if p == q and r == s:
+                # NOTE: We only need 1 of the antisymmetrisations to get the
+                # correct result. The second one is needed for the correct
+                # permutational symmetry in the symmetry object.
+                res = 2.0 * res.antisymmetrise(0, 1).antisymmetrise(2, 3)
+            elif p == q:
                 res = 2.0 * res.antisymmetrise(0, 1)
             elif r == s:
                 res = 2.0 * res.antisymmetrise(2, 3)
@@ -323,7 +328,7 @@ class OperatorIntegrals:
                 # always subtract the S^ab contributions
                 res += (
                     - einsum("sp,qr->pqrs", S_ab[s + p], S_ab[q + r])
-                    - einsum("ps,rq->pqrs", S_ab[p + s], S_ab[r + q])
+                    - einsum("rq,ps->pqrs", S_ab[r + q], S_ab[p + s])
                 )
                 # conditionally subtract the D contribution
                 if p == s and q == r:

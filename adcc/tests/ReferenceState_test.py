@@ -190,17 +190,20 @@ systems = ["cn_sto3g", "cn_ccpvdz"]
 def test_ssq_reference_state(system):
     testcase: testcases.TestCase = testcases.get_by_filename(system).pop()
     # we need to run the scf calculation since we don't store the <S^2> values
-    scfres = run_hf("pyscf", testcase.xyz, testcase.basis, multiplicity=2)
+    scfres = run_hf(
+        "pyscf", testcase.xyz, testcase.basis, multiplicity=testcase.multiplicity
+    )
     ref_ssq, _ = scfres.spin_square()
-    # generic case
-    hf = ReferenceState(scfres)
-    assert hf.ssq == pytest.approx(ref_ssq)
-    # frozen_core
-    hf = ReferenceState(scfres, frozen_core=1)
-    assert hf.ssq == pytest.approx(ref_ssq)
-    # frozen_virtual
-    hf = ReferenceState(scfres, frozen_virtual=1)
-    assert hf.ssq == pytest.approx(ref_ssq)
-    # frozen_core + frozen_virtual
-    hf = ReferenceState(scfres, frozen_core=1, frozen_virtual=1)
-    assert hf.ssq == pytest.approx(ref_ssq)
+    for case in testcase.cases:
+        core_orbitals = testcase.core_orbitals if "cvs" in case else None
+        frozen_core = testcase.frozen_core if "fc" in case else None
+        frozen_virtual = testcase.frozen_virtual if "fv" in case else None
+        hf = ReferenceState(
+            scfres, core_orbitals=core_orbitals, frozen_core=frozen_core,
+            frozen_virtual=frozen_virtual
+        )
+        if "cvs" in case:
+            with pytest.raises(NotImplementedError):
+                hf.ssq
+        else:
+            assert hf.ssq == pytest.approx(ref_ssq)
