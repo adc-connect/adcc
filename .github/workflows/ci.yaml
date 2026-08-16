@@ -190,14 +190,13 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
+      - uses: actions/cache@v5
+        with:
+          path: ~/.cache/pre-commit
+          key: ${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
       - name: Install dependencies
-        run: |
-          pip install flake8
-          sudo apt-get install clang-format
-      - run: flake8
-      - name: Checking C++ files with clang-format
-        working-directory: libadcc_src
-        run: |
-          clang-format --version
-          find . -type f \( -name '*.cc' -o -name '*.hh' \) -print0 | xargs -r0 clang-format -i
-          git diff --exit-code
+        run: pip install .[lint]  --user
+      # Runs ruff (python) and clang-format (C++) with the versions pinned in
+      # .pre-commit-config.yaml
+      - name: Source code formatting
+        uses: pre-commit/action@v3.0.1

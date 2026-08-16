@@ -14,5 +14,8 @@ text = re.sub(r'\n__backend__\s*:.*?}\n', '', text, flags=re.DOTALL)
 text = text.replace('libadcc.Tensor', 'Tensor')
 p.write_text(text)
 """
-ruff format libadcc.pyi
-ruff check --fix libadcc.pyi
+# Format the stub with the ruff version pinned in .pre-commit-config.yaml, so that
+# the result is identical to what the commit hook produces.
+# The first run is expected to modify the file, thus try a second time.
+# If the second run also fails, there is some problem.
+pre-commit run --files libadcc.pyi || pre-commit run --files libadcc.pyi
