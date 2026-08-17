@@ -8,7 +8,7 @@ dependencies:
   - gcc_linux-64
   - gxx_linux-64
   - libtensorlight >=3.0.1
-  - pybind11 >=2.6
+  - pybind11 >=3.0
   - pip
   - pkg-config
   # Run
