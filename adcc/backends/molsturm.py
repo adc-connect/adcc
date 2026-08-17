@@ -20,6 +20,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import warnings
 import numpy as np
 
 from molsturm.State import State
@@ -27,6 +28,11 @@ from adcc.DataHfProvider import DataHfProvider
 
 
 def convert_scf_to_dict(scfres):
+    warnings.warn(
+        "The molsturm interface is no longer maintained. "
+        "It will be removed in the future.",
+        DeprecationWarning
+    )
     if not isinstance(scfres, State):
         raise TypeError("Unsupported type for backends.molsturm.import_scf.")
 
@@ -66,8 +72,6 @@ def convert_scf_to_dict(scfres):
         data["multipoles"]["nuclear_0"] = int(np.sum(charges)),
         data["multipoles"]["nuclear_1"] = np.einsum('i,ix->x', charges, coords)
     else:
-        import warnings
-
         # We have no information about this, so we can just provide dummies
         data["multipoles"]["nuclear_0"] = -1
         data["multipoles"]["nuclear_1"] = np.zeros(3)
