@@ -229,21 +229,21 @@ class ReferenceState(libadcc.ReferenceState):
         # the implementation
         density = TwoParticleDensity(self.mospaces,
                                      symmetry=OperatorSymmetry.HERMITIAN)
-        # gamma_pqrs = delta_pr delta_qs - delta_ps delta_qr for occupied p,q,r,s
+        # gamma_ijkl = delta_ik delta_jl - delta_il delta_jk
         for block in density.canonical_blocks:
             splitted = split_spaces(block)
             # skip any blocks containing virtual subspaces
             if any(sp in self.mospaces.subspaces_virtual for sp in splitted):
                 continue
-            p, q, r, s = splitted
-            if p == r and q == s:
+            i, j, k, l = splitted
+            if i == k and j == l:
                 density[block].set_mask("ijij", 1)
-            if p == s and q == r:
+            if i == l and j == k:
                 density[block].set_mask("ijji", -1)
             # only set elements to zero if one of the checks were true and
             # __getitem__ initialized a tensor. There should be no need
             # to initialize all canonical blocks here.
-            if p == q and r == s and block in density.blocks_nonzero:
+            if i == j and k == l and block in density.blocks_nonzero:
                 density[block].set_mask("iijj", 0)
         density.reference_state = self
         return density
