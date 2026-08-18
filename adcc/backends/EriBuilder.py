@@ -141,7 +141,7 @@ class EriBuilder:
             if fromslice is None or toslice is None:
                 continue   # Not found
             ret.append(SpinBlockSlice(
-                block[0], block[1], slice(*fromslice), slice(*toslice)
+                block[0], block[1], slice(*fromslice, 1), slice(*toslice, 1)
             ))
         assert len(ret) > 0
         return ret
