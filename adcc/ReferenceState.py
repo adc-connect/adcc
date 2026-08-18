@@ -235,7 +235,7 @@ class ReferenceState(libadcc.ReferenceState):
             # skip any blocks containing virtual subspaces
             if any(sp in self.mospaces.subspaces_virtual for sp in splitted):
                 continue
-            i, j, k, l = splitted
+            i, j, k, l = splitted  # noqa: E741
             if i == k and j == l:
                 density[block].set_mask("ijij", 1)
             if i == l and j == k:
