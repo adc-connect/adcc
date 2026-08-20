@@ -22,7 +22,7 @@
 ## ---------------------------------------------------------------------
 from dataclasses import dataclass
 from itertools import product
-from typing import Literal, TypeAlias, TypeGuard
+from typing import Literal, TypeAlias
 import numpy as np
 
 IntSlice: TypeAlias = "slice[int, int, int]"
@@ -32,14 +32,6 @@ Block4D = tuple[Block, Block, Block, Block]
 Spin = Literal["a", "b"]
 Spin4D = tuple[Spin, Spin, Spin, Spin]
 Array4D = np.ndarray[tuple[int, int, int, int], np.dtype[np.float64]]
-
-
-def is_int_slice(sl: slice) -> TypeGuard[IntSlice]:
-    return (
-        isinstance(sl.start, int)
-        and isinstance(sl.stop, int)
-        and isinstance(sl.step, int)
-    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,18 +100,10 @@ class EriBuilder:
             (sl1.toslice, sl2.toslice, sl3.toslice, sl4.toslice)
         ) for sl1, sl2, sl3, sl4 in product(*splitted)]
 
-    def split_1d_slice(
-        self, sl: "slice[int | None, int, int | None]"
-    ) -> list[SpinBlockSlice]:
+    def split_1d_slice(self, sl: IntSlice) -> list[SpinBlockSlice]:
         """
         Split slice into block-slices or multiple block-slices
         """
-        if sl.start is None:
-            sl = slice(0, sl.stop, 1)
-        if sl.step is None:
-            sl = slice(sl.start, sl.stop, 1)
-        assert is_int_slice(sl)
-
         ret: list[SpinBlockSlice] = []
         for (block, bslice) in self.block2slice.items():
             fromslice: tuple[int, int] | None = None

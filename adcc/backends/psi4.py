@@ -27,7 +27,7 @@ import psi4
 
 import libadcc
 
-from .EriBuilder import EriBuilder, Spin4D, Block4D
+from .EriBuilder import EriBuilder, Block4D, Spin4D
 from ..exceptions import InvalidReference
 from ..ElectronicStates import EnergyCorrection
 
