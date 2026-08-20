@@ -22,7 +22,7 @@
 ## ---------------------------------------------------------------------
 from dataclasses import dataclass
 from itertools import product
-from typing import Literal, TypeAlias
+from typing import Literal, TypeAlias, TypeGuard
 import numpy as np
 
 IntSlice: TypeAlias = "slice[int, int, int]"
@@ -32,6 +32,14 @@ Block4D = tuple[Block, Block, Block, Block]
 Spin = Literal["a", "b"]
 Spin4D = tuple[Spin, Spin, Spin, Spin]
 Array4D = np.ndarray[tuple[int, int, int, int], np.dtype[np.float64]]
+
+
+def is_int_slice(slice: slice) -> TypeGuard[IntSlice]:
+    return (
+        isinstance(slice.start, int)
+        and isinstance(slice.stop, int)
+        and isinstance(slice.step, int)
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,7 +95,9 @@ class EriBuilder:
         """
         raise NotImplementedError("Implement compute_mo_eri")
 
-    def split_4d_slice(self, slices: IntSlice4D) -> list[SpinBlockSlice4D]:
+    def split_4d_slice(
+        self, slices: tuple[slice, slice, slice, slice]
+    ) -> list[SpinBlockSlice4D]:
         """
         Split tuple of four slices into the block spin slices
         and their mapping to where elements are to be placed
@@ -100,10 +110,15 @@ class EriBuilder:
             (sl1.toslice, sl2.toslice, sl3.toslice, sl4.toslice)
         ) for sl1, sl2, sl3, sl4 in product(*splitted)]
 
-    def split_1d_slice(self, sl: IntSlice) -> list[SpinBlockSlice]:
+    def split_1d_slice(self, sl: slice) -> list[SpinBlockSlice]:
         """
         Split slice into block-slices or multiple block-slices
         """
+        if sl.start is None:
+            sl = slice(0, sl.stop, sl.step)
+        if sl.step is None:
+            sl = slice(sl.start, sl.stop, 1)
+        assert is_int_slice(sl)
         ret: list[SpinBlockSlice] = []
         for (block, bslice) in self.block2slice.items():
             fromslice: tuple[int, int] | None = None
@@ -130,7 +145,9 @@ class EriBuilder:
         assert len(ret) > 0
         return ret
 
-    def fill_slice_symm(self, slices: IntSlice4D, out: Array4D) -> None:
+    def fill_slice_symm(
+        self, slices: tuple[slice, slice, slice, slice], out: Array4D
+    ) -> None:
         non_zero_spin_blocks: list[Spin4D] = [  # chemist notation
             ("a", "a", "a", "a"),
             ("a", "a", "b", "b"),
