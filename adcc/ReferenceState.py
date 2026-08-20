@@ -24,7 +24,7 @@ import numpy as np
 
 from .misc import cached_property
 from .Tensor import Tensor
-from .MoSpaces import MoSpaces
+from .MoSpaces import split_spaces, MoSpaces
 from .backends import import_scf_results
 from .OperatorIntegrals import OperatorIntegrals
 from .OneParticleDensity import OneParticleDensity
@@ -224,16 +224,27 @@ class ReferenceState(libadcc.ReferenceState):
         """
         Return the two-particle Hartree-Fock density in the MO basis
         """
+        # NOTE: running over canonical blocks here, to avoid incorporating
+        # implicitly knowledge about the definition of a canonical block in
+        # the implementation
         density = TwoParticleDensity(self.mospaces,
                                      symmetry=OperatorSymmetry.HERMITIAN)
+        # gamma_ijkl = delta_ik delta_jl - delta_il delta_jk
         for block in density.canonical_blocks:
-            sym = libadcc.make_symmetry_operator(self.mospaces, block,
-                                                 density.symmetry.to_str(), "1")
-            density[block] = Tensor(sym)
-        for ss in self.mospaces.subspaces_occupied:
-            density[ss + ss + ss + ss].set_mask("ijij", 1)
-            density[ss + ss + ss + ss].set_mask("ijji", -1)
-            density[ss + ss + ss + ss].set_mask("iijj", 0)
+            splitted = split_spaces(block)
+            # skip any blocks containing virtual subspaces
+            if any(sp in self.mospaces.subspaces_virtual for sp in splitted):
+                continue
+            i, j, k, l = splitted  # noqa: E741
+            if i == k and j == l:
+                density[block].set_mask("ijij", 1)
+            if i == l and j == k:
+                density[block].set_mask("ijji", -1)
+            # only set elements to zero if one of the checks were true and
+            # __getitem__ initialized a tensor. There should be no need
+            # to initialize all canonical blocks here.
+            if i == j and k == l and block in density.blocks_nonzero:
+                density[block].set_mask("iijj", 0)
         density.reference_state = self
         return density
 
