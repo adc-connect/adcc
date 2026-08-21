@@ -37,6 +37,8 @@ Array1D = np.ndarray[tuple[int], np.dtype[np.float64]]
 Array2D = np.ndarray[tuple[int, int], np.dtype[np.float64]]
 Array4D = np.ndarray[tuple[int, int, int, int], np.dtype[np.float64]]
 DipoleLike = tuple[Array2D, Array2D, Array2D]
+# Once we drop python 3.10 we can write
+# QuadrupoleLike = tuple[*DipoleLike, *DipoleLike, *DipoleLike]
 QuadrupoleLike = tuple[
     Array2D, Array2D, Array2D,
     Array2D, Array2D, Array2D,
