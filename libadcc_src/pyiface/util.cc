@@ -18,16 +18,14 @@
 //
 
 #include "util.hh"
-#include "../config.hh"
 #include "../exceptions.hh"
-#include <sstream>
-#include <type_traits>
+#include "pybind11/typing.h"
 
 namespace libadcc {
 
 namespace py = pybind11;
 
-py::tuple shape_tuple(const std::vector<size_t>& shape) {
+py::typing::Tuple<size_t, py::ellipsis> shape_tuple(const std::vector<size_t>& shape) {
   switch (shape.size()) {
     case 0:
       throw runtime_error("Encountered unexpected dimensionality 0.");

@@ -29,14 +29,17 @@ namespace py = pybind11;
 
 void export_Symmetry(py::module& m) {
 
-  py::class_<Symmetry, std::shared_ptr<Symmetry>>(
-        m, "Symmetry", "Container for Tensor symmetry information")
+  py::class_<Symmetry, std::shared_ptr<Symmetry>> symmetry(
+        m, "Symmetry", "Container for Tensor symmetry information");
+  symmetry
         .def(py::init<std::shared_ptr<const MoSpaces>, const std::string&>(),
+             py::arg("mospaces"), py::arg("space"),
              "Construct a Symmetry class from an MoSpaces object and the identifier for "
              "the space (e.g. o1o1, v1o1, o3v2o1v1, ...). Python binding to "
              ":cpp:class:`libadcc::Symmetry`.")
         .def(py::init<std::shared_ptr<const MoSpaces>, const std::string&,
                       std::map<std::string, std::pair<size_t, size_t>>>(),
+             py::arg("mospaces"), py::arg("space"), py::arg("extra_axes_orbs"),
              "Construct a Symmetry class from an MoSpaces object, a space string and a "
              "map to supply the number of orbitals for some additional axes.\nFor the "
              "additional axis the pair contains either two numbers (for the number of "
@@ -60,12 +63,15 @@ void export_Symmetry(py::module& m) {
         .def("describe", &Symmetry::describe, "Return a descriptive string.")
         //
         .def_property("irreps_allowed", &Symmetry::irreps_allowed,
-                      &Symmetry::set_irreps_allowed,
+                      py::cpp_function(&Symmetry::set_irreps_allowed,
+                                       py::is_method(symmetry), py::arg("irreps")),
                       "The list of irreducible representations, for which the tensor "
                       "shall be non-zero. If this is *not* set, i.e. an empty list, all "
                       "irreps will be allowed.")
         .def_property(
-              "permutations", &Symmetry::permutations, &Symmetry::set_permutations,
+              "permutations", &Symmetry::permutations,
+              py::cpp_function(&Symmetry::set_permutations, py::is_method(symmetry),
+                               py::arg("permutations")),
               "The list of index permutations, which do not change the tensor.\n"
               "A minus may be used to indicate anti-symmetric\n"
               "permutations with respect to the first (reference) permutation.\n"
@@ -76,13 +82,15 @@ void export_Symmetry(py::module& m) {
               "the symmetry. Beware that the check for errors and conflicts\n"
               "is only rudimentary at the moment.")
         .def_property("spin_block_maps", &Symmetry::spin_block_maps,
-                      &Symmetry::set_spin_block_maps,
+                      py::cpp_function(&Symmetry::set_spin_block_maps,
+                                       py::is_method(symmetry), py::arg("spin_maps")),
                       "A list of tuples of the form (\"aaaa\", \"bbbb\", -1.0), i.e.\n"
                       "two spin blocks followed by a factor. This maps the second onto "
                       "the first\n"
                       "with a factor of -1.0 between them.")
         .def_property("spin_blocks_forbidden", &Symmetry::spin_blocks_forbidden,
-                      &Symmetry::set_spin_blocks_forbidden,
+                      py::cpp_function(&Symmetry::set_spin_blocks_forbidden,
+                                       py::is_method(symmetry), py::arg("forbidden")),
                       "List of spin-blocks, which are marked forbidden (i.e. enforce "
                       "them to stay zero).\n"
                       "Blocks are given as a string in the letters 'a' and 'b', e.g. "
@@ -94,6 +102,7 @@ void export_Symmetry(py::module& m) {
   // Factories for common cases
   //
   m.def("make_symmetry_orbital_energies", &make_symmetry_orbital_energies,
+        py::arg("mospaces"), py::arg("space"),
         "Return the Symmetry object like it would be set up for the passed subspace \n"
         "of the orbital energies tensor.\n"
         "\n"
@@ -101,6 +110,7 @@ void export_Symmetry(py::module& m) {
         "  space       space string (e.g. o1)");
 
   m.def("make_symmetry_orbital_coefficients", &make_symmetry_orbital_coefficients,
+        py::arg("mospaces"), py::arg("space"), py::arg("n_bas"), py::arg("blocks") = "ab",
         "Return the Symmetry object like it would be set up for the passed subspace \n"
         "of the orbital coefficients tensor.\n"
         "\n"
@@ -109,25 +119,28 @@ void export_Symmetry(py::module& m) {
         "  n_bas       Number of basis functions\n"
         "  blocks      Spin blocks to include. Valid are \"ab\", \"a\" and \"b\".");
 
-  m.def("make_symmetry_eri", &make_symmetry_eri,
+  m.def("make_symmetry_eri", &make_symmetry_eri, py::arg("mospaces"), py::arg("space"),
         "Return the Symmetry object like it would be set up for the passed subspace \n"
         "of the electron-repulsion tensor.\n"
         "\n"
         "  mospaces    MoSpaces object\n"
         "  space       Space string (e.g. o1v1o1v1)\n");
 
-  m.def("make_symmetry_operator", &make_symmetry_operator,
+  m.def("make_symmetry_operator", &make_symmetry_operator, py::arg("mospaces"),
+        py::arg("space"), py::arg("operator_symmetry"),
+        py::arg("cartesian_transformation"),
         "Return the Symmetry object for an orbital subspace block of a one-particle "
         "operator\n"
         "\n"
         "  mospaces    MoSpaces object\n"
         "  space       Space string (e.g. o1v1)\n"
-        "  symmetry    Describes the symmetry of the tensor (only in effect if both \n"
+        "  operator_symmetry\n"
+        "              Describes the symmetry of the tensor (only in effect if both \n"
         "              subspaces of the space string are identical).\n"
         "              Valid are \"nosymmetry\", \"hermitian\" and \"antihermitian\".\n"
         "  cartesian_transformation\n"
         "              The cartesian function according to which the operator "
-        "transforms.\n"
+        "              transforms.\n"
         "\n"
         "Valid cartesian_transformation values include:\n"
         "     \"1\"                   Totally symmetric (default)\n"
@@ -136,6 +149,8 @@ void export_Symmetry(py::module& m) {
         "     \"Rx\", \"Ry\", \"Rz\"      Rotations about the coordinate axis\n");
 
   m.def("make_symmetry_operator_basis", &make_symmetry_operator_basis,
+        py::arg("mospaces"), py::arg("n_bas"), py::arg("operator_symmetry"),
+        py::arg("n_particle_op"), py::arg("blocks"),
         "Return the symmetry object for an operator in the AO basis. The object will\n"
         "represent a block-diagonal matrix of the form\n"
         "    ( M 0 )\n"
@@ -143,17 +158,18 @@ void export_Symmetry(py::module& m) {
         "where M is an n_bas x n_bas block and is indentical in upper-left\n"
         "and lower-right.\n"
         "\n"
-        "mospaces_ptr      MoSpaces pointer\n"
+        "mospaces          MoSpaces pointer\n"
         "n_bas             Number of AO basis functions\n"
         "operator_symmetry Is the tensor symmetric (hermitian/antihermitian, only\n"
         "                  in effect if both space axes identical).\n"
-        "                  Nosymmetry disables a setup of permutational symmetry.\n"
+        "                  Nosymmetry disables a setup of 'bra-ket' symmetry.\n"
         "n_particle_op     NParticleOperator\n"
         "blocks            Which blocks of the operator to return. Valid values\n"
         "                  are 'ab' to return a tensor for both alpha and beta\n"
         "                  block as a block-diagonal tensor, 'a' to only return a\n"
         "                  tensor for only alpha block.\n");
-  m.def("make_symmetry_triples", &make_symmetry_triples,
+  m.def("make_symmetry_triples", &make_symmetry_triples, py::arg("mospaces"),
+        py::arg("space"),
         "Return the Symmetry object like it would be set up for the passed subspace \n"
         "of a triples amplitude tensor.\n"
         "\n"

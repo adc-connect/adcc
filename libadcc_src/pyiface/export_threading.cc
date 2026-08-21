@@ -40,7 +40,7 @@ void export_threading(py::module& m) {
   m.def(
         "get_n_threads", [threadpool_ptr]() { return threadpool_ptr->n_running(); },
         "Get the number of running worker threads used by adcc.");
-  m.def("set_n_threads", set_threads,
+  m.def("set_n_threads", set_threads, py::arg("n_threads"),
         "Set the number of running worker threads used by adcc");
   m.def(
         "set_n_threads_total",
@@ -48,6 +48,7 @@ void export_threading(py::module& m) {
           const size_t n_running = threadpool_ptr->n_running();
           threadpool_ptr->reinit(n_running, n_total);
         },
+        py::arg("n_total"),
         "Set the total number of threads (running and sleeping) used by adcc. This will "
         "disappear in the future. Do not rely on it.");
   m.def(

@@ -18,7 +18,6 @@
 //
 
 #pragma once
-#include "AdcMemory.hh"
 #include "HartreeFockSolution_i.hh"
 #include "MoSpaces.hh"
 #include "Tensor.hh"
@@ -92,12 +91,13 @@ class ReferenceState {
 
   /** Return the nuclear contribution to the cartesian multipole moment
    *  (in standard ordering, i.e. xx, xy, xz, yy, yz, zz) of the given order. */
-  std::vector<scalar_type> nuclear_multipole(size_t order,
-                                             std::array<scalar_type, 3> gauge_origin = {
-                                                   0, 0, 0}) const;
+  std::vector<scalar_type> nuclear_multipole(
+        size_t order,
+        std::tuple<scalar_type, scalar_type, scalar_type> gauge_origin = {0, 0, 0}) const;
 
   /** Determine the gauge origin for nuclear multipoles. */
-  const std::array<scalar_type, 3> gauge_origin_to_xyz(std::string gauge_origin) const;
+  const std::tuple<scalar_type, scalar_type, scalar_type> gauge_origin_to_xyz(
+        std::string gauge_origin) const;
 
   /** Return the SCF convergence tolerance */
   double conv_tol() const { return m_hfsoln_ptr->conv_tol(); }

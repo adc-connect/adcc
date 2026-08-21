@@ -96,9 +96,10 @@ class VeloxChemEriBuilder(EriBuilder):
         super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted)
 
     def compute_mo_eri(self, blocks, spins):
-        eri = self.moints_drv.compute_in_memory(*self.compute_args,
-                                                moints_name="chem_" + blocks,
-                                                moints_spin=spins)
+        eri = self.moints_drv.compute_in_memory(
+            *self.compute_args, moints_name="chem_" + "".join(blocks),
+            moints_spin="".join(spins)
+        )
         return eri
 
 
@@ -170,6 +171,11 @@ class VeloxChemHFProvider(HartreeFockProvider):
 
     def get_energy_scf(self):
         return self.scfdrv.get_scf_energy()
+
+    def get_nuclear_repulsion_energy(self):
+        raise NotImplementedError(
+            "Nuclear repulsion energy not implemented for Veloxchem"
+        )
 
     def get_spin_multiplicity(self):
         return self.molecule.get_multiplicity()

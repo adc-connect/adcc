@@ -24,7 +24,6 @@
 
 namespace libadcc {
 
-using namespace pybind11::literals;
 namespace py = pybind11;
 
 static std::string AdcMemory___repr__(const AdcMemory& self) {
@@ -40,11 +39,11 @@ static std::string AdcMemory___repr__(const AdcMemory& self) {
 }
 
 void export_AdcMemory(py::module& m) {
-  py::class_<AdcMemory, std::shared_ptr<AdcMemory>>(
+  py::class_<AdcMemory, std::shared_ptr<AdcMemory>> adc_memory(
         m, "AdcMemory",
         "Class controlling the memory allocations for adcc ADC calculations. Python "
-        "binding to :cpp:class:`libadcc::AdcMemory`.")
-        .def(py::init<>())
+        "binding to :cpp:class:`libadcc::AdcMemory`.");
+  adc_memory.def(py::init<>())
         .def_property_readonly("allocator", &AdcMemory::allocator,
                                "Return the allocator to which the class is initialised.")
         .def_property_readonly("pagefile_directory", &AdcMemory::pagefile_directory,
@@ -54,11 +53,12 @@ void export_AdcMemory(py::module& m) {
               "max_block_size", &AdcMemory::max_block_size,
               "Return the maximal block size a tenor may have along each axis.")
         .def_property("contraction_batch_size", &AdcMemory::contraction_batch_size,
-                      &AdcMemory::set_contraction_batch_size,
+                      py::cpp_function(&AdcMemory::set_contraction_batch_size,
+                                       py::is_method(adc_memory), py::arg("bsize")),
                       "Get or set the batch size for contraction, i.e. the number of "
                       "elements handled simultaneously in a tensor contraction.")
-        .def("initialise", &AdcMemory::initialise, "pagefile_directory"_a,
-             "max_block_size"_a, "allocator"_a)
+        .def("initialise", &AdcMemory::initialise, py::arg("pagefile_directory"),
+             py::arg("max_block_size") = 16, py::arg("allocator") = "standard")
         .def("__repr__", &AdcMemory___repr__)
         //
         ;

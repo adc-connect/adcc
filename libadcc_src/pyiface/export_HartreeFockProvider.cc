@@ -20,6 +20,7 @@
 #include "../HartreeFockSolution_i.hh"
 #include "../exceptions.hh"
 #include "hartree_fock_solution_hack.hh"
+#include "ndarray.hh"
 #include "util.hh"
 #include <pybind11/pybind11.h>
 
@@ -50,9 +51,10 @@ class HartreeFockProvider : public HartreeFockSolution_i {
   //
   // Translate C++-like interface to python-like interface
   //
-  void nuclear_multipole(size_t order, std::array<scalar_type, 3> gauge_origin,
+  void nuclear_multipole(size_t order,
+                         std::tuple<scalar_type, scalar_type, scalar_type> gauge_origin,
                          scalar_type* buffer, size_t size) const override {
-    py::array_t<scalar_type> ret = get_nuclear_multipole(order, py::cast(gauge_origin));
+    py::array_t<scalar_type> ret = get_nuclear_multipole(order, gauge_origin);
     if (static_cast<ssize_t>(size) != ret.size()) {
       throw dimension_mismatch("Array size (==" + std::to_string(ret.size()) +
                                ") does not agree with buffer size (" +
@@ -61,10 +63,9 @@ class HartreeFockProvider : public HartreeFockSolution_i {
     std::copy(ret.data(), ret.data() + size, buffer);
   }
 
-  const std::array<scalar_type, 3> gauge_origin_to_xyz(
+  const std::tuple<scalar_type, scalar_type, scalar_type> gauge_origin_to_xyz(
         std::string gauge_origin) const override {
-    return py::cast<std::array<scalar_type, 3>>(
-          transform_gauge_origin_to_xyz(py::cast(gauge_origin)));
+    return transform_gauge_origin_to_xyz(py::cast(gauge_origin));
   }
 
   void occupation_f(scalar_type* buffer, size_t size) const override {
@@ -133,9 +134,9 @@ class HartreeFockProvider : public HartreeFockSolution_i {
           buffer, d1_length * d2_length * sizeof(scalar_type));
     std::vector<ssize_t> strides{static_cast<ssize_t>(sizeof(scalar_type) * d1_stride),
                                  static_cast<ssize_t>(sizeof(scalar_type) * d2_stride)};
-    py::tuple slices = py::make_tuple(
+    const std::tuple<py::slice, py::slice> slices{
           py::slice(static_cast<ssize_t>(d1_start), static_cast<ssize_t>(d1_end), 1),
-          py::slice(static_cast<ssize_t>(d2_start), static_cast<ssize_t>(d2_end), 1));
+          py::slice(static_cast<ssize_t>(d2_start), static_cast<ssize_t>(d2_end), 1)};
     fill_fock_ff(slices, py::array({d1_length, d2_length}, strides, buffer, memview));
   }
 
@@ -186,11 +187,11 @@ class HartreeFockProvider : public HartreeFockSolution_i {
                                  static_cast<ssize_t>(sizeof(scalar_type) * d2_stride),
                                  static_cast<ssize_t>(sizeof(scalar_type) * d3_stride),
                                  static_cast<ssize_t>(sizeof(scalar_type) * d4_stride)};
-    py::tuple slices = py::make_tuple(
+    const std::tuple<py::slice, py::slice, py::slice, py::slice> slices{
           py::slice(static_cast<ssize_t>(d1_start), static_cast<ssize_t>(d1_end), 1),
           py::slice(static_cast<ssize_t>(d2_start), static_cast<ssize_t>(d2_end), 1),
           py::slice(static_cast<ssize_t>(d3_start), static_cast<ssize_t>(d3_end), 1),
-          py::slice(static_cast<ssize_t>(d4_start), static_cast<ssize_t>(d4_end), 1));
+          py::slice(static_cast<ssize_t>(d4_start), static_cast<ssize_t>(d4_end), 1)};
     fill_eri_ffff(slices, py::array({d1_length, d2_length, d3_length, d4_length}, strides,
                                     buffer, memview));
   }
@@ -243,11 +244,11 @@ class HartreeFockProvider : public HartreeFockSolution_i {
                                  static_cast<ssize_t>(sizeof(scalar_type) * d2_stride),
                                  static_cast<ssize_t>(sizeof(scalar_type) * d3_stride),
                                  static_cast<ssize_t>(sizeof(scalar_type) * d4_stride)};
-    py::tuple slices = py::make_tuple(
+    std::tuple<py::slice, py::slice, py::slice, py::slice> slices{
           py::slice(static_cast<ssize_t>(d1_start), static_cast<ssize_t>(d1_end), 1),
           py::slice(static_cast<ssize_t>(d2_start), static_cast<ssize_t>(d2_end), 1),
           py::slice(static_cast<ssize_t>(d3_start), static_cast<ssize_t>(d3_end), 1),
-          py::slice(static_cast<ssize_t>(d4_start), static_cast<ssize_t>(d4_end), 1));
+          py::slice(static_cast<ssize_t>(d4_start), static_cast<ssize_t>(d4_end), 1)};
     fill_eri_phys_asym_ffff(
           slices, py::array({d1_length, d2_length, d3_length, d4_length}, strides, buffer,
                             memview));
@@ -258,22 +259,29 @@ class HartreeFockProvider : public HartreeFockSolution_i {
   //
   virtual size_t get_n_orbs_alpha() const = 0;
   virtual size_t get_n_bas() const        = 0;
-  virtual py::array_t<scalar_type> get_nuclear_multipole(
-        size_t order, py::tuple gauge_origin) const                                 = 0;
-  virtual const py::tuple transform_gauge_origin_to_xyz(py::str gauge_origin) const = 0;
-  virtual real_type get_conv_tol() const                                            = 0;
-  virtual bool get_restricted() const                                               = 0;
-  virtual size_t get_spin_multiplicity() const                                      = 0;
-  virtual real_type get_energy_scf() const                                          = 0;
-  virtual real_type get_nuclear_repulsion_energy() const                            = 0;
-  virtual std::string get_backend() const                                           = 0;
+  virtual NDArray<scalar_type, 1> get_nuclear_multipole(
+        py::int_ order,
+        std::tuple<py::float_, py::float_, py::float_> gauge_origin) const = 0;
+  virtual const std::tuple<scalar_type, scalar_type, scalar_type>
+  transform_gauge_origin_to_xyz(py::str gauge_origin) const = 0;
+  virtual real_type get_conv_tol() const                    = 0;
+  virtual bool get_restricted() const                       = 0;
+  virtual size_t get_spin_multiplicity() const              = 0;
+  virtual real_type get_energy_scf() const                  = 0;
+  virtual real_type get_nuclear_repulsion_energy() const    = 0;
+  virtual std::string get_backend() const                   = 0;
 
-  virtual void fill_occupation_f(py::array out) const                         = 0;
-  virtual void fill_orben_f(py::array out) const                              = 0;
-  virtual void fill_orbcoeff_fb(py::array out) const                          = 0;
-  virtual void fill_fock_ff(py::tuple, py::array out) const                   = 0;
-  virtual void fill_eri_ffff(py::tuple slices, py::array out) const           = 0;
-  virtual void fill_eri_phys_asym_ffff(py::tuple slices, py::array out) const = 0;
+  virtual void fill_occupation_f(NDArray<scalar_type, 1> out) const = 0;
+  virtual void fill_orben_f(NDArray<scalar_type, 1> out) const      = 0;
+  virtual void fill_orbcoeff_fb(NDArray<scalar_type, 2> out) const  = 0;
+  virtual void fill_fock_ff(std::tuple<py::slice, py::slice>,
+                            NDArray<scalar_type, 2> out) const      = 0;
+  virtual void fill_eri_ffff(
+        std::tuple<py::slice, py::slice, py::slice, py::slice> slices,
+        NDArray<scalar_type, 4> out) const = 0;
+  virtual void fill_eri_phys_asym_ffff(
+        std::tuple<py::slice, py::slice, py::slice, py::slice> slices,
+        NDArray<scalar_type, 4> out) const = 0;
 };
 
 /** This implements the trampoline for C++ to call the python functions
@@ -289,14 +297,17 @@ class PyHartreeFockProvider : public HartreeFockProvider {
   size_t get_n_bas() const override {
     PYBIND11_OVERLOAD_PURE(size_t, HartreeFockProvider, get_n_bas, );
   }
-  py::array_t<scalar_type> get_nuclear_multipole(size_t order,
-                                                 py::tuple gauge_origin) const override {
-    PYBIND11_OVERLOAD_PURE(py::array_t<scalar_type>, HartreeFockProvider,
+  NDArray<scalar_type, 1> get_nuclear_multipole(
+        py::int_ order,
+        std::tuple<py::float_, py::float_, py::float_> gauge_origin) const override {
+    PYBIND11_OVERLOAD_PURE(PYBIND11_TYPE(NDArray<scalar_type, 1>), HartreeFockProvider,
                            get_nuclear_multipole, order, gauge_origin);
   }
-  const py::tuple transform_gauge_origin_to_xyz(py::str gauge_origin) const override {
-    PYBIND11_OVERLOAD_PURE(py::tuple, HartreeFockProvider, transform_gauge_origin_to_xyz,
-                           gauge_origin);
+  const std::tuple<scalar_type, scalar_type, scalar_type> transform_gauge_origin_to_xyz(
+        py::str gauge_origin) const override {
+    PYBIND11_OVERLOAD_PURE(
+          PYBIND11_TYPE(std::tuple<scalar_type, scalar_type, scalar_type>),
+          HartreeFockProvider, transform_gauge_origin_to_xyz, gauge_origin);
   }
   real_type get_conv_tol() const override {
     PYBIND11_OVERLOAD_PURE(real_type, HartreeFockProvider, get_conv_tol, );
@@ -314,22 +325,26 @@ class PyHartreeFockProvider : public HartreeFockProvider {
     PYBIND11_OVERLOAD_PURE(real_type, HartreeFockProvider,
                            get_nuclear_repulsion_energy, );
   }
-  void fill_occupation_f(py::array out) const override {
+  void fill_occupation_f(NDArray<scalar_type, 1> out) const override {
     PYBIND11_OVERLOAD_PURE(void, HartreeFockProvider, fill_occupation_f, out);
   }
-  void fill_orben_f(py::array out) const override {
+  void fill_orben_f(NDArray<scalar_type, 1> out) const override {
     PYBIND11_OVERLOAD_PURE(void, HartreeFockProvider, fill_orben_f, out);
   }
-  void fill_orbcoeff_fb(py::array out) const override {
+  void fill_orbcoeff_fb(NDArray<scalar_type, 2> out) const override {
     PYBIND11_OVERLOAD_PURE(void, HartreeFockProvider, fill_orbcoeff_fb, out);
   }
-  void fill_fock_ff(py::tuple slices, py::array out) const override {
+  void fill_fock_ff(std::tuple<py::slice, py::slice> slices,
+                    NDArray<scalar_type, 2> out) const override {
     PYBIND11_OVERLOAD_PURE(void, HartreeFockProvider, fill_fock_ff, slices, out);
   }
-  void fill_eri_ffff(py::tuple slices, py::array out) const override {
+  void fill_eri_ffff(std::tuple<py::slice, py::slice, py::slice, py::slice> slices,
+                     NDArray<scalar_type, 4> out) const override {
     PYBIND11_OVERLOAD_PURE(void, HartreeFockProvider, fill_eri_ffff, slices, out);
   }
-  void fill_eri_phys_asym_ffff(py::tuple slices, py::array out) const override {
+  void fill_eri_phys_asym_ffff(
+        std::tuple<py::slice, py::slice, py::slice, py::slice> slices,
+        NDArray<scalar_type, 4> out) const override {
     PYBIND11_OVERLOAD_PURE(void, HartreeFockProvider, fill_eri_phys_asym_ffff, slices,
                            out);
   }
@@ -344,7 +359,7 @@ class PyHartreeFockProvider : public HartreeFockProvider {
   }
 };
 
-static py::array_t<scalar_type> HartreeFockSolution_i_occupation_f(
+static NDArray<scalar_type, 1> HartreeFockSolution_i_occupation_f(
       const HartreeFockSolution_i& self) {
   py::array_t<scalar_type> ret(self.n_orbs());
   self.occupation_f(ret.mutable_data(), self.n_orbs());
@@ -369,21 +384,21 @@ static size_t count_electrons(const HartreeFockSolution_i& self, bool count_beta
   return ret;
 }
 
-static py::array_t<scalar_type> HartreeFockSolution_i_orben_f(
+static NDArray<scalar_type, 1> HartreeFockSolution_i_orben_f(
       const HartreeFockSolution_i& self) {
   py::array_t<scalar_type> ret(self.n_orbs());
   self.orben_f(ret.mutable_data(), self.n_orbs());
   return ret;
 }
 
-static py::array_t<scalar_type> HartreeFockSolution_i_orbcoeff_fb(
+static NDArray<scalar_type, 2> HartreeFockSolution_i_orbcoeff_fb(
       const HartreeFockSolution_i& self) {
   py::array_t<scalar_type> ret({self.n_orbs(), self.n_bas()});
   self.orbcoeff_fb(ret.mutable_data(), self.n_orbs() * self.n_bas());
   return ret;
 }
 
-static py::array_t<scalar_type> HartreeFockSolution_i_fock_ff(
+static NDArray<scalar_type, 2> HartreeFockSolution_i_fock_ff(
       const HartreeFockSolution_i& self) {
   py::array_t<scalar_type> ret({self.n_orbs(), self.n_orbs()});
   self.fock_ff(0, self.n_orbs(), 0, self.n_orbs(),
@@ -461,50 +476,54 @@ void export_HartreeFockProvider(py::module& m) {
              "Returns the number of *spatial* one-electron basis functions. This value "
              "is abbreviated by `nb` in the documentation.")
         .def("get_nuclear_multipole", &HartreeFockProvider::get_nuclear_multipole,
+             py::arg("order"), py::arg("gauge_origin") = py::make_tuple(0.0, 0.0, 0.0),
              "Returns the nuclear multipole of the requested order. For `0` returns the "
              "total nuclear charge as an array of size 1, for `1` returns the nuclear "
              "dipole moment as an array of size 3.")
         //
         .def("transform_gauge_origin_to_xyz",
-             &HartreeFockProvider::transform_gauge_origin_to_xyz,
+             &HartreeFockProvider::transform_gauge_origin_to_xyz, py::arg("gauge_origin"),
              "Transforms a string specifying the gauge origin to a tuple containing "
              "the x, y, z Cartesian components.")
         //
-        .def("fill_occupation_f", &HartreeFockProvider::fill_occupation_f,
+        .def("fill_occupation_f", &HartreeFockProvider::fill_occupation_f, py::arg("out"),
              "Fill the passed numpy array of size `(2 * nf, )` with the occupation "
              "number for each SCF orbital.")
-        .def("fill_orben_f", &HartreeFockProvider::fill_orben_f,
+        .def("fill_orben_f", &HartreeFockProvider::fill_orben_f, py::arg("out"),
              "Fill the passed numpy array of size `(2 * nf, )` with the SCF orbital "
              "energies.")
-        .def("fill_orbcoeff_fb", &HartreeFockProvider::fill_orbcoeff_fb,
+        .def("fill_orbcoeff_fb", &HartreeFockProvider::fill_orbcoeff_fb, py::arg("out"),
              "Fill the passed numpy array of size `(2 * nf, nb)` with the SCF orbital "
              "coefficients, i.e. the uniform transform from the one-particle basis to "
              "the molecular orbitals.")
-        .def("fill_fock_ff", &HartreeFockProvider::fill_fock_ff,
-             "Fill the passed numpy array `arg1` with a part of the Fock matrix in the "
+        .def("fill_fock_ff", &HartreeFockProvider::fill_fock_ff, py::arg("slices"),
+             py::arg("out"),
+             "Fill the passed numpy array `out` with a part of the Fock matrix in the "
              "molecular orbital basis. The block to store is specified by the provided "
-             "tuple of ranges `arg0`, which gives the range of indices to place into the "
-             "buffer along each of the axis. The index counting is done in spin "
+             "tuple of ranges `slices`, which gives the range of indices to place into "
+             "the buffer along each of the axis. The index counting is done in spin "
              "orbitals, so the full range in each axis is `range(0, 2 * nf)`. The "
              "implementation should not assume that the alpha-beta and beta-alpha blocks "
              "are not accessed even though they are zero by spin symmetry.")
-        .def("fill_eri_ffff", &HartreeFockProvider::fill_eri_ffff,
-             "Fill the passed numpy array `arg1` with a part of the electron-repulsion "
+        .def("fill_eri_ffff", &HartreeFockProvider::fill_eri_ffff, py::arg("slices"),
+             py::arg("out"),
+             "Fill the passed numpy array `out` with a part of the electron-repulsion "
              "integral tensor in the molecular orbital basis. "
              "The indexing convention is the chemist's notation, i.e. the index tuple "
              "`(i,j,k,l)` refers to the integral :math:`(ij|kl)`. "
              "The block to store is specified by the provided "
-             "tuple of ranges `arg0`, which gives the range of indices to place into the "
-             "buffer along each of the axis. The index counting is done in spin "
+             "tuple of ranges `slices`, which gives the range of indices to place into "
+             "the buffer along each of the axis. The index counting is done in spin "
              "orbitals, so the full range in each axis is `range(0, 2 * nf)`.")
         .def("fill_eri_phys_asym_ffff", &HartreeFockProvider::fill_eri_phys_asym_ffff,
-             "Fill the passed numpy array `arg1` with a part of the **antisymmetrised** "
+             py::arg("slices"), py::arg("out"),
+             "Fill the passed numpy array `out` with a part of the **antisymmetrised** "
              "electron-repulsion integral tensor in the molecular orbital basis. "
              "The indexing convention is the physicist's notation, i.e. the index tuple "
              "`(i,j,k,l)` refers to the integral :math:`\\langle ij||kl \\rangle`. "
              "The block to store is specified by the provided "
-             "tuple of ranges `arg0`, which gives the range of indices to place into the "
-             "buffer along each of the axis. The index counting is done in spin "
+             "tuple of ranges `slices`, which gives the range of indices to place into "
+             "the buffer along each of the axis. The index counting is done in spin "
              "orbitals, so the full range in each axis is `range(0, 2 * nf)`.")
         .def("has_eri_phys_asym_ffff", &HartreeFockProvider::has_eri_phys_asym_ffff,
              "Returns whether `fill_eri_phys_asym_ffff` function is implemented and "
