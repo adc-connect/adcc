@@ -38,7 +38,7 @@ class TestDataHfProvdier(unittest.TestCase):
         data = testdata_cache._load_hfdata(system)
         refdata = testdata_cache.hfimport(system, case=case)
 
-        bdict = dict()
+        bdict = {}
         for key in ["restricted", "conv_tol", "occupation_f", "orbcoeff_fb",
                     "orben_f", "fock_ff", "eri_ffff", "energy_scf",
                     "nuclear_repulsion_energy", "spin_multiplicity"]:

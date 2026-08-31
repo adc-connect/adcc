@@ -148,12 +148,12 @@ def run_qchem(test_case: testcases.TestCase, method: AdcMethod, case: str,
                         is_spin_flip=bool(n_spin_flip),
                         import_nstates=import_nstates
                     )
-                except DataImportError as e:
+                except DataImportError:
                     # something (expected) went wrong during import
                     # copy the output file to the working directory and abort.
                     if outfile.exists():
                         shutil.copy(outfile, Path.cwd())
-                    raise e
+                    raise
             # import the ground state data as flat dict
             gs_data = None
             if import_gs:
@@ -233,9 +233,9 @@ def build_antisym_eri(pyscf_data: h5py.File, core_orbitals: int | None = None,
             eri = getattr(refstate, block).to_ndarray()
             assert isinstance(eri, np.ndarray) and eri.ndim == 4
             ret[block] = cast(np.ndarray[tuple[int, int, int, int]], eri)
-        except ValueError as e:  # CVS block not available
+        except ValueError:  # CVS block not available
             if refstate.has_core_occupied_space:
-                raise e
+                raise
     return ret
 
 

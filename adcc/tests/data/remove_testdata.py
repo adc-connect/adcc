@@ -5,7 +5,7 @@ from pathlib import Path
 import h5py
 
 
-def remove(file: Path, cases: list[str] = None, density_orders: list[str] = None):
+def remove(file: Path, cases: list[str] | None = None, density_orders: list[str] | None = None):
     """
     Removes test data for the given reference cases and density orders in the
     given test data (hdf5) file and deletes the file if all data is removed.
@@ -32,7 +32,7 @@ def remove(file: Path, cases: list[str] = None, density_orders: list[str] = None
             # at this point we have to have a file with adc reference data
             assert re.search(r"adc[0-9]", file.name)
             density_orders_to_remove = [
-                dens_oder for dens_oder in case_data.keys()
+                dens_oder for dens_oder in case_data
                 if density_orders is None or dens_oder in density_orders
             ]
             for density_order in density_orders_to_remove:

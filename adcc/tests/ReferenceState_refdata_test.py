@@ -129,7 +129,7 @@ def compare_refstate_with_reference(system: str, case: str,
             orbcoeff_ref = reference["orbital_coefficients"][ss + "b"]
             assert_allclose(orbcoeff, orbcoeff_ref, atol=atol)
 
-    for ss in reference["fock"].keys():
+    for ss in reference["fock"]:
         assert_allclose(refstate.fock(ss).to_ndarray(),
                         reference["fock"][ss], atol=atol)
 
@@ -137,11 +137,11 @@ def compare_refstate_with_reference(system: str, case: str,
         decimal = 7
         if refstate.backend == "veloxchem":
             decimal = 6
-        for ss in reference["eri"].keys():
+        for ss in reference["eri"]:
             assert_almost_equal(np.abs(refstate.eri(ss).to_ndarray()),
                                 np.abs(reference["eri"][ss]), decimal=decimal)
     elif compare_eri == "value":
-        for ss in reference["eri"].keys():
+        for ss in reference["eri"]:
             assert_allclose(refstate.eri(ss).to_ndarray(),
                             reference["eri"][ss], atol=atol)
 

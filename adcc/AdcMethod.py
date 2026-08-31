@@ -102,7 +102,7 @@ class GroundStateType(Enum):
 @dataclass(frozen=True)
 class LevelSpec:
     max_level: int | None = None
-    special_levels: tuple[MethodLevel, ...] = tuple()
+    special_levels: tuple[MethodLevel, ...] = ()
 
     def supports(self, level: MethodLevel) -> bool:
         if isinstance(level.value, int):

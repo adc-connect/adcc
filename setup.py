@@ -269,7 +269,7 @@ def assets_most_recent_release(project: str) -> list[str]:
 
         with open(filename) as fp:
             ret = json.loads(fp.read())
-        assets = [ret[i]["assets"] for i in range(len(ret))][0]
+        assets = next(ret[i]["assets"] for i in range(len(ret)))
         return [asset["browser_download_url"] for asset in assets]
 
 

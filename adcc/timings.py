@@ -154,7 +154,7 @@ class Timer:
         """The list of all tasks known to this object"""
         all_tasks = set(self.start_times.keys())
         all_tasks.update(set(self.raw_data.keys()))
-        return sorted(list(all_tasks))
+        return sorted(all_tasks)
 
     @property
     def lifetime(self):

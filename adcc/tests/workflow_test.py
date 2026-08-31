@@ -44,15 +44,15 @@ class TestWorkflow:
         assert 6, "singlet" == validate_state_parameters(refstate, n_singlets=6)
 
         invalid_cases = [
-            dict(),                # No states requested
-            dict(n_states=0),      # No states requested
-            dict(n_singlets=-2),   # Negative number of states requested
-            dict(n_spin_flip=2),   # Invalid kind of states for RHF
-            dict(n_states=2, n_singlets=2),      # States of two sorts
-            dict(n_triplets=2, n_singlets=2),    # States of two sorts
-            dict(n_states=2, n_spin_flip=2),     # States of two sorts
-            dict(n_triplets=2, kind="singlet"),  # kind and n_ do not agree
-            dict(n_states=2, kind="bla"),      # Kind invaled
+            {},                # No states requested
+            {"n_states": 0},      # No states requested
+            {"n_singlets": -2},   # Negative number of states requested
+            {"n_spin_flip": 2},   # Invalid kind of states for RHF
+            {"n_states": 2, "n_singlets": 2},      # States of two sorts
+            {"n_triplets": 2, "n_singlets": 2},    # States of two sorts
+            {"n_states": 2, "n_spin_flip": 2},     # States of two sorts
+            {"n_triplets": 2, "kind": "singlet"},  # kind and n_ do not agree
+            {"n_states": 2, "kind": "bla"},      # Kind invaled
         ]
         for case in invalid_cases:
             with pytest.raises(InputError):
@@ -70,19 +70,19 @@ class TestWorkflow:
                                                            n_spin_flip=2)
 
         invalid_cases = [
-            dict(),                # No states requested
-            dict(n_states=0),      # No states requested
-            dict(n_states=-2),     # Negative number of states requested
-            dict(n_spin_flip=-3),  # Negative number of states requested
-            dict(n_states=2, n_singlets=2),    # States of two sorts
-            dict(n_triplets=2, n_singlets=2),  # States of two sorts
-            dict(n_states=2, n_spin_flip=2),   # States of two sorts
-            dict(n_spin_flip=2, kind="singlet"),  # kind and n_ do not agree
-            dict(n_states=2, kind="bla"),      # Kind invaled
-            dict(n_states=4, kind="singlet"),  # UHF with singlets
-            dict(n_states=2, kind="triplet"),  # UHF with triplets
-            dict(n_triplets=2),    # UHF with triplets
-            dict(n_singlets=6),    # UHF with singlets
+            {},                # No states requested
+            {"n_states": 0},      # No states requested
+            {"n_states": -2},     # Negative number of states requested
+            {"n_spin_flip": -3},  # Negative number of states requested
+            {"n_states": 2, "n_singlets": 2},    # States of two sorts
+            {"n_triplets": 2, "n_singlets": 2},  # States of two sorts
+            {"n_states": 2, "n_spin_flip": 2},   # States of two sorts
+            {"n_spin_flip": 2, "kind": "singlet"},  # kind and n_ do not agree
+            {"n_states": 2, "kind": "bla"},      # Kind invaled
+            {"n_states": 4, "kind": "singlet"},  # UHF with singlets
+            {"n_states": 2, "kind": "triplet"},  # UHF with triplets
+            {"n_triplets": 2},    # UHF with triplets
+            {"n_singlets": 6},    # UHF with singlets
         ]
         for case in invalid_cases:
             with pytest.raises(InputError):
@@ -127,15 +127,15 @@ class TestWorkflow:
         assert res.mospaces.frozen_virtual == [6, 13]
 
         invalid_cases = [
-            dict(),                   # Missing method
-            dict(method="dadadad"),   # Unknown method
-            dict(frozen_core=1),      # Missing method
-            dict(frozen_virtual=3),   # Missing method
-            dict(core_orbitals=4),    # Missing method
-            dict(method="cvs-adc2"),  # No core_orbitals
-            dict(method="cvs-adc2", frozen_core=1),
-            dict(method="adc2", core_orbitals=3),  # Extra core parameter
-            dict(method="adc2", core_orbitals=3, frozen_virtual=2),
+            {},                   # Missing method
+            {"method": "dadadad"},   # Unknown method
+            {"frozen_core": 1},      # Missing method
+            {"frozen_virtual": 3},   # Missing method
+            {"core_orbitals": 4},    # Missing method
+            {"method": "cvs-adc2"},  # No core_orbitals
+            {"method": "cvs-adc2", "frozen_core": 1},
+            {"method": "adc2", "core_orbitals": 3},  # Extra core parameter
+            {"method": "adc2", "core_orbitals": 3, "frozen_virtual": 2},
         ]
         for case in invalid_cases:
             with pytest.raises(InputError):

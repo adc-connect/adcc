@@ -39,12 +39,12 @@ def guess_kwargs_kind(kind):
     Return the kwargs required to be passed to `guesses_from_diagonal` to
     computed states of the passed excitation `kind`.
     """
-    kwargsmap = dict(
-        singlet=dict(spin_block_symmetrisation="symmetric", spin_change=0),
-        triplet=dict(spin_block_symmetrisation="antisymmetric", spin_change=0),
-        spin_flip=dict(spin_block_symmetrisation="none", spin_change=-1),
-        any=dict(spin_block_symmetrisation="none", spin_change=0),
-    )
+    kwargsmap = {
+        "singlet": {"spin_block_symmetrisation": "symmetric", "spin_change": 0},
+        "triplet": {"spin_block_symmetrisation": "antisymmetric", "spin_change": 0},
+        "spin_flip": {"spin_block_symmetrisation": "none", "spin_change": -1},
+        "any": {"spin_block_symmetrisation": "none", "spin_change": 0},
+    }
     try:
         return kwargsmap[kind]
     except KeyError:

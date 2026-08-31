@@ -33,7 +33,7 @@ from .functions import dot
 class ExcitedStates(ElectronicTransition):
     _module = adc_pp
 
-    def __init__(self, data, method: str = None, property_method: str = None):
+    def __init__(self, data, method: str | None = None, property_method: str | None = None):
         super().__init__(data, method, property_method)
 
         if self.method.adc_type is not AdcType.PP:

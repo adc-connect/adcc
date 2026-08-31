@@ -230,7 +230,7 @@ def banner(colour=sys.stdout.isatty()):
 
     empty = "|" + 70 * " " + "|\n"
     string = "+" + 70 * "-" + "+\n"
-    string += "|{0:^70s}|\n".format(
+    string += "|{:^70s}|\n".format(
         "adcc:  Seamlessly connect your host program to ADC"
     ).replace("adcc", "adc" + yellow + "c" + white)
     string += "+" + 70 * "-" + "+\n"

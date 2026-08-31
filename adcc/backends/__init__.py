@@ -102,8 +102,7 @@ def import_scf_results(res):
         return DataHfProvider(res)
 
     if isinstance(res, str):
-        if os.path.isfile(res) and (res.endswith(".h5")
-                                    or res.endswith(".hdf5")):
+        if os.path.isfile(res) and (res.endswith((".h5", ".hdf5"))):
             return import_scf_results(h5py.File(res, "r"))
         else:
             raise ValueError(f"Unrecognised path or file extension: {res}")

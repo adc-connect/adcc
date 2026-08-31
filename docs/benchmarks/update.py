@@ -50,9 +50,9 @@ def fetch_json(commit, machine):
 def write_details(data, testcase, reference, basis, n_ao=None):
     lines = []
 
-    memkey = [k for k in data["results"].keys()
+    memkey = [k for k in data["results"]
               if f"Full{testcase}" in k and "peakmem_" in k]
-    timekey = [k for k in data["results"].keys()
+    timekey = [k for k in data["results"]
                if f"Full{testcase}" in k and "time_" in k]
     if len(memkey) == 0:
         return
@@ -61,8 +61,8 @@ def write_details(data, testcase, reference, basis, n_ao=None):
     memkey = memkey[0]
     timekey = timekey[0]
 
-    mbasis, mmethod, mstates, mtol, mthreads = data["results"][memkey]["params"]
-    tbasis, tmethod, tstates, ttol, tthreads = data["results"][timekey]["params"]
+    _, mmethod, mstates, mtol, mthreads = data["results"][memkey]["params"]
+    _, tmethod, tstates, ttol, tthreads = data["results"][timekey]["params"]
     tol = max(float(e) for e in set(mtol).intersection(ttol))
     states = max(int(e) for e in set(mstates).intersection(tstates))
     mproduct = list(itertools.product(*data["results"][memkey]["params"]))

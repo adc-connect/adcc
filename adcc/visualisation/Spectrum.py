@@ -42,7 +42,7 @@ class Spectrum:
     #  support element-wise multiplication, division, addition /
     #                   subtraction of spectra ?
 
-    def __init__(self, x, y, *args, xlabel: str = None, ylabel: str = None,
+    def __init__(self, x, y, *args, xlabel: str | None = None, ylabel: str | None = None,
                  **kwargs):
         """Pass spectrum data to initialise the class.
 

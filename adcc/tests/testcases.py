@@ -8,9 +8,9 @@ from adcc.AdcMethod import AdcType
 # NOTE: Can't use a dict, because TestCase has to be hashable.
 @dataclass(frozen=True)
 class Kinds:
-    pp: tuple[str, ...] = tuple()
-    ip: tuple[str, ...] = tuple()
-    ea: tuple[str, ...] = tuple()
+    pp: tuple[str, ...] = ()
+    ip: tuple[str, ...] = ()
+    ea: tuple[str, ...] = ()
 
     def __getitem__(self, key: AdcType):
         return getattr(self, key.to_str())
@@ -297,7 +297,7 @@ def _init_test_cases() -> tuple[TestCase, ...]:
 available = _init_test_cases()
 
 
-def get(n_expected_cases: int = None, **kwargs: str) -> list[TestCase]:
+def get(n_expected_cases: int | None = None, **kwargs: str) -> list[TestCase]:
     """
     Filter test cases according to the fields of the test cases, e.g.,
     name="h2o"

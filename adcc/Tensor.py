@@ -84,10 +84,9 @@ class Tensor(libadcc.Tensor):
             sym_or_mo = Symmetry(sym_or_mo, space, permutations,
                                  spin_block_maps, spin_blocks_forbidden)
 
-        if space is not None:
-            if sym_or_mo.space != space:
-                raise ValueError("Value passed to space needs to agree with "
-                                 "space value from Symmetry object.")
+        if space is not None and sym_or_mo.space != space:
+            raise ValueError("Value passed to space needs to agree with "
+                             "space value from Symmetry object.")
 
         super().__init__(sym_or_mo)
 

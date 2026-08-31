@@ -64,8 +64,8 @@ def _fallback_einsum(einsum_str, *operands, **kwargs):
     # do them first.
     for i in range(len(subscripts)):
         sub = subscripts[i]
-        cdiagonal = set(c for c in sub if sub.count(c) > 1 and c in outstr)
-        ctrace = set(c for c in sub if sub.count(c) > 1 and c not in outstr)
+        cdiagonal = {c for c in sub if sub.count(c) > 1 and c in outstr}
+        ctrace = {c for c in sub if sub.count(c) > 1 and c not in outstr}
         if ctrace:
             raise NotImplementedError("Partial traces (e.g. contractions "
                                       "'iaib->ab') are not yet supported "

@@ -137,7 +137,7 @@ class NParticleOperator:
             )
 
             # add new canonical block to dictionary
-            if canonical_block not in self._canonical_blocks.keys():
+            if canonical_block not in self._canonical_blocks:
                 self._canonical_blocks[canonical_block] = CanonicalBlock()
 
             # increment factor counter
@@ -397,10 +397,9 @@ class NParticleOperator:
                 self[block] = evaluate(obT)
 
         # Update ReferenceState pointer
-        if self.reference_state is not None:
-            if other.reference_state is not None \
+        if self.reference_state is not None and other.reference_state is not None \
                     and self.reference_state != other.reference_state:
-                self.reference_state = None
+            self.reference_state = None
         return self
 
     def __isub__(self, other):
@@ -439,10 +438,9 @@ class NParticleOperator:
                 self[block] = evaluate(obT)
 
         # Update ReferenceState pointer
-        if self.reference_state is not None:
-            if other.reference_state is not None \
+        if self.reference_state is not None and other.reference_state is not None \
                     and self.reference_state != other.reference_state:
-                self.reference_state = None
+            self.reference_state = None
         return self
 
     def __imul__(self, other):

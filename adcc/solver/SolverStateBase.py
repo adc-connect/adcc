@@ -56,7 +56,7 @@ class EigenSolverStateBase:
         text += "+" + 60 * "-" + "+\n"
         text += f"| {algorithm:<41s}  {conv:>15s} |\n"
         text += (f"| {problem[:30]:30s} n_iter={self.n_iter:<3d}  n_applies={self.n_applies:<5d} |\n")
-        text += ("| n_reortho={0:<7d}  max_overlap_before_reortho={1:<10s}   |\n"
+        text += ("| n_reortho={:<7d}  max_overlap_before_reortho={:<10s}   |\n"
                  "".format(len(self.reortho_triggers),
                            f"{max(self.reortho_triggers):<10.4E}"
                            if len(self.reortho_triggers) > 0 else "N/A"))

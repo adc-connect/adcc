@@ -41,9 +41,8 @@ backends = [b for b in adcc.backends.available() if b != "molsturm"]
 def test_backends_import_reference_data(system: str, case: str, backend: str):
     system: testcases.TestCase = testcases.get_by_filename(system).pop()
 
-    if backend == "veloxchem":
-        if system.basis == "def2-tzvp" and system.name == "h2o":
-            pytest.skip("VeloxChem does not support f-functions.")
+    if backend == "veloxchem" and system.basis == "def2-tzvp" and system.name == "h2o":
+        pytest.skip("VeloxChem does not support f-functions.")
 
     compare_eri = "abs"
     if system.name == "cn":

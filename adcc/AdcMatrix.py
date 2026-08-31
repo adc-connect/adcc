@@ -424,7 +424,7 @@ class AdcMatrix(AdcMatrixlike):
             #      for example) and basically they only need to support some
             #      form of matrix-vector product and some statistics like
             #      spaces and sizes etc.
-        block_orders = {bl: None for bl in self.block_orders.keys()}
+        block_orders = {bl: None for bl in self.block_orders}
         block_orders[block] = self.block_orders[block]
         return AdcMatrix(self.method, self.ground_state,
                          block_orders=block_orders,
@@ -739,7 +739,7 @@ class AdcMatrixProjected(AdcMatrix):
                                             outer_virtuals)
 
         projectors = {}
-        for block in matrix.axis_spaces.keys():
+        for block in matrix.axis_spaces:
             block_partitions = [sp for sp in excitation_blocks
                                 if len(sp) == len(matrix.axis_spaces[block])]
             projectors[block] = Projector(matrix.axis_spaces[block],
@@ -749,7 +749,7 @@ class AdcMatrixProjected(AdcMatrix):
     def apply_projection(self, in_ampl):
         return AmplitudeVector(**{
             block: self.projectors[block] @ in_ampl[block]
-            for block in in_ampl.keys()
+            for block in in_ampl
         })
 
     def matvec(self, in_ampl):

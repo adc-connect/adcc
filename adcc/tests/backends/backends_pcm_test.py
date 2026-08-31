@@ -158,21 +158,21 @@ class TestPCMcomparison(unittest.TestCase):
     def test_comparison_dd_pcmsolver(self):
         system = testcases.get_by_filename("nh3_321g").pop()
 
-        scfargs = dict(
-            xyz=system.xyz,
-            basis=system.basis,
-            charge=system.charge, multiplicity=system.multiplicity,
-            conv_tol=1e-12, conv_tol_grad=1e-11,
-            max_iter=150,
-        )
-        psiopts = dict(scf_type="direct")
-        adcopts = dict(method="adc2", n_singlets=5, conv_tol=1e-7,
-                       environment="linear_response")
+        scfargs = {
+            "xyz": system.xyz,
+            "basis": system.basis,
+            "charge": system.charge, "multiplicity": system.multiplicity,
+            "conv_tol": 1e-12, "conv_tol_grad": 1e-11,
+            "max_iter": 150,
+        }
+        psiopts = {"scf_type": "direct"}
+        adcopts = {"method": "adc2", "n_singlets": 5, "conv_tol": 1e-7,
+                       "environment": "linear_response"}
 
         scfres_ief = psi4_run_pcm_hf(**scfargs, options=dict(pcm=True, **psiopts),
-                                     pcm_options=dict(pcm_method="IEFPCM",
-                                                      solvent="Water",
-                                                      radiiset="UFF"))
+                                     pcm_options={"pcm_method": "IEFPCM",
+                                                      "solvent": "Water",
+                                                      "radiiset": "UFF"})
         state_ief = adcc.run_adc(scfres_ief, **adcopts)
         assert state_ief.converged
 
@@ -197,12 +197,12 @@ class TestPCMcomparison(unittest.TestCase):
             basis=system.basis,
             charge=system.charge, multiplicity=system.multiplicity,
             conv_tol=1e-12, conv_tol_grad=1e-11, max_iter=150,
-            options=dict(
-                ddx=True, ddx_model="cosmo", ddx_solvent_epsilon=2.0,
-                ddx_solvent_epsilon_optical=2.0, ddx_radii_set="uff",
-                ddx_radii_scaling=1.1, ddx_lmax=10, ddx_n_lebedev=590,
-                scf_type="direct"
-            )
+            options={
+                "ddx": True, "ddx_model": "cosmo", "ddx_solvent_epsilon": 2.0,
+                "ddx_solvent_epsilon_optical": 2.0, "ddx_radii_set": "uff",
+                "ddx_radii_scaling": 1.1, "ddx_lmax": 10, "ddx_n_lebedev": 590,
+                "scf_type": "direct"
+            }
         )
         state = adcc.cis(scfres, n_singlets=7, conv_tol=1e-7,
                          environment="linear_response")
@@ -223,8 +223,8 @@ def remove_cavity_psi4():
 
 def psi4_run_pcm_hf(xyz: str, basis: str, charge: int = 0, multiplicity: int = 1,
                     conv_tol: float = 1e-12, conv_tol_grad: float = 1e-11,
-                    max_iter: int = 150, options: dict = None,
-                    pcm_options: dict = None):
+                    max_iter: int = 150, options: dict | None = None,
+                    pcm_options: dict | None = None):
 
     import psi4
 
@@ -278,8 +278,8 @@ def psi4_run_pcm_hf(xyz: str, basis: str, charge: int = 0, multiplicity: int = 1
 
 def pyscf_run_pcm_hf(xyz: str, basis: str, charge: int = 0, multiplicity: int = 1,
                      conv_tol: float = 1e-11, conv_tol_grad: float = 1e-10,
-                     max_iter: int = 150, pcm_options: dict = None,
-                     options: dict = None):
+                     max_iter: int = 150, pcm_options: dict | None = None,
+                     options: dict | None = None):
 
     from pyscf import gto, scf
     from pyscf.solvent import ddCOSMO

@@ -94,14 +94,14 @@ def construct_nonzero_blocks(mospaces, n_core, n_virt):
     nvb = mospaces.n_orbs_beta("v1")
     noa = mospaces.n_orbs_alpha("o1")
     nob = mospaces.n_orbs_beta("o1")
-    c = dict(a=slice(0,         n_core),
-             b=slice(noa, noa + n_core))
-    o = dict(a=slice(n_core,             noa),
-             b=slice(n_core + noa, noa + nob))
-    v = dict(a=slice(0,         nva - n_virt),
-             b=slice(nva, nvb + nva - n_virt))
-    w = dict(a=slice(nva - n_virt,             nva),
-             b=slice(nva - n_virt + nvb, nvb + nva))
+    c = {"a": slice(0,         n_core),
+             "b": slice(noa, noa + n_core)}
+    o = {"a": slice(n_core,             noa),
+             "b": slice(n_core + noa, noa + nob)}
+    v = {"a": slice(0,         nva - n_virt),
+             "b": slice(nva, nvb + nva - n_virt)}
+    w = {"a": slice(nva - n_virt,             nva),
+             "b": slice(nva - n_virt + nvb, nvb + nva)}
 
     spaces_ph = ["cv", "ow"]
     nonzero_blocks_ph = []
@@ -122,8 +122,8 @@ def construct_nonzero_blocks(mospaces, n_core, n_virt):
         nonzero_blocks_pphh.append((c[s1], o[s2], w[s3], v[s4]))
         nonzero_blocks_pphh.append((o[s1], c[s2], w[s3], v[s4]))
 
-    spaces = dict(ph=spaces_ph, pphh=spaces_pphh)
-    nonzeros = dict(ph=nonzero_blocks_ph, pphh=nonzero_blocks_pphh)
+    spaces = {"ph": spaces_ph, "pphh": spaces_pphh}
+    nonzeros = {"ph": nonzero_blocks_ph, "pphh": nonzero_blocks_pphh}
     return spaces, nonzeros
 
 

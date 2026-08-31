@@ -30,8 +30,14 @@ from adcc.ReferenceState import ReferenceState
 
 class TestReferenceStateCounterData:
     def base_test(self, n_alpha, n_beta, n_bas, n_orbs_alpha, restricted,
-                  check_symmetry=False, core_orbitals=[], frozen_core=[],
-                  frozen_virtual=[]):
+                  check_symmetry=False, core_orbitals=None, frozen_core=None,
+                  frozen_virtual=None):
+        if frozen_virtual is None:
+            frozen_virtual = []
+        if frozen_core is None:
+            frozen_core = []
+        if core_orbitals is None:
+            core_orbitals = []
         if not isinstance(restricted, bool):
             restricted = (restricted == "restricted")
         data = HfCounterData(n_alpha, n_beta, n_bas, n_orbs_alpha, restricted)

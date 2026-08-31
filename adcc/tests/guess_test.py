@@ -279,9 +279,8 @@ class TestGuess:
 
             assert nonzeros.shape[0] == 1
             nonzeros = [tuple(nzitem) for nzitem in nonzeros[0]]
-            if i > 0 and igroup + 1 < len(gidcs):
-                if nonzeros[0] in gidcs[igroup + 1]:
-                    igroup += 1
+            if i > 0 and igroup + 1 < len(gidcs) and nonzeros[0] in gidcs[igroup + 1]:
+                igroup += 1
             for nz in nonzeros:
                 assert nz in gidcs[igroup]
 

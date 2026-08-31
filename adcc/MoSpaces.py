@@ -93,11 +93,10 @@ def expand_spaceargs(hfdata_or_n_orbs, **spaceargs):
         for spin in [0, 1]:
             if isinstance(spaceargs[key][spin], Iterable):
                 any_iterable = True
-            elif spaceargs[key][spin] is not None:
-                if any_iterable:
-                    raise ValueError("If one of the values of frozen_core, "
-                                     "core_orbitals, frozen_virtual is an "
-                                     "iterable, all must be.")
+            elif spaceargs[key][spin] is not None and any_iterable:
+                raise ValueError("If one of the values of frozen_core, "
+                                 "core_orbitals, frozen_virtual is an "
+                                 "iterable, all must be.")
 
     n_orbs = [0, 0]
     for key in ["frozen_core", "core_orbitals"]:

@@ -263,7 +263,7 @@ def _import_state_to_state_data(context: h5py.File, method: str,
     # -> determine the number of available states from the keys
     s2s_data = context[tree]
     assert isinstance(s2s_data, h5py.Group)
-    n_states = max(int(key.split("-")[0]) for key in s2s_data.keys()) + 1
+    n_states = max(int(key.split("-")[0]) for key in s2s_data) + 1
     if import_nstates is not None:
         n_states = min(n_states, import_nstates)
     del s2s_data

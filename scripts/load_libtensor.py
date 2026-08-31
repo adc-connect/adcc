@@ -60,7 +60,7 @@ def load_libtensor(fle):
     shape = tuple(shape)
 
     # Construct a string where all fields are on an individual line
-    translated = "\n".join(map(lambda x: "\n".join(x.split()), fle.readlines()))
+    translated = "\n".join("\n".join(x.split()) for x in fle.readlines())
 
     # Read that into numpy and return
     return np.loadtxt(StringIO(translated)).reshape(shape)

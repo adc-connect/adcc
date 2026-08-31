@@ -325,13 +325,11 @@ def compare_adc_results(adc_results, atol):
                 # sign is consistent across all matrix elements of a state.
                 assert_allclose_signs(fixed_signs_new[:, :, 0], fixed_signs)
 
-        if (
-            not state1.reference_state.restricted
-            and not state1.reference_state.has_core_occupied_space
-        ):
-            if "overlap" in state1.operators.available and \
-                    "overlap" in state2.operators.available:
-                assert_allclose(state1.state_ssq, state2.state_ssq, atol=atol)
+        if not state1.reference_state.restricted and not \
+                state1.reference_state.has_core_occupied_space and \
+                "overlap" in state1.operators.available and \
+                "overlap" in state2.operators.available:
+            assert_allclose(state1.state_ssq, state2.state_ssq, atol=atol)
 
         # Only in two backends the gauge origin selection is implemented.
         if len(set(comb) & set(backends_with_gauge_origin)) == 2:
