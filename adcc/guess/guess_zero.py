@@ -20,7 +20,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from adcc import AmplitudeVector, Symmetry, Tensor
+from adcc.AmplitudeVector import AmplitudeVector
+from adcc.Symmetry import Symmetry
+from adcc.Tensor import Tensor
 
 from ..AdcMatrix import AdcMatrixlike
 

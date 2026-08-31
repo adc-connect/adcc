@@ -20,8 +20,8 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from adcc import evaluate
 from adcc.AmplitudeVector import AmplitudeVector
+from adcc.functions import evaluate
 from libadcc import amplitude_vector_enforce_spin_kind
 
 # TODO

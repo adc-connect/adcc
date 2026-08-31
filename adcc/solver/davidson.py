@@ -27,9 +27,9 @@ import numpy as np
 import scipy.linalg as la
 import scipy.sparse.linalg as sla
 
-from adcc import evaluate, lincomb
 from adcc.AdcMatrix import AdcMatrixlike
 from adcc.AmplitudeVector import AmplitudeVector
+from adcc.functions import evaluate, lincomb
 
 from .common import select_eigenpairs
 from .explicit_symmetrisation import IndexSymmetrisation
