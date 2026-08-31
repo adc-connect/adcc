@@ -52,8 +52,9 @@ def _dispatch_diagonal(subscript, outstring, operand):
 def _fallback_einsum(einsum_str, *operands, **kwargs):
     # A fallback implementation of einsum in adcc,
     # which deals with a few cases opt_einsum cannot deal with
-    from .functions import einsum
     from opt_einsum.parser import gen_unused_symbols
+
+    from .functions import einsum
 
     operands = list(operands)
     subscripts = einsum_str.split("->")[0].split(",")
@@ -114,10 +115,9 @@ def _fallback_einsum(einsum_str, *operands, **kwargs):
 
 
 def register_with_opt_einsum():
-    import libadcc
+    from opt_einsum.backends.dispatch import EVAL_CONSTS_BACKENDS, _cached_funcs, _has_einsum
 
-    from opt_einsum.backends.dispatch import (EVAL_CONSTS_BACKENDS,
-                                              _cached_funcs, _has_einsum)
+    import libadcc
 
     def libadcc_evaluate_constants(const_arrays, expr):
         # Compute the partial expression tree of the inputs

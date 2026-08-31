@@ -20,10 +20,12 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
-import pytest
-from adcc.block import get_canonical_block
 from dataclasses import dataclass
+
+import pytest
+
+import adcc
+from adcc.block import get_canonical_block
 
 
 @dataclass(frozen=True)

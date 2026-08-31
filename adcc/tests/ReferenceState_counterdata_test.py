@@ -20,12 +20,12 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import pytest
 import numpy as np
+import pytest
 from numpy.testing import assert_array_equal
 
-from adcc.ReferenceState import ReferenceState
 from adcc.HfCounterData import HfCounterData
+from adcc.ReferenceState import ReferenceState
 
 
 class TestReferenceStateCounterData:

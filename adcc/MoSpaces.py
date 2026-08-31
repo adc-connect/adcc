@@ -20,16 +20,16 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import numpy as np
 import textwrap
+from collections.abc import Iterable
 from itertools import product
+
+import numpy as np
+
+import libadcc
 
 from .backends import import_scf_results
 from .memory_pool import memory_pool
-
-from collections.abc import Iterable
-
-import libadcc
 
 __all__ = ["MoSpaces"]
 
@@ -82,8 +82,7 @@ def expand_spaceargs(hfdata_or_n_orbs, **spaceargs):
         elif isinstance(entry, Iterable):
             return np.array(entry)
         else:
-            raise TypeError("Unsupported type {} passed to argument {}"
-                            "".format(type(entry), space))
+            raise TypeError(f"Unsupported type {type(entry)} passed to argument {space}")
 
     for key in spaceargs:
         if not isinstance(spaceargs[key], tuple):
@@ -113,7 +112,7 @@ def expand_spaceargs(hfdata_or_n_orbs, **spaceargs):
         n_orbs[1] += len(list_beta)
 
     key = "frozen_virtual"
-    if key in spaceargs and spaceargs[key]:
+    if spaceargs.get(key):
         spaceargs[key] = np.concatenate((
             expand_to_list(key, spaceargs[key][0], from_max=noa),
             expand_to_list(key, spaceargs[key][1], from_max=nob) + noa

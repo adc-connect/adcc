@@ -22,8 +22,8 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
-from . import shapefctns
 from ..misc import requires_module
+from . import shapefctns
 
 
 class Spectrum:
@@ -65,8 +65,7 @@ class Spectrum:
         self.xlabel = "x" if xlabel is None else xlabel
         self.ylabel = "y" if ylabel is None else ylabel
         if self.x.size != self.y.size:
-            raise ValueError("Sizes of x and y mismatch: {} versus {}."
-                             "".format(self.x.size, self.y.size))
+            raise ValueError(f"Sizes of x and y mismatch: {self.x.size} versus {self.y.size}.")
         self._args = args
         self._kwargs = kwargs
 

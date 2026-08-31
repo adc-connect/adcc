@@ -21,16 +21,15 @@
 ##
 ## ---------------------------------------------------------------------
 import os
-import adcc
-import matplotlib
-import numpy as np
-
-from pyscf import gto, scf
-
-from matplotlib import pyplot as plt
-from matplotlib.colors import LogNorm
 
 import h5py
+import matplotlib
+import numpy as np
+from matplotlib import pyplot as plt
+from matplotlib.colors import LogNorm
+from pyscf import gto, scf
+
+import adcc
 
 
 def dump_matrix(basis, method):

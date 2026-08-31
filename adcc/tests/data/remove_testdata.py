@@ -1,7 +1,8 @@
-from pathlib import Path
 import argparse
-import h5py
 import re
+from pathlib import Path
+
+import h5py
 
 
 def remove(file: Path, cases: list[str] = None, density_orders: list[str] = None):

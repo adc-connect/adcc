@@ -20,16 +20,20 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
-import pytest
 import numpy as np
+import pytest
 
+import adcc
 from adcc.solver import IndexSpinSymmetrisation
-from adcc.solver.power_method import default_print as powprint, power_method
-from adcc.solver.preconditioner import JacobiPreconditioner
 from adcc.solver.conjugate_gradient import (
-    IterativeInverse, conjugate_gradient, default_print, guess_from_previous
+    IterativeInverse,
+    conjugate_gradient,
+    default_print,
+    guess_from_previous,
 )
+from adcc.solver.power_method import default_print as powprint
+from adcc.solver.power_method import power_method
+from adcc.solver.preconditioner import JacobiPreconditioner
 
 from ..testdata_cache import testdata_cache
 

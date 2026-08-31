@@ -20,11 +20,11 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from .timings import Timer
 from .functions import evaluate
+from .timings import Timer
 
 
-class Intermediates():
+class Intermediates:
     """
     Class offering to return a number of intermediate tensors.
     The tensors are cached internally for later reuse

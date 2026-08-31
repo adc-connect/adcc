@@ -1,24 +1,25 @@
-from adcc.tests.generators.import_qchem_data import (
-    import_excited_states, import_groundstate, DataImportError
-)
-from adcc.tests.generators.qchem_savedir import QchemSavedir
-from adcc.tests import testcases
-
-from adcc.hdf5io import _extract_dataset
-from adcc.AdcMethod import AdcMethod, MethodLevel
-from adcc import ReferenceState
-
-from collections.abc import Sequence
-from pathlib import Path
-from typing import cast
-import numpy as np
-import h5py
 import itertools
 import os
 import shutil
 import subprocess
 import tempfile
+from collections.abc import Sequence
+from pathlib import Path
+from typing import cast
 
+import h5py
+import numpy as np
+
+from adcc import ReferenceState
+from adcc.AdcMethod import AdcMethod, MethodLevel
+from adcc.hdf5io import _extract_dataset
+from adcc.tests import testcases
+from adcc.tests.generators.import_qchem_data import (
+    DataImportError,
+    import_excited_states,
+    import_groundstate,
+)
+from adcc.tests.generators.qchem_savedir import QchemSavedir
 
 _testdata_dirname = "data"
 _qchem_context_file = "context.hdf5"
@@ -380,7 +381,7 @@ def generate_qchem_input_file(infile: str | Path, adc_method: AdcMethod, basis: 
     if isr_order is not None:  # and isr_max_order
         method += f"\nadc_isr_order            {_isr_order_dict[isr_order]}"
 
-    qsys_mem = "{:d}gb".format(max(memory // 1000, 1) + 5)
+    qsys_mem = f"{max(memory // 1000, 1) + 5:d}gb"
     qsys_vmem = qsys_mem
 
     pe = pe_potfile is not None
@@ -388,7 +389,7 @@ def generate_qchem_input_file(infile: str | Path, adc_method: AdcMethod, basis: 
 
     if custom_basis:
         assert purecart is not None  # has to be provided for a custom basis
-        basis = "gen\npurecart                 {:d}".format(purecart)
+        basis = f"gen\npurecart                 {purecart:d}"
 
     # Adjust the input depending on whether we want to perform an qchem SCF calc
     scf_options = ["use_libqints             true",

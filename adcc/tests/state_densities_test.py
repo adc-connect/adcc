@@ -20,16 +20,15 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import pytest
 import numpy as np
+import pytest
 from pytest import approx
 
-from adcc import ExcitedStates, AdcMethod
+from adcc import AdcMethod, ExcitedStates
 from adcc.State2States import State2States
 
-from .testdata_cache import testdata_cache
 from . import testcases
-
+from .testdata_cache import testdata_cache
 
 methods = [
     ("adc0", None),

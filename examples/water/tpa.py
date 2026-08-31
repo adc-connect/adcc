@@ -3,15 +3,15 @@
 """Example computing the TPA cross section for water using ADC
 (10.1063/1.3682324)
 """
-import adcc
 import numpy as np
-
 from pyscf import gto, scf
-from adcc.solver.preconditioner import JacobiPreconditioner
-from adcc.solver import IndexSymmetrisation
-from adcc.solver.conjugate_gradient import conjugate_gradient, default_print
+
+import adcc
 from adcc.adc_pp.modified_transition_moments import modified_transition_moments
 from adcc.IsrMatrix import IsrMatrix
+from adcc.solver import IndexSymmetrisation
+from adcc.solver.conjugate_gradient import conjugate_gradient, default_print
+from adcc.solver.preconditioner import JacobiPreconditioner
 
 
 class ShiftedMat(adcc.AdcMatrix):
@@ -79,5 +79,5 @@ for f, ee in enumerate(state.excitation_energy):
         + np.einsum('mv,mv->', S[f], S[f])
         + np.einsum('mv,vm->', S[f], S[f])
     )
-    print("TPA Cross section [a.u.]: {:.4f}".format(delta))
+    print(f"TPA Cross section [a.u.]: {delta:.4f}")
     np.testing.assert_allclose(6.5539, delta, atol=1e-4)

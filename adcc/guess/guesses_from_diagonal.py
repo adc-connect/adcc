@@ -20,12 +20,13 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import libadcc
+from itertools import groupby
+
 import numpy as np
 
+import libadcc
 from adcc import evaluate
 from libadcc import MoIndexTranslation
-from itertools import groupby
 
 from ..AdcMatrix import AdcMatrixlike
 from .guess_zero import guess_zero
@@ -67,7 +68,7 @@ def guesses_from_diagonal(matrix, n_guesses, block="ph", spin_change=0,
         raise TypeError("matrix needs to be of type AdcMatrixlike")
     if spin_block_symmetrisation not in ["none", "symmetric", "antisymmetric"]:
         raise ValueError("Invalid value for spin_block_symmetrisation: "
-                         "{}".format(spin_block_symmetrisation))
+                         f"{spin_block_symmetrisation}")
     if spin_block_symmetrisation != "none" and \
        not matrix.reference_state.restricted:
         raise ValueError("spin_block_symmetrisation != none is only valid for "
@@ -75,11 +76,10 @@ def guesses_from_diagonal(matrix, n_guesses, block="ph", spin_change=0,
                          "states.")
     if int(spin_change * 2) / 2 != spin_change:
         raise ValueError("Only integer or half-integer spin_change is allowed. "
-                         "You passed {}".format(spin_change))
+                         f"You passed {spin_change}")
 
     if block not in matrix.axis_blocks:
-        raise ValueError("The passed ADC matrix does not have the block '{}.'"
-                         "".format(block))
+        raise ValueError(f"The passed ADC matrix does not have the block '{block}.'")
     if n_guesses == 0:
         return []
 

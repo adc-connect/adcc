@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
-import adcc
 import psi4
-
 from matplotlib import pyplot as plt
+
+import adcc
 
 mol = psi4.geometry("""
     O 0 0 0

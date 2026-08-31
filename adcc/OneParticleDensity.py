@@ -20,11 +20,12 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from .NParticleDensity import NParticleDensity
-from .NParticleOperator import OperatorSymmetry
 import libadcc
+
 from .functions import einsum
 from .MoSpaces import split_spaces
+from .NParticleDensity import NParticleDensity
+from .NParticleOperator import OperatorSymmetry
 
 
 class OneParticleDensity(NParticleDensity):

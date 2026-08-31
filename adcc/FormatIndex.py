@@ -57,7 +57,7 @@ class FormatIndexHfProvider(FormatIndexBase):
             Number of digits to reserve for the host index
         """
         if not isinstance(refstate, ReferenceState):
-            raise TypeError(f"Unsupported type: {str(refstate)}")
+            raise TypeError(f"Unsupported type: {refstate!s}")
         # TODO some backends such as pyscf have a 1-based indexing
         #      ... this should be worked in here!
         self.base_index = 0
@@ -125,7 +125,7 @@ class FormatIndexAdcc(FormatIndexBase):
         elif isinstance(refstate_or_mospaces, MoSpaces):
             self.mospaces = refstate_or_mospaces
         else:
-            raise TypeError(f"Unsupported type: {str(refstate_or_mospaces)}")
+            raise TypeError(f"Unsupported type: {refstate_or_mospaces!s}")
         self.max_digits = max_digits
 
     def _translate_index(self, space: str, idx: int) -> tuple[str, int, str]:
@@ -194,7 +194,7 @@ class FormatIndexHomoLumo(FormatIndexBase):
             to the HOMO as well (False).
         """
         if not isinstance(refstate, ReferenceState):
-            raise TypeError(f"Unsupported type: {str(refstate)}")
+            raise TypeError(f"Unsupported type: {refstate!s}")
         self.mospaces: MoSpaces = refstate.mospaces
         self.maxlen_offset: int = max_digits + 1  # + 1 for "+"/"-" string
         self.n_alpha: int = refstate.n_alpha

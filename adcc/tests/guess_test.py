@@ -21,17 +21,17 @@
 ##
 ## ---------------------------------------------------------------------
 import itertools
-import pytest
+
 import numpy as np
-from pytest import approx
+import pytest
 from numpy.testing import assert_array_equal
+from pytest import approx
 
 import adcc
 import adcc.guess
 
-from .testdata_cache import testdata_cache
 from . import testcases
-
+from .testdata_cache import testdata_cache
 
 # The methods to test
 singles_methods = ["adc0", "adc1", "adc2", "adc2x", "adc3", "adc4"]
@@ -219,7 +219,7 @@ class TestGuess:
                 sidcs = [
                     idx for idx in sidcs[0]
                     if any((idx[0] >= nCa and idx[1] >= nva,
-                            idx[0]  < nCa and idx[1]  < nva))  # noqa: E221
+                            idx[0]  < nCa and idx[1]  < nva))
                 ]
         elif block == "pphh":
             # the doubles guesses are constructed from the 0th order diagonal
@@ -238,21 +238,21 @@ class TestGuess:
             if spin_flip:
                 sidcs = [
                     idx for idx in sidcs[0]
-                    if any((idx[0]  < noa and idx[1]  < nCa and idx[2]  < nva and idx[3] >= nva,   # noqa: E221,E501
-                            idx[0]  < noa and idx[1]  < nCa and idx[2] >= nva and idx[3]  < nva,   # noqa: E221,E501
-                            idx[0]  < noa and idx[1] >= nCa and idx[2] >= nva and idx[3] >= nva,   # noqa: E221,E501
-                            idx[0] >= noa and idx[1]  < nCa and idx[2] >= nva and idx[3] >= nva))  # noqa: E221,E501
+                    if any((idx[0]  < noa and idx[1]  < nCa and idx[2]  < nva and idx[3] >= nva,
+                            idx[0]  < noa and idx[1]  < nCa and idx[2] >= nva and idx[3]  < nva,
+                            idx[0]  < noa and idx[1] >= nCa and idx[2] >= nva and idx[3] >= nva,
+                            idx[0] >= noa and idx[1]  < nCa and idx[2] >= nva and idx[3] >= nva))
                 ]
             else:
                 sidcs = [
                     idx for idx in sidcs[0]
                     # aaaa / bbbb / abab / baba / abba / baab
-                    if any((idx[0]  < noa and idx[1]  < nCa and idx[2]  < nva and idx[3]  < nva,   # noqa: E221,E501
-                            idx[0] >= noa and idx[1] >= nCa and idx[2] >= nva and idx[3] >= nva,   # noqa: E221,E501
-                            idx[0]  < noa and idx[1] >= nCa and idx[2]  < nva and idx[3] >= nva,   # noqa: E221,E501
-                            idx[0] >= noa and idx[1]  < nCa and idx[2] >= nva and idx[3]  < nva,   # noqa: E221,E501
-                            idx[0]  < noa and idx[1] >= nCa and idx[2] >= nva and idx[3]  < nva,   # noqa: E221,E501
-                            idx[0] >= noa and idx[1]  < nCa and idx[2]  < nva and idx[3] >= nva))  # noqa: E221,E501
+                    if any((idx[0]  < noa and idx[1]  < nCa and idx[2]  < nva and idx[3]  < nva,
+                            idx[0] >= noa and idx[1] >= nCa and idx[2] >= nva and idx[3] >= nva,
+                            idx[0]  < noa and idx[1] >= nCa and idx[2]  < nva and idx[3] >= nva,
+                            idx[0] >= noa and idx[1]  < nCa and idx[2] >= nva and idx[3]  < nva,
+                            idx[0]  < noa and idx[1] >= nCa and idx[2] >= nva and idx[3]  < nva,
+                            idx[0] >= noa and idx[1]  < nCa and idx[2]  < nva and idx[3] >= nva))
                 ]
                 # for triplets we have to filter out closed shell singlet
                 # excitations: excitations from a common spatial orbital to a
@@ -540,9 +540,9 @@ class TestGuess:
         return {
             ("ph", "none"): [
                 ([(11, 3)], [1.]), ([(12, 3)], [1.]),
-                ([( 6, 0)], [1.]), ([( 6, 1)], [1.]),  # noqa: E201
-                ([(10, 3)], [1.]), ([( 5, 0)], [1.]),  # noqa: E201
-                ([( 4, 1)], [1.]), ([(11, 5)], [1.]),  # noqa: E201
+                ([( 6, 0)], [1.]), ([( 6, 1)], [1.]),
+                ([(10, 3)], [1.]), ([( 5, 0)], [1.]),
+                ([( 4, 1)], [1.]), ([(11, 5)], [1.]),
             ],
             ("pphh", "none"): [
                 ([(6, 11, 0, 3), (6, 11, 3, 0), (11, 6, 0, 3), (11, 6, 3, 0)],

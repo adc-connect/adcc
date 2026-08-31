@@ -1,13 +1,12 @@
-from adcc.tests.generators.dump_pyscf import dump_pyscf
-from adcc.tests import testcases
-
-from pyscf import gto, scf
-
-from pathlib import Path
-import h5py
 import os
 import tempfile
+from pathlib import Path
 
+import h5py
+from pyscf import gto, scf
+
+from adcc.tests import testcases
+from adcc.tests.generators.dump_pyscf import dump_pyscf
 
 _testdata_dirname = "data"
 
@@ -56,7 +55,7 @@ def generate(test_case: testcases.TestCase,
     hdf5_file = Path(__file__).resolve().parent.parent / _testdata_dirname
     hdf5_file /= test_case.hfdata_file_name
     if hdf5_file.exists():
-        return None
+        return
     print(f"Generating data for {test_case.file_name}.")
     mf = run_pyscf(test_case, frac_occ)
     with h5py.File(hdf5_file, "w") as hdf5_file:

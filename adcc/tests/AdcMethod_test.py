@@ -24,7 +24,6 @@ import pytest
 
 from adcc.AdcMethod import AdcMethod, AdcType, GroundStateType, IsrMethod
 
-
 adc_methods = [("adc1", None), ("adc2x", None), ("cvs-adc3", None),
                ("adc", ValueError), ("cvs_adc2", ValueError),
                ("xyz-adc2", ValueError), ("adc5", NotImplementedError),

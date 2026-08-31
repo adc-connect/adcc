@@ -20,16 +20,17 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import libadcc
 import numpy as np
 
+import libadcc
+
+from . import block as b
+from .functions import direct_sum, einsum
 from .GroundState import GroundState
+from .misc import cached_member_function
 from .MoSpaces import split_spaces
 from .NParticleOperator import OperatorSymmetry
 from .OneParticleDensity import OneParticleDensity
-from .functions import direct_sum, einsum
-from .misc import cached_member_function
-from . import block as b
 
 
 class LazyMp(GroundState):

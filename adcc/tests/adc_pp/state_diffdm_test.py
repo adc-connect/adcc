@@ -23,15 +23,14 @@
 import numpy as np
 import pytest
 
+from adcc.adc_pp.state_diffdm import state_diffdm
+from adcc.adc_pp.state_diffdm_2p import state_diffdm_2p
 from adcc.AdcMethod import IsrMethod
 from adcc.functions import einsum
-from adcc.adc_pp.state_diffdm_2p import state_diffdm_2p
-from adcc.adc_pp.state_diffdm import state_diffdm
 from adcc.MoSpaces import split_spaces
 
 from .. import testcases
 from ..testdata_cache import testdata_cache
-
 
 test_cases = testcases.get_by_filename("h2o_sto3g", "cn_sto3g")
 cases = [(case.file_name, c, kind)
@@ -46,7 +45,7 @@ class TestStateDiffDm:
         hf = state.reference_state
         mp = state.ground_state
         n_states = len(state.excitation_energy)
-        excitation_energy = np.zeros((n_states))
+        excitation_energy = np.zeros(n_states)
 
         method = state.method.as_method(IsrMethod)
         level = method.level.to_int()

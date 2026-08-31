@@ -20,12 +20,13 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import os
-import glob
 import atexit
+import glob
+import os
 import shutil
-import libadcc
 import tempfile
+
+import libadcc
 
 
 class MemoryPool(libadcc.AdcMemory):

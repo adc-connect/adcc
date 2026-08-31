@@ -20,9 +20,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from .Symmetry import Symmetry
-
 import libadcc
+
+from .Symmetry import Symmetry
 
 
 class Tensor(libadcc.Tensor):

@@ -20,9 +20,11 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
 import unittest
+
 import numpy as np
+
+import adcc
 
 from .testdata_cache import testdata_cache
 

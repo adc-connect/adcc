@@ -20,18 +20,18 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import pytest
 import numpy as np
+import pytest
 from numpy.testing import assert_allclose
 
-from adcc.State2States import State2States
+from adcc import AdcMethod, run_adc
+from adcc.AdcMethod import MethodLevel
 from adcc.backends import run_hf
 from adcc.misc import assert_allclose_signfix
-from adcc import run_adc, AdcMethod
-from adcc.AdcMethod import MethodLevel
-from .testdata_cache import testdata_cache
-from . import testcases
+from adcc.State2States import State2States
 
+from . import testcases
+from .testdata_cache import testdata_cache
 
 # The density matrices are already tested in state_densities_test.py
 # -> here we only want to test the contraction of the densities with

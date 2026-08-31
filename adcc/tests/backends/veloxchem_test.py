@@ -20,22 +20,24 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import pytest
 import numpy as np
+import pytest
 from numpy.testing import assert_almost_equal, assert_array_equal
 
 import adcc
 import adcc.backends
 from adcc.backends import have_backend
 
-from .testing import (eri_asymm_construction_test, eri_chem_permutations,
-                      operator_import_from_ao_test)
 from .. import testcases
+from .testing import (
+    eri_asymm_construction_test,
+    eri_chem_permutations,
+    operator_import_from_ao_test,
+)
 
 if have_backend("veloxchem"):
     import veloxchem as vlx
-    from veloxchem.veloxchemlib import (AngularMomentumIntegralsDriver,
-                                        LinearMomentumIntegralsDriver)
+    from veloxchem.veloxchemlib import AngularMomentumIntegralsDriver, LinearMomentumIntegralsDriver
 
 
 h2o = testcases.get_by_filename("h2o_sto3g", "h2o_ccpvdz")

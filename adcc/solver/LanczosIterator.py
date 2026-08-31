@@ -21,12 +21,13 @@
 ##
 ## ---------------------------------------------------------------------
 import warnings
+
 import numpy as np
 import scipy.linalg as la
 
 from adcc import evaluate, lincomb
-from adcc.timings import Timer
 from adcc.AmplitudeVector import AmplitudeVector
+from adcc.timings import Timer
 
 from .orthogonaliser import GramSchmidtOrthogonaliser
 

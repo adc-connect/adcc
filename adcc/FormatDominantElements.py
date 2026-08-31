@@ -22,10 +22,10 @@
 ## ---------------------------------------------------------------------
 import copy
 
-from .Tensor import _tensor_select_below_absmax
-from .FormatIndex import FormatIndexAdcc, FormatIndexBase
-
 from libadcc import Tensor
+
+from .FormatIndex import FormatIndexAdcc, FormatIndexBase
+from .Tensor import _tensor_select_below_absmax
 
 
 class FormatDominantElements:

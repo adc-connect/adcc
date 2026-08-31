@@ -20,13 +20,13 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import libadcc
-
 from itertools import product
 
-from .AdcMatrix import AdcMatrixlike
-from .AdcMethod import IsrMethod, AdcType
+import libadcc
+
 from .adc_pp import bmatrix as ppbmatrix
+from .AdcMatrix import AdcMatrixlike
+from .AdcMethod import AdcType, IsrMethod
 from .AmplitudeVector import AmplitudeVector
 from .LazyMp import LazyMp
 from .NParticleOperator import OperatorSymmetry

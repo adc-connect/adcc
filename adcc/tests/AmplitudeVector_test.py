@@ -20,11 +20,13 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from numpy.testing import assert_allclose
-import pytest
 import unittest
 
-from adcc import AmplitudeVector, LazyMp, AdcMatrix, guess_zero, zeros_like
+import pytest
+from numpy.testing import assert_allclose
+
+from adcc import AdcMatrix, AmplitudeVector, LazyMp, guess_zero, zeros_like
+
 from .testdata_cache import testdata_cache
 
 

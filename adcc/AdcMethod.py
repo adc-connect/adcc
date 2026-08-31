@@ -22,9 +22,10 @@
 ## ---------------------------------------------------------------------
 from collections import Counter
 from dataclasses import dataclass
-from typing import Any, Optional, Union, TypeVar
 from enum import Enum
+from typing import TypeVar
 
+from typing_extensions import Self
 
 T = TypeVar("T", bound="Method")
 
@@ -100,7 +101,7 @@ class GroundStateType(Enum):
 
 @dataclass(frozen=True)
 class LevelSpec:
-    max_level: Optional[int] = None
+    max_level: int | None = None
     special_levels: tuple[MethodLevel, ...] = tuple()
 
     def supports(self, level: MethodLevel) -> bool:
@@ -118,7 +119,7 @@ class LevelKey:
 
 class Method:
     # this has to be set on the child classes
-    _method_base_name: Optional[str] = None
+    _method_base_name: str | None = None
     _supported_levels: dict[LevelKey, LevelSpec] = {}
 
     def __init__(self, method: str):
@@ -229,14 +230,14 @@ class Method:
         return "-".join(ret)
 
     @property
-    def base_method(self: T) -> T:
+    def base_method(self) -> Self:
         """
         The base (full) method, i.e. with all approximations such as
         CVS stripped off.
         """
         return self.__class__(self._base_method)
 
-    def at_level(self: T, newlevel: Union[int, str]) -> T:
+    def at_level(self, newlevel: int | str) -> Self:
         """
         Return an equivalent method, where only the level is changed
         (e.g. calling this on a CVS method returns a CVS method)
@@ -257,7 +258,7 @@ class Method:
         )
 
     def as_method_at_level(self, method_cls: type[T],
-                           newlevel: Union[int, str]) -> T:
+                           newlevel: int | str) -> T:
         """
         Return an equivalent method, at the given level, preserving any prefices
         (e.g. cvs-) of this method.
@@ -269,12 +270,12 @@ class Method:
             f"{method_cls._method_base_name}{newlevel}"
         ))
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Method):
             return NotImplemented
         return self.name == other.name
 
-    def __ne__(self, other: Any):
+    def __ne__(self, other: object):
         if not isinstance(other, Method):
             return NotImplemented
         return self.name != other.name

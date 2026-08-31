@@ -167,10 +167,7 @@ class HfCounterData(HartreeFockProvider):
                     block = "aaaa"
                 elif block == "baba":  # baba -> abab
                     block = "abab"
-                elif block == "abba":  # abba -> -baba -> -abab
-                    block = "abab"
-                    fac *= -1
-                elif block == "baab":  # baab -> abba -> -baba -> -abab
+                elif block == "abba" or block == "baab":  # abba -> -baba -> -abab
                     block = "abab"
                     fac *= -1
                 assert block in ("aaaa", "abab")

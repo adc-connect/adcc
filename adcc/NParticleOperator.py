@@ -20,10 +20,11 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import math
 from dataclasses import dataclass
 from enum import Enum
 from itertools import product
-import math
+
 import numpy as np
 
 import libadcc
@@ -118,7 +119,7 @@ class NParticleOperator:
         # Initialize all blocks; symmetry rules are applied lazily upon access.
         combs = list(product(self.orbital_subspaces,
                              repeat=2 * self._n_particle_op))
-        blocks = tuple("".join((comb)) for comb in combs)
+        blocks = tuple("".join(comb) for comb in combs)
 
         self._block_info: dict[str, BlockInfo] = {}
         self._canonical_blocks: dict[str, CanonicalBlock] = {}
@@ -308,7 +309,7 @@ class NParticleOperator:
             for sp in self.orbital_subspaces
         }
         # build complete np.ndarray -> go through all blocks
-        ret = np.zeros((self.shape))
+        ret = np.zeros(self.shape)
         for block in self.blocks:
             if self.is_zero_block(block):
                 continue

@@ -20,10 +20,11 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import warnings
-import numpy as np
 import inspect
+import warnings
 from functools import wraps
+
+import numpy as np
 from packaging.version import parse
 
 from .timings import Timer

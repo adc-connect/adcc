@@ -1,13 +1,12 @@
-import adcc
+import json
+from pathlib import Path
+
 import pyscf
 from pyscf import gto, scf, tdscf
 from pyscf.solvent import ddCOSMO
 
+import adcc
 from adcc.tests import testcases
-
-from pathlib import Path
-import json
-
 
 _testdata_dirname = "data"
 

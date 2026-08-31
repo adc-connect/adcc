@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
+from pyscf import gto, scf
+
 import adcc
 import adcc.projection
-
-from pyscf import gto, scf
 from adcc.AdcMatrix import AdcMatrixProjected
 
 # Aim of this script is to compute core excitations of water

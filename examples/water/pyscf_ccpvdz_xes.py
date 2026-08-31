@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
-import adcc
 import copy
 
-from pyscf import gto, scf
 from matplotlib import pyplot as plt
+from pyscf import gto, scf
+
+import adcc
 
 mol = gto.M(
     atom='O 0 0 0;'

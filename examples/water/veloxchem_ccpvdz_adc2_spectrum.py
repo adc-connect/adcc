@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 import os
-import adcc
 import tempfile
 
-from mpi4py import MPI
-from matplotlib import pyplot as plt
-
 import veloxchem as vlx
+from matplotlib import pyplot as plt
+from mpi4py import MPI
 from veloxchem.mpitask import MpiTask
+
+import adcc
 
 # Run SCF in VeloxChem
 with tempfile.TemporaryDirectory() as tmpdir:

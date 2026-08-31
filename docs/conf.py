@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Configuration file for the Sphinx documentation builder.
 #
@@ -13,21 +12,21 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
+import subprocess
 import sys
 import time
-import subprocess
 
 sys.path.insert(0, os.path.abspath('..'))
 
-import adcc  # noqa: E402
+import adcc
 
 # -- Project information -----------------------------------------------------
 
 
 def determine_tag():
-    commit = subprocess.check_output("git rev-parse HEAD".split(),
+    commit = subprocess.check_output(["git", "rev-parse", "HEAD"],
                                      universal_newlines=True).strip()
-    tag = subprocess.check_output("git tag --points-at".split() + [f"{commit}"],
+    tag = subprocess.check_output(["git", "tag", "--points-at"] + [f"{commit}"],
                                   universal_newlines=True).strip()
     return tag
 
@@ -210,7 +209,6 @@ imgmath_latex_preamble = "".join([
     r"\newcommand*{\mat}[1]{\ensuremath{\mathbf{#1}}}",
     r"\renewcommand*{\vec}[1]{\ensuremath{\underline{\boldsymbol{#1}}}}"
     r"\DeclareMathOperator{\tr}{tr}",
-    #
     r"\newcommand*{\Op}[1]{\ensuremath{\hat{\mathcal{#1}}}}",
     r"\newcommand*{\bra}[1]{\left\langle#1\right|}",
     r"\newcommand*{\ket}[1]{\left|#1\right\rangle}"

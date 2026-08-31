@@ -20,10 +20,10 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import json
 import itertools
-import numpy as np
+import json
 
+import numpy as np
 import requests
 
 

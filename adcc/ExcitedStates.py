@@ -23,7 +23,7 @@
 import numpy as np
 from scipy import constants
 
-from .import adc_pp
+from . import adc_pp
 from .AdcMethod import AdcType
 from .ElectronicStates import TableColumn
 from .ElectronicTransition import ElectronicTransition
@@ -183,9 +183,9 @@ class ExcitedStates(ElectronicTransition):
             qcvars.update({
                 # Transition properties
                 f"{name} TRANSITION DIPOLES (LEN)": self.transition_dipole_moment,
-                f"{name} TRANSITION DIPOLES (VEL)": self.transition_dipole_moment_velocity,  # noqa: E501
+                f"{name} TRANSITION DIPOLES (VEL)": self.transition_dipole_moment_velocity,
                 f"{name} OSCILLATOR STRENGTHS (LEN)": self.oscillator_strength,
-                f"{name} OSCILLATOR STRENGTHS (VEL)": self.oscillator_strength_velocity,  # noqa: E501
+                f"{name} OSCILLATOR STRENGTHS (VEL)": self.oscillator_strength_velocity,
                 f"{name} ROTATIONAL STRENGTHS (VEL)": self.rotatory_strength,
                 #
                 # State properties

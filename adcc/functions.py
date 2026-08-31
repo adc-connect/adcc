@@ -20,9 +20,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import libadcc
-
 import opt_einsum
+
+import libadcc
 
 from .AmplitudeVector import AmplitudeVector
 

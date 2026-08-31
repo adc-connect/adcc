@@ -1,10 +1,10 @@
-from . import testcases
-
-from pathlib import Path
 import os
-import pytest
 import subprocess
+from pathlib import Path
 
+import pytest
+
+from . import testcases
 
 _testdata_dirname = "data"
 

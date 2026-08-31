@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 import sys
+
 import numpy as np
 import scipy.linalg as la
 
 from adcc import copy, evaluate
 
 from ..functions import dot
-from .preconditioner import PreconditionerIdentity
 from .explicit_symmetrisation import IndexSymmetrisation
+from .preconditioner import PreconditionerIdentity
 
 
 def guess_from_previous(matrix, rhs, previous_cgstate):

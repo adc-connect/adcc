@@ -22,9 +22,10 @@
 ## ---------------------------------------------------------------------
 import tempfile
 import unittest
+from pathlib import Path
+
 import h5py
 import numpy as np
-from pathlib import Path
 
 from .ReferenceState_refdata_test import compare_refstate_with_reference
 from .testdata_cache import testdata_cache

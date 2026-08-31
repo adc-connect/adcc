@@ -54,12 +54,11 @@ class EigenSolverStateBase:
             conv = "NOT CONVERGED"
 
         text += "+" + 60 * "-" + "+\n"
-        text += "| {0:<41s}  {1:>15s} |\n".format(algorithm, conv)
-        text += ("| {0:30s} n_iter={1:<3d}  n_applies={2:<5d} |\n"
-                 "".format(problem[:30], self.n_iter, self.n_applies))
+        text += f"| {algorithm:<41s}  {conv:>15s} |\n"
+        text += (f"| {problem[:30]:30s} n_iter={self.n_iter:<3d}  n_applies={self.n_applies:<5d} |\n")
         text += ("| n_reortho={0:<7d}  max_overlap_before_reortho={1:<10s}   |\n"
                  "".format(len(self.reortho_triggers),
-                           "{:<10.4E}".format(max(self.reortho_triggers))
+                           f"{max(self.reortho_triggers):<10.4E}"
                            if len(self.reortho_triggers) > 0 else "N/A"))
         text += "+" + 60 * "-" + "+\n"
         text += ("|  #     eigenvalue  res. norm       "

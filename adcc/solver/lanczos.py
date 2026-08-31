@@ -22,15 +22,16 @@
 ## ---------------------------------------------------------------------
 import sys
 import warnings
+
 import numpy as np
 import scipy.linalg as la
 
 from adcc import lincomb
 
 from .common import select_eigenpairs
+from .explicit_symmetrisation import IndexSymmetrisation
 from .LanczosIterator import LanczosIterator
 from .SolverStateBase import EigenSolverStateBase
-from .explicit_symmetrisation import IndexSymmetrisation
 
 
 class LanczosState(EigenSolverStateBase):
@@ -60,8 +61,7 @@ def default_print(state, identifier, file=sys.stdout):
                          residual=np.max(state.residual_norms)),
               "", state.eigenvalues[:7], file=file)
         if hasattr(state, "subspace_orthogonality"):
-            print(33 * " " + "nonorth: {:5.3g}"
-                  "".format(state.subspace_orthogonality))
+            print(33 * " " + f"nonorth: {state.subspace_orthogonality:5.3g}")
     elif identifier == "is_converged":
         soltime = state.timer.total("iteration")
         print("=== Converged ===", file=file)
@@ -301,10 +301,9 @@ def lanczos(matrix, guesses, n_ep, max_subspace=None,
         min_subspace = n_ep + 2 * len(guesses)
     if conv_tol < matrix.shape[1] * np.finfo(float).eps:
         warnings.warn(la.LinAlgWarning(
-            "Convergence tolerance (== {:5.2g}) lower than "
-            "estimated maximal numerical accuracy (== {:5.2g}). "
+            f"Convergence tolerance (== {conv_tol:5.2g}) lower than "
+            f"estimated maximal numerical accuracy (== {matrix.shape[1] * np.finfo(float).eps:5.2g}). "
             "Convergence might be hard to achieve."
-            "".format(conv_tol, matrix.shape[1] * np.finfo(float).eps)
         ))
 
     return lanczos_iterations(iterator, n_ep, min_subspace, max_subspace,

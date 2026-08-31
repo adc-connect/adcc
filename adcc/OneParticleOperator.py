@@ -22,9 +22,9 @@
 ## ---------------------------------------------------------------------
 import libadcc
 
-from .NParticleOperator import NParticleOperator, OperatorSymmetry
 from .functions import einsum
 from .MoSpaces import split_spaces
+from .NParticleOperator import NParticleOperator, OperatorSymmetry
 
 
 class OneParticleOperator(NParticleOperator):

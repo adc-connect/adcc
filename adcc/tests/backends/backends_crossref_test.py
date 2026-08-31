@@ -21,16 +21,17 @@
 ##
 ## ---------------------------------------------------------------------
 import itertools
-import pytest
+
 import numpy as np
+import pytest
 from numpy.testing import assert_allclose
 
 import adcc
 import adcc.backends
 from adcc.misc import assert_allclose_signfix
 
-from .testing import cached_backend_hf
 from .. import testcases
+from .testing import cached_backend_hf
 
 # molsturm is super slow
 backends = [b for b in adcc.backends.available() if b != "molsturm"]
@@ -204,7 +205,7 @@ def compare_adc_results(adc_results, atol):
                 assert_allclose(
                     np.abs(v1np), np.abs(v2np), atol=10 * atol,
                     err_msg="ADC vectors are not equal"
-                            "in block {}".format(block)
+                            f"in block {block}"
                 )
 
         def fix_signs(actual, desired, atol):

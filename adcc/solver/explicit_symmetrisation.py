@@ -20,10 +20,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from libadcc import amplitude_vector_enforce_spin_kind
-
 from adcc import evaluate
 from adcc.AmplitudeVector import AmplitudeVector
+from libadcc import amplitude_vector_enforce_spin_kind
 
 # TODO
 #    This interface is not that great and leads to duplicate information
@@ -35,7 +34,7 @@ from adcc.AmplitudeVector import AmplitudeVector
 #    guesses and these classes (which is probably the best case)
 
 
-class IndexSymmetrisation():
+class IndexSymmetrisation:
     """
     Enforce the very index symmetrisation required for a particular
     ADC matrix at hand in the new amplitude vectors.

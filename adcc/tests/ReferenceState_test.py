@@ -21,12 +21,13 @@
 ##
 ## ---------------------------------------------------------------------
 import unittest
+
 import pytest
 
 from adcc import ReferenceState
-from adcc.MoSpaces import expand_spaceargs
-from adcc.HfCounterData import HfCounterData
 from adcc.backends import run_hf
+from adcc.HfCounterData import HfCounterData
+from adcc.MoSpaces import expand_spaceargs
 
 from . import testcases
 

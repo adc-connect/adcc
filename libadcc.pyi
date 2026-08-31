@@ -1,8 +1,8 @@
-from __future__ import annotations
 import collections.abc
+import typing
+
 import numpy
 import numpy.typing
-import typing
 
 __all__: list[str] = [
     "AdcMemory",
@@ -37,7 +37,6 @@ class AdcMemory:
     Class controlling the memory allocations for adcc ADC calculations. Python binding to :cpp:class:`libadcc::AdcMemory`.
     """
     def __init__(self) -> None: ...
-    def __repr__(self) -> str: ...
     def initialise(
         self,
         pagefile_directory: str,
@@ -791,7 +790,6 @@ class Tensor:
     def __radd__(
         self, number: typing.SupportsFloat | typing.SupportsIndex
     ) -> Tensor: ...
-    def __repr__(self) -> str: ...
     def __rmul__(
         self, number: typing.SupportsFloat | typing.SupportsIndex
     ) -> Tensor: ...
@@ -806,7 +804,6 @@ class Tensor:
         """
         Set a tensor element or a slice of tensor elements. The operation will adhere symmetry, i.e. alter all elements equivalent by symmetry at once.
         """
-    def __str__(self) -> str: ...
     @typing.overload
     def __sub__(
         self, number: typing.SupportsFloat | typing.SupportsIndex

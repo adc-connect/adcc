@@ -22,26 +22,23 @@
 ## ---------------------------------------------------------------------
 
 """Setup for adcc"""
-import os
-import sys
+import functools
 import json
-import time
+import logging
+import os
+import platform
 import shlex
 import shutil
-import logging
-import platform
-import tempfile
-import functools
-import sysconfig
 import subprocess
-
+import sys
+import sysconfig
+import tempfile
+import time
 from pathlib import Path
-
-from setuptools import Command, setup
 
 from pybind11.setup_helpers import Pybind11Extension
 from pybind11.setup_helpers import build_ext as _Pybind11BuildExt
-
+from setuptools import Command, setup
 
 log = logging.getLogger()
 
@@ -165,7 +162,7 @@ def append_to_pkg_config_path(*paths: str):
             os.environ["PKG_CONFIG_PATH"] = path
 
 
-@functools.lru_cache()
+@functools.lru_cache
 def get_pkg_config():
     """
     Get path to pkg-config and set up the PKG_CONFIG environment variable.
@@ -336,7 +333,7 @@ def install_libtensor(url: str, destination: str):
         ]
         for fglob in file_globs:
             for file in dest_folder.rglob(fglob):
-                log.info(f"Removing old libtensor file: {str(file)}")
+                log.info(f"Removing old libtensor file: {file!s}")
                 assert file.is_file()
                 file.unlink()
         # Change to installation directory and unpack the downloaded archive
@@ -376,7 +373,7 @@ def update_flags_from_config(config_file: Path, *flags: dict):
     Reads and executes the content of the config file and updates
     the prodided flags accordingly
     """
-    log.info(f"Reading siteconfig file: {str(config_file)}")
+    log.info(f"Reading siteconfig file: {config_file!s}")
     assert config_file.is_file()
     # merge the flags into a single dict: can't have the same keys!
     combined_flags = {}
@@ -393,7 +390,7 @@ def update_flags_from_config(config_file: Path, *flags: dict):
                 flag_subset[key] = val
 
 
-@functools.lru_cache()
+@functools.lru_cache
 def libadcc_extension():
     # flags that are passed to the compiler
     build_flags: dict[str, list[str]] = {
@@ -558,9 +555,7 @@ setup(
     # content of readme can't be modified from within pyproject.toml
     long_description=read_readme(),
     long_description_content_type="text/markdown",
-    #
     ext_modules=[libadcc_extension()],
-    #
     cmdclass={
         "build_ext": build_ext, "build_docs": BuildDocs, "cpptest": CppTest
     },

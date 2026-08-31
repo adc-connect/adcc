@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 
-import adcc
 from pyscf import gto, scf
 from pyscf.solvent import PE
-
 from scipy import constants
+
+import adcc
+
 eV = constants.value("Hartree energy in eV")  # Hartree to eV
 
 mol = gto.M(

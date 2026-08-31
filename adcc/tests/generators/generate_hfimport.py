@@ -1,14 +1,13 @@
-from adcc.tests.testdata_cache import testdata_cache
-from adcc.tests import testcases
+import itertools
+from pathlib import Path
+
+import h5py
+import numpy as np
 
 import adcc
 from adcc.hdf5io import emplace_dict
-
-from pathlib import Path
-import numpy as np
-import h5py
-import itertools
-
+from adcc.tests import testcases
+from adcc.tests.testdata_cache import testdata_cache
 
 _testdata_dirname = "data"
 

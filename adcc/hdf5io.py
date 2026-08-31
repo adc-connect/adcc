@@ -20,11 +20,10 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import numpy as np
-
 from os.path import basename
 
 import h5py
+import numpy as np
 
 
 def _emplace_ndarray(keyval, group, typ, **kwargs):

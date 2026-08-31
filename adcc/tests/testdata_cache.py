@@ -1,20 +1,19 @@
-from . import testcases
+import json
+from pathlib import Path
 
+import h5py
+import numpy as np
+
+from adcc import guess_zero, hdf5io
 from adcc.AdcMatrix import AdcMatrix
+from adcc.AdcMethod import AdcMethod, IsrMethod
 from adcc.ExcitedStates import ExcitedStates
 from adcc.LazyMp import LazyMp
 from adcc.misc import cached_member_function
 from adcc.ReferenceState import ReferenceState
 from adcc.solver import EigenSolverStateBase
-from adcc import hdf5io, guess_zero
-from adcc.AdcMethod import IsrMethod, AdcMethod
 
-from pathlib import Path
-from typing import Optional, Union
-import numpy as np
-import h5py
-import json
-
+from . import testcases
 
 _testdata_dirname = "data"
 
@@ -26,7 +25,7 @@ class AdcMockState(EigenSolverStateBase):
 
 class TestdataCache:
     @cached_member_function()
-    def _load_hfdata(self, system: Union[str, testcases.TestCase]) -> dict:
+    def _load_hfdata(self, system: str | testcases.TestCase) -> dict:
         """Load the HF data for the given test case."""
         if isinstance(system, str):
             # avoid loading data twice for str and TestCase. Instead store a
@@ -44,7 +43,7 @@ class TestdataCache:
         return hdf5io.load(fname)
 
     @cached_member_function()
-    def refstate(self, system: Union[str, testcases.TestCase],
+    def refstate(self, system: str | testcases.TestCase,
                  case: str) -> ReferenceState:
         """
         Build the adcc.ReferenceState.
@@ -81,7 +80,7 @@ class TestdataCache:
         return refstate
 
     @cached_member_function()
-    def hfimport(self, system: Union[str, testcases.TestCase],
+    def hfimport(self, system: str | testcases.TestCase,
                  case: str) -> dict:
         """
         Load HF data that was dumped after an import with ReferenceState.
@@ -117,9 +116,9 @@ class TestdataCache:
         return data
 
     @cached_member_function()
-    def _load_data(self, system: Union[str, testcases.TestCase],
+    def _load_data(self, system: str | testcases.TestCase,
                    method: str, case: str, source: str,
-                   gs_density_order: Optional[int] = None
+                   gs_density_order: int | None = None
                    ) -> dict:
         """
         Load the reference data for the given system, method (mpn / adcn),
@@ -160,7 +159,7 @@ class TestdataCache:
         return data
 
     def adcc_data(self, system: str, method: str, case: str,
-                  gs_density_order: Optional[int] = None) -> dict:
+                  gs_density_order: int | None = None) -> dict:
         """
         Load the adcc reference data for the given system, method (mpn / adcn),
         reference case (cvs, fc, fv-cvs, ...) and optionally gs_density_order
@@ -173,7 +172,7 @@ class TestdataCache:
         )
 
     def adcman_data(self, system: str, method: str, case: str,
-                    gs_density_order: Optional[int] = None) -> dict:
+                    gs_density_order: int | None = None) -> dict:
         """
         Load the adcman reference data for the given system, method (mpn / adcn),
         reference case (cvs, fc, fv-cvs, ...) and optionally gs_density_order
@@ -185,11 +184,11 @@ class TestdataCache:
         )
 
     @cached_member_function()
-    def _make_mock_adc_state(self, system: Union[str, testcases.TestCase],
+    def _make_mock_adc_state(self, system: str | testcases.TestCase,
                              method: str, case: str,
                              kind: str, source: str,
-                             gs_density_order: Optional[int] = None,
-                             isr_order: Optional[int] = None,
+                             gs_density_order: int | None = None,
+                             isr_order: int | None = None,
                              ) -> ExcitedStates:
         """
         Create an ExcitedStates instance for the given test case, method (adcn),
@@ -279,8 +278,8 @@ class TestdataCache:
         return ExcitedStates(states)
 
     def adcc_states(self, system: str, method: str, kind: str,
-                    case: str, gs_density_order: Optional[int] = None,
-                    isr_order: Optional[int] = None,
+                    case: str, gs_density_order: int | None = None,
+                    isr_order: int | None = None,
                     ) -> ExcitedStates:
         """
         Create an ExcitedStates instance for the given test case, method (adcn),
@@ -295,8 +294,8 @@ class TestdataCache:
         )
 
     def adcman_states(self, system: str, method: str, kind: str,
-                      case: str, gs_density_order: Optional[int] = None,
-                      isr_order: Optional[int] = None
+                      case: str, gs_density_order: int | None = None,
+                      isr_order: int | None = None
                       ) -> ExcitedStates:
         """
         Create an ExcitedStates instance for the given test case, method (adcn),

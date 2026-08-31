@@ -20,17 +20,20 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import pytest
 import numpy as np
+import pytest
 from numpy.testing import assert_almost_equal
 
 import adcc
 import adcc.backends
 from adcc.backends import have_backend
 
-from .testing import (eri_asymm_construction_test, eri_chem_permutations,
-                      operator_import_from_ao_test)
 from .. import testcases
+from .testing import (
+    eri_asymm_construction_test,
+    eri_chem_permutations,
+    operator_import_from_ao_test,
+)
 
 if have_backend("psi4"):
     import psi4

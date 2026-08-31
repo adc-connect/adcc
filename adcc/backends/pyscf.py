@@ -20,17 +20,17 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from typing import cast, Literal
-import numpy as np
+from typing import Literal, cast
 
+import numpy as np
 from pyscf import ao2mo, gto, scf
 from pyscf.solvent import ddcosmo
 
 import libadcc
 
-from .EriBuilder import EriBuilder, Block4D, Spin4D
-from ..exceptions import InvalidReference
 from ..ElectronicStates import EnergyCorrection
+from ..exceptions import InvalidReference
+from .EriBuilder import Block4D, EriBuilder, Spin4D
 
 # Some type defs for the interface
 Array1D = np.ndarray[tuple[int], np.dtype[np.float64]]

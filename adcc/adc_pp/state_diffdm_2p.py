@@ -20,19 +20,16 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+
 from .. import block as b
-from ..LazyMp import LazyMp
 from ..AdcMethod import IsrMethod
+from ..AmplitudeVector import AmplitudeVector
 from ..functions import einsum, zeros_like
 from ..Intermediates import Intermediates
-from ..AmplitudeVector import AmplitudeVector
-from ..TwoParticleDensity import TwoParticleDensity
+from ..LazyMp import LazyMp
 from ..NParticleOperator import OperatorSymmetry
-from .util import (
-    check_doubles_amplitudes, check_singles_amplitudes, check_triples_amplitudes
-)
-
-from typing import Optional, Union
+from ..TwoParticleDensity import TwoParticleDensity
+from .util import check_doubles_amplitudes, check_singles_amplitudes, check_triples_amplitudes
 
 
 def diffdm_isr0_2p(ground_state: LazyMp, amplitude: AmplitudeVector,
@@ -398,9 +395,9 @@ DISPATCH = {
 }
 
 
-def state_diffdm_2p(method: Union[str, IsrMethod], ground_state: LazyMp,
+def state_diffdm_2p(method: str | IsrMethod, ground_state: LazyMp,
                     amplitude: AmplitudeVector,
-                    intermediates: Optional[Intermediates] = None):
+                    intermediates: Intermediates | None = None):
     """
     Compute the two-particle difference density matrix of an excited state
     in the MO basis.

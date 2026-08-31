@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-import adcc
-
 import psi4
+
+import adcc
 
 # Run PCM SCF in psi4
 mol = psi4.geometry("""

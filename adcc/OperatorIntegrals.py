@@ -22,17 +22,17 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
-from .misc import cached_property, cached_member_function
+import libadcc
+
+from .functions import einsum
+from .misc import cached_member_function, cached_property
+from .MoSpaces import split_spaces
+from .NParticleOperator import NParticleOperator, OperatorSymmetry
+from .OneParticleDensity import OneParticleDensity
+from .OneParticleOperator import OneParticleOperator
 from .Tensor import Tensor
 from .timings import Timer, timed_member_call
-from .OneParticleOperator import OneParticleOperator
-from .OneParticleDensity import OneParticleDensity
-from .NParticleOperator import OperatorSymmetry, NParticleOperator
 from .TwoParticleOperator import TwoParticleOperator
-from .functions import einsum
-from .MoSpaces import split_spaces
-
-import libadcc
 
 
 def transform_operator_ao2mo(tensor_bb: Tensor, tensor_ff: NParticleOperator,
@@ -232,7 +232,7 @@ class OperatorIntegrals:
             raise NotImplementedError(f"overlap operator not implemented "
                                       f"in {self.provider_ao.backend} backend.")
 
-        ao_operator = getattr(self.provider_ao, "overlap")
+        ao_operator = self.provider_ao.overlap
         ovlp_bb = replicate_ao_block(self.mospaces, ao_operator,
                                      symmetry=OperatorSymmetry.HERMITIAN,
                                      block="a")
@@ -430,7 +430,7 @@ class OperatorIntegrals:
     def _import_g_origin_dep_quad_like_operator(
         self, integral: str, gauge_origin="origin",
         symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
-    ) -> tuple[tuple[OneParticleOperator, ...], ...]:  # noqa E501
+    ) -> tuple[tuple[OneParticleOperator, ...], ...]:
         """
         Imports the operator and transforms it to the molecular orbital basis.
 
@@ -479,7 +479,7 @@ class OperatorIntegrals:
 
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
     def electric_quadrupole_traceless(self, gauge_origin="origin"
-                                      ) -> tuple[tuple[OneParticleOperator, ...], ...]:  # noqa E501
+                                      ) -> tuple[tuple[OneParticleOperator, ...], ...]:
         """
         Returns the traceless electric quadrupole integrals
         in the molecular orbital basis dependent on the selected gauge origin.
@@ -492,7 +492,7 @@ class OperatorIntegrals:
 
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
     def electric_quadrupole_velocity(self, gauge_origin="origin"
-                                     ) -> tuple[tuple[OneParticleOperator, ...], ...]:  # noqa E501
+                                     ) -> tuple[tuple[OneParticleOperator, ...], ...]:
         """
         Returns the electric quadrupole integrals in velocity gauge
         in the molecular orbital basis dependent on the selected gauge origin.
@@ -505,7 +505,7 @@ class OperatorIntegrals:
 
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
     def diamagnetic_magnetizability(self, gauge_origin="origin"
-                                    ) -> tuple[tuple[OneParticleOperator, ...], ...]:  # noqa E501
+                                    ) -> tuple[tuple[OneParticleOperator, ...], ...]:
         """
         Returns the diamagnetic magnetizability integrals
         in the molecular orbital basis dependent on the selected gauge origin.

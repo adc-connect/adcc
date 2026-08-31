@@ -20,17 +20,17 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
-import pytest
-import numpy as np
+from itertools import combinations_with_replacement
 
+import numpy as np
+import pytest
+
+import adcc
 from adcc import OneParticleOperator
 from adcc.NParticleOperator import OperatorSymmetry
 
-from .testdata_cache import testdata_cache
 from . import testcases
-from itertools import combinations_with_replacement
-
+from .testdata_cache import testdata_cache
 
 operator_sym = [OperatorSymmetry.HERMITIAN, OperatorSymmetry.ANTIHERMITIAN,
                 OperatorSymmetry.NOSYMMETRY]

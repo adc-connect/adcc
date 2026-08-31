@@ -22,12 +22,12 @@
 ## ---------------------------------------------------------------------
 import sys
 import warnings
+
 import numpy as np
-
-from .SolverStateBase import EigenSolverStateBase
-from .explicit_symmetrisation import IndexSymmetrisation
-
 import scipy.linalg as la
+
+from .explicit_symmetrisation import IndexSymmetrisation
+from .SolverStateBase import EigenSolverStateBase
 
 
 class PowerMethodState(EigenSolverStateBase):

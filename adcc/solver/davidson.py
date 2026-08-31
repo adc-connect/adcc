@@ -22,6 +22,7 @@
 ## ---------------------------------------------------------------------
 import sys
 import warnings
+
 import numpy as np
 import scipy.linalg as la
 import scipy.sparse.linalg as sla
@@ -31,9 +32,9 @@ from adcc.AdcMatrix import AdcMatrixlike
 from adcc.AmplitudeVector import AmplitudeVector
 
 from .common import select_eigenpairs
+from .explicit_symmetrisation import IndexSymmetrisation
 from .preconditioner import JacobiPreconditioner
 from .SolverStateBase import EigenSolverStateBase
-from .explicit_symmetrisation import IndexSymmetrisation
 
 
 class DavidsonState(EigenSolverStateBase):
@@ -63,8 +64,7 @@ def default_print(state, identifier, file=sys.stdout):
                          residual=np.max(state.residual_norms)),
               "", state.eigenvalues[:7], file=file)
         if hasattr(state, "subspace_orthogonality"):
-            print(33 * " " + "nonorth: {:5.3g}"
-                  "".format(state.subspace_orthogonality))
+            print(33 * " " + f"nonorth: {state.subspace_orthogonality:5.3g}")
     elif identifier == "is_converged":
         soltime = state.timer.total("iteration")
         print("=== Converged ===", file=file)
@@ -314,9 +314,8 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
                 if state.subspace_orthogonality > n_problem * eps:
                     warnings.warn(la.LinAlgWarning(
                         "Subspace in Davidson has lost orthogonality. "
-                        "Max. deviation from orthogonality is {:.4E}. "
-                        "Expect inaccurate results.".format(
-                            state.subspace_orthogonality)
+                        f"Max. deviation from orthogonality is {state.subspace_orthogonality:.4E}. "
+                        "Expect inaccurate results."
                     ))
 
         if n_ss_added == 0:
@@ -449,10 +448,9 @@ def eigsh(matrix, guesses, n_ep=None, n_block=None, max_subspace=None,
 
     if conv_tol < matrix.shape[1] * np.finfo(float).eps:
         warnings.warn(la.LinAlgWarning(
-            "Convergence tolerance (== {:5.2g}) lower than "
-            "estimated maximal numerical accuracy (== {:5.2g}). "
+            f"Convergence tolerance (== {conv_tol:5.2g}) lower than "
+            f"estimated maximal numerical accuracy (== {matrix.shape[1] * np.finfo(float).eps:5.2g}). "
             "Convergence might be hard to achieve."
-            "".format(conv_tol, matrix.shape[1] * np.finfo(float).eps)
         ))
 
     state = DavidsonState(matrix, guesses)

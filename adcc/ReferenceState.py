@@ -22,16 +22,16 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
-from .misc import cached_property
-from .Tensor import Tensor
-from .MoSpaces import split_spaces, MoSpaces
-from .backends import import_scf_results
-from .OperatorIntegrals import OperatorIntegrals
-from .OneParticleDensity import OneParticleDensity
-from .TwoParticleDensity import TwoParticleDensity
-from .NParticleOperator import product_trace, OperatorSymmetry
-
 import libadcc
+
+from .backends import import_scf_results
+from .misc import cached_property
+from .MoSpaces import MoSpaces, split_spaces
+from .NParticleOperator import OperatorSymmetry, product_trace
+from .OneParticleDensity import OneParticleDensity
+from .OperatorIntegrals import OperatorIntegrals
+from .Tensor import Tensor
+from .TwoParticleDensity import TwoParticleDensity
 
 __all__ = ["ReferenceState"]
 
@@ -235,7 +235,7 @@ class ReferenceState(libadcc.ReferenceState):
             # skip any blocks containing virtual subspaces
             if any(sp in self.mospaces.subspaces_virtual for sp in splitted):
                 continue
-            i, j, k, l = splitted  # noqa: E741
+            i, j, k, l = splitted
             if i == k and j == l:
                 density[block].set_mask("ijij", 1)
             if i == l and j == k:

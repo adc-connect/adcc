@@ -20,11 +20,11 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+from collections.abc import Callable, Sequence
+from typing import Any, TypeVar
+
 from .MoSpaces import split_spaces
 from .NParticleOperator import OperatorSymmetry
-
-from collections.abc import Callable, Sequence
-from typing import TypeVar, Any, Union
 
 
 def __getattr__(attr: Sequence[str]) -> str:
@@ -44,7 +44,7 @@ T = TypeVar("T")
 # adapted from
 # https://github.com/sympy/sympy/blob/master/sympy/physics/secondquant.py
 def _sort_anticommuting(to_sort: list[T],
-                        key: Union[Callable[[T], Any], None] = None
+                        key: Callable[[T], Any] | None = None
                         ) -> tuple[list[T], int]:
     """
     Sort a list of mutually anticommuting operators into canonical order.

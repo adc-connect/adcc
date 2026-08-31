@@ -20,11 +20,12 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
 import pytest
 from pytest import approx
 
+import adcc
 from adcc import InputError
+
 from .testdata_cache import testdata_cache
 
 

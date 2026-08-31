@@ -26,18 +26,16 @@ import warnings
 from libadcc import ReferenceState
 
 from . import solver
-from .guess import (guesses_any, guesses_singlet, guesses_spin_flip,
-                    guesses_triplet)
-from .LazyMp import LazyMp
-from .AdcMatrix import AdcMatrix, AdcMatrixlike, AdcExtraTerm
+from .AdcMatrix import AdcExtraTerm, AdcMatrix, AdcMatrixlike
 from .AdcMethod import AdcMethod, IsrMethod
 from .exceptions import InputError
 from .ExcitedStates import ExcitedStates
+from .guess import guesses_any, guesses_singlet, guesses_spin_flip, guesses_triplet
+from .LazyMp import LazyMp
 from .ReferenceState import ReferenceState as adcc_ReferenceState
-from .solver.lanczos import lanczos
 from .solver.davidson import jacobi_davidson
-from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
-                                             IndexSymmetrisation)
+from .solver.explicit_symmetrisation import IndexSpinSymmetrisation, IndexSymmetrisation
+from .solver.lanczos import lanczos
 
 __all__ = ["run_adc"]
 
@@ -414,9 +412,8 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
                                                n_guesses_doubles)
     else:
         if len(guesses) < n_states:
-            raise InputError("Less guesses provided via guesses (== {}) "
-                             "than states to be computed (== {})"
-                             "".format(len(guesses), n_states))
+            raise InputError(f"Less guesses provided via guesses (== {len(guesses)}) "
+                             f"than states to be computed (== {n_states})")
         if n_guesses is not None:
             warnings.warn("Ignoring n_guesses parameter, since guesses are "
                           "explicitly provided.")
@@ -503,8 +500,8 @@ def obtain_guesses_by_inspection(matrix, n_guesses, kind, n_guesses_doubles=None
 
     total_guesses = singles_guesses + doubles_guesses
     if len(total_guesses) < n_guesses:
-        raise InputError("Less guesses found than requested: {} found, "
-                         "{} requested".format(len(total_guesses), n_guesses))
+        raise InputError(f"Less guesses found than requested: {len(total_guesses)} found, "
+                         f"{n_guesses} requested")
     return total_guesses
 
 

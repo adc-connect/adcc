@@ -21,17 +21,18 @@
 ##
 ## ---------------------------------------------------------------------
 import itertools
+
 import numpy as np
 
 import libadcc
 
-from .LazyMp import LazyMp
 from .adc_pp import matrix as ppmatrix
-from .timings import Timer, timed_member_call
-from .AdcMethod import AdcMethod, Method, AdcType
+from .AdcMethod import AdcMethod, AdcType, Method
+from .AmplitudeVector import AmplitudeVector
 from .functions import ones_like
 from .Intermediates import Intermediates
-from .AmplitudeVector import AmplitudeVector
+from .LazyMp import LazyMp
+from .timings import Timer, timed_member_call
 
 
 class AdcExtraTerm:
@@ -114,7 +115,7 @@ class AdcMatrixlike:
         assert bandwidth >= 0
         n_spaces = ((method.level.to_int() + bandwidth) // 2) + 1
         spaces = [
-            "p" * i + min_space + "h" * i for i in range(0, n_spaces)
+            "p" * i + min_space + "h" * i for i in range(n_spaces)
         ]
         # exploit the fact that the spaces are sorted from small to high:
         # If we walk the adc matrix in any direction we always have to subtract 1!

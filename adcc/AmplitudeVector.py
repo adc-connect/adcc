@@ -22,6 +22,7 @@
 ## ---------------------------------------------------------------------
 from collections.abc import Sequence
 from typing import overload
+
 import numpy as np
 
 import libadcc
@@ -141,9 +142,7 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
     def __matmul__(
         self, other: "Sequence[AmplitudeVector] | AmplitudeVector"
     ) -> np.ndarray[tuple[int], np.dtype[np.float64]] | float:
-        if isinstance(other, AmplitudeVector):
-            return self.dot(other)
-        elif isinstance(other, Sequence) and all(
+        if isinstance(other, AmplitudeVector) or isinstance(other, Sequence) and all(
             isinstance(t, AmplitudeVector) for t in other
         ):
             return self.dot(other)

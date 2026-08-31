@@ -1,10 +1,11 @@
-from adcc.AdcMethod import AdcMethod, AdcType
-from adcc.hdf5io import _extract_dataset
-
 from collections.abc import Hashable
 from typing import Any
-import numpy as np
+
 import h5py
+import numpy as np
+
+from adcc.AdcMethod import AdcMethod, AdcType
+from adcc.hdf5io import _extract_dataset
 
 
 class DataImportError(ValueError):

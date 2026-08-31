@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
-import adcc
-
 from pyscf import gto, scf
+
+import adcc
 
 # Run SCF in pyscf
 mol = gto.M(

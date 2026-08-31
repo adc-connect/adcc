@@ -20,9 +20,8 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import numpy as np
-
 import h5py
+import numpy as np
 
 from libadcc import HartreeFockProvider
 
@@ -178,10 +177,10 @@ class DataHfProvider(HartreeFockProvider):
             self.__backend = data.get("backend", "dict")
         elif isinstance(data, h5py.File):
             if "r" not in data.mode:
-                raise ValueError("Passed h5py.File stream (filename: {}) not "
-                                 "readable.".format(data.filename))
+                raise ValueError(f"Passed h5py.File stream (filename: {data.filename}) not "
+                                 "readable.")
             self.__backend = data.attrs.get(
-                "backend", '<HDF5 file "{}">'.format(data.filename)
+                "backend", f'<HDF5 file "{data.filename}">'
             )
         else:
             raise TypeError("Can only deal with data objects of type dict "
@@ -200,9 +199,8 @@ class DataHfProvider(HartreeFockProvider):
             if key not in data:
                 continue
             if data[key].shape != exshape:
-                raise ValueError("Shape mismatch for key {}: Expected {}, but "
-                                 "got {}.".format(key, exshape,
-                                                  data[key].shape))
+                raise ValueError(f"Shape mismatch for key {key}: Expected {exshape}, but "
+                                 f"got {data[key].shape}.")
 
         # Setup integral data
         opprov = DataOperatorIntegralProvider(self.__backend)

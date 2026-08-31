@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
-import adcc
 import psi4
+
+import adcc
 
 # Run SCF in psi4
 mol = psi4.geometry("""

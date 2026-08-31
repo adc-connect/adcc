@@ -20,13 +20,13 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from math import sqrt
 from collections import namedtuple
+from math import sqrt
 
 from adcc import block as b
+from adcc.AmplitudeVector import AmplitudeVector
 from adcc.functions import direct_sum, einsum, zeros_like
 from adcc.Intermediates import Intermediates, register_as_intermediate
-from adcc.AmplitudeVector import AmplitudeVector
 
 __all__ = ["block"]
 

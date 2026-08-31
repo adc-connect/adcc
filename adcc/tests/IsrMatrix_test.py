@@ -20,16 +20,16 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import pytest
 import unittest
+
 import numpy as np
+import pytest
 
 from adcc.IsrMatrix import IsrMatrix
 from adcc.State2States import State2States
 
-from .testdata_cache import testdata_cache
 from . import testcases
-
+from .testdata_cache import testdata_cache
 
 test_cases = testcases.get_by_filename("h2o_sto3g", "cn_sto3g")
 cases = [(case.file_name, c, kind)

@@ -20,11 +20,12 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
-from adcc.NParticleOperator import OperatorSymmetry
+from collections import namedtuple
+
 import numpy as np
 
-from collections import namedtuple
+import adcc
+from adcc.NParticleOperator import OperatorSymmetry
 
 ii, jj, kk, ll = 0, 1, 2, 3
 eri_chem_permutations = [(ii, jj, kk, ll),  # (ij|kl)
@@ -139,8 +140,8 @@ def eri_asymm_construction_test(scfres, core_orbitals=0):
                 sl2 = tuple(sl2)
                 np.testing.assert_almost_equal(
                     eri_asymm[sl], imported_asymm[sl2],
-                    err_msg="""ERIs wrong in space {} """
-                            """and spin block {}""".format(s, allowed_spin)
+                    err_msg=f"""ERIs wrong in space {s} """
+                            f"""and spin block {allowed_spin}"""
                 )
 
 

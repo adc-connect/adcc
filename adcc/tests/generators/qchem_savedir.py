@@ -1,8 +1,8 @@
-from pathlib import Path
-import numpy as np
 import struct
-import h5py
+from pathlib import Path
 
+import h5py
+import numpy as np
 
 Array4D = np.ndarray[tuple[int, int, int, int]]
 

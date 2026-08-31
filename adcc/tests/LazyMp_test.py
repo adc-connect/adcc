@@ -20,19 +20,18 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import pytest
 import numpy as np
+import pytest
 from numpy.testing import assert_allclose
 from pytest import approx
 
+from adcc import LazyMp, OperatorSymmetry
 from adcc import block as b
-from adcc import OperatorSymmetry, LazyMp
 from adcc.functions import einsum
 from adcc.MoSpaces import split_spaces
 
-from .testdata_cache import testdata_cache
 from . import testcases
-
+from .testdata_cache import testdata_cache
 
 test_cases = testcases.get_by_filename(
     "h2o_sto3g", "cn_sto3g", "h2o_def2tzvp", "cn_ccpvdz"

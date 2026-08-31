@@ -1,12 +1,11 @@
+import json
+from pathlib import Path
+
 import psi4
-import adcc
 from psi4.driver.procrouting.response.scf_response import tdscf_excitations
 
+import adcc
 from adcc.tests import testcases
-
-from pathlib import Path
-import json
-
 
 _testdata_dirname = "data"
 

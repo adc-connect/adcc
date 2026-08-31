@@ -20,27 +20,27 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+
+import numpy as np
+
+import libadcc
+
+from . import block as b
+from .functions import direct_sum, einsum, zeros_like
+from .misc import cached_member_function, cached_property
 from .MoSpaces import MoSpaces, split_spaces
 from .NParticleOperator import OperatorSymmetry, product_trace
 from .OneParticleDensity import OneParticleDensity
 from .ReferenceState import ReferenceState
-from .TwoParticleDensity import TwoParticleDensity
-from .functions import direct_sum, einsum, zeros_like
-from .misc import cached_member_function, cached_property
 from .timings import Timer
-from . import block as b
-
-import libadcc
-
-from typing import Union
-import numpy as np
+from .TwoParticleDensity import TwoParticleDensity
 
 
 class GroundState:
     """
     Base class representing the ground state.
     """
-    def __init__(self, hf: Union[ReferenceState, libadcc.HartreeFockSolution_i]):
+    def __init__(self, hf: ReferenceState | libadcc.HartreeFockSolution_i):
         if isinstance(hf, libadcc.HartreeFockSolution_i):
             hf = ReferenceState(hf)
         if not isinstance(hf, ReferenceState):

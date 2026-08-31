@@ -20,14 +20,13 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import pytest
 import numpy as np
+import pytest
 
 from adcc.adc_pp.modified_transition_moments import modified_transition_moments
 
-from ..testdata_cache import testdata_cache
 from .. import testcases
-
+from ..testdata_cache import testdata_cache
 
 methods = [
     ("adc0", None),

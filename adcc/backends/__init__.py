@@ -21,12 +21,13 @@
 ##
 ## ---------------------------------------------------------------------
 import os
-import h5py
 import warnings
+
+import h5py
 
 from ..misc import is_module_available
 
-__all__ = ["import_scf_results", "run_hf", "have_backend", "available"]
+__all__ = ["available", "have_backend", "import_scf_results", "run_hf"]
 
 
 # Lazily cache the available backends
@@ -61,15 +62,17 @@ def import_scf_results(res):
     and guess what the host program was and how to import it.
     """
     if have_backend("pyscf"):
-        from . import pyscf as backend_pyscf
         from pyscf import scf
+
+        from . import pyscf as backend_pyscf
 
         if isinstance(res, scf.hf.SCF):
             return backend_pyscf.import_scf(res)
 
     if have_backend("molsturm"):
-        from . import molsturm as backend_molsturm
         from molsturm.State import State
+
+        from . import molsturm as backend_molsturm
 
         if isinstance(res, State):
             return backend_molsturm.import_scf(res)
@@ -84,6 +87,7 @@ def import_scf_results(res):
 
     if have_backend("psi4"):
         import psi4
+
         from . import psi4 as backend_psi4
 
         if isinstance(res, psi4.core.HF):
@@ -102,8 +106,7 @@ def import_scf_results(res):
                                     or res.endswith(".hdf5")):
             return import_scf_results(h5py.File(res, "r"))
         else:
-            raise ValueError("Unrecognised path or file extension: {}"
-                             "".format(res))
+            raise ValueError(f"Unrecognised path or file extension: {res}")
 
     # Note: Add more backends here
 
@@ -140,10 +143,10 @@ def run_hf(backend, xyz, basis, **kwargs):
             )
         else:
             backend = available()[0]
-        warnings.warn("No backend specified. Using {}.".format(backend))
+        warnings.warn(f"No backend specified. Using {backend}.")
 
     if not have_backend(backend):
-        raise ValueError("Backend {} not found.".format(backend))
+        raise ValueError(f"Backend {backend} not found.")
     if backend == "psi4":
         from . import psi4 as backend_hf
 
@@ -158,6 +161,6 @@ def run_hf(backend, xyz, basis, **kwargs):
 
     else:
         raise NotImplementedError("No run_hf function implemented for backend "
-                                  "{}.".format(backend))
+                                  f"{backend}.")
 
     return backend_hf.run_hf(xyz, basis, **kwargs)

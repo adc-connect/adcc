@@ -20,20 +20,21 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import re
-import adcc
-import unittest
-import pytest
 import itertools
+import re
+import unittest
+
 import numpy as np
+import pytest
 from numpy.testing import assert_allclose
 
+import adcc
 from adcc.AdcMethod import AdcType
-from adcc.projection import Projector, SubspacePartitioning, transfer_cvs_to_full
 from adcc.HfCounterData import HfCounterData
+from adcc.projection import Projector, SubspacePartitioning, transfer_cvs_to_full
 
-from .testdata_cache import testdata_cache
 from . import testcases
+from .testdata_cache import testdata_cache
 
 
 class TestSubspacePartitioning(unittest.TestCase):
@@ -114,10 +115,8 @@ def construct_nonzero_blocks(mospaces, n_core, n_virt):
                                               ["a", "b"], ["a", "b"]):
         nonzero_blocks_pphh.append((c[s1], o[s2], v[s3], v[s4]))
         nonzero_blocks_pphh.append((o[s1], c[s2], v[s3], v[s4]))
-        #
         nonzero_blocks_pphh.append((c[s1], c[s2], v[s3], w[s4]))
         nonzero_blocks_pphh.append((c[s1], c[s2], w[s3], v[s4]))
-        #
         nonzero_blocks_pphh.append((c[s1], o[s2], v[s3], w[s4]))
         nonzero_blocks_pphh.append((o[s1], c[s2], v[s3], w[s4]))
         nonzero_blocks_pphh.append((c[s1], o[s2], w[s3], v[s4]))

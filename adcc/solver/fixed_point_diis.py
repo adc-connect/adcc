@@ -20,42 +20,40 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from typing import (
-    Callable, Optional, TextIO, Protocol, Deque, TypeVar, Generic, cast
-)
-from collections import deque
 import sys
+from collections import deque
+from collections.abc import Callable
+from typing import Generic, Protocol, TextIO, TypeVar, cast
 
 import numpy as np
+from typing_extensions import Self
 
 
 class DIISError(Exception):
     """is the base class of errors visible from this module."""
-    pass
 
 
 class SubspaceError(DIISError):
     """is raised when encountering problems related to the subspace setup."""
-    pass
 
 
 Vector = TypeVar("Vector", bound="DIISVector")
 
 
 class DIISVector(Protocol):
-    def dot(self: Vector, other: Vector) -> float:
+    def dot(self, other: Self) -> float:
         ...
 
-    def zeros_like(self: Vector) -> Vector:
+    def zeros_like(self) -> Self:
         ...
 
-    def __sub__(self: Vector, other: Vector) -> Vector:
+    def __sub__(self, other: Self) -> Self:
         ...
 
-    def __mul__(self: Vector, other: float) -> Vector:
+    def __mul__(self, other: float) -> Self:
         ...
 
-    def __iadd__(self: Vector, other: Vector) -> Vector:
+    def __iadd__(self, other: Self) -> Self:
         ...
 
 
@@ -92,12 +90,12 @@ class DIISSubspace(Generic[Vector]):
 
         self.max_size: int = max_size
         self.start_size: int = start_size
-        self.subspace_vectors: Deque[Vector] = deque(maxlen=max_size)
-        self.error_vectors: Deque[Vector] = deque(maxlen=max_size)
+        self.subspace_vectors: deque[Vector] = deque(maxlen=max_size)
+        self.error_vectors: deque[Vector] = deque(maxlen=max_size)
         self.overlap: np.ndarray[tuple[int, int], np.dtype[np.float64]] = np.zeros(
             (0, 0), dtype=np.float64
         )
-        self.step_info: Optional[str] = None
+        self.step_info: str | None = None
         self.converged: bool = False
         self.n_iter: int = 0
 
@@ -292,7 +290,7 @@ def _no_print(state: DIISSubspace, identifier: str, file: TextIO = sys.stdout):
 def diis(updater: Callable[[Vector], Vector], guess_vector: Vector,
          diis_start_size: int = 3, max_subspace_size: int = 7,
          conv_tol: float = 1e-9, n_max_iterations: int = 100,
-         callback: Optional[DIISCallback] = None) -> Vector:
+         callback: DIISCallback | None = None) -> Vector:
     """
     Implementation of the direct inversion of the iterative subspace algorithm.
 

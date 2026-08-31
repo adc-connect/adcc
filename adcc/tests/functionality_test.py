@@ -20,14 +20,14 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
-import pytest
 import numpy as np
+import pytest
 from numpy.testing import assert_allclose
 from pytest import approx
 
-from adcc.misc import assert_allclose_signfix
+import adcc
 from adcc import ExcitedStates
+from adcc.misc import assert_allclose_signfix
 
 from . import testcases
 from .testdata_cache import testdata_cache

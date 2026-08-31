@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
-import adcc
 import psi4
-
 from scipy import constants
+
+import adcc
+
 eV = constants.value("Hartree energy in eV")  # Hartree to eV
 
 # Run SCF in psi4

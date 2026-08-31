@@ -20,9 +20,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import numpy as np
-
 from io import StringIO
+
+import numpy as np
 
 
 def load_libtensor(fle):

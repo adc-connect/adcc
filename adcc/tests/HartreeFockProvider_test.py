@@ -20,10 +20,11 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
 import unittest
+
 from pytest import approx
 
+import adcc
 from adcc import ExcitedStates
 from adcc.DataHfProvider import DataHfProvider
 

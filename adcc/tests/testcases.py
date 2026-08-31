@@ -1,7 +1,6 @@
 from collections import Counter
-from dataclasses import dataclass, asdict, fields
+from dataclasses import asdict, dataclass, fields
 from pathlib import Path
-from typing import Optional
 
 from adcc.AdcMethod import AdcType
 
@@ -27,10 +26,10 @@ class TestCase:
     basis: str
     restricted: bool
     only_full_mode: bool  # whether to run the test case only in full mode
-    pe_potfile: Optional[str] = None
-    core_orbitals: Optional[int] = None
-    frozen_core: Optional[int] = None
-    frozen_virtual: Optional[int] = None
+    pe_potfile: str | None = None
+    core_orbitals: int | None = None
+    frozen_core: int | None = None
+    frozen_virtual: int | None = None
     # the different cases for which to generate mp/adc reference data
     # generic, cvs, frozen core (fc), frozen virtual (fv), ...
     cases: tuple[str, ...] = ("gen",)
@@ -147,17 +146,14 @@ _xyz = {
     H 0 0 1.795239827225189
     H 1.693194615993441 0 -0.599043184453037
     """, "Bohr"),
-    #
     "cn": ("""
     C 0 0 0
     N 0 0 2.2143810738114829
     """, "Bohr"),
-    #
     "hf": ("""
     H 0 0 0
     F 0 0 2.5
     """, "Bohr"),
-    #
     "ch2nh2": ("""
     C -1.043771327642266  0.9031379094521343 -0.0433881118200138
     N  1.356218645077853 -0.0415928720016770  0.9214682528604154
@@ -166,7 +162,6 @@ _xyz = {
     H  2.681464678974086  1.3903093043650074  0.6074335654801934
     H  1.838098806841944 -1.5878801706882844 -0.2108367437177239
     """, "Bohr"),
-    #
     "r2methyloxirane": ("""
     O        0.0000000000      0.0000000000      0.0000000000
     C        2.7197505315      0.0000000000      0.0000000000
@@ -179,14 +174,12 @@ _xyz = {
     H        3.8622600497      3.6616656215     -1.2676471822
     H        5.9395792877      1.1934754318     -2.1292489119
     """, "Bohr"),  # (R)-2-Methyloxirane
-    #
     "formaldehyde": ("""
     C 2.0092420208996 3.8300915804899 0.8199294419789
     O 2.1078857690998 2.0406638776593 2.1812021228452
     H 2.0682421748693 5.7438044586615 1.5798996515014
     H 1.8588483602149 3.6361694243085 -1.2192956060942
     """, "Bohr"),
-    #
     "nh3": ("""
     N     -0.0000000001    -0.1040380466      0.0000000000
     H     -0.9015844116     0.4818470201     -1.5615900098

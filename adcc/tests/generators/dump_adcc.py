@@ -1,3 +1,6 @@
+import h5py
+import numpy as np
+
 import adcc
 from adcc.AdcMatrix import AdcMatrix
 from adcc.AmplitudeVector import AmplitudeVector
@@ -5,9 +8,6 @@ from adcc.ExcitedStates import ExcitedStates
 from adcc.hdf5io import emplace_dict
 from adcc.LazyMp import LazyMp
 from adcc.State2States import State2States
-
-import numpy as np
-import h5py
 
 
 def dump_groundstate(ground_state: LazyMp, hdf5_file: h5py.Group,

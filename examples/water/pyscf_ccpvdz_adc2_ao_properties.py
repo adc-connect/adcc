@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
-import adcc
 import numpy as np
-
-from scipy import constants
 from matplotlib import pyplot as plt
-from adcc.visualisation import ExcitationSpectrum
-
 from pyscf import gto, scf
 from pyscf.tools import cubegen
+from scipy import constants
+
+import adcc
+from adcc.visualisation import ExcitationSpectrum
 
 eV = constants.value("Hartree energy in eV")  # Hartree to eV
 
@@ -80,10 +79,10 @@ for i, exci in enumerate(state.excitation_energy):
     u, s, v = np.linalg.svd(ρ_tdm_tot)
     # LUNTOs
     cubegen.orbital(mol=mol, coeff=u.T[0],
-                    outfile="nto_{}_LUNTO.cube".format(i))
+                    outfile=f"nto_{i}_LUNTO.cube")
     # HONTOs
     cubegen.orbital(mol=mol, coeff=v[0],
-                    outfile="nto_{}_HONTO.cube".format(i))
+                    outfile=f"nto_{i}_HONTO.cube")
 
     # Save oscillator strength and excitation energies
     osc_strengths.append(osc)

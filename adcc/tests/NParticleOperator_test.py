@@ -20,14 +20,14 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+from itertools import combinations_with_replacement
+
 import pytest
 from numpy.testing import assert_array_almost_equal_nulp, assert_equal
 
-from adcc.NParticleOperator import OperatorSymmetry, NParticleOperator
+from adcc.NParticleOperator import NParticleOperator, OperatorSymmetry
 
 from .testdata_cache import testdata_cache
-from itertools import combinations_with_replacement
-
 
 operator_sym = [OperatorSymmetry.HERMITIAN, OperatorSymmetry.ANTIHERMITIAN,
                 OperatorSymmetry.NOSYMMETRY]
@@ -93,10 +93,7 @@ class TestNParticleOperator:
         b.set_random()
 
         ref = a.to_ndarray() + b.to_ndarray()
-        if op_sym[0] != op_sym[1] and op_sym[1] == OperatorSymmetry.NOSYMMETRY:
-            with pytest.raises(ValueError):
-                a += b
-        elif op_sym[0] != op_sym[1] and op_sym[1] != OperatorSymmetry.NOSYMMETRY \
+        if op_sym[0] != op_sym[1] and op_sym[1] == OperatorSymmetry.NOSYMMETRY or op_sym[0] != op_sym[1] and op_sym[1] != OperatorSymmetry.NOSYMMETRY \
                 and op_sym[0] != OperatorSymmetry.NOSYMMETRY:
             with pytest.raises(ValueError):
                 a += b
@@ -143,10 +140,7 @@ class TestNParticleOperator:
         b.set_random()
 
         ref = a.to_ndarray() - b.to_ndarray()
-        if op_sym[0] != op_sym[1] and op_sym[1] == OperatorSymmetry.NOSYMMETRY:
-            with pytest.raises(ValueError):
-                a -= b
-        elif op_sym[0] != op_sym[1] and op_sym[1] != OperatorSymmetry.NOSYMMETRY \
+        if op_sym[0] != op_sym[1] and op_sym[1] == OperatorSymmetry.NOSYMMETRY or op_sym[0] != op_sym[1] and op_sym[1] != OperatorSymmetry.NOSYMMETRY \
                 and op_sym[0] != OperatorSymmetry.NOSYMMETRY:
             with pytest.raises(ValueError):
                 a -= b

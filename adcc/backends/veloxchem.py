@@ -23,20 +23,18 @@
 import os
 import tempfile
 import warnings
-import numpy as np
 
+import numpy as np
+import veloxchem as vlx
 from mpi4py import MPI
+from veloxchem.mpitask import MpiTask
+from veloxchem.veloxchemlib import AngularMomentumIntegralsDriver, LinearMomentumIntegralsDriver
+
 from libadcc import HartreeFockProvider
 
-import veloxchem as vlx
-
-from .EriBuilder import EriBuilder
-from ..exceptions import InvalidReference
 from ..ElectronicStates import EnergyCorrection
-
-from veloxchem.mpitask import MpiTask
-from veloxchem.veloxchemlib import (AngularMomentumIntegralsDriver,
-                                    LinearMomentumIntegralsDriver)
+from ..exceptions import InvalidReference
+from .EriBuilder import EriBuilder
 
 
 class VeloxChemOperatorIntegralProvider:
@@ -273,11 +271,11 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=None, conv_tol_grad=1e
         with open(infile, "w") as fp:
             lines = ["@jobs", "task: hf", "@end", ""]
             lines += ["@scf",
-                      "conv_thresh: {}".format(conv_tol_grad),
-                      "max_iter: {}".format(max_iter),
+                      f"conv_thresh: {conv_tol_grad}",
+                      f"max_iter: {max_iter}",
                       "@end", ""]
             lines += ["@method settings",
-                      "basis: {}".format(basis_remap.get(basis, basis))]
+                      f"basis: {basis_remap.get(basis, basis)}"]
             # TODO: PE results in VeloxChem are currently wrong, because
             # polarizabilities are always made isotropic
             if pe_options:
@@ -286,8 +284,8 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=None, conv_tol_grad=1e
                           f"potfile: {potfile}"]
             lines += ["@end"]
             lines += ["@molecule",
-                      "charge: {}".format(charge),
-                      "multiplicity: {}".format(multiplicity),
+                      f"charge: {charge}",
+                      f"multiplicity: {multiplicity}",
                       "units: bohr",
                       "xyz:\n{}".format("\n".join(xyz.split(";"))),
                       "@end"]

@@ -1,11 +1,9 @@
 import numpy as np
 import pytest
 
-from adcc.solver.fixed_point_diis import (
-    diis, SubspaceError, DIISError, DIISSubspace, default_print
-)
-from adcc.solver.preconditioner import JacobiPreconditioner
 from adcc import AdcMatrix, AmplitudeVector, guess_zero, guesses_triplet
+from adcc.solver.fixed_point_diis import DIISError, DIISSubspace, SubspaceError, default_print, diis
+from adcc.solver.preconditioner import JacobiPreconditioner
 
 from ..testdata_cache import testdata_cache
 

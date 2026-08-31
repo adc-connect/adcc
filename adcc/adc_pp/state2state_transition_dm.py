@@ -29,11 +29,7 @@ from adcc.LazyMp import LazyMp
 from adcc.NParticleOperator import OperatorSymmetry
 from adcc.OneParticleDensity import OneParticleDensity
 
-from .util import (
-    check_doubles_amplitudes,
-    check_singles_amplitudes,
-    check_triples_amplitudes
-)
+from .util import check_doubles_amplitudes, check_singles_amplitudes, check_triples_amplitudes
 
 
 def s2s_tdm_isr0(ground_state, amplitude_l, amplitude_r, intermediates):

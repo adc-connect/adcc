@@ -20,23 +20,19 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
-import pytest
 import numpy as np
+import pytest
 from numpy.testing import assert_allclose
 
-from adcc.AdcMatrix import (
-    AdcExtraTerm, AdcMatrixProjected, AdcMatrixShifted, AdcMatrixlike
-)
-from adcc.AdcMethod import AdcMethod, IsrMethod, AdcType
-from adcc.Intermediates import Intermediates
+import adcc
 from adcc.adc_pp.matrix import AdcBlock
+from adcc.AdcMatrix import AdcExtraTerm, AdcMatrixlike, AdcMatrixProjected, AdcMatrixShifted
+from adcc.AdcMethod import AdcMethod, AdcType, IsrMethod
+from adcc.Intermediates import Intermediates
 
-from .projection_test import (
-    assert_nonzero_blocks, construct_nonzero_blocks, assert_equal_symmetry
-)
-from .testdata_cache import testdata_cache
 from . import testcases
+from .projection_test import assert_equal_symmetry, assert_nonzero_blocks, construct_nonzero_blocks
+from .testdata_cache import testdata_cache
 
 
 class TestBlockOrders:
@@ -51,7 +47,7 @@ class TestBlockOrders:
              "ppphhh_pphh": 1, "ppphhh_ppphhh": 0},  # adc4
         )
         # verify the default methods
-        for order in range(0, 5):
+        for order in range(5):
             block_orders = AdcMatrixlike._default_block_orders(
                 method=AdcMethod(f"adc{order}"), bandwidth=0
             )
@@ -78,7 +74,7 @@ class TestBlockOrders:
             {"ph_ph": 1, "ph_pphh": 0, "pphh_ph": 0, "pphh_pphh": None},  # ISR(1)
             {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 0}  # ISR(2)
         )
-        for order in range(0, 3):
+        for order in range(3):
             block_orders = AdcMatrixlike._default_block_orders(
                 method=IsrMethod(f"isr{order}"), bandwidth=1
             )
@@ -97,7 +93,7 @@ class TestBlockOrders:
              "pphh_ph": 1, "pphh_pphh": 0, "pphh_ppphhh": None,
              "ppphhh_ph": 0, "ppphhh_pphh": None, "ppphhh_ppphhh": None}  # ISR(2)
         )
-        for order in range(0, 3):
+        for order in range(3):
             block_orders = AdcMatrixlike._default_block_orders(
                 method=IsrMethod(f"isr{order}"), bandwidth=2
             )

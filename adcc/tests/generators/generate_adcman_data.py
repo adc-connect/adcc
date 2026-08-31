@@ -1,12 +1,11 @@
-from adcc.tests.generators.run_qchem import run_qchem
-from adcc.tests import testcases
+from pathlib import Path
+
+import h5py
 
 from adcc.AdcMethod import AdcMethod, MethodLevel
 from adcc.hdf5io import emplace_dict
-
-from pathlib import Path
-import h5py
-
+from adcc.tests import testcases
+from adcc.tests.generators.run_qchem import run_qchem
 
 _testdata_dirname = "data"
 
@@ -56,21 +55,21 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
 
     key = f"{case}/{gs_density_order}/{isr_order}"
     if key in hdf5_file:
-        return None
+        return
     # skip cvs-adc(0), since it is not available in qchem
     if "cvs" in case and method.level is MethodLevel.ZERO:
-        return None
+        return
     # skip cvs-isr(3) and cvs-isr3d, since it is not implemented yet.
     if isr_order in (3, "3d") and "cvs" in case:
-        return None
+        return
     # gs_density_order is only available for adc(3) and adc(4)
     # and it is not available for cvs-adc
     if gs_density_order is not None and (
             method.level.to_int() < 3 or "cvs" in case):
-        return None
+        return
     # CVS-ADC(4) not available
     if "cvs" in case and method.level.to_int() > 3:
-        return None
+        return
     # add a cvs prefix to the method if necessary
     if "cvs" in case and not method.is_core_valence_separated:
         method = AdcMethod(f"cvs-{method.name}")

@@ -1,17 +1,18 @@
-from adcc.tests.generators.dump_adcc import (
-    dump_groundstate, dump_matrix_testdata, dump_excited_states
-)
-from adcc.tests.testdata_cache import testdata_cache
-from adcc.tests import testcases
-
-from adcc.AdcMethod import AdcMethod, MethodLevel
-from adcc.LazyMp import LazyMp
-from adcc.workflow import run_adc, validate_state_parameters
-from adcc import copy as adcc_copy
-
 from pathlib import Path
+
 import h5py
 
+from adcc import copy as adcc_copy
+from adcc.AdcMethod import AdcMethod, MethodLevel
+from adcc.LazyMp import LazyMp
+from adcc.tests import testcases
+from adcc.tests.generators.dump_adcc import (
+    dump_excited_states,
+    dump_groundstate,
+    dump_matrix_testdata,
+)
+from adcc.tests.testdata_cache import testdata_cache
+from adcc.workflow import run_adc, validate_state_parameters
 
 _testdata_dirname = "data"
 
@@ -57,13 +58,13 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     )
     key = f"{case}/{gs_density_order}"
     if f"{key}/{isr_order}/{kind}" in hdf5_file:
-        return None
+        return
     # CVS-ISR(3) not available
     if isr_order in (3, "3d") and "cvs" in case:
-        return None
+        return
     # CVS-ADC(4) not available
     if "cvs" in case and method.name == "adc4":
-        return None
+        return
     print(f"Generating {method.name} data for {case} {test_case.file_name}.")
     # prepend cvs to the method if needed (otherwise we will get an error)
     if "cvs" in case and not method.is_core_valence_separated:
@@ -81,7 +82,7 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
         # make sense to dump the data once for a singlet and once for a triplet
         # trial vector.
         matrix_group = hdf5_file.create_group(f"{key}/matrix")
-        trial_vec = adcc_copy(states.excitation_vector[0]).set_random()  # type: ignore # noqa: E501
+        trial_vec = adcc_copy(states.excitation_vector[0]).set_random()  # type: ignore
         dump_matrix_testdata(states.matrix, trial_vec, matrix_group)
     # dump the excited states data
     kind_group = hdf5_file.create_group(f"{key}/{isr_order}/{states.kind}")

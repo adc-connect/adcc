@@ -31,11 +31,7 @@ from adcc.LazyMp import LazyMp
 from adcc.NParticleOperator import OperatorSymmetry
 from adcc.OneParticleDensity import OneParticleDensity
 
-from .util import (
-    check_doubles_amplitudes,
-    check_singles_amplitudes,
-    check_triples_amplitudes
-)
+from .util import check_doubles_amplitudes, check_singles_amplitudes, check_triples_amplitudes
 
 
 def diffdm_isr0(ground_state, amplitude, intermediates):

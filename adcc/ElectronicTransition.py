@@ -20,15 +20,16 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import warnings
+
 import numpy as np
 from scipy import constants
-import warnings
 
 from .ElectronicStates import ElectronicStates, _timer_name
 from .Excitation import Excitation
 from .misc import cached_member_function
-from .OneParticleOperator import OneParticleOperator
 from .NParticleOperator import product_trace
+from .OneParticleOperator import OneParticleOperator
 
 
 class ElectronicTransition(ElectronicStates):

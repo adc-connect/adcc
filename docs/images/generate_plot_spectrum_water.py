@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
-from pyscf import gto, scf
 from matplotlib import pyplot as plt
+from pyscf import gto, scf
 
 import adcc
 

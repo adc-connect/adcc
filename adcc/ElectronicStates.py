@@ -1,26 +1,29 @@
+import warnings
+
 import numpy as np
 from scipy import constants
-import warnings
 
 from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod, IsrMethod, MethodLevel
 from .AmplitudeVector import AmplitudeVector
 from .FormatDominantElements import FormatDominantElements
 from .FormatIndex import (
-    FormatIndexBase, FormatIndexAdcc, FormatIndexHfProvider, FormatIndexHomoLumo
+    FormatIndexAdcc,
+    FormatIndexBase,
+    FormatIndexHfProvider,
+    FormatIndexHomoLumo,
 )
 from .LazyMp import LazyMp
-from .OneParticleDensity import OneParticleDensity
-from .TwoParticleDensity import TwoParticleDensity
-from .NParticleOperator import product_trace
-from .OperatorIntegrals import OperatorIntegrals
 from .misc import cached_member_function, requires_module
+from .NParticleOperator import product_trace
+from .OneParticleDensity import OneParticleDensity
+from .OperatorIntegrals import OperatorIntegrals
 from .ReferenceState import ReferenceState
 from .solver.SolverStateBase import EigenSolverStateBase
 from .StateView import StateView
 from .timings import Timer
+from .TwoParticleDensity import TwoParticleDensity
 from .visualisation.Spectrum import Spectrum
-
 
 _timer_name = "_property_timer"
 

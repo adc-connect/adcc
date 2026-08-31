@@ -73,7 +73,7 @@ def guess_symmetries(matrix, spin_change=0, spin_block_symmetrisation="none"):
         raise TypeError("matrix needs to be of type AdcMatrixlike")
     if spin_block_symmetrisation not in ["none", "symmetric", "antisymmetric"]:
         raise ValueError("Invalid value for spin_block_symmetrisation: "
-                         "{}".format(spin_block_symmetrisation))
+                         f"{spin_block_symmetrisation}")
     if spin_block_symmetrisation != "none" and \
        not matrix.reference_state.restricted:
         raise ValueError("spin_block_symmetrisation != none is only valid for "
@@ -81,7 +81,7 @@ def guess_symmetries(matrix, spin_change=0, spin_block_symmetrisation="none"):
                          "states.")
     if int(spin_change * 2) / 2 != spin_change:
         raise ValueError("Only integer or half-integer spin_change is allowed. "
-                         "You passed {}".format(spin_change))
+                         f"You passed {spin_change}")
 
     max_spin_change = 0
     if "ph" in matrix.axis_blocks:

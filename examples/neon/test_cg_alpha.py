@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
-import adcc
 import numpy as np
-
 from pyscf import gto, scf
-from adcc.solver.preconditioner import JacobiPreconditioner
+
+import adcc
+from adcc.adc_pp.modified_transition_moments import modified_transition_moments
 from adcc.solver import IndexSymmetrisation
 from adcc.solver.conjugate_gradient import conjugate_gradient, default_print
-from adcc.adc_pp.modified_transition_moments import modified_transition_moments
+from adcc.solver.preconditioner import JacobiPreconditioner
 
 
 class ShiftedMat(adcc.AdcMatrix):

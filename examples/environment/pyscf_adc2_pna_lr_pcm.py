@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
-import adcc
 from pyscf import gto, scf
 from pyscf.solvent import ddCOSMO
+
+import adcc
 
 # Run PCM SCF in pyscf
 mol = gto.M(

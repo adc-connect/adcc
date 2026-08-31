@@ -20,20 +20,21 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import libadcc
-import warnings
 import itertools
+import warnings
 
 import numpy as np
 
-from .guess import guess_kwargs_kind, guess_symmetries
-from .Tensor import Tensor
-from .MoSpaces import expand_spaceargs
-from .Symmetry import Symmetry
+import libadcc
+
 from .AdcMatrix import AdcMatrixlike
 from .AmplitudeVector import AmplitudeVector
+from .guess import guess_kwargs_kind, guess_symmetries
+from .MoSpaces import expand_spaceargs
+from .Symmetry import Symmetry
+from .Tensor import Tensor
 
-__all__ = ["SubspacePartitioning", "Projector"]
+__all__ = ["Projector", "SubspacePartitioning"]
 
 
 class SubspacePartitioning:

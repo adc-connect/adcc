@@ -23,9 +23,15 @@
 from .guess_zero import guess_symmetries, guess_zero
 from .guesses_from_diagonal import guesses_from_diagonal
 
-__all__ = ["guess_zero", "guesses_from_diagonal",
-           "guesses_singlet", "guesses_triplet", "guesses_any",
-           "guesses_spin_flip", "guess_symmetries"]
+__all__ = [
+    "guess_symmetries",
+    "guess_zero",
+    "guesses_any",
+    "guesses_from_diagonal",
+    "guesses_singlet",
+    "guesses_spin_flip",
+    "guesses_triplet",
+]
 
 
 def guess_kwargs_kind(kind):

@@ -21,15 +21,15 @@
 ##
 ## ---------------------------------------------------------------------
 from typing import Literal
-import numpy as np
 
+import numpy as np
 import psi4
 
 import libadcc
 
-from .EriBuilder import EriBuilder, Block4D, Spin4D
-from ..exceptions import InvalidReference
 from ..ElectronicStates import EnergyCorrection
+from ..exceptions import InvalidReference
+from .EriBuilder import Block4D, EriBuilder, Spin4D
 
 # Some type defs for the interface
 Array1D = np.ndarray[tuple[int], np.dtype[np.float64]]

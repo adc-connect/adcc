@@ -21,8 +21,9 @@
 ##
 ## ---------------------------------------------------------------------
 from adcc import AmplitudeVector
-from adcc.OneParticleDensity import OneParticleDensity
 from adcc.NParticleOperator import OperatorSymmetry
+from adcc.OneParticleDensity import OneParticleDensity
+
 from .matrix import AdcBlock
 
 

@@ -20,13 +20,14 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
 import unittest
+
 import pytest
 
+import adcc
 from adcc import LazyMp
-from adcc.solver.davidson import jacobi_davidson, eigsh
 from adcc.misc import cached_property
+from adcc.solver.davidson import eigsh, jacobi_davidson
 
 from ..testdata_cache import testdata_cache
 

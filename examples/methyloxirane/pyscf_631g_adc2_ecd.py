@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
-import adcc
-
-from pyscf import gto, scf
 from matplotlib import pyplot as plt
+from pyscf import gto, scf
+
+import adcc
 
 enantiomers = {
     "(S)-2-methyloxirane": """

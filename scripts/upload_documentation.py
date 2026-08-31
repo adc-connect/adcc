@@ -25,8 +25,8 @@ import subprocess
 
 
 def build_docs():
-    subprocess.run("rm -r docs/api".split())
-    subprocess.run("./setup.py build_docs".split(), check=True)
+    subprocess.run(["rm", "-r", "docs/api"])
+    subprocess.run(["./setup.py", "build_docs"], check=True)
     return "build/sphinx/html"
 
 
@@ -36,7 +36,7 @@ def upload_docs(outdir):
     with open(os.path.dirname(__file__) + "/config.json") as fp:
         target = json.load(fp)["documentation"]
     subprocess.run("rsync -P -rvzc --exclude .buildinfo --exclude objects.inv "
-                   "--delete {}/ {} --cvs-exclude".format(outdir, target).split(),
+                   f"--delete {outdir}/ {target} --cvs-exclude".split(),
                    check=True)
 
 

@@ -20,14 +20,13 @@
 ## along with adcc-testdata. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import numpy as np
 import h5py
-
+import numpy as np
 import pyscf
-from pyscf import ao2mo, scf, gto
+from pyscf import ao2mo, gto, scf
 
-from adcc.backends.pyscf import import_scf, PyScfHFProvider
 from adcc import hdf5io
+from adcc.backends.pyscf import PyScfHFProvider, import_scf
 
 
 def dump_pyscf(scfres: scf.hf.SCF, hdf5_file: h5py.Group):
@@ -274,7 +273,7 @@ def get_qchem_formatted_basis(mol: gto.Mole) -> str:
     for atom_number in sorted(cgtos_by_atom):
         atom_name: str = mol.elements[atom_number]
         qchem_formatted_basis.append(
-            "{: <2s}    {: >3d}".format(atom_name, atom_number + 1)
+            f"{atom_name: <2s}    {atom_number + 1: >3d}"
         )
         for cgto in cgtos_by_atom[atom_number]:
             angular_momentum_name, primitive_gtos = cgto
@@ -286,12 +285,11 @@ def get_qchem_formatted_basis(mol: gto.Mole) -> str:
                        for _, coeffs in primitive_gtos)
             for coeff_i in range(n_cgtos_per_pgto):
                 qchem_formatted_basis.append(
-                    "{:s}   {: >2d}   1.00".format(angular_momentum_name,
-                                                   n_primitive_gtos)
+                    f"{angular_momentum_name:s}   {n_primitive_gtos: >2d}   1.00"
                 )
                 for exp, coeffs in primitive_gtos:
                     coeff = coeffs[coeff_i]
-                    basis_line = "{: >20.8E}{: >20.8E}".format(exp, coeff)
+                    basis_line = f"{exp: >20.8E}{coeff: >20.8E}"
                     # qchem expects the fortran scientific format
                     qchem_formatted_basis.append(basis_line.replace("E", "D"))
         qchem_formatted_basis.append("****")

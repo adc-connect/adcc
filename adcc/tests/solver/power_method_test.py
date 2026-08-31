@@ -20,13 +20,12 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import pytest
 import numpy as np
+import pytest
 from numpy.testing import assert_allclose
 from scipy.sparse.linalg import aslinearoperator
 
 from adcc.solver.power_method import default_print, power_method
-
 
 sizes = ["0004", "0050", "0200", "1000"]
 
