@@ -153,11 +153,11 @@ def replicate_ao_block(mospaces, tensor,
             result.set_from_ndarray(np.block([
                 [tensor, zerobk],
                 [zerobk, tensor],
-            ]), 1e-14)
+            ]), 1e-14)  # fmt: skip
         else:
             result.set_from_ndarray(np.block([
                 tensor
-            ]), 1e-14)
+            ]), 1e-14)  # fmt: skip
     elif len(tensor.shape) == 4:
         sym = libadcc.make_symmetry_operator_basis(
             mospaces, tensor.shape[0], symmetry.to_str(), 2, block
@@ -187,7 +187,7 @@ def replicate_ao_block(mospaces, tensor,
                         [zerobk, tensor_as],
                     ],
                 ],
-            ])
+            ])  # fmt: skip
             result.set_from_ndarray(full_tensor, 1e-14)
         else:
             raise NotImplementedError(
@@ -328,7 +328,7 @@ class OperatorIntegrals:
                 res += (
                     - einsum("sp,qr->pqrs", S_ab[s + p], S_ab[q + r])
                     - einsum("rq,ps->pqrs", S_ab[r + q], S_ab[p + s])
-                )
+                )  # fmt: skip
                 # conditionally subtract the D contribution
                 if p == s and q == r:
                     res -= 0.5 * einsum(

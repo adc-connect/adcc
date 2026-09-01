@@ -82,7 +82,8 @@ def block_ph_ph_0(ground_state, op):
         return AmplitudeVector(ph=(
             + 1.0 * einsum('ic,ac->ia', ampl.ph, op.vv)
             - 1.0 * einsum('ka,ki->ia', ampl.ph, op.oo)
-        ))
+        ))  # fmt: skip
+
     return IsrBlock(apply)
 
 
@@ -97,7 +98,8 @@ def block_pphh_pphh_0(ground_state, op):
                 - 2.0 * einsum('kjab,ki->ijab', ampl.pphh, op.oo)
                 + 2.0 * einsum('kiab,kj->ijab', ampl.pphh, op.oo)
             ).antisymmetrise(0, 1)
-        ))
+        ))  # fmt: skip
+
     return IsrBlock(apply)
 
 
@@ -109,7 +111,8 @@ def block_ph_pphh_0(ground_state, op):
         return AmplitudeVector(ph=0.5 * (
             - 2.0 * einsum('ilad,ld->ia', ampl.pphh, op.ov)
             + 2.0 * einsum('ilca,lc->ia', ampl.pphh, op.ov)
-        ))
+        ))  # fmt: skip
+
     return IsrBlock(apply)
 
 
@@ -122,7 +125,8 @@ def block_pphh_ph_0(ground_state, op):
                 + 1.0 * einsum('ib,aj->ijab', ampl.ph, op.vo)
                 - 1.0 * einsum('jb,ai->ijab', ampl.ph, op.vo)
             ).antisymmetrise(0, 1).antisymmetrise(2, 3)
-        ))
+        ))  # fmt: skip
+
     return IsrBlock(apply)
 
 
@@ -151,7 +155,8 @@ def block_ph_pphh_1(ground_state, op):
             - 2.0 * einsum('ilca,lncf,fn->ia', ampl.pphh, t2, op.vo)
             - 2.0 * einsum('klad,kled,ei->ia', ampl.pphh, t2, op.vo)
             - 2.0 * einsum('ilcd,nlcd,an->ia', ampl.pphh, t2, op.vo)
-        ))
+        ))  # fmt: skip
+
     return IsrBlock(apply)
 
 
@@ -180,7 +185,8 @@ def block_pphh_ph_1(ground_state, op):
                 - 1.0 * einsum('ic,njab,nc->ijab', ampl.ph, t2, op.ov)
                 + 1.0 * einsum('jc,niab,nc->ijab', ampl.ph, t2, op.ov)
             ).antisymmetrise(0, 1)
-        ))
+        ))  # fmt: skip
+
     return IsrBlock(apply)
 
 
@@ -222,7 +228,8 @@ def block_ph_ph_2(ground_state, op):
             # (2,7)
             - 1.0 * einsum('kc,kncf,imaf,mn->ia', ampl.ph, t2, t2, op.oo)
             + 1.0 * einsum('kc,knce,inaf,ef->ia', ampl.ph, t2, t2, op.vv)
-        ))
+        ))  # fmt: skip
+
     return IsrBlock(apply)
 
 

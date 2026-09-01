@@ -86,7 +86,7 @@ class LazyMp(GroundState):
             + 0.5 * einsum('jabc,ijbc->ia', hf.ovvv, t2oo)
             # N^5: O^3V^2 / N^4: O^2V^2
             + 0.5 * einsum('jkib,jkab->ia', hf.ooov, t2oo)
-        )
+        )  # fmt: skip
         # additional terms since we don't apply the CVS approximation
         # for the ground state
         # (all of the following terms vanish within the approximation)
@@ -100,7 +100,7 @@ class LazyMp(GroundState):
                 + 0.5 * einsum("JKab,ibJK->ia", t2cc, hf.ovcc)
                 # N^5: O^1V^3C^1 / N^4: V^3C^1
                 + 0.5 * einsum("iJbc,Jabc->ia", t2oc, hf.cvvv)
-            )
+            )  # fmt: skip
         return (res / denom).evaluate()
 
     @cached_member_function()
@@ -129,7 +129,7 @@ class LazyMp(GroundState):
             + 0.5 * einsum("IJbc,Jabc->Ia", t2cc, hf.cvvv)
             # N^5: O^1V^3C^1 / N^4: O^1V^3V
             - 0.5 * einsum("jIbc,jabc->Ia", t2oc, hf.ovvv)
-        )
+        )  # fmt: skip
         return (res / denom).evaluate()
 
     @cached_member_function()
@@ -148,7 +148,7 @@ class LazyMp(GroundState):
             + 4.0 * t2erit.antisymmetrise(2, 3).antisymmetrise(0, 1)
             - 0.5 * self.t2eri(b.oovv, b.vv)
             - 0.5 * self.t2eri(b.oovv, b.oo)
-        ) / denom
+        ) / denom  # fmt: skip
 
     @cached_member_function()
     def td3(self, space: str) -> libadcc.Tensor:
@@ -200,7 +200,7 @@ class LazyMp(GroundState):
             # N^6: O^4V^2 / N^4: O^2V^2
             + 0.25 * einsum('klab,ijkl->ijab', t2_1,
                             einsum('klcd,ijcd->ijkl', hf.oovv, t2_1))
-        ).antisymmetrise(0, 1).antisymmetrise(2, 3)
+        ).antisymmetrise(0, 1).antisymmetrise(2, 3)  # fmt: skip
         return ampl / denom
 
     @cached_member_function()
@@ -238,7 +238,7 @@ class LazyMp(GroundState):
             + 9 * einsum('idab,jkcd->ijkabc', hf.ovvv, t2_1)
             # N^7: O^4V^3 / N^6: O^3V^3
             + 9 * einsum('ijla,klbc->ijkabc', hf.ooov, t2_1)
-        ).antisymmetrise(0, 1, 2).antisymmetrise(3, 4, 5)
+        ).antisymmetrise(0, 1, 2).antisymmetrise(3, 4, 5)  # fmt: skip
         return numerator / denom
 
     @cached_member_function()

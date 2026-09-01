@@ -298,7 +298,7 @@ class GroundState:
             + einsum("ijab,jb->ia", hf.oovv, dm.ov)
             - einsum("ibja,jb->ia", hf.ovov, dm.ov)
             + einsum("ibac,bc->ia", hf.ovvv, dm.vv)
-        )
+        )  # fmt: skip
 
     @cached_member_function()
     def second_order_dm_correction(self, apply_cvs: bool = False
@@ -328,16 +328,16 @@ class GroundState:
             ret.vv += (
                 + 0.5 * einsum("IJac,IJbc->ab", self.t2cc, self.t2cc)
                 + 1.0 * einsum("kJac,kJbc->ab", self.t2oc, self.t2oc)
-            )
+            )  # fmt: skip
             # compute extra CVS blocks
             ret.cc = -0.5 * (
                 + einsum("kIab,kJab->IJ", self.t2oc, self.t2oc)
                 + einsum('LIab,LJab->IJ', self.t2cc, self.t2cc)
-            )
+            )  # fmt: skip
             ret.oc = -0.5 * (
                 + einsum("kIab,kjab->jI", self.t2oc, self.t2oo)
                 + einsum("ILab,jLab->jI", self.t2cc, self.t2oc)
-            )
+            )  # fmt: skip
             ret.cv = self.ts2(b.cv, apply_cvs=apply_cvs)
         ret.reference_state = self.reference_state
         return ret.evaluate()
@@ -399,7 +399,7 @@ class GroundState:
             + 4.0 * einsum("ik,jl->ijkl", p0.oo, d_oo)
             .antisymmetrise(0, 1).antisymmetrise(2, 3)
             + 0.5 * einsum("ijab,klab->ijkl", self.t2oo, self.t2oo)
-        )
+        )  # fmt: skip
         ret.ooov = (
             + 2.0 * einsum("ja,ik->ijka", p0.ov, d_oo).antisymmetrise(0, 1)
         )
@@ -409,7 +409,7 @@ class GroundState:
         ret.ovov = (
             + 1.0 * einsum("ab,ij->iajb", p0.vv, d_oo)
             - 1.0 * einsum("jkac,ikbc->iajb", self.t2oo, self.t2oo)
-        )
+        )  # fmt: skip
         ret.vvvv = (
             + 0.5 * einsum("ijab,ijcd->abcd", self.t2oo, self.t2oo)
         )

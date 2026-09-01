@@ -35,24 +35,24 @@ a_sym_012 = 1 / 6 * (
     a + a.transpose((0, 2, 1, 3))
     + a.transpose((1, 0, 2, 3)) + a.transpose((1, 2, 0, 3))
     + a.transpose((2, 1, 0, 3)) + a.transpose((2, 0, 1, 3))
-)
+)  # fmt: skip
 a_asym_012 = 1 / 6 * (
     a - a.transpose((0, 2, 1, 3))
     - a.transpose((1, 0, 2, 3)) + a.transpose((1, 2, 0, 3))
     - a.transpose((2, 1, 0, 3)) + a.transpose((2, 0, 1, 3))
-)
+)  # fmt: skip
 
 b = np.random.randn(N, N, N, N, N, N)
 b_sym_012_345 = 1 / 6 * (
     b + b.transpose((0, 2, 1, 3, 5, 4))
     + b.transpose((1, 0, 2, 4, 3, 5)) + b.transpose((1, 2, 0, 4, 5, 3))
     + b.transpose((2, 1, 0, 5, 4, 3)) + b.transpose((2, 0, 1, 5, 3, 4))
-)
+)  # fmt: skip
 b_asym_012_345 = 1 / 6 * (
     b - b.transpose((0, 2, 1, 3, 5, 4))
     - b.transpose((1, 0, 2, 4, 3, 5)) + b.transpose((1, 2, 0, 4, 5, 3))
     - b.transpose((2, 1, 0, 5, 4, 3)) + b.transpose((2, 0, 1, 5, 3, 4))
-)
+)  # fmt: skip
 
 
 HEADER = """

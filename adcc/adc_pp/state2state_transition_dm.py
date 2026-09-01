@@ -82,7 +82,7 @@ def s2s_tdm_isr2(ground_state, amplitude_l, amplitude_r, intermediates):
         - 0.5 * einsum('ia,jkac,kc->ij', ur1, t2, rul1)
         - 0.5 * einsum('ikac,kc,ja->ij', t2, rur1, ul1)
         - 1.0 * einsum('ia,ja->ij', rul1, rur1)
-    )
+    )  # fmt: skip
     dm.vv += (
         + 2.0 * einsum('ijac,ijbc->ab', ul2, ur2)
         - 0.5 * einsum("ac,cb->ab", p1_vv, p0.vv)
@@ -92,7 +92,7 @@ def s2s_tdm_isr2(ground_state, amplitude_l, amplitude_r, intermediates):
         + 0.5 * einsum("ikac,kc,ib->ab", t2, rul1, ur1)
         + 0.5 * einsum("ia,ikbc,kc->ab", ul1, t2, rur1)
         + 1.0 * einsum("ia,ib->ab", rur1, rul1)
-    )
+    )  # fmt: skip
 
     # (TODO Move to intermediates)
     p1_ov = -2.0 * einsum("jb,ijab->ia", ul1, ur2).evaluate()
@@ -104,14 +104,14 @@ def s2s_tdm_isr2(ground_state, amplitude_l, amplitude_r, intermediates):
         + einsum("ij,ja->ia", p1_oo, p0.ov)
         - einsum("ib,klca,klcb->ia", ur1, t2, ul2)
         - einsum("ikcd,jkcd,ja->ia", t2, ul2, ur1)
-    )
+    )  # fmt: skip
     dm.vo += (
         - einsum("ijab,jb->ai", t2, p1_ov)
         - einsum("ib,ab->ai", p0.ov, p1_vv)
         + einsum("ji,ja->ai", p1_oo, p0.ov)
         - einsum("ib,klca,klcb->ai", ul1, t2, ur2)
         - einsum("ikcd,jkcd,ja->ai", t2, ur2, ul1)
-    )
+    )  # fmt: skip
     return dm
 
 
@@ -192,7 +192,7 @@ def s2s_tdm_isr3d(ground_state, amplitude_l, amplitude_r, intermediates):
             einsum("lc,ilac->ia", einsum("kb,klbc->lc", ur1, t2_1), t2_2),
             ul1,
         )
-    )
+    )  # fmt: skip
     dm.vv += (
         - 2 * einsum("ia,ib->ab", einsum("ijac,jc->ia", ul2, ur1), t1_2)
         + 2 * einsum("jb,ja->ab", einsum("ic,ijbc->jb", ul1, ur2), t1_2)
@@ -248,7 +248,7 @@ def s2s_tdm_isr3d(ground_state, amplitude_l, amplitude_r, intermediates):
             einsum("ic,jkac->ijka", ur1, t2_2),
             einsum("id,jkbd->ijkb", ul1, t2_1),
         )
-    )
+    )  # fmt: skip
     dm.ov += (
         + 1 * einsum("ib,ab->ia", einsum("jc,ijbc->ib", ul1, ur2), p0_2_vv)
         - 1 * einsum("ij,ja->ia", einsum("jb,ib->ij", ul1, p0_3_ov), ur1)
@@ -347,7 +347,7 @@ def s2s_tdm_isr3d(ground_state, amplitude_l, amplitude_r, intermediates):
             einsum("ijbc,klbc->ijkl", ur2, t2_1),
             einsum("jd,klad->jkla", ul1, t2_1),
         )
-    )
+    )  # fmt: skip
 
     dm.vo += (
         + 1 * einsum("ik,ka->ai", einsum("jkbc,ijbc->ik", ur2, t2_2), ul1)
@@ -447,7 +447,7 @@ def s2s_tdm_isr3d(ground_state, amplitude_l, amplitude_r, intermediates):
             einsum("ijkl,jc->iklc", einsum("ijbd,klbd->ijkl", ul2, t2_1), ur1),
             t2_1,
         )
-    )
+    )  # fmt: skip
     return dm
 
 

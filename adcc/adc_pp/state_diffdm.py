@@ -86,7 +86,7 @@ def diffdm_isr2(ground_state, amplitude, intermediates):
                      - einsum("jkcb,db->jkcd", t2, p1_vv))
             - einsum("ia,jkac,kc->ij", u1, t2, ru1)
         ).symmetrise()
-    )
+    )  # fmt: skip
 
     dm.vv += (  # adc2_p_vv
         2 * p2_vv + einsum("ia,ib->ab", ru1, ru1) - (
@@ -96,7 +96,7 @@ def diffdm_isr2(ground_state, amplitude, intermediates):
                      - einsum("jk,jlac->klac", p1_oo, t2))
             - einsum("ikac,kc,ib->ab", t2, ru1, u1)
         ).symmetrise()
-    )
+    )  # fmt: skip
 
     dm.ov += (  # adc2_p_ov
         - einsum("ijab,jb->ia", t2, p2_ov)
@@ -104,7 +104,7 @@ def diffdm_isr2(ground_state, amplitude, intermediates):
         + einsum("ij,ja->ia", p1_oo, p0.ov)
         - einsum("ib,klca,klcb->ia", u1, t2, u2)
         - einsum("ikcd,jkcd,ja->ia", t2, u2, u1)
-    )
+    )  # fmt: skip
     return dm
 
 
@@ -146,13 +146,13 @@ def diffdm_cvs_isr2(ground_state, amplitude, intermediates):
         - einsum("ka,ab->kb", p0.ov, p1_vv)
         - einsum("lkdb,dl->kb", t2, p2_vo)
         + 1 / sqrt(2) * einsum("ib,klad,liad->kb", u1, t2, u2)
-    )
+    )  # fmt: skip
 
     dm.vv += p2_vv - 0.5 * (  # cvs_isr2_dp_vv
         + einsum("cb,ac->ab", p1_vv, p0.vv)
         + einsum("cb,ac->ab", p0.vv, p1_vv)
         + einsum("ijbc,ijad,cd->ab", t2, t2, p1_vv)
-    )
+    )  # fmt: skip
 
     # Add 2nd order correction to CVS-ISR(1) diffdm
     dm.cc -= einsum("kIab,kJab->IJ", u2, u2)
@@ -200,7 +200,7 @@ def diffdm_isr3d(ground_state, amplitude, intermediates):
                 einsum("ka,ikac->ic", ur1, t2_1),
             )
         ).symmetrise()
-    )
+    )  # fmt: skip
     dm.ov += (  # adc3_p_ov
         + 1 * einsum("ik,ka->ia", einsum("jkbc,ijbc->ik", ur2, t2_2), ur1)
         + 1 * einsum("ijkb,jkab->ia", einsum("ic,jkbc->ijkb", ur1, ur2), t2_2)
@@ -290,7 +290,7 @@ def diffdm_isr3d(ground_state, amplitude, intermediates):
             einsum("ijbc,klbc->ijkl", ur2, t2_1),
             einsum("jd,klad->jkla", ur1, t2_1),
         )
-    )
+    )  # fmt: skip
     dm.vv += (  # adc3_p_vv
         + 2 * (
             +2 * einsum("ja,jb->ab", einsum("ic,ijac->ja", ur1, ur2), t1_2)
@@ -319,7 +319,7 @@ def diffdm_isr3d(ground_state, amplitude, intermediates):
                 einsum("ic,jkac->ijka", ur1, t2_1),
             )
         ).symmetrise()
-    )
+    )  # fmt: skip
 
     return dm
 

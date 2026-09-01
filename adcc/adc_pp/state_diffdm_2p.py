@@ -49,13 +49,13 @@ def diffdm_isr0_2p(ground_state: LazyMp, amplitude: AmplitudeVector,
     dm.oooo = (
         # N^4: O^4 / N^4: O^4
         - 4.0 * einsum("il,jk->ijkl", p1_oo, d_oo)
-    ).antisymmetrise(0, 1).antisymmetrise(2, 3)
+    ).antisymmetrise(0, 1).antisymmetrise(2, 3)  # fmt: skip
     dm.ovov = (
         # N^4: O^2V^2 / N^4: O^2V^2
         - 1.0 * einsum("ja,ib->iajb", u1, u1)
         # N^4: O^2V^2 / N^4: O^2V^2
         + 1.0 * einsum("ab,ij->iajb", p1_vv, d_oo)
-    )
+    )  # fmt: skip
     return dm
 
 
@@ -91,7 +91,7 @@ def diffdm_isr1s_2p(ground_state: LazyMp, amplitude: AmplitudeVector,
         - 2.0 * (
             einsum("jk,ikab->ijab", p1_oo, t2)
         ).antisymmetrise(0, 1)
-    )
+    )  # fmt: skip
 
     return dm
 
@@ -117,12 +117,12 @@ def diffdm_isr1_2p(ground_state: LazyMp, amplitude: AmplitudeVector,
             - 4.0 * einsum(
                 "ja,ik->ijka", einsum("lb,jlab->ja", u1, u2), d_oo
             ).antisymmetrise(0, 1)
-        )
+        )  # fmt: skip
 
         dm.ovvv += (
             # N^5: O^2V^3 / N^4: O^1V^3
             - 2.0 * einsum("ja,ijbc->iabc", u1, u2)
-        )
+        )  # fmt: skip
     except ValueError:
         # no doubles contribution
         pass
@@ -194,7 +194,7 @@ def diffdm_isr2d_2p(ground_state: LazyMp, amplitude: AmplitudeVector,
                                          einsum("na,mnac->mc", u1, t2), t2), u1),
                            d_oo)
         ).antisymmetrise(0, 1).antisymmetrise(2, 3).symmetrise([(0, 2), (1, 3)])
-    )
+    )  # fmt: skip
     dm.ooov += (
         # N^6: O^4V^2 / N^4: O^2V^2
         + 1.0 * einsum("ijkl,la->ijka", einsum("klbc,ijbc->ijkl", u2, t2), u1)
@@ -230,7 +230,7 @@ def diffdm_isr2d_2p(ground_state: LazyMp, amplitude: AmplitudeVector,
                            einsum("il,la->ia", einsum("ia,la->il", u1, u1),
                                   p0.ov), d_oo)
         ).antisymmetrise(0, 1)
-    )
+    )  # fmt: skip
     dm.oovv += (
         # N^4: O^2V^2 / N^4: O^2V^2
         + 4.0 * einsum("ib,ja->ijab",
@@ -241,7 +241,7 @@ def diffdm_isr2d_2p(ground_state: LazyMp, amplitude: AmplitudeVector,
                        einsum("kc,ijac->ijka", u1, td2), u1).antisymmetrise(2, 3)
         # N^5: O^3V^2 / N^4: O^2V^2
         + 2.0 * einsum("jk,ikab->ijab", einsum("jc,kc->jk", u1, u1), td2)
-    )
+    )  # fmt: skip
     dm.ovov += (
         # N^6: O^3V^3 / N^4: O^2V^2
         - 4.0 * einsum("jkac,ikbc->iajb", u2, u2)
@@ -323,7 +323,7 @@ def diffdm_isr2d_2p(ground_state: LazyMp, amplitude: AmplitudeVector,
                                          einsum("kc,klcd->ld", u1, t2),
                                          t2), u1), d_oo)
         ).symmetrise([(0, 2), (1, 3)])
-    )
+    )  # fmt: skip
     dm.ovvv += (
         # N^6: O^3V^3 / N^4: O^1V^3
         + 1.0 * einsum("ijka,jkbc->iabc", einsum("id,jkad->ijka", u1, u2), t2)
@@ -339,7 +339,7 @@ def diffdm_isr2d_2p(ground_state: LazyMp, amplitude: AmplitudeVector,
             # N^4: O^1V^3 / N^4: O^1V^3
             + 2.0 * einsum("ac,ib->iabc", einsum("ja,jc->ac", u1, u1), p0.ov)
         ).antisymmetrise(2, 3)
-    )
+    )  # fmt: skip
     dm.vvvv += (
         # N^6: O^2V^4 / N^4: V^4
         + 2 * einsum("ijab,ijcd->abcd", u2, u2)
@@ -364,7 +364,7 @@ def diffdm_isr2d_2p(ground_state: LazyMp, amplitude: AmplitudeVector,
                            einsum("ijkb,jkcd->ibcd",
                                   einsum("ie,jkbe->ijkb", u1, t2), t2), u1)
         ).antisymmetrise(0, 1).symmetrise([(0, 2), (1, 3)])
-    )
+    )  # fmt: skip
     return dm
 
 

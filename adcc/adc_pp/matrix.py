@@ -98,7 +98,7 @@ def block_ph_ph_0(hf, mp, intermediates):
         return AmplitudeVector(ph=(
             + einsum("ib,ab->ia", ampl.ph, hf.fvv)
             - einsum("IJ,Ja->Ia", fCC, ampl.ph)
-        ))
+        ))  # fmt: skip
     return AdcBlock(apply, diagonal)
 
 
@@ -117,7 +117,7 @@ def diagonal_pphh_pphh_0(hf):
     res = direct_sum(
         "-i-J+a+b->iJab",
         hf.foo.diagonal(), fCC.diagonal(), hf.fvv.diagonal(), hf.fvv.diagonal()
-    ).symmetrise(2, 3)
+    ).symmetrise(2, 3)  # fmt: skip
     if not hf.has_core_occupied_space:
         res = res.symmetrise(0, 1)
     return AmplitudeVector(pphh=res)
@@ -128,7 +128,7 @@ def block_pphh_pphh_0(hf, mp, intermediates):
         return AmplitudeVector(pphh=(
             + 2 * einsum("ijac,bc->ijab", ampl.pphh, hf.fvv).antisymmetrise(2, 3)
             - 2 * einsum("ik,kjab->ijab", hf.foo, ampl.pphh).antisymmetrise(0, 1)
-        ))
+        ))  # fmt: skip
     return AdcBlock(apply, diagonal_pphh_pphh_0(hf))
 
 
@@ -138,7 +138,7 @@ def block_cvs_pphh_pphh_0(hf, mp, intermediates):
             + 2 * einsum("iJac,bc->iJab", ampl.pphh, hf.fvv).antisymmetrise(2, 3)
             - einsum("ik,kJab->iJab", hf.foo, ampl.pphh)
             - einsum("JK,iKab->iJab", hf.fcc, ampl.pphh)
-        ))
+        ))  # fmt: skip
     return AdcBlock(apply, diagonal_pphh_pphh_0(hf))
 
 
@@ -194,14 +194,14 @@ def block_ph_ph_1(hf, mp, intermediates):
     diagonal = AmplitudeVector(ph=(
         + direct_sum("a-i->ia", hf.fvv.diagonal(), fCC.diagonal())  # order 0
         - einsum("IaIa->Ia", CvCv)  # order 1
-    ))
+    ))  # fmt: skip
 
     def apply(ampl):
         return AmplitudeVector(ph=(                 # PT order
             + einsum("ib,ab->ia", ampl.ph, hf.fvv)  # 0
             - einsum("IJ,Ja->Ia", fCC, ampl.ph)     # 0
             - einsum("JaIb,Jb->Ia", CvCv, ampl.ph)  # 1
-        ))
+        ))  # fmt: skip
     return AdcBlock(apply, diagonal)
 
 
@@ -227,7 +227,7 @@ def diagonal_pphh_pphh_1(hf):
         # the occupied or virtual indices
         + direct_sum("ia+Jb->iJab", dinterm_ov, dinterm_Cv).symmetrise(2, 3)
         + direct_sum("iJ+ab->iJab", diag_oC, diag_vv)
-    ))
+    ))  # fmt: skip
 
 
 def block_pphh_pphh_1(hf, mp, intermediates):
@@ -241,7 +241,7 @@ def block_pphh_pphh_1(hf, mp, intermediates):
             ).antisymmetrise(0, 1).antisymmetrise(2, 3)
             + 0.5 * einsum("ijkl,klab->ijab", hf.oooo, ampl.pphh)
             + 0.5 * einsum("ijcd,abcd->ijab", ampl.pphh, hf.vvvv)
-        ))
+        ))  # fmt: skip
     return AdcBlock(apply, diagonal_pphh_pphh_1(hf))
 
 
@@ -259,7 +259,7 @@ def block_cvs_pphh_pphh_1(hf, mp, intermediates):
             ).antisymmetrise(2, 3)
             + 1.0 * einsum("iJlK,lKab->iJab", hf.ococ, ampl.pphh)
             + 0.5 * einsum("iJcd,abcd->iJab", ampl.pphh, hf.vvvv)
-        ))
+        ))  # fmt: skip
     return AdcBlock(apply, diagonal_pphh_pphh_1(hf))
 
 
@@ -271,7 +271,7 @@ def block_ph_pphh_1(hf, mp, intermediates):
         return AmplitudeVector(ph=(
             + einsum("jkib,jkab->ia", hf.ooov, ampl.pphh)
             + einsum("ijbc,jabc->ia", ampl.pphh, hf.ovvv)
-        ))
+        ))  # fmt: skip
     return AdcBlock(apply, 0)
 
 
@@ -280,7 +280,7 @@ def block_cvs_ph_pphh_1(hf, mp, intermediates):
         return AmplitudeVector(ph=(
             + sqrt(2) * einsum("jKIb,jKab->Ia", hf.occv, ampl.pphh)
             - 1 / sqrt(2) * einsum("jIbc,jabc->Ia", ampl.pphh, hf.ovvv)
-        ))
+        ))  # fmt: skip
     return AdcBlock(apply, 0)
 
 
@@ -289,7 +289,7 @@ def block_pphh_ph_1(hf, mp, intermediates):
         return AmplitudeVector(pphh=(
             + einsum("ic,jcab->ijab", ampl.ph, hf.ovvv).antisymmetrise(0, 1)
             - einsum("ijka,kb->ijab", hf.ooov, ampl.ph).antisymmetrise(2, 3)
-        ))
+        ))  # fmt: skip
     return AdcBlock(apply, 0)
 
 
@@ -299,7 +299,7 @@ def block_cvs_pphh_ph_1(hf, mp, intermediates):
             + sqrt(2) * einsum("jIKb,Ka->jIab",
                                hf.occv, ampl.ph).antisymmetrise(2, 3)
             - 1 / sqrt(2) * einsum("Ic,jcab->jIab", ampl.ph, hf.ovvv)
-        ))
+        ))  # fmt: skip
     return AdcBlock(apply, 0)
 
 
@@ -325,7 +325,7 @@ def block_pphh_ppphhh_1(hf, mp, intermediates):
                 - 3 / 2 * einsum("iklabc,kljc->ijab",
                                  ur3, hf.ooov)
             ).antisymmetrise(0, 1)
-        ))
+        ))  # fmt: skip
     return AdcBlock(apply, 0)
 
 
@@ -342,7 +342,7 @@ def block_ppphhh_pphh_1(hf, mp, intermediates):
                 # N^7: O^3V^4 / N^6: O^3V^3
                 - 1 / 3 * einsum("ijad,kdbc->ijkabc", ur2, hf.ovvv)
             ).antisymmetrise(0, 1, 2).antisymmetrise(3, 4, 5)
-        ))
+        ))  # fmt: skip
     return AdcBlock(apply, 0)
 
 
@@ -356,13 +356,13 @@ def block_ph_ph_2(hf, mp, intermediates):
         + direct_sum("a-i->ia", i1.diagonal(), i2.diagonal())
         - einsum("IaIa->Ia", hf.ovov)
         - einsum("ikac,ikac->ia", mp.t2oo, hf.oovv)
-    ))
+    ))  # fmt: skip
 
     # Not used anywhere else, so kept as an anonymous intermediate
     term_t2_eri = (
         + einsum("ijab,jkbc->ikac", mp.t2oo, hf.oovv)
         + einsum("ijab,jkbc->ikac", hf.oovv, mp.t2oo)
-    ).evaluate()
+    ).evaluate()  # fmt: skip
 
     def apply(ampl):
         return AmplitudeVector(ph=(
@@ -370,7 +370,7 @@ def block_ph_ph_2(hf, mp, intermediates):
             - einsum("ij,ja->ia", i2, ampl.ph)
             - einsum("jaib,jb->ia", hf.ovov, ampl.ph)    # 1
             - 0.5 * einsum("ikac,kc->ia", term_t2_eri, ampl.ph)  # 2
-        ))
+        ))  # fmt: skip
     return AdcBlock(apply, diagonal)
 
 
@@ -379,14 +379,14 @@ def block_cvs_ph_ph_2(hf, mp, intermediates):
     diagonal = AmplitudeVector(ph=(
         + direct_sum("a-i->ia", i1.diagonal(), hf.fcc.diagonal())
         - einsum("IaIa->Ia", hf.cvcv)
-    ))
+    ))  # fmt: skip
 
     def apply(ampl):
         return AmplitudeVector(ph=(
             + einsum("ib,ab->ia", ampl.ph, i1)
             - einsum("ij,ja->ia", hf.fcc, ampl.ph)
             - einsum("JaIb,Jb->Ia", hf.cvcv, ampl.ph)
-        ))
+        ))  # fmt: skip
     return AdcBlock(apply, diagonal)
 
 
@@ -411,7 +411,7 @@ def diagonal_pphh_pphh_2(hf, mp):
                             einsum("klab,klab->ab", t2_1, hf.oovv))
         + 2 * direct_sum("ia+jb->ijab", einsum("ikac,ikac->ia", t2_1, hf.oovv),
                          einsum("ikac,ikac->ia", t2_1, hf.oovv)).symmetrise(2, 3)
-    ))
+    ))  # fmt: skip
 
 
 def block_pphh_pphh_2(hf, mp, intermediates):
@@ -479,7 +479,7 @@ def block_pphh_pphh_2(hf, mp, intermediates):
                 + 0.5 * einsum("jlad,ilbd->ijab",
                                einsum("jkac,klcd->jlad", ur2, t2_1), hf.oovv)
             ).antisymmetrise(0, 1).antisymmetrise(2, 3)
-        ))
+        ))  # fmt: skip
     return AdcBlock(apply, diagonal_pphh_pphh_2(hf, mp))
 
 
@@ -496,7 +496,7 @@ def block_ph_pphh_2(hf, mp, intermediates):
             + einsum("ijbc,jabc->ia", ampl.pphh, pib_ovvv)
             + einsum("icab,jkcd,jkbd->ia", hf.ovvv, ampl.pphh, mp.t2oo)  # 2nd
             + einsum("ijka,jlbc,klbc->ia", hf.ooov, mp.t2oo, ampl.pphh)  # 2nd
-        ))
+        ))  # fmt: skip
     return AdcBlock(apply, 0)
 
 
@@ -509,7 +509,7 @@ def block_cvs_ph_pphh_2(hf, mp, intermediates):
             + 2.0 * einsum("lKIc,lKac->Ia", pia_occv, ampl.pphh)
             - einsum("lIcd,lacd->Ia", ampl.pphh, pib_ovvv)
             - einsum("jIKa,ljcd,lKcd->Ia", hf.occv, mp.t2oo, ampl.pphh)
-        ))
+        ))  # fmt: skip
     return AdcBlock(apply, 0)
 
 
@@ -527,7 +527,7 @@ def block_pphh_ph_2(hf, mp, intermediates):
                 - einsum("ijka,kb->ijab", pia_ooov, ampl.ph)
                 - einsum("ijac,kbcd,kd->ijab", mp.t2oo, hf.ovvv, ampl.ph)  # 2st
             ).antisymmetrise(2, 3)
-        ))
+        ))  # fmt: skip
     return AdcBlock(apply, 0)
 
 
@@ -540,7 +540,7 @@ def block_cvs_pphh_ph_2(hf, mp, intermediates):
             - 2.0 * einsum("jIKa,Kb->jIab", pia_occv, ampl.ph).antisymmetrise(2, 3)
             - einsum("Ic,jcab->jIab", ampl.ph, pib_ovvv)
             - einsum("lKIc,Kc,jlab->jIab", hf.occv, ampl.ph, mp.t2oo)
-        ))
+        ))  # fmt: skip
     return AdcBlock(apply, 0)
 
 
@@ -562,7 +562,7 @@ def block_ph_ppphhh_2(hf, mp, intermediates):
             # N^7: O^4V^3 / N^6: O^3V^3
             + 3 / 2 * einsum("jlma,imjl->ia",
                              einsum("jklabc,kmbc->jlma", ur3, t2_1), hf.oooo)
-        ))
+        ))  # fmt: skip
     return AdcBlock(apply, 0)
 
 
@@ -594,8 +594,7 @@ def block_ppphhh_ph_2(hf, mp, intermediates):
                 - 1 / 6 * einsum("jkma,imbc->ijkabc",
                                  einsum("la,jklm->jkma", ur1, hf.oooo), t2_1)
             ).antisymmetrise(0, 1, 2).antisymmetrise(3, 4, 5)
-        ))
-        return
+        ))  # fmt: skip
     return AdcBlock(apply, 0)
 
 
@@ -757,7 +756,7 @@ def block_ph_pphh_3(hf, mp, intermediates):
                             einsum("ic,jkbc->ijkb",
                                    einsum("lmcd,lmid->ic", t2_1, hf.ooov),
                                    t2_1), ur2)
-        ))
+        ))  # fmt: skip
     return AdcBlock(apply, 0)
 
 
@@ -909,7 +908,7 @@ def block_pphh_ph_3(hf, mp, intermediates):
                 - 0.25 * einsum("ijkb,ka->ijab",
                                 einsum("jlkb,il->ijkb", hf.ooov, p0_2_oo), ur1)
             ).antisymmetrise(0, 1).antisymmetrise(2, 3)
-        ))
+        ))  # fmt: skip
     return AdcBlock(apply, 0)
 
 
@@ -949,7 +948,7 @@ def adc3_i1(hf, mp, intermediates):
     t2eri_sum = (
         + einsum("jicb->ijcb", mp.t2eri(b.oovv, b.ov))  # t2eri4
         - 0.25 * mp.t2eri(b.oovv, b.vv)                 # t2eri5
-    )
+    )  # fmt: skip
     return (
         (  # symmetrise a<>b
             + 0.5 * einsum("ijac,ijbc->ab", mp.t2oo + td2, hf.oovv)
@@ -958,7 +957,7 @@ def adc3_i1(hf, mp, intermediates):
         ).symmetrise()
         + einsum("iajb,ij->ab", hf.ovov, p0.oo)
         + einsum("acbd,cd->ab", hf.vvvv, p0.vv)
-    )
+    )  # fmt: skip
 
 
 def adc3_i2(hf, mp, intermediates):
@@ -976,7 +975,7 @@ def adc3_i2(hf, mp, intermediates):
         ).symmetrise()
         - einsum("ikjl,kl->ij", hf.oooo, p0.oo)
         - einsum("iajb,ab->ij", hf.ovov, p0.vv)
-    )
+    )  # fmt: skip
 
 
 def cvs_adc3_i2(hf, mp, intermediates):
@@ -985,7 +984,7 @@ def cvs_adc3_i2(hf, mp, intermediates):
         + 2.0 * einsum("kIJa,ka->IJ", hf.occv, cvs_p0.ov).symmetrise()
         - 1.0 * einsum("kIlJ,kl->IJ", hf.ococ, cvs_p0.oo)
         - 1.0 * einsum("IaJb,ab->IJ", hf.cvcv, cvs_p0.vv)
-    )
+    )  # fmt: skip
 
 
 @register_as_intermediate
@@ -1007,7 +1006,7 @@ def adc3_m11(hf, mp, intermediates):
         + 2.0 * mp.t2eri(b.oovv, b.ov).symmetrise((0, 1), (2, 3))  # t2eri4
         + 0.5 * mp.t2eri(b.oovv, b.vv)                             # t2eri5
         + 0.5 * mp.t2eri(b.oovv, b.oo)                             # t2eri3
-    )
+    )  # fmt: skip
     return (
         + einsum("ij,ab->iajb", d_oo, hf.fvv + i1)
         - einsum("ij,ab->iajb", hf.foo - i2, d_vv)
@@ -1032,7 +1031,7 @@ def adc3_m11(hf, mp, intermediates):
                        einsum("ikcd,jlcd->ikjl", mp.t2oo, mp.t2oo), hf.ovov)
         - einsum("iljk,kalb->iajb", hf.oooo, t2sq)
         - einsum("idjc,acbd->iajb", t2sq, hf.vvvv)
-    )
+    )  # fmt: skip
 
 
 @register_as_intermediate
@@ -1063,7 +1062,7 @@ def cvs_adc3_m11(hf, mp, intermediates):
         + 0.5 * einsum("IcJd,acbd->IaJb", hf.cvcv,
                        einsum("klac,klbd->acbd", mp.t2oo, mp.t2oo))
         - einsum("lIkJ,kalb->IaJb", hf.ococ, t2sq)
-    )
+    )  # fmt: skip
 
 
 @register_as_intermediate
@@ -1073,7 +1072,7 @@ def adc3_pia(hf, mp, intermediates):
         + hf.ooov                                            # 1st order
         - 2.0 * mp.t2eri(b.ooov, b.ov).antisymmetrise(0, 1)  # 2nd order
         - 0.5 * mp.t2eri(b.ooov, b.vv)                       # 2nd order
-    )
+    )  # fmt: skip
 
 
 @register_as_intermediate
@@ -1090,7 +1089,7 @@ def adc3_pib(hf, mp, intermediates):
         + hf.ovvv                                            # 1st order
         + 2.0 * mp.t2eri(b.ovvv, b.ov).antisymmetrise(2, 3)  # 2nd order
         - 0.5 * mp.t2eri(b.ovvv, b.oo)                       # 2nd order
-    )
+    )  # fmt: skip
 
 
 @register_as_intermediate
@@ -1541,7 +1540,7 @@ def adc4_m11(hf, mp, intermediates):
             + 1 * einsum("ab,ij->iajb",
                          einsum("kbla,kl->ab", hf.ovov, p0_oo), d_oo)
         )
-    )
+    )  # fmt: skip
 
 
 @register_as_intermediate
@@ -1555,4 +1554,4 @@ def df3(hf, mp, intermediates):
         "-i-j-k+a+b+c->ijkabc",
         hf.foo.diagonal(), hf.foo.diagonal(), hf.foo.diagonal(),
         hf.fvv.diagonal(), hf.fvv.diagonal(), hf.fvv.diagonal()
-    ).symmetrise(0, 1, 2).symmetrise(3, 4, 5)
+    ).symmetrise(0, 1, 2).symmetrise(3, 4, 5)  # fmt: skip

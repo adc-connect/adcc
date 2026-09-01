@@ -65,7 +65,7 @@ def tdm_cvs_isr2(ground_state, amplitude, intermediates):
     dm.oc = (  # cvs_isr2_dp0_oc
         - einsum("ja,Ia->jI", p0.ov, u1)
         + (1 / sqrt(2)) * einsum("kIab,jkab->jI", u2, t2)
-    )
+    )  # fmt: skip
 
     # cvs_isr2_dp0_vc
     dm.vc -= 0.5 * einsum("ab,Ib->aI", p0.vv, u1)
@@ -85,17 +85,17 @@ def tdm_isr2(ground_state, amplitude, intermediates):
     dm.oo = (  # isr2_dp0_oo
         - einsum("ia,ja->ij", p0.ov, u1)
         - einsum("ikab,jkab->ji", u2, t2)
-    )
+    )  # fmt: skip
     dm.vv = (  # isr2_dp0_vv
         + einsum("ia,ib->ab", u1, p0.ov)
         + einsum("ijac,ijbc->ab", u2, t2)
-    )
+    )  # fmt: skip
     dm.ov -= einsum("ijab,jb->ia", td2, u1)  # isr2_dp0_ov
     dm.vo += 0.5 * (  # isr2_dp0_vo
         + einsum("ijab,jkbc,kc->ai", t2, t2, u1)
         - einsum("ab,ib->ai", p0.vv, u1)
         + einsum("ja,ij->ai", u1, p0.oo)
-    )
+    )  # fmt: skip
     return dm
 
 
@@ -123,13 +123,13 @@ def tdm_isr3(ground_state, amplitude, intermediates):
         - 1 * einsum("jkab,ikab->ij", ul2, t2_2)
         + 1 * einsum("ia,ja->ij", einsum("kb,ikab->ia", ul1, t2_1), t1_2)
         + 0.5 * einsum("ikbc,jkbc->ij", einsum("la,iklabc->ikbc", ul1, t3_2), t2_1)
-    )
+    )  # fmt: skip
     dm.vv += (
         + 1 * einsum("ia,ib->ab", ul1, p0_3_ov)
         + 1 * einsum("ijac,ijbc->ab", ul2, t2_2)
         + 0.5 * einsum("ikbc,ikac->ab", einsum("jd,ijkbcd->ikbc", ul1, t3_2), t2_1)
         - 1 * einsum("ib,ia->ab", einsum("jc,ijbc->ib", ul1, t2_1), t1_2)
-    )
+    )  # fmt: skip
     dm.ov += (
         - 1 * einsum("jb,ijab->ia", ul1, t2_3)
         - 0.5 * einsum("jkbc,ijkabc->ia", ul2, t3_2)
@@ -152,14 +152,14 @@ def tdm_isr3(ground_state, amplitude, intermediates):
             einsum("ijcd,klcd->ijkl", t2_1, t2_1),
             einsum("jb,klab->jkla", ul1, t2_1),
         )
-    )
+    )  # fmt: skip
 
     dm.vo += (
         + 0.5 * einsum("ja,ij->ai", ul1, p0_3_oo)
         - 0.5 * einsum("ib,ab->ai", ul1, p0_3_vv)
         + 0.5 * einsum("kc,ikac->ai", einsum("jb,jkbc->kc", ul1, t2_2), t2_1)
         + 0.5 * einsum("jb,ijab->ai", einsum("kc,jkbc->jb", ul1, t2_1), t2_2)
-    )
+    )  # fmt: skip
 
     return dm
 

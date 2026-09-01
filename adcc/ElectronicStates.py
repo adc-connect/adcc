@@ -313,7 +313,7 @@ class ElectronicStates:
         # NOTE: this currently assumes that all available properties are available
         # on the corresponding state_view class
         assert self._state_view_cls is not None
-        blacklist = ("parent_state")
+        blacklist = ("parent_state",)
         ret = []
         for key in dir(self._state_view_cls):
             # private fields or ao transformed densities or other fields
@@ -744,7 +744,7 @@ class FormatAmplitudeVector:
             formats = {"ov": (
                 "{} -> {}" + idx_spin_gap + "{}->{}"
                 + spin_coeff_gap + self.value_format
-            )}
+            )}  # fmt: skip
         elif self.matrix.axis_blocks == ["ph", "pphh"]:
             formats = {
                 "ov": (
@@ -755,7 +755,7 @@ class FormatAmplitudeVector:
                     "{} {} -> {} {}" + idx_spin_gap + "{}{}->{}{}"
                     + spin_coeff_gap + self.value_format
                 )
-            }
+            }  # fmt: skip
         elif self.matrix.axis_blocks == ["ph", "pphh", "ppphhh"]:
             formats = {
                 "ov": (
@@ -773,7 +773,7 @@ class FormatAmplitudeVector:
                     "{} {} {} -> {} {} {}" + idx_spin_gap + "{}{}{}->{}{}{}"
                     + spin_coeff_gap + self.value_format
                 )
-            }
+            }  # fmt: skip
         else:
             raise NotImplementedError("Unknown ADC matrix structure")
 

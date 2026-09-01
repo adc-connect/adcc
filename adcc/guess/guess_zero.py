@@ -215,7 +215,7 @@ def guess_symmetry_triples(matrix, spin_change=0,
             "bbbaab", "bbbaba", "bbbbaa",  # 3/1
             "abbbbb", "babbbb", "bbabbb",  # 2/3
             "bbbabb", "bbbbab", "bbbbba",  # 3/2
-        ]
+        ]  # fmt: skip
 
     # Add index permutation symmetry:
     permutations = ["ijkabc"]
