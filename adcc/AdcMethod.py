@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -23,7 +22,7 @@
 from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
-from typing import TypeVar
+from typing import ClassVar, TypeVar
 
 from typing_extensions import Self
 
@@ -66,7 +65,7 @@ class MethodLevel(Enum):
         elif isinstance(self.value, str):
             return int(self.value[0])
         else:
-            raise ValueError(f"Unknown value type {type(self.value)}.")
+            raise TypeError(f"Unknown value type {type(self.value)}.")
 
 
 class AdcType(Enum):
@@ -120,7 +119,7 @@ class LevelKey:
 class Method:
     # this has to be set on the child classes
     _method_base_name: str | None = None
-    _supported_levels: dict[LevelKey, LevelSpec] = {}
+    _supported_levels: ClassVar[dict[LevelKey, LevelSpec]] = {}
 
     def __init__(self, method: str):
         """
@@ -286,7 +285,7 @@ class Method:
 
 class AdcMethod(Method):
     _method_base_name = "adc"
-    _supported_levels = {
+    _supported_levels: ClassVar = {
         LevelKey(
             adc_type=AdcType.PP,
             gs_type=GroundStateType.MP,
@@ -308,7 +307,7 @@ class AdcMethod(Method):
 
 class IsrMethod(Method):
     _method_base_name = "isr"
-    _supported_levels = {
+    _supported_levels: ClassVar = {
         LevelKey(
             adc_type=AdcType.PP,
             gs_type=GroundStateType.MP,

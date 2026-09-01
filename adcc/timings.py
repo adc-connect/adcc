@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -194,13 +193,15 @@ class Timer:
         else:
             raise ValueError("Task not currently running: " + task)
 
-    def describe(self, colour=sys.stdout.isatty()) -> str:
+    def describe(self, colour: bool | None = None) -> str:
         # This is very dummy ... in the future we would like to have
         # a nice little table, which also respects the key hierachy
         # and displays cumulative sums for each level and which
         # tasks care of duplicated time intervals (e.g. if two tasks
         # run at the same time)
         # Colour: Use one for each level
+        if colour is None:
+            colour = sys.stdout.isatty()
         text = "Timer " + strtime_short(self.lifetime) + " lifetime:\n"
         if not self.tasks:
             text += "  No timings recorded"

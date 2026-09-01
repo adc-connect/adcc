@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 import numpy as np
 from data import coeff_data, dip_data, eri_data, orben_data

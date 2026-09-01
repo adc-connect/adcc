@@ -1,5 +1,6 @@
 import struct
 from pathlib import Path
+from typing import ClassVar
 
 import h5py
 import numpy as np
@@ -24,7 +25,7 @@ class QchemSavedir:
     savedir: str
         name (or path) of the directory in which the files are written.
     """
-    _filenames = {
+    _filenames: ClassVar = {
         "mo_coeffs":         ("53",        "qchem_fortran_style"),
         "density_matrix_ao": ("54",        "qchem_fortran_style"),
         "fock_matrix_ao":    ("58",        "qchem_fortran_style"),

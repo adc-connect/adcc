@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -84,9 +83,9 @@ def expand_spaceargs(hfdata_or_n_orbs, **spaceargs):
         else:
             raise TypeError(f"Unsupported type {type(entry)} passed to argument {space}")
 
-    for key in spaceargs:
-        if not isinstance(spaceargs[key], tuple):
-            spaceargs[key] = (spaceargs[key], spaceargs[key])
+    for key, val in spaceargs.items():
+        if not isinstance(val, tuple):
+            spaceargs[key] = (val, val)
 
     any_iterable = False
     for key in spaceargs:

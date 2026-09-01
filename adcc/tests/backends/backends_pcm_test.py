@@ -1,5 +1,6 @@
 import os
 import unittest
+from typing import ClassVar
 
 import numpy as np
 import pytest
@@ -29,8 +30,8 @@ cases = [(case.file_name, c) for case in formaldehyde for c in case.cases]
 @pytest.mark.parametrize("system,case", cases)
 @pytest.mark.parametrize("backend", backends)
 class TestPCM:
-    options = {"psi4": {"pcm": True}, "pyscf": {}}
-    pcm_options = {"psi4": {"pcm_method": "IEFPCM", "solvent": "Water"},
+    options: ClassVar = {"psi4": {"pcm": True}, "pyscf": {}}
+    pcm_options: ClassVar = {"psi4": {"pcm_method": "IEFPCM", "solvent": "Water"},
                    "pyscf": {"eps": 78.3553, "eps_opt": 1.78}}
 
     def test_pcm_ptlr(self, system, case, method, backend):

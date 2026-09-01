@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -157,7 +156,7 @@ class TestFunctionality:
                     kwargs[n_states] = 1
                 elif "cvs" in case:
                     kwargs[n_states] = 2
-            elif method.level.to_int() < 4:  # adc2/adc3
+            elif method.level.to_int() < 4:  # adc2/adc3  # noqa: SIM102
                 if "cvs" in case and "fv" in case:  # only 5 states available
                     kwargs["n_guesses"] = 3
 

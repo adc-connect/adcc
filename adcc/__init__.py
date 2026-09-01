@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -206,7 +205,7 @@ def cvs_adc3(*args, **kwargs):
     return run_adc(*args, **kwargs, method="cvs-adc3")
 
 
-def banner(colour=sys.stdout.isatty()):
+def banner(colour: bool | None = None):
     """Return a nice banner describing adcc and its components
 
     The returned string contains version information, maintainer emails
@@ -217,6 +216,8 @@ def banner(colour=sys.stdout.isatty()):
     colour : bool
         Should colour be used in the print out
     """
+    if colour is None:
+         colour = sys.stdout.isatty()
     if colour:
         yellow = '\033[93m'
         green = '\033[92m'

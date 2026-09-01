@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import json
 from pathlib import Path
 
@@ -106,7 +108,8 @@ def main():
     pyscf_results["pyscf_version"] = pyscf.__version__
 
     dump_file = Path(__file__).parent.parent / _testdata_dirname / "pyscf_data.json"
-    json.dump(pyscf_results, open(dump_file, "w"), indent=2)
+    with open(dump_file, "w") as f:
+        json.dump(pyscf_results, f, indent=2)
 
 
 if __name__ == "__main__":

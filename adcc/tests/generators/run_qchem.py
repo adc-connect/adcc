@@ -324,10 +324,12 @@ def execute_qchem(infile: str, outfile: str, workdir: str,
     env["QCSCRATCH"] = workdir
     # Call the executable (with or without savedir)
     if savedir is None:
-        code = subprocess.run(["qchem", infile, outfile], env=env).returncode
+        code = subprocess.run(
+            ["qchem", infile, outfile], env=env, check=False
+        ).returncode
     else:
         code = subprocess.run(
-            ["qchem", infile, outfile, savedir], env=env
+            ["qchem", infile, outfile, savedir], env=env, check=False
         ).returncode
     # qchem did not terminate normal -> copy the outputfile to the working directory
     if code:

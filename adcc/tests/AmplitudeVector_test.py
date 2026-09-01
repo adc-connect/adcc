@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -39,7 +38,7 @@ class TestAmplitudeVector(unittest.TestCase):
             vec.set_random()
         v, w = vectors
         with pytest.raises(AttributeError):
-            v.pph
+            _ = v.pph
         with pytest.raises(AttributeError):
             v.pph = w.ph
         # setattr with expression

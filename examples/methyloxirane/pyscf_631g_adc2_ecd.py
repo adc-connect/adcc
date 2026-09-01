@@ -33,8 +33,7 @@ enantiomers = {
 }
 
 
-for molecule in enantiomers:
-    molecular_geometry = enantiomers[molecule]
+for molecule, molecular_geometry in enantiomers.items():
     mol = gto.M(
         atom=molecular_geometry,
         basis='6-31G',

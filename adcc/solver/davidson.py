@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -196,7 +195,7 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
             # Form residuals, A * SS * v - λ * SS * v = Ax * v + SS * (-λ*v)
             def form_residual(rval, rvec):
                 coefficients = np.hstack((rvec, -rval * rvec))
-                return lincomb(coefficients, Ax + SS, evaluate=True)
+                return lincomb(coefficients, Ax + SS, evaluate=True)  # noqa: B023
             residuals = [form_residual(rvals[i], v)
                          for i, v in enumerate(np.transpose(rvecs))]
             assert len(residuals) == n_block

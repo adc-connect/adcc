@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -176,7 +175,7 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
             ret = {block: tensor.__rmul__(other) for block, tensor in self.items()}
         return AmplitudeVector(**ret)
 
-    def __imul__(
+    def __imul__(  # noqa: PYI034 remove once we drop 3.10
         self, other: "AmplitudeVector | libadcc.Tensor | float"
     ) -> "AmplitudeVector":
         # tensor operations in the backend are currently not really in-place
@@ -225,7 +224,7 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
             ret = {block: tensor.__radd__(other) for block, tensor in self.items()}
         return AmplitudeVector(**ret)
 
-    def __iadd__(
+    def __iadd__(  # noqa: PYI034 remove once we drop 3.10
         self, other: "AmplitudeVector | libadcc.Tensor"
     ) -> "AmplitudeVector":
         # not really in-place in the backend!
@@ -272,7 +271,7 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
             ret = {block: tensor.__rsub__(other) for block, tensor in self.items()}
         return AmplitudeVector(**ret)
 
-    def __isub__(
+    def __isub__(  # noqa: PYI034 remove once we drop 3.10
         self, other: "AmplitudeVector | libadcc.Tensor"
     ) -> "AmplitudeVector":
         # not really in-place in the backend!
@@ -310,7 +309,7 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
             ret = {block: self[block].__truediv__(other) for block in self.keys()}
         return AmplitudeVector(**ret)
 
-    def __itruediv__(
+    def __itruediv__(  # noqa: PYI034  # remove once we drop 3.10
         self, other: "AmplitudeVector | libadcc.Tensor | float"
     ) -> "AmplitudeVector":
         # not really in-place in the backend!

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -169,7 +168,7 @@ class PyScfOperatorIntegralProvider:
 
     def pe_induction_elec(self, dm: libadcc.Tensor) -> Array2D:
         try:
-            self.scfres.with_solvent.cppe_state
+            _ = self.scfres.with_solvent.cppe_state
         except AttributeError:
             raise RuntimeError("Can not compute the PE electronic induction "
                                "operator using the given pyscf object.")
@@ -527,9 +526,7 @@ def _transform_gauge_origin_to_xyz(
                              / charges.sum())
     elif gauge_origin == "origin":
         gauge_origin = (0.0, 0.0, 0.0)
-    elif isinstance(gauge_origin, tuple):
-        gauge_origin = gauge_origin
-    else:
+    elif not isinstance(gauge_origin, tuple):
         raise NotImplementedError("The gauge origin can be defined either by a "
                                   "keyword (origin, mass_center or charge_center) "
                                   "or by a tuple defining the Cartesian components "

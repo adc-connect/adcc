@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -205,6 +204,6 @@ def test_ssq_reference_state(system):
         )
         if "cvs" in case:
             with pytest.raises(NotImplementedError):
-                hf.ssq
+                _ = hf.ssq
         else:
             assert hf.ssq == pytest.approx(ref_ssq)

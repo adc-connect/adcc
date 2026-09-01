@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -21,6 +20,7 @@
 ##
 ## ---------------------------------------------------------------------
 import itertools
+from typing import ClassVar
 
 import numpy as np
 
@@ -72,7 +72,7 @@ class AdcMatrixlike:
     Base class marker for all objects like ADC matrices.
     """
 
-    _special_block_orders = {
+    _special_block_orders: ClassVar = {
         "adc2x": {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 1},
         "isr1s": {"ph_ph": 1, "ph_pphh": None, "pphh_ph": None, "pphh_pphh": None},
         "isr2d": {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 0},
@@ -404,9 +404,8 @@ class AdcMatrix(AdcMatrixlike):
     def __matmul__(self, other):
         if isinstance(other, AmplitudeVector):
             return self.matvec(other)
-        if isinstance(other, list):
-            if all(isinstance(elem, AmplitudeVector) for elem in other):
-                return [self.matvec(ov) for ov in other]
+        if isinstance(other, list) and all(isinstance(elem, AmplitudeVector) for elem in other):
+            return [self.matvec(ov) for ov in other]
         return NotImplemented
 
     def block_view(self, block):

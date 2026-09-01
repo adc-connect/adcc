@@ -25,7 +25,7 @@ class DummyVec:
     def __mul__(self, other: float) -> "DummyVec":
         return DummyVec(self.array * other)
 
-    def __iadd__(self, other: "DummyVec") -> "DummyVec":  # noqa: PYI034
+    def __iadd__(self, other: "DummyVec") -> "DummyVec":  # noqa: PYI034 remove once we drop 3.10
         self.array += other.array
         return self
 

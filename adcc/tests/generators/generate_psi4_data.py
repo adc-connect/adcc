@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import json
 from pathlib import Path
 
@@ -123,7 +125,8 @@ def main():
     psi4_results["psi4_version"] = psi4.__version__
 
     dump_file = Path(__file__).parent.parent / _testdata_dirname / "psi4_data.json"
-    json.dump(psi4_results, open(dump_file, "w"), indent=2)
+    with open(dump_file, "w") as f:
+        json.dump(psi4_results, f, indent=2)
 
 
 if __name__ == "__main__":

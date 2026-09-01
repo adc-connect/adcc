@@ -35,6 +35,7 @@ import sysconfig
 import tempfile
 import time
 from pathlib import Path
+from typing import ClassVar
 
 from pybind11.setup_helpers import Pybind11Extension
 from pybind11.setup_helpers import build_ext as _Pybind11BuildExt
@@ -48,7 +49,7 @@ log = logging.getLogger()
 #
 class BuildDocs(Command):
     description = "Build the C++ and python documentation"
-    user_options = []
+    user_options: ClassVar = []
 
     def initialize_options(self):
         pass
@@ -85,7 +86,7 @@ class BuildDocs(Command):
 
 class CppTest(Command):
     description = "Build and run C++ tests"
-    user_options = []
+    user_options: ClassVar = []
 
     def initialize_options(self):
         pass
@@ -381,7 +382,8 @@ def update_flags_from_config(config_file: Path, *flags: dict):
         assert not flag_subset.keys() & combined_flags.keys()
         combined_flags.update(flag_subset)
     # read and execute the config and update the flags
-    exec(open(config_file, "r").read(), combined_flags)
+    with open(config_file, "r") as f:
+        exec(f.read(), combined_flags)  # noqa: S102
     # split the flags up in the original dicts only keeping
     # known keys that existed in the original dicts
     for key, val in combined_flags.items():

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -166,7 +165,6 @@ class IsrMatrix(AdcMatrixlike):
         """
         if isinstance(other, AmplitudeVector):
             return self.matvec(other)
-        if isinstance(other, list):
-            if all(isinstance(elem, AmplitudeVector) for elem in other):
-                return [self.matvec(ov) for ov in other]
+        if isinstance(other, list) and all(isinstance(elem, AmplitudeVector) for elem in other):
+            return [self.matvec(ov) for ov in other]
         return NotImplemented
