@@ -27,14 +27,16 @@ import adcc
 from adcc.NParticleOperator import OperatorSymmetry
 
 ii, jj, kk, ll = 0, 1, 2, 3
-eri_chem_permutations = [(ii, jj, kk, ll),  # (ij|kl)
-                         (kk, ll, ii, jj),  # (kl|ij)
-                         (jj, ii, ll, kk),  # (ji|lk)
-                         (ll, kk, jj, ii),  # (lk|ji)
-                         (jj, ii, kk, ll),  # (ji|kl)
-                         (ll, kk, ii, jj),  # (lk|ij)
-                         (ii, jj, ll, kk),  # (ij|lk)
-                         (kk, ll, jj, ii)]  # (kl|ji)
+eri_chem_permutations = [
+    (ii, jj, kk, ll),  # (ij|kl)
+    (kk, ll, ii, jj),  # (kl|ij)
+    (jj, ii, ll, kk),  # (ji|lk)
+    (ll, kk, jj, ii),  # (lk|ji)
+    (jj, ii, kk, ll),  # (ji|kl)
+    (ll, kk, ii, jj),  # (lk|ij)
+    (ii, jj, ll, kk),  # (ij|lk)
+    (kk, ll, jj, ii),
+]  # (kl|ji)
 del ii, jj, kk, ll
 
 
@@ -48,8 +50,9 @@ del ii, jj, kk, ll
 #   computing the final integral. The first prefactor (pref1) in
 #   this case is 1, whereas the second prefactor (pref2) is 0 due to
 #   vanishing block of the antisymmetrized integral.
-EriPermutationSpinAntiSymm = namedtuple('EriPermutationSpinAntiSymm',
-                                        ['pref1', 'pref2', 'transposition'])
+EriPermutationSpinAntiSymm = namedtuple(
+    "EriPermutationSpinAntiSymm", ["pref1", "pref2", "transposition"]
+)
 eri_phys_asymm_spin_allowed_prefactors = [
     EriPermutationSpinAntiSymm(1, 1, "aaaa"),
     EriPermutationSpinAntiSymm(1, 1, "bbbb"),
@@ -73,8 +76,7 @@ def eri_asymm_construction_test(scfres, core_orbitals=0):
             ss_pairs.append(ss1 + ss2)
 
     # build the full ERI tensor
-    eri_chem = np.empty((hfdata.n_orbs, hfdata.n_orbs,
-                         hfdata.n_orbs, hfdata.n_orbs))
+    eri_chem = np.empty((hfdata.n_orbs, hfdata.n_orbs, hfdata.n_orbs, hfdata.n_orbs))
     sfull = slice(hfdata.n_orbs)
     hfdata.fill_eri_ffff((sfull, sfull, sfull, sfull), eri_chem)
     eri_phys = eri_chem.transpose(0, 2, 1, 3)
@@ -87,37 +89,36 @@ def eri_asymm_construction_test(scfres, core_orbitals=0):
     n_orbs_alpha = hfdata.n_orbs_alpha
 
     aro1 = slice(core_orbitals, n_alpha, 1)
-    bro1 = slice(
-        n_orbs_alpha + core_orbitals, n_orbs_alpha + n_beta, 1
-    )
+    bro1 = slice(n_orbs_alpha + core_orbitals, n_orbs_alpha + n_beta, 1)
     aro2 = slice(0, core_orbitals, 1)
-    bro2 = slice(
-        n_orbs_alpha, n_orbs_alpha + core_orbitals, 1
-    )
+    bro2 = slice(n_orbs_alpha, n_orbs_alpha + core_orbitals, 1)
     arv = slice(n_alpha, n_orbs_alpha, 1)
     brv = slice(n_orbs_alpha + n_beta, n_orbs, 1)
 
     lookuptable = {
-        "o1": {"a": aro1, "b": bro1, },
-        "o2": {"a": aro2, "b": bro2, },
-        "v1": {"a": arv, "b": brv, }
+        "o1": {
+            "a": aro1,
+            "b": bro1,
+        },
+        "o2": {
+            "a": aro2,
+            "b": bro2,
+        },
+        "v1": {
+            "a": arv,
+            "b": brv,
+        },
     }
 
     n_elec = n_alpha + n_beta
     n_virt_a = n_orbs_alpha - n_alpha
     lookuptable_prelim = {
         "o1": {
-            "a": slice(
-                0, n_alpha - core_orbitals, 1
-            ), "b": slice(n_alpha - core_orbitals, n_elec, 1)
+            "a": slice(0, n_alpha - core_orbitals, 1),
+            "b": slice(n_alpha - core_orbitals, n_elec, 1),
         },
-        "o2": {
-            "a": slice(0, core_orbitals, 1),
-            "b": slice(core_orbitals, 2 * core_orbitals, 1)
-        },
-        "v1": {
-            "a": slice(0, n_virt_a, 1), "b": slice(n_virt_a, n_orbs - n_elec, 1)
-        }
+        "o2": {"a": slice(0, core_orbitals, 1), "b": slice(core_orbitals, 2 * core_orbitals, 1)},
+        "v1": {"a": slice(0, n_virt_a, 1), "b": slice(n_virt_a, n_orbs - n_elec, 1)},
     }
     # loop over all spaces and compare imported
     # tensor to full tensor
@@ -126,26 +127,26 @@ def eri_asymm_construction_test(scfres, core_orbitals=0):
             p1, p2 = ss_pairs[i], ss_pairs[j]
             s = p1 + p2
             n = 2
-            s_clean = [s[i:i + n] for i in range(0, len(s), n)]
+            s_clean = [s[i : i + n] for i in range(0, len(s), n)]
             imported_asymm = refstate.eri(s).to_ndarray()
             for allowed_spin in eri_phys_asymm_spin_allowed_prefactors:
                 sl = [lookuptable[x] for x in s_clean]
-                sl = [sl[x][y] for x, y in
-                      enumerate(list(allowed_spin.transposition))]
+                sl = [sl[x][y] for x, y in enumerate(list(allowed_spin.transposition))]
                 sl2 = [lookuptable_prelim[x] for x in s_clean]
-                sl2 = [sl2[x][y] for x, y in
-                       enumerate(list(allowed_spin.transposition))]
+                sl2 = [sl2[x][y] for x, y in enumerate(list(allowed_spin.transposition))]
                 sl = tuple(sl)
                 sl2 = tuple(sl2)
                 np.testing.assert_almost_equal(
-                    eri_asymm[sl], imported_asymm[sl2],
+                    eri_asymm[sl],
+                    imported_asymm[sl2],
                     err_msg=f"""ERIs wrong in space {s} """
-                            f"""and spin block {allowed_spin}"""
+                    f"""and spin block {allowed_spin}""",
                 )
 
 
-def operator_import_from_ao_test(scfres, ao_dict, operator="electric_dipole",
-                                 gauge_origin=(0.0, 0.0, 0.0)):
+def operator_import_from_ao_test(
+    scfres, ao_dict, operator="electric_dipole", gauge_origin=(0.0, 0.0, 0.0)
+):
     refstate = adcc.ReferenceState(scfres)
     occa = refstate.orbital_coefficients_alpha("o1b").to_ndarray()
     occb = refstate.orbital_coefficients_beta("o1b").to_ndarray()
@@ -155,8 +156,10 @@ def operator_import_from_ao_test(scfres, ao_dict, operator="electric_dipole",
     if operator in ["magnetic_dipole"]:
         int_imported = getattr(refstate.operators, operator)(gauge_origin)
     elif operator in [
-        "electric_quadrupole", "electric_quadrupole_traceless",
-        "electric_quadrupole_velocity", "diamagnetic_magnetizability"
+        "electric_quadrupole",
+        "electric_quadrupole_traceless",
+        "electric_quadrupole_velocity",
+        "diamagnetic_magnetizability",
     ]:
         callback = getattr(refstate.operators, operator)(gauge_origin)
         # flatten the list of lists of OneParticleOperators
@@ -165,27 +168,26 @@ def operator_import_from_ao_test(scfres, ao_dict, operator="electric_dipole",
         int_imported = getattr(refstate.operators, operator)
 
     for i, ao_component in enumerate(ao_dict):
-        int_oo = np.einsum('ib,ba,ja->ij', occa, ao_component, occa)
-        int_oo += np.einsum('ib,ba,ja->ij', occb, ao_component, occb)
+        int_oo = np.einsum("ib,ba,ja->ij", occa, ao_component, occa)
+        int_oo += np.einsum("ib,ba,ja->ij", occb, ao_component, occb)
 
-        int_ov = np.einsum('ib,ba,ja->ij', occa, ao_component, virta)
-        int_ov += np.einsum('ib,ba,ja->ij', occb, ao_component, virtb)
+        int_ov = np.einsum("ib,ba,ja->ij", occa, ao_component, virta)
+        int_ov += np.einsum("ib,ba,ja->ij", occb, ao_component, virtb)
 
-        int_vv = np.einsum('ib,ba,ja->ij', virta, ao_component, virta)
-        int_vv += np.einsum('ib,ba,ja->ij', virtb, ao_component, virtb)
+        int_vv = np.einsum("ib,ba,ja->ij", virta, ao_component, virta)
+        int_vv += np.einsum("ib,ba,ja->ij", virtb, ao_component, virtb)
 
         int_mock = {"o1o1": int_oo, "o1v1": int_ov, "v1v1": int_vv}
 
         int_imported_comp = int_imported[i]
         if int_imported_comp.symmetry is not OperatorSymmetry.HERMITIAN:
-            int_vo = np.einsum('ib,ba,ja->ij', virta, ao_component, occa)
-            int_vo += np.einsum('ib,ba,ja->ij', virtb, ao_component, occb)
+            int_vo = np.einsum("ib,ba,ja->ij", virta, ao_component, occa)
+            int_vo += np.einsum("ib,ba,ja->ij", virtb, ao_component, occb)
             int_mock["v1o1"] = int_vo
 
         for b in int_imported_comp.canonical_blocks:
             np.testing.assert_allclose(
-                int_mock[b], int_imported_comp[b].to_ndarray(),
-                atol=refstate.conv_tol
+                int_mock[b], int_imported_comp[b].to_ndarray(), atol=refstate.conv_tol
             )
 
 
@@ -208,11 +210,15 @@ def cached_backend_hf(backend: str, system: str, conv_tol=1e-12, pe_options=None
         # TODO: conv_tol_grad should be sqrt(conv_tol) I think,
         # but leave it for now as long as it works.
         conv_tol_grad = 10 * conv_tol
-        hfres = adcc.backends.run_hf(backend, xyz=system.xyz,
-                                     basis=system.basis, conv_tol=conv_tol,
-                                     multiplicity=system.multiplicity,
-                                     conv_tol_grad=conv_tol_grad,
-                                     pe_options=pe_options)
+        hfres = adcc.backends.run_hf(
+            backend,
+            xyz=system.xyz,
+            basis=system.basis,
+            conv_tol=conv_tol,
+            multiplicity=system.multiplicity,
+            conv_tol_grad=conv_tol_grad,
+            pe_options=pe_options,
+        )
         return adcc.backends.import_scf_results(hfres)
 
     key = (backend, system, conv_tol)

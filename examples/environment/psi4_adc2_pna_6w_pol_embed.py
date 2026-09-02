@@ -31,15 +31,18 @@ mol = psi4.geometry("""
     """)
 
 psi4.core.set_num_threads(4)
-psi4.set_options({'basis': "sto-3g",
-                  'scf_type': 'pk',
-                  'pe': 'true',
-                  'e_convergence': 1e-10,
-                  'd_convergence': 1e-10})
+psi4.set_options(
+    {
+        "basis": "sto-3g",
+        "scf_type": "pk",
+        "pe": "true",
+        "e_convergence": 1e-10,
+        "d_convergence": 1e-10,
+    }
+)
 psi4.set_module_options("pe", {"potfile": "pna_6w.pot"})
-scf_e, wfn = psi4.energy('SCF', return_wfn=True)
+scf_e, wfn = psi4.energy("SCF", return_wfn=True)
 
 # Run an adc2 calculation:
-state = adcc.adc2(wfn, n_singlets=5, conv_tol=1e-8,
-                  environment=True)
+state = adcc.adc2(wfn, n_singlets=5, conv_tol=1e-8, environment=True)
 print(state.describe())

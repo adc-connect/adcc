@@ -50,29 +50,25 @@ class TestMolsturm:
         coords = np.asarray(params["system"]["coords"])
         charges = np.asarray(params["system"]["atom_numbers"])
         assert hfdata.get_nuclear_multipole(0)[0] == int(np.sum(charges))
-        assert_almost_equal(hfdata.get_nuclear_multipole(1),
-                            np.einsum('i,ix->x', charges, coords))
+        assert_almost_equal(hfdata.get_nuclear_multipole(1), np.einsum("i,ix->x", charges, coords))
 
         if scfres["restricted"]:
             assert hfdata.restricted
             assert hfdata.spin_multiplicity == 2 * (n_alpha - n_beta) + 1
-            assert np.all(hfdata.orben_f[:n_orbs_alpha]
-                          == hfdata.orben_f[n_orbs_alpha:])
+            assert np.all(hfdata.orben_f[:n_orbs_alpha] == hfdata.orben_f[n_orbs_alpha:])
         else:
             assert hfdata.spin_multiplicity == 0
             assert not hfdata.restricted
 
         occu = np.zeros(2 * scfres["n_orbs_alpha"])
-        occu[:n_alpha] = occu[n_orbs_alpha:n_orbs_alpha + n_beta] = 1.
+        occu[:n_alpha] = occu[n_orbs_alpha : n_orbs_alpha + n_beta] = 1.0
         assert_almost_equal(hfdata.occupation_f, occu)
 
         assert_almost_equal(hfdata.orben_f, scfres["orben_f"])
-        assert_almost_equal(hfdata.orbcoeff_fb,
-                            np.transpose(scfres["orbcoeff_bf"]))
+        assert_almost_equal(hfdata.orbcoeff_fb, np.transpose(scfres["orbcoeff_bf"]))
         assert_almost_equal(hfdata.fock_ff, scfres["fock_ff"])
 
-        eri = np.empty((hfdata.n_orbs, hfdata.n_orbs,
-                        hfdata.n_orbs, hfdata.n_orbs))
+        eri = np.empty((hfdata.n_orbs, hfdata.n_orbs, hfdata.n_orbs, hfdata.n_orbs))
         sfull = slice(hfdata.n_orbs)
         hfdata.fill_eri_ffff((sfull, sfull, sfull, sfull), eri)
         assert_almost_equal(eri, scfres["eri_ffff"])
@@ -88,8 +84,9 @@ class TestMolsturm:
     def test_uhf(self, system):
         system = testcases.get_by_filename(system).pop()
 
-        scfres = adcc.backends.run_hf("molsturm", system.xyz, system.basis,
-                                      multiplicity=3, conv_tol_grad=1e-6)
+        scfres = adcc.backends.run_hf(
+            "molsturm", system.xyz, system.basis, multiplicity=3, conv_tol_grad=1e-6
+        )
         self.base_test(scfres)
         eri_asymm_construction_test(scfres)
         eri_asymm_construction_test(scfres, core_orbitals=1)

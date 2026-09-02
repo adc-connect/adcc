@@ -32,7 +32,7 @@ from .memory_pool import memory_pool
 
 __all__ = ["MoSpaces"]
 
-__valid_spaces = list(map(''.join, product(["o", "v"], ["1", "2", "3"])))
+__valid_spaces = list(map("".join, product(["o", "v"], ["1", "2", "3"])))
 
 
 def split_spaces(spacestr):
@@ -55,14 +55,14 @@ def expand_spaceargs(hfdata_or_n_orbs, **spaceargs):
         noa = hfdata.n_orbs_alpha
         nob = hfdata.n_orbs_beta
 
-    if isinstance(spaceargs.get("frozen_core", None), bool) \
-       and spaceargs.get("frozen_core", None):
+    if isinstance(spaceargs.get("frozen_core", None), bool) and spaceargs.get("frozen_core", None):
         # Determine number of frozen core electrons automatically
         # TODO The idea is to look at the energy gap in the HF orbital
         #      energies and exclude the ones, which are very far from the
         #      HOMO-LUMO gap.
-        raise NotImplementedError("Automatic determination of frozen-core "
-                                  "electrons not implemented.")
+        raise NotImplementedError(
+            "Automatic determination of frozen-core electrons not implemented."
+        )
         #
         # TODO One could also adopt the idea in the paper by Andreas and Chong
         #      how to automatically select the frozen_virtual orbitals in a
@@ -93,34 +93,35 @@ def expand_spaceargs(hfdata_or_n_orbs, **spaceargs):
             if isinstance(spaceargs[key][spin], Iterable):
                 any_iterable = True
             elif spaceargs[key][spin] is not None and any_iterable:
-                raise ValueError("If one of the values of frozen_core, "
-                                 "core_orbitals, frozen_virtual is an "
-                                 "iterable, all must be.")
+                raise ValueError(
+                    "If one of the values of frozen_core, "
+                    "core_orbitals, frozen_virtual is an "
+                    "iterable, all must be."
+                )
 
     n_orbs = [0, 0]
     for key in ["frozen_core", "core_orbitals"]:
         if key not in spaceargs or not spaceargs[key]:
             continue
-        list_alpha = expand_to_list(key, spaceargs[key][0],
-                                    from_min=n_orbs[0])
-        list_beta = noa + expand_to_list(key, spaceargs[key][1],
-                                         from_min=n_orbs[1])
+        list_alpha = expand_to_list(key, spaceargs[key][0], from_min=n_orbs[0])
+        list_beta = noa + expand_to_list(key, spaceargs[key][1], from_min=n_orbs[1])
         spaceargs[key] = np.concatenate((list_alpha, list_beta)).tolist()
         n_orbs[0] += len(list_alpha)
         n_orbs[1] += len(list_beta)
 
     key = "frozen_virtual"
     if spaceargs.get(key):
-        spaceargs[key] = np.concatenate((
-            expand_to_list(key, spaceargs[key][0], from_max=noa),
-            expand_to_list(key, spaceargs[key][1], from_max=nob) + noa
-        )).tolist()
+        spaceargs[key] = np.concatenate(
+            (
+                expand_to_list(key, spaceargs[key][0], from_max=noa),
+                expand_to_list(key, spaceargs[key][1], from_max=nob) + noa,
+            )
+        ).tolist()
     return spaceargs
 
 
 class MoSpaces(libadcc.MoSpaces):
-    def __init__(self, hfdata, core_orbitals=None, frozen_core=None,
-                 frozen_virtual=None):
+    def __init__(self, hfdata, core_orbitals=None, frozen_core=None, frozen_virtual=None):
         """Construct an MoSpaces object, which holds information for
         translating between the adcc convention of arranging molecular
         orbitals and the convention of the host program.
@@ -145,11 +146,19 @@ class MoSpaces(libadcc.MoSpaces):
         if not isinstance(hfdata, libadcc.HartreeFockSolution_i):
             hfdata = import_scf_results(hfdata)
 
-        spaceargs = expand_spaceargs(hfdata, frozen_core=frozen_core,
-                                     frozen_virtual=frozen_virtual,
-                                     core_orbitals=core_orbitals)
-        super().__init__(hfdata, memory_pool, spaceargs["core_orbitals"],
-                         spaceargs["frozen_core"], spaceargs["frozen_virtual"])
+        spaceargs = expand_spaceargs(
+            hfdata,
+            frozen_core=frozen_core,
+            frozen_virtual=frozen_virtual,
+            core_orbitals=core_orbitals,
+        )
+        super().__init__(
+            hfdata,
+            memory_pool,
+            spaceargs["core_orbitals"],
+            spaceargs["frozen_core"],
+            spaceargs["frozen_virtual"],
+        )
 
     @property
     def frozen_core(self):

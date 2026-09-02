@@ -6,11 +6,10 @@ import adcc
 
 # Run SCF in pyscf
 mol = gto.M(
-    atom='H 0 0 0;'
-         'F 0 0 2.5',
-    basis='6-31G',
+    atom="H 0 0 0;F 0 0 2.5",
+    basis="6-31G",
     unit="Bohr",
-    spin=2  # =2S, ergo triplet
+    spin=2,  # =2S, ergo triplet
 )
 scfres = scf.UHF(mol)
 scfres.conv_tol = 1e-14

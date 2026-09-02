@@ -37,8 +37,8 @@ def s2s_tdm_isr0(ground_state, amplitude_l, amplitude_r, intermediates):
     ur1 = amplitude_r.ph
 
     dm = OneParticleDensity(ground_state, symmetry=OperatorSymmetry.NOSYMMETRY)
-    dm.oo = -einsum('ja,ia->ij', ul1, ur1)
-    dm.vv = einsum('ia,ib->ab', ul1, ur1)
+    dm.oo = -einsum("ja,ia->ij", ul1, ur1)
+    dm.vv = einsum("ia,ib->ab", ul1, ur1)
     return dm
 
 
@@ -70,8 +70,8 @@ def s2s_tdm_isr2(ground_state, amplitude_l, amplitude_r, intermediates):
     p1_vv = dm.vv.evaluate()  # ADC(1) tdm
 
     # ADC(2) ISR intermediate (TODO Move to intermediates)
-    rul1 = einsum('ijab,jb->ia', t2, ul1).evaluate()
-    rur1 = einsum('ijab,jb->ia', t2, ur1).evaluate()
+    rul1 = einsum("ijab,jb->ia", t2, ul1).evaluate()
+    rur1 = einsum("ijab,jb->ia", t2, ur1).evaluate()
 
     dm.oo += (
         - 2.0 * einsum('ikab,jkab->ij', ur2, ul2)
@@ -454,14 +454,11 @@ def s2s_tdm_isr3d(ground_state, amplitude_l, amplitude_r, intermediates):
 def s2s_tdm_isr3(ground_state, amplitude_l, amplitude_r, intermediates):
     dm = s2s_tdm_isr3d(ground_state, amplitude_l, amplitude_r, intermediates)
     try:
-        check_triples_amplitudes([b.o, b.o, b.o, b.v, b.v, b.v],
-                                 amplitude_l, amplitude_r)
+        check_triples_amplitudes([b.o, b.o, b.o, b.v, b.v, b.v], amplitude_l, amplitude_r)
     except ValueError:
         return dm
 
-    raise NotImplementedError(
-        "Consistent ISR(3) including triples is not implemented yet."
-    )
+    raise NotImplementedError("Consistent ISR(3) including triples is not implemented yet.")
 
 
 # Ref: https://doi.org/10.1080/00268976.2013.859313
@@ -508,10 +505,10 @@ def state2state_transition_dm(
 
     if method.name not in DISPATCH:
         raise NotImplementedError(
-            f"state2state_transition_dm is not implemented for {method.name}.")
+            f"state2state_transition_dm is not implemented for {method.name}."
+        )
     else:
         # final state is on the bra side/left (complex conjugate)
         # see ref https://doi.org/10.1080/00268976.2013.859313, appendix A2
-        ret = DISPATCH[method.name](
-            ground_state, amplitude_to, amplitude_from, intermediates)
+        ret = DISPATCH[method.name](ground_state, amplitude_to, amplitude_from, intermediates)
         return ret.evaluate()

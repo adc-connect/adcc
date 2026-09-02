@@ -61,8 +61,7 @@ class TestAdcMatrixDenseExport:
         refstate = testdata_cache.refstate(h2o, case=case)
         matrix = adcc.AdcMatrix(method, refstate)
         state = adcc.run_adc(
-            matrix, method=method, conv_tol=conv_tol, n_states=n_states,
-            max_subspace=7 * n_states
+            matrix, method=method, conv_tol=conv_tol, n_states=n_states, max_subspace=7 * n_states
         )
 
         dense = matrix.to_ndarray()

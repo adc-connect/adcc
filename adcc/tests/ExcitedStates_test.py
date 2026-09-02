@@ -42,8 +42,7 @@ class TestExcitedStates:
             for key in dir(exci):
                 if key.startswith("_"):
                     continue
-                blacklist = ["__", "index", "_ao", "excitation_vector",
-                             "method", "parent_state"]
+                blacklist = ["__", "index", "_ao", "excitation_vector", "method", "parent_state"]
                 if any(b in key for b in blacklist):
                     continue
                 try:
@@ -62,8 +61,7 @@ class TestExcitedStates:
                 if isinstance(ref, (OneParticleOperator, OneParticleDensity)):
                     assert ref.blocks == res.blocks
                     for b in ref.blocks:
-                        assert_allclose(ref[b].to_ndarray(),
-                                        res[b].to_ndarray())
+                        assert_allclose(ref[b].to_ndarray(), res[b].to_ndarray())
                 else:
                     assert_allclose(ref, res)
 
@@ -72,21 +70,18 @@ class TestExcitedStates:
             system="h2o_sto3g", method="adc2", kind="singlet", case="gen"
         )
 
-        cc1 = EnergyCorrection("custom_correction1",
-                               lambda exci: exci.excitation_energy ** 2)
-        cc2 = EnergyCorrection("custom_correction2",
-                               lambda exci: 2.0)
-        cc3 = EnergyCorrection("custom_correction3",
-                               lambda exci: -42.0)
+        cc1 = EnergyCorrection("custom_correction1", lambda exci: exci.excitation_energy**2)
+        cc2 = EnergyCorrection("custom_correction2", lambda exci: 2.0)
+        cc3 = EnergyCorrection("custom_correction3", lambda exci: -42.0)
         state_corrected = state + [cc1, cc2]
         for i in range(state.size):
             assert hasattr(state_corrected, "custom_correction1")
             assert hasattr(state_corrected, "custom_correction2")
-            assert_allclose(state.excitation_energy[i],
-                            state_corrected.excitation_energy_uncorrected[i])
+            assert_allclose(
+                state.excitation_energy[i], state_corrected.excitation_energy_uncorrected[i]
+            )
             corr = state.excitation_energy[i] ** 2 + 2.0
-            assert_allclose(state.excitation_energy[i] + corr,
-                            state_corrected.excitation_energy[i])
+            assert_allclose(state.excitation_energy[i] + corr, state_corrected.excitation_energy[i])
 
         with pytest.raises(ValueError):
             state_corrected += cc2
@@ -98,11 +93,13 @@ class TestExcitedStates:
             assert hasattr(state_corrected2, "custom_correction1")
             assert hasattr(state_corrected2, "custom_correction2")
             assert hasattr(state_corrected2, "custom_correction3")
-            assert_allclose(state.excitation_energy[i],
-                            state_corrected2.excitation_energy_uncorrected[i])
+            assert_allclose(
+                state.excitation_energy[i], state_corrected2.excitation_energy_uncorrected[i]
+            )
             corr = state.excitation_energy[i] ** 2 + 2.0 - 42.0
-            assert_allclose(state.excitation_energy[i] + corr,
-                            state_corrected2.excitation_energy[i])
+            assert_allclose(
+                state.excitation_energy[i] + corr, state_corrected2.excitation_energy[i]
+            )
         state_corrected2.describe()
 
     def test_dataframe_export(self, gauge_origin="origin"):
@@ -126,8 +123,7 @@ class TestExcitedStates:
                 try:
                     assert_allclose(df[key], getattr(state, newkey)[:, i])
                 except TypeError:
-                    assert_allclose(df[key],
-                                    getattr(state, newkey)(gauge_origin)[:, i])
+                    assert_allclose(df[key], getattr(state, newkey)(gauge_origin)[:, i])
             elif hasattr(state, key[:-3]):
                 newkey = key[:-3]
                 i = components.index(key[-1])
@@ -135,7 +131,6 @@ class TestExcitedStates:
                 try:
                     assert_allclose(df[key], getattr(state, newkey)[:, i, j])
                 except TypeError:
-                    assert_allclose(df[key],
-                                    getattr(state, newkey)(gauge_origin)[:, i, j])
+                    assert_allclose(df[key], getattr(state, newkey)(gauge_origin)[:, i, j])
             else:
                 raise KeyError(f"Key {key} not found in ExcitedStates object.")

@@ -62,8 +62,9 @@ def guesses_singlet(matrix, n_guesses, block="ph", **kwargs):
                  (typically "ph" or "pphh").
     kwargs       Any other argument understood by guesses_from_diagonal.
     """
-    return guesses_from_diagonal(matrix, n_guesses, block=block,
-                                 **guess_kwargs_kind("singlet"), **kwargs)
+    return guesses_from_diagonal(
+        matrix, n_guesses, block=block, **guess_kwargs_kind("singlet"), **kwargs
+    )
 
 
 def guesses_triplet(matrix, n_guesses, block="ph", **kwargs):
@@ -78,8 +79,9 @@ def guesses_triplet(matrix, n_guesses, block="ph", **kwargs):
                  (typically "ph" or "pphh").
     kwargs       Any other argument understood by guesses_from_diagonal.
     """
-    return guesses_from_diagonal(matrix, n_guesses, block=block,
-                                 **guess_kwargs_kind("triplet"), **kwargs)
+    return guesses_from_diagonal(
+        matrix, n_guesses, block=block, **guess_kwargs_kind("triplet"), **kwargs
+    )
 
 
 # guesses for computing any state (singlet or triplet)
@@ -98,5 +100,6 @@ def guesses_spin_flip(matrix, n_guesses, block="ph", **kwargs):
                  (typically "ph" or "pphh").
     kwargs       Any other argument understood by guesses_from_diagonal.
     """
-    return guesses_from_diagonal(matrix, n_guesses, block=block,
-                                 **guess_kwargs_kind("spin_flip"), **kwargs)
+    return guesses_from_diagonal(
+        matrix, n_guesses, block=block, **guess_kwargs_kind("spin_flip"), **kwargs
+    )

@@ -54,9 +54,7 @@ class AdcMemory:
         Get or set the batch size for contraction, i.e. the number of elements handled simultaneously in a tensor contraction.
         """
     @contraction_batch_size.setter
-    def contraction_batch_size(
-        self, bsize: typing.SupportsInt | typing.SupportsIndex
-    ) -> None: ...
+    def contraction_batch_size(self, bsize: typing.SupportsInt | typing.SupportsIndex) -> None: ...
     @property
     def max_block_size(self) -> int:
         """
@@ -99,9 +97,7 @@ class HartreeFockProvider(HartreeFockSolution_i):
         """
         Fill the passed numpy array `out` with a part of the Fock matrix in the molecular orbital basis. The block to store is specified by the provided tuple of ranges `slices`, which gives the range of indices to place into the buffer along each of the axis. The index counting is done in spin orbitals, so the full range in each axis is `range(0, 2 * nf)`. The implementation should not assume that the alpha-beta and beta-alpha blocks are not accessed even though they are zero by spin symmetry.
         """
-    def fill_occupation_f(
-        self, out: numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]]
-    ) -> None:
+    def fill_occupation_f(self, out: numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]]) -> None:
         """
         Fill the passed numpy array of size `(2 * nf, )` with the occupation number for each SCF orbital.
         """
@@ -111,9 +107,7 @@ class HartreeFockProvider(HartreeFockSolution_i):
         """
         Fill the passed numpy array of size `(2 * nf, nb)` with the SCF orbital coefficients, i.e. the uniform transform from the one-particle basis to the molecular orbitals.
         """
-    def fill_orben_f(
-        self, out: numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]]
-    ) -> None:
+    def fill_orben_f(self, out: numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]]) -> None:
         """
         Fill the passed numpy array of size `(2 * nf, )` with the SCF orbital energies.
         """
@@ -164,9 +158,7 @@ class HartreeFockProvider(HartreeFockSolution_i):
         """
         Returns whether `fill_eri_phys_asym_ffff` function is implemented and should be used(*True*) or whether antisymmetrisation should be done inside adcc starting from the `fill_eri_ffff` function (*False*)
         """
-    def transform_gauge_origin_to_xyz(
-        self, gauge_origin: str
-    ) -> tuple[float, float, float]:
+    def transform_gauge_origin_to_xyz(self, gauge_origin: str) -> tuple[float, float, float]:
         """
         Transforms a string specifying the gauge origin to a tuple containing the x, y, z Cartesian components.
         """
@@ -220,9 +212,7 @@ class MoIndexTranslation:
         Construct a MoIndexTranslation class from an MoSpaces object and the identifier for the space (e.g. o1o1, v1o1, o3v2o1v1, ...)
         """
     @typing.overload
-    def __init__(
-        self, mospaces: MoSpaces, subspaces: collections.abc.Sequence[str]
-    ) -> None:
+    def __init__(self, mospaces: MoSpaces, subspaces: collections.abc.Sequence[str]) -> None:
         """
         Construct a MoIndexTranslation class from an MoSpaces object and the list of identifiers for the space (e.g. ["o1", "o1"] ...)
         """
@@ -311,9 +301,7 @@ class MoIndexTranslation:
                     be thought of as a half-open interval [start, end), where start and
                     end are the indexed passed as a pair to the function.
         """
-    def spin_of(
-        self, tpl: tuple[typing.SupportsInt | typing.SupportsIndex, ...]
-    ) -> str:
+    def spin_of(self, tpl: tuple[typing.SupportsInt | typing.SupportsIndex, ...]) -> str:
         """
         Get the spin block of each of the index components as a string.
         """
@@ -363,15 +351,9 @@ class MoSpaces:
         self,
         hf: HartreeFockSolution_i,
         adcmem: AdcMemory,
-        core_orbitals: collections.abc.Sequence[
-            typing.SupportsInt | typing.SupportsIndex
-        ],
-        frozen_core_orbitals: collections.abc.Sequence[
-            typing.SupportsInt | typing.SupportsIndex
-        ],
-        frozen_virtuals: collections.abc.Sequence[
-            typing.SupportsInt | typing.SupportsIndex
-        ],
+        core_orbitals: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex],
+        frozen_core_orbitals: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex],
+        frozen_virtuals: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex],
     ) -> None:
         """
         Construct an MoSpaces object from a HartreeFockSolution_i, a pointer to
@@ -741,45 +723,33 @@ class Symmetry:
         Blocks are given as a string in the letters 'a' and 'b', e.g. ["aaba", "abba"]
         """
     @spin_blocks_forbidden.setter
-    def spin_blocks_forbidden(
-        self, forbidden: collections.abc.Sequence[str]
-    ) -> None: ...
+    def spin_blocks_forbidden(self, forbidden: collections.abc.Sequence[str]) -> None: ...
 
 class Tensor:
     """
     Class representing the Tensor objects used for computations in adcc
     """
     @typing.overload
-    def __add__(
-        self, number: typing.SupportsFloat | typing.SupportsIndex
-    ) -> Tensor: ...
+    def __add__(self, number: typing.SupportsFloat | typing.SupportsIndex) -> Tensor: ...
     @typing.overload
     def __add__(self, other: Tensor) -> Tensor: ...
-    def __getitem__(
-        self, idcs: tuple[typing.SupportsInt | typing.SupportsIndex, ...]
-    ) -> float:
+    def __getitem__(self, idcs: tuple[typing.SupportsInt | typing.SupportsIndex, ...]) -> float:
         """
         Get a tensor element or a slice of tensor elements.
         """
     def __iadd__(self, other: Tensor) -> Tensor: ...
-    def __imul__(
-        self, number: typing.SupportsFloat | typing.SupportsIndex
-    ) -> Tensor: ...
+    def __imul__(self, number: typing.SupportsFloat | typing.SupportsIndex) -> Tensor: ...
     def __init__(self, symmetry: Symmetry) -> None:
         """
         Construct a Tensor object using a Symmetry object describing its symmetry properties.
         The returned object is not guaranteed to contain initialised memory. Python binding to :cpp:class:`libadcc::Tensor`
         """
     def __isub__(self, other: Tensor) -> Tensor: ...
-    def __itruediv__(
-        self, number: typing.SupportsFloat | typing.SupportsIndex
-    ) -> Tensor: ...
+    def __itruediv__(self, number: typing.SupportsFloat | typing.SupportsIndex) -> Tensor: ...
     def __len__(self) -> int: ...
     def __matmul__(self, other: Tensor) -> Tensor: ...
     @typing.overload
-    def __mul__(
-        self, number: typing.SupportsFloat | typing.SupportsIndex
-    ) -> Tensor: ...
+    def __mul__(self, number: typing.SupportsFloat | typing.SupportsIndex) -> Tensor: ...
     @typing.overload
     def __mul__(self, other: Tensor) -> Tensor:
         """
@@ -787,15 +757,9 @@ class Tensor:
         """
     def __neg__(self) -> Tensor: ...
     def __pos__(self) -> Tensor: ...
-    def __radd__(
-        self, number: typing.SupportsFloat | typing.SupportsIndex
-    ) -> Tensor: ...
-    def __rmul__(
-        self, number: typing.SupportsFloat | typing.SupportsIndex
-    ) -> Tensor: ...
-    def __rsub__(
-        self, number: typing.SupportsFloat | typing.SupportsIndex
-    ) -> Tensor: ...
+    def __radd__(self, number: typing.SupportsFloat | typing.SupportsIndex) -> Tensor: ...
+    def __rmul__(self, number: typing.SupportsFloat | typing.SupportsIndex) -> Tensor: ...
+    def __rsub__(self, number: typing.SupportsFloat | typing.SupportsIndex) -> Tensor: ...
     def __setitem__(
         self,
         idcs: tuple[typing.SupportsInt | typing.SupportsIndex, ...],
@@ -805,15 +769,11 @@ class Tensor:
         Set a tensor element or a slice of tensor elements. The operation will adhere symmetry, i.e. alter all elements equivalent by symmetry at once.
         """
     @typing.overload
-    def __sub__(
-        self, number: typing.SupportsFloat | typing.SupportsIndex
-    ) -> Tensor: ...
+    def __sub__(self, number: typing.SupportsFloat | typing.SupportsIndex) -> Tensor: ...
     @typing.overload
     def __sub__(self, other: Tensor) -> Tensor: ...
     @typing.overload
-    def __truediv__(
-        self, number: typing.SupportsFloat | typing.SupportsIndex
-    ) -> Tensor: ...
+    def __truediv__(self, number: typing.SupportsFloat | typing.SupportsIndex) -> Tensor: ...
     @typing.overload
     def __truediv__(self, other: Tensor) -> Tensor:
         """
@@ -854,9 +814,7 @@ class Tensor:
         """
         Ensure the tensor to be fully evaluated and resilient in memory. Usually happens automatically when needed. Might be useful for fine-tuning, however.
         """
-    def is_allowed(
-        self, idcs: tuple[typing.SupportsInt | typing.SupportsIndex, ...]
-    ) -> bool:
+    def is_allowed(self, idcs: tuple[typing.SupportsInt | typing.SupportsIndex, ...]) -> bool:
         """
         Is a particular index allowed by symmetry
         """
@@ -906,9 +864,7 @@ class Tensor:
         """
         Set the tensor as immutable, allowing some optimisations to be performed.
         """
-    def set_mask(
-        self, mask: str, value: typing.SupportsFloat | typing.SupportsIndex
-    ) -> None:
+    def set_mask(self, mask: str, value: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
         Set all elements corresponding to an index mask, which is given by a string eg. 'iijkli' sets elements T_{iijkli}
         """
@@ -931,9 +887,7 @@ class Tensor:
     @typing.overload
     def transpose(self) -> Tensor: ...
     @typing.overload
-    def transpose(
-        self, axes: tuple[typing.SupportsInt | typing.SupportsIndex, ...]
-    ) -> Tensor: ...
+    def transpose(self, axes: tuple[typing.SupportsInt | typing.SupportsIndex, ...]) -> Tensor: ...
     def zeros_like(self) -> Tensor: ...
     @property
     def T(self) -> Tensor: ...
@@ -959,9 +913,7 @@ class Tensor:
     @property
     def subspaces(self) -> list[str]: ...
 
-def amplitude_vector_enforce_spin_kind(
-    doubles_tensor: Tensor, block: str, spin_kind: str
-) -> None:
+def amplitude_vector_enforce_spin_kind(doubles_tensor: Tensor, block: str, spin_kind: str) -> None:
     """
     Apply the spin symmetrisation required to make the doubles and higher parts of an amplitude vector consist of components for a particular spin kind only.
     """

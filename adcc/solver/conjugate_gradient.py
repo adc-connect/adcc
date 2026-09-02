@@ -52,20 +52,19 @@ class IterativeInverse:
         if isinstance(x, list):
             return [self.__matmul__(xi) for xi in x]
         else:
-            guess = self.construct_guess(self.matrix,  x, self.cgstate)
-            self.cgstate = conjugate_gradient(self.matrix, x, guess,
-                                              **self.kwargs)
+            guess = self.construct_guess(self.matrix, x, self.cgstate)
+            self.cgstate = conjugate_gradient(self.matrix, x, guess, **self.kwargs)
             return self.cgstate.solution
 
 
 class State:
     def __init__(self):
-        self.solution = None       # Current approximation to the solution
-        self.residual = None       # Current residual
+        self.solution = None  # Current approximation to the solution
+        self.residual = None  # Current residual
         self.residual_norm = None  # Current residual norm
-        self.converged = False     # Flag whether iteration is converged
-        self.n_iter = 0            # Number of iterations
-        self.n_applies = 0         # Number of applies
+        self.converged = False  # Flag whether iteration is converged
+        self.n_iter = 0  # Number of iterations
+        self.n_applies = 0  # Number of applies
 
 
 def default_print(state, identifier, file=sys.stdout):
@@ -73,16 +72,23 @@ def default_print(state, identifier, file=sys.stdout):
         print("Niter residual_norm", file=file)
     elif identifier == "next_iter":
         fmt = "{n_iter:3d}  {residual:12.5g}"
-        print(fmt.format(n_iter=state.n_iter,
-                         residual=np.max(state.residual_norm)), file=file)
+        print(fmt.format(n_iter=state.n_iter, residual=np.max(state.residual_norm)), file=file)
     elif identifier == "is_converged":
         print("=== Converged ===", file=file)
         print("    Number of matrix applies:   ", state.n_applies)
 
 
-def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
-                       callback=None, Pinv=None, cg_type="polak_ribiere",
-                       explicit_symmetrisation=IndexSymmetrisation):
+def conjugate_gradient(
+    matrix,
+    rhs,
+    x0=None,
+    conv_tol=1e-9,
+    max_iter=100,
+    callback=None,
+    Pinv=None,
+    cg_type="polak_ribiere",
+    explicit_symmetrisation=IndexSymmetrisation,
+):
     """An implementation of the conjugate gradient algorithm.
 
     This algorithm implements the "flexible" conjugate gradient using the
@@ -115,11 +121,11 @@ def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
         obtaining an eigenvector with matching symmetry criteria.
     """
     if callback is None:
+
         def callback(state, identifier):
             pass
 
-    if explicit_symmetrisation is not None and \
-            isinstance(explicit_symmetrisation, type):
+    if explicit_symmetrisation is not None and isinstance(explicit_symmetrisation, type):
         explicit_symmetrisation = explicit_symmetrisation(matrix)
 
     if x0 is None:
@@ -175,9 +181,10 @@ def conjugate_gradient(matrix, rhs, x0=None, conv_tol=1e-9, max_iter=100,
             return state
 
         if state.n_iter == max_iter:
-            raise la.LinAlgError("Maximum number of iterations (== "
-                                 + str(max_iter) + " reached in conjugate "
-                                 "gradient procedure.")
+            raise la.LinAlgError(
+                "Maximum number of iterations (== " + str(max_iter) + " reached in conjugate "
+                "gradient procedure."
+            )
 
         zk = evaluate(Pinv @ state.residual)
 

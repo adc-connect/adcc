@@ -81,7 +81,7 @@ HEADER = """
 
 
 def npprint(arr):
-    fmt = '{:.18e}'
+    fmt = "{:.18e}"
     str_arr = [fmt.format(x) for x in arr]
     return ",".join(str_arr)
 
@@ -90,26 +90,32 @@ with open("./TensorTestData.cc", "w") as f:
     f.write(HEADER)
     f.write("namespace libadcc {\nnamespace tests {\n\n")
     f.write("size_t TensorTestData::N = " + str(N) + ";")
-    f.write("std::vector<double> TensorTestData::a = {"
-            + npprint(a.ravel()) + "};")
-    f.write("std::vector<double> TensorTestData::a_sym_01 = {"
-            + npprint(a_sym_01.ravel()) + "};")
-    f.write("std::vector<double> TensorTestData::a_asym_01 = {"
-            + npprint(a_asym_01.ravel()) + "};")
-    f.write("std::vector<double> TensorTestData::a_sym_01_23 = {"
-            + npprint(a_sym_01_23.ravel()) + "};")
-    f.write("std::vector<double> TensorTestData::a_asym_01_23 = {"
-            + npprint(a_asym_01_23.ravel()) + "};")
-    f.write("std::vector<double> TensorTestData::a_sym_012 = {"
-            + npprint(a_sym_012.ravel()) + "};")
-    f.write("std::vector<double> TensorTestData::a_asym_012 = {"
-            + npprint(a_asym_012.ravel()) + "};")
-    f.write("std::vector<double> TensorTestData::b = {"
-            + npprint(b.ravel()) + "};")
-    f.write("std::vector<double> TensorTestData::b_sym_012_345 = {"
-            + npprint(b_sym_012_345.ravel()) + "};")
-    f.write("std::vector<double> TensorTestData::b_asym_012_345 = {"
-            + npprint(b_asym_012_345.ravel()) + "};")
+    f.write("std::vector<double> TensorTestData::a = {" + npprint(a.ravel()) + "};")
+    f.write("std::vector<double> TensorTestData::a_sym_01 = {" + npprint(a_sym_01.ravel()) + "};")
+    f.write("std::vector<double> TensorTestData::a_asym_01 = {" + npprint(a_asym_01.ravel()) + "};")
+    f.write(
+        "std::vector<double> TensorTestData::a_sym_01_23 = {" + npprint(a_sym_01_23.ravel()) + "};"
+    )
+    f.write(
+        "std::vector<double> TensorTestData::a_asym_01_23 = {"
+        + npprint(a_asym_01_23.ravel())
+        + "};"
+    )
+    f.write("std::vector<double> TensorTestData::a_sym_012 = {" + npprint(a_sym_012.ravel()) + "};")
+    f.write(
+        "std::vector<double> TensorTestData::a_asym_012 = {" + npprint(a_asym_012.ravel()) + "};"
+    )
+    f.write("std::vector<double> TensorTestData::b = {" + npprint(b.ravel()) + "};")
+    f.write(
+        "std::vector<double> TensorTestData::b_sym_012_345 = {"
+        + npprint(b_sym_012_345.ravel())
+        + "};"
+    )
+    f.write(
+        "std::vector<double> TensorTestData::b_asym_012_345 = {"
+        + npprint(b_asym_012_345.ravel())
+        + "};"
+    )
     f.write("\n}\n}")
 
 

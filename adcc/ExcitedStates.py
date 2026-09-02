@@ -36,9 +36,11 @@ class ExcitedStates(ElectronicTransition):
         super().__init__(data, method, property_method)
 
         if self.method.adc_type is not AdcType.PP:
-            raise ValueError("ExcitedStates computes excited state properties "
-                             "for PP-ADC. Got the non-PP-ADC method "
-                             f"{self.method.name}")
+            raise ValueError(
+                "ExcitedStates computes excited state properties "
+                "for PP-ADC. Got the non-PP-ADC method "
+                f"{self.method.name}"
+            )
 
     def _repr_pretty_(self, pp, cycle):
         if cycle:
@@ -46,9 +48,15 @@ class ExcitedStates(ElectronicTransition):
         else:
             pp.text(self.describe())
 
-    def describe(self, oscillator_strengths=True, rotatory_strengths=False,
-                 state_dipole_moments=False, transition_dipole_moments=False,
-                 block_norms=True, ssq=False):
+    def describe(
+        self,
+        oscillator_strengths=True,
+        rotatory_strengths=False,
+        state_dipole_moments=False,
+        transition_dipole_moments=False,
+        block_norms=True,
+        ssq=False,
+    ):
         """
         Return a string providing a human-readable description of the class
 
@@ -75,8 +83,7 @@ class ExcitedStates(ElectronicTransition):
         """
         has_dipole = "electric_dipole" in self.operators.available
         has_rotatory = all(
-            op in self.operators.available for op in
-            ["magnetic_dipole", "electric_dipole_velocity"]
+            op in self.operators.available for op in ["magnetic_dipole", "electric_dipole_velocity"]
         )
         # Collect the columns to print
         columns: list[TableColumn] = []
@@ -88,79 +95,62 @@ class ExcitedStates(ElectronicTransition):
         # excitation energy in a.u. and eV
         eV = constants.value("Hartree energy in eV")
         values.extend(f"{e:^13.7g} {e * eV:^13.7g}" for e in self.excitation_energy)
-        columns.append(TableColumn(
-            header="excitation energy", values=values.copy(),
-            unit="(au)         (eV)"
-        ))
+        columns.append(
+            TableColumn(header="excitation energy", values=values.copy(), unit="(au)         (eV)")
+        )
         values.clear()
         # the transition dipole moments
         if transition_dipole_moments and has_dipole:
             for tdm in self.transition_dipole_moment:
                 tdmx, tdmy, tdmz = tdm
-                values.append(
-                    f"{tdmx:^8.4f} {tdmy:^8.4f} {tdmz:^8.4f}"
-                    f"{np.linalg.norm(tdm):^8.4f}"
+                values.append(f"{tdmx:^8.4f} {tdmy:^8.4f} {tdmz:^8.4f}{np.linalg.norm(tdm):^8.4f}")
+            columns.append(
+                TableColumn(
+                    header="transition dipole moment",
+                    values=values.copy(),
+                    unit="x(au)    y(au)    z(au)    abs(au)",
                 )
-            columns.append(TableColumn(
-                header="transition dipole moment", values=values.copy(),
-                unit="x(au)    y(au)    z(au)    abs(au)"
-            ))
+            )
             values.clear()
         # the oscillator strengths
         if oscillator_strengths and has_dipole:
             values.extend(f"{osc:^8.4f}" for osc in self.oscillator_strength)
-            columns.append(TableColumn(
-                header="osc str", values=values.copy(), unit="(au)"
-            ))
+            columns.append(TableColumn(header="osc str", values=values.copy(), unit="(au)"))
             values.clear()
         if rotatory_strengths and has_rotatory:
             values.extend(f"{rot:^8.4f}" for rot in self.rotatory_strength)
-            columns.append(TableColumn(
-                header="rot str", values=values.copy(), unit="(au)"
-            ))
+            columns.append(TableColumn(header="rot str", values=values.copy(), unit="(au)"))
             values.clear()
         # vector norm
         if block_norms and "ph" in self.matrix.axis_blocks:
-            values.extend(f"{dot(vec.ph, vec.ph):^9.4f}"
-                          for vec in self.excitation_vector)
-            columns.append(TableColumn(
-                header="|v1|^2", values=values.copy(), unit=""
-            ))
+            values.extend(f"{dot(vec.ph, vec.ph):^9.4f}" for vec in self.excitation_vector)
+            columns.append(TableColumn(header="|v1|^2", values=values.copy(), unit=""))
             values.clear()
         if block_norms and "pphh" in self.matrix.axis_blocks:
-            values.extend(f"{dot(vec.pphh, vec.pphh):^9.4f}"
-                          for vec in self.excitation_vector)
-            columns.append(TableColumn(
-                header="|v2|^2", values=values.copy(), unit=""
-            ))
+            values.extend(f"{dot(vec.pphh, vec.pphh):^9.4f}" for vec in self.excitation_vector)
+            columns.append(TableColumn(header="|v2|^2", values=values.copy(), unit=""))
             values.clear()
         if block_norms and "ppphhh" in self.matrix.axis_blocks:
-            values.extend(f"{dot(vec.ppphhh, vec.ppphhh):^9.4f}"
-                          for vec in self.excitation_vector)
-            columns.append(TableColumn(
-                header="|v3|^2", values=values.copy(), unit=""
-            ))
+            values.extend(f"{dot(vec.ppphhh, vec.ppphhh):^9.4f}" for vec in self.excitation_vector)
+            columns.append(TableColumn(header="|v3|^2", values=values.copy(), unit=""))
             values.clear()
         # the state dipole moment
         if state_dipole_moments and has_dipole:
             for dm in self.state_dipole_moment:
                 dmx, dmy, dmz = dm
-                values.append(
-                    f"{dmx:^8.4f} {dmy:^8.4f} {dmz:^8.4f}"
-                    f"{np.linalg.norm(dm):^8.4f}"
+                values.append(f"{dmx:^8.4f} {dmy:^8.4f} {dmz:^8.4f}{np.linalg.norm(dm):^8.4f}")
+            columns.append(
+                TableColumn(
+                    header="state dipole moment",
+                    values=values.copy(),
+                    unit="x(au)    y(au)    z(au)    abs(au)",
                 )
-            columns.append(TableColumn(
-                header="state dipole moment", values=values.copy(),
-                unit="x(au)    y(au)    z(au)    abs(au)"
-            ))
+            )
             values.clear()
             values.clear()
         if ssq and not self.reference_state.restricted:
-            values.extend(f"{ssq:^9.4f}"
-                          for ssq in self.state_ssq)
-            columns.append(TableColumn(
-                header="<S^2>", values=values.copy(), unit="(au)"
-            ))
+            values.extend(f"{ssq:^9.4f}" for ssq in self.state_ssq)
+            columns.append(TableColumn(header="<S^2>", values=values.copy(), unit="(au)"))
             values.clear()
         return self._describe(columns)
 
@@ -179,20 +169,23 @@ class ExcitedStates(ElectronicTransition):
         }
 
         if properties:
-            qcvars.update({
-                # Transition properties
-                f"{name} TRANSITION DIPOLES (LEN)": self.transition_dipole_moment,
-                f"{name} TRANSITION DIPOLES (VEL)": self.transition_dipole_moment_velocity,
-                f"{name} OSCILLATOR STRENGTHS (LEN)": self.oscillator_strength,
-                f"{name} OSCILLATOR STRENGTHS (VEL)": self.oscillator_strength_velocity,
-                f"{name} ROTATIONAL STRENGTHS (VEL)": self.rotatory_strength,
-                #
-                # State properties
-                f"{name} STATE DIPOLES": self.state_dipole_moment
-            })
+            qcvars.update(
+                {
+                    # Transition properties
+                    f"{name} TRANSITION DIPOLES (LEN)": self.transition_dipole_moment,
+                    f"{name} TRANSITION DIPOLES (VEL)": self.transition_dipole_moment_velocity,
+                    f"{name} OSCILLATOR STRENGTHS (LEN)": self.oscillator_strength,
+                    f"{name} OSCILLATOR STRENGTHS (VEL)": self.oscillator_strength_velocity,
+                    f"{name} ROTATIONAL STRENGTHS (VEL)": self.rotatory_strength,
+                    #
+                    # State properties
+                    f"{name} STATE DIPOLES": self.state_dipole_moment,
+                }
+            )
 
         if recurse:
-            mpvars = self.ground_state.to_qcvars(properties, recurse=True,
-                                                 maxlevel=self.method.level)
+            mpvars = self.ground_state.to_qcvars(
+                properties, recurse=True, maxlevel=self.method.level
+            )
             qcvars.update(mpvars)
         return qcvars

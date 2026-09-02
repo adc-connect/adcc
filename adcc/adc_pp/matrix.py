@@ -68,21 +68,27 @@ def block(ground_state, spaces, order, variant=None, intermediates=None):
         intermediates = Intermediates(ground_state)
 
     if ground_state.has_core_occupied_space and "cvs" not in variant:
-        raise ValueError("Cannot run a general (non-core-valence approximated) "
-                         "ADC method on top of a ground state with a "
-                         "core-valence separation.")
+        raise ValueError(
+            "Cannot run a general (non-core-valence approximated) "
+            "ADC method on top of a ground state with a "
+            "core-valence separation."
+        )
     if not ground_state.has_core_occupied_space and "cvs" in variant:
-        raise ValueError("Cannot run a core-valence approximated ADC method on "
-                         "top of a ground state without a "
-                         "core-valence separation.")
+        raise ValueError(
+            "Cannot run a core-valence approximated ADC method on "
+            "top of a ground state without a "
+            "core-valence separation."
+        )
 
     fn = "_".join(["block"] + variant + spaces + [str(order)])
 
     if fn not in globals():
-        raise ValueError("Could not dispatch: "
-                         f"spaces={spaces} order={order} variant={variant}. "
-                         "Probably the secular matrix is not implemented for "
-                         "the requested method.")
+        raise ValueError(
+            "Could not dispatch: "
+            f"spaces={spaces} order={order} variant={variant}. "
+            "Probably the secular matrix is not implemented for "
+            "the requested method."
+        )
     return globals()[fn](reference_state, ground_state, intermediates)
 
 
@@ -91,14 +97,14 @@ def block(ground_state, spaces, order, variant=None, intermediates=None):
 #
 def block_ph_ph_0(hf, mp, intermediates):
     fCC = hf.fcc if hf.has_core_occupied_space else hf.foo
-    diagonal = AmplitudeVector(ph=direct_sum("a-i->ia", hf.fvv.diagonal(),
-                                             fCC.diagonal()))
+    diagonal = AmplitudeVector(ph=direct_sum("a-i->ia", hf.fvv.diagonal(), fCC.diagonal()))
 
     def apply(ampl):
         return AmplitudeVector(ph=(
             + einsum("ib,ab->ia", ampl.ph, hf.fvv)
             - einsum("IJ,Ja->Ia", fCC, ampl.ph)
         ))  # fmt: skip
+
     return AdcBlock(apply, diagonal)
 
 
@@ -129,6 +135,7 @@ def block_pphh_pphh_0(hf, mp, intermediates):
             + 2 * einsum("ijac,bc->ijab", ampl.pphh, hf.fvv).antisymmetrise(2, 3)
             - 2 * einsum("ik,kjab->ijab", hf.foo, ampl.pphh).antisymmetrise(0, 1)
         ))  # fmt: skip
+
     return AdcBlock(apply, diagonal_pphh_pphh_0(hf))
 
 
@@ -139,6 +146,7 @@ def block_cvs_pphh_pphh_0(hf, mp, intermediates):
             - einsum("ik,kJab->iJab", hf.foo, ampl.pphh)
             - einsum("JK,iKab->iJab", hf.fcc, ampl.pphh)
         ))  # fmt: skip
+
     return AdcBlock(apply, diagonal_pphh_pphh_0(hf))
 
 
@@ -151,6 +159,7 @@ def block_ppphhh_ppphhh_0(hf, mp, intermediates):
         ur3 = ampl.ppphhh
         diag = intermediates.df3
         return AmplitudeVector(ppphhh=diag * ur3)
+
     return AdcBlock(apply, diagonal_ppphhh_ppphhh_0(intermediates))
 
 
@@ -202,6 +211,7 @@ def block_ph_ph_1(hf, mp, intermediates):
             - einsum("IJ,Ja->Ia", fCC, ampl.ph)     # 0
             - einsum("JaIb,Jb->Ia", CvCv, ampl.ph)  # 1
         ))  # fmt: skip
+
     return AdcBlock(apply, diagonal)
 
 
@@ -210,12 +220,16 @@ block_cvs_ph_ph_1 = block_ph_ph_1
 
 def diagonal_pphh_pphh_1(hf):
     # Fock matrix and ovov diagonal term (sometimes called "intermediate diagonal")
-    dinterm_ov = (direct_sum("a-i->ia", hf.fvv.diagonal(), hf.foo.diagonal())
-                  - 2.0 * einsum("iaia->ia", hf.ovov)).evaluate()
+    dinterm_ov = (
+        direct_sum("a-i->ia", hf.fvv.diagonal(), hf.foo.diagonal())
+        - 2.0 * einsum("iaia->ia", hf.ovov)
+    ).evaluate()
 
     if hf.has_core_occupied_space:
-        dinterm_Cv = (direct_sum("a-I->Ia", hf.fvv.diagonal(), hf.fcc.diagonal())
-                      - 2.0 * einsum("IaIa->Ia", hf.cvcv)).evaluate()
+        dinterm_Cv = (
+            direct_sum("a-I->Ia", hf.fvv.diagonal(), hf.fcc.diagonal())
+            - 2.0 * einsum("IaIa->Ia", hf.cvcv)
+        ).evaluate()
         diag_oC = einsum("iJiJ->iJ", hf.ococ)
     else:
         dinterm_Cv = dinterm_ov
@@ -242,6 +256,7 @@ def block_pphh_pphh_1(hf, mp, intermediates):
             + 0.5 * einsum("ijkl,klab->ijab", hf.oooo, ampl.pphh)
             + 0.5 * einsum("ijcd,abcd->ijab", ampl.pphh, hf.vvvv)
         ))  # fmt: skip
+
     return AdcBlock(apply, diagonal_pphh_pphh_1(hf))
 
 
@@ -260,6 +275,7 @@ def block_cvs_pphh_pphh_1(hf, mp, intermediates):
             + 1.0 * einsum("iJlK,lKab->iJab", hf.ococ, ampl.pphh)
             + 0.5 * einsum("iJcd,abcd->iJab", ampl.pphh, hf.vvvv)
         ))  # fmt: skip
+
     return AdcBlock(apply, diagonal_pphh_pphh_1(hf))
 
 
@@ -272,6 +288,7 @@ def block_ph_pphh_1(hf, mp, intermediates):
             + einsum("jkib,jkab->ia", hf.ooov, ampl.pphh)
             + einsum("ijbc,jabc->ia", ampl.pphh, hf.ovvv)
         ))  # fmt: skip
+
     return AdcBlock(apply, 0)
 
 
@@ -281,6 +298,7 @@ def block_cvs_ph_pphh_1(hf, mp, intermediates):
             + sqrt(2) * einsum("jKIb,jKab->Ia", hf.occv, ampl.pphh)
             - 1 / sqrt(2) * einsum("jIbc,jabc->Ia", ampl.pphh, hf.ovvv)
         ))  # fmt: skip
+
     return AdcBlock(apply, 0)
 
 
@@ -290,6 +308,7 @@ def block_pphh_ph_1(hf, mp, intermediates):
             + einsum("ic,jcab->ijab", ampl.ph, hf.ovvv).antisymmetrise(0, 1)
             - einsum("ijka,kb->ijab", hf.ooov, ampl.ph).antisymmetrise(2, 3)
         ))  # fmt: skip
+
     return AdcBlock(apply, 0)
 
 
@@ -300,6 +319,7 @@ def block_cvs_pphh_ph_1(hf, mp, intermediates):
                                hf.occv, ampl.ph).antisymmetrise(2, 3)
             - 1 / sqrt(2) * einsum("Ic,jcab->jIab", ampl.ph, hf.ovvv)
         ))  # fmt: skip
+
     return AdcBlock(apply, 0)
 
 
@@ -326,6 +346,7 @@ def block_pphh_ppphhh_1(hf, mp, intermediates):
                                  ur3, hf.ooov)
             ).antisymmetrise(0, 1)
         ))  # fmt: skip
+
     return AdcBlock(apply, 0)
 
 
@@ -343,6 +364,7 @@ def block_ppphhh_pphh_1(hf, mp, intermediates):
                 - 1 / 3 * einsum("ijad,kdbc->ijkabc", ur2, hf.ovvv)
             ).antisymmetrise(0, 1, 2).antisymmetrise(3, 4, 5)
         ))  # fmt: skip
+
     return AdcBlock(apply, 0)
 
 
@@ -371,6 +393,7 @@ def block_ph_ph_2(hf, mp, intermediates):
             - einsum("jaib,jb->ia", hf.ovov, ampl.ph)    # 1
             - 0.5 * einsum("ikac,kc->ia", term_t2_eri, ampl.ph)  # 2
         ))  # fmt: skip
+
     return AdcBlock(apply, diagonal)
 
 
@@ -387,13 +410,16 @@ def block_cvs_ph_ph_2(hf, mp, intermediates):
             - einsum("ij,ja->ia", hf.fcc, ampl.ph)
             - einsum("JaIb,Jb->Ia", hf.cvcv, ampl.ph)
         ))  # fmt: skip
+
     return AdcBlock(apply, diagonal)
 
 
 def diagonal_pphh_pphh_2(hf, mp):
     # Fock matrix and ovov diagonal term (sometimes called "intermediate diagonal")
-    dinterm_ov = (direct_sum("a-i->ia", hf.fvv.diagonal(), hf.foo.diagonal())
-                  - 2.0 * einsum("iaia->ia", hf.ovov)).evaluate()
+    dinterm_ov = (
+        direct_sum("a-i->ia", hf.fvv.diagonal(), hf.foo.diagonal())
+        - 2.0 * einsum("iaia->ia", hf.ovov)
+    ).evaluate()
 
     t2_1 = mp.t2(b.oovv)
 
@@ -480,6 +506,7 @@ def block_pphh_pphh_2(hf, mp, intermediates):
                                einsum("jkac,klcd->jlad", ur2, t2_1), hf.oovv)
             ).antisymmetrise(0, 1).antisymmetrise(2, 3)
         ))  # fmt: skip
+
     return AdcBlock(apply, diagonal_pphh_pphh_2(hf, mp))
 
 
@@ -497,6 +524,7 @@ def block_ph_pphh_2(hf, mp, intermediates):
             + einsum("icab,jkcd,jkbd->ia", hf.ovvv, ampl.pphh, mp.t2oo)  # 2nd
             + einsum("ijka,jlbc,klbc->ia", hf.ooov, mp.t2oo, ampl.pphh)  # 2nd
         ))  # fmt: skip
+
     return AdcBlock(apply, 0)
 
 
@@ -510,6 +538,7 @@ def block_cvs_ph_pphh_2(hf, mp, intermediates):
             - einsum("lIcd,lacd->Ia", ampl.pphh, pib_ovvv)
             - einsum("jIKa,ljcd,lKcd->Ia", hf.occv, mp.t2oo, ampl.pphh)
         ))  # fmt: skip
+
     return AdcBlock(apply, 0)
 
 
@@ -528,6 +557,7 @@ def block_pphh_ph_2(hf, mp, intermediates):
                 - einsum("ijac,kbcd,kd->ijab", mp.t2oo, hf.ovvv, ampl.ph)  # 2st
             ).antisymmetrise(2, 3)
         ))  # fmt: skip
+
     return AdcBlock(apply, 0)
 
 
@@ -541,6 +571,7 @@ def block_cvs_pphh_ph_2(hf, mp, intermediates):
             - einsum("Ic,jcab->jIab", ampl.ph, pib_ovvv)
             - einsum("lKIc,Kc,jlab->jIab", hf.occv, ampl.ph, mp.t2oo)
         ))  # fmt: skip
+
     return AdcBlock(apply, 0)
 
 
@@ -563,6 +594,7 @@ def block_ph_ppphhh_2(hf, mp, intermediates):
             + 3 / 2 * einsum("jlma,imjl->ia",
                              einsum("jklabc,kmbc->jlma", ur3, t2_1), hf.oooo)
         ))  # fmt: skip
+
     return AdcBlock(apply, 0)
 
 
@@ -595,6 +627,7 @@ def block_ppphhh_ph_2(hf, mp, intermediates):
                                  einsum("la,jklm->jkma", ur1, hf.oooo), t2_1)
             ).antisymmetrise(0, 1, 2).antisymmetrise(3, 4, 5)
         ))  # fmt: skip
+
     return AdcBlock(apply, 0)
 
 
@@ -610,6 +643,7 @@ def block_ph_ph_3(hf, mp, intermediates):
 
     def apply(ampl):
         return AmplitudeVector(ph=einsum("iajb,jb->ia", m11, ampl.ph))
+
     return AdcBlock(apply, diagonal)
 
 
@@ -757,6 +791,7 @@ def block_ph_pphh_3(hf, mp, intermediates):
                                    einsum("lmcd,lmid->ic", t2_1, hf.ooov),
                                    t2_1), ur2)
         ))  # fmt: skip
+
     return AdcBlock(apply, 0)
 
 
@@ -909,6 +944,7 @@ def block_pphh_ph_3(hf, mp, intermediates):
                                 einsum("jlkb,il->ijkb", hf.ooov, p0_2_oo), ur1)
             ).antisymmetrise(0, 1).antisymmetrise(2, 3)
         ))  # fmt: skip
+
     return AdcBlock(apply, 0)
 
 
@@ -921,12 +957,14 @@ def block_ph_ph_4(hf, mp, intermediates):
 
     def apply(ampl):
         return AmplitudeVector(ph=einsum("iajb,jb->ia", m11, ampl.ph))
+
     return AdcBlock(apply, diagonal)
 
 
 #
 # Intermediates
 #
+
 
 @register_as_intermediate
 def adc2_i1(hf, mp, intermediates):

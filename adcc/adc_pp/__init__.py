@@ -32,9 +32,9 @@ from the high-level objects in the adcc main module.
 """
 
 __all__ = [
-           "modified_transition_moments",
-           "state2state_transition_dm",
-           "state_diffdm",
-           "state_diffdm_2p",
-           "transition_dm",
+    "modified_transition_moments",
+    "state2state_transition_dm",
+    "state_diffdm",
+    "state_diffdm_2p",
+    "transition_dm",
 ]

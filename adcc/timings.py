@@ -64,20 +64,16 @@ def strtime(span, colour=False):
         return cms + f"{span * 1000:6.3f}ms" + cr
     if span < 120:
         full = int(span)
-        return (cs + f"{full:3d}s " + cms
-                + f"{int((span - full) * 1000):3d}ms" + cr)
+        return cs + f"{full:3d}s " + cms + f"{int((span - full) * 1000):3d}ms" + cr
     if span < 3600:
         full = int(span / 60)
-        return (cm + f"{full:2d}m " + cs
-                + f"{int(span - full * 60):2d}s" + cr)
+        return cm + f"{full:2d}m " + cs + f"{int(span - full * 60):2d}s" + cr
     if span < 86400:
         full = int(span / 3600)
-        return (ch + f"{full:2d}h " + cm
-                + f"{int(span / 60 - full * 60):2d}m" + cr)
+        return ch + f"{full:2d}h " + cm + f"{int(span / 60 - full * 60):2d}m" + cr
     else:
         full = int(span / 86400)
-        return (cd + f"{full:3d}d " + ch
-                + f"{int(span / 3600 - full * 24):2d}h" + cr)
+        return cd + f"{full:3d}d " + ch + f"{int(span / 3600 - full * 24):2d}h" + cr
 
 
 class Timer:
@@ -228,11 +224,13 @@ def timed_call(f):
     Decorator to automatically time function calls.
     The timer object is available under the function attribute _timer
     """
+
     def decorated(*args, **kwargs):
         if not hasattr(decorated, "_timer"):
             decorated._timer = Timer()
         with decorated._timer.record(f.__name__):
             return f(*args, **kwargs)
+
     decorated.__doc__ = f.__doc__
     return decorated
 
@@ -243,12 +241,15 @@ def timed_member_call(timer="timer"):
     The name of the instance attribute where timings are stored is the
     timer argument to this function.
     """
+
     def decorator(f):
         def wrapped(self, *args, **kwargs):
             if not hasattr(self, timer):
                 setattr(self, timer, Timer())
             with getattr(self, timer).record(f.__name__):
                 return f(self, *args, **kwargs)
+
         wrapped.__doc__ = f.__doc__
         return wrapped
+
     return decorator

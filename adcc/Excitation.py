@@ -44,12 +44,14 @@ class Excitation(StateView):
             should refer to (0-based)
         """
         from .ExcitedStates import ElectronicTransition
+
         # NOTE: This should also work with S2S. But then index
         # would need to be relative to S2S.initial, i.e., 0 for S2S.initial + 1
         # which is kind of weird. But I think we can allow it.
         if not isinstance(parent_state, ElectronicTransition):
-            raise TypeError("parent_state needs to be an ExcitedStates object. "
-                            f"Got: {type(parent_state)}.")
+            raise TypeError(
+                f"parent_state needs to be an ExcitedStates object. Got: {type(parent_state)}."
+            )
         super().__init__(parent_state, index)
         self._parent_state: ElectronicTransition
 
@@ -73,8 +75,7 @@ class Excitation(StateView):
         """The transition dipole moment in the velocity gauge"""
         return self._parent_state._transition_dipole_moment_velocity(self.index)
 
-    def transition_magnetic_dipole_moment(self,
-                                          gauge_origin="origin") -> np.ndarray:
+    def transition_magnetic_dipole_moment(self, gauge_origin="origin") -> np.ndarray:
         """The transition magnetic dipole moment"""
         return self._parent_state._transition_magnetic_dipole_moment(
             state_n=self.index, gauge_origin=gauge_origin
@@ -86,8 +87,7 @@ class Excitation(StateView):
             state_n=self.index, gauge_origin=gauge_origin
         )
 
-    def transition_quadrupole_moment_velocity(self,
-                                              gauge_origin="origin") -> np.ndarray:
+    def transition_quadrupole_moment_velocity(self, gauge_origin="origin") -> np.ndarray:
         """The transition quadrupole moment"""
         return self._parent_state._transition_quadrupole_moment_velocity(
             state_n=self.index, gauge_origin=gauge_origin

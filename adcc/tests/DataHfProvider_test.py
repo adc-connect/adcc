@@ -38,9 +38,18 @@ class TestDataHfProvdier(unittest.TestCase):
         refdata = testdata_cache.hfimport(system, case=case)
 
         bdict = {}
-        for key in ["restricted", "conv_tol", "occupation_f", "orbcoeff_fb",
-                    "orben_f", "fock_ff", "eri_ffff", "energy_scf",
-                    "nuclear_repulsion_energy", "spin_multiplicity"]:
+        for key in [
+            "restricted",
+            "conv_tol",
+            "occupation_f",
+            "orbcoeff_fb",
+            "orben_f",
+            "fock_ff",
+            "eri_ffff",
+            "energy_scf",
+            "nuclear_repulsion_energy",
+            "spin_multiplicity",
+        ]:
             bdict[key] = data[key]
 
         dmmp = data["multipoles"]
@@ -52,8 +61,7 @@ class TestDataHfProvdier(unittest.TestCase):
 
         # Import hfdata from dict
         compare_refstate_with_reference(
-            system=system, case=case, data=data, reference=refdata, scfres=bdict,
-            compare_eri="abs"
+            system=system, case=case, data=data, reference=refdata, scfres=bdict, compare_eri="abs"
         )
 
     def test_hdf5(self):
@@ -75,10 +83,10 @@ class TestDataHfProvdier(unittest.TestCase):
 
                 # Optional keys
                 h5f.create_dataset("energy_scf", data=data["energy_scf"])
-                h5f.create_dataset("nuclear_repulsion_energy",
-                                   data=data["nuclear_repulsion_energy"])
-                h5f.create_dataset("spin_multiplicity",
-                                   data=data["spin_multiplicity"])
+                h5f.create_dataset(
+                    "nuclear_repulsion_energy", data=data["nuclear_repulsion_energy"]
+                )
+                h5f.create_dataset("spin_multiplicity", data=data["spin_multiplicity"])
 
                 dmmp = data["multipoles"]
                 mmp = h5f.create_group("multipoles")
@@ -88,6 +96,10 @@ class TestDataHfProvdier(unittest.TestCase):
 
             # Import hfdata from hdf5 file
             compare_refstate_with_reference(
-                system=system, case=case, data=data, reference=refdata,
-                scfres=str(fn), compare_eri="abs"
+                system=system,
+                case=case,
+                data=data,
+                reference=refdata,
+                scfres=str(fn),
+                compare_eri="abs",
             )

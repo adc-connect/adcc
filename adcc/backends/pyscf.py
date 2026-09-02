@@ -39,9 +39,15 @@ DipoleLike = tuple[Array2D, Array2D, Array2D]
 # Once we drop python 3.10 we can write
 # QuadrupoleLike = tuple[*DipoleLike, *DipoleLike, *DipoleLike]
 QuadrupoleLike = tuple[
-    Array2D, Array2D, Array2D,
-    Array2D, Array2D, Array2D,
-    Array2D, Array2D, Array2D,
+    Array2D,
+    Array2D,
+    Array2D,
+    Array2D,
+    Array2D,
+    Array2D,
+    Array2D,
+    Array2D,
+    Array2D,
 ]
 Coordinate = tuple[float, float, float]
 Environment = Literal["pe", "pcm"]
@@ -50,10 +56,16 @@ EnvironmentImplementation = Literal["cppe", "ddcosmo"]
 
 class PyScfOperatorIntegralProvider:
     available: tuple[str, ...] = (
-        "overlap", "electric_dipole", "electric_dipole_velocity", "magnetic_dipole",
-        "electric_quadrupole", "electric_quadrupole_traceless",
-        "electric_quadrupole_velocity", "diamagnetic_magnetizability",
-        "pe_induction_elec", "pcm_potential_elec"
+        "overlap",
+        "electric_dipole",
+        "electric_dipole_velocity",
+        "magnetic_dipole",
+        "electric_quadrupole",
+        "electric_quadrupole_traceless",
+        "electric_quadrupole_velocity",
+        "diamagnetic_magnetizability",
+        "pe_induction_elec",
+        "pcm_potential_elec",
     )
 
     def __init__(self, scfres: scf.hf.SCF):
@@ -62,27 +74,21 @@ class PyScfOperatorIntegralProvider:
 
     @property
     def overlap(self) -> Array2D:
-        return self.scfres.mol.intor_symmetric('int1e_ovlp')
+        return self.scfres.mol.intor_symmetric("int1e_ovlp")
 
     @property
     def electric_dipole(self) -> DipoleLike:
         """-sum_i r_i"""
-        return tuple(
-            -1.0 * self.scfres.mol.intor_symmetric('int1e_r', comp=3)
-        )
+        return tuple(-1.0 * self.scfres.mol.intor_symmetric("int1e_r", comp=3))
 
-    def magnetic_dipole(
-        self, gauge_origin: Coordinate | str = "origin"
-    ) -> DipoleLike:
+    def magnetic_dipole(self, gauge_origin: Coordinate | str = "origin") -> DipoleLike:
         """
         The imaginary part of the integral is returned.
         -0.5 * sum_i r_i x p_i
         """
         gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
         with self.scfres.mol.with_common_orig(gauge_origin):
-            return tuple(
-                -0.5 * self.scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
-            )
+            return tuple(-0.5 * self.scfres.mol.intor("int1e_cg_irxp", comp=3, hermi=2))
 
     @property
     def electric_dipole_velocity(self) -> DipoleLike:
@@ -91,19 +97,13 @@ class PyScfOperatorIntegralProvider:
         -sum_i p_i
         """
         with self.scfres.mol.with_common_orig((0.0, 0.0, 0.0)):
-            return tuple(
-                self.scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
-            )
+            return tuple(self.scfres.mol.intor("int1e_ipovlp", comp=3, hermi=2))
 
-    def electric_quadrupole(
-        self, gauge_origin: Coordinate | str = "origin"
-    ) -> QuadrupoleLike:
+    def electric_quadrupole(self, gauge_origin: Coordinate | str = "origin") -> QuadrupoleLike:
         """-sum_i r_{i, alpha} r_{i, beta}"""
         gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
         with self.scfres.mol.with_common_orig(gauge_origin):
-            return tuple(
-                -1.0 * self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
-            )
+            return tuple(-1.0 * self.scfres.mol.intor_symmetric("int1e_rr", comp=9))
 
     def electric_quadrupole_traceless(
         self, gauge_origin: Coordinate | str = "origin"
@@ -114,16 +114,14 @@ class PyScfOperatorIntegralProvider:
         """
         gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
         with self.scfres.mol.with_common_orig(gauge_origin):
-            r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
+            r_r = self.scfres.mol.intor_symmetric("int1e_rr", comp=9)
             r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
-            r_quadr = self.scfres.mol.intor_symmetric('int1e_r2', comp=1)
+            r_quadr = self.scfres.mol.intor_symmetric("int1e_r2", comp=1)
             r_quadr_matrix = np.zeros_like(r_r)
             for i in range(3):
                 r_quadr_matrix[i][i] = r_quadr
             term = 0.5 * (3 * r_r - r_quadr_matrix)
-            return tuple(
-                -1.0 * np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
-            )
+            return tuple(-1.0 * np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0])))
 
     def electric_quadrupole_velocity(
         self, gauge_origin: Coordinate | str = "origin"
@@ -135,16 +133,14 @@ class PyScfOperatorIntegralProvider:
         """
         gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
         with self.scfres.mol.with_common_orig(gauge_origin):
-            r_p = self.scfres.mol.intor('int1e_irp', comp=9, hermi=0)
+            r_p = self.scfres.mol.intor("int1e_irp", comp=9, hermi=0)
             r_p = np.reshape(r_p, (3, 3, r_p.shape[1], r_p.shape[1]))
-            ovlp = self.scfres.mol.intor_symmetric('int1e_ovlp', comp=1)
+            ovlp = self.scfres.mol.intor_symmetric("int1e_ovlp", comp=1)
             ovlp_matrix = np.zeros_like(r_p)
             for i in range(3):
                 ovlp_matrix[i][i] = ovlp
             term = r_p + r_p.transpose(1, 0, 2, 3) - ovlp_matrix
-            return tuple(
-                -1.0 * np.reshape(term, (9, ovlp.shape[0], ovlp.shape[0]))
-            )
+            return tuple(-1.0 * np.reshape(term, (9, ovlp.shape[0], ovlp.shape[0])))
 
     def diamagnetic_magnetizability(
         self, gauge_origin: Coordinate | str = "origin"
@@ -155,33 +151,35 @@ class PyScfOperatorIntegralProvider:
         """
         gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
         with self.scfres.mol.with_common_orig(gauge_origin):
-            r_r = self.scfres.mol.intor_symmetric('int1e_rr', comp=9)
+            r_r = self.scfres.mol.intor_symmetric("int1e_rr", comp=9)
             r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
-            r_quadr = self.scfres.mol.intor_symmetric('int1e_r2', comp=1)
+            r_quadr = self.scfres.mol.intor_symmetric("int1e_r2", comp=1)
             r_quadr_matrix = np.zeros_like(r_r)
             for i in range(3):
                 r_quadr_matrix[i][i] = r_quadr
             term = 0.25 * (r_quadr_matrix - r_r)
-            return cast(QuadrupoleLike, tuple(
-                np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
-            ))
+            return cast(
+                QuadrupoleLike, tuple(np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0])))
+            )
 
     def pe_induction_elec(self, dm: libadcc.Tensor) -> Array2D:
         try:
             _ = self.scfres.with_solvent.cppe_state
         except AttributeError:
-            raise RuntimeError("Can not compute the PE electronic induction "
-                               "operator using the given pyscf object.")
+            raise RuntimeError(
+                "Can not compute the PE electronic induction operator using the given pyscf object."
+            )
 
-        return self.scfres.with_solvent._exec_cppe(
-            dm.to_ndarray(), elec_only=True
-        )[1]
+        return self.scfres.with_solvent._exec_cppe(dm.to_ndarray(), elec_only=True)[1]
 
     def pcm_potential_elec(self, dm: libadcc.Tensor) -> Array2D:
-        if not hasattr(self.scfres, "with_solvent") or \
-                not isinstance(self.scfres.with_solvent, ddcosmo.DDCOSMO):
-            raise RuntimeError("Can not compute the electronic PCM potential "
-                               "operator using the given pyscf object.")
+        if not hasattr(self.scfres, "with_solvent") or not isinstance(
+            self.scfres.with_solvent, ddcosmo.DDCOSMO
+        ):
+            raise RuntimeError(
+                "Can not compute the electronic PCM potential "
+                "operator using the given pyscf object."
+            )
 
         # Since eps (dielectric constant) is the only solvent parameter
         # in pyscf and there is no solvent data available in the
@@ -194,28 +192,32 @@ class PyScfOperatorIntegralProvider:
 # TODO: refactor ERI builder to be more general
 # IntegralBuilder would be good
 class PyScfEriBuilder(EriBuilder):
-    def __init__(self, scfres: scf.hf.SCF, n_orbs: int, n_orbs_alpha: int,
-                 n_alpha: int, n_beta: int, restricted: bool):
+    def __init__(
+        self,
+        scfres: scf.hf.SCF,
+        n_orbs: int,
+        n_orbs_alpha: int,
+        n_alpha: int,
+        n_beta: int,
+        restricted: bool,
+    ):
         self.scfres: scf.hf.SCF = scfres
         self.mo_coeff: tuple[Array2D, Array2D]
         if restricted:
             self.mo_coeff = cast(
-                tuple[Array2D, Array2D],
-                (self.scfres.mo_coeff, self.scfres.mo_coeff)
+                tuple[Array2D, Array2D], (self.scfres.mo_coeff, self.scfres.mo_coeff)
             )
         else:
-            self.mo_coeff = cast(
-                tuple[Array2D, Array2D], self.scfres.mo_coeff
-            )
+            self.mo_coeff = cast(tuple[Array2D, Array2D], self.scfres.mo_coeff)
         super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted)
 
     @property
     def coefficients(self) -> dict[Literal["Oa", "Ob", "Va", "Vb"], Array2D]:
         return {
-            "Oa": self.mo_coeff[0][:, :self.n_alpha],
-            "Ob": self.mo_coeff[1][:, :self.n_beta],
-            "Va": self.mo_coeff[0][:, self.n_alpha:],
-            "Vb": self.mo_coeff[1][:, self.n_beta:],
+            "Oa": self.mo_coeff[0][:, : self.n_alpha],
+            "Ob": self.mo_coeff[1][:, : self.n_beta],
+            "Va": self.mo_coeff[0][:, self.n_alpha :],
+            "Vb": self.mo_coeff[1][:, self.n_beta :],
         }
 
     def compute_mo_eri(self, blocks: Block4D, spins: Spin4D) -> Array4D:
@@ -225,16 +227,17 @@ class PyScfEriBuilder(EriBuilder):
         #      files were used instead. These could be deleted on the call
         #      to `flush_cache` automatically.
         sizes = [i.shape[1] for i in coeffs]
-        return ao2mo.general(self.scfres.mol, coeffs,
-                             compact=False).reshape(sizes[0], sizes[1],
-                                                    sizes[2], sizes[3])
+        return ao2mo.general(self.scfres.mol, coeffs, compact=False).reshape(
+            sizes[0], sizes[1], sizes[2], sizes[3]
+        )
 
 
 class PyScfHFProvider(libadcc.HartreeFockProvider):
     """
-        This implementation is only valid
-        if no orbital reordering is required.
+    This implementation is only valid
+    if no orbital reordering is required.
     """
+
     def __init__(self, scfres: scf.hf.SCF):
         # Do not forget the next line,
         # otherwise weird errors result
@@ -242,15 +245,13 @@ class PyScfHFProvider(libadcc.HartreeFockProvider):
         self.scfres: scf.hf.SCF = scfres
         n_alpha, n_beta = scfres.mol.nelec
         self.eri_builder: PyScfEriBuilder = PyScfEriBuilder(
-            self.scfres, self.n_orbs, self.n_orbs_alpha,
-            n_alpha, n_beta, self.restricted
+            self.scfres, self.n_orbs, self.n_orbs_alpha, n_alpha, n_beta, self.restricted
         )
         self.operator_integral_provider: PyScfOperatorIntegralProvider = (
             PyScfOperatorIntegralProvider(self.scfres)
         )
         if not self.restricted:
-            assert self.scfres.mo_coeff[0].shape[1] == \
-                self.scfres.mo_coeff[1].shape[1]
+            assert self.scfres.mo_coeff[0].shape[1] == self.scfres.mo_coeff[1].shape[1]
 
         self.environment: Environment | None = None
         self.environment_implementation: EnvironmentImplementation | None = None
@@ -282,19 +283,16 @@ class PyScfHFProvider(libadcc.HartreeFockProvider):
         if self.environment == "pe":
             ptlr = EnergyCorrection(
                 "pe_ptlr_correction",
-                lambda view: 2.0 * self.pe_energy(view.transition_dm_ao,
-                                                  elec_only=True)
+                lambda view: 2.0 * self.pe_energy(view.transition_dm_ao, elec_only=True),
             )
             ptss = EnergyCorrection(
                 "pe_ptss_correction",
-                lambda view: self.pe_energy(view.state_diffdm_ao,
-                                            elec_only=True)
+                lambda view: self.pe_energy(view.state_diffdm_ao, elec_only=True),
             )
             ret.extend([ptlr, ptss])
         elif self.environment == "pcm":
             ptlr = EnergyCorrection(
-                "pcm_ptlr_correction",
-                lambda view: self.pcm_energy(view.transition_dm_ao)
+                "pcm_ptlr_correction", lambda view: self.pcm_energy(view.transition_dm_ao)
             )
             ret.extend([ptlr])
         return {ec.name: ec for ec in ret}
@@ -315,8 +313,10 @@ class PyScfHFProvider(libadcc.HartreeFockProvider):
         elif isinstance(self.scfres.mo_occ, np.ndarray):
             restricted = self.scfres.mo_occ.ndim < 2
         else:
-            raise InvalidReference("Unusual pyscf SCF class encountered. Could "
-                                   "not determine restricted / unrestricted.")
+            raise InvalidReference(
+                "Unusual pyscf SCF class encountered. Could "
+                "not determine restricted / unrestricted."
+            )
         return restricted
 
     def get_energy_scf(self) -> float:
@@ -363,38 +363,29 @@ class PyScfHFProvider(libadcc.HartreeFockProvider):
 
     def fill_occupation_f(self, out: Array1D) -> None:
         if self.restricted:
-            out[:] = np.hstack((self.scfres.mo_occ / 2,
-                                self.scfres.mo_occ / 2))
+            out[:] = np.hstack((self.scfres.mo_occ / 2, self.scfres.mo_occ / 2))
         else:
-            out[:] = np.hstack((self.scfres.mo_occ[0],
-                                self.scfres.mo_occ[1]))
+            out[:] = np.hstack((self.scfres.mo_occ[0], self.scfres.mo_occ[1]))
 
     def fill_orbcoeff_fb(self, out: Array2D) -> None:
         if self.restricted:
-            mo_coeff = (self.scfres.mo_coeff,
-                        self.scfres.mo_coeff)
+            mo_coeff = (self.scfres.mo_coeff, self.scfres.mo_coeff)
         else:
             mo_coeff = self.scfres.mo_coeff
-        out[:] = np.transpose(
-            np.hstack((mo_coeff[0], mo_coeff[1]))
-        )
+        out[:] = np.transpose(np.hstack((mo_coeff[0], mo_coeff[1])))
 
     def fill_orben_f(self, out: Array1D) -> None:
         if self.restricted:
-            out[:] = np.hstack((self.scfres.mo_energy,
-                                self.scfres.mo_energy))
+            out[:] = np.hstack((self.scfres.mo_energy, self.scfres.mo_energy))
         else:
-            out[:] = np.hstack((self.scfres.mo_energy[0],
-                                self.scfres.mo_energy[1]))
+            out[:] = np.hstack((self.scfres.mo_energy[0], self.scfres.mo_energy[1]))
 
     def fill_fock_ff(self, slices: tuple[slice, slice], out: Array2D) -> None:
         diagonal = np.empty(self.n_orbs)
         self.fill_orben_f(diagonal)
         out[:] = np.diag(diagonal)[slices]
 
-    def fill_eri_ffff(
-        self, slices: tuple[slice, slice, slice, slice], out: Array4D
-    ) -> None:
+    def fill_eri_ffff(self, slices: tuple[slice, slice, slice, slice], out: Array4D) -> None:
         self.eri_builder.fill_slice_symm(slices, out)
 
     def fill_eri_phys_asym_ffff(
@@ -416,10 +407,12 @@ def import_scf(scfres: scf.hf.SCF) -> PyScfHFProvider:
         raise InvalidReference("Unsupported type for backends.pyscf.import_scf.")
 
     if not scfres.converged:
-        raise InvalidReference("Cannot start an adc calculation on top of an SCF,"
-                               " which is not yet converged. Did you forget to"
-                               " run the kernel() or the scf() function of the"
-                               " pyscf scf object?")
+        raise InvalidReference(
+            "Cannot start an adc calculation on top of an SCF,"
+            " which is not yet converged. Did you forget to"
+            " run the kernel() or the scf() function of the"
+            " pyscf scf object?"
+        )
 
     # TODO Check for point-group symmetry,
     #      check for density-fitting or choleski
@@ -427,9 +420,16 @@ def import_scf(scfres: scf.hf.SCF) -> PyScfHFProvider:
     return PyScfHFProvider(scfres)
 
 
-def run_hf(xyz: str, basis: str, charge: int = 0, multiplicity: int = 1,
-           conv_tol: float = 1e-11, conv_tol_grad: float = 1e-9,
-           max_iter: int = 150, pe_options: dict | None = None) -> scf.hf.SCF:
+def run_hf(
+    xyz: str,
+    basis: str,
+    charge: int = 0,
+    multiplicity: int = 1,
+    conv_tol: float = 1e-11,
+    conv_tol_grad: float = 1e-9,
+    max_iter: int = 150,
+    pe_options: dict | None = None,
+) -> scf.hf.SCF:
     mol = gto.M(
         atom=xyz,
         basis=basis,
@@ -444,6 +444,7 @@ def run_hf(xyz: str, basis: str, charge: int = 0, multiplicity: int = 1,
     )
     if pe_options:
         from pyscf.solvent import PE
+
         mf = PE(scf.HF(mol), pe_options)
     else:
         mf = scf.HF(mol)
@@ -461,9 +462,15 @@ def run_hf(xyz: str, basis: str, charge: int = 0, multiplicity: int = 1,
     return mf
 
 
-def run_core_hole(xyz: str, basis: str, charge: int = 0, multiplicity: int = 1,
-                  conv_tol: float = 1e-11, conv_tol_grad: float = 1e-9,
-                  max_iter: int = 150) -> scf.hf.SCF:
+def run_core_hole(
+    xyz: str,
+    basis: str,
+    charge: int = 0,
+    multiplicity: int = 1,
+    conv_tol: float = 1e-11,
+    conv_tol_grad: float = 1e-9,
+    max_iter: int = 150,
+) -> scf.hf.SCF:
     mol = gto.M(
         atom=xyz,
         basis=basis,
@@ -522,13 +529,14 @@ def _transform_gauge_origin_to_xyz(
     if gauge_origin == "mass_center":
         gauge_origin = tuple(np.einsum("i,ij->j", masses, coords) / masses.sum())
     elif gauge_origin == "charge_center":
-        gauge_origin = tuple(np.einsum("i,ij->j", charges, coords)
-                             / charges.sum())
+        gauge_origin = tuple(np.einsum("i,ij->j", charges, coords) / charges.sum())
     elif gauge_origin == "origin":
         gauge_origin = (0.0, 0.0, 0.0)
     elif not isinstance(gauge_origin, tuple):
-        raise NotImplementedError("The gauge origin can be defined either by a "
-                                  "keyword (origin, mass_center or charge_center) "
-                                  "or by a tuple defining the Cartesian components "
-                                  "e.g. (x, y, z).")
+        raise NotImplementedError(
+            "The gauge origin can be defined either by a "
+            "keyword (origin, mass_center or charge_center) "
+            "or by a tuple defining the Cartesian components "
+            "e.g. (x, y, z)."
+        )
     return gauge_origin

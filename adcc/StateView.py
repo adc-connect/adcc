@@ -22,11 +22,12 @@ class StateView:
             should refer to (0-based)
         """
         from .ElectronicStates import ElectronicStates
+
         # valid range for index: -n_states <= index < +n_states
-        if index >= parent_state.size or \
-                (index < 0 and abs(index) > parent_state.size):
-            raise ValueError(f"index {index} is out of range for a parent state "
-                             f"with {parent_state.size} states.")
+        if index >= parent_state.size or (index < 0 and abs(index) > parent_state.size):
+            raise ValueError(
+                f"index {index} is out of range for a parent state with {parent_state.size} states."
+            )
         self._parent_state: ElectronicStates = parent_state
         self.index: int = index
 

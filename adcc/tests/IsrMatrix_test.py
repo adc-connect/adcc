@@ -31,8 +31,12 @@ from . import testcases
 from .testdata_cache import testdata_cache
 
 test_cases = testcases.get_by_filename("h2o_sto3g", "cn_sto3g")
-cases = [(case.file_name, c, kind)
-         for case in test_cases for c in ["gen", "cvs"] for kind in case.kinds.pp]
+cases = [
+    (case.file_name, c, kind)
+    for case in test_cases
+    for c in ["gen", "cvs"]
+    for kind in case.kinds.pp
+]
 
 methods = ["adc0", "adc1", "adc2"]
 operator_kinds = ["electric", "magnetic"]
@@ -42,11 +46,10 @@ operator_kinds = ["electric", "magnetic"]
 @pytest.mark.parametrize("system,case,kind", cases)
 @pytest.mark.parametrize("operator_kind", operator_kinds)
 class TestIsrMatrix:
-    def test_matrix_vector_product(self, system: str, case: str, kind: str,
-                                   method: str, operator_kind: str):
-        state = testdata_cache.adcc_states(
-            system=system, method=method, kind=kind, case=case
-        )
+    def test_matrix_vector_product(
+        self, system: str, case: str, kind: str, method: str, operator_kind: str
+    ):
+        state = testdata_cache.adcc_states(system=system, method=method, kind=kind, case=case)
         method = method.replace("adc", "isr")
         n_ref = len(state.excitation_vector)
         mp = state.ground_state
@@ -75,14 +78,12 @@ class TestIsrMatrix:
             B_Yn = matrix @ state.excitations[ifrom].excitation_vector
             state2state = State2States(state, initial=ifrom)
             for j, ito in enumerate(range(ifrom + 1, n_ref)):
-                s2s_tdm = [state.excitations[ito].excitation_vector @ vec
-                           for vec in B_Yn]
+                s2s_tdm = [state.excitations[ito].excitation_vector @ vec for vec in B_Yn]
 
                 if operator_kind == "electric":
                     s2s_tdm_ref = state2state.transition_dipole_moment[j]
                 else:
-                    s2s_tdm_ref = \
-                        state2state.transition_magnetic_dipole_moment("origin")[j]
+                    s2s_tdm_ref = state2state.transition_magnetic_dipole_moment("origin")[j]
                 np.testing.assert_allclose(s2s_tdm, s2s_tdm_ref, atol=1e-12)
 
 
@@ -92,15 +93,13 @@ class TestIsrMatrixInterface(unittest.TestCase):
         method = "adc2"
         kind = "singlet"
 
-        state = testdata_cache.adcc_states(
-            system=system, method=method, kind=kind, case="gen"
-        )
+        state = testdata_cache.adcc_states(system=system, method=method, kind=kind, case="gen")
 
         method = "isr2"
         assert len(state.excitation_vector) > 1
         mp = state.ground_state
         dips = state.reference_state.operators.electric_dipole
-        magdips = state.reference_state.operators.magnetic_dipole('origin')
+        magdips = state.reference_state.operators.magnetic_dipole("origin")
         vecs = [exc.excitation_vector for exc in state.excitations[:2]]
 
         matrix_ref = IsrMatrix(method, mp, dips)
@@ -121,9 +120,7 @@ class TestIsrMatrixInterface(unittest.TestCase):
             for vec2 in vecs:
                 resl = [vec1 @ mvprod for mvprod in matrix_ref.matvec(vec2)]
                 resr = [mvprod @ vec2 for mvprod in matrix_ref.rmatvec(vec1)]
-                np.testing.assert_allclose(
-                    np.array(resl), np.array(resr), atol=1e-12
-                )
+                np.testing.assert_allclose(np.array(resl), np.array(resr), atol=1e-12)
 
         # anti-symmetric operators
         magmatrix = IsrMatrix(method, mp, magdips)
@@ -131,6 +128,4 @@ class TestIsrMatrixInterface(unittest.TestCase):
             for vec2 in vecs:
                 resl = [vec1 @ mvprod for mvprod in magmatrix.matvec(vec2)]
                 resr = [mvprod @ vec2 for mvprod in magmatrix.rmatvec(vec1)]
-                np.testing.assert_allclose(
-                    np.array(resl), np.array(resr), atol=1e-12
-                )
+                np.testing.assert_allclose(np.array(resl), np.array(resr), atol=1e-12)

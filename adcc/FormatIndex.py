@@ -79,12 +79,12 @@ class FormatIndexHfProvider(FormatIndexBase):
 
         This function can be called multiple times.
         """
-        log_max_idx = int(np.log(max(self._translate_index(space, idx)[0]
-                                     for space, idx in space_index_pairs)))
+        log_max_idx = int(
+            np.log(max(self._translate_index(space, idx)[0] for space, idx in space_index_pairs))
+        )
         self.max_digits = max(log_max_idx, self.max_digits, 1)
 
-    def format(self, space: str, idx: int,
-               concat_spin: bool = True) -> tuple[str, str]:
+    def format(self, space: str, idx: int, concat_spin: bool = True) -> tuple[str, str]:
         """
         Format the given index that belongs to the given space.
         Return a tuple containing the formatted index and the corresponding
@@ -142,13 +142,11 @@ class FormatIndexAdcc(FormatIndexBase):
 
         This function can be called multiple times.
         """
-        maxlen = max(self._translate_index(space, idx)[1]
-                     for space, idx in space_index_pairs)
+        maxlen = max(self._translate_index(space, idx)[1] for space, idx in space_index_pairs)
         log_max_idx = int(np.log(max(1, maxlen)))
         self.max_digits = max(log_max_idx, self.max_digits, 1)
 
-    def format(self, space: str, idx: int,
-               concat_spin: bool = True) -> tuple[str, str]:
+    def format(self, space: str, idx: int, concat_spin: bool = True) -> tuple[str, str]:
         """
         Format the given index that belongs to the given space.
         Return a tuple containing the formatted index and the corresponding
@@ -171,8 +169,7 @@ class FormatIndexAdcc(FormatIndexBase):
 
 
 class FormatIndexHomoLumo(FormatIndexBase):
-    def __init__(self, refstate: ReferenceState, max_digits: int = 1,
-                 use_hoco: bool = True):
+    def __init__(self, refstate: ReferenceState, max_digits: int = 1, use_hoco: bool = True):
         """
         Format the given index for the given orbital subspace
         by translating it into a form HOMO-1, LUMO+4 and so on.
@@ -208,9 +205,11 @@ class FormatIndexHomoLumo(FormatIndexBase):
         # TODO Expand this class there is something sensible
         closed_shell = refstate.n_alpha == refstate.n_beta
         if not refstate.is_aufbau_occupation or not closed_shell:
-            raise ValueError("format_homolumo only produces the right results "
-                             "for closed-shell references with an Aufbau "
-                             "occupation")
+            raise ValueError(
+                "format_homolumo only produces the right results "
+                "for closed-shell references with an Aufbau "
+                "occupation"
+            )
 
     def _translate_index(self, space: str, idx: int) -> tuple[str, str, str]:
         # Deal with core-occupied orbitals first:
@@ -254,12 +253,10 @@ class FormatIndexHomoLumo(FormatIndexBase):
 
         This function can be called multiple times.
         """
-        maxlen = max(len(self._translate_index(space, idx)[1])
-                     for space, idx in space_index_pairs)
+        maxlen = max(len(self._translate_index(space, idx)[1]) for space, idx in space_index_pairs)
         self.maxlen_offset = max(maxlen, self.maxlen_offset, 2)
 
-    def format(self, space: str, idx: int,
-               concat_spin: bool = True) -> tuple[str, str]:
+    def format(self, space: str, idx: int, concat_spin: bool = True) -> tuple[str, str]:
         """
         Format the given index that belongs to the given space.
         Return a tuple containing the formatted index and the corresponding

@@ -7,11 +7,9 @@ import adcc
 
 # Run SCF in pyscf
 mol = gto.M(
-    atom='O 0 0 0;'
-         'H 0 0 1.795239827225189;'
-         'H 1.693194615993441 0 -0.599043184453037',
-    basis='cc-pvdz',
-    unit="Bohr"
+    atom="O 0 0 0;H 0 0 1.795239827225189;H 1.693194615993441 0 -0.599043184453037",
+    basis="cc-pvdz",
+    unit="Bohr",
 )
 scfres = scf.RHF(mol)
 scfres.conv_tol = 1e-12
@@ -25,14 +23,20 @@ state = adcc.adc2(scfres, n_singlets=7, conv_tol=1e-8)
 
 # Print results
 print()
-print("  st  ex.ene. (au)         f     transition dipole moment (au)"
-      "        state dip (au)")
+print("  st  ex.ene. (au)         f     transition dipole moment (au)        state dip (au)")
 for i, val in enumerate(state.excitation_energy):
     fmt = "{0:2d}  {1:12.8g} {2:9.3g}   [{3:9.3g}, {4:9.3g}, {5:9.3g}]"
     fmt += "   [{6:9.3g}, {7:9.3g}, {8:9.3g}]"
-    print(state.kind[0], fmt.format(i, val, state.oscillator_strength[i],
-                                    *state.transition_dipole_moment[i],
-                                    *state.state_dipole_moment[i]))
+    print(
+        state.kind[0],
+        fmt.format(
+            i,
+            val,
+            state.oscillator_strength[i],
+            *state.transition_dipole_moment[i],
+            *state.state_dipole_moment[i],
+        ),
+    )
 print(state.excitation_energies)
 state.plot_spectrum()
 plt.savefig("pyscf_ccpvdz_adc2_spectrum.pdf")

@@ -42,8 +42,7 @@ hf_631g = testcases.get_by_filename("hf_631g").pop()
 
 
 class TestGuess:
-    def assert_symmetry_no_spin_change(self, matrix, guess, block,
-                                       spin_block_symmetrisation):
+    def assert_symmetry_no_spin_change(self, matrix, guess, block, spin_block_symmetrisation):
         """
         Assert a guess vector has the correct symmetry if no spin change
         occurs during the excitation (i.e. no spin-flip)
@@ -71,8 +70,7 @@ class TestGuess:
         assert np.max(np.abs(gts[:nCa, nva:])) == 0
 
         if matrix.reference_state.restricted:
-            assert_array_equal(gts[:nCa, :nva],
-                               fac * gts[nCa:, nva:])
+            assert_array_equal(gts[:nCa, :nva], fac * gts[nCa:, nva:])
 
         # Doubles
         if "pphh" not in matrix.axis_blocks:
@@ -93,12 +91,18 @@ class TestGuess:
         assert np.max(np.abs(gtd[:noa, nCa:, nva:, nva:])) == 0  # ab->bb
 
         if matrix.reference_state.restricted:
-            assert_array_equal(gtd[:noa, :nCa, :nva, :nva],        # aa->aa
-                               fac * gtd[noa:, nCa:, nva:, nva:])  # bb->bb
-            assert_array_equal(gtd[:noa, nCa:, :nva, nva:],        # ab->ab
-                               fac * gtd[noa:, :nCa, nva:, :nva])  # ba->ba
-            assert_array_equal(gtd[:noa, nCa:, nva:, :nva],        # ab->ba
-                               fac * gtd[noa:, :nCa, :nva, nva:])  # ba->ab
+            assert_array_equal(
+                gtd[:noa, :nCa, :nva, :nva],  # aa->aa
+                fac * gtd[noa:, nCa:, nva:, nva:],
+            )  # bb->bb
+            assert_array_equal(
+                gtd[:noa, nCa:, :nva, nva:],  # ab->ab
+                fac * gtd[noa:, :nCa, nva:, :nva],
+            )  # ba->ba
+            assert_array_equal(
+                gtd[:noa, nCa:, nva:, :nva],  # ab->ba
+                fac * gtd[noa:, :nCa, :nva, nva:],
+            )  # ba->ab
 
         assert_array_equal(gtd.transpose((0, 1, 3, 2)), -gtd)
         if not matrix.is_core_valence_separated:
@@ -123,8 +127,7 @@ class TestGuess:
             has_baba = np.max(np.abs(gtd[noa:, :nCa, nva:, :nva])) > 0
             has_abba = np.max(np.abs(gtd[:noa, nCa:, nva:, :nva])) > 0
             has_baab = np.max(np.abs(gtd[noa:, :nCa, :nva, nva:])) > 0
-            assert has_aaaa or has_abab or has_abba or \
-                has_bbbb or has_baba or has_baab
+            assert has_aaaa or has_abab or has_abba or has_bbbb or has_baba or has_baab
 
     def assert_symmetry_spin_flip(self, matrix, guess, block):
         """
@@ -183,13 +186,12 @@ class TestGuess:
             assert has_aaab or has_aaba or has_abbb or has_babb
 
     def assert_orthonormal(self, guesses):
-        for (i, gi) in enumerate(guesses):
-            for (j, gj) in enumerate(guesses):
+        for i, gi in enumerate(guesses):
+            for j, gj in enumerate(guesses):
                 ref = 1 if i == j else 0
                 assert adcc.dot(gi, gj) == approx(ref)
 
-    def assert_guess_values(self, matrix, block, guesses, spin_flip=False,
-                            triplet=False):
+    def assert_guess_values(self, matrix, block, guesses, spin_flip=False, triplet=False):
         """
         Assert that the guesses correspond to the smallest
         diagonal values.
@@ -208,17 +210,15 @@ class TestGuess:
             diagonal = matrix.diagonal().ph.to_ndarray()
 
             # Build list of indices, which would sort the diagonal
-            sidcs = np.dstack(np.unravel_index(np.argsort(diagonal.ravel()),
-                                               diagonal.shape))
+            sidcs = np.dstack(np.unravel_index(np.argsort(diagonal.ravel()), diagonal.shape))
             assert sidcs.shape[0] == 1
             if spin_flip:
-                sidcs = [idx for idx in sidcs[0]
-                         if idx[0] < nCa and idx[1] >= nva]
+                sidcs = [idx for idx in sidcs[0] if idx[0] < nCa and idx[1] >= nva]
             else:
                 sidcs = [
-                    idx for idx in sidcs[0]
-                    if any((idx[0] >= nCa and idx[1] >= nva,
-                            idx[0]  < nCa and idx[1]  < nva))
+                    idx
+                    for idx in sidcs[0]
+                    if any((idx[0] >= nCa and idx[1] >= nva, idx[0] < nCa and idx[1] < nva))
                 ]
         elif block == "pphh":
             # the doubles guesses are constructed from the 0th order diagonal
@@ -230,28 +230,37 @@ class TestGuess:
                 ).pphh.to_ndarray()
 
             # Build list of indices, which would sort the diagonal
-            sidcs = np.dstack(np.unravel_index(np.argsort(diagonal.ravel()),
-                                               diagonal.shape))
+            sidcs = np.dstack(np.unravel_index(np.argsort(diagonal.ravel()), diagonal.shape))
 
             assert sidcs.shape[0] == 1
             if spin_flip:
                 sidcs = [
-                    idx for idx in sidcs[0]
-                    if any((idx[0]  < noa and idx[1]  < nCa and idx[2]  < nva and idx[3] >= nva,
-                            idx[0]  < noa and idx[1]  < nCa and idx[2] >= nva and idx[3]  < nva,
-                            idx[0]  < noa and idx[1] >= nCa and idx[2] >= nva and idx[3] >= nva,
-                            idx[0] >= noa and idx[1]  < nCa and idx[2] >= nva and idx[3] >= nva))
+                    idx
+                    for idx in sidcs[0]
+                    if any(
+                        (
+                            idx[0] < noa and idx[1] < nCa and idx[2] < nva and idx[3] >= nva,
+                            idx[0] < noa and idx[1] < nCa and idx[2] >= nva and idx[3] < nva,
+                            idx[0] < noa and idx[1] >= nCa and idx[2] >= nva and idx[3] >= nva,
+                            idx[0] >= noa and idx[1] < nCa and idx[2] >= nva and idx[3] >= nva,
+                        )
+                    )
                 ]
             else:
                 sidcs = [
-                    idx for idx in sidcs[0]
+                    idx
+                    for idx in sidcs[0]
                     # aaaa / bbbb / abab / baba / abba / baab
-                    if any((idx[0]  < noa and idx[1]  < nCa and idx[2]  < nva and idx[3]  < nva,
+                    if any(
+                        (
+                            idx[0] < noa and idx[1] < nCa and idx[2] < nva and idx[3] < nva,
                             idx[0] >= noa and idx[1] >= nCa and idx[2] >= nva and idx[3] >= nva,
-                            idx[0]  < noa and idx[1] >= nCa and idx[2]  < nva and idx[3] >= nva,
-                            idx[0] >= noa and idx[1]  < nCa and idx[2] >= nva and idx[3]  < nva,
-                            idx[0]  < noa and idx[1] >= nCa and idx[2] >= nva and idx[3]  < nva,
-                            idx[0] >= noa and idx[1]  < nCa and idx[2]  < nva and idx[3] >= nva))
+                            idx[0] < noa and idx[1] >= nCa and idx[2] < nva and idx[3] >= nva,
+                            idx[0] >= noa and idx[1] < nCa and idx[2] >= nva and idx[3] < nva,
+                            idx[0] < noa and idx[1] >= nCa and idx[2] >= nva and idx[3] < nva,
+                            idx[0] >= noa and idx[1] < nCa and idx[2] < nva and idx[3] >= nva,
+                        )
+                    )
                 ]
                 # for triplets we have to filter out closed shell singlet
                 # excitations: excitations from a common spatial orbital to a
@@ -259,9 +268,11 @@ class TestGuess:
                 # Only relevant for the oovv and ccvv blocks, but we don't
                 # cover the ccvv block in CVS-ADC.
                 if triplet and not mospaces.has_core_occupied_space:
-                    sidcs = [idx for idx in sidcs
-                             if abs(idx[0] - idx[1]) != noa
-                             or abs(idx[2] - idx[3]) != nva]
+                    sidcs = [
+                        idx
+                        for idx in sidcs
+                        if abs(idx[0] - idx[1]) != noa or abs(idx[2] - idx[3]) != nva
+                    ]
             sidcs = [idx for idx in sidcs if idx[2] != idx[3]]
             if not matrix.is_core_valence_separated:
                 sidcs = [idx for idx in sidcs if idx[0] != idx[1]]
@@ -269,10 +280,12 @@ class TestGuess:
         # Group the indices by corresponding diagonal value
         def grouping(x):
             return np.round(diagonal[tuple(x)], decimals=12)
-        gidcs = [[tuple(gitem) for gitem in group]
-                 for _, group in itertools.groupby(sidcs, grouping)]
+
+        gidcs = [
+            [tuple(gitem) for gitem in group] for _, group in itertools.groupby(sidcs, grouping)
+        ]
         igroup = 0  # The current diagonal value group we are in
-        for (i, guess) in enumerate(guesses):
+        for i, guess in enumerate(guesses):
             # Extract indices of non-zero elements
             nonzeros = np.dstack(np.where(guess[block].to_ndarray() != 0))
 
@@ -283,8 +296,9 @@ class TestGuess:
             for nz in nonzeros:
                 assert nz in gidcs[igroup]
 
-    def base_test_no_spin_change(self, system: str, case: str, method: str,
-                                 block: str, max_guesses: int = 10):
+    def base_test_no_spin_change(
+        self, system: str, case: str, method: str, block: str, max_guesses: int = 10
+    ):
         hf = testdata_cache.refstate(system, case=case)
         if "cvs" in case and "cvs" not in method:
             method = f"cvs-{method}"
@@ -297,28 +311,26 @@ class TestGuess:
         for symm in symmetrisations:
             for n_guesses in range(1, max_guesses + 1):
                 guesses = adcc.guess.guesses_from_diagonal(
-                    matrix, n_guesses, block=block, spin_change=0,
-                    spin_block_symmetrisation=symm
+                    matrix, n_guesses, block=block, spin_change=0, spin_block_symmetrisation=symm
                 )
                 assert len(guesses) == n_guesses
                 for gs in guesses:
                     self.assert_symmetry_no_spin_change(matrix, gs, block, symm)
                 self.assert_orthonormal(guesses)
                 self.assert_guess_values(
-                    matrix, block, guesses, spin_flip=False,
-                    triplet=(symm == "antisymmetric")
+                    matrix, block, guesses, spin_flip=False, triplet=(symm == "antisymmetric")
                 )
 
-    def base_test_spin_flip(self, system: str, case: str, method: str, block: str,
-                            max_guesses: int = 10):
+    def base_test_spin_flip(
+        self, system: str, case: str, method: str, block: str, max_guesses: int = 10
+    ):
         hf = testdata_cache.refstate(system, case=case)
         if "cvs" in case and "cvs" not in method:
             method = f"cvs-{method}"
         matrix = adcc.AdcMatrix(method, hf)
         for n_guesses in range(1, max_guesses + 1):
             guesses = adcc.guess.guesses_from_diagonal(
-                matrix, n_guesses, block=block, spin_change=-1,
-                spin_block_symmetrisation="none"
+                matrix, n_guesses, block=block, spin_change=-1, spin_block_symmetrisation="none"
             )
             assert len(guesses) == n_guesses
             for gs in guesses:
@@ -332,12 +344,16 @@ class TestGuess:
         if "cvs" in case and method == "adc4":
             pytest.skip("CVS-ADC(4) not implemented")
         guesses = {  # fewer guesses available
-            "fv-cvs": 1, "cvs": 2, "fc": 8, "fv": 5, "fc-fv": 4, "fc-cvs": 2,
-            "fc-fv-cvs": 1
+            "fv-cvs": 1,
+            "cvs": 2,
+            "fc": 8,
+            "fv": 5,
+            "fc-fv": 4,
+            "fc-cvs": 2,
+            "fc-fv-cvs": 1,
         }
         self.base_test_no_spin_change(
-            "h2o_sto3g", case=case, method=method, block="ph",
-            max_guesses=guesses.get(case, 10)
+            "h2o_sto3g", case=case, method=method, block="ph", max_guesses=guesses.get(case, 10)
         )
 
     @pytest.mark.parametrize("method", doubles_methods)
@@ -346,11 +362,15 @@ class TestGuess:
         if "cvs" in case and method == "adc4":
             pytest.skip("CVS-ADC(4) not implemented")
         guesses = {  # fewer ocvv guesses available
-            "fv-cvs": 4, "fc-fv-cvs": 3
+            "fv-cvs": 4,
+            "fc-fv-cvs": 3,
         }
         self.base_test_no_spin_change(
-            system="h2o_sto3g", case=case, method=method, block="pphh",
-            max_guesses=guesses.get(case, 5)
+            system="h2o_sto3g",
+            case=case,
+            method=method,
+            block="pphh",
+            max_guesses=guesses.get(case, 5),
         )
 
     @pytest.mark.parametrize("method", singles_methods)
@@ -359,11 +379,17 @@ class TestGuess:
         if "cvs" in case and method == "adc4":
             pytest.skip("CVS-ADC(4) not implemented")
         guesses = {  # fewer guesses available
-            "cvs": 7, "fc-cvs": 7, "fv-cvs": 5, "fc-fv-cvs": 5
+            "cvs": 7,
+            "fc-cvs": 7,
+            "fv-cvs": 5,
+            "fc-fv-cvs": 5,
         }
         self.base_test_no_spin_change(
-            system="cn_sto3g", case=case, method=method, block="ph",
-            max_guesses=guesses.get(case, 10)
+            system="cn_sto3g",
+            case=case,
+            method=method,
+            block="ph",
+            max_guesses=guesses.get(case, 10),
         )
 
     @pytest.mark.parametrize("method", doubles_methods)
@@ -372,8 +398,7 @@ class TestGuess:
         if "cvs" in case and method == "adc4":
             pytest.skip("CVS-ADC(4) not implemented")
         self.base_test_no_spin_change(
-            system="cn_sto3g", case=case, method=method, block="pphh",
-            max_guesses=5
+            system="cn_sto3g", case=case, method=method, block="pphh", max_guesses=5
         )
 
     @pytest.mark.parametrize("method", singles_methods)
@@ -382,8 +407,7 @@ class TestGuess:
         if "cvs" in case and method == "adc4":
             pytest.skip("CVS-ADC(4) not implemented")
         self.base_test_spin_flip(
-            system="hf_631g", case=case, method=method, block="ph",
-            max_guesses=10
+            system="hf_631g", case=case, method=method, block="ph", max_guesses=10
         )
 
     @pytest.mark.parametrize("method", doubles_methods)
@@ -392,8 +416,7 @@ class TestGuess:
         if "cvs" in case and method == "adc4":
             pytest.skip("CVS-ADC(4) not implemented")
         self.base_test_spin_flip(
-            system="hf_631g", case=case, method=method, block="pphh",
-            max_guesses=5
+            system="hf_631g", case=case, method=method, block="pphh", max_guesses=5
         )
 
     #
@@ -408,15 +431,14 @@ class TestGuess:
             for symm in symmetrisations:
                 ref_sb = ref[(block, symm)]
                 guesses = adcc.guess.guesses_from_diagonal(
-                    matrix, len(ref_sb), block, spin_change=0,
-                    spin_block_symmetrisation=symm
+                    matrix, len(ref_sb), block, spin_change=0, spin_block_symmetrisation=symm
                 )
                 assert len(guesses) == len(ref_sb)
                 for gs in guesses:
                     self.assert_symmetry_no_spin_change(matrix, gs, block, symm)
                 self.assert_orthonormal(guesses)
 
-                for (i, guess) in enumerate(guesses):
+                for i, guess in enumerate(guesses):
                     guess_b = guess[block].to_ndarray()
                     nonzeros = np.dstack(np.where(guess_b != 0))
                     assert nonzeros.shape[0] == 1
@@ -455,81 +477,317 @@ class TestGuess:
         asymm = [1 / np.sqrt(2), -1 / np.sqrt(2)]
         return {
             ("ph", "symmetric"): [
-                ([(4, 0), (9, 2)], symm), ([(4, 1), (9, 3)], symm),
-                ([(3, 0), (8, 2)], symm), ([(3, 1), (8, 3)], symm),
-                ([(2, 0), (7, 2)], symm), ([(2, 1), (7, 3)], symm),
-                ([(1, 0), (6, 2)], symm), ([(1, 1), (6, 3)], symm),
+                ([(4, 0), (9, 2)], symm),
+                ([(4, 1), (9, 3)], symm),
+                ([(3, 0), (8, 2)], symm),
+                ([(3, 1), (8, 3)], symm),
+                ([(2, 0), (7, 2)], symm),
+                ([(2, 1), (7, 3)], symm),
+                ([(1, 0), (6, 2)], symm),
+                ([(1, 1), (6, 3)], symm),
             ],
             ("ph", "antisymmetric"): [
                 # nonzeros          values
-                ([(4, 0), (9, 2)], asymm), ([(4, 1), (9, 3)], asymm),
-                ([(3, 0), (8, 2)], asymm), ([(3, 1), (8, 3)], asymm),
-                ([(2, 0), (7, 2)], asymm), ([(2, 1), (7, 3)], asymm),
-                ([(1, 0), (6, 2)], asymm), ([(1, 1), (6, 3)], asymm),
+                ([(4, 0), (9, 2)], asymm),
+                ([(4, 1), (9, 3)], asymm),
+                ([(3, 0), (8, 2)], asymm),
+                ([(3, 1), (8, 3)], asymm),
+                ([(2, 0), (7, 2)], asymm),
+                ([(2, 1), (7, 3)], asymm),
+                ([(1, 0), (6, 2)], asymm),
+                ([(1, 1), (6, 3)], asymm),
             ],
             ("pphh", "symmetric"): [
-                ([(4, 9, 0, 2), (4, 9, 2, 0), (9, 4, 0, 2), (9, 4, 2, 0)],
-                 [0.5, -0.5, -0.5, 0.5]),
-                ([(3, 9, 0, 2), (3, 9, 2, 0), (4, 8, 0, 2), (4, 8, 2, 0),
-                  (8, 4, 0, 2), (8, 4, 2, 0), (9, 3, 0, 2), (9, 3, 2, 0)],
-                 [sq8, -sq8, sq8, -sq8, -sq8, sq8, -sq8, sq8]),
-                ([(3, 8, 0, 2), (3, 8, 2, 0), (8, 3, 0, 2), (8, 3, 2, 0)],
-                 [0.5, -0.5, -0.5, 0.5]),
-                ([(4, 9, 0, 3), (4, 9, 1, 2), (4, 9, 2, 1), (4, 9, 3, 0),
-                  (9, 4, 0, 3), (9, 4, 1, 2), (9, 4, 2, 1), (9, 4, 3, 0)],
-                 [sq8, sq8, -sq8, -sq8, -sq8, -sq8, sq8, sq8]),
-                ([(3, 4, 0, 1), (3, 4, 1, 0), (3, 9, 0, 3), (3, 9, 1, 2),
-                  (3, 9, 2, 1), (3, 9, 3, 0), (4, 3, 0, 1), (4, 3, 1, 0),
-                  (4, 8, 0, 3), (4, 8, 1, 2), (4, 8, 2, 1), (4, 8, 3, 0),
-                  (8, 4, 0, 3), (8, 4, 1, 2), (8, 4, 2, 1), (8, 4, 3, 0),
-                  (8, 9, 2, 3), (8, 9, 3, 2), (9, 3, 0, 3), (9, 3, 1, 2),
-                  (9, 3, 2, 1), (9, 3, 3, 0), (9, 8, 2, 3), (9, 8, 3, 2)],
-                 [sq12, -sq12, sq48, -sq48, sq48, -sq48, -sq12, sq12,
-                  -sq48, sq48, -sq48, sq48, sq48, -sq48,  sq48, -sq48,
-                  sq12, -sq12, -sq48, sq48, -sq48, sq48, -sq12, sq12]),
-                ([(3, 9, 0, 3), (3, 9, 1, 2), (3, 9, 2, 1), (3, 9, 3, 0),
-                  (4, 8, 0, 3), (4, 8, 1, 2), (4, 8, 2, 1), (4, 8, 3, 0),
-                  (8, 4, 0, 3), (8, 4, 1, 2), (8, 4, 2, 1), (8, 4, 3, 0),
-                  (9, 3, 0, 3), (9, 3, 1, 2), (9, 3, 2, 1), (9, 3, 3, 0)],
-                 [0.25, 0.25, -0.25, -0.25, 0.25, 0.25, -0.25, -0.25,
-                  -0.25, -0.25, 0.25, 0.25, -0.25, -0.25, 0.25, 0.25]),
-                ([(3, 8, 0, 3), (3, 8, 1, 2), (3, 8, 2, 1), (3, 8, 3, 0),
-                  (8, 3, 0, 3), (8, 3, 1, 2), (8, 3, 2, 1), (8, 3, 3, 0)],
-                 [sq8, sq8, -sq8, -sq8, -sq8, -sq8, sq8, sq8]),
-                ([(4, 9, 1, 3), (4, 9, 3, 1), (9, 4, 1, 3), (9, 4, 3, 1)],
-                 [0.5, -0.5, -0.5, 0.5]),
+                ([(4, 9, 0, 2), (4, 9, 2, 0), (9, 4, 0, 2), (9, 4, 2, 0)], [0.5, -0.5, -0.5, 0.5]),
+                (
+                    [
+                        (3, 9, 0, 2),
+                        (3, 9, 2, 0),
+                        (4, 8, 0, 2),
+                        (4, 8, 2, 0),
+                        (8, 4, 0, 2),
+                        (8, 4, 2, 0),
+                        (9, 3, 0, 2),
+                        (9, 3, 2, 0),
+                    ],
+                    [sq8, -sq8, sq8, -sq8, -sq8, sq8, -sq8, sq8],
+                ),
+                ([(3, 8, 0, 2), (3, 8, 2, 0), (8, 3, 0, 2), (8, 3, 2, 0)], [0.5, -0.5, -0.5, 0.5]),
+                (
+                    [
+                        (4, 9, 0, 3),
+                        (4, 9, 1, 2),
+                        (4, 9, 2, 1),
+                        (4, 9, 3, 0),
+                        (9, 4, 0, 3),
+                        (9, 4, 1, 2),
+                        (9, 4, 2, 1),
+                        (9, 4, 3, 0),
+                    ],
+                    [sq8, sq8, -sq8, -sq8, -sq8, -sq8, sq8, sq8],
+                ),
+                (
+                    [
+                        (3, 4, 0, 1),
+                        (3, 4, 1, 0),
+                        (3, 9, 0, 3),
+                        (3, 9, 1, 2),
+                        (3, 9, 2, 1),
+                        (3, 9, 3, 0),
+                        (4, 3, 0, 1),
+                        (4, 3, 1, 0),
+                        (4, 8, 0, 3),
+                        (4, 8, 1, 2),
+                        (4, 8, 2, 1),
+                        (4, 8, 3, 0),
+                        (8, 4, 0, 3),
+                        (8, 4, 1, 2),
+                        (8, 4, 2, 1),
+                        (8, 4, 3, 0),
+                        (8, 9, 2, 3),
+                        (8, 9, 3, 2),
+                        (9, 3, 0, 3),
+                        (9, 3, 1, 2),
+                        (9, 3, 2, 1),
+                        (9, 3, 3, 0),
+                        (9, 8, 2, 3),
+                        (9, 8, 3, 2),
+                    ],
+                    [
+                        sq12,
+                        -sq12,
+                        sq48,
+                        -sq48,
+                        sq48,
+                        -sq48,
+                        -sq12,
+                        sq12,
+                        -sq48,
+                        sq48,
+                        -sq48,
+                        sq48,
+                        sq48,
+                        -sq48,
+                        sq48,
+                        -sq48,
+                        sq12,
+                        -sq12,
+                        -sq48,
+                        sq48,
+                        -sq48,
+                        sq48,
+                        -sq12,
+                        sq12,
+                    ],
+                ),
+                (
+                    [
+                        (3, 9, 0, 3),
+                        (3, 9, 1, 2),
+                        (3, 9, 2, 1),
+                        (3, 9, 3, 0),
+                        (4, 8, 0, 3),
+                        (4, 8, 1, 2),
+                        (4, 8, 2, 1),
+                        (4, 8, 3, 0),
+                        (8, 4, 0, 3),
+                        (8, 4, 1, 2),
+                        (8, 4, 2, 1),
+                        (8, 4, 3, 0),
+                        (9, 3, 0, 3),
+                        (9, 3, 1, 2),
+                        (9, 3, 2, 1),
+                        (9, 3, 3, 0),
+                    ],
+                    [
+                        0.25,
+                        0.25,
+                        -0.25,
+                        -0.25,
+                        0.25,
+                        0.25,
+                        -0.25,
+                        -0.25,
+                        -0.25,
+                        -0.25,
+                        0.25,
+                        0.25,
+                        -0.25,
+                        -0.25,
+                        0.25,
+                        0.25,
+                    ],
+                ),
+                (
+                    [
+                        (3, 8, 0, 3),
+                        (3, 8, 1, 2),
+                        (3, 8, 2, 1),
+                        (3, 8, 3, 0),
+                        (8, 3, 0, 3),
+                        (8, 3, 1, 2),
+                        (8, 3, 2, 1),
+                        (8, 3, 3, 0),
+                    ],
+                    [sq8, sq8, -sq8, -sq8, -sq8, -sq8, sq8, sq8],
+                ),
+                ([(4, 9, 1, 3), (4, 9, 3, 1), (9, 4, 1, 3), (9, 4, 3, 1)], [0.5, -0.5, -0.5, 0.5]),
             ],
             ("pphh", "antisymmetric"): [
-                ([(3, 9, 0, 2), (3, 9, 2, 0), (4, 8, 0, 2), (4, 8, 2, 0),
-                  (8, 4, 0, 2), (8, 4, 2, 0), (9, 3, 0, 2), (9, 3, 2, 0)],
-                 [sq8, -sq8, -sq8, sq8, sq8, -sq8, -sq8, sq8]),
-                ([(4, 9, 0, 3), (4, 9, 1, 2), (4, 9, 2, 1), (4, 9, 3, 0),
-                  (9, 4, 0, 3), (9, 4, 1, 2), (9, 4, 2, 1), (9, 4, 3, 0)],
-                 [sq8, -sq8, sq8, -sq8, -sq8, sq8, -sq8, sq8]),
-                ([(3, 4, 0, 1), (3, 4, 1, 0), (4, 3, 0, 1), (4, 3, 1, 0),
-                  (8, 9, 2, 3), (8, 9, 3, 2), (9, 8, 2, 3), (9, 8, 3, 2)],
-                 [sq8, -sq8, -sq8, sq8, -sq8, sq8, sq8, -sq8]),
-                ([(3, 9, 0, 3), (3, 9, 1, 2), (3, 9, 2, 1), (3, 9, 3, 0),
-                  (4, 8, 0, 3), (4, 8, 1, 2), (4, 8, 2, 1), (4, 8, 3, 0),
-                  (8, 4, 0, 3), (8, 4, 1, 2), (8, 4, 2, 1), (8, 4, 3, 0),
-                  (9, 3, 0, 3), (9, 3, 1, 2), (9, 3, 2, 1), (9, 3, 3, 0)],
-                 [0.25, 0.25, -0.25, -0.25, -0.25, -0.25, 0.25, 0.25,
-                  0.25, 0.25, -0.25, -0.25, -0.25, -0.25, 0.25, 0.25]),
-                ([(3, 9, 0, 3), (3, 9, 1, 2), (3, 9, 2, 1), (3, 9, 3, 0),
-                  (4, 8, 0, 3), (4, 8, 1, 2), (4, 8, 2, 1), (4, 8, 3, 0),
-                  (8, 4, 0, 3), (8, 4, 1, 2), (8, 4, 2, 1), (8, 4, 3, 0),
-                  (9, 3, 0, 3), (9, 3, 1, 2), (9, 3, 2, 1), (9, 3, 3, 0)],
-                 [0.25, -0.25, 0.25, -0.25, 0.25, -0.25, 0.25, -0.25,
-                  -0.25, 0.25, -0.25, 0.25, -0.25, 0.25, -0.25, 0.25]),
-                ([(2, 9, 0, 2), (2, 9, 2, 0), (4, 7, 0, 2), (4, 7, 2, 0),
-                  (7, 4, 0, 2), (7, 4, 2, 0), (9, 2, 0, 2), (9, 2, 2, 0)],
-                 [sq8, -sq8, -sq8, sq8, sq8, -sq8, -sq8, sq8]),
-                ([(3, 8, 0, 3), (3, 8, 1, 2), (3, 8, 2, 1), (3, 8, 3, 0),
-                  (8, 3, 0, 3), (8, 3, 1, 2), (8, 3, 2, 1), (8, 3, 3, 0)],
-                 [sq8, -sq8, sq8, -sq8, -sq8,  sq8, -sq8, sq8]),
-                ([(2, 8, 0, 2), (2, 8, 2, 0), (3, 7, 0, 2), (3, 7, 2, 0),
-                  (7, 3, 0, 2), (7, 3, 2, 0), (8, 2, 0, 2), (8, 2, 2, 0)],
-                 [sq8, -sq8, -sq8, sq8, sq8, -sq8, -sq8, sq8]),
+                (
+                    [
+                        (3, 9, 0, 2),
+                        (3, 9, 2, 0),
+                        (4, 8, 0, 2),
+                        (4, 8, 2, 0),
+                        (8, 4, 0, 2),
+                        (8, 4, 2, 0),
+                        (9, 3, 0, 2),
+                        (9, 3, 2, 0),
+                    ],
+                    [sq8, -sq8, -sq8, sq8, sq8, -sq8, -sq8, sq8],
+                ),
+                (
+                    [
+                        (4, 9, 0, 3),
+                        (4, 9, 1, 2),
+                        (4, 9, 2, 1),
+                        (4, 9, 3, 0),
+                        (9, 4, 0, 3),
+                        (9, 4, 1, 2),
+                        (9, 4, 2, 1),
+                        (9, 4, 3, 0),
+                    ],
+                    [sq8, -sq8, sq8, -sq8, -sq8, sq8, -sq8, sq8],
+                ),
+                (
+                    [
+                        (3, 4, 0, 1),
+                        (3, 4, 1, 0),
+                        (4, 3, 0, 1),
+                        (4, 3, 1, 0),
+                        (8, 9, 2, 3),
+                        (8, 9, 3, 2),
+                        (9, 8, 2, 3),
+                        (9, 8, 3, 2),
+                    ],
+                    [sq8, -sq8, -sq8, sq8, -sq8, sq8, sq8, -sq8],
+                ),
+                (
+                    [
+                        (3, 9, 0, 3),
+                        (3, 9, 1, 2),
+                        (3, 9, 2, 1),
+                        (3, 9, 3, 0),
+                        (4, 8, 0, 3),
+                        (4, 8, 1, 2),
+                        (4, 8, 2, 1),
+                        (4, 8, 3, 0),
+                        (8, 4, 0, 3),
+                        (8, 4, 1, 2),
+                        (8, 4, 2, 1),
+                        (8, 4, 3, 0),
+                        (9, 3, 0, 3),
+                        (9, 3, 1, 2),
+                        (9, 3, 2, 1),
+                        (9, 3, 3, 0),
+                    ],
+                    [
+                        0.25,
+                        0.25,
+                        -0.25,
+                        -0.25,
+                        -0.25,
+                        -0.25,
+                        0.25,
+                        0.25,
+                        0.25,
+                        0.25,
+                        -0.25,
+                        -0.25,
+                        -0.25,
+                        -0.25,
+                        0.25,
+                        0.25,
+                    ],
+                ),
+                (
+                    [
+                        (3, 9, 0, 3),
+                        (3, 9, 1, 2),
+                        (3, 9, 2, 1),
+                        (3, 9, 3, 0),
+                        (4, 8, 0, 3),
+                        (4, 8, 1, 2),
+                        (4, 8, 2, 1),
+                        (4, 8, 3, 0),
+                        (8, 4, 0, 3),
+                        (8, 4, 1, 2),
+                        (8, 4, 2, 1),
+                        (8, 4, 3, 0),
+                        (9, 3, 0, 3),
+                        (9, 3, 1, 2),
+                        (9, 3, 2, 1),
+                        (9, 3, 3, 0),
+                    ],
+                    [
+                        0.25,
+                        -0.25,
+                        0.25,
+                        -0.25,
+                        0.25,
+                        -0.25,
+                        0.25,
+                        -0.25,
+                        -0.25,
+                        0.25,
+                        -0.25,
+                        0.25,
+                        -0.25,
+                        0.25,
+                        -0.25,
+                        0.25,
+                    ],
+                ),
+                (
+                    [
+                        (2, 9, 0, 2),
+                        (2, 9, 2, 0),
+                        (4, 7, 0, 2),
+                        (4, 7, 2, 0),
+                        (7, 4, 0, 2),
+                        (7, 4, 2, 0),
+                        (9, 2, 0, 2),
+                        (9, 2, 2, 0),
+                    ],
+                    [sq8, -sq8, -sq8, sq8, sq8, -sq8, -sq8, sq8],
+                ),
+                (
+                    [
+                        (3, 8, 0, 3),
+                        (3, 8, 1, 2),
+                        (3, 8, 2, 1),
+                        (3, 8, 3, 0),
+                        (8, 3, 0, 3),
+                        (8, 3, 1, 2),
+                        (8, 3, 2, 1),
+                        (8, 3, 3, 0),
+                    ],
+                    [sq8, -sq8, sq8, -sq8, -sq8, sq8, -sq8, sq8],
+                ),
+                (
+                    [
+                        (2, 8, 0, 2),
+                        (2, 8, 2, 0),
+                        (3, 7, 0, 2),
+                        (3, 7, 2, 0),
+                        (7, 3, 0, 2),
+                        (7, 3, 2, 0),
+                        (8, 2, 0, 2),
+                        (8, 2, 2, 0),
+                    ],
+                    [sq8, -sq8, -sq8, sq8, sq8, -sq8, -sq8, sq8],
+                ),
             ],
         }
 
@@ -537,29 +795,65 @@ class TestGuess:
         sq8 = 1 / np.sqrt(8)
         return {
             ("ph", "none"): [
-                ([(11, 3)], [1.]), ([(12, 3)], [1.]),
-                ([( 6, 0)], [1.]), ([( 6, 1)], [1.]),
-                ([(10, 3)], [1.]), ([( 5, 0)], [1.]),
-                ([( 4, 1)], [1.]), ([(11, 5)], [1.]),
+                ([(11, 3)], [1.0]),
+                ([(12, 3)], [1.0]),
+                ([(6, 0)], [1.0]),
+                ([(6, 1)], [1.0]),
+                ([(10, 3)], [1.0]),
+                ([(5, 0)], [1.0]),
+                ([(4, 1)], [1.0]),
+                ([(11, 5)], [1.0]),
             ],
             ("pphh", "none"): [
-                ([(6, 11, 0, 3), (6, 11, 3, 0), (11, 6, 0, 3), (11, 6, 3, 0)],
-                 [-0.5, 0.5, 0.5, -0.5]),
-                ([(6, 12, 0, 3), (6, 12, 3, 0), (12, 6, 0, 3), (12, 6, 3, 0)],
-                 [-0.5,  0.5, 0.5, -0.5]),
-                ([(6, 11, 1, 3), (6, 11, 3, 1), (11, 6, 1, 3), (11, 6, 3, 1)],
-                 [0.5, -0.5, -0.5, 0.5]),
-                ([(6, 12, 1, 3), (6, 12, 3, 1), (12, 6, 1, 3), (12, 6, 3, 1)],
-                 [0.5, -0.5, -0.5, 0.5]),
-                ([(4, 11, 0, 3), (4, 11, 3, 0), (11, 4, 0, 3), (11, 4, 3, 0)],
-                 [0.5, -0.5, -0.5, 0.5]),
-                ([(4, 12, 0, 3), (4, 12, 3, 0), (5, 11, 0, 3), (5, 11, 3, 0),
-                  (11, 5, 0, 3), (11, 5, 3, 0), (12, 4, 0, 3), (12, 4, 3, 0)],
-                 [sq8, -sq8, -sq8,  sq8,  sq8, -sq8, -sq8,  sq8]),
-                ([(4, 12, 0, 3), (4, 12, 3, 0), (5, 11, 0, 3), (5, 11, 3, 0),
-                  (11, 5, 0, 3), (11, 5, 3, 0), (12, 4, 0, 3), (12, 4, 3, 0)],
-                 [sq8, -sq8,  sq8, -sq8, -sq8,  sq8, -sq8,  sq8]),
-                ([(5, 12, 0, 3), (5, 12, 3, 0), (12, 5, 0, 3), (12, 5, 3, 0)],
-                 [0.5, -0.5, -0.5, 0.5]),
+                (
+                    [(6, 11, 0, 3), (6, 11, 3, 0), (11, 6, 0, 3), (11, 6, 3, 0)],
+                    [-0.5, 0.5, 0.5, -0.5],
+                ),
+                (
+                    [(6, 12, 0, 3), (6, 12, 3, 0), (12, 6, 0, 3), (12, 6, 3, 0)],
+                    [-0.5, 0.5, 0.5, -0.5],
+                ),
+                (
+                    [(6, 11, 1, 3), (6, 11, 3, 1), (11, 6, 1, 3), (11, 6, 3, 1)],
+                    [0.5, -0.5, -0.5, 0.5],
+                ),
+                (
+                    [(6, 12, 1, 3), (6, 12, 3, 1), (12, 6, 1, 3), (12, 6, 3, 1)],
+                    [0.5, -0.5, -0.5, 0.5],
+                ),
+                (
+                    [(4, 11, 0, 3), (4, 11, 3, 0), (11, 4, 0, 3), (11, 4, 3, 0)],
+                    [0.5, -0.5, -0.5, 0.5],
+                ),
+                (
+                    [
+                        (4, 12, 0, 3),
+                        (4, 12, 3, 0),
+                        (5, 11, 0, 3),
+                        (5, 11, 3, 0),
+                        (11, 5, 0, 3),
+                        (11, 5, 3, 0),
+                        (12, 4, 0, 3),
+                        (12, 4, 3, 0),
+                    ],
+                    [sq8, -sq8, -sq8, sq8, sq8, -sq8, -sq8, sq8],
+                ),
+                (
+                    [
+                        (4, 12, 0, 3),
+                        (4, 12, 3, 0),
+                        (5, 11, 0, 3),
+                        (5, 11, 3, 0),
+                        (11, 5, 0, 3),
+                        (11, 5, 3, 0),
+                        (12, 4, 0, 3),
+                        (12, 4, 3, 0),
+                    ],
+                    [sq8, -sq8, sq8, -sq8, -sq8, sq8, -sq8, sq8],
+                ),
+                (
+                    [(5, 12, 0, 3), (5, 12, 3, 0), (12, 5, 0, 3), (12, 5, 3, 0)],
+                    [0.5, -0.5, -0.5, 0.5],
+                ),
             ],
         }

@@ -21,11 +21,9 @@ eV = constants.value("Hartree energy in eV")  # Hartree to eV
 
 # Run SCF in pyscf
 mol = gto.M(
-    atom='O 0 0 0;'
-         'H 0 0 1.795239827225189;'
-         'H 1.693194615993441 0 -0.599043184453037',
-    basis='cc-pvdz',
-    unit="Bohr"
+    atom="O 0 0 0;H 0 0 1.795239827225189;H 1.693194615993441 0 -0.599043184453037",
+    basis="cc-pvdz",
+    unit="Bohr",
 )
 scfres = scf.RHF(mol)
 scfres.conv_tol = 1e-12
@@ -38,35 +36,34 @@ print(adcc.banner())
 state = adcc.adc2(scfres, n_singlets=7, conv_tol=1e-8)
 
 # Get dipole integrals from pyscf
-dip_ao = mol.intor_symmetric('int1e_r', comp=3)
+dip_ao = mol.intor_symmetric("int1e_r", comp=3)
 
 # compute nuclear dipole
 charges = mol.atom_charges()
 coords = mol.atom_coords()
-dip_nucl = np.einsum('i,ix->x', charges, coords)
+dip_nucl = np.einsum("i,ix->x", charges, coords)
 
 #
 # Compute properties
 #
-exc_energies = []    # Excitation energies
-osc_strengths = []    # Oscillator strength
+exc_energies = []  # Excitation energies
+osc_strengths = []  # Oscillator strength
 
 print()
-print("  st  ex.ene. (au)         f     transition dipole moment (au)"
-      "        state dip (au)")
+print("  st  ex.ene. (au)         f     transition dipole moment (au)        state dip (au)")
 for i, exci in enumerate(state.excitation_energy):
     # Compute transition density matrix
     tdm_ao = state.transition_dm[i].to_ao_basis()
     ρ_tdm_tot = (tdm_ao[0] + tdm_ao[1]).to_ndarray()
 
     # Compute transition dipole moment
-    tdip = np.einsum('xij,ij->x', dip_ao, ρ_tdm_tot)
-    osc = 2. / 3. * np.linalg.norm(tdip)**2 * np.abs(exci)
+    tdip = np.einsum("xij,ij->x", dip_ao, ρ_tdm_tot)
+    osc = 2.0 / 3.0 * np.linalg.norm(tdip) ** 2 * np.abs(exci)
 
     # Compute excited states density matrix and excited state dipole moment
     opdm_ao = state.state_dm[i].to_ao_basis()
     ρ_opdm_tot = (opdm_ao[0] + opdm_ao[1]).to_ndarray()
-    sdip_el = np.einsum('xij,ij->x', dip_ao, ρ_opdm_tot)
+    sdip_el = np.einsum("xij,ij->x", dip_ao, ρ_opdm_tot)
     sdip = sdip_el - dip_nucl
 
     # Print findings
@@ -78,11 +75,9 @@ for i, exci in enumerate(state.excitation_energy):
     # Build LUNTO and HONTO by SVD
     u, s, v = np.linalg.svd(ρ_tdm_tot)
     # LUNTOs
-    cubegen.orbital(mol=mol, coeff=u.T[0],
-                    outfile=f"nto_{i}_LUNTO.cube")
+    cubegen.orbital(mol=mol, coeff=u.T[0], outfile=f"nto_{i}_LUNTO.cube")
     # HONTOs
-    cubegen.orbital(mol=mol, coeff=v[0],
-                    outfile=f"nto_{i}_HONTO.cube")
+    cubegen.orbital(mol=mol, coeff=v[0], outfile=f"nto_{i}_HONTO.cube")
 
     # Save oscillator strength and excitation energies
     osc_strengths.append(osc)

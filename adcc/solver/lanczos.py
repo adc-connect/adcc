@@ -38,7 +38,7 @@ class LanczosState(EigenSolverStateBase):
         super().__init__(iterator.matrix)
         self.n_restart = 0
         self.subspace_residual = None  # Lanczos subspace residual vector(s)
-        self.subspace_vectors = None   # Current subspace vectors
+        self.subspace_vectors = None  # Current subspace vectors
         self.algorithm = "lanczos"
         self.timer = iterator.timer
 
@@ -50,15 +50,21 @@ def default_print(state, identifier, file=sys.stdout):
     from adcc.timings import strtime, strtime_short
 
     if identifier == "start" and state.n_iter == 0:
-        print("Niter n_ss  max_residual  time  Ritz values",
-              file=file)
+        print("Niter n_ss  max_residual  time  Ritz values", file=file)
     elif identifier == "next_iter":
         time_iter = state.timer.current("iteration")
         fmt = "{n_iter:3d}  {ss_size:4d}  {residual:12.5g}  {tstr:5s}"
-        print(fmt.format(n_iter=state.n_iter, tstr=strtime_short(time_iter),
-                         ss_size=len(state.subspace_vectors),
-                         residual=np.max(state.residual_norms)),
-              "", state.eigenvalues[:7], file=file)
+        print(
+            fmt.format(
+                n_iter=state.n_iter,
+                tstr=strtime_short(time_iter),
+                ss_size=len(state.subspace_vectors),
+                residual=np.max(state.residual_norms),
+            ),
+            "",
+            state.eigenvalues[:7],
+            file=file,
+        )
         if hasattr(state, "subspace_orthogonality"):
             print(33 * " " + f"nonorth: {state.subspace_orthogonality:5.3g}")
     elif identifier == "is_converged":
@@ -81,12 +87,17 @@ def compute_true_residuals(subspace, rvals, rvecs, epair_mask):
     def form_residual(rval, rvec):
         coefficients = np.hstack((rvec, -rval * rvec))
         return lincomb(coefficients, AV + V, evaluate=True)
-    residuals = [form_residual(rvals[i], rvec)
-                 for i, rvec in enumerate(np.transpose(rvecs))
-                 if i in epair_mask]
-    eigenvectors = [lincomb(rvec, V, evaluate=True)
-                    for i, rvec in enumerate(np.transpose(rvecs))
-                    if i in epair_mask]
+
+    residuals = [
+        form_residual(rvals[i], rvec)
+        for i, rvec in enumerate(np.transpose(rvecs))
+        if i in epair_mask
+    ]
+    eigenvectors = [
+        lincomb(rvec, V, evaluate=True)
+        for i, rvec in enumerate(np.transpose(rvecs))
+        if i in epair_mask
+    ]
     rnorms = np.array([np.sqrt(r @ r) for r in residuals])
 
     return eigenvectors, residuals, rnorms
@@ -107,8 +118,9 @@ def check_convergence(subspace, rvals, rvecs, tol):
     b = subspace.rayleigh_extension
 
     # Norm of the residual vector block
-    norm_residual = np.sqrt(sum(subspace.residual[p] @ subspace.residual[p]
-                                for p in range(subspace.n_block)))
+    norm_residual = np.sqrt(
+        sum(subspace.residual[p] @ subspace.residual[p] for p in range(subspace.n_block))
+    )
 
     # Minimal tolerance for convergence criterion
     # same settings as in ARPACK are used:
@@ -128,9 +140,18 @@ def check_convergence(subspace, rvals, rvecs, tol):
     return eigenpair_converged, np.array(eigenpair_error)
 
 
-def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9,
-                       which="LA", max_iter=100, callback=None,
-                       debug_checks=False, state=None):
+def lanczos_iterations(
+    iterator,
+    n_ep,
+    min_subspace,
+    max_subspace,
+    conv_tol=1e-9,
+    which="LA",
+    max_iter=100,
+    callback=None,
+    debug_checks=False,
+    state=None,
+):
     """Drive the Lanczos iterations
 
     Parameters
@@ -158,6 +179,7 @@ def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9
         (Loss of orthogonality etc.)
     """
     if callback is None:
+
         def callback(state, identifier):
             pass
 
@@ -180,8 +202,7 @@ def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9
             orth = subspace.check_orthogonality(orthotol)
             state.subspace_orthogonality = orth
 
-        is_rval_converged, eigenpair_error = check_convergence(subspace, rvals,
-                                                               rvecs, conv_tol)
+        is_rval_converged, eigenpair_error = check_convergence(subspace, rvals, rvecs, conv_tol)
 
         # Update state
         state.n_iter += 1
@@ -200,19 +221,19 @@ def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9
         state.timer.restart("iteration")
 
         if converged:
-            state = amend_true_residuals(state, subspace, rvals,
-                                         rvecs, epair_mask)
+            state = amend_true_residuals(state, subspace, rvals, rvecs, epair_mask)
             state.converged = True
             callback(state, "is_converged")
             state.timer.stop("iteration")
             return state
 
         if state.n_iter >= max_iter:
-            warnings.warn(la.LinAlgWarning(
-                f"Maximum number of iterations (== {max_iter}) "
-                "reached in lanczos procedure."))
-            state = amend_true_residuals(state, subspace, rvals,
-                                         rvecs, epair_mask)
+            warnings.warn(
+                la.LinAlgWarning(
+                    f"Maximum number of iterations (== {max_iter}) reached in lanczos procedure."
+                )
+            )
+            state = amend_true_residuals(state, subspace, rvals, rvecs, epair_mask)
             state.timer.stop("iteration")
             state.converged = False
             return state
@@ -224,37 +245,62 @@ def lanczos_iterations(iterator, n_ep, min_subspace, max_subspace, conv_tol=1e-9
             V = subspace.subspace
             vn, betan = subspace.ortho.qr(subspace.residual)
 
-            Y = [lincomb(rvec, V, evaluate=True)
-                 for i, rvec in enumerate(np.transpose(rvecs))
-                 if i in epair_mask]
+            Y = [
+                lincomb(rvec, V, evaluate=True)
+                for i, rvec in enumerate(np.transpose(rvecs))
+                if i in epair_mask
+            ]
             Theta = rvals[epair_mask]
             Sigma = rvecs[:, epair_mask].T @ b @ betan.T
 
             iterator = LanczosIterator(
-                iterator.matrix, vn, ritz_vectors=Y, ritz_values=Theta,
+                iterator.matrix,
+                vn,
+                ritz_vectors=Y,
+                ritz_values=Theta,
                 ritz_overlaps=Sigma,
-                explicit_symmetrisation=iterator.explicit_symmetrisation
+                explicit_symmetrisation=iterator.explicit_symmetrisation,
             )
             state.n_restart += 1
             return lanczos_iterations(
-                iterator, n_ep, min_subspace, max_subspace, conv_tol, which,
-                max_iter, callback, debug_checks, state)
+                iterator,
+                n_ep,
+                min_subspace,
+                max_subspace,
+                conv_tol,
+                which,
+                max_iter,
+                callback,
+                debug_checks,
+                state,
+            )
 
     state = amend_true_residuals(state, subspace, rvals, rvecs, epair_mask)
     state.timer.stop("iteration")
     state.converged = False
-    warnings.warn(la.LinAlgWarning(
-        "Lanczos procedure found maximal subspace possible. Iteration cannot be "
-        "continued like this and will be aborted without convergence. "
-        "Try a different guess."))
+    warnings.warn(
+        la.LinAlgWarning(
+            "Lanczos procedure found maximal subspace possible. Iteration cannot be "
+            "continued like this and will be aborted without convergence. "
+            "Try a different guess."
+        )
+    )
     return state
 
 
-def lanczos(matrix, guesses, n_ep, max_subspace=None,
-            conv_tol=1e-9, which="LM", max_iter=100,
-            callback=None, debug_checks=False,
-            explicit_symmetrisation=IndexSymmetrisation,
-            min_subspace=None):
+def lanczos(
+    matrix,
+    guesses,
+    n_ep,
+    max_subspace=None,
+    conv_tol=1e-9,
+    which="LM",
+    max_iter=100,
+    callback=None,
+    debug_checks=False,
+    explicit_symmetrisation=IndexSymmetrisation,
+    min_subspace=None,
+):
     """Lanczos eigensolver for ADC problems
 
     Parameters
@@ -286,11 +332,9 @@ def lanczos(matrix, guesses, n_ep, max_subspace=None,
     min_subspace : int or NoneType, optional
         Subspace size to collapse to when performing a thick restart.
     """
-    if explicit_symmetrisation is not None and \
-            isinstance(explicit_symmetrisation, type):
+    if explicit_symmetrisation is not None and isinstance(explicit_symmetrisation, type):
         explicit_symmetrisation = explicit_symmetrisation(matrix)
-    iterator = LanczosIterator(matrix, guesses,
-                               explicit_symmetrisation=explicit_symmetrisation)
+    iterator = LanczosIterator(matrix, guesses, explicit_symmetrisation=explicit_symmetrisation)
 
     if not isinstance(guesses, list):
         guesses = [guesses]
@@ -299,11 +343,22 @@ def lanczos(matrix, guesses, n_ep, max_subspace=None,
     if not min_subspace:
         min_subspace = n_ep + 2 * len(guesses)
     if conv_tol < matrix.shape[1] * np.finfo(float).eps:
-        warnings.warn(la.LinAlgWarning(
-            f"Convergence tolerance (== {conv_tol:5.2g}) lower than "
-            f"estimated maximal numerical accuracy (== {matrix.shape[1] * np.finfo(float).eps:5.2g}). "
-            "Convergence might be hard to achieve."
-        ))
+        warnings.warn(
+            la.LinAlgWarning(
+                f"Convergence tolerance (== {conv_tol:5.2g}) lower than "
+                f"estimated maximal numerical accuracy (== {matrix.shape[1] * np.finfo(float).eps:5.2g}). "
+                "Convergence might be hard to achieve."
+            )
+        )
 
-    return lanczos_iterations(iterator, n_ep, min_subspace, max_subspace,
-                              conv_tol, which, max_iter, callback, debug_checks)
+    return lanczos_iterations(
+        iterator,
+        n_ep,
+        min_subspace,
+        max_subspace,
+        conv_tol,
+        which,
+        max_iter,
+        callback,
+        debug_checks,
+    )

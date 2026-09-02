@@ -23,8 +23,9 @@ import libadcc
 
 
 class Symmetry(libadcc.Symmetry):
-    def __init__(self, mospaces, space, permutations=None,
-                 spin_block_maps=None, spin_blocks_forbidden=None):
+    def __init__(
+        self, mospaces, space, permutations=None, spin_block_maps=None, spin_blocks_forbidden=None
+    ):
         if not isinstance(mospaces, libadcc.MoSpaces):
             raise TypeError("mospaces needs to be an MoSpaces instance.")
 

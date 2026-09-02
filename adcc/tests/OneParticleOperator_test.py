@@ -31,8 +31,11 @@ from adcc.NParticleOperator import OperatorSymmetry
 from . import testcases
 from .testdata_cache import testdata_cache
 
-operator_sym = [OperatorSymmetry.HERMITIAN, OperatorSymmetry.ANTIHERMITIAN,
-                OperatorSymmetry.NOSYMMETRY]
+operator_sym = [
+    OperatorSymmetry.HERMITIAN,
+    OperatorSymmetry.ANTIHERMITIAN,
+    OperatorSymmetry.NOSYMMETRY,
+]
 op_syms_two_operators = list(combinations_with_replacement(operator_sym, 2))
 
 
@@ -65,8 +68,7 @@ class TestOneParticleOperator:
         np.testing.assert_allclose(dipx_ao_ref, dipx_ao_a, atol=1e-12)
         np.testing.assert_allclose(dipx_ao_ref, dipx_ao_b, atol=1e-12)
 
-    @pytest.mark.parametrize("symmetry", operator_sym,
-                             ids=[f"{c.name}" for c in operator_sym])
+    @pytest.mark.parametrize("symmetry", operator_sym, ids=[f"{c.name}" for c in operator_sym])
     def test_to_ndarray(self, symmetry):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
         dm = OneParticleOperator(ref.mospaces, symmetry=symmetry)
@@ -114,5 +116,4 @@ class TestOneParticleOperator:
         with pytest.raises(ValueError):
             a.oo = a.ov
         # shortcuts
-        np.testing.assert_allclose(a.oo.to_ndarray(),
-                                   a["o1o1"].to_ndarray())
+        np.testing.assert_allclose(a.oo.to_ndarray(), a["o1o1"].to_ndarray())

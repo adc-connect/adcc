@@ -205,8 +205,7 @@ def transition_dm(method, ground_state, amplitude, intermediates=None):
         intermediates = Intermediates(ground_state)
 
     if method.name not in DISPATCH:
-        raise NotImplementedError(
-            f"transition_dm is not implemented for {method.name}.")
+        raise NotImplementedError(f"transition_dm is not implemented for {method.name}.")
     else:
         ret = DISPATCH[method.name](ground_state, amplitude, intermediates)
         return ret.evaluate()

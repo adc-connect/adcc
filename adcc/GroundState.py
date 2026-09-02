@@ -39,12 +39,12 @@ class GroundState:
     """
     Base class representing the ground state.
     """
+
     def __init__(self, hf: ReferenceState | libadcc.HartreeFockSolution_i):
         if isinstance(hf, libadcc.HartreeFockSolution_i):
             hf = ReferenceState(hf)
         if not isinstance(hf, ReferenceState):
-            raise TypeError("hf needs to be a 'ReferenceState' "
-                            "or a 'HartreeFockSolution_i'")
+            raise TypeError("hf needs to be a 'ReferenceState' or a 'HartreeFockSolution_i'")
         self.reference_state: ReferenceState = hf
         self.mospaces: MoSpaces = hf.mospaces
         self.timer: Timer = Timer()
@@ -107,8 +107,7 @@ class GroundState:
     def energy_correction(self, level: int = 2) -> float:
         """Obtain the ground state energy correction at a particular level"""
         raise NotImplementedError(
-            "Ground state energy corrections not implemented on "
-            f"{self.__class__.__name__} class."
+            f"Ground state energy corrections not implemented on {self.__class__.__name__} class."
         )
 
     def energy(self, level: int = 2) -> float:
@@ -117,8 +116,7 @@ class GroundState:
         at a particular level of perturbation theory.
         """
         raise NotImplementedError(
-            "Ground state energy not implemented on "
-            f"{self.__class__.__name__} class."
+            f"Ground state energy not implemented on {self.__class__.__name__} class."
         )
 
     def diffdm(self, level: int = 2, apply_cvs: bool = False) -> OneParticleDensity:
@@ -131,18 +129,16 @@ class GroundState:
         elif level == 2:
             return self.second_order_dm_correction(apply_cvs=apply_cvs)
         elif level == 3:
-            return (
-                self.second_order_dm_correction(apply_cvs=apply_cvs)
-                + self.third_order_dm_correction(apply_cvs=apply_cvs)
-            )
+            return self.second_order_dm_correction(
+                apply_cvs=apply_cvs
+            ) + self.third_order_dm_correction(apply_cvs=apply_cvs)
         else:
             raise NotImplementedError(
                 "Only second-order density corection is implemented. "
                 f"diffdm of level {level} is not available."
             )
 
-    def density(self, level: int = 2,
-                apply_cvs: bool = False) -> OneParticleDensity:
+    def density(self, level: int = 2, apply_cvs: bool = False) -> OneParticleDensity:
         """
         Return the ground state density in the MO basis with all corrections
         up to the specified order of perturbation theory.
@@ -152,8 +148,7 @@ class GroundState:
         diffdm = self.diffdm(level, apply_cvs=apply_cvs)
         return self.reference_state.density + diffdm
 
-    def diffdm_2p(self, level: int = 2,
-                  apply_cvs: bool = False) -> TwoParticleDensity:
+    def diffdm_2p(self, level: int = 2, apply_cvs: bool = False) -> TwoParticleDensity:
         """
         Return the two-particle ground state difference density in the MO basis
         with all corrections up to the specified order of perturbation theory.
@@ -163,14 +158,16 @@ class GroundState:
         elif level == 1:
             return self.first_order_dm_correction_2p(apply_cvs=apply_cvs)
         elif level == 2:
-            return (self.first_order_dm_correction_2p(apply_cvs=apply_cvs)
-                    + self.second_order_dm_correction_2p(apply_cvs=apply_cvs))
-        raise NotImplementedError("Only first and second-order two-particle "
-                                  "density corrections are implemented. "
-                                  f"2p diffdm of level {level} is not available.")
+            return self.first_order_dm_correction_2p(
+                apply_cvs=apply_cvs
+            ) + self.second_order_dm_correction_2p(apply_cvs=apply_cvs)
+        raise NotImplementedError(
+            "Only first and second-order two-particle "
+            "density corrections are implemented. "
+            f"2p diffdm of level {level} is not available."
+        )
 
-    def density_2p(self, level: int = 2,
-                   apply_cvs: bool = False) -> TwoParticleDensity:
+    def density_2p(self, level: int = 2, apply_cvs: bool = False) -> TwoParticleDensity:
         """
         Return the two-particle ground state density in the MO basis
         with all corrections up to the specified order of perturbation theory.
@@ -181,17 +178,18 @@ class GroundState:
         return self.reference_state.density_2p + diffdm
 
     @cached_member_function()
-    def dipole_moment(self, level: int = 2, apply_cvs: bool = False
-                      ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+    def dipole_moment(
+        self, level: int = 2, apply_cvs: bool = False
+    ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
         """
         Return the ground state dipole moment at the specified level of
         perturbation theory.
         """
         dm = self.density(level, apply_cvs=apply_cvs)
         dipole_integrals = self.reference_state.operators.electric_dipole
-        return self.reference_state.nuclear_dipole + np.array([
-            product_trace(comp, dm) for comp in dipole_integrals
-        ])
+        return self.reference_state.nuclear_dipole + np.array(
+            [product_trace(comp, dm) for comp in dipole_integrals]
+        )
 
     @cached_member_function()
     def ssq(self, level: int = 2, apply_cvs: bool = False) -> float:
@@ -199,17 +197,13 @@ class GroundState:
         Return <S^2> of the ground state.
         """
         if self.reference_state.restricted:
-            raise NotImplementedError(
-                "<S^2> is not implemented for restricted HF references."
-            )
+            raise NotImplementedError("<S^2> is not implemented for restricted HF references.")
         ssq_1p_op = self.reference_state.operators.ssq_1p
         ssq_2p_op = self.reference_state.operators.ssq_2p
         # the trace of the second-order (and higher) correction to the RDM1
         # is zero -> no influence on top of HF density for ground state
         ssq_1p = product_trace(ssq_1p_op, self.density(0))
-        ssq_2p = product_trace(
-            ssq_2p_op, self.density_2p(level, apply_cvs=apply_cvs)
-        )
+        ssq_2p = product_trace(ssq_2p_op, self.density_2p(level, apply_cvs=apply_cvs))
         return ssq_1p + ssq_2p
 
     @cached_member_function()
@@ -231,18 +225,20 @@ class GroundState:
         key = space + contraction
         expressions = {
             # space + contraction
-            b.ooov + b.vv: ('ijbc,kabc->ijka', b.ovvv),
-            b.ooov + b.ov: ('ilab,lkjb->ijka', b.ooov),
-            b.oovv + b.oo: ('klab,ijkl->ijab', b.oooo),
-            b.oovv + b.ov: ('jkac,kbic->ijab', b.ovov),
-            b.oovv + b.vv: ('ijcd,abcd->ijab', b.vvvv),
-            b.ovvv + b.oo: ('jkbc,jkia->iabc', b.ooov),
-            b.ovvv + b.ov: ('ijbd,jcad->iabc', b.ovvv),
+            b.ooov + b.vv: ("ijbc,kabc->ijka", b.ovvv),
+            b.ooov + b.ov: ("ilab,lkjb->ijka", b.ooov),
+            b.oovv + b.oo: ("klab,ijkl->ijab", b.oooo),
+            b.oovv + b.ov: ("jkac,kbic->ijab", b.ovov),
+            b.oovv + b.vv: ("ijcd,abcd->ijab", b.vvvv),
+            b.ovvv + b.oo: ("jkbc,jkia->iabc", b.ooov),
+            b.ovvv + b.ov: ("ijbd,jcad->iabc", b.ovvv),
         }
         if key not in expressions:
-            raise NotImplementedError("t2eri intermediate not implemented "
-                                      f"for space '{space}' and contraction "
-                                      f"'{contraction}'.")
+            raise NotImplementedError(
+                "t2eri intermediate not implemented "
+                f"for space '{space}' and contraction "
+                f"'{contraction}'."
+            )
         contraction_str, eri_block = expressions[key]
         return einsum(contraction_str, self.t2oo, hf.eri(eri_block))
 
@@ -262,10 +258,8 @@ class GroundState:
         if self.has_core_occupied_space:
             raise NotImplementedError("m_3_plus not implemented for CVS.")
         return (
-            + 1 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.ov))
-            + 0.5 * einsum(
-                "ijbc,jabc->ia", self.td2(b.oovv), self.reference_state.ovvv
-            )
+            +1 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.ov))
+            + 0.5 * einsum("ijbc,jabc->ia", self.td2(b.oovv), self.reference_state.ovvv)
             - 0.25 * einsum("ijbc,jabc->ia", self.t2oo, self.t2eri(b.ovvv, b.oo))
         )
 
@@ -278,9 +272,7 @@ class GroundState:
         if self.has_core_occupied_space:
             raise NotImplementedError("m_3_minus not implemented for CVS.")
         return (
-            + 0.5 * einsum(
-                "jkab,jkib->ia", self.td2(b.oovv), self.reference_state.ooov
-            )
+            +0.5 * einsum("jkab,jkib->ia", self.td2(b.oovv), self.reference_state.ooov)
             - 1 * einsum("jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.ov))
             - 0.25 * einsum("jkab,jkib->ia", self.t2oo, self.t2eri(b.ooov, b.vv))
         )
@@ -301,20 +293,19 @@ class GroundState:
         )  # fmt: skip
 
     @cached_member_function()
-    def second_order_dm_correction(self, apply_cvs: bool = False
-                                   ) -> OneParticleDensity:
+    def second_order_dm_correction(self, apply_cvs: bool = False) -> OneParticleDensity:
         """
         Return the second-order contribution to the ground state
         difference density in the MO basis.
         """
         if apply_cvs and not self.has_core_occupied_space:
-            raise RuntimeError("Cannot apply the CVS approximation to a "
-                               "ground state build on top of a HF reference state "
-                               "without a core space.")
+            raise RuntimeError(
+                "Cannot apply the CVS approximation to a "
+                "ground state build on top of a HF reference state "
+                "without a core space."
+            )
 
-        ret = OneParticleDensity(
-            self.mospaces, symmetry=OperatorSymmetry.HERMITIAN
-        )
+        ret = OneParticleDensity(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
         ret.oo = -0.5 * einsum("ikab,jkab->ij", self.t2oo, self.t2oo)
         ret.ov = self.ts2(b.ov, apply_cvs=apply_cvs)
         ret.vv = 0.5 * einsum("ijac,ijbc->ab", self.t2oo, self.t2oo)
@@ -342,8 +333,7 @@ class GroundState:
         ret.reference_state = self.reference_state
         return ret.evaluate()
 
-    def third_order_dm_correction(self, apply_cvs: bool = False
-                                  ) -> OneParticleDensity:
+    def third_order_dm_correction(self, apply_cvs: bool = False) -> OneParticleDensity:
         """
         Return the third-order contribution to the ground state
         difference density in the MO basis.
@@ -355,40 +345,38 @@ class GroundState:
         )
 
     @cached_member_function()
-    def first_order_dm_correction_2p(self, apply_cvs: bool = False
-                                     ) -> TwoParticleDensity:
+    def first_order_dm_correction_2p(self, apply_cvs: bool = False) -> TwoParticleDensity:
         """
         Return the two-particle first-order difference density correction
         in the MO basis.
         """
         if self.has_core_occupied_space:
-            raise NotImplementedError("First-order 2-particle DM correction not "
-                                      "implemented for a ground state with "
-                                      "core orbitals.")
+            raise NotImplementedError(
+                "First-order 2-particle DM correction not "
+                "implemented for a ground state with "
+                "core orbitals."
+            )
         assert not apply_cvs  # TODO: once implemented for core orbitals
-        ret = TwoParticleDensity(
-            self.mospaces, symmetry=OperatorSymmetry.HERMITIAN
-        )
+        ret = TwoParticleDensity(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
         ret.oovv = -1.0 * self.t2oo
         ret.reference_state = self.reference_state
         return ret.evaluate()
 
     @cached_member_function()
-    def second_order_dm_correction_2p(self, apply_cvs: bool = False
-                                      ) -> TwoParticleDensity:
+    def second_order_dm_correction_2p(self, apply_cvs: bool = False) -> TwoParticleDensity:
         """
         Return the two-particle second-order difference density correction
         in the MO basis.
         """
         if self.has_core_occupied_space:
-            raise NotImplementedError("Second-order 2-particle DM correction not "
-                                      "implemented for a ground state with "
-                                      "core orbitals.")
+            raise NotImplementedError(
+                "Second-order 2-particle DM correction not "
+                "implemented for a ground state with "
+                "core orbitals."
+            )
         assert not apply_cvs  # TODO: once implemented for core orbitals
         hf: ReferenceState = self.reference_state
-        ret = TwoParticleDensity(
-            self.mospaces, symmetry=OperatorSymmetry.HERMITIAN
-        )
+        ret = TwoParticleDensity(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
         p0: OneParticleDensity = self.diffdm(2)
 
         # constuct Kronecker Delta
@@ -400,24 +388,19 @@ class GroundState:
             .antisymmetrise(0, 1).antisymmetrise(2, 3)
             + 0.5 * einsum("ijab,klab->ijkl", self.t2oo, self.t2oo)
         )  # fmt: skip
-        ret.ooov = (
-            + 2.0 * einsum("ja,ik->ijka", p0.ov, d_oo).antisymmetrise(0, 1)
-        )
-        ret.oovv = (
-            - 1.0 * self.td2(b.oovv)
-        )
+        ret.ooov = +2.0 * einsum("ja,ik->ijka", p0.ov, d_oo).antisymmetrise(0, 1)
+        ret.oovv = -1.0 * self.td2(b.oovv)
         ret.ovov = (
             + 1.0 * einsum("ab,ij->iajb", p0.vv, d_oo)
             - 1.0 * einsum("jkac,ikbc->iajb", self.t2oo, self.t2oo)
         )  # fmt: skip
-        ret.vvvv = (
-            + 0.5 * einsum("ijab,ijcd->abcd", self.t2oo, self.t2oo)
-        )
+        ret.vvvv = +0.5 * einsum("ijab,ijcd->abcd", self.t2oo, self.t2oo)
         ret.reference_state = self.reference_state
         return ret.evaluate()
 
-    def _to_qcvars(self, gs_type: str, properties: bool = False,
-                   recurse: bool = False, maxlevel: int = 2) -> dict:
+    def _to_qcvars(
+        self, gs_type: str, properties: bool = False, recurse: bool = False, maxlevel: int = 2
+    ) -> dict:
         """
         Return a dictionary with property keys compatible to a Psi4 wavefunction
         or a QCEngine Atomicresults object.

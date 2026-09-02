@@ -30,7 +30,8 @@ class Intermediates:
     Class offering to return a number of intermediate tensors.
     The tensors are cached internally for later reuse
     """
-    generators: ClassVar = {}      # Registered generator functions
+
+    generators: ClassVar = {}  # Registered generator functions
 
     def __init__(self, ground_state):
         self.ground_state = ground_state
@@ -57,11 +58,7 @@ class Intermediates:
         self.cached_tensors.clear()
 
     def __repr__(self):
-        return (
-            "AdcIntermediates(contains="
-            + list(self.cached_tensors.keys()).join(",")
-            + ")"
-        )
+        return "AdcIntermediates(contains=" + list(self.cached_tensors.keys()).join(",") + ")"
 
 
 def register_as_intermediate(function):

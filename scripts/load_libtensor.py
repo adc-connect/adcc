@@ -40,23 +40,28 @@ def load_libtensor(fle):
     try:
         dim = int(v[0])
     except ValueError:
-        raise ValueError("Could not parse libtensor file: "
-                         "Could not read dimension: " + v[0])
+        raise ValueError("Could not parse libtensor file: Could not read dimension: " + v[0])
 
     if len(v) != dim + 1:
-        raise ValueError("Could not parse libtensor file: "
-                         "Length of dimensionality string (== " + str(len(v))
-                         + ") and expected number of dimensions (== " + str(dim)
-                         + ") does not agree.")
+        raise ValueError(
+            "Could not parse libtensor file: "
+            "Length of dimensionality string (== "
+            + str(len(v))
+            + ") and expected number of dimensions (== "
+            + str(dim)
+            + ") does not agree."
+        )
 
     shape = []
     for i in range(dim):
         try:
             shape.append(int(v[i + 1]))
         except ValueError:
-            raise ValueError("Could not parse libtensor file: "
-                             "Could not parse the " + str(i) + "th element of "
-                             "the dimensionality string.")
+            raise ValueError(
+                "Could not parse libtensor file: "
+                "Could not parse the " + str(i) + "th element of "
+                "the dimensionality string."
+            )
     shape = tuple(shape)
 
     # Construct a string where all fields are on an individual line
@@ -83,7 +88,8 @@ if __name__ == "__main__":
            0.973523775057021 0.977914983508967 0.173239489854350
            0.307523274999390 0.350790596757097 0.217292801077974
            0.036913933392764 0.697086228627064 0.695325836804376
-        """)
+        """
+    )
 
     tensor = load_libtensor(tensor_stream)
     assert tensor[0, 0, 0, 0] == 0.666739916801930

@@ -28,7 +28,7 @@ mol = gto.M(
     H          7.74900        2.71100        2.65200
     H          8.99100        1.57500        2.99500
     """,
-    basis='sto-3g',
+    basis="sto-3g",
 )
 
 scfres = PE(scf.RHF(mol), {"potfile": "pna_6w.pot"})
@@ -38,14 +38,12 @@ scfres.max_cycle = 250
 scfres.kernel()
 
 # model the solvent through perturbative corrections
-state_pt = adcc.adc2(scfres, n_singlets=5, conv_tol=1e-5,
-                     environment=['ptss', 'ptlr'])
+state_pt = adcc.adc2(scfres, n_singlets=5, conv_tol=1e-5, environment=["ptss", "ptlr"])
 
 # now model the solvent through linear-response coupling
 # in the ADC matrix, re-using the matrix from previous run.
 # This will modify state_pt.matrix
-state_lr = adcc.run_adc(state_pt.matrix, n_singlets=5, conv_tol=1e-5,
-                        environment='linear_response')
+state_lr = adcc.run_adc(state_pt.matrix, n_singlets=5, conv_tol=1e-5, environment="linear_response")
 
 print(state_pt.describe())
 print(state_lr.describe())

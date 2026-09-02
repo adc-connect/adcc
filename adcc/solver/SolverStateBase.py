@@ -32,14 +32,14 @@ class EigenSolverStateBase:
             Matrix to be diagonalised.
         """
         self.matrix = matrix
-        self.eigenvalues = None           # Current eigenvalues
-        self.eigenvectors = None          # Current eigenvectors
-        self.residual_norms = None        # Current residual norms
-        self.converged = False            # Flag whether iteration is converged
-        self.n_iter = 0                   # Number of iterations
-        self.n_applies = 0                # Number of applies
-        self.reortho_triggers = []        # List of reorthogonalisation triggers
-        self.timer = Timer()              # Construct a new timer
+        self.eigenvalues = None  # Current eigenvalues
+        self.eigenvectors = None  # Current eigenvectors
+        self.residual_norms = None  # Current residual norms
+        self.converged = False  # Flag whether iteration is converged
+        self.n_iter = 0  # Number of iterations
+        self.n_applies = 0  # Number of applies
+        self.reortho_triggers = []  # List of reorthogonalisation triggers
+        self.timer = Timer()  # Construct a new timer
 
     def describe(self):
         text = ""
@@ -54,14 +54,13 @@ class EigenSolverStateBase:
 
         text += "+" + 60 * "-" + "+\n"
         text += f"| {algorithm:<41s}  {conv:>15s} |\n"
-        text += (f"| {problem[:30]:30s} n_iter={self.n_iter:<3d}  n_applies={self.n_applies:<5d} |\n")
-        text += ("| n_reortho={:<7d}  max_overlap_before_reortho={:<10s}   |\n"
-                 "".format(len(self.reortho_triggers),
-                           f"{max(self.reortho_triggers):<10.4E}"
-                           if len(self.reortho_triggers) > 0 else "N/A"))
+        text += f"| {problem[:30]:30s} n_iter={self.n_iter:<3d}  n_applies={self.n_applies:<5d} |\n"
+        text += "| n_reortho={:<7d}  max_overlap_before_reortho={:<10s}   |\n".format(
+            len(self.reortho_triggers),
+            f"{max(self.reortho_triggers):<10.4E}" if len(self.reortho_triggers) > 0 else "N/A",
+        )
         text += "+" + 60 * "-" + "+\n"
-        text += ("|  #     eigenvalue  res. norm       "
-                 "dominant elements       |\n")
+        text += "|  #     eigenvalue  res. norm       dominant elements       |\n"
 
         body = "| {0:2d} {1:14.7g}  {2:9.4g}               TODO            |\n"
         for i, vec in enumerate(self.eigenvectors):

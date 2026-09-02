@@ -38,12 +38,10 @@ from ..testdata_cache import testdata_cache
 
 class TestSolverLanczos(unittest.TestCase):
     def test_adc2_singlets(self):
-        refdata = testdata_cache.adcman_data(
-            system="h2o_sto3g", method="adc2", case="gen"
-        )["None"]["singlet"]
-        matrix = adcc.AdcMatrix(
-            "adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
-        )
+        refdata = testdata_cache.adcman_data(system="h2o_sto3g", method="adc2", case="gen")["None"][
+            "singlet"
+        ]
+        matrix = adcc.AdcMatrix("adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen")))
 
         # Solve for singlets
         guesses = adcc.guesses_singlet(matrix, n_guesses=5, block="ph")
@@ -56,12 +54,10 @@ class TestSolverLanczos(unittest.TestCase):
         assert res.eigenvalues[:n_states] == pytest.approx(ref_singlets[:n_states])
 
     def test_adc2_triplets(self):
-        refdata = testdata_cache.adcman_data(
-            system="h2o_sto3g", method="adc2", case="gen"
-        )["None"]["triplet"]
-        matrix = adcc.AdcMatrix(
-            "adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
-        )
+        refdata = testdata_cache.adcman_data(system="h2o_sto3g", method="adc2", case="gen")["None"][
+            "triplet"
+        ]
+        matrix = adcc.AdcMatrix("adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen")))
 
         # Solve for triplets
         guesses = adcc.guesses_triplet(matrix, n_guesses=6, block="ph")
@@ -74,27 +70,26 @@ class TestSolverLanczos(unittest.TestCase):
         assert res.eigenvalues[:n_states] == pytest.approx(ref_triplets[:n_states])
 
     def test_adc2_shift_invert_singlets(self):
-        refdata = testdata_cache.adcman_data(
-            system="h2o_sto3g", method="adc2", case="gen"
-        )["None"]["singlet"]
-        matrix = adcc.AdcMatrix(
-            "adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
-        )
+        refdata = testdata_cache.adcman_data(system="h2o_sto3g", method="adc2", case="gen")["None"][
+            "singlet"
+        ]
+        matrix = adcc.AdcMatrix("adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen")))
 
         conv_tol = 1e-5
         shift = -0.5
 
         # Construct shift and inverted matrix:
-        shinv = IterativeInverse(AdcMatrixShifted(matrix, shift),
-                                 conv_tol=conv_tol / 10,
-                                 Pinv=JacobiPreconditioner,
-                                 callback=cg_print)
+        shinv = IterativeInverse(
+            AdcMatrixShifted(matrix, shift),
+            conv_tol=conv_tol / 10,
+            Pinv=JacobiPreconditioner,
+            callback=cg_print,
+        )
 
         # Solve for singlets
         guesses = adcc.guesses_singlet(matrix, n_guesses=5, block="ph")
         symm = IndexSpinSymmetrisation(matrix, enforce_spin_kind="singlet")
-        res = lanczos(shinv, guesses, n_ep=5, callback=la_print,
-                      explicit_symmetrisation=symm)
+        res = lanczos(shinv, guesses, n_ep=5, callback=la_print, explicit_symmetrisation=symm)
         assert res.converged
 
         # Undo spectral transformation and compare
@@ -105,27 +100,26 @@ class TestSolverLanczos(unittest.TestCase):
         assert eigenvalues[:n_states] == pytest.approx(ref_singlets[:n_states])
 
     def test_adc2_shift_invert_triplets(self):
-        refdata = testdata_cache.adcman_data(
-            system="h2o_sto3g", method="adc2", case="gen"
-        )["None"]["triplet"]
-        matrix = adcc.AdcMatrix(
-            "adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
-        )
+        refdata = testdata_cache.adcman_data(system="h2o_sto3g", method="adc2", case="gen")["None"][
+            "triplet"
+        ]
+        matrix = adcc.AdcMatrix("adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen")))
 
         conv_tol = 1e-5
         shift = -0.5
 
         # Construct shift and inverted matrix:
-        shinv = IterativeInverse(AdcMatrixShifted(matrix, shift),
-                                 conv_tol=conv_tol / 10,
-                                 Pinv=JacobiPreconditioner,
-                                 callback=cg_print)
+        shinv = IterativeInverse(
+            AdcMatrixShifted(matrix, shift),
+            conv_tol=conv_tol / 10,
+            Pinv=JacobiPreconditioner,
+            callback=cg_print,
+        )
 
         # Solve for triplets
         guesses = adcc.guesses_triplet(matrix, n_guesses=5, block="ph")
         symm = IndexSpinSymmetrisation(matrix, enforce_spin_kind="triplet")
-        res = lanczos(shinv, guesses, n_ep=5, callback=la_print,
-                      explicit_symmetrisation=symm)
+        res = lanczos(shinv, guesses, n_ep=5, callback=la_print, explicit_symmetrisation=symm)
         assert res.converged
 
         # Undo spectral transformation and compare

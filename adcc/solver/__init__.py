@@ -3,8 +3,8 @@ from .explicit_symmetrisation import IndexSpinSymmetrisation, IndexSymmetrisatio
 from .SolverStateBase import EigenSolverStateBase
 
 __all__ = [
-                                      "EigenSolverStateBase",
-                                      "IndexSpinSymmetrisation",
-                                      "IndexSymmetrisation",
-                                      "davidson",
+    "EigenSolverStateBase",
+    "IndexSpinSymmetrisation",
+    "IndexSymmetrisation",
+    "davidson",
 ]

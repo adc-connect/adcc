@@ -38,7 +38,9 @@ from .EriBuilder import EriBuilder
 
 class VeloxChemOperatorIntegralProvider:
     available: tuple[str, ...] = (
-        "electric_dipole", "electric_dipole_velocity", "magnetic_dipole",
+        "electric_dipole",
+        "electric_dipole_velocity",
+        "magnetic_dipole",
     )
 
     def __init__(self, scfdrv):
@@ -53,9 +55,11 @@ class VeloxChemOperatorIntegralProvider:
         # define the origin for electric dipole integrals
         dipole_drv.origin = tuple(np.zeros(3))
         dipole_mats = dipole_drv.compute(task.molecule, task.ao_basis)
-        return (-1.0 * dipole_mats.x_to_numpy(),
-                -1.0 * dipole_mats.y_to_numpy(),
-                -1.0 * dipole_mats.z_to_numpy())
+        return (
+            -1.0 * dipole_mats.x_to_numpy(),
+            -1.0 * dipole_mats.y_to_numpy(),
+            -1.0 * dipole_mats.z_to_numpy(),
+        )
 
     def magnetic_dipole(self, gauge_origin="origin") -> tuple[np.ndarray, ...]:
         """
@@ -67,9 +71,11 @@ class VeloxChemOperatorIntegralProvider:
         angmom_drv = AngularMomentumIntegralsDriver(task.mpi_comm)
         angmom_drv.origin = tuple(gauge_origin)
         angmom_mats = angmom_drv.compute(task.molecule, task.ao_basis)
-        return (0.5 * angmom_mats.x_to_numpy(),
-                0.5 * angmom_mats.y_to_numpy(),
-                0.5 * angmom_mats.z_to_numpy())
+        return (
+            0.5 * angmom_mats.x_to_numpy(),
+            0.5 * angmom_mats.y_to_numpy(),
+            0.5 * angmom_mats.z_to_numpy(),
+        )
 
     @property
     def electric_dipole_velocity(self) -> tuple[np.ndarray, ...]:
@@ -80,30 +86,31 @@ class VeloxChemOperatorIntegralProvider:
         task = self.scfdrv.task
         linmom_drv = LinearMomentumIntegralsDriver(task.mpi_comm)
         linmom_mats = linmom_drv.compute(task.molecule, task.ao_basis)
-        return (-1.0 * linmom_mats.x_to_numpy(),
-                -1.0 * linmom_mats.y_to_numpy(),
-                -1.0 * linmom_mats.z_to_numpy())
+        return (
+            -1.0 * linmom_mats.x_to_numpy(),
+            -1.0 * linmom_mats.y_to_numpy(),
+            -1.0 * linmom_mats.z_to_numpy(),
+        )
 
 
 class VeloxChemEriBuilder(EriBuilder):
-    def __init__(self, task, mol_orbs, n_orbs, n_orbs_alpha, n_alpha,
-                 n_beta, restricted):
+    def __init__(self, task, mol_orbs, n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted):
         self.moints_drv = vlx.MOIntegralsDriver(task.mpi_comm, task.ostream)
         self.compute_args = (task.molecule, task.ao_basis, mol_orbs)
         super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted)
 
     def compute_mo_eri(self, blocks, spins):
         eri = self.moints_drv.compute_in_memory(
-            *self.compute_args, moints_name="chem_" + "".join(blocks),
-            moints_spin="".join(spins)
+            *self.compute_args, moints_name="chem_" + "".join(blocks), moints_spin="".join(spins)
         )
         return eri
 
 
 class VeloxChemHFProvider(HartreeFockProvider):
     """
-        This implementation is valid for RHF and UHF
+    This implementation is valid for RHF and UHF
     """
+
     def __init__(self, scfdrv):
         # Do not forget the next line,
         # otherwise weird errors result
@@ -111,7 +118,7 @@ class VeloxChemHFProvider(HartreeFockProvider):
         warnings.warn(
             "The VeloxChem interface does not work with new VeloxChem versions "
             "and is no longer maintained. It will be removed in the future.",
-            DeprecationWarning
+            DeprecationWarning,
         )
 
         self.scfdrv = scfdrv
@@ -123,17 +130,19 @@ class VeloxChemHFProvider(HartreeFockProvider):
         n_alpha = self.molecule.number_of_alpha_electrons()
         n_beta = self.molecule.number_of_beta_electrons()
         self.eri_builder = VeloxChemEriBuilder(
-            self.scfdrv.task, self.mol_orbs, self.n_orbs, self.n_orbs_alpha,
-            n_alpha, n_beta, self.restricted
+            self.scfdrv.task,
+            self.mol_orbs,
+            self.n_orbs,
+            self.n_orbs_alpha,
+            n_alpha,
+            n_beta,
+            self.restricted,
         )
 
-        self.operator_integral_provider = VeloxChemOperatorIntegralProvider(
-            self.scfdrv
-        )
+        self.operator_integral_provider = VeloxChemOperatorIntegralProvider(self.scfdrv)
 
     def pe_energy(self, dm, elec_only=True):
-        e_pe, _ = self.scfdrv.pe_drv.get_pe_contribution(dm.to_ndarray(),
-                                                         elec_only=elec_only)
+        e_pe, _ = self.scfdrv.pe_drv.get_pe_contribution(dm.to_ndarray(), elec_only=elec_only)
         return e_pe
 
     @property
@@ -142,13 +151,11 @@ class VeloxChemHFProvider(HartreeFockProvider):
         if hasattr(self.scfdrv, "pe_drv"):
             ptlr = EnergyCorrection(
                 "pe_ptlr_correction",
-                lambda view: 2.0 * self.pe_energy(view.transition_dm_ao,
-                                                  elec_only=True)
+                lambda view: 2.0 * self.pe_energy(view.transition_dm_ao, elec_only=True),
             )
             ptss = EnergyCorrection(
                 "pe_ptss_correction",
-                lambda view: self.pe_energy(view.state_diffdm_ao,
-                                            elec_only=True)
+                lambda view: self.pe_energy(view.state_diffdm_ao, elec_only=True),
             )
             ret.extend([ptlr, ptss])
         return {ec.name: ec for ec in ret}
@@ -170,9 +177,7 @@ class VeloxChemHFProvider(HartreeFockProvider):
         return self.scfdrv.get_scf_energy()
 
     def get_nuclear_repulsion_energy(self):
-        raise NotImplementedError(
-            "Nuclear repulsion energy not implemented for Veloxchem"
-        )
+        raise NotImplementedError("Nuclear repulsion energy not implemented for Veloxchem")
 
     def get_spin_multiplicity(self):
         return self.molecule.get_multiplicity()
@@ -190,10 +195,8 @@ class VeloxChemHFProvider(HartreeFockProvider):
             # The function interface needs to be a np.array on return
             return np.array([np.sum(nuc_charges)])
         elif order == 1:
-            coords = np.vstack(
-                (mol.x_to_numpy(), mol.y_to_numpy(), mol.z_to_numpy())
-            ).transpose()
-            return np.einsum('i,ix->x', nuc_charges, coords)
+            coords = np.vstack((mol.x_to_numpy(), mol.y_to_numpy(), mol.z_to_numpy())).transpose()
+            return np.einsum("i,ix->x", nuc_charges, coords)
         elif order == 2:
             coords = mol.get_coordinates_in_bohr() - gauge_origin
             r_r = np.einsum("ij,ik->ijk", coords, coords)
@@ -215,9 +218,7 @@ class VeloxChemHFProvider(HartreeFockProvider):
     def fill_orbcoeff_fb(self, out):
         mo_coeff_a = self.mol_orbs.alpha_to_numpy()
         mo_coeff_b = self.mol_orbs.beta_to_numpy()
-        out[:] = np.transpose(
-            np.hstack((mo_coeff_a, mo_coeff_b))
-        )
+        out[:] = np.transpose(np.hstack((mo_coeff_a, mo_coeff_b)))
 
     def fill_orben_f(self, out):
         orben_a = self.mol_orbs.ea_to_numpy()
@@ -246,19 +247,27 @@ def import_scf(scfdrv):
     # TODO The error messages in here could be a little more informative
 
     if not hasattr(scfdrv, "task"):
-        raise InvalidReference("Please attach the VeloxChem task to "
-                               "the VeloxChem SCF driver")
+        raise InvalidReference("Please attach the VeloxChem task to the VeloxChem SCF driver")
 
     if not scfdrv.is_converged:
-        raise InvalidReference("Cannot start an adc calculation on top "
-                               "of an SCF, which is not converged.")
+        raise InvalidReference(
+            "Cannot start an adc calculation on top of an SCF, which is not converged."
+        )
 
     provider = VeloxChemHFProvider(scfdrv)
     return provider
 
 
-def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=None, conv_tol_grad=1e-9,
-           max_iter=150, pe_options=None):
+def run_hf(
+    xyz,
+    basis,
+    charge=0,
+    multiplicity=1,
+    conv_tol=None,
+    conv_tol_grad=1e-9,
+    max_iter=150,
+    pe_options=None,
+):
     basis_remap = {
         "sto3g": "sto-3g",
         "def2tzvp": "def2-tzvp",
@@ -269,33 +278,29 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=None, conv_tol_grad=1e
         outfile = os.path.join(tmpdir, "vlx.out")
         with open(infile, "w") as fp:
             lines = ["@jobs", "task: hf", "@end", ""]
-            lines += ["@scf",
-                      f"conv_thresh: {conv_tol_grad}",
-                      f"max_iter: {max_iter}",
-                      "@end", ""]
-            lines += ["@method settings",
-                      f"basis: {basis_remap.get(basis, basis)}"]
+            lines += ["@scf", f"conv_thresh: {conv_tol_grad}", f"max_iter: {max_iter}", "@end", ""]
+            lines += ["@method settings", f"basis: {basis_remap.get(basis, basis)}"]
             # TODO: PE results in VeloxChem are currently wrong, because
             # polarizabilities are always made isotropic
             if pe_options:
                 potfile = pe_options["potfile"]
-                lines += ["pe: yes",
-                          f"potfile: {potfile}"]
+                lines += ["pe: yes", f"potfile: {potfile}"]
             lines += ["@end"]
-            lines += ["@molecule",
-                      f"charge: {charge}",
-                      f"multiplicity: {multiplicity}",
-                      "units: bohr",
-                      "xyz:\n{}".format("\n".join(xyz.split(";"))),
-                      "@end"]
+            lines += [
+                "@molecule",
+                f"charge: {charge}",
+                f"multiplicity: {multiplicity}",
+                "units: bohr",
+                "xyz:\n{}".format("\n".join(xyz.split(";"))),
+                "@end",
+            ]
             fp.write("\n".join(lines))
         task = MpiTask([infile, outfile], MPI.COMM_WORLD)
         if multiplicity == 1:
             scfdrv = vlx.ScfRestrictedDriver(task.mpi_comm, task.ostream)
         else:
             scfdrv = vlx.ScfUnrestrictedDriver(task.mpi_comm, task.ostream)
-        scfdrv.update_settings(task.input_dict['scf'],
-                               task.input_dict['method_settings'])
+        scfdrv.update_settings(task.input_dict["scf"], task.input_dict["method_settings"])
         scfdrv.compute(task.molecule, task.ao_basis, task.min_basis)
         scfdrv.task = task
     return scfdrv
@@ -314,14 +319,14 @@ def _transform_gauge_origin_to_xyz(scfdrv, gauge_origin):
     if gauge_origin == "mass_center":
         gauge_origin = tuple(np.einsum("i,ij->j", masses, coords) / masses.sum())
     elif gauge_origin == "charge_center":
-        gauge_origin = tuple(np.einsum("i,ij->j", charges, coords)
-                             / charges.sum())
+        gauge_origin = tuple(np.einsum("i,ij->j", charges, coords) / charges.sum())
     elif gauge_origin == "origin":
         gauge_origin = (0.0, 0.0, 0.0)
     elif not isinstance(gauge_origin, tuple):
-        raise NotImplementedError("The gauge origin can be defined either by a "
-                                  "keyword (origin, mass_center or charge_center) "
-                                  "or by a tuple defining the Cartesian components "
-                                  "e.g. (x, y, z)."
-                                  )
+        raise NotImplementedError(
+            "The gauge origin can be defined either by a "
+            "keyword (origin, mass_center or charge_center) "
+            "or by a tuple defining the Cartesian components "
+            "e.g. (x, y, z)."
+        )
     return gauge_origin

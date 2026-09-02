@@ -29,7 +29,7 @@ def select_eigenpairs(eigenvalues, n_ep, which):
     from the smallest to the largest.
     """
     mask = np.zeros(len(eigenvalues), dtype=bool)
-    if which == "LA":    # Largest algebraic
+    if which == "LA":  # Largest algebraic
         mask[-n_ep:] = True
     elif which == "SA":  # Smallest algebraic
         mask[:n_ep] = True
@@ -40,6 +40,7 @@ def select_eigenpairs(eigenvalues, n_ep, which):
         sorti = np.argsort(np.abs(eigenvalues))[:n_ep]
         mask[sorti] = True
     else:
-        raise ValueError("For now only the values 'LM', 'LA', 'SM' and 'SA' "
-                         "are understood for 'which'.")
+        raise ValueError(
+            "For now only the values 'LM', 'LA', 'SM' and 'SA' are understood for 'which'."
+        )
     return mask.nonzero()[0]

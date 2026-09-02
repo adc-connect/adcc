@@ -12,11 +12,10 @@ import adcc
 def run_spin_flip(distance):
     # Run SCF in pyscf
     mol = gto.M(
-        atom='H 0 0 0;'
-             f'F 0 0 {distance}',
-        basis='6-31G',
+        atom=f"H 0 0 0;F 0 0 {distance}",
+        basis="6-31G",
         unit="Bohr",
-        spin=2  # =2S, ergo triplet
+        spin=2,  # =2S, ergo triplet
     )
     scfres = scf.UHF(mol)
     scfres.conv_tol = 1e-12

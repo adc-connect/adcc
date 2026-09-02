@@ -52,8 +52,9 @@ class OneParticleOperator(NParticleOperator):
 
     def _transform_to_ao(self, refstate):
         if not len(self.blocks_nonzero):
-            raise ValueError("At least one non-zero block is needed to "
-                             "transform the OneParticleOperator.")
+            raise ValueError(
+                "At least one non-zero block is needed to transform the OneParticleOperator."
+            )
         if isinstance(refstate, libadcc.ReferenceState):
             coeff_map = {}
             for sp in self.orbital_subspaces:
@@ -73,12 +74,22 @@ class OneParticleOperator(NParticleOperator):
             # by 2 because only one of the blocks is actually present
             pref = self.canonical_factors[block]
 
-            dm_bb_a += pref * einsum("lm,im,ij,jv,vs->ls",
-                                     ovlp, coeff_map[f"{s1}_a"],
-                                     self.block(block), coeff_map[f"{s2}_a"], ovlp)
-            dm_bb_b += pref * einsum("lm,im,ij,jv,vs->ls",
-                                     ovlp, coeff_map[f"{s1}_b"],
-                                     self.block(block), coeff_map[f"{s2}_b"], ovlp)
+            dm_bb_a += pref * einsum(
+                "lm,im,ij,jv,vs->ls",
+                ovlp,
+                coeff_map[f"{s1}_a"],
+                self.block(block),
+                coeff_map[f"{s2}_a"],
+                ovlp,
+            )
+            dm_bb_b += pref * einsum(
+                "lm,im,ij,jv,vs->ls",
+                ovlp,
+                coeff_map[f"{s1}_b"],
+                self.block(block),
+                coeff_map[f"{s2}_b"],
+                ovlp,
+            )
         if self.symmetry == OperatorSymmetry.HERMITIAN:
             dm_bb_a = dm_bb_a.symmetrise()
             dm_bb_b = dm_bb_b.symmetrise()

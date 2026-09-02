@@ -132,9 +132,15 @@ __all__ = [
 __version__ = "0.18.0"
 __license__ = "GPL v3"
 __url__ = "https://adc-connect.org"
-__authors__ = ["Michael F. Herbst", "Maximilian Scheurer", "Jonas Leitner",
-               "Antonia Papapostolou", "Friederike Schneider",
-               "Adrian L. Dempwolff", "Adrian J. Müller"]
+__authors__ = [
+    "Michael F. Herbst",
+    "Maximilian Scheurer",
+    "Jonas Leitner",
+    "Antonia Papapostolou",
+    "Friederike Schneider",
+    "Adrian L. Dempwolff",
+    "Adrian J. Müller",
+]
 __email__ = "developers@adc-connect.org"
 __contributors__ = []
 
@@ -217,23 +223,23 @@ def banner(colour: bool | None = None):
         Should colour be used in the print out
     """
     if colour is None:
-         colour = sys.stdout.isatty()
+        colour = sys.stdout.isatty()
     if colour:
-        yellow = '\033[93m'
-        green = '\033[92m'
-        cyan = '\033[96m'
-        white = '\033[0m'
+        yellow = "\033[93m"
+        green = "\033[92m"
+        cyan = "\033[96m"
+        white = "\033[0m"
     else:
-        yellow = ''
-        green = ''
-        cyan = ''
-        white = ''
+        yellow = ""
+        green = ""
+        cyan = ""
+        white = ""
 
     empty = "|" + 70 * " " + "|\n"
     string = "+" + 70 * "-" + "+\n"
-    string += "|{:^70s}|\n".format(
-        "adcc:  Seamlessly connect your host program to ADC"
-    ).replace("adcc", "adc" + yellow + "c" + white)
+    string += "|{:^70s}|\n".format("adcc:  Seamlessly connect your host program to ADC").replace(
+        "adcc", "adc" + yellow + "c" + white
+    )
     string += "+" + 70 * "-" + "+\n"
     string += empty
     string += "|     version     " + green + f"{__version__:<52}" + white + " |\n"

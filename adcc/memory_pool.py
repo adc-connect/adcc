@@ -29,8 +29,7 @@ import libadcc
 
 
 class MemoryPool(libadcc.AdcMemory):
-    def initialise(self, scratch_directory="/tmp", max_block_size=16,
-                   allocator="standard"):
+    def initialise(self, scratch_directory="/tmp", max_block_size=16, allocator="standard"):
         """Initialise the adcc memory management.
 
         Parameters

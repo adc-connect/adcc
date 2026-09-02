@@ -39,14 +39,11 @@ def available() -> tuple[str, ...]:
     if _available_backends is None:
         status = {
             "pyscf": is_module_available("pyscf", "1.5.0"),
-            "psi4": (is_module_available("psi4", "1.3.0")
-                     and is_module_available("psi4.core")),
+            "psi4": (is_module_available("psi4", "1.3.0") and is_module_available("psi4.core")),
             "veloxchem": is_module_available("veloxchem"),  # No version info
-            "molsturm": is_module_available("molsturm"),    # No version info
+            "molsturm": is_module_available("molsturm"),  # No version info
         }
-        _available_backends = tuple(sorted(
-            b for b, stat in status.items() if stat
-        ))
+        _available_backends = tuple(sorted(b for b, stat in status.items() if stat))
     return _available_backends
 
 
@@ -93,11 +90,13 @@ def import_scf_results(res):
             return backend_psi4.import_scf(res)
 
     from libadcc import HartreeFockSolution_i
+
     if isinstance(res, HartreeFockSolution_i):
         return res
 
     if isinstance(res, (dict, h5py.File)):
         from adcc.DataHfProvider import DataHfProvider
+
         return DataHfProvider(res)
 
     if isinstance(res, str):
@@ -108,27 +107,28 @@ def import_scf_results(res):
 
     # Note: Add more backends here
 
-    raise NotImplementedError("No means to import an SCF result of "
-                              "type " + str(type(res)) + " implemented.")
+    raise NotImplementedError(
+        "No means to import an SCF result of type " + str(type(res)) + " implemented."
+    )
 
 
 def run_hf(backend, xyz, basis, **kwargs):
     """
-        Run a HF calculation with a specified backend, molecule, and SCF
-        parameters
+    Run a HF calculation with a specified backend, molecule, and SCF
+    parameters
 
-        backend:        name of the backend (pyscf, psi4, or veloxchem)
-        xyz:            string with coordinates in Bohr
-        basis:          basis set name
-        charge:         charge of the molecule
-        multiplicity:   spin multiplicity 2S + 1
-        conv_tol:       energy convergence tolerance
-        conv_tol_grad:  convergence tolerance of the electronic gradient
-        max_iter:       maximum number of SCF iterations
-        pe_options:     dictionary with options for polarizable embedding (PE)
+    backend:        name of the backend (pyscf, psi4, or veloxchem)
+    xyz:            string with coordinates in Bohr
+    basis:          basis set name
+    charge:         charge of the molecule
+    multiplicity:   spin multiplicity 2S + 1
+    conv_tol:       energy convergence tolerance
+    conv_tol_grad:  convergence tolerance of the electronic gradient
+    max_iter:       maximum number of SCF iterations
+    pe_options:     dictionary with options for polarizable embedding (PE)
 
-        Note: This function only exists for testing purposes and should
-        not be used in production calculations.
+    Note: This function only exists for testing purposes and should
+    not be used in production calculations.
     """
 
     if not backend:
@@ -158,7 +158,6 @@ def run_hf(backend, xyz, basis, **kwargs):
         from . import molsturm as backend_hf
 
     else:
-        raise NotImplementedError("No run_hf function implemented for backend "
-                                  f"{backend}.")
+        raise NotImplementedError(f"No run_hf function implemented for backend {backend}.")
 
     return backend_hf.run_hf(xyz, basis, **kwargs)

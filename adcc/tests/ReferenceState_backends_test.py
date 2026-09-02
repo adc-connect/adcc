@@ -55,6 +55,11 @@ def test_backends_import_reference_data(system: str, case: str, backend: str):
     # perform a new scf calculation with the backend
     scfres = cached_backend_hf(backend=backend, system=system, conv_tol=conv_tol)
     compare_refstate_with_reference(
-        system=system, case=case, data=data, reference=reference, scfres=scfres,
-        compare_orbcoeff=False, compare_eri=compare_eri
+        system=system,
+        case=case,
+        data=data,
+        reference=reference,
+        scfres=scfres,
+        compare_orbcoeff=False,
+        compare_eri=compare_eri,
     )

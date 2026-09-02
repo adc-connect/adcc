@@ -47,9 +47,16 @@ def default_print(state, identifier, file=sys.stdout):
     elif identifier == "next_iter":
         time_iter = state.timer.current("power_method/iteration")
         fmt = "{n_iter:3d}  {residual:12.5g}  {tstr:5s}"
-        print(fmt.format(n_iter=state.n_iter, tstr=strtime_short(time_iter),
-                         residual=np.max(state.residual_norms)),
-              "", state.eigenvalues[:7], file=file)
+        print(
+            fmt.format(
+                n_iter=state.n_iter,
+                tstr=strtime_short(time_iter),
+                residual=np.max(state.residual_norms),
+            ),
+            "",
+            state.eigenvalues[:7],
+            file=file,
+        )
     elif identifier == "is_converged":
         soltime = state.timer.total("power_method/iteration")
         print("=== Converged ===", file=file)
@@ -57,8 +64,9 @@ def default_print(state, identifier, file=sys.stdout):
         print("    Total solver time:          ", strtime(soltime))
 
 
-def power_method(A, guess, conv_tol=1e-9, max_iter=70, callback=None,
-                 explicit_symmetrisation=IndexSymmetrisation):
+def power_method(
+    A, guess, conv_tol=1e-9, max_iter=70, callback=None, explicit_symmetrisation=IndexSymmetrisation
+):
     """Use the power iteration to solve for the largest eigenpair of A.
 
     The power method is a very simple diagonalisation method, which solves
@@ -82,11 +90,11 @@ def power_method(A, guess, conv_tol=1e-9, max_iter=70, callback=None,
         obtaining an eigenvector with matching symmetry criteria.
     """
     if callback is None:
+
         def callback(state, identifier):
             pass
 
-    if explicit_symmetrisation is not None and \
-            isinstance(explicit_symmetrisation, type):
+    if explicit_symmetrisation is not None and isinstance(explicit_symmetrisation, type):
         explicit_symmetrisation = explicit_symmetrisation(A)
 
     x = guess / np.sqrt(guess @ guess)
@@ -123,6 +131,5 @@ def power_method(A, guess, conv_tol=1e-9, max_iter=70, callback=None,
             x = Ax
         x = x / np.sqrt(x @ x)
 
-    warnings.warn(la.LinAlgWarning(
-        "Power method not converged. Returning intermediate results."))
+    warnings.warn(la.LinAlgWarning("Power method not converged. Returning intermediate results."))
     return state

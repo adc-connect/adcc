@@ -46,8 +46,7 @@ class TestSubspacePartitioning(unittest.TestCase):
         data = HfCounterData(n_alpha, n_beta, n_bas, n_orbs_alpha, restricted)
         refstate = adcc.ReferenceState(data, import_all_below_n_orbs=None)
 
-        partitioning = SubspacePartitioning(refstate.mospaces, core_orbitals=2,
-                                            outer_virtuals=3)
+        partitioning = SubspacePartitioning(refstate.mospaces, core_orbitals=2, outer_virtuals=3)
         assert "v" in partitioning.aliases
         assert "w" in partitioning.aliases
         assert "o" in partitioning.aliases
@@ -71,8 +70,7 @@ class TestSubspacePartitioning(unittest.TestCase):
         data = HfCounterData(n_alpha, n_beta, n_bas, n_orbs_alpha, restricted)
         refstate = adcc.ReferenceState(data, import_all_below_n_orbs=None)
 
-        partitioning = SubspacePartitioning(refstate.mospaces, core_orbitals=2,
-                                            outer_virtuals=2)
+        partitioning = SubspacePartitioning(refstate.mospaces, core_orbitals=2, outer_virtuals=2)
         assert "v" in partitioning.aliases
         assert "w" in partitioning.aliases
         assert "o" in partitioning.aliases
@@ -93,25 +91,20 @@ def construct_nonzero_blocks(mospaces, n_core, n_virt):
     nvb = mospaces.n_orbs_beta("v1")
     noa = mospaces.n_orbs_alpha("o1")
     nob = mospaces.n_orbs_beta("o1")
-    c = {"a": slice(0,         n_core),
-             "b": slice(noa, noa + n_core)}
-    o = {"a": slice(n_core,             noa),
-             "b": slice(n_core + noa, noa + nob)}
-    v = {"a": slice(0,         nva - n_virt),
-             "b": slice(nva, nvb + nva - n_virt)}
-    w = {"a": slice(nva - n_virt,             nva),
-             "b": slice(nva - n_virt + nvb, nvb + nva)}
+    c = {"a": slice(0, n_core), "b": slice(noa, noa + n_core)}
+    o = {"a": slice(n_core, noa), "b": slice(n_core + noa, noa + nob)}
+    v = {"a": slice(0, nva - n_virt), "b": slice(nva, nvb + nva - n_virt)}
+    w = {"a": slice(nva - n_virt, nva), "b": slice(nva - n_virt + nvb, nvb + nva)}
 
     spaces_ph = ["cv", "ow"]
     nonzero_blocks_ph = []
-    for (s1, s2) in itertools.product(["a", "b"], ["a", "b"]):
+    for s1, s2 in itertools.product(["a", "b"], ["a", "b"]):
         nonzero_blocks_ph.append((c[s1], v[s2]))
         nonzero_blocks_ph.append((o[s1], w[s2]))
 
     spaces_pphh = ["covv", "ccvw", "covw"]
     nonzero_blocks_pphh = []
-    for (s1, s2, s3, s4) in itertools.product(["a", "b"], ["a", "b"],
-                                              ["a", "b"], ["a", "b"]):
+    for s1, s2, s3, s4 in itertools.product(["a", "b"], ["a", "b"], ["a", "b"], ["a", "b"]):
         nonzero_blocks_pphh.append((c[s1], o[s2], v[s3], v[s4]))
         nonzero_blocks_pphh.append((o[s1], c[s2], v[s3], v[s4]))
         nonzero_blocks_pphh.append((c[s1], c[s2], v[s3], w[s4]))
@@ -164,14 +157,10 @@ def assert_equal_symmetry(sym1, sym2):
 
 class TestProjector(unittest.TestCase):
     def base_test(self, system: str, kind: str, n_core: int, n_virt: int):
-        state = testdata_cache.adcc_states(
-            system=system, method="adc3", kind=kind, case="gen"
-        )
+        state = testdata_cache.adcc_states(system=system, method="adc3", kind=kind, case="gen")
         mospaces = state.reference_state.mospaces
 
-        partitioning = SubspacePartitioning(mospaces,
-                                            core_orbitals=n_core,
-                                            outer_virtuals=n_virt)
+        partitioning = SubspacePartitioning(mospaces, core_orbitals=n_core, outer_virtuals=n_virt)
         spaces, nonzero_blocks = construct_nonzero_blocks(mospaces, n_core, n_virt)
 
         # Singles
@@ -183,9 +172,7 @@ class TestProjector(unittest.TestCase):
 
         #
         # Doubles
-        partitioning = SubspacePartitioning(mospaces,
-                                            core_orbitals=n_core,
-                                            outer_virtuals=n_virt)
+        partitioning = SubspacePartitioning(mospaces, core_orbitals=n_core, outer_virtuals=n_virt)
         proj = Projector(["o1", "o1", "v1", "v1"], partitioning, spaces["pphh"])
         rhs = state.excitation_vector[0].pphh.copy().set_random()
         out = proj @ rhs
@@ -211,34 +198,26 @@ class TestProjector(unittest.TestCase):
         self.base_test("cn_ccpvdz", "any", n_core=2, n_virt=4)
 
 
-test_cases = testcases.get_by_filename(
-    "h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz"
-)
-cases = [
-    (case.file_name, kind) for case in test_cases
-    for kind in case.kinds[AdcType.PP]
-]
+test_cases = testcases.get_by_filename("h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz")
+cases = [(case.file_name, kind) for case in test_cases for kind in case.kinds[AdcType.PP]]
 
 
 @pytest.mark.parametrize("system,kind", cases)
 class TestCvsTransfer:
     def test_high_level(self, system: str, kind: str):
-        state_cvs = testdata_cache.adcc_states(
-            system=system, method="adc2x", kind=kind, case="cvs"
-        )
+        state_cvs = testdata_cache.adcc_states(system=system, method="adc2x", kind=kind, case="cvs")
         refstate = testdata_cache.refstate(system, case="gen")
         matrix = adcc.AdcMatrix("adc2x", refstate)
 
-        orth = np.array([[v @ w for v in state_cvs.excitation_vector]
-                         for w in state_cvs.excitation_vector])
+        orth = np.array(
+            [[v @ w for v in state_cvs.excitation_vector] for w in state_cvs.excitation_vector]
+        )
         fullvecs = transfer_cvs_to_full(state_cvs, matrix)
         orthfull = np.array([[v @ w for v in fullvecs] for w in fullvecs])
         assert_allclose(orth, orthfull, atol=1e-16)
 
     def test_random(self, system: str, kind: str):
-        state_cvs = testdata_cache.adcc_states(
-            system=system, method="adc2x", kind=kind, case="cvs"
-        )
+        state_cvs = testdata_cache.adcc_states(system=system, method="adc2x", kind=kind, case="cvs")
         refstate = testdata_cache.refstate(system, case="gen")
         matrix = adcc.AdcMatrix("adc2x", refstate)
         vectors = [v.copy().set_random() for v in state_cvs.excitation_vector]

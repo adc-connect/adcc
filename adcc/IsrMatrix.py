@@ -52,13 +52,14 @@ class IsrMatrix(AdcMatrixlike):
             The order of perturbation theory to employ for each matrix block.
             If not set, defaults according to the selected ADC method are chosen.
         """
-        if isinstance(hf_or_mp, (libadcc.ReferenceState,
-                                 libadcc.HartreeFockSolution_i)):
+        if isinstance(hf_or_mp, (libadcc.ReferenceState, libadcc.HartreeFockSolution_i)):
             hf_or_mp = LazyMp(hf_or_mp)
         if not isinstance(hf_or_mp, LazyMp):
-            raise TypeError("hf_or_mp is not a valid object. It needs to be "
-                            "either a LazyMp, a ReferenceState or a "
-                            "HartreeFockSolution_i.")
+            raise TypeError(
+                "hf_or_mp is not a valid object. It needs to be "
+                "either a LazyMp, a ReferenceState or a "
+                "HartreeFockSolution_i."
+            )
 
         if not isinstance(method, IsrMethod):
             method = IsrMethod(method)
@@ -68,9 +69,11 @@ class IsrMatrix(AdcMatrixlike):
         else:
             self.operator = (operator,)
         if not all(isinstance(op, OneParticleOperator) for op in self.operator):
-            raise TypeError("operator is not a valid object. It needs to be "
-                            "either an OneParticleOperator or a list of "
-                            "OneParticleOperator objects.")
+            raise TypeError(
+                "operator is not a valid object. It needs to be "
+                "either an OneParticleOperator or a list of "
+                "OneParticleOperator objects."
+            )
 
         self.timer = Timer()
         self.method = method
@@ -83,19 +86,17 @@ class IsrMatrix(AdcMatrixlike):
 
         n_particle_op = self.operator[0].n_particle_op
         assert all(op.n_particle_op == n_particle_op for op in self.operator)
-        self.block_orders = self._default_block_orders(
-            self.method, bandwidth=n_particle_op
-        )
+        self.block_orders = self._default_block_orders(self.method, bandwidth=n_particle_op)
         if block_orders is None:
             # only implemented through PP-ADC(2)
             if method.adc_type is not AdcType.PP:
-                raise NotImplementedError("The B-matrix is not implemented "
-                                          f"for method {method.name}.")
+                raise NotImplementedError(
+                    f"The B-matrix is not implemented for method {method.name}."
+                )
         else:
             self.block_orders.update(block_orders)
         self._validate_block_orders(
-            block_orders=self.block_orders, method=self.method,
-            allow_missing_diagonal_blocks=True
+            block_orders=self.block_orders, method=self.method, allow_missing_diagonal_blocks=True
         )
 
         # Build the blocks
@@ -103,15 +104,17 @@ class IsrMatrix(AdcMatrixlike):
             variant = None
             if self.is_core_valence_separated:
                 variant = "cvs"
-            blocks = tuple({
-                block: ppbmatrix.block(self.ground_state, op,
-                                       block.split("_"), order=order,
-                                       variant=variant)
-                for block, order in self.block_orders.items() if order is not None
-            } for op in self.operator)
-            self.blocks = tuple({
-                b: bl[b].apply for b in bl
-            } for bl in blocks)
+            blocks = tuple(
+                {
+                    block: ppbmatrix.block(
+                        self.ground_state, op, block.split("_"), order=order, variant=variant
+                    )
+                    for block, order in self.block_orders.items()
+                    if order is not None
+                }
+                for op in self.operator
+            )
+            self.blocks = tuple({b: bl[b].apply for b in bl} for bl in blocks)
 
     @timed_member_call()
     def matvec(self, v):
@@ -127,13 +130,9 @@ class IsrMatrix(AdcMatrixlike):
         # contribution to the matvec is zero and does not need to be computed.
         avail_blocks = [f"{bra}_{ket}" for bra, ket in product(v.blocks, repeat=2)]
         filtered_blocks = [
-            {blk: v for blk, v in comp.items() if blk in avail_blocks}
-            for comp in self.blocks
+            {blk: v for blk, v in comp.items() if blk in avail_blocks} for comp in self.blocks
         ]
-        ret = [
-            sum(block(v) for block in bl_ph.values())
-            for bl_ph in filtered_blocks
-        ]
+        ret = [sum(block(v) for block in bl_ph.values()) for bl_ph in filtered_blocks]
         if len(ret) == 1:
             return ret[0]
         else:
@@ -144,12 +143,8 @@ class IsrMatrix(AdcMatrixlike):
         if all(op.symmetry is OperatorSymmetry.HERMITIAN for op in self.operator):
             return self.matvec(v)
         # anti-Hermitian operators
-        elif all(op.symmetry is OperatorSymmetry.ANTIHERMITIAN
-                 for op in self.operator):
-            return [
-                AmplitudeVector(ph=-1.0 * mv.ph, pphh=-1.0 * mv.pphh)
-                for mv in self.matvec(v)
-            ]
+        elif all(op.symmetry is OperatorSymmetry.ANTIHERMITIAN for op in self.operator):
+            return [AmplitudeVector(ph=-1.0 * mv.ph, pphh=-1.0 * mv.pphh) for mv in self.matvec(v)]
         # operators without any symmetry
         else:
             return NotImplemented

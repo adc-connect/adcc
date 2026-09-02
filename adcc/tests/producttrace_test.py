@@ -34,8 +34,11 @@ from adcc.OneParticleDensity import OneParticleDensity
 
 from . import testcases
 
-operator_sym = [OperatorSymmetry.HERMITIAN, OperatorSymmetry.ANTIHERMITIAN,
-                OperatorSymmetry.NOSYMMETRY]
+operator_sym = [
+    OperatorSymmetry.HERMITIAN,
+    OperatorSymmetry.ANTIHERMITIAN,
+    OperatorSymmetry.NOSYMMETRY,
+]
 op_syms_two_operators = list(combinations_with_replacement(operator_sym, 2))
 
 
@@ -47,10 +50,11 @@ def trace_contract(op_a, op_b):
 
 
 class TestProductTrace:
-    @pytest.mark.parametrize("symmetries",
-                             op_syms_two_operators,
-                             ids=[f"{c[0].name}_{c[1].name}"
-                                  for c in op_syms_two_operators])
+    @pytest.mark.parametrize(
+        "symmetries",
+        op_syms_two_operators,
+        ids=[f"{c[0].name}_{c[1].name}" for c in op_syms_two_operators],
+    )
     def test_product_trace(self, symmetries):
         system = "h2o_sto3g"
         system: testcases.TestCase = testcases.get_by_filename(system).pop()
@@ -71,10 +75,7 @@ class TestProductTrace:
         op_b_ao_a = op_b_mo.to_ao_basis(ref)[0].to_ndarray()
         op_b_ao_b = op_b_mo.to_ao_basis(ref)[1].to_ndarray()
 
-        ptrace_ao = (
-            trace_contract(op_a_ao_a, op_b_ao_a)
-            + trace_contract(op_a_ao_b, op_b_ao_b)
-        )
+        ptrace_ao = trace_contract(op_a_ao_a, op_b_ao_a) + trace_contract(op_a_ao_b, op_b_ao_b)
 
         ptrace_mo_ref = 0
         if op_a_mo.symmetry == OperatorSymmetry.NOSYMMETRY:
@@ -96,9 +97,7 @@ class TestProductTrace:
                     factors.pop(b)
 
         for b, factor in factors.items():
-            ptrace_mo_ref += factor * np.sum(
-                op_a_mo[b].to_ndarray() * op_b_mo[b].to_ndarray()
-            )
+            ptrace_mo_ref += factor * np.sum(op_a_mo[b].to_ndarray() * op_b_mo[b].to_ndarray())
         assert ptrace_mo_ref == pytest.approx(product_trace(op_a_mo, op_b_mo))
         assert product_trace(op_a_mo, op_b_mo) == pytest.approx(ptrace_ao)
         assert product_trace(op_b_mo, op_a_mo) == pytest.approx(ptrace_ao)

@@ -42,9 +42,9 @@ T = TypeVar("T")
 
 # adapted from
 # https://github.com/sympy/sympy/blob/master/sympy/physics/secondquant.py
-def _sort_anticommuting(to_sort: list[T],
-                        key: Callable[[T], Any] | None = None
-                        ) -> tuple[list[T], int]:
+def _sort_anticommuting(
+    to_sort: list[T], key: Callable[[T], Any] | None = None
+) -> tuple[list[T], int]:
     """
     Sort a list of mutually anticommuting operators into canonical order.
 
@@ -103,9 +103,9 @@ def _sort_anticommuting(to_sort: list[T],
     return (to_sort, sign)
 
 
-def get_canonical_block(bra: str, ket: str,
-                        operator_symmetry: OperatorSymmetry
-                        ) -> tuple[str, int, tuple]:
+def get_canonical_block(
+    bra: str, ket: str, operator_symmetry: OperatorSymmetry
+) -> tuple[str, int, tuple]:
     """
     Return the canonical representation of an operator block, together with the
     factor required to recover the desired block and the transpose tuple that
@@ -131,6 +131,7 @@ def get_canonical_block(bra: str, ket: str,
         A tuple encoding the transformation applied to obtain the desired block
         from the canonical block.
     """
+
     def invert_transpose_tuple(p: tuple[int, ...]) -> tuple[int, ...]:
         """
         Invert transpose tuple containing permutation that maps a block to its
@@ -145,17 +146,13 @@ def get_canonical_block(bra: str, ket: str,
     factor = 1
 
     bra = split_spaces(bra) if bra else []
-    bra_sorted, bra_factor = _sort_anticommuting(
-        list(enumerate(bra)), key=lambda tpl: tpl[1]
-    )
+    bra_sorted, bra_factor = _sort_anticommuting(list(enumerate(bra)), key=lambda tpl: tpl[1])
     bra_transpose = [val for val, _ in bra_sorted]
     bra_space_sorted = [val for _, val in bra_sorted]
     factor *= bra_factor
 
     ket = split_spaces(ket) if ket else []
-    ket_sorted, ket_factor = _sort_anticommuting(
-        list(enumerate(ket)), key=lambda tpl: tpl[1]
-    )
+    ket_sorted, ket_factor = _sort_anticommuting(list(enumerate(ket)), key=lambda tpl: tpl[1])
     ket_transpose = [val for val, _ in ket_sorted]
     ket_transpose = tuple(x + len(bra) for x in ket_transpose)
     ket_space_sorted = [val for _, val in ket_sorted]

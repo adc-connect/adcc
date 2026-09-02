@@ -39,7 +39,7 @@ from .SolverStateBase import EigenSolverStateBase
 class DavidsonState(EigenSolverStateBase):
     def __init__(self, matrix, guesses):
         super().__init__(matrix)
-        self.residuals = None                   # Current residuals
+        self.residuals = None  # Current residuals
         self.subspace_vectors = guesses.copy()  # Current subspace vectors
         self.algorithm = "davidson"
 
@@ -53,15 +53,21 @@ def default_print(state, identifier, file=sys.stdout):
     # TODO Use colour!
 
     if identifier == "start" and state.n_iter == 0:
-        print("Niter n_ss  max_residual  time  Ritz values",
-              file=file)
+        print("Niter n_ss  max_residual  time  Ritz values", file=file)
     elif identifier == "next_iter":
         time_iter = state.timer.current("iteration")
         fmt = "{n_iter:3d}  {ss_size:4d}  {residual:12.5g}  {tstr:5s}"
-        print(fmt.format(n_iter=state.n_iter, tstr=strtime_short(time_iter),
-                         ss_size=len(state.subspace_vectors),
-                         residual=np.max(state.residual_norms)),
-              "", state.eigenvalues[:7], file=file)
+        print(
+            fmt.format(
+                n_iter=state.n_iter,
+                tstr=strtime_short(time_iter),
+                ss_size=len(state.subspace_vectors),
+                residual=np.max(state.residual_norms),
+            ),
+            "",
+            state.eigenvalues[:7],
+            file=file,
+        )
         if hasattr(state, "subspace_orthogonality"):
             print(33 * " " + f"nonorth: {state.subspace_orthogonality:5.3g}")
     elif identifier == "is_converged":
@@ -74,11 +80,23 @@ def default_print(state, identifier, file=sys.stdout):
 
 
 # TODO This function should be merged with eigsh
-def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
-                        is_converged, which, callback=None, preconditioner=None,
-                        preconditioning_method="Davidson", debug_checks=False,
-                        residual_min_norm=None, explicit_symmetrisation=None,
-                        max_subspace_iter=None):
+def davidson_iterations(
+    matrix,
+    state,
+    max_subspace,
+    max_iter,
+    n_ep,
+    n_block,
+    is_converged,
+    which,
+    callback=None,
+    preconditioner=None,
+    preconditioning_method="Davidson",
+    debug_checks=False,
+    residual_min_norm=None,
+    explicit_symmetrisation=None,
+    max_subspace_iter=None,
+):
     """Drive the davidson iterations
 
     Parameters
@@ -123,13 +141,14 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
         Maximum number of iterations for diagonalizing the subspace matrix
     """
     if preconditioning_method not in ["Davidson", "Sleijpen-van-der-Vorst"]:
-        raise ValueError("Only 'Davidson' and 'Sleijpen-van-der-Vorst' "
-                         "are valid preconditioner methods")
+        raise ValueError(
+            "Only 'Davidson' and 'Sleijpen-van-der-Vorst' are valid preconditioner methods"
+        )
     if preconditioning_method == "Sleijpen-van-der-Vorst":
-        raise NotImplementedError("Sleijpen-van-der-Vorst preconditioning "
-                                  "not yet implemented.")
+        raise NotImplementedError("Sleijpen-van-der-Vorst preconditioning not yet implemented.")
 
     if callback is None:
+
         def callback(state, identifier):
             pass
 
@@ -188,32 +207,34 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
                 # TODO Maybe play with precision a little here
                 # TODO Maybe use previous vectors somehow
                 v0 = None
-                rvals, rvecs = sla.eigsh(Ass, k=n_block, which=which, v0=v0,
-                                         maxiter=max_subspace_iter)
+                rvals, rvecs = sla.eigsh(
+                    Ass, k=n_block, which=which, v0=v0, maxiter=max_subspace_iter
+                )
 
         with state.timer.record("residuals"):
             # Form residuals, A * SS * v - λ * SS * v = Ax * v + SS * (-λ*v)
             def form_residual(rval, rvec):
                 coefficients = np.hstack((rvec, -rval * rvec))
                 return lincomb(coefficients, Ax + SS, evaluate=True)  # noqa: B023
-            residuals = [form_residual(rvals[i], v)
-                         for i, v in enumerate(np.transpose(rvecs))]
+
+            residuals = [form_residual(rvals[i], v) for i, v in enumerate(np.transpose(rvecs))]
             assert len(residuals) == n_block
 
             # Update the state's eigenpairs and residuals
             epair_mask = select_eigenpairs(rvals, n_ep, which)
             state.eigenvalues = rvals[epair_mask]
             state.residuals = [residuals[i] for i in epair_mask]
-            state.residual_norms = np.array([np.sqrt(r @ r)
-                                             for r in state.residuals])
+            state.residual_norms = np.array([np.sqrt(r @ r) for r in state.residuals])
 
         callback(state, "next_iter")
         state.timer.restart("iteration")
         if is_converged(state):
             # Build the eigenvectors we desire from the subspace vectors:
-            state.eigenvectors = [lincomb(v, SS, evaluate=True)
-                                  for i, v in enumerate(np.transpose(rvecs))
-                                  if i in epair_mask]
+            state.eigenvectors = [
+                lincomb(v, SS, evaluate=True)
+                for i, v in enumerate(np.transpose(rvecs))
+                if i in epair_mask
+            ]
 
             state.converged = True
             callback(state, "is_converged")
@@ -221,12 +242,16 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
             return state
 
         if state.n_iter == max_iter:
-            warnings.warn(la.LinAlgWarning(
-                f"Maximum number of iterations (== {max_iter}) "
-                "reached in davidson procedure."))
-            state.eigenvectors = [lincomb(v, SS, evaluate=True)
-                                  for i, v in enumerate(np.transpose(rvecs))
-                                  if i in epair_mask]
+            warnings.warn(
+                la.LinAlgWarning(
+                    f"Maximum number of iterations (== {max_iter}) reached in davidson procedure."
+                )
+            )
+            state.eigenvectors = [
+                lincomb(v, SS, evaluate=True)
+                for i, v in enumerate(np.transpose(rvecs))
+                if i in epair_mask
+            ]
             state.timer.stop("iteration")
             state.converged = False
             return state
@@ -306,27 +331,33 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
                     n_ss_vec = len(SS)
 
             if debug_checks:
-                orth = np.array([[SS[i] @ SS[j] for i in range(n_ss_vec)]
-                                 for j in range(n_ss_vec)])
+                orth = np.array([[SS[i] @ SS[j] for i in range(n_ss_vec)] for j in range(n_ss_vec)])
                 orth -= np.eye(n_ss_vec)
                 state.subspace_orthogonality = np.max(np.abs(orth))
                 if state.subspace_orthogonality > n_problem * eps:
-                    warnings.warn(la.LinAlgWarning(
-                        "Subspace in Davidson has lost orthogonality. "
-                        f"Max. deviation from orthogonality is {state.subspace_orthogonality:.4E}. "
-                        "Expect inaccurate results."
-                    ))
+                    warnings.warn(
+                        la.LinAlgWarning(
+                            "Subspace in Davidson has lost orthogonality. "
+                            f"Max. deviation from orthogonality is {state.subspace_orthogonality:.4E}. "
+                            "Expect inaccurate results."
+                        )
+                    )
 
         if n_ss_added == 0:
             state.timer.stop("iteration")
             state.converged = False
-            state.eigenvectors = [lincomb(v, SS, evaluate=True)
-                                  for i, v in enumerate(np.transpose(rvecs))
-                                  if i in epair_mask]
-            warnings.warn(la.LinAlgWarning(
-                "Davidson procedure could not generate any further vectors for "
-                "the subspace. Iteration cannot be continued like this and will "
-                "be aborted without convergence. Try a different guess."))
+            state.eigenvectors = [
+                lincomb(v, SS, evaluate=True)
+                for i, v in enumerate(np.transpose(rvecs))
+                if i in epair_mask
+            ]
+            warnings.warn(
+                la.LinAlgWarning(
+                    "Davidson procedure could not generate any further vectors for "
+                    "the subspace. Iteration cannot be continued like this and will "
+                    "be aborted without convergence. Try a different guess."
+                )
+            )
             return state
 
         # Matrix applies for the new vectors
@@ -348,12 +379,23 @@ def davidson_iterations(matrix, state, max_subspace, max_iter, n_ep, n_block,
                         Ass[j, i] = Ass[i, j]
 
 
-def eigsh(matrix, guesses, n_ep=None, n_block=None, max_subspace=None,
-          conv_tol=1e-9, which="SA", max_iter=70,
-          callback=None, preconditioner=None,
-          preconditioning_method="Davidson", debug_checks=False,
-          residual_min_norm=None, explicit_symmetrisation=IndexSymmetrisation,
-          max_subspace_iter=None):
+def eigsh(
+    matrix,
+    guesses,
+    n_ep=None,
+    n_block=None,
+    max_subspace=None,
+    conv_tol=1e-9,
+    which="SA",
+    max_iter=70,
+    callback=None,
+    preconditioner=None,
+    preconditioning_method="Davidson",
+    debug_checks=False,
+    residual_min_norm=None,
+    explicit_symmetrisation=IndexSymmetrisation,
+    max_subspace_iter=None,
+):
     """Davidson eigensolver for ADC problems
 
     Parameters
@@ -410,35 +452,42 @@ def eigsh(matrix, guesses, n_ep=None, n_block=None, max_subspace=None,
     if preconditioner is not None and isinstance(preconditioner, type):
         preconditioner = preconditioner(matrix)
 
-    if explicit_symmetrisation is not None and \
-            isinstance(explicit_symmetrisation, type):
+    if explicit_symmetrisation is not None and isinstance(explicit_symmetrisation, type):
         explicit_symmetrisation = explicit_symmetrisation(matrix)
 
     if n_ep is None:
         n_ep = len(guesses)
     elif n_ep > len(guesses):
-        raise ValueError(f"n_ep (= {n_ep}) cannot exceed the number of guess "
-                         f"vectors (= {len(guesses)}).")
+        raise ValueError(
+            f"n_ep (= {n_ep}) cannot exceed the number of guess vectors (= {len(guesses)})."
+        )
 
     if n_block is None:
         n_block = n_ep
     elif n_block < n_ep:
-        raise ValueError(f"n_block (= {n_block}) cannot be smaller than the number "
-                         f"of states requested (= {n_ep}).")
+        raise ValueError(
+            f"n_block (= {n_block}) cannot be smaller than the number "
+            f"of states requested (= {n_ep})."
+        )
     elif n_block > len(guesses):
-        raise ValueError(f"n_block (= {n_block}) cannot exceed the number of guess "
-                         f"vectors (= {len(guesses)}).")
+        raise ValueError(
+            f"n_block (= {n_block}) cannot exceed the number of guess vectors (= {len(guesses)})."
+        )
 
     if not max_subspace:
         # TODO Arnoldi uses this:
         # max_subspace = max(2 * n_ep + 1, 20)
         max_subspace = max(6 * n_ep, 20, 5 * len(guesses))
     elif max_subspace < 2 * n_block:
-        raise ValueError(f"max_subspace (= {max_subspace}) needs to be at least "
-                         f"twice as large as n_block (n_block = {n_block}).")
+        raise ValueError(
+            f"max_subspace (= {max_subspace}) needs to be at least "
+            f"twice as large as n_block (n_block = {n_block})."
+        )
     elif max_subspace < len(guesses):
-        raise ValueError(f"max_subspace (= {max_subspace}) cannot be smaller than "
-                         f"the number of guess vectors (= {len(guesses)}).")
+        raise ValueError(
+            f"max_subspace (= {max_subspace}) cannot be smaller than "
+            f"the number of guess vectors (= {len(guesses)})."
+        )
 
     def convergence_test(state):
         state.residuals_converged = state.residual_norms < conv_tol
@@ -446,28 +495,39 @@ def eigsh(matrix, guesses, n_ep=None, n_block=None, max_subspace=None,
         return state.converged
 
     if conv_tol < matrix.shape[1] * np.finfo(float).eps:
-        warnings.warn(la.LinAlgWarning(
-            f"Convergence tolerance (== {conv_tol:5.2g}) lower than "
-            f"estimated maximal numerical accuracy (== {matrix.shape[1] * np.finfo(float).eps:5.2g}). "
-            "Convergence might be hard to achieve."
-        ))
+        warnings.warn(
+            la.LinAlgWarning(
+                f"Convergence tolerance (== {conv_tol:5.2g}) lower than "
+                f"estimated maximal numerical accuracy (== {matrix.shape[1] * np.finfo(float).eps:5.2g}). "
+                "Convergence might be hard to achieve."
+            )
+        )
 
     state = DavidsonState(matrix, guesses)
-    davidson_iterations(matrix, state, max_subspace, max_iter,
-                        n_ep=n_ep, n_block=n_block, is_converged=convergence_test,
-                        callback=callback, which=which,
-                        preconditioner=preconditioner,
-                        preconditioning_method=preconditioning_method,
-                        debug_checks=debug_checks,
-                        residual_min_norm=residual_min_norm,
-                        explicit_symmetrisation=explicit_symmetrisation,
-                        max_subspace_iter=max_subspace_iter)
+    davidson_iterations(
+        matrix,
+        state,
+        max_subspace,
+        max_iter,
+        n_ep=n_ep,
+        n_block=n_block,
+        is_converged=convergence_test,
+        callback=callback,
+        which=which,
+        preconditioner=preconditioner,
+        preconditioning_method=preconditioning_method,
+        debug_checks=debug_checks,
+        residual_min_norm=residual_min_norm,
+        explicit_symmetrisation=explicit_symmetrisation,
+        max_subspace_iter=max_subspace_iter,
+    )
     return state
 
 
 def jacobi_davidson(*args, **kwargs):
-    return eigsh(*args, preconditioner=JacobiPreconditioner,
-                 preconditioning_method="Davidson", **kwargs)
+    return eigsh(
+        *args, preconditioner=JacobiPreconditioner, preconditioning_method="Davidson", **kwargs
+    )
 
 
 def davidson(*args, **kwargs):

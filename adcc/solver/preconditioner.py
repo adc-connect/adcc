@@ -29,6 +29,7 @@ class PreconditionerIdentity:
     """
     Preconditioner, which does absolutely nothing
     """
+
     def apply(self, invecs):
         return invecs
 
@@ -43,10 +44,10 @@ class JacobiPreconditioner:
     Represents the application of (D - σ I)^{-1}, where
     D is the diagonal of the adcmatrix.
     """
+
     def __init__(self, adcmatrix, shifts=0.0):
         if not isinstance(adcmatrix, AdcMatrixlike):
-            raise TypeError("Only an AdcMatrixlike may be used with this "
-                            "preconditioner for now.")
+            raise TypeError("Only an AdcMatrixlike may be used with this preconditioner for now.")
 
         self.diagonal = adcmatrix.diagonal()
         self.shifts = shifts
@@ -64,19 +65,22 @@ class JacobiPreconditioner:
     def apply(self, invecs):
         if isinstance(invecs, AmplitudeVector):
             if not isinstance(self.shifts, (float, np.number)):
-                raise TypeError("Can only apply JacobiPreconditioner "
-                                "to a single vector if shifts is "
-                                "only a single number.")
+                raise TypeError(
+                    "Can only apply JacobiPreconditioner "
+                    "to a single vector if shifts is "
+                    "only a single number."
+                )
             return invecs / (self.diagonal - self.shifts)
         elif isinstance(invecs, list):
             if len(self.shifts) != len(invecs):
-                raise ValueError("Number of vectors passed does not agree "
-                                 "with number of shifts stored inside "
-                                 "precoditioner. Update using the "
-                                 "'update_shifts' method.")
+                raise ValueError(
+                    "Number of vectors passed does not agree "
+                    "with number of shifts stored inside "
+                    "precoditioner. Update using the "
+                    "'update_shifts' method."
+                )
 
-            return [v / (self.diagonal - self.shifts[i])
-                    for i, v in enumerate(invecs)]
+            return [v / (self.diagonal - self.shifts[i]) for i, v in enumerate(invecs)]
         else:
             raise TypeError("Input type not understood: " + str(type(invecs)))
 

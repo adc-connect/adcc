@@ -35,23 +35,21 @@ class TestWorkflow:
         refstate = testdata_cache.refstate("h2o_sto3g", case="gen")
 
         assert 3, "any" == validate_state_parameters(refstate, n_states=3)
-        assert 4, "singlet" == validate_state_parameters(refstate, n_states=4,
-                                                         kind="singlet")
-        assert 2, "triplet" == validate_state_parameters(refstate, n_states=2,
-                                                         kind="triplet")
+        assert 4, "singlet" == validate_state_parameters(refstate, n_states=4, kind="singlet")
+        assert 2, "triplet" == validate_state_parameters(refstate, n_states=2, kind="triplet")
         assert 2, "triplet" == validate_state_parameters(refstate, n_triplets=2)
         assert 6, "singlet" == validate_state_parameters(refstate, n_singlets=6)
 
         invalid_cases = [
-            {},                # No states requested
-            {"n_states": 0},      # No states requested
-            {"n_singlets": -2},   # Negative number of states requested
-            {"n_spin_flip": 2},   # Invalid kind of states for RHF
-            {"n_states": 2, "n_singlets": 2},      # States of two sorts
-            {"n_triplets": 2, "n_singlets": 2},    # States of two sorts
-            {"n_states": 2, "n_spin_flip": 2},     # States of two sorts
+            {},  # No states requested
+            {"n_states": 0},  # No states requested
+            {"n_singlets": -2},  # Negative number of states requested
+            {"n_spin_flip": 2},  # Invalid kind of states for RHF
+            {"n_states": 2, "n_singlets": 2},  # States of two sorts
+            {"n_triplets": 2, "n_singlets": 2},  # States of two sorts
+            {"n_states": 2, "n_spin_flip": 2},  # States of two sorts
             {"n_triplets": 2, "kind": "singlet"},  # kind and n_ do not agree
-            {"n_states": 2, "kind": "bla"},      # Kind invaled
+            {"n_states": 2, "kind": "bla"},  # Kind invaled
         ]
         for case in invalid_cases:
             with pytest.raises(InputError):
@@ -62,26 +60,24 @@ class TestWorkflow:
 
         refstate = testdata_cache.refstate("cn_sto3g", case="gen")
 
-        assert 3, "any" == validate_state_parameters(refstate, n_states=3,
-                                                     kind="any")
+        assert 3, "any" == validate_state_parameters(refstate, n_states=3, kind="any")
         assert 3, "any" == validate_state_parameters(refstate, n_states=3)
-        assert 2, "spin_flip" == validate_state_parameters(refstate,
-                                                           n_spin_flip=2)
+        assert 2, "spin_flip" == validate_state_parameters(refstate, n_spin_flip=2)
 
         invalid_cases = [
-            {},                # No states requested
-            {"n_states": 0},      # No states requested
-            {"n_states": -2},     # Negative number of states requested
+            {},  # No states requested
+            {"n_states": 0},  # No states requested
+            {"n_states": -2},  # Negative number of states requested
             {"n_spin_flip": -3},  # Negative number of states requested
-            {"n_states": 2, "n_singlets": 2},    # States of two sorts
+            {"n_states": 2, "n_singlets": 2},  # States of two sorts
             {"n_triplets": 2, "n_singlets": 2},  # States of two sorts
-            {"n_states": 2, "n_spin_flip": 2},   # States of two sorts
+            {"n_states": 2, "n_spin_flip": 2},  # States of two sorts
             {"n_spin_flip": 2, "kind": "singlet"},  # kind and n_ do not agree
-            {"n_states": 2, "kind": "bla"},      # Kind invaled
+            {"n_states": 2, "kind": "bla"},  # Kind invaled
             {"n_states": 4, "kind": "singlet"},  # UHF with singlets
             {"n_states": 2, "kind": "triplet"},  # UHF with triplets
-            {"n_triplets": 2},    # UHF with triplets
-            {"n_singlets": 6},    # UHF with singlets
+            {"n_triplets": 2},  # UHF with triplets
+            {"n_singlets": 6},  # UHF with singlets
         ]
         for case in invalid_cases:
             with pytest.raises(InputError):
@@ -119,18 +115,17 @@ class TestWorkflow:
         assert res.mospaces.frozen_core == []
         assert res.mospaces.frozen_virtual == [6, 13]
 
-        res = construct_adcmatrix(hfdata, method="adc2", frozen_virtual=1,
-                                  frozen_core=1)
+        res = construct_adcmatrix(hfdata, method="adc2", frozen_virtual=1, frozen_core=1)
         assert res.mospaces.core_orbitals == []
         assert res.mospaces.frozen_core == [0, 7]
         assert res.mospaces.frozen_virtual == [6, 13]
 
         invalid_cases = [
-            {},                   # Missing method
-            {"method": "dadadad"},   # Unknown method
-            {"frozen_core": 1},      # Missing method
-            {"frozen_virtual": 3},   # Missing method
-            {"core_orbitals": 4},    # Missing method
+            {},  # Missing method
+            {"method": "dadadad"},  # Unknown method
+            {"frozen_core": 1},  # Missing method
+            {"frozen_virtual": 3},  # Missing method
+            {"core_orbitals": 4},  # Missing method
             {"method": "cvs-adc2"},  # No core_orbitals
             {"method": "cvs-adc2", "frozen_core": 1},
             {"method": "adc2", "core_orbitals": 3},  # Extra core parameter
@@ -152,14 +147,11 @@ class TestWorkflow:
             assert isinstance(res, adcc.AdcMatrix)
             assert res.method == adcc.AdcMethod("adc2")
 
-            with pytest.raises(InputError,
-                               match=r"Cannot run a core-valence"):
+            with pytest.raises(InputError, match=r"Cannot run a core-valence"):
                 construct_adcmatrix(obj, method="cvs-adc2x")
-            with pytest.warns(UserWarning,
-                              match=r"^Ignored frozen_core parameter"):
+            with pytest.warns(UserWarning, match=r"^Ignored frozen_core parameter"):
                 construct_adcmatrix(obj, frozen_core=3, method="adc1")
-            with pytest.warns(UserWarning,
-                              match=r"^Ignored frozen_virtual parameter"):
+            with pytest.warns(UserWarning, match=r"^Ignored frozen_virtual parameter"):
                 construct_adcmatrix(obj, frozen_virtual=1, method="adc3")
 
         for obj in [gs_cvs, refst_cvs]:
@@ -171,8 +163,7 @@ class TestWorkflow:
                 construct_adcmatrix(obj)  # Missing method
             with pytest.raises(InputError, match=r"Cannot run a general"):
                 construct_adcmatrix(obj, method="adc2")
-            with pytest.warns(UserWarning,
-                              match=r"^Ignored core_orbitals parameter"):
+            with pytest.warns(UserWarning, match=r"^Ignored core_orbitals parameter"):
                 construct_adcmatrix(obj, core_orbitals=2, method="cvs-adc1")
 
         #
@@ -191,8 +182,7 @@ class TestWorkflow:
             construct_adcmatrix(mtx_cvs, core_orbitals=2)
         with pytest.warns(UserWarning, match=r"^Ignored frozen_core parameter"):
             construct_adcmatrix(mtx_ful, frozen_core=3)
-        with pytest.warns(UserWarning,
-                          match=r"^Ignored frozen_virtual parameter"):
+        with pytest.warns(UserWarning, match=r"^Ignored frozen_virtual parameter"):
             construct_adcmatrix(mtx_cvs, frozen_virtual=1)
 
     def test_diagonalise_adcmatrix(self):
@@ -209,31 +199,28 @@ class TestWorkflow:
 
         matrix = adcc.AdcMatrix(method, testdata_cache.refstate(system, case=case))
 
-        res = diagonalise_adcmatrix(matrix, n_states=n_states, kind=kind,
-                                    eigensolver="davidson")
+        res = diagonalise_adcmatrix(matrix, n_states=n_states, kind=kind, eigensolver="davidson")
         assert res.converged
         assert res.eigenvalues[:n_states] == approx(ref_singlets[:n_states])
 
         guesses = adcc.guesses_singlet(matrix, n_guesses=6, block="ph")
-        res = diagonalise_adcmatrix(matrix, n_states=n_states, kind=kind,
-                                    guesses=guesses)
+        res = diagonalise_adcmatrix(matrix, n_states=n_states, kind=kind, guesses=guesses)
         assert res.converged
         assert res.eigenvalues[:n_states] == approx(ref_singlets[:n_states])
 
         with pytest.raises(InputError):  # Too low tolerance
             # SCF tolerance = 1e-14 currently
-            res = diagonalise_adcmatrix(matrix, n_states=9, kind=kind,
-                                        eigensolver="davidson",
-                                        conv_tol=1e-15)
+            res = diagonalise_adcmatrix(
+                matrix, n_states=9, kind=kind, eigensolver="davidson", conv_tol=1e-15
+            )
 
         with pytest.raises(InputError):  # Wrong solver method
-            res = diagonalise_adcmatrix(matrix, n_states=9, kind=kind,
-                                        eigensolver="blubber")
+            res = diagonalise_adcmatrix(matrix, n_states=9, kind=kind, eigensolver="blubber")
 
         with pytest.raises(InputError):  # Too few guesses
-            res = diagonalise_adcmatrix(matrix, n_states=9, kind=kind,
-                                        eigensolver="davidson",
-                                        guesses=guesses)
+            res = diagonalise_adcmatrix(
+                matrix, n_states=9, kind=kind, eigensolver="davidson", guesses=guesses
+            )
 
     def test_estimate_n_guesses(self):
         from adcc.workflow import estimate_n_guesses
@@ -260,17 +247,16 @@ class TestWorkflow:
         # Test that the right number of guesses is returned ...
         for mat in [matrix1, matrix2]:
             for i in range(4, 9):
-                res = obtain_guesses_by_inspection(mat, n_guesses=i,
-                                                   kind="singlet")
+                res = obtain_guesses_by_inspection(mat, n_guesses=i, kind="singlet")
                 assert len(res) == i
 
         for i in range(4, 9):
             res = obtain_guesses_by_inspection(
-                matrix2, n_guesses=i, kind="triplet", n_guesses_doubles=2)
+                matrix2, n_guesses=i, kind="triplet", n_guesses_doubles=2
+            )
             assert len(res) == i
 
         with pytest.raises(InputError):
-            obtain_guesses_by_inspection(matrix1, n_guesses=4, kind="any",
-                                         n_guesses_doubles=2)
+            obtain_guesses_by_inspection(matrix1, n_guesses=4, kind="any", n_guesses_doubles=2)
         with pytest.raises(InputError):
             obtain_guesses_by_inspection(matrix1, n_guesses=40, kind="any")

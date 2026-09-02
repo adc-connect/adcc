@@ -40,7 +40,7 @@ def _extract_ndarray(dataset):
         # Here we decode the bytes explicitly.
         arr_flat = np.reshape(arr, -1)
         if len(arr_flat) > 0 and isinstance(arr_flat[0], bytes):
-            arr_str = np.empty(dataset.shape, dtype='O')
+            arr_str = np.empty(dataset.shape, dtype="O")
             arr_str_flat = np.reshape(arr_str, -1)
             for i in range(len(arr_flat)):
                 arr_str_flat[i] = arr_flat[i].decode()
@@ -78,11 +78,11 @@ def _extract_none(dataset):
 # If type not found here, we have an error
 # in the direction python -> hdf5, else we ignore it.
 _scalar_transform = [
-    (str,     h5py.special_dtype(vlen=str)),
-    (bool,    np.dtype("b1")),
+    (str, h5py.special_dtype(vlen=str)),
+    (bool, np.dtype("b1")),
     (complex, np.dtype("c16")),
-    (float,   np.dtype("f8")),
-    (int,     np.dtype("int64")),
+    (float, np.dtype("f8")),
+    (int, np.dtype("int64")),
 ]
 
 
@@ -96,11 +96,9 @@ def _emplace_scalar(keyval, group, typ, compression=None, **kwargs):
             dtype = t[1]
             break
     if dtype is None:
-        raise TypeError("Encountered unknown data type '"
-                        + str(type(keyval[1])) + "'")
+        raise TypeError("Encountered unknown data type '" + str(type(keyval[1])) + "'")
 
-    dset = group.create_dataset(keyval[0], data=keyval[1],
-                                dtype=dtype, **kwargs)
+    dset = group.create_dataset(keyval[0], data=keyval[1], dtype=dtype, **kwargs)
     dset.attrs["type"] = "scalar"
 
 
@@ -127,7 +125,7 @@ def _extract_scalar(dataset):
 
 def _extract_dataset(dataset):
     """Select extractor based on the type attribute and use that
-       to make the proper key-value pair out of the dataset
+    to make the proper key-value pair out of the dataset
     """
     if "type" not in dataset.attrs:
         if dataset.shape == ():
@@ -138,11 +136,11 @@ def _extract_dataset(dataset):
         # Use type attribute to distinguish what should happen
         tpe = dataset.attrs["type"]
         return {
-            "scalar":   _extract_scalar,
-            "none":     _extract_none,
-            "ndarray":  _extract_ndarray,
-            "list":     _extract_listlike,
-            "tuple":    _extract_listlike,
+            "scalar": _extract_scalar,
+            "none": _extract_none,
+            "ndarray": _extract_ndarray,
+            "list": _extract_listlike,
+            "tuple": _extract_listlike,
         }[tpe](dataset)
 
 
@@ -159,14 +157,14 @@ def _emplace_key_value(kv, group, **kwargs):
         emplace_dict(kv[1], subgroup)
 
     emplace_map = [
-        (np.ndarray,   _emplace_ndarray),
-        (type(None),   _emplace_none),
-        (list,         _emplace_listlike),
-        (tuple,        _emplace_listlike),
-        (dict,         _emplace_dict_inner),
+        (np.ndarray, _emplace_ndarray),
+        (type(None), _emplace_none),
+        (list, _emplace_listlike),
+        (tuple, _emplace_listlike),
+        (dict, _emplace_dict_inner),
     ]
 
-    for (typ, emplace) in emplace_map:
+    for typ, emplace in emplace_map:
         if isinstance(kv[1], typ):
             try:
                 emplace(kv, group, typ, **kwargs)
@@ -195,17 +193,13 @@ def emplace_dict(dictionary, group, **kwargs):
 
 def extract_group(group):
     # Recursively extract all groups:
-    ret = {basename(v.name): extract_group(v) for v in group.values()
-           if isinstance(v, h5py.Group)}
+    ret = {basename(v.name): extract_group(v) for v in group.values() if isinstance(v, h5py.Group)}
 
     # Now deal with all datasets
-    ret.update([_extract_dataset(v) for v in group.values()
-                if isinstance(v, h5py.Dataset)])
+    ret.update([_extract_dataset(v) for v in group.values() if isinstance(v, h5py.Dataset)])
 
-    if not all(isinstance(v, (h5py.Dataset, h5py.Group)) or v is None
-               for v in group.values()):
-        raise ValueError("Encountered object in h5py which is neither "
-                         "a Group nor a Dataset")
+    if not all(isinstance(v, (h5py.Dataset, h5py.Group)) or v is None for v in group.values()):
+        raise ValueError("Encountered object in h5py which is neither a Group nor a Dataset")
     return ret
 
 

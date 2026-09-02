@@ -38,11 +38,11 @@ class IndexSymmetrisation:
     Enforce the very index symmetrisation required for a particular
     ADC matrix at hand in the new amplitude vectors.
     """
+
     def __init__(self, matrix):
         # Build symmetrisation functions required to be executed
         # for the respective block
-        self.symmetrisation_functions = \
-            matrix.construct_symmetrisation_for_blocks()
+        self.symmetrisation_functions = matrix.construct_symmetrisation_for_blocks()
 
     def symmetrise(self, new_vectors):
         """
@@ -57,8 +57,7 @@ class IndexSymmetrisation:
             return self.symmetrise([new_vectors])[0]
         for vec in new_vectors:
             if not isinstance(vec, AmplitudeVector):
-                raise TypeError("new_vectors has to be an "
-                                "iterable of AmplitudeVector")
+                raise TypeError("new_vectors has to be an iterable of AmplitudeVector")
             for b in vec.blocks:
                 if b not in self.symmetrisation_functions:
                     continue
@@ -71,6 +70,7 @@ class IndexSpinSymmetrisation(IndexSymmetrisation):
     Enforce both the required index symmetry as well as an additional
     explicit spin symmetry in the new amplitude vectors.
     """
+
     def __init__(self, matrix, enforce_spin_kind="singlet"):
         super().__init__(matrix)
         self.enforce_spin_kind = enforce_spin_kind
@@ -89,11 +89,8 @@ class IndexSpinSymmetrisation(IndexSymmetrisation):
             if "pphh" in vec.blocks:
                 # TODO: Note that the "d" is needed here because the C++ side
                 #       does not yet understand ph and pphh
-                amplitude_vector_enforce_spin_kind(
-                    vec.pphh, "d", self.enforce_spin_kind
-                )
+                amplitude_vector_enforce_spin_kind(vec.pphh, "d", self.enforce_spin_kind)
         return new_vectors
 
 
-IndexSpinSymmetrisation.symmetrise.__doc__ = \
-    IndexSymmetrisation.symmetrise.__doc__
+IndexSpinSymmetrisation.symmetrise.__doc__ = IndexSymmetrisation.symmetrise.__doc__

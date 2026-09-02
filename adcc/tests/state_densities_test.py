@@ -37,7 +37,7 @@ methods = [
     ("adc3", None),
     ("adc3", 3),
     ("adc4", None),
-    ("adc4", "3d")
+    ("adc4", "3d"),
 ]
 generators = ["adcman", "adcc"]
 large_cases = ("h2o_def2tzvp", "cn_ccpvdz")
@@ -49,27 +49,29 @@ large_cases = ("h2o_def2tzvp", "cn_ccpvdz")
 test_cases = testcases.get_by_filename(
     "h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz", "hf_631g"
 )
-cases = [(case.file_name, c, kind)
-         for case in test_cases
-         for c in ["gen", "cvs"] if c in case.cases
-         for kind in ["singlet", "any", "spin_flip"] if kind in case.kinds.pp]
+cases = [
+    (case.file_name, c, kind)
+    for case in test_cases
+    for c in ["gen", "cvs"]
+    if c in case.cases
+    for kind in ["singlet", "any", "spin_flip"]
+    if kind in case.kinds.pp
+]
 
 
 @pytest.mark.parametrize("adc_method, isr_order", methods)
 @pytest.mark.parametrize("generator", generators)
 class TestStateDensities:
     @pytest.mark.parametrize("system,case,kind", cases)
-    def test_state_diffdm(self, system: str, case: str, kind: str, adc_method: str,
-                          isr_order, generator: str):
+    def test_state_diffdm(
+        self, system: str, case: str, kind: str, adc_method: str, isr_order, generator: str
+    ):
 
-        if (
-            "cvs" in case and AdcMethod(adc_method).level.to_int() == 0
-            and generator == "adcman"
-        ):
+        if "cvs" in case and AdcMethod(adc_method).level.to_int() == 0 and generator == "adcman":
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
         if adc_method == "adc4" and system in large_cases:
             pytest.skip("ADC(4) reference data not available for large cases.")
-        if 'cvs' in case and isr_order in (3, "3d"):
+        if "cvs" in case and isr_order in (3, "3d"):
             pytest.skip("CVS-ISR(3) not implemented yet")
         if "cvs" in case and adc_method == "adc4":
             pytest.skip("CVS-ADC(4) not implemented yet")
@@ -80,8 +82,8 @@ class TestStateDensities:
         # construct a ExcitedStates instance using the eigenvalues and eigenstates
         # from the reference data.
         state: ExcitedStates = getattr(testdata_cache, f"{generator}_states")(
-            system=system, method=adc_method, case=case,
-            kind=kind, isr_order=isr_order)
+            system=system, method=adc_method, case=case, kind=kind, isr_order=isr_order
+        )
 
         # since refdata was used to build state we have to have the same amount
         # of states
@@ -97,19 +99,16 @@ class TestStateDensities:
     # adcman does not compute the tdm for singlet -> triplet transitions,
     # because the transition dipole moment should be zero anyway
     # -> remove triplet tests
-    @pytest.mark.parametrize("system,case,kind",
-                             [c for c in cases if c[2] != "triplet"])
-    def test_ground_to_excited_tdm(self, system: str, case: str, kind: str,
-                                   adc_method: str, isr_order, generator: str):
+    @pytest.mark.parametrize("system,case,kind", [c for c in cases if c[2] != "triplet"])
+    def test_ground_to_excited_tdm(
+        self, system: str, case: str, kind: str, adc_method: str, isr_order, generator: str
+    ):
 
-        if (
-            "cvs" in case and AdcMethod(adc_method).level.to_int() == 0
-            and generator == "adcman"
-        ):
+        if "cvs" in case and AdcMethod(adc_method).level.to_int() == 0 and generator == "adcman":
             pytest.skip("No CVS-ADC(0) adcman reference data available.")
         if adc_method == "adc4" and system in large_cases:
             pytest.skip("ADC(4) reference data not available for large cases.")
-        if 'cvs' in case and isr_order in (3, "3d"):
+        if "cvs" in case and isr_order in (3, "3d"):
             pytest.skip("CVS-ISR(3) not implemented yet")
         if "cvs" in case and adc_method == "adc4":
             pytest.skip("CVS-ADC(4) not implemented yet")
@@ -120,8 +119,8 @@ class TestStateDensities:
         # construct a ExcitedStates instance using the eigenvalues and eigenstates
         # from the reference data.
         state: ExcitedStates = getattr(testdata_cache, f"{generator}_states")(
-            system=system, method=adc_method, case=case,
-            kind=kind, isr_order=isr_order)
+            system=system, method=adc_method, case=case, kind=kind, isr_order=isr_order
+        )
         # since refdata was used to build state we have to have the same amount
         # of states
         for i in range(len(state.excitation_vector)):
@@ -133,14 +132,14 @@ class TestStateDensities:
             dm_ao_a, dm_ao_b = dm_ao_a.to_ndarray(), dm_ao_b.to_ndarray()
             ref_dm_a = refdata["ground_to_excited_tdm_bb_a"][i]
             ref_dm_b = refdata["ground_to_excited_tdm_bb_b"][i]
-            assert (dm_ao_a == approx(ref_dm_a))
-            assert (dm_ao_b == approx(ref_dm_b))
+            assert dm_ao_a == approx(ref_dm_a)
+            assert dm_ao_b == approx(ref_dm_b)
 
     # CVS state-to-state TDM is not implemented in adcc
-    @pytest.mark.parametrize("system,case,kind",
-                             [c for c in cases if "cvs" not in c[1]])
-    def test_state_to_state_tdm(self, system: str, case: str, kind: str,
-                                adc_method: str, isr_order, generator: str):
+    @pytest.mark.parametrize("system,case,kind", [c for c in cases if "cvs" not in c[1]])
+    def test_state_to_state_tdm(
+        self, system: str, case: str, kind: str, adc_method: str, isr_order, generator: str
+    ):
 
         if adc_method == "adc4" and system in large_cases:
             pytest.skip("ADC(4) reference data not available for large cases.")
@@ -153,8 +152,8 @@ class TestStateDensities:
         # construct a ExcitedStates instance using the eigenvalues and eigenstates
         # from the reference data.
         state: ExcitedStates = getattr(testdata_cache, f"{generator}_states")(
-            system=system, method=adc_method, case=case,
-            kind=kind, isr_order=isr_order)
+            system=system, method=adc_method, case=case, kind=kind, isr_order=isr_order
+        )
         # since refdata was used to build state we have to have the same amount
         # of states
         for i in range(len(state.excitation_vector) - 1):

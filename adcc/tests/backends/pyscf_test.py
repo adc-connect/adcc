@@ -61,8 +61,7 @@ class TestPyscf:
             assert not isinstance(scfres, scf.uhf.UHF)
 
             assert hfdata.n_orbs_alpha == hfdata.n_orbs_beta
-            assert np.all(hfdata.orben_f[:n_orbs_alpha]
-                          == hfdata.orben_f[n_orbs_alpha:])
+            assert np.all(hfdata.orben_f[:n_orbs_alpha] == hfdata.orben_f[n_orbs_alpha:])
 
             mo_occ = (scfres.mo_occ / 2, scfres.mo_occ / 2)
             mo_energy = (scfres.mo_energy, scfres.mo_energy)
@@ -81,29 +80,23 @@ class TestPyscf:
         assert hfdata.n_beta == np.sum(mo_occ[1] > 0)
 
         # occupation_f
-        assert_almost_equal(hfdata.occupation_f,
-                            np.hstack((mo_occ[0], mo_occ[1])))
+        assert_almost_equal(hfdata.occupation_f, np.hstack((mo_occ[0], mo_occ[1])))
 
         # orben_f
-        assert_almost_equal(hfdata.orben_f,
-                            np.hstack((mo_energy[0], mo_energy[1])))
+        assert_almost_equal(hfdata.orben_f, np.hstack((mo_energy[0], mo_energy[1])))
 
         # orbcoeff_fb
-        assert_almost_equal(hfdata.orbcoeff_fb, np.transpose(np.hstack((
-            mo_coeff[0], mo_coeff[1]
-        ))))
+        assert_almost_equal(hfdata.orbcoeff_fb, np.transpose(np.hstack((mo_coeff[0], mo_coeff[1]))))
 
         # fock_ff
-        fock = tuple(mo_coeff[i].transpose().conj() @ fock_bb[i] @ mo_coeff[i]
-                     for i in range(2))
+        fock = tuple(mo_coeff[i].transpose().conj() @ fock_bb[i] @ mo_coeff[i] for i in range(2))
         fullfock_ff = np.zeros((hfdata.n_orbs, hfdata.n_orbs))
         fullfock_ff[:n_orbs_alpha, :n_orbs_alpha] = fock[0]
         fullfock_ff[n_orbs_alpha:, n_orbs_alpha:] = fock[1]
         assert_almost_equal(hfdata.fock_ff, fullfock_ff)
 
         # test symmetry of the ERI tensor
-        eri = np.empty((hfdata.n_orbs, hfdata.n_orbs,
-                        hfdata.n_orbs, hfdata.n_orbs))
+        eri = np.empty((hfdata.n_orbs, hfdata.n_orbs, hfdata.n_orbs, hfdata.n_orbs))
         sfull = slice(0, hfdata.n_orbs)
         hfdata.fill_eri_ffff((sfull, sfull, sfull, sfull), eri)
         for perm in eri_chem_permutations:
@@ -112,16 +105,16 @@ class TestPyscf:
 
     def operators_test(self, mf):
         from adcc.backends.pyscf import _transform_gauge_origin_to_xyz
+
         gauge_origins = ["origin", "mass_center", "charge_center"]
 
         # Test electric dipole
-        ao_dip = -1.0 * mf.mol.intor_symmetric('int1e_r', comp=3)
+        ao_dip = -1.0 * mf.mol.intor_symmetric("int1e_r", comp=3)
         operator_import_from_ao_test(mf, list(ao_dip))
 
         # Test electric dipole velocity
-        ao_linmom = mf.mol.intor('int1e_ipovlp', comp=3, hermi=2)
-        operator_import_from_ao_test(mf, list(ao_linmom),
-                                     "electric_dipole_velocity")
+        ao_linmom = mf.mol.intor("int1e_ipovlp", comp=3, hermi=2)
+        operator_import_from_ao_test(mf, list(ao_linmom), "electric_dipole_velocity")
 
         # Test gauge origin dependent integrals
         for gauge_origin in gauge_origins:
@@ -129,63 +122,55 @@ class TestPyscf:
 
             # Test magnetic dipole
             with mf.mol.with_common_orig(gauge_origin):
-                ao_magdip = -0.5 * mf.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
-            operator_import_from_ao_test(mf, list(ao_magdip), "magnetic_dipole",
-                                         gauge_origin)
+                ao_magdip = -0.5 * mf.mol.intor("int1e_cg_irxp", comp=3, hermi=2)
+            operator_import_from_ao_test(mf, list(ao_magdip), "magnetic_dipole", gauge_origin)
 
             # Test electric quadrupole
             with mf.mol.with_common_orig(gauge_origin):
-                ao_quad = -1.0 * mf.mol.intor_symmetric('int1e_rr', comp=9)
-            operator_import_from_ao_test(mf, list(ao_quad),
-                                         "electric_quadrupole", gauge_origin)
+                ao_quad = -1.0 * mf.mol.intor_symmetric("int1e_rr", comp=9)
+            operator_import_from_ao_test(mf, list(ao_quad), "electric_quadrupole", gauge_origin)
 
             # Test electric quadrupole traceless
             with mf.mol.with_common_orig(gauge_origin):
-                r_r = mf.mol.intor_symmetric('int1e_rr', comp=9)
+                r_r = mf.mol.intor_symmetric("int1e_rr", comp=9)
                 r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
-                r_quadr = mf.mol.intor_symmetric('int1e_r2', comp=1)
+                r_quadr = mf.mol.intor_symmetric("int1e_r2", comp=1)
                 r_quadr_matrix = np.zeros_like(r_r)
                 for i in range(3):
                     r_quadr_matrix[i][i] = r_quadr
                 term = 0.5 * (3 * r_r - r_quadr_matrix)
-                ao_quad_traceless = (
-                    -1.0 * np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
-                )
-            operator_import_from_ao_test(mf, list(ao_quad_traceless),
-                                         "electric_quadrupole_traceless",
-                                         gauge_origin)
+                ao_quad_traceless = -1.0 * np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
+            operator_import_from_ao_test(
+                mf, list(ao_quad_traceless), "electric_quadrupole_traceless", gauge_origin
+            )
 
             # Test electric quadrupole velocity
             with mf.mol.with_common_orig(gauge_origin):
-                r_p = mf.mol.intor('int1e_irp', comp=9, hermi=0)
+                r_p = mf.mol.intor("int1e_irp", comp=9, hermi=0)
                 r_p = np.reshape(r_p, (3, 3, r_p.shape[1], r_p.shape[1]))
-                ovlp = mf.mol.intor_symmetric('int1e_ovlp', comp=1)
+                ovlp = mf.mol.intor_symmetric("int1e_ovlp", comp=1)
                 ovlp_matrix = np.zeros_like(r_p)
                 for i in range(3):
                     ovlp_matrix[i][i] = ovlp
                 term = r_p + r_p.transpose(1, 0, 2, 3) - ovlp_matrix
-                ao_quad_vel = (
-                    -1.0 * np.reshape(term, (9, ovlp.shape[0], ovlp.shape[0]))
-                )
-            operator_import_from_ao_test(mf, list(ao_quad_vel),
-                                         "electric_quadrupole_velocity",
-                                         gauge_origin)
+                ao_quad_vel = -1.0 * np.reshape(term, (9, ovlp.shape[0], ovlp.shape[0]))
+            operator_import_from_ao_test(
+                mf, list(ao_quad_vel), "electric_quadrupole_velocity", gauge_origin
+            )
 
             # Test diamagnetic magnetizability
             with mf.mol.with_common_orig(gauge_origin):
-                r_r = mf.mol.intor_symmetric('int1e_rr', comp=9)
+                r_r = mf.mol.intor_symmetric("int1e_rr", comp=9)
                 r_r = np.reshape(r_r, (3, 3, r_r.shape[1], r_r.shape[1]))
-                r_quadr = mf.mol.intor_symmetric('int1e_r2', comp=1)
+                r_quadr = mf.mol.intor_symmetric("int1e_r2", comp=1)
                 r_quadr_matrix = np.zeros_like(r_r)
                 for i in range(3):
                     r_quadr_matrix[i][i] = r_quadr
                 term = 0.25 * (r_quadr_matrix - r_r)
-                diag_mag = (
-                    np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
-                )
-            operator_import_from_ao_test(mf, list(diag_mag),
-                                         "diamagnetic_magnetizability",
-                                         gauge_origin)
+                diag_mag = np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0]))
+            operator_import_from_ao_test(
+                mf, list(diag_mag), "diamagnetic_magnetizability", gauge_origin
+            )
 
     @pytest.mark.parametrize("system", h2o, ids=[case.file_name for case in h2o])
     def test_rhf(self, system: testcases.TestCase):
@@ -196,8 +181,7 @@ class TestPyscf:
         eri_asymm_construction_test(mf)
         eri_asymm_construction_test(mf, core_orbitals=1)
 
-    @pytest.mark.parametrize("system", ch2nh2,
-                             ids=[case.file_name for case in ch2nh2])
+    @pytest.mark.parametrize("system", ch2nh2, ids=[case.file_name for case in ch2nh2])
     def test_uhf(self, system: testcases.TestCase):
         mf = adcc.backends.run_hf(
             "pyscf", system.xyz, system.basis, multiplicity=system.multiplicity

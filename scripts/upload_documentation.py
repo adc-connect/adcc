@@ -35,14 +35,15 @@ def upload_docs(outdir):
 
     with open(os.path.dirname(__file__) + "/config.json") as fp:
         target = json.load(fp)["documentation"]
-    subprocess.run("rsync -P -rvzc --exclude .buildinfo --exclude objects.inv "
-                   f"--delete {outdir}/ {target} --cvs-exclude".split(),
-                   check=True)
+    subprocess.run(
+        "rsync -P -rvzc --exclude .buildinfo --exclude objects.inv "
+        f"--delete {outdir}/ {target} --cvs-exclude".split(),
+        check=True,
+    )
 
 
 def main():
-    if not os.path.isfile("scripts/upload_documentation.py") or \
-       not os.path.isfile("setup.py"):
+    if not os.path.isfile("scripts/upload_documentation.py") or not os.path.isfile("setup.py"):
         raise SystemExit("Please run from top dir of repository")
 
     outdir = build_docs()

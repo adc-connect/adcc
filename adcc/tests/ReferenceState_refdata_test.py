@@ -29,10 +29,15 @@ from . import testcases
 from .testdata_cache import testdata_cache
 
 
-def compare_refstate_with_reference(system: str, case: str,
-                                    data: dict, reference: dict,
-                                    scfres=None, compare_orbcoeff: bool = True,
-                                    compare_eri: str = "value"):
+def compare_refstate_with_reference(
+    system: str,
+    case: str,
+    data: dict,
+    reference: dict,
+    scfres=None,
+    compare_orbcoeff: bool = True,
+    compare_eri: str = "value",
+):
     # - data is the data to build a ReferenceState on top. If scfres is given
     # it will be used instead of data. We check that the data of the constructed
     # ReferenceState is consistent with data!
@@ -60,8 +65,10 @@ def compare_refstate_with_reference(system: str, case: str,
     frozen_core = system.frozen_core if "fc" in case else None
     frozen_virtual = system.frozen_virtual if "fv" in case else None
     refstate = adcc.ReferenceState(
-        import_data, core_orbitals=core_orbitals, frozen_core=frozen_core,
-        frozen_virtual=frozen_virtual
+        import_data,
+        core_orbitals=core_orbitals,
+        frozen_core=frozen_core,
+        frozen_virtual=frozen_virtual,
     )
     # collect the subspaces for the case
     subspaces = ["o1", "v1"]
@@ -82,22 +89,16 @@ def compare_refstate_with_reference(system: str, case: str,
     assert refstate.n_orbs == 2 * data["n_orbs_alpha"]
     assert refstate.n_orbs_alpha == data["n_orbs_alpha"]
     assert refstate.n_orbs_beta == data["n_orbs_alpha"]
-    assert refstate.n_alpha == sum(data["occupation_f"][:refstate.n_orbs_alpha])
-    assert refstate.n_beta == sum(data["occupation_f"][refstate.n_orbs_alpha:])
+    assert refstate.n_alpha == sum(data["occupation_f"][: refstate.n_orbs_alpha])
+    assert refstate.n_beta == sum(data["occupation_f"][refstate.n_orbs_alpha :])
     assert refstate.conv_tol == atol  # because atol is set to be the SCF conv_tol
     assert_allclose(refstate.energy_scf, data["energy_scf"], atol=atol)
-    assert_allclose(
-        refstate.nuclear_repulsion_energy,
-        data["nuclear_repulsion_energy"],
-        atol=atol
-    )
+    assert_allclose(refstate.nuclear_repulsion_energy, data["nuclear_repulsion_energy"], atol=atol)
     assert refstate.mospaces.subspaces == subspaces
 
-    multipoles = data['multipoles']
-    assert_allclose(refstate.nuclear_total_charge,
-                    multipoles["nuclear_0"], atol=atol)
-    assert_allclose(refstate.nuclear_dipole,
-                    multipoles["nuclear_1"], atol=atol)
+    multipoles = data["multipoles"]
+    assert_allclose(refstate.nuclear_total_charge, multipoles["nuclear_0"], atol=atol)
+    assert_allclose(refstate.nuclear_dipole, multipoles["nuclear_1"], atol=atol)
     if backend is not None and backend in ["pyscf", "veloxchem"]:
         gauge_origins = ["origin", "mass_center", "charge_center"]
         for g_origin in gauge_origins:
@@ -107,20 +108,20 @@ def compare_refstate_with_reference(system: str, case: str,
                 atol_nuc_quad = 2e-4
             else:
                 atol_nuc_quad = atol
-            assert_allclose(refstate.nuclear_quadrupole(g_origin),
-                            multipoles[f"nuclear_2_{g_origin}"],
-                            atol=atol_nuc_quad)
+            assert_allclose(
+                refstate.nuclear_quadrupole(g_origin),
+                multipoles[f"nuclear_2_{g_origin}"],
+                atol=atol_nuc_quad,
+            )
 
-    if "electric_dipole" in refstate.operators.available \
-            and "elec_1" in multipoles:
+    if "electric_dipole" in refstate.operators.available and "elec_1" in multipoles:
         refstate2 = adcc.ReferenceState(data)
-        assert_allclose(
-            refstate.dipole_moment, refstate2.dipole_moment, atol=atol
-        )
+        assert_allclose(refstate.dipole_moment, refstate2.dipole_moment, atol=atol)
 
     for ss in subspaces:
-        assert_allclose(refstate.orbital_energies(ss).to_ndarray(),
-                        reference["orbital_energies"][ss], atol=atol)
+        assert_allclose(
+            refstate.orbital_energies(ss).to_ndarray(), reference["orbital_energies"][ss], atol=atol
+        )
 
     if compare_orbcoeff:
         for ss in subspaces:
@@ -129,20 +130,19 @@ def compare_refstate_with_reference(system: str, case: str,
             assert_allclose(orbcoeff, orbcoeff_ref, atol=atol)
 
     for ss in reference["fock"]:
-        assert_allclose(refstate.fock(ss).to_ndarray(),
-                        reference["fock"][ss], atol=atol)
+        assert_allclose(refstate.fock(ss).to_ndarray(), reference["fock"][ss], atol=atol)
 
     if compare_eri == "abs":
         decimal = 7
         if refstate.backend == "veloxchem":
             decimal = 6
         for ss in reference["eri"]:
-            assert_almost_equal(np.abs(refstate.eri(ss).to_ndarray()),
-                                np.abs(reference["eri"][ss]), decimal=decimal)
+            assert_almost_equal(
+                np.abs(refstate.eri(ss).to_ndarray()), np.abs(reference["eri"][ss]), decimal=decimal
+            )
     elif compare_eri == "value":
         for ss in reference["eri"]:
-            assert_allclose(refstate.eri(ss).to_ndarray(),
-                            reference["eri"][ss], atol=atol)
+            assert_allclose(refstate.eri(ss).to_ndarray(), reference["eri"][ss], atol=atol)
 
 
 test_cases = testcases.get_by_filename(
@@ -156,6 +156,4 @@ class TestReferenceStateReferenceData:
     def test_hfimport(self, system: str, case: str):
         data = testdata_cache._load_hfdata(system)
         reference = testdata_cache.hfimport(system, case)
-        compare_refstate_with_reference(
-            system=system, case=case, data=data, reference=reference
-        )
+        compare_refstate_with_reference(system=system, case=case, data=data, reference=reference)

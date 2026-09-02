@@ -38,9 +38,15 @@ DipoleLike = tuple[Array2D, Array2D, Array2D]
 # Once we drop python 3.10 we can write
 # QuadrupoleLike = tuple[*DipoleLike, *DipoleLike, *DipoleLike]
 QuadrupoleLike = tuple[
-    Array2D, Array2D, Array2D,
-    Array2D, Array2D, Array2D,
-    Array2D, Array2D, Array2D,
+    Array2D,
+    Array2D,
+    Array2D,
+    Array2D,
+    Array2D,
+    Array2D,
+    Array2D,
+    Array2D,
+    Array2D,
 ]
 Coordinate = tuple[float, float, float]
 Environment = Literal["pe", "pcm"]
@@ -49,9 +55,14 @@ EnvironmentImplementation = Literal["cppe", "ddx", "pcmsolver"]
 
 class Psi4OperatorIntegralProvider:
     available: tuple[str, ...] = (
-        "overlap", "electric_dipole", "electric_dipole_velocity", "magnetic_dipole",
-        "electric_quadrupole", "electric_quadrupole_traceless",
-        "pe_induction_elec", "pcm_potential_elec"
+        "overlap",
+        "electric_dipole",
+        "electric_dipole_velocity",
+        "magnetic_dipole",
+        "electric_quadrupole",
+        "electric_quadrupole_traceless",
+        "pe_induction_elec",
+        "pcm_potential_elec",
     )
 
     def __init__(self, wfn: psi4.core.HF):
@@ -69,8 +80,7 @@ class Psi4OperatorIntegralProvider:
         x, y, z = self.mints.ao_dipole()  # list
         return np.asarray(x), np.asarray(y), np.asarray(z)
 
-    def magnetic_dipole(self,
-                        gauge_origin: Coordinate | str = "origin") -> DipoleLike:
+    def magnetic_dipole(self, gauge_origin: Coordinate | str = "origin") -> DipoleLike:
         """
         The imaginary part of the integral is returned.
         -0.5 * sum_i r_i x p_i
@@ -94,9 +104,7 @@ class Psi4OperatorIntegralProvider:
         x, y, z = self.mints.ao_nabla()  # list
         return -1.0 * np.asarray(x), -1.0 * np.asarray(y), -1.0 * np.asarray(z)
 
-    def electric_quadrupole(
-        self, gauge_origin: Coordinate | str = "origin"
-    ) -> QuadrupoleLike:
+    def electric_quadrupole(self, gauge_origin: Coordinate | str = "origin") -> QuadrupoleLike:
         """-sum_i r_{i, alpha} r_{i, beta}"""
         # TODO: Gauge origin?
         if gauge_origin != (0.0, 0.0, 0.0) and gauge_origin != "origin":
@@ -131,39 +139,50 @@ class Psi4OperatorIntegralProvider:
 
     def pe_induction_elec(self, dm: libadcc.Tensor) -> Array2D:
         if not hasattr(self.wfn, "pe_state"):
-            raise RuntimeError("Can not compute the PE electronic induction "
-                               "operator using the given psi4 object.")
+            raise RuntimeError(
+                "Can not compute the PE electronic induction operator using the given psi4 object."
+            )
 
-        return np.asarray(self.wfn.pe_state.get_pe_contribution(
-            psi4.core.Matrix.from_array(dm.to_ndarray()),
-            elec_only=True
-        )[1])
+        return np.asarray(
+            self.wfn.pe_state.get_pe_contribution(
+                psi4.core.Matrix.from_array(dm.to_ndarray()), elec_only=True
+            )[1]
+        )
 
     def pcm_potential_elec(self, dm: libadcc.Tensor) -> Array2D:
         if hasattr(self.wfn, "ddx"):
-            return np.asarray(self.wfn.ddx.get_solvation_contributions(
-                psi4.core.Matrix.from_array(dm.to_ndarray()),
-                elec_only=True, nonequilibrium=True
-            )[1])
+            return np.asarray(
+                self.wfn.ddx.get_solvation_contributions(
+                    psi4.core.Matrix.from_array(dm.to_ndarray()),
+                    elec_only=True,
+                    nonequilibrium=True,
+                )[1]
+            )
         elif self.wfn.PCM_enabled():
-            return np.asarray(self.wfn.get_PCM().compute_V(
-                psi4.core.Matrix.from_array(dm.to_ndarray())
-            ))
-        raise RuntimeError("Can not compute the electronic PCM potential "
-                           "operator using the given psi4 object.")
+            return np.asarray(
+                self.wfn.get_PCM().compute_V(psi4.core.Matrix.from_array(dm.to_ndarray()))
+            )
+        raise RuntimeError(
+            "Can not compute the electronic PCM potential operator using the given psi4 object."
+        )
 
 
 class Psi4EriBuilder(EriBuilder):
-    def __init__(self, wfn: psi4.core.HF, n_orbs: int, n_orbs_alpha: int,
-                 n_alpha: int, n_beta: int, restricted: bool):
+    def __init__(
+        self,
+        wfn: psi4.core.HF,
+        n_orbs: int,
+        n_orbs_alpha: int,
+        n_alpha: int,
+        n_beta: int,
+        restricted: bool,
+    ):
         self.wfn: psi4.core.HF = wfn
         self.mints: psi4.core.MintsHelper = psi4.core.MintsHelper(self.wfn)
         super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted)
 
     @property
-    def coefficients(
-        self
-    ) -> dict[Literal["Oa", "Ob", "Va", "Vb"], psi4.core.Matrix]:
+    def coefficients(self) -> dict[Literal["Oa", "Ob", "Va", "Vb"], psi4.core.Matrix]:
         return {
             "Oa": self.wfn.Ca_subset("AO", "OCC"),
             "Ob": self.wfn.Cb_subset("AO", "OCC"),
@@ -178,17 +197,17 @@ class Psi4EriBuilder(EriBuilder):
 
 class Psi4HFProvider(libadcc.HartreeFockProvider):
     """
-        This implementation is only valid
-        if no orbital reordering is required.
+    This implementation is only valid
+    if no orbital reordering is required.
     """
+
     def __init__(self, wfn: psi4.core.HF):
         # Do not forget the next line,
         # otherwise weird errors result
         super().__init__()
         self.wfn: psi4.core.HF = wfn
         self.eri_builder: Psi4EriBuilder = Psi4EriBuilder(
-            self.wfn, self.n_orbs, self.wfn.nmo(),
-            wfn.nalpha(), wfn.nbeta(), self.restricted
+            self.wfn, self.n_orbs, self.wfn.nmo(), wfn.nalpha(), wfn.nbeta(), self.restricted
         )
         self.operator_integral_provider: Psi4OperatorIntegralProvider = (
             Psi4OperatorIntegralProvider(self.wfn)
@@ -208,8 +227,7 @@ class Psi4HFProvider(libadcc.HartreeFockProvider):
 
     def pe_energy(self, dm: libadcc.Tensor, elec_only: bool = True) -> float:
         density_psi = psi4.core.Matrix.from_array(dm.to_ndarray())
-        e_pe, _ = self.wfn.pe_state.get_pe_contribution(density_psi,
-                                                        elec_only=elec_only)
+        e_pe, _ = self.wfn.pe_state.get_pe_contribution(density_psi, elec_only=elec_only)
         return e_pe
 
     def pcm_energy(self, dm: libadcc.Tensor, elec_only: bool = True) -> float:
@@ -224,8 +242,9 @@ class Psi4HFProvider(libadcc.HartreeFockProvider):
         elif self.environment_implementation == "pcmsolver":
             V_pcm = psi4.core.PCM.compute_V(self.wfn.get_PCM(), psi_dm)
         else:
-            raise ValueError("Invalid environment implementation: "
-                             f"{self.environment_implementation}")
+            raise ValueError(
+                f"Invalid environment implementation: {self.environment_implementation}"
+            )
         return float(np.einsum("uv,uv->", dm.to_ndarray(), V_pcm.to_array()))
 
     @property
@@ -234,20 +253,17 @@ class Psi4HFProvider(libadcc.HartreeFockProvider):
         if self.environment == "pe":
             ptlr = EnergyCorrection(
                 "pe_ptlr_correction",
-                lambda view: 2.0 * self.pe_energy(view.transition_dm_ao,
-                                                  elec_only=True)
+                lambda view: 2.0 * self.pe_energy(view.transition_dm_ao, elec_only=True),
             )
             ptss = EnergyCorrection(
                 "pe_ptss_correction",
-                lambda view: self.pe_energy(view.state_diffdm_ao,
-                                            elec_only=True)
+                lambda view: self.pe_energy(view.state_diffdm_ao, elec_only=True),
             )
             ret.extend([ptlr, ptss])
         if self.environment == "pcm":
             ptlr = EnergyCorrection(
                 "pcm_ptlr_correction",
-                lambda view: self.pcm_energy(view.transition_dm_ao,
-                                             elec_only=True)
+                lambda view: self.pcm_energy(view.transition_dm_ao, elec_only=True),
             )
             ret.extend([ptlr])
         return {ec.name: ec for ec in ret}
@@ -281,37 +297,31 @@ class Psi4HFProvider(libadcc.HartreeFockProvider):
         return self.wfn.basisset().nbf()
 
     def get_nuclear_multipole(
-        self, order: int,
-        gauge_origin: Coordinate = (0.0, 0.0, 0.0)
+        self, order: int, gauge_origin: Coordinate = (0.0, 0.0, 0.0)
     ) -> Array1D:
         molecule = self.wfn.molecule()
         if order == 0:
             # The function interface needs to be a np.array on return
-            return np.array([sum(molecule.charge(i)
-                                 for i in range(molecule.natom()))])
+            return np.array([sum(molecule.charge(i) for i in range(molecule.natom()))])
         elif order == 1:
             dip_nuclear = molecule.nuclear_dipole()
             return np.array([dip_nuclear[0], dip_nuclear[1], dip_nuclear[2]])
         else:
             raise NotImplementedError("get_nuclear_multipole with order > 1")
 
-    def transform_gauge_origin_to_xyz(self, gauge_origin: str
-                                      ) -> Coordinate:
+    def transform_gauge_origin_to_xyz(self, gauge_origin: str) -> Coordinate:
         raise NotImplementedError("transform_gauge_origin_to_xyz not implemented.")
 
     def fill_orbcoeff_fb(self, out: Array2D) -> None:
         mo_coeff_a = np.asarray(self.wfn.Ca())
         mo_coeff_b = np.asarray(self.wfn.Cb())
         mo_coeff = (mo_coeff_a, mo_coeff_b)
-        out[:] = np.transpose(
-            np.hstack((mo_coeff[0], mo_coeff[1]))
-        )
+        out[:] = np.transpose(np.hstack((mo_coeff[0], mo_coeff[1])))
 
     def fill_occupation_f(self, out: Array1D) -> None:
-        out[:] = np.hstack((
-            np.asarray(self.wfn.occupation_a()),
-            np.asarray(self.wfn.occupation_b())
-        ))
+        out[:] = np.hstack(
+            (np.asarray(self.wfn.occupation_a()), np.asarray(self.wfn.occupation_b()))
+        )
 
     def fill_orben_f(self, out: Array1D) -> None:
         orben_a = np.asarray(self.wfn.epsilon_a())
@@ -323,12 +333,12 @@ class Psi4HFProvider(libadcc.HartreeFockProvider):
         self.fill_orben_f(diagonal)
         out[:] = np.diag(diagonal)[slices]
 
-    def fill_eri_ffff(self, slices: tuple[slice, slice, slice, slice],
-                      out: Array4D) -> None:
+    def fill_eri_ffff(self, slices: tuple[slice, slice, slice, slice], out: Array4D) -> None:
         self.eri_builder.fill_slice_symm(slices, out)
 
-    def fill_eri_phys_asym_ffff(self, slices: tuple[slice, slice, slice, slice],
-                                out: Array4D) -> None:
+    def fill_eri_phys_asym_ffff(
+        self, slices: tuple[slice, slice, slice, slice], out: Array4D
+    ) -> None:
         raise NotImplementedError("fill_eri_phys_asym_ffff not implemented.")
 
     def has_eri_phys_asym_ffff(self) -> bool:
@@ -348,22 +358,24 @@ def import_scf(wfn: psi4.core.HF) -> Psi4HFProvider:
         )
 
     if not isinstance(wfn, (psi4.core.RHF, psi4.core.UHF)):
-        raise InvalidReference("Right now only RHF and UHF references are "
-                               "supported for Psi4.")
+        raise InvalidReference("Right now only RHF and UHF references are supported for Psi4.")
 
     # TODO This is not fully correct, because the core.Wavefunction object
     #      has an internal, but py-invisible Options structure, which contains
     #      the actual set of options ... theoretically they could differ
-    scf_type = psi4.core.get_global_option('SCF_TYPE')
+    scf_type = psi4.core.get_global_option("SCF_TYPE")
     # CD = Choleski, DF = density-fitting
     unsupported_scf_types = ["CD", "DISK_DF", "MEM_DF"]
     if scf_type in unsupported_scf_types:
-        raise InvalidReference("Unsupported Psi4 SCF_TYPE, should not be one "
-                               f"of {unsupported_scf_types}")
+        raise InvalidReference(
+            f"Unsupported Psi4 SCF_TYPE, should not be one of {unsupported_scf_types}"
+        )
 
     if wfn.nirrep() > 1:
-        raise InvalidReference("The passed Psi4 wave function object needs to "
-                               "have exactly one irrep, i.e. be of C1 symmetry.")
+        raise InvalidReference(
+            "The passed Psi4 wave function object needs to "
+            "have exactly one irrep, i.e. be of C1 symmetry."
+        )
 
     # Psi4 throws an exception if SCF is not converged, so there is no need
     # to assert that here.
@@ -371,9 +383,16 @@ def import_scf(wfn: psi4.core.HF) -> Psi4HFProvider:
     return provider
 
 
-def run_hf(xyz: str, basis: str, charge: int = 0, multiplicity: int = 1,
-           conv_tol: float = 1e-11, conv_tol_grad: float = 1e-9,
-           max_iter: int = 150, pe_options: dict | None = None) -> psi4.core.HF:
+def run_hf(
+    xyz: str,
+    basis: str,
+    charge: int = 0,
+    multiplicity: int = 1,
+    conv_tol: float = 1e-11,
+    conv_tol_grad: float = 1e-9,
+    max_iter: int = 150,
+    pe_options: dict | None = None,
+) -> psi4.core.HF:
     basissets = {
         "sto3g": "sto-3g",
         "def2tzvp": "def2-tzvp",
@@ -392,25 +411,23 @@ def run_hf(xyz: str, basis: str, charge: int = 0, multiplicity: int = 1,
     """)
 
     psi4.core.be_quiet()
-    psi4.set_options({
-        'basis': basissets.get(basis, basis),
-        'scf_type': 'pk',
-        'e_convergence': conv_tol,
-        'd_convergence': conv_tol_grad,
-        'maxiter': max_iter,
-        'reference': "RHF",
-    })
+    psi4.set_options(
+        {
+            "basis": basissets.get(basis, basis),
+            "scf_type": "pk",
+            "e_convergence": conv_tol,
+            "d_convergence": conv_tol_grad,
+            "maxiter": max_iter,
+            "reference": "RHF",
+        }
+    )
     if pe_options:
         psi4.set_options({"pe": "true"})
         psi4.set_module_options("pe", {"potfile": pe_options["potfile"]})
 
     if multiplicity != 1:
-        psi4.set_options({
-            'reference': "UHF",
-            'maxiter': max_iter + 500,
-            'soscf': 'true'
-        })
+        psi4.set_options({"reference": "UHF", "maxiter": max_iter + 500, "soscf": "true"})
 
-    _, wfn = psi4.energy('SCF', return_wfn=True, molecule=mol)  # type: ignore
+    _, wfn = psi4.energy("SCF", return_wfn=True, molecule=mol)  # type: ignore
     psi4.core.clean()
     return wfn

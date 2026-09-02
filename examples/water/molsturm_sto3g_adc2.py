@@ -6,14 +6,12 @@ import adcc
 
 # Run SCF in molsturm
 atoms = ["O", "H", "H"]
-coords = [[0, 0, 0],
-          [0, 0, 1.795239827225189],
-          [1.693194615993441, 0, -0.599043184453037]]
+coords = [[0, 0, 0], [0, 0, 1.795239827225189], [1.693194615993441, 0, -0.599043184453037]]
 system = molsturm.System(atoms, coords)
 
-hfres = molsturm.hartree_fock(system, basis_type="gaussian",
-                              basis_set_name="sto-3g",
-                              conv_tol=1e-12, print_iterations=True)
+hfres = molsturm.hartree_fock(
+    system, basis_type="gaussian", basis_set_name="sto-3g", conv_tol=1e-12, print_iterations=True
+)
 
 # Run an adc2 calculation:
 singlets = adcc.adc2(hfres, n_singlets=5, conv_tol=1e-9)

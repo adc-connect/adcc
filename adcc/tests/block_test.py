@@ -41,14 +41,14 @@ cases_1p = [
     Block("v1o1", adcc.OperatorSymmetry.HERMITIAN, "o1v1", 1, (1, 0)),
     Block("o1o1", adcc.OperatorSymmetry.HERMITIAN, "o1o1", 1, (0, 1)),
     Block("v1v1", adcc.OperatorSymmetry.HERMITIAN, "v1v1", 1, (0, 1)),
-    Block("o1v1", adcc.OperatorSymmetry.ANTIHERMITIAN, "o1v1",  1, (0, 1)),
+    Block("o1v1", adcc.OperatorSymmetry.ANTIHERMITIAN, "o1v1", 1, (0, 1)),
     Block("v1o1", adcc.OperatorSymmetry.ANTIHERMITIAN, "o1v1", -1, (1, 0)),
-    Block("o1o1", adcc.OperatorSymmetry.ANTIHERMITIAN, "o1o1",  1, (0, 1)),
-    Block("v1v1", adcc.OperatorSymmetry.ANTIHERMITIAN, "v1v1",  1, (0, 1)),
-    Block("o1v1", adcc.OperatorSymmetry.NOSYMMETRY, "o1v1",  1, (0, 1)),
-    Block("v1o1", adcc.OperatorSymmetry.NOSYMMETRY, "v1o1",  1, (0, 1)),
-    Block("o1o1", adcc.OperatorSymmetry.NOSYMMETRY, "o1o1",  1, (0, 1)),
-    Block("v1v1", adcc.OperatorSymmetry.NOSYMMETRY, "v1v1",  1, (0, 1))
+    Block("o1o1", adcc.OperatorSymmetry.ANTIHERMITIAN, "o1o1", 1, (0, 1)),
+    Block("v1v1", adcc.OperatorSymmetry.ANTIHERMITIAN, "v1v1", 1, (0, 1)),
+    Block("o1v1", adcc.OperatorSymmetry.NOSYMMETRY, "o1v1", 1, (0, 1)),
+    Block("v1o1", adcc.OperatorSymmetry.NOSYMMETRY, "v1o1", 1, (0, 1)),
+    Block("o1o1", adcc.OperatorSymmetry.NOSYMMETRY, "o1o1", 1, (0, 1)),
+    Block("v1v1", adcc.OperatorSymmetry.NOSYMMETRY, "v1v1", 1, (0, 1)),
 ]
 
 # test only subset
@@ -56,32 +56,20 @@ cases_2p = [
     Block("o1o1v1v1", adcc.OperatorSymmetry.HERMITIAN, "o1o1v1v1", 1, (0, 1, 2, 3)),
     Block("v1v1o1o1", adcc.OperatorSymmetry.HERMITIAN, "o1o1v1v1", 1, (2, 3, 0, 1)),
     Block("o1v1o1o1", adcc.OperatorSymmetry.HERMITIAN, "o1o1o1v1", 1, (2, 3, 0, 1)),
-    Block("v1o1o1v1", adcc.OperatorSymmetry.HERMITIAN, "o1v1o1v1", -1,
-          (1, 0, 2, 3)),
-
-    Block("o1o1v1v1", adcc.OperatorSymmetry.ANTIHERMITIAN, "o1o1v1v1", 1,
-          (0, 1, 2, 3)),
-    Block("v1v1o1o1", adcc.OperatorSymmetry.ANTIHERMITIAN, "o1o1v1v1", -1,
-          (2, 3, 0, 1)),
-    Block("o1v1o1o1", adcc.OperatorSymmetry.ANTIHERMITIAN, "o1o1o1v1", -1,
-          (2, 3, 0, 1)),
-    Block("v1o1o1v1", adcc.OperatorSymmetry.ANTIHERMITIAN, "o1v1o1v1", -1,
-          (1, 0, 2, 3)),
-
-    Block("o1o1v1v1", adcc.OperatorSymmetry.NOSYMMETRY, "o1o1v1v1", 1,
-          (0, 1, 2, 3)),
-    Block("v1v1o1o1", adcc.OperatorSymmetry.NOSYMMETRY, "v1v1o1o1", 1,
-          (0, 1, 2, 3)),
-    Block("o1v1o1o1", adcc.OperatorSymmetry.NOSYMMETRY, "o1v1o1o1", 1,
-          (0, 1, 2, 3)),
-    Block("v1o1o1v1", adcc.OperatorSymmetry.NOSYMMETRY, "o1v1o1v1", -1,
-          (1, 0, 2, 3)),
+    Block("v1o1o1v1", adcc.OperatorSymmetry.HERMITIAN, "o1v1o1v1", -1, (1, 0, 2, 3)),
+    Block("o1o1v1v1", adcc.OperatorSymmetry.ANTIHERMITIAN, "o1o1v1v1", 1, (0, 1, 2, 3)),
+    Block("v1v1o1o1", adcc.OperatorSymmetry.ANTIHERMITIAN, "o1o1v1v1", -1, (2, 3, 0, 1)),
+    Block("o1v1o1o1", adcc.OperatorSymmetry.ANTIHERMITIAN, "o1o1o1v1", -1, (2, 3, 0, 1)),
+    Block("v1o1o1v1", adcc.OperatorSymmetry.ANTIHERMITIAN, "o1v1o1v1", -1, (1, 0, 2, 3)),
+    Block("o1o1v1v1", adcc.OperatorSymmetry.NOSYMMETRY, "o1o1v1v1", 1, (0, 1, 2, 3)),
+    Block("v1v1o1o1", adcc.OperatorSymmetry.NOSYMMETRY, "v1v1o1o1", 1, (0, 1, 2, 3)),
+    Block("o1v1o1o1", adcc.OperatorSymmetry.NOSYMMETRY, "o1v1o1o1", 1, (0, 1, 2, 3)),
+    Block("v1o1o1v1", adcc.OperatorSymmetry.NOSYMMETRY, "o1v1o1v1", -1, (1, 0, 2, 3)),
 ]
 
 
 class TestBlock:
-    @pytest.mark.parametrize("case", cases_1p,
-                             ids=[f"{c.inp}_{c.sym.name}" for c in cases_1p])
+    @pytest.mark.parametrize("case", cases_1p, ids=[f"{c.inp}_{c.sym.name}" for c in cases_1p])
     def test_get_canonical_block_1p(self, case):
         bra, ket = case.inp[:2], case.inp[2:]
         c_block, factor, transpose = get_canonical_block(bra, ket, case.sym)
@@ -89,8 +77,7 @@ class TestBlock:
         assert factor == case.factor
         assert transpose == case.transpose
 
-    @pytest.mark.parametrize("case", cases_2p,
-                             ids=[f"{c.inp}_{c.sym.name}" for c in cases_2p])
+    @pytest.mark.parametrize("case", cases_2p, ids=[f"{c.inp}_{c.sym.name}" for c in cases_2p])
     def test_get_canonical_block_2p(self, case):
         bra, ket = case.inp[:4], case.inp[4:]
         c_block, factor, transpose = get_canonical_block(bra, ket, case.sym)

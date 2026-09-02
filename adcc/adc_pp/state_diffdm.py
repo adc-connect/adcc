@@ -124,8 +124,7 @@ def diffdm_cvs_isr1(ground_state, amplitude, intermediates):
 
 
 def diffdm_cvs_isr2(ground_state, amplitude, intermediates):
-    dm = diffdm_cvs_isr1(ground_state,
-                         amplitude, intermediates)  # Get cvs-ISR(1) result
+    dm = diffdm_cvs_isr1(ground_state, amplitude, intermediates)  # Get cvs-ISR(1) result
     check_doubles_amplitudes([b.o, b.c, b.v, b.v], amplitude)
     u1, u2 = amplitude.ph, amplitude.pphh
 
@@ -160,8 +159,7 @@ def diffdm_cvs_isr2(ground_state, amplitude, intermediates):
 
 
 def diffdm_isr3d(ground_state, amplitude, intermediates):
-    dm = diffdm_isr2(ground_state,
-                     amplitude, intermediates)  # starts from ADC2 values
+    dm = diffdm_isr2(ground_state, amplitude, intermediates)  # starts from ADC2 values
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
     ur1, ur2 = amplitude.ph, amplitude.pphh  # ADC amplitudes
 
@@ -331,9 +329,7 @@ def diffdm_isr3(ground_state, amplitude, intermediates):
     except ValueError:
         return dm
 
-    raise NotImplementedError(
-        "Consistent ISR(3) including triples is not implmenetd yet."
-    )
+    raise NotImplementedError("Consistent ISR(3) including triples is not implmenetd yet.")
 
 
 # dict controlling the dispatch of the state_diffdm function
@@ -379,9 +375,7 @@ def state_diffdm(method, ground_state, amplitude, intermediates=None):
         intermediates = Intermediates(ground_state)
 
     if method.name not in DISPATCH:
-        raise NotImplementedError(
-            f"state_diffdm is not implemented for {method.name}."
-        )
+        raise NotImplementedError(f"state_diffdm is not implemented for {method.name}.")
     else:
         ret = DISPATCH[method.name](ground_state, amplitude, intermediates)
         return ret.evaluate()

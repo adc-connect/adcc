@@ -4,12 +4,10 @@ from pyscf.geomopt import berny_solver
 
 # Starting geometry
 mol = gto.M(
-    atom='S 0 0 0;'
-         'H 0 0 1.795239827225189;'
-         'H 1.693194615993441 0 -0.599043184453037',
-    basis='cc-pvtz',
+    atom="S 0 0 0;H 0 0 1.795239827225189;H 1.693194615993441 0 -0.599043184453037",
+    basis="cc-pvtz",
     verbose=3,
-    unit="Bohr"
+    unit="Bohr",
 )
 
 # HF optimisation

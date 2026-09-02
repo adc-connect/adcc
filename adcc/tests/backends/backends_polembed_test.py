@@ -40,8 +40,7 @@ except ImportError:
     has_cppe = False
 
 
-backends = [b for b in adcc.backends.available()
-            if b not in ["molsturm", "veloxchem"]]
+backends = [b for b in adcc.backends.available() if b not in ["molsturm", "veloxchem"]]
 
 methods = ["adc0", "adc1", "adc2", "adc2x", "adc3", "adc4"]
 
@@ -56,18 +55,15 @@ class TestPolarizableEmbedding:
         test_case = testcases.get_by_filename(system).pop()
         if test_case.only_full_mode and method == "adc4":
             pytest.skip("ADC(4) reference only available for small testcases.")
-        refdata = testdata_cache.adcman_data(
-            system=system, method=method, case="gen"
-        )["None"]["singlet"]
+        refdata = testdata_cache.adcman_data(system=system, method=method, case="gen")["None"][
+            "singlet"
+        ]
 
         assert test_case.pe_potfile is not None
         pe_options = {"potfile": test_case.pe_potfile}
-        scfres = cached_backend_hf(
-            backend=backend, system=system, pe_options=pe_options
-        )
+        scfres = cached_backend_hf(backend=backend, system=system, pe_options=pe_options)
         state = adcc.run_adc(
-            scfres, method=method, n_singlets=5, conv_tol=1e-7,
-            environment=["ptlr", "ptss"]
+            scfres, method=method, n_singlets=5, conv_tol=1e-7, environment=["ptlr", "ptss"]
         )
         assert state.converged
 
@@ -77,24 +73,20 @@ class TestPolarizableEmbedding:
         assert_allclose(
             refdata["eigenvalues"][:n_states],
             state.excitation_energy_uncorrected[:n_states],
-            atol=1e-5
+            atol=1e-5,
         )
         assert_allclose(
-            + refdata["eigenvalues"][:n_states]
+            +refdata["eigenvalues"][:n_states]
             + refdata["pe_ptss_correction"][:n_states]
             + refdata["pe_ptlr_correction"][:n_states],
             state.excitation_energy[:n_states],
-            atol=1e-5
+            atol=1e-5,
         )
         assert_allclose(
-            refdata["pe_ptss_correction"][:n_states],
-            state.pe_ptss_correction[:n_states],
-            atol=1e-5
+            refdata["pe_ptss_correction"][:n_states], state.pe_ptss_correction[:n_states], atol=1e-5
         )
         assert_allclose(
-            refdata["pe_ptlr_correction"][:n_states],
-            state.pe_ptlr_correction[:n_states],
-            atol=1e-5
+            refdata["pe_ptlr_correction"][:n_states], state.pe_ptlr_correction[:n_states], atol=1e-5
         )
 
     @pytest.mark.parametrize("method", ["adc2"])
@@ -106,46 +98,40 @@ class TestPolarizableEmbedding:
 
         assert system.pe_potfile is not None
         pe_options = {"potfile": system.pe_potfile}
-        scfres = cached_backend_hf(
-            backend=backend, system=system.file_name, pe_options=pe_options
-        )
+        scfres = cached_backend_hf(backend=backend, system=system.file_name, pe_options=pe_options)
         assert_allclose(scfres.energy_scf, tm_result["energy_scf"], atol=1e-8)
 
         matrix = adcc.AdcMatrix(method, scfres)
-        solvent = AdcExtraTerm(matrix, {'ph_ph': block_ph_ph_0_pe})
+        solvent = AdcExtraTerm(matrix, {"ph_ph": block_ph_ph_0_pe})
 
         # manually add the coupling term
         matrix += solvent
         assert len(matrix.extra_terms)
 
-        assert_allclose(
-            matrix.ground_state.energy(2),
-            tm_result["energy_mp2"],
-            atol=1e-8
-        )
-        state = adcc.run_adc(matrix, n_singlets=5, conv_tol=1e-7,
-                             environment=False)
+        assert_allclose(matrix.ground_state.energy(2), tm_result["energy_mp2"], atol=1e-8)
+        state = adcc.run_adc(matrix, n_singlets=5, conv_tol=1e-7, environment=False)
         assert state.converged
         assert_allclose(
-            state.excitation_energy_uncorrected,
-            tm_result["excitation_energy"],
-            atol=1e-6
+            state.excitation_energy_uncorrected, tm_result["excitation_energy"], atol=1e-6
         )
 
         # invalid combination
         with pytest.raises(InputError):
-            adcc.run_adc(scfres, method=method, n_singlets=5,
-                         environment={"linear_response": True, "ptlr": True})
+            adcc.run_adc(
+                scfres,
+                method=method,
+                n_singlets=5,
+                environment={"linear_response": True, "ptlr": True},
+            )
         # no scheme specified
         with pytest.raises(InputError):
             adcc.run_adc(scfres, method=method, n_singlets=5)
 
         # automatically add coupling term
-        state = adcc.run_adc(scfres, method=method, n_singlets=5,
-                             conv_tol=1e-7, environment="linear_response")
+        state = adcc.run_adc(
+            scfres, method=method, n_singlets=5, conv_tol=1e-7, environment="linear_response"
+        )
         assert state.converged
         assert_allclose(
-            state.excitation_energy_uncorrected,
-            tm_result["excitation_energy"],
-            atol=1e-6
+            state.excitation_energy_uncorrected, tm_result["excitation_energy"], atol=1e-6
         )

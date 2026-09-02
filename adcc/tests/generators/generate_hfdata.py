@@ -28,7 +28,7 @@ def run_pyscf(test_case: testcases.TestCase, frac_occ: bool):
             basis=test_case.basis,
             unit=test_case.unit,
             spin=test_case.multiplicity - 1,  # =2S
-            verbose=0
+            verbose=0,
         )
         mf = scf.RHF(mol) if test_case.restricted else scf.UHF(mol)
         mf.diis = scf.EDIIS()
@@ -48,8 +48,7 @@ def run_pyscf(test_case: testcases.TestCase, frac_occ: bool):
     return mf
 
 
-def generate(test_case: testcases.TestCase,
-             frac_occ: bool) -> None:
+def generate(test_case: testcases.TestCase, frac_occ: bool) -> None:
     """
     Run Pyscf for the given test case and dump the result in the hdf5 file
     if the file does not already exist.
@@ -87,9 +86,7 @@ def generate_hf():
 
 
 def generate_methox():
-    case = testcases.get(
-        n_expected_cases=1, name="r2methyloxirane", basis="sto-3g"
-    ).pop()
+    case = testcases.get(n_expected_cases=1, name="r2methyloxirane", basis="sto-3g").pop()
     generate(case, frac_occ=False)
 
 

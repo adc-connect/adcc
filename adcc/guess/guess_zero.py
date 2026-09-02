@@ -44,12 +44,14 @@ def guess_zero(matrix, spin_change=0, spin_block_symmetrisation="none"):
                  "symmetric" and "antisymmetric", where "none" enforces
                  no particular symmetry.
     """
-    return AmplitudeVector(**{
-        block: Tensor(sym) for block, sym in guess_symmetries(
-            matrix, spin_change=spin_change,
-            spin_block_symmetrisation=spin_block_symmetrisation
-        ).items()
-    })
+    return AmplitudeVector(
+        **{
+            block: Tensor(sym)
+            for block, sym in guess_symmetries(
+                matrix, spin_change=spin_change, spin_block_symmetrisation=spin_block_symmetrisation
+            ).items()
+        }
+    )
 
 
 def guess_symmetries(matrix, spin_change=0, spin_block_symmetrisation="none"):
@@ -73,16 +75,19 @@ def guess_symmetries(matrix, spin_change=0, spin_block_symmetrisation="none"):
     if not isinstance(matrix, AdcMatrixlike):
         raise TypeError("matrix needs to be of type AdcMatrixlike")
     if spin_block_symmetrisation not in ["none", "symmetric", "antisymmetric"]:
-        raise ValueError("Invalid value for spin_block_symmetrisation: "
-                         f"{spin_block_symmetrisation}")
-    if spin_block_symmetrisation != "none" and \
-       not matrix.reference_state.restricted:
-        raise ValueError("spin_block_symmetrisation != none is only valid for "
-                         "ADC calculations on top of restricted reference "
-                         "states.")
+        raise ValueError(
+            f"Invalid value for spin_block_symmetrisation: {spin_block_symmetrisation}"
+        )
+    if spin_block_symmetrisation != "none" and not matrix.reference_state.restricted:
+        raise ValueError(
+            "spin_block_symmetrisation != none is only valid for "
+            "ADC calculations on top of restricted reference "
+            "states."
+        )
     if int(spin_change * 2) / 2 != spin_change:
-        raise ValueError("Only integer or half-integer spin_change is allowed. "
-                         f"You passed {spin_change}")
+        raise ValueError(
+            f"Only integer or half-integer spin_change is allowed. You passed {spin_change}"
+        )
 
     max_spin_change = 0
     if "ph" in matrix.axis_blocks:
@@ -92,36 +97,35 @@ def guess_symmetries(matrix, spin_change=0, spin_block_symmetrisation="none"):
     if "ppphhh" in matrix.axis_blocks:
         max_spin_change = 3
     if spin_change > max_spin_change:
-        raise ValueError("spin_change for singles guesses may only be in the "
-                         f"range [{-max_spin_change}, {max_spin_change}] and "
-                         f"not {spin_change}.")
+        raise ValueError(
+            "spin_change for singles guesses may only be in the "
+            f"range [{-max_spin_change}, {max_spin_change}] and "
+            f"not {spin_change}."
+        )
 
     symmetries = {}
     if "ph" in matrix.axis_blocks:
         symmetries["ph"] = guess_symmetry_singles(
-            matrix, spin_change=spin_change,
-            spin_block_symmetrisation=spin_block_symmetrisation
+            matrix, spin_change=spin_change, spin_block_symmetrisation=spin_block_symmetrisation
         )
     if "pphh" in matrix.axis_blocks:
         symmetries["pphh"] = guess_symmetry_doubles(
-            matrix, spin_change=spin_change,
-            spin_block_symmetrisation=spin_block_symmetrisation
+            matrix, spin_change=spin_change, spin_block_symmetrisation=spin_block_symmetrisation
         )
     if "ppphhh" in matrix.axis_blocks:
         symmetries["ppphhh"] = guess_symmetry_triples(
-            matrix, spin_change=spin_change,
-            spin_block_symmetrisation=spin_block_symmetrisation
+            matrix, spin_change=spin_change, spin_block_symmetrisation=spin_block_symmetrisation
         )
     return symmetries
 
 
-def guess_symmetry_singles(matrix, spin_change=0,
-                           spin_block_symmetrisation="none"):
+def guess_symmetry_singles(matrix, spin_change=0, spin_block_symmetrisation="none"):
     symmetry = Symmetry(matrix.mospaces, "".join(matrix.axis_spaces["ph"]))
     symmetry.irreps_allowed = ["A"]
     if spin_change != 0 and spin_block_symmetrisation != "none":
-        raise NotImplementedError("spin_symmetrisation != 'none' only "
-                                  "implemented for spin_change == 0")
+        raise NotImplementedError(
+            "spin_symmetrisation != 'none' only implemented for spin_change == 0"
+        )
     elif spin_block_symmetrisation == "symmetric":
         symmetry.spin_block_maps = [("aa", "bb", 1)]
         symmetry.spin_blocks_forbidden = ["ab", "ba"]
@@ -131,35 +135,38 @@ def guess_symmetry_singles(matrix, spin_change=0,
     return symmetry
 
 
-def guess_symmetry_doubles(matrix, spin_change=0,
-                           spin_block_symmetrisation="none"):
+def guess_symmetry_doubles(matrix, spin_change=0, spin_block_symmetrisation="none"):
     spaces_d = matrix.axis_spaces["pphh"]
     symmetry = Symmetry(matrix.mospaces, "".join(spaces_d))
     symmetry.irreps_allowed = ["A"]
 
     if spin_change != 0 and spin_block_symmetrisation != "none":
-        raise NotImplementedError("spin_symmetrisation != 'none' only "
-                                  "implemented for spin_change == 0")
+        raise NotImplementedError(
+            "spin_symmetrisation != 'none' only implemented for spin_change == 0"
+        )
 
-    if spin_change == 0 \
-       and spin_block_symmetrisation in ("symmetric", "antisymmetric"):
+    if spin_change == 0 and spin_block_symmetrisation in ("symmetric", "antisymmetric"):
         fac = 1 if spin_block_symmetrisation == "symmetric" else -1
         # Spin mapping between blocks where alpha and beta are just mirrored
-        symmetry.spin_block_maps = [("aaaa", "bbbb", fac),
-                                    ("abab", "baba", fac),
-                                    ("abba", "baab", fac)]
+        symmetry.spin_block_maps = [
+            ("aaaa", "bbbb", fac),
+            ("abab", "baba", fac),
+            ("abba", "baab", fac),
+        ]
 
         # Mark blocks which change spin as forbidden
-        symmetry.spin_blocks_forbidden = ["aabb",  # spin_change +2
-                                          "bbaa",  # spin_change -2
-                                          "aaab",  # spin_change +1
-                                          "aaba",  # spin_change +1
-                                          "abaa",  # spin_change -1
-                                          "baaa",  # spin_change -1
-                                          "abbb",  # spin_change +1
-                                          "babb",  # spin_change +1
-                                          "bbab",  # spin_change -1
-                                          "bbba"]  # spin_change -1
+        symmetry.spin_blocks_forbidden = [
+            "aabb",  # spin_change +2
+            "bbaa",  # spin_change -2
+            "aaab",  # spin_change +1
+            "aaba",  # spin_change +1
+            "abaa",  # spin_change -1
+            "baaa",  # spin_change -1
+            "abbb",  # spin_change +1
+            "babb",  # spin_change +1
+            "bbab",  # spin_change -1
+            "bbba",
+        ]  # spin_change -1
 
     # Add index permutation symmetry:
     permutations = ["ijab"]
@@ -172,30 +179,31 @@ def guess_symmetry_doubles(matrix, spin_change=0,
     return symmetry
 
 
-def guess_symmetry_triples(matrix, spin_change=0,
-                           spin_block_symmetrisation="none"):
+def guess_symmetry_triples(matrix, spin_change=0, spin_block_symmetrisation="none"):
     spaces_t = matrix.axis_spaces["ppphhh"]
     symmetry = Symmetry(matrix.mospaces, "".join(spaces_t))
     symmetry.irreps_allowed = ["A"]
 
     if spin_change != 0 and spin_block_symmetrisation != "none":
-        raise NotImplementedError("spin_symmetrisation != 'none' only "
-                                  "implemented for spin_change == 0")
+        raise NotImplementedError(
+            "spin_symmetrisation != 'none' only implemented for spin_change == 0"
+        )
 
-    if spin_change == 0 \
-       and spin_block_symmetrisation in ("symmetric", "antisymmetric"):
+    if spin_change == 0 and spin_block_symmetrisation in ("symmetric", "antisymmetric"):
         fac = 1 if spin_block_symmetrisation == "symmetric" else -1
         # Spin mapping between blocks where alpha and beta are just mirrored
-        symmetry.spin_block_maps = [("aaaaaa", "bbbbbb", fac),
-                                    ("aabaab", "bbabba", fac),
-                                    ("aababa", "bbabab", fac),
-                                    ("aabbaa", "bbaabb", fac),
-                                    ("abaaab", "babbba", fac),
-                                    ("abaaba", "babbab", fac),
-                                    ("ababaa", "bababb", fac),
-                                    ("baaaab", "abbbba", fac),
-                                    ("baaaba", "abbbab", fac),
-                                    ("baabaa", "abbabb", fac)]
+        symmetry.spin_block_maps = [
+            ("aaaaaa", "bbbbbb", fac),
+            ("aabaab", "bbabba", fac),
+            ("aababa", "bbabab", fac),
+            ("aabbaa", "bbaabb", fac),
+            ("abaaab", "babbba", fac),
+            ("abaaba", "babbab", fac),
+            ("ababaa", "bababb", fac),
+            ("baaaab", "abbbba", fac),
+            ("baaaba", "abbbab", fac),
+            ("baabaa", "abbabb", fac),
+        ]
 
         # Mark blocks which change spin as forbidden
         symmetry.spin_blocks_forbidden = [

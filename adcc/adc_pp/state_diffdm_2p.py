@@ -31,8 +31,9 @@ from ..TwoParticleDensity import TwoParticleDensity
 from .util import check_doubles_amplitudes, check_singles_amplitudes, check_triples_amplitudes
 
 
-def diffdm_isr0_2p(ground_state: LazyMp, amplitude: AmplitudeVector,
-                   intermediates: Intermediates) -> TwoParticleDensity:
+def diffdm_isr0_2p(
+    ground_state: LazyMp, amplitude: AmplitudeVector, intermediates: Intermediates
+) -> TwoParticleDensity:
     check_singles_amplitudes([b.o, b.v], amplitude)
     u1 = amplitude.ph
 
@@ -59,8 +60,9 @@ def diffdm_isr0_2p(ground_state: LazyMp, amplitude: AmplitudeVector,
     return dm
 
 
-def diffdm_isr1s_2p(ground_state: LazyMp, amplitude: AmplitudeVector,
-                    intermediates: Intermediates) -> TwoParticleDensity:
+def diffdm_isr1s_2p(
+    ground_state: LazyMp, amplitude: AmplitudeVector, intermediates: Intermediates
+) -> TwoParticleDensity:
     dm = diffdm_isr0_2p(ground_state, amplitude, intermediates)  # Get ISR(0) result
     u1 = amplitude.ph
 
@@ -96,10 +98,10 @@ def diffdm_isr1s_2p(ground_state: LazyMp, amplitude: AmplitudeVector,
     return dm
 
 
-def diffdm_isr1_2p(ground_state: LazyMp, amplitude: AmplitudeVector,
-                   intermediates: Intermediates) -> TwoParticleDensity:
-    dm = diffdm_isr1s_2p(ground_state,
-                         amplitude, intermediates)  # Get ISR(1)-s result
+def diffdm_isr1_2p(
+    ground_state: LazyMp, amplitude: AmplitudeVector, intermediates: Intermediates
+) -> TwoParticleDensity:
+    dm = diffdm_isr1s_2p(ground_state, amplitude, intermediates)  # Get ISR(1)-s result
 
     try:
         # ISR(1)-d
@@ -129,8 +131,9 @@ def diffdm_isr1_2p(ground_state: LazyMp, amplitude: AmplitudeVector,
     return dm
 
 
-def diffdm_isr2d_2p(ground_state: LazyMp, amplitude: AmplitudeVector,
-                    intermediates: Intermediates) -> TwoParticleDensity:
+def diffdm_isr2d_2p(
+    ground_state: LazyMp, amplitude: AmplitudeVector, intermediates: Intermediates
+) -> TwoParticleDensity:
     dm = diffdm_isr1_2p(ground_state, amplitude, intermediates)  # Get ISR(1) result
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
     u1, u2 = amplitude.ph, amplitude.pphh
@@ -368,10 +371,10 @@ def diffdm_isr2d_2p(ground_state: LazyMp, amplitude: AmplitudeVector,
     return dm
 
 
-def diffdm_isr2_2p(ground_state: LazyMp, amplitude: AmplitudeVector,
-                   intermediates: Intermediates) -> TwoParticleDensity:
-    dm = diffdm_isr2d_2p(ground_state,
-                         amplitude, intermediates)  # Get ISR(2)-d result
+def diffdm_isr2_2p(
+    ground_state: LazyMp, amplitude: AmplitudeVector, intermediates: Intermediates
+) -> TwoParticleDensity:
+    dm = diffdm_isr2d_2p(ground_state, amplitude, intermediates)  # Get ISR(2)-d result
     # evaluate additional contributions from the S-T block
     # if the vector has a triples component
     try:
@@ -380,7 +383,7 @@ def diffdm_isr2_2p(ground_state: LazyMp, amplitude: AmplitudeVector,
         return dm
     u1, u3 = amplitude.ph, amplitude.ppphhh
     # N^6: O^3V^3 / N^6: O^3V^3
-    dm.oovv += - 6 * einsum("kc,ijkabc->ijab", u1, u3)
+    dm.oovv += -6 * einsum("kc,ijkabc->ijab", u1, u3)
     return dm
 
 
@@ -394,9 +397,12 @@ DISPATCH = {
 }
 
 
-def state_diffdm_2p(method: str | IsrMethod, ground_state: LazyMp,
-                    amplitude: AmplitudeVector,
-                    intermediates: Intermediates | None = None):
+def state_diffdm_2p(
+    method: str | IsrMethod,
+    ground_state: LazyMp,
+    amplitude: AmplitudeVector,
+    intermediates: Intermediates | None = None,
+):
     """
     Compute the two-particle difference density matrix of an excited state
     in the MO basis.
@@ -422,8 +428,7 @@ def state_diffdm_2p(method: str | IsrMethod, ground_state: LazyMp,
         intermediates = Intermediates(ground_state)
 
     if method.name not in DISPATCH:
-        raise NotImplementedError("state_diffdm_2p is not implemented "
-                                  f"for {method.name}.")
+        raise NotImplementedError(f"state_diffdm_2p is not implemented for {method.name}.")
     else:
         ret = DISPATCH[method.name](ground_state, amplitude, intermediates)
         return ret.evaluate()

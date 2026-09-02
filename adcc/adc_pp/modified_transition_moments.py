@@ -36,7 +36,7 @@ def mtm_isr0(ground_state, op, intermediates):
 
 def mtm_isr1(ground_state, op, intermediates):
     ampl = mtm_isr0(ground_state, op, intermediates)
-    f1 = - 1.0 * einsum("ijab,jb->ia", ground_state.t2(b.oovv), op.ov)
+    f1 = -1.0 * einsum("ijab,jb->ia", ground_state.t2(b.oovv), op.ov)
     return ampl + AmplitudeVector(ph=f1)
 
 
@@ -176,9 +176,7 @@ DISPATCH = {
 }
 
 
-def modified_transition_moments(
-    method, ground_state, operator=None, intermediates=None
-):
+def modified_transition_moments(method, ground_state, operator=None, intermediates=None):
     """Compute the modified transition moments (MTM) for the provided
     ISR method with reference to the passed ground state.
 
@@ -216,8 +214,7 @@ def modified_transition_moments(
             f"modified_transition_moments is not implemented for {method.name}."
         )
 
-    ret = [DISPATCH[method.name](ground_state, op, intermediates)
-           for op in operator]
+    ret = [DISPATCH[method.name](ground_state, op, intermediates) for op in operator]
     if unpack:
         assert len(ret) == 1
         ret = ret[0]

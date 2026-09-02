@@ -17,11 +17,10 @@ mol = psi4.geometry("""
 
 psi4.set_num_threads(adcc.get_n_threads())
 psi4.core.be_quiet()
-psi4.set_options({'basis': "6-31g",
-                  'e_convergence': 1e-14,
-                  'd_convergence': 1e-9,
-                  'reference': 'uhf'})
-scf_e, wfn = psi4.energy('SCF', return_wfn=True)
+psi4.set_options(
+    {"basis": "6-31g", "e_convergence": 1e-14, "d_convergence": 1e-9, "reference": "uhf"}
+)
+scf_e, wfn = psi4.energy("SCF", return_wfn=True)
 
 # Run solver and print results
 states = adcc.adc2(wfn, n_spin_flip=5, conv_tol=1e-8)

@@ -3,6 +3,7 @@
 """Example computing the TPA cross section for water using ADC
 (10.1063/1.3682324)
 """
+
 import numpy as np
 from pyscf import gto, scf
 
@@ -26,11 +27,9 @@ class ShiftedMat(adcc.AdcMatrix):
 
 # Run SCF in pyscf
 mol = gto.M(
-    atom='O 0 0 0;'
-         'H 0 0 1.795239827225189;'
-         'H 1.693194615993441 0 -0.599043184453037',
-    basis='aug-cc-pvdz',
-    unit="Bohr"
+    atom="O 0 0 0;H 0 0 1.795239827225189;H 1.693194615993441 0 -0.599043184453037",
+    basis="aug-cc-pvdz",
+    unit="Bohr",
 )
 scfres = scf.RHF(mol)
 scfres.conv_tol = 1e-12
@@ -58,9 +57,13 @@ for f, ee in enumerate(state.excitation_energy):
         rhs = rhss[mu]
         x0 = preconditioner.apply(rhs)
         res = conjugate_gradient(
-            matrix, rhs=rhs, x0=x0, callback=default_print,
-            Pinv=preconditioner, conv_tol=1e-6,
-            explicit_symmetrisation=explicit_symmetrisation
+            matrix,
+            rhs=rhs,
+            x0=x0,
+            callback=default_print,
+            Pinv=preconditioner,
+            conv_tol=1e-6,
+            explicit_symmetrisation=explicit_symmetrisation,
         )
         response.append(res)
     right_vec = isrmatrix @ state.excitation_vector[f]
@@ -68,16 +71,19 @@ for f, ee in enumerate(state.excitation_energy):
         for nu in range(mu, 3):
             # compute the matrix element
             S[f, mu, nu] = (
-                response[mu].solution @ right_vec[nu]
-                + response[nu].solution @ right_vec[mu]
+                response[mu].solution @ right_vec[nu] + response[nu].solution @ right_vec[mu]
             )
             S[f, nu, mu] = S[f, mu, nu]
     print("Two-Photon Matrix for state", f)
     print(S[f])
-    delta = 1.0 / 15.0 * (
-        np.einsum('mm,vv->', S[f], S[f])
-        + np.einsum('mv,mv->', S[f], S[f])
-        + np.einsum('mv,vm->', S[f], S[f])
+    delta = (
+        1.0
+        / 15.0
+        * (
+            np.einsum("mm,vv->", S[f], S[f])
+            + np.einsum("mv,mv->", S[f], S[f])
+            + np.einsum("mv,vm->", S[f], S[f])
+        )
     )
     print(f"TPA Cross section [a.u.]: {delta:.4f}")
     np.testing.assert_allclose(6.5539, delta, atol=1e-4)

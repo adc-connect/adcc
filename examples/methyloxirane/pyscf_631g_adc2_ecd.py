@@ -29,14 +29,14 @@ enantiomers = {
         H	1.4131373959	-0.3116398357	-1.2181956153
         H	2.0766856596	0.8381684090	-0.0415125805
         H	2.0848517291	-0.8974263240	0.3232009602
-    """
+    """,
 }
 
 
 for molecule, molecular_geometry in enantiomers.items():
     mol = gto.M(
         atom=molecular_geometry,
-        basis='6-31G',
+        basis="6-31G",
     )
     scfres = scf.RHF(mol)
     scfres.conv_tol = 1e-10
@@ -48,7 +48,6 @@ for molecule, molecular_geometry in enantiomers.items():
     print(state.describe(rotatory_strengths=True))
 
     # Plot rotatory strengths
-    plots = state.plot_spectrum(yaxis="rotatory_strength", width=0.005,
-                                label=molecule)
+    plots = state.plot_spectrum(yaxis="rotatory_strength", width=0.005, label=molecule)
 plt.legend()
 plt.show()

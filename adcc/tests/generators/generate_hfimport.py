@@ -40,12 +40,10 @@ def collect_data(refstate: adcc.ReferenceState) -> dict:
     ret = {"subspaces": np.array(subspaces, dtype="S")}  # dtype S: char bytes
     # and the orbital energies + orbital coefficients
     for space in subspaces:
-        ret[f"orbital_energies/{space}"] = (
-            refstate.orbital_energies(space).to_ndarray()
-        )
-        ret[f"orbital_coefficients/{space}b"] = (
-            refstate.orbital_coefficients(f"{space}b").to_ndarray()
-        )
+        ret[f"orbital_energies/{space}"] = refstate.orbital_energies(space).to_ndarray()
+        ret[f"orbital_coefficients/{space}b"] = refstate.orbital_coefficients(
+            f"{space}b"
+        ).to_ndarray()
     # dump the fock matrix
     canonical_pairs = []
     for space1, space2 in itertools.combinations_with_replacement(subspaces, 2):

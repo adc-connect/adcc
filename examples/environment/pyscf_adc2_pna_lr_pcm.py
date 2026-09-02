@@ -25,8 +25,11 @@ mol = gto.M(
     H          7.74900        2.71100        2.65200
     H          8.99100        1.57500        2.99500
     """,
-    basis='sto-3g', symmetry=0, charge=0, spin=0,
-    unit="Angström"
+    basis="sto-3g",
+    symmetry=0,
+    charge=0,
+    spin=0,
+    unit="Angström",
 )
 
 mf = ddCOSMO(scf.RHF(mol))
@@ -44,6 +47,5 @@ mf.kernel()
 # the corresponding optical dielectric constant.
 # Note that this is also necessary for the ptlr scheme.
 mf.with_solvent.eps = 1.78
-state = adcc.adc2(mf, n_singlets=5, conv_tol=1e-6,
-                  environment="linear_response")
+state = adcc.adc2(mf, n_singlets=5, conv_tol=1e-6, environment="linear_response")
 print(state.describe())
