@@ -24,8 +24,6 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import ClassVar, TypeVar
 
-from typing_extensions import Self
-
 T = TypeVar("T", bound="Method")
 
 
@@ -229,14 +227,15 @@ class Method:
         return "-".join(ret)
 
     @property
-    def base_method(self) -> Self:
+    def base_method(self: T) -> T:  # noqa: PYI019  switch to Self once we drop 3.10
         """
         The base (full) method, i.e. with all approximations such as
         CVS stripped off.
         """
         return self.__class__(self._base_method)
 
-    def at_level(self, newlevel: int | str) -> Self:
+    # switch to Self once we drop 3.10
+    def at_level(self: T, newlevel: int | str) -> T:  # noqa:PYI019
         """
         Return an equivalent method, where only the level is changed
         (e.g. calling this on a CVS method returns a CVS method)

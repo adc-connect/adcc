@@ -25,7 +25,6 @@ from collections.abc import Callable
 from typing import Generic, Protocol, TextIO, TypeVar, cast
 
 import numpy as np
-from typing_extensions import Self
 
 
 class DIISError(Exception):
@@ -40,15 +39,16 @@ Vector = TypeVar("Vector", bound="DIISVector")
 
 
 class DIISVector(Protocol):
-    def dot(self, other: Self) -> float: ...
+    # switch to Self one 3.10 is dropped
+    def dot(self: Vector, other: Vector) -> float: ...  # noqa: PYI019
 
-    def zeros_like(self) -> Self: ...
+    def zeros_like(self: Vector) -> Vector: ...  # noqa: PYI019
 
-    def __sub__(self, other: Self) -> Self: ...
+    def __sub__(self: Vector, other: Vector) -> Vector: ...  # noqa: PYI019
 
-    def __mul__(self, other: float) -> Self: ...
+    def __mul__(self: Vector, other: float) -> Vector: ...  # noqa: PYI019
 
-    def __iadd__(self, other: Self) -> Self: ...
+    def __iadd__(self: Vector, other: Vector) -> Vector: ...  # noqa: PYI019
 
 
 class DIISCallback(Protocol):
