@@ -192,9 +192,7 @@ class HartreeFockSolution_i:
     @property
     def occupation_f(self) -> numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]]: ...
     @property
-    def orbcoeff_fb(
-        self,
-    ) -> numpy.ndarray[tuple[int, int], numpy.dtype[numpy.float64]]: ...
+    def orbcoeff_fb(self) -> numpy.ndarray[tuple[int, int], numpy.dtype[numpy.float64]]: ...
     @property
     def orben_f(self) -> numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]]: ...
     @property
@@ -275,8 +273,7 @@ class MoIndexTranslation:
         self,
         ranges: tuple[
             tuple[
-                typing.SupportsInt | typing.SupportsIndex,
-                typing.SupportsInt | typing.SupportsIndex,
+                typing.SupportsInt | typing.SupportsIndex, typing.SupportsInt | typing.SupportsIndex
             ],
             ...,
         ],
@@ -457,10 +454,7 @@ class ReferenceState:
     Class representing information about the reference state for adcc. Python binding to:cpp:class:`libadcc::ReferenceState`.
     """
     def __init__(
-        self,
-        hfsoln: HartreeFockSolution_i,
-        mo: MoSpaces,
-        symmetry_check_on_import: bool,
+        self, hfsoln: HartreeFockSolution_i, mo: MoSpaces, symmetry_check_on_import: bool
     ) -> None:
         """
         Setup a ReferenceStateject using an MoSpaces object.
@@ -593,9 +587,7 @@ class ReferenceState:
         Number of beta orbitals
         """
     @property
-    def nuclear_dipole(
-        self,
-    ) -> numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]]: ...
+    def nuclear_dipole(self) -> numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]]: ...
     @property
     def nuclear_repulsion_energy(self) -> float:
         """
@@ -636,8 +628,7 @@ class Symmetry:
         extra_axes_orbs: collections.abc.Mapping[
             str,
             tuple[
-                typing.SupportsInt | typing.SupportsIndex,
-                typing.SupportsInt | typing.SupportsIndex,
+                typing.SupportsInt | typing.SupportsIndex, typing.SupportsInt | typing.SupportsIndex
             ],
         ],
     ) -> None:
@@ -951,8 +942,7 @@ def get_n_threads_total() -> int:
     """
 
 def linear_combination_strict(
-    coefficients: typing.Annotated[numpy.typing.ArrayLike, numpy.float64],
-    tensors: list[Tensor],
+    coefficients: typing.Annotated[numpy.typing.ArrayLike, numpy.float64], tensors: list[Tensor]
 ) -> Tensor: ...
 def make_symmetry_eri(mospaces: MoSpaces, space: str) -> Symmetry:
     """
@@ -964,10 +954,7 @@ def make_symmetry_eri(mospaces: MoSpaces, space: str) -> Symmetry:
     """
 
 def make_symmetry_operator(
-    mospaces: MoSpaces,
-    space: str,
-    operator_symmetry: str,
-    cartesian_transformation: str,
+    mospaces: MoSpaces, space: str, operator_symmetry: str, cartesian_transformation: str
 ) -> Symmetry:
     """
     Return the Symmetry object for an orbital subspace block of a one-particle operator
