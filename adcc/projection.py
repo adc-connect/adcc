@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -20,25 +19,27 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import libadcc
-import warnings
 import itertools
+import warnings
 
 import numpy as np
 
-from .guess import guess_kwargs_kind, guess_symmetries
-from .Tensor import Tensor
-from .MoSpaces import expand_spaceargs
-from .Symmetry import Symmetry
+import libadcc
+
 from .AdcMatrix import AdcMatrixlike
 from .AmplitudeVector import AmplitudeVector
+from .guess import guess_kwargs_kind, guess_symmetries
+from .MoSpaces import expand_spaceargs
+from .Symmetry import Symmetry
+from .Tensor import Tensor
 
-__all__ = ["SubspacePartitioning", "Projector"]
+__all__ = ["Projector", "SubspacePartitioning"]
 
 
 class SubspacePartitioning:
-    def __init__(self, mospaces, core_orbitals=None, outer_virtuals=None,
-                 partitions=None, aliases=None):
+    def __init__(
+        self, mospaces, core_orbitals=None, outer_virtuals=None, partitions=None, aliases=None
+    ):
         """
         Partition the "o1" and "v1" occupied and virtual orbital subspace into two
         (or more) parts. In combination with the :py:`adcc.Projector`
@@ -65,14 +66,12 @@ class SubspacePartitioning:
             (advanced argument).
         """
         if mospaces.has_core_occupied_space or "v2" in mospaces.subspaces_virtual:
-            raise ValueError("Cannot use MoSpaces with core-valence separation "
-                             "or frozen virtuals.")
+            raise ValueError("Cannot use MoSpaces with core-valence separation or frozen virtuals.")
         assert mospaces.subspaces_occupied == ["o1"]
 
         if not partitions or not aliases:
             if core_orbitals is None and outer_virtuals is None:
-                raise ValueError("One of core_orbitals or outer_virtuals should "
-                                 "be passed.")
+                raise ValueError("One of core_orbitals or outer_virtuals should be passed.")
 
             # core / outer virtual part of the "normal" occupied / virtual subspace
             noa = mospaces.n_orbs_alpha("o1")
@@ -90,8 +89,14 @@ class SubspacePartitioning:
             assert occ and av
 
             # Setup the space partitionings and aliases
-            partitions = {"o1.1": occ, "v1.1": av, }
-            aliases = {"o": "o1.1", "v": "v1.1", }
+            partitions = {
+                "o1.1": occ,
+                "v1.1": av,
+            }
+            aliases = {
+                "o": "o1.1",
+                "v": "v1.1",
+            }
             if core:
                 partitions["o1.2"] = core
                 aliases["c"] = "o1.2"
@@ -109,7 +114,7 @@ class SubspacePartitioning:
 
             # Determine whether the partitioning keeps spin symmetry.
             self.keeps_spin_symmetry = mospaces.restricted
-            for (label, indices) in partitions.items():
+            for label, indices in partitions.items():
                 if not self.keeps_spin_symmetry:
                     break
                 nalpha = mospaces.n_orbs_alpha(label[:2])
@@ -132,8 +137,7 @@ class SubspacePartitioning:
         such as ['o1.1', 'o1.2], but the aliased equivalent ["o", "c"].
         """
         partitions = [s for s in self.partitions if s.startswith(space + ".")]
-        partitions = [key for (key, value) in self.aliases.items()
-                      if value in partitions]
+        partitions = [key for (key, value) in self.aliases.items() if value in partitions]
         return sorted(partitions)
 
     def get_partition(self, label):
@@ -157,11 +161,12 @@ class Projector:
         blocks_to_keep : list
             Blocks which are kept as non-zero (e.g. ``["cv", "ccvv", "ocvv"]``).
         """
-        if len(subspaces) == 3 or len(subspaces) > 4 \
-                or (len(subspaces) > 2 and subspaces[1] == subspaces[2]):
-            raise NotImplementedError(
-                f"Projector not implemented for subspaces {subspaces}"
-            )
+        if (
+            len(subspaces) == 3
+            or len(subspaces) > 4
+            or (len(subspaces) > 2 and subspaces[1] == subspaces[2])
+        ):
+            raise NotImplementedError(f"Projector not implemented for subspaces {subspaces}")
 
         def normalise_block(labels):
             labels = list(labels)
@@ -171,19 +176,17 @@ class Projector:
                 labels[0], labels[1] = labels[1], labels[0]
             if len(subspaces) <= 2:
                 return labels
-            if len(subspaces) == 3 or subspaces[1] == subspaces[2] \
-                    or len(subspaces) > 4:
+            if len(subspaces) == 3 or subspaces[1] == subspaces[2] or len(subspaces) > 4:
                 raise NotImplementedError("not implemented")
             if subspaces[2] == subspaces[3] and labels[2] > labels[3]:
                 labels[2], labels[3] = labels[3], labels[2]
             return labels
 
-        blocks_to_keep = ["".join(normalise_block(block))
-                          for block in blocks_to_keep]
-        partitions = [partitioning.list_space_partitions(space)
-                      for space in subspaces]
-        all_partition_blocks = ["".join(normalise_block(block))
-                                for block in itertools.product(*partitions)]
+        blocks_to_keep = ["".join(normalise_block(block)) for block in blocks_to_keep]
+        partitions = [partitioning.list_space_partitions(space) for space in subspaces]
+        all_partition_blocks = [
+            "".join(normalise_block(block)) for block in itertools.product(*partitions)
+        ]
         for block in blocks_to_keep:
             if block not in all_partition_blocks:
                 raise ValueError(f"Partition block {block} not known.")
@@ -197,10 +200,14 @@ class Projector:
                 sym.spin_block_maps = [("aa", "bb", 1), ("ab", "ba", 1)]
             elif len(subspaces) == 4:
                 sym.spin_block_maps = [
-                    ("aaaa", "bbbb", 1), ("aaab", "bbba", 1),
-                    ("aaba", "bbab", 1), ("abaa", "babb", 1),
-                    ("baaa", "abbb", 1), ("aabb", "bbaa", 1),
-                    ("abba", "baab", 1), ("abab", "baba", 1)
+                    ("aaaa", "bbbb", 1),
+                    ("aaab", "bbba", 1),
+                    ("aaba", "bbab", 1),
+                    ("abaa", "babb", 1),
+                    ("baaa", "abbb", 1),
+                    ("aabb", "bbaa", 1),
+                    ("abba", "baab", 1),
+                    ("abab", "baba", 1),
                 ]
             else:
                 raise NotImplementedError("not implemented")
@@ -229,9 +236,8 @@ class Projector:
     def __matmul__(self, other):
         if isinstance(other, libadcc.Tensor):
             return self.matvec(other)
-        if isinstance(other, list):
-            if all(isinstance(elem, libadcc.Tensor) for elem in other):
-                return [self.matvec(ov) for ov in other]
+        if isinstance(other, list) and all(isinstance(elem, libadcc.Tensor) for elem in other):
+            return [self.matvec(ov) for ov in other]
         return NotImplemented
 
 
@@ -255,10 +261,9 @@ def transfer_amplitude_cvs_to_full(mospaces_cvs, cvs, symmetry_full, tol=1e-12):
     n_of_a = mospaces_full.n_orbs_alpha("o1")
 
     cvs_contiguous_in_full = (
-        mospaces_cvs.core_orbitals[:n_c_a]
-        == mospaces_full.occupied_orbitals[:n_c_a]
+        mospaces_cvs.core_orbitals[:n_c_a] == mospaces_full.occupied_orbitals[:n_c_a]
         and mospaces_cvs.core_orbitals[n_c_a:]
-        == mospaces_full.occupied_orbitals[n_of_a:n_of_a + n_c_a]
+        == mospaces_full.occupied_orbitals[n_of_a : n_of_a + n_c_a]
     )
     if not cvs_contiguous_in_full:
         raise NotImplementedError(
@@ -266,8 +271,7 @@ def transfer_amplitude_cvs_to_full(mospaces_cvs, cvs, symmetry_full, tol=1e-12):
             "contiguous in the full space has been implemented, i.e. when the "
             "`core_orbitals` are chosen as an integer in the run_adc routines."
         )
-    full = AmplitudeVector(**{block: Tensor(sym)
-                              for block, sym in symmetry_full.items()})
+    full = AmplitudeVector(**{block: Tensor(sym) for block, sym in symmetry_full.items()})
 
     # Singles block
     assert cvs.ph.subspaces == ["o2", "v1"]
@@ -277,7 +281,7 @@ def transfer_amplitude_cvs_to_full(mospaces_cvs, cvs, symmetry_full, tol=1e-12):
     cvs_ph = cvs.ph.to_ndarray()
     full_ph = np.zeros(full.ph.shape)
     full_ph[0:n_c_a, :] = cvs_ph[:n_c_a, :]
-    full_ph[n_of_a:n_of_a + n_c_a, :] = cvs_ph[n_c_a:, :]
+    full_ph[n_of_a : n_of_a + n_c_a, :] = cvs_ph[n_c_a:, :]
     full.ph.set_from_ndarray(full_ph, tol)
 
     # Doubles block
@@ -295,27 +299,29 @@ def transfer_amplitude_cvs_to_full(mospaces_cvs, cvs, symmetry_full, tol=1e-12):
 
         full_pphh = np.zeros(full.pphh.shape)
         full_pphh[n_c_a:n_of_a, 0:n_c_a, :, :] = cvs_pphh_aa
-        full_pphh[0:n_c_a, n_c_a:n_of_a, :, :] = (
-            -cvs_pphh_aa.transpose((1, 0, 2, 3))
+        full_pphh[0:n_c_a, n_c_a:n_of_a, :, :] = -cvs_pphh_aa.transpose((1, 0, 2, 3))
+        full_pphh[n_c_a:n_of_a, n_of_a : n_of_a + n_c_a, :, :] = cvs_pphh_ab
+        full_pphh[n_of_a : n_of_a + n_c_a, n_c_a:n_of_a, :, :] = -cvs_pphh_ab.transpose(
+            (1, 0, 2, 3)
         )
-        full_pphh[n_c_a:n_of_a, n_of_a:n_of_a + n_c_a, :, :] = cvs_pphh_ab
-        full_pphh[n_of_a:n_of_a + n_c_a, n_c_a:n_of_a, :, :] = (
-            -cvs_pphh_ab.transpose((1, 0, 2, 3))
-        )
-        full_pphh[n_of_a + n_c_a:, 0:n_c_a, :, :] = cvs_pphh_ba
-        full_pphh[0:n_c_a, n_of_a + n_c_a:, :, :] = (
-            -cvs_pphh_ba.transpose((1, 0, 2, 3))
-        )
-        full_pphh[n_of_a + n_c_a:, n_of_a:n_of_a + n_c_a, :, :] = cvs_pphh_bb
-        full_pphh[n_of_a:n_of_a + n_c_a, n_of_a + n_c_a:, :, :] = (
-            -cvs_pphh_bb.transpose((1, 0, 2, 3))
+        full_pphh[n_of_a + n_c_a :, 0:n_c_a, :, :] = cvs_pphh_ba
+        full_pphh[0:n_c_a, n_of_a + n_c_a :, :, :] = -cvs_pphh_ba.transpose((1, 0, 2, 3))
+        full_pphh[n_of_a + n_c_a :, n_of_a : n_of_a + n_c_a, :, :] = cvs_pphh_bb
+        full_pphh[n_of_a : n_of_a + n_c_a, n_of_a + n_c_a :, :, :] = -cvs_pphh_bb.transpose(
+            (1, 0, 2, 3)
         )
         full.pphh.set_from_ndarray(full_pphh, tol)
     return full
 
 
-def transfer_cvs_to_full(state_matrix_cvs, matrix_full, vector=None, kind=None,
-                         spin_change=0, spin_block_symmetrisation="none"):
+def transfer_cvs_to_full(
+    state_matrix_cvs,
+    matrix_full,
+    vector=None,
+    kind=None,
+    spin_change=0,
+    spin_block_symmetrisation="none",
+):
     """
     Transfer `vector` (or a list of vectors) from the CVS space to the full space
     defined by the ADC matrix `matrix_full`. `state_matrix_cvs` is either the
@@ -329,27 +335,34 @@ def transfer_cvs_to_full(state_matrix_cvs, matrix_full, vector=None, kind=None,
 
     if spin_change is None and spin_block_symmetrisation is None:
         if kind is None:
-            raise ValueError("kind needs to be given if first argument is not an "
-                             "ExcitedStates object and spin symmetry setup is not "
-                             "explicitly given.")
-        return transfer_cvs_to_full(state_matrix_cvs, matrix_full, vector, kind,
-                                    **guess_kwargs_kind(kind))
+            raise ValueError(
+                "kind needs to be given if first argument is not an "
+                "ExcitedStates object and spin symmetry setup is not "
+                "explicitly given."
+            )
+        return transfer_cvs_to_full(
+            state_matrix_cvs, matrix_full, vector, kind, **guess_kwargs_kind(kind)
+        )
 
     if vector is None:
         if hasattr(state_matrix_cvs, "excitation_vector"):
             vector = state_matrix_cvs.excitation_vector
         else:
-            raise ValueError("vector needs to be given if first argument is not an "
-                             "ExcitedStates object.")
+            raise ValueError(
+                "vector needs to be given if first argument is not an ExcitedStates object."
+            )
     if isinstance(vector, list):
-        return [transfer_cvs_to_full(state_matrix_cvs, matrix_full, v, kind,
-                                     **guess_kwargs_kind(kind)) for v in vector]
+        return [
+            transfer_cvs_to_full(state_matrix_cvs, matrix_full, v, kind, **guess_kwargs_kind(kind))
+            for v in vector
+        ]
 
     if isinstance(state_matrix_cvs, AdcMatrixlike):
         mospaces_cvs = state_matrix_cvs.mospaces
     else:
         mospaces_cvs = state_matrix_cvs.matrix.mospaces
 
-    sym = guess_symmetries(matrix_full, spin_change=spin_change,
-                           spin_block_symmetrisation=spin_block_symmetrisation)
+    sym = guess_symmetries(
+        matrix_full, spin_change=spin_change, spin_block_symmetrisation=spin_block_symmetrisation
+    )
     return transfer_amplitude_cvs_to_full(mospaces_cvs, vector, sym)

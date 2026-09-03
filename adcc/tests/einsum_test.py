@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -21,11 +20,13 @@
 ##
 ## ---------------------------------------------------------------------
 import unittest
-import pytest
+
 import numpy as np
+import pytest
 from numpy.testing import assert_allclose
 
 from adcc import einsum, empty_like, nosym_like
+
 from .testdata_cache import testdata_cache
 
 

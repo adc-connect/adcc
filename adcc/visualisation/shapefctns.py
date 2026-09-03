@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -25,8 +24,8 @@ import numpy as np
 
 def gaussian(x, x0, stddev):
     fac = 1 / np.sqrt(2 * np.pi * stddev**2)
-    return fac * np.exp(-(x - x0)**2 / (2 * stddev**2))
+    return fac * np.exp(-((x - x0) ** 2) / (2 * stddev**2))
 
 
 def lorentzian(x, x0, gamma):
-    return gamma / ((x - x0)**2 + gamma**2) / np.pi
+    return gamma / ((x - x0) ** 2 + gamma**2) / np.pi

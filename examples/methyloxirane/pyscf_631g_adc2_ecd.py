@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
-import adcc
-
-from pyscf import gto, scf
 from matplotlib import pyplot as plt
+from pyscf import gto, scf
+
+import adcc
 
 enantiomers = {
     "(S)-2-methyloxirane": """
@@ -29,15 +29,14 @@ enantiomers = {
         H	1.4131373959	-0.3116398357	-1.2181956153
         H	2.0766856596	0.8381684090	-0.0415125805
         H	2.0848517291	-0.8974263240	0.3232009602
-    """
+    """,
 }
 
 
-for molecule in enantiomers:
-    molecular_geometry = enantiomers[molecule]
+for molecule, molecular_geometry in enantiomers.items():
     mol = gto.M(
         atom=molecular_geometry,
-        basis='6-31G',
+        basis="6-31G",
     )
     scfres = scf.RHF(mol)
     scfres.conv_tol = 1e-10
@@ -49,7 +48,6 @@ for molecule in enantiomers:
     print(state.describe(rotatory_strengths=True))
 
     # Plot rotatory strengths
-    plots = state.plot_spectrum(yaxis="rotatory_strength", width=0.005,
-                                label=molecule)
+    plots = state.plot_spectrum(yaxis="rotatory_strength", width=0.005, label=molecule)
 plt.legend()
 plt.show()

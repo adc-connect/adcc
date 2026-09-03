@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -20,8 +19,8 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import pytest
 import numpy as np
+import pytest
 from numpy.testing import assert_allclose
 
 from adcc import direct_sum, einsum, empty_like, nosym_like
@@ -33,9 +32,11 @@ class TestTensor:
     @pytest.mark.parametrize("system", ["h2o_sto3g", "cn_sto3g"])
     def test_nontrivial_addition(self, system: str):
         refstate = testdata_cache.refstate(system=system, case="gen")
-        mtcs = [empty_like(refstate.fock("o1v1")).set_random(),
-                empty_like(refstate.fock("v1o1")).set_random(),
-                empty_like(refstate.fock("o1v1")).set_random()]
+        mtcs = [
+            empty_like(refstate.fock("o1v1")).set_random(),
+            empty_like(refstate.fock("v1o1")).set_random(),
+            empty_like(refstate.fock("o1v1")).set_random(),
+        ]
         mnps = [m.to_ndarray() for m in mtcs]
 
         res = -3 * (2 * mtcs[0] + mtcs[1].T) * mtcs[2]
@@ -46,17 +47,19 @@ class TestTensor:
 
     def test_nontrivial_symmetrisation(self):
         refstate = testdata_cache.refstate("cn_sto3g", case="gen")
-        mtcs = [nosym_like(refstate.eri("o1o1v1v1")).set_random(),
-                nosym_like(refstate.eri("o1v1o1v1")).set_random(),
-                nosym_like(refstate.eri("o1o1v1v1")).set_random()]
+        mtcs = [
+            nosym_like(refstate.eri("o1o1v1v1")).set_random(),
+            nosym_like(refstate.eri("o1v1o1v1")).set_random(),
+            nosym_like(refstate.eri("o1o1v1v1")).set_random(),
+        ]
         mnps = [m.to_ndarray() for m in mtcs]
 
-        res = (mtcs[0] / mtcs[1].transpose((0, 2, 3, 1)))
+        res = mtcs[0] / mtcs[1].transpose((0, 2, 3, 1))
         res -= 2 * mtcs[2].antisymmetrise((0, 1))
         res = res.symmetrise((0, 1), (2, 3))
 
-        ref = (mnps[0] / mnps[1].transpose((0, 2, 3, 1)))
-        ref -= (mnps[2] - mnps[2].transpose((1, 0, 2, 3)))
+        ref = mnps[0] / mnps[1].transpose((0, 2, 3, 1))
+        ref -= mnps[2] - mnps[2].transpose((1, 0, 2, 3))
         ref = 0.5 * (ref + ref.transpose((1, 0, 3, 2)))
 
         assert res.needs_evaluation
@@ -84,14 +87,14 @@ class TestTensor:
 
         # (Slightly) modified ADC(2) singles block equation
         res = (
-            + einsum("ib,ab->ia", u1, f_vv + i1)
+            +einsum("ib,ab->ia", u1, f_vv + i1)
             - einsum("ij,ja->ia", f_oo - i2, u1)
             - einsum("jaib,jb->ia", ovov, u1)
             - 0.5 * einsum("ijab,jkbc,kc->ia", t2, oovv, u1)
             - 0.5 * einsum("ijab,jkbc,kc->ia", oovv, t2, u1)
         )
         ref = (
-            + np.einsum("ib,ab->ia", nu1, nf_vv + ni1)
+            +np.einsum("ib,ab->ia", nu1, nf_vv + ni1)
             - np.einsum("ij,ja->ia", nf_oo - ni2, nu1)
             - np.einsum("jaib,jb->ia", novov, nu1)
             - 0.5 * np.einsum("ijab,jkbc,kc->ia", nt2, noovv, nu1)
@@ -121,25 +124,27 @@ class TestTensor:
         oev = nosym_like(refstate.orbital_energies("v1")).set_random()
 
         interm = np.einsum("ijac,ijcb->ab", oovv.to_ndarray(), oovv.to_ndarray())
-        ref = (interm[:, :, None, None]
-               - oeo.to_ndarray()[None, None, :, None]
-               - oev.to_ndarray()[None, None, None, :])
+        ref = (
+            interm[:, :, None, None]
+            - oeo.to_ndarray()[None, None, :, None]
+            - oev.to_ndarray()[None, None, None, :]
+        )
         ref = ref.transpose((2, 0, 3, 1))
 
-        res = direct_sum("ab-i-c->iacb", einsum("ijac,ijcb->ab", oovv, oovv),
-                         oeo, oev)
+        res = direct_sum("ab-i-c->iacb", einsum("ijac,ijcb->ab", oovv, oovv), oeo, oev)
         assert_allclose(res.to_ndarray(), ref, rtol=1e-10, atol=1e-14)
 
     def test_nontrivial_diagonal(self):
         refstate = testdata_cache.refstate("cn_sto3g", case="gen")
-        mtcs = [nosym_like(refstate.eri("o1o1v1v1")).set_random(),
-                nosym_like(refstate.eri("o1v1o1v1")).set_random(),
-                nosym_like(refstate.eri("o1o1v1v1")).set_random()]
+        mtcs = [
+            nosym_like(refstate.eri("o1o1v1v1")).set_random(),
+            nosym_like(refstate.eri("o1v1o1v1")).set_random(),
+            nosym_like(refstate.eri("o1o1v1v1")).set_random(),
+        ]
         mnps = [m.to_ndarray() for m in mtcs]
 
         res = einsum("ijab,ibkc,kjad->cd", mtcs[0], mtcs[1], mtcs[2]).diagonal()
-        ref = np.einsum("ijab,ibkc,kjad->cd", mnps[0], mnps[1],
-                        mnps[2]).diagonal()
+        ref = np.einsum("ijab,ibkc,kjad->cd", mnps[0], mnps[1], mnps[2]).diagonal()
 
         assert res.needs_evaluation
         assert_allclose(res.to_ndarray(), ref, rtol=1e-10, atol=1e-14)

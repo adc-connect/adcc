@@ -1,7 +1,10 @@
 from . import davidson
+from .explicit_symmetrisation import IndexSpinSymmetrisation, IndexSymmetrisation
 from .SolverStateBase import EigenSolverStateBase
-from .explicit_symmetrisation import (IndexSpinSymmetrisation,
-                                      IndexSymmetrisation)
 
-__all__ = ["IndexSymmetrisation", "IndexSpinSymmetrisation",
-           "davidson", "EigenSolverStateBase"]
+__all__ = [
+    "EigenSolverStateBase",
+    "IndexSpinSymmetrisation",
+    "IndexSymmetrisation",
+    "davidson",
+]

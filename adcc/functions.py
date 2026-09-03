@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -20,9 +19,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import libadcc
-
 import opt_einsum
+
+import libadcc
 
 from .AmplitudeVector import AmplitudeVector
 
@@ -114,14 +113,14 @@ def lincomb(coefficients, tensors, evaluate=False):
     if len(tensors) == 0:
         raise ValueError("List of tensors cannot be empty")
     if len(tensors) != len(coefficients):
-        raise ValueError("Number of coefficient values does not match "
-                         "number of tensors.")
+        raise ValueError("Number of coefficient values does not match number of tensors.")
     if isinstance(tensors[0], AmplitudeVector):
-        return AmplitudeVector(**{
-            block: lincomb(coefficients, [ten[block] for ten in tensors],
-                           evaluate=evaluate)
-            for block in tensors[0].blocks
-        })
+        return AmplitudeVector(
+            **{
+                block: lincomb(coefficients, [ten[block] for ten in tensors], evaluate=evaluate)
+                for block in tensors[0].blocks
+            }
+        )
     elif not isinstance(tensors[0], libadcc.Tensor):
         raise TypeError("Tensor type not supported")
 
@@ -131,15 +130,17 @@ def lincomb(coefficients, tensors, evaluate=False):
     else:
         # Perform lazy evaluation on this linear combination
         start = float(coefficients[0]) * tensors[0]
-        return sum((float(c) * t
-                    for (c, t) in zip(coefficients[1:], tensors[1:])), start)
+        return sum((float(c) * t for (c, t) in zip(coefficients[1:], tensors[1:])), start)
 
 
 def linear_combination(*args, **kwargs):
     import warnings
 
-    warnings.warn(DeprecationWarning("linear_combination is deprecated and will "
-                                     "be removed in 0.17. Use lincomb."))
+    warnings.warn(
+        DeprecationWarning(
+            "linear_combination is deprecated and will be removed in 0.17. Use lincomb."
+        )
+    )
     return lincomb(*args, **kwargs)
 
 
@@ -174,13 +175,14 @@ def direct_sum(subscripts, *operands):
         permutation = None
 
     if len(src) != len(operands):
-        raise ValueError("Number of contraction subscripts does not agree with "
-                         "number of operands")
+        raise ValueError("Number of contraction subscripts does not agree with number of operands")
     for i, idcs in enumerate(src):
         if len(idcs) != operands[i].ndim:
-            raise ValueError(f"Number of subscripts of {i}-th tensor (== {idcs}) "
-                             "does not match dimension of tensor "
-                             f"(== {operands[i].ndim}).")
+            raise ValueError(
+                f"Number of subscripts of {i}-th tensor (== {idcs}) "
+                "does not match dimension of tensor "
+                f"(== {operands[i].ndim})."
+            )
 
     if signs[0] == "-":
         res = -operands[0]
@@ -215,5 +217,4 @@ def einsum(subscripts, *operands, optimise="auto"):
         Choose the type of the path optimisation, see
         opt_einsum.contract for details.
     """
-    return opt_einsum.contract(subscripts, *operands, optimize=optimise,
-                               backend="libadcc")
+    return opt_einsum.contract(subscripts, *operands, optimize=optimise, backend="libadcc")

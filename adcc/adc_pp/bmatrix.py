@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -57,21 +56,27 @@ def block(ground_state, operator, spaces, order, variant=None):
         variant = []
 
     if ground_state.has_core_occupied_space and "cvs" not in variant:
-        raise ValueError("Cannot run a general (non-core-valence approximated) "
-                         "ADC method on top of a ground state with a "
-                         "core-valence separation.")
+        raise ValueError(
+            "Cannot run a general (non-core-valence approximated) "
+            "ADC method on top of a ground state with a "
+            "core-valence separation."
+        )
     if not ground_state.has_core_occupied_space and "cvs" in variant:
-        raise ValueError("Cannot run a core-valence approximated ADC method on "
-                         "top of a ground state without a "
-                         "core-valence separation.")
+        raise ValueError(
+            "Cannot run a core-valence approximated ADC method on "
+            "top of a ground state without a "
+            "core-valence separation."
+        )
 
     fn = "_".join(["block"] + variant + spaces + [str(order)])
 
     if fn not in globals():
-        raise ValueError("Could not dispatch: "
-                         f"spaces={spaces} order={order} variant={variant}. "
-                         "Probably the B-matrix is not implemented for the "
-                         "requested method.")
+        raise ValueError(
+            "Could not dispatch: "
+            f"spaces={spaces} order={order} variant={variant}. "
+            "Probably the B-matrix is not implemented for the "
+            "requested method."
+        )
     return globals()[fn](ground_state, operator)
 
 
@@ -83,7 +88,8 @@ def block_ph_ph_0(ground_state, op):
         return AmplitudeVector(ph=(
             + 1.0 * einsum('ic,ac->ia', ampl.ph, op.vv)
             - 1.0 * einsum('ka,ki->ia', ampl.ph, op.oo)
-        ))
+        ))  # fmt: skip
+
     return IsrBlock(apply)
 
 
@@ -98,7 +104,8 @@ def block_pphh_pphh_0(ground_state, op):
                 - 2.0 * einsum('kjab,ki->ijab', ampl.pphh, op.oo)
                 + 2.0 * einsum('kiab,kj->ijab', ampl.pphh, op.oo)
             ).antisymmetrise(0, 1)
-        ))
+        ))  # fmt: skip
+
     return IsrBlock(apply)
 
 
@@ -110,7 +117,8 @@ def block_ph_pphh_0(ground_state, op):
         return AmplitudeVector(ph=0.5 * (
             - 2.0 * einsum('ilad,ld->ia', ampl.pphh, op.ov)
             + 2.0 * einsum('ilca,lc->ia', ampl.pphh, op.ov)
-        ))
+        ))  # fmt: skip
+
     return IsrBlock(apply)
 
 
@@ -123,7 +131,8 @@ def block_pphh_ph_0(ground_state, op):
                 + 1.0 * einsum('ib,aj->ijab', ampl.ph, op.vo)
                 - 1.0 * einsum('jb,ai->ijab', ampl.ph, op.vo)
             ).antisymmetrise(0, 1).antisymmetrise(2, 3)
-        ))
+        ))  # fmt: skip
+
     return IsrBlock(apply)
 
 
@@ -152,7 +161,8 @@ def block_ph_pphh_1(ground_state, op):
             - 2.0 * einsum('ilca,lncf,fn->ia', ampl.pphh, t2, op.vo)
             - 2.0 * einsum('klad,kled,ei->ia', ampl.pphh, t2, op.vo)
             - 2.0 * einsum('ilcd,nlcd,an->ia', ampl.pphh, t2, op.vo)
-        ))
+        ))  # fmt: skip
+
     return IsrBlock(apply)
 
 
@@ -181,7 +191,8 @@ def block_pphh_ph_1(ground_state, op):
                 - 1.0 * einsum('ic,njab,nc->ijab', ampl.ph, t2, op.ov)
                 + 1.0 * einsum('jc,niab,nc->ijab', ampl.ph, t2, op.ov)
             ).antisymmetrise(0, 1)
-        ))
+        ))  # fmt: skip
+
     return IsrBlock(apply)
 
 
@@ -223,7 +234,8 @@ def block_ph_ph_2(ground_state, op):
             # (2,7)
             - 1.0 * einsum('kc,kncf,imaf,mn->ia', ampl.ph, t2, t2, op.oo)
             + 1.0 * einsum('kc,knce,inaf,ef->ia', ampl.ph, t2, t2, op.vv)
-        ))
+        ))  # fmt: skip
+
     return IsrBlock(apply)
 
 
@@ -249,81 +261,94 @@ def block_ph_pphh_2(ground_state, op):
                 # zeroth order
                 -2 * einsum("ijab,jb->ia", ur2, d_ov)  # N^4: O^2V^2 / N^4: O^2V^2
                 # first order
-                + 1 * einsum(
+                + 1
+                * einsum(
                     "ijkb,jkab->ia", einsum("jkbc,ci->ijkb", t2_1, d_vo), ur2
                 )  # N^5: O^3V^2 / N^4: O^2V^2
-                + 1 * einsum(
+                + 1
+                * einsum(
                     "ik,ak->ia", einsum("ijbc,jkbc->ik", ur2, t2_1), d_vo
                 )  # N^5: O^3V^2 / N^4: O^2V^2
-                + 2 * einsum(
+                + 2
+                * einsum(
                     "jb,ijab->ia", einsum("jkbc,ck->jb", t2_1, d_vo), ur2
                 )  # N^4: O^2V^2 / N^4: O^2V^2
                 # second order
-                + 1 * einsum(
+                + 1
+                * einsum(
                     "jb,ijab->ia", einsum("jc,bc->jb", d_ov, p0_2_vv), ur2
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                + 1 * einsum(
+                + 1
+                * einsum(
                     "ijkb,jkab->ia", einsum("jkbc,ci->ijkb", t2_2, d_vo), ur2
                 )  # N^5: O^3V^2 / N^4: O^2V^2
-                + 1 * einsum(
+                + 1
+                * einsum(
                     "ijkb,jkab->ia", einsum("jc,ickb->ijkb", d_ov, t2sq), ur2
                 )  # N^5: O^3V^2 / N^4: O^2V^2
-                + 1 * einsum(
+                + 1
+                * einsum(
                     "ik,ak->ia", einsum("ijbc,jkbc->ik", ur2, t2_2), d_vo
                 )  # N^5: O^3V^2 / N^4: O^2V^2
-                + 1 * einsum(
+                + 1
+                * einsum(
                     "ijkc,jcka->ia", einsum("ijbc,kb->ijkc", ur2, d_ov), t2sq
                 )  # N^5: O^3V^2 / N^4: O^2V^2
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "jb,ijab->ia", einsum("kb,jk->jb", d_ov, p0_2_oo), ur2
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "jb,ijab->ia", einsum("kc,jbkc->jb", d_ov, t2sq), ur2
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                - 2 * einsum(
+                - 2
+                * einsum(
                     "jb,ijab->ia", einsum("jc,cb->jb", t1_2, d_vv), ur2
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                + 2 * einsum(
+                + 2
+                * einsum(
                     "jb,ijab->ia", einsum("kb,jk->jb", t1_2, d_oo), ur2
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                + 2 * einsum(
+                + 2
+                * einsum(
                     "jb,ijab->ia", einsum("jkbc,ck->jb", t2_2, d_vo), ur2
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                + 0.5 * einsum(
+                + 0.5
+                * einsum(
                     "ld,ilad->ia",
-                    einsum(
-                        "jklb,jkbd->ld",
-                        einsum(
-                            "jkbc,lc->jklb", ur2, d_ov), t2_1), t2_1,
+                    einsum("jklb,jkbd->ld", einsum("jkbc,lc->jklb", ur2, d_ov), t2_1),
+                    t2_1,
                 )  # N^5: O^3V^2 / N^4: O^2V^2
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "ijkb,jkab->ia",
-                    einsum(
-                        "ic,jkbc->ijkb",
-                        einsum(
-                            "ilcd,ld->ic", t2_1, d_ov), t2_1), ur2,
+                    einsum("ic,jkbc->ijkb", einsum("ilcd,ld->ic", t2_1, d_ov), t2_1),
+                    ur2,
                 )  # N^5: O^3V^2 / N^4: O^2V^2
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "ka,ik->ia",
                     einsum("klad,ld->ka", t2_1, d_ov),
                     einsum("ijbc,jkbc->ik", ur2, t2_1),
                 )  # N^5: O^3V^2 / N^4: O^2V^2
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "ld,ilad->ia",
                     einsum("jl,jd->ld", einsum("jkbc,klbc->jl", ur2, t2_1), d_ov),
                     t2_1,
                 )  # N^5: O^3V^2 / N^4: O^2V^2
-                - 0.25 * einsum(
+                - 0.25
+                * einsum(
                     "ijkl,jkla->ia",
                     einsum("ilcd,jkcd->ijkl", t2_1, t2_1),
                     einsum("jkab,lb->jkla", ur2, d_ov),
                 )  # N^6: O^4V^2 / N^4: O^2V^2
-                - 0.25 * einsum(
+                - 0.25
+                * einsum(
                     "ikld,klad->ia",
-                    einsum(
-                        "ijkl,jd->ikld",
-                        einsum(
-                            "ijbc,klbc->ijkl", ur2, t2_1), d_ov), t2_1,
+                    einsum("ijkl,jd->ikld", einsum("ijbc,klbc->ijkl", ur2, t2_1), d_ov),
+                    t2_1,
                 )  # N^6: O^4V^2 / N^4: O^2V^2
             )
         )
@@ -346,95 +371,110 @@ def block_pphh_ph_2(ground_state, op):
     def apply(ampl):
         ur1 = ampl.ph
         return AmplitudeVector(
-            pphh=0.5 * (
+            pphh=0.5
+            * (
                 # zeroth order
-                4 * einsum(
-                    "ja,bi->ijab", ur1, d_vo
-                ).antisymmetrise(0, 1).antisymmetrise(2, 3)
+                4 * einsum("ja,bi->ijab", ur1, d_vo).antisymmetrise(0, 1).antisymmetrise(2, 3)
                 # N^4: O^2V^2 / N^4: O^2V^2
-                + 4 * einsum(
-                    "jb,ia->ijab", einsum("jkbc,kc->jb", t2_1, d_ov), ur1
-                ).antisymmetrise(0, 1).antisymmetrise(2, 3)
+                + 4
+                * einsum("jb,ia->ijab", einsum("jkbc,kc->jb", t2_1, d_ov), ur1)
+                .antisymmetrise(0, 1)
+                .antisymmetrise(2, 3)
                 # N^4: O^2V^2 / N^4: O^2V^2
-                + 2 * einsum(
-                    "ijkb,ka->ijab", einsum("ijbc,kc->ijkb", t2_1, d_ov), ur1
-                ).antisymmetrise(2, 3)  # N^5: O^3V^2 / N^4: O^2V^2
-                + 2 * einsum(
-                    "ik,jkab->ijab", einsum("ic,kc->ik", ur1, d_ov), t2_1
-                ).antisymmetrise(0, 1)  # N^5: O^3V^2 / N^4: O^2V^2
+                + 2
+                * einsum("ijkb,ka->ijab", einsum("ijbc,kc->ijkb", t2_1, d_ov), ur1).antisymmetrise(
+                    2, 3
+                )  # N^5: O^3V^2 / N^4: O^2V^2
+                + 2
+                * einsum("ik,jkab->ijab", einsum("ic,kc->ik", ur1, d_ov), t2_1).antisymmetrise(
+                    0, 1
+                )  # N^5: O^3V^2 / N^4: O^2V^2
                 # second order
-                + 4 * (
-                    +1 * einsum(
+                + 4
+                * (
+                    +1
+                    * einsum(
                         "jb,ia->ijab", einsum("kb,kj->jb", t1_2, d_oo), ur1
                     )  # N^4: O^2V^2 / N^4: O^2V^2
-                    + 1 * einsum(
+                    + 1
+                    * einsum(
                         "jb,ia->ijab", einsum("jkbc,kc->jb", t2_2, d_ov), ur1
                     )  # N^4: O^2V^2 / N^4: O^2V^2
-                    + 1 * einsum(
+                    + 1
+                    * einsum(
                         "ib,ja->ijab", einsum("ic,bc->ib", t1_2, d_vv), ur1
                     )  # N^4: O^2V^2 / N^4: O^2V^2
-                    + 0.5 * einsum(
+                    + 0.5
+                    * einsum(
                         "jb,ia->ijab", einsum("cj,bc->jb", d_vo, p0_2_vv), ur1
                     )  # N^4: O^2V^2 / N^4: O^2V^2
-                    + 0.5 * einsum(
+                    + 0.5
+                    * einsum(
                         "ib,ja->ijab", einsum("bk,ik->ib", d_vo, p0_2_oo), ur1
                     )  # N^4: O^2V^2 / N^4: O^2V^2
-                    + 0.5 * einsum(
+                    + 0.5
+                    * einsum(
                         "ib,ja->ijab", einsum("ck,ibkc->ib", d_vo, t2sq), ur1
                     )  # N^4: O^2V^2 / N^4: O^2V^2
-                    + 0.5 * einsum(
+                    + 0.5
+                    * einsum(
                         "ijkb,ka->ijab", einsum("ci,jbkc->ijkb", d_vo, t2sq), ur1
                     )  # N^5: O^3V^2 / N^4: O^2V^2
-                    + 0.5 * einsum(
+                    + 0.5
+                    * einsum(
                         "ijkb,ak->ijab", einsum("ic,jbkc->ijkb", ur1, t2sq), d_vo
                     )  # N^5: O^3V^2 / N^4: O^2V^2
-                ).antisymmetrise(0, 1).antisymmetrise(2, 3)
-                + 2 * (
-                    +1 * einsum(
+                )
+                .antisymmetrise(0, 1)
+                .antisymmetrise(2, 3)
+                + 2
+                * (
+                    +1
+                    * einsum(
                         "ijkb,ka->ijab", einsum("ijbc,kc->ijkb", t2_2, d_ov), ur1
                     )  # N^5: O^3V^2 / N^4: O^2V^2
-                    + 0.5 * einsum(
+                    + 0.5
+                    * einsum(
                         "ijka,kb->ijab",
-                        einsum(
-                            "kc,ijac->ijka", einsum("klcd,dl->kc", t2_1, d_vo), t2_1
-                        ), ur1,
+                        einsum("kc,ijac->ijka", einsum("klcd,dl->kc", t2_1, d_vo), t2_1),
+                        ur1,
                     )  # N^5: O^3V^2 / N^4: O^2V^2
-                    + 0.5 * einsum(
+                    + 0.5
+                    * einsum(
                         "ijla,bl->ijab",
-                        einsum(
-                            "ld,ijad->ijla",
-                            einsum(
-                                "kc,klcd->ld", ur1, t2_1), t2_1), d_vo,
+                        einsum("ld,ijad->ijla", einsum("kc,klcd->ld", ur1, t2_1), t2_1),
+                        d_vo,
                     )  # N^5: O^3V^2 / N^4: O^2V^2
                     - 0.25
                     * einsum(
                         "ijla,bl->ijab",
-                        einsum(
-                            "ijkl,ka->ijla", einsum("ijcd,klcd->ijkl",
-                                                    t2_1, t2_1), ur1
-                        ), d_vo,
+                        einsum("ijkl,ka->ijla", einsum("ijcd,klcd->ijkl", t2_1, t2_1), ur1),
+                        d_vo,
                     )  # N^6: O^4V^2 / N^4: O^2V^2
                 ).antisymmetrise(2, 3)
-                + 2 * (
-                    +1 * einsum(
+                + 2
+                * (
+                    +1
+                    * einsum(
                         "ik,jkab->ijab", einsum("ic,kc->ik", ur1, d_ov), t2_2
                     )  # N^5: O^3V^2 / N^4: O^2V^2
-                    + 0.5 * einsum(
+                    + 0.5
+                    * einsum(
                         "jk,ikab->ijab",
                         einsum("kc,jc->jk", einsum("klcd,dl->kc", t2_1, d_vo), ur1),
                         t2_1,
                     )  # N^5: O^3V^2 / N^4: O^2V^2
-                    + 0.5 * einsum(
+                    + 0.5
+                    * einsum(
                         "jl,ilab->ijab",
                         einsum("ld,dj->jl", einsum("kc,klcd->ld", ur1, t2_1), d_vo),
                         t2_1,
                     )  # N^5: O^3V^2 / N^4: O^2V^2
-                    - 0.25 * einsum(
+                    - 0.25
+                    * einsum(
                         "ijkl,klab->ijab",
-                        einsum(
-                            "ikld,dj->ijkl", einsum("ic,klcd->ikld",
-                                                    ur1, t2_1), d_vo
-                        ), t2_1,
+                        einsum("ikld,dj->ijkl", einsum("ic,klcd->ikld", ur1, t2_1), d_vo),
+                        t2_1,
                     )  # N^6: O^4V^2 / N^4: O^2V^2
                 ).antisymmetrise(0, 1)
             )
@@ -470,246 +510,274 @@ def block_ph_ph_3(ground_state, op):
                 +1 * einsum("ib,ab->ia", ur1, d_vv)  # N^3: O^1V^2 / N^2: V^2
                 - 1 * einsum("ja,ji->ia", ur1, d_oo)  # N^3: O^2V^1 / N^2: O^1V^1
                 # second order
-                + 1 * einsum(
+                + 1
+                * einsum(
                     "ab,ib->ia", einsum("kj,jbka->ab", d_oo, t2sq), ur1
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                + 0.5 * einsum(
+                + 0.5
+                * einsum(
                     "ic,ac->ia", einsum("jb,icjb->ic", ur1, t2sq), d_vv
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                + 0.5 * einsum(
+                + 0.5
+                * einsum(
                     "jc,iajc->ia", einsum("jb,cb->jc", ur1, d_vv), t2sq
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "ij,ja->ia", einsum("ib,jb->ij", t1_2, d_ov), ur1
                 )  # N^3: O^2V^1 / N^2: O^1V^1
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "ij,ja->ia", einsum("jb,bi->ij", t1_2, d_vo), ur1
                 )  # N^3: O^2V^1 / N^2: O^1V^1
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "ij,ja->ia", einsum("bc,icjb->ij", d_vv, t2sq), ur1
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "ij,ja->ia", einsum("ib,jb->ij", ur1, d_ov), t1_2
                 )  # N^3: O^2V^1 / N^2: O^1V^1
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "ij,aj->ia", einsum("ib,jb->ij", ur1, t1_2), d_vo
                 )  # N^3: O^2V^1 / N^2: O^1V^1
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "ij,ja->ia", einsum("jk,ik->ij", d_oo, p0_2_oo), ur1
                 )  # N^3: O^2V^1 / N^2: O^1V^1
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "ij,ja->ia", einsum("ki,jk->ij", d_oo, p0_2_oo), ur1
                 )  # N^3: O^2V^1 / N^2: O^1V^1
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "ic,ac->ia", einsum("ib,bc->ic", ur1, p0_2_vv), d_vv
                 )  # N^3: O^1V^2 / N^2: V^2
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "ic,ac->ia", einsum("ib,cb->ic", ur1, d_vv), p0_2_vv
                 )  # N^3: O^1V^2 / N^2: V^2
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "kb,iakb->ia", einsum("jb,jk->kb", ur1, d_oo), t2sq
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "ka,ki->ia", einsum("jb,jbka->ka", ur1, t2sq), d_oo
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                + 1 * einsum(
+                + 1
+                * einsum(
                     "kd,ikad->ia",
                     einsum("kc,cd->kd", einsum("jb,jkbc->kc", ur1, t2_1), d_vv),
                     t2_1,
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                + 0.5 * einsum(
+                + 0.5
+                * einsum(
                     "ij,ja->ia",
-                    einsum(
-                        "ikbc,jkbc->ij",
-                        einsum(
-                            "ilbc,lk->ikbc", t2_1, d_oo), t2_1), ur1,
+                    einsum("ikbc,jkbc->ij", einsum("ilbc,lk->ikbc", t2_1, d_oo), t2_1),
+                    ur1,
                 )  # N^5: O^3V^2 / N^4: O^2V^2
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "lc,ilac->ia",
                     einsum("kc,lk->lc", einsum("jb,jkbc->kc", ur1, t2_1), d_oo),
                     t2_1,
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "ijkd,jkad->ia",
-                    einsum(
-                        "ijkc,cd->ijkd",
-                        einsum(
-                            "ib,jkbc->ijkc", ur1, t2_1), d_vv), t2_1,
+                    einsum("ijkc,cd->ijkd", einsum("ib,jkbc->ijkc", ur1, t2_1), d_vv),
+                    t2_1,
                 )  # N^5: O^3V^2 / N^4: O^2V^2
                 # third order
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "ij,ja->ia", einsum("bi,jb->ij", d_vo, p0_3_ov), ur1
                 )  # N^3: O^2V^1 / N^2: O^1V^1
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "ij,ja->ia", einsum("jb,ib->ij", d_ov, p0_3_ov), ur1
                 )  # N^3: O^2V^1 / N^2: O^1V^1
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "ij,aj->ia", einsum("ib,jb->ij", ur1, p0_3_ov), d_vo
                 )  # N^3: O^2V^1 / N^2: O^1V^1
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "ij,ja->ia", einsum("ib,jb->ij", ur1, d_ov), p0_3_ov
                 )  # N^3: O^2V^1 / N^2: O^1V^1
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "ik,ka->ia", einsum("ji,jk->ik", d_oo, p0_3_oo), ur1
                 )  # N^3: O^2V^1 / N^2: O^1V^1
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "ik,ka->ia", einsum("kj,ij->ik", d_oo, p0_3_oo), ur1
                 )  # N^3: O^2V^1 / N^2: O^1V^1
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "ib,ab->ia", einsum("ic,bc->ib", ur1, p0_3_vv), d_vv
                 )  # N^3: O^1V^2 / N^2: V^2
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "ib,ab->ia", einsum("ic,bc->ib", ur1, d_vv), p0_3_vv
                 )  # N^3: O^1V^2 / N^2: V^2
-                + 1 * einsum(
+                + 1
+                * einsum(
                     "kc,ikac->ia",
                     einsum("jk,jc->kc", einsum("jb,kb->jk", ur1, t1_2), d_ov),
                     t2_1,
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                + 1 * einsum(
+                + 1
+                * einsum(
                     "kc,ikac->ia",
                     einsum("jk,jc->kc", einsum("jb,kb->jk", ur1, d_ov), t1_2),
                     t2_1,
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                + 1 * einsum(
+                + 1
+                * einsum(
                     "kc,ikac->ia",
                     einsum("kd,dc->kc", einsum("jb,jkbd->kd", ur1, t2_2), d_vv),
                     t2_1,
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                + 1 * einsum(
+                + 1
+                * einsum(
                     "ik,ka->ia",
                     einsum("kc,ci->ik", einsum("jb,jkbc->kc", ur1, t2_1), d_vo),
                     t1_2,
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                + 1 * einsum(
+                + 1
+                * einsum(
                     "ik,ak->ia",
                     einsum("kc,ic->ik", einsum("jb,jkbc->kc", ur1, t2_1), t1_2),
                     d_vo,
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                + 1 * einsum(
+                + 1
+                * einsum(
                     "kd,ikad->ia",
                     einsum("kc,cd->kd", einsum("jb,jkbc->kc", ur1, t2_1), d_vv),
                     t2_2,
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                + 0.5 * einsum(
+                + 0.5
+                * einsum(
                     "ij,ja->ia",
-                    einsum(
-                        "ilbc,jlbc->ij",
-                        einsum(
-                            "ikbc,kl->ilbc", t2_1, d_oo), t2_2), ur1,
+                    einsum("ilbc,jlbc->ij", einsum("ikbc,kl->ilbc", t2_1, d_oo), t2_2),
+                    ur1,
                 )  # N^5: O^3V^2 / N^4: O^2V^2
-                + 0.5 * einsum(
+                + 0.5
+                * einsum(
                     "ij,ja->ia",
-                    einsum(
-                        "jkbc,ikbc->ij", einsum("jklbcd,dl->jkbc", t3_2, d_vo), t2_1
-                    ), ur1,
+                    einsum("jkbc,ikbc->ij", einsum("jklbcd,dl->jkbc", t3_2, d_vo), t2_1),
+                    ur1,
                 )  # N^6: O^3V^3 / N^6: O^3V^3
-                + 0.5 * einsum(
+                + 0.5
+                * einsum(
                     "ij,ja->ia",
-                    einsum(
-                        "jlbc,ilbc->ij",
-                        einsum(
-                            "jkbc,lk->jlbc", t2_1, d_oo), t2_2), ur1,
+                    einsum("jlbc,ilbc->ij", einsum("jkbc,lk->jlbc", t2_1, d_oo), t2_2),
+                    ur1,
                 )  # N^5: O^3V^2 / N^4: O^2V^2
-                + 0.5 * einsum(
+                + 0.5
+                * einsum(
                     "ij,ja->ia",
-                    einsum(
-                        "ikbc,jkbc->ij", einsum("iklbcd,ld->ikbc", t3_2, d_ov), t2_1
-                    ), ur1,
+                    einsum("ikbc,jkbc->ij", einsum("iklbcd,ld->ikbc", t3_2, d_ov), t2_1),
+                    ur1,
                 )  # N^6: O^3V^3 / N^6: O^3V^3
-                + 0.5 * einsum(
+                + 0.5
+                * einsum(
                     "ijkc,jkac->ia",
-                    einsum(
-                        "jkbc,ib->ijkc",
-                        einsum(
-                            "jklbcd,dl->jkbc", t3_2, d_vo), ur1), t2_1,
+                    einsum("jkbc,ib->ijkc", einsum("jklbcd,dl->jkbc", t3_2, d_vo), ur1),
+                    t2_1,
                 )  # N^6: O^3V^3 / N^6: O^3V^3
-                + 0.5 * einsum(
+                + 0.5
+                * einsum(
                     "jkac,ijkc->ia",
-                    einsum(
-                        "jklacd,ld->jkac", t3_2, d_ov),
-                    einsum(
-                        "ib,jkbc->ijkc", ur1, t2_1),
+                    einsum("jklacd,ld->jkac", t3_2, d_ov),
+                    einsum("ib,jkbc->ijkc", ur1, t2_1),
                 )  # N^6: O^3V^3 / N^6: O^3V^3
-                + 0.5 * einsum(
+                + 0.5
+                * einsum(
                     "kc,ikac->ia",
                     einsum("lb,klbc->kc", einsum("jb,jl->lb", ur1, d_oo), t2_2),
                     t2_1,
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                + 0.5 * einsum(
+                + 0.5
+                * einsum(
                     "kc,ikac->ia",
                     einsum("lb,klbc->kc", einsum("jb,jl->lb", ur1, d_oo), t2_1),
                     t2_2,
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                + 0.5 * einsum(
+                + 0.5
+                * einsum(
                     "ic,ac->ia",
                     einsum("kd,ikcd->ic", einsum("jb,jkbd->kd", ur1, t2_1), t2_2),
                     d_vv,
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                + 0.5 * einsum(
+                + 0.5
+                * einsum(
                     "ic,ac->ia",
                     einsum("kd,ikcd->ic", einsum("jb,jkbd->kd", ur1, t2_2), t2_1),
                     d_vv,
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "ij,ja->ia",
                     einsum("ic,jc->ij", einsum("ikbc,kb->ic", t2_1, d_ov), t1_2),
                     ur1,
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "ij,ja->ia",
-                    einsum(
-                        "ikbd,jkbd->ij",
-                        einsum(
-                            "ikbc,dc->ikbd", t2_1, d_vv), t2_2), ur1,
+                    einsum("ikbd,jkbd->ij", einsum("ikbc,dc->ikbd", t2_1, d_vv), t2_2),
+                    ur1,
                 )  # N^5: O^2V^3 / N^4: O^2V^2
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "ij,ja->ia",
                     einsum("jc,ic->ij", einsum("jkbc,bk->jc", t2_1, d_vo), t1_2),
                     ur1,
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "ij,ja->ia",
-                    einsum(
-                        "jkbd,ikbd->ij",
-                        einsum(
-                            "jkbc,cd->jkbd", t2_1, d_vv), t2_2), ur1,
+                    einsum("jkbd,ikbd->ij", einsum("jkbc,cd->jkbd", t2_1, d_vv), t2_2),
+                    ur1,
                 )  # N^5: O^2V^3 / N^4: O^2V^2
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "ka,ik->ia",
                     einsum("jkac,jc->ka", t2_1, d_ov),
                     einsum("ib,kb->ik", ur1, t1_2),
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "ijkc,jkac->ia",
-                    einsum(
-                        "iklc,jl->ijkc",
-                        einsum(
-                            "ib,klbc->iklc", ur1, t2_2), d_oo), t2_1,
+                    einsum("iklc,jl->ijkc", einsum("ib,klbc->iklc", ur1, t2_2), d_oo),
+                    t2_1,
                 )  # N^5: O^3V^2 / N^4: O^2V^2
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "ik,ka->ia",
                     einsum("kb,ib->ik", einsum("jkbc,cj->kb", t2_1, d_vo), ur1),
                     t1_2,
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "iklc,klac->ia",
-                    einsum(
-                        "ijkc,lj->iklc",
-                        einsum(
-                            "ib,jkbc->ijkc", ur1, t2_1), d_oo), t2_2,
+                    einsum("ijkc,lj->iklc", einsum("ib,jkbc->ijkc", ur1, t2_1), d_oo),
+                    t2_2,
                 )  # N^5: O^3V^2 / N^4: O^2V^2
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "kc,ikac->ia",
                     einsum("lc,kl->kc", einsum("jb,jlbc->lc", ur1, t2_2), d_oo),
                     t2_1,
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "kc,ikac->ia",
-                    einsum(
-                        "klcd,dl->kc",
-                        einsum(
-                            "jb,jklbcd->klcd", ur1, t3_2), d_vo), t2_1,
+                    einsum("klcd,dl->kc", einsum("jb,jklbcd->klcd", ur1, t3_2), d_vo),
+                    t2_1,
                 )  # N^6: O^3V^3 / N^6: O^3V^3
                 - 1
                 * einsum(
@@ -717,43 +785,41 @@ def block_ph_ph_3(ground_state, op):
                     einsum("kc,lk->lc", einsum("jb,jkbc->kc", ur1, t2_1), d_oo),
                     t2_2,
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                - 1 * einsum(
+                - 1
+                * einsum(
                     "ilad,ld->ia",
-                    einsum(
-                        "kc,iklacd->ilad",
-                        einsum(
-                            "jb,jkbc->kc", ur1, t2_1), t3_2), d_ov,
+                    einsum("kc,iklacd->ilad", einsum("jb,jkbc->kc", ur1, t2_1), t3_2),
+                    d_ov,
                 )  # N^6: O^3V^3 / N^6: O^3V^3
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "ijkc,jkac->ia",
-                    einsum(
-                        "ijkd,dc->ijkc",
-                        einsum(
-                            "ib,jkbd->ijkd", ur1, t2_2), d_vv), t2_1,
+                    einsum("ijkd,dc->ijkc", einsum("ib,jkbd->ijkd", ur1, t2_2), d_vv),
+                    t2_1,
                 )  # N^5: O^3V^2 / N^4: O^2V^2
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "ijkd,jkad->ia",
-                    einsum(
-                        "ijkc,cd->ijkd",
-                        einsum(
-                            "ib,jkbc->ijkc", ur1, t2_1), d_vv), t2_2,
+                    einsum("ijkc,cd->ijkd", einsum("ib,jkbc->ijkc", ur1, t2_1), d_vv),
+                    t2_2,
                 )  # N^5: O^3V^2 / N^4: O^2V^2
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "kc,ikac->ia",
                     einsum("jd,jkcd->kc", einsum("jb,db->jd", ur1, d_vv), t2_2),
                     t2_1,
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "ka,ki->ia",
                     einsum("lc,klac->ka", einsum("jb,jlbc->lc", ur1, t2_2), t2_1),
                     d_oo,
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "iklc,klac->ia",
-                    einsum(
-                        "klcd,di->iklc",
-                        einsum(
-                            "jb,jklbcd->klcd", ur1, t3_2), d_vo), t2_1,
+                    einsum("klcd,di->iklc", einsum("jb,jklbcd->klcd", ur1, t3_2), d_vo),
+                    t2_1,
                 )  # N^6: O^3V^3 / N^6: O^3V^3
                 - 0.5
                 * einsum(
@@ -761,26 +827,26 @@ def block_ph_ph_3(ground_state, op):
                     einsum("lc,klac->ka", einsum("jb,jlbc->lc", ur1, t2_1), t2_2),
                     d_oo,
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "klcd,iklacd->ia",
-                    einsum(
-                        "jklc,jd->klcd",
-                        einsum(
-                            "jb,klbc->jklc", ur1, t2_1), d_ov), t3_2,
+                    einsum("jklc,jd->klcd", einsum("jb,klbc->jklc", ur1, t2_1), d_ov),
+                    t3_2,
                 )  # N^6: O^3V^3 / N^6: O^3V^3
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "il,al->ia",
-                    einsum(
-                        "klcd,ikcd->il",
-                        einsum(
-                            "jb,jklbcd->klcd", ur1, t3_2), t2_1), d_vo,
+                    einsum("klcd,ikcd->il", einsum("jb,jklbcd->klcd", ur1, t3_2), t2_1),
+                    d_vo,
                 )  # N^6: O^3V^3 / N^6: O^3V^3
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "kc,ikac->ia",
                     einsum("jd,jkcd->kc", einsum("jb,db->jd", ur1, d_vv), t2_1),
                     t2_2,
                 )  # N^4: O^2V^2 / N^4: O^2V^2
-                - 0.5 * einsum(
+                - 0.5
+                * einsum(
                     "klcd,iklacd->ia",
                     einsum("jl,jkcd->klcd", einsum("jb,lb->jl", ur1, d_ov), t2_1),
                     t3_2,

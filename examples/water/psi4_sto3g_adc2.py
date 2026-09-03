@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
-import adcc
 import psi4
+
+import adcc
 
 mol = psi4.geometry("""
     O 0 0 0
@@ -15,11 +16,10 @@ mol = psi4.geometry("""
 # the adcc ThreadPool
 psi4.set_num_threads(adcc.get_n_threads())
 psi4.core.be_quiet()
-psi4.set_options({'basis': "sto-3g",
-                  'scf_type': 'pk',
-                  'e_convergence': 1e-12,
-                  'd_convergence': 1e-8})
-scf_e, wfn = psi4.energy('SCF', return_wfn=True)
+psi4.set_options(
+    {"basis": "sto-3g", "scf_type": "pk", "e_convergence": 1e-12, "d_convergence": 1e-8}
+)
+scf_e, wfn = psi4.energy("SCF", return_wfn=True)
 
 # Run an adc2 calculation:
 state = adcc.adc2(wfn, n_singlets=5)

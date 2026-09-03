@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -22,22 +21,22 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
-from .misc import cached_property, cached_member_function
-from .Tensor import Tensor
-from .timings import Timer, timed_member_call
-from .OneParticleOperator import OneParticleOperator
-from .OneParticleDensity import OneParticleDensity
-from .NParticleOperator import OperatorSymmetry, NParticleOperator
-from .TwoParticleOperator import TwoParticleOperator
-from .functions import einsum
-from .MoSpaces import split_spaces
-
 import libadcc
 
+from .functions import einsum
+from .misc import cached_member_function, cached_property
+from .MoSpaces import split_spaces
+from .NParticleOperator import NParticleOperator, OperatorSymmetry
+from .OneParticleDensity import OneParticleDensity
+from .OneParticleOperator import OneParticleOperator
+from .Tensor import Tensor
+from .timings import Timer, timed_member_call
+from .TwoParticleOperator import TwoParticleOperator
 
-def transform_operator_ao2mo(tensor_bb: Tensor, tensor_ff: NParticleOperator,
-                             coefficients,
-                             conv_tol: float = 1e-14):
+
+def transform_operator_ao2mo(
+    tensor_bb: Tensor, tensor_ff: NParticleOperator, coefficients, conv_tol: float = 1e-14
+):
     """Take a block-diagonal tensor in the atomic orbital basis
     and transform it into the molecular orbital basis in the
     convention used by adcc.
@@ -69,23 +68,22 @@ def transform_operator_ao2mo(tensor_bb: Tensor, tensor_ff: NParticleOperator,
             cleft_2 = coefficients(blk[2:4] + "b")
             cright_1 = coefficients(blk[4:6] + "b")
             cright_2 = coefficients(blk[6:] + "b")
-            temp = einsum("ia,jb,abcd,kc,ld->ijkl",
-                          cleft_1, cleft_2, tensor_bb, cright_1, cright_2)
+            temp = einsum("ia,jb,abcd,kc,ld->ijkl", cleft_1, cleft_2, tensor_bb, cright_1, cright_2)
 
             # TODO: once the permutational symmetry is correct:
             # tensor_ff.set_block(blk, tensor_ff)
             tensor_ff[blk].set_from_ndarray(temp.to_ndarray(), conv_tol)
         else:
-            raise NotImplementedError(
-                "Only one- and two-particle operators are implemented."
-            )
+            raise NotImplementedError("Only one- and two-particle operators are implemented.")
 
 
-def transform_operator_ao2mo_spin_projected(tensor_bb: Tensor,
-                                            tensor_ff: NParticleOperator,
-                                            coeff_map: dict[str, Tensor],
-                                            spin_map: str = "aa",
-                                            conv_tol: float = 1e-14):
+def transform_operator_ao2mo_spin_projected(
+    tensor_bb: Tensor,
+    tensor_ff: NParticleOperator,
+    coeff_map: dict[str, Tensor],
+    spin_map: str = "aa",
+    conv_tol: float = 1e-14,
+):
     """Take a tensor in the atomic orbital basis
     and transform it into the molecular orbital basis in the
     convention used by adcc.
@@ -127,9 +125,9 @@ def transform_operator_ao2mo_spin_projected(tensor_bb: Tensor,
             raise NotImplementedError
 
 
-def replicate_ao_block(mospaces, tensor,
-                       symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN,
-                       block: str = "ab"):
+def replicate_ao_block(
+    mospaces, tensor, symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN, block: str = "ab"
+):
     """
     transform_operator_ao2mo requires the operator in the AO basis to be
     replicated in a block-diagonal fashion (e.g. for a OneParticleOperator:
@@ -154,18 +152,18 @@ def replicate_ao_block(mospaces, tensor,
             result.set_from_ndarray(np.block([
                 [tensor, zerobk],
                 [zerobk, tensor],
-            ]), 1e-14)
+            ]), 1e-14)  # fmt: skip
         else:
             result.set_from_ndarray(np.block([
                 tensor
-            ]), 1e-14)
+            ]), 1e-14)  # fmt: skip
     elif len(tensor.shape) == 4:
         sym = libadcc.make_symmetry_operator_basis(
             mospaces, tensor.shape[0], symmetry.to_str(), 2, block
         )
         result = Tensor(sym)
         if block == "ab":
-            tensor_ex = - tensor.transpose((0, 1, 3, 2))
+            tensor_ex = -tensor.transpose((0, 1, 3, 2))
             tensor_as = tensor + tensor_ex
             full_tensor = np.block([
                 [
@@ -188,12 +186,11 @@ def replicate_ao_block(mospaces, tensor,
                         [zerobk, tensor_as],
                     ],
                 ],
-            ])
+            ])  # fmt: skip
             result.set_from_ndarray(full_tensor, 1e-14)
         else:
             raise NotImplementedError(
-                f"Invalid block {block}. Only 'ab' supported for 2-particle "
-                "operators."
+                f"Invalid block {block}. Only 'ab' supported for 2-particle operators."
             )
     else:
         raise NotImplementedError("Only 2 and 4 dimensional tensors supported.")
@@ -201,8 +198,9 @@ def replicate_ao_block(mospaces, tensor,
 
 
 class OperatorIntegrals:
-    def __init__(self, provider, mospaces, coefficients, coefficients_alpha,
-                 coefficients_beta, conv_tol):
+    def __init__(
+        self, provider, mospaces, coefficients, coefficients_alpha, coefficients_beta, conv_tol
+    ):
         self._provider_ao = provider
         self.mospaces = mospaces
         self._coefficients = coefficients
@@ -229,13 +227,14 @@ class OperatorIntegrals:
     def overlap_ao(self) -> Tensor:
         """Return the overlap in the atomic orbital basis."""
         if "overlap" not in self.available:
-            raise NotImplementedError(f"overlap operator not implemented "
-                                      f"in {self.provider_ao.backend} backend.")
+            raise NotImplementedError(
+                f"overlap operator not implemented in {self.provider_ao.backend} backend."
+            )
 
-        ao_operator = getattr(self.provider_ao, "overlap")
-        ovlp_bb = replicate_ao_block(self.mospaces, ao_operator,
-                                     symmetry=OperatorSymmetry.HERMITIAN,
-                                     block="a")
+        ao_operator = self.provider_ao.overlap
+        ovlp_bb = replicate_ao_block(
+            self.mospaces, ao_operator, symmetry=OperatorSymmetry.HERMITIAN, block="a"
+        )
         return ovlp_bb
 
     @cached_property
@@ -259,10 +258,12 @@ class OperatorIntegrals:
         # once CVS 2p densities are implemented before removing the
         # exception.
         if "o2" in self.mospaces.subspaces:
-            raise NotImplementedError("The 2-particle part of the SSq operator is "
-                                      "only implemented for the occupied and "
-                                      "virtual spaces, i.e., "
-                                      "CVS is not supported yet.")
+            raise NotImplementedError(
+                "The 2-particle part of the SSq operator is "
+                "only implemented for the occupied and "
+                "virtual spaces, i.e., "
+                "CVS is not supported yet."
+            )
         # Intermediates
         # S^aa, S^ab and S^bb (spin projected overlap matrices)
         # NOTE: For UHF, the diagonal spin blocks of the overlap matrix
@@ -276,20 +277,14 @@ class OperatorIntegrals:
             coeff_map[sp + "_a"] = self._coefficients_alpha(sp + "b")
             coeff_map[sp + "_b"] = self._coefficients_beta(sp + "b")
 
-        S_aa = OneParticleOperator(self.mospaces,
-                                   symmetry=OperatorSymmetry.NOSYMMETRY)
-        transform_operator_ao2mo_spin_projected(ovlp_bb, S_aa, coeff_map, "aa",
-                                                self._conv_tol)
+        S_aa = OneParticleOperator(self.mospaces, symmetry=OperatorSymmetry.NOSYMMETRY)
+        transform_operator_ao2mo_spin_projected(ovlp_bb, S_aa, coeff_map, "aa", self._conv_tol)
 
-        S_ab = OneParticleOperator(self.mospaces,
-                                   symmetry=OperatorSymmetry.NOSYMMETRY)
-        transform_operator_ao2mo_spin_projected(ovlp_bb, S_ab, coeff_map, "ab",
-                                                self._conv_tol)
+        S_ab = OneParticleOperator(self.mospaces, symmetry=OperatorSymmetry.NOSYMMETRY)
+        transform_operator_ao2mo_spin_projected(ovlp_bb, S_ab, coeff_map, "ab", self._conv_tol)
 
-        S_bb = OneParticleOperator(self.mospaces,
-                                   symmetry=OperatorSymmetry.NOSYMMETRY)
-        transform_operator_ao2mo_spin_projected(ovlp_bb, S_bb, coeff_map, "bb",
-                                                self._conv_tol)
+        S_bb = OneParticleOperator(self.mospaces, symmetry=OperatorSymmetry.NOSYMMETRY)
+        transform_operator_ao2mo_spin_projected(ovlp_bb, S_bb, coeff_map, "bb", self._conv_tol)
 
         # additional intermediate (is diagonal)
         S_aa_minus_bb = S_aa - S_bb
@@ -310,9 +305,7 @@ class OperatorIntegrals:
             # D = S^aa - S^bb is diagonal in the MO basis
             # -> only consider when the spaces match
             if p == r and q == s:
-                res += 0.5 * einsum(
-                    "pr,qs->pqrs", S_aa_minus_bb[p + r], S_aa_minus_bb[q + s]
-                )
+                res += 0.5 * einsum("pr,qs->pqrs", S_aa_minus_bb[p + r], S_aa_minus_bb[q + s])
             # then deal with the terms with negative sign:
             # 2 S^ab terms and the single D term
             if p == q and r == s:
@@ -329,34 +322,31 @@ class OperatorIntegrals:
                 res += (
                     - einsum("sp,qr->pqrs", S_ab[s + p], S_ab[q + r])
                     - einsum("rq,ps->pqrs", S_ab[r + q], S_ab[p + s])
-                )
+                )  # fmt: skip
                 # conditionally subtract the D contribution
                 if p == s and q == r:
-                    res -= 0.5 * einsum(
-                        "ps,qr->pqrs", S_aa_minus_bb[p + s], S_aa_minus_bb[q + r]
-                    )
+                    res -= 0.5 * einsum("ps,qr->pqrs", S_aa_minus_bb[p + s], S_aa_minus_bb[q + r])
             op[block] = res
         return op
 
     def _import_dipole_like_operator(
-        self, integral: str,
-        symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
+        self, integral: str, symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
     ) -> tuple[OneParticleOperator, ...]:
         if integral not in self.available:
-            raise NotImplementedError(f"{integral.replace('_', ' ')} operator "
-                                      "not implemented "
-                                      f"in {self.provider_ao.backend} backend.")
+            raise NotImplementedError(
+                f"{integral.replace('_', ' ')} operator "
+                "not implemented "
+                f"in {self.provider_ao.backend} backend."
+            )
 
         ao_operator = getattr(self.provider_ao, integral)
         assert len(ao_operator) == 3  # has to have a x, y and z component
 
         dipoles = []
         for comp in range(3):  # [x, y, z]
-            dip_bb = replicate_ao_block(self.mospaces, ao_operator[comp],
-                                        symmetry=symmetry)
+            dip_bb = replicate_ao_block(self.mospaces, ao_operator[comp], symmetry=symmetry)
             dip_ff = OneParticleOperator(self.mospaces, symmetry=symmetry)
-            transform_operator_ao2mo(dip_bb, dip_ff, self._coefficients,
-                                     self._conv_tol)
+            transform_operator_ao2mo(dip_bb, dip_ff, self._coefficients, self._conv_tol)
             dipoles.append(dip_ff)
         return tuple(dipoles)
 
@@ -365,7 +355,8 @@ class OperatorIntegrals:
     def electric_dipole(self) -> tuple[OneParticleOperator, ...]:
         """Return the electric dipole integrals in the molecular orbital basis."""
         return self._import_dipole_like_operator(
-            "electric_dipole", symmetry=OperatorSymmetry.HERMITIAN)
+            "electric_dipole", symmetry=OperatorSymmetry.HERMITIAN
+        )
 
     @cached_property
     @timed_member_call("_import_timer")
@@ -375,11 +366,14 @@ class OperatorIntegrals:
         in the molecular orbital basis.
         """
         return self._import_dipole_like_operator(
-            "electric_dipole_velocity", symmetry=OperatorSymmetry.ANTIHERMITIAN)
+            "electric_dipole_velocity", symmetry=OperatorSymmetry.ANTIHERMITIAN
+        )
 
     def _import_g_origin_dep_dip_like_operator(
-            self, integral: str, gauge_origin="origin",
-            symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
+        self,
+        integral: str,
+        gauge_origin="origin",
+        symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN,
     ) -> tuple[OneParticleOperator, ...]:
         """
         Imports the operator and transforms it to the molecular orbital basis.
@@ -396,41 +390,42 @@ class OperatorIntegrals:
             If the imported operator is symmetric, by default True
         """
         if integral not in self.available:
-            raise NotImplementedError(f"{integral} operator is not implemented "
-                                      f"in {self.provider_ao.backend} backend.")
+            raise NotImplementedError(
+                f"{integral} operator is not implemented in {self.provider_ao.backend} backend."
+            )
 
         ao_operator = getattr(self.provider_ao, integral)(gauge_origin)
         assert len(ao_operator) == 3  # has to have a x, y and z component
 
         dipoles = []
         for comp in range(3):  # [x, y, z]
-            dip_bb = replicate_ao_block(self.mospaces, ao_operator[comp],
-                                        symmetry=symmetry)
+            dip_bb = replicate_ao_block(self.mospaces, ao_operator[comp], symmetry=symmetry)
             dip_ff = OneParticleOperator(self.mospaces, symmetry=symmetry)
-            transform_operator_ao2mo(dip_bb, dip_ff, self._coefficients,
-                                     self._conv_tol)
+            transform_operator_ao2mo(dip_bb, dip_ff, self._coefficients, self._conv_tol)
             dipoles.append(dip_ff)
         return tuple(dipoles)
 
     # separate the timings, so one can easily see in the timings how many different
     # gauge_origins were used throughout the calculation
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
-    def magnetic_dipole(self, gauge_origin="origin"
-                        ) -> tuple[OneParticleOperator, ...]:
+    def magnetic_dipole(self, gauge_origin="origin") -> tuple[OneParticleOperator, ...]:
         """
         Returns the magnetic dipole intergrals
         in the molecular orbital basis dependent on the selected gauge origin.
         The default gauge origin is set to (0.0, 0.0, 0.0) (= 'origin').
         """
         return self._import_g_origin_dep_dip_like_operator(
-            integral="magnetic_dipole", gauge_origin=gauge_origin,
-            symmetry=OperatorSymmetry.ANTIHERMITIAN
+            integral="magnetic_dipole",
+            gauge_origin=gauge_origin,
+            symmetry=OperatorSymmetry.ANTIHERMITIAN,
         )
 
     def _import_g_origin_dep_quad_like_operator(
-        self, integral: str, gauge_origin="origin",
-        symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
-    ) -> tuple[tuple[OneParticleOperator, ...], ...]:  # noqa E501
+        self,
+        integral: str,
+        gauge_origin="origin",
+        symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN,
+    ) -> tuple[tuple[OneParticleOperator, ...], ...]:
         """
         Imports the operator and transforms it to the molecular orbital basis.
 
@@ -446,79 +441,86 @@ class OperatorIntegrals:
             if the imported operator is symmetric, by default True
         """
         if integral not in self.available:
-            raise NotImplementedError(f"{integral} operator is not implemented "
-                                      f"in {self.provider_ao.backend} backend.")
+            raise NotImplementedError(
+                f"{integral} operator is not implemented in {self.provider_ao.backend} backend."
+            )
 
         ao_operator = getattr(self.provider_ao, integral)(gauge_origin)
         assert len(ao_operator) == 9
 
         flattened = []
         for comp in range(9):  # [xx, xy, xz, yx, yy, yz, zx, zy, zz]
-            quad_bb = replicate_ao_block(self.mospaces, ao_operator[comp],
-                                         symmetry=symmetry)
-            quad_ff = OneParticleOperator(
-                self.mospaces, symmetry=symmetry
-            )
-            transform_operator_ao2mo(quad_bb, quad_ff, self._coefficients,
-                                     self._conv_tol)
+            quad_bb = replicate_ao_block(self.mospaces, ao_operator[comp], symmetry=symmetry)
+            quad_ff = OneParticleOperator(self.mospaces, symmetry=symmetry)
+            transform_operator_ao2mo(quad_bb, quad_ff, self._coefficients, self._conv_tol)
             flattened.append(quad_ff)
         return (tuple(flattened[:3]), tuple(flattened[3:6]), tuple(flattened[6:]))
 
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
-    def electric_quadrupole(self, gauge_origin="origin"
-                            ) -> tuple[tuple[OneParticleOperator, ...], ...]:
+    def electric_quadrupole(
+        self, gauge_origin="origin"
+    ) -> tuple[tuple[OneParticleOperator, ...], ...]:
         """
         Returns the electric quadrupole integrals
         in the molecular orbital basis dependent on the selected gauge origin.
         The default gauge origin is set to (0.0, 0.0, 0.0) (= 'origin').
         """
         return self._import_g_origin_dep_quad_like_operator(
-            integral="electric_quadrupole", gauge_origin=gauge_origin,
-            symmetry=OperatorSymmetry.HERMITIAN
+            integral="electric_quadrupole",
+            gauge_origin=gauge_origin,
+            symmetry=OperatorSymmetry.HERMITIAN,
         )
 
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
-    def electric_quadrupole_traceless(self, gauge_origin="origin"
-                                      ) -> tuple[tuple[OneParticleOperator, ...], ...]:  # noqa E501
+    def electric_quadrupole_traceless(
+        self, gauge_origin="origin"
+    ) -> tuple[tuple[OneParticleOperator, ...], ...]:
         """
         Returns the traceless electric quadrupole integrals
         in the molecular orbital basis dependent on the selected gauge origin.
         The default gauge origin is set to (0.0, 0.0, 0.0) (= 'origin').
         """
         return self._import_g_origin_dep_quad_like_operator(
-            integral="electric_quadrupole_traceless", gauge_origin=gauge_origin,
-            symmetry=OperatorSymmetry.HERMITIAN
+            integral="electric_quadrupole_traceless",
+            gauge_origin=gauge_origin,
+            symmetry=OperatorSymmetry.HERMITIAN,
         )
 
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
-    def electric_quadrupole_velocity(self, gauge_origin="origin"
-                                     ) -> tuple[tuple[OneParticleOperator, ...], ...]:  # noqa E501
+    def electric_quadrupole_velocity(
+        self, gauge_origin="origin"
+    ) -> tuple[tuple[OneParticleOperator, ...], ...]:
         """
         Returns the electric quadrupole integrals in velocity gauge
         in the molecular orbital basis dependent on the selected gauge origin.
         The default gauge origin is set to (0.0, 0.0, 0.0) (= 'origin').
         """
         return self._import_g_origin_dep_quad_like_operator(
-            integral="electric_quadrupole_velocity", gauge_origin=gauge_origin,
-            symmetry=OperatorSymmetry.ANTIHERMITIAN
+            integral="electric_quadrupole_velocity",
+            gauge_origin=gauge_origin,
+            symmetry=OperatorSymmetry.ANTIHERMITIAN,
         )
 
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
-    def diamagnetic_magnetizability(self, gauge_origin="origin"
-                                    ) -> tuple[tuple[OneParticleOperator, ...], ...]:  # noqa E501
+    def diamagnetic_magnetizability(
+        self, gauge_origin="origin"
+    ) -> tuple[tuple[OneParticleOperator, ...], ...]:
         """
         Returns the diamagnetic magnetizability integrals
         in the molecular orbital basis dependent on the selected gauge origin.
         The default gauge origin is set to (0.0, 0.0, 0.0) (= 'origin').
         """
         return self._import_g_origin_dep_quad_like_operator(
-            integral="diamagnetic_magnetizability", gauge_origin=gauge_origin,
-            symmetry=OperatorSymmetry.HERMITIAN
+            integral="diamagnetic_magnetizability",
+            gauge_origin=gauge_origin,
+            symmetry=OperatorSymmetry.HERMITIAN,
         )
 
     def _import_density_dependent_operator(
-        self, operator: str, density_mo: OneParticleDensity,
-        symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
+        self,
+        operator: str,
+        density_mo: OneParticleDensity,
+        symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN,
     ) -> OneParticleDensity:
         """
         Import the density-dependent operator and transform it to the
@@ -536,62 +538,59 @@ class OperatorIntegrals:
         """
         dm_ao = sum(density_mo.to_ao_basis())
         v_ao = getattr(self.provider_ao, operator)(dm_ao)
-        v_bb = replicate_ao_block(
-            self.mospaces, v_ao, symmetry=symmetry
-        )
+        v_bb = replicate_ao_block(self.mospaces, v_ao, symmetry=symmetry)
         v_ff = OneParticleDensity(self.mospaces, symmetry=symmetry)
-        transform_operator_ao2mo(
-            v_bb, v_ff, self._coefficients, self._conv_tol
-        )
+        transform_operator_ao2mo(v_bb, v_ff, self._coefficients, self._conv_tol)
         return v_ff
 
-    def pe_induction_elec(self,
-                          density_mo: OneParticleDensity) -> OneParticleDensity:
+    def pe_induction_elec(self, density_mo: OneParticleDensity) -> OneParticleDensity:
         """
         Returns the (density-dependent) PE electronic induction operator in the
         molecular orbital basis.
         """
         if "pe_induction_elec" not in self.available:
-            raise NotImplementedError("PE electronic induction operator "
-                                      "not implemented "
-                                      f"in {self.provider_ao.backend} backend.")
+            raise NotImplementedError(
+                "PE electronic induction operator "
+                "not implemented "
+                f"in {self.provider_ao.backend} backend."
+            )
         return self._import_density_dependent_operator(
-            operator="pe_induction_elec", density_mo=density_mo,
-            symmetry=OperatorSymmetry.HERMITIAN
+            operator="pe_induction_elec", density_mo=density_mo, symmetry=OperatorSymmetry.HERMITIAN
         )
 
-    def pcm_potential_elec(self,
-                           density_mo: OneParticleDensity) -> OneParticleDensity:
+    def pcm_potential_elec(self, density_mo: OneParticleDensity) -> OneParticleDensity:
         """
         Returns the (density-dependent) electronic PCM potential operator in the
         molecular orbital basis
         """
         if "pcm_potential_elec" not in self.available:
-            raise NotImplementedError("Electronic PCM potential operator "
-                                      "not implemented "
-                                      f"in {self.provider_ao.backend} backend.")
+            raise NotImplementedError(
+                "Electronic PCM potential operator "
+                "not implemented "
+                f"in {self.provider_ao.backend} backend."
+            )
         return self._import_density_dependent_operator(
-            operator="pcm_potential_elec", density_mo=density_mo,
-            symmetry=OperatorSymmetry.HERMITIAN
+            operator="pcm_potential_elec",
+            density_mo=density_mo,
+            symmetry=OperatorSymmetry.HERMITIAN,
         )
 
     def _import_2p_like_operator(
-        self, integral: str,
-        symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
+        self, integral: str, symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
     ) -> TwoParticleOperator:
         if integral not in self.available:
-            raise NotImplementedError(f"{integral.replace('_', ' ')} operator "
-                                      "not implemented "
-                                      f"in {self.provider_ao.backend} backend.")
+            raise NotImplementedError(
+                f"{integral.replace('_', ' ')} operator "
+                "not implemented "
+                f"in {self.provider_ao.backend} backend."
+            )
 
         ao_operator = getattr(self.provider_ao, integral)
 
-        op_bbbb = replicate_ao_block(self.mospaces, ao_operator,
-                                     symmetry=symmetry)
+        op_bbbb = replicate_ao_block(self.mospaces, ao_operator, symmetry=symmetry)
 
         op_ffff = TwoParticleOperator(self.mospaces, symmetry=symmetry)
-        transform_operator_ao2mo(op_bbbb, op_ffff, self._coefficients,
-                                 self._conv_tol)
+        transform_operator_ao2mo(op_bbbb, op_ffff, self._coefficients, self._conv_tol)
         return op_ffff
 
     @property

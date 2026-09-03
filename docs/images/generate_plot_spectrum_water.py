@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
-from pyscf import gto, scf
 from matplotlib import pyplot as plt
+from pyscf import gto, scf
 
 import adcc
 
@@ -12,7 +12,7 @@ mol = gto.M(
          'H 1.693194615993441 0 -0.599043184453037',
     basis='cc-pvtz',
     unit="Bohr"
-)
+)  # fmt: skip
 scfres = scf.RHF(mol)
 scfres.conv_tol = 1e-13
 scfres.kernel()

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -22,6 +21,7 @@
 ## ---------------------------------------------------------------------
 from collections.abc import Sequence
 from typing import overload
+
 import numpy as np
 
 import libadcc
@@ -96,14 +96,12 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
         return self
 
     @overload
-    def dot(self, other: "AmplitudeVector") -> float:
-        ...
+    def dot(self, other: "AmplitudeVector") -> float: ...
 
     @overload
     def dot(
         self, other: Sequence["AmplitudeVector"]
-    ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
-        ...
+    ) -> np.ndarray[tuple[int], np.dtype[np.float64]]: ...
 
     def dot(
         self, other: "Sequence[AmplitudeVector] | AmplitudeVector"
@@ -125,47 +123,38 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
             return ret
         return sum(
             (self[b].dot(other[b]) for b in sorted(self.keys() & other.keys())),
-            0.0  # so we always return a float even when the intersection is empty
+            0.0,  # so we always return a float even when the intersection is empty
         )
 
     @overload
-    def __matmul__(self, other: "AmplitudeVector") -> float:
-        ...
+    def __matmul__(self, other: "AmplitudeVector") -> float: ...
 
     @overload
     def __matmul__(
         self, other: Sequence["AmplitudeVector"]
-    ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
-        ...
+    ) -> np.ndarray[tuple[int], np.dtype[np.float64]]: ...
 
     def __matmul__(
         self, other: "Sequence[AmplitudeVector] | AmplitudeVector"
     ) -> np.ndarray[tuple[int], np.dtype[np.float64]] | float:
-        if isinstance(other, AmplitudeVector):
-            return self.dot(other)
-        elif isinstance(other, Sequence) and all(
-            isinstance(t, AmplitudeVector) for t in other
+        if (
+            isinstance(other, AmplitudeVector)
+            or isinstance(other, Sequence)
+            and all(isinstance(t, AmplitudeVector) for t in other)
         ):
             return self.dot(other)
         return NotImplemented
 
-    def __mul__(
-        self, other: "AmplitudeVector | libadcc.Tensor | float"
-    ) -> "AmplitudeVector":
+    def __mul__(self, other: "AmplitudeVector | libadcc.Tensor | float") -> "AmplitudeVector":
         # missing blocks can be treated as multiplying by zero
         # and omited in the result Vector
         if isinstance(other, AmplitudeVector):
-            ret = {
-                block: self[block].__mul__(other[block])
-                for block in self.keys() & other.keys()
-            }
+            ret = {block: self[block].__mul__(other[block]) for block in self.keys() & other.keys()}
         else:
             ret = {block: self[block].__mul__(other) for block in self.keys()}
         return AmplitudeVector(**ret)
 
-    def __rmul__(
-        self, other: "AmplitudeVector | libadcc.Tensor | float"
-    ) -> "AmplitudeVector":
+    def __rmul__(self, other: "AmplitudeVector | libadcc.Tensor | float") -> "AmplitudeVector":
         if isinstance(other, AmplitudeVector):
             return other.__mul__(self)
         # This path is not reachable currently, because the libadcc backend
@@ -177,7 +166,7 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
             ret = {block: tensor.__rmul__(other) for block, tensor in self.items()}
         return AmplitudeVector(**ret)
 
-    def __imul__(
+    def __imul__(  # noqa: PYI034 remove once we drop 3.10
         self, other: "AmplitudeVector | libadcc.Tensor | float"
     ) -> "AmplitudeVector":
         # tensor operations in the backend are currently not really in-place
@@ -196,9 +185,7 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
                 self[block] = tensor.__imul__(other)
         return self
 
-    def __add__(
-        self, other: "AmplitudeVector | libadcc.Tensor | float"
-    ) -> "AmplitudeVector":
+    def __add__(self, other: "AmplitudeVector | libadcc.Tensor | float") -> "AmplitudeVector":
         if isinstance(other, AmplitudeVector):
             ret = {}
             for block in self.keys() | other.keys():
@@ -212,9 +199,7 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
             ret = {block: tensor.__add__(other) for block, tensor in self.items()}
         return AmplitudeVector(**ret)
 
-    def __radd__(
-        self, other: "AmplitudeVector | libadcc.Tensor | float"
-    ) -> "AmplitudeVector":
+    def __radd__(self, other: "AmplitudeVector | libadcc.Tensor | float") -> "AmplitudeVector":
         if isinstance(other, AmplitudeVector):
             return other.__add__(self)
         # This path is not reachable currently, because the libadcc backend
@@ -226,7 +211,7 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
             ret = {block: tensor.__radd__(other) for block, tensor in self.items()}
         return AmplitudeVector(**ret)
 
-    def __iadd__(
+    def __iadd__(  # noqa: PYI034 remove once we drop 3.10
         self, other: "AmplitudeVector | libadcc.Tensor"
     ) -> "AmplitudeVector":
         # not really in-place in the backend!
@@ -243,9 +228,7 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
                 self[block] = tensor.__iadd__(other)
         return self
 
-    def __sub__(
-        self, other: "AmplitudeVector | libadcc.Tensor | float"
-    ) -> "AmplitudeVector":
+    def __sub__(self, other: "AmplitudeVector | libadcc.Tensor | float") -> "AmplitudeVector":
         if isinstance(other, AmplitudeVector):
             ret = {}
             for block in self.keys() | other.keys():
@@ -259,9 +242,7 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
             ret = {block: self[block].__sub__(other) for block in self.keys()}
         return AmplitudeVector(**ret)
 
-    def __rsub__(
-        self, other: "AmplitudeVector | libadcc.Tensor | float"
-    ) -> "AmplitudeVector":
+    def __rsub__(self, other: "AmplitudeVector | libadcc.Tensor | float") -> "AmplitudeVector":
         if isinstance(other, AmplitudeVector):
             return other.__sub__(self)
         # This path is not reachable currently, because the libadcc backend
@@ -273,7 +254,7 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
             ret = {block: tensor.__rsub__(other) for block, tensor in self.items()}
         return AmplitudeVector(**ret)
 
-    def __isub__(
+    def __isub__(  # noqa: PYI034 remove once we drop 3.10
         self, other: "AmplitudeVector | libadcc.Tensor"
     ) -> "AmplitudeVector":
         # not really in-place in the backend!
@@ -290,9 +271,7 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
                 self[block] = tensor.__isub__(other)
         return self
 
-    def __truediv__(
-        self, other: "AmplitudeVector | libadcc.Tensor | float"
-    ) -> "AmplitudeVector":
+    def __truediv__(self, other: "AmplitudeVector | libadcc.Tensor | float") -> "AmplitudeVector":
         # here all blocks of other have to be in self present, too!
         # block missing in other: x / 0 -> division by zero
         # block missing in self: 0 / x = 0 -> fine but not in result
@@ -303,15 +282,12 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
                     f"zero blocks. Self contains {self.blocks}. Other contains "
                     f"{other.blocks}."
                 )
-            ret = {
-                block: tensor.__truediv__(other[block])
-                for block, tensor in self.items()
-            }
+            ret = {block: tensor.__truediv__(other[block]) for block, tensor in self.items()}
         else:
             ret = {block: self[block].__truediv__(other) for block in self.keys()}
         return AmplitudeVector(**ret)
 
-    def __itruediv__(
+    def __itruediv__(  # noqa: PYI034  # remove once we drop 3.10
         self, other: "AmplitudeVector | libadcc.Tensor | float"
     ) -> "AmplitudeVector":
         # not really in-place in the backend!

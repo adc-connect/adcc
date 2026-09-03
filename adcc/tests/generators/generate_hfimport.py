@@ -1,14 +1,15 @@
-from adcc.tests.testdata_cache import testdata_cache
-from adcc.tests import testcases
+#!/usr/bin/env python3
+
+import itertools
+from pathlib import Path
+
+import h5py
+import numpy as np
 
 import adcc
 from adcc.hdf5io import emplace_dict
-
-from pathlib import Path
-import numpy as np
-import h5py
-import itertools
-
+from adcc.tests import testcases
+from adcc.tests.testdata_cache import testdata_cache
 
 _testdata_dirname = "data"
 
@@ -39,12 +40,10 @@ def collect_data(refstate: adcc.ReferenceState) -> dict:
     ret = {"subspaces": np.array(subspaces, dtype="S")}  # dtype S: char bytes
     # and the orbital energies + orbital coefficients
     for space in subspaces:
-        ret[f"orbital_energies/{space}"] = (
-            refstate.orbital_energies(space).to_ndarray()
-        )
-        ret[f"orbital_coefficients/{space}b"] = (
-            refstate.orbital_coefficients(f"{space}b").to_ndarray()
-        )
+        ret[f"orbital_energies/{space}"] = refstate.orbital_energies(space).to_ndarray()
+        ret[f"orbital_coefficients/{space}b"] = refstate.orbital_coefficients(
+            f"{space}b"
+        ).to_ndarray()
     # dump the fock matrix
     canonical_pairs = []
     for space1, space2 in itertools.combinations_with_replacement(subspaces, 2):

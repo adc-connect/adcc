@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
-import adcc
-
 from import_data import import_data
+
+import adcc
 
 # Gather preliminary data
 data = import_data()

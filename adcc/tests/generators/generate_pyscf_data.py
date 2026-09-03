@@ -1,21 +1,29 @@
-import adcc
+#!/usr/bin/env python3
+
+import json
+from pathlib import Path
+
 import pyscf
 from pyscf import gto, scf, tdscf
 from pyscf.solvent import ddCOSMO
 
+import adcc
 from adcc.tests import testcases
-
-from pathlib import Path
-import json
-
 
 _testdata_dirname = "data"
 
 
-def run_pyscf_tdscf(xyz: str, basis: str, unit: str = "Bohr", charge: int = 0,
-                    multiplicity: int = 1, conv_tol: float = 1e-12,
-                    conv_tol_grad: float = 1e-10, max_iter: int = 150,
-                    pcm_options: dict | None = None):
+def run_pyscf_tdscf(
+    xyz: str,
+    basis: str,
+    unit: str = "Bohr",
+    charge: int = 0,
+    multiplicity: int = 1,
+    conv_tol: float = 1e-12,
+    conv_tol_grad: float = 1e-10,
+    max_iter: int = 150,
+    pcm_options: dict | None = None,
+):
     """
     Performs a pyscf CIS calculation. Returns the SCF and the CIS objects.
     """
@@ -61,12 +69,20 @@ def run_adcc_ptlr(wfn) -> adcc.ExcitedStates:
     # only converges with a small subspace, such that the subspace is collapsed
     # "at the right moment"... If the subspsace is too large, the davidson
     # will converge to zero eigenvalues. 30 was too large already...
-    return adcc.run_adc(wfn, method="adc1", n_singlets=5, max_subspace=25,
-                        max_iter=250, conv_tol=1e-7, environment="ptlr")
+    return adcc.run_adc(
+        wfn,
+        method="adc1",
+        n_singlets=5,
+        max_subspace=25,
+        max_iter=250,
+        conv_tol=1e-7,
+        environment="ptlr",
+    )
 
 
-def dump_results(test_case: testcases.TestCase, pcm_options: dict | None = None
-                 ) -> tuple[str, dict]:
+def dump_results(
+    test_case: testcases.TestCase, pcm_options: dict | None = None
+) -> tuple[str, dict]:
     name = test_case.file_name
     if pcm_options is not None:
         name += "_pcm"
@@ -75,23 +91,25 @@ def dump_results(test_case: testcases.TestCase, pcm_options: dict | None = None
     kwargs = test_case.asdict("xyz", "basis", "unit", "charge", "multiplicity")
     hf, cis = run_pyscf_tdscf(**kwargs, pcm_options=pcm_options)
 
-    ret = {"basis": test_case.basis,
-           "method": "adc1",
-           "molecule": test_case.name,
-           "energy_scf": float(hf.e_tot)}  # type: ignore
+    ret = {
+        "basis": test_case.basis,
+        "method": "adc1",
+        "molecule": test_case.name,
+        "energy_scf": float(hf.e_tot),
+    }  # type: ignore
     # dump does not like numpy types
     ret["lr_excitation_energy"] = [
-        float(round(s, 9)) for s in cis.e  # type: ignore
+        float(round(s, 9))
+        for s in cis.e  # type: ignore
     ]
     ret["lr_osc_strength"] = [
-        float(round(s, 5)) for s in cis.oscillator_strength()  # type: ignore
+        float(round(s, 5))
+        for s in cis.oscillator_strength()  # type: ignore
     ]
 
     if pcm_options:
         state = run_adcc_ptlr(hf)
-        ret["ptlr_adcc_excitation_energy"] = [
-            round(float(e), 9) for e in state.excitation_energy
-        ]
+        ret["ptlr_adcc_excitation_energy"] = [round(float(e), 9) for e in state.excitation_energy]
     return name, ret
 
 
@@ -107,7 +125,8 @@ def main():
     pyscf_results["pyscf_version"] = pyscf.__version__
 
     dump_file = Path(__file__).parent.parent / _testdata_dirname / "pyscf_data.json"
-    json.dump(pyscf_results, open(dump_file, "w"), indent=2)
+    with open(dump_file, "w") as f:
+        json.dump(pyscf_results, f, indent=2)
 
 
 if __name__ == "__main__":

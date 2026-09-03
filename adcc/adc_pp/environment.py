@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -21,8 +20,9 @@
 ##
 ## ---------------------------------------------------------------------
 from adcc import AmplitudeVector
-from adcc.OneParticleDensity import OneParticleDensity
 from adcc.NParticleOperator import OperatorSymmetry
+from adcc.OneParticleDensity import OneParticleDensity
+
 from .matrix import AdcBlock
 
 
@@ -42,6 +42,7 @@ def block_ph_ph_0_pe(hf, mp, intermediates):
         tdm.vo = ampl.ph.transpose()
         vpe = op.pe_induction_elec(tdm)
         return AmplitudeVector(ph=vpe.ov)
+
     return AdcBlock(apply, 0)
 
 
@@ -61,4 +62,5 @@ def block_ph_ph_0_pcm(hf, mp, intermediates):
         tdm.vo = ampl.ph.transpose()
         vpcm = op.pcm_potential_elec(tdm)
         return AmplitudeVector(ph=vpcm.ov)
+
     return AdcBlock(apply, 0)

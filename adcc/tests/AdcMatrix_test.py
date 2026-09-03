@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -20,23 +19,19 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
-import pytest
 import numpy as np
+import pytest
 from numpy.testing import assert_allclose
 
-from adcc.AdcMatrix import (
-    AdcExtraTerm, AdcMatrixProjected, AdcMatrixShifted, AdcMatrixlike
-)
-from adcc.AdcMethod import AdcMethod, IsrMethod, AdcType
-from adcc.Intermediates import Intermediates
+import adcc
 from adcc.adc_pp.matrix import AdcBlock
+from adcc.AdcMatrix import AdcExtraTerm, AdcMatrixlike, AdcMatrixProjected, AdcMatrixShifted
+from adcc.AdcMethod import AdcMethod, AdcType, IsrMethod
+from adcc.Intermediates import Intermediates
 
-from .projection_test import (
-    assert_nonzero_blocks, construct_nonzero_blocks, assert_equal_symmetry
-)
-from .testdata_cache import testdata_cache
 from . import testcases
+from .projection_test import assert_equal_symmetry, assert_nonzero_blocks, construct_nonzero_blocks
+from .testdata_cache import testdata_cache
 
 
 class TestBlockOrders:
@@ -46,26 +41,31 @@ class TestBlockOrders:
             {"ph_ph": 1},  # adc1
             {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 0},  # adc2
             {"ph_ph": 3, "ph_pphh": 2, "pphh_ph": 2, "pphh_pphh": 1},  # adc3
-            {"ph_ph": 4, "ph_pphh": 3, "pphh_ph": 3, "pphh_pphh": 2,
-             "ph_ppphhh": 2, "ppphhh_ph": 2, "pphh_ppphhh": 1,
-             "ppphhh_pphh": 1, "ppphhh_ppphhh": 0},  # adc4
+            {
+                "ph_ph": 4,
+                "ph_pphh": 3,
+                "pphh_ph": 3,
+                "pphh_pphh": 2,
+                "ph_ppphhh": 2,
+                "ppphhh_ph": 2,
+                "pphh_ppphhh": 1,
+                "ppphhh_pphh": 1,
+                "ppphhh_ppphhh": 0,
+            },  # adc4
         )
         # verify the default methods
-        for order in range(0, 5):
+        for order in range(5):
             block_orders = AdcMatrixlike._default_block_orders(
                 method=AdcMethod(f"adc{order}"), bandwidth=0
             )
             if order != 4:
                 cvs_block_orders = AdcMatrixlike._default_block_orders(
-                    method=AdcMethod(f"cvs-adc{order}"),
-                    bandwidth=0
+                    method=AdcMethod(f"cvs-adc{order}"), bandwidth=0
                 )
                 assert cvs_block_orders == block_orders
             assert ref[order] == block_orders
         # verify the special methods: adc2x
-        block_orders = AdcMatrixlike._default_block_orders(
-            method=AdcMethod("adc2x"), bandwidth=0
-        )
+        block_orders = AdcMatrixlike._default_block_orders(method=AdcMethod("adc2x"), bandwidth=0)
         cvs_block_orders = AdcMatrixlike._default_block_orders(
             method=AdcMethod("cvs-adc2x"), bandwidth=0
         )
@@ -76,52 +76,49 @@ class TestBlockOrders:
         ref = (
             {"ph_ph": 0},  # ISR(0)
             {"ph_ph": 1, "ph_pphh": 0, "pphh_ph": 0, "pphh_pphh": None},  # ISR(1)
-            {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 0}  # ISR(2)
+            {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 0},  # ISR(2)
         )
-        for order in range(0, 3):
+        for order in range(3):
             block_orders = AdcMatrixlike._default_block_orders(
                 method=IsrMethod(f"isr{order}"), bandwidth=1
             )
             cvs_block_orders = AdcMatrixlike._default_block_orders(
-                method=IsrMethod(f"cvs-isr{order}"),
-                bandwidth=1
+                method=IsrMethod(f"cvs-isr{order}"), bandwidth=1
             )
             assert ref[order] == block_orders
             assert cvs_block_orders == block_orders
         # also verify ISR matrices: 2-particle
         ref = (
-            {"ph_ph": 0, "ph_pphh": None,
-             "pphh_ph": None, "pphh_pphh": None},  # ISR(0)
+            {"ph_ph": 0, "ph_pphh": None, "pphh_ph": None, "pphh_pphh": None},  # ISR(0)
             {"ph_ph": 1, "ph_pphh": 0, "pphh_ph": 0, "pphh_pphh": None},  # ISR(1)
-            {"ph_ph": 2, "ph_pphh": 1, "ph_ppphhh": 0,
-             "pphh_ph": 1, "pphh_pphh": 0, "pphh_ppphhh": None,
-             "ppphhh_ph": 0, "ppphhh_pphh": None, "ppphhh_ppphhh": None}  # ISR(2)
+            {
+                "ph_ph": 2,
+                "ph_pphh": 1,
+                "ph_ppphhh": 0,
+                "pphh_ph": 1,
+                "pphh_pphh": 0,
+                "pphh_ppphhh": None,
+                "ppphhh_ph": 0,
+                "ppphhh_pphh": None,
+                "ppphhh_ppphhh": None,
+            },  # ISR(2)
         )
-        for order in range(0, 3):
+        for order in range(3):
             block_orders = AdcMatrixlike._default_block_orders(
                 method=IsrMethod(f"isr{order}"), bandwidth=2
             )
             cvs_block_orders = AdcMatrixlike._default_block_orders(
-                method=IsrMethod(f"cvs-isr{order}"),
-                bandwidth=2
+                method=IsrMethod(f"cvs-isr{order}"), bandwidth=2
             )
             assert ref[order] == block_orders
             assert cvs_block_orders == block_orders
         # isr(1)-s
-        block_orders = AdcMatrixlike._default_block_orders(
-            method=IsrMethod("isr1s"), bandwidth=1
-        )
-        ref_isr1s = {
-            "ph_ph": 1, "ph_pphh": None, "pphh_ph": None, "pphh_pphh": None
-        }
+        block_orders = AdcMatrixlike._default_block_orders(method=IsrMethod("isr1s"), bandwidth=1)
+        ref_isr1s = {"ph_ph": 1, "ph_pphh": None, "pphh_ph": None, "pphh_pphh": None}
         assert block_orders == ref_isr1s
         # isr(2)-d
-        block_orders = AdcMatrixlike._default_block_orders(
-            method=IsrMethod("isr2d"), bandwidth=2
-        )
-        ref_isr2d = {
-            "ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 0
-        }
+        block_orders = AdcMatrixlike._default_block_orders(method=IsrMethod("isr2d"), bandwidth=2)
+        ref_isr2d = {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 0}
         assert block_orders == ref_isr2d
 
     def test_validate_block_orders(self):
@@ -130,9 +127,17 @@ class TestBlockOrders:
             {"ph_ph": 1, "ph_pphh": None, "ppphhh_ppphhh": None},  # adc1
             {"ph_ph": 2, "ph_pphh": 1, "pphh_ph": 1, "pphh_pphh": 0},  # adc2
             {"ph_ph": 3, "ph_pphh": 2, "pphh_ph": 2, "pphh_pphh": 1},  # adc3
-            {"ph_ph": 4, "ph_pphh": 3, "pphh_ph": 3, "pphh_pphh": 2,
-             "ph_ppphhh": 2, "ppphhh_ph": 2, "pphh_ppphhh": 1,
-             "ppphhh_pphh": 1, "ppphhh_ppphhh": 0},  # adc4
+            {
+                "ph_ph": 4,
+                "ph_pphh": 3,
+                "pphh_ph": 3,
+                "pphh_pphh": 2,
+                "ph_ppphhh": 2,
+                "ppphhh_ph": 2,
+                "pphh_ppphhh": 1,
+                "ppphhh_pphh": 1,
+                "ppphhh_ppphhh": 0,
+            },  # adc4
         )
         for block_orders in valid_block_orders:
             AdcMatrixlike._validate_block_orders(block_orders, AdcMethod("adc0"))
@@ -145,31 +150,17 @@ class TestBlockOrders:
         )
         for block_orders in invalid_block_orders:
             with pytest.raises(ValueError):
-                AdcMatrixlike._validate_block_orders(
-                    block_orders, AdcMethod("adc0")
-                )
+                AdcMatrixlike._validate_block_orders(block_orders, AdcMethod("adc0"))
 
     def test_validate_space(self):
         # some valid PP-ADC methods
-        assert AdcMatrixlike._is_valid_space(
-            "ph", AdcMethod("adc0")
-        )
-        assert AdcMatrixlike._is_valid_space(
-            "pphh", AdcMethod("adc0")
-        )
-        assert AdcMatrixlike._is_valid_space(
-            "pppphhhh", AdcMethod("adc0")
-        )
+        assert AdcMatrixlike._is_valid_space("ph", AdcMethod("adc0"))
+        assert AdcMatrixlike._is_valid_space("pphh", AdcMethod("adc0"))
+        assert AdcMatrixlike._is_valid_space("pppphhhh", AdcMethod("adc0"))
         # some invalid method strings
-        assert not AdcMatrixlike._is_valid_space(
-            "p", AdcMethod("adc0")
-        )
-        assert not AdcMatrixlike._is_valid_space(
-            "hp", AdcMethod("adc0")
-        )
-        assert not AdcMatrixlike._is_valid_space(
-            "phh", AdcMethod("adc0")
-        )
+        assert not AdcMatrixlike._is_valid_space("p", AdcMethod("adc0"))
+        assert not AdcMatrixlike._is_valid_space("hp", AdcMethod("adc0"))
+        assert not AdcMatrixlike._is_valid_space("phh", AdcMethod("adc0"))
 
 
 h2o_sto3g = testcases.get_by_filename("h2o_sto3g").pop()
@@ -183,13 +174,10 @@ methods = ["adc0", "adc1", "adc2", "adc2x", "adc3", "adc4"]
 @pytest.mark.parametrize("system", ["h2o_sto3g", "cn_sto3g"])
 class TestAdcMatrix:
     def load_matrix_data(self, system: str, case: str, method: str) -> dict:
-        refdata = testdata_cache.adcc_data(
-            system=system, method=method, case=case
-        )
+        refdata = testdata_cache.adcc_data(system=system, method=method, case=case)
         return refdata["matrix"]
 
-    def construct_matrix(self, system: str, case: str,
-                         method: str) -> adcc.AdcMatrix:
+    def construct_matrix(self, system: str, case: str, method: str) -> adcc.AdcMatrix:
         # build a matrix from the cached reference state
         refstate = testdata_cache.refstate(system, case)
         if "cvs" in case and "cvs" not in method:
@@ -198,9 +186,7 @@ class TestAdcMatrix:
 
     def construct_trial_vec(self, system: str, case: str, method: str, kind: str):
         matdata = self.load_matrix_data(system, case, method)
-        states = testdata_cache.adcc_states(
-            system, method=method, kind=kind, case=case
-        )
+        states = testdata_cache.adcc_states(system, method=method, kind=kind, case=case)
         blocks = states.matrix.axis_blocks
         out = states.excitation_vector[0].copy()
         out[blocks[0]].set_from_ndarray(matdata["random_singles"])
@@ -218,18 +204,19 @@ class TestAdcMatrix:
         blocks = matrix.axis_blocks
 
         diag_s = matrix.diagonal()[blocks[0]]
-        assert_allclose(matdata["diagonal_singles"], diag_s.to_ndarray(),
-                        rtol=1e-10, atol=1e-12)
+        assert_allclose(matdata["diagonal_singles"], diag_s.to_ndarray(), rtol=1e-10, atol=1e-12)
 
         if len(blocks) > 1:
             diag_d = matrix.diagonal()[blocks[1]]
-            assert_allclose(matdata["diagonal_doubles"], diag_d.to_ndarray(),
-                            rtol=1e-10, atol=1e-12)
+            assert_allclose(
+                matdata["diagonal_doubles"], diag_d.to_ndarray(), rtol=1e-10, atol=1e-12
+            )
 
         if len(blocks) > 2:
             diag_t = matrix.diagonal()[blocks[2]]
-            assert_allclose(matdata["diagonal_triples"], diag_t.to_ndarray(),
-                            rtol=1e-10, atol=1e-12)
+            assert_allclose(
+                matdata["diagonal_triples"], diag_t.to_ndarray(), rtol=1e-10, atol=1e-12
+            )
 
     def test_matvec(self, system: str, case: str, method: str):
         if "cvs" in case and method == "adc4":
@@ -247,14 +234,15 @@ class TestAdcMatrix:
             kind = "any"  # we don't do the test for spin flip
         trial_vec = self.construct_trial_vec(system, case, method, kind)
         result = matrix @ trial_vec
-        assert_allclose(matdata["matvec_singles"], result.ph.to_ndarray(),
-                        rtol=1e-10, atol=1e-12)
+        assert_allclose(matdata["matvec_singles"], result.ph.to_ndarray(), rtol=1e-10, atol=1e-12)
         if "matvec_doubles" in matdata:
-            assert_allclose(matdata["matvec_doubles"], result.pphh.to_ndarray(),
-                            rtol=1e-10, atol=1e-12)
+            assert_allclose(
+                matdata["matvec_doubles"], result.pphh.to_ndarray(), rtol=1e-10, atol=1e-12
+            )
         if "matvec_triples" in matdata:
-            assert_allclose(matdata["matvec_triples"], result.ppphhh.to_ndarray(),
-                            rtol=1e-10, atol=1e-12)
+            assert_allclose(
+                matdata["matvec_triples"], result.ppphhh.to_ndarray(), rtol=1e-10, atol=1e-12
+            )
 
     def test_compute_block(self, system: str, case: str, method: str):
         if "cvs" in case and method == "adc4":
@@ -270,18 +258,13 @@ class TestAdcMatrix:
                 raise ValueError(f"Unknwon adc type {matrix.method.adc_type}.")
         else:
             kind = "any"  # we don't do the test for spin flip
-        trial_vec = self.construct_trial_vec(
-            system, case=case, method=method, kind=kind
-        )
+        trial_vec = self.construct_trial_vec(system, case=case, method=method, kind=kind)
         blocks = matrix.axis_blocks
-        for b1, i1 in [("s", 0), ("d", 1), ("t", 2)][:len(blocks)]:
-            for b2, i2 in [("s", 0), ("d", 1), ("t", 2)][:len(blocks)]:
-                res = matrix.block_apply(
-                    f"{blocks[i1]}_{blocks[i2]}", trial_vec[blocks[i2]]
-                )
+        for b1, i1 in [("s", 0), ("d", 1), ("t", 2)][: len(blocks)]:
+            for b2, i2 in [("s", 0), ("d", 1), ("t", 2)][: len(blocks)]:
+                res = matrix.block_apply(f"{blocks[i1]}_{blocks[i2]}", trial_vec[blocks[i2]])
                 assert_allclose(
-                    matdata[f"result_{b1}{b2}"], res.to_ndarray(), rtol=1e-10,
-                    atol=1e-12
+                    matdata[f"result_{b1}{b2}"], res.to_ndarray(), rtol=1e-10, atol=1e-12
                 )
 
 
@@ -303,9 +286,7 @@ class TestAdcMatrixInterface:
         # check that the blocks are correct
         blocks = matrix.axis_blocks
         if matrix.method.adc_type is AdcType.PP:
-            assert blocks == (
-                ["ph", "pphh", "ppphhh"][:matrix.method.level.to_int() // 2 + 1]
-            )
+            assert blocks == (["ph", "pphh", "ppphhh"][: matrix.method.level.to_int() // 2 + 1])
         else:
             raise NotImplementedError(f"Unknown adc type {matrix.method.adc_type}.")
         assert sorted(matrix.axis_spaces.keys(), key=len) == blocks
@@ -408,11 +389,9 @@ class TestAdcMatrixInterface:
         matrix = adcc.AdcMatrix("adc2", ground_state)
 
         with pytest.raises(TypeError):
-            adcc.AdcMatrix("adc2", ground_state,
-                           diagonal_precomputed=42)
+            adcc.AdcMatrix("adc2", ground_state, diagonal_precomputed=42)
         with pytest.raises(ValueError):
-            adcc.AdcMatrix("adc2", ground_state,
-                           diagonal_precomputed=matrix.diagonal() + 42)
+            adcc.AdcMatrix("adc2", ground_state, diagonal_precomputed=matrix.diagonal() + 42)
         with pytest.raises(TypeError):
             AdcExtraTerm(matrix, "fail")
         with pytest.raises(TypeError):
@@ -429,17 +408,18 @@ class TestAdcMatrixInterface:
         def __shift_ph(hf, mp, intermediates):
             def apply(invec):
                 return adcc.AmplitudeVector(ph=shift * invec.ph)
+
             diag = adcc.AmplitudeVector(ph=shift * ones.ph)
             return AdcBlock(apply, diag)
 
         def __shift_pphh(hf, mp, intermediates):
             def apply(invec):
                 return adcc.AmplitudeVector(pphh=shift * invec.pphh)
+
             diag = adcc.AmplitudeVector(pphh=shift * ones.pphh)
             return AdcBlock(apply, diag)
-        extra = AdcExtraTerm(
-            matrix, {'ph_ph': __shift_ph, 'pphh_pphh': __shift_pphh}
-        )
+
+        extra = AdcExtraTerm(matrix, {"ph_ph": __shift_ph, "pphh_pphh": __shift_pphh})
         # cannot add to 'pphh_pphh' in ADC(1) matrix
         with pytest.raises(ValueError):
             matrix_adc1 += extra
@@ -448,14 +428,12 @@ class TestAdcMatrixInterface:
         shifted_3 = extra + matrix
         for manual in [shifted_2, shifted_3]:
             assert_allclose(
-                shifted.diagonal().ph.to_ndarray(),
-                manual.diagonal().ph.to_ndarray(),
-                atol=1e-12
+                shifted.diagonal().ph.to_ndarray(), manual.diagonal().ph.to_ndarray(), atol=1e-12
             )
             assert_allclose(
                 shifted.diagonal().pphh.to_ndarray(),
                 manual.diagonal().pphh.to_ndarray(),
-                atol=1e-12
+                atol=1e-12,
             )
             vec = adcc.guess_zero(matrix)
             vec.set_random()
@@ -517,9 +495,9 @@ class TestAdcMatrixProjected:
         spaces, nonzero_blocks = out
 
         excitation_blocks = spaces["ph"] + spaces["pphh"]
-        projected = AdcMatrixProjected(matrix, excitation_blocks,
-                                       core_orbitals=n_core,
-                                       outer_virtuals=n_virt)
+        projected = AdcMatrixProjected(
+            matrix, excitation_blocks, core_orbitals=n_core, outer_virtuals=n_virt
+        )
         return matrix, projected, nonzero_blocks
 
     def test_diagonal(self, system: str):
@@ -542,8 +520,7 @@ class TestAdcMatrixProjected:
         spin_block_symmetrisation = "none"
         if "h2o" in system:
             spin_block_symmetrisation = "symmetric"
-        vec = adcc.guess_zero(matrix,
-                              spin_block_symmetrisation=spin_block_symmetrisation)
+        vec = adcc.guess_zero(matrix, spin_block_symmetrisation=spin_block_symmetrisation)
         vec.set_random()
         pvec = projected.apply_projection(vec.copy())  # only apply projection
 

@@ -3,11 +3,11 @@
 import os
 import tempfile
 
+import veloxchem as vlx
 from mpi4py import MPI
+from veloxchem.mpitask import MpiTask
 
 import adcc
-import veloxchem as vlx
-from veloxchem.mpitask import MpiTask
 
 # Run SCF in VeloxChem
 with tempfile.TemporaryDirectory() as tmpdir:

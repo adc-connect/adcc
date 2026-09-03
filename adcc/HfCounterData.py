@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -33,6 +32,7 @@ class HfCounterData(HartreeFockProvider):
     given upon construction. This data can be imported and verified
     easily afterwards. All data is based on pain indices.
     """
+
     def __init__(self, n_alpha, n_beta, n_bas, n_orbs_alpha, restricted):
         if n_alpha != n_beta and restricted:
             raise ValueError("ROHF should not be tested")
@@ -101,8 +101,8 @@ class HfCounterData(HartreeFockProvider):
         n1 = len(range1[0]) + len(range1[1])  # Total number for first axis
         n2 = len(range2[0]) + len(range2[1])  # Total number for first axis
         res = np.zeros((n1, n2))
-        for (i, vi) in enumerate(np.hstack(range1)):
-            for (j, vj) in enumerate(np.hstack(range2)):
+        for i, vi in enumerate(np.hstack(range1)):
+            for j, vj in enumerate(np.hstack(range2)):
                 if i < na1 and j >= na2:
                     continue  # ab block is zero
                 if i >= na1 and j < na2:
@@ -114,14 +114,13 @@ class HfCounterData(HartreeFockProvider):
         return res
 
     def fill_orbcoeff_fb(self, out):
-        out[:] = (np.hstack(self.get_f_range())[:, None] * self.mul(1)
-                  + self.get_b_range()[None, :])
+        out[:] = np.hstack(self.get_f_range())[:, None] * self.mul(1) + self.get_b_range()[None, :]
 
     def fill_occupation_f(self, out):
         n_oa = self.__n_orbs_alpha
         out[:] = np.zeros(2 * n_oa)
-        out[:self.__n_alpha] = 1.
-        out[n_oa:n_oa + self.__n_beta] = 1.
+        out[: self.__n_alpha] = 1.0
+        out[n_oa : n_oa + self.__n_beta] = 1.0
 
     def fill_orben_f(self, out):
         out[:] = np.hstack(self.get_f_range())
@@ -148,8 +147,7 @@ class HfCounterData(HartreeFockProvider):
         n_alphas = [na1, na2, na3, na4]
 
         # Full ranges per axis
-        rfulls = (np.hstack(range1), np.hstack(range2),
-                  np.hstack(range3), np.hstack(range4))
+        rfulls = (np.hstack(range1), np.hstack(range2), np.hstack(range3), np.hstack(range4))
 
         # Total number of orbitals per axis
         n_orbs = tuple(len(rfulls[i]) for i in range(4))
@@ -163,14 +161,11 @@ class HfCounterData(HartreeFockProvider):
             # map equivalent spin blocks onto another
             fac = 1.0
             if self.__restricted:
-                if block == "bbbb":    # bbbb -> aaaa
+                if block == "bbbb":  # bbbb -> aaaa
                     block = "aaaa"
                 elif block == "baba":  # baba -> abab
                     block = "abab"
-                elif block == "abba":  # abba -> -baba -> -abab
-                    block = "abab"
-                    fac *= -1
-                elif block == "baab":  # baab -> abba -> -baba -> -abab
+                elif block == "abba" or block == "baab":  # abba -> -baba -> -abab
                     block = "abab"
                     fac *= -1
                 assert block in ("aaaa", "abab")
@@ -189,12 +184,13 @@ class HfCounterData(HartreeFockProvider):
                 val[2], val[3] = val[3], val[2]
                 fac *= -1
             if val[0] > val[2]:  # deal with ijkl = klij
-                val[0], val[1], val[2], val[3] = \
-                    val[2], val[3], val[0], val[1]
+                val[0], val[1], val[2], val[3] = val[2], val[3], val[0], val[1]
 
             return fac * (
-                + self.mul(3) * val[0] + self.mul(2) * val[1]
-                + self.mul(1) * val[2] + self.mul(0) * val[3]
+                +self.mul(3) * val[0]
+                + self.mul(2) * val[1]
+                + self.mul(1) * val[2]
+                + self.mul(0) * val[3]
             )
 
         # Run only over blocks, which are non-zero by spin
@@ -212,12 +208,11 @@ class HfCounterData(HartreeFockProvider):
                 for i2 in ranges[1]:
                     for i3 in ranges[2]:
                         for i4 in ranges[3]:
-                            res[i1, i2, i3, i4] = compute_eri_value(
-                                block, i1, i2, i3, i4
-                            )
+                            res[i1, i2, i3, i4] = compute_eri_value(block, i1, i2, i3, i4)
         return res
 
     def fill_eri_phys_asym_ffff(self, slices, out):
-        full = self.fold_eri(self.get_f_range(), self.get_f_range(),
-                             self.get_f_range(), self.get_f_range())
+        full = self.fold_eri(
+            self.get_f_range(), self.get_f_range(), self.get_f_range(), self.get_f_range()
+        )
         out[:] = full[slices]

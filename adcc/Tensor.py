@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -20,15 +19,20 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from .Symmetry import Symmetry
-
 import libadcc
+
+from .Symmetry import Symmetry
 
 
 class Tensor(libadcc.Tensor):
-    def __init__(self, sym_or_mo, space=None,
-                 permutations=None, spin_block_maps=None,
-                 spin_blocks_forbidden=None):
+    def __init__(
+        self,
+        sym_or_mo,
+        space=None,
+        permutations=None,
+        spin_block_maps=None,
+        spin_blocks_forbidden=None,
+    ):
         """Construct an uninitialised Tensor from an :class:`MoSpaces` or
         a :class:`Symmetry` object.
 
@@ -74,20 +78,22 @@ class Tensor(libadcc.Tensor):
 
         """
         if not isinstance(sym_or_mo, (libadcc.MoSpaces, libadcc.Symmetry)):
-            raise TypeError("The first argument needs to be a Symmetry or an "
-                            "MoSpaces object.")
+            raise TypeError("The first argument needs to be a Symmetry or an MoSpaces object.")
         if not isinstance(sym_or_mo, libadcc.Symmetry):
             if space is None:
-                raise ValueError("If the first argument to Tensor is no "
-                                 "Symmetry object, the second argument (spaces)"
-                                 "needs to be given")
-            sym_or_mo = Symmetry(sym_or_mo, space, permutations,
-                                 spin_block_maps, spin_blocks_forbidden)
+                raise ValueError(
+                    "If the first argument to Tensor is no "
+                    "Symmetry object, the second argument (spaces)"
+                    "needs to be given"
+                )
+            sym_or_mo = Symmetry(
+                sym_or_mo, space, permutations, spin_block_maps, spin_blocks_forbidden
+            )
 
-        if space is not None:
-            if sym_or_mo.space != space:
-                raise ValueError("Value passed to space needs to agree with "
-                                 "space value from Symmetry object.")
+        if space is not None and sym_or_mo.space != space:
+            raise ValueError(
+                "Value passed to space needs to agree with space value from Symmetry object."
+            )
 
         super().__init__(sym_or_mo)
 

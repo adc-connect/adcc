@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -33,31 +32,31 @@ from .OneParticleOperator import OneParticleOperator
 class State2States(ElectronicTransition):
     def __init__(self, data, method=None, property_method=None, initial=0):
         """Construct a State2States class from some data obtained
-            from an interative solver or an :class:`ExcitedStates` object.
+        from an interative solver or an :class:`ExcitedStates` object.
 
-            The class provides access to ADC transition properties between
-            excited states, i.e., from the `initial` state to all higher-lying
-            excited states obtained from an ADC calculation.
+        The class provides access to ADC transition properties between
+        excited states, i.e., from the `initial` state to all higher-lying
+        excited states obtained from an ADC calculation.
 
-            By default the ADC method is extracted from the data object
-            and the property method in property_method is set equal to
-            this method, except ADC(3) where property_method=="adc2".
-            This can be overwritten using the parameters.
+        By default the ADC method is extracted from the data object
+        and the property method in property_method is set equal to
+        this method, except ADC(3) where property_method=="adc2".
+        This can be overwritten using the parameters.
 
-            Parameters
-            ----------
-            data
-                Any kind of iterative solver state. Typically derived off
-                a :class:`solver.EigenSolverStateBase`. Can also be an
-                :class:`ExcitedStates` object.
-            method : str, optional
-                Provide an explicit method parameter if data contains none.
-            property_method : str, optional
-                Provide an explicit method for property calculations to
-                override the automatic selection.
-            initial : int, optional
-                Provide the index of the excited state from which transitions
-                to all other higher-lying states are to be computed.
+        Parameters
+        ----------
+        data
+            Any kind of iterative solver state. Typically derived off
+            a :class:`solver.EigenSolverStateBase`. Can also be an
+            :class:`ExcitedStates` object.
+        method : str, optional
+            Provide an explicit method parameter if data contains none.
+        property_method : str, optional
+            Provide an explicit method for property calculations to
+            override the automatic selection.
+        initial : int, optional
+            Provide the index of the excited state from which transitions
+            to all other higher-lying states are to be computed.
         """
 
         super().__init__(data, method, property_method)
@@ -82,11 +81,12 @@ class State2States(ElectronicTransition):
         Excitation energies from the inital state to energetically higher lying
         states in atomic units
         """
-        return np.array([
-            self._excitation_energy[final]
-            - self._excitation_energy[self.initial]
-            for final in range(self.initial + 1, super().size)
-        ])
+        return np.array(
+            [
+                self._excitation_energy[final] - self._excitation_energy[self.initial]
+                for final in range(self.initial + 1, super().size)
+            ]
+        )
 
     @property
     def excitation_energy_uncorrected(self) -> np.ndarray:
@@ -94,16 +94,18 @@ class State2States(ElectronicTransition):
         Excitation energies without any corrections from the inital state to
         energetically higher lying states in atomic units
         """
-        return np.array([
-            self._excitation_energy_uncorrected[final]
-            - self._excitation_energy_uncorrected[self.initial]
-            for final in range(self.initial + 1, super().size)
-        ])
+        return np.array(
+            [
+                self._excitation_energy_uncorrected[final]
+                - self._excitation_energy_uncorrected[self.initial]
+                for final in range(self.initial + 1, super().size)
+            ]
+        )
 
     @property
     def excitation_vector(self):
         """List of excitation vectors"""
-        return self._excitation_vector[self.initial + 1:]
+        return self._excitation_vector[self.initial + 1 :]
 
     @property
     def transition_dm(self) -> list[OneParticleOperator]:
@@ -124,10 +126,11 @@ class State2States(ElectronicTransition):
         # the parent class.
         state_n = self.initial + state_n + 1
         return self._module.state2state_transition_dm(
-            self.property_method, self.ground_state,
+            self.property_method,
+            self.ground_state,
             super().excitation_vector[self.initial],
             super().excitation_vector[state_n],
-            self.matrix.intermediates
+            self.matrix.intermediates,
         )
 
     def _state_diffdm(self, state_n: int) -> OneParticleOperator:
@@ -139,7 +142,9 @@ class State2States(ElectronicTransition):
         # alternatively one could create an independent StateProperties class
         # and additionally inherit from that class on ExcitedStates and the
         # future IP/EA class.
-        raise NotImplementedError("Difference density matrices and excited state "
-                                  "properties are not available through "
-                                  f"'{self.__class__.__name__}'. Please use e.g. "
-                                  "'ExcitedStates' for PP-ADC.")
+        raise NotImplementedError(
+            "Difference density matrices and excited state "
+            "properties are not available through "
+            f"'{self.__class__.__name__}'. Please use e.g. "
+            "'ExcitedStates' for PP-ADC."
+        )

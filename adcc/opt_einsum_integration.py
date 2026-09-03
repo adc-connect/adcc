@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -52,8 +51,9 @@ def _dispatch_diagonal(subscript, outstring, operand):
 def _fallback_einsum(einsum_str, *operands, **kwargs):
     # A fallback implementation of einsum in adcc,
     # which deals with a few cases opt_einsum cannot deal with
-    from .functions import einsum
     from opt_einsum.parser import gen_unused_symbols
+
+    from .functions import einsum
 
     operands = list(operands)
     subscripts = einsum_str.split("->")[0].split(",")
@@ -63,18 +63,19 @@ def _fallback_einsum(einsum_str, *operands, **kwargs):
     # do them first.
     for i in range(len(subscripts)):
         sub = subscripts[i]
-        cdiagonal = set(c for c in sub if sub.count(c) > 1 and c in outstr)
-        ctrace = set(c for c in sub if sub.count(c) > 1 and c not in outstr)
+        cdiagonal = {c for c in sub if sub.count(c) > 1 and c in outstr}
+        ctrace = {c for c in sub if sub.count(c) > 1 and c not in outstr}
         if ctrace:
-            raise NotImplementedError("Partial traces (e.g. contractions "
-                                      "'iaib->ab') are not yet supported "
-                                      "in adcc.einsum.")
+            raise NotImplementedError(
+                "Partial traces (e.g. contractions "
+                "'iaib->ab') are not yet supported "
+                "in adcc.einsum."
+            )
         if cdiagonal:
             # Do any possible diagonal extraction first
             outstring = "".join(c for c in sub if c not in cdiagonal)
             outstring += "".join(cdiagonal)
-            operands[i] = _dispatch_diagonal(subscripts[i], outstring,
-                                             operands[i])
+            operands[i] = _dispatch_diagonal(subscripts[i], outstring, operands[i])
             subscripts[i] = outstring
 
     if len(subscripts) == 1:
@@ -84,8 +85,7 @@ def _fallback_einsum(einsum_str, *operands, **kwargs):
         return operands[0].transpose(permutation)
     elif len(subscripts) == 2:
         # Should the diagonal of a contraction be extracted, e.g. il,laib->aib
-        diagonal_chars = [a for a in subscripts[0]
-                          if a in subscripts[1] and a in outstr]
+        diagonal_chars = [a for a in subscripts[0] if a in subscripts[1] and a in outstr]
 
         if not diagonal_chars:
             # Try another round of einsum
@@ -93,10 +93,9 @@ def _fallback_einsum(einsum_str, *operands, **kwargs):
 
         # Replace one of the duplicate characters in the input
         # and prepend it to output
-        replacers = list(gen_unused_symbols(outstr + "".join(subscripts),
-                                            len(diagonal_chars)))
+        replacers = list(gen_unused_symbols(outstr + "".join(subscripts), len(diagonal_chars)))
         newoutstr = "".join(replacers) + outstr
-        for (old, new) in zip(diagonal_chars, replacers):
+        for old, new in zip(diagonal_chars, replacers):
             subscripts[0] = subscripts[0].replace(old, new)
 
         # Check we are not creating an infinite loop:
@@ -109,24 +108,24 @@ def _fallback_einsum(einsum_str, *operands, **kwargs):
         # Run _dispatch_diagonal with the result to form the requested diagonal
         return _dispatch_diagonal("".join(diagonal_chars) + outstr, outstr, res)
     else:
-        raise NotImplementedError("Fallback einsum not implemented for more than "
-                                  "two operators")
+        raise NotImplementedError("Fallback einsum not implemented for more than two operators")
 
 
 def register_with_opt_einsum():
-    import libadcc
+    from opt_einsum.backends.dispatch import EVAL_CONSTS_BACKENDS, _cached_funcs, _has_einsum
 
-    from opt_einsum.backends.dispatch import (EVAL_CONSTS_BACKENDS,
-                                              _cached_funcs, _has_einsum)
+    import libadcc
 
     def libadcc_evaluate_constants(const_arrays, expr):
         # Compute the partial expression tree of the inputs
-        new_ops, new_contraction_list = expr(*const_arrays, backend='libadcc',
-                                             evaluate_constants=True)
+        new_ops, new_contraction_list = expr(
+            *const_arrays, backend="libadcc", evaluate_constants=True
+        )
 
         # Evaluate as much as possible and return
         new_ops = [None if x is None else libadcc.evaluate(x) for x in new_ops]
         return new_ops, new_contraction_list
+
     EVAL_CONSTS_BACKENDS["libadcc"] = libadcc_evaluate_constants
     _has_einsum["libadcc"] = False
-    _cached_funcs[('einsum', 'libadcc')] = _fallback_einsum
+    _cached_funcs[("einsum", "libadcc")] = _fallback_einsum

@@ -30,16 +30,14 @@
 #include <catch2/catch.hpp>
 #include <libtensor/expr/bispace/bispace.h>
 
-#define CHECK_ELEMENTWISE(TENSOR, EXPRESSION)       \
-  {                                                 \
-    {                                               \
-      std::vector<double> exported;                 \
-      TENSOR->export_to(exported);                  \
-      for (size_t i = 0; i < TENSOR->size(); ++i) { \
-        INFO("Index is " << i);                     \
-        CHECK(exported[i] == EXPRESSION);           \
-      }                                             \
-    }                                               \
+#define CHECK_ELEMENTWISE(TENSOR, EXPRESSION)   \
+  {{std::vector<double> exported;               \
+  TENSOR->export_to(exported);                  \
+  for (size_t i = 0; i < TENSOR->size(); ++i) { \
+    INFO("Index is " << i);                     \
+    CHECK(exported[i] == EXPRESSION);           \
+  }                                             \
+  }                                             \
   }
 
 namespace libadcc {

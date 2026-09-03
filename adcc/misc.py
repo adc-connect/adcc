@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -20,10 +19,11 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import warnings
-import numpy as np
 import inspect
+import warnings
 from functools import wraps
+
+import numpy as np
 from packaging.version import parse
 
 from .timings import Timer
@@ -34,6 +34,7 @@ def cached_property(f):
     Decorator for a cached property. From
     https://stackoverflow.com/questions/6428723/python-are-property-fields-being-cached-automatically
     """
+
     def get(self):
         try:
             return self._property_cache[f]
@@ -53,8 +54,7 @@ def cached_property(f):
     return property(get)
 
 
-def cached_member_function(timer: str = "timer",
-                           separate_timings_by_args: bool = True):
+def cached_member_function(timer: str = "timer", separate_timings_by_args: bool = True):
     """
     Decorates a member function being called with
     one or more arguments and stores the results
@@ -73,6 +73,7 @@ def cached_member_function(timer: str = "timer",
         in the key under which the timings are stored, i.e., a distinct timer task
         will be generated for each set of arguments. (default: True)
     """
+
     def decorator(function):
         fname = function.__name__
 
@@ -82,13 +83,12 @@ def cached_member_function(timer: str = "timer",
         # If we want to support them we need to add them in a well defined
         # order to the cache key (sort them by name)
         func_signature = inspect.signature(function)
-        bad_arg_types = (
-            inspect.Parameter.KEYWORD_ONLY, inspect.Parameter.VAR_KEYWORD
-        )
-        if any(arg.kind in bad_arg_types for arg in
-               func_signature.parameters.values()):
-            raise ValueError("Member functions with keyword only arguments can not "
-                             "be wrapped with the cached_member_function.")
+        bad_arg_types = (inspect.Parameter.KEYWORD_ONLY, inspect.Parameter.VAR_KEYWORD)
+        if any(arg.kind in bad_arg_types for arg in func_signature.parameters.values()):
+            raise ValueError(
+                "Member functions with keyword only arguments can not "
+                "be wrapped with the cached_member_function."
+            )
 
         @wraps(function)
         def wrapper(self, *args, **kwargs):
@@ -115,7 +115,7 @@ def cached_member_function(timer: str = "timer",
                 if isinstance(instance_timer, Timer):
                     timer_task = fname
                     if separate_timings_by_args:
-                        descr = '_'.join([str(a) for a in args])
+                        descr = "_".join([str(a) for a in args])
                         timer_task += f"/{descr}"
 
                     with instance_timer.record(timer_task):
@@ -130,7 +130,9 @@ def cached_member_function(timer: str = "timer",
                         result = result.evaluate()
                     fun_cache[args] = result
                 return result
+
         return wrapper
+
     return decorator
 
 
@@ -167,6 +169,7 @@ def requires_module(name, min_version=None):
     Decorator to check if the module 'name' is available,
     throw ModuleNotFoundError on call if not.
     """
+
     def inner(function):
         def wrapper(*args, **kwargs):
             fname = function.__name__
@@ -177,8 +180,10 @@ def requires_module(name, min_version=None):
                     f"'conda install {name}' on your system."
                 )
             return function(*args, **kwargs)
+
         wrapper.__doc__ = function.__doc__
         return wrapper
+
     return inner
 
 
@@ -196,6 +201,7 @@ def normalise_sign(*items, atol=0):
     """
     Normalise the sign of a list of numpy arrays
     """
+
     def sign(item):
         flat = np.ravel(item)
         flat = flat[np.abs(flat) > atol]
@@ -203,5 +209,6 @@ def normalise_sign(*items, atol=0):
             return 1
         else:
             return np.sign(flat[0])
+
     desired_sign = sign(items[0])
     return tuple(desired_sign / sign(item) * item for item in items)

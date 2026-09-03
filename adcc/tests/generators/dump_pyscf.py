@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -20,14 +19,13 @@
 ## along with adcc-testdata. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import numpy as np
 import h5py
-
+import numpy as np
 import pyscf
-from pyscf import ao2mo, scf, gto
+from pyscf import ao2mo, gto, scf
 
-from adcc.backends.pyscf import import_scf, PyScfHFProvider
 from adcc import hdf5io
+from adcc.backends.pyscf import PyScfHFProvider, import_scf
 
 
 def dump_pyscf(scfres: scf.hf.SCF, hdf5_file: h5py.Group):
@@ -100,8 +98,7 @@ def dump_pyscf(scfres: scf.hf.SCF, hdf5_file: h5py.Group):
     n_alpha = np.sum(mo_occ[0] > 0)
     n_beta = np.sum(mo_occ[1] > 0)
     if n_alpha != np.sum(mo_occ[0]) or n_beta != np.sum(mo_occ[1]):
-        raise ValueError("Fractional occupation numbers are not supported "
-                         "in adcc.")
+        raise ValueError("Fractional occupation numbers are not supported in adcc.")
 
     # NOTE: orbitals should already be sorted correctly:
     # occupied below virtual and according to their energy within the space.
@@ -115,8 +112,7 @@ def dump_pyscf(scfres: scf.hf.SCF, hdf5_file: h5py.Group):
     data["orben_f"] = np.hstack((mo_energy[0], mo_energy[1]))
     # Transform fock matrix to MOs and build the full, block-diagonal matrix
     fock = tuple(
-        mo_coeff[spin].transpose().conj() @ fock_bb[spin] @ mo_coeff[spin]
-        for spin in range(2)
+        mo_coeff[spin].transpose().conj() @ fock_bb[spin] @ mo_coeff[spin] for spin in range(2)
     )
     full_fock_ff = np.zeros((n_orbs, n_orbs))
     full_fock_ff[:n_orbs_alpha, :n_orbs_alpha] = fock[0]
@@ -125,8 +121,7 @@ def dump_pyscf(scfres: scf.hf.SCF, hdf5_file: h5py.Group):
 
     non_canonical = np.max(np.abs(data["fock_ff"] - np.diag(data["orben_f"])))
     if non_canonical > max(1e-11, data["conv_tol"]):
-        raise ValueError("Running adcc on top of a non-canonical fock "
-                         "matrix is not implemented.")
+        raise ValueError("Running adcc on top of a non-canonical fock matrix is not implemented.")
 
     # Dump the stacked orbital coefficients
     #    b
@@ -182,8 +177,8 @@ def dump_pyscf(scfres: scf.hf.SCF, hdf5_file: h5py.Group):
     masses = scfres.mol.atom_mass_list(isotope_avg=True)
     charges = scfres.mol.atom_charges()
     coords = scfres.mol.atom_coords()
-    mass_center = np.einsum('i,ij->j', masses, coords) / masses.sum()
-    charge_center = np.einsum('i,ij->j', charges, coords) / charges.sum()
+    mass_center = np.einsum("i,ij->j", masses, coords) / masses.sum()
+    charge_center = np.einsum("i,ij->j", charges, coords) / charges.sum()
 
     def calculate_nuclear_quadrupole(charges, coordinates, gauge_origin):
         coords = coordinates - gauge_origin
@@ -196,50 +191,47 @@ def dump_pyscf(scfres: scf.hf.SCF, hdf5_file: h5py.Group):
     data["multipoles"] = {}
     data["multipoles"]["nuclear_0"] = int(np.sum(charges))
     data["multipoles"]["nuclear_1"] = np.einsum("i,ix->x", charges, coords)
-    data["multipoles"]["nuclear_2_origin"] = \
-        calculate_nuclear_quadrupole(charges, coords, (0, 0, 0))
-    data["multipoles"]["nuclear_2_mass_center"] = \
-        calculate_nuclear_quadrupole(charges, coords, mass_center)
-    data["multipoles"]["nuclear_2_charge_center"] = \
-        calculate_nuclear_quadrupole(charges, coords, charge_center)
-    data["multipoles"]["elec_0"] = -int(n_alpha + n_beta)
-    data["multipoles"]["elec_1"] = (
-        -1.0 * scfres.mol.intor_symmetric("int1e_r", comp=3)
+    data["multipoles"]["nuclear_2_origin"] = calculate_nuclear_quadrupole(
+        charges, coords, (0, 0, 0)
     )
+    data["multipoles"]["nuclear_2_mass_center"] = calculate_nuclear_quadrupole(
+        charges, coords, mass_center
+    )
+    data["multipoles"]["nuclear_2_charge_center"] = calculate_nuclear_quadrupole(
+        charges, coords, charge_center
+    )
+    data["multipoles"]["elec_0"] = -int(n_alpha + n_beta)
+    data["multipoles"]["elec_1"] = -1.0 * scfres.mol.intor_symmetric("int1e_r", comp=3)
 
     with scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
-        data["multipoles"]["elec_2_origin"] = (
-            -1.0 * scfres.mol.intor_symmetric('int1e_rr', comp=9)
-        )
+        data["multipoles"]["elec_2_origin"] = -1.0 * scfres.mol.intor_symmetric("int1e_rr", comp=9)
     with scfres.mol.with_common_orig(mass_center):
-        data["multipoles"]["elec_2_mass_center"] = (
-            -1.0 * scfres.mol.intor_symmetric('int1e_rr', comp=9)
+        data["multipoles"]["elec_2_mass_center"] = -1.0 * scfres.mol.intor_symmetric(
+            "int1e_rr", comp=9
         )
     with scfres.mol.with_common_orig(charge_center):
-        data["multipoles"]["elec_2_charge_center"] = (
-            -1.0 * scfres.mol.intor_symmetric('int1e_rr', comp=9)
+        data["multipoles"]["elec_2_charge_center"] = -1.0 * scfres.mol.intor_symmetric(
+            "int1e_rr", comp=9
         )
 
     data["derivatives"] = {}
-    data["derivatives"]["elec_vel_1"] = (
-        scfres.mol.intor('int1e_ipovlp', comp=3, hermi=2)
-    )
+    data["derivatives"]["elec_vel_1"] = scfres.mol.intor("int1e_ipovlp", comp=3, hermi=2)
 
     data["magnetic_moments"] = {}
     with scfres.mol.with_common_orig([0.0, 0.0, 0.0]):
-        data["magnetic_moments"]["mag_1_origin"] = (
-            -0.5 * scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
+        data["magnetic_moments"]["mag_1_origin"] = -0.5 * scfres.mol.intor(
+            "int1e_cg_irxp", comp=3, hermi=2
         )
     with scfres.mol.with_common_orig(mass_center):
-        data["magnetic_moments"]["mag_1_mass_center"] = (
-            -0.5 * scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
+        data["magnetic_moments"]["mag_1_mass_center"] = -0.5 * scfres.mol.intor(
+            "int1e_cg_irxp", comp=3, hermi=2
         )
     with scfres.mol.with_common_orig(charge_center):
-        data["magnetic_moments"]["mag_1_charge_center"] = (
-            -0.5 * scfres.mol.intor('int1e_cg_irxp', comp=3, hermi=2)
+        data["magnetic_moments"]["mag_1_charge_center"] = -0.5 * scfres.mol.intor(
+            "int1e_cg_irxp", comp=3, hermi=2
         )
 
-    data["overlap"] = scfres.mol.intor_symmetric('int1e_ovlp')
+    data["overlap"] = scfres.mol.intor_symmetric("int1e_ovlp")
 
     hdf5io.emplace_dict(data, hdf5_file, compression="gzip")
     hdf5_file.attrs["backend"] = "pyscf"
@@ -265,33 +257,28 @@ def get_qchem_formatted_basis(mol: gto.Mole) -> str:
         cgto_angular_momentum_name = angular_momentum_map[cgto_angular_momentum]
         if atom_number not in cgtos_by_atom:
             cgtos_by_atom[atom_number] = []
-        cur_basis_function = (cgto_angular_momentum_name,
-                              list(zip(cgto_exps, cgto_coeffs)))
+        cur_basis_function = (cgto_angular_momentum_name, list(zip(cgto_exps, cgto_coeffs)))
         cgtos_by_atom[atom_number].append(cur_basis_function)
     qchem_formatted_basis: list[str] = []
     # sort the data to go through the atoms in ascending order
     # (the order they are given in the geomtry)
     for atom_number in sorted(cgtos_by_atom):
         atom_name: str = mol.elements[atom_number]
-        qchem_formatted_basis.append(
-            "{: <2s}    {: >3d}".format(atom_name, atom_number + 1)
-        )
+        qchem_formatted_basis.append(f"{atom_name: <2s}    {atom_number + 1: >3d}")
         for cgto in cgtos_by_atom[atom_number]:
             angular_momentum_name, primitive_gtos = cgto
             n_primitive_gtos = len(primitive_gtos)
             # each primitive GTO might have more than one coefficient, i.e.,
             # each pgto might be used in more than one cgto.
             n_cgtos_per_pgto = len(primitive_gtos[0][1])
-            assert all(len(coeffs) == n_cgtos_per_pgto
-                       for _, coeffs in primitive_gtos)
+            assert all(len(coeffs) == n_cgtos_per_pgto for _, coeffs in primitive_gtos)
             for coeff_i in range(n_cgtos_per_pgto):
                 qchem_formatted_basis.append(
-                    "{:s}   {: >2d}   1.00".format(angular_momentum_name,
-                                                   n_primitive_gtos)
+                    f"{angular_momentum_name:s}   {n_primitive_gtos: >2d}   1.00"
                 )
                 for exp, coeffs in primitive_gtos:
                     coeff = coeffs[coeff_i]
-                    basis_line = "{: >20.8E}{: >20.8E}".format(exp, coeff)
+                    basis_line = f"{exp: >20.8E}{coeff: >20.8E}"
                     # qchem expects the fortran scientific format
                     qchem_formatted_basis.append(basis_line.replace("E", "D"))
         qchem_formatted_basis.append("****")

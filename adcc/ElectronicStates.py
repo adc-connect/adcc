@@ -1,26 +1,29 @@
+import warnings
+
 import numpy as np
 from scipy import constants
-import warnings
 
 from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod, IsrMethod, MethodLevel
 from .AmplitudeVector import AmplitudeVector
 from .FormatDominantElements import FormatDominantElements
 from .FormatIndex import (
-    FormatIndexBase, FormatIndexAdcc, FormatIndexHfProvider, FormatIndexHomoLumo
+    FormatIndexAdcc,
+    FormatIndexBase,
+    FormatIndexHfProvider,
+    FormatIndexHomoLumo,
 )
 from .LazyMp import LazyMp
-from .OneParticleDensity import OneParticleDensity
-from .TwoParticleDensity import TwoParticleDensity
-from .NParticleOperator import product_trace
-from .OperatorIntegrals import OperatorIntegrals
 from .misc import cached_member_function, requires_module
+from .NParticleOperator import product_trace
+from .OneParticleDensity import OneParticleDensity
+from .OperatorIntegrals import OperatorIntegrals
 from .ReferenceState import ReferenceState
 from .solver.SolverStateBase import EigenSolverStateBase
 from .StateView import StateView
 from .timings import Timer
+from .TwoParticleDensity import TwoParticleDensity
 from .visualisation.Spectrum import Spectrum
-
 
 _timer_name = "_property_timer"
 
@@ -36,8 +39,7 @@ class ElectronicStates:
     # ExcitedStates class. Has to be defined on the corresponding child class.
     _state_view_cls: StateView = None
 
-    def __init__(self, data, method: str = None,
-                 property_method: str = None) -> None:
+    def __init__(self, data, method: str | None = None, property_method: str | None = None) -> None:
         """
         Construct an ElectronicStates class from some data obtained from an
         iterative solver or another :class:`ElectronicStates` instance.
@@ -56,18 +58,18 @@ class ElectronicStates:
         """
         self.matrix: AdcMatrix = data.matrix
         self.ground_state: LazyMp = self.matrix.ground_state
-        self.reference_state: ReferenceState = (
-            self.matrix.ground_state.reference_state
-        )
+        self.reference_state: ReferenceState = self.matrix.ground_state.reference_state
         self.operators: OperatorIntegrals = self.reference_state.operators
 
         # List of all the objects which have timers (do not yet collect
         # timers, since new times might be added implicitly at a later point)
         self._property_timer: Timer = Timer()
-        self._timed_objects = [("", self.reference_state),
-                               ("adcmatrix", self.matrix),
-                               ("mp", self.ground_state),
-                               ("intermediates", self.matrix.intermediates)]
+        self._timed_objects = [
+            ("", self.reference_state),
+            ("adcmatrix", self.matrix),
+            ("mp", self.ground_state),
+            ("intermediates", self.matrix.intermediates),
+        ]
         if hasattr(data, "timer"):
             datakey = getattr(data, "algorithm", data.__class__.__name__)
             self._timed_objects.append((datakey, data))
@@ -83,14 +85,15 @@ class ElectronicStates:
         if not isinstance(self.method, AdcMethod):
             self.method: AdcMethod = AdcMethod(self.method)
 
-        if property_method is None and hasattr(data, '_property_method'):
+        if property_method is None and hasattr(data, "_property_method"):
             property_method = data._property_method
         if property_method is None:
-            if self.method.level in [MethodLevel.TWO_X, MethodLevel.THREE,
-                                     MethodLevel.FOUR]:
+            if self.method.level in [MethodLevel.TWO_X, MethodLevel.THREE, MethodLevel.FOUR]:
                 # Auto-select ISR(2) properties for ADC(2)-x and ADC(3) calc
-                warnings.warn(f"ISR({self.method.level.to_str()}) not implemented."
-                              f" Property method is selected as ISR(2).")
+                warnings.warn(
+                    f"ISR({self.method.level.to_str()}) not implemented."
+                    f" Property method is selected as ISR(2)."
+                )
                 property_method = self.method.as_method_at_level(IsrMethod, 2)
             else:
                 property_method = self.method.as_method(IsrMethod)
@@ -113,11 +116,9 @@ class ElectronicStates:
             # are present, the latter one has priority: otherwise corrections
             # would be added again below!
             if hasattr(data, "excitation_energy"):
-                self._excitation_energy_uncorrected = \
-                    data.excitation_energy.copy()
+                self._excitation_energy_uncorrected = data.excitation_energy.copy()
             if hasattr(data, "excitation_energy_uncorrected"):
-                self._excitation_energy_uncorrected =\
-                    data.excitation_energy_uncorrected.copy()
+                self._excitation_energy_uncorrected = data.excitation_energy_uncorrected.copy()
             if hasattr(data, "excitation_vector"):
                 self._excitation_vector = data.excitation_vector
 
@@ -131,8 +132,9 @@ class ElectronicStates:
             for eec in data._excitation_energy_corrections:
                 correction_energy = getattr(data, eec.name)
                 if hasattr(self, eec.name):
-                    raise ValueError(f"{self.__name__} already has an attribute "
-                                     f"with the name '{eec.name}'")
+                    raise ValueError(
+                        f"{self.__name__} already has an attribute with the name '{eec.name}'"
+                    )
                 setattr(self, eec.name, correction_energy)
                 self._excitation_energy += correction_energy
                 self._excitation_energy_corrections.append(eec)
@@ -220,9 +222,7 @@ class ElectronicStates:
 
     def _state_dm_2p(self, state_n: int) -> TwoParticleDensity:
         """List of two particle state density matrices of all computed states"""
-        mp_density = self.ground_state.density_2p(
-            self.property_method.level.to_int()
-        )
+        mp_density = self.ground_state.density_2p(self.property_method.level.to_int())
         diffdm = self._state_diffdm_2p(state_n)
         return mp_density + diffdm
 
@@ -246,7 +246,7 @@ class ElectronicStates:
         ddm_2p = self._state_diffdm_2p(state_n)
         ssq_1p = product_trace(ssq_1p_op, ddm_1p)
         ssq_2p = product_trace(ssq_2p_op, ddm_2p)
-        return (ssq_1p + ssq_2p + gs_ssq)
+        return ssq_1p + ssq_2p + gs_ssq
 
     @property
     def state_dipole_moment(self) -> np.ndarray:
@@ -264,8 +264,7 @@ class ElectronicStates:
 
         dipole_integrals = self.operators.electric_dipole
         ddm = self._state_diffdm(state_n)
-        return (gs_dip_moment
-                + np.array([product_trace(comp, ddm) for comp in dipole_integrals]))
+        return gs_dip_moment + np.array([product_trace(comp, ddm) for comp in dipole_integrals])
 
     def _state_view(self, state_n: int) -> StateView:
         """
@@ -276,11 +275,11 @@ class ElectronicStates:
     def _add_energy_correction(self, correction: "EnergyCorrection") -> None:
         assert isinstance(correction, EnergyCorrection)
         if hasattr(self, correction.name):
-            raise ValueError(f"{self.__class__.__name__} already has an attribute "
-                             f" with the name '{correction.name}'")
-        correction_energy = np.array([
-            correction(self._state_view(i)) for i in range(self.size)
-        ])
+            raise ValueError(
+                f"{self.__class__.__name__} already has an attribute "
+                f" with the name '{correction.name}'"
+            )
+        correction_energy = np.array([correction(self._state_view(i)) for i in range(self.size)])
         setattr(self, correction.name, correction_energy)
         self._excitation_energy += correction_energy
         self._excitation_energy_corrections.append(correction)
@@ -310,7 +309,7 @@ class ElectronicStates:
         # NOTE: this currently assumes that all available properties are available
         # on the corresponding state_view class
         assert self._state_view_cls is not None
-        blacklist = ("parent_state")
+        blacklist = ("parent_state",)
         ret = []
         for key in dir(self._state_view_cls):
             # private fields or ao transformed densities or other fields
@@ -326,11 +325,12 @@ class ElectronicStates:
         Atomic units are used for all values.
         """
         import pandas as pd
+
         propkeys = self.excitation_property_keys
         propkeys.extend([k.name for k in self._excitation_energy_corrections])
         data = {
             "excitation": np.arange(0, self.size, dtype=int),
-            "kind": np.tile(self.kind, self.size)
+            "kind": np.tile(self.kind, self.size),
         }
         for key in propkeys:
             try:
@@ -362,17 +362,25 @@ class ElectronicStates:
                     for j, q in enumerate(["x", "y", "z"]):
                         data[f"{key}_{p}{q}"] = d[:, i, j]
             elif d.ndim > 3:
-                warnings.warn(f"Exporting NumPy array for property {key}"
-                              f" with shape {d.shape} not supported.")
+                warnings.warn(
+                    f"Exporting NumPy array for property {key} with shape {d.shape} not supported."
+                )
                 continue
         df = pd.DataFrame(data=data)
         df.set_index("excitation")
         return df
 
     @requires_module("matplotlib")
-    def _plot_spectrum(self, ylabel: str, yvalues: np.ndarray, xaxis: str = "eV",
-                       broadening="lorentzian", width: float = 0.01,
-                       width_unit: str = "au", **kwargs):
+    def _plot_spectrum(
+        self,
+        ylabel: str,
+        yvalues: np.ndarray,
+        xaxis: str = "eV",
+        broadening="lorentzian",
+        width: float = 0.01,
+        width_unit: str = "au",
+        **kwargs,
+    ):
         """
         One-shot plotting function for the spectrum generated by all states
         known to this class.
@@ -440,9 +448,7 @@ class ElectronicStates:
         # first build the spectra in atomic units on the x-axis
         spectrum = Spectrum(x=self.excitation_energy, y=yvalues, ylabel=ylabel)
         if broadening:  # generate a broadened spectrum
-            broadened_spectrum: Spectrum = spectrum.broaden_lines(
-                width=width, shape=broadening
-            )
+            broadened_spectrum: Spectrum = spectrum.broaden_lines(width=width, shape=broadening)
         xaxis = xaxis.lower()
         # convert the x-unit of the dicrete spectrum
         convert_x_units(spectrum)
@@ -456,9 +462,7 @@ class ElectronicStates:
             # - use the same color as for the discrete spectrum
             kwbroad = {k: v for k, v in kwargs.items() if k != "color"}
             disc_color = plots[0].get_color()
-            plots.extend(broadened_spectrum.plot(
-                color=disc_color, style="continuous", **kwbroad
-            ))
+            plots.extend(broadened_spectrum.plot(color=disc_color, style="continuous", **kwbroad))
         else:
             # plot the discrete spectrum
             plots = spectrum.plot(style="discrete", **kwargs)
@@ -481,9 +485,9 @@ class ElectronicStates:
         # that are printed below after
         if self._excitation_energy_corrections:
             correction_head = "Excitation energy includes these corrections:"
-            corr_width = max(len(correction_head),
-                             *(len(c.name) for c in
-                               self._excitation_energy_corrections))
+            corr_width = max(
+                len(correction_head), *(len(c.name) for c in self._excitation_energy_corrections)
+            )
             if corr_width > table_width:
                 # add padding to the last column
                 new_width = columns[-1].width + corr_width - table_width
@@ -499,8 +503,7 @@ class ElectronicStates:
         state_info = []
         if hasattr(self, "kind") and self.kind:
             state_info.append(self.kind)
-        if hasattr(self, "spin_change") and self.spin_change is not None and \
-                self.spin_change != 0:
+        if hasattr(self, "spin_change") and self.spin_change is not None and self.spin_change != 0:
             state_info.append(f"(ΔMS={self.spin_change:+2d})")
         if hasattr(self, "converged"):
             conv = "converged" if self.converged else "NOT CONVERGED"
@@ -547,8 +550,7 @@ class ElectronicStates:
                 lines.append(f"|    - {eec.name:<{maxlen}s} |")
         return "\n".join(lines)
 
-    def describe_amplitudes(self, tolerance: float = 0.01,
-                            index_format=None) -> str:
+    def describe_amplitudes(self, tolerance: float = 0.01, index_format=None) -> str:
         """
         Return a string describing the dominant amplitudes of each
         excitation vector in human-readable form. The ``kwargs``
@@ -576,9 +578,7 @@ class ElectronicStates:
         # first format all the headers to determine their length
         headers = []
         for i, energy in enumerate(self.excitation_energy):
-            headers.append(
-                f"State {i:3d}, {energy:13.7g} au, {energy * eV:13.7g} eV"
-            )
+            headers.append(f"State {i:3d}, {energy:13.7g} au, {energy * eV:13.7g} eV")
         # determine the required linewidth
         width = max(formatter.linewidth, *(len(h) for h in headers))
         hline = "+" + (width + 2) * "-" + "+"  # +2: space to the left and right
@@ -590,9 +590,7 @@ class ElectronicStates:
             lines.append(hline)
             # format the vector and add the table borders + spaces
             for coefficient in formatter.format(amplitude):
-                lines.append(
-                    f"| {coefficient:^{width}s} |"
-                )
+                lines.append(f"| {coefficient:^{width}s} |")
             lines.append(hline)
         return "\n".join(lines)
 
@@ -625,8 +623,14 @@ class EnergyCorrection:
 
 class TableColumn:
     # represents a column in the table generated by the describe method
-    def __init__(self, header: str, values: tuple[str, ...], unit: str = "",
-                 width: int = None, align: str = "^"):
+    def __init__(
+        self,
+        header: str,
+        values: tuple[str, ...],
+        unit: str = "",
+        width: int | None = None,
+        align: str = "^",
+    ):
         # the minimum required width of the column
         min_width = max(len(header), len(unit), *(len(v) for v in values))
         if width is None or width < min_width:
@@ -642,22 +646,27 @@ class TableColumn:
         # remove whitespaces in case we want to shrink the column!
         values = tuple(v.strip() for v in self.values)
         return TableColumn(
-            header=self.header.strip(), values=values, unit=self.unit.strip(),
-            width=width, align=self.align
+            header=self.header.strip(),
+            values=values,
+            unit=self.unit.strip(),
+            width=width,
+            align=self.align,
         )
 
     def with_align(self, align: str) -> "TableColumn":
         # remove whitespaces so we can change the alignment
         values = tuple(v.strip() for v in self.values)
         return TableColumn(
-            header=self.header.strip(), values=values, unit=self.unit.strip(),
-            width=self.width, align=align
+            header=self.header.strip(),
+            values=values,
+            unit=self.unit.strip(),
+            width=self.width,
+            align=align,
         )
 
 
 class FormatAmplitudeVector:
-    def __init__(self, matrix: AdcMatrix, tolerance: float = 0.01,
-                 index_format: str = None):
+    def __init__(self, matrix: AdcMatrix, tolerance: float = 0.01, index_format: str | None = None):
         """
         Set up a formatter class for formatting excitation vectors.
 
@@ -690,12 +699,9 @@ class FormatAmplitudeVector:
         elif index_format == "homolumo":
             index_format = FormatIndexHomoLumo(refstate)
         elif not isinstance(index_format, FormatIndexBase):
-            raise ValueError("Unsupported value for index_format: "
-                             + str(index_format))
+            raise ValueError("Unsupported value for index_format: " + str(index_format))
 
-        self.tensor_format = FormatDominantElements(
-            matrix.mospaces, tolerance, index_format
-        )
+        self.tensor_format = FormatDominantElements(matrix.mospaces, tolerance, index_format)
         self.index_format = self.tensor_format.index_format
         # Formatting used for the values (coefficients)
         self.value_format = "{:+8.3g}"
@@ -741,7 +747,7 @@ class FormatAmplitudeVector:
             formats = {"ov": (
                 "{} -> {}" + idx_spin_gap + "{}->{}"
                 + spin_coeff_gap + self.value_format
-            )}
+            )}  # fmt: skip
         elif self.matrix.axis_blocks == ["ph", "pphh"]:
             formats = {
                 "ov": (
@@ -752,7 +758,7 @@ class FormatAmplitudeVector:
                     "{} {} -> {} {}" + idx_spin_gap + "{}{}->{}{}"
                     + spin_coeff_gap + self.value_format
                 )
-            }
+            }  # fmt: skip
         elif self.matrix.axis_blocks == ["ph", "pphh", "ppphhh"]:
             formats = {
                 "ov": (
@@ -770,7 +776,7 @@ class FormatAmplitudeVector:
                     "{} {} {} -> {} {} {}" + idx_spin_gap + "{}{}{}->{}{}{}"
                     + spin_coeff_gap + self.value_format
                 )
-            }
+            }  # fmt: skip
         else:
             raise NotImplementedError("Unknown ADC matrix structure")
 
@@ -782,7 +788,5 @@ class FormatAmplitudeVector:
             assert block in amplitude
             formatted = self.tensor_format.format_as_list(spaces, amplitude[block])
             for indices, spins, coeff in formatted:
-                lines.append(
-                    formats[space_str].format(*indices, *spins, coeff)
-                )
+                lines.append(formats[space_str].format(*indices, *spins, coeff))
         return lines

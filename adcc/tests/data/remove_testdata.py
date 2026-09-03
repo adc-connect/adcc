@@ -1,10 +1,11 @@
-from pathlib import Path
 import argparse
-import h5py
 import re
+from pathlib import Path
+
+import h5py
 
 
-def remove(file: Path, cases: list[str] = None, density_orders: list[str] = None):
+def remove(file: Path, cases: list[str] | None = None, density_orders: list[str] | None = None):
     """
     Removes test data for the given reference cases and density orders in the
     given test data (hdf5) file and deletes the file if all data is removed.
@@ -24,14 +25,14 @@ def remove(file: Path, cases: list[str] = None, density_orders: list[str] = None
             # mpdata and hfimport are independent of the density order
             # if density_orders is not given we remove the data for all
             # density_orders
-            if "mpdata" in file.name or "hfimport" in file.name or \
-                    density_orders is None:
+            if "mpdata" in file.name or "hfimport" in file.name or density_orders is None:
                 cases_to_remove.append(case)
                 continue
             # at this point we have to have a file with adc reference data
             assert re.search(r"adc[0-9]", file.name)
             density_orders_to_remove = [
-                dens_oder for dens_oder in case_data.keys()
+                dens_oder
+                for dens_oder in case_data
                 if density_orders is None or dens_oder in density_orders
             ]
             for density_order in density_orders_to_remove:
@@ -51,24 +52,33 @@ def remove(file: Path, cases: list[str] = None, density_orders: list[str] = None
 def parse_cmdline() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="remove test data",
-        description=("Helper script to remove specific test data to allow their "
-                     "regeneration."),
+        description=("Helper script to remove specific test data to allow their regeneration."),
     )
     parser.add_argument(
-        "datafiles", type=str, nargs="+",
-        help="The data (hdf5) files in which to remove test data."
+        "datafiles", type=str, nargs="+", help="The data (hdf5) files in which to remove test data."
     )
     parser.add_argument(
-        "-c", "--cases", type=str, nargs="*", default=None,
-        help=("The reference cases for which to remove test data. If not given "
-              "data for all reference cases will be removed (you can also "
-              "remove the entire files in that case).")
-    )
-    parser.add_argument(
-        "--density-orders", dest="density_orders", type=str, nargs="*",
+        "-c",
+        "--cases",
+        type=str,
+        nargs="*",
         default=None,
-        help=("The gs_density_orders for which to remove test data. If not given "
-              "the data will be removed for all density orders (if applicable).")
+        help=(
+            "The reference cases for which to remove test data. If not given "
+            "data for all reference cases will be removed (you can also "
+            "remove the entire files in that case)."
+        ),
+    )
+    parser.add_argument(
+        "--density-orders",
+        dest="density_orders",
+        type=str,
+        nargs="*",
+        default=None,
+        help=(
+            "The gs_density_orders for which to remove test data. If not given "
+            "the data will be removed for all density orders (if applicable)."
+        ),
     )
     return parser.parse_args()
 

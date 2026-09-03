@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -37,7 +36,7 @@ def mtm_isr0(ground_state, op, intermediates):
 
 def mtm_isr1(ground_state, op, intermediates):
     ampl = mtm_isr0(ground_state, op, intermediates)
-    f1 = - 1.0 * einsum("ijab,jb->ia", ground_state.t2(b.oovv), op.ov)
+    f1 = -1.0 * einsum("ijab,jb->ia", ground_state.t2(b.oovv), op.ov)
     return ampl + AmplitudeVector(ph=f1)
 
 
@@ -53,11 +52,11 @@ def mtm_isr2(ground_state, op, intermediates):
         + 1.0 * einsum("ib,ab->ia", p0.ov, op.vv)
         - 1.0 * einsum("ji,ja->ia", op.oo, p0.ov)
         - 1.0 * einsum("ijab,jb->ia", ground_state.td2(b.oovv), op.ov)
-    )
+    )  # fmt: skip
     f2 = (
         + 1.0 * einsum("ijac,bc->ijab", t2, op.vv).antisymmetrise(2, 3)
         + 1.0 * einsum("ki,jkab->ijab", op.oo, t2).antisymmetrise(0, 1)
-    )
+    )  # fmt: skip
     return ampl + AmplitudeVector(ph=f1, pphh=f2)
 
 
@@ -73,7 +72,7 @@ def mtm_cvs_isr2(ground_state, op, intermediates):
     f1 = (
         - 0.5 * einsum("bI,ab->Ia", op.vc, cvs_p0.vv)
         - 1.0 * einsum("jI,ja->Ia", op.oc, cvs_p0.ov)
-    )
+    )  # fmt: skip
     f2 = (1 / sqrt(2)) * einsum("kI,kjab->jIab", op.oc, ground_state.t2(b.oovv))
     return ampl + AmplitudeVector(ph=f1, pphh=f2)
 
@@ -143,7 +142,7 @@ def mtm_isr3(ground_state, op, intermediates):
             einsum("ijcd,klcd->ijkl", t2_1, t2_1),
             einsum("klab,jb->jkla", t2_1, d_ov),
         )  # N^6: O^4V^2 / N^4: O^2V^2
-    )
+    )  # fmt: skip
 
     res.pphh += (
         2 * (
@@ -153,7 +152,7 @@ def mtm_isr3(ground_state, op, intermediates):
             0.5 * einsum("ijac,bc->ijab", t2_2, d_vv)  # N^5: O^2V^3 / N^4: O^2V^2
         ).antisymmetrise(2, 3)
         - 0.5 * einsum("ijkabc,kc->ijab", t3_2, d_ov)  # N^6: O^3V^3 / N^6: O^3V^3
-    )
+    )  # fmt: skip
     return res
 
 
@@ -177,9 +176,7 @@ DISPATCH = {
 }
 
 
-def modified_transition_moments(
-    method, ground_state, operator=None, intermediates=None
-):
+def modified_transition_moments(method, ground_state, operator=None, intermediates=None):
     """Compute the modified transition moments (MTM) for the provided
     ISR method with reference to the passed ground state.
 
@@ -217,8 +214,7 @@ def modified_transition_moments(
             f"modified_transition_moments is not implemented for {method.name}."
         )
 
-    ret = [DISPATCH[method.name](ground_state, op, intermediates)
-           for op in operator]
+    ret = [DISPATCH[method.name](ground_state, op, intermediates) for op in operator]
     if unpack:
         assert len(ret) == 1
         ret = ret[0]

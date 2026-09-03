@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -22,10 +21,10 @@
 ## ---------------------------------------------------------------------
 import copy
 
-from .Tensor import _tensor_select_below_absmax
-from .FormatIndex import FormatIndexAdcc, FormatIndexBase
-
 from libadcc import Tensor
+
+from .FormatIndex import FormatIndexAdcc, FormatIndexBase
+from .Tensor import _tensor_select_below_absmax
 
 
 class FormatDominantElements:
@@ -52,10 +51,10 @@ class FormatDominantElements:
         assert all(len(pair) == 2 for pair in spaces_tensor_pairs)
 
         for spaces, tensor in spaces_tensor_pairs:
-            if not isinstance(spaces, (tuple, list)) or \
-               not isinstance(tensor, Tensor):
-                raise TypeError("spaces_tensor_pairs should be a list of "
-                                "(spaces tuples, Tensor) tuples")
+            if not isinstance(spaces, (tuple, list)) or not isinstance(tensor, Tensor):
+                raise TypeError(
+                    "spaces_tensor_pairs should be a list of (spaces tuples, Tensor) tuples"
+                )
             for indices, _ in _tensor_select_below_absmax(tensor, self.tolerance):
                 assert len(indices) == len(spaces)
                 self.index_format.optimise_formatting(
@@ -71,10 +70,11 @@ class FormatDominantElements:
         ret = []
         for indices, value in _tensor_select_below_absmax(tensor, self.tolerance):
             assert len(indices) == len(spaces)
-            formatted = tuple(self.index_format.format(sp, idx,
-                                                       concat_spin=False)
-                              for sp, idx in zip(spaces, indices))
-            ret.append(tuple(zip(*formatted)) + (value, ))
+            formatted = tuple(
+                self.index_format.format(sp, idx, concat_spin=False)
+                for sp, idx in zip(spaces, indices)
+            )
+            ret.append(tuple(zip(*formatted)) + (value,))
         return ret
 
     def format(self, spaces: tuple[str], tensor: Tensor) -> str:
@@ -85,6 +85,7 @@ class FormatDominantElements:
         """
         ret = []
         for indices, spins, value in self.format_as_list(spaces, tensor):
-            ret.append(" ".join(indices) + "  " + "".join(spins)
-                       + "   " + self.value_format.format(value))
+            ret.append(
+                " ".join(indices) + "  " + "".join(spins) + "   " + self.value_format.format(value)
+            )
         return "\n".join(ret)
