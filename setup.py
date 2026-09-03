@@ -433,6 +433,11 @@ def libadcc_extension():
             "-Wno-unused-command-line-argument",
             "-Wno-undefined-var-template",
             "-Wno-bitwise-instead-of-logical",
+            # clang 23 enables unused-template by default.
+            # However, the pybind11 headers do not build with this flag, currently.
+            # Fixed in: https://github.com/pybind/pybind11/pull/6156
+            # Remove this again once pybind11 > 3.1.0 is available.
+            "-Wno-unused-template",
         ]
         build_flags["extra_compile_args"].extend(["-arch", platform.machine()])
         build_flags["extra_link_args"].extend(["-arch", platform.machine()])
