@@ -58,7 +58,7 @@ jobs:
       #
       - name: Install package
         run: |
-          pip install --user .[tests]
+          pip install --user .[tests,coverage]
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Run python tests with std allocator
