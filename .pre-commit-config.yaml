@@ -1,5 +1,7 @@
 # update the pinned versions by running:
 # pre-commit autoupdate
+# Afterwards tun the pre-commit hooks on all files in the repo with
+# pre-commit run --all-files
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.3

@@ -100,13 +100,23 @@ extend-exclude = [
 ]
 
 [tool.ruff.lint]
-# - The module files share the name of the class they define, e.g.
+# - N999: The module files share the name of the class they define, e.g.
 #   `AdcMatrix` in `AdcMatrix.py`. In python usually snake_case
 #   `adc_matrix.py` is used for module names and thus ruff is not happy.
 #    However, renaming them would break downstream code.
-ignore = ["N999"]
+# - E265: no space after block comment. Fires for all the license
+#   headers since they start with '##'
+# - E266: comment with multiple leading '#'. Fires for the license headers.
+ignore = ["N999", "E265", "E266"]
+# Q: prefer double quotes
+# E + W: white-space rules
+# Mostly preview only rules that are usually handled by ruff format.
+# However, in `fmt: skip` blocks (equations) we want the linter to enforce them.
+extend-select=["Q", "E", "W"]
+preview = true
 
 [tool.ruff.lint.per-file-ignores]
-# libadcc.pyi is automatically generated. Ignores
+# libadcc.pyi is automatically generated. Ignores:
 # - `Self` not used as return type
-"libadcc.pyi" = ["PYI034"]
+# - Docstrings might be too long
+"libadcc.pyi" = ["PYI034", "E501"]
