@@ -1,13 +1,14 @@
-from adcc.tests.generators.dump_pyscf import dump_pyscf
-from adcc.tests import testcases
+#!/usr/bin/env python3
 
-from pyscf import gto, scf
-
-from pathlib import Path
-import h5py
 import os
 import tempfile
+from pathlib import Path
 
+import h5py
+from pyscf import gto, scf
+
+from adcc.tests import testcases
+from adcc.tests.generators.dump_pyscf import dump_pyscf
 
 _testdata_dirname = "data"
 
@@ -27,7 +28,7 @@ def run_pyscf(test_case: testcases.TestCase, frac_occ: bool):
             basis=test_case.basis,
             unit=test_case.unit,
             spin=test_case.multiplicity - 1,  # =2S
-            verbose=0
+            verbose=0,
         )
         mf = scf.RHF(mol) if test_case.restricted else scf.UHF(mol)
         mf.diis = scf.EDIIS()
@@ -47,8 +48,7 @@ def run_pyscf(test_case: testcases.TestCase, frac_occ: bool):
     return mf
 
 
-def generate(test_case: testcases.TestCase,
-             frac_occ: bool) -> None:
+def generate(test_case: testcases.TestCase, frac_occ: bool) -> None:
     """
     Run Pyscf for the given test case and dump the result in the hdf5 file
     if the file does not already exist.
@@ -56,7 +56,7 @@ def generate(test_case: testcases.TestCase,
     hdf5_file = Path(__file__).resolve().parent.parent / _testdata_dirname
     hdf5_file /= test_case.hfdata_file_name
     if hdf5_file.exists():
-        return None
+        return
     print(f"Generating data for {test_case.file_name}.")
     mf = run_pyscf(test_case, frac_occ)
     with h5py.File(hdf5_file, "w") as hdf5_file:
@@ -86,9 +86,7 @@ def generate_hf():
 
 
 def generate_methox():
-    case = testcases.get(
-        n_expected_cases=1, name="r2methyloxirane", basis="sto-3g"
-    ).pop()
+    case = testcases.get(n_expected_cases=1, name="r2methyloxirane", basis="sto-3g").pop()
     generate(case, frac_occ=False)
 
 

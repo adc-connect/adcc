@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
-import adcc
-
-from pyscf import gto, scf
 from matplotlib import pyplot as plt
+from pyscf import gto, scf
+
+import adcc
 
 # Run SCF in pyscf
 mol = gto.M(
-    atom='S  -0.38539679062   0 -0.27282082253;'
-         'H  -0.0074283962687 0  2.2149138578;'
-         'H   2.0860198029    0 -0.74589639249',
-    basis='cc-pvtz',
-    unit="Bohr"
+    atom="S  -0.38539679062   0 -0.27282082253;"
+    "H  -0.0074283962687 0  2.2149138578;"
+    "H   2.0860198029    0 -0.74589639249",
+    basis="cc-pvtz",
+    unit="Bohr",
 )
 scfres = scf.RHF(mol)
 scfres.conv_tol = 1e-13

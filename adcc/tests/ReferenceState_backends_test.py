@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -25,10 +24,9 @@ import pytest
 import adcc
 
 from . import testcases
-from .testdata_cache import testdata_cache
 from .backends.testing import cached_backend_hf
 from .ReferenceState_refdata_test import compare_refstate_with_reference
-
+from .testdata_cache import testdata_cache
 
 test_cases = testcases.get_by_filename(
     "h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz", "ch2nh2_sto3g"
@@ -42,9 +40,8 @@ backends = [b for b in adcc.backends.available() if b != "molsturm"]
 def test_backends_import_reference_data(system: str, case: str, backend: str):
     system: testcases.TestCase = testcases.get_by_filename(system).pop()
 
-    if backend == "veloxchem":
-        if system.basis == "def2-tzvp" and system.name == "h2o":
-            pytest.skip("VeloxChem does not support f-functions.")
+    if backend == "veloxchem" and system.basis == "def2-tzvp" and system.name == "h2o":
+        pytest.skip("VeloxChem does not support f-functions.")
 
     compare_eri = "abs"
     if system.name == "cn":
@@ -58,6 +55,11 @@ def test_backends_import_reference_data(system: str, case: str, backend: str):
     # perform a new scf calculation with the backend
     scfres = cached_backend_hf(backend=backend, system=system, conv_tol=conv_tol)
     compare_refstate_with_reference(
-        system=system, case=case, data=data, reference=reference, scfres=scfres,
-        compare_orbcoeff=False, compare_eri=compare_eri
+        system=system,
+        case=case,
+        data=data,
+        reference=reference,
+        scfres=scfres,
+        compare_orbcoeff=False,
+        compare_eri=compare_eri,
     )

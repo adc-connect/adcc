@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -20,13 +19,14 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import adcc
 import unittest
+
 import pytest
 
+import adcc
 from adcc import LazyMp
-from adcc.solver.davidson import jacobi_davidson, eigsh
 from adcc.misc import cached_property
+from adcc.solver.davidson import eigsh, jacobi_davidson
 
 from ..testdata_cache import testdata_cache
 
@@ -34,9 +34,7 @@ from ..testdata_cache import testdata_cache
 class TestSolverDavidson(unittest.TestCase):
     @cached_property
     def matrix(self):
-        return adcc.AdcMatrix(
-            "adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
-        )
+        return adcc.AdcMatrix("adc2", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen")))
 
     def test_n_guesses(self):
         # we have to have a guess for each state
@@ -77,13 +75,11 @@ class TestSolverDavidson(unittest.TestCase):
     def test_adc0_singlet(self):
         # ensure that a diagonal matrix (with guesses from the diagonal)
         # converges in a single iteration to the correct eigenvalues
-        refdata = testdata_cache.adcman_data(
-            system="h2o_sto3g", method="adc0", case="gen"
-        )["None"]["singlet"]
+        refdata = testdata_cache.adcman_data(system="h2o_sto3g", method="adc0", case="gen")["None"][
+            "singlet"
+        ]
 
-        matrix = adcc.AdcMatrix(
-            "adc0", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen"))
-        )
+        matrix = adcc.AdcMatrix("adc0", LazyMp(testdata_cache.refstate("h2o_sto3g", case="gen")))
 
         # Solve for singlets
         guesses = adcc.guesses_singlet(matrix, n_guesses=2, block="ph")
@@ -99,9 +95,9 @@ class TestSolverDavidson(unittest.TestCase):
         assert res.eigenvalues[:n_states] == pytest.approx(ref_singlets[:n_states])
 
     def test_adc2_singlets(self):
-        refdata = testdata_cache.adcman_data(
-            system="h2o_sto3g", method="adc2", case="gen"
-        )["None"]["singlet"]
+        refdata = testdata_cache.adcman_data(system="h2o_sto3g", method="adc2", case="gen")["None"][
+            "singlet"
+        ]
 
         # Solve for singlets
         guesses = adcc.guesses_singlet(self.matrix, n_guesses=9, block="ph")
@@ -114,9 +110,9 @@ class TestSolverDavidson(unittest.TestCase):
         assert res.eigenvalues[:n_states] == pytest.approx(ref_singlets[:n_states])
 
     def test_adc2_triplets(self):
-        refdata = testdata_cache.adcman_data(
-            system="h2o_sto3g", method="adc2", case="gen"
-        )["None"]["triplet"]
+        refdata = testdata_cache.adcman_data(system="h2o_sto3g", method="adc2", case="gen")["None"][
+            "triplet"
+        ]
 
         # Solve for triplets
         guesses = adcc.guesses_triplet(self.matrix, n_guesses=10, block="ph")

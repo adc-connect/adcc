@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -24,19 +23,34 @@ import pytest
 
 from adcc.AdcMethod import AdcMethod, AdcType, GroundStateType, IsrMethod
 
+adc_methods = [
+    ("adc1", None),
+    ("adc2x", None),
+    ("cvs-adc3", None),
+    ("adc", ValueError),
+    ("cvs_adc2", ValueError),
+    ("xyz-adc2", ValueError),
+    ("adc5", NotImplementedError),
+    ("isr2", ValueError),
+    ("mp-adc2", None),
+    ("cvs-mp-adc2", None),
+    ("cvs-cvs-adc2", ValueError),
+    ("adcc", ValueError),
+    ("pp-adc2", None),
+    ("ee-adc2", ValueError),
+    ("mp-pp-adc2", None),
+    ("pp-mp-adc2", ValueError),
+]
 
-adc_methods = [("adc1", None), ("adc2x", None), ("cvs-adc3", None),
-               ("adc", ValueError), ("cvs_adc2", ValueError),
-               ("xyz-adc2", ValueError), ("adc5", NotImplementedError),
-               ("isr2", ValueError), ("mp-adc2", None), ("cvs-mp-adc2", None),
-               ("cvs-cvs-adc2", ValueError), ("adcc", ValueError),
-               ("pp-adc2", None), ("ee-adc2", ValueError),
-               ("mp-pp-adc2", None), ("pp-mp-adc2", ValueError)]
-
-isr_methods = [("isr1", None), ("cvs-isr2", None),
-               ("adc", ValueError), ("cvs_isr2", ValueError),
-               ("xyz-isr2", ValueError), ("isr5", NotImplementedError),
-               ("adc2", ValueError)]
+isr_methods = [
+    ("isr1", None),
+    ("cvs-isr2", None),
+    ("adc", ValueError),
+    ("cvs_isr2", ValueError),
+    ("xyz-isr2", ValueError),
+    ("isr5", NotImplementedError),
+    ("adc2", ValueError),
+]
 
 
 class TestAdcMethod:

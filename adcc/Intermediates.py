@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -20,16 +19,19 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from .timings import Timer
+from typing import ClassVar
+
 from .functions import evaluate
+from .timings import Timer
 
 
-class Intermediates():
+class Intermediates:
     """
     Class offering to return a number of intermediate tensors.
     The tensors are cached internally for later reuse
     """
-    generators = {}      # Registered generator functions
+
+    generators: ClassVar = {}  # Registered generator functions
 
     def __init__(self, ground_state):
         self.ground_state = ground_state
@@ -56,11 +58,7 @@ class Intermediates():
         self.cached_tensors.clear()
 
     def __repr__(self):
-        return (
-            "AdcIntermediates(contains="
-            + list(self.cached_tensors.keys()).join(",")
-            + ")"
-        )
+        return "AdcIntermediates(contains=" + list(self.cached_tensors.keys()).join(",") + ")"
 
 
 def register_as_intermediate(function):

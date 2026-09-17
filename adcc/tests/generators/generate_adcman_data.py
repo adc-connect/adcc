@@ -1,20 +1,19 @@
-from adcc.tests.generators.run_qchem import run_qchem
-from adcc.tests import testcases
+#!/usr/bin/env python3
+
+from pathlib import Path
+
+import h5py
 
 from adcc.AdcMethod import AdcMethod, MethodLevel
 from adcc.hdf5io import emplace_dict
-
-from pathlib import Path
-import h5py
-
+from adcc.tests import testcases
+from adcc.tests.generators.run_qchem import run_qchem
 
 _testdata_dirname = "data"
 
 # the base methods for each adc_type for which to generate data
 # the different cases (cvs, fc, ...) are handled in the generate functions.
-_methods = {
-    "pp": ("adc0", "adc1", "adc2", "adc2x", "adc3")
-}
+_methods = {"pp": ("adc0", "adc1", "adc2", "adc2x", "adc3")}
 _isr_orders = {
     MethodLevel.ZERO: (None,),
     MethodLevel.ONE: (None,),
@@ -23,9 +22,7 @@ _isr_orders = {
     MethodLevel.THREE: (None, 3),
     MethodLevel.FOUR: (None, "3d"),
 }
-_small_cases_methods = {
-    "pp": _methods["pp"] + ("adc4",)
-}
+_small_cases_methods = {"pp": _methods["pp"] + ("adc4",)}
 # Since it seems not possible to only perform an adcman MPn calculation,
 # the ground state data has to be extracted from an adc(n) calculation.
 # The method given below is used for this. The pt order should be rather high
@@ -38,12 +35,19 @@ _gs_data_isr_order: MethodLevel | None = None
 _gs_data_density_orders = (None,)
 
 
-def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
-                 gs_density_order: int | None = None,
-                 n_singlets: int = 0, n_triplets: int = 0,
-                 n_spin_flip: int = 0, n_states: int = 0,
-                 dump_nstates: int | None = None,
-                 isr_order: int | str | None = None, **kwargs) -> None:
+def generate_adc(
+    test_case: testcases.TestCase,
+    method: AdcMethod,
+    case: str,
+    gs_density_order: int | None = None,
+    n_singlets: int = 0,
+    n_triplets: int = 0,
+    n_spin_flip: int = 0,
+    n_states: int = 0,
+    dump_nstates: int | None = None,
+    isr_order: int | str | None = None,
+    **kwargs,
+) -> None:
     """
     Generate and dump the excited state reference data for the given reference case
     of the given test case if the data doesn't exist already.
@@ -56,33 +60,43 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
 
     key = f"{case}/{gs_density_order}/{isr_order}"
     if key in hdf5_file:
-        return None
+        return
     # skip cvs-adc(0), since it is not available in qchem
     if "cvs" in case and method.level is MethodLevel.ZERO:
-        return None
+        return
     # skip cvs-isr(3) and cvs-isr3d, since it is not implemented yet.
     if isr_order in (3, "3d") and "cvs" in case:
-        return None
+        return
     # gs_density_order is only available for adc(3) and adc(4)
     # and it is not available for cvs-adc
-    if gs_density_order is not None and (
-            method.level.to_int() < 3 or "cvs" in case):
-        return None
+    if gs_density_order is not None and (method.level.to_int() < 3 or "cvs" in case):
+        return
     # CVS-ADC(4) not available
     if "cvs" in case and method.level.to_int() > 3:
-        return None
+        return
     # add a cvs prefix to the method if necessary
     if "cvs" in case and not method.is_core_valence_separated:
         method = AdcMethod(f"cvs-{method.name}")
 
-    print(f"Generating {method.name} (gs_density_order={gs_density_order}) "
-          f"(isr_order={isr_order}) data for {case} {test_case.file_name}.")
+    print(
+        f"Generating {method.name} (gs_density_order={gs_density_order}) "
+        f"(isr_order={isr_order}) data for {case} {test_case.file_name}."
+    )
 
     state_data, _ = run_qchem(
-        test_case, method, case, import_states=True, import_gs=False,
-        n_singlets=n_singlets, n_triplets=n_triplets, n_spin_flip=n_spin_flip,
-        n_states=n_states, import_nstates=dump_nstates,
-        gs_density_order=gs_density_order, isr_order=isr_order, **kwargs
+        test_case,
+        method,
+        case,
+        import_states=True,
+        import_gs=False,
+        n_singlets=n_singlets,
+        n_triplets=n_triplets,
+        n_spin_flip=n_spin_flip,
+        n_states=n_states,
+        import_nstates=dump_nstates,
+        gs_density_order=gs_density_order,
+        isr_order=isr_order,
+        **kwargs,
     )
     # the data returned from run_qchem should have already been imported
     # using the correct keys -> just dump them
@@ -90,12 +104,18 @@ def generate_adc(test_case: testcases.TestCase, method: AdcMethod, case: str,
     emplace_dict(state_data, case_group, compression="gzip")
 
 
-def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
-                     n_singlets: int = 0, n_triplets: int = 0,
-                     n_spin_flip: int = 0, n_states: int = 0,
-                     dump_nstates: int | None = None,
-                     states_per_case: dict[str, dict[str, int]] | None = None,
-                     isr_order: int | str | None = None, **kwargs) -> None:
+def generate_adc_all(
+    test_case: testcases.TestCase,
+    method: AdcMethod,
+    n_singlets: int = 0,
+    n_triplets: int = 0,
+    n_spin_flip: int = 0,
+    n_states: int = 0,
+    dump_nstates: int | None = None,
+    states_per_case: dict[str, dict[str, int]] | None = None,
+    isr_order: int | str | None = None,
+    **kwargs,
+) -> None:
     """
     Generate and dump the excited state reference data for all relevant
     reference cases of the given test case.
@@ -109,10 +129,18 @@ def generate_adc_all(test_case: testcases.TestCase, method: AdcMethod,
             n_states = states_per_case[case].get("n_states", 0)
         for density_order in test_case.gs_density_orders:
             generate_adc(
-                test_case, method, case, n_singlets=n_singlets,
-                n_triplets=n_triplets, n_spin_flip=n_spin_flip, n_states=n_states,
-                dump_nstates=dump_nstates, gs_density_order=density_order,
-                isr_order=isr_order, **kwargs)
+                test_case,
+                method,
+                case,
+                n_singlets=n_singlets,
+                n_triplets=n_triplets,
+                n_spin_flip=n_spin_flip,
+                n_states=n_states,
+                dump_nstates=dump_nstates,
+                gs_density_order=density_order,
+                isr_order=isr_order,
+                **kwargs,
+            )
 
 
 def generate_groundstate(test_case: testcases.TestCase) -> None:
@@ -145,9 +173,13 @@ def generate_groundstate(test_case: testcases.TestCase) -> None:
         for density_order in gs_density_orders:
             # run a adc calculation asking for zero excited states
             _, data = run_qchem(
-                test_case, method=method, case=case, import_states=False,
-                import_gs=True, gs_density_order=density_order,
-                isr_order=isr_order
+                test_case,
+                method=method,
+                case=case,
+                import_states=False,
+                import_gs=True,
+                gs_density_order=density_order,
+                isr_order=isr_order,
             )
             assert data is not None
             # add the newly generated data to the gs_data
@@ -173,7 +205,7 @@ def generate_h2o_sto3g():
             # 1 core and 2 virtual orbitals
             "fc-cvs": {"n_singlets": 2, "n_triplets": 2},
             # 1 core and 1 virtual orbital
-            "fc-fv-cvs": {"n_singlets": 1, "n_triplets": 1}
+            "fc-fv-cvs": {"n_singlets": 1, "n_triplets": 1},
         }
     }
     test_case = testcases.get(n_expected_cases=1, name="h2o", basis="sto-3g").pop()
@@ -182,33 +214,46 @@ def generate_h2o_sto3g():
         method = AdcMethod(method)
         # get the number of states for all kinds -> Generate the data in a single
         # adcman calculation
-        n_states = {kind: 3 for kind in
-                    testcases.kinds_to_nstates(test_case.kinds[method.adc_type])}
+        n_states = {
+            kind: 3 for kind in testcases.kinds_to_nstates(test_case.kinds[method.adc_type])
+        }
         generate_adc_all(
-            test_case, method=method, dump_nstates=2,
-            states_per_case=states.get(method.name, None), **n_states)
+            test_case,
+            method=method,
+            dump_nstates=2,
+            states_per_case=states.get(method.name, None),
+            **n_states,
+        )
         for isr_order in _isr_orders[method.level]:
-            generate_adc_all(test_case, method=method, dump_nstates=2,
-                             states_per_case=states.get(method.name, None),
-                             isr_order=isr_order, **n_states)
+            generate_adc_all(
+                test_case,
+                method=method,
+                dump_nstates=2,
+                states_per_case=states.get(method.name, None),
+                isr_order=isr_order,
+                **n_states,
+            )
 
 
 def generate_h2o_def2tzvp():
     # RHF, Singlet, 43 basis functions: 5 occ, 38 virt.
-    test_case = testcases.get(
-        n_expected_cases=1, name="h2o", basis="def2-tzvp"
-    ).pop()
+    test_case = testcases.get(n_expected_cases=1, name="h2o", basis="def2-tzvp").pop()
     generate_groundstate(test_case)
     for method in _methods["pp"]:
         method = AdcMethod(method)
-        n_states = {kind: 3 for kind in
-                    testcases.kinds_to_nstates(test_case.kinds[method.adc_type])}
-        generate_adc_all(
-            test_case, method=method, dump_nstates=2, states_per_case=None,
-            **n_states)
+        n_states = {
+            kind: 3 for kind in testcases.kinds_to_nstates(test_case.kinds[method.adc_type])
+        }
+        generate_adc_all(test_case, method=method, dump_nstates=2, states_per_case=None, **n_states)
         for isr_order in _isr_orders[method.level]:
-            generate_adc_all(test_case, method=method, dump_nstates=2,
-                             states_per_case=None, isr_order=isr_order, **n_states)
+            generate_adc_all(
+                test_case,
+                method=method,
+                dump_nstates=2,
+                states_per_case=None,
+                isr_order=isr_order,
+                **n_states,
+            )
 
 
 def generate_cn_sto3g():
@@ -217,14 +262,19 @@ def generate_cn_sto3g():
     generate_groundstate(test_case)
     for method in _small_cases_methods["pp"]:
         method = AdcMethod(method)
-        n_states = {kind: 3 for kind in
-                    testcases.kinds_to_nstates(test_case.kinds[method.adc_type])}
-        generate_adc_all(
-            test_case, method=method, dump_nstates=2, states_per_case=None,
-            **n_states)
+        n_states = {
+            kind: 3 for kind in testcases.kinds_to_nstates(test_case.kinds[method.adc_type])
+        }
+        generate_adc_all(test_case, method=method, dump_nstates=2, states_per_case=None, **n_states)
         for isr_order in _isr_orders[method.level]:
-            generate_adc_all(test_case, method=method, dump_nstates=2,
-                             states_per_case=None, isr_order=isr_order, **n_states)
+            generate_adc_all(
+                test_case,
+                method=method,
+                dump_nstates=2,
+                states_per_case=None,
+                isr_order=isr_order,
+                **n_states,
+            )
 
 
 def generate_cn_ccpvdz():
@@ -233,13 +283,19 @@ def generate_cn_ccpvdz():
     generate_groundstate(test_case)
     for method in _methods["pp"]:
         method = AdcMethod(method)
-        n_states = {kind: 3 for kind in
-                    testcases.kinds_to_nstates(test_case.kinds[method.adc_type])}
-        generate_adc_all(test_case, method=method, dump_nstates=2,
-                         states_per_case=None, **n_states)
+        n_states = {
+            kind: 3 for kind in testcases.kinds_to_nstates(test_case.kinds[method.adc_type])
+        }
+        generate_adc_all(test_case, method=method, dump_nstates=2, states_per_case=None, **n_states)
         for isr_order in _isr_orders[method.level]:
-            generate_adc_all(test_case, method=method, dump_nstates=2,
-                             states_per_case=None, isr_order=isr_order, **n_states)
+            generate_adc_all(
+                test_case,
+                method=method,
+                dump_nstates=2,
+                states_per_case=None,
+                isr_order=isr_order,
+                **n_states,
+            )
 
 
 def generate_hf_631g():
@@ -248,14 +304,19 @@ def generate_hf_631g():
     generate_groundstate(test_case)
     for method in _small_cases_methods["pp"]:
         method = AdcMethod(method)
-        n_states = {kind: 3 for kind in
-                    testcases.kinds_to_nstates(test_case.kinds[method.adc_type])}
-        generate_adc_all(
-            test_case, method=method, dump_nstates=2, states_per_case=None,
-            **n_states)
+        n_states = {
+            kind: 3 for kind in testcases.kinds_to_nstates(test_case.kinds[method.adc_type])
+        }
+        generate_adc_all(test_case, method=method, dump_nstates=2, states_per_case=None, **n_states)
         for isr_order in _isr_orders[method.level]:
-            generate_adc_all(test_case, method=method, dump_nstates=2,
-                             states_per_case=None, isr_order=isr_order, **n_states)
+            generate_adc_all(
+                test_case,
+                method=method,
+                dump_nstates=2,
+                states_per_case=None,
+                isr_order=isr_order,
+                **n_states,
+            )
 
 
 def generate_formaldehyde_pe():
@@ -268,17 +329,29 @@ def generate_formaldehyde_pe():
         for method in methods["pp"]:
             method = AdcMethod(method)
             n_states = {
-                kind: 3 for kind in
-                testcases.kinds_to_nstates(test_case.kinds[method.adc_type])
+                kind: 3 for kind in testcases.kinds_to_nstates(test_case.kinds[method.adc_type])
             }
             assert test_case.pe_potfile is not None
-            generate_adc_all(test_case=test_case, method=method, dump_nstates=2,
-                             states_per_case=None, pe_potfile=test_case.pe_potfile,
-                             run_qchem_scf=True, **n_states)
+            generate_adc_all(
+                test_case=test_case,
+                method=method,
+                dump_nstates=2,
+                states_per_case=None,
+                pe_potfile=test_case.pe_potfile,
+                run_qchem_scf=True,
+                **n_states,
+            )
         for isr_order in _isr_orders[method.level]:
-            generate_adc_all(test_case, method=method, dump_nstates=2,
-                             states_per_case=None, pe_potfile=test_case.pe_potfile,
-                             run_qchem_scf=True, isr_order=isr_order, **n_states)
+            generate_adc_all(
+                test_case,
+                method=method,
+                dump_nstates=2,
+                states_per_case=None,
+                pe_potfile=test_case.pe_potfile,
+                run_qchem_scf=True,
+                isr_order=isr_order,
+                **n_states,
+            )
 
 
 def main():

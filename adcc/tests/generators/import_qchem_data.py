@@ -1,18 +1,18 @@
-from adcc.AdcMethod import AdcMethod, AdcType
-from adcc.hdf5io import _extract_dataset
-
 from collections.abc import Hashable
 from typing import Any
-import numpy as np
+
 import h5py
+import numpy as np
+
+from adcc.AdcMethod import AdcMethod, AdcType
+from adcc.hdf5io import _extract_dataset
 
 
 class DataImportError(ValueError):
     pass
 
 
-def import_groundstate(context: h5py.File, only_full_mode: bool,
-                       dims_pref: str = "dims/") -> dict:
+def import_groundstate(context: h5py.File, only_full_mode: bool, dims_pref: str = "dims/") -> dict:
     """
     Import the MP ground state.
 
@@ -30,24 +30,23 @@ def import_groundstate(context: h5py.File, only_full_mode: bool,
         prefix to the context tree of the object.
     """
     # import all available ground state data
-    data_to_read = {
-        path: key for path, key in _mp_data.items() if path in context
-    }
+    data_to_read = {path: key for path, key in _mp_data.items() if path in context}
     if not only_full_mode:
-        addition = {
-            path: key for path, key in _mp_data_large.items() if path in context
-        }
+        addition = {path: key for path, key in _mp_data_large.items() if path in context}
         assert not addition.keys() & data_to_read.keys()
         data_to_read.update(addition)
         del addition
     return import_data(context, dims_pref=dims_pref, **data_to_read)
 
 
-def import_excited_states(context: h5py.File, method: AdcMethod,
-                          only_full_mode: bool,
-                          is_spin_flip: bool = False,
-                          import_nstates: int | None = None,
-                          dims_pref: str = "dims/") -> dict:
+def import_excited_states(
+    context: h5py.File,
+    method: AdcMethod,
+    only_full_mode: bool,
+    is_spin_flip: bool = False,
+    import_nstates: int | None = None,
+    dims_pref: str = "dims/",
+) -> dict:
     """
     Import the excited states data (excitation energies, amplitude vectors, ...)
     from the context.
@@ -74,7 +73,8 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
     # define the possible state kinds to import for each adc variant.
     state_kinds = {
         AdcType.PP: [
-            ("singlets", True), ("triplets", True),  # restricted
+            ("singlets", True),
+            ("triplets", True),  # restricted
             # uhf and spin flip are located in the same ".../uhf/..." subtree
             ("any_or_spinflip", False),  # unrestricted
         ]
@@ -89,9 +89,14 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
     data = {}
     for kind, restricted in state_kinds[method.adc_type]:
         states = _import_excited_states(
-            context, method=method_name, only_full_mode=only_full_mode,
-            adc_type=method.adc_type, import_nstates=import_nstates,
-            state_kind=kind, restricted=restricted, dims_pref=dims_pref
+            context,
+            method=method_name,
+            only_full_mode=only_full_mode,
+            adc_type=method.adc_type,
+            import_nstates=import_nstates,
+            state_kind=kind,
+            restricted=restricted,
+            dims_pref=dims_pref,
         )
         if states is None:  # no states of the given kind available
             continue
@@ -99,9 +104,14 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
         # -> if we have more than 1 state!
         if len(states["eigenvalues"]) > 1:
             state_to_state = _import_state_to_state_data(
-                context, method=method_name, only_full_mode=only_full_mode,
-                adc_type=method.adc_type, import_nstates=import_nstates,
-                state_kind=kind, restricted=restricted, dims_pref=dims_pref
+                context,
+                method=method_name,
+                only_full_mode=only_full_mode,
+                adc_type=method.adc_type,
+                import_nstates=import_nstates,
+                state_kind=kind,
+                restricted=restricted,
+                dims_pref=dims_pref,
             )
             states["state_to_state"] = state_to_state
 
@@ -109,16 +119,20 @@ def import_excited_states(context: h5py.File, method: AdcMethod,
             kind = "spin_flip" if is_spin_flip else "any"
         data[kind_map.get(kind, kind)] = states
     if not data:
-        raise RuntimeError(f"Could not find any states for {method.name} in "
-                           f"{context.filename}.")
+        raise RuntimeError(f"Could not find any states for {method.name} in {context.filename}.")
     return data
 
 
-def _import_excited_states(context: h5py.File, method: str, only_full_mode: bool,
-                           adc_type: AdcType = AdcType.PP,
-                           import_nstates: int | None = None,
-                           state_kind: str | None = None, restricted: bool = True,
-                           dims_pref: str = "dims/") -> None | dict[str, Any]:
+def _import_excited_states(
+    context: h5py.File,
+    method: str,
+    only_full_mode: bool,
+    adc_type: AdcType = AdcType.PP,
+    import_nstates: int | None = None,
+    state_kind: str | None = None,
+    restricted: bool = True,
+    dims_pref: str = "dims/",
+) -> None | dict[str, Any]:
     """
     Import the excited states data (excitation energies, amplitude vectors, ...)
     from the context.
@@ -174,17 +188,22 @@ def _import_excited_states(context: h5py.File, method: str, only_full_mode: bool
         # ensure that the state is converged
         _, converged = _extract_dataset(context[f"{state_tree}/converged"])
         if not converged:
-            raise DataImportError(f"State {n} of kind {state_kind} in file "
-                                  f"{context.filename} is not converged.")
-        data_to_read.update({
-            f"{state_tree}/{path}": (n, key)
-            for path, key in _excited_state_data["required"].items()
-        })
-        data_to_read.update({
-            f"{state_tree}/{path}": (n, key)
-            for path, key in _excited_state_data["optional"].items()
-            if f"{state_tree}/{path}" in context
-        })
+            raise DataImportError(
+                f"State {n} of kind {state_kind} in file {context.filename} is not converged."
+            )
+        data_to_read.update(
+            {
+                f"{state_tree}/{path}": (n, key)
+                for path, key in _excited_state_data["required"].items()
+            }
+        )
+        data_to_read.update(
+            {
+                f"{state_tree}/{path}": (n, key)
+                for path, key in _excited_state_data["optional"].items()
+                if f"{state_tree}/{path}" in context
+            }
+        )
         if not only_full_mode:
             # update data_to_read depending on the required structure of
             # the dict
@@ -200,20 +219,21 @@ def _import_excited_states(context: h5py.File, method: str, only_full_mode: bool
         data[key].append(val)
     # ensure that we did converge on a nonzero result
     if any(abs(e) < 1e-12 for e in data["eigenvalues"]):
-        raise DataImportError("Eigenvalue < 1e-12 detected. Calculation converged "
-                              "towards zero.")
+        raise DataImportError("Eigenvalue < 1e-12 detected. Calculation converged towards zero.")
     # convert to numpy array!
     return {k: np.array(v) if isinstance(v, list) else v for k, v in data.items()}
 
 
-def _import_state_to_state_data(context: h5py.File, method: str,
-                                only_full_mode: bool,
-                                adc_type: AdcType = AdcType.PP,
-                                import_nstates: int | None = None,
-                                state_kind: str | None = None,
-                                restricted: bool = True,
-                                dims_pref: str = "dims/"
-                                ) -> dict[str, dict[str, Any]]:
+def _import_state_to_state_data(
+    context: h5py.File,
+    method: str,
+    only_full_mode: bool,
+    adc_type: AdcType = AdcType.PP,
+    import_nstates: int | None = None,
+    state_kind: str | None = None,
+    restricted: bool = True,
+    dims_pref: str = "dims/",
+) -> dict[str, dict[str, Any]]:
     """
     Import the state-to-state data (tdms, transition dipole moments, ...)
     from the context.
@@ -262,7 +282,7 @@ def _import_state_to_state_data(context: h5py.File, method: str,
     # -> determine the number of available states from the keys
     s2s_data = context[tree]
     assert isinstance(s2s_data, h5py.Group)
-    n_states = max(int(key.split("-")[0]) for key in s2s_data.keys()) + 1
+    n_states = max(int(key.split("-")[0]) for key in s2s_data) + 1
     if import_nstates is not None:
         n_states = min(n_states, import_nstates)
     del s2s_data
@@ -287,13 +307,13 @@ def _import_state_to_state_data(context: h5py.File, method: str,
                 ifrom_data[key] = []
             ifrom_data[key].append(val)
         # convert the lists to numpy array
-        data[f"from_{ifrom}"] = {k: np.array(v) if isinstance(v, list) else v
-                                 for k, v in ifrom_data.items()}
+        data[f"from_{ifrom}"] = {
+            k: np.array(v) if isinstance(v, list) else v for k, v in ifrom_data.items()
+        }
     return data
 
 
-def import_data(context: h5py.File, dims_pref: str = "dims/",
-                **kwargs: Hashable) -> dict:
+def import_data(context: h5py.File, dims_pref: str = "dims/", **kwargs: Hashable) -> dict:
     """
     Read and import data from the dumped libctx context.
     The data to import can be defined through kwargs in the form
@@ -322,8 +342,7 @@ def import_data(context: h5py.File, dims_pref: str = "dims/",
             _, dims = _extract_dataset(context[dim_path])
             value = value.reshape(dims)
         if key in data:
-            raise DataImportError(f"The key {key} is not unique. Overwriting "
-                                  "data during import.")
+            raise DataImportError(f"The key {key} is not unique. Overwriting data during import.")
         data[key] = value
     return data
 
@@ -343,7 +362,7 @@ _excited_state_data = {
         # excited state dipole moment (vector)
         "prop/dipole": "state_dipole_moments",
         # the singles part of the amplitude vector
-        "u1": "eigenvectors_singles"
+        "u1": "eigenvectors_singles",
     },
     "optional": {
         # transition dm in the AO basis:
@@ -358,7 +377,7 @@ _excited_state_data = {
         # PE data
         "prop/e_pe_ptSS": "pe_ptss_correction",
         "tprop/e_pe_ptLR": "pe_ptlr_correction",
-    }
+    },
 }
 # The large excited state data that is only imported for small test cases
 # that not only run in full mode.

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -22,8 +21,8 @@
 ## ---------------------------------------------------------------------
 import numpy as np
 
-from . import shapefctns
 from ..misc import requires_module
+from . import shapefctns
 
 
 class Spectrum:
@@ -42,8 +41,7 @@ class Spectrum:
     #  support element-wise multiplication, division, addition /
     #                   subtraction of spectra ?
 
-    def __init__(self, x, y, *args, xlabel: str = None, ylabel: str = None,
-                 **kwargs):
+    def __init__(self, x, y, *args, xlabel: str | None = None, ylabel: str | None = None, **kwargs):
         """Pass spectrum data to initialise the class.
 
         To allow the copy and other functions to work properly, all arguments
@@ -65,8 +63,7 @@ class Spectrum:
         self.xlabel = "x" if xlabel is None else xlabel
         self.ylabel = "y" if ylabel is None else ylabel
         if self.x.size != self.y.size:
-            raise ValueError("Sizes of x and y mismatch: {} versus {}."
-                             "".format(self.x.size, self.y.size))
+            raise ValueError(f"Sizes of x and y mismatch: {self.x.size} versus {self.y.size}.")
         self._args = args
         self._kwargs = kwargs
 
@@ -91,8 +88,7 @@ class Spectrum:
             Explicitly set the maximum value of the x-axis for broadening
         """
         if not callable(shape) and width is None:
-            raise ValueError("If shape is not a callable, the width parameter "
-                             "is required")
+            raise ValueError("If shape is not a callable, the width parameter is required")
 
         if not callable(shape):
             if not hasattr(shapefctns, shape):
@@ -136,8 +132,7 @@ class Spectrum:
     def copy(self):
         """Return a consistent copy of the object."""
         return self.__class__(
-            self.x, self.y, *self._args, xlabel=self.xlabel, ylabel=self.ylabel,
-            **self._kwargs
+            self.x, self.y, *self._args, xlabel=self.xlabel, ylabel=self.ylabel, **self._kwargs
         )
 
     @requires_module("matplotlib")
@@ -154,10 +149,10 @@ class Spectrum:
             "continuous". By default no special style is chosen.
         """
         from matplotlib import pyplot as plt
+
         if style == "discrete":
             p = plt.plot(self.x, self.y, "x", *args, **kwargs)
-            plt.vlines(self.x, 0, self.y, linestyle="dashed",
-                       color=p[0].get_color(), linewidth=1)
+            plt.vlines(self.x, 0, self.y, linestyle="dashed", color=p[0].get_color(), linewidth=1)
         elif style == "continuous":
             p = plt.plot(self.x, self.y, "-", *args, **kwargs)
         elif style is None:
@@ -169,5 +164,5 @@ class Spectrum:
         # if we have negative y-values (e.g., rotatory strengths),
         # draw y = 0 as an extra line for clarity
         if np.any(self.y < 0.0):
-            plt.axhline(0.0, color='gray', lw=0.5)
+            plt.axhline(0.0, color="gray", lw=0.5)
         return p

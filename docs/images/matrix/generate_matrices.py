@@ -21,16 +21,15 @@
 ##
 ## ---------------------------------------------------------------------
 import os
-import adcc
-import matplotlib
-import numpy as np
-
-from pyscf import gto, scf
-
-from matplotlib import pyplot as plt
-from matplotlib.colors import LogNorm
 
 import h5py
+import matplotlib
+import numpy as np
+from matplotlib import pyplot as plt
+from matplotlib.colors import LogNorm
+from pyscf import gto, scf
+
+import adcc
 
 
 def dump_matrix(basis, method):
@@ -45,7 +44,7 @@ def dump_matrix(basis, method):
                 H 0 0 1.795239827225189
                 H 1.693194615993441 0 -0.599043184453037""",
         basis=basis,
-        unit="Bohr"
+        unit="Bohr",
     )
     scfres = scf.RHF(mol)
     scfres.conv_tol = 1e-13
@@ -66,25 +65,23 @@ def dump_matrix(basis, method):
 def plot_matrix(mtx, vrange=(-6, 2), sdline=None):
     plt.close()
     cmap = matplotlib.cm.YlOrRd
-    cmap.set_bad("white", 1.)
-    cmap.set_over(cmap(cmap.N), 1.)
-    cmap.set_under("white", 1.)
-    norm = LogNorm(vmin=10**min(vrange), vmax=10**max(vrange))
+    cmap.set_bad("white", 1.0)
+    cmap.set_over(cmap(cmap.N), 1.0)
+    cmap.set_under("white", 1.0)
+    norm = LogNorm(vmin=10 ** min(vrange), vmax=10 ** max(vrange))
 
     ticks = []
     for i in range(min(vrange), max(vrange)):
         ticks += list(np.linspace(10**i, 10 * 10**i, 5, endpoint=False))
-    ticks += [10**max(vrange)]
+    ticks += [10 ** max(vrange)]
 
     img = plt.matshow(np.abs(mtx), cmap=cmap, norm=norm)
     plt.colorbar(img, ticks=ticks)
     plt.draw()
 
     if sdline:
-        plt.axhline(y=40, xmin=0, xmax=mtx.shape[1],
-                    color="grey", linewidth=0.7)
-        plt.axvline(x=40, ymin=0, ymax=mtx.shape[1],
-                    color="grey", linewidth=0.7)
+        plt.axhline(y=40, xmin=0, xmax=mtx.shape[1], color="grey", linewidth=0.7)
+        plt.axvline(x=40, ymin=0, ymax=mtx.shape[1], color="grey", linewidth=0.7)
 
 
 def make_save_plot(basis, method, **kwargs):
@@ -92,8 +89,7 @@ def make_save_plot(basis, method, **kwargs):
     plot_matrix(mtx, **kwargs)
 
     key = basis.replace("*", "s").replace("-", "").lower()
-    plt.savefig("matrix_water_" + method + "_" + key + ".png",
-                bbox_inches="tight", dpi=200)
+    plt.savefig("matrix_water_" + method + "_" + key + ".png", bbox_inches="tight", dpi=200)
 
 
 if __name__ == "__main__":

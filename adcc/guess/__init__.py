@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -23,9 +22,15 @@
 from .guess_zero import guess_symmetries, guess_zero
 from .guesses_from_diagonal import guesses_from_diagonal
 
-__all__ = ["guess_zero", "guesses_from_diagonal",
-           "guesses_singlet", "guesses_triplet", "guesses_any",
-           "guesses_spin_flip", "guess_symmetries"]
+__all__ = [
+    "guess_symmetries",
+    "guess_zero",
+    "guesses_any",
+    "guesses_from_diagonal",
+    "guesses_singlet",
+    "guesses_spin_flip",
+    "guesses_triplet",
+]
 
 
 def guess_kwargs_kind(kind):
@@ -33,12 +38,12 @@ def guess_kwargs_kind(kind):
     Return the kwargs required to be passed to `guesses_from_diagonal` to
     computed states of the passed excitation `kind`.
     """
-    kwargsmap = dict(
-        singlet=dict(spin_block_symmetrisation="symmetric", spin_change=0),
-        triplet=dict(spin_block_symmetrisation="antisymmetric", spin_change=0),
-        spin_flip=dict(spin_block_symmetrisation="none", spin_change=-1),
-        any=dict(spin_block_symmetrisation="none", spin_change=0),
-    )
+    kwargsmap = {
+        "singlet": {"spin_block_symmetrisation": "symmetric", "spin_change": 0},
+        "triplet": {"spin_block_symmetrisation": "antisymmetric", "spin_change": 0},
+        "spin_flip": {"spin_block_symmetrisation": "none", "spin_change": -1},
+        "any": {"spin_block_symmetrisation": "none", "spin_change": 0},
+    }
     try:
         return kwargsmap[kind]
     except KeyError:
@@ -57,8 +62,9 @@ def guesses_singlet(matrix, n_guesses, block="ph", **kwargs):
                  (typically "ph" or "pphh").
     kwargs       Any other argument understood by guesses_from_diagonal.
     """
-    return guesses_from_diagonal(matrix, n_guesses, block=block,
-                                 **guess_kwargs_kind("singlet"), **kwargs)
+    return guesses_from_diagonal(
+        matrix, n_guesses, block=block, **guess_kwargs_kind("singlet"), **kwargs
+    )
 
 
 def guesses_triplet(matrix, n_guesses, block="ph", **kwargs):
@@ -73,8 +79,9 @@ def guesses_triplet(matrix, n_guesses, block="ph", **kwargs):
                  (typically "ph" or "pphh").
     kwargs       Any other argument understood by guesses_from_diagonal.
     """
-    return guesses_from_diagonal(matrix, n_guesses, block=block,
-                                 **guess_kwargs_kind("triplet"), **kwargs)
+    return guesses_from_diagonal(
+        matrix, n_guesses, block=block, **guess_kwargs_kind("triplet"), **kwargs
+    )
 
 
 # guesses for computing any state (singlet or triplet)
@@ -93,5 +100,6 @@ def guesses_spin_flip(matrix, n_guesses, block="ph", **kwargs):
                  (typically "ph" or "pphh").
     kwargs       Any other argument understood by guesses_from_diagonal.
     """
-    return guesses_from_diagonal(matrix, n_guesses, block=block,
-                                 **guess_kwargs_kind("spin_flip"), **kwargs)
+    return guesses_from_diagonal(
+        matrix, n_guesses, block=block, **guess_kwargs_kind("spin_flip"), **kwargs
+    )

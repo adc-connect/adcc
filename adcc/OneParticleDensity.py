@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -20,11 +19,12 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from .NParticleDensity import NParticleDensity
-from .NParticleOperator import OperatorSymmetry
 import libadcc
+
 from .functions import einsum
 from .MoSpaces import split_spaces
+from .NParticleDensity import NParticleDensity
+from .NParticleOperator import OperatorSymmetry
 
 
 class OneParticleDensity(NParticleDensity):
@@ -53,8 +53,9 @@ class OneParticleDensity(NParticleDensity):
 
     def _transform_to_ao(self, refstate):
         if not len(self.blocks_nonzero):
-            raise ValueError("At least one non-zero block is needed to "
-                             "transform the OneParticleOperator.")
+            raise ValueError(
+                "At least one non-zero block is needed to transform the OneParticleOperator."
+            )
         if isinstance(refstate, libadcc.ReferenceState):
             coeff_map = {}
             for sp in self.orbital_subspaces:
@@ -70,10 +71,12 @@ class OneParticleDensity(NParticleDensity):
             # (anti-)hermitian operators: scale matrix element by 2
             # because only one of the blocks is actually present
             factor = self.canonical_factors[block]
-            dm_bb_a += factor * einsum("ip,ij,jq->pq", coeff_map[f"{s1}_a"],
-                                       self.block(block), coeff_map[f"{s2}_a"])
-            dm_bb_b += factor * einsum("ip,ij,jq->pq", coeff_map[f"{s1}_b"],
-                                       self.block(block), coeff_map[f"{s2}_b"])
+            dm_bb_a += factor * einsum(
+                "ip,ij,jq->pq", coeff_map[f"{s1}_a"], self.block(block), coeff_map[f"{s2}_a"]
+            )
+            dm_bb_b += factor * einsum(
+                "ip,ij,jq->pq", coeff_map[f"{s1}_b"], self.block(block), coeff_map[f"{s2}_b"]
+            )
         if self.symmetry == OperatorSymmetry.HERMITIAN:
             dm_bb_a = dm_bb_a.symmetrise()
             dm_bb_b = dm_bb_b.symmetrise()

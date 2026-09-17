@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -20,39 +19,31 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import pytest
 import numpy as np
+import pytest
 from numpy.testing import assert_allclose
 from pytest import approx
 
+from adcc import LazyMp, OperatorSymmetry
 from adcc import block as b
-from adcc import OperatorSymmetry, LazyMp
 from adcc.functions import einsum
 from adcc.MoSpaces import split_spaces
 
-from .testdata_cache import testdata_cache
 from . import testcases
+from .testdata_cache import testdata_cache
 
-
-test_cases = testcases.get_by_filename(
-    "h2o_sto3g", "cn_sto3g", "h2o_def2tzvp", "cn_ccpvdz"
-)
+test_cases = testcases.get_by_filename("h2o_sto3g", "cn_sto3g", "h2o_def2tzvp", "cn_ccpvdz")
 # Include all test cases (not only CVS) to verify the SSQ operator implementation
 # for the other (fc, fv, ...) cases
 unrestricted_cases = [
-    (case.file_name, c) for case in test_cases if not case.restricted
-    for c in case.cases
+    (case.file_name, c) for case in test_cases if not case.restricted for c in case.cases
 ]
 small_cases = [
-    (case.file_name, c) for case in test_cases if not case.only_full_mode
-    for c in ["gen", "cvs"]
+    (case.file_name, c) for case in test_cases if not case.only_full_mode for c in ["gen", "cvs"]
 ]
-non_cvs_small_cases = [
-    (system, case) for system, case in small_cases if "cvs" not in case
-]
+non_cvs_small_cases = [(system, case) for system, case in small_cases if "cvs" not in case]
 large_cases = [
-    (case.file_name, c) for case in test_cases if case.only_full_mode
-    for c in ["gen", "cvs"]
+    (case.file_name, c) for case in test_cases if case.only_full_mode for c in ["gen", "cvs"]
 ]
 assert not any(c in small_cases for c in large_cases)
 cases = small_cases + large_cases
@@ -60,9 +51,7 @@ generators = ["adcman", "adcc"]
 # we don't have tt2 reference data from adcman for cvs, since there
 # is nothing implemented currently for cvs that requires the tt2 amplitudes.
 tt2_cases = [(system, case, "adcc") for system, case in small_cases]
-tt2_cases.extend(
-    (system, case, "adcman") for system, case in small_cases if "cvs" not in case
-)
+tt2_cases.extend((system, case, "adcman") for system, case in small_cases if "cvs" not in case)
 
 
 # Helper class to lazily cache the LazyMp instances so we can utilize their cache
@@ -107,15 +96,9 @@ class TestLazyMp:
     #
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)
-    def test_mp2_energy(self, system: str, case: str, generator: str,
-                        instances: LazyMpCache):
-        refmp = testdata_cache._load_data(
-            system=system, method="mp", case=case, source=generator
-        )
-        assert (
-            instances.get(system, case).energy_correction(2)
-            == approx(refmp["mp2"]["energy"])
-        )
+    def test_mp2_energy(self, system: str, case: str, generator: str, instances: LazyMpCache):
+        refmp = testdata_cache._load_data(system=system, method="mp", case=case, source=generator)
+        assert instances.get(system, case).energy_correction(2) == approx(refmp["mp2"]["energy"])
         if "cvs" not in case:
             return
         # CVS MP(2) energy should be equal to the non-CVS one
@@ -126,127 +109,101 @@ class TestLazyMp:
         refmp = testdata_cache._load_data(
             system=system, method="mp", case=non_cvs_case, source=generator
         )
-        assert (
-            instances.get(system, case).energy_correction(2)
-            == approx(refmp["mp2"]["energy"])
-        )
+        assert instances.get(system, case).energy_correction(2) == approx(refmp["mp2"]["energy"])
 
     # MP3 energy not implemented for CVS
     @pytest.mark.parametrize("system,case", non_cvs_small_cases)
     @pytest.mark.parametrize("generator", generators)
-    def test_mp3_energy(self, system: str, case: str, generator: str,
-                        instances: LazyMpCache):
-        refmp = testdata_cache._load_data(
-            system=system, method="mp", case=case, source=generator
-        )
-        assert (
-            instances.get(system, case).energy_correction(3)
-            == approx(refmp["mp3"]["energy"])
-        )
+    def test_mp3_energy(self, system: str, case: str, generator: str, instances: LazyMpCache):
+        refmp = testdata_cache._load_data(system=system, method="mp", case=case, source=generator)
+        assert instances.get(system, case).energy_correction(3) == approx(refmp["mp3"]["energy"])
 
     # MP4 energy not implemented for CVS
     @pytest.mark.parametrize("system,case", non_cvs_small_cases)
     @pytest.mark.parametrize("generator", generators)
-    def test_mp4_energy(self, system: str, case: str, generator: str,
-                        instances: LazyMpCache):
-        refmp = testdata_cache._load_data(
-            system=system, method="mp", case=case, source=generator
-        )
-        assert (
-            instances.get(system, case).energy_correction(4)
-            == approx(refmp["mp4"]["energy"])
-        )
+    def test_mp4_energy(self, system: str, case: str, generator: str, instances: LazyMpCache):
+        refmp = testdata_cache._load_data(system=system, method="mp", case=case, source=generator)
+        assert instances.get(system, case).energy_correction(4) == approx(refmp["mp4"]["energy"])
 
     # Ssq only implemented for unrestricted case, no adcman reference
-    @pytest.mark.parametrize("system,case", [(s, c) for s, c in unrestricted_cases
-                                             if "cvs" not in c])
-    def test_mp1_ssq(self, system: str, case: str,
-                     instances: LazyMpCache):
-        refmp = testdata_cache._load_data(
-            system=system, method="mp", case=case, source="adcc"
-        )
-        assert (
-            instances.get(system, case).ssq(1)
-            == approx(refmp["mp1"]["ssq"])
-        )
+    @pytest.mark.parametrize(
+        "system,case", [(s, c) for s, c in unrestricted_cases if "cvs" not in c]
+    )
+    def test_mp1_ssq(self, system: str, case: str, instances: LazyMpCache):
+        refmp = testdata_cache._load_data(system=system, method="mp", case=case, source="adcc")
+        assert instances.get(system, case).ssq(1) == approx(refmp["mp1"]["ssq"])
 
-    @pytest.mark.parametrize("system,case", [(s, c) for s, c in unrestricted_cases
-                                             if "cvs" not in c])
-    def test_mp2_ssq(self, system: str, case: str,
-                     instances: LazyMpCache):
-        refmp = testdata_cache._load_data(
-            system=system, method="mp", case=case, source="adcc"
-        )
-        assert (
-            instances.get(system, case).ssq(2)
-            == approx(refmp["mp2"]["ssq"])
-        )
+    @pytest.mark.parametrize(
+        "system,case", [(s, c) for s, c in unrestricted_cases if "cvs" not in c]
+    )
+    def test_mp2_ssq(self, system: str, case: str, instances: LazyMpCache):
+        refmp = testdata_cache._load_data(system=system, method="mp", case=case, source="adcc")
+        assert instances.get(system, case).ssq(2) == approx(refmp["mp2"]["ssq"])
 
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)
-    def test_df(self, system: str, case: str, generator: str,
-                instances: LazyMpCache):
-        refmp = testdata_cache._load_data(
-            system=system, method="mp", case=case, source=generator
+    def test_df(self, system: str, case: str, generator: str, instances: LazyMpCache):
+        refmp = testdata_cache._load_data(system=system, method="mp", case=case, source=generator)
+        assert_allclose(
+            instances.get(system, case).df("o1v1").to_ndarray(), refmp["mp1"]["df_o1v1"], atol=1e-12
         )
-        assert_allclose(instances.get(system, case).df("o1v1").to_ndarray(),
-                        refmp["mp1"]["df_o1v1"], atol=1e-12)
         if "cvs" in case:
-            assert_allclose(instances.get(system, case).df("o2v1").to_ndarray(),
-                            refmp["mp1"]["df_o2v1"], atol=1e-12)
+            assert_allclose(
+                instances.get(system, case).df("o2v1").to_ndarray(),
+                refmp["mp1"]["df_o2v1"],
+                atol=1e-12,
+            )
 
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)
-    def test_td1(self, system: str, case: str, generator: str,
-                 instances: LazyMpCache):
-        refmp = testdata_cache._load_data(
-            system=system, method="mp", case=case, source=generator
-        )
+    def test_td1(self, system: str, case: str, generator: str, instances: LazyMpCache):
+        refmp = testdata_cache._load_data(system=system, method="mp", case=case, source=generator)
         blocks = ["o1o1v1v1"]
         if "cvs" in case:
             blocks.extend(["o1o2v1v1", "o2o2v1v1"])
         for label in blocks:
-            assert_allclose(instances.get(system, case).t2(label).to_ndarray(),
-                            refmp["mp1"][f"t_{label}"], atol=1e-12)
+            assert_allclose(
+                instances.get(system, case).t2(label).to_ndarray(),
+                refmp["mp1"][f"t_{label}"],
+                atol=1e-12,
+            )
             assert f"td1/{label}" in instances.get(system, case).timer.tasks
 
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)
-    def test_td2(self, system: str, case: str, generator: str,
-                 instances: LazyMpCache):
-        refmp = testdata_cache._load_data(
-            system=system, method="mp", case=case, source=generator
+    def test_td2(self, system: str, case: str, generator: str, instances: LazyMpCache):
+        refmp = testdata_cache._load_data(system=system, method="mp", case=case, source=generator)
+        assert_allclose(
+            instances.get(system, case).td2("o1o1v1v1").to_ndarray(),
+            refmp["mp2"]["td_o1o1v1v1"],
+            atol=1e-12,
         )
-        assert_allclose(instances.get(system, case).td2("o1o1v1v1").to_ndarray(),
-                        refmp["mp2"]["td_o1o1v1v1"], atol=1e-12)
         assert "td2/o1o1v1v1" in instances.get(system, case).timer.tasks
 
     @pytest.mark.parametrize("system,case", non_cvs_small_cases)
     @pytest.mark.parametrize("generator", generators)
-    def test_td3(self, system: str, case: str, generator: str,
-                 instances: LazyMpCache):
-        refmp = testdata_cache._load_data(
-            system=system, method="mp", case=case, source=generator
+    def test_td3(self, system: str, case: str, generator: str, instances: LazyMpCache):
+        refmp = testdata_cache._load_data(system=system, method="mp", case=case, source=generator)
+        assert_allclose(
+            instances.get(system, case).td3("o1o1v1v1").to_ndarray(),
+            refmp["mp3"]["td_o1o1v1v1"],
+            atol=1e-12,
         )
-        assert_allclose(instances.get(system, case).td3("o1o1v1v1").to_ndarray(),
-                        refmp["mp3"]["td_o1o1v1v1"], atol=1e-12)
         assert "td3/o1o1v1v1" in instances.get(system, case).timer.tasks
 
     @pytest.mark.parametrize("system,case,generator", tt2_cases)
-    def test_tt2(self, system: str, case: str, generator: str,
-                 instances: LazyMpCache):
-        refmp = testdata_cache._load_data(
-            system=system, method="mp", case=case, source=generator
-        )
+    def test_tt2(self, system: str, case: str, generator: str, instances: LazyMpCache):
+        refmp = testdata_cache._load_data(system=system, method="mp", case=case, source=generator)
         assert_allclose(
             instances.get(system, case).tt2("o1o1o1v1v1v1").to_ndarray(),
             refmp["mp2"]["tt_o1o1o1v1v1v1"],
-            atol=1e-12
+            atol=1e-12,
         )
         assert "tt2/o1o1o1v1v1v1" in instances.get(system, case).timer.tasks
 
     def test_triples_symmetry(self, instances: LazyMpCache):
         import libadcc
+
         # Ensure that the triples have the correct symmetry that matches
         # the symmetry of make_symmetry_triples
         mp = instances.get("h2o_sto3g", "gen")
@@ -263,36 +220,34 @@ class TestLazyMp:
 
     @pytest.mark.parametrize("system,case", non_cvs_small_cases)
     def test_sigma_inf_ov(self, system: str, case: str, instances: LazyMpCache):
-        refmp = testdata_cache._load_data(
-            system=system, method="mp", case=case, source="adcc"
+        refmp = testdata_cache._load_data(system=system, method="mp", case=case, source="adcc")
+        assert_allclose(
+            instances.get(system, case).sigma_inf_ov(3).to_ndarray(),
+            refmp["mp3"]["sigma_inf_ov"],
+            atol=1e-12,
         )
-        assert_allclose(instances.get(system, case).sigma_inf_ov(3).to_ndarray(),
-                        refmp["mp3"]["sigma_inf_ov"], atol=1e-12)
         assert "sigma_inf_ov/3" in instances.get(system, case).timer.tasks
 
     @pytest.mark.parametrize("system,case", non_cvs_small_cases)
     def test_m_3_plus(self, system: str, case: str, instances: LazyMpCache):
-        refmp = testdata_cache._load_data(
-            system=system, method="mp", case=case, source="adcc"
+        refmp = testdata_cache._load_data(system=system, method="mp", case=case, source="adcc")
+        assert_allclose(
+            instances.get(system, case).m_3_plus.to_ndarray(), refmp["mp3"]["m_3_plus"], atol=1e-12
         )
-        assert_allclose(instances.get(system, case).m_3_plus.to_ndarray(),
-                        refmp["mp3"]["m_3_plus"], atol=1e-12)
 
     @pytest.mark.parametrize("system, case", non_cvs_small_cases)
     def test_m_3_minus(self, system: str, case: str, instances: LazyMpCache):
-        refmp = testdata_cache._load_data(
-            system=system, method="mp", case=case, source="adcc"
+        refmp = testdata_cache._load_data(system=system, method="mp", case=case, source="adcc")
+        assert_allclose(
+            instances.get(system, case).m_3_minus.to_ndarray(),
+            refmp["mp3"]["m_3_minus"],
+            atol=1e-12,
         )
-        assert_allclose(instances.get(system, case).m_3_minus.to_ndarray(),
-                        refmp["mp3"]["m_3_minus"], atol=1e-12)
 
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)
-    def test_mp2_diffdm_mo(self, system: str, case: str, generator: str,
-                           instances: LazyMpCache):
-        refmp = testdata_cache._load_data(
-            system=system, method="mp", case=case, source=generator
-        )
+    def test_mp2_diffdm_mo(self, system: str, case: str, generator: str, instances: LazyMpCache):
+        refmp = testdata_cache._load_data(system=system, method="mp", case=case, source=generator)
         mp2diff = instances.get(system, case).diffdm(2, apply_cvs=False)
 
         assert mp2diff.symmetry is OperatorSymmetry.HERMITIAN
@@ -305,10 +260,8 @@ class TestLazyMp:
             # calculated instead of the canonical oc block
             if generator == "adcman" and label == "o1o2":
                 label = "o2o1"
-            assert_allclose(mp2diff[label].to_ndarray(),
-                            refmp["mp2"]["dm_" + label], atol=1e-12)
-        assert ("second_order_dm_correction/False" in
-                instances.get(system, case).timer.tasks)
+            assert_allclose(mp2diff[label].to_ndarray(), refmp["mp2"]["dm_" + label], atol=1e-12)
+        assert "second_order_dm_correction/False" in instances.get(system, case).timer.tasks
 
         if "cvs" not in case:
             return
@@ -318,18 +271,15 @@ class TestLazyMp:
         blocks = ["o1o1", "o1v1", "v1v1"]
         assert sorted(blocks) == sorted(mp2diff.blocks_nonzero)
         for label in blocks:
-            assert_allclose(mp2diff[label].to_ndarray(),
-                            refmp["cvs-mp2"]["dm_" + label], atol=1e-12)
-        assert ("second_order_dm_correction/True" in
-                instances.get(system, case).timer.tasks)
+            assert_allclose(
+                mp2diff[label].to_ndarray(), refmp["cvs-mp2"]["dm_" + label], atol=1e-12
+            )
+        assert "second_order_dm_correction/True" in instances.get(system, case).timer.tasks
 
     @pytest.mark.parametrize("system,case", cases)
     @pytest.mark.parametrize("generator", generators)
-    def test_mp2_diffdm_ao(self, system: str, case: str, generator: str,
-                           instances: LazyMpCache):
-        refmp = testdata_cache._load_data(
-            system=system, method="mp", case=case, source=generator
-        )
+    def test_mp2_diffdm_ao(self, system: str, case: str, generator: str, instances: LazyMpCache):
+        refmp = testdata_cache._load_data(system=system, method="mp", case=case, source=generator)
         mp2diff = instances.get(system, case).diffdm(2, apply_cvs=False)
         reference_state = instances.get(system, case).reference_state
 
@@ -353,9 +303,7 @@ class TestLazyMp:
         # but this data is not available from adcman!
         if generator == "adcman":
             return
-        refmp = testdata_cache._load_data(
-            system=system, method="mp", case=case, source=generator
-        )
+        refmp = testdata_cache._load_data(system=system, method="mp", case=case, source=generator)
         mp2diff = instances.get(system, case).diffdm(2, apply_cvs=True)
         reference_state = instances.get(system, case).reference_state
 
@@ -365,31 +313,22 @@ class TestLazyMp:
 
     @pytest.mark.parametrize("system,case", non_cvs_small_cases)
     @pytest.mark.parametrize("generator", generators)
-    def test_mp3_diffdm_mo(self, system: str, case: str, generator: str,
-                           instances: LazyMpCache):
-        refmp = testdata_cache._load_data(
-            system=system, method="mp", case=case, source=generator
-        )
+    def test_mp3_diffdm_mo(self, system: str, case: str, generator: str, instances: LazyMpCache):
+        refmp = testdata_cache._load_data(system=system, method="mp", case=case, source=generator)
         mp3diff = instances.get(system, case).diffdm(3)
 
         assert mp3diff.symmetry is OperatorSymmetry.HERMITIAN
 
         blocks = ["o1o1", "o1v1", "v1v1"]
         for label in blocks:
-
-            assert_allclose(mp3diff[label].to_ndarray(),
-                            refmp["mp3"]["dm_" + label], atol=1e-12)
-            assert "third_order_dm_correction/False" in (
-                instances.get(system, case).timer.tasks)
+            assert_allclose(mp3diff[label].to_ndarray(), refmp["mp3"]["dm_" + label], atol=1e-12)
+            assert "third_order_dm_correction/False" in (instances.get(system, case).timer.tasks)
 
     @pytest.mark.parametrize("system,case", non_cvs_small_cases)
     @pytest.mark.parametrize("generator", generators)
-    def test_mp3_diffdm_ao(self, system: str, case: str, generator: str,
-                           instances: LazyMpCache):
+    def test_mp3_diffdm_ao(self, system: str, case: str, generator: str, instances: LazyMpCache):
 
-        refmp = testdata_cache._load_data(
-            system=system, method="mp", case=case, source=generator
-        )
+        refmp = testdata_cache._load_data(system=system, method="mp", case=case, source=generator)
         mp3diff = instances.get(system, case).diffdm(3)
         reference_state = instances.get(system, case).reference_state
 
@@ -399,15 +338,10 @@ class TestLazyMp:
 
     @pytest.mark.parametrize("system,case", non_cvs_small_cases)
     @pytest.mark.parametrize("level", [1, 2])
-    def test_mpn_diffdm_2p_mo(self, system: str, case: str, level: int,
-                              instances: LazyMpCache):
+    def test_mpn_diffdm_2p_mo(self, system: str, case: str, level: int, instances: LazyMpCache):
         # consistency tests for the 2p diffdm in the MO basis
-        refmp = testdata_cache.adcc_data(
-            system=system, method="mp", case=case
-        )
-        diffdm = instances.get(system, case).diffdm_2p(
-            level=level, apply_cvs=False
-        )
+        refmp = testdata_cache.adcc_data(system=system, method="mp", case=case)
+        diffdm = instances.get(system, case).diffdm_2p(level=level, apply_cvs=False)
         blocks = {
             1: ["o1o1v1v1"],
             2: ["o1o1o1o1", "o1o1o1v1", "o1o1v1v1", "o1v1o1v1", "v1v1v1v1"],
@@ -416,9 +350,7 @@ class TestLazyMp:
         assert blocks == diffdm.blocks_nonzero
         for label in blocks:
             assert_allclose(
-                diffdm[label].to_ndarray(),
-                refmp[f"mp{level}"][f"2p_dm_{label}"],
-                atol=1e-12
+                diffdm[label].to_ndarray(), refmp[f"mp{level}"][f"2p_dm_{label}"], atol=1e-12
             )
         fname = {
             1: "first_order_dm_correction_2p",
@@ -428,9 +360,7 @@ class TestLazyMp:
             assert f"{fname[lev]}/False" in instances.get(system, case).timer.tasks
         # TODO: add test for CVS-MP 2p density once implemented
         with pytest.raises((NotImplementedError, AssertionError)):
-            diffdm = instances.get(system, case).diffdm_2p(
-                level=level, apply_cvs=True
-            )
+            diffdm = instances.get(system, case).diffdm_2p(level=level, apply_cvs=True)
 
     #
     # Cache
@@ -472,19 +402,15 @@ class TestGroundstateDensity:
                 # = 1 / (n_occ - 1) <pi||ri> D^pq_rq
                 s1, s2, s3, s4 = split_spaces(block)
                 if s2 == s4:
-                    eri_1p = np.einsum(
-                        "piqi->pq", hf.eri(f"{s1}o1{s3}o1").to_ndarray()
-                    )
+                    eri_1p = np.einsum("piqi->pq", hf.eri(f"{s1}o1{s3}o1").to_ndarray())
                     n_occ = hf.foo.shape[1]
-                    energy -= 1 / (n_occ - 1) * np.einsum(
-                        "pr,pqrq->",
-                        eri_1p,
-                        dens_2p[block].to_ndarray()
+                    energy -= (
+                        1
+                        / (n_occ - 1)
+                        * np.einsum("pr,pqrq->", eri_1p, dens_2p[block].to_ndarray())
                     )
                 # and the full 2e part
-                energy += 0.25 * einsum(
-                    "pqrs,pqrs", dens_2p[block], hf.eri(block)
-                )
+                energy += 0.25 * einsum("pqrs,pqrs", dens_2p[block], hf.eri(block))
         return energy
 
     def test_mpn_energy(self, system: str, level: int):
@@ -493,8 +419,5 @@ class TestGroundstateDensity:
 
         ref = mp.energy(level=level)
 
-        energy = (
-            hf.nuclear_repulsion_energy
-            + self.calculate_mpn_energy(mp, level=level)
-        )
+        energy = hf.nuclear_repulsion_energy + self.calculate_mpn_energy(mp, level=level)
         assert energy == pytest.approx(ref)

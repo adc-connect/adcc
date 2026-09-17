@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -20,9 +19,8 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import numpy as np
-
 import h5py
+import numpy as np
 
 from libadcc import HartreeFockProvider
 
@@ -43,11 +41,10 @@ def get_scalar_value(data, key, default=None):
         return value  # Just a scalar
     elif value.shape == ():
         return value[()]
-    elif value.shape == (1, ):
+    elif value.shape == (1,):
         return value[0]
     else:
-        raise ValueError("Unrecognised scalar value shape ", value.shape,
-                         " should be () or (1, )")
+        raise ValueError("Unrecognised scalar value shape ", value.shape, " should be () or (1, )")
 
 
 def get_array_value(data, key, default=None):
@@ -71,7 +68,8 @@ class DataOperatorIntegralProvider:
     def available(self) -> tuple[str, ...]:
         blacklist = ("backend", "available")
         return tuple(
-            integral for integral in dir(self)
+            integral
+            for integral in dir(self)
             if not integral.startswith("_") and integral not in blacklist
         )
 
@@ -178,70 +176,87 @@ class DataHfProvider(HartreeFockProvider):
             self.__backend = data.get("backend", "dict")
         elif isinstance(data, h5py.File):
             if "r" not in data.mode:
-                raise ValueError("Passed h5py.File stream (filename: {}) not "
-                                 "readable.".format(data.filename))
-            self.__backend = data.attrs.get(
-                "backend", '<HDF5 file "{}">'.format(data.filename)
-            )
+                raise ValueError(
+                    f"Passed h5py.File stream (filename: {data.filename}) not readable."
+                )
+            self.__backend = data.attrs.get("backend", f'<HDF5 file "{data.filename}">')
         else:
-            raise TypeError("Can only deal with data objects of type dict "
-                            "or h5py.File.")
+            raise TypeError("Can only deal with data objects of type dict or h5py.File.")
 
         if data["orbcoeff_fb"].shape[0] % 2 != 0:
             raise ValueError("orbcoeff_fb first axis should have even length")
         nb = self.get_n_bas()
         nf = 2 * self.get_n_orbs_alpha()
 
-        checks = [("orbcoeff_fb", (nf, nb)), ("occupation_f", (nf, )),
-                  ("orben_f", (nf, )), ("fock_ff", (nf, nf)),
-                  ("eri_ffff", (nf, nf, nf, nf)),
-                  ("eri_phys_asym_ffff", (nf, nf, nf, nf)), ]
+        checks = [
+            ("orbcoeff_fb", (nf, nb)),
+            ("occupation_f", (nf,)),
+            ("orben_f", (nf,)),
+            ("fock_ff", (nf, nf)),
+            ("eri_ffff", (nf, nf, nf, nf)),
+            ("eri_phys_asym_ffff", (nf, nf, nf, nf)),
+        ]
         for key, exshape in checks:
             if key not in data:
                 continue
             if data[key].shape != exshape:
-                raise ValueError("Shape mismatch for key {}: Expected {}, but "
-                                 "got {}.".format(key, exshape,
-                                                  data[key].shape))
+                raise ValueError(
+                    f"Shape mismatch for key {key}: Expected {exshape}, but got {data[key].shape}."
+                )
 
         # Setup integral data
         opprov = DataOperatorIntegralProvider(self.__backend)
         mmp = data.get("multipoles", {})
         if "elec_1" in mmp:
             if mmp["elec_1"].shape != (3, nb, nb):
-                raise ValueError("multipoles/elec_1 is expected to have shape "
-                                 + str((3, nb, nb)) + " not "
-                                 + str(mmp["elec_1"].shape))
+                raise ValueError(
+                    "multipoles/elec_1 is expected to have shape "
+                    + str((3, nb, nb))
+                    + " not "
+                    + str(mmp["elec_1"].shape)
+                )
             opprov.electric_dipole = np.asarray(mmp["elec_1"])
         if "elec_2_origin" in mmp:
+
             def get_integral_elquad(gauge_origin):
                 return np.asarray(mmp[f"elec_2_{gauge_origin}"])
+
             if mmp["elec_2_origin"].shape != (9, nb, nb):
-                raise ValueError("multipoles/elec_2_origin is expected to "
-                                 "have shape " + str((9, nb, nb)) + " not "
-                                 + str(mmp["elec_2"].shape))
+                raise ValueError(
+                    "multipoles/elec_2_origin is expected to "
+                    "have shape " + str((9, nb, nb)) + " not " + str(mmp["elec_2"].shape)
+                )
             opprov.electric_quadrupole = get_integral_elquad
         magm = data.get("magnetic_moments", {})
         if "mag_1_origin" in magm:
+
             def get_integral_magdip(gauge_origin):
                 return np.asarray(magm[f"mag_1_{gauge_origin}"])
+
             if magm["mag_1_origin"].shape != (3, nb, nb):
-                raise ValueError("magnetic_moments/mag_1_origin is expected to have"
-                                 " shape " + str((3, nb, nb)) + " not "
-                                 + str(magm["mag_1_origin"].shape))
+                raise ValueError(
+                    "magnetic_moments/mag_1_origin is expected to have"
+                    " shape " + str((3, nb, nb)) + " not " + str(magm["mag_1_origin"].shape)
+                )
             opprov.magnetic_dipole = get_integral_magdip
         derivs = data.get("derivatives", {})
         if "elec_vel_1" in derivs:
             if derivs["elec_vel_1"].shape != (3, nb, nb):
-                raise ValueError("derivatives/elec_vel_1 is expected to have shape "
-                                 + str((3, nb, nb)) + " not "
-                                 + str(derivs["elec_vel_1"].shape))
+                raise ValueError(
+                    "derivatives/elec_vel_1 is expected to have shape "
+                    + str((3, nb, nb))
+                    + " not "
+                    + str(derivs["elec_vel_1"].shape)
+                )
             opprov.electric_dipole_velocity = np.asarray(derivs["elec_vel_1"])
         if "overlap" in data:
             if data["overlap"].shape != (nb, nb):
-                raise ValueError("overlap is expected to have shape "
-                                 + str((nb, nb)) + " not "
-                                 + str(data["overlap"].shape))
+                raise ValueError(
+                    "overlap is expected to have shape "
+                    + str((nb, nb))
+                    + " not "
+                    + str(data["overlap"].shape)
+                )
             opprov.overlap = np.asarray(data["overlap"])
 
         self.operator_integral_provider = opprov
@@ -299,8 +314,7 @@ class DataHfProvider(HartreeFockProvider):
         else:
             nuc_multipole = get_array_value(self.data, key, default=None)
         if nuc_multipole is None:
-            raise NotImplementedError(f"Nuclear multipole with order {order} is "
-                                      "not available.")
+            raise NotImplementedError(f"Nuclear multipole with order {order} is not available.")
         if order == 0:  # The function interface needs an np.array on return
             nuc_multipole = np.array([nuc_multipole])
         return nuc_multipole
@@ -334,5 +348,4 @@ class DictHfProvider(DataHfProvider):
         from warnings import warn
 
         super().__init__(*args, **kwargs)
-        warn(DeprecationWarning("DictHfProvider is deprecated, "
-                                "use DataHfProvider"))
+        warn(DeprecationWarning("DictHfProvider is deprecated, use DataHfProvider"))

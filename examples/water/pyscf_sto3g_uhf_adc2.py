@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
-import adcc
-
 from pyscf import gto, scf
+
+import adcc
 
 # Run SCF in pyscf
 mol = gto.M(
-    atom='O 0 0 0;'
-         'H 0 0 1.795239827225189;'
-         'H 1.693194615993441 0 -0.599043184453037',
-    basis='sto-3g',
+    atom="O 0 0 0;H 0 0 1.795239827225189;H 1.693194615993441 0 -0.599043184453037",
+    basis="sto-3g",
     spin=2,
-    unit="Bohr"
+    unit="Bohr",
 )
 scfres = scf.UHF(mol)
 scfres.conv_tol = 1e-8

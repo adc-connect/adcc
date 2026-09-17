@@ -6,11 +6,11 @@ import adcc
 
 # Run SCF in pyscf
 mol = gto.M(
-    atom='S  -0.38539679062   0 -0.27282082253;'
-         'H  -0.0074283962687 0  2.2149138578;'
-         'H   2.0860198029    0 -0.74589639249',
-    basis='cc-pvtz',
-    unit="Bohr"
+    atom="S  -0.38539679062   0 -0.27282082253;"
+    "H  -0.0074283962687 0  2.2149138578;"
+    "H   2.0860198029    0 -0.74589639249",
+    basis="cc-pvtz",
+    unit="Bohr",
 )
 scfres = scf.RHF(mol)
 scfres.conv_tol = 1e-13

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -20,24 +19,43 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import pytest
 import numpy as np
+import pytest
 from numpy.testing import assert_array_equal
 
-from adcc.ReferenceState import ReferenceState
 from adcc.HfCounterData import HfCounterData
+from adcc.ReferenceState import ReferenceState
 
 
 class TestReferenceStateCounterData:
-    def base_test(self, n_alpha, n_beta, n_bas, n_orbs_alpha, restricted,
-                  check_symmetry=False, core_orbitals=[], frozen_core=[],
-                  frozen_virtual=[]):
+    def base_test(
+        self,
+        n_alpha,
+        n_beta,
+        n_bas,
+        n_orbs_alpha,
+        restricted,
+        check_symmetry=False,
+        core_orbitals=None,
+        frozen_core=None,
+        frozen_virtual=None,
+    ):
+        if frozen_virtual is None:
+            frozen_virtual = []
+        if frozen_core is None:
+            frozen_core = []
+        if core_orbitals is None:
+            core_orbitals = []
         if not isinstance(restricted, bool):
-            restricted = (restricted == "restricted")
+            restricted = restricted == "restricted"
         data = HfCounterData(n_alpha, n_beta, n_bas, n_orbs_alpha, restricted)
         refstate = ReferenceState(
-            data, core_orbitals, frozen_core, frozen_virtual,
-            symmetry_check_on_import=check_symmetry, import_all_below_n_orbs=None
+            data,
+            core_orbitals,
+            frozen_core,
+            frozen_virtual,
+            symmetry_check_on_import=check_symmetry,
+            import_all_below_n_orbs=None,
         )
 
         # Setup spaces and refstate axis
@@ -54,7 +72,7 @@ class TestReferenceStateCounterData:
             orbs_b = np.array(orbitals[1]) + 1 + n_orbs_alpha
             if restricted:
                 orbs_b -= n_orbs_alpha
-            ref_axis[sid] = ((orbs_a, orbs_b))
+            ref_axis[sid] = (orbs_a, orbs_b)
             done_a.extend(orbs_a)
             done_b.extend(orbs_b)
 
@@ -69,12 +87,14 @@ class TestReferenceStateCounterData:
         if frozen_virtual:
             add_subspace(frozen_virtual, "v2")
 
-        notdone_a = np.array([o for o in data.get_fa_range()
-                              if not np.any(np.abs(done_a - o) < 1e-12)])
-        notdone_b = np.array([o for o in data.get_fb_range()
-                              if not np.any(np.abs(done_b - o) < 1e-12)])
-        ref_axis["o1"] = ((notdone_a[:na_rest], notdone_b[:nb_rest]))
-        ref_axis["v1"] = ((notdone_a[na_rest:], notdone_b[nb_rest:]))
+        notdone_a = np.array(
+            [o for o in data.get_fa_range() if not np.any(np.abs(done_a - o) < 1e-12)]
+        )
+        notdone_b = np.array(
+            [o for o in data.get_fb_range() if not np.any(np.abs(done_b - o) < 1e-12)]
+        )
+        ref_axis["o1"] = (notdone_a[:na_rest], notdone_b[:nb_rest])
+        ref_axis["v1"] = (notdone_a[na_rest:], notdone_b[nb_rest:])
 
         # General properties
         assert refstate.restricted == restricted
@@ -87,33 +107,30 @@ class TestReferenceStateCounterData:
         assert refstate.n_alpha == n_alpha
         assert refstate.n_beta == n_beta
         assert refstate.conv_tol == 1e-10
-        assert refstate.energy_scf == -1.
+        assert refstate.energy_scf == -1.0
 
         # Orben
         for ss in subspaces:
-            assert_array_equal(refstate.orbital_energies(ss).to_ndarray(),
-                               np.hstack(ref_axis[ss]))
+            assert_array_equal(refstate.orbital_energies(ss).to_ndarray(), np.hstack(ref_axis[ss]))
 
         # Orbcoeff
         for ss in subspaces:
-            coeff_a = ref_axis[ss][0][:, None] * data.mul(1) \
-                + data.get_b_range()[None, :]
-            coeff_b = ref_axis[ss][1][:, None] * data.mul(1) \
-                + data.get_b_range()[None, :]
+            coeff_a = ref_axis[ss][0][:, None] * data.mul(1) + data.get_b_range()[None, :]
+            coeff_b = ref_axis[ss][1][:, None] * data.mul(1) + data.get_b_range()[None, :]
             nfa, nb = coeff_a.shape
             nfb, nb = coeff_b.shape
             coeff_full = np.zeros((nfa + nfb, 2 * nb))
             coeff_full[:nfa, :nb] = coeff_a
             coeff_full[nfa:, nb:] = coeff_b
-            assert_array_equal(
-                refstate.orbital_coefficients(ss + "b").to_ndarray(), coeff_full
-            )
+            assert_array_equal(refstate.orbital_coefficients(ss + "b").to_ndarray(), coeff_full)
 
         # Fock
         for ss1 in subspaces:
             for ss2 in subspaces:
-                assert_array_equal(refstate.fock(ss1 + ss2).to_ndarray(),
-                                   data.fold_fock(ref_axis[ss1], ref_axis[ss2]))
+                assert_array_equal(
+                    refstate.fock(ss1 + ss2).to_ndarray(),
+                    data.fold_fock(ref_axis[ss1], ref_axis[ss2]),
+                )
 
         #
         # TODO The eri test is not yet working ... but I (mfh) have really spend
@@ -158,103 +175,187 @@ class TestReferenceStateCounterData:
     #
     @pytest.mark.parametrize("restricted", ["restricted", "unrestricted"])
     def test_generic_small(self, restricted: str):
-        self.base_test(n_alpha=3, n_beta=3, n_bas=8, n_orbs_alpha=8,
-                       restricted=restricted, check_symmetry=False)
+        self.base_test(
+            n_alpha=3,
+            n_beta=3,
+            n_bas=8,
+            n_orbs_alpha=8,
+            restricted=restricted,
+            check_symmetry=False,
+        )
         #              # XXX check_symmetry=True fails because a
         #                write buffer overflow
 
     @pytest.mark.parametrize("restricted", ["restricted", "unrestricted"])
     def test_generic_medium(self, restricted):
-        self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
-                       restricted=restricted)
+        self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20, restricted=restricted)
 
     @pytest.mark.parametrize("restricted", ["restricted", "unrestricted"])
     def test_generic_large(self, restricted):
-        self.base_test(n_alpha=21, n_beta=21, n_bas=60, n_orbs_alpha=60,
-                       restricted=restricted)
+        self.base_test(n_alpha=21, n_beta=21, n_bas=60, n_orbs_alpha=60, restricted=restricted)
 
     @pytest.mark.parametrize("restricted", ["restricted", "unrestricted"])
     def test_cvs_medium(self, restricted):
-        self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
-                       restricted=restricted, core_orbitals=([0, 1], [0, 1]))
+        self.base_test(
+            n_alpha=9,
+            n_beta=9,
+            n_bas=20,
+            n_orbs_alpha=20,
+            restricted=restricted,
+            core_orbitals=([0, 1], [0, 1]),
+        )
 
     def test_cvs_large_restricted(self):
-        self.base_test(n_alpha=15, n_beta=15, n_bas=60, n_orbs_alpha=60,
-                       restricted=True, core_orbitals=([0, 1, 2], [0, 1, 2]))
+        self.base_test(
+            n_alpha=15,
+            n_beta=15,
+            n_bas=60,
+            n_orbs_alpha=60,
+            restricted=True,
+            core_orbitals=([0, 1, 2], [0, 1, 2]),
+        )
 
     #
     # frozen-core
     #
     @pytest.mark.parametrize("restricted", ["restricted", "unrestricted"])
     def test_fc_medium(self, restricted):
-        self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
-                       restricted=restricted, frozen_core=([0, 1], [0, 1]))
+        self.base_test(
+            n_alpha=9,
+            n_beta=9,
+            n_bas=20,
+            n_orbs_alpha=20,
+            restricted=restricted,
+            frozen_core=([0, 1], [0, 1]),
+        )
 
     def test_fc_large_restricted(self):
-        self.base_test(n_alpha=15, n_beta=15, n_bas=60, n_orbs_alpha=60,
-                       restricted=True, frozen_core=([0, 1, 2], [0, 1, 2]))
+        self.base_test(
+            n_alpha=15,
+            n_beta=15,
+            n_bas=60,
+            n_orbs_alpha=60,
+            restricted=True,
+            frozen_core=([0, 1, 2], [0, 1, 2]),
+        )
 
     @pytest.mark.parametrize("restricted", ["restricted", "unrestricted"])
     def test_fc_cvs_medium(self, restricted):
-        self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
-                       restricted=restricted, frozen_core=([0], [0]),
-                       core_orbitals=([1], [1]))
+        self.base_test(
+            n_alpha=9,
+            n_beta=9,
+            n_bas=20,
+            n_orbs_alpha=20,
+            restricted=restricted,
+            frozen_core=([0], [0]),
+            core_orbitals=([1], [1]),
+        )
 
     def test_fc_cvs_large_restricted(self):
-        self.base_test(n_alpha=15, n_beta=15, n_bas=60, n_orbs_alpha=60,
-                       restricted=True, frozen_core=([0], [0]),
-                       core_orbitals=([1, 2], [1, 2]))
+        self.base_test(
+            n_alpha=15,
+            n_beta=15,
+            n_bas=60,
+            n_orbs_alpha=60,
+            restricted=True,
+            frozen_core=([0], [0]),
+            core_orbitals=([1, 2], [1, 2]),
+        )
 
     #
     # frozen-virtual
     #
     @pytest.mark.parametrize("restricted", ["restricted", "unrestricted"])
     def test_fv_medium(self, restricted):
-        self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
-                       restricted=restricted,
-                       frozen_virtual=([18, 19], [18, 19]))
+        self.base_test(
+            n_alpha=9,
+            n_beta=9,
+            n_bas=20,
+            n_orbs_alpha=20,
+            restricted=restricted,
+            frozen_virtual=([18, 19], [18, 19]),
+        )
 
     def test_fv_large_restricted(self):
-        self.base_test(n_alpha=15, n_beta=15, n_bas=60, n_orbs_alpha=60,
-                       restricted=True,
-                       frozen_virtual=([57, 58, 59], [57, 58, 59]))
+        self.base_test(
+            n_alpha=15,
+            n_beta=15,
+            n_bas=60,
+            n_orbs_alpha=60,
+            restricted=True,
+            frozen_virtual=([57, 58, 59], [57, 58, 59]),
+        )
 
     @pytest.mark.parametrize("restricted", ["restricted", "unrestricted"])
     def test_fv_cvs_medium(self, restricted):
-        self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
-                       restricted=restricted,
-                       frozen_virtual=([18, 19], [18, 19]),
-                       core_orbitals=([0, 1], [0, 1]))
+        self.base_test(
+            n_alpha=9,
+            n_beta=9,
+            n_bas=20,
+            n_orbs_alpha=20,
+            restricted=restricted,
+            frozen_virtual=([18, 19], [18, 19]),
+            core_orbitals=([0, 1], [0, 1]),
+        )
 
     def test_fv_cvs_large_restricted(self):
-        self.base_test(n_alpha=15, n_beta=15, n_bas=60, n_orbs_alpha=60,
-                       restricted=True,
-                       frozen_virtual=([57, 58, 59], [57, 58, 59]),
-                       core_orbitals=([0, 1, 2], [0, 1, 2]))
+        self.base_test(
+            n_alpha=15,
+            n_beta=15,
+            n_bas=60,
+            n_orbs_alpha=60,
+            restricted=True,
+            frozen_virtual=([57, 58, 59], [57, 58, 59]),
+            core_orbitals=([0, 1, 2], [0, 1, 2]),
+        )
 
     #
     # frozen-core, frozen-virtual
     #
     @pytest.mark.parametrize("restricted", ["restricted", "unrestricted"])
     def test_fc_fv_medium(self, restricted):
-        self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
-                       restricted=restricted, frozen_core=([0, 1], [0, 1]),
-                       frozen_virtual=([18, 19], [18, 19]))
+        self.base_test(
+            n_alpha=9,
+            n_beta=9,
+            n_bas=20,
+            n_orbs_alpha=20,
+            restricted=restricted,
+            frozen_core=([0, 1], [0, 1]),
+            frozen_virtual=([18, 19], [18, 19]),
+        )
 
     def test_fc_fv_large_restricted(self):
-        self.base_test(n_alpha=15, n_beta=15, n_bas=60, n_orbs_alpha=60,
-                       restricted=True, frozen_core=([0, 1, 2], [0, 1, 2]),
-                       frozen_virtual=([57, 58, 59], [57, 58, 59]))
+        self.base_test(
+            n_alpha=15,
+            n_beta=15,
+            n_bas=60,
+            n_orbs_alpha=60,
+            restricted=True,
+            frozen_core=([0, 1, 2], [0, 1, 2]),
+            frozen_virtual=([57, 58, 59], [57, 58, 59]),
+        )
 
     @pytest.mark.parametrize("restricted", ["restricted", "unrestricted"])
     def test_fc_fv_cvs_medium(self, restricted):
-        self.base_test(n_alpha=9, n_beta=9, n_bas=20, n_orbs_alpha=20,
-                       restricted=restricted,
-                       frozen_virtual=([18, 19], [18, 19]),
-                       frozen_core=([0], [0]), core_orbitals=([1], [1]))
+        self.base_test(
+            n_alpha=9,
+            n_beta=9,
+            n_bas=20,
+            n_orbs_alpha=20,
+            restricted=restricted,
+            frozen_virtual=([18, 19], [18, 19]),
+            frozen_core=([0], [0]),
+            core_orbitals=([1], [1]),
+        )
 
     def test_fc_fv_cvs_large_restricted(self):
-        self.base_test(n_alpha=15, n_beta=15, n_bas=60, n_orbs_alpha=60,
-                       restricted=True,
-                       frozen_virtual=([57, 58, 59], [57, 58, 59]),
-                       frozen_core=([0], [0]), core_orbitals=([1, 2], [1, 2]))
+        self.base_test(
+            n_alpha=15,
+            n_beta=15,
+            n_bas=60,
+            n_orbs_alpha=60,
+            restricted=True,
+            frozen_virtual=([57, 58, 59], [57, 58, 59]),
+            frozen_core=([0], [0]),
+            core_orbitals=([1, 2], [1, 2]),
+        )

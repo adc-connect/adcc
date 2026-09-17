@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -23,6 +22,7 @@
 from dataclasses import dataclass
 from itertools import product
 from typing import Literal, TypeAlias, TypeGuard
+
 import numpy as np
 
 IntSlice: TypeAlias = "slice[int, int, int]"
@@ -36,9 +36,7 @@ Array4D = np.ndarray[tuple[int, int, int, int], np.dtype[np.float64]]
 
 def is_int_slice(slice: slice) -> TypeGuard[IntSlice]:
     return (
-        isinstance(slice.start, int)
-        and isinstance(slice.stop, int)
-        and isinstance(slice.step, int)
+        isinstance(slice.start, int) and isinstance(slice.stop, int) and isinstance(slice.step, int)
     )
 
 
@@ -59,8 +57,7 @@ class SpinBlockSlice4D:
 
 
 def range_in(inner: IntSlice, full: IntSlice) -> bool:
-    return all(r in range(full.start, full.stop)
-               for r in range(inner.start, inner.stop))
+    return all(r in range(full.start, full.stop) for r in range(inner.start, inner.stop))
 
 
 class EriBuilder:
@@ -73,8 +70,8 @@ class EriBuilder:
           Gets passed the block as a string like 'OOVV' and the spin block as
           as string like 'abab'.
     """
-    def __init__(self, n_orbs: int, n_orbs_alpha: int, n_alpha: int, n_beta: int,
-                 restricted: bool):
+
+    def __init__(self, n_orbs: int, n_orbs_alpha: int, n_alpha: int, n_beta: int, restricted: bool):
         self.n_orbs: int = n_orbs
         self.n_orbs_alpha: int = n_orbs_alpha
         self.n_alpha: int = n_alpha
@@ -84,8 +81,7 @@ class EriBuilder:
         self.block2slice: dict[tuple[Block, Spin], IntSlice] = {
             ("O", "a"): slice(0, self.n_alpha, 1),
             ("V", "a"): slice(self.n_alpha, self.n_orbs_alpha, 1),
-            ("O", "b"): slice(self.n_orbs_alpha,
-                              self.n_orbs_alpha + self.n_beta, 1),
+            ("O", "b"): slice(self.n_orbs_alpha, self.n_orbs_alpha + self.n_beta, 1),
             ("V", "b"): slice(self.n_orbs_alpha + self.n_beta, self.n_orbs, 1),
         }
 
@@ -95,20 +91,21 @@ class EriBuilder:
         """
         raise NotImplementedError("Implement compute_mo_eri")
 
-    def split_4d_slice(
-        self, slices: tuple[slice, slice, slice, slice]
-    ) -> list[SpinBlockSlice4D]:
+    def split_4d_slice(self, slices: tuple[slice, slice, slice, slice]) -> list[SpinBlockSlice4D]:
         """
         Split tuple of four slices into the block spin slices
         and their mapping to where elements are to be placed
         """
         splitted = (self.split_1d_slice(sl) for sl in slices)
-        return [SpinBlockSlice4D(
-            (sl1.block, sl2.block, sl3.block, sl4.block),
-            (sl1.spin, sl2.spin, sl3.spin, sl4.spin),
-            (sl1.fromslice, sl2.fromslice, sl3.fromslice, sl4.fromslice),
-            (sl1.toslice, sl2.toslice, sl3.toslice, sl4.toslice)
-        ) for sl1, sl2, sl3, sl4 in product(*splitted)]
+        return [
+            SpinBlockSlice4D(
+                (sl1.block, sl2.block, sl3.block, sl4.block),
+                (sl1.spin, sl2.spin, sl3.spin, sl4.spin),
+                (sl1.fromslice, sl2.fromslice, sl3.fromslice, sl4.fromslice),
+                (sl1.toslice, sl2.toslice, sl3.toslice, sl4.toslice),
+            )
+            for sl1, sl2, sl3, sl4 in product(*splitted)
+        ]
 
     def split_1d_slice(self, sl: slice) -> list[SpinBlockSlice]:
         """
@@ -120,7 +117,7 @@ class EriBuilder:
             sl = slice(sl.start, sl.stop, 1)
         assert is_int_slice(sl)
         ret: list[SpinBlockSlice] = []
-        for (block, bslice) in self.block2slice.items():
+        for block, bslice in self.block2slice.items():
             fromslice: tuple[int, int] | None = None
             toslice: tuple[int, int] | None = None
             if range_in(sl, bslice):
@@ -138,16 +135,12 @@ class EriBuilder:
                 fromslice = (0, sl.stop - bslice.start)
                 toslice = (bslice.start - sl.start, sl.stop - sl.start)
             if fromslice is None or toslice is None:
-                continue   # Not found
-            ret.append(SpinBlockSlice(
-                block[0], block[1], slice(*fromslice, 1), slice(*toslice, 1)
-            ))
+                continue  # Not found
+            ret.append(SpinBlockSlice(block[0], block[1], slice(*fromslice, 1), slice(*toslice, 1)))
         assert len(ret) > 0
         return ret
 
-    def fill_slice_symm(
-        self, slices: tuple[slice, slice, slice, slice], out: Array4D
-    ) -> None:
+    def fill_slice_symm(self, slices: tuple[slice, slice, slice, slice], out: Array4D) -> None:
         non_zero_spin_blocks: list[Spin4D] = [  # chemist notation
             ("a", "a", "a", "a"),
             ("a", "a", "b", "b"),

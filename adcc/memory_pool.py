@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -20,17 +19,17 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import os
-import glob
 import atexit
+import glob
+import os
 import shutil
-import libadcc
 import tempfile
+
+import libadcc
 
 
 class MemoryPool(libadcc.AdcMemory):
-    def initialise(self, scratch_directory="/tmp", max_block_size=16,
-                   allocator="standard"):
+    def initialise(self, scratch_directory="/tmp", max_block_size=16, allocator="standard"):
         """Initialise the adcc memory management.
 
         Parameters

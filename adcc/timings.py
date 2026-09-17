@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -22,10 +21,10 @@
 ## ---------------------------------------------------------------------
 import sys
 import time
-import numpy as np
-
 from contextlib import contextmanager
 from os.path import join
+
+import numpy as np
 
 
 def strtime_short(span):
@@ -33,17 +32,17 @@ def strtime_short(span):
     Return a 5-character string identifying the timespan
     """
     if span < 1:
-        return "{:3d}ms".format(int(span * 1000))
+        return f"{int(span * 1000):3d}ms"
     if span < 60:
-        return "{:4.1f}s".format(span)
+        return f"{span:4.1f}s"
     if span < 120:
-        return "{:4d}s".format(int(span))
+        return f"{int(span):4d}s"
     if span < 3600:
-        return "{:4.1f}m".format(span / 60)
+        return f"{span / 60:4.1f}m"
     if span < 86400:
-        return "{:4.1f}h".format(span / 3600)
+        return f"{span / 3600:4.1f}h"
     else:
-        return "{:4.1f}d".format(span / 3600 / 24)
+        return f"{span / 3600 / 24:4.1f}d"
 
 
 def strtime(span, colour=False):
@@ -62,23 +61,19 @@ def strtime(span, colour=False):
         cr = cd = ch = cm = cs = cms = ""
 
     if span < 1:
-        return cms + "{:6.3f}ms".format(span * 1000) + cr
+        return cms + f"{span * 1000:6.3f}ms" + cr
     if span < 120:
         full = int(span)
-        return (cs + "{:3d}s ".format(full) + cms
-                + "{:3d}ms".format(int((span - full) * 1000)) + cr)
+        return cs + f"{full:3d}s " + cms + f"{int((span - full) * 1000):3d}ms" + cr
     if span < 3600:
         full = int(span / 60)
-        return (cm + "{:2d}m ".format(full) + cs
-                + "{:2d}s".format(int(span - full * 60)) + cr)
+        return cm + f"{full:2d}m " + cs + f"{int(span - full * 60):2d}s" + cr
     if span < 86400:
         full = int(span / 3600)
-        return (ch + "{:2d}h ".format(full) + cm
-                + "{:2d}m".format(int(span / 60 - full * 60)) + cr)
+        return ch + f"{full:2d}h " + cm + f"{int(span / 60 - full * 60):2d}m" + cr
     else:
         full = int(span / 86400)
-        return (cd + "{:3d}d ".format(full) + ch
-                + "{:2d}h".format(int(span / 3600 - full * 24)) + cr)
+        return cd + f"{full:3d}d " + ch + f"{int(span / 3600 - full * 24):2d}h" + cr
 
 
 class Timer:
@@ -154,7 +149,7 @@ class Timer:
         """The list of all tasks known to this object"""
         all_tasks = set(self.start_times.keys())
         all_tasks.update(set(self.raw_data.keys()))
-        return sorted(list(all_tasks))
+        return sorted(all_tasks)
 
     @property
     def lifetime(self):
@@ -194,13 +189,15 @@ class Timer:
         else:
             raise ValueError("Task not currently running: " + task)
 
-    def describe(self, colour=sys.stdout.isatty()) -> str:
+    def describe(self, colour: bool | None = None) -> str:
         # This is very dummy ... in the future we would like to have
         # a nice little table, which also respects the key hierachy
         # and displays cumulative sums for each level and which
         # tasks care of duplicated time intervals (e.g. if two tasks
         # run at the same time)
         # Colour: Use one for each level
+        if colour is None:
+            colour = sys.stdout.isatty()
         text = "Timer " + strtime_short(self.lifetime) + " lifetime:\n"
         if not self.tasks:
             text += "  No timings recorded"
@@ -227,11 +224,13 @@ def timed_call(f):
     Decorator to automatically time function calls.
     The timer object is available under the function attribute _timer
     """
+
     def decorated(*args, **kwargs):
         if not hasattr(decorated, "_timer"):
-            setattr(decorated, "_timer", Timer())
-        with getattr(decorated, "_timer").record(f.__name__):
+            decorated._timer = Timer()
+        with decorated._timer.record(f.__name__):
             return f(*args, **kwargs)
+
     decorated.__doc__ = f.__doc__
     return decorated
 
@@ -242,12 +241,15 @@ def timed_member_call(timer="timer"):
     The name of the instance attribute where timings are stored is the
     timer argument to this function.
     """
+
     def decorator(f):
         def wrapped(self, *args, **kwargs):
             if not hasattr(self, timer):
                 setattr(self, timer, Timer())
             with getattr(self, timer).record(f.__name__):
                 return f(self, *args, **kwargs)
+
         wrapped.__doc__ = f.__doc__
         return wrapped
+
     return decorator

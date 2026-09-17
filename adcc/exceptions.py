@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -27,7 +26,6 @@ class InputError(ValueError):
     Exception thrown during the validation stage of the arguments passed to
     :py:`run_adc` to signal that an input is not valid.
     """
-    pass
 
 
 class InvalidReference(InputError):
@@ -36,4 +34,3 @@ class InvalidReference(InputError):
     a feature like density-fitting has been applied, which is inconsistent
     with the current capabilities of adcc.
     """
-    pass

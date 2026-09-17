@@ -42,7 +42,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-tests = ["pytest", "pytest-cov", "pandas >= 0.25.0"]
+tests = ["pytest", "pandas >= 0.25.0"]
+coverage = ["pytest-cov"]
 # building the tests requires the same dependencies as building libadcc
 # since we explicity call setup.py
 cpptest = [
@@ -54,7 +55,12 @@ build_docs = [
 	"sphinx-automodapi", "sphinx-rtd-theme"
 ]
 analysis = ["matplotlib >= 3.0", "pandas >= 0.25.0"]
-build_stub = ["ruff", "pybind11-stubgen"]
+# the stub is formatted through pre-commit, which uses the pinned ruff version
+build_stub = ["pre-commit", "pybind11-stubgen"]
+# ruff and clang-format are not listed here on purpose: pre-commit installs them
+# itself in the versions pinned in .pre-commit-config.yaml.
+lint = ["pre-commit"]
+dev = ["adcc[tests,cpptest,lint]"]
 
 [project.urls]
 Homepage = "https://adc-connect.org"
@@ -84,3 +90,33 @@ files = [
 [tool.pytest.ini_options]
 addopts = "--verbose"
 testpaths = ["adcc/tests"]
+
+[tool.ruff]
+line-length = 100
+# extend-exclude adds to ruff's defaults (.git, build, dist, ...)
+extend-exclude = [
+	"examples/water/data.py",
+	"*.ipynb",
+]
+
+[tool.ruff.lint]
+# - N999: The module files share the name of the class they define, e.g.
+#   `AdcMatrix` in `AdcMatrix.py`. In python usually snake_case
+#   `adc_matrix.py` is used for module names and thus ruff is not happy.
+#    However, renaming them would break downstream code.
+# - E265: no space after block comment. Fires for all the license
+#   headers since they start with '##'
+# - E266: comment with multiple leading '#'. Fires for the license headers.
+ignore = ["N999", "E265", "E266"]
+# Q: prefer double quotes
+# E + W: white-space rules
+# Mostly preview only rules that are usually handled by ruff format.
+# However, in `fmt: skip` blocks (equations) we want the linter to enforce them.
+extend-select=["Q", "E", "W"]
+preview = true
+
+[tool.ruff.lint.per-file-ignores]
+# libadcc.pyi is automatically generated. Ignores:
+# - `Self` not used as return type
+# - Docstrings might be too long
+"libadcc.pyi" = ["PYI034", "E501"]

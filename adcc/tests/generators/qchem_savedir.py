@@ -1,8 +1,9 @@
-from pathlib import Path
-import numpy as np
 import struct
-import h5py
+from pathlib import Path
+from typing import ClassVar
 
+import h5py
+import numpy as np
 
 Array4D = np.ndarray[tuple[int, int, int, int]]
 
@@ -24,13 +25,14 @@ class QchemSavedir:
     savedir: str
         name (or path) of the directory in which the files are written.
     """
-    _filenames = {
-        "mo_coeffs":         ("53",        "qchem_fortran_style"),
-        "density_matrix_ao": ("54",        "qchem_fortran_style"),
-        "fock_matrix_ao":    ("58",        "qchem_fortran_style"),
-        "energies":          ("99",        "qchem_fortran_style"),
-        "dimensions":        ("819",       "qchem_fortran_style"),
-        "integrals":         ("integrals", "hdf5"),
+
+    _filenames: ClassVar = {
+        "mo_coeffs": ("53", "qchem_fortran_style"),
+        "density_matrix_ao": ("54", "qchem_fortran_style"),
+        "fock_matrix_ao": ("58", "qchem_fortran_style"),
+        "energies": ("99", "qchem_fortran_style"),
+        "dimensions": ("819", "qchem_fortran_style"),
+        "integrals": ("integrals", "hdf5"),
     }
 
     def __init__(self, savedir: str | Path) -> None:
@@ -39,18 +41,21 @@ class QchemSavedir:
         self.savedir = savedir.resolve()
         self.savedir.mkdir(parents=True, exist_ok=True)
 
-    def write(self, scf_energy: float,
-              mo_coeffs: np.ndarray[tuple[int, int]],
-              fock_ao: np.ndarray[tuple[int, int]],
-              orb_energies: np.ndarray[tuple[int]],
-              ao_density_aa: np.ndarray[tuple[int, int]],
-              ao_density_bb: np.ndarray[tuple[int, int]],
-              purecart: int,
-              n_basis: int | None = None,
-              n_orbitals: int | None = None,
-              n_fragments: int = 0,
-              eri_blocks: dict[str, Array4D] | None = None,
-              ao_integrals: dict[str, np.ndarray] | None = None) -> None:
+    def write(
+        self,
+        scf_energy: float,
+        mo_coeffs: np.ndarray[tuple[int, int]],
+        fock_ao: np.ndarray[tuple[int, int]],
+        orb_energies: np.ndarray[tuple[int]],
+        ao_density_aa: np.ndarray[tuple[int, int]],
+        ao_density_bb: np.ndarray[tuple[int, int]],
+        purecart: int,
+        n_basis: int | None = None,
+        n_orbitals: int | None = None,
+        n_fragments: int = 0,
+        eri_blocks: dict[str, Array4D] | None = None,
+        ao_integrals: dict[str, np.ndarray] | None = None,
+    ) -> None:
         """
         Write all content in the savedir.
 
@@ -110,15 +115,17 @@ class QchemSavedir:
         self.write_scf_energy(scf_energy)
         self.write_ao_density(density_aa=ao_density_aa, density_bb=ao_density_bb)
         self.write_ao_fock(fock_ao)
-        self.write_dims(n_basis=n_basis, n_orbitals=n_orbitals,
-                        purecart=purecart, n_fagments=n_fragments)
+        self.write_dims(
+            n_basis=n_basis, n_orbitals=n_orbitals, purecart=purecart, n_fagments=n_fragments
+        )
         if eri_blocks is not None:
             self.write_antisym_eri(**eri_blocks)
         if ao_integrals is not None:
             self.write_ao_integrals(**ao_integrals)
 
-    def write_mo_coeffs(self, mo_coeffs: np.ndarray[tuple[int, int]],
-                        orb_energies: np.ndarray[tuple[int]]) -> None:
+    def write_mo_coeffs(
+        self, mo_coeffs: np.ndarray[tuple[int, int]], orb_energies: np.ndarray[tuple[int]]
+    ) -> None:
         """
         Writes the file for MO coefficients. Since the file also contains
         the orbital energies, they have to be provided too.
@@ -141,12 +148,11 @@ class QchemSavedir:
         """
         fname = self._get_filename("energies")
         with open(fname, "wb") as f:
-            f.write(
-                struct.pack("<12d", 0., scf_energy, *[0. for _ in range(10)])
-            )
+            f.write(struct.pack("<12d", 0.0, scf_energy, *[0.0 for _ in range(10)]))
 
-    def write_ao_density(self, density_aa: np.ndarray[tuple[int, int]],
-                         density_bb: np.ndarray[tuple[int, int]]) -> None:
+    def write_ao_density(
+        self, density_aa: np.ndarray[tuple[int, int]], density_bb: np.ndarray[tuple[int, int]]
+    ) -> None:
         """
         Write the file containing the SCF density in the AO basis.
 
@@ -171,8 +177,7 @@ class QchemSavedir:
         with open(fname, "wb") as f:
             f.write(fock.tobytes())
 
-    def write_dims(self, n_basis: int, n_orbitals: int, purecart: int,
-                   n_fagments: int = 0) -> None:
+    def write_dims(self, n_basis: int, n_orbitals: int, purecart: int, n_fagments: int = 0) -> None:
         """
         Write the file containing general information about the dimensions
         and the basis.
@@ -197,9 +202,7 @@ class QchemSavedir:
         """
         fname = self._get_filename("dimensions")
         with open(fname, "wb") as f:
-            f.write(
-                struct.pack("<4i", n_basis, n_orbitals, purecart, n_fagments)
-            )
+            f.write(struct.pack("<4i", n_basis, n_orbitals, purecart, n_fagments))
 
     def write_antisym_eri(self, **eri_blocks: np.ndarray) -> None:
         """
@@ -242,8 +245,7 @@ class QchemSavedir:
         Get the file name in which to write the desired content.
         """
         if content not in self._filenames:
-            raise ValueError(f"Unknown file content {content}. Can't determine "
-                             "the file name.")
+            raise ValueError(f"Unknown file content {content}. Can't determine the file name.")
         name, file_type = self._filenames[content]
         if file_type == "hdf5":
             fpath = self.savedir / f"{name}.hdf5"

@@ -1,11 +1,9 @@
 import numpy as np
 import pytest
 
-from adcc.solver.fixed_point_diis import (
-    diis, SubspaceError, DIISError, DIISSubspace, default_print
-)
-from adcc.solver.preconditioner import JacobiPreconditioner
 from adcc import AdcMatrix, AmplitudeVector, guess_zero, guesses_triplet
+from adcc.solver.fixed_point_diis import DIISError, DIISSubspace, SubspaceError, default_print, diis
+from adcc.solver.preconditioner import JacobiPreconditioner
 
 from ..testdata_cache import testdata_cache
 
@@ -27,7 +25,7 @@ class DummyVec:
     def __mul__(self, other: float) -> "DummyVec":
         return DummyVec(self.array * other)
 
-    def __iadd__(self, other: "DummyVec") -> "DummyVec":
+    def __iadd__(self, other: "DummyVec") -> "DummyVec":  # noqa: PYI034 remove once we drop 3.10
         self.array += other.array
         return self
 
@@ -38,16 +36,13 @@ class TestDIIS:
         # bad DIIS parameters:
         # start > subspace_size
         with pytest.raises(SubspaceError):
-            diis(lambda x: x, guess_vector=guess,
-                 diis_start_size=3, max_subspace_size=2)
+            diis(lambda x: x, guess_vector=guess, diis_start_size=3, max_subspace_size=2)
         # diis_start_size < 2
         with pytest.raises(SubspaceError):
-            diis(lambda x: x, guess_vector=guess,
-                 diis_start_size=1, max_subspace_size=2)
+            diis(lambda x: x, guess_vector=guess, diis_start_size=1, max_subspace_size=2)
         # max_subspace_size < 2
         with pytest.raises(SubspaceError):
-            diis(lambda x: x, guess_vector=guess,
-                 diis_start_size=1, max_subspace_size=1)
+            diis(lambda x: x, guess_vector=guess, diis_start_size=1, max_subspace_size=1)
 
     def adc_updater(self, matrix: AdcMatrix):
         precond = JacobiPreconditioner(matrix)
@@ -64,9 +59,7 @@ class TestDIIS:
 
     def test_conv_failure(self):
         conv_tol = 1e-9
-        matrix = AdcMatrix(
-            "adc1", testdata_cache.refstate("h2o_sto3g", case="gen")
-        )
+        matrix = AdcMatrix("adc1", testdata_cache.refstate("h2o_sto3g", case="gen"))
         # start with a one guess and set n_max_iterations to a low value
         # such that it is not possible to converge
         guess = guess_zero(matrix)
@@ -75,36 +68,46 @@ class TestDIIS:
         # 0 iterations are not valid
         with pytest.raises(DIISError):
             diis(
-                updater=self.adc_updater(matrix), guess_vector=guess,
-                conv_tol=conv_tol, callback=default_print, n_max_iterations=0
+                updater=self.adc_updater(matrix),
+                guess_vector=guess,
+                conv_tol=conv_tol,
+                callback=default_print,
+                n_max_iterations=0,
             )
         # no convergence after initial linear step
         with pytest.raises(DIISError):
             diis(
-                updater=self.adc_updater(matrix), guess_vector=guess,
-                conv_tol=conv_tol, callback=default_print, n_max_iterations=1
+                updater=self.adc_updater(matrix),
+                guess_vector=guess,
+                conv_tol=conv_tol,
+                callback=default_print,
+                n_max_iterations=1,
             )
         # no convergence after 2 linear and 1 DIIS step
         with pytest.raises(DIISError):
             diis(
-                updater=self.adc_updater(matrix), guess_vector=guess,
-                diis_start_size=2, conv_tol=conv_tol, callback=default_print,
-                n_max_iterations=3
+                updater=self.adc_updater(matrix),
+                guess_vector=guess,
+                diis_start_size=2,
+                conv_tol=conv_tol,
+                callback=default_print,
+                n_max_iterations=3,
             )
 
     def test_adc1(self):
         # try to converge the lowest excited state
         conv_tol = 1e-9
-        matrix = AdcMatrix(
-            "adc1", testdata_cache.refstate("h2o_sto3g", case="gen")
-        )
+        matrix = AdcMatrix("adc1", testdata_cache.refstate("h2o_sto3g", case="gen"))
         # triplet is lower in energy than singlet and numpy just computes
         # all states independent of their spin
         guess = guesses_triplet(matrix, 1, block="ph")[0]
         assert isinstance(guess, AmplitudeVector)
-        solution = diis(updater=self.adc_updater(matrix), guess_vector=guess,
-                        conv_tol=conv_tol,
-                        callback=default_print)
+        solution = diis(
+            updater=self.adc_updater(matrix),
+            guess_vector=guess,
+            conv_tol=conv_tol,
+            callback=default_print,
+        )
         # ensure the solution is normalized
         assert pytest.approx(np.sqrt(solution @ solution)) == 1
         # ensure that we indeed converged by computing the residual:
@@ -123,9 +126,11 @@ class TestDIIS:
         # if we now restart the diis with the converged solution we should
         # converge instantly (after performing a single linear step)
         other_solution = diis(
-            updater=self.adc_updater(matrix), guess_vector=solution,
-            conv_tol=conv_tol, callback=default_print,
-            n_max_iterations=1
+            updater=self.adc_updater(matrix),
+            guess_vector=solution,
+            conv_tol=conv_tol,
+            callback=default_print,
+            n_max_iterations=1,
         )
         diff = other_solution - solution
         assert np.sqrt(diff.dot(diff)) < conv_tol
@@ -158,11 +163,7 @@ class TestDIISSubspace:
         subspace.error_vectors.append(e3)
         subspace._update_overlap()
         assert subspace.overlap.shape == (3, 3)
-        assert (subspace.overlap == np.array([
-            [1, 0, 1],
-            [0, 1, 1],
-            [1, 1, 2]
-        ])).all()
+        assert (subspace.overlap == np.array([[1, 0, 1], [0, 1, 1], [1, 1, 2]])).all()
 
     def test_add(self):
         # ensure that the vectors are correctly added, n_iter is inscremented

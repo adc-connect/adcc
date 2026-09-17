@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -21,9 +20,11 @@
 ##
 ## ---------------------------------------------------------------------
 import unittest
+
 from numpy.testing import assert_allclose
 
 from adcc import direct_sum, empty_like, nosym_like
+
 from .testdata_cache import testdata_cache
 
 
@@ -107,14 +108,18 @@ class TestDirectSum(unittest.TestCase):
         oev = nosym_like(refstate.orbital_energies("v1")).set_random()
 
         res = direct_sum("i+ab-c", oeo, fvv, oev)
-        ref = (oeo.to_ndarray()[:, None, None, None]
-               + fvv.to_ndarray()[None, :, :, None]
-               - oev.to_ndarray()[None, None, None, :])
+        ref = (
+            oeo.to_ndarray()[:, None, None, None]
+            + fvv.to_ndarray()[None, :, :, None]
+            - oev.to_ndarray()[None, None, None, :]
+        )
         assert_allclose(res.to_ndarray(), ref, rtol=1e-10, atol=1e-14)
 
         res = direct_sum("ab-i-c->iacb", fvv, oeo, oev)
-        ref = (fvv.to_ndarray()[:, :, None, None]
-               - oeo.to_ndarray()[None, None, :, None]
-               - oev.to_ndarray()[None, None, None, :])
+        ref = (
+            fvv.to_ndarray()[:, :, None, None]
+            - oeo.to_ndarray()[None, None, :, None]
+            - oev.to_ndarray()[None, None, None, :]
+        )
         ref = ref.transpose((2, 0, 3, 1))
         assert_allclose(res.to_ndarray(), ref, rtol=1e-10, atol=1e-14)

@@ -88,11 +88,26 @@ On the Python-side we follow the `numpy docstring standard <https://numpydoc.rea
 Coding conventions
 ------------------
 
-On the Python end, the repository contains a ``setup.cfg`` file,
-which largely defines the code conventions. Use your favourite ``flake8``-plugin
-to ensure compliance. On the C++-end we provide ``.clang-format`` files,
-such that automatic formatting can be done with
-your favourite tool based on ``clang-format``.
+Code conventions are enforced automatically by `pre-commit
+<https://pre-commit.com>`_, which runs `ruff <https://docs.astral.sh/ruff/>`_ on
+the Python code and ``clang-format`` on the C++ code. To install the git hook
+once after cloning:
+
+.. code-block:: shell
+
+   pip install adcc[lint]
+   pre-commit install
+
+Both tools rewrite files in place. A commit that violates the conventions is
+therefore aborted *after* the offending files have been fixed, and you need to
+stage the changes and repeat the commit. Only once both tools report no
+remaining problems will the commit go through.
+
+The exact rules are defined in ``pyproject.toml`` (``[tool.ruff]``) and in the
+``.clang-format`` files. The linter versions are pinned in
+``.pre-commit-config.yaml`` and are used by the git hook and by the CI alike, so
+that both agree; ``pre-commit autoupdate`` bumps them. To check the whole
+repository instead of just the staged files, run ``pre-commit run --all-files``.
 
 What other developers use
 -------------------------

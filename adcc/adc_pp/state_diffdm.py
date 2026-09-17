@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -31,11 +30,7 @@ from adcc.LazyMp import LazyMp
 from adcc.NParticleOperator import OperatorSymmetry
 from adcc.OneParticleDensity import OneParticleDensity
 
-from .util import (
-    check_doubles_amplitudes,
-    check_singles_amplitudes,
-    check_triples_amplitudes
-)
+from .util import check_doubles_amplitudes, check_singles_amplitudes, check_triples_amplitudes
 
 
 def diffdm_isr0(ground_state, amplitude, intermediates):
@@ -91,7 +86,7 @@ def diffdm_isr2(ground_state, amplitude, intermediates):
                      - einsum("jkcb,db->jkcd", t2, p1_vv))
             - einsum("ia,jkac,kc->ij", u1, t2, ru1)
         ).symmetrise()
-    )
+    )  # fmt: skip
 
     dm.vv += (  # adc2_p_vv
         2 * p2_vv + einsum("ia,ib->ab", ru1, ru1) - (
@@ -101,7 +96,7 @@ def diffdm_isr2(ground_state, amplitude, intermediates):
                      - einsum("jk,jlac->klac", p1_oo, t2))
             - einsum("ikac,kc,ib->ab", t2, ru1, u1)
         ).symmetrise()
-    )
+    )  # fmt: skip
 
     dm.ov += (  # adc2_p_ov
         - einsum("ijab,jb->ia", t2, p2_ov)
@@ -109,7 +104,7 @@ def diffdm_isr2(ground_state, amplitude, intermediates):
         + einsum("ij,ja->ia", p1_oo, p0.ov)
         - einsum("ib,klca,klcb->ia", u1, t2, u2)
         - einsum("ikcd,jkcd,ja->ia", t2, u2, u1)
-    )
+    )  # fmt: skip
     return dm
 
 
@@ -129,8 +124,7 @@ def diffdm_cvs_isr1(ground_state, amplitude, intermediates):
 
 
 def diffdm_cvs_isr2(ground_state, amplitude, intermediates):
-    dm = diffdm_cvs_isr1(ground_state,
-                         amplitude, intermediates)  # Get cvs-ISR(1) result
+    dm = diffdm_cvs_isr1(ground_state, amplitude, intermediates)  # Get cvs-ISR(1) result
     check_doubles_amplitudes([b.o, b.c, b.v, b.v], amplitude)
     u1, u2 = amplitude.ph, amplitude.pphh
 
@@ -151,13 +145,13 @@ def diffdm_cvs_isr2(ground_state, amplitude, intermediates):
         - einsum("ka,ab->kb", p0.ov, p1_vv)
         - einsum("lkdb,dl->kb", t2, p2_vo)
         + 1 / sqrt(2) * einsum("ib,klad,liad->kb", u1, t2, u2)
-    )
+    )  # fmt: skip
 
     dm.vv += p2_vv - 0.5 * (  # cvs_isr2_dp_vv
         + einsum("cb,ac->ab", p1_vv, p0.vv)
         + einsum("cb,ac->ab", p0.vv, p1_vv)
         + einsum("ijbc,ijad,cd->ab", t2, t2, p1_vv)
-    )
+    )  # fmt: skip
 
     # Add 2nd order correction to CVS-ISR(1) diffdm
     dm.cc -= einsum("kIab,kJab->IJ", u2, u2)
@@ -165,8 +159,7 @@ def diffdm_cvs_isr2(ground_state, amplitude, intermediates):
 
 
 def diffdm_isr3d(ground_state, amplitude, intermediates):
-    dm = diffdm_isr2(ground_state,
-                     amplitude, intermediates)  # starts from ADC2 values
+    dm = diffdm_isr2(ground_state, amplitude, intermediates)  # starts from ADC2 values
     check_doubles_amplitudes([b.o, b.o, b.v, b.v], amplitude)
     ur1, ur2 = amplitude.ph, amplitude.pphh  # ADC amplitudes
 
@@ -205,7 +198,7 @@ def diffdm_isr3d(ground_state, amplitude, intermediates):
                 einsum("ka,ikac->ic", ur1, t2_1),
             )
         ).symmetrise()
-    )
+    )  # fmt: skip
     dm.ov += (  # adc3_p_ov
         + 1 * einsum("ik,ka->ia", einsum("jkbc,ijbc->ik", ur2, t2_2), ur1)
         + 1 * einsum("ijkb,jkab->ia", einsum("ic,jkbc->ijkb", ur1, ur2), t2_2)
@@ -295,7 +288,7 @@ def diffdm_isr3d(ground_state, amplitude, intermediates):
             einsum("ijbc,klbc->ijkl", ur2, t2_1),
             einsum("jd,klad->jkla", ur1, t2_1),
         )
-    )
+    )  # fmt: skip
     dm.vv += (  # adc3_p_vv
         + 2 * (
             +2 * einsum("ja,jb->ab", einsum("ic,ijac->ja", ur1, ur2), t1_2)
@@ -324,7 +317,7 @@ def diffdm_isr3d(ground_state, amplitude, intermediates):
                 einsum("ic,jkac->ijka", ur1, t2_1),
             )
         ).symmetrise()
-    )
+    )  # fmt: skip
 
     return dm
 
@@ -336,9 +329,7 @@ def diffdm_isr3(ground_state, amplitude, intermediates):
     except ValueError:
         return dm
 
-    raise NotImplementedError(
-        "Consistent ISR(3) including triples is not implmenetd yet."
-    )
+    raise NotImplementedError("Consistent ISR(3) including triples is not implmenetd yet.")
 
 
 # dict controlling the dispatch of the state_diffdm function
@@ -384,9 +375,7 @@ def state_diffdm(method, ground_state, amplitude, intermediates=None):
         intermediates = Intermediates(ground_state)
 
     if method.name not in DISPATCH:
-        raise NotImplementedError(
-            f"state_diffdm is not implemented for {method.name}."
-        )
+        raise NotImplementedError(f"state_diffdm is not implemented for {method.name}.")
     else:
         ret = DISPATCH[method.name](ground_state, amplitude, intermediates)
         return ret.evaluate()

@@ -210,10 +210,10 @@ std::shared_ptr<Tensor> import_eri_chem_then_asym(const HartreeFockSolution_i& h
                 for (size_t i1 = 0; i1 < bidx.axis(1).length(); ++i1) {
                   for (size_t i2 = 0; i2 < bidx.axis(2).length(); ++i2) {
                     for (size_t i3 = 0; i3 < bidx.axis(3).length(); ++i3) {
-                      const size_t idx = strides[0] * i0 +  //
-                                         strides[1] * i1 +  //
-                                         strides[2] * i2 +  //
-                                         strides[3] * i3;
+                      const size_t idx     = strides[0] * i0 +  //
+                                             strides[1] * i1 +  //
+                                             strides[2] * i2 +  //
+                                             strides[3] * i3;
                       buffer[offset + idx] = 0.0;
                     }  // i3
                   }  // i2
@@ -243,14 +243,14 @@ std::shared_ptr<Tensor> import_eri_chem_then_asym(const HartreeFockSolution_i& h
                 for (size_t i1 = 0; i1 < bidx.axis(1).length(); ++i1) {
                   for (size_t i2 = 0; i2 < bidx.axis(2).length(); ++i2) {
                     for (size_t i3 = 0; i3 < bidx.axis(3).length(); ++i3) {
-                      const size_t idx = strides[0] * i0 +  //
-                                         strides[1] * i1 +  //
-                                         strides[2] * i2 +  //
-                                         strides[3] * i3;
-                      const size_t o_idx = o_strides[0] * i0 +  //
-                                           o_strides[1] * i1 +  //
-                                           o_strides[2] * i2 +  //
-                                           o_strides[3] * i3;
+                      const size_t idx     = strides[0] * i0 +  //
+                                             strides[1] * i1 +  //
+                                             strides[2] * i2 +  //
+                                             strides[3] * i3;
+                      const size_t o_idx   = o_strides[0] * i0 +  //
+                                             o_strides[1] * i1 +  //
+                                             o_strides[2] * i2 +  //
+                                             o_strides[3] * i3;
                       buffer[offset + idx] = buffer[offset + idx] - other[o_idx];
                     }  // i3
                   }  // i2

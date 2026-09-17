@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -38,7 +37,7 @@ _singlets = {
     "adc4": [0.45478823, 0.55811031, 0.58185504],
     "cvs-adc0": [20.83623681, 20.99931574],
     "cvs-adc1": [20.10577515, 20.16512502],
-    "cvs-adc2": [20.0045422,  20.08771799],
+    "cvs-adc2": [20.0045422, 20.08771799],
     "cvs-adc2x": [19.90528006, 19.9990468],
     "cvs-adc3": [19.93138526, 20.02055267],
 }
@@ -60,14 +59,12 @@ _triplets = {
 
 def _residual_norms(state):
     residuals = [
-        state.matrix @ v - e * v
-        for e, v in zip(state.excitation_energy, state.excitation_vector)
+        state.matrix @ v - e * v for e, v in zip(state.excitation_energy, state.excitation_vector)
     ]
     return np.array([r @ r for r in residuals])
 
 
-@pytest.mark.skipif("pyscf" not in adcc.backends.available(),
-                    reason="PySCF not found.")
+@pytest.mark.skipif("pyscf" not in adcc.backends.available(), reason="PySCF not found.")
 @pytest.mark.parametrize("method", methods)
 class TestSmoke:
     conv_tol = 1e-7
@@ -76,12 +73,14 @@ class TestSmoke:
         # NOTE: cached_backend_hf not used because adcc.testdata
         # is not included in installation
         scfres = adcc.backends.run_hf(
-            "pyscf", xyz="""
+            "pyscf",
+            xyz="""
             O 0 0 0
             H 0 0 1.795239827225189
             H 1.693194615993441 0 -0.599043184453037""",
-            basis="sto-3g", conv_tol=self.conv_tol / 100,
-            conv_tol_grad=self.conv_tol / 10
+            basis="sto-3g",
+            conv_tol=self.conv_tol / 100,
+            conv_tol_grad=self.conv_tol / 10,
         )
         return scfres
 
@@ -93,13 +92,17 @@ class TestSmoke:
         else:
             refstate = adcc.ReferenceState(scfres)
             n_states = 3
-        state_singlets = adcc.run_adc(refstate, method=method,
-                                      n_singlets=n_states, conv_tol=self.conv_tol)
+        state_singlets = adcc.run_adc(
+            refstate, method=method, n_singlets=n_states, conv_tol=self.conv_tol
+        )
         assert np.all(_residual_norms(state_singlets) < self.conv_tol)
-        state_triplets = adcc.run_adc(refstate, method=method,
-                                      n_triplets=n_states, conv_tol=self.conv_tol)
+        state_triplets = adcc.run_adc(
+            refstate, method=method, n_triplets=n_states, conv_tol=self.conv_tol
+        )
         assert np.all(_residual_norms(state_triplets) < self.conv_tol)
-        assert_allclose(state_singlets.excitation_energy,
-                        _singlets[method], atol=self.conv_tol * 10)
-        assert_allclose(state_triplets.excitation_energy,
-                        _triplets[method], atol=self.conv_tol * 10)
+        assert_allclose(
+            state_singlets.excitation_energy, _singlets[method], atol=self.conv_tol * 10
+        )
+        assert_allclose(
+            state_triplets.excitation_energy, _triplets[method], atol=self.conv_tol * 10
+        )

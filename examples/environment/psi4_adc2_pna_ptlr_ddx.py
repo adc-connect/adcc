@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-import adcc
-
 import psi4
+
+import adcc
 
 # Run PCM SCF in psi4
 mol = psi4.geometry("""
@@ -26,21 +26,23 @@ mol = psi4.geometry("""
     no_com
     """)
 
-psi4.set_options({
-    'basis': "sto-3g",
-    'scf_type': 'pk',
-    'e_convergence': 1e-10,
-    'd_convergence': 1e-10,
-    'ddx': True,
-    'ddx_model': "pcm",
-    'ddx_solvent': "water",
-    'ddx_radii_set': 'uff',
-    'ddx_radii_scaling': 1.2,
-    'ddx_solvation_convergence': 1e-10,
-})
+psi4.set_options(
+    {
+        "basis": "sto-3g",
+        "scf_type": "pk",
+        "e_convergence": 1e-10,
+        "d_convergence": 1e-10,
+        "ddx": True,
+        "ddx_model": "pcm",
+        "ddx_solvent": "water",
+        "ddx_radii_set": "uff",
+        "ddx_radii_scaling": 1.2,
+        "ddx_solvation_convergence": 1e-10,
+    }
+)
 psi4.core.set_num_threads(4)
 
-scf_e, wfn = psi4.energy('scf', return_wfn=True)
+scf_e, wfn = psi4.energy("scf", return_wfn=True)
 
 # Run an ADC2 calculation with ptLR
 state = adcc.adc2(wfn, n_singlets=5, conv_tol=1e-8, environment="ptlr")

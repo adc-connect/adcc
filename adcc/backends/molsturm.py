@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -21,17 +20,17 @@
 ##
 ## ---------------------------------------------------------------------
 import warnings
-import numpy as np
 
+import numpy as np
 from molsturm.State import State
+
 from adcc.DataHfProvider import DataHfProvider
 
 
 def convert_scf_to_dict(scfres):
     warnings.warn(
-        "The molsturm interface is no longer maintained. "
-        "It will be removed in the future.",
-        DeprecationWarning
+        "The molsturm interface is no longer maintained. It will be removed in the future.",
+        DeprecationWarning,
     )
     if not isinstance(scfres, State):
         raise TypeError("Unsupported type for backends.molsturm.import_scf.")
@@ -44,7 +43,11 @@ def convert_scf_to_dict(scfres):
 
     # Keys to include verbatim from the hf res dictionary to the adcc input
     verbatim_keys = [
-        "n_orbs_alpha", "restricted", "orben_f", "eri_ffff", "fock_ff",
+        "n_orbs_alpha",
+        "restricted",
+        "orben_f",
+        "eri_ffff",
+        "fock_ff",
     ]
     for k in verbatim_keys:
         data[k] = scfres[k]
@@ -56,28 +59,32 @@ def convert_scf_to_dict(scfres):
 
     n_oa = data["n_orbs_alpha"]
     data["occupation_f"] = np.zeros(2 * n_oa)
-    data["occupation_f"][:n_alpha] = 1.
-    data["occupation_f"][n_oa:n_oa + n_beta] = 1.
+    data["occupation_f"][:n_alpha] = 1.0
+    data["occupation_f"][n_oa : n_oa + n_beta] = 1.0
 
     data["energy_scf"] = scfres["energy_ground_state"]
     data["conv_tol"] = scfres["final_error_norm"]
     data["orbcoeff_fb"] = scfres["orbcoeff_bf"].transpose().copy()
 
     # Compute electric and nuclear multipole moments
-    data["multipoles"] = {"elec_0": -int(n_alpha + n_beta), }
+    data["multipoles"] = {
+        "elec_0": -int(n_alpha + n_beta),
+    }
     if "input_parameters" in scfres:
         params = scfres["input_parameters"]
         coords = np.asarray(params["system"]["coords"])
         charges = np.asarray(params["system"]["atom_numbers"])
-        data["multipoles"]["nuclear_0"] = int(np.sum(charges)),
-        data["multipoles"]["nuclear_1"] = np.einsum('i,ix->x', charges, coords)
+        data["multipoles"]["nuclear_0"] = (int(np.sum(charges)),)
+        data["multipoles"]["nuclear_1"] = np.einsum("i,ix->x", charges, coords)
     else:
         # We have no information about this, so we can just provide dummies
         data["multipoles"]["nuclear_0"] = -1
         data["multipoles"]["nuclear_1"] = np.zeros(3)
-        warnings.warn("The passed molsturm scfres has no information about "
-                      "nuclear multipoles, such that dummy data are used. "
-                      "Results involving nuclear multipoles could be wrong.")
+        warnings.warn(
+            "The passed molsturm scfres has no information about "
+            "nuclear multipoles, such that dummy data are used. "
+            "Results involving nuclear multipoles could be wrong."
+        )
 
     data["backend"] = "molsturm"
     return data
@@ -94,8 +101,7 @@ basis_remap = {
 }
 
 
-def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
-           conv_tol_grad=1e-8, max_iter=150):
+def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12, conv_tol_grad=1e-8, max_iter=150):
 
     import molsturm
 
@@ -104,14 +110,19 @@ def run_hf(xyz, basis, charge=0, multiplicity=1, conv_tol=1e-12,
     n_atom = len(geom) // 4
     assert n_atom * 4 == len(geom)
     atoms = [geom[i * 4] for i in range(n_atom)]
-    coords = [[float(geom[i * 4 + 1]),
-               float(geom[i * 4 + 2]),
-               float(geom[i * 4 + 3])] for i in range(n_atom)]
+    coords = [
+        [float(geom[i * 4 + 1]), float(geom[i * 4 + 2]), float(geom[i * 4 + 3])]
+        for i in range(n_atom)
+    ]
 
     mol = molsturm.System(atoms, coords)
     mol.charge = charge
     mol.multiplicity = multiplicity
 
-    return molsturm.hartree_fock(mol, basis_type="gaussian",
-                                 basis_set_name=basis_remap.get(basis, basis),
-                                 conv_tol=conv_tol_grad, max_iter=max_iter)
+    return molsturm.hartree_fock(
+        mol,
+        basis_type="gaussian",
+        basis_set_name=basis_remap.get(basis, basis),
+        conv_tol=conv_tol_grad,
+        max_iter=max_iter,
+    )

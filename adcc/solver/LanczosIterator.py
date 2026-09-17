@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -21,19 +20,27 @@
 ##
 ## ---------------------------------------------------------------------
 import warnings
+
 import numpy as np
 import scipy.linalg as la
 
 from adcc import evaluate, lincomb
-from adcc.timings import Timer
 from adcc.AmplitudeVector import AmplitudeVector
+from adcc.timings import Timer
 
 from .orthogonaliser import GramSchmidtOrthogonaliser
 
 
 class LanczosIterator:
-    def __init__(self, matrix, guesses, ritz_vectors=None, ritz_values=None,
-                 ritz_overlaps=None, explicit_symmetrisation=None):
+    def __init__(
+        self,
+        matrix,
+        guesses,
+        ritz_vectors=None,
+        ritz_values=None,
+        ritz_overlaps=None,
+        explicit_symmetrisation=None,
+    ):
         """
         Initialise an iterator generating :py:class:`LanczosSubspace` objects,
         which represent a growing Krylov subspace started from the `matrix`
@@ -59,7 +66,7 @@ class LanczosIterator:
             subspace vectors. Allows to correct for loss of index or spin
             symmetries during orthogonalisation (type or instance).
         """
-        n_problem = matrix.shape[1]   # Problem size
+        n_problem = matrix.shape[1]  # Problem size
 
         if not isinstance(guesses, list):
             guesses = [guesses]
@@ -73,13 +80,11 @@ class LanczosIterator:
             n_restart = 0
             ritz_vectors = []  # Y
             ritz_overlaps = np.empty((0, n_block))  # Sigma
-            ritz_values = np.empty((0, ))  # Theta
+            ritz_values = np.empty((0,))  # Theta
         else:
             n_restart = len(ritz_values)
-            if len(ritz_vectors) != n_restart or \
-               ritz_overlaps.shape != (n_restart, n_block):
-                raise ValueError("Restart vector shape does not agree "
-                                 "with problem.")
+            if len(ritz_vectors) != n_restart or ritz_overlaps.shape != (n_restart, n_block):
+                raise ValueError("Restart vector shape does not agree with problem.")
 
         self.matrix = matrix
         self.ritz_values = ritz_values
@@ -95,7 +100,7 @@ class LanczosIterator:
         # To be initialised by first call to __next__
         self.lanczos_subspace = []
         self.alphas = []  # Diagonal matrix block of subspace matrix
-        self.betas = []   # Side-diagonal matrix blocks of subspace matrix
+        self.betas = []  # Side-diagonal matrix blocks of subspace matrix
         self.residual = guesses
         self.n_iter = 0
         self.n_applies = 0
@@ -116,9 +121,10 @@ class LanczosIterator:
 
             # r = r - v * alpha - Y * Sigma
             Sigma, Y = self.ritz_overlaps, self.ritz_vectors
-            r = [lincomb(np.hstack(([1], -alpha[:, p], -Sigma[:, p])),
-                         [r[p]] + v + Y, evaluate=True)
-                 for p in range(self.n_block)]
+            r = [
+                lincomb(np.hstack(([1], -alpha[:, p], -Sigma[:, p])), [r[p]] + v + Y, evaluate=True)
+                for p in range(self.n_block)
+            ]
 
             # r = r - Y * Y'r (Full reorthogonalisation)
             for p in range(self.n_block):
@@ -128,11 +134,11 @@ class LanczosIterator:
             self.n_iter = 1
             self.n_applies = self.n_block
             self.alphas = [alpha]  # Diagonal matrix block of subspace matrix
-            self.betas = []        # Side-diagonal matrix blocks
+            self.betas = []  # Side-diagonal matrix blocks
             return LanczosSubspace(self)
 
         # Iteration 1 and onwards:
-        q = self.lanczos_subspace[-self.n_block:]
+        q = self.lanczos_subspace[-self.n_block :]
         v, beta = self.ortho.qr(self.residual)
         if np.linalg.norm(beta) < np.finfo(float).eps * self.n_problem:
             # No point to go on ... new vectors will be decoupled from old ones
@@ -141,8 +147,10 @@ class LanczosIterator:
         # r = A * v - q * beta^T
         self.n_applies += self.n_block
         r = self.matrix @ v
-        r = [lincomb(np.hstack(([1], -(beta.T)[:, p])), [r[p]] + q, evaluate=True)
-             for p in range(self.n_block)]
+        r = [
+            lincomb(np.hstack(([1], -(beta.T)[:, p])), [r[p]] + q, evaluate=True)
+            for p in range(self.n_block)
+        ]
 
         # alpha = v^T * r
         alpha = np.empty((self.n_block, self.n_block))
@@ -150,14 +158,14 @@ class LanczosIterator:
             alpha[p, :] = v[p] @ r
 
         # r = r - v * alpha
-        r = [lincomb(np.hstack(([1], -alpha[:, p])), [r[p]] + v, evaluate=True)
-             for p in range(self.n_block)]
+        r = [
+            lincomb(np.hstack(([1], -alpha[:, p])), [r[p]] + v, evaluate=True)
+            for p in range(self.n_block)
+        ]
 
         # Full reorthogonalisation
         for p in range(self.n_block):
-            r[p] = self.ortho.orthogonalise_against(
-                r[p], self.lanczos_subspace + self.ritz_vectors
-            )
+            r[p] = self.ortho.orthogonalise_against(r[p], self.lanczos_subspace + self.ritz_vectors)
 
         # Commit results
         self.n_iter += 1
@@ -170,17 +178,18 @@ class LanczosIterator:
 
 class LanczosSubspace:
     """Container for the Lanczos subspace."""
+
     def __init__(self, iterator):
         self.__iterator = iterator
-        self.n_iter = iterator.n_iter        # Number of iterations
+        self.n_iter = iterator.n_iter  # Number of iterations
         self.n_restart = iterator.n_restart  # Number of restart vectors
-        self.residual = iterator.residual    # Lanczos residual vector(s)
-        self.n_block = iterator.n_block      # Block size
+        self.residual = iterator.residual  # Lanczos residual vector(s)
+        self.n_block = iterator.n_block  # Block size
         self.n_problem = iterator.n_problem  # Problem size
-        self.matrix = iterator.matrix        # Problem matrix
-        self.ortho = iterator.ortho          # Orthogonaliser
-        self.alphas = iterator.alphas        # Diagonal blocks
-        self.betas = iterator.betas          # Side-diagonal blocks
+        self.matrix = iterator.matrix  # Problem matrix
+        self.ortho = iterator.ortho  # Orthogonaliser
+        self.alphas = iterator.alphas  # Diagonal blocks
+        self.betas = iterator.betas  # Side-diagonal blocks
         self.n_applies = iterator.n_applies  # Number of applies
 
         # Combined set of subspace vectors
@@ -202,16 +211,14 @@ class LanczosSubspace:
         T = np.zeros((n_ss, n_ss))
         if n_restart > 0:
             T[:n_restart, :n_restart] = np.diag(ritz_values)
-            T[:n_restart, n_restart:n_restart + self.n_block] = ritz_overlaps
-            T[n_restart:n_restart + self.n_block, :n_restart] = ritz_overlaps.T
+            T[:n_restart, n_restart : n_restart + self.n_block] = ritz_overlaps
+            T[n_restart : n_restart + self.n_block, :n_restart] = ritz_overlaps.T
 
         for i, alpha in enumerate(self.alphas):
-            rnge = slice(n_restart + i * self.n_block,
-                         n_restart + (i + 1) * self.n_block)
+            rnge = slice(n_restart + i * self.n_block, n_restart + (i + 1) * self.n_block)
             T[rnge, rnge] = alpha
         for i, beta in enumerate(self.betas):
-            rnge = slice(n_restart + i * self.n_block,
-                         n_restart + (i + 1) * self.n_block)
+            rnge = slice(n_restart + i * self.n_block, n_restart + (i + 1) * self.n_block)
             rnge_plus = slice(rnge.start + self.n_block, rnge.stop + self.n_block)
             T[rnge, rnge_plus] = beta.T
             T[rnge_plus, rnge] = beta
@@ -240,7 +247,7 @@ class LanczosSubspace:
             # Compute AV[:, i]
             coefficients = []
             vectors = []
-            for (j, v) in enumerate(self.subspace):
+            for j, v in enumerate(self.subspace):
                 if T[j, i] != 0:
                     coefficients.append(T[j, i])
                     vectors.append(v)
@@ -254,13 +261,13 @@ class LanczosSubspace:
     def check_orthogonality(self, tolerance=None):
         if tolerance is None:
             tolerance = self.n_problem * np.finfo(float).eps
-        orth = np.array([[SSi @ SSj for SSi in self.subspace]
-                         for SSj in self.subspace])
+        orth = np.array([[SSi @ SSj for SSi in self.subspace] for SSj in self.subspace])
         orth -= np.eye(len(self.subspace))
         orth = np.max(np.abs(orth))
         if orth > tolerance:
-            warnings.warn(la.LinAlgWarning(
-                "LanczosSubspace has lost orthogonality. "
-                "Expect inaccurate results."
-            ))
+            warnings.warn(
+                la.LinAlgWarning(
+                    "LanczosSubspace has lost orthogonality. Expect inaccurate results."
+                )
+            )
         return orth

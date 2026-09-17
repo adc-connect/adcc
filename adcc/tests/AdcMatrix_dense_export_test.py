@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -20,15 +19,14 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import pytest
 import numpy as np
+import pytest
 from numpy.testing import assert_allclose
 
 import adcc
 
-from .testdata_cache import testdata_cache
 from . import testcases
-
+from .testdata_cache import testdata_cache
 
 h2o = testcases.get_by_filename("h2o_sto3g").pop()
 cases = ["gen", "cvs"]
@@ -63,8 +61,7 @@ class TestAdcMatrixDenseExport:
         refstate = testdata_cache.refstate(h2o, case=case)
         matrix = adcc.AdcMatrix(method, refstate)
         state = adcc.run_adc(
-            matrix, method=method, conv_tol=conv_tol, n_states=n_states,
-            max_subspace=7 * n_states
+            matrix, method=method, conv_tol=conv_tol, n_states=n_states, max_subspace=7 * n_states
         )
 
         dense = matrix.to_ndarray()

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -26,28 +25,41 @@ import warnings
 from libadcc import ReferenceState
 
 from . import solver
-from .guess import (guesses_any, guesses_singlet, guesses_spin_flip,
-                    guesses_triplet)
-from .LazyMp import LazyMp
-from .AdcMatrix import AdcMatrix, AdcMatrixlike, AdcExtraTerm
+from .AdcMatrix import AdcExtraTerm, AdcMatrix, AdcMatrixlike
 from .AdcMethod import AdcMethod, IsrMethod
 from .exceptions import InputError
 from .ExcitedStates import ExcitedStates
+from .guess import guesses_any, guesses_singlet, guesses_spin_flip, guesses_triplet
+from .LazyMp import LazyMp
 from .ReferenceState import ReferenceState as adcc_ReferenceState
-from .solver.lanczos import lanczos
 from .solver.davidson import jacobi_davidson
-from .solver.explicit_symmetrisation import (IndexSpinSymmetrisation,
-                                             IndexSymmetrisation)
+from .solver.explicit_symmetrisation import IndexSpinSymmetrisation, IndexSymmetrisation
+from .solver.lanczos import lanczos
 
 __all__ = ["run_adc"]
 
 
-def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
-            eigensolver=None, guesses=None, n_guesses=None, isr_order=None,
-            n_guesses_doubles=None, output=sys.stdout, core_orbitals=None,
-            frozen_core=None, frozen_virtual=None, method=None,
-            n_singlets=None, n_triplets=None, n_spin_flip=None,
-            environment=None, **solverargs):
+def run_adc(
+    data_or_matrix,
+    n_states=None,
+    kind="any",
+    conv_tol=None,
+    eigensolver=None,
+    guesses=None,
+    n_guesses=None,
+    isr_order=None,
+    n_guesses_doubles=None,
+    output=sys.stdout,
+    core_orbitals=None,
+    frozen_core=None,
+    frozen_virtual=None,
+    method=None,
+    n_singlets=None,
+    n_triplets=None,
+    n_spin_flip=None,
+    environment=None,
+    **solverargs,
+):
     """Run an ADC calculation.
 
     Main entry point to run an ADC calculation. The reference to build the ADC
@@ -184,12 +196,21 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
     ... state = adcc.cvs_adc3(mf, core_orbitals=1, n_singlets=3)
     """
     matrix = construct_adcmatrix(
-        data_or_matrix, core_orbitals=core_orbitals, frozen_core=frozen_core,
-        frozen_virtual=frozen_virtual, method=method)
+        data_or_matrix,
+        core_orbitals=core_orbitals,
+        frozen_core=frozen_core,
+        frozen_virtual=frozen_virtual,
+        method=method,
+    )
 
     n_states, kind = validate_state_parameters(
-        matrix.reference_state, n_states=n_states, n_singlets=n_singlets,
-        n_triplets=n_triplets, n_spin_flip=n_spin_flip, kind=kind)
+        matrix.reference_state,
+        n_states=n_states,
+        n_singlets=n_singlets,
+        n_triplets=n_triplets,
+        n_spin_flip=n_spin_flip,
+        kind=kind,
+    )
 
     # Determine spin change during excitation. If guesses is not None,
     # i.e. user-provided, we cannot guarantee for obtaining a particular
@@ -214,9 +235,17 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
         property_method = matrix.method.as_method_at_level(IsrMethod, isr_order)
 
     diagres = diagonalise_adcmatrix(
-        matrix, n_states, kind, guesses=guesses, n_guesses=n_guesses,
-        n_guesses_doubles=n_guesses_doubles, conv_tol=conv_tol, output=output,
-        eigensolver=eigensolver, **solverargs)
+        matrix,
+        n_states,
+        kind,
+        guesses=guesses,
+        n_guesses=n_guesses,
+        n_guesses_doubles=n_guesses_doubles,
+        conv_tol=conv_tol,
+        output=output,
+        eigensolver=eigensolver,
+        **solverargs,
+    )
 
     exstates = ExcitedStates(diagres, property_method=property_method)
     exstates.kind = kind
@@ -230,8 +259,9 @@ def run_adc(data_or_matrix, n_states=None, kind="any", conv_tol=None,
 #
 # Individual steps
 #
-def construct_adcmatrix(data_or_matrix, core_orbitals=None, frozen_core=None,
-                        frozen_virtual=None, method=None):
+def construct_adcmatrix(
+    data_or_matrix, core_orbitals=None, frozen_core=None, frozen_virtual=None, method=None
+):
     """
     Use the provided data or AdcMatrix object to check consistency of the
     other passed parameters and construct the AdcMatrix object representing
@@ -239,8 +269,9 @@ def construct_adcmatrix(data_or_matrix, core_orbitals=None, frozen_core=None,
     Internal function called from run_adc.
     """
     if not isinstance(data_or_matrix, AdcMatrixlike) and method is None:
-        raise InputError("method needs to be explicitly provided unless "
-                         "data_or_matrix is an AdcMatrixlike.")
+        raise InputError(
+            "method needs to be explicitly provided unless data_or_matrix is an AdcMatrixlike."
+        )
     if method is not None and not isinstance(method, AdcMethod):
         try:
             method = AdcMethod(method)
@@ -249,36 +280,46 @@ def construct_adcmatrix(data_or_matrix, core_orbitals=None, frozen_core=None,
 
     if not isinstance(data_or_matrix, (ReferenceState, AdcMatrixlike, LazyMp)):
         if method.is_core_valence_separated and core_orbitals is None:
-            raise InputError("If core-valence separation approximation is "
-                             "applied then the number of core orbitals needs "
-                             "to be specified via the parameter "
-                             "core_orbitals.")
+            raise InputError(
+                "If core-valence separation approximation is "
+                "applied then the number of core orbitals needs "
+                "to be specified via the parameter "
+                "core_orbitals."
+            )
         try:
-            refstate = adcc_ReferenceState(data_or_matrix,
-                                           core_orbitals=core_orbitals,
-                                           frozen_core=frozen_core,
-                                           frozen_virtual=frozen_virtual)
+            refstate = adcc_ReferenceState(
+                data_or_matrix,
+                core_orbitals=core_orbitals,
+                frozen_core=frozen_core,
+                frozen_virtual=frozen_virtual,
+            )
         except ValueError as e:
             raise InputError(str(e))  # In case of an issue with the spaces
         data_or_matrix = refstate
     elif core_orbitals is not None:
         mospaces = data_or_matrix.mospaces
-        warnings.warn("Ignored core_orbitals parameter because data_or_matrix"
-                      " is a ReferenceState, a LazyMp or an AdcMatrixlike object "
-                      " (which has a value of core_orbitals={})."
-                      "".format(mospaces.n_orbs_alpha("o2")))
+        warnings.warn(
+            "Ignored core_orbitals parameter because data_or_matrix"
+            " is a ReferenceState, a LazyMp or an AdcMatrixlike object "
+            " (which has a value of core_orbitals={})."
+            "".format(mospaces.n_orbs_alpha("o2"))
+        )
     elif frozen_core is not None:
         mospaces = data_or_matrix.mospaces
-        warnings.warn("Ignored frozen_core parameter because data_or_matrix"
-                      " is a ReferenceState, a LazyMp or an AdcMatrixlike object "
-                      " (which has a value of frozen_core={})."
-                      "".format(mospaces.n_orbs_alpha("o3")))
+        warnings.warn(
+            "Ignored frozen_core parameter because data_or_matrix"
+            " is a ReferenceState, a LazyMp or an AdcMatrixlike object "
+            " (which has a value of frozen_core={})."
+            "".format(mospaces.n_orbs_alpha("o3"))
+        )
     elif frozen_virtual is not None:
         mospaces = data_or_matrix.mospaces
-        warnings.warn("Ignored frozen_virtual parameter because data_or_matrix"
-                      " is a ReferenceState, a LazyMp or an AdcMatrixlike object "
-                      " (which has a value of frozen_virtual={})."
-                      "".format(mospaces.n_orbs_alpha("v2")))
+        warnings.warn(
+            "Ignored frozen_virtual parameter because data_or_matrix"
+            " is a ReferenceState, a LazyMp or an AdcMatrixlike object "
+            " (which has a value of frozen_virtual={})."
+            "".format(mospaces.n_orbs_alpha("v2"))
+        )
 
     # Make AdcMatrix (if not done)
     if isinstance(data_or_matrix, (ReferenceState, LazyMp)):
@@ -288,78 +329,97 @@ def construct_adcmatrix(data_or_matrix, core_orbitals=None, frozen_core=None,
             # In case of an issue with CVS <-> chosen spaces
             raise InputError(str(e))
     elif method is not None and method != data_or_matrix.method:
-        warnings.warn("Ignored method parameter because data_or_matrix is an"
-                      " AdcMatrixlike, which implicitly sets the method")
+        warnings.warn(
+            "Ignored method parameter because data_or_matrix is an"
+            " AdcMatrixlike, which implicitly sets the method"
+        )
     if isinstance(data_or_matrix, AdcMatrixlike):
         return data_or_matrix
 
 
-def validate_state_parameters(reference_state, n_states=None, n_singlets=None,
-                              n_triplets=None, n_spin_flip=None, kind="any"):
+def validate_state_parameters(
+    reference_state, n_states=None, n_singlets=None, n_triplets=None, n_spin_flip=None, kind="any"
+):
     """
     Check the passed state parameters for consistency with itself and with
     the passed reference and normalise them. In the end return the number of
     states and the corresponding kind parameter selected.
     Internal function called from run_adc.
     """
-    if sum(nst is not None for nst in [n_states, n_singlets,
-                                       n_triplets, n_spin_flip]) > 1:
-        raise InputError("One may only specify one out of n_states, "
-                         "n_singlets, n_triplets and n_spin_flip")
+    if sum(nst is not None for nst in [n_states, n_singlets, n_triplets, n_spin_flip]) > 1:
+        raise InputError(
+            "One may only specify one out of n_states, n_singlets, n_triplets and n_spin_flip"
+        )
 
     if n_singlets is not None:
         if not reference_state.restricted:
-            raise InputError("The n_singlets parameter may only be employed "
-                             "for restricted references")
+            raise InputError(
+                "The n_singlets parameter may only be employed for restricted references"
+            )
         if kind not in ["singlet", "any"]:
-            raise InputError(f"Kind parameter {kind} not compatible "
-                             "with n_singlets > 0")
+            raise InputError(f"Kind parameter {kind} not compatible with n_singlets > 0")
         kind = "singlet"
         n_states = n_singlets
     if n_triplets is not None:
         if not reference_state.restricted:
-            raise InputError("The n_triplets parameter may only be employed "
-                             "for restricted references")
+            raise InputError(
+                "The n_triplets parameter may only be employed for restricted references"
+            )
         if kind not in ["triplet", "any"]:
-            raise InputError(f"Kind parameter {kind} not compatible "
-                             "with n_triplets > 0")
+            raise InputError(f"Kind parameter {kind} not compatible with n_triplets > 0")
         kind = "triplet"
         n_states = n_triplets
     if n_spin_flip is not None:
         if reference_state.restricted:
-            raise InputError("The n_spin_flip parameter may only be employed "
-                             "for unrestricted references")
+            raise InputError(
+                "The n_spin_flip parameter may only be employed for unrestricted references"
+            )
         if kind not in ["spin_flip", "any"]:
-            raise InputError(f"Kind parameter {kind} not compatible "
-                             "with n_spin_flip > 0")
+            raise InputError(f"Kind parameter {kind} not compatible with n_spin_flip > 0")
         kind = "spin_flip"
         n_states = n_spin_flip
 
     # Check if there are states to be computed
     if n_states is None or n_states == 0:
-        raise InputError("No excited states to be computed. Specify at least "
-                         "one of n_states, n_singlets, n_triplets, "
-                         "or n_spin_flip")
+        raise InputError(
+            "No excited states to be computed. Specify at least "
+            "one of n_states, n_singlets, n_triplets, "
+            "or n_spin_flip"
+        )
     if n_states < 0:
         raise InputError("n_states needs to be positive")
 
     if kind not in ["any", "spin_flip", "singlet", "triplet"]:
-        raise InputError("The kind parameter may only take the values 'any', "
-                         "'singlet', 'triplet' or 'spin_flip'")
+        raise InputError(
+            "The kind parameter may only take the values 'any', 'singlet', 'triplet' or 'spin_flip'"
+        )
     if kind in ["singlet", "triplet"] and not reference_state.restricted:
-        raise InputError("kind==singlet and kind==triplet are only valid for "
-                         "ADC calculations in combination with a restricted "
-                         "ground state.")
+        raise InputError(
+            "kind==singlet and kind==triplet are only valid for "
+            "ADC calculations in combination with a restricted "
+            "ground state."
+        )
     if kind in ["spin_flip"] and reference_state.restricted:
-        raise InputError("kind==spin_flip is only valid for "
-                         "ADC calculations in combination with an unrestricted "
-                         "ground state.")
+        raise InputError(
+            "kind==spin_flip is only valid for "
+            "ADC calculations in combination with an unrestricted "
+            "ground state."
+        )
     return n_states, kind
 
 
-def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
-                          guesses=None, n_guesses=None, n_guesses_doubles=None,
-                          conv_tol=None, output=sys.stdout, **solverargs):
+def diagonalise_adcmatrix(
+    matrix,
+    n_states,
+    kind,
+    eigensolver="davidson",
+    guesses=None,
+    n_guesses=None,
+    n_guesses_doubles=None,
+    conv_tol=None,
+    output=sys.stdout,
+    **solverargs,
+):
     """
     This function seeks appropriate guesses and afterwards proceeds to
     diagonalise the ADC matrix using the specified eigensolver.
@@ -380,22 +440,20 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
     # Determine explicit_symmetrisation
     explicit_symmetrisation = IndexSymmetrisation
     if kind in ["singlet", "triplet"]:
-        explicit_symmetrisation = IndexSpinSymmetrisation(
-            matrix, enforce_spin_kind=kind
-        )
+        explicit_symmetrisation = IndexSpinSymmetrisation(matrix, enforce_spin_kind=kind)
 
     # Set some solver-specific parameters
     if eigensolver == "davidson":
         n_guesses_per_state = 2
         callback = setup_solver_printing(
-            "Jacobi-Davidson", matrix, kind, solver.davidson.default_print,
-            output=output)
+            "Jacobi-Davidson", matrix, kind, solver.davidson.default_print, output=output
+        )
         run_eigensolver = jacobi_davidson
     elif eigensolver == "lanczos":
         n_guesses_per_state = 1
         callback = setup_solver_printing(
-            "Lanczos", matrix, kind, solver.lanczos.default_print,
-            output=output)
+            "Lanczos", matrix, kind, solver.lanczos.default_print, output=output
+        )
         run_eigensolver = lanczos
     else:
         raise InputError(f"Solver {eigensolver} unknown, try 'davidson'.")
@@ -406,33 +464,38 @@ def diagonalise_adcmatrix(matrix, n_states, kind, eigensolver="davidson",
             # restrict to the number of available singles guesses if no doubles
             # are available
             n_guesses = estimate_n_guesses(
-                matrix=matrix, n_states=n_states,
+                matrix=matrix,
+                n_states=n_states,
                 singles_only=("pphh" not in matrix.axis_blocks),
-                n_guesses_per_state=n_guesses_per_state
+                n_guesses_per_state=n_guesses_per_state,
             )
-        guesses = obtain_guesses_by_inspection(matrix, n_guesses, kind,
-                                               n_guesses_doubles)
+        guesses = obtain_guesses_by_inspection(matrix, n_guesses, kind, n_guesses_doubles)
     else:
         if len(guesses) < n_states:
-            raise InputError("Less guesses provided via guesses (== {}) "
-                             "than states to be computed (== {})"
-                             "".format(len(guesses), n_states))
+            raise InputError(
+                f"Less guesses provided via guesses (== {len(guesses)}) "
+                f"than states to be computed (== {n_states})"
+            )
         if n_guesses is not None:
-            warnings.warn("Ignoring n_guesses parameter, since guesses are "
-                          "explicitly provided.")
+            warnings.warn("Ignoring n_guesses parameter, since guesses are explicitly provided.")
         if n_guesses_doubles is not None:
-            warnings.warn("Ignoring n_guesses_doubles parameter, since guesses "
-                          "are explicitly provided.")
+            warnings.warn(
+                "Ignoring n_guesses_doubles parameter, since guesses are explicitly provided."
+            )
 
     solverargs.setdefault("which", "SA")
-    return run_eigensolver(matrix, guesses, n_ep=n_states, conv_tol=conv_tol,
-                           callback=callback,
-                           explicit_symmetrisation=explicit_symmetrisation,
-                           **solverargs)
+    return run_eigensolver(
+        matrix,
+        guesses,
+        n_ep=n_states,
+        conv_tol=conv_tol,
+        callback=callback,
+        explicit_symmetrisation=explicit_symmetrisation,
+        **solverargs,
+    )
 
 
-def estimate_n_guesses(matrix, n_states, singles_only=True,
-                       n_guesses_per_state=2):
+def estimate_n_guesses(matrix, n_states, singles_only=True, n_guesses_per_state=2):
     """
     Implementation of a basic heuristic to find a good number of guess
     vectors to be searched for using the find_guesses function.
@@ -474,16 +537,20 @@ def obtain_guesses_by_inspection(matrix, n_guesses, kind, n_guesses_doubles=None
     the singles guesses cannot provide to reach n_guesses.
     Internal function called from run_adc.
     """
-    if n_guesses_doubles is not None and n_guesses_doubles > 0 \
-       and "pphh" not in matrix.axis_blocks:
-        raise InputError("n_guesses_doubles > 0 is only sensible if the ADC "
-                         "method has a doubles block (i.e. it is *not* ADC(0), "
-                         "ADC(1) or a variant thereof.")
+    if n_guesses_doubles is not None and n_guesses_doubles > 0 and "pphh" not in matrix.axis_blocks:
+        raise InputError(
+            "n_guesses_doubles > 0 is only sensible if the ADC "
+            "method has a doubles block (i.e. it is *not* ADC(0), "
+            "ADC(1) or a variant thereof."
+        )
 
     # Determine guess function
-    guess_function = {"any": guesses_any, "singlet": guesses_singlet,
-                      "triplet": guesses_triplet,
-                      "spin_flip": guesses_spin_flip}[kind]
+    guess_function = {
+        "any": guesses_any,
+        "singlet": guesses_singlet,
+        "triplet": guesses_triplet,
+        "spin_flip": guesses_spin_flip,
+    }[kind]
 
     # Determine number of singles guesses to request
     n_guess_singles = n_guesses
@@ -498,18 +565,17 @@ def obtain_guesses_by_inspection(matrix, n_guesses, kind, n_guesses_doubles=None
         if n_guesses_doubles is None:
             n_guesses_doubles = n_guesses - len(singles_guesses)
         if n_guesses_doubles > 0:
-            doubles_guesses = guess_function(matrix, n_guesses_doubles,
-                                             block="pphh")
+            doubles_guesses = guess_function(matrix, n_guesses_doubles, block="pphh")
 
     total_guesses = singles_guesses + doubles_guesses
     if len(total_guesses) < n_guesses:
-        raise InputError("Less guesses found than requested: {} found, "
-                         "{} requested".format(len(total_guesses), n_guesses))
+        raise InputError(
+            f"Less guesses found than requested: {len(total_guesses)} found, {n_guesses} requested"
+        )
     return total_guesses
 
 
-def setup_solver_printing(solmethod_name, matrix, kind, default_print,
-                          output=None):
+def setup_solver_printing(solmethod_name, matrix, kind, default_print, output=None):
     """
     Setup default printing for solvers. Internal function called from run_adc.
     """
@@ -521,11 +587,11 @@ def setup_solver_printing(solmethod_name, matrix, kind, default_print,
         method_name = matrix.method.name
 
     if output is not None:
-        print(f"Starting {method_name}{kstr} {solmethod_name} ...",
-              file=output)
+        print(f"Starting {method_name}{kstr} {solmethod_name} ...", file=output)
 
         def inner_callback(state, identifier):
             default_print(state, identifier, output)
+
         return inner_callback
 
 
@@ -543,10 +609,7 @@ def setup_environment(matrix, environment):
             f" schemes: {valid_envs} or set to False."
         )
     elif environment and not hf.environment:
-        raise InputError(
-            "Environment specified, but no environment"
-            " was found in reference state."
-        )
+        raise InputError("Environment specified, but no environment was found in reference state.")
     elif not hf.environment:
         environment = {}
 
@@ -558,13 +621,13 @@ def setup_environment(matrix, environment):
     }
     conversion = convertor.get(type(environment), None)
     if conversion is None:
-        raise TypeError("Cannot convert environment parameter of type"
-                        f"'{type(environment)}' to dict.")
+        raise TypeError(
+            f"Cannot convert environment parameter of type'{type(environment)}' to dict."
+        )
     environment = conversion(environment)
 
     if any(env not in valid_envs for env in environment):
-        raise InputError("Invalid key specified for environment."
-                         f" Valid keys are '{valid_envs}'.")
+        raise InputError(f"Invalid key specified for environment. Valid keys are '{valid_envs}'.")
 
     env_matrix_term = None
     energy_corrections = []
@@ -574,9 +637,11 @@ def setup_environment(matrix, environment):
     ]
     for fbc in forbidden_combinations:
         if all(environment.get(k, False) for k in fbc):
-            raise InputError("Combination of environment schemes"
-                             f" '{fbc}' not allowed. Check the"
-                             " adcc documentation for more details.")
+            raise InputError(
+                "Combination of environment schemes"
+                f" '{fbc}' not allowed. Check the"
+                " adcc documentation for more details."
+            )
 
     for pt in ["ptss", "ptlr"]:
         if not environment.get(pt, False):
@@ -584,18 +649,23 @@ def setup_environment(matrix, environment):
         hf_corr = hf.excitation_energy_corrections
         eec_key = f"{hf.environment}_{pt}_correction"
         if eec_key not in hf_corr:
-            raise ValueError(f"{pt} correction requested, but could not find"
-                             f" the needed function {eec_key} in"
-                             f" reference state from backend {hf.backend}.")
+            raise ValueError(
+                f"{pt} correction requested, but could not find"
+                f" the needed function {eec_key} in"
+                f" reference state from backend {hf.backend}."
+            )
         energy_corrections.append(hf_corr[eec_key])
     if environment.get("linear_response", False):
         from adcc.adc_pp import environment as adcpp_env
+
         block_key = f"block_ph_ph_0_{hf.environment}"
         if not hasattr(adcpp_env, block_key):
-            raise NotImplementedError("Matrix term for linear response coupling"
-                                      f" with solvent {hf.environment}"
-                                      " not implemented.")
+            raise NotImplementedError(
+                "Matrix term for linear response coupling"
+                f" with solvent {hf.environment}"
+                " not implemented."
+            )
         block_fun = getattr(adcpp_env, block_key)
-        env_matrix_term = AdcExtraTerm(matrix, {'ph_ph': block_fun})
+        env_matrix_term = AdcExtraTerm(matrix, {"ph_ph": block_fun})
 
     return env_matrix_term, energy_corrections

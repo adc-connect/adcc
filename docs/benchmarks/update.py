@@ -20,28 +20,31 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import json
 import itertools
-import numpy as np
+import json
 
+import numpy as np
 import requests
 
 
 def write_commit_file(commit):
     with open("commit.rst", "w") as fp:
-        fp.write("This summary only shows a few key results, which have been "
-                 f"generated using commit **{commit}** from the "
-                 "`adcc repository <https://code.adc-connect.org>`_. "
-                 "The full results in interactive form are accessible on "
-                 "https://adc-connect.github.io/adcc-bench.")
+        fp.write(
+            "This summary only shows a few key results, which have been "
+            f"generated using commit **{commit}** from the "
+            "`adcc repository <https://code.adc-connect.org>`_. "
+            "The full results in interactive form are accessible on "
+            "https://adc-connect.github.io/adcc-bench."
+        )
 
 
 def fetch_json(commit, machine):
-    baseurl = ("https://raw.githubusercontent.com/adc-connect/"
-               "adcc-bench/results")
-    resultsfile = (baseurl + "/results/" + machine + "/" + commit
-                   + "-virtualenv-py3.6-numpy1.15-pybind11-""pyscf1.6.3"
-                   "-scipy1.2.json")
+    baseurl = "https://raw.githubusercontent.com/adc-connect/adcc-bench/results"
+    resultsfile = (
+        baseurl + "/results/" + machine + "/" + commit + "-virtualenv-py3.6-numpy1.15-pybind11-"
+        "pyscf1.6.3"
+        "-scipy1.2.json"
+    )
     res = requests.get(resultsfile)
     assert res.ok
     return json.loads(res.text)
@@ -50,10 +53,8 @@ def fetch_json(commit, machine):
 def write_details(data, testcase, reference, basis, n_ao=None):
     lines = []
 
-    memkey = [k for k in data["results"].keys()
-              if f"Full{testcase}" in k and "peakmem_" in k]
-    timekey = [k for k in data["results"].keys()
-               if f"Full{testcase}" in k and "time_" in k]
+    memkey = [k for k in data["results"] if f"Full{testcase}" in k and "peakmem_" in k]
+    timekey = [k for k in data["results"] if f"Full{testcase}" in k and "time_" in k]
     if len(memkey) == 0:
         return
     assert len(memkey) == 1
@@ -61,8 +62,8 @@ def write_details(data, testcase, reference, basis, n_ao=None):
     memkey = memkey[0]
     timekey = timekey[0]
 
-    mbasis, mmethod, mstates, mtol, mthreads = data["results"][memkey]["params"]
-    tbasis, tmethod, tstates, ttol, tthreads = data["results"][timekey]["params"]
+    _, mmethod, mstates, mtol, mthreads = data["results"][memkey]["params"]
+    _, tmethod, tstates, ttol, tthreads = data["results"][timekey]["params"]
     tol = max(float(e) for e in set(mtol).intersection(ttol))
     states = max(int(e) for e in set(mstates).intersection(tstates))
     mproduct = list(itertools.product(*data["results"][memkey]["params"]))
@@ -91,10 +92,12 @@ def write_details(data, testcase, reference, basis, n_ao=None):
         method = method[1:-1]
         for bas in [basis.upper(), basis.lower()]:
             try:
-                midx = mproduct.index(("'" + bas + "'", "'" + method + "'",
-                                       str(states), str(tol), str(threads)))
-                tidx = tproduct.index(("'" + bas + "'", "'" + method + "'",
-                                       str(states), str(tol), str(threads)))
+                midx = mproduct.index(
+                    ("'" + bas + "'", "'" + method + "'", str(states), str(tol), str(threads))
+                )
+                tidx = tproduct.index(
+                    ("'" + bas + "'", "'" + method + "'", str(states), str(tol), str(threads))
+                )
             except ValueError:
                 continue
 
@@ -118,8 +121,7 @@ def main():
     write_commit_file(commit)
     json_clustern08 = fetch_json(commit, "mlv-clustern08")
     write_details(json_clustern08, "PhosphineCvs", "RHF", "6-311++G**", n_ao=51)
-    write_details(json_clustern08, "MethylammoniumRadical", "UHF",
-                  "cc-pVTZ", n_ao=116)
+    write_details(json_clustern08, "MethylammoniumRadical", "UHF", "cc-pVTZ", n_ao=116)
     write_details(json_clustern08, "ParaNitroAniline", "RHF", "cc-pVDZ", n_ao=170)
     write_details(json_clustern08, "WaterExpensive", "RHF", "cc-pVQZ", n_ao=115)
     write_details(json_clustern08, "Noradrenaline", "RHF", "6-311++G**", n_ao=341)

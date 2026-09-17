@@ -119,12 +119,19 @@ std::vector<std::shared_ptr<const lt::letter>> make_label(size_t n) {
 template <typename T, size_t>
 using repeat_t = T;
 
+// Clang was not happy with the function declaration
+// -> switch to a struct instead
+template <typename T, typename Seq>
+struct tuple_array;
+
 template <typename T, size_t... I>
-std::tuple<repeat_t<T, I>...> tuple_array_impl(std::index_sequence<I...>);
+struct tuple_array<T, std::index_sequence<I...>> {
+  using type = std::tuple<repeat_t<T, I>...>;
+};
 
 /** Array like tuple that contains N fields of the given type */
 template <typename T, size_t N>
-using tuple_array_t = decltype(tuple_array_impl<T>(std::make_index_sequence<N>{}));
+using tuple_array_t = typename tuple_array<T, std::make_index_sequence<N>>::type;
 
 template <size_t PERM_SIZE, size_t N_PERMS, size_t... I>
 tuple_array_t<lt::expr::label<N_PERMS>, PERM_SIZE> make_label_tuple(

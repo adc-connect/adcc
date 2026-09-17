@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -20,14 +19,13 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import pytest
 import numpy as np
+import pytest
 
 from adcc.adc_pp.modified_transition_moments import modified_transition_moments
 
-from ..testdata_cache import testdata_cache
 from .. import testcases
-
+from ..testdata_cache import testdata_cache
 
 methods = [
     ("adc0", None),
@@ -40,13 +38,15 @@ methods = [
     ("adc4", "3d"),
 ]
 
-test_cases = testcases.get_by_filename(
-    "h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz"
-)
+test_cases = testcases.get_by_filename("h2o_sto3g", "h2o_def2tzvp", "cn_sto3g", "cn_ccpvdz")
 large_cases = ("h2o_def2tzvp", "cn_ccpvdz")
-cases = [(case.file_name, c, kind)
-         for case in test_cases for c in ["gen", "cvs"]
-         for kind in ["singlet", "any"] if kind in case.kinds.pp]
+cases = [
+    (case.file_name, c, kind)
+    for case in test_cases
+    for c in ["gen", "cvs"]
+    for kind in ["singlet", "any"]
+    if kind in case.kinds.pp
+]
 
 operator_kinds = ["electric", "magnetic"]
 
@@ -54,8 +54,9 @@ operator_kinds = ["electric", "magnetic"]
 @pytest.mark.parametrize("adc_method, isr_order", methods)
 @pytest.mark.parametrize("system,case,kind", cases)
 @pytest.mark.parametrize("op_kind", operator_kinds)
-def test_modified_transition_moments(system: str, case: str, adc_method: str,
-                                     isr_order, kind: str, op_kind: str):
+def test_modified_transition_moments(
+    system: str, case: str, adc_method: str, isr_order, kind: str, op_kind: str
+):
 
     if adc_method == "adc4" and system in large_cases:
         pytest.skip("ADC(4) reference data not available for large cases.")
@@ -65,9 +66,9 @@ def test_modified_transition_moments(system: str, case: str, adc_method: str,
         system=system, method=adc_method, kind=kind, case=case, isr_order=isr_order
     )
 
-    ref = testdata_cache.adcc_data(
-        system=system, method=adc_method, case=case
-    )[str(isr_order)][kind]
+    ref = testdata_cache.adcc_data(system=system, method=adc_method, case=case)[str(isr_order)][
+        kind
+    ]
 
     n_ref = len(state.excitation_vector)
 
@@ -78,11 +79,8 @@ def test_modified_transition_moments(system: str, case: str, adc_method: str,
         dips = state.reference_state.operators.magnetic_dipole("origin")
         ref_tdm = ref["transition_magnetic_dipole_moments_origin"]
     else:
-        raise NotImplementedError(
-            f"Test not implemented for operator kind {op_kind}"
-        )
-    mtms = modified_transition_moments(state.property_method,
-                                       state.ground_state, dips)
+        raise NotImplementedError(f"Test not implemented for operator kind {op_kind}")
+    mtms = modified_transition_moments(state.property_method, state.ground_state, dips)
 
     for i in range(n_ref):
         # Computing the scalar product of the eigenvector

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## vi: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 ## ---------------------------------------------------------------------
 ##
@@ -20,13 +19,12 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import pytest
 import numpy as np
+import pytest
 from numpy.testing import assert_allclose
 from scipy.sparse.linalg import aslinearoperator
 
 from adcc.solver.power_method import default_print, power_method
-
 
 sizes = ["0004", "0050", "0200", "1000"]
 
@@ -42,10 +40,14 @@ class TestPowerMethod:
 
         start = np.random.randn(len(ev))
         start[0] += 0.001
-        res = power_method(aslinearoperator(np.diag(ev)), start,
-                           conv_tol=conv_tol, callback=default_print,
-                           explicit_symmetrisation=None,
-                           max_iter=100)
+        res = power_method(
+            aslinearoperator(np.diag(ev)),
+            start,
+            conv_tol=conv_tol,
+            callback=default_print,
+            explicit_symmetrisation=None,
+            max_iter=100,
+        )
 
         ones = np.zeros(size)
         ones[0] = 1 * np.sign(res.eigenvectors[0][0])
