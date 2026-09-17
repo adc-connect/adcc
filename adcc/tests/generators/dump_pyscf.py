@@ -263,7 +263,7 @@ def get_qchem_formatted_basis(mol: gto.Mole) -> str:
     # sort the data to go through the atoms in ascending order
     # (the order they are given in the geomtry)
     for atom_number in sorted(cgtos_by_atom):
-        atom_name: str = mol.elements[atom_number]
+        atom_name = mol.elements[atom_number]
         qchem_formatted_basis.append(f"{atom_name: <2s}    {atom_number + 1: >3d}")
         for cgto in cgtos_by_atom[atom_number]:
             angular_momentum_name, primitive_gtos = cgto

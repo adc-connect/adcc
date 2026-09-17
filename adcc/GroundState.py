@@ -323,7 +323,7 @@ class GroundState:
             # compute extra CVS blocks
             ret.cc = -0.5 * (
                 + einsum("kIab,kJab->IJ", self.t2oc, self.t2oc)
-                + einsum('LIab,LJab->IJ', self.t2cc, self.t2cc)
+                + einsum("LIab,LJab->IJ", self.t2cc, self.t2cc)
             )  # fmt: skip
             ret.oc = -0.5 * (
                 + einsum("kIab,kjab->jI", self.t2oc, self.t2oo)

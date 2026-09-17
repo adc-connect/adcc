@@ -14,7 +14,7 @@ from adcc.AdcMatrix import AdcExtraTerm
 from adcc.exceptions import InputError
 
 from .. import testcases
-from ..testdata_cache import psi4_data, pyscf_data  # noqa F401
+from ..testdata_cache import psi4_data, pyscf_data  # noqa: F401
 
 backends = [b for b in ["psi4", "pyscf"] if b in adcc.backends.available()]
 methods = ["adc1"]

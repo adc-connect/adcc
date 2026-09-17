@@ -68,7 +68,7 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
 
     @property
     def needs_evaluation(self) -> bool:
-        return any(t.needs_evaluation for _, t in self.items())
+        return any(t.needs_evaluation for t in self.values())
 
     def ones_like(self) -> "AmplitudeVector":
         """Return an empty AmplitudeVector of the same shape and symmetry"""

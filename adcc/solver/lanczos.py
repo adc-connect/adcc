@@ -346,7 +346,8 @@ def lanczos(
         warnings.warn(
             la.LinAlgWarning(
                 f"Convergence tolerance (== {conv_tol:5.2g}) lower than "
-                f"estimated maximal numerical accuracy (== {matrix.shape[1] * np.finfo(float).eps:5.2g}). "
+                "estimated maximal numerical accuracy "
+                f"(== {matrix.shape[1] * np.finfo(float).eps:5.2g}). "
                 "Convergence might be hard to achieve."
             )
         )

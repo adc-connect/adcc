@@ -23,7 +23,6 @@ import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
 
-import adcc
 import adcc.backends
 from adcc.backends import have_backend
 

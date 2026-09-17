@@ -114,7 +114,7 @@ def _extract_scalar(dataset):
     else:
         ret = dataset[0]
 
-    if dtype == str and isinstance(ret, bytes):
+    if dtype is str and isinstance(ret, bytes):
         # HDF5 3.0.0 and up no longer extracts variable-string fields
         # as string but extracts them as raw bytes.
         ret = ret.decode()

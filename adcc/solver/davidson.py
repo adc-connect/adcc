@@ -338,7 +338,8 @@ def davidson_iterations(
                     warnings.warn(
                         la.LinAlgWarning(
                             "Subspace in Davidson has lost orthogonality. "
-                            f"Max. deviation from orthogonality is {state.subspace_orthogonality:.4E}. "
+                            "Max. deviation from orthogonality is "
+                            f"{state.subspace_orthogonality:.4E}. "
                             "Expect inaccurate results."
                         )
                     )
@@ -498,7 +499,8 @@ def eigsh(
         warnings.warn(
             la.LinAlgWarning(
                 f"Convergence tolerance (== {conv_tol:5.2g}) lower than "
-                f"estimated maximal numerical accuracy (== {matrix.shape[1] * np.finfo(float).eps:5.2g}). "
+                f"estimated maximal numerical accuracy "
+                f"(== {matrix.shape[1] * np.finfo(float).eps:5.2g}). "
                 "Convergence might be hard to achieve."
             )
         )

@@ -74,17 +74,17 @@ def s2s_tdm_isr2(ground_state, amplitude_l, amplitude_r, intermediates):
     rur1 = einsum("ijab,jb->ia", t2, ur1).evaluate()
 
     dm.oo += (
-        - 2.0 * einsum('ikab,jkab->ij', ur2, ul2)
-        + 0.5 * einsum('ik,kj->ij', p1_oo, p0.oo)
-        + 0.5 * einsum('ik,kj->ij', p0.oo, p1_oo)
-        - 0.5 * einsum('ikcd,lk,jlcd->ij', t2, p1_oo, t2)
-        + 1.0 * einsum('ikcd,jkcb,db->ij', t2, t2, p1_vv)
-        - 0.5 * einsum('ia,jkac,kc->ij', ur1, t2, rul1)
-        - 0.5 * einsum('ikac,kc,ja->ij', t2, rur1, ul1)
-        - 1.0 * einsum('ia,ja->ij', rul1, rur1)
+        - 2.0 * einsum("ikab,jkab->ij", ur2, ul2)
+        + 0.5 * einsum("ik,kj->ij", p1_oo, p0.oo)
+        + 0.5 * einsum("ik,kj->ij", p0.oo, p1_oo)
+        - 0.5 * einsum("ikcd,lk,jlcd->ij", t2, p1_oo, t2)
+        + 1.0 * einsum("ikcd,jkcb,db->ij", t2, t2, p1_vv)
+        - 0.5 * einsum("ia,jkac,kc->ij", ur1, t2, rul1)
+        - 0.5 * einsum("ikac,kc,ja->ij", t2, rur1, ul1)
+        - 1.0 * einsum("ia,ja->ij", rul1, rur1)
     )  # fmt: skip
     dm.vv += (
-        + 2.0 * einsum('ijac,ijbc->ab', ul2, ur2)
+        + 2.0 * einsum("ijac,ijbc->ab", ul2, ur2)
         - 0.5 * einsum("ac,cb->ab", p1_vv, p0.vv)
         - 0.5 * einsum("ac,cb->ab", p0.vv, p1_vv)
         - 0.5 * einsum("klbc,klad,cd->ab", t2, t2, p1_vv)

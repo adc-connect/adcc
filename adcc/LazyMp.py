@@ -82,9 +82,9 @@ class LazyMp(GroundState):
         denom = -self.df(b.ov)
         res = (
             # N^5: O^2V^3 / N^4: O^1V^3
-            + 0.5 * einsum('jabc,ijbc->ia', hf.ovvv, t2oo)
+            + 0.5 * einsum("jabc,ijbc->ia", hf.ovvv, t2oo)
             # N^5: O^3V^2 / N^4: O^2V^2
-            + 0.5 * einsum('jkib,jkab->ia', hf.ooov, t2oo)
+            + 0.5 * einsum("jkib,jkab->ia", hf.ooov, t2oo)
         )  # fmt: skip
         # additional terms since we don't apply the CVS approximation
         # for the ground state
@@ -167,36 +167,36 @@ class LazyMp(GroundState):
         ampl = (
             + 2 * (
                 # N^5: O^2V^3 / N^4: O^1V^3
-                + 1 * einsum('icab,jc->ijab', hf.ovvv, t1_2)
+                + 1 * einsum("icab,jc->ijab", hf.ovvv, t1_2)
                 # N^7: O^4V^3 / N^6: O^3V^3
-                + 0.5 * einsum('klic,jklabc->ijab', hf.ooov, t3_2)
+                + 0.5 * einsum("klic,jklabc->ijab", hf.ooov, t3_2)
                 # N^5: O^3V^2 / N^4: O^2V^2
-                + 0.5 * einsum('ilab,jl->ijab', t2_1,
-                               einsum('klcd,jkcd->jl', hf.oovv, t2_1))
+                + 0.5 * einsum("ilab,jl->ijab", t2_1,
+                               einsum("klcd,jkcd->jl", hf.oovv, t2_1))
             )
             + 4 * (
                 # N^6: O^3V^3 / N^4: O^2V^2
-                + 1 * einsum('icka,jkbc->ijab', hf.ovov, t2_2)
+                + 1 * einsum("icka,jkbc->ijab", hf.ovov, t2_2)
             )
             + 2 * (
                 # N^5: O^3V^2 / N^4: O^2V^2
-                + 1 * einsum('ijka,kb->ijab', hf.ooov, t1_2)
+                + 1 * einsum("ijka,kb->ijab", hf.ooov, t1_2)
                 # N^7: O^3V^4 / N^6: O^3V^3
-                + 0.5 * einsum('kacd,ijkbcd->ijab', hf.ovvv, t3_2)
+                + 0.5 * einsum("kacd,ijkbcd->ijab", hf.ovvv, t3_2)
                 # N^6: O^3V^3 / N^4: O^2V^2
-                + 1 * einsum('ikbd,jkad->ijab', t2_1,
-                             einsum('klcd,jlac->jkad', hf.oovv, t2_1))
+                + 1 * einsum("ikbd,jkad->ijab", t2_1,
+                             einsum("klcd,jlac->jkad", hf.oovv, t2_1))
                 # N^5: O^2V^3 / N^4: O^2V^2
-                + 0.5 * einsum('ijad,bd->ijab', t2_1,
-                               einsum('klcd,klbc->bd', hf.oovv, t2_1))
+                + 0.5 * einsum("ijad,bd->ijab", t2_1,
+                               einsum("klcd,klbc->bd", hf.oovv, t2_1))
             )
             # N^6: O^2V^4 / N^4: V^4
-            - 0.5 * einsum('abcd,ijcd->ijab', hf.vvvv, t2_2)
+            - 0.5 * einsum("abcd,ijcd->ijab", hf.vvvv, t2_2)
             # N^6: O^4V^2 / N^4: O^2V^2
-            - 0.5 * einsum('ijkl,klab->ijab', hf.oooo, t2_2)
+            - 0.5 * einsum("ijkl,klab->ijab", hf.oooo, t2_2)
             # N^6: O^4V^2 / N^4: O^2V^2
-            + 0.25 * einsum('klab,ijkl->ijab', t2_1,
-                            einsum('klcd,ijcd->ijkl', hf.oovv, t2_1))
+            + 0.25 * einsum("klab,ijkl->ijab", t2_1,
+                            einsum("klcd,ijcd->ijkl", hf.oovv, t2_1))
         ).antisymmetrise(0, 1).antisymmetrise(2, 3)  # fmt: skip
         return ampl / denom
 
@@ -233,9 +233,9 @@ class LazyMp(GroundState):
         # The scaling in the comments is given as: [comp_scaling] / [mem_scaling]
         numerator = (
             # N^7: O^3V^4 / N^6: O^3V^3
-            + 9 * einsum('idab,jkcd->ijkabc', hf.ovvv, t2_1)
+            + 9 * einsum("idab,jkcd->ijkabc", hf.ovvv, t2_1)
             # N^7: O^4V^3 / N^6: O^3V^3
-            + 9 * einsum('ijla,klbc->ijkabc', hf.ooov, t2_1)
+            + 9 * einsum("ijla,klbc->ijkabc", hf.ooov, t2_1)
         ).antisymmetrise(0, 1, 2).antisymmetrise(3, 4, 5)  # fmt: skip
         return numerator / denom
 
