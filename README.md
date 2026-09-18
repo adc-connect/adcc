@@ -1,17 +1,15 @@
 <img src="https://raw.githubusercontent.com/adc-connect/adcc/master/docs/logo/logo.png" alt="adcc logo" height="100px" />
 
 # adcc: Seamlessly connect your program to ADC                                                                
-| **Documentation** | [![][docs-img]][docs-url] [![][binder-img]][binder-url] |
-| :------ | :------- |
-| **Build Status**  | [![][ci-img]][ci-url] [![][cov-img]][cov-url] [![][lgtm-img]][lgtm-url] |
-|  **Installation** | [![][pypi-img]][pypi-url] [![][conda-img]][conda-url] [![][license-img]][license-url]  |
+| **Documentation:** | [![][docs-img]][docs-url] |
+| :-------------- | :--------------------------------------------------------- |
+| **Build Status:**  | [![][ci-img]][ci-url] [![][cov-img]][cov-url] |
+|  **Installation:** | [![][pypi-img]][pypi-url] [![][conda-img]][conda-url] [![][license-img]][license-url]  |
 
 [docs-img]: https://img.shields.io/badge/doc-latest-blue.svg
-[docs-url]: https://adc-connect.org
-[binder-img]: https://mybinder.org/badge_logo.svg
-[binder-url]: https://try.adc-connect.org
-[ci-img]: https://github.com/adc-connect/adcc/workflows/CI/badge.svg?branch=master&event=push
-[ci-url]: https://github.com/adc-connect/adcc/actions
+[docs-url]: https://adc-connect.github.io/adcc/
+[ci-img]: https://github.com/adc-connect/adcc/actions/workflows/ci.yaml/badge.svg
+[ci-url]: https://github.com/adc-connect/adcc/actions/workflows/ci.yaml
 [cov-img]: https://coveralls.io/repos/adc-connect/adcc/badge.svg?branch=master&service=github
 [cov-url]: https://coveralls.io/github/adc-connect/adcc?branch=master
 [license-img]: https://img.shields.io/badge/License-GPL%20v3-blue.svg
@@ -20,28 +18,43 @@
 [pypi-url]: https://pypi.org/project/adcc
 [conda-img]: https://anaconda.org/conda-forge/adcc/badges/version.svg
 [conda-url]: https://anaconda.org/conda-forge/adcc
-[lgtm-img]: https://img.shields.io/lgtm/grade/python/github/adc-connect/adcc?label=code%20quality
-[lgtm-url]: https://lgtm.com/projects/g/adc-connect/adcc/context:python
 
 adcc (**ADC-connect**) is a Python-based framework for calculating molecular spectra and electronically excited states
 with the algebraic-diagrammatic construction (ADC) approach.
 
 Arbitrary host programs may be used to supply a
 self-consistent field (SCF) reference to start off the ADC calculation.
-Currently adcc comes with ready-to-use interfaces to four programs: PySCF, Psi4, VeloxChem and molsturm.
-Adding other SCF codes or
-starting a calculation from
-statically computed data can be easily achieved.
+Currently, adcc comes with ready-to-use interfaces to different SCF programs like PySCF and Psi4.
+Adding other SCF codes or starting a calculation from statically computed data
+can be easily achieved.
 
-Try adcc in your browser at https://try.adc-connect.org
-or take a look at the [adcc documentation](https://adc-connect.org)
-for more details and installation instructions.
+## Installation
+
+From PyPI:
+```bash
+pip install adcc
+```
+
+From conda-forge:
+```bash
+conda install adcc -c conda-forge
+```
+
+Local development version:
+```bash
+git clone git@github.com:adc-connect/adcc.git
+cd adcc
+pip install -e .[dev]
+```
+
+For documentation or more detailed installation instructions you might want to have
+a look at the [adcc documentation][docs-url].
 
 ## Citation
 
 **Paper:** | [![](https://img.shields.io/badge/DOI-10.1002/wcms.1462-blue)](https://doi.org/10.1002/wcms.1462)
------------| --------------------------------------------------------------------------------------------------------
-**Code:**  | [![DOI](https://zenodo.org/badge/215731857.svg)](https://zenodo.org/badge/latestdoi/215731857)
+:--------- | :----------------------------------------------------------
+**Code:**  | [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3519764.svg)](https://doi.org/10.5281/zenodo.3519764)
 
 If you use adcc, please cite
 [our paper in WIREs Computational Molecular Science](https://doi.org/10.1002/wcms.1462).
