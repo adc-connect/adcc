@@ -19,17 +19,21 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from typing import Any, TypeGuard
+from typing import TYPE_CHECKING, Any, TypeAlias, TypeGuard
 
 import numpy as np
 
-from .OneParticleOperator import OneParticleOperator
+# This module has to stay completely independent of other adcc modules
+# (at runtime) to avoid import circles!
+if TYPE_CHECKING:
+    from .OneParticleOperator import OneParticleOperator
 
 Array1D = np.ndarray[tuple[int], np.dtype[np.float64]]
 Array2D = np.ndarray[tuple[int, int], np.dtype[np.float64]]
 Array4D = np.ndarray[tuple[int, int, int, int], np.dtype[np.float64]]
 DipoleLikeArray = tuple[Array2D, Array2D, Array2D]
-DipoleLike = tuple[OneParticleOperator, OneParticleOperator, OneParticleOperator]
+# quotes: cannot evaluate this type at runtime
+DipoleLike: TypeAlias = "tuple[OneParticleOperator, OneParticleOperator, OneParticleOperator]"
 # Once we drop python 3.10 we can write
 # QuadrupoleLikeArray = tuple[*DipoleLikeArray, *DipoleLikeArray, *DipoleLikeArray]
 QuadrupoleLikeArray = tuple[
@@ -56,6 +60,8 @@ def is_quadrupole_like_array(value: Any) -> TypeGuard[QuadrupoleLikeArray]:
 
 
 def is_dipole_like(value: Any) -> TypeGuard[DipoleLike]:
+    from .OneParticleOperator import OneParticleOperator
+
     return (
         isinstance(value, tuple)
         and len(value) == 3
@@ -63,5 +69,5 @@ def is_dipole_like(value: Any) -> TypeGuard[DipoleLike]:
     )
 
 
-def is_quadruple_like(value: Any) -> TypeGuard[QuadrupoleLike]:
+def is_quadrupole_like(value: Any) -> TypeGuard[QuadrupoleLike]:
     return isinstance(value, tuple) and len(value) == 3 and all(is_dipole_like(v) for v in value)

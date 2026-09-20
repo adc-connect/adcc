@@ -45,7 +45,7 @@ from .typing import (
     QuadrupoleLike,
     QuadrupoleLikeArray,
     is_dipole_like,
-    is_quadruple_like,
+    is_quadrupole_like,
 )
 
 
@@ -65,13 +65,13 @@ def transform_operator_ao2mo_1p(
     tensor_bb : libadcc.Tensor
         Block-diagonal tensor in the atomic orbital basis with
         dimensionality (2 n_bas, 2 n_bas) and two identical diagonal
-        blocks wich are repeated for the alpha and beta spin.
+        blocks which are repeated for the alpha and beta spin.
     tensor_ff : OneParticleOperator
         Output tensor with the symmetry set-up to contain
         the operator in the molecular orbital representation
     coefficients : Callable[[str], libadcc.Tensor]
         Function providing coefficient blocks
-    conv_tol : float, optional
+    tolerance : float, optional
         SCF convergence tolerance, by default 1e-14
     """
     for blk in tensor_ff.canonical_blocks:
@@ -101,13 +101,13 @@ def transform_operator_ao2mo_2p(
     tensor_bb : libadcc.Tensor
         Block-diagonal tensor in the atomic orbital basis with
         dimensionality (2 n_bas, 2 n_bas) and two identical diagonal
-        blocks wich are repeated for the alpha and beta spin.
+        blocks which are repeated for the alpha and beta spin.
     tensor_ff : TwoParticleOperator
         Output tensor with the symmetry set-up to contain
         the operator in the molecular orbital representation
     coefficients : Callable[[str], libadcc.Tensor]
         Function providing coefficient blocks
-    conv_tol : float, optional
+    tolerance : float, optional
         SCF convergence tolerance, by default 1e-14
     """
     for blk in tensor_ff.canonical_blocks:
@@ -144,7 +144,7 @@ def transform_operator_ao2mo_spin_projected_1p(
     ----------
     tensor_bb : libadcc.Tensor
         Tensor in the atomic orbital basis
-    tensor_ff : np.ndarray[tuple[int, ...], np.dtype[np.float64]]
+    tensor_ff : OneParticleOperator
         Output tensor with the symmetry set-up to contain
         the operator in the molecular orbital representation
     coeff_alpha : Callable[[str], libadcc.Tensor]
@@ -154,7 +154,7 @@ def transform_operator_ao2mo_spin_projected_1p(
     spin_block : Literal["aa", "ab", "ba", "bb"], optional
         Two-character string specifying which spin components are projected
         for the left and right indices. Default is "aa".
-    conv_tol : float, optional
+    tolerance : float, optional
         SCF convergence tolerance, by default 1e-14
     """
     assert len(spin_block) == 2
@@ -225,7 +225,6 @@ def replicate_ao_block_2p(
     The `block` argument controls which blocks are constructed:
     - block="ab": replicate the operator for both alpha and beta spaces,
       resulting in a full block-diagonal structure.
-    - block="a": construct only the corresponding single block.
     """
     assert block == "ab"
     sym = libadcc.make_symmetry_operator_basis(
@@ -315,6 +314,11 @@ class OperatorIntegrals:
     def _import_operator_2p(
         self, ao_operator: Array4D, symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
     ) -> TwoParticleOperator:
+        """
+        Imports the given ao_operator to `adcc` by introducing the permutational
+        antisymmetry, expanding the tensor along the spin axis and transforming
+        the result to the MO basis.
+        """
         op_bbbb = replicate_ao_block_2p(
             mospaces=self.mospaces, tensor=ao_operator, symmetry=symmetry, block="ab"
         )
@@ -330,22 +334,30 @@ class OperatorIntegrals:
     def _import_dipole_like_operator(
         self, ao_operator: DipoleLikeArray, symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
     ) -> DipoleLike:
+        """
+        Imports an operator that is similar to a dipole operator, i.e., it consists of
+        three components (x, y, z), in the MO basis.
+        """
         res = tuple(
             self._import_operator_1p(ao_operator=comp, symmetry=symmetry) for comp in ao_operator
         )
         assert is_dipole_like(res)
         return res
 
-    def _import_quadruple_like_operator(
+    def _import_quadrupole_like_operator(
         self,
         ao_operator: QuadrupoleLikeArray,
         symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN,
     ) -> QuadrupoleLike:
+        """
+        Imports an operator that is similar to a quadrupole operator, i.e., it consists of
+        nine components (xx, xy, xz, yx, yy, yz, zx, zy, zz), in the MO basis.
+        """
         flattened = tuple(
             self._import_operator_1p(ao_operator=comp, symmetry=symmetry) for comp in ao_operator
         )
         res = (tuple(flattened[:3]), tuple(flattened[3:6]), tuple(flattened[6:]))
-        assert is_quadruple_like(res)
+        assert is_quadrupole_like(res)
         return res
 
     @cached_property
@@ -493,7 +505,7 @@ class OperatorIntegrals:
         in the molecular orbital basis dependent on the selected gauge origin.
         The default gauge origin is set to (0.0, 0.0, 0.0) (= 'origin').
         """
-        return self._import_quadruple_like_operator(
+        return self._import_quadrupole_like_operator(
             ao_operator=self.provider_ao.electric_quadrupole(gauge_origin=gauge_origin),
             symmetry=OperatorSymmetry.HERMITIAN,
         )
@@ -507,7 +519,7 @@ class OperatorIntegrals:
         in the molecular orbital basis dependent on the selected gauge origin.
         The default gauge origin is set to (0.0, 0.0, 0.0) (= 'origin').
         """
-        return self._import_quadruple_like_operator(
+        return self._import_quadrupole_like_operator(
             ao_operator=self.provider_ao.electric_quadrupole_traceless(gauge_origin=gauge_origin),
             symmetry=OperatorSymmetry.HERMITIAN,
         )
@@ -521,7 +533,7 @@ class OperatorIntegrals:
         in the molecular orbital basis dependent on the selected gauge origin.
         The default gauge origin is set to (0.0, 0.0, 0.0) (= 'origin').
         """
-        return self._import_quadruple_like_operator(
+        return self._import_quadrupole_like_operator(
             ao_operator=self.provider_ao.electric_quadrupole_velocity(gauge_origin=gauge_origin),
             symmetry=OperatorSymmetry.ANTIHERMITIAN,
         )
@@ -535,7 +547,7 @@ class OperatorIntegrals:
         in the molecular orbital basis dependent on the selected gauge origin.
         The default gauge origin is set to (0.0, 0.0, 0.0) (= 'origin').
         """
-        return self._import_quadruple_like_operator(
+        return self._import_quadrupole_like_operator(
             ao_operator=self.provider_ao.diamagnetic_magnetizability(gauge_origin=gauge_origin),
             symmetry=OperatorSymmetry.HERMITIAN,
         )

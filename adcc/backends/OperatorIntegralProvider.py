@@ -35,8 +35,17 @@ class OperatorIntegralProvider(ABC):
 
     @property
     def available(self) -> tuple[str, ...]:
-        """Lists integrals that are available in the backend."""
-        # check the methods avilable on the child class (resolved along the MRO)
+        """
+        Lists integrals that are available in the backend.
+
+        This is the queryable counterpart of the ``NotImplementedError`` that every
+        operator defined on this base class raises. A subclass declares support
+        for an operator by overwriting the corresponding base class method, which
+        automatically makes the operator appear here.
+        Consequently, a name present in ``available`` garuantees that accessing
+        the corresponding method will not raise ``NotImplementedError``.
+        """
+        # check the methods available on the child class (resolved along the MRO)
         # and return all whose definition differs from the one on this class.
         # This implementation does not work for classmethods or staticmethods
         blacklist = ("backend", "available")
@@ -132,7 +141,7 @@ class OperatorIntegralProvider(ABC):
         - delta_{alpha, beta} r_{i}^2)
         """
         raise NotImplementedError(
-            f"Diagmagnetic magnetizability operator not implemented for the {self.backend} backend"
+            f"Diamagnetic magnetizability operator not implemented for the {self.backend} backend"
         )
 
     def pe_induction_elec(self, dm: libadcc.Tensor) -> Array2D:

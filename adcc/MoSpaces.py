@@ -27,6 +27,7 @@ import numpy as np
 
 import libadcc
 
+from .backends import import_scf_results
 from .memory_pool import memory_pool
 
 __all__ = ["MoSpaces"]
@@ -142,8 +143,6 @@ class MoSpaces(libadcc.MoSpaces):
         frozen_virtuals : int or list or tuple, optional
             The orbitals to be put into the frozen virtual space.
         """
-        from .backends import import_scf_results
-
         if not isinstance(hfdata, libadcc.HartreeFockSolution_i):
             hfdata = import_scf_results(hfdata)
 
