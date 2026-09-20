@@ -43,7 +43,8 @@ class HfCounterData(HartreeFockProvider):
         self.__n_orbs_alpha = n_orbs_alpha
         self.__restricted = restricted
         self.__mul = 10
-        self.operator_integral_provider = DataOperatorIntegralProvider()
+        # no operator integrals are provided by this test data
+        self.operator_integral_provider = DataOperatorIntegralProvider({}, n_bas=n_bas)
 
         # Do not forget the next line,
         # otherwise weird errors result

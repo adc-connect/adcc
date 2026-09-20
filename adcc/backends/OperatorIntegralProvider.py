@@ -44,6 +44,8 @@ class OperatorIntegralProvider(ABC):
         automatically makes the operator appear here.
         Consequently, a name present in ``available`` garuantees that accessing
         the corresponding method will not raise ``NotImplementedError``.
+        For gauge origin dependent operators this only garuantees that the backend
+        at least supports one origin.
         """
         # check the methods available on the child class (resolved along the MRO)
         # and return all whose definition differs from the one on this class.

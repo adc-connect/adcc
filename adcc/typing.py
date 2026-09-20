@@ -55,6 +55,10 @@ def is_array_2d(value: Any) -> TypeGuard[Array2D]:
     return isinstance(value, np.ndarray) and value.ndim == 2 and value.dtype == np.float64
 
 
+def is_dipole_like_array(value: Any) -> TypeGuard[DipoleLikeArray]:
+    return isinstance(value, tuple) and len(value) == 3 and all(is_array_2d(v) for v in value)
+
+
 def is_quadrupole_like_array(value: Any) -> TypeGuard[QuadrupoleLikeArray]:
     return isinstance(value, tuple) and len(value) == 9 and all(is_array_2d(v) for v in value)
 

@@ -19,10 +19,24 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import re
+from string import Formatter
+from typing import Any, ClassVar
+
 import h5py
 import numpy as np
 
 from libadcc import HartreeFockProvider
+
+from .backends import OperatorIntegralProvider
+from .typing import (
+    Array2D,
+    Coordinate,
+    DipoleLikeArray,
+    QuadrupoleLikeArray,
+    is_dipole_like_array,
+    is_quadrupole_like_array,
+)
 
 
 def get_scalar_value(data, key, default=None):
@@ -60,18 +74,149 @@ def get_array_value(data, key, default=None):
     return np.asarray(data[key])
 
 
-class DataOperatorIntegralProvider:
-    def __init__(self, backend="data"):
-        self.backend = backend
+class DataOperatorIntegralProvider(OperatorIntegralProvider):
+    # dict holding pairs of operator names and the paths to the integrals in the data.
+    # for nested containers the keys are separated by "/" and format strings are used
+    # to dynamically adjust the keys at runtime to e.g. allow the selection of multiple
+    # gauge origins.
+    _operator_keys: ClassVar[dict[str, str]] = {
+        "overlap": "overlap",
+        "electric_dipole": "multipoles/elec_1",
+        "electric_quadrupole": "multipoles/elec_2_{gauge_origin}",
+        "magnetic_dipole": "magnetic_moments/mag_1_{gauge_origin}",
+        "electric_dipole_velocity": "derivatives/elec_vel_1",
+    }
+
+    def __init__(self, data: dict[str, Any], n_bas: int, backend: str = "data"):
+        """
+        Access and load operator integrals from the ``data`` container and verify their
+        shape against the provided number of basis functions ``n_bas``.
+        """
+        self._data: dict[str, Any] = data
+        self._n_bas: int = n_bas
+        self._backend: str = backend
+
+    @property
+    def backend(self) -> str:
+        return self._backend
+
+    def _load_from_data(self, key: str, default: Any = None) -> Any:
+        """
+        Walk the possibly nested data and extract the desired data.
+        Returns ``default`` if the key is absent.
+        """
+        data = self._data
+        for sub_key in key.split("/"):
+            if sub_key not in data:
+                return default
+            data = data[sub_key]
+        return data
+
+    def _resolve_key(self, name: str, gauge_origin: Coordinate | str = "origin") -> str:
+        """
+        Returns the path to the given operator in the data.
+        """
+        key = self._operator_keys.get(name, None)
+        if key is None:
+            raise ValueError(
+                f"Cannot load unknown operator integral {name}. "
+                f"Known integrals are {tuple(self._operator_keys)}."
+            )
+        if not isinstance(gauge_origin, str):
+            raise NotImplementedError(
+                f"The {self.backend} backend only supports named gauge origins such as 'origin'."
+                f"Got '{gauge_origin}'"
+            )
+        # for non-format strings nothing happens
+        return key.format(gauge_origin=gauge_origin)
+
+    def _contains(self, name: str) -> bool:
+        """
+        Whether the data container contains any data for the given integral.
+        For keys that are format strings (e.g. gauge origin dependent integrals)
+        it is checked whether data is available for ANY value of the format fields.
+        """
+        key = self._operator_keys.get(name, None)
+        if key is None:
+            return False
+        parent, _, final = key.rpartition("/")
+        # verify that parent is no format string
+        if any(field is not None for _, field, _, _ in Formatter().parse(parent)):
+            raise ValueError(
+                "Format strings are only supported in the final component of an operator key. "
+                f"Got '{key}' for the operator {name}."
+            )
+        # partially load the data
+        data = self._load_from_data(parent, {}) if parent else self._data
+        # work through the format string and replace possible format fields by wildcards
+        # mag_{n}_{gauge_origin}_foo -> amg_.+_.+_foo
+        pattern = re.compile(
+            "".join(
+                re.escape(literal) + ("" if field is None else ".+")
+                for literal, field, _, _ in Formatter().parse(final)
+            )
+        )
+        return any(pattern.fullmatch(stored) for stored in data)
 
     @property
     def available(self) -> tuple[str, ...]:
-        blacklist = ("backend", "available")
-        return tuple(
-            integral
-            for integral in dir(self)
-            if not integral.startswith("_") and integral not in blacklist
+        return tuple(name for name in self._operator_keys if self._contains(name))
+
+    def _load_operator(
+        self, name: str, shape: tuple[int, ...], gauge_origin: Coordinate | str = "origin"
+    ) -> np.ndarray:
+        """
+        Load a given operator from the data container and verify its shape.
+        """
+        key = self._resolve_key(name, gauge_origin=gauge_origin)
+        operator = self._load_from_data(key, None)
+        if operator is None:
+            raise NotImplementedError(
+                f"{name} operator for the {self.backend} backend not implemented: "
+                f"no data stored under the key '{key}'."
+            )
+        # import and validate the shape
+        operator = np.asarray(operator)
+        if operator.shape != shape:
+            raise ValueError(
+                f"Invalid shape for operator {name} stored under key {key}: "
+                f"expected shape {shape}, got {operator.shape}."
+            )
+        return operator
+
+    @property
+    def overlap(self) -> Array2D:
+        return self._load_operator("overlap", (self._n_bas, self._n_bas))
+
+    @property
+    def electric_dipole(self) -> DipoleLikeArray:
+        res = tuple(self._load_operator("electric_dipole", (3, self._n_bas, self._n_bas)))
+        assert is_dipole_like_array(res)
+        return res
+
+    @property
+    def electric_dipole_velocity(self) -> DipoleLikeArray:
+        res = tuple(self._load_operator("electric_dipole_velocity", (3, self._n_bas, self._n_bas)))
+        assert is_dipole_like_array(res)
+        return res
+
+    def magnetic_dipole(self, gauge_origin: Coordinate | str = "origin") -> DipoleLikeArray:
+        res = tuple(
+            self._load_operator(
+                "magnetic_dipole", (3, self._n_bas, self._n_bas), gauge_origin=gauge_origin
+            )
         )
+        assert is_dipole_like_array(res)
+        return res
+
+    def electric_quadrupole(self, gauge_origin: Coordinate | str = "origin") -> QuadrupoleLikeArray:
+        res = tuple(
+            self._load_operator(
+                "electric_quadrupole", (9, self._n_bas, self._n_bas), gauge_origin=gauge_origin
+            )
+        )
+        assert is_quadrupole_like_array(res)
+        return res
 
 
 class DataHfProvider(HartreeFockProvider):
@@ -204,62 +349,11 @@ class DataHfProvider(HartreeFockProvider):
                     f"Shape mismatch for key {key}: Expected {exshape}, but got {data[key].shape}."
                 )
 
-        # Setup integral data
-        opprov = DataOperatorIntegralProvider(self.__backend)
-        mmp = data.get("multipoles", {})
-        if "elec_1" in mmp:
-            if mmp["elec_1"].shape != (3, nb, nb):
-                raise ValueError(
-                    "multipoles/elec_1 is expected to have shape "
-                    + str((3, nb, nb))
-                    + " not "
-                    + str(mmp["elec_1"].shape)
-                )
-            opprov.electric_dipole = np.asarray(mmp["elec_1"])
-        if "elec_2_origin" in mmp:
-
-            def get_integral_elquad(gauge_origin):
-                return np.asarray(mmp[f"elec_2_{gauge_origin}"])
-
-            if mmp["elec_2_origin"].shape != (9, nb, nb):
-                raise ValueError(
-                    "multipoles/elec_2_origin is expected to "
-                    "have shape " + str((9, nb, nb)) + " not " + str(mmp["elec_2"].shape)
-                )
-            opprov.electric_quadrupole = get_integral_elquad
-        magm = data.get("magnetic_moments", {})
-        if "mag_1_origin" in magm:
-
-            def get_integral_magdip(gauge_origin):
-                return np.asarray(magm[f"mag_1_{gauge_origin}"])
-
-            if magm["mag_1_origin"].shape != (3, nb, nb):
-                raise ValueError(
-                    "magnetic_moments/mag_1_origin is expected to have"
-                    " shape " + str((3, nb, nb)) + " not " + str(magm["mag_1_origin"].shape)
-                )
-            opprov.magnetic_dipole = get_integral_magdip
-        derivs = data.get("derivatives", {})
-        if "elec_vel_1" in derivs:
-            if derivs["elec_vel_1"].shape != (3, nb, nb):
-                raise ValueError(
-                    "derivatives/elec_vel_1 is expected to have shape "
-                    + str((3, nb, nb))
-                    + " not "
-                    + str(derivs["elec_vel_1"].shape)
-                )
-            opprov.electric_dipole_velocity = np.asarray(derivs["elec_vel_1"])
-        if "overlap" in data:
-            if data["overlap"].shape != (nb, nb):
-                raise ValueError(
-                    "overlap is expected to have shape "
-                    + str((nb, nb))
-                    + " not "
-                    + str(data["overlap"].shape)
-                )
-            opprov.overlap = np.asarray(data["overlap"])
-
-        self.operator_integral_provider = opprov
+        # Setup integral data. The provider locates and validates the integrals
+        # in the data container itself, see DataOperatorIntegralProvider.
+        self.operator_integral_provider = DataOperatorIntegralProvider(
+            data, n_bas=nb, backend=self.__backend
+        )
 
     #
     # Required keys
