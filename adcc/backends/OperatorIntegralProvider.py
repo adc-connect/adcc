@@ -34,6 +34,22 @@ class OperatorIntegralProvider(ABC):
     """
 
     @property
+    def available(self) -> tuple[str, ...]:
+        """Lists integrals that are available in the backend."""
+        # check the methods avilable on the child class (resolved along the MRO)
+        # and return all whose definition differs from the one on this class.
+        # This implementation does not work for classmethods or staticmethods
+        blacklist = ("backend", "available")
+        return tuple(
+            name
+            for name in dir(self.__class__)
+            if not name.startswith("_")
+            and name not in blacklist
+            and hasattr(OperatorIntegralProvider, name)
+            and getattr(self.__class__, name) is not getattr(OperatorIntegralProvider, name)
+        )
+
+    @property
     @abstractmethod
     def backend(self) -> str:
         """Name of the backend providing the integrals."""

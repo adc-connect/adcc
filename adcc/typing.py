@@ -19,12 +19,18 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+from typing import Any, TypeGuard
+
 import numpy as np
 
+from .OneParticleOperator import OneParticleOperator
+
 Array2D = np.ndarray[tuple[int, int], np.dtype[np.float64]]
+Array4D = np.ndarray[tuple[int, int, int, int], np.dtype[np.float64]]
 DipoleLikeArray = tuple[Array2D, Array2D, Array2D]
+DipoleLike = tuple[OneParticleOperator, OneParticleOperator, OneParticleOperator]
 # Once we drop python 3.10 we can write
-# QuadrupoleLike = tuple[*DipoleLike, *DipoleLike, *DipoleLike]
+# QuadrupoleLikeArray = tuple[*DipoleLikeArray, *DipoleLikeArray, *DipoleLikeArray]
 QuadrupoleLikeArray = tuple[
     Array2D,
     Array2D,
@@ -36,4 +42,17 @@ QuadrupoleLikeArray = tuple[
     Array2D,
     Array2D,
 ]
+QuadrupoleLike = tuple[DipoleLike, DipoleLike, DipoleLike]
 Coordinate = tuple[float, float, float]
+
+
+def is_dipole_like(value: Any) -> TypeGuard[DipoleLike]:
+    return (
+        isinstance(value, tuple)
+        and len(value) == 3
+        and all(isinstance(v, OneParticleOperator) for v in value)
+    )
+
+
+def is_quadruple_like(value: Any) -> TypeGuard[QuadrupoleLike]:
+    return isinstance(value, tuple) and len(value) == 3 and all(is_dipole_like(v) for v in value)

@@ -25,8 +25,9 @@ import warnings
 import h5py
 
 from ..misc import is_module_available
+from .OperatorIntegralProvider import OperatorIntegralProvider
 
-__all__ = ["available", "have_backend", "import_scf_results", "run_hf"]
+__all__ = ["OperatorIntegralProvider", "available", "have_backend", "import_scf_results", "run_hf"]
 
 
 # Lazily cache the available backends
