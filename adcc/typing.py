@@ -25,6 +25,7 @@ import numpy as np
 
 from .OneParticleOperator import OneParticleOperator
 
+Array1D = np.ndarray[tuple[int], np.dtype[np.float64]]
 Array2D = np.ndarray[tuple[int, int], np.dtype[np.float64]]
 Array4D = np.ndarray[tuple[int, int, int, int], np.dtype[np.float64]]
 DipoleLikeArray = tuple[Array2D, Array2D, Array2D]
@@ -44,6 +45,14 @@ QuadrupoleLikeArray = tuple[
 ]
 QuadrupoleLike = tuple[DipoleLike, DipoleLike, DipoleLike]
 Coordinate = tuple[float, float, float]
+
+
+def is_array_2d(value: Any) -> TypeGuard[Array2D]:
+    return isinstance(value, np.ndarray) and value.ndim == 2 and value.dtype == np.float64
+
+
+def is_quadrupole_like_array(value: Any) -> TypeGuard[QuadrupoleLikeArray]:
+    return isinstance(value, tuple) and len(value) == 9 and all(is_array_2d(v) for v in value)
 
 
 def is_dipole_like(value: Any) -> TypeGuard[DipoleLike]:

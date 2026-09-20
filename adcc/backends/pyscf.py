@@ -19,7 +19,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from typing import Literal, cast
+from typing import Literal
 
 import numpy as np
 from pyscf import ao2mo, gto, scf
@@ -29,59 +29,42 @@ import libadcc
 
 from ..ElectronicStates import EnergyCorrection
 from ..exceptions import InvalidReference
+from ..typing import (
+    Array1D,
+    Array2D,
+    Array4D,
+    Coordinate,
+    DipoleLikeArray,
+    QuadrupoleLikeArray,
+    is_array_2d,
+    is_quadrupole_like_array,
+)
 from .EriBuilder import Block4D, EriBuilder, Spin4D
+from .OperatorIntegralProvider import OperatorIntegralProvider
 
 # Some type defs for the interface
-Array1D = np.ndarray[tuple[int], np.dtype[np.float64]]
-Array2D = np.ndarray[tuple[int, int], np.dtype[np.float64]]
-Array4D = np.ndarray[tuple[int, int, int, int], np.dtype[np.float64]]
-DipoleLike = tuple[Array2D, Array2D, Array2D]
-# Once we drop python 3.10 we can write
-# QuadrupoleLike = tuple[*DipoleLike, *DipoleLike, *DipoleLike]
-QuadrupoleLike = tuple[
-    Array2D,
-    Array2D,
-    Array2D,
-    Array2D,
-    Array2D,
-    Array2D,
-    Array2D,
-    Array2D,
-    Array2D,
-]
-Coordinate = tuple[float, float, float]
 Environment = Literal["pe", "pcm"]
 EnvironmentImplementation = Literal["cppe", "ddcosmo"]
 
 
-class PyScfOperatorIntegralProvider:
-    available: tuple[str, ...] = (
-        "overlap",
-        "electric_dipole",
-        "electric_dipole_velocity",
-        "magnetic_dipole",
-        "electric_quadrupole",
-        "electric_quadrupole_traceless",
-        "electric_quadrupole_velocity",
-        "diamagnetic_magnetizability",
-        "pe_induction_elec",
-        "pcm_potential_elec",
-    )
-
+class PyScfOperatorIntegralProvider(OperatorIntegralProvider):
     def __init__(self, scfres: scf.hf.SCF):
         self.scfres: scf.hf.SCF = scfres
-        self.backend: str = "pyscf"
+
+    @property
+    def backend(self) -> str:
+        return "pyscf"
 
     @property
     def overlap(self) -> Array2D:
         return self.scfres.mol.intor_symmetric("int1e_ovlp")
 
     @property
-    def electric_dipole(self) -> DipoleLike:
+    def electric_dipole(self) -> DipoleLikeArray:
         """-sum_i r_i"""
         return tuple(-1.0 * self.scfres.mol.intor_symmetric("int1e_r", comp=3))
 
-    def magnetic_dipole(self, gauge_origin: Coordinate | str = "origin") -> DipoleLike:
+    def magnetic_dipole(self, gauge_origin: Coordinate | str = "origin") -> DipoleLikeArray:
         """
         The imaginary part of the integral is returned.
         -0.5 * sum_i r_i x p_i
@@ -91,7 +74,7 @@ class PyScfOperatorIntegralProvider:
             return tuple(-0.5 * self.scfres.mol.intor("int1e_cg_irxp", comp=3, hermi=2))
 
     @property
-    def electric_dipole_velocity(self) -> DipoleLike:
+    def electric_dipole_velocity(self) -> DipoleLikeArray:
         """
         The imaginary part of the integral is returned.
         -sum_i p_i
@@ -99,7 +82,7 @@ class PyScfOperatorIntegralProvider:
         with self.scfres.mol.with_common_orig((0.0, 0.0, 0.0)):
             return tuple(self.scfres.mol.intor("int1e_ipovlp", comp=3, hermi=2))
 
-    def electric_quadrupole(self, gauge_origin: Coordinate | str = "origin") -> QuadrupoleLike:
+    def electric_quadrupole(self, gauge_origin: Coordinate | str = "origin") -> QuadrupoleLikeArray:
         """-sum_i r_{i, alpha} r_{i, beta}"""
         gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
         with self.scfres.mol.with_common_orig(gauge_origin):
@@ -107,7 +90,7 @@ class PyScfOperatorIntegralProvider:
 
     def electric_quadrupole_traceless(
         self, gauge_origin: Coordinate | str = "origin"
-    ) -> QuadrupoleLike:
+    ) -> QuadrupoleLikeArray:
         """
         -0.5 * sum_i (3 * r_{i, alpha} r_{i, beta}
         - delta_{alpha, beta} r_{i}^2)
@@ -125,7 +108,7 @@ class PyScfOperatorIntegralProvider:
 
     def electric_quadrupole_velocity(
         self, gauge_origin: Coordinate | str = "origin"
-    ) -> QuadrupoleLike:
+    ) -> QuadrupoleLikeArray:
         """
         The imaginary part of the integral is returned.
         -sum_i (r_{i, beta} p_{i, alpha} - i delta_{alpha, beta}
@@ -144,7 +127,7 @@ class PyScfOperatorIntegralProvider:
 
     def diamagnetic_magnetizability(
         self, gauge_origin: Coordinate | str = "origin"
-    ) -> QuadrupoleLike:
+    ) -> QuadrupoleLikeArray:
         """
         0.25 * sum_i (r_{i, alpha} r_{i, beta}
         - delta_{alpha, beta} r_{i}^2)
@@ -158,9 +141,9 @@ class PyScfOperatorIntegralProvider:
             for i in range(3):
                 r_quadr_matrix[i][i] = r_quadr
             term = 0.25 * (r_quadr_matrix - r_r)
-            return cast(
-                QuadrupoleLike, tuple(np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0])))
-            )
+            res = tuple(np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0])))
+            assert is_quadrupole_like_array(res)
+            return res
 
     def pe_induction_elec(self, dm: libadcc.Tensor) -> Array2D:
         try:
@@ -204,11 +187,12 @@ class PyScfEriBuilder(EriBuilder):
         self.scfres: scf.hf.SCF = scfres
         self.mo_coeff: tuple[Array2D, Array2D]
         if restricted:
-            self.mo_coeff = cast(
-                tuple[Array2D, Array2D], (self.scfres.mo_coeff, self.scfres.mo_coeff)
-            )
+            assert is_array_2d(self.scfres.mo_coeff)
+            self.mo_coeff = (self.scfres.mo_coeff, self.scfres.mo_coeff)
         else:
-            self.mo_coeff = cast(tuple[Array2D, Array2D], self.scfres.mo_coeff)
+            alpha_coeff, beta_coeff = self.scfres.mo_coeff
+            assert is_array_2d(alpha_coeff) and is_array_2d(beta_coeff)
+            self.mo_coeff = (alpha_coeff, beta_coeff)
         super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted)
 
     @property
