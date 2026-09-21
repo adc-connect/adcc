@@ -20,6 +20,7 @@
 ##
 ## ---------------------------------------------------------------------
 import re
+from collections.abc import Mapping
 from string import Formatter
 from typing import Any, ClassVar
 
@@ -87,12 +88,12 @@ class DataOperatorIntegralProvider(OperatorIntegralProvider):
         "electric_dipole_velocity": "derivatives/elec_vel_1",
     }
 
-    def __init__(self, data: dict[str, Any], n_bas: int, backend: str = "data"):
+    def __init__(self, data: Mapping[str, Any], n_bas: int, backend: str = "data"):
         """
         Access and load operator integrals from the ``data`` container and verify their
         shape against the provided number of basis functions ``n_bas``.
         """
-        self._data: dict[str, Any] = data
+        self._data: Mapping[str, Any] = data
         self._n_bas: int = n_bas
         self._backend: str = backend
 
@@ -107,7 +108,7 @@ class DataOperatorIntegralProvider(OperatorIntegralProvider):
         """
         data = self._data
         for sub_key in key.split("/"):
-            if sub_key not in data:
+            if not isinstance(data, Mapping) or sub_key not in data:
                 return default
             data = data[sub_key]
         return data
@@ -148,6 +149,8 @@ class DataOperatorIntegralProvider(OperatorIntegralProvider):
             )
         # partially load the data
         data = self._load_from_data(parent, {}) if parent else self._data
+        if not isinstance(data, Mapping):
+            return False
         # work through the format string and replace possible format fields by wildcards
         # mag_{n}_{gauge_origin}_foo -> amg_.+_.+_foo
         pattern = re.compile(
@@ -176,7 +179,7 @@ class DataOperatorIntegralProvider(OperatorIntegralProvider):
                 f"no data stored under the key '{key}'."
             )
         # import and validate the shape
-        operator = np.asarray(operator)
+        operator = np.asarray(operator, dtype=np.float64)
         if operator.shape != shape:
             raise ValueError(
                 f"Invalid shape for operator {name} stored under key {key}: "
