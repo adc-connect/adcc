@@ -35,10 +35,12 @@ from ..typing import (
     Array4D,
     Coordinate,
     DipoleLikeArray,
+    GaugeOrigin,
     QuadrupoleLikeArray,
     Slices2D,
     Slices4D,
     is_array_2d,
+    is_named_origin,
     is_quadrupole_like_array,
 )
 from .EriBuilder import Block4D, EriBuilder, Spin4D
@@ -66,7 +68,7 @@ class PyScfOperatorIntegralProvider(OperatorIntegralProvider):
         """-sum_i r_i"""
         return tuple(-1.0 * self.scfres.mol.intor_symmetric("int1e_r", comp=3))
 
-    def magnetic_dipole(self, gauge_origin: Coordinate | str = "origin") -> DipoleLikeArray:
+    def magnetic_dipole(self, gauge_origin: GaugeOrigin = "origin") -> DipoleLikeArray:
         """
         The imaginary part of the integral is returned.
         -0.5 * sum_i r_i x p_i
@@ -84,14 +86,14 @@ class PyScfOperatorIntegralProvider(OperatorIntegralProvider):
         with self.scfres.mol.with_common_orig((0.0, 0.0, 0.0)):
             return tuple(self.scfres.mol.intor("int1e_ipovlp", comp=3, hermi=2))
 
-    def electric_quadrupole(self, gauge_origin: Coordinate | str = "origin") -> QuadrupoleLikeArray:
+    def electric_quadrupole(self, gauge_origin: GaugeOrigin = "origin") -> QuadrupoleLikeArray:
         """-sum_i r_{i, alpha} r_{i, beta}"""
         gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
         with self.scfres.mol.with_common_orig(gauge_origin):
             return tuple(-1.0 * self.scfres.mol.intor_symmetric("int1e_rr", comp=9))
 
     def electric_quadrupole_traceless(
-        self, gauge_origin: Coordinate | str = "origin"
+        self, gauge_origin: GaugeOrigin = "origin"
     ) -> QuadrupoleLikeArray:
         """
         -0.5 * sum_i (3 * r_{i, alpha} r_{i, beta}
@@ -109,7 +111,7 @@ class PyScfOperatorIntegralProvider(OperatorIntegralProvider):
             return tuple(-1.0 * np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0])))
 
     def electric_quadrupole_velocity(
-        self, gauge_origin: Coordinate | str = "origin"
+        self, gauge_origin: GaugeOrigin = "origin"
     ) -> QuadrupoleLikeArray:
         """
         The imaginary part of the integral is returned.
@@ -128,7 +130,7 @@ class PyScfOperatorIntegralProvider(OperatorIntegralProvider):
             return tuple(-1.0 * np.reshape(term, (9, ovlp.shape[0], ovlp.shape[0])))
 
     def diamagnetic_magnetizability(
-        self, gauge_origin: Coordinate | str = "origin"
+        self, gauge_origin: GaugeOrigin = "origin"
     ) -> QuadrupoleLikeArray:
         """
         0.25 * sum_i (r_{i, alpha} r_{i, beta}
@@ -345,6 +347,10 @@ class PyScfHFProvider(libadcc.HartreeFockProvider):
             raise NotImplementedError("get_nuclear_multipole with order > 2")
 
     def transform_gauge_origin_to_xyz(self, gauge_origin: str) -> Coordinate:
+        # pybind11::typing::Literal would do exactly what we want and allow to also define
+        # NamedOrigin in the C++ interface. However, this feature requires C++20.
+        # -> just narrow the type on the python side again.
+        assert is_named_origin(gauge_origin)
         return _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
 
     def fill_occupation_f(self, out: Array1D) -> None:
@@ -500,9 +506,7 @@ def run_core_hole(
     return mf_chole
 
 
-def _transform_gauge_origin_to_xyz(
-    scfres: scf.hf.SCF, gauge_origin: Coordinate | str
-) -> Coordinate:
+def _transform_gauge_origin_to_xyz(scfres: scf.hf.SCF, gauge_origin: GaugeOrigin) -> Coordinate:
     """
     Determines the gauge origin. If the gauge origin is defined as a tuple
     the coordinates need to be given in atomic units!

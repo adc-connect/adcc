@@ -23,7 +23,7 @@ from abc import ABC, abstractmethod
 
 import libadcc
 
-from ..typing import Array2D, Coordinate, DipoleLikeArray, QuadrupoleLikeArray
+from ..typing import Array2D, DipoleLikeArray, GaugeOrigin, QuadrupoleLikeArray
 
 
 class OperatorIntegralProvider(ABC):
@@ -113,13 +113,13 @@ class OperatorIntegralProvider(ABC):
             f"{self.backend} backend"
         )
 
-    def magnetic_dipole(self, gauge_origin: Coordinate | str = "origin") -> DipoleLikeArray:
+    def magnetic_dipole(self, gauge_origin: GaugeOrigin = "origin") -> DipoleLikeArray:
         """
         The imaginary part of the integral `-0.5 * sum_i r_i x p_i` is returned.
 
         Parameters
         ----------
-        gauge_origin : Coordinate | str, optional
+        gauge_origin : GaugeOrigin, optional
             The gauge origin, either by name ('origin', 'mass_center' or
             'charge_center') or as Cartesian coordinates (x, y, z) in the unit
             expected by the backend (e.g. Bohr for pyscf). By default 'origin',
@@ -134,13 +134,13 @@ class OperatorIntegralProvider(ABC):
             f"Magnetic dipole operator not implemented for the {self.backend} backend"
         )
 
-    def electric_quadrupole(self, gauge_origin: Coordinate | str = "origin") -> QuadrupoleLikeArray:
+    def electric_quadrupole(self, gauge_origin: GaugeOrigin = "origin") -> QuadrupoleLikeArray:
         """
         The electric quadrupole operator `-sum_i r_{i, alpha} r_{i, beta}` is returned.
 
         Parameters
         ----------
-        gauge_origin : Coordinate | str, optional
+        gauge_origin : GaugeOrigin, optional
             The gauge origin, either by name ('origin', 'mass_center' or
             'charge_center') or as Cartesian coordinates (x, y, z) in the unit
             expected by the backend (e.g. Bohr for pyscf). By default 'origin',
@@ -156,7 +156,7 @@ class OperatorIntegralProvider(ABC):
         )
 
     def electric_quadrupole_traceless(
-        self, gauge_origin: Coordinate | str = "origin"
+        self, gauge_origin: GaugeOrigin = "origin"
     ) -> QuadrupoleLikeArray:
         """
         The electric quadrupole operator
@@ -165,7 +165,7 @@ class OperatorIntegralProvider(ABC):
 
         Parameters
         ----------
-        gauge_origin : Coordinate | str, optional
+        gauge_origin : GaugeOrigin, optional
             The gauge origin, either by name ('origin', 'mass_center' or
             'charge_center') or as Cartesian coordinates (x, y, z) in the unit
             expected by the backend (e.g. Bohr for pyscf). By default 'origin',
@@ -181,7 +181,7 @@ class OperatorIntegralProvider(ABC):
         )
 
     def electric_quadrupole_velocity(
-        self, gauge_origin: Coordinate | str = "origin"
+        self, gauge_origin: GaugeOrigin = "origin"
     ) -> QuadrupoleLikeArray:
         """
         The imaginary part of the integral
@@ -190,7 +190,7 @@ class OperatorIntegralProvider(ABC):
 
         Parameters
         ----------
-        gauge_origin : Coordinate | str, optional
+        gauge_origin : GaugeOrigin, optional
             The gauge origin, either by name ('origin', 'mass_center' or
             'charge_center') or as Cartesian coordinates (x, y, z) in the unit
             expected by the backend (e.g. Bohr for pyscf). By default 'origin',
@@ -207,7 +207,7 @@ class OperatorIntegralProvider(ABC):
         )
 
     def diamagnetic_magnetizability(
-        self, gauge_origin: Coordinate | str = "origin"
+        self, gauge_origin: GaugeOrigin = "origin"
     ) -> QuadrupoleLikeArray:
         """
         The diamagnetic magnetizability
@@ -216,7 +216,7 @@ class OperatorIntegralProvider(ABC):
 
         Parameters
         ----------
-        gauge_origin : Coordinate | str, optional
+        gauge_origin : GaugeOrigin, optional
             The gauge origin, either by name ('origin', 'mass_center' or
             'charge_center') or as Cartesian coordinates (x, y, z) in the unit
             expected by the backend (e.g. Bohr for pyscf). By default 'origin',

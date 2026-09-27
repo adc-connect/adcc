@@ -37,6 +37,7 @@ from .typing import (
     Coordinate,
     DipoleLikeArray,
     FloatArray,
+    GaugeOrigin,
     QuadrupoleLikeArray,
     ShapeT,
     Slices2D,
@@ -188,7 +189,7 @@ class DataOperatorIntegralProvider(OperatorIntegralProvider):
     def backend(self) -> str:
         return self._backend
 
-    def _resolve_key(self, name: str, gauge_origin: Coordinate | str = "origin") -> str:
+    def _resolve_key(self, name: str, gauge_origin: GaugeOrigin = "origin") -> str:
         """
         Returns the path to the given operator in the data.
         """
@@ -241,7 +242,7 @@ class DataOperatorIntegralProvider(OperatorIntegralProvider):
         return tuple(name for name in self._operator_keys if self._contains(name))
 
     def _load_operator(
-        self, name: str, shape: ShapeT, gauge_origin: Coordinate | str = "origin"
+        self, name: str, shape: ShapeT, gauge_origin: GaugeOrigin = "origin"
     ) -> FloatArray[ShapeT]:
         """
         Load a given operator from the data container and verify its ``shape`` and ``dtype``.
@@ -265,7 +266,7 @@ class DataOperatorIntegralProvider(OperatorIntegralProvider):
         assert is_dipole_like_array(res)
         return res
 
-    def magnetic_dipole(self, gauge_origin: Coordinate | str = "origin") -> DipoleLikeArray:
+    def magnetic_dipole(self, gauge_origin: GaugeOrigin = "origin") -> DipoleLikeArray:
         res = tuple(
             self._load_operator(
                 "magnetic_dipole", (3, self._n_bas, self._n_bas), gauge_origin=gauge_origin
@@ -274,7 +275,7 @@ class DataOperatorIntegralProvider(OperatorIntegralProvider):
         assert is_dipole_like_array(res)
         return res
 
-    def electric_quadrupole(self, gauge_origin: Coordinate | str = "origin") -> QuadrupoleLikeArray:
+    def electric_quadrupole(self, gauge_origin: GaugeOrigin = "origin") -> QuadrupoleLikeArray:
         res = tuple(
             self._load_operator(
                 "electric_quadrupole", (9, self._n_bas, self._n_bas), gauge_origin=gauge_origin

@@ -34,9 +34,11 @@ from ..typing import (
     Array4D,
     Coordinate,
     DipoleLikeArray,
+    GaugeOrigin,
     QuadrupoleLikeArray,
     Slices2D,
     Slices4D,
+    is_named_origin,
 )
 from .EriBuilder import Block4D, EriBuilder, Spin4D
 from .OperatorIntegralProvider import OperatorIntegralProvider
@@ -65,7 +67,7 @@ class Psi4OperatorIntegralProvider(OperatorIntegralProvider):
         x, y, z = self.mints.ao_dipole()  # list
         return np.asarray(x), np.asarray(y), np.asarray(z)
 
-    def magnetic_dipole(self, gauge_origin: Coordinate | str = "origin") -> DipoleLikeArray:
+    def magnetic_dipole(self, gauge_origin: GaugeOrigin = "origin") -> DipoleLikeArray:
         """
         The imaginary part of the integral is returned.
         -0.5 * sum_i r_i x p_i
@@ -89,7 +91,7 @@ class Psi4OperatorIntegralProvider(OperatorIntegralProvider):
         x, y, z = self.mints.ao_nabla()  # list
         return -1.0 * np.asarray(x), -1.0 * np.asarray(y), -1.0 * np.asarray(z)
 
-    def electric_quadrupole(self, gauge_origin: Coordinate | str = "origin") -> QuadrupoleLikeArray:
+    def electric_quadrupole(self, gauge_origin: GaugeOrigin = "origin") -> QuadrupoleLikeArray:
         """-sum_i r_{i, alpha} r_{i, beta}"""
         # TODO: Gauge origin?
         if gauge_origin != (0.0, 0.0, 0.0) and gauge_origin != "origin":
@@ -104,7 +106,7 @@ class Psi4OperatorIntegralProvider(OperatorIntegralProvider):
         return (u[0], u[1], u[2], u[1], u[3], u[4], u[2], u[4], u[5])
 
     def electric_quadrupole_traceless(
-        self, gauge_origin: Coordinate | str = "origin"
+        self, gauge_origin: GaugeOrigin = "origin"
     ) -> QuadrupoleLikeArray:
         """
         -0.5 * sum_i (3 * r_{i, alpha} r_{i, beta}
@@ -295,7 +297,10 @@ class Psi4HFProvider(libadcc.HartreeFockProvider):
             raise NotImplementedError("get_nuclear_multipole with order > 1")
 
     def transform_gauge_origin_to_xyz(self, gauge_origin: str) -> Coordinate:
-        raise NotImplementedError("transform_gauge_origin_to_xyz not implemented.")
+        assert is_named_origin(gauge_origin)
+        if gauge_origin == "origin":
+            return (0.0, 0.0, 0.0)
+        raise NotImplementedError("transform_gauge_origin_to_xyz only implemented for 'origin'.")
 
     def fill_orbcoeff_fb(self, out: Array2D) -> None:
         mo_coeff_a = np.asarray(self.wfn.Ca())

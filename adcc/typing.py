@@ -19,7 +19,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from typing import TYPE_CHECKING, Any, TypeAlias, TypeGuard, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, TypeAlias, TypeGuard, TypeVar, get_args
 
 import numpy as np
 
@@ -54,6 +54,8 @@ Slices2D = tuple[slice, slice]
 Slices4D = tuple[slice, slice, slice, slice]
 # Gauge origin types
 Coordinate = tuple[float, float, float]
+NamedOrigin = Literal["origin", "mass_center", "charge_center"]
+GaugeOrigin = NamedOrigin | Coordinate
 
 # Properties (composed of adcc types)
 # quotes: cannot evaluate this type at runtime
@@ -85,6 +87,13 @@ def is_quadrupole_like_array(value: Any) -> TypeGuard[QuadrupoleLikeArray]:
     (xx, xy, xz, yx, yy, yz, zx, zy, zz).
     """
     return isinstance(value, tuple) and len(value) == 9 and all(is_array_2d(v) for v in value)
+
+
+def is_named_origin(value: Any) -> TypeGuard[NamedOrigin]:
+    """
+    Whether ``value`` is a named origin.
+    """
+    return isinstance(value, str) and value in get_args(NamedOrigin)
 
 
 def is_dipole_like(value: Any) -> TypeGuard[DipoleLike]:

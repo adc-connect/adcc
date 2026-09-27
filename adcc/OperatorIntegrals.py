@@ -39,9 +39,9 @@ from .TwoParticleOperator import TwoParticleOperator
 from .typing import (
     Array2D,
     Array4D,
-    Coordinate,
     DipoleLike,
     DipoleLikeArray,
+    GaugeOrigin,
     QuadrupoleLike,
     QuadrupoleLikeArray,
     is_dipole_like,
@@ -542,15 +542,17 @@ class OperatorIntegrals:
 
     # separate the timings, so one can easily see in the timings how many different
     # gauge_origins were used throughout the calculation
+    # TODO: synonymous gauge origins like (0, 0, 0) and 'origin' are computed and cached twice.
+    # This is true for all gauge dependent properties on this class.
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
-    def magnetic_dipole(self, gauge_origin: Coordinate | str = "origin") -> DipoleLike:
+    def magnetic_dipole(self, gauge_origin: GaugeOrigin = "origin") -> DipoleLike:
         """
         Returns the magnetic dipole integrals
         in the molecular orbital basis dependent on the selected gauge origin.
 
         Parameters
         ----------
-        gauge_origin : Coordinate | str, optional
+        gauge_origin : GaugeOrigin, optional
             The gauge origin, either by name ('origin', 'mass_center' or
             'charge_center') or as Cartesian coordinates (x, y, z) in the unit
             expected by the backend (e.g. Bohr for pyscf). By default 'origin',
@@ -567,14 +569,14 @@ class OperatorIntegrals:
         )
 
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
-    def electric_quadrupole(self, gauge_origin: Coordinate | str = "origin") -> QuadrupoleLike:
+    def electric_quadrupole(self, gauge_origin: GaugeOrigin = "origin") -> QuadrupoleLike:
         """
         Returns the electric quadrupole integrals
         in the molecular orbital basis dependent on the selected gauge origin.
 
         Parameters
         ----------
-        gauge_origin : Coordinate | str, optional
+        gauge_origin : GaugeOrigin, optional
             The gauge origin, either by name ('origin', 'mass_center' or
             'charge_center') or as Cartesian coordinates (x, y, z) in the unit
             expected by the backend (e.g. Bohr for pyscf). By default 'origin',
@@ -591,16 +593,14 @@ class OperatorIntegrals:
         )
 
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
-    def electric_quadrupole_traceless(
-        self, gauge_origin: Coordinate | str = "origin"
-    ) -> QuadrupoleLike:
+    def electric_quadrupole_traceless(self, gauge_origin: GaugeOrigin = "origin") -> QuadrupoleLike:
         """
         Returns the traceless electric quadrupole integrals
         in the molecular orbital basis dependent on the selected gauge origin.
 
         Parameters
         ----------
-        gauge_origin : Coordinate | str, optional
+        gauge_origin : GaugeOrigin, optional
             The gauge origin, either by name ('origin', 'mass_center' or
             'charge_center') or as Cartesian coordinates (x, y, z) in the unit
             expected by the backend (e.g. Bohr for pyscf). By default 'origin',
@@ -617,16 +617,14 @@ class OperatorIntegrals:
         )
 
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
-    def electric_quadrupole_velocity(
-        self, gauge_origin: Coordinate | str = "origin"
-    ) -> QuadrupoleLike:
+    def electric_quadrupole_velocity(self, gauge_origin: GaugeOrigin = "origin") -> QuadrupoleLike:
         """
         Returns the electric quadrupole integrals in velocity gauge
         in the molecular orbital basis dependent on the selected gauge origin.
 
         Parameters
         ----------
-        gauge_origin : Coordinate | str, optional
+        gauge_origin : GaugeOrigin, optional
             The gauge origin, either by name ('origin', 'mass_center' or
             'charge_center') or as Cartesian coordinates (x, y, z) in the unit
             expected by the backend (e.g. Bohr for pyscf). By default 'origin',
@@ -643,16 +641,14 @@ class OperatorIntegrals:
         )
 
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
-    def diamagnetic_magnetizability(
-        self, gauge_origin: Coordinate | str = "origin"
-    ) -> QuadrupoleLike:
+    def diamagnetic_magnetizability(self, gauge_origin: GaugeOrigin = "origin") -> QuadrupoleLike:
         """
         Returns the diamagnetic magnetizability integrals
         in the molecular orbital basis dependent on the selected gauge origin.
 
         Parameters
         ----------
-        gauge_origin : Coordinate | str, optional
+        gauge_origin : GaugeOrigin, optional
             The gauge origin, either by name ('origin', 'mass_center' or
             'charge_center') or as Cartesian coordinates (x, y, z) in the unit
             expected by the backend (e.g. Bohr for pyscf). By default 'origin',
