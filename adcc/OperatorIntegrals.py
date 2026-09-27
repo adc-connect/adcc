@@ -54,25 +54,30 @@ def transform_operator_ao2mo_1p(
     tensor_ff: OneParticleOperator,
     coefficients: Callable[[str], libadcc.Tensor],
     tolerance: float = 1e-14,
-):
+) -> None:
     """
-    Take a block-diagonal one-particle operator in the atomic orbital basis
-    and transform it into the molecular orbital basis in the
-    convention used by adcc.
+    Transform a one-particle operator from the spin-replicated atomic orbital
+    basis into the molecular orbital basis in the convention used by adcc.
+    For every canonical block ``pq`` of ``tensor_ff`` the block
+
+        O_pq = sum_{ab} C_pa O_ab C_qb
+
+    is computed and stored in ``tensor_ff``.
 
     Parameters
     ----------
     tensor_bb : libadcc.Tensor
-        Block-diagonal tensor in the atomic orbital basis with
-        dimensionality (2 n_bas, 2 n_bas) and two identical diagonal
-        blocks which are repeated for the alpha and beta spin.
+        Operator in the spin-replicated atomic orbital basis with shape
+        (2 n_bas, 2 n_bas), e.g., constructed with :func:`replicate_ao_block_1p`.
     tensor_ff : OneParticleOperator
-        Output tensor with the symmetry set-up to contain
-        the operator in the molecular orbital representation
+        Output operator with the symmetry set-up to contain the operator in
+        the molecular orbital representation. Modified in place.
     coefficients : Callable[[str], libadcc.Tensor]
-        Function providing coefficient blocks
+        Function providing the orbital coefficient block for a given space,
+        e.g., ``coefficients("o1b")`` of shape (n_o1, 2 n_bas).
     tolerance : float, optional
-        SCF convergence tolerance, by default 1e-14
+        Tolerance for the symmetry check when setting the MO blocks
+        (typically the SCF convergence tolerance), by default 1e-14
     """
     for blk in tensor_ff.canonical_blocks:
         sp1, sp2 = split_spaces(blk)
@@ -90,25 +95,31 @@ def transform_operator_ao2mo_2p(
     tensor_ff: TwoParticleOperator,
     coefficients: Callable[[str], libadcc.Tensor],
     tolerance: float = 1e-14,
-):
+) -> None:
     """
-    Take a block-diagonal tensor in the atomic orbital basis
-    and transform it into the molecular orbital basis in the
-    convention used by adcc.
+    Transform an antisymmetrised two-particle operator from the spin-orbital
+    atomic orbital basis into the molecular orbital basis in the convention
+    used by adcc. For every canonical block ``pqrs`` of ``tensor_ff`` the block
+
+        <pq||rs> = sum_{abcd} C_pa C_qb <ab||cd> C_rc C_sd
+
+    is computed and stored in ``tensor_ff``.
 
     Parameters
     ----------
     tensor_bb : libadcc.Tensor
-        Block-diagonal tensor in the atomic orbital basis with
-        dimensionality (2 n_bas, 2 n_bas) and two identical diagonal
-        blocks which are repeated for the alpha and beta spin.
+        Antisymmetrised operator <ab||cd> in the spin-orbital atomic orbital
+        basis (physicists' notation) with shape (2 n_bas, 2 n_bas, 2 n_bas, 2 n_bas),
+        e.g., constructed with :func:`replicate_ao_block_2p`.
     tensor_ff : TwoParticleOperator
-        Output tensor with the symmetry set-up to contain
-        the operator in the molecular orbital representation
+        Output operator with the symmetry set-up to contain the operator in
+        the molecular orbital representation. Modified in place.
     coefficients : Callable[[str], libadcc.Tensor]
-        Function providing coefficient blocks
+        Function providing the orbital coefficient block for a given space,
+        e.g., ``coefficients("o1b")`` of shape (n_o1, 2 n_bas).
     tolerance : float, optional
-        SCF convergence tolerance, by default 1e-14
+        Tolerance for the symmetry check when setting the MO blocks
+        (typically the SCF convergence tolerance), by default 1e-14
     """
     for blk in tensor_ff.canonical_blocks:
         sp1, sp2, sp3, sp4 = split_spaces(blk)
@@ -130,32 +141,38 @@ def transform_operator_ao2mo_spin_projected_1p(
     coeff_beta: Callable[[str], libadcc.Tensor],
     spin_block: Literal["aa", "ab", "ba", "bb"] = "aa",
     tolerance: float = 1e-14,
-):
+) -> None:
     """
-    Take a tensor in the atomic orbital basis
-    and transform it into the molecular orbital basis in the
-    convention used by adcc.
+    Transform a one-particle operator from the atomic orbital basis into the
+    molecular orbital basis in the convention used by adcc, while projecting
+    the left and right index onto a single spin each. For every canonical
+    block ``pq`` of ``tensor_ff`` the block
 
-    The transformation is performed block-wise using the provided
-    molecular orbital coefficient matrices for the selected
-    spin components.
+        O_pq = sum_{ab} C^{s1}_pa O_ab C^{s2}_qb
+
+    is computed, where ``s1`` and ``s2`` are the spins given by ``spin_block``
+    and ``C^{s}`` only contains the spin ``s`` part of the orbital coefficients.
 
     Parameters
     ----------
     tensor_bb : libadcc.Tensor
-        Tensor in the atomic orbital basis
+        Operator in the atomic orbital basis with shape (n_bas, n_bas),
+        e.g., constructed with :func:`replicate_ao_block_1p` and ``block="a"``.
     tensor_ff : OneParticleOperator
-        Output tensor with the symmetry set-up to contain
-        the operator in the molecular orbital representation
+        Output operator with the symmetry set-up to contain the operator in
+        the molecular orbital representation. Modified in place.
     coeff_alpha : Callable[[str], libadcc.Tensor]
-        Function providing alpha coefficient blocks.
+        Function providing the alpha part of the orbital coefficient block
+        for a given space, of shape (n_space, n_bas).
     coeff_beta : Callable[[str], libadcc.Tensor]
-        Function providing beta coefficient blocks.
+        Function providing the beta part of the orbital coefficient block
+        for a given space, of shape (n_space, n_bas).
     spin_block : Literal["aa", "ab", "ba", "bb"], optional
         Two-character string specifying which spin components are projected
         for the left and right indices. Default is "aa".
     tolerance : float, optional
-        SCF convergence tolerance, by default 1e-14
+        Tolerance for the symmetry check when setting the MO blocks
+        (typically the SCF convergence tolerance), by default 1e-14
     """
     assert len(spin_block) == 2
     spin1, spin2 = spin_block
@@ -179,16 +196,24 @@ def replicate_ao_block_1p(
     block: Literal["ab", "a"] = "ab",
 ) -> libadcc.Tensor:
     """
-    transform_operator_ao2mo requires the operator in the AO basis to be
-    replicated in a block-diagonal fashion (e.g. for a OneParticleOperator:
-    [A  0
-     0  A]).
-    This is achieved using this function.
+    Construct the spin-orbital representation of a spin-free one-particle
+    operator ``A`` given in the atomic orbital basis, as required by
+    :func:`transform_operator_ao2mo_1p`.
 
-    The `block` argument controls which blocks are constructed:
-    - block="ab": replicate the operator for both alpha and beta spaces,
-      resulting in a full block-diagonal structure.
-    - block="a": construct only the corresponding single block.
+    Parameters
+    ----------
+    mospaces : MoSpaces
+        The MoSpaces of the reference state.
+    tensor : Array2D
+        The operator in the atomic orbital basis with shape (n_bas, n_bas).
+    symmetry : OperatorSymmetry, optional
+        Permutational symmetry of the operator, by default hermitian.
+    block : Literal["ab", "a"], optional
+        Controls which blocks are constructed, by default "ab":
+
+        - "ab": replicate the operator for alpha and beta spin, resulting in
+          the block-diagonal (2 n_bas, 2 n_bas) tensor ``[[A, 0], [0, A]]``.
+        - "a": only the single (n_bas, n_bas) block ``A``.
     """
     assert block in ["ab", "a"]
     sym = libadcc.make_symmetry_operator_basis(
@@ -216,15 +241,30 @@ def replicate_ao_block_2p(
     block: Literal["ab"] = "ab",
 ) -> libadcc.Tensor:
     """
-    transform_operator_ao2mo requires the operator in the AO basis to be
-    replicated in a block-diagonal fashion (e.g. for a OneParticleOperator:
-    [A  0
-     0  A]).
-    This is achieved using this function.
+    Construct the antisymmetrised spin-orbital representation of a spin-free
+    two-particle operator given in the atomic orbital basis, as required by
+    :func:`transform_operator_ao2mo_2p`.
 
-    The `block` argument controls which blocks are constructed:
-    - block="ab": replicate the operator for both alpha and beta spaces,
-      resulting in a full block-diagonal structure.
+    With ``<ab|cd>`` denoting the input ``tensor`` in physicists' notation,
+    the (2 n_bas, 2 n_bas, 2 n_bas, 2 n_bas) result contains the spin blocks
+
+        <ab||cd>  = <ab|cd> - <ab|dc>   for aaaa and bbbb,
+        <ab|cd>                         for abab and baba,
+        -<ab|dc>                        for abba and baab,
+
+    while all other (spin-forbidden) blocks are zero.
+
+    Parameters
+    ----------
+    mospaces : MoSpaces
+        The MoSpaces of the reference state.
+    tensor : Array4D
+        The operator in the atomic orbital basis in physicists' notation
+        with shape (n_bas, n_bas, n_bas, n_bas).
+    symmetry : OperatorSymmetry, optional
+        Permutational symmetry of the operator, by default hermitian.
+    block : Literal["ab"], optional
+        Only "ab" (both spins) is supported.
     """
     assert block == "ab"
     sym = libadcc.make_symmetry_operator_basis(
@@ -289,7 +329,12 @@ class OperatorIntegrals:
 
     @property
     def available(self) -> tuple[str, ...]:
-        """Which integrals are available in the underlying backend"""
+        """
+        Which integrals are available in the underlying backend.
+        Note that for gauge origin dependent operators being listed here only means that
+        they are available for at least one gauge origin, while other gauge origins may
+        still raise an exception. For more details, see `OperatorIntegralProvider.available`.
+        """
         return self.provider_ao.available
 
     def _import_operator_1p(
@@ -467,7 +512,14 @@ class OperatorIntegrals:
     @cached_property
     @timed_member_call("_import_timer")
     def electric_dipole(self) -> DipoleLike:
-        """Return the electric dipole integrals in the molecular orbital basis."""
+        """
+        Return the electric dipole integrals in the molecular orbital basis.
+
+        Raises
+        ------
+        NotImplementedError
+            If the operator is not supported by the backend.
+        """
         return self._import_dipole_like_operator(
             ao_operator=self.provider_ao.electric_dipole, symmetry=OperatorSymmetry.HERMITIAN
         )
@@ -476,8 +528,12 @@ class OperatorIntegrals:
     @timed_member_call("_import_timer")
     def electric_dipole_velocity(self) -> DipoleLike:
         """
-        Return the electric dipole integrals (in the velocity gauge)
-        in the molecular orbital basis.
+        Return the electric dipole integrals (in the velocity gauge) in the molecular orbital basis.
+
+        Raises
+        ------
+        NotImplementedError
+            If the operator is not supported by the backend.
         """
         return self._import_dipole_like_operator(
             ao_operator=self.provider_ao.electric_dipole_velocity,
@@ -489,9 +545,21 @@ class OperatorIntegrals:
     @cached_member_function(timer="_import_timer", separate_timings_by_args=True)
     def magnetic_dipole(self, gauge_origin: Coordinate | str = "origin") -> DipoleLike:
         """
-        Returns the magnetic dipole intergrals
+        Returns the magnetic dipole integrals
         in the molecular orbital basis dependent on the selected gauge origin.
-        The default gauge origin is set to (0.0, 0.0, 0.0) (= 'origin').
+
+        Parameters
+        ----------
+        gauge_origin : Coordinate | str, optional
+            The gauge origin, either by name ('origin', 'mass_center' or
+            'charge_center') or as Cartesian coordinates (x, y, z) in the unit
+            expected by the backend (e.g. Bohr for pyscf). By default 'origin',
+            i.e., (0.0, 0.0, 0.0).
+
+        Raises
+        ------
+        NotImplementedError
+            If the operator or the gauge origin is not supported by the backend.
         """
         return self._import_dipole_like_operator(
             ao_operator=self.provider_ao.magnetic_dipole(gauge_origin=gauge_origin),
@@ -503,7 +571,19 @@ class OperatorIntegrals:
         """
         Returns the electric quadrupole integrals
         in the molecular orbital basis dependent on the selected gauge origin.
-        The default gauge origin is set to (0.0, 0.0, 0.0) (= 'origin').
+
+        Parameters
+        ----------
+        gauge_origin : Coordinate | str, optional
+            The gauge origin, either by name ('origin', 'mass_center' or
+            'charge_center') or as Cartesian coordinates (x, y, z) in the unit
+            expected by the backend (e.g. Bohr for pyscf). By default 'origin',
+            i.e., (0.0, 0.0, 0.0).
+
+        Raises
+        ------
+        NotImplementedError
+            If the operator or the gauge origin is not supported by the backend.
         """
         return self._import_quadrupole_like_operator(
             ao_operator=self.provider_ao.electric_quadrupole(gauge_origin=gauge_origin),
@@ -517,7 +597,19 @@ class OperatorIntegrals:
         """
         Returns the traceless electric quadrupole integrals
         in the molecular orbital basis dependent on the selected gauge origin.
-        The default gauge origin is set to (0.0, 0.0, 0.0) (= 'origin').
+
+        Parameters
+        ----------
+        gauge_origin : Coordinate | str, optional
+            The gauge origin, either by name ('origin', 'mass_center' or
+            'charge_center') or as Cartesian coordinates (x, y, z) in the unit
+            expected by the backend (e.g. Bohr for pyscf). By default 'origin',
+            i.e., (0.0, 0.0, 0.0).
+
+        Raises
+        ------
+        NotImplementedError
+            If the operator or the gauge origin is not supported by the backend.
         """
         return self._import_quadrupole_like_operator(
             ao_operator=self.provider_ao.electric_quadrupole_traceless(gauge_origin=gauge_origin),
@@ -531,7 +623,19 @@ class OperatorIntegrals:
         """
         Returns the electric quadrupole integrals in velocity gauge
         in the molecular orbital basis dependent on the selected gauge origin.
-        The default gauge origin is set to (0.0, 0.0, 0.0) (= 'origin').
+
+        Parameters
+        ----------
+        gauge_origin : Coordinate | str, optional
+            The gauge origin, either by name ('origin', 'mass_center' or
+            'charge_center') or as Cartesian coordinates (x, y, z) in the unit
+            expected by the backend (e.g. Bohr for pyscf). By default 'origin',
+            i.e., (0.0, 0.0, 0.0).
+
+        Raises
+        ------
+        NotImplementedError
+            If the operator or the gauge origin is not supported by the backend.
         """
         return self._import_quadrupole_like_operator(
             ao_operator=self.provider_ao.electric_quadrupole_velocity(gauge_origin=gauge_origin),
@@ -545,7 +649,19 @@ class OperatorIntegrals:
         """
         Returns the diamagnetic magnetizability integrals
         in the molecular orbital basis dependent on the selected gauge origin.
-        The default gauge origin is set to (0.0, 0.0, 0.0) (= 'origin').
+
+        Parameters
+        ----------
+        gauge_origin : Coordinate | str, optional
+            The gauge origin, either by name ('origin', 'mass_center' or
+            'charge_center') or as Cartesian coordinates (x, y, z) in the unit
+            expected by the backend (e.g. Bohr for pyscf). By default 'origin',
+            i.e., (0.0, 0.0, 0.0).
+
+        Raises
+        ------
+        NotImplementedError
+            If the operator or the gauge origin is not supported by the backend.
         """
         return self._import_quadrupole_like_operator(
             ao_operator=self.provider_ao.diamagnetic_magnetizability(gauge_origin=gauge_origin),
@@ -556,6 +672,13 @@ class OperatorIntegrals:
         """
         Returns the (density-dependent) PE electronic induction operator in the
         molecular orbital basis.
+
+        Raises
+        ------
+        NotImplementedError
+            If the operator is not supported by the backend.
+        RuntimeError
+            If the operator is evaluted for a SCF reference without environment.
         """
         dm_ao = sum(density_mo.to_ao_basis())
         assert isinstance(dm_ao, libadcc.Tensor)
@@ -568,6 +691,13 @@ class OperatorIntegrals:
         """
         Returns the (density-dependent) electronic PCM potential operator in the
         molecular orbital basis
+
+        Raises
+        ------
+        NotImplementedError
+            If the operator is not supported by the backend.
+        RuntimeError
+            If the operator is evaluted for a SCF reference without environment.
         """
         dm_ao = sum(density_mo.to_ao_basis())
         assert isinstance(dm_ao, libadcc.Tensor)
@@ -578,6 +708,9 @@ class OperatorIntegrals:
 
     @property
     def timer(self) -> Timer:
+        """
+        Timer containing timings for all so far performed operator imports.
+        """
         ret = Timer()
         ret.attach(self._import_timer, subtree="import")
         return ret

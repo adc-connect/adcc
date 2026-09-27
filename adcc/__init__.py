@@ -26,7 +26,7 @@ from libadcc import HartreeFockProvider, get_n_threads, set_n_threads
 from .AdcMatrix import AdcMatrix
 from .AdcMethod import AdcMethod, IsrMethod
 from .AmplitudeVector import AmplitudeVector
-from .DataHfProvider import DataHfProvider, DictHfProvider
+from .DataHfProvider import DataHfProvider
 from .ElectronicTransition import ElectronicTransition
 from .exceptions import InputError
 from .Excitation import Excitation
@@ -75,7 +75,6 @@ __all__ = [
     "AdcMethod",
     "AmplitudeVector",
     "DataHfProvider",
-    "DictHfProvider",
     "ElectronicTransition",
     "Excitation",
     "ExcitedStates",

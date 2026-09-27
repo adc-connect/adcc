@@ -42,10 +42,15 @@ class OperatorIntegralProvider(ABC):
         operator defined on this base class raises. A subclass declares support
         for an operator by overwriting the corresponding base class method, which
         automatically makes the operator appear here.
-        Consequently, a name present in ``available`` garuantees that accessing
+        Consequently, an operator present in ``available`` guarantees that accessing
         the corresponding method will not raise ``NotImplementedError``.
-        For gauge origin dependent operators this only garuantees that the backend
-        at least supports one origin.
+        For gauge origin dependent operators this only guarantees that the backend
+        at least supports one origin, while other origins still raise ``NotImplementedError``.
+        Conversely, accessing an operator that is not listed in ``available`` raises
+        ``NotImplementedError`` for any argument.
+        For environment operators (like 'pe_induction_elec' and 'pcm_potential_elec')
+        a ``RuntimeError`` may be raised even when they are listed as available
+        if they are requested for a SCF reference without an environment.
         """
         # check the methods available on the child class (resolved along the MRO)
         # and return all whose definition differs from the one on this class.
@@ -67,7 +72,14 @@ class OperatorIntegralProvider(ABC):
 
     @property
     def overlap(self) -> Array2D:
-        """The AO overlap matrix"""
+        """
+        The AO overlap matrix is returned.
+
+        Raises
+        ------
+        NotImplementedError
+            If the operator is not supported by the backend.
+        """
         raise NotImplementedError(
             f"Overlap operator not implemented for the {self.backend} backend"
         )
@@ -75,8 +87,12 @@ class OperatorIntegralProvider(ABC):
     @property
     def electric_dipole(self) -> DipoleLikeArray:
         """
-        The electric dipole operator
-        -sum_i r_i
+        The electric dipole operator `-sum_i r_i` is returned.
+
+        Raises
+        ------
+        NotImplementedError
+            If the operator is not supported by the backend.
         """
         raise NotImplementedError(
             f"Electric dipole operator not implemented for the {self.backend} backend"
@@ -85,8 +101,12 @@ class OperatorIntegralProvider(ABC):
     @property
     def electric_dipole_velocity(self) -> DipoleLikeArray:
         """
-        The imaginary part of the integral is returned.
-        -sum_i p_i
+        The imaginary part of the integral `-sum_i p_i` is returned.
+
+        Raises
+        ------
+        NotImplementedError
+            If the operator is not supported by the backend.
         """
         raise NotImplementedError(
             "Electric dipole operator in the velocity gauge not implemented for the "
@@ -95,8 +115,20 @@ class OperatorIntegralProvider(ABC):
 
     def magnetic_dipole(self, gauge_origin: Coordinate | str = "origin") -> DipoleLikeArray:
         """
-        The imaginary part of the integral is returned.
-        -0.5 * sum_i r_i x p_i
+        The imaginary part of the integral `-0.5 * sum_i r_i x p_i` is returned.
+
+        Parameters
+        ----------
+        gauge_origin : Coordinate | str, optional
+            The gauge origin, either by name ('origin', 'mass_center' or
+            'charge_center') or as Cartesian coordinates (x, y, z) in the unit
+            expected by the backend (e.g. Bohr for pyscf). By default 'origin',
+            i.e., (0.0, 0.0, 0.0).
+
+        Raises
+        ------
+        NotImplementedError
+            If the operator or the gauge origin is not supported by the backend.
         """
         raise NotImplementedError(
             f"Magnetic dipole operator not implemented for the {self.backend} backend"
@@ -104,8 +136,20 @@ class OperatorIntegralProvider(ABC):
 
     def electric_quadrupole(self, gauge_origin: Coordinate | str = "origin") -> QuadrupoleLikeArray:
         """
-        The electric quadrupole operator
-        -sum_i r_{i, alpha} r_{i, beta}
+        The electric quadrupole operator `-sum_i r_{i, alpha} r_{i, beta}` is returned.
+
+        Parameters
+        ----------
+        gauge_origin : Coordinate | str, optional
+            The gauge origin, either by name ('origin', 'mass_center' or
+            'charge_center') or as Cartesian coordinates (x, y, z) in the unit
+            expected by the backend (e.g. Bohr for pyscf). By default 'origin',
+            i.e., (0.0, 0.0, 0.0).
+
+        Raises
+        ------
+        NotImplementedError
+            If the operator or the gauge origin is not supported by the backend.
         """
         raise NotImplementedError(
             f"Electric quadrupole operator not implemented for the {self.backend} backend"
@@ -115,8 +159,22 @@ class OperatorIntegralProvider(ABC):
         self, gauge_origin: Coordinate | str = "origin"
     ) -> QuadrupoleLikeArray:
         """
-        -0.5 * sum_i (3 * r_{i, alpha} r_{i, beta}
-        - delta_{alpha, beta} r_{i}^2)
+        The electric quadrupole operator
+        `-0.5 * sum_i (3 * r_{i, alpha} r_{i, beta} - delta_{alpha, beta} r_{i}^2)`
+        is returned.
+
+        Parameters
+        ----------
+        gauge_origin : Coordinate | str, optional
+            The gauge origin, either by name ('origin', 'mass_center' or
+            'charge_center') or as Cartesian coordinates (x, y, z) in the unit
+            expected by the backend (e.g. Bohr for pyscf). By default 'origin',
+            i.e., (0.0, 0.0, 0.0).
+
+        Raises
+        ------
+        NotImplementedError
+            If the operator or the gauge origin is not supported by the backend.
         """
         raise NotImplementedError(
             f"Traceless electric quadrupole operator not implemented for the {self.backend} backend"
@@ -126,9 +184,22 @@ class OperatorIntegralProvider(ABC):
         self, gauge_origin: Coordinate | str = "origin"
     ) -> QuadrupoleLikeArray:
         """
-        The imaginary part of the integral is returned.
-        -sum_i (r_{i, beta} p_{i, alpha} - i delta_{alpha, beta}
-        + r_{i, alpha} p_{i, beta})
+        The imaginary part of the integral
+        `-sum_i (r_{i, beta} p_{i, alpha} - i delta_{alpha, beta} + r_{i, alpha} p_{i, beta})`
+        is returned.
+
+        Parameters
+        ----------
+        gauge_origin : Coordinate | str, optional
+            The gauge origin, either by name ('origin', 'mass_center' or
+            'charge_center') or as Cartesian coordinates (x, y, z) in the unit
+            expected by the backend (e.g. Bohr for pyscf). By default 'origin',
+            i.e., (0.0, 0.0, 0.0).
+
+        Raises
+        ------
+        NotImplementedError
+            If the operator or the gauge origin is not supported by the backend.
         """
         raise NotImplementedError(
             "Electric quadrupole operator in the velocity gauge not implemented for "
@@ -139,20 +210,54 @@ class OperatorIntegralProvider(ABC):
         self, gauge_origin: Coordinate | str = "origin"
     ) -> QuadrupoleLikeArray:
         """
-        0.25 * sum_i (r_{i, alpha} r_{i, beta}
-        - delta_{alpha, beta} r_{i}^2)
+        The diamagnetic magnetizability
+        `0.25 * sum_i (r_{i, alpha} r_{i, beta} - delta_{alpha, beta} r_{i}^2)`
+        is returned.
+
+        Parameters
+        ----------
+        gauge_origin : Coordinate | str, optional
+            The gauge origin, either by name ('origin', 'mass_center' or
+            'charge_center') or as Cartesian coordinates (x, y, z) in the unit
+            expected by the backend (e.g. Bohr for pyscf). By default 'origin',
+            i.e., (0.0, 0.0, 0.0).
+
+        Raises
+        ------
+        NotImplementedError
+            If the operator or the gauge origin is not supported by the backend.
         """
         raise NotImplementedError(
             f"Diamagnetic magnetizability operator not implemented for the {self.backend} backend"
         )
 
     def pe_induction_elec(self, dm: libadcc.Tensor) -> Array2D:
+        """
+        The potential induced in the PE environment by the provided `dm` is returned.
+
+        Raises
+        ------
+        NotImplementedError
+            If the operator is not supported by the backend.
+        RuntimeError
+            If the operator is evaluted for a SCF reference without environment.
+        """
         raise NotImplementedError(
             f"Polarizable embedding induction operator not implemented for "
             f"the {self.backend} backend"
         )
 
     def pcm_potential_elec(self, dm: libadcc.Tensor) -> Array2D:
+        """
+        The potential induced in the PCM environment by the provided `dm` is returned.
+
+        Raises
+        ------
+        NotImplementedError
+            If the operator is not supported by the backend.
+        RuntimeError
+            If the operator is evaluted for a SCF reference without environment.
+        """
         raise NotImplementedError(
             f"Polarizable continuum potential operator not implemented for "
             f"the {self.backend} backend"

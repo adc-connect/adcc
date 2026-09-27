@@ -118,9 +118,15 @@ class ExcitedStates(ElectronicTransition):
             columns.append(TableColumn(header="osc str", values=values.copy(), unit="(au)"))
             values.clear()
         if rotatory_strengths and has_rotatory:
-            values.extend(f"{rot:^8.4f}" for rot in self.rotatory_strength)
-            columns.append(TableColumn(header="rot str", values=values.copy(), unit="(au)"))
-            values.clear()
+            # we can not know whether data is available for a given gauge origin.
+            # For instance the backend might only provide 'mass_center',
+            # while we need 'origin' in the following.
+            try:
+                values.extend(f"{rot:^8.4f}" for rot in self.rotatory_strength)
+                columns.append(TableColumn(header="rot str", values=values.copy(), unit="(au)"))
+                values.clear()
+            except NotImplementedError:
+                pass
         # vector norm
         if block_norms and "ph" in self.matrix.axis_blocks:
             values.extend(f"{dot(vec.ph, vec.ph):^9.4f}" for vec in self.excitation_vector)
