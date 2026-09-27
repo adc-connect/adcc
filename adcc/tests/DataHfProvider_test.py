@@ -26,6 +26,8 @@ from pathlib import Path
 import h5py
 import numpy as np
 
+from adcc.DataHfProvider import DataOperatorIntegralProvider
+
 from .ReferenceState_refdata_test import compare_refstate_with_reference
 from .testdata_cache import testdata_cache
 
@@ -103,3 +105,23 @@ class TestDataHfProvdier(unittest.TestCase):
                 scfres=str(fn),
                 compare_eri="abs",
             )
+
+
+class TestDataOperatorIntegralProvider(unittest.TestCase):
+    def test_available(self):
+        # ensure that all integrals are listed that are available for at least 1 gauge_origin
+        assert not DataOperatorIntegralProvider({}, n_bas=1).available
+        assert not DataOperatorIntegralProvider({"something": 1}, n_bas=1).available
+        assert DataOperatorIntegralProvider(
+            {"multipoles": {"elec_1": np.array([[0, 0], [0, 0]])}}, n_bas=2
+        ).available == ("electric_dipole",)
+        # shape does not matter for available. Just that we have some data
+        assert DataOperatorIntegralProvider(
+            {"multipoles": {"elec_1": np.array([0])}}, n_bas=2
+        ).available == ("electric_dipole",)
+        assert DataOperatorIntegralProvider(
+            {"magnetic_moments": {"mag_1_mass_center": np.array([0])}}, n_bas=2
+        ).available == ("magnetic_dipole",)
+        assert DataOperatorIntegralProvider(
+            {"magnetic_moments": {"mag_1_origin": np.array([0])}}, n_bas=2
+        ).available == ("magnetic_dipole",)
