@@ -28,7 +28,16 @@ import libadcc
 
 from ..ElectronicStates import EnergyCorrection
 from ..exceptions import InvalidReference
-from ..typing import Array1D, Array2D, Array4D, Coordinate, DipoleLikeArray, QuadrupoleLikeArray
+from ..typing import (
+    Array1D,
+    Array2D,
+    Array4D,
+    Coordinate,
+    DipoleLikeArray,
+    QuadrupoleLikeArray,
+    Slices2D,
+    Slices4D,
+)
 from .EriBuilder import Block4D, EriBuilder, Spin4D
 from .OperatorIntegralProvider import OperatorIntegralProvider
 
@@ -304,17 +313,15 @@ class Psi4HFProvider(libadcc.HartreeFockProvider):
         orben_b = np.asarray(self.wfn.epsilon_b())
         out[:] = np.hstack((orben_a, orben_b))
 
-    def fill_fock_ff(self, slices: tuple[slice, slice], out: Array2D) -> None:
+    def fill_fock_ff(self, slices: Slices2D, out: Array2D) -> None:
         diagonal = np.empty(self.n_orbs)
         self.fill_orben_f(diagonal)
         out[:] = np.diag(diagonal)[slices]
 
-    def fill_eri_ffff(self, slices: tuple[slice, slice, slice, slice], out: Array4D) -> None:
+    def fill_eri_ffff(self, slices: Slices4D, out: Array4D) -> None:
         self.eri_builder.fill_slice_symm(slices, out)
 
-    def fill_eri_phys_asym_ffff(
-        self, slices: tuple[slice, slice, slice, slice], out: Array4D
-    ) -> None:
+    def fill_eri_phys_asym_ffff(self, slices: Slices4D, out: Array4D) -> None:
         raise NotImplementedError("fill_eri_phys_asym_ffff not implemented.")
 
     def has_eri_phys_asym_ffff(self) -> bool:

@@ -36,6 +36,8 @@ from ..typing import (
     Coordinate,
     DipoleLikeArray,
     QuadrupoleLikeArray,
+    Slices2D,
+    Slices4D,
     is_array_2d,
     is_quadrupole_like_array,
 )
@@ -364,17 +366,15 @@ class PyScfHFProvider(libadcc.HartreeFockProvider):
         else:
             out[:] = np.hstack((self.scfres.mo_energy[0], self.scfres.mo_energy[1]))
 
-    def fill_fock_ff(self, slices: tuple[slice, slice], out: Array2D) -> None:
+    def fill_fock_ff(self, slices: Slices2D, out: Array2D) -> None:
         diagonal = np.empty(self.n_orbs)
         self.fill_orben_f(diagonal)
         out[:] = np.diag(diagonal)[slices]
 
-    def fill_eri_ffff(self, slices: tuple[slice, slice, slice, slice], out: Array4D) -> None:
+    def fill_eri_ffff(self, slices: Slices4D, out: Array4D) -> None:
         self.eri_builder.fill_slice_symm(slices, out)
 
-    def fill_eri_phys_asym_ffff(
-        self, slices: tuple[slice, slice, slice, slice], out: Array4D
-    ) -> None:
+    def fill_eri_phys_asym_ffff(self, slices: Slices4D, out: Array4D) -> None:
         raise NotImplementedError("fill_eri_phys_asym_ffff not implemented.")
 
     def has_eri_phys_asym_ffff(self) -> bool:

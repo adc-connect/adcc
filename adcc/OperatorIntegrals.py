@@ -137,8 +137,8 @@ def transform_operator_ao2mo_2p(
 def transform_operator_ao2mo_spin_projected_1p(
     tensor_bb: libadcc.Tensor,
     tensor_ff: OneParticleOperator,
-    coeff_alpha: Callable[[str], libadcc.Tensor],
-    coeff_beta: Callable[[str], libadcc.Tensor],
+    coefficients_alpha: Callable[[str], libadcc.Tensor],
+    coefficients_beta: Callable[[str], libadcc.Tensor],
     spin_block: Literal["aa", "ab", "ba", "bb"] = "aa",
     tolerance: float = 1e-14,
 ) -> None:
@@ -161,10 +161,10 @@ def transform_operator_ao2mo_spin_projected_1p(
     tensor_ff : OneParticleOperator
         Output operator with the symmetry set-up to contain the operator in
         the molecular orbital representation. Modified in place.
-    coeff_alpha : Callable[[str], libadcc.Tensor]
+    coefficients_alpha : Callable[[str], libadcc.Tensor]
         Function providing the alpha part of the orbital coefficient block
         for a given space, of shape (n_space, n_bas).
-    coeff_beta : Callable[[str], libadcc.Tensor]
+    coefficients_beta : Callable[[str], libadcc.Tensor]
         Function providing the beta part of the orbital coefficient block
         for a given space, of shape (n_space, n_bas).
     spin_block : Literal["aa", "ab", "ba", "bb"], optional
@@ -177,8 +177,8 @@ def transform_operator_ao2mo_spin_projected_1p(
     assert len(spin_block) == 2
     spin1, spin2 = spin_block
     assert spin1 in ["a", "b"] and spin2 in ["a", "b"]
-    left = coeff_alpha if spin1 == "a" else coeff_beta
-    right = coeff_alpha if spin2 == "a" else coeff_beta
+    left = coefficients_alpha if spin1 == "a" else coefficients_beta
+    right = coefficients_alpha if spin2 == "a" else coefficients_beta
 
     for blk in tensor_ff.canonical_blocks:
         s1, s2 = split_spaces(blk)

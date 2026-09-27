@@ -26,6 +26,8 @@ import numpy as np
 
 import libadcc
 
+from .typing import Array1D
+
 
 class AmplitudeVector(dict[str, libadcc.Tensor]):
     def __init__(self, **kwargs: libadcc.Tensor):
@@ -99,13 +101,9 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
     def dot(self, other: "AmplitudeVector") -> float: ...
 
     @overload
-    def dot(
-        self, other: Sequence["AmplitudeVector"]
-    ) -> np.ndarray[tuple[int], np.dtype[np.float64]]: ...
+    def dot(self, other: Sequence["AmplitudeVector"]) -> Array1D: ...
 
-    def dot(
-        self, other: "Sequence[AmplitudeVector] | AmplitudeVector"
-    ) -> np.ndarray[tuple[int], np.dtype[np.float64]] | float:
+    def dot(self, other: "Sequence[AmplitudeVector] | AmplitudeVector") -> Array1D | float:
         """
         Return the dot product with another AmplitudeVector
         or the dot products with a list of AmplitudeVectors.
@@ -130,13 +128,9 @@ class AmplitudeVector(dict[str, libadcc.Tensor]):
     def __matmul__(self, other: "AmplitudeVector") -> float: ...
 
     @overload
-    def __matmul__(
-        self, other: Sequence["AmplitudeVector"]
-    ) -> np.ndarray[tuple[int], np.dtype[np.float64]]: ...
+    def __matmul__(self, other: Sequence["AmplitudeVector"]) -> Array1D: ...
 
-    def __matmul__(
-        self, other: "Sequence[AmplitudeVector] | AmplitudeVector"
-    ) -> np.ndarray[tuple[int], np.dtype[np.float64]] | float:
+    def __matmul__(self, other: "Sequence[AmplitudeVector] | AmplitudeVector") -> Array1D | float:
         if (
             isinstance(other, AmplitudeVector)
             or isinstance(other, Sequence)

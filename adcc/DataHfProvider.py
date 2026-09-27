@@ -39,6 +39,8 @@ from .typing import (
     FloatArray,
     QuadrupoleLikeArray,
     ShapeT,
+    Slices2D,
+    Slices4D,
     is_dipole_like_array,
     is_float_array,
     is_quadrupole_like_array,
@@ -444,19 +446,17 @@ class DataHfProvider(HartreeFockProvider):
         nf = 2 * self.get_n_orbs_alpha()
         out[:] = _load_array_value(self._data, key="orben_f", shape=(nf,))
 
-    def fill_fock_ff(self, slices: tuple[slice, slice], out: Array2D) -> None:
+    def fill_fock_ff(self, slices: Slices2D, out: Array2D) -> None:
         # avoid loading the full array and instead slice the handle
         nf = 2 * self.get_n_orbs_alpha()
         out[:] = _get_array(self._data, key="fock_ff", shape=(nf, nf))[slices]
 
-    def fill_eri_ffff(self, slices: tuple[slice, slice, slice, slice], out: Array4D) -> None:
+    def fill_eri_ffff(self, slices: Slices4D, out: Array4D) -> None:
         # avoid loading the full array and instead slice the handle
         nf = 2 * self.get_n_orbs_alpha()
         out[:] = _get_array(self._data, key="eri_ffff", shape=(nf, nf, nf, nf))[slices]
 
-    def fill_eri_phys_asym_ffff(
-        self, slices: tuple[slice, slice, slice, slice], out: Array4D
-    ) -> None:
+    def fill_eri_phys_asym_ffff(self, slices: Slices4D, out: Array4D) -> None:
         # Only required if eri_ffff not provided
         # avoid loading the full array and instead slice the handle
         nf = 2 * self.get_n_orbs_alpha()

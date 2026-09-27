@@ -28,15 +28,14 @@ import numpy as np
 if TYPE_CHECKING:
     from .OneParticleOperator import OneParticleOperator
 
+# Plain numpy arrays
 ShapeT = TypeVar("ShapeT", bound=tuple[int, ...])
 FloatArray = np.ndarray[ShapeT, np.dtype[np.float64]]
-
 Array1D = FloatArray[tuple[int]]
 Array2D = FloatArray[tuple[int, int]]
 Array4D = FloatArray[tuple[int, int, int, int]]
+# Types composed of numpy arrays
 DipoleLikeArray = tuple[Array2D, Array2D, Array2D]
-# quotes: cannot evaluate this type at runtime
-DipoleLike: TypeAlias = "tuple[OneParticleOperator, OneParticleOperator, OneParticleOperator]"
 # Once we drop python 3.10 we can write
 # QuadrupoleLikeArray = tuple[*DipoleLikeArray, *DipoleLikeArray, *DipoleLikeArray]
 QuadrupoleLikeArray = tuple[
@@ -50,8 +49,16 @@ QuadrupoleLikeArray = tuple[
     Array2D,
     Array2D,
 ]
-QuadrupoleLike = tuple[DipoleLike, DipoleLike, DipoleLike]
+# Slices
+Slices2D = tuple[slice, slice]
+Slices4D = tuple[slice, slice, slice, slice]
+# Gauge origin types
 Coordinate = tuple[float, float, float]
+
+# Properties (composed of adcc types)
+# quotes: cannot evaluate this type at runtime
+DipoleLike: TypeAlias = "tuple[OneParticleOperator, OneParticleOperator, OneParticleOperator]"
+QuadrupoleLike = tuple[DipoleLike, DipoleLike, DipoleLike]
 
 
 def is_float_array(value: Any, shape: ShapeT) -> TypeGuard[FloatArray[ShapeT]]:
