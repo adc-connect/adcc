@@ -21,13 +21,22 @@
 ## ---------------------------------------------------------------------
 import os
 import warnings
+from collections.abc import Mapping
 
 import h5py
 
 from ..misc import is_module_available
+from .DataHfProvider import DataHfProvider
 from .OperatorIntegralProvider import OperatorIntegralProvider
 
-__all__ = ["OperatorIntegralProvider", "available", "have_backend", "import_scf_results", "run_hf"]
+__all__ = [
+    "DataHfProvider",
+    "OperatorIntegralProvider",
+    "available",
+    "have_backend",
+    "import_scf_results",
+    "run_hf",
+]
 
 
 # Lazily cache the available backends
@@ -95,9 +104,7 @@ def import_scf_results(res):
     if isinstance(res, HartreeFockSolution_i):
         return res
 
-    if isinstance(res, (dict, h5py.File)):
-        from adcc.DataHfProvider import DataHfProvider
-
+    if isinstance(res, Mapping):
         return DataHfProvider(res)
 
     if isinstance(res, str):

@@ -23,7 +23,7 @@ import numpy as np
 
 from libadcc import HartreeFockProvider
 
-from .DataHfProvider import DataOperatorIntegralProvider
+from .backends.DataHfProvider import DataOperatorIntegralProvider
 
 
 class HfCounterData(HartreeFockProvider):

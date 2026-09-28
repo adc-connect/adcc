@@ -26,7 +26,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from adcc.DataHfProvider import DataOperatorIntegralProvider
+from adcc.backends.DataHfProvider import DataOperatorIntegralProvider
 
 from .ReferenceState_refdata_test import compare_refstate_with_reference
 from .testdata_cache import testdata_cache

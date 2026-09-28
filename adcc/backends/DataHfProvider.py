@@ -29,8 +29,7 @@ import numpy as np
 
 from libadcc import HartreeFockProvider
 
-from .backends import OperatorIntegralProvider
-from .typing import (
+from ..typing import (
     Array1D,
     Array2D,
     Array4D,
@@ -46,8 +45,9 @@ from .typing import (
     is_float_array,
     is_quadrupole_like_array,
 )
+from .OperatorIntegralProvider import OperatorIntegralProvider
 
-DataT = TypeVar("DataT")
+ScalarT = TypeVar("ScalarT")
 
 
 @runtime_checkable
@@ -98,7 +98,7 @@ def _convert_scalar(value: object, scalar_cls: type) -> object:
     return value
 
 
-def _load_scalar_value(data: Mapping[str, Any], key: str, scalar_cls: type[DataT]) -> DataT:
+def _load_scalar_value(data: Mapping[str, Any], key: str, scalar_cls: type[ScalarT]) -> ScalarT:
     """
     Loads a scalar value (a value which is not an array) from ``data`` and ensures
     that the scalar value is of the correct type.
@@ -511,8 +511,8 @@ class DataHfProvider(HartreeFockProvider):
             # this should be catched already on the C++ side
             if not self.get_restricted():
                 raise ValueError(
-                    "'spin_multiplicity' not provided in the data. Can only be determined "
-                    "automatically for a restricted reference."
+                    "'spin_multiplicity' not provided in the data container. For an unrestricted "
+                    "reference the multiplicity cannot be inferred from the data on the fly."
                 )
             noa = self.get_n_orbs_alpha()
             occupations = self._occupation_f()
