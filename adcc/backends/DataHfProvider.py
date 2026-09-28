@@ -404,6 +404,8 @@ class DataHfProvider(HartreeFockProvider):
         super().__init__()
         if not isinstance(data, Mapping):
             raise TypeError("The data container has to a Mapping like 'dict' or 'h5py.File'.")
+        if isinstance(data, h5py.File) and "r" not in data.mode:
+            raise ValueError(f"Passed h5py.File stream (filename: {data.filename}) not readable.")
         self._data: Mapping[str, Any] = data
 
         # Setup integral data. The provider locates and validates the integrals
