@@ -41,6 +41,9 @@ py::typing::Tuple<size_t, py::ellipsis> shape_tuple(const std::vector<size_t>& s
 /** Convert a Sequence of tensors to a vector of shared pointers to Tensor */
 std::vector<std::shared_ptr<Tensor>> extract_tensors(const py::sequence& in);
 
+/** Convert a Sequence of axes to a vector of axis indices */
+std::vector<size_t> extract_axes(py::handle in);
+
 }  // namespace libadcc
 
 namespace pybind11 {

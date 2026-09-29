@@ -31,37 +31,29 @@ namespace libadcc {
 namespace py = pybind11;
 typedef std::shared_ptr<Tensor> ten_ptr;
 
-using Permutations =
-      py::typing::Union<py::typing::Iterable<py::int_>,
-                        py::typing::Iterable<py::typing::Iterable<py::int_>>>;
+using Axes             = Sequence<py::ssize_t>;
+using Permutations     = py::typing::Union<Axes, Sequence<Axes>>;
+using PermutationsArgs = py::typing::Union<py::ssize_t, Axes>;
 
-static std::vector<std::vector<size_t>> parse_permutations(
-      const Permutations& permutations) {
-  bool iterator_of_ints = true;
-  for (auto tpl : permutations) {
-    if (!py::isinstance<py::int_>(tpl)) {
-      iterator_of_ints = false;
+static std::vector<std::vector<size_t>> parse_permutations(py::handle permutations) {
+  if (!py::isinstance<py::sequence>(permutations)) {
+    throw py::type_error("Expected a sequence or nested sequence of axes, but got " +
+                         py::repr(permutations).cast<std::string>() + ".");
+  }
+  auto perms_as_seq = py::reinterpret_borrow<py::sequence>(permutations);
+  bool nested       = false;
+  for (const py::object elem : perms_as_seq) {
+    if (py::isinstance<py::iterable>(elem)) {
+      nested = true;
       break;
     }
   }
+  if (!nested) return {extract_axes(perms_as_seq)};
 
-  if (iterator_of_ints) {
-    std::vector<size_t> perms;
-    for (auto itm : permutations) {
-      perms.push_back(itm.cast<size_t>());
-    }
-    return std::vector<std::vector<size_t>>{perms};
-  }
-
-  std::vector<std::vector<size_t>> vec_perms;
-  for (auto tpl : permutations) {
-    std::vector<size_t> perms;
-    for (auto itm : tpl) {
-      perms.push_back(itm.cast<size_t>());
-    }
-    vec_perms.push_back(perms);
-  }
-  return vec_perms;
+  std::vector<std::vector<size_t>> ret;
+  ret.reserve(perms_as_seq.size());
+  for (py::object elem : perms_as_seq) ret.push_back(extract_axes(elem));
+  return ret;
 }
 
 static std::vector<size_t> convert_index_tuple(const ten_ptr& self, py::tuple idcs) {
@@ -163,20 +155,16 @@ static ten_ptr Tensor_transpose_1(const Tensor& self) {
   return self.transpose(vec_axes);
 }
 
-static ten_ptr Tensor_transpose_2(const Tensor& self,
-                                  py::typing::Tuple<py::ssize_t, py::ellipsis> axes) {
-  std::vector<size_t> vec_axes(py::len(axes));
-  for (size_t i = 0; i < py::len(axes); ++i) {
-    vec_axes[i] = axes[i].cast<size_t>();
-  }
-  return self.transpose(vec_axes);
+static ten_ptr Tensor_transpose_2(const Tensor& self, Axes axes) {
+  return self.transpose(extract_axes(axes));
 }
 
 static ten_ptr Tensor_symmetrise_1(const Tensor& self, Permutations permutations) {
   return self.symmetrise(parse_permutations(permutations));
 }
 
-static ten_ptr Tensor_symmetrise_2(const Tensor& self, py::Args<py::int_> permutations) {
+static ten_ptr Tensor_symmetrise_2(const Tensor& self,
+                                   py::Args<PermutationsArgs> permutations) {
   if (py::len(permutations) == 0) {
     if (self.ndim() != 2) {
       throw invalid_argument(
@@ -192,7 +180,7 @@ static ten_ptr Tensor_antisymmetrise_1(const Tensor& self, Permutations permutat
 }
 
 static ten_ptr Tensor_antisymmetrise_2(const Tensor& self,
-                                       py::Args<py::int_> permutations) {
+                                       py::Args<PermutationsArgs> permutations) {
   if (py::len(permutations) == 0) {
     if (self.ndim() != 2) {
       throw invalid_argument(
@@ -203,21 +191,13 @@ static ten_ptr Tensor_antisymmetrise_2(const Tensor& self,
   return self.antisymmetrise(parse_permutations(permutations));
 }
 
-static py::typing::Union<ten_ptr, scalar_type> tensordot_1(
-      ten_ptr a, ten_ptr b, py::typing::Iterable<py::typing::Iterable<py::int_>> axes) {
-  if (py::len(axes) != 2) {
-    throw invalid_argument("axes needs to be an iterable of length 2");
-  }
-  std::vector<std::vector<size_t>> c_axes;
-  for (py::handle ax : axes) {
-    std::vector<size_t> res;
-    for (py::handle elem : ax.cast<py::iterable>()) {
-      res.push_back(elem.cast<size_t>());
-    }
-    c_axes.push_back(res);
+static py::typing::Union<ten_ptr, scalar_type> tensordot_1(ten_ptr a, ten_ptr b,
+                                                           Sequence<Axes> axes) {
+  if (axes.size() != 2) {
+    throw invalid_argument("'axes' needs to be a sequence of length 2.");
   }
 
-  TensorOrScalar res = a->tensordot(b, {c_axes[0], c_axes[1]});
+  TensorOrScalar res = a->tensordot(b, {extract_axes(axes[0]), extract_axes(axes[1])});
   if (res.tensor_ptr == nullptr) {
     return py::cast(res.scalar);
   } else {

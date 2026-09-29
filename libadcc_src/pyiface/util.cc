@@ -68,4 +68,24 @@ std::vector<std::shared_ptr<Tensor>> extract_tensors(const py::sequence& in) {
   return ret;
 }
 
+std::vector<size_t> extract_axes(py::handle axes) {
+  if (!py::isinstance<py::sequence>(axes)) {
+    throw py::type_error("Expected a sequence of axes, but got " +
+                         py::repr(axes).cast<std::string>() + ".");
+  }
+  auto axes_as_seq = py::reinterpret_borrow<py::sequence>(axes);
+  std::vector<size_t> ret;
+  ret.reserve(axes_as_seq.size());
+  for (py::object elem : axes_as_seq) {
+    try {
+      ret.push_back(elem.cast<size_t>());
+    } catch (const py::cast_error&) {
+      throw py::type_error(
+            "Expected a sequence of non-negative integers as axes, but got " +
+            py::repr(elem).cast<std::string>() + ".");
+    }
+  }
+  return ret;
+}
+
 }  // namespace libadcc

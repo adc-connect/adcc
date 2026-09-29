@@ -773,11 +773,18 @@ class Tensor:
     @typing.overload
     def antisymmetrise(
         self,
-        permutations: collections.abc.Iterable[int]
-        | collections.abc.Iterable[collections.abc.Iterable[int]],
+        permutations: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]
+        | collections.abc.Sequence[
+            collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]
+        ],
     ) -> Tensor: ...
     @typing.overload
-    def antisymmetrise(self, *args: int) -> Tensor: ...
+    def antisymmetrise(
+        self,
+        *args: typing.SupportsInt
+        | typing.SupportsIndex
+        | collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex],
+    ) -> Tensor: ...
     def copy(self) -> Tensor:
         """
         Returns a deep copy of the tensor.
@@ -866,11 +873,18 @@ class Tensor:
     @typing.overload
     def symmetrise(
         self,
-        permutations: collections.abc.Iterable[int]
-        | collections.abc.Iterable[collections.abc.Iterable[int]],
+        permutations: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]
+        | collections.abc.Sequence[
+            collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]
+        ],
     ) -> Tensor: ...
     @typing.overload
-    def symmetrise(self, *args: int) -> Tensor: ...
+    def symmetrise(
+        self,
+        *args: typing.SupportsInt
+        | typing.SupportsIndex
+        | collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex],
+    ) -> Tensor: ...
     def to_ndarray(self) -> numpy.typing.NDArray[numpy.float64]:
         """
         Export the tensor data to a standard np::ndarray by making a copy.
@@ -878,7 +892,9 @@ class Tensor:
     @typing.overload
     def transpose(self) -> Tensor: ...
     @typing.overload
-    def transpose(self, axes: tuple[typing.SupportsInt | typing.SupportsIndex, ...]) -> Tensor: ...
+    def transpose(
+        self, axes: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]
+    ) -> Tensor: ...
     def zeros_like(self) -> Tensor: ...
     @property
     def T(self) -> Tensor: ...
@@ -1049,7 +1065,11 @@ def set_n_threads_total(n_total: typing.SupportsInt | typing.SupportsIndex) -> N
 
 @typing.overload
 def tensordot(
-    a: Tensor, b: Tensor, axes: collections.abc.Iterable[collections.abc.Iterable[int]]
+    a: Tensor,
+    b: Tensor,
+    axes: collections.abc.Sequence[
+        collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]
+    ],
 ) -> Tensor | float: ...
 @typing.overload
 def tensordot(
