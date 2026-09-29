@@ -798,7 +798,7 @@ class Tensor:
     def dot(self, other: Tensor) -> float: ...
     @typing.overload
     def dot(
-        self, tensors: list[Tensor]
+        self, tensors: collections.abc.Sequence[Tensor]
     ) -> numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]]: ...
     def empty_like(self) -> Tensor: ...
     def evaluate(self) -> Tensor:
@@ -942,7 +942,8 @@ def get_n_threads_total() -> int:
     """
 
 def linear_combination_strict(
-    coefficients: typing.Annotated[numpy.typing.ArrayLike, numpy.float64], tensors: list[Tensor]
+    coefficients: typing.Annotated[numpy.typing.ArrayLike, numpy.float64],
+    tensors: collections.abc.Sequence[Tensor],
 ) -> Tensor: ...
 def make_symmetry_eri(mospaces: MoSpaces, space: str) -> Symmetry:
     """

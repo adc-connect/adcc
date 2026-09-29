@@ -29,11 +29,26 @@ namespace libadcc {
 
 namespace py = pybind11;
 
+// Typed py::sequence to allow for Sequence[T] type hints in the stub file
+template <typename T>
+class Sequence : public py::sequence {
+  using py::sequence::sequence;
+};
+
 /** Make a py::tuple from a vector representing the shape */
 py::typing::Tuple<size_t, py::ellipsis> shape_tuple(const std::vector<size_t>& shape);
 
-/** Convert a list of tensors to a vector of shared pointers to Tensor */
-template <typename Listlike>
-std::vector<std::shared_ptr<Tensor>> extract_tensors(const Listlike& in);
+/** Convert a Sequence of tensors to a vector of shared pointers to Tensor */
+std::vector<std::shared_ptr<Tensor>> extract_tensors(const py::sequence& in);
 
 }  // namespace libadcc
+
+namespace pybind11 {
+namespace detail {
+template <typename T>
+struct handle_type_name<libadcc::Sequence<T>> {
+  static constexpr auto name =
+        const_name("collections.abc.Sequence[") + make_caster<T>::name + const_name("]");
+};
+}  // namespace detail
+}  // namespace pybind11

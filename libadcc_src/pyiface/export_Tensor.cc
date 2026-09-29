@@ -94,7 +94,7 @@ static std::vector<size_t> convert_index_tuple(const ten_ptr& self, py::tuple id
       ret[i] = shape[i] - si;
     } else {
       auto si = static_cast<size_t>(idx);
-      if (si > shape[i]) {
+      if (si >= shape[i]) {
         throw py::index_error("index " + std::to_string(idx) +
                               " is out of bounds for axis " + std::to_string(i) +
                               " with size " + std::to_string(shape[i]));
@@ -146,8 +146,8 @@ static scalar_type Tensor_dot(const Tensor& self, ten_ptr other) {
 }
 
 static NDArray<scalar_type, 1> Tensor_dot_list(const Tensor& self,
-                                               py::typing::List<Tensor> tensors) {
-  std::vector<ten_ptr> parsed   = extract_tensors<py::list>(tensors);
+                                               Sequence<Tensor> tensors) {
+  auto parsed                   = extract_tensors(tensors);
   std::vector<scalar_type> dots = self.dot(parsed);
   py::array_t<scalar_type> ret(dots.size());
   std::copy(dots.begin(), dots.end(), ret.mutable_data());
@@ -271,7 +271,7 @@ static auto Tensor_trace_2(const Tensor& tensor) {
 
 static ten_ptr linear_combination_strict(
       py::array_t<scalar_type, py::array::c_style> coefficients,
-      py::typing::List<Tensor> tensors) {
+      Sequence<Tensor> tensors) {
 
   if (coefficients.ndim() != 1) {
     throw invalid_argument("coefficients array needs to have exactly one dimension.");
@@ -280,10 +280,12 @@ static ten_ptr linear_combination_strict(
   const scalar_type* in_data = coefficients.data();
   std::vector<scalar_type> scalars(in_size);
   std::copy(in_data, in_data + in_size, scalars.data());
-  std::vector<ten_ptr> parsed = extract_tensors<py::list>(tensors);
+  auto parsed = extract_tensors(tensors);
 
-  if (parsed.empty()) throw runtime_error("No tensors parsed during linear combination");
-
+  if (parsed.empty())
+    throw runtime_error(
+          "No tensors parsed during linear combination. Not possible to construct a "
+          "result tensor.");
   auto ret = parsed[0]->zeros_like();
   ret->add_linear_combination(scalars, parsed);
   return ret;
@@ -445,7 +447,7 @@ void export_Tensor(py::module& m) {
   py::class_<Tensor, std::shared_ptr<Tensor>> tensor(
         m, "Tensor",
         "Class representing the Tensor objects used for computations in adcc");
-  tensor.def(py::init(&make_tensor_zero), py::arg("symmetry"),
+  tensor.def(py::init(&make_tensor_zero), py::arg("symmetry").none(false),
              "Construct a Tensor object using a Symmetry object describing its symmetry "
              "properties.\n"
              "The returned object is not guaranteed to contain initialised memory. "
@@ -482,7 +484,7 @@ void export_Tensor(py::module& m) {
              "string eg. 'iijkli' sets elements T_{iijkli}")
         .def("diagonal", &Tensor_diagonal)
         .def("copy", &Tensor::copy, "Returns a deep copy of the tensor.")
-        .def("dot", &Tensor_dot, py::arg("other"))
+        .def("dot", &Tensor_dot, py::arg("other").none(false))
         .def("dot", &Tensor_dot_list, py::arg("tensors"))
         .def_property_readonly("T", &Tensor_transpose_1)
         .def("transpose", &Tensor_transpose_1)
@@ -542,27 +544,31 @@ void export_Tensor(py::module& m) {
              py::arg("number"))  // tensor /= scalar
         .def("__truediv__", &Tensor_scalar__truediv__,
              py::arg("number"))  // tensor / scalar
-                                 //
-        .def("__mul__", &Tensor__mul__, py::arg("other"),
+        .def("__mul__", &Tensor__mul__, py::arg("other").none(false),
              "Multiply two tensors elementwise.")  // tensor * tensor
-        .def("__truediv__", &Tensor__truediv__, py::arg("other"),
-             "Divide two tensors elementwise.")              // tensor / tensor
-        .def("__iadd__", &Tensor__iadd__, py::arg("other"))  // tensor += tensor
-        .def("__add__", &Tensor__add__, py::arg("other"))    // tensor + tensor
-        .def("__isub__", &Tensor__isub__, py::arg("other"))  // tensor -= tensor
-        .def("__sub__", &Tensor__sub__, py::arg("other"))    // tensor - tensor
+        .def("__truediv__", &Tensor__truediv__, py::arg("other").none(false),
+             "Divide two tensors elementwise.")  // tensor / tensor
+        .def("__iadd__", &Tensor__iadd__,
+             py::arg("other").none(false))                             // tensor += tensor
+        .def("__add__", &Tensor__add__, py::arg("other").none(false))  // tensor + tensor
+        .def("__isub__", &Tensor__isub__,
+             py::arg("other").none(false))                             // tensor -= tensor
+        .def("__sub__", &Tensor__sub__, py::arg("other").none(false))  // tensor - tensor
         //
-        .def("__matmul__", &Tensor__matmul__, py::arg("other"))  // tensor @ tensor
+        .def("__matmul__", &Tensor__matmul__,
+             py::arg("other").none(false))  // tensor @ tensor
         //
         ;
 
-  m.def("evaluate", &evaluate, py::arg("tensor"));
-  m.def("tensordot", &tensordot_1, py::arg("a"), py::arg("b"), py::arg("axes"));
-  m.def("tensordot", &tensordot_2, py::arg("a"), py::arg("b"), py::arg("axes"));
-  m.def("tensordot", &tensordot_3, py::arg("a"), py::arg("b"));
-  m.def("direct_sum", &direct_sum, py::arg("a"), py::arg("b"));
-  m.def("trace", &Tensor_trace_1, py::arg("subscripts"), py::arg("tensor"));
-  m.def("trace", &Tensor_trace_2, py::arg("tensor"));
+  m.def("evaluate", &evaluate, py::arg("tensor").none(false));
+  m.def("tensordot", &tensordot_1, py::arg("a").none(false), py::arg("b").none(false),
+        py::arg("axes"));
+  m.def("tensordot", &tensordot_2, py::arg("a").none(false), py::arg("b").none(false),
+        py::arg("axes"));
+  m.def("tensordot", &tensordot_3, py::arg("a").none(false), py::arg("b").none(false));
+  m.def("direct_sum", &direct_sum, py::arg("a").none(false), py::arg("b").none(false));
+  m.def("trace", &Tensor_trace_1, py::arg("subscripts"), py::arg("tensor").none(false));
+  m.def("trace", &Tensor_trace_2, py::arg("tensor").none(false));
   m.def("linear_combination_strict", &linear_combination_strict, py::arg("coefficients"),
         py::arg("tensors"));
 }

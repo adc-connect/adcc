@@ -19,7 +19,6 @@
 
 #include "util.hh"
 #include "../exceptions.hh"
-#include "pybind11/typing.h"
 
 namespace libadcc {
 
@@ -55,21 +54,18 @@ py::typing::Tuple<size_t, py::ellipsis> shape_tuple(const std::vector<size_t>& s
   }
 }
 
-template <typename Listlike>
-std::vector<std::shared_ptr<Tensor>> extract_tensors(const Listlike& in) {
+std::vector<std::shared_ptr<Tensor>> extract_tensors(const py::sequence& in) {
   std::vector<std::shared_ptr<Tensor>> ret;
-  for (py::handle elem : in) {
+  ret.reserve(in.size());
+  for (py::object elem : in) {
+    if (!py::isinstance<Tensor>(elem)) {
+      throw py::type_error(
+            "Expected a sequence of tensors but one element is of type '" +
+            py::str(py::type::of(elem).attr("__name__")).cast<std::string>() + "'.");
+    }
     ret.push_back(elem.cast<std::shared_ptr<Tensor>>());
   }
   return ret;
 }
-
-//
-// Template instantiations
-//
-template std::vector<std::shared_ptr<Tensor>> extract_tensors<py::list>(
-      const py::list& in);
-template std::vector<std::shared_ptr<Tensor>> extract_tensors<py::tuple>(
-      const py::tuple& in);
 
 }  // namespace libadcc
