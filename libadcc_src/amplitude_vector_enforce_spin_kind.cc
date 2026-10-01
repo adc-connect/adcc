@@ -103,18 +103,11 @@ void amplitude_vector_enforce_spin_kind(std::shared_ptr<Tensor> doubles_tensor,
     lt::short_orbit<4, scalar_type> orbi(sym, ii, /* compute_if_allowed_orbit = */ true);
     if (!orbi.is_allowed()) continue;
 
-    // get_acindex -> get absolute canonical index
-    // Continue if our current index is larger than the canonical index
-    if (orbi.get_acindex() < ai.get_abs_index()) continue;
-
-    // TODO This might be wrong ... think about it and talk to Adrian
-    //      the point is that orbi might have other strides than bidims_alpha
-    //      Continue if the canonical index is already past the
-    //      alpha-alpha-alpha-alpha block
-    if (orbi.get_acindex() > bidims_alpha.get_size()) continue;
-
     // Get the index tuple of the canonical block of (alpha, alpha, alpha, alpha)
     const lt::index<4>& ci = orbi.get_cindex();
+
+    // skip non-canonical blocks
+    if (ci != ii) continue;
 
     // set i1 to (alpha, beta, alpha, beta) equivalent of the canonical index
     //  pinned by ai and orbi
