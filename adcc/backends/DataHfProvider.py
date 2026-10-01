@@ -290,6 +290,11 @@ class DataHfProvider(HartreeFockProvider):
         """
         Initialise the DataHfProvider class with the `data` being a supported
         data container (e.g. a python dictionary or HDF5 file).
+        Note that the data is loaded lazily from the container.
+        Hence, the container must be valid (e.g. the HDF5 file opened and readable)
+        as long as the provider (or any object constructed from it,
+        e.g. a :py:class:`adcc.ReferenceState`) is in use.
+
         Let `nf` denote the number of Fock spin orbitals (i.e. the sum of both
         the alpha and the beta orbitals) and `nb` the number of basis functions.
         With `array` we indicate either a `np.array` or an HDF5 dataset.
@@ -370,7 +375,7 @@ class DataHfProvider(HartreeFockProvider):
         12. **spin_multiplicity** (`int`): The spin multiplicity of the HF
             ground state described by the data. A value of `0` (for unknown)
             should be supplied for unrestricted calculations.
-            (default: 0 for unrestricted calculations and (nalpha - nbeta + 1) for restricted)
+            (default: (nalpha - nbeta + 1) for restricted)
         13. **overlap** (`array`, size `(nb, nb)`): Overlap matrix in the atomic
             orbital basis.
         14. **magnetic_moments**: Container with magnetic moment integrals.
@@ -512,7 +517,7 @@ class DataHfProvider(HartreeFockProvider):
         except MissingDataError:
             # this should be catched already on the C++ side
             if not self.get_restricted():
-                raise ValueError(
+                raise MissingDataError(
                     "'spin_multiplicity' not provided in the data container. For an unrestricted "
                     "reference the multiplicity cannot be inferred from the data on the fly."
                 )

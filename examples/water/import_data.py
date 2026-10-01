@@ -11,7 +11,7 @@ def import_data():
         "n_bas": n_bas,
         "energy_scf": -7.4959319286025718e01,
         "restricted": True,
-        "threshold": 1e-12,
+        "conv_tol": 1e-12,
         "spin_multiplicity": 1,
         "multipoles": {
             "elec_0": -10,
