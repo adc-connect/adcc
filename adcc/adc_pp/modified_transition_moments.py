@@ -21,12 +21,12 @@
 ## ---------------------------------------------------------------------
 from math import sqrt
 
-from adcc import block as b
-from adcc.AdcMethod import IsrMethod
-from adcc.AmplitudeVector import AmplitudeVector
-from adcc.functions import einsum, evaluate
-from adcc.Intermediates import Intermediates
-from adcc.LazyMp import LazyMp
+from .. import block as b
+from ..AdcMethod import IsrMethod
+from ..AmplitudeVector import AmplitudeVector
+from ..functions import einsum, evaluate
+from ..Intermediates import Intermediates
+from ..LazyMp import LazyMp
 
 
 def mtm_isr0(ground_state, op, intermediates):

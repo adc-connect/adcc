@@ -19,6 +19,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import inspect
 import warnings
 
 import numpy as np
@@ -201,7 +202,22 @@ class ElectronicTransition(ElectronicStates):
         select a gauge origin.
         """
         tdm = self._transition_dipole_moment_velocity(state_n)
-        magmom = self._transition_magnetic_dipole_moment(state_n=state_n, gauge_origin="origin")
+        # since it is gauge origin invariant: we can pick any origin that is available.
+        # Pick the default if it is available. Otherwise arbitrarily pick the first origin
+        # reported as available by the backend.
+        # TODO: Check if any available origin is already cached on `OperatorIntegrals`
+        default_gauge_origin = (
+            inspect.signature(self._transition_magnetic_dipole_moment)
+            .parameters["gauge_origin"]
+            .default
+        )
+        available_origins = self.operators.available_gauge_origins("magnetic_dipole")
+        gauge_origin = (
+            default_gauge_origin
+            if default_gauge_origin in available_origins or not available_origins
+            else available_origins[0]
+        )
+        magmom = self._transition_magnetic_dipole_moment(state_n=state_n, gauge_origin=gauge_origin)
         ee = self.excitation_energy[state_n]
         return np.dot(tdm, magmom) / ee
 

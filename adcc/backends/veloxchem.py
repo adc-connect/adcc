@@ -33,22 +33,21 @@ from libadcc import HartreeFockProvider
 
 from ..ElectronicStates import EnergyCorrection
 from ..exceptions import InvalidReference
+from ..typing import DipoleLikeArray
 from .EriBuilder import EriBuilder
+from .OperatorIntegralProvider import OperatorIntegralProvider
 
 
-class VeloxChemOperatorIntegralProvider:
-    available: tuple[str, ...] = (
-        "electric_dipole",
-        "electric_dipole_velocity",
-        "magnetic_dipole",
-    )
-
+class VeloxChemOperatorIntegralProvider(OperatorIntegralProvider):
     def __init__(self, scfdrv):
         self.scfdrv = scfdrv
-        self.backend = "veloxchem"
 
     @property
-    def electric_dipole(self) -> tuple[np.ndarray, ...]:
+    def backend(self) -> str:
+        return "veloxchem"
+
+    @property
+    def electric_dipole(self) -> DipoleLikeArray:
         """-sum_i r_i"""
         task = self.scfdrv.task
         dipole_drv = vlx.ElectricDipoleIntegralsDriver(task.mpi_comm)
@@ -61,7 +60,7 @@ class VeloxChemOperatorIntegralProvider:
             -1.0 * dipole_mats.z_to_numpy(),
         )
 
-    def magnetic_dipole(self, gauge_origin="origin") -> tuple[np.ndarray, ...]:
+    def magnetic_dipole(self, gauge_origin="origin") -> DipoleLikeArray:
         """
         The imaginary part of the integral is returned.
         -0.5 * sum_i r_i x p_i
@@ -78,7 +77,7 @@ class VeloxChemOperatorIntegralProvider:
         )
 
     @property
-    def electric_dipole_velocity(self) -> tuple[np.ndarray, ...]:
+    def electric_dipole_velocity(self) -> DipoleLikeArray:
         """
         The imaginary part of the integral is returned.
         -sum_i p_i

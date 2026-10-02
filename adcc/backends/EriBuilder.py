@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from itertools import product
 from typing import Literal, TypeAlias, TypeGuard
 
-import numpy as np
+from ..typing import Array4D, Slices4D
 
 IntSlice: TypeAlias = "slice[int, int, int]"
 IntSlice4D = tuple[IntSlice, IntSlice, IntSlice, IntSlice]
@@ -31,7 +31,6 @@ Block = Literal["O", "V"]
 Block4D = tuple[Block, Block, Block, Block]
 Spin = Literal["a", "b"]
 Spin4D = tuple[Spin, Spin, Spin, Spin]
-Array4D = np.ndarray[tuple[int, int, int, int], np.dtype[np.float64]]
 
 
 def is_int_slice(slice: slice) -> TypeGuard[IntSlice]:
@@ -91,7 +90,7 @@ class EriBuilder:
         """
         raise NotImplementedError("Implement compute_mo_eri")
 
-    def split_4d_slice(self, slices: tuple[slice, slice, slice, slice]) -> list[SpinBlockSlice4D]:
+    def split_4d_slice(self, slices: Slices4D) -> list[SpinBlockSlice4D]:
         """
         Split tuple of four slices into the block spin slices
         and their mapping to where elements are to be placed
@@ -140,7 +139,7 @@ class EriBuilder:
         assert len(ret) > 0
         return ret
 
-    def fill_slice_symm(self, slices: tuple[slice, slice, slice, slice], out: Array4D) -> None:
+    def fill_slice_symm(self, slices: Slices4D, out: Array4D) -> None:
         non_zero_spin_blocks: list[Spin4D] = [  # chemist notation
             ("a", "a", "a", "a"),
             ("a", "a", "b", "b"),
