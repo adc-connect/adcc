@@ -19,6 +19,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+import inspect
 from abc import ABC, abstractmethod
 
 import libadcc
@@ -46,6 +47,7 @@ class OperatorIntegralProvider(ABC):
         the corresponding method will not raise ``NotImplementedError``.
         For gauge origin dependent operators this only guarantees that the backend
         at least supports one origin, while other origins still raise ``NotImplementedError``.
+        The supported named gauge origins can be queried via ``available_gauge_origins``.
         Conversely, accessing an operator that is not listed in ``available`` raises
         ``NotImplementedError`` for any argument.
         For environment operators (like 'pe_induction_elec' and 'pcm_potential_elec')
@@ -55,7 +57,7 @@ class OperatorIntegralProvider(ABC):
         # check the methods available on the child class (resolved along the MRO)
         # and return all whose definition differs from the one on this class.
         # This implementation does not work for classmethods or staticmethods
-        blacklist = ("backend", "available")
+        blacklist = ("backend", "available", "available_gauge_origins")
         return tuple(
             name
             for name in dir(self.__class__)
@@ -63,6 +65,42 @@ class OperatorIntegralProvider(ABC):
             and name not in blacklist
             and hasattr(OperatorIntegralProvider, name)
             and getattr(self.__class__, name) is not getattr(OperatorIntegralProvider, name)
+        )
+
+    def available_gauge_origins(self, operator: str) -> tuple[str, ...]:
+        """
+        Named gauge origins (e.g. 'origin') the backend supports for the given
+        gauge origin dependent ``operator``.
+
+        Raises
+        ------
+        ValueError
+            If ``operator`` is unknown or independent of the gauge origin.
+        NotImplementedError
+            If ``operator`` is not available in the backend or the backend cannot report
+            available gauge origins.
+        """
+        # check if the operator is even implemented on the base class
+        base_method = getattr(OperatorIntegralProvider, operator, None)
+        if base_method is None:
+            raise ValueError(f"Unknown operator '{operator}'.")
+        # verify the operator is gauge dependent (the method takes a 'gauge_origin' argument)
+        if (
+            not callable(base_method)
+            or "gauge_origin" not in inspect.signature(base_method).parameters
+        ):
+            raise ValueError(f"The operator '{operator}' does not depend on the gauge origin.")
+        # check if the operator is available for the backend
+        if operator not in self.available:
+            raise NotImplementedError(
+                f"Operator {operator} not implemented for the {self.backend} backend. "
+                f"Available are {', '.join(self.available)}."
+            )
+        return self._available_gauge_origins(operator)
+
+    def _available_gauge_origins(self, operator: str) -> tuple[str, ...]:
+        raise NotImplementedError(
+            f"The {self.backend} backend does not report the available gauge origins."
         )
 
     @property

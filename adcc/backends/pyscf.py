@@ -19,7 +19,8 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from typing import Literal
+from collections.abc import Callable
+from typing import Literal, get_args
 
 import numpy as np
 from pyscf import ao2mo, gto, scf
@@ -36,6 +37,7 @@ from ..typing import (
     Coordinate,
     DipoleLikeArray,
     GaugeOrigin,
+    NamedOrigin,
     QuadrupoleLikeArray,
     Slices2D,
     Slices4D,
@@ -54,6 +56,10 @@ EnvironmentImplementation = Literal["cppe", "ddcosmo"]
 class PyScfOperatorIntegralProvider(OperatorIntegralProvider):
     def __init__(self, scfres: scf.hf.SCF):
         self.scfres: scf.hf.SCF = scfres
+
+    def _available_gauge_origins(self, operator: str) -> tuple[str, ...]:
+        # all gauge dependent operators support the same gauge origins currently
+        return tuple(_NAMED_ORIGIN_CONVERTER)
 
     @property
     def backend(self) -> str:
@@ -506,25 +512,39 @@ def run_core_hole(
     return mf_chole
 
 
+def _mass_center(mol: gto.Mole) -> Coordinate:
+    coords = mol.atom_coords()
+    masses = mol.atom_mass_list(isotope_avg=True)
+    return tuple(np.einsum("i,ij->j", masses, coords) / masses.sum())
+
+
+def _charge_center(mol: gto.Mole) -> Coordinate:
+    coords = mol.atom_coords()
+    charges = mol.atom_charges()
+    return tuple(np.einsum("i,ij->j", charges, coords) / charges.sum())
+
+
+_NAMED_ORIGIN_CONVERTER: dict[NamedOrigin, Callable[[gto.Mole], Coordinate]] = {
+    "origin": lambda mol: (0.0, 0.0, 0.0),
+    "mass_center": _mass_center,
+    "charge_center": _charge_center,
+}
+
+
 def _transform_gauge_origin_to_xyz(scfres: scf.hf.SCF, gauge_origin: GaugeOrigin) -> Coordinate:
     """
     Determines the gauge origin. If the gauge origin is defined as a tuple
     the coordinates need to be given in atomic units!
     """
-    coords = scfres.mol.atom_coords()
-    masses = scfres.mol.atom_mass_list(isotope_avg=True)
-    charges = scfres.mol.atom_charges()
-    if gauge_origin == "mass_center":
-        gauge_origin = tuple(np.einsum("i,ij->j", masses, coords) / masses.sum())
-    elif gauge_origin == "charge_center":
-        gauge_origin = tuple(np.einsum("i,ij->j", charges, coords) / charges.sum())
-    elif gauge_origin == "origin":
-        gauge_origin = (0.0, 0.0, 0.0)
-    elif not isinstance(gauge_origin, tuple):
+    if isinstance(gauge_origin, tuple):
+        return gauge_origin
+
+    converter = (
+        _NAMED_ORIGIN_CONVERTER.get(gauge_origin, None) if is_named_origin(gauge_origin) else None
+    )
+    if converter is None:
         raise NotImplementedError(
-            "The gauge origin can be defined either by a "
-            "keyword (origin, mass_center or charge_center) "
-            "or by a tuple defining the Cartesian components "
-            "e.g. (x, y, z)."
+            f"Cannot convert named gauge origin '{gauge_origin}'. Valid gauge origins are "
+            f"either coordinate tuples (x, y, z) or a named gauge origin ({get_args(NamedOrigin)})"
         )
-    return gauge_origin
+    return converter(scfres.mol)

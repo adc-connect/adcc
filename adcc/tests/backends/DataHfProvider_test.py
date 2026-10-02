@@ -25,11 +25,12 @@ from pathlib import Path
 
 import h5py
 import numpy as np
+import pytest
 
 from adcc.backends.DataHfProvider import DataOperatorIntegralProvider
 
-from .ReferenceState_refdata_test import compare_refstate_with_reference
-from .testdata_cache import testdata_cache
+from ..ReferenceState_refdata_test import compare_refstate_with_reference
+from ..testdata_cache import testdata_cache
 
 
 class TestDataHfProvdier(unittest.TestCase):
@@ -125,3 +126,22 @@ class TestDataOperatorIntegralProvider(unittest.TestCase):
         assert DataOperatorIntegralProvider(
             {"magnetic_moments": {"mag_1_origin": np.array([0])}}, n_bas=2
         ).available == ("magnetic_dipole",)
+
+    def test_available_gauge_origins(self):
+        data = {
+            "magnetic_moments": {
+                "mag_1_origin": np.array([[0, 0], [0, 0]]),
+                "mag_1_mass_center": np.array([[1, 1], [1, 1]]),
+            },
+        }
+        provider = DataOperatorIntegralProvider(data, n_bas=2)
+        assert provider.available_gauge_origins("magnetic_dipole") == ("origin", "mass_center")
+        # try to load a gauge independent operator
+        data = {
+            "multipoles": {
+                "elec_1": np.array([[0, 0], [0, 0]]),
+            },
+        }
+        provider = DataOperatorIntegralProvider(data, n_bas=2)
+        with pytest.raises(ValueError):
+            provider.available_gauge_origins("electric_dipole")

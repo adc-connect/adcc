@@ -53,6 +53,10 @@ class Psi4OperatorIntegralProvider(OperatorIntegralProvider):
         self.wfn: psi4.core.HF = wfn
         self.mints: psi4.core.MintsHelper = psi4.core.MintsHelper(self.wfn)
 
+    def _available_gauge_origins(self, operator: str) -> tuple[str, ...]:
+        # only "origin" available for all operators
+        return ("origin",)
+
     @property
     def backend(self) -> str:
         return "psi4"

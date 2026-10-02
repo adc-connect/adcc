@@ -337,6 +337,13 @@ class OperatorIntegrals:
         """
         return self.provider_ao.available
 
+    def available_gauge_origins(self, operator: str) -> tuple[str, ...]:
+        """
+        Named gauge origins supported by the backend for ``operator``.
+        See ``OperatorIntegralProvider.available_gauge_origins``.
+        """
+        return self.provider_ao.available_gauge_origins(operator)
+
     def _import_operator_1p(
         self, ao_operator: Array2D, symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN
     ) -> OneParticleOperator:

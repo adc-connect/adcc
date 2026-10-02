@@ -207,15 +207,19 @@ class DataOperatorIntegralProvider(OperatorIntegralProvider):
         # for non-format strings nothing happens
         return key.format(gauge_origin=gauge_origin)
 
-    def _contains(self, name: str) -> bool:
+    def _matching_fields(self, name: str) -> list[dict[str, str]]:
         """
-        Whether the data container contains any data for the given integral.
-        For keys that are format strings (e.g. gauge origin dependent integrals)
-        it is checked whether data is available for ANY value of the format fields.
+        Find all entries in the data container that match the key of the given
+        integral (`name`) and return the values of the format fields for each match.
+        E.g. for the key 'magnetic_moments/mag_1_{gauge_origin}' and the stored entries
+        'mag_1_origin' and 'mag_1_mass_center' this returns
+        ``[{"gauge_origin": "origin"}, {"gauge_origin": "mass_center"}]``.
+        For keys without format fields a match is represented by an empty dict.
+        An empty list is returned for unknown integrals or if no matching entry exists.
         """
         key = self._operator_keys.get(name, None)
         if key is None:
-            return False
+            return []
         parent, _, final = key.rpartition("/")
         # verify that parent is no format string
         if any(field is not None for _, field, _, _ in Formatter().parse(parent)):
@@ -226,16 +230,42 @@ class DataOperatorIntegralProvider(OperatorIntegralProvider):
         # partially load the data
         data = _load_from_data(self._data, key=parent, default={}) if parent else self._data
         if not isinstance(data, Mapping):
-            return False
+            return []
         # work through the format string and replace possible format fields by wildcards
-        # mag_{n}_{gauge_origin}_foo -> mag_.+_.+_foo
-        pattern = re.compile(
-            "".join(
-                re.escape(literal) + ("" if field is None else ".+")
-                for literal, field, _, _ in Formatter().parse(final)
-            )
-        )
-        return any(pattern.fullmatch(stored) for stored in data)
+        # capturing the matches.
+        # mag_{n}_{gauge_origin}_foo -> mag_(?P<n>.+)_(?P<gauge_origin>.+)_foo
+        pattern, seen = [], set()
+        for literal, field, _, _ in Formatter().parse(final):
+            pattern.append(re.escape(literal))
+            if field is None:
+                continue
+            if field in seen:
+                pattern.append(f"(?P={field})")  # must be equal to the other capture
+            else:
+                seen.add(field)
+                pattern.append(f"(?P<{field}>.+)")
+        pattern = re.compile("".join(pattern))
+        return [m.groupdict() for stored in data if (m := pattern.fullmatch(stored))]
+
+    def _contains(self, name: str) -> bool:
+        """
+        Whether the data container contains any data for the given integral.
+        For keys that are format strings (e.g. gauge origin dependent integrals)
+        it is checked whether data is available for ANY value of the format fields.
+        """
+        return bool(self._matching_fields(name))
+
+    def _available_gauge_origins(self, operator: str) -> tuple[str, ...]:
+        ret = []
+        for m in self._matching_fields(operator):
+            gauge_origin = m.get("gauge_origin", None)
+            if gauge_origin is None:
+                raise ValueError(
+                    f"Key of gauge dependent operator {operator} does not depend on the "
+                    "gauge_origin."
+                )
+            ret.append(gauge_origin)
+        return tuple(ret)
 
     @property
     def available(self) -> tuple[str, ...]:
