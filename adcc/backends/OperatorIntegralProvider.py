@@ -69,7 +69,7 @@ class OperatorIntegralProvider(ABC):
 
     def available_gauge_origins(self, operator: str) -> tuple[str, ...]:
         """
-        Named gauge origins (e.g. 'origin') the backend supports for the given
+        Named gauge origins (arbitrary strings like 'origin') the backend supports for the given
         gauge origin dependent ``operator``.
 
         Raises
