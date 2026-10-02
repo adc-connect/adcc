@@ -30,9 +30,15 @@ namespace libadcc {
 namespace py = pybind11;
 
 // Typed py::sequence to allow for Sequence[T] type hints in the stub file
+// Unfortunately, Tensor is also accepted as py::sequence (defines __getitem__ + __len__).
+// Thus overwrite check_ to catch this at the boundary.
 template <typename T>
 class Sequence : public py::sequence {
+ public:
   using py::sequence::sequence;
+  static bool check_(py::handle h) {
+    return py::sequence::check_(h) && !py::isinstance<Tensor>(h);
+  }
 };
 
 /** Make a py::tuple from a vector representing the shape */

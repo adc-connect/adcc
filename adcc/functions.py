@@ -21,7 +21,7 @@
 ## ---------------------------------------------------------------------
 import re
 from collections.abc import Sequence
-from typing import Any, Protocol, TypeGuard, TypeVar, overload
+from typing import Any, Protocol, SupportsIndex, TypeGuard, TypeVar, overload
 
 import opt_einsum
 from opt_einsum.typing import OptimizeKind
@@ -33,6 +33,7 @@ from .typing import Array1D
 
 _TensorT = TypeVar("_TensorT")
 _TensorT_contra = TypeVar("_TensorT_contra", contravariant=True)
+_TensorT_co = TypeVar("_TensorT_co", covariant=True)
 
 
 class SupportsDot(Protocol[_TensorT_contra]):
@@ -53,33 +54,27 @@ def dot(a: SupportsDot[_TensorT], b: _TensorT | Sequence[_TensorT]) -> float | A
     return a.dot(b)
 
 
-# once we drop python 3.10:
-# use typing.Self instead of _TensorT
-class SupportsCopy(Protocol):
-    def copy(self: _TensorT) -> _TensorT: ...  # noqa: PYI019
+class SupportsCopy(Protocol[_TensorT_co]):
+    def copy(self) -> _TensorT_co: ...
 
 
-_SupportsCopyT = TypeVar("_SupportsCopyT", bound=SupportsCopy)
-
-
-def copy(a: _SupportsCopyT) -> _SupportsCopyT:
+def copy(a: SupportsCopy[_TensorT]) -> _TensorT:
     """
     Return a copy of the input tensor.
     """
     return a.copy()
 
 
-class SupportsTranspose(Protocol):
+class SupportsTranspose(Protocol[_TensorT_co]):
     @overload
-    def transpose(self: _TensorT) -> _TensorT: ...
+    def transpose(self) -> _TensorT_co: ...
     @overload
-    def transpose(self: _TensorT, axes: Sequence[int], /) -> _TensorT: ...
+    def transpose(self, axes: Sequence[SupportsIndex], /) -> _TensorT_co: ...
 
 
-_SupportsTransposeT = TypeVar("_SupportsTransposeT", bound=SupportsTranspose)
-
-
-def transpose(a: _SupportsTransposeT, axes: Sequence[int] | None = None) -> _SupportsTransposeT:
+def transpose(
+    a: SupportsTranspose[_TensorT], axes: Sequence[SupportsIndex] | None = None
+) -> _TensorT:
     """
     Return the transpose of a tensor as a *copy*. If axes is not given all axes are reversed.
     Else the axes are expect as a tuple of indices, e.g. (1,0,2,3) will permute first two axes
@@ -90,42 +85,33 @@ def transpose(a: _SupportsTransposeT, axes: Sequence[int] | None = None) -> _Sup
     return a.transpose(axes)
 
 
-class SupportsEmptyLike(Protocol):
-    def empty_like(self: _TensorT) -> _TensorT: ...  # noqa: PYI019
+class SupportsEmptyLike(Protocol[_TensorT_co]):
+    def empty_like(self) -> _TensorT_co: ...
 
 
-_SupportsEmptyLikeT = TypeVar("_SupportsEmptyLikeT", bound=SupportsEmptyLike)
-
-
-def empty_like(a: _SupportsEmptyLikeT) -> _SupportsEmptyLikeT:
+def empty_like(a: SupportsEmptyLike[_TensorT]) -> _TensorT:
     """
     Return an empty tensor of the same shape and symmetry as the input tensor.
     """
     return a.empty_like()
 
 
-class SupportsZerosLike(Protocol):
-    def zeros_like(self: _TensorT) -> _TensorT: ...  # noqa: PYI019
+class SupportsZerosLike(Protocol[_TensorT_co]):
+    def zeros_like(self) -> _TensorT_co: ...
 
 
-_SupportsZerosLikeT = TypeVar("_SupportsZerosLikeT", bound=SupportsZerosLike)
-
-
-def zeros_like(a: _SupportsZerosLikeT) -> _SupportsZerosLikeT:
+def zeros_like(a: SupportsZerosLike[_TensorT]) -> _TensorT:
     """
     Return a zero tensor of the same shape and symmetry as the input tensor.
     """
     return a.zeros_like()
 
 
-class SupportsOnesLike(Protocol):
-    def ones_like(self: _TensorT) -> _TensorT: ...  # noqa: PYI019
+class SupportsOnesLike(Protocol[_TensorT_co]):
+    def ones_like(self) -> _TensorT_co: ...
 
 
-_SupportsOnesLikeT = TypeVar("_SupportsOnesLikeT", bound=SupportsOnesLike)
-
-
-def ones_like(a: _SupportsOnesLikeT) -> _SupportsOnesLikeT:
+def ones_like(a: SupportsOnesLike[_TensorT]) -> _TensorT:
     """
     Return tensor of the same shape and symmetry as the input tensor, but initialised to 1,
     that is the canonical blocks are 1 and the other ones are symmetry-equivalent (-1 or 0).
@@ -133,14 +119,11 @@ def ones_like(a: _SupportsOnesLikeT) -> _SupportsOnesLikeT:
     return a.ones_like()
 
 
-class SupportsNosymLike(Protocol):
-    def nosym_like(self: _TensorT) -> _TensorT: ...  # noqa: PYI019
+class SupportsNosymLike(Protocol[_TensorT_co]):
+    def nosym_like(self) -> _TensorT_co: ...
 
 
-_SupportsNosymLikeT = TypeVar("_SupportsNosymLikeT", bound=SupportsNosymLike)
-
-
-def nosym_like(a: _SupportsNosymLikeT) -> _SupportsNosymLikeT:
+def nosym_like(a: SupportsNosymLike[_TensorT]) -> _TensorT:
     """
     Return tensor of the same shape, but without the symmetry setup of the input tensor.
     """
@@ -197,7 +180,7 @@ def lincomb(
         # only considering tensors which have the corresponding block (treating missing blocks
         # as zero blocks)
         ret: dict[str, libadcc.Tensor] = {}
-        for block in {block for vec in tensors for block in vec}:
+        for block in sorted({block for vec in tensors for block in vec}):
             relevant = tuple(i for i, vec in enumerate(tensors) if block in vec)
             ret[block] = lincomb(
                 tuple(coefficients[i] for i in relevant),
@@ -220,20 +203,17 @@ def lincomb(
     )
 
 
-class SupportsEvaluate(Protocol):
-    def evaluate(self: _TensorT) -> _TensorT: ...  # noqa: PYI019
-
-
-_SupportsEvaluateT = TypeVar("_SupportsEvaluateT", bound=SupportsEvaluate)
+class SupportsEvaluate(Protocol[_TensorT_co]):
+    def evaluate(self) -> _TensorT_co: ...
 
 
 @overload
-def evaluate(a: _SupportsEvaluateT) -> _SupportsEvaluateT: ...
+def evaluate(a: SupportsEvaluate[_TensorT]) -> _TensorT: ...
 @overload
-def evaluate(a: Sequence[_SupportsEvaluateT]) -> list[_SupportsEvaluateT]: ...
+def evaluate(a: Sequence[SupportsEvaluate[_TensorT]]) -> list[_TensorT]: ...
 def evaluate(
-    a: _SupportsEvaluateT | Sequence[_SupportsEvaluateT],
-) -> _SupportsEvaluateT | list[_SupportsEvaluateT]:
+    a: SupportsEvaluate[_TensorT] | Sequence[SupportsEvaluate[_TensorT]],
+) -> _TensorT | list[_TensorT]:
     """Force full evaluation of a tensor expression"""
     if isinstance(a, Sequence):
         return [evaluate(elem) for elem in a]
@@ -297,24 +277,33 @@ def direct_sum(subscripts: str, *operands: libadcc.Tensor) -> libadcc.Tensor:
             f"Repeated index detected in source subscripts '{src_indices}' "
             f"parsed from '{subscripts}'."
         )
+    # verify that the target indices match the source indices
+    if arrow and sorted(src_indices) != sorted(dest):
+        raise ValueError(
+            f"Target subscripts '{dest}' must be a permutation of the "
+            f"source subscripts '{src_indices}'."
+        )
     # compute the result
     res: libadcc.Tensor = -operands[0] if terms[0][0] == "-" else operands[0]
     for (sign, _), op in zip(terms[1:], operands[1:], strict=True):
         res = libadcc.direct_sum(res, -op if sign == "-" else op)
-    # determine whether we have to transpose the result tensor
+    # check if we have to transpose the result tensor
     if arrow:
-        if sorted(src_indices) != sorted(dest):
-            raise ValueError(
-                f"Target subscripts '{dest}' must be a permutation of the "
-                f"source subscripts '{src_indices}'."
-            )
-        res = res.transpose(tuple(src_indices.index(c) for c in dest))
+        perm = tuple(src_indices.index(c) for c in dest)
+        if perm != tuple(range(len(src_indices))):
+            res = res.transpose(perm)
     return res
 
 
+# Strictly, the return type is 'libadcc.Tensor | float', but then every caller
+# would have to narrow the result. With 'libadcc.Tensor | Any' the Tensor part is
+# still checked, while the Any part accepts everything. Thus, type checkers treat
+# the result effectively as 'libadcc.Tensor'.
+# The downside: using a scalar result as float requires an explicit narrowing.
+# However, usually 'libadcc.Tensor.dot' can be used instead in this case.
 def einsum(
     subscripts: str, *operands: libadcc.Tensor, optimise: OptimizeKind = "auto"
-) -> libadcc.Tensor | float:
+) -> libadcc.Tensor | Any:
     """
     Evaluate Einstein summation convention for the operands similar
     to numpy's einsum function. Uses opt_einsum and libadcc to
@@ -334,11 +323,10 @@ def einsum(
         Choose the type of the path optimisation, see
         opt_einsum.contract for details.
     """
-    # The union return type is unfortunately correct,
-    # but that means that callers have to narrow the type.
     return opt_einsum.contract(
         subscripts,
         *operands,
         optimize=optimise,
-        backend="libadcc",  # not registered in opt_einsums BackendType # type: ignore
+        # only registered at runtime and thus 'libadcc' is not known as BackendType
+        backend="libadcc",  # type: ignore[arg-type]
     )

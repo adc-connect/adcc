@@ -69,9 +69,10 @@ std::vector<std::shared_ptr<Tensor>> extract_tensors(const py::sequence& in) {
 }
 
 std::vector<size_t> extract_axes(py::handle axes) {
-  if (!py::isinstance<py::sequence>(axes)) {
-    throw py::type_error("Expected a sequence of axes, but got " +
-                         py::repr(axes).cast<std::string>() + ".");
+  if (!py::isinstance<Sequence<py::ssize_t>>(axes)) {
+    throw py::type_error(
+          "Expected a sequence of axes, but got " +
+          py::str(py::type::of(axes).attr("__name__")).cast<std::string>() + ".");
   }
   auto axes_as_seq = py::reinterpret_borrow<py::sequence>(axes);
   std::vector<size_t> ret;

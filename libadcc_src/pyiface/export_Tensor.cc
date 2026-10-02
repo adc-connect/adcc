@@ -36,9 +36,10 @@ using Permutations     = py::typing::Union<Axes, Sequence<Axes>>;
 using PermutationsArgs = py::typing::Union<py::ssize_t, Axes>;
 
 static std::vector<std::vector<size_t>> parse_permutations(py::handle permutations) {
-  if (!py::isinstance<py::sequence>(permutations)) {
-    throw py::type_error("Expected a sequence or nested sequence of axes, but got " +
-                         py::repr(permutations).cast<std::string>() + ".");
+  if (!py::isinstance<Sequence<py::ssize_t>>(permutations)) {
+    throw py::type_error(
+          "Expected a sequence or nested sequence of axes, but got " +
+          py::str(py::type::of(permutations).attr("__name__")).cast<std::string>() + ".");
   }
   auto perms_as_seq = py::reinterpret_borrow<py::sequence>(permutations);
   bool nested       = false;
