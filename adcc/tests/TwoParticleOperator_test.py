@@ -28,7 +28,7 @@ import adcc
 from adcc import TwoParticleOperator
 from adcc.backends import run_hf
 from adcc.NParticleOperator import OperatorSymmetry
-from adcc.OperatorIntegrals import replicate_ao_block, transform_operator_ao2mo
+from adcc.OperatorIntegrals import replicate_ao_block_2p, transform_operator_ao2mo_2p
 
 from . import testcases
 from .testdata_cache import testdata_cache
@@ -162,9 +162,9 @@ class TestTwoParticleOperator:
         # get AO integral in physicist notation
         int2e = scfres.mol.intor("int2e", comp=1, aosym=1).transpose((0, 2, 1, 3))
         # from the integrals construct a TwoParticleOperator
-        dip_bb = replicate_ao_block(ref.mospaces, int2e, symmetry=OperatorSymmetry.HERMITIAN)
+        dip_bb = replicate_ao_block_2p(ref.mospaces, int2e, symmetry=OperatorSymmetry.HERMITIAN)
         eri_operator = TwoParticleOperator(ref, symmetry=OperatorSymmetry.HERMITIAN)
-        transform_operator_ao2mo(dip_bb, eri_operator, ref.orbital_coefficients, ref.conv_tol)
+        transform_operator_ao2mo_2p(dip_bb, eri_operator, ref.orbital_coefficients, ref.conv_tol)
 
         # compare constructed TwoParticleOperator with ERIs
         for block in eri_operator.blocks:

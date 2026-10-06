@@ -24,7 +24,7 @@ import warnings
 import numpy as np
 from molsturm.State import State
 
-from adcc.DataHfProvider import DataHfProvider
+from .DataHfProvider import DataHfProvider
 
 
 def convert_scf_to_dict(scfres):

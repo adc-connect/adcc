@@ -28,59 +28,50 @@ import libadcc
 
 from ..ElectronicStates import EnergyCorrection
 from ..exceptions import InvalidReference
+from ..typing import (
+    Array1D,
+    Array2D,
+    Array4D,
+    Coordinate,
+    DipoleLikeArray,
+    GaugeOrigin,
+    QuadrupoleLikeArray,
+    Slices2D,
+    Slices4D,
+    is_named_origin,
+)
 from .EriBuilder import Block4D, EriBuilder, Spin4D
+from .OperatorIntegralProvider import OperatorIntegralProvider
 
 # Some type defs for the interface
-Array1D = np.ndarray[tuple[int], np.dtype[np.float64]]
-Array2D = np.ndarray[tuple[int, int], np.dtype[np.float64]]
-Array4D = np.ndarray[tuple[int, int, int, int], np.dtype[np.float64]]
-DipoleLike = tuple[Array2D, Array2D, Array2D]
-# Once we drop python 3.10 we can write
-# QuadrupoleLike = tuple[*DipoleLike, *DipoleLike, *DipoleLike]
-QuadrupoleLike = tuple[
-    Array2D,
-    Array2D,
-    Array2D,
-    Array2D,
-    Array2D,
-    Array2D,
-    Array2D,
-    Array2D,
-    Array2D,
-]
-Coordinate = tuple[float, float, float]
 Environment = Literal["pe", "pcm"]
 EnvironmentImplementation = Literal["cppe", "ddx", "pcmsolver"]
 
 
-class Psi4OperatorIntegralProvider:
-    available: tuple[str, ...] = (
-        "overlap",
-        "electric_dipole",
-        "electric_dipole_velocity",
-        "magnetic_dipole",
-        "electric_quadrupole",
-        "electric_quadrupole_traceless",
-        "pe_induction_elec",
-        "pcm_potential_elec",
-    )
-
+class Psi4OperatorIntegralProvider(OperatorIntegralProvider):
     def __init__(self, wfn: psi4.core.HF):
         self.wfn: psi4.core.HF = wfn
-        self.backend: str = "psi4"
         self.mints: psi4.core.MintsHelper = psi4.core.MintsHelper(self.wfn)
+
+    def _available_gauge_origins(self, operator: str) -> tuple[str, ...]:
+        # only "origin" available for all operators
+        return ("origin",)
+
+    @property
+    def backend(self) -> str:
+        return "psi4"
 
     @property
     def overlap(self) -> Array2D:
         return np.asarray(self.mints.ao_overlap())
 
     @property
-    def electric_dipole(self) -> DipoleLike:
+    def electric_dipole(self) -> DipoleLikeArray:
         """-sum_i r_i"""
         x, y, z = self.mints.ao_dipole()  # list
         return np.asarray(x), np.asarray(y), np.asarray(z)
 
-    def magnetic_dipole(self, gauge_origin: Coordinate | str = "origin") -> DipoleLike:
+    def magnetic_dipole(self, gauge_origin: GaugeOrigin = "origin") -> DipoleLikeArray:
         """
         The imaginary part of the integral is returned.
         -0.5 * sum_i r_i x p_i
@@ -96,7 +87,7 @@ class Psi4OperatorIntegralProvider:
         return 0.5 * np.asarray(x), 0.5 * np.asarray(y), 0.5 * np.asarray(z)
 
     @property
-    def electric_dipole_velocity(self) -> DipoleLike:
+    def electric_dipole_velocity(self) -> DipoleLikeArray:
         """
         The imaginary part of the integral is returned.
         -sum_i p_i
@@ -104,7 +95,7 @@ class Psi4OperatorIntegralProvider:
         x, y, z = self.mints.ao_nabla()  # list
         return -1.0 * np.asarray(x), -1.0 * np.asarray(y), -1.0 * np.asarray(z)
 
-    def electric_quadrupole(self, gauge_origin: Coordinate | str = "origin") -> QuadrupoleLike:
+    def electric_quadrupole(self, gauge_origin: GaugeOrigin = "origin") -> QuadrupoleLikeArray:
         """-sum_i r_{i, alpha} r_{i, beta}"""
         # TODO: Gauge origin?
         if gauge_origin != (0.0, 0.0, 0.0) and gauge_origin != "origin":
@@ -119,8 +110,8 @@ class Psi4OperatorIntegralProvider:
         return (u[0], u[1], u[2], u[1], u[3], u[4], u[2], u[4], u[5])
 
     def electric_quadrupole_traceless(
-        self, gauge_origin: Coordinate | str = "origin"
-    ) -> QuadrupoleLike:
+        self, gauge_origin: GaugeOrigin = "origin"
+    ) -> QuadrupoleLikeArray:
         """
         -0.5 * sum_i (3 * r_{i, alpha} r_{i, beta}
         - delta_{alpha, beta} r_{i}^2)
@@ -310,7 +301,10 @@ class Psi4HFProvider(libadcc.HartreeFockProvider):
             raise NotImplementedError("get_nuclear_multipole with order > 1")
 
     def transform_gauge_origin_to_xyz(self, gauge_origin: str) -> Coordinate:
-        raise NotImplementedError("transform_gauge_origin_to_xyz not implemented.")
+        assert is_named_origin(gauge_origin)
+        if gauge_origin == "origin":
+            return (0.0, 0.0, 0.0)
+        raise NotImplementedError("transform_gauge_origin_to_xyz only implemented for 'origin'.")
 
     def fill_orbcoeff_fb(self, out: Array2D) -> None:
         mo_coeff_a = np.asarray(self.wfn.Ca())
@@ -328,17 +322,15 @@ class Psi4HFProvider(libadcc.HartreeFockProvider):
         orben_b = np.asarray(self.wfn.epsilon_b())
         out[:] = np.hstack((orben_a, orben_b))
 
-    def fill_fock_ff(self, slices: tuple[slice, slice], out: Array2D) -> None:
+    def fill_fock_ff(self, slices: Slices2D, out: Array2D) -> None:
         diagonal = np.empty(self.n_orbs)
         self.fill_orben_f(diagonal)
         out[:] = np.diag(diagonal)[slices]
 
-    def fill_eri_ffff(self, slices: tuple[slice, slice, slice, slice], out: Array4D) -> None:
+    def fill_eri_ffff(self, slices: Slices4D, out: Array4D) -> None:
         self.eri_builder.fill_slice_symm(slices, out)
 
-    def fill_eri_phys_asym_ffff(
-        self, slices: tuple[slice, slice, slice, slice], out: Array4D
-    ) -> None:
+    def fill_eri_phys_asym_ffff(self, slices: Slices4D, out: Array4D) -> None:
         raise NotImplementedError("fill_eri_phys_asym_ffff not implemented.")
 
     def has_eri_phys_asym_ffff(self) -> bool:

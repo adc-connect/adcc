@@ -25,7 +25,7 @@ from pytest import approx
 
 import adcc
 from adcc import ExcitedStates
-from adcc.DataHfProvider import DataHfProvider
+from adcc.backends import DataHfProvider
 
 from .testdata_cache import testdata_cache
 

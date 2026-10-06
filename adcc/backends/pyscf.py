@@ -19,7 +19,8 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from typing import Literal, cast
+from collections.abc import Callable
+from typing import Literal, get_args
 
 import numpy as np
 from pyscf import ao2mo, gto, scf
@@ -29,59 +30,51 @@ import libadcc
 
 from ..ElectronicStates import EnergyCorrection
 from ..exceptions import InvalidReference
+from ..typing import (
+    Array1D,
+    Array2D,
+    Array4D,
+    Coordinate,
+    DipoleLikeArray,
+    GaugeOrigin,
+    NamedOrigin,
+    QuadrupoleLikeArray,
+    Slices2D,
+    Slices4D,
+    is_array_2d,
+    is_named_origin,
+    is_quadrupole_like_array,
+)
 from .EriBuilder import Block4D, EriBuilder, Spin4D
+from .OperatorIntegralProvider import OperatorIntegralProvider
 
 # Some type defs for the interface
-Array1D = np.ndarray[tuple[int], np.dtype[np.float64]]
-Array2D = np.ndarray[tuple[int, int], np.dtype[np.float64]]
-Array4D = np.ndarray[tuple[int, int, int, int], np.dtype[np.float64]]
-DipoleLike = tuple[Array2D, Array2D, Array2D]
-# Once we drop python 3.10 we can write
-# QuadrupoleLike = tuple[*DipoleLike, *DipoleLike, *DipoleLike]
-QuadrupoleLike = tuple[
-    Array2D,
-    Array2D,
-    Array2D,
-    Array2D,
-    Array2D,
-    Array2D,
-    Array2D,
-    Array2D,
-    Array2D,
-]
-Coordinate = tuple[float, float, float]
 Environment = Literal["pe", "pcm"]
 EnvironmentImplementation = Literal["cppe", "ddcosmo"]
 
 
-class PyScfOperatorIntegralProvider:
-    available: tuple[str, ...] = (
-        "overlap",
-        "electric_dipole",
-        "electric_dipole_velocity",
-        "magnetic_dipole",
-        "electric_quadrupole",
-        "electric_quadrupole_traceless",
-        "electric_quadrupole_velocity",
-        "diamagnetic_magnetizability",
-        "pe_induction_elec",
-        "pcm_potential_elec",
-    )
-
+class PyScfOperatorIntegralProvider(OperatorIntegralProvider):
     def __init__(self, scfres: scf.hf.SCF):
         self.scfres: scf.hf.SCF = scfres
-        self.backend: str = "pyscf"
+
+    def _available_gauge_origins(self, operator: str) -> tuple[str, ...]:
+        # all gauge dependent operators support the same gauge origins currently
+        return tuple(_NAMED_ORIGIN_CONVERTER)
+
+    @property
+    def backend(self) -> str:
+        return "pyscf"
 
     @property
     def overlap(self) -> Array2D:
         return self.scfres.mol.intor_symmetric("int1e_ovlp")
 
     @property
-    def electric_dipole(self) -> DipoleLike:
+    def electric_dipole(self) -> DipoleLikeArray:
         """-sum_i r_i"""
         return tuple(-1.0 * self.scfres.mol.intor_symmetric("int1e_r", comp=3))
 
-    def magnetic_dipole(self, gauge_origin: Coordinate | str = "origin") -> DipoleLike:
+    def magnetic_dipole(self, gauge_origin: GaugeOrigin = "origin") -> DipoleLikeArray:
         """
         The imaginary part of the integral is returned.
         -0.5 * sum_i r_i x p_i
@@ -91,7 +84,7 @@ class PyScfOperatorIntegralProvider:
             return tuple(-0.5 * self.scfres.mol.intor("int1e_cg_irxp", comp=3, hermi=2))
 
     @property
-    def electric_dipole_velocity(self) -> DipoleLike:
+    def electric_dipole_velocity(self) -> DipoleLikeArray:
         """
         The imaginary part of the integral is returned.
         -sum_i p_i
@@ -99,15 +92,15 @@ class PyScfOperatorIntegralProvider:
         with self.scfres.mol.with_common_orig((0.0, 0.0, 0.0)):
             return tuple(self.scfres.mol.intor("int1e_ipovlp", comp=3, hermi=2))
 
-    def electric_quadrupole(self, gauge_origin: Coordinate | str = "origin") -> QuadrupoleLike:
+    def electric_quadrupole(self, gauge_origin: GaugeOrigin = "origin") -> QuadrupoleLikeArray:
         """-sum_i r_{i, alpha} r_{i, beta}"""
         gauge_origin = _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
         with self.scfres.mol.with_common_orig(gauge_origin):
             return tuple(-1.0 * self.scfres.mol.intor_symmetric("int1e_rr", comp=9))
 
     def electric_quadrupole_traceless(
-        self, gauge_origin: Coordinate | str = "origin"
-    ) -> QuadrupoleLike:
+        self, gauge_origin: GaugeOrigin = "origin"
+    ) -> QuadrupoleLikeArray:
         """
         -0.5 * sum_i (3 * r_{i, alpha} r_{i, beta}
         - delta_{alpha, beta} r_{i}^2)
@@ -124,8 +117,8 @@ class PyScfOperatorIntegralProvider:
             return tuple(-1.0 * np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0])))
 
     def electric_quadrupole_velocity(
-        self, gauge_origin: Coordinate | str = "origin"
-    ) -> QuadrupoleLike:
+        self, gauge_origin: GaugeOrigin = "origin"
+    ) -> QuadrupoleLikeArray:
         """
         The imaginary part of the integral is returned.
         -sum_i (r_{i, beta} p_{i, alpha} - i delta_{alpha, beta}
@@ -143,8 +136,8 @@ class PyScfOperatorIntegralProvider:
             return tuple(-1.0 * np.reshape(term, (9, ovlp.shape[0], ovlp.shape[0])))
 
     def diamagnetic_magnetizability(
-        self, gauge_origin: Coordinate | str = "origin"
-    ) -> QuadrupoleLike:
+        self, gauge_origin: GaugeOrigin = "origin"
+    ) -> QuadrupoleLikeArray:
         """
         0.25 * sum_i (r_{i, alpha} r_{i, beta}
         - delta_{alpha, beta} r_{i}^2)
@@ -158,9 +151,9 @@ class PyScfOperatorIntegralProvider:
             for i in range(3):
                 r_quadr_matrix[i][i] = r_quadr
             term = 0.25 * (r_quadr_matrix - r_r)
-            return cast(
-                QuadrupoleLike, tuple(np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0])))
-            )
+            res = tuple(np.reshape(term, (9, r_quadr.shape[0], r_quadr.shape[0])))
+            assert is_quadrupole_like_array(res)
+            return res
 
     def pe_induction_elec(self, dm: libadcc.Tensor) -> Array2D:
         try:
@@ -204,11 +197,12 @@ class PyScfEriBuilder(EriBuilder):
         self.scfres: scf.hf.SCF = scfres
         self.mo_coeff: tuple[Array2D, Array2D]
         if restricted:
-            self.mo_coeff = cast(
-                tuple[Array2D, Array2D], (self.scfres.mo_coeff, self.scfres.mo_coeff)
-            )
+            assert is_array_2d(self.scfres.mo_coeff)
+            self.mo_coeff = (self.scfres.mo_coeff, self.scfres.mo_coeff)
         else:
-            self.mo_coeff = cast(tuple[Array2D, Array2D], self.scfres.mo_coeff)
+            alpha_coeff, beta_coeff = self.scfres.mo_coeff
+            assert is_array_2d(alpha_coeff) and is_array_2d(beta_coeff)
+            self.mo_coeff = (alpha_coeff, beta_coeff)
         super().__init__(n_orbs, n_orbs_alpha, n_alpha, n_beta, restricted)
 
     @property
@@ -359,6 +353,10 @@ class PyScfHFProvider(libadcc.HartreeFockProvider):
             raise NotImplementedError("get_nuclear_multipole with order > 2")
 
     def transform_gauge_origin_to_xyz(self, gauge_origin: str) -> Coordinate:
+        # pybind11::typing::Literal would do exactly what we want and allow to also define
+        # NamedOrigin in the C++ interface. However, this feature requires C++20.
+        # -> just narrow the type on the python side again.
+        assert is_named_origin(gauge_origin)
         return _transform_gauge_origin_to_xyz(self.scfres, gauge_origin)
 
     def fill_occupation_f(self, out: Array1D) -> None:
@@ -380,17 +378,15 @@ class PyScfHFProvider(libadcc.HartreeFockProvider):
         else:
             out[:] = np.hstack((self.scfres.mo_energy[0], self.scfres.mo_energy[1]))
 
-    def fill_fock_ff(self, slices: tuple[slice, slice], out: Array2D) -> None:
+    def fill_fock_ff(self, slices: Slices2D, out: Array2D) -> None:
         diagonal = np.empty(self.n_orbs)
         self.fill_orben_f(diagonal)
         out[:] = np.diag(diagonal)[slices]
 
-    def fill_eri_ffff(self, slices: tuple[slice, slice, slice, slice], out: Array4D) -> None:
+    def fill_eri_ffff(self, slices: Slices4D, out: Array4D) -> None:
         self.eri_builder.fill_slice_symm(slices, out)
 
-    def fill_eri_phys_asym_ffff(
-        self, slices: tuple[slice, slice, slice, slice], out: Array4D
-    ) -> None:
+    def fill_eri_phys_asym_ffff(self, slices: Slices4D, out: Array4D) -> None:
         raise NotImplementedError("fill_eri_phys_asym_ffff not implemented.")
 
     def has_eri_phys_asym_ffff(self) -> bool:
@@ -516,27 +512,39 @@ def run_core_hole(
     return mf_chole
 
 
-def _transform_gauge_origin_to_xyz(
-    scfres: scf.hf.SCF, gauge_origin: Coordinate | str
-) -> Coordinate:
+def _mass_center(mol: gto.Mole) -> Coordinate:
+    coords = mol.atom_coords()
+    masses = mol.atom_mass_list(isotope_avg=True)
+    return tuple(np.einsum("i,ij->j", masses, coords) / masses.sum())
+
+
+def _charge_center(mol: gto.Mole) -> Coordinate:
+    coords = mol.atom_coords()
+    charges = mol.atom_charges()
+    return tuple(np.einsum("i,ij->j", charges, coords) / charges.sum())
+
+
+_NAMED_ORIGIN_CONVERTER: dict[NamedOrigin, Callable[[gto.Mole], Coordinate]] = {
+    "origin": lambda mol: (0.0, 0.0, 0.0),
+    "mass_center": _mass_center,
+    "charge_center": _charge_center,
+}
+
+
+def _transform_gauge_origin_to_xyz(scfres: scf.hf.SCF, gauge_origin: GaugeOrigin) -> Coordinate:
     """
     Determines the gauge origin. If the gauge origin is defined as a tuple
     the coordinates need to be given in atomic units!
     """
-    coords = scfres.mol.atom_coords()
-    masses = scfres.mol.atom_mass_list(isotope_avg=True)
-    charges = scfres.mol.atom_charges()
-    if gauge_origin == "mass_center":
-        gauge_origin = tuple(np.einsum("i,ij->j", masses, coords) / masses.sum())
-    elif gauge_origin == "charge_center":
-        gauge_origin = tuple(np.einsum("i,ij->j", charges, coords) / charges.sum())
-    elif gauge_origin == "origin":
-        gauge_origin = (0.0, 0.0, 0.0)
-    elif not isinstance(gauge_origin, tuple):
+    if isinstance(gauge_origin, tuple):
+        return gauge_origin
+
+    converter = (
+        _NAMED_ORIGIN_CONVERTER.get(gauge_origin, None) if is_named_origin(gauge_origin) else None
+    )
+    if converter is None:
         raise NotImplementedError(
-            "The gauge origin can be defined either by a "
-            "keyword (origin, mass_center or charge_center) "
-            "or by a tuple defining the Cartesian components "
-            "e.g. (x, y, z)."
+            f"Cannot convert named gauge origin '{gauge_origin}'. Valid gauge origins are "
+            f"either coordinate tuples (x, y, z) or a named gauge origin ({get_args(NamedOrigin)})"
         )
-    return gauge_origin
+    return converter(scfres.mol)
