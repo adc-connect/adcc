@@ -773,11 +773,18 @@ class Tensor:
     @typing.overload
     def antisymmetrise(
         self,
-        permutations: collections.abc.Iterable[int]
-        | collections.abc.Iterable[collections.abc.Iterable[int]],
+        permutations: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]
+        | collections.abc.Sequence[
+            collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]
+        ],
     ) -> Tensor: ...
     @typing.overload
-    def antisymmetrise(self, *args: int) -> Tensor: ...
+    def antisymmetrise(
+        self,
+        *args: typing.SupportsInt
+        | typing.SupportsIndex
+        | collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex],
+    ) -> Tensor: ...
     def copy(self) -> Tensor:
         """
         Returns a deep copy of the tensor.
@@ -793,12 +800,12 @@ class Tensor:
         """
         Return a string providing a hopefully descriptive representation of the symmetry information stored inside the tensor.
         """
-    def diagonal(self, *args: int) -> Tensor: ...
+    def diagonal(self, *args: typing.SupportsInt | typing.SupportsIndex) -> Tensor: ...
     @typing.overload
     def dot(self, other: Tensor) -> float: ...
     @typing.overload
     def dot(
-        self, tensors: list[Tensor]
+        self, tensors: collections.abc.Sequence[Tensor]
     ) -> numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]]: ...
     def empty_like(self) -> Tensor: ...
     def evaluate(self) -> Tensor:
@@ -866,11 +873,18 @@ class Tensor:
     @typing.overload
     def symmetrise(
         self,
-        permutations: collections.abc.Iterable[int]
-        | collections.abc.Iterable[collections.abc.Iterable[int]],
+        permutations: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]
+        | collections.abc.Sequence[
+            collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]
+        ],
     ) -> Tensor: ...
     @typing.overload
-    def symmetrise(self, *args: int) -> Tensor: ...
+    def symmetrise(
+        self,
+        *args: typing.SupportsInt
+        | typing.SupportsIndex
+        | collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex],
+    ) -> Tensor: ...
     def to_ndarray(self) -> numpy.typing.NDArray[numpy.float64]:
         """
         Export the tensor data to a standard np::ndarray by making a copy.
@@ -878,7 +892,9 @@ class Tensor:
     @typing.overload
     def transpose(self) -> Tensor: ...
     @typing.overload
-    def transpose(self, axes: tuple[typing.SupportsInt | typing.SupportsIndex, ...]) -> Tensor: ...
+    def transpose(
+        self, axes: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]
+    ) -> Tensor: ...
     def zeros_like(self) -> Tensor: ...
     @property
     def T(self) -> Tensor: ...
@@ -942,7 +958,8 @@ def get_n_threads_total() -> int:
     """
 
 def linear_combination_strict(
-    coefficients: typing.Annotated[numpy.typing.ArrayLike, numpy.float64], tensors: list[Tensor]
+    coefficients: typing.Annotated[numpy.typing.ArrayLike, numpy.float64],
+    tensors: collections.abc.Sequence[Tensor],
 ) -> Tensor: ...
 def make_symmetry_eri(mospaces: MoSpaces, space: str) -> Symmetry:
     """
@@ -1048,7 +1065,11 @@ def set_n_threads_total(n_total: typing.SupportsInt | typing.SupportsIndex) -> N
 
 @typing.overload
 def tensordot(
-    a: Tensor, b: Tensor, axes: collections.abc.Iterable[collections.abc.Iterable[int]]
+    a: Tensor,
+    b: Tensor,
+    axes: collections.abc.Sequence[
+        collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]
+    ],
 ) -> Tensor | float: ...
 @typing.overload
 def tensordot(

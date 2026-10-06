@@ -19,7 +19,6 @@
 
 #include "util.hh"
 #include "../exceptions.hh"
-#include "pybind11/typing.h"
 
 namespace libadcc {
 
@@ -55,21 +54,43 @@ py::typing::Tuple<size_t, py::ellipsis> shape_tuple(const std::vector<size_t>& s
   }
 }
 
-template <typename Listlike>
-std::vector<std::shared_ptr<Tensor>> extract_tensors(const Listlike& in) {
+std::vector<std::shared_ptr<Tensor>> extract_tensors(const py::sequence& in) {
   std::vector<std::shared_ptr<Tensor>> ret;
-  for (py::handle elem : in) {
+  ret.reserve(in.size());
+  for (py::object elem : in) {
+    if (!py::isinstance<Tensor>(elem)) {
+      throw py::type_error(
+            "Expected a sequence of tensors but one element is of type '" +
+            py::str(py::type::of(elem).attr("__name__")).cast<std::string>() + "'.");
+    }
     ret.push_back(elem.cast<std::shared_ptr<Tensor>>());
   }
   return ret;
 }
 
-//
-// Template instantiations
-//
-template std::vector<std::shared_ptr<Tensor>> extract_tensors<py::list>(
-      const py::list& in);
-template std::vector<std::shared_ptr<Tensor>> extract_tensors<py::tuple>(
-      const py::tuple& in);
+std::vector<size_t> extract_axes(py::handle axes) {
+  if (!py::isinstance<Sequence<py::ssize_t>>(axes)) {
+    throw py::type_error(
+          "Expected a sequence of axes, but got " +
+          py::str(py::type::of(axes).attr("__name__")).cast<std::string>() + ".");
+  }
+  auto axes_as_seq = py::reinterpret_borrow<py::sequence>(axes);
+  std::vector<size_t> ret;
+  ret.reserve(axes_as_seq.size());
+  for (py::object elem : axes_as_seq) {
+    if (!PyIndex_Check(elem.ptr())) {
+      throw py::type_error(
+            "Expected a sequence of integers as axes, but got " +
+            py::str(py::type::of(elem).attr("__name__")).cast<std::string>() + ".");
+    }
+    const auto axis = elem.cast<py::ssize_t>();
+    if (axis < 0) {
+      throw py::value_error("Axes must be non-negative, but got " + std::to_string(axis) +
+                            ".");
+    }
+    ret.push_back(static_cast<size_t>(axis));
+  }
+  return ret;
+}
 
 }  // namespace libadcc

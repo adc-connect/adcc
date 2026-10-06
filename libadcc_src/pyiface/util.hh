@@ -29,11 +29,35 @@ namespace libadcc {
 
 namespace py = pybind11;
 
+// Typed py::sequence to allow for Sequence[T] type hints in the stub file
+// Unfortunately, Tensor is also accepted as py::sequence (defines __getitem__ + __len__).
+// Thus overwrite check_ to catch this at the boundary.
+template <typename T>
+class Sequence : public py::sequence {
+ public:
+  using py::sequence::sequence;
+  static bool check_(py::handle h) {
+    return py::sequence::check_(h) && !py::isinstance<Tensor>(h);
+  }
+};
+
 /** Make a py::tuple from a vector representing the shape */
 py::typing::Tuple<size_t, py::ellipsis> shape_tuple(const std::vector<size_t>& shape);
 
-/** Convert a list of tensors to a vector of shared pointers to Tensor */
-template <typename Listlike>
-std::vector<std::shared_ptr<Tensor>> extract_tensors(const Listlike& in);
+/** Convert a Sequence of tensors to a vector of shared pointers to Tensor */
+std::vector<std::shared_ptr<Tensor>> extract_tensors(const py::sequence& in);
+
+/** Convert a Sequence of axes to a vector of axis indices */
+std::vector<size_t> extract_axes(py::handle in);
 
 }  // namespace libadcc
+
+namespace pybind11 {
+namespace detail {
+template <typename T>
+struct handle_type_name<libadcc::Sequence<T>> {
+  static constexpr auto name =
+        const_name("collections.abc.Sequence[") + make_caster<T>::name + const_name("]");
+};
+}  // namespace detail
+}  // namespace pybind11
