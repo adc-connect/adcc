@@ -130,11 +130,11 @@ def nosym_like(a: SupportsNosymLike[_TensorT]) -> _TensorT:
     return a.nosym_like()
 
 
-def is_amplitude_vector_sequence(value: Any) -> TypeGuard[Sequence[AmplitudeVector]]:
+def _is_amplitude_vector_sequence(value: Any) -> TypeGuard[Sequence[AmplitudeVector]]:
     return isinstance(value, Sequence) and all(isinstance(v, AmplitudeVector) for v in value)
 
 
-def is_tensor_sequence(value: Any) -> TypeGuard[Sequence[libadcc.Tensor]]:
+def _is_tensor_sequence(value: Any) -> TypeGuard[Sequence[libadcc.Tensor]]:
     return isinstance(value, Sequence) and all(isinstance(v, libadcc.Tensor) for v in value)
 
 
@@ -175,7 +175,7 @@ def lincomb(
     if len(tensors) != len(coefficients):
         raise ValueError("Number of coefficient values does not match number of tensors.")
 
-    if is_amplitude_vector_sequence(tensors):
+    if _is_amplitude_vector_sequence(tensors):
         # the amplitude vectors might contain different blocks: loop over the union of blocks
         # only considering tensors which have the corresponding block (treating missing blocks
         # as zero blocks)
@@ -188,7 +188,7 @@ def lincomb(
                 evaluate=evaluate,
             )
         return AmplitudeVector(**ret)
-    elif is_tensor_sequence(tensors):
+    elif _is_tensor_sequence(tensors):
         if evaluate:
             # Perform strict evaluation on this linear combination
             return libadcc.linear_combination_strict(coefficients, tensors)

@@ -226,15 +226,9 @@ static py::typing::Union<ten_ptr, scalar_type> tensordot_3(ten_ptr a, ten_ptr b)
   return tensordot_2(a, b, 2);
 }
 
-static ten_ptr Tensor_diagonal(ten_ptr ten, py::Args<py::int_> permutations) {
-  std::vector<size_t> axes;
-  if (py::len(permutations) == 0) {
-    axes.push_back(0);
-    axes.push_back(1);
-  } else {
-    for (auto itm : permutations) axes.push_back(itm.cast<size_t>());
-  }
-  return ten->diagonal(axes);
+static ten_ptr Tensor_diagonal(ten_ptr ten, py::Args<py::ssize_t> permutations) {
+  if (py::len(permutations) == 0) return ten->diagonal({0, 1});
+  return ten->diagonal(extract_axes(permutations));
 }
 
 static auto direct_sum(ten_ptr a, ten_ptr b) { return a->direct_sum(b); }
@@ -392,6 +386,10 @@ static ten_ptr Tensor_scalar__sub__(const ten_ptr& self, scalar_type number) {
   }
 }
 
+static ten_ptr Tensor_scalar__rsub__(const ten_ptr& self, scalar_type number) {
+  return Tensor_scalar__add__(self->scale(-1.0), number);
+}
+
 //
 // Operations with another tensor
 //
@@ -517,7 +515,7 @@ void export_Tensor(py::module& m) {
         .def("__add__", &Tensor_scalar__add__, py::arg("number"))    // tensor + scalar
         .def("__sub__", &Tensor_scalar__sub__, py::arg("number"))    // tensor - scalar
         .def("__radd__", &Tensor_scalar__add__, py::arg("number"))   // scalar + tensor
-        .def("__rsub__", &Tensor_scalar__sub__, py::arg("number"))   // scalar - tensor
+        .def("__rsub__", &Tensor_scalar__rsub__, py::arg("number"))  // scalar - tensor
         .def("__imul__", &Tensor_scalar__imul__, py::arg("number"))  // tensor *= scalar
         .def("__mul__", &Tensor_scalar__mul__, py::arg("number"))    // tensor * scalar
         .def("__rmul__", &Tensor_scalar__mul__, py::arg("number"))   // scalar * tensor

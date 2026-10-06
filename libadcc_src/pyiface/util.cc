@@ -78,13 +78,17 @@ std::vector<size_t> extract_axes(py::handle axes) {
   std::vector<size_t> ret;
   ret.reserve(axes_as_seq.size());
   for (py::object elem : axes_as_seq) {
-    try {
-      ret.push_back(elem.cast<size_t>());
-    } catch (const py::cast_error&) {
+    if (!PyIndex_Check(elem.ptr())) {
       throw py::type_error(
-            "Expected a sequence of non-negative integers as axes, but got " +
-            py::repr(elem).cast<std::string>() + ".");
+            "Expected a sequence of integers as axes, but got " +
+            py::str(py::type::of(elem).attr("__name__")).cast<std::string>() + ".");
     }
+    const auto axis = elem.cast<py::ssize_t>();
+    if (axis < 0) {
+      throw py::value_error("Axes must be non-negative, but got " + std::to_string(axis) +
+                            ".");
+    }
+    ret.push_back(static_cast<size_t>(axis));
   }
   return ret;
 }
