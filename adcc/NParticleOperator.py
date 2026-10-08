@@ -28,8 +28,8 @@ import numpy as np
 
 import libadcc
 
+from .block import split_spaces
 from .functions import evaluate
-from .MoSpaces import split_spaces
 from .Tensor import Tensor
 
 

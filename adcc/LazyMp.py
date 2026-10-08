@@ -24,10 +24,10 @@ import numpy as np
 import libadcc
 
 from . import block as b
+from .block import split_spaces
 from .functions import direct_sum, einsum
 from .GroundState import GroundState
 from .misc import cached_member_function
-from .MoSpaces import split_spaces
 from .NParticleOperator import OperatorSymmetry
 from .OneParticleDensity import OneParticleDensity
 

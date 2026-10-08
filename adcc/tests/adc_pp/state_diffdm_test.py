@@ -25,8 +25,8 @@ import pytest
 from adcc.adc_pp.state_diffdm import state_diffdm
 from adcc.adc_pp.state_diffdm_2p import state_diffdm_2p
 from adcc.AdcMethod import IsrMethod
+from adcc.block import split_spaces
 from adcc.functions import einsum
-from adcc.MoSpaces import split_spaces
 
 from .. import testcases
 from ..testdata_cache import testdata_cache

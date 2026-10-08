@@ -24,8 +24,9 @@ import numpy as np
 import libadcc
 
 from .backends import import_scf_results
+from .block import split_spaces
 from .misc import cached_property
-from .MoSpaces import MoSpaces, split_spaces
+from .MoSpaces import MoSpaces
 from .NParticleOperator import OperatorSymmetry, product_trace
 from .OneParticleDensity import OneParticleDensity
 from .OperatorIntegrals import OperatorIntegrals
