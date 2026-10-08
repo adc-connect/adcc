@@ -26,8 +26,8 @@ from pytest import approx
 
 from adcc import LazyMp, OperatorSymmetry
 from adcc import block as b
+from adcc.block import split_spaces
 from adcc.functions import einsum
-from adcc.MoSpaces import split_spaces
 
 from . import testcases
 from .testdata_cache import testdata_cache

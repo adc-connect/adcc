@@ -25,9 +25,10 @@ import numpy as np
 import libadcc
 
 from . import block as b
+from .block import split_spaces
 from .functions import direct_sum, einsum, zeros_like
 from .misc import cached_member_function, cached_property
-from .MoSpaces import MoSpaces, split_spaces
+from .MoSpaces import MoSpaces
 from .NParticleOperator import OperatorSymmetry, product_trace
 from .OneParticleDensity import OneParticleDensity
 from .ReferenceState import ReferenceState

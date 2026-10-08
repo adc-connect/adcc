@@ -28,7 +28,7 @@ import pytest
 import adcc
 from adcc import OneParticleOperator
 from adcc.backends import run_hf
-from adcc.MoSpaces import split_spaces
+from adcc.block import split_spaces
 from adcc.NParticleOperator import OperatorSymmetry, product_trace
 from adcc.OneParticleDensity import OneParticleDensity
 

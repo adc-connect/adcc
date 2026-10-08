@@ -19,9 +19,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-import textwrap
 from collections.abc import Iterable
-from itertools import product
 
 import numpy as np
 
@@ -31,20 +29,6 @@ from .backends import import_scf_results
 from .memory_pool import memory_pool
 
 __all__ = ["MoSpaces"]
-
-__valid_spaces = list(map("".join, product(["o", "v"], ["1", "2", "3"])))
-
-
-def split_spaces(spacestr):
-    """Utility function to split a string with
-    multiple spaces into the individual space strings
-    """
-    sp = textwrap.wrap(spacestr, 2)
-    try:
-        assert all(s in __valid_spaces for s in sp)
-        return sp
-    except AssertionError:
-        raise ValueError(f"Invalid space string '{spacestr}'.")
 
 
 def expand_spaceargs(hfdata_or_n_orbs, **spaceargs):
