@@ -169,9 +169,18 @@ def block_ppphhh_pphh_0(hf, mp, intermediates):
 # 1st order main
 #
 def block_ph_ph_1(hf, mp, intermediates):
+    assert not hf.has_core_occupied_space
     F = hf.operators.fock
-    # TODO first-order diagonal, for now zeroth order only
-    diagonal = block_ph_ph_0(hf, mp, intermediates).diagonal
+    # Zeroth order:
+    # {f^{a}_{a}} - {f^{i}_{i}}
+    # First order:
+    # - {F^{i}_{i}} - {V^{ia}_{ia}} + {F^{a}_{a}} - {f^{a}_{a}} + {f^{i}_{i}}
+    # -> f_aa and f_ii terms cancel
+    # -> identical to the normal diagonal (exactly like the apply)
+    diagonal = AmplitudeVector(ph=(
+        direct_sum("a-i->ia", F.vv.diagonal(), F.oo.diagonal())
+        - einsum("iaia->ia", hf.ovov)
+    ))  # fmt: skip
 
     def apply(ampl):
         ur1 = ampl.ph
