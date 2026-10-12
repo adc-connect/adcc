@@ -110,7 +110,7 @@ def block_ph_ph_0(hf, mp, intermediates):
 
 def diagonal_pphh_pphh_0(hf):
     res = direct_sum(
-        "-i-J+a+b->iJab",
+        "-i-j+a+b->ijab",
         hf.foo.diagonal(), hf.foo.diagonal(), hf.fvv.diagonal(), hf.fvv.diagonal()
     ).symmetrise(2, 3)  # fmt: skip
     return AmplitudeVector(pphh=res)
@@ -249,32 +249,17 @@ def block_ph_ph_2(hf, mp, intermediates):
     F = hf.operators.fock
     t1_1 = mp.ts1(b.ov)
     t2_1 = mp.t2oo
+    i1 = intermediates.rohf_dods_adc2_i1
+    i2 = intermediates.rohf_dods_adc2_i2
     # TODO second-order diagonal, for now zeroth order only
     diagonal = block_ph_ph_0(hf, mp, intermediates).diagonal
-
-    # Contractions independent of the trial vector, together with the
-    # Fock terms of block_ph_ph_1
-    i_vv = (
-        + 1.0 * F.vv  # 0 + 1
-        - 1.0 * einsum("jc,jabc->ab", t1_1, hf.ovvv)  # N^4: O^1V^3 / N^4: O^1V^3
-        - 1.0 * einsum("jc,jbac->ab", t1_1, hf.ovvv)  # N^4: O^1V^3 / N^4: O^1V^3
-    ).evaluate()  # fmt: skip
-    i_oo = (
-        - 1.0 * F.oo  # 0 + 1
-        - 1.0 * einsum("kb,ikjb->ij", t1_1, hf.ooov)  # N^4: O^3V^1 / N^4: O^3V^1
-        - 1.0 * einsum("kb,jkib->ij", t1_1, hf.ooov)  # N^4: O^3V^1 / N^4: O^3V^1
-        - 0.5 * einsum("ib,jb->ij", t1_1, F.ov)  # N^3: O^2V^1 / N^2: O^1V^1
-        - 0.5 * einsum("jb,ib->ij", t1_1, F.ov)  # N^3: O^2V^1 / N^2: O^1V^1
-        + 0.25 * einsum("ikbc,jkbc->ij", t2_1, hf.oovv)  # N^5: O^3V^2 / N^4: O^2V^2
-        + 0.25 * einsum("jkbc,ikbc->ij", t2_1, hf.oovv)  # N^5: O^3V^2 / N^4: O^2V^2
-    ).evaluate()  # fmt: skip
 
     def apply(ampl):
         ur1 = ampl.ph
         return AmplitudeVector(ph=(
-            # 0 + 1 + 2 (via i_vv and i_oo)
-            + 1.0 * einsum("ib,ab->ia", ur1, i_vv)  # N^3: O^1V^2 / N^2: V^2
-            + 1.0 * einsum("ij,ja->ia", i_oo, ur1)  # N^3: O^2V^1 / N^2: O^1V^1
+            # 0 + 1 + 2 (via i1 and i2)
+            + 1.0 * einsum("ib,ab->ia", ur1, i1)  # N^3: O^1V^2 / N^2: V^2
+            - 1.0 * einsum("ij,ja->ia", i2, ur1)  # N^3: O^2V^1 / N^2: O^1V^1
             # 1
             - 1.0 * einsum("jb,ibja->ia", ur1, hf.ovov)  # N^4: O^2V^2 / N^4: O^2V^2
             # 2
@@ -349,3 +334,34 @@ def block_pphh_ph_3(hf, mp, intermediates):
 #
 def block_ph_ph_4(hf, mp, intermediates):
     pass
+
+
+#
+# Intermediates
+#
+@register_as_intermediate
+def rohf_dods_adc2_i1(hf, mp, intermediates):
+    # Contains the F_vv term of block_ph_ph_1 (zeroth + first order)
+    t1_1 = mp.ts1(b.ov)
+    return (
+        + 1.0 * hf.operators.fock.vv
+        - 1.0 * einsum("jc,jabc->ab", t1_1, hf.ovvv)  # N^4: O^1V^3 / N^4: O^1V^3
+        - 1.0 * einsum("jc,jbac->ab", t1_1, hf.ovvv)  # N^4: O^1V^3 / N^4: O^1V^3
+    )  # fmt: skip
+
+
+@register_as_intermediate
+def rohf_dods_adc2_i2(hf, mp, intermediates):
+    # Contains the F_oo term of block_ph_ph_1 (zeroth + first order)
+    F = hf.operators.fock
+    t1_1 = mp.ts1(b.ov)
+    t2_1 = mp.t2oo
+    return (
+        + 1.0 * F.oo
+        + 1.0 * einsum("kb,ikjb->ij", t1_1, hf.ooov)  # N^4: O^3V^1 / N^4: O^3V^1
+        + 1.0 * einsum("kb,jkib->ij", t1_1, hf.ooov)  # N^4: O^3V^1 / N^4: O^3V^1
+        + 0.5 * einsum("ib,jb->ij", t1_1, F.ov)  # N^3: O^2V^1 / N^2: O^1V^1
+        + 0.5 * einsum("jb,ib->ij", t1_1, F.ov)  # N^3: O^2V^1 / N^2: O^1V^1
+        - 0.25 * einsum("ikbc,jkbc->ij", t2_1, hf.oovv)  # N^5: O^3V^2 / N^4: O^2V^2
+        - 0.25 * einsum("jkbc,ikbc->ij", t2_1, hf.oovv)  # N^5: O^3V^2 / N^4: O^2V^2
+    )  # fmt: skip
