@@ -123,6 +123,18 @@ class OperatorIntegralProvider(ABC):
         )
 
     @property
+    def fock(self) -> Array2D:
+        """
+        The AO Fock matrix is returned.
+
+        Raises
+        ------
+        NotImplementedError
+            If the operator is not supported by the backend.
+        """
+        raise NotImplementedError(f"Fock operator not implemented for the {self.backend} backend")
+
+    @property
     def electric_dipole(self) -> DipoleLikeArray:
         """
         The electric dipole operator `-sum_i r_i` is returned.

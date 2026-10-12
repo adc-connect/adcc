@@ -424,6 +424,12 @@ class OperatorIntegrals:
 
     @cached_property
     @timed_member_call("_import_timer")
+    def fock(self) -> OneParticleOperator:
+        """Return the Fock operator."""
+        return self._import_operator_1p(self.provider_ao.fock, symmetry=OperatorSymmetry.HERMITIAN)
+
+    @cached_property
+    @timed_member_call("_import_timer")
     def ssq_1p(self) -> OneParticleOperator:
         """Returns the one-particle part of the S^2 operator"""
         op = OneParticleOperator(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
