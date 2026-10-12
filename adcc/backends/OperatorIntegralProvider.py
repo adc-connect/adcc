@@ -123,9 +123,9 @@ class OperatorIntegralProvider(ABC):
         )
 
     @property
-    def fock(self) -> Array2D:
+    def fock(self) -> tuple[Array2D, Array2D]:
         """
-        The AO Fock matrix is returned.
+        The alpha and beta AO Fock matrices are returned.
 
         Raises
         ------

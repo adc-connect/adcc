@@ -426,7 +426,25 @@ class OperatorIntegrals:
     @timed_member_call("_import_timer")
     def fock(self) -> OneParticleOperator:
         """Return the Fock operator."""
-        return self._import_operator_1p(self.provider_ao.fock, symmetry=OperatorSymmetry.HERMITIAN)
+        # Inline the import for now. TODO: refactor later
+        alpha, beta = self.provider_ao.fock
+        sym = libadcc.make_symmetry_operator_basis(
+            self.mospaces, alpha.shape[0], OperatorSymmetry.HERMITIAN.to_str(), 1, "ab"
+        )
+        fock_bb = Tensor(sym)
+        zerobk = np.zeros_like(alpha)
+        fock_bb.set_from_ndarray(np.block([
+            [alpha, zerobk],
+            [zerobk, beta],
+        ]), 1e-14)  # fmt: skip
+        fock_ff = OneParticleOperator(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
+        transform_operator_ao2mo_1p(
+            tensor_bb=fock_bb,
+            tensor_ff=fock_ff,
+            coefficients=self._coefficients,
+            tolerance=self._conv_tol,
+        )
+        return fock_ff
 
     @cached_property
     @timed_member_call("_import_timer")

@@ -33,6 +33,12 @@ from .OneParticleDensity import OneParticleDensity
 
 
 class LazyMp(GroundState):
+    def ts1(self, space: str) -> libadcc.Tensor:
+        raise RuntimeError(
+            "First-order MP singles amplitudes usually vanish. Most likely you don't want to "
+            "call this method for an MP ground state."
+        )
+
     @cached_member_function()
     def td1(self, space: str) -> libadcc.Tensor:
         """T2 amplitudes"""
@@ -274,6 +280,7 @@ class LazyMp(GroundState):
         assert level >= 0
         if level == 0:
             # Sum of orbital energies ...
+            # TODO: core orbitals and frozen core
             return self.reference_state.nuclear_repulsion_energy + np.einsum(
                 "i->", self.reference_state.foo.diagonal().to_ndarray()
             )

@@ -50,6 +50,13 @@ class GroundState:
         self.timer: Timer = Timer()
         self.has_core_occupied_space: bool = hf.has_core_occupied_space
 
+    def ts1(self, space: str) -> libadcc.Tensor:
+        """First-order ground state singles amplitudes."""
+        raise NotImplementedError(
+            "First-order ground state singles amplitudes not implemented on "
+            f"{self.__class__.__name__} class."
+        )
+
     def td1(self, space: str) -> libadcc.Tensor:
         """First-order ground state doubles amplitudes."""
         raise NotImplementedError(
