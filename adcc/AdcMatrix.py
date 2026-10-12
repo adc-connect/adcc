@@ -27,11 +27,15 @@ import numpy as np
 import libadcc
 
 from .adc_pp import matrix as ppmatrix
+from .adc_pp import rohf_dods_matrix
 from .AdcMethod import AdcMethod, AdcType, Method
 from .AmplitudeVector import AmplitudeVector
 from .functions import ones_like
 from .Intermediates import Intermediates
+from .GroundState import GroundState
 from .LazyMp import LazyMp
+from .LazyRoDodsMp import LazyRoDodsMp
+from .ReferenceState import ReferenceState
 from .timings import Timer, timed_member_call
 
 
@@ -221,12 +225,15 @@ class AdcMatrix(AdcMatrixlike):
         diagonal_precomputed: adcc.AmplitudeVector
             Allows to pass a pre-computed diagonal, for internal use only.
         """
-        if isinstance(hf_or_mp, (libadcc.ReferenceState, libadcc.HartreeFockSolution_i)):
-            hf_or_mp = LazyMp(hf_or_mp)
-        if not isinstance(hf_or_mp, LazyMp):
+        if isinstance(hf_or_mp, libadcc.HartreeFockSolution_i):
+            hf_or_mp = ReferenceState(hf_or_mp)
+        if isinstance(hf_or_mp, libadcc.ReferenceState):
+            rohf_dods = getattr(hf_or_mp, "rohf_dods", False)
+            hf_or_mp = (LazyRoDodsMp if rohf_dods else LazyMp)(hf_or_mp)
+        if not isinstance(hf_or_mp, GroundState):
             raise TypeError(
                 "hf_or_mp is not a valid object. It needs to be "
-                "either a LazyMp, a ReferenceState or a "
+                "either a GroundState, a ReferenceState or a "
                 "HartreeFockSolution_i."
             )
 
@@ -243,6 +250,12 @@ class AdcMatrix(AdcMatrixlike):
         self.method = method
         self.ground_state = hf_or_mp
         self.reference_state = hf_or_mp.reference_state
+        self.rohf_dods = self.reference_state.rohf_dods
+        if self.rohf_dods != isinstance(hf_or_mp, LazyRoDodsMp):
+            raise TypeError(
+                "Ground state type does not match rohf_dods of the reference state: "
+                "use LazyRoDodsMp if and only if rohf_dods=True."
+            )
         self.mospaces = hf_or_mp.reference_state.mospaces
         self.is_core_valence_separated = method.is_core_valence_separated
         self.ndim = 2
@@ -261,11 +274,12 @@ class AdcMatrix(AdcMatrixlike):
 
         # Build the blocks and diagonals
         with self.timer.record("build"):
+            matrix_module = rohf_dods_matrix if self.rohf_dods else ppmatrix
             variant = None
             if self.is_core_valence_separated:
                 variant = "cvs"
             blocks = {
-                block: ppmatrix.block(
+                block: matrix_module.block(
                     self.ground_state,
                     block.split("_"),
                     order=order,

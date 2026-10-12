@@ -60,6 +60,7 @@ class ElectronicStates:
         self.ground_state: LazyMp = self.matrix.ground_state
         self.reference_state: ReferenceState = self.matrix.ground_state.reference_state
         self.operators: OperatorIntegrals = self.reference_state.operators
+        self.rohf_dods: bool = self.reference_state.rohf_dods
 
         # List of all the objects which have timers (do not yet collect
         # timers, since new times might be added implicitly at a later point)

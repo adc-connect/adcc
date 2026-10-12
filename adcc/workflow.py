@@ -30,7 +30,7 @@ from .AdcMethod import AdcMethod, IsrMethod
 from .exceptions import InputError
 from .ExcitedStates import ExcitedStates
 from .guess import guesses_any, guesses_singlet, guesses_spin_flip, guesses_triplet
-from .LazyMp import LazyMp
+from .GroundState import GroundState
 from .ReferenceState import ReferenceState as adcc_ReferenceState
 from .solver.davidson import jacobi_davidson
 from .solver.explicit_symmetrisation import IndexSpinSymmetrisation, IndexSymmetrisation
@@ -58,6 +58,7 @@ def run_adc(
     n_triplets=None,
     n_spin_flip=None,
     environment=None,
+    rohf_dods=False,
     **solverargs,
 ):
     """Run an ADC calculation.
@@ -145,6 +146,10 @@ def run_adc(
         virtuals for both the MP and ADC methods performed). For ways to define
         these see the description in :py:class:`adcc.ReferenceState`.
 
+    rohf_dods : bool, optional
+        Use the ROHF DODS ground state and ADC matrix. Not available with
+        core-valence separation.
+
     environment : bool or list or dict, optional
         The keywords to specify how coupling to an environment model,
         e.g. PE, is treated. For details see :ref:`environment`.
@@ -201,6 +206,7 @@ def run_adc(
         frozen_core=frozen_core,
         frozen_virtual=frozen_virtual,
         method=method,
+        rohf_dods=rohf_dods
     )
 
     n_states, kind = validate_state_parameters(
@@ -260,7 +266,8 @@ def run_adc(
 # Individual steps
 #
 def construct_adcmatrix(
-    data_or_matrix, core_orbitals=None, frozen_core=None, frozen_virtual=None, method=None
+    data_or_matrix, core_orbitals=None, frozen_core=None, frozen_virtual=None, method=None,
+    rohf_dods=False
 ):
     """
     Use the provided data or AdcMatrix object to check consistency of the
@@ -278,7 +285,7 @@ def construct_adcmatrix(
         except ValueError as e:
             raise InputError(str(e))  # In case the method is unknown
 
-    if not isinstance(data_or_matrix, (ReferenceState, AdcMatrixlike, LazyMp)):
+    if not isinstance(data_or_matrix, (ReferenceState, AdcMatrixlike, GroundState)):
         if method.is_core_valence_separated and core_orbitals is None:
             raise InputError(
                 "If core-valence separation approximation is "
@@ -292,6 +299,7 @@ def construct_adcmatrix(
                 core_orbitals=core_orbitals,
                 frozen_core=frozen_core,
                 frozen_virtual=frozen_virtual,
+                rohf_dods=rohf_dods,
             )
         except ValueError as e:
             raise InputError(str(e))  # In case of an issue with the spaces
@@ -321,8 +329,16 @@ def construct_adcmatrix(
             "".format(mospaces.n_orbs_alpha("v2"))
         )
 
+    reference_state = getattr(data_or_matrix, "reference_state", data_or_matrix)
+    if getattr(reference_state, "rohf_dods", False) != rohf_dods:
+        warnings.warn(
+            "Ignored rohf_dods parameter because data_or_matrix"
+            " is a ReferenceState, a LazyMp or an AdcMatrixlike object"
+            f" (which has a value of rohf_dods={not rohf_dods})."
+        )
+
     # Make AdcMatrix (if not done)
-    if isinstance(data_or_matrix, (ReferenceState, LazyMp)):
+    if isinstance(data_or_matrix, (ReferenceState, GroundState)):
         try:
             return AdcMatrix(method, data_or_matrix)
         except ValueError as e:

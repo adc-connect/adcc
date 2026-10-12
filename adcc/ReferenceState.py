@@ -44,6 +44,7 @@ class ReferenceState(libadcc.ReferenceState):
         frozen_virtual=None,
         symmetry_check_on_import=False,
         import_all_below_n_orbs=10,
+        rohf_dods=False,
     ):
         """Construct a ReferenceState holding information about the employed
         SCF reference.
@@ -108,6 +109,10 @@ class ReferenceState(libadcc.ReferenceState):
             parameter, the class will thus automatically import all ERI tensor
             and Fock matrix blocks.
 
+        rohf_dods : bool, optional
+            Treat the reference as ROHF with doubly and singly occupied
+            spaces (DODS). Not available with a core-occupied space.
+
         Examples
         --------
         To start a calculation with the 2 lowest alpha and beta orbitals
@@ -155,6 +160,9 @@ class ReferenceState(libadcc.ReferenceState):
             core_orbitals=core_orbitals,
         )
         super().__init__(hfdata, self._mospaces, symmetry_check_on_import)
+        if rohf_dods and self.has_core_occupied_space:
+            raise ValueError("rohf_dods is not available with a core-occupied space (CVS).")
+        self.rohf_dods = rohf_dods
 
         if import_all_below_n_orbs is not None and hfdata.n_orbs < import_all_below_n_orbs:
             super().import_all()
