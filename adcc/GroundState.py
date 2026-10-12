@@ -97,18 +97,25 @@ class GroundState:
             f"{self.__class__.__name__} class."
         )
 
-    def td3(self, space: str) -> libadcc.Tensor:
-        """Third-order ground state doubles amplitudes"""
-        raise NotImplementedError(
-            "Third-order ground state doubles amplitudes not implemented on "
-            f"{self.__class__.__name__} class. "
-        )
-
     def tt2(self, space: str) -> libadcc.Tensor:
         """Second-order ground state triples amplitudes"""
         raise NotImplementedError(
             "Second-order ground state triples amplitudes not implemented on "
             f"{self.__class__.__name__} class."
+        )
+
+    def ts3(self, space: str) -> libadcc.Tensor:
+        """Third-order ground state singles amplitudes"""
+        raise NotImplementedError(
+            "Third-order ground state singles amplitudes not implemented on "
+            f"{self.__class__.__name__} class. "
+        )
+
+    def td3(self, space: str) -> libadcc.Tensor:
+        """Third-order ground state doubles amplitudes"""
+        raise NotImplementedError(
+            "Third-order ground state doubles amplitudes not implemented on "
+            f"{self.__class__.__name__} class. "
         )
 
     def energy_correction(self, level: int = 2) -> float:

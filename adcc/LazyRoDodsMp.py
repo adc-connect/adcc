@@ -106,21 +106,152 @@ class LazyRoDodsMp(GroundState):
             4 * (
                 + 1 * einsum("ia,jb->ijab", t1_1, F.ov)  # N^4: O^2V^2 / N^4: O^2V^2
                 + 1 * einsum("ikac,jckb->ijab", t2_1, hf.ovov)  # N^6: O^3V^3 / N^4: O^2V^2
-            ).antisymmetrise(0, 1).antisymmetrise(2, 3)
+            )
             # Apply (1 - P_ab) to:
             + 2 * (
                 + 1 * einsum("kb,ijka->ijab", t1_1, hf.ooov)  # N^5: O^3V^2 / N^4: O^2V^2
                 + 1 * einsum("ijbc,ac->ijab", t2_1, F.vv)  # N^5: O^2V^3 / N^4: O^2V^2
-            ).antisymmetrise(2, 3)
+            )
             # Apply (1 - P_ij) to:
             + 2 * (
                 + 1 * einsum("jc,icab->ijab", t1_1, hf.ovvv)  # N^5: O^2V^3 / N^4: O^1V^3
                 + 1 * einsum("ikab,jk->ijab", t2_1, F.oo)  # N^5: O^3V^2 / N^4: O^2V^2
-            ).antisymmetrise(0, 1)
+            )
             - 0.5 * einsum("klab,ijkl->ijab", t2_1, hf.oooo)  # N^6: O^4V^2 / N^4: O^2V^2
             - 0.5 * einsum("ijcd,abcd->ijab", t2_1, hf.vvvv)  # N^6: O^2V^4 / N^4: V^4
             + 1 * hf.oovv  # N^4: O^2V^2 / N^4: O^2V^2
-        ) / denom  # fmt: skip
+        ).antisymmetrise(0, 1).antisymmetrise(2, 3) / denom  # fmt: skip
+
+    @cached_member_function()
+    def tt2(self, space: str) -> libadcc.Tensor:
+        if space != b.ooovvv:
+            raise NotImplementedError(
+                f"Second-order triples amplitudes not implemented for space '{space}'"
+            )
+        if self.has_core_occupied_space:
+            raise NotImplementedError(
+                "Second-order triples amplitudes not implemented for CVS-RO-DODS-MP"
+            )
+        hf = self.reference_state
+        F = hf.operators.fock
+        t1_1 = self.ts1(b.ov)
+        t2_1 = self.td1(b.oovv)
+        df = self.df(b.ov)
+        denom = (
+            direct_sum("ia,jkbc->ijkabc", df, direct_sum("jb,kc->jkbc", df, df))
+            .symmetrise(0, 1, 2)
+            .symmetrise(3, 4, 5)
+        )
+        # minus sign: orbital energy denominator
+        return - 9 * (
+            # The scaling comment is given as: [comp_scaling] / [mem_scaling]
+            # Apply (1 - P_ij - P_ik - P_ab - P_ac + P_ijP_ab + P_ijP_ac + P_ikP_ab + P_ikP_ac) to:
+            + 1 * einsum("ia,jkbc->ijkabc", t1_1, hf.oovv)  # N^6: O^3V^3 / N^6: O^3V^3
+            # Apply (1 - P_ij - P_jk - P_ac - P_bc + P_ijP_ac + P_ijP_bc + P_jkP_ac + P_jkP_bc) to:
+            + 1 * einsum("ikab,jc->ijkabc", t2_1, F.ov)  # N^6: O^3V^3 / N^6: O^3V^3
+            # Apply (1 - P_ij - P_ik - P_ac - P_bc + P_ijP_ac + P_ijP_bc + P_ikP_ac + P_ikP_bc) to:
+            + 1 * einsum("ilab,jklc->ijkabc", t2_1, hf.ooov)  # N^7: O^4V^3 / N^6: O^3V^3
+            # Apply (1 - P_ik - P_jk - P_ab - P_ac + P_ikP_ab + P_ikP_ac + P_jkP_ab + P_jkP_ac) to:
+            + 1 * einsum("ijad,kdbc->ijkabc", t2_1, hf.ovvv)  # N^7: O^3V^4 / N^6: O^3V^3
+        ).antisymmetrise(0, 1, 2).antisymmetrise(3, 4, 5) / denom  # fmt: skip
+
+    @cached_member_function()
+    def ts3(self, space: str) -> libadcc.Tensor:
+        if space != b.ov:
+            raise NotImplementedError(
+                f"Third-order singles amplitudes not implemented for space '{space}'"
+            )
+        if self.has_core_occupied_space:
+            raise NotImplementedError(
+                "Third-order singles amplitudes not implemented for CVS-RO-DODS-MP"
+            )
+        hf = self.reference_state
+        F = hf.operators.fock
+        t1_1 = self.ts1(b.ov)
+        t2_1 = self.td1(b.oovv)
+        t1_2 = self.ts2(b.ov)
+        t2_2 = self.td2(b.oovv)
+        t3_2 = self.tt2(b.ooovvv)
+        # minus sign: orbital energy denominator
+        return - (
+            + 1 * einsum("ib,ab->ia", t1_1, F.vv)  # N^3: O^1V^2 / N^2: V^2
+            + 1 * einsum("ib,ab->ia", t1_2, F.vv)  # N^3: O^1V^2 / N^2: V^2
+            + 0.5 * einsum("jkab,jkib->ia", t2_1, hf.ooov)  # N^5: O^3V^2 / N^4: O^2V^2
+            + 0.5 * einsum("ijbc,jabc->ia", t2_1, hf.ovvv)  # N^5: O^2V^3 / N^4: O^1V^3
+            + 0.5 * einsum("jkab,jkib->ia", t2_2, hf.ooov)  # N^5: O^3V^2 / N^4: O^2V^2
+            + 0.5 * einsum("ijbc,jabc->ia", t2_2, hf.ovvv)  # N^5: O^2V^3 / N^4: O^1V^3
+            - 1 * einsum("ja,ij->ia", t1_1, F.oo)  # N^3: O^2V^1 / N^2: O^1V^1
+            - 1 * einsum("jb,ibja->ia", t1_1, hf.ovov)  # N^4: O^2V^2 / N^4: O^2V^2
+            - 1 * einsum("ijab,jb->ia", t2_1, F.ov)  # N^4: O^2V^2 / N^4: O^2V^2
+            - 1 * einsum("ja,ij->ia", t1_2, F.oo)  # N^3: O^2V^1 / N^2: O^1V^1
+            - 1 * einsum("jb,ibja->ia", t1_2, hf.ovov)  # N^4: O^2V^2 / N^4: O^2V^2
+            - 1 * einsum("ijab,jb->ia", t2_2, F.ov)  # N^4: O^2V^2 / N^4: O^2V^2
+            + 0.25 * einsum("ijkabc,jkbc->ia", t3_2, hf.oovv)  # N^6: O^3V^3 / N^6: O^3V^3
+            - 1 * einsum("jb,jb->", t1_1, F.ov) * t1_1  # N^2: O^1V^1 / N^2: O^1V^1
+            + 0.25 * einsum("jkbc,jkbc->", t2_1, hf.oovv) * t1_1  # N^4: O^2V^2 / N^4: O^2V^2
+            + 1 * F.ov  # N^2: O^1V^1 / N^2: O^1V^1
+        ) / self.df(b.ov)  # fmt: skip
+
+    @cached_member_function()
+    def td3(self, space: str) -> libadcc.Tensor:
+        if space != b.oovv:
+            raise NotImplementedError(
+                f"Third-order doubles amplitudes not implemented for space '{space}'"
+            )
+        if self.has_core_occupied_space:
+            raise NotImplementedError(
+                "Third-order doubles amplitudes not implemented for CVS-RO-DODS-MP"
+            )
+        hf = self.reference_state
+        F = hf.operators.fock
+        t1_1 = self.ts1(b.ov)
+        t2_1 = self.td1(b.oovv)
+        t1_2 = self.ts2(b.ov)
+        t2_2 = self.td2(b.oovv)
+        t3_2 = self.tt2(b.ooovvv)
+        denom = direct_sum("ia,jb->ijab", self.df(b.ov), self.df(b.ov)).symmetrise(0, 1)
+        return (
+            # The scaling comment is given as: [comp_scaling] / [mem_scaling]
+            # Apply (1 - P_ij - P_ab + P_ijP_ab) to:
+            4 * (
+                + 1 * einsum("ia,jb->ijab", t1_1, F.ov)  # N^4: O^2V^2 / N^4: O^2V^2
+                + 1 * einsum("ikac,jckb->ijab", t2_1, hf.ovov)  # N^6: O^3V^3 / N^4: O^2V^2
+                + 1 * einsum("ia,jb->ijab", t1_2, F.ov)  # N^4: O^2V^2 / N^4: O^2V^2
+                + 1 * einsum("ikac,jckb->ijab", t2_2, hf.ovov)  # N^6: O^3V^3 / N^4: O^2V^2
+            )
+            # Apply (1 - P_ab) to:
+            + 2 * (
+                + 1 * einsum("kb,ijka->ijab", t1_1, hf.ooov)  # N^5: O^3V^2 / N^4: O^2V^2
+                + 1 * einsum("ijbc,ac->ijab", t2_1, F.vv)  # N^5: O^2V^3 / N^4: O^2V^2
+                + 1 * einsum("kb,ijka->ijab", t1_2, hf.ooov)  # N^5: O^3V^2 / N^4: O^2V^2
+                + 1 * einsum("ijbc,ac->ijab", t2_2, F.vv)  # N^5: O^2V^3 / N^4: O^2V^2
+                + 0.5 * einsum("ijkbcd,kacd->ijab", t3_2, hf.ovvv)  # N^7: O^3V^4 / N^6: O^3V^3
+                # N^5: O^2V^3 / N^4: O^2V^2
+                - 0.5 * einsum("bc,ijac->ijab", einsum("klbd,klcd->bc", t2_1, hf.oovv), t2_1)
+            )
+            # Apply (1 - P_ij) to:
+            + 2 * (
+                + 1 * einsum("jc,icab->ijab", t1_1, hf.ovvv)  # N^5: O^2V^3 / N^4: O^1V^3
+                + 1 * einsum("ikab,jk->ijab", t2_1, F.oo)  # N^5: O^3V^2 / N^4: O^2V^2
+                + 1 * einsum("jc,icab->ijab", t1_2, hf.ovvv)  # N^5: O^2V^3 / N^4: O^1V^3
+                + 1 * einsum("ikab,jk->ijab", t2_2, F.oo)  # N^5: O^3V^2 / N^4: O^2V^2
+                + 0.5 * einsum("jklabc,klic->ijab", t3_2, hf.ooov)  # N^7: O^4V^3 / N^6: O^3V^3
+                # N^6: O^3V^3 / N^4: O^2V^2
+                - 1 * einsum("ikad,jkbd->ijab", einsum("ilac,klcd->ikad", t2_1, hf.oovv), t2_1)
+                # N^5: O^3V^2 / N^4: O^2V^2
+                - 0.5 * einsum("jk,ikab->ijab", einsum("jlcd,klcd->jk", t2_1, hf.oovv), t2_1)
+            )
+            # Apply 1 to:
+            + 1 * einsum("ijkabc,kc->ijab", t3_2, F.ov)  # N^6: O^3V^3 / N^6: O^3V^3
+            - 0.5 * einsum("klab,ijkl->ijab", t2_1, hf.oooo)  # N^6: O^4V^2 / N^4: O^2V^2
+            - 0.5 * einsum("ijcd,abcd->ijab", t2_1, hf.vvvv)  # N^6: O^2V^4 / N^4: V^4
+            - 0.5 * einsum("klab,ijkl->ijab", t2_2, hf.oooo)  # N^6: O^4V^2 / N^4: O^2V^2
+            - 0.5 * einsum("ijcd,abcd->ijab", t2_2, hf.vvvv)  # N^6: O^2V^4 / N^4: V^4
+            + 1 * einsum("kc,kc->", t1_1, F.ov) * t2_1  # N^4: O^2V^2 / N^4: O^2V^2
+            # N^6: O^4V^2 / N^4: O^2V^2
+            + 0.25 * einsum("ijkl,klab->ijab", einsum("ijcd,klcd->ijkl", t2_1, hf.oovv), t2_1)
+            + 1 * hf.oovv  # N^4: O^2V^2 / N^4: O^2V^2
+        ).antisymmetrise(0, 1).antisymmetrise(2, 3) / denom  # fmt: skip
 
     @cached_member_function()
     def energy_correction(self, level: int = 2) -> float:
@@ -135,6 +266,9 @@ class LazyRoDodsMp(GroundState):
         elif level == 3:
             ts = self.ts2
             td = self.td2
+        elif level == 4:
+            ts = self.ts3
+            td = self.td3
         else:
             raise NotImplementedError(
                 f"RO-DODS-MP energy correction not implemented for level {level}"
