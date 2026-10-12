@@ -31,8 +31,8 @@ from .adc_pp import rohf_dods_matrix
 from .AdcMethod import AdcMethod, AdcType, Method
 from .AmplitudeVector import AmplitudeVector
 from .functions import ones_like
-from .Intermediates import Intermediates
 from .GroundState import GroundState
+from .Intermediates import Intermediates
 from .LazyMp import LazyMp
 from .LazyRoDodsMp import LazyRoDodsMp
 from .ReferenceState import ReferenceState

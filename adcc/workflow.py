@@ -29,8 +29,8 @@ from .AdcMatrix import AdcExtraTerm, AdcMatrix, AdcMatrixlike
 from .AdcMethod import AdcMethod, IsrMethod
 from .exceptions import InputError
 from .ExcitedStates import ExcitedStates
-from .guess import guesses_any, guesses_singlet, guesses_spin_flip, guesses_triplet
 from .GroundState import GroundState
+from .guess import guesses_any, guesses_singlet, guesses_spin_flip, guesses_triplet
 from .ReferenceState import ReferenceState as adcc_ReferenceState
 from .solver.davidson import jacobi_davidson
 from .solver.explicit_symmetrisation import IndexSpinSymmetrisation, IndexSymmetrisation
@@ -206,7 +206,7 @@ def run_adc(
         frozen_core=frozen_core,
         frozen_virtual=frozen_virtual,
         method=method,
-        rohf_dods=rohf_dods
+        rohf_dods=rohf_dods,
     )
 
     n_states, kind = validate_state_parameters(
@@ -266,8 +266,12 @@ def run_adc(
 # Individual steps
 #
 def construct_adcmatrix(
-    data_or_matrix, core_orbitals=None, frozen_core=None, frozen_virtual=None, method=None,
-    rohf_dods=False
+    data_or_matrix,
+    core_orbitals=None,
+    frozen_core=None,
+    frozen_virtual=None,
+    method=None,
+    rohf_dods=False,
 ):
     """
     Use the provided data or AdcMatrix object to check consistency of the

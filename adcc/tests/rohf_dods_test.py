@@ -31,7 +31,7 @@ pyscf = pytest.importorskip("pyscf")
 
 # For a UHF reference F = f and F_ov = 0, so the ROHF DODS variant
 # has to reproduce the standard UHF results.
-methods = ["adc0", "adc1", "adc2"]
+methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
 # rohf_dods is not available with CVS
 cvs_methods = [
     pytest.param(f"cvs-{m}", marks=pytest.mark.xfail(raises=InputError, strict=True))
@@ -74,8 +74,7 @@ def scfres_dods():
 @pytest.fixture(scope="module")
 def refstates(scfres):
     return {
-        rohf_dods: adcc.ReferenceState(scfres, rohf_dods=rohf_dods)
-        for rohf_dods in (False, True)
+        rohf_dods: adcc.ReferenceState(scfres, rohf_dods=rohf_dods) for rohf_dods in (False, True)
     }
 
 
@@ -96,7 +95,7 @@ class TestRohfDods:
 
     @pytest.mark.parametrize("method", methods + cvs_methods)
     def test_excitation_energies(self, scfres, method):
-        kwargs = dict(method=method, n_states=5, conv_tol=1e-10, output=None)
+        kwargs = {"method": method, "n_states": 5, "conv_tol": 1e-10, "output": None}
         if method.startswith("cvs"):
             # only 3 CVS guesses with one core orbital in sto-3g
             kwargs.update(core_orbitals=1, n_states=2)
@@ -105,10 +104,11 @@ class TestRohfDods:
         assert not ref.rohf_dods and type(ref.ground_state) is LazyMp
         assert res.rohf_dods and type(res.ground_state) is LazyRoDodsMp
         assert_allclose(res.ground_state.energy(2), ref.ground_state.energy(2), atol=1e-12)
+        assert_allclose(res.ground_state.energy(3), ref.ground_state.energy(3), atol=1e-12)
         assert res.converged
         assert_allclose(res.excitation_energy, ref.excitation_energy, atol=1e-8)
 
-    @pytest.mark.parametrize("method", methods)
+    @pytest.mark.parametrize("method", reference_energies.keys())
     def test_reference_energies(self, scfres_dods, method):
         res = adcc.run_adc(
             scfres_dods, method=method, n_states=5, conv_tol=1e-10, output=None, rohf_dods=True
