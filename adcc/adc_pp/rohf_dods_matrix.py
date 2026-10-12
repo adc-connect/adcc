@@ -20,11 +20,10 @@
 ##
 ## ---------------------------------------------------------------------
 from collections import namedtuple
-from math import sqrt
 
 from adcc import block as b
 from adcc.AmplitudeVector import AmplitudeVector
-from adcc.functions import direct_sum, einsum, zeros_like
+from adcc.functions import direct_sum, einsum
 from adcc.Intermediates import Intermediates, register_as_intermediate
 
 __all__ = ["block"]
@@ -113,6 +112,8 @@ def diagonal_pphh_pphh_0(hf):
         "-i-j+a+b->ijab",
         hf.foo.diagonal(), hf.foo.diagonal(), hf.fvv.diagonal(), hf.fvv.diagonal()
     ).symmetrise(2, 3)  # fmt: skip
+    if not hf.has_core_occupied_space:
+        res = res.symmetrise(0, 1)
     return AmplitudeVector(pphh=res)
 
 
