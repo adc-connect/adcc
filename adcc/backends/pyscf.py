@@ -70,6 +70,10 @@ class PyScfOperatorIntegralProvider(OperatorIntegralProvider):
         return self.scfres.mol.intor_symmetric("int1e_ovlp")
 
     @property
+    def fock(self) -> Array2D:
+        return self.scfres.get_fock()
+
+    @property
     def electric_dipole(self) -> DipoleLikeArray:
         """-sum_i r_i"""
         return tuple(-1.0 * self.scfres.mol.intor_symmetric("int1e_r", comp=3))
