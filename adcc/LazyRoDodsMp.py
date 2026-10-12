@@ -24,7 +24,7 @@ import numpy as np
 import libadcc
 
 from . import block as b
-from .functions import direct_sum
+from .functions import direct_sum, einsum
 from .GroundState import GroundState
 from .misc import cached_member_function
 from .MoSpaces import split_spaces
@@ -60,18 +60,88 @@ class LazyRoDodsMp(GroundState):
         ).symmetrise((2, 3))
 
     @cached_member_function()
+    def ts2(self, space: str, apply_cvs: bool = False) -> libadcc.Tensor:
+        if space != b.ov:
+            raise NotImplementedError(
+                f"Second-order singles amplitudes not implemented for space '{space}'"
+            )
+        if self.has_core_occupied_space or apply_cvs:
+            raise NotImplementedError(
+                "Second-order singles amplitudes not implemented for CVS-RO-DODS-MP"
+            )
+        # scaling: N^5 -> identical to normal MP
+        hf = self.reference_state
+        F = hf.operators.fock
+        t1_1 = self.ts1(b.ov)
+        t2_1 = self.td1(b.oovv)
+        # minus sign: orbital energy denominator
+        return - (
+            + 1 * einsum("ib,ab->ia", t1_1, F.vv)  # N^3: O^1V^2 / N^2: V^2
+            + 0.5 * einsum("jkab,jkib->ia", t2_1, hf.ooov)  # N^5: O^3V^2 / N^4: O^2V^2
+            + 0.5 * einsum("ijbc,jabc->ia", t2_1, hf.ovvv)  # N^5: O^2V^3 / N^4: O^1V^3
+            - 1 * einsum("ja,ij->ia", t1_1, F.oo)  # N^3: O^2V^1 / N^2: O^1V^1
+            - 1 * einsum("jb,ibja->ia", t1_1, hf.ovov)  # N^4: O^2V^2 / N^4: O^2V^2
+            - 1 * einsum("ijab,jb->ia", t2_1, F.ov)  # N^4: O^2V^2 / N^4: O^2V^2
+            + 1 * F.ov  # N^2: O^1V^1 / N^2: O^1V^1
+        ) / self.df(b.ov)  # fmt: skip
+
+    @cached_member_function()
+    def td2(self, space: str) -> libadcc.Tensor:
+        if space != b.oovv:
+            raise NotImplementedError(
+                f"Second-order doubles amplitudes not implemented for space '{space}'"
+            )
+        if self.has_core_occupied_space:
+            raise NotImplementedError(
+                "Second-order doubles amplitudes not implemented for CVS-RO-DODS-MP"
+            )
+        hf = self.reference_state
+        F = hf.operators.fock
+        t1_1 = self.ts1(b.ov)
+        t2_1 = self.td1(b.oovv)
+        denom = direct_sum("ia,jb->ijab", self.df(b.ov), self.df(b.ov)).symmetrise(0, 1)
+        return (
+            # The scaling comment is given as: [comp_scaling] / [mem_scaling]
+            # Apply (1 - P_ij - P_ab + P_ijP_ab) to:
+            4 * (
+                + 1 * einsum("ia,jb->ijab", t1_1, F.ov)  # N^4: O^2V^2 / N^4: O^2V^2
+                + 1 * einsum("ikac,jckb->ijab", t2_1, hf.ovov)  # N^6: O^3V^3 / N^4: O^2V^2
+            ).antisymmetrise(0, 1).antisymmetrise(2, 3)
+            # Apply (1 - P_ab) to:
+            + 2 * (
+                + 1 * einsum("kb,ijka->ijab", t1_1, hf.ooov)  # N^5: O^3V^2 / N^4: O^2V^2
+                + 1 * einsum("ijbc,ac->ijab", t2_1, F.vv)  # N^5: O^2V^3 / N^4: O^2V^2
+            ).antisymmetrise(2, 3)
+            # Apply (1 - P_ij) to:
+            + 2 * (
+                + 1 * einsum("jc,icab->ijab", t1_1, hf.ovvv)  # N^5: O^2V^3 / N^4: O^1V^3
+                + 1 * einsum("ikab,jk->ijab", t2_1, F.oo)  # N^5: O^3V^2 / N^4: O^2V^2
+            ).antisymmetrise(0, 1)
+            - 0.5 * einsum("klab,ijkl->ijab", t2_1, hf.oooo)  # N^6: O^4V^2 / N^4: O^2V^2
+            - 0.5 * einsum("ijcd,abcd->ijab", t2_1, hf.vvvv)  # N^6: O^2V^4 / N^4: V^4
+            + 1 * hf.oovv  # N^4: O^2V^2 / N^4: O^2V^2
+        ) / denom  # fmt: skip
+
+    @cached_member_function()
     def energy_correction(self, level: int = 2) -> float:
         if level <= 0:
             raise ValueError(f"Level has to be a positive non-zero integer, got {level}.")
-        if level == 2 and not self.has_core_occupied_space:
-            return self.ts1(b.ov).dot(
-                self.reference_state.operators.fock.ov
-            ) - 0.25 * self.t2oo.dot(self.reference_state.oovv)
+        if self.has_core_occupied_space:
+            raise NotImplementedError("CVS-RO-DODS-MP energy corrections not implemented.")
+
+        if level == 2:
+            ts = self.ts1
+            td = self.td1
+        elif level == 3:
+            ts = self.ts2
+            td = self.td2
         else:
             raise NotImplementedError(
-                f"{'CVS-RO-DODS-MP' if self.has_core_occupied_space else 'RO-DODS-MP'} energy "
-                f"correction not implemented for level {level}."
+                f"RO-DODS-MP energy correction not implemented for level {level}"
             )
+        return ts(b.ov).dot(self.reference_state.operators.fock.ov) - 0.25 * td(b.oovv).dot(
+            self.reference_state.oovv
+        )
 
     def energy(self, level: int = 2) -> float:
         if level < 0:
