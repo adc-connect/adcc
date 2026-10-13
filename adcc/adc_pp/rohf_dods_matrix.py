@@ -195,10 +195,29 @@ def block_ph_ph_1(hf, mp, intermediates):
     return AdcBlock(apply, diagonal)
 
 
+def diagonal_pphh_pphh_1(hf):
+    assert not hf.has_core_occupied_space
+    F = hf.operators.fock
+    # the zeroth order contributions cancel exactly against the first order contributions
+    # -> only F orbital energies remain
+    # -> basically identical to the diagonal of standard ADC
+    ov_itmd = (
+        direct_sum("a-i->ia", F.vv.diagonal(), F.oo.diagonal())
+        - 4 * 0.5 * einsum("iaia->ia", hf.ovov)
+    ).evaluate()  # fmt: skip
+    return AmplitudeVector(pphh=(
+        direct_sum("ia+jb->ijab", ov_itmd, ov_itmd)
+        + direct_sum(
+            "ij+ab->ijab",
+            einsum("ijij->ij", hf.oooo),
+            einsum("abab->ab", hf.vvvv),
+        )
+    ).symmetrise(0, 1).symmetrise(2, 3))  # fmt: skip
+
+
 def block_pphh_pphh_1(hf, mp, intermediates):
     F = hf.operators.fock
-    # TODO first-order diagonal, for now zeroth order only
-    diagonal = diagonal_pphh_pphh_0(hf)
+    diagonal = diagonal_pphh_pphh_1(hf)
 
     def apply(ampl):
         ur2 = ampl.pphh
