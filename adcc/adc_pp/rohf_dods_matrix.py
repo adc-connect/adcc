@@ -135,7 +135,12 @@ def block_pphh_pphh_0(hf, mp, intermediates):
 
 
 def block_ppphhh_ppphhh_0(hf, mp, intermediates):
-    pass
+    diagonal = AmplitudeVector(ppphhh=intermediates.df3)
+
+    def apply(ampl):
+        return AmplitudeVector(ppphhh=intermediates.df3 * ampl.ppphhh)
+
+    return AdcBlock(apply, diagonal)
 
 
 #
@@ -154,7 +159,7 @@ def block_ph_ppphhh_0(hf, mp, intermediates):
 
 
 def block_ppphhh_ph_0(hf, mp, intermediates):
-    pass
+    return AdcBlock(lambda ampl: 0, 0)
 
 
 def block_pphh_ppphhh_0(hf, mp, intermediates):
@@ -162,7 +167,7 @@ def block_pphh_ppphhh_0(hf, mp, intermediates):
 
 
 def block_ppphhh_pphh_0(hf, mp, intermediates):
-    pass
+    return AdcBlock(lambda ampl: 0, 0)
 
 
 #
@@ -287,7 +292,7 @@ def block_ph_ppphhh_1(hf, mp, intermediates):
 
 
 def block_ppphhh_ph_1(hf, mp, intermediates):
-    pass
+    return AdcBlock(lambda ampl: 0, 0)
 
 
 def block_pphh_ppphhh_1(hf, mp, intermediates):
@@ -305,7 +310,17 @@ def block_pphh_ppphhh_1(hf, mp, intermediates):
 
 
 def block_ppphhh_pphh_1(hf, mp, intermediates):
-    pass
+    def apply(ampl):
+        ur2 = ampl.pphh
+        # The scaling comment is given as: [comp_scaling] / [mem_scaling]
+        return AmplitudeVector(ppphhh=(
+            # Apply (1 - P_ij - P_ik) (1 - P_ac - P_bc) to:
+            - 9 * 1 / 3 * einsum("ilab,jklc->ijkabc", ur2, hf.ooov)  # N^7: O^4V^3 / N^6: O^3V^3
+            # Apply (1 - P_ik - P_jk) (1 - P_ab - P_ac) to:
+            - 9 * 1 / 3 * einsum("ijad,kdbc->ijkabc", ur2, hf.ovvv)  # N^7: O^3V^4 / N^6: O^3V^3
+        ).antisymmetrise(0, 1, 2).antisymmetrise(3, 4, 5))  # fmt: skip
+
+    return AdcBlock(apply, 0)
 
 
 #
@@ -589,7 +604,28 @@ def block_ph_ppphhh_2(hf, mp, intermediates):
 
 
 def block_ppphhh_ph_2(hf, mp, intermediates):
-    pass
+    t2_1 = mp.td1(b.oovv)
+
+    def apply(ampl):
+        ur1 = ampl.ph
+        # The scaling comment is given as: [comp_scaling] / [mem_scaling]
+        return AmplitudeVector(ppphhh=(
+            # Apply (1 - P_ij - P_ik) (1 - P_ab - P_ac) to:
+            9 * (
+                # N^7: O^4V^3 / N^6: O^3V^3
+                - 1 / 6 * einsum("jkma,imbc->ijkabc", einsum("la,jklm->jkma", ur1, hf.oooo), t2_1)
+                # N^7: O^3V^4 / N^6: O^3V^3
+                - 1 / 6 * einsum("ibce,jkae->ijkabc", einsum("id,bcde->ibce", ur1, hf.vvvv), t2_1)
+            )
+            # Apply (1 - P_ik - P_jk) (1 - P_ab - P_ac - P_bc + P_abP_ac + P_abP_bc) to:
+            # N^7: O^3V^4 / N^6: O^3V^3
+            - 18 * 1 / 6 * einsum("kacd,ijbd->ijkabc", einsum("la,kdlc->kacd", ur1, hf.ovov), t2_1)
+            # Apply (1 - P_ij - P_ik - P_jk + P_ijP_ik + P_ijP_jk) (1 - P_ac - P_bc) to:
+            # N^7: O^4V^3 / N^6: O^3V^3
+            - 18 * 1 / 6 * einsum("iklc,jlab->ijkabc", einsum("id,kdlc->iklc", ur1, hf.ovov), t2_1)
+        ).antisymmetrise(0, 1, 2).antisymmetrise(3, 4, 5))  # fmt: skip
+
+    return AdcBlock(apply, 0)
 
 
 #
