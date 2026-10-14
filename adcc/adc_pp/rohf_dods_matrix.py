@@ -158,7 +158,7 @@ def block_ppphhh_ph_0(hf, mp, intermediates):
 
 
 def block_pphh_ppphhh_0(hf, mp, intermediates):
-    pass
+    return AdcBlock(lambda ampl: 0, 0)
 
 
 def block_ppphhh_pphh_0(hf, mp, intermediates):
@@ -291,7 +291,17 @@ def block_ppphhh_ph_1(hf, mp, intermediates):
 
 
 def block_pphh_ppphhh_1(hf, mp, intermediates):
-    pass
+    def apply(ampl):
+        ur3 = ampl.ppphhh
+        # The scaling comment is given as: [comp_scaling] / [mem_scaling]
+        return AmplitudeVector(pphh=(
+            # Apply (1 - P_ij) to:
+            - 2 * 3 / 2 * einsum("iklabc,kljc->ijab", ur3, hf.ooov)  # N^7: O^4V^3 / N^6: O^3V^3
+            # Apply (1 - P_ab) to:
+            - 2 * 3 / 2 * einsum("ijkacd,kbcd->ijab", ur3, hf.ovvv)  # N^7: O^3V^4 / N^6: O^3V^3
+        ).antisymmetrise(0, 1).antisymmetrise(2, 3))  # fmt: skip
+
+    return AdcBlock(apply, 0)
 
 
 def block_ppphhh_pphh_1(hf, mp, intermediates):
