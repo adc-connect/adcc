@@ -31,17 +31,20 @@ pyscf = pytest.importorskip("pyscf")
 
 # For a UHF reference F = f and F_ov = 0, so the ROHF DODS variant
 # has to reproduce the standard UHF results.
-methods = ["adc0", "adc1", "adc2", "adc2x", "adc3"]
+methods = ["adc0", "adc1", "adc2", "adc2x", "adc3", "adc4"]
 # rohf_dods is not available with CVS
 cvs_methods = [
     pytest.param(f"cvs-{m}", marks=pytest.mark.xfail(raises=InputError, strict=True))
     for m in methods
+    if m != "adc4"  # cvs-adc4 is not implemented
 ]
 
 
 @pytest.fixture(scope="module")
 def scfres():
-    mol = pyscf.gto.M(atom="O 0 0 0; H 0 0 0.97", basis="sto-3g", spin=1, verbose=0)
+    mol = pyscf.gto.M(
+        atom="N 0 0 0; H 0 0.801 0.637; H 0 -0.801 0.637", basis="sto-3g", spin=1, verbose=0
+    )
     mf = pyscf.scf.UHF(mol)
     mf.conv_tol = 1e-12
     mf.conv_tol_grad = 1e-10
@@ -97,8 +100,7 @@ class TestRohfDods:
     def test_excitation_energies(self, scfres, method):
         kwargs = {"method": method, "n_states": 5, "conv_tol": 1e-10, "output": None}
         if method.startswith("cvs"):
-            # only 3 CVS guesses with one core orbital in sto-3g
-            kwargs.update(core_orbitals=1, n_states=2)
+            kwargs.update(core_orbitals=1)
         ref = adcc.run_adc(scfres, **kwargs)
         res = adcc.run_adc(scfres, rohf_dods=True, **kwargs)
         assert not ref.rohf_dods and type(ref.ground_state) is LazyMp
