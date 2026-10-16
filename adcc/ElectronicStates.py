@@ -186,9 +186,10 @@ class ElectronicStates:
     def _state_diffdm(self, state_n: int) -> OneParticleDensity:
         """Computes the difference density matrix for a single state"""
         evec = self.excitation_vector[state_n]
-        return self._module.state_diffdm(
-            self.property_method, self.ground_state, evec, self.matrix.intermediates
+        diffdm = (
+            self._module.rohf_dods_state_diffdm if self.rohf_dods else self._module.state_diffdm
         )
+        return diffdm(self.property_method, self.ground_state, evec, self.matrix.intermediates)
 
     @property
     def state_dm(self) -> list[OneParticleDensity]:
@@ -212,6 +213,7 @@ class ElectronicStates:
     def _state_diffdm_2p(self, state_n: int) -> TwoParticleDensity:
         """Computes the two-particle difference density matrix for a single state"""
         evec = self.excitation_vector[state_n]
+        assert not self.rohf_dods
         return self._module.state_diffdm_2p(
             self.property_method, self.ground_state, evec, self.matrix.intermediates
         )

@@ -112,6 +112,7 @@ class State2States(ElectronicTransition):
         """
         List of transition density matrices from initial state to final state/s
         """
+        assert not self.rohf_dods
         return [self._transition_dm(final) for final in range(self.size)]
 
     @cached_member_function(timer=_timer_name, separate_timings_by_args=False)
