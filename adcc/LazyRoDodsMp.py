@@ -28,13 +28,14 @@ from .functions import direct_sum, einsum
 from .GroundState import GroundState
 from .misc import cached_member_function
 from .MoSpaces import split_spaces
+from .NParticleOperator import OperatorSymmetry
 from .OneParticleDensity import OneParticleDensity
 from .TwoParticleDensity import TwoParticleDensity
 
 
 class LazyRoDodsMp(GroundState):
     @cached_member_function()
-    def ts1(self, space: str) -> libadcc.Tensor:
+    def ts1(self, space: str, apply_cvs: bool = False) -> libadcc.Tensor:
         split = split_spaces(space)
         if len(split) != 2 or split[1] != b.v:
             raise ValueError(f"Invalid space '{space}' for first-order singles amplitudes.")
@@ -293,36 +294,210 @@ class LazyRoDodsMp(GroundState):
         return res
 
     def diffdm(self, level: int = 2, apply_cvs: bool = False) -> OneParticleDensity:
-        raise NotImplementedError("Diffdm not implemented for RO-DODS-MP ground state.")
+        corrections = (
+            self.first_order_dm_correction,
+            self.second_order_dm_correction,
+            self.third_order_dm_correction,
+        )
+        if level < 1:
+            raise ValueError(f"Difference density of order {level} vanishes.")
+        elif level > len(corrections):
+            raise NotImplementedError(f"Difference density of order {level} is not implemented.")
+        # copy to avoid cache corruption
+        ret = corrections[0](apply_cvs).copy()
+        for correction in corrections[1:level]:
+            ret += correction(apply_cvs)
+        assert isinstance(ret, OneParticleDensity)
+        return ret
 
     def density(self, level: int = 2, apply_cvs: bool = False) -> OneParticleDensity:
-        raise NotImplementedError("Density not implemented for RO-DODS-MP ground state.")
+        density = self.reference_state.density
+        if level == 0:
+            return density
+        return density + self.diffdm(level, apply_cvs=apply_cvs)
 
     def diffdm_2p(self, level: int = 2, apply_cvs: bool = False) -> TwoParticleDensity:
-        raise NotImplementedError("Diffdm not implemented for RO-DODS-MP ground state.")
+        corrections = (
+            self.first_order_dm_correction_2p,
+            self.second_order_dm_correction_2p,
+        )
+        if level < 1:
+            raise ValueError(f"2-particle difference density of order {level} vanishes.")
+        elif level > len(corrections):
+            raise NotImplementedError(
+                f"2-particle difference density of order {level} is not implemented."
+            )
+        # copy to avoid cache corruption
+        ret = corrections[0](apply_cvs).copy()
+        for correction in corrections[1:level]:
+            ret += correction(apply_cvs)
+        assert isinstance(ret, TwoParticleDensity)
+        return ret
 
     def density_2p(self, level: int = 2, apply_cvs: bool = False) -> TwoParticleDensity:
-        raise NotImplementedError("Diffdm not implemented for RO-DODS-MP ground state.")
+        density = self.reference_state.density_2p
+        if level == 0:
+            return density
+        return density + self.diffdm_2p(level, apply_cvs=apply_cvs)
 
+    @cached_member_function()
+    def first_order_dm_correction(self, apply_cvs: bool = False) -> OneParticleDensity:
+        if self.has_core_occupied_space:
+            raise NotImplementedError(
+                "First-order difference density correction not implemented for CVS-RO-DODS-MP"
+            )
+        assert not apply_cvs
+        ret = OneParticleDensity(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
+        ret.ov = self.ts1(b.ov)
+        ret.reference_state = self.reference_state
+        return ret
+
+    @cached_member_function()
     def second_order_dm_correction(self, apply_cvs: bool = False) -> OneParticleDensity:
-        raise NotImplementedError(
-            "second_order_dm_correction not implemented for RO-DODS-MP ground state."
-        )
+        if self.has_core_occupied_space:
+            raise NotImplementedError(
+                "First-order difference density correction not implemented for CVS-RO-DODS-MP"
+            )
+        assert not apply_cvs
 
+        t1_1 = self.ts1(b.ov)
+        t2_1 = self.td1(b.oovv)
+        t1_2 = self.ts2(b.ov)
+
+        ret = OneParticleDensity(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
+        ret.oo = (
+            - 1 * einsum("ia,ja->ij", t1_1, t1_1)  # N^3: O^2V^1 / N^2: O^1V^1
+            - 0.5 * einsum("ikab,jkab->ij", t2_1, t2_1)  # N^5: O^3V^2 / N^4: O^2V^2
+        )  # fmt: skip
+        ret.ov = (
+            - 1 * einsum("jb,ijab->ia", t1_1, t2_1)  # N^4: O^2V^2 / N^4: O^2V^2
+            + 1 * t1_2  # N^2: O^1V^1 / N^2: O^1V^1
+        )  # fmt: skip
+        ret.vv = (
+            + 1 * einsum("ia,ib->ab", t1_1, t1_1)  # N^3: O^1V^2 / N^2: V^2
+            + 0.5 * einsum("ijac,ijbc->ab", t2_1, t2_1)  # N^5: O^2V^3 / N^4: O^2V^2
+        )  # fmt: skip
+        ret.reference_state = self.reference_state
+        return ret
+
+    @cached_member_function()
     def third_order_dm_correction(self, apply_cvs: bool = False) -> OneParticleDensity:
-        raise NotImplementedError(
-            "third_order_dm_correction not implemented for RO-DODS-MP ground state."
-        )
+        if self.has_core_occupied_space:
+            raise NotImplementedError(
+                "First-order difference density correction not implemented for CVS-RO-DODS-MP"
+            )
+        assert not apply_cvs
 
+        t1_1 = self.ts1(b.ov)
+        t2_1 = self.td1(b.oovv)
+        t1_2 = self.ts2(b.ov)
+        t2_2 = self.td2(b.oovv)
+        t3_2 = self.tt2(b.ooovvv)
+        t1_3 = self.ts3(b.ov)
+
+        ret = OneParticleDensity(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
+        ret.oo = 2 * (
+            # Apply (1 + P_ij) to:
+            - 1 * einsum("ia,ja->ij", t1_1, t1_2)  # N^3: O^2V^1 / N^2: O^1V^1
+            - 0.5 * einsum("ikab,jkab->ij", t2_1, t2_2)  # N^5: O^3V^2 / N^4: O^2V^2
+        ).symmetrise()  # fmt: skip
+        ret.ov = (
+            - 1 * einsum("jb,jb->", t1_1, t1_1) * t1_1  # N^2: O^1V^1 / N^2: O^1V^1
+            - 1 * einsum("jb,ijab->ia", t1_1, t2_2)  # N^4: O^2V^2 / N^4: O^2V^2
+            - 1 * einsum("ijab,jb->ia", t2_1, t1_2)  # N^4: O^2V^2 / N^4: O^2V^2
+            - 0.25 * einsum("jkbc,jkbc->", t2_1, t2_1) * t1_1  # N^4: O^2V^2 / N^4: O^2V^2
+            - 0.25 * einsum("jkbc,ijkabc->ia", t2_1, t3_2)  # N^6: O^3V^3 / N^6: O^3V^3
+            + 1 * t1_3  # N^2: O^1V^1 / N^2: O^1V^1
+        )  # fmt: skip
+        ret.vv = 2 * (
+            # Apply (1 + P_ab) to:
+            + 1 * einsum("ia,ib->ab", t1_1, t1_2)  # N^3: O^1V^2 / N^2: V^2
+            + 0.5 * einsum("ijac,ijbc->ab", t2_1, t2_2)  # N^5: O^2V^3 / N^4: O^2V^2
+        ).symmetrise()  # fmt: skip
+        ret.reference_state = self.reference_state
+        return ret
+
+    @cached_member_function()
     def first_order_dm_correction_2p(self, apply_cvs: bool = False) -> TwoParticleDensity:
-        raise NotImplementedError(
-            "first_order_dm_correction_2p not implemented for RO-DODS-MP ground state."
-        )
+        if self.has_core_occupied_space:
+            raise NotImplementedError(
+                "First-order 2-particle difference density correction not implemented "
+                "for CVS-RO-DODS-MP"
+            )
+        assert not apply_cvs
 
+        # Kronecker delta
+        d_oo = self.reference_state.foo.zeros_like()
+        d_oo.set_mask("ii", 1.0)
+
+        ret = TwoParticleDensity(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
+        ret.ooov = 2 * (
+            # Apply (1 - P_ij) to:
+            + 1 * einsum("ja,ik->ijka", self.ts1(b.ov), d_oo)  # N^4: O^3V^1 / N^4: O^3V^1
+        ).antisymmetrise(0, 1)  # fmt: skip
+        ret.oovv = -1 * self.td1(b.oovv)
+        ret.reference_state = self.reference_state
+        return ret
+
+    @cached_member_function()
     def second_order_dm_correction_2p(self, apply_cvs: bool = False) -> TwoParticleDensity:
-        raise NotImplementedError(
-            "second_order_dm_correction_2p not implemented for RO-DODS-MP ground state."
-        )
+        if self.has_core_occupied_space:
+            raise NotImplementedError(
+                "Second-order 2-particle difference density correction not implemented "
+                "for CVS-RO-DODS-MP"
+            )
+        assert not apply_cvs
+
+        t1_1 = self.ts1(b.ov)
+        t2_1 = self.td1(b.oovv)
+        t1_2 = self.ts2(b.ov)
+
+        # Kronecker delta
+        d_oo = self.reference_state.foo.zeros_like()
+        d_oo.set_mask("ii", 1.0)
+
+        ret = TwoParticleDensity(self.mospaces, symmetry=OperatorSymmetry.HERMITIAN)
+        ret.oooo = (
+            # Apply 1 to:
+            + 0.5 * einsum("ijab,klab->ijkl", t2_1, t2_1)  # N^6: O^4V^2 / N^4: O^2V^2
+            # Apply (1 - P_ij - P_kl + P_ijP_kl) to:
+            + 4 * (
+                # N^4: O^4 / N^4: O^4
+                + 1 * einsum("il,jk->ijkl", einsum("ia,la->il", t1_1, t1_1), d_oo)
+                # N^5: O^3V^2 / N^4: O^2V^2
+                + 0.5 * einsum("il,jk->ijkl", einsum("imab,lmab->il", t2_1, t2_1), d_oo)
+            )
+        ).antisymmetrise(0, 1).antisymmetrise(2, 3)  # fmt: skip
+        ret.ooov = (
+            # Apply (1 - P_ij) to:
+            2 * (
+                + 1 * einsum("ja,ik->ijka", t1_2, d_oo)  # N^4: O^3V^1 / N^4: O^3V^1
+                # N^4: O^2V^2 / N^4: O^2V^2
+                + 1 * einsum("ia,jk->ijka", einsum("lb,ilab->ia", t1_1, t2_1), d_oo)
+            )
+            # Apply 1 to:
+            - 1 * einsum("kb,ijab->ijka", t1_1, t2_1)  # N^5: O^3V^2 / N^4: O^2V^2
+        ).antisymmetrise(0, 1)  # fmt: skip
+        ret.oovv = -1 * self.td2(b.oovv)
+        ret.ovov = (
+            # Apply 1 to:
+            - 1 * einsum("ja,ib->iajb", t1_1, t1_1)  # N^4: O^2V^2 / N^4: O^2V^2
+            - 1 * einsum("jkac,ikbc->iajb", t2_1, t2_1)  # N^6: O^3V^3 / N^4: O^2V^2
+            # N^4: O^2V^2 / N^4: O^2V^2
+            + 1 * einsum("ab,ij->iajb", einsum("ka,kb->ab", t1_1, t1_1), d_oo)
+            # N^5: O^2V^3 / N^4: O^2V^2
+            + 0.5 * einsum("ab,ij->iajb", einsum("klac,klbc->ab", t2_1, t2_1), d_oo)
+        )  # fmt: skip
+        ret.ovvv = (
+            # Apply 1 to:
+            - 1 * einsum("ja,ijbc->iabc", t1_1, t2_1)  # N^5: O^2V^3 / N^4: O^1V^3
+        ).antisymmetrise(2, 3)  # fmt: skip
+        ret.vvvv = (
+            # Apply 1 to:
+            + 0.5 * einsum("ijab,ijcd->abcd", t2_1, t2_1)  # N^6: O^2V^4 / N^4: V^4
+        ).antisymmetrise(0, 1).antisymmetrise(2, 3)  # fmt: skip
+        ret.reference_state = self.reference_state
+        return ret
 
     def to_qcvars(self, properties: bool = False, recurse: bool = False, maxlevel: int = 2) -> dict:
         """

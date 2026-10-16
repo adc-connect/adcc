@@ -50,8 +50,11 @@ class GroundState:
         self.timer: Timer = Timer()
         self.has_core_occupied_space: bool = hf.has_core_occupied_space
 
-    def ts1(self, space: str) -> libadcc.Tensor:
+    def ts1(self, space: str, apply_cvs: bool = False) -> libadcc.Tensor:
         """First-order ground state singles amplitudes."""
+        # NOTE: In contrast to the other amplitudes, ts1 has the additional
+        # apply_cvs argument, since ts2 corresponds to the OV/CV block of the
+        # first order 1p density correction.
         raise NotImplementedError(
             "First-order ground state singles amplitudes not implemented on "
             f"{self.__class__.__name__} class."

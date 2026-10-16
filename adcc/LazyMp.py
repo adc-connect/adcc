@@ -33,7 +33,7 @@ from .OneParticleDensity import OneParticleDensity
 
 
 class LazyMp(GroundState):
-    def ts1(self, space: str) -> libadcc.Tensor:
+    def ts1(self, space: str, apply_cvs: bool = False) -> libadcc.Tensor:
         raise RuntimeError(
             "First-order MP singles amplitudes usually vanish. Most likely you don't want to "
             "call this method for an MP ground state."
