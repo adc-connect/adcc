@@ -598,7 +598,7 @@ def rohf_dods_state_diffdm(method, ground_state, amplitude, intermediates=None):
     if not isinstance(method, IsrMethod):
         method = IsrMethod(method)
     if not isinstance(ground_state, LazyRoDodsMp):
-        raise TypeError("ground_state should be a LazyMp object.")
+        raise TypeError("ground_state should be a LazyRoDodsMp object.")
     if not isinstance(amplitude, AmplitudeVector):
         raise TypeError("amplitude should be an AmplitudeVector object.")
     if intermediates is None:
