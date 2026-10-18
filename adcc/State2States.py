@@ -124,9 +124,13 @@ class State2States(ElectronicTransition):
         # 0 refers to initial_state + 1.
         # This is necessary to enable the use of the implementations on
         # the parent class.
-        assert not self.rohf_dods
         state_n = self.initial + state_n + 1
-        return self._module.state2state_transition_dm(
+        s2s_tdm = (
+            self._module.rohf_dods_state2state_transition_dm
+            if self.rohf_dods
+            else self._module.state2state_transition_dm
+        )
+        return s2s_tdm(
             self.property_method,
             self.ground_state,
             super().excitation_vector[self.initial],
