@@ -56,8 +56,10 @@ class ElectronicTransition(ElectronicStates):
     def _transition_dm(self, state_n: int) -> OneParticleOperator:
         """Computes the tansition density matrix for a single state"""
         evec = self.excitation_vector[state_n]
-        assert not self.rohf_dods
-        return self._module.transition_dm(
+        transition_dm = (
+            self._module.rohf_dods_transition_dm if self.rohf_dods else self._module.transition_dm
+        )
+        return transition_dm(
             self.property_method, self.ground_state, evec, self.matrix.intermediates
         )
 

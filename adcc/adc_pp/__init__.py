@@ -22,6 +22,7 @@
 from .modified_transition_moments import modified_transition_moments
 from .rohf_dods_state_diffdm import rohf_dods_state_diffdm
 from .rohf_dods_state_diffdm_2p import rohf_dods_state_diffdm_2p
+from .rohf_dods_transition_dm import rohf_dods_transition_dm
 from .state2state_transition_dm import state2state_transition_dm
 from .state_diffdm import state_diffdm
 from .state_diffdm_2p import state_diffdm_2p
@@ -37,6 +38,7 @@ __all__ = [
     "modified_transition_moments",
     "rohf_dods_state_diffdm",
     "rohf_dods_state_diffdm_2p",
+    "rohf_dods_transition_dm",
     "state2state_transition_dm",
     "state_diffdm",
     "state_diffdm_2p",
