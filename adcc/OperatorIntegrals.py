@@ -27,9 +27,10 @@ import numpy as np
 import libadcc
 
 from .backends import OperatorIntegralProvider
+from .block import split_spaces
 from .functions import einsum
 from .misc import cached_member_function, cached_property
-from .MoSpaces import MoSpaces, split_spaces
+from .MoSpaces import MoSpaces
 from .NParticleOperator import OperatorSymmetry
 from .OneParticleDensity import OneParticleDensity
 from .OneParticleOperator import OneParticleOperator

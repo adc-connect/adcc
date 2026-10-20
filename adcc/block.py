@@ -20,31 +20,64 @@
 ##
 ## ---------------------------------------------------------------------
 from collections.abc import Callable, Sequence
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 
-from .MoSpaces import split_spaces
-from .NParticleOperator import OperatorSymmetry
+# Avoid top level imports from other adcc modules at runtime (circular imports)
+if TYPE_CHECKING:
+    from _typeshed import SupportsDunderGT
+
+    from .NParticleOperator import OperatorSymmetry
+
+# available spaces and the subset of available spaces with a short hand notation
+_shorthands: dict[str, str] = {"o": "o1", "c": "o2", "v": "v1"}
+_valid_spaces: tuple[str, ...] = ("o1", "o2", "o3", "v1", "v2")
+assert all(v in _valid_spaces for v in _shorthands.values())
 
 
-def __getattr__(attr: Sequence[str]) -> str:
+def __getattr__(spaces: str) -> str:
     """
-    Return a multi-dimensional block string like 'o1o2v1v1'
-    when requesting the attribute 'ocvv'.
+    Return a multi-dimensional block string like 'o1o2v1v1' when requesting the attribute 'ocvv'.
     """
-    if any(c not in ["o", "v", "c"] for c in attr):
-        raise AttributeError
-    mapping = {"o": "o1", "v": "v1", "c": "o2"}
-    return "".join(mapping[c] for c in attr)
+    if not spaces or any(c not in _shorthands for c in spaces):
+        raise AttributeError(
+            f"module {__name__!r} has no attribute {spaces!r} "
+            f"(available space shorthands are {', '.join(_shorthands)})."
+        )
+    return "".join(_shorthands[c] for c in spaces)
 
 
-T = TypeVar("T")
+def split_spaces(spaces: str) -> list[str]:
+    """
+    Splits a string of spaces (``spaces``) into the individual space string components.
+    """
+    splitted = [spaces[i : i + 2] for i in range(0, len(spaces), 2)]
+    if any(sp not in _valid_spaces for sp in splitted):
+        raise ValueError(
+            f"Invalid space string '{spaces}'. Valid spaces are {', '.join(_valid_spaces)}."
+        )
+    return splitted
+
+
+_T = TypeVar("_T")
+_ComparableT = TypeVar("_ComparableT", bound="SupportsDunderGT[Any]")
+
+
+@overload
+def _sort_anticommuting(
+    to_sort: Sequence[_T], key: Callable[[_T], _ComparableT]
+) -> tuple[list[_T], int]: ...
+@overload
+def _sort_anticommuting(
+    to_sort: Sequence[_ComparableT], key: None = None
+) -> tuple[list[_ComparableT], int]: ...
 
 
 # adapted from
 # https://github.com/sympy/sympy/blob/master/sympy/physics/secondquant.py
 def _sort_anticommuting(
-    to_sort: list[T], key: Callable[[T], Any] | None = None
-) -> tuple[list[T], int]:
+    to_sort: Sequence[Any],
+    key: "Callable[[Any], SupportsDunderGT[Any]] | None" = None,
+) -> tuple[list[Any], int]:
     """
     Sort a list of mutually anticommuting operators into canonical order.
 
@@ -53,9 +86,9 @@ def _sort_anticommuting(
 
     Parameters
     ----------
-    to_sort : list[T]
-        List of operators (or any comparable objects) to be sorted.
-    key : callable, optional
+    to_sort : Sequence[T]
+        Sequence of operators (or any comparable objects) to be sorted.
+    key : Callable[[T], SupportsDunderGT], optional
         Optional function mapping each element of ``to_sort`` to a comparison
         key.  If ``None`` (default), the elements themselves are compared.
 
@@ -104,8 +137,8 @@ def _sort_anticommuting(
 
 
 def get_canonical_block(
-    bra: str, ket: str, operator_symmetry: OperatorSymmetry
-) -> tuple[str, int, tuple]:
+    bra: str, ket: str, operator_symmetry: "OperatorSymmetry"
+) -> tuple[str, int, tuple[int, ...]]:
     """
     Return the canonical representation of an operator block, together with the
     factor required to recover the desired block and the transpose tuple that
@@ -127,48 +160,55 @@ def get_canonical_block(
     factor : int
         The integer factor needed to recover the desired block
         from the canonical block, i.e. ``+1`` or ``-1``.
-    transform : tuple
+    transform : tuple[int, ...]
         A tuple encoding the transformation applied to obtain the desired block
         from the canonical block.
     """
+    from .NParticleOperator import OperatorSymmetry
 
-    def invert_transpose_tuple(p: tuple[int, ...]) -> tuple[int, ...]:
+    def invert_transpose_tuple(transpose: tuple[int, ...]) -> tuple[int, ...]:
         """
         Invert transpose tuple containing permutation that maps a block to its
         canonical form. Returns the tuple that maps from the canonical block
         back to the original block.
         """
-        q = [None] * len(p)
-        for i, pi in enumerate(p):
-            q[pi] = i
-        return tuple(q)
+        inverted: list[int] = [-1] * len(transpose)
+        for i, pi in enumerate(transpose):
+            inverted[pi] = i
+        assert -1 not in inverted, f"Invalid transpose {transpose}"
+        return tuple(inverted)
 
     factor = 1
 
-    bra = split_spaces(bra) if bra else []
-    bra_sorted, bra_factor = _sort_anticommuting(list(enumerate(bra)), key=lambda tpl: tpl[1])
-    bra_transpose = [val for val, _ in bra_sorted]
+    bra_splitted = split_spaces(bra)
+    bra_sorted, bra_factor = _sort_anticommuting(
+        list(enumerate(bra_splitted)), key=lambda tpl: tpl[1]
+    )
+    bra_transpose = tuple(val for val, _ in bra_sorted)
     bra_space_sorted = [val for _, val in bra_sorted]
     factor *= bra_factor
 
-    ket = split_spaces(ket) if ket else []
-    ket_sorted, ket_factor = _sort_anticommuting(list(enumerate(ket)), key=lambda tpl: tpl[1])
-    ket_transpose = [val for val, _ in ket_sorted]
-    ket_transpose = tuple(x + len(bra) for x in ket_transpose)
+    ket_splitted = split_spaces(ket)
+    ket_sorted, ket_factor = _sort_anticommuting(
+        list(enumerate(ket_splitted)), key=lambda tpl: tpl[1]
+    )
+    ket_transpose = tuple(val + len(bra_splitted) for val, _ in ket_sorted)
     ket_space_sorted = [val for _, val in ket_sorted]
     factor *= ket_factor
 
     transpose = (*bra_transpose, *ket_transpose)
     canonical_block = "".join(bra_space_sorted) + "".join(ket_space_sorted)
 
-    if operator_symmetry != OperatorSymmetry.NOSYMMETRY:
-        if len(bra) != len(ket):
+    if operator_symmetry is not OperatorSymmetry.NOSYMMETRY:
+        if len(bra_splitted) != len(ket_splitted):
             raise ValueError("Invalid blocks strings.")
 
         if ket_space_sorted < bra_space_sorted:
             transpose = (*ket_transpose, *bra_transpose)
             canonical_block = "".join(ket_space_sorted) + "".join(bra_space_sorted)
-            if operator_symmetry == OperatorSymmetry.ANTIHERMITIAN:
+            if operator_symmetry is OperatorSymmetry.ANTIHERMITIAN:
                 factor *= -1
+            else:
+                assert operator_symmetry is OperatorSymmetry.HERMITIAN
     transpose = invert_transpose_tuple(transpose)
     return (canonical_block, factor, transpose)
