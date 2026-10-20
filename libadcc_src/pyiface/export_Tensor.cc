@@ -31,37 +31,30 @@ namespace libadcc {
 namespace py = pybind11;
 typedef std::shared_ptr<Tensor> ten_ptr;
 
-using Permutations =
-      py::typing::Union<py::typing::Iterable<py::int_>,
-                        py::typing::Iterable<py::typing::Iterable<py::int_>>>;
+using Axes             = Sequence<py::ssize_t>;
+using Permutations     = py::typing::Union<Axes, Sequence<Axes>>;
+using PermutationsArgs = py::typing::Union<py::ssize_t, Axes>;
 
-static std::vector<std::vector<size_t>> parse_permutations(
-      const Permutations& permutations) {
-  bool iterator_of_ints = true;
-  for (auto tpl : permutations) {
-    if (!py::isinstance<py::int_>(tpl)) {
-      iterator_of_ints = false;
+static std::vector<std::vector<size_t>> parse_permutations(py::handle permutations) {
+  if (!py::isinstance<Sequence<py::ssize_t>>(permutations)) {
+    throw py::type_error(
+          "Expected a sequence or nested sequence of axes, but got " +
+          py::str(py::type::of(permutations).attr("__name__")).cast<std::string>() + ".");
+  }
+  auto perms_as_seq = py::reinterpret_borrow<py::sequence>(permutations);
+  bool nested       = false;
+  for (const py::object elem : perms_as_seq) {
+    if (py::isinstance<py::iterable>(elem)) {
+      nested = true;
       break;
     }
   }
+  if (!nested) return {extract_axes(perms_as_seq)};
 
-  if (iterator_of_ints) {
-    std::vector<size_t> perms;
-    for (auto itm : permutations) {
-      perms.push_back(itm.cast<size_t>());
-    }
-    return std::vector<std::vector<size_t>>{perms};
-  }
-
-  std::vector<std::vector<size_t>> vec_perms;
-  for (auto tpl : permutations) {
-    std::vector<size_t> perms;
-    for (auto itm : tpl) {
-      perms.push_back(itm.cast<size_t>());
-    }
-    vec_perms.push_back(perms);
-  }
-  return vec_perms;
+  std::vector<std::vector<size_t>> ret;
+  ret.reserve(perms_as_seq.size());
+  for (py::object elem : perms_as_seq) ret.push_back(extract_axes(elem));
+  return ret;
 }
 
 static std::vector<size_t> convert_index_tuple(const ten_ptr& self, py::tuple idcs) {
@@ -94,7 +87,7 @@ static std::vector<size_t> convert_index_tuple(const ten_ptr& self, py::tuple id
       ret[i] = shape[i] - si;
     } else {
       auto si = static_cast<size_t>(idx);
-      if (si > shape[i]) {
+      if (si >= shape[i]) {
         throw py::index_error("index " + std::to_string(idx) +
                               " is out of bounds for axis " + std::to_string(i) +
                               " with size " + std::to_string(shape[i]));
@@ -146,8 +139,8 @@ static scalar_type Tensor_dot(const Tensor& self, ten_ptr other) {
 }
 
 static NDArray<scalar_type, 1> Tensor_dot_list(const Tensor& self,
-                                               py::typing::List<Tensor> tensors) {
-  std::vector<ten_ptr> parsed   = extract_tensors<py::list>(tensors);
+                                               Sequence<Tensor> tensors) {
+  auto parsed                   = extract_tensors(tensors);
   std::vector<scalar_type> dots = self.dot(parsed);
   py::array_t<scalar_type> ret(dots.size());
   std::copy(dots.begin(), dots.end(), ret.mutable_data());
@@ -163,20 +156,16 @@ static ten_ptr Tensor_transpose_1(const Tensor& self) {
   return self.transpose(vec_axes);
 }
 
-static ten_ptr Tensor_transpose_2(const Tensor& self,
-                                  py::typing::Tuple<py::ssize_t, py::ellipsis> axes) {
-  std::vector<size_t> vec_axes(py::len(axes));
-  for (size_t i = 0; i < py::len(axes); ++i) {
-    vec_axes[i] = axes[i].cast<size_t>();
-  }
-  return self.transpose(vec_axes);
+static ten_ptr Tensor_transpose_2(const Tensor& self, Axes axes) {
+  return self.transpose(extract_axes(axes));
 }
 
 static ten_ptr Tensor_symmetrise_1(const Tensor& self, Permutations permutations) {
   return self.symmetrise(parse_permutations(permutations));
 }
 
-static ten_ptr Tensor_symmetrise_2(const Tensor& self, py::Args<py::int_> permutations) {
+static ten_ptr Tensor_symmetrise_2(const Tensor& self,
+                                   py::Args<PermutationsArgs> permutations) {
   if (py::len(permutations) == 0) {
     if (self.ndim() != 2) {
       throw invalid_argument(
@@ -192,7 +181,7 @@ static ten_ptr Tensor_antisymmetrise_1(const Tensor& self, Permutations permutat
 }
 
 static ten_ptr Tensor_antisymmetrise_2(const Tensor& self,
-                                       py::Args<py::int_> permutations) {
+                                       py::Args<PermutationsArgs> permutations) {
   if (py::len(permutations) == 0) {
     if (self.ndim() != 2) {
       throw invalid_argument(
@@ -203,21 +192,13 @@ static ten_ptr Tensor_antisymmetrise_2(const Tensor& self,
   return self.antisymmetrise(parse_permutations(permutations));
 }
 
-static py::typing::Union<ten_ptr, scalar_type> tensordot_1(
-      ten_ptr a, ten_ptr b, py::typing::Iterable<py::typing::Iterable<py::int_>> axes) {
-  if (py::len(axes) != 2) {
-    throw invalid_argument("axes needs to be an iterable of length 2");
-  }
-  std::vector<std::vector<size_t>> c_axes;
-  for (py::handle ax : axes) {
-    std::vector<size_t> res;
-    for (py::handle elem : ax.cast<py::iterable>()) {
-      res.push_back(elem.cast<size_t>());
-    }
-    c_axes.push_back(res);
+static py::typing::Union<ten_ptr, scalar_type> tensordot_1(ten_ptr a, ten_ptr b,
+                                                           Sequence<Axes> axes) {
+  if (axes.size() != 2) {
+    throw invalid_argument("'axes' needs to be a sequence of length 2.");
   }
 
-  TensorOrScalar res = a->tensordot(b, {c_axes[0], c_axes[1]});
+  TensorOrScalar res = a->tensordot(b, {extract_axes(axes[0]), extract_axes(axes[1])});
   if (res.tensor_ptr == nullptr) {
     return py::cast(res.scalar);
   } else {
@@ -245,15 +226,9 @@ static py::typing::Union<ten_ptr, scalar_type> tensordot_3(ten_ptr a, ten_ptr b)
   return tensordot_2(a, b, 2);
 }
 
-static ten_ptr Tensor_diagonal(ten_ptr ten, py::Args<py::int_> permutations) {
-  std::vector<size_t> axes;
-  if (py::len(permutations) == 0) {
-    axes.push_back(0);
-    axes.push_back(1);
-  } else {
-    for (auto itm : permutations) axes.push_back(itm.cast<size_t>());
-  }
-  return ten->diagonal(axes);
+static ten_ptr Tensor_diagonal(ten_ptr ten, py::Args<py::ssize_t> permutations) {
+  if (py::len(permutations) == 0) return ten->diagonal({0, 1});
+  return ten->diagonal(extract_axes(permutations));
 }
 
 static auto direct_sum(ten_ptr a, ten_ptr b) { return a->direct_sum(b); }
@@ -271,7 +246,7 @@ static auto Tensor_trace_2(const Tensor& tensor) {
 
 static ten_ptr linear_combination_strict(
       py::array_t<scalar_type, py::array::c_style> coefficients,
-      py::typing::List<Tensor> tensors) {
+      Sequence<Tensor> tensors) {
 
   if (coefficients.ndim() != 1) {
     throw invalid_argument("coefficients array needs to have exactly one dimension.");
@@ -280,10 +255,12 @@ static ten_ptr linear_combination_strict(
   const scalar_type* in_data = coefficients.data();
   std::vector<scalar_type> scalars(in_size);
   std::copy(in_data, in_data + in_size, scalars.data());
-  std::vector<ten_ptr> parsed = extract_tensors<py::list>(tensors);
+  auto parsed = extract_tensors(tensors);
 
-  if (parsed.empty()) throw runtime_error("No tensors parsed during linear combination");
-
+  if (parsed.empty())
+    throw runtime_error(
+          "No tensors parsed during linear combination. Not possible to construct a "
+          "result tensor.");
   auto ret = parsed[0]->zeros_like();
   ret->add_linear_combination(scalars, parsed);
   return ret;
@@ -409,6 +386,10 @@ static ten_ptr Tensor_scalar__sub__(const ten_ptr& self, scalar_type number) {
   }
 }
 
+static ten_ptr Tensor_scalar__rsub__(const ten_ptr& self, scalar_type number) {
+  return Tensor_scalar__add__(self->scale(-1.0), number);
+}
+
 //
 // Operations with another tensor
 //
@@ -445,7 +426,7 @@ void export_Tensor(py::module& m) {
   py::class_<Tensor, std::shared_ptr<Tensor>> tensor(
         m, "Tensor",
         "Class representing the Tensor objects used for computations in adcc");
-  tensor.def(py::init(&make_tensor_zero), py::arg("symmetry"),
+  tensor.def(py::init(&make_tensor_zero), py::arg("symmetry").none(false),
              "Construct a Tensor object using a Symmetry object describing its symmetry "
              "properties.\n"
              "The returned object is not guaranteed to contain initialised memory. "
@@ -482,7 +463,7 @@ void export_Tensor(py::module& m) {
              "string eg. 'iijkli' sets elements T_{iijkli}")
         .def("diagonal", &Tensor_diagonal)
         .def("copy", &Tensor::copy, "Returns a deep copy of the tensor.")
-        .def("dot", &Tensor_dot, py::arg("other"))
+        .def("dot", &Tensor_dot, py::arg("other").none(false))
         .def("dot", &Tensor_dot_list, py::arg("tensors"))
         .def_property_readonly("T", &Tensor_transpose_1)
         .def("transpose", &Tensor_transpose_1)
@@ -534,7 +515,7 @@ void export_Tensor(py::module& m) {
         .def("__add__", &Tensor_scalar__add__, py::arg("number"))    // tensor + scalar
         .def("__sub__", &Tensor_scalar__sub__, py::arg("number"))    // tensor - scalar
         .def("__radd__", &Tensor_scalar__add__, py::arg("number"))   // scalar + tensor
-        .def("__rsub__", &Tensor_scalar__sub__, py::arg("number"))   // scalar - tensor
+        .def("__rsub__", &Tensor_scalar__rsub__, py::arg("number"))  // scalar - tensor
         .def("__imul__", &Tensor_scalar__imul__, py::arg("number"))  // tensor *= scalar
         .def("__mul__", &Tensor_scalar__mul__, py::arg("number"))    // tensor * scalar
         .def("__rmul__", &Tensor_scalar__mul__, py::arg("number"))   // scalar * tensor
@@ -542,27 +523,31 @@ void export_Tensor(py::module& m) {
              py::arg("number"))  // tensor /= scalar
         .def("__truediv__", &Tensor_scalar__truediv__,
              py::arg("number"))  // tensor / scalar
-                                 //
-        .def("__mul__", &Tensor__mul__, py::arg("other"),
+        .def("__mul__", &Tensor__mul__, py::arg("other").none(false),
              "Multiply two tensors elementwise.")  // tensor * tensor
-        .def("__truediv__", &Tensor__truediv__, py::arg("other"),
-             "Divide two tensors elementwise.")              // tensor / tensor
-        .def("__iadd__", &Tensor__iadd__, py::arg("other"))  // tensor += tensor
-        .def("__add__", &Tensor__add__, py::arg("other"))    // tensor + tensor
-        .def("__isub__", &Tensor__isub__, py::arg("other"))  // tensor -= tensor
-        .def("__sub__", &Tensor__sub__, py::arg("other"))    // tensor - tensor
+        .def("__truediv__", &Tensor__truediv__, py::arg("other").none(false),
+             "Divide two tensors elementwise.")  // tensor / tensor
+        .def("__iadd__", &Tensor__iadd__,
+             py::arg("other").none(false))                             // tensor += tensor
+        .def("__add__", &Tensor__add__, py::arg("other").none(false))  // tensor + tensor
+        .def("__isub__", &Tensor__isub__,
+             py::arg("other").none(false))                             // tensor -= tensor
+        .def("__sub__", &Tensor__sub__, py::arg("other").none(false))  // tensor - tensor
         //
-        .def("__matmul__", &Tensor__matmul__, py::arg("other"))  // tensor @ tensor
+        .def("__matmul__", &Tensor__matmul__,
+             py::arg("other").none(false))  // tensor @ tensor
         //
         ;
 
-  m.def("evaluate", &evaluate, py::arg("tensor"));
-  m.def("tensordot", &tensordot_1, py::arg("a"), py::arg("b"), py::arg("axes"));
-  m.def("tensordot", &tensordot_2, py::arg("a"), py::arg("b"), py::arg("axes"));
-  m.def("tensordot", &tensordot_3, py::arg("a"), py::arg("b"));
-  m.def("direct_sum", &direct_sum, py::arg("a"), py::arg("b"));
-  m.def("trace", &Tensor_trace_1, py::arg("subscripts"), py::arg("tensor"));
-  m.def("trace", &Tensor_trace_2, py::arg("tensor"));
+  m.def("evaluate", &evaluate, py::arg("tensor").none(false));
+  m.def("tensordot", &tensordot_1, py::arg("a").none(false), py::arg("b").none(false),
+        py::arg("axes"));
+  m.def("tensordot", &tensordot_2, py::arg("a").none(false), py::arg("b").none(false),
+        py::arg("axes"));
+  m.def("tensordot", &tensordot_3, py::arg("a").none(false), py::arg("b").none(false));
+  m.def("direct_sum", &direct_sum, py::arg("a").none(false), py::arg("b").none(false));
+  m.def("trace", &Tensor_trace_1, py::arg("subscripts"), py::arg("tensor").none(false));
+  m.def("trace", &Tensor_trace_2, py::arg("tensor").none(false));
   m.def("linear_combination_strict", &linear_combination_strict, py::arg("coefficients"),
         py::arg("tensors"));
 }
