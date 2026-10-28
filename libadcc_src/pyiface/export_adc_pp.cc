@@ -19,6 +19,7 @@
 
 #include "../amplitude_vector_enforce_spin_kind.hh"
 #include "../fill_pp_doubles_guesses.hh"
+#include "util.hh"
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -28,12 +29,20 @@ namespace py = pybind11;
 
 void export_adc_pp(py::module& m) {
   m.def("amplitude_vector_enforce_spin_kind", &amplitude_vector_enforce_spin_kind,
-        py::arg("doubles_tensor"), py::arg("block"), py::arg("spin_kind"),
+        py::arg("doubles_tensor").none(false), py::arg("block"), py::arg("spin_kind"),
         "Apply the spin symmetrisation required to make the doubles and higher parts of "
         "an amplitude vector consist of components for a particular spin kind only.");
 
-  m.def("fill_pp_doubles_guesses", &fill_pp_doubles_guesses, py::arg("guesses_d"),
-        py::arg("mospaces"), py::arg("df1"), py::arg("df2"), py::arg("spin_change_twice"),
+  m.def(
+        "fill_pp_doubles_guesses",
+        [](Sequence<Tensor> guesses_d, std::shared_ptr<const MoSpaces> mospaces,
+           std::shared_ptr<Tensor> df1, std::shared_ptr<Tensor> df2,
+           int spin_change_twice, scalar_type degeneracy_tolerance) {
+          return fill_pp_doubles_guesses(extract_tensors(guesses_d), mospaces, df1, df2,
+                                         spin_change_twice, degeneracy_tolerance);
+        },
+        py::arg("guesses_d"), py::arg("mospaces").none(false), py::arg("df1").none(false),
+        py::arg("df2").none(false), py::arg("spin_change_twice"),
         py::arg("degeneracy_tolerance"),
         "Fill the passed vector of doubles blocks with doubles guesses using the "
         "delta-Fock matrices df1 and df2, which are the two delta-Fock matrices "

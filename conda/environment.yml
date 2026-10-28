@@ -16,7 +16,7 @@ dependencies:
   - scipy >=1.2
   - tqdm >=4.30
   - h5py >=2.9
-  - opt_einsum >=3.0
+  - opt_einsum >=3.4
   # Tests
   - pandas >=0.25.0
   - cppe >=0.3.1
