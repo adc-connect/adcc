@@ -165,6 +165,18 @@ def dump_excited_states(
     kind_data["ground_to_excited_tdm_bb_a"] = np.asarray(tdm_bb_a)
     kind_data["ground_to_excited_tdm_bb_b"] = np.asarray(tdm_bb_b)
 
+    # 2p diffdm in the MO basis for small systems. Not implemented for CVS and ISR(3)
+    if (
+        states._property_method.level.to_int() <= 2
+        and not only_full_mode
+        and not states.ground_state.has_core_occupied_space
+    ):
+        for n in range(n_states):
+            ddm_2p = states.state_diffdm_2p[n]
+            for block in ddm_2p.blocks_nonzero:
+                kind_data[f"state_diffdm_2p/state_{n}/{block}"] = ddm_2p[block].to_ndarray()
+            del ddm_2p
+
     # Eigenvectors
     kind_data["eigenvectors_singles"] = np.asarray(eigenvectors[1])
     if 2 in eigenvectors:
