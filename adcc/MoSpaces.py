@@ -48,6 +48,14 @@ def _as_pair(arg: SpaceSelectionArg) -> tuple[SpaceSelection, SpaceSelection]:
     match arg:
         case tuple((Collection() as alpha, Collection() as beta)):
             return alpha, beta
+        case tuple((SupportsIndex() as first, SupportsIndex() as second)) if index(first) == index(
+            second
+        ):
+            raise ValueError(
+                f"Got the tuple {arg} with 2 identical entries. To select orbitals by index "
+                "the indices have to be unique. Pairs of counts are no longer supported: to "
+                "select the same number of orbitals for alpha and beta spin, pass a single count."
+            )
         case _:
             return arg, arg
 
@@ -59,7 +67,7 @@ def _expand_to_list(
     Convert the space selection ``entry`` to a list of orbital indices.
     If ``entry`` is a count, ``start`` or ``stop`` have to be provided to
     define the bounds of the range which is constructed.
-    If ``start`` is provided [start, ..., count) is constructed.
+    If ``start`` is provided [start, ..., start + count) is constructed.
     If ``stop`` is provided [stop - count, ..., stop) is constructed.
     """
     if entry is None:
@@ -87,7 +95,7 @@ def _expand_to_list(
         else:
             assert stop is not None
             return list(range(stop - n, stop))
-    raise TypeError(f"Unsupported type {(type(entry))} passed to argument {space}.")
+    raise TypeError(f"Unsupported type {type(entry)} passed to argument {space}.")
 
 
 def expand_spaceargs(
@@ -128,8 +136,8 @@ def expand_spaceargs(
     entries = tuple(entry for pair in pairs.values() for entry in pair if entry is not None)
     if 0 < sum(isinstance(entry, Collection) for entry in entries) < len(entries):
         raise ValueError(
-            "If one of the values of core_orbitals, frozen_core and frozen_virtual is an "
-            "iterable, all must be, got "
+            "If one of the values of core_orbitals, frozen_core and frozen_virtual is a "
+            "collection of indices, all must be, got "
             f"{core_orbitals = }, {frozen_core = } and {frozen_virtual = }."
         )
 

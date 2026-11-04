@@ -237,7 +237,7 @@ MoSpaces::MoSpaces(const HartreeFockSolution_i& hf,
 
   // Check we have not already distributed too many electrons
   const size_t n_alpha_done = m_n_orbs_alpha["o2"] + m_n_orbs_alpha["o3"];
-  const size_t n_beta_done  = m_n_orbs_alpha["o2"] + m_n_orbs_alpha["o3"];
+  const size_t n_beta_done  = m_n_orbs_beta["o2"] + m_n_orbs_beta["o3"];
   if (n_alpha <= n_alpha_done) {
     throw invalid_argument(
           "Too many orbitals selected to be " + subspace_name("o2") + " (space o2) or " +
@@ -282,7 +282,7 @@ MoSpaces::MoSpaces(const HartreeFockSolution_i& hf,
     } else if (orig_spin[imo] == 'a' && n_alphas_todo == 0) {
       orig_subspace[imo] = "v1";
       m_n_orbs_alpha["v1"] += 1;
-    } else if (orig_spin[imo] == 'b' && n_alphas_todo == 0) {
+    } else if (orig_spin[imo] == 'b' && n_betas_todo == 0) {
       orig_subspace[imo] = "v1";
       m_n_orbs_beta["v1"] += 1;
     }
