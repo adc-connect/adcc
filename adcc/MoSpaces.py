@@ -178,13 +178,13 @@ class MoSpaces(libadcc.MoSpaces):
         hfdata
             Host-program object with Hartree-Fock data.
 
-        core_orbitals : SpaceSelectionArg, optional
+        core_orbitals : int or collection of int or pair of collections of int, optional
             The orbitals to be put into the core-occupied space.
 
-        frozen_core : SpaceSelectionArg, optional
+        frozen_core : int or collection of int or pair of collections of int, optional
             The orbitals to be put into the frozen core space.
 
-        frozen_virtual : SpaceSelectionArg, optional
+        frozen_virtual : int or collection of int or pair of collections of int, optional
             The orbitals to be put into the frozen virtual space.
         """
         hfdata = import_scf_results(hfdata)
