@@ -67,9 +67,9 @@ class ReferenceState(libadcc.ReferenceState):
               into the orbital subspace.
            c. An explicit list of orbital indices to be placed into the
               subspace.
-           d. A pair of (a) to (c): If the orbital selection for alpha and
+           d. A pair of (b) or (c): If the orbital selection for alpha and
               beta orbitals should differ, a pair of ranges, or a pair of
-              index lists or a pair of numbers can be specified.
+              index lists can be specified.
 
         Parameters
         ----------
@@ -80,17 +80,17 @@ class ReferenceState(libadcc.ReferenceState):
             object representing a pointer to a C++ object derived off
             the :cpp:class:`adcc::HartreeFockSolution_i`.
 
-        core_orbitals : int or list or tuple, optional
+        core_orbitals : int or collection of int or pair of collections of int, optional
             The orbitals to be put into the core-occupied space. For ways to
             define the core orbitals see the description above.
 
-        frozen_core : int or list or tuple, optional
+        frozen_core : int or collection of int or pair of collections of int, optional
             The orbitals to be put into the frozen core space. For ways to
             define the core orbitals see the description above. For an automatic
             selection of the frozen core space one may also specify
             ``frozen_core=True``.
 
-        frozen_virtuals : int or list or tuple, optional
+        frozen_virtual : int or collection of int or pair of collections of int, optional
             The orbitals to be put into the frozen virtual space. For ways to
             define the core orbitals see the description above.
 

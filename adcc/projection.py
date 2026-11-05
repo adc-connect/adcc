@@ -49,12 +49,12 @@ class SubspacePartitioning:
         ----------
         mospaces : MoSpaces
             MoSpaces to base partitioning on.
-        core_orbitals : int or list or tuple, optional
+        core_orbitals : int or collection of int or pair of collections of int, optional
             The orbitals to be put into the ``c`` core space.
             For details on the option how to select these spaces, see the
             documentation in :py:`adcc.ReferenceState.__init__` (``outer_virtuals``
             follows the same rules as ``frozen_virtuals``).
-        outer_virtuals : int or list or tuple, optional
+        outer_virtuals : int or collection of int or pair of collections of int, optional
             The virtuals to be put into the ``w`` outer-virtual space.
         partitions : dict, optional
             Partitioning of the spaces: Mapping from the partitioned spaces to

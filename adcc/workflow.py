@@ -128,19 +128,19 @@ def run_adc(
         Python stream to which output will be written. If `None` all output
         is disabled.
 
-    core_orbitals : int or list or tuple, optional
+    core_orbitals : int or collection of int or pair of collections of int, optional
         The orbitals to be put into the core-occupied space. For ways to
         define the core orbitals see the description in
         :py:class:`adcc.ReferenceState`.
         Required if core-valence separation is applied and the input data is
         given as data from the host program (i.e. option (a) discussed above)
 
-    frozen_core : int or list or tuple, optional
+    frozen_core : int or collection of int or pair of collections of int, optional
         The orbitals to select as frozen core orbitals (i.e. inactive occupied
         orbitals for both the MP and ADC methods performed). For ways to define
         these see the description in :py:class:`adcc.ReferenceState`.
 
-    frozen_virtual : int or list or tuple, optional
+    frozen_virtual : int or collection of int or pair of collections of int, optional
         The orbitals to select as frozen virtual orbitals (i.e. inactive
         virtuals for both the MP and ADC methods performed). For ways to define
         these see the description in :py:class:`adcc.ReferenceState`.
