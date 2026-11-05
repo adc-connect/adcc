@@ -24,7 +24,7 @@ _methods = {"pp": ("adc0", "adc1", "adc2", "adc2x", "adc3")}
 _isr_orders = {
     MethodLevel.ZERO: (None,),  # 0
     MethodLevel.ONE: (None,),  # 1
-    MethodLevel.TWO: (None, 1, "1s"),  # 2, 1, 1s
+    MethodLevel.TWO: (None, 1),  # 2, 1
     MethodLevel.TWO_X: (None,),  # 2
     MethodLevel.THREE: (None, 3),  # 2, 3
     MethodLevel.FOUR: (None, "3d"),  # 2, 3d

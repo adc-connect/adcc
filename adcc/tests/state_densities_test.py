@@ -37,7 +37,6 @@ methods = [
     ("adc1", None),
     ("adc2", None),
     ("adc2", 1),
-    ("adc2", "1s"),
     ("adc2x", None),
     ("adc3", None),
     ("adc4", None),
