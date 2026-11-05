@@ -52,8 +52,8 @@ class SubspacePartitioning:
         core_orbitals : int or collection of int or pair of collections of int, optional
             The orbitals to be put into the ``c`` core space.
             For details on the option how to select these spaces, see the
-            documentation in :py:`adcc.ReferenceState.__init__` (``outer_virtuals``
-            follows the same rules as ``frozen_virtuals``).
+            documentation in :py:meth:`adcc.ReferenceState.__init__` (``outer_virtuals``
+            follows the same rules as ``frozen_virtual``).
         outer_virtuals : int or collection of int or pair of collections of int, optional
             The virtuals to be put into the ``w`` outer-virtual space.
         partitions : dict, optional

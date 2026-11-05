@@ -734,8 +734,8 @@ class AdcMatrixProjected(AdcMatrix):
         (e.g. ``["cv", "ccvv", "ocvv"]``).
 
         For details on the option how to select the spaces, see the documentation
-        in :py:`adcc.ReferenceState.__init__` (``outer_virtuals`` follows the same
-        rules as ``frozen_virtuals``).
+        in :py:meth:`adcc.ReferenceState.__init__` (``outer_virtuals`` follows the same
+        rules as ``frozen_virtual``).
 
         Parameters
         ----------

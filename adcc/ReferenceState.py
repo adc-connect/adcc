@@ -86,9 +86,7 @@ class ReferenceState(libadcc.ReferenceState):
 
         frozen_core : int or collection of int or pair of collections of int, optional
             The orbitals to be put into the frozen core space. For ways to
-            define the core orbitals see the description above. For an automatic
-            selection of the frozen core space one may also specify
-            ``frozen_core=True``.
+            define the core orbitals see the description above.
 
         frozen_virtual : int or collection of int or pair of collections of int, optional
             The orbitals to be put into the frozen virtual space. For ways to
