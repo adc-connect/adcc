@@ -18,8 +18,9 @@
 //
 
 #pragma once
+#include <pybind11/pybind11.h>  // Python.h must be included first, see python docs
+
 #include "../HartreeFockSolution_i.hh"
-#include <pybind11/pybind11.h>
 
 namespace pybind11 {
 namespace detail {

@@ -734,8 +734,8 @@ class AdcMatrixProjected(AdcMatrix):
         (e.g. ``["cv", "ccvv", "ocvv"]``).
 
         For details on the option how to select the spaces, see the documentation
-        in :py:`adcc.ReferenceState.__init__` (``outer_virtuals`` follows the same
-        rules as ``frozen_virtuals``).
+        in :py:meth:`adcc.ReferenceState.__init__` (``outer_virtuals`` follows the same
+        rules as ``frozen_virtual``).
 
         Parameters
         ----------
@@ -743,9 +743,9 @@ class AdcMatrixProjected(AdcMatrix):
             Matrix which is projected
         excitation_blocks : list
             Excitation blocks to keep in the Amplitudes.
-        core_orbitals : int or list or tuple, optional
+        core_orbitals : int or collection of int or pair of collections of int, optional
             The orbitals to be put into the ``c`` core space.
-        outer_virtuals : int or list or tuple, optional
+        outer_virtuals : int or collection of int or pair of collections of int, optional
             The virtuals to be put into the ``w`` outer-virtual space.
         """
         from .projection import Projector, SubspacePartitioning

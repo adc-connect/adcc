@@ -25,6 +25,8 @@ from collections.abc import Mapping
 
 import h5py
 
+import libadcc
+
 from ..misc import is_module_available
 from .DataHfProvider import DataHfProvider
 from .OperatorIntegralProvider import OperatorIntegralProvider
@@ -44,6 +46,9 @@ _available_backends = None
 
 
 def available() -> tuple[str, ...]:
+    """
+    List of available backends by name.
+    """
     global _available_backends
 
     if _available_backends is None:
@@ -57,16 +62,19 @@ def available() -> tuple[str, ...]:
     return _available_backends
 
 
-def have_backend(backend):
+def have_backend(backend: str) -> bool:
     """Is a particular backend available?"""
     return backend in available()
 
 
-def import_scf_results(res):
+def import_scf_results(res: object) -> libadcc.HartreeFockSolution_i:
     """
     Import an scf_result from an SCF program. Tries to be smart
     and guess what the host program was and how to import it.
     """
+    if isinstance(res, libadcc.HartreeFockSolution_i):
+        return res
+
     if have_backend("pyscf"):
         from pyscf import scf
 
@@ -98,11 +106,6 @@ def import_scf_results(res):
 
         if isinstance(res, psi4.core.HF):
             return backend_psi4.import_scf(res)
-
-    from libadcc import HartreeFockSolution_i
-
-    if isinstance(res, HartreeFockSolution_i):
-        return res
 
     if isinstance(res, Mapping):
         return DataHfProvider(res)

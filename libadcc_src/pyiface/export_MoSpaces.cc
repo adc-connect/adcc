@@ -16,9 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with adcc. If not, see <http://www.gnu.org/licenses/>.
 //
+#include <pybind11/pybind11.h>  // Python.h must be included first, see python docs
 
 #include "../MoSpaces.hh"
-#include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
 namespace libadcc {

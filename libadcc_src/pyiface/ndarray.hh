@@ -18,10 +18,11 @@
 //
 
 #pragma once
+#include <pybind11/pybind11.h>  // Python.h must be included first, see python docs
+
 #include "../exceptions.hh"
 #include <cstddef>
 #include <pybind11/numpy.h>
-#include <pybind11/pybind11.h>
 #include <string>
 
 namespace libadcc {
