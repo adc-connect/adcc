@@ -21,11 +21,11 @@ jobs:
           - {version: '3.10', os: ubuntu-latest, documentation: False}
           - {version: '3.13', os: macos-latest, documentation: False}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.version }}
-      - uses: actions/cache@v5
+      - uses: actions/cache@v6
         env:
           cache-name: cache-artifacts
         with:
@@ -145,7 +145,7 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Patch compiler in Conda environment file
         if: contains( matrix.os, 'macos')
         run: |
@@ -186,11 +186,11 @@ jobs:
     name: Code style
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.13'
-      - uses: actions/cache@v5
+      - uses: actions/cache@v6
         with:
           path: ~/.cache/pre-commit
           key: ${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
