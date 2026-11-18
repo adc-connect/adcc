@@ -60,6 +60,17 @@ class TestNParticleOperator:
                 assert_equal(cpy.block(b).to_ndarray(), op.block(b).to_ndarray())
                 assert cpy.block(b) is not op.block(b)
 
+    def test_is_zero_block(self):
+        # ensure that non-canonical zero blocks are also marked as zero blocks
+        ref = testdata_cache.refstate("h2o_sto3g", "gen")
+        a = NParticleOperator(ref, n_particle_op=1, symmetry=OperatorSymmetry.HERMITIAN)
+        assert a.is_zero_block("o1v1")
+        assert a.is_zero_block("v1o1")
+        a.set_random()
+        assert not a.is_zero_block("v1o1")
+        with pytest.raises(ValueError):
+            a.is_zero_block("xyz")
+
     @pytest.mark.parametrize("n_particle_op", n_particles)
     @pytest.mark.parametrize(
         "op_sym",
