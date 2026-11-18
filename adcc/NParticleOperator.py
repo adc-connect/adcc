@@ -541,7 +541,7 @@ def product_trace(op1: NParticleOperator, op2: NParticleOperator) -> float:
         The trace / expectation value <op1, op2>.
     """
     if op1.n_particle_op != op2.n_particle_op:
-        raise TypeError(
+        raise ValueError(
             "Both operators (or densities) must have the same dimensionality, got "
             f"a {op1.n_particle_op}-particle density/operator and a "
             f"{op2.n_particle_op}-particle density/operator."
