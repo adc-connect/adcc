@@ -19,30 +19,28 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from .NParticleOperator import NParticleOperator, OperatorSymmetry
+from .NParticleOperator import NParticleOperator
 
 
 class NParticleDensity(NParticleOperator):
-    def __init__(self, spaces, n_particle_op, symmetry=OperatorSymmetry.HERMITIAN):
-        """
-        General N-particle density operator.
+    """
+    General N-particle density operator.
 
-        Density matrices require a different MO-to-AO transformation than general
-        operators due to the non-orthonormal AO basis (C^\\dagger S C= 1).
-        While general operators transform as
+    Density matrices require a different MO-to-AO transformation than general
+    operators due to the non-orthonormal AO basis (C^\\dagger S C= 1).
+    While general operators transform as
 
-        d_MO = C^\\dagger S d_AO S C
+    d_MO = C^\\dagger S d_AO S C
 
-        density matrices transform as
+    density matrices transform as
 
-        D_MO = C^\\dagger d_AO C
+    D_MO = C^\\dagger d_AO C
 
-        Expectation values (inner products) of a density and an operator are
-        identical in the AO and MO basis. Note that it is important that only one
-        of them is transformed using the overlap matrix!
+    Expectation values (inner products) of a density and an operator are
+    identical in the AO and MO basis. Note that it is important that only one
+    of them is transformed using the overlap matrix!
 
-        It therefore makes sense to consistently choose the transformations of the
-        Fock matrix and the HF density matrix for all operators and densities,
-        respectively.
-        """
-        super().__init__(spaces, n_particle_op, symmetry=symmetry)
+    It therefore makes sense to consistently choose the transformations of the
+    Fock matrix and the HF density matrix for all operators and densities,
+    respectively.
+    """

@@ -19,25 +19,36 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
+from typing import TYPE_CHECKING
+
 from .NParticleOperator import NParticleOperator, OperatorSymmetry
+
+if TYPE_CHECKING:
+    from .GroundState import GroundState
+    from .MoSpaces import MoSpaces
+    from .ReferenceState import ReferenceState
 
 
 class TwoParticleOperator(NParticleOperator):
-    def __init__(self, spaces, symmetry=OperatorSymmetry.HERMITIAN):
+    def __init__(
+        self,
+        spaces: "MoSpaces | ReferenceState | GroundState",
+        symmetry: OperatorSymmetry = OperatorSymmetry.HERMITIAN,
+    ) -> None:
         """
         Construct a TwoParticleOperator object. All blocks are initialised
         as zero blocks.
 
         Parameters
         ----------
-        spaces : adcc.MoSpaces or adcc.ReferenceState or adcc.LazyMp
+        spaces : adcc.MoSpaces or adcc.ReferenceState or adcc.GroundState
             MoSpaces object
 
         symmetry : OperatorSymmetry, optional
         """
         super().__init__(spaces, n_particle_op=2, symmetry=symmetry)
 
-    def _construct_empty(self):
+    def _construct_empty(self) -> "TwoParticleOperator":
         """
         Create an empty instance of a TwoParticleOperator
         """
@@ -46,7 +57,7 @@ class TwoParticleOperator(NParticleOperator):
             symmetry=self.symmetry,
         )
 
-    def _transform_to_ao(self, refstate_or_coefficients):
+    def _transform_to_ao(self, refstate):
         """
         MO -> AO transformation of antisymmetrized densities/integrals is
         not implemented, because information about spin blocks is irreversibly lost
