@@ -167,6 +167,43 @@ class TestNParticleOperator:
             assert_array_almost_equal_nulp(a.to_ndarray(), ref)
 
     @pytest.mark.parametrize("n_particle_op", n_particles)
+    def test_iadd_isub_zero_nosymmetry(self, n_particle_op):
+        # zero blocks of the NOSYMMETRY operator that are non-canonical
+        # for the (anti-)hermitian operator have to be filled as well
+        ref = testdata_cache.refstate("h2o_sto3g", "gen")
+        b = NParticleOperator(ref, n_particle_op=n_particle_op, symmetry=OperatorSymmetry.HERMITIAN)
+        b.set_random()
+
+        a = NParticleOperator(
+            ref, n_particle_op=n_particle_op, symmetry=OperatorSymmetry.NOSYMMETRY
+        )
+        a += b
+        assert_array_almost_equal_nulp(a.to_ndarray(), b.to_ndarray())
+
+        a = NParticleOperator(
+            ref, n_particle_op=n_particle_op, symmetry=OperatorSymmetry.NOSYMMETRY
+        )
+        a -= b
+        assert_array_almost_equal_nulp(a.to_ndarray(), -b.to_ndarray())
+
+        # and the same for anti-hermitian
+        b = NParticleOperator(
+            ref, n_particle_op=n_particle_op, symmetry=OperatorSymmetry.ANTIHERMITIAN
+        )
+        b.set_random()
+        a = NParticleOperator(
+            ref, n_particle_op=n_particle_op, symmetry=OperatorSymmetry.NOSYMMETRY
+        )
+        a += b
+        assert_array_almost_equal_nulp(a.to_ndarray(), b.to_ndarray())
+
+        a = NParticleOperator(
+            ref, n_particle_op=n_particle_op, symmetry=OperatorSymmetry.NOSYMMETRY
+        )
+        a -= b
+        assert_array_almost_equal_nulp(a.to_ndarray(), -b.to_ndarray())
+
+    @pytest.mark.parametrize("n_particle_op", n_particles)
     @pytest.mark.parametrize("op_sym", operator_sym, ids=[f"{c.name}" for c in operator_sym])
     def test_mul(self, n_particle_op, op_sym):
         ref = testdata_cache.refstate("h2o_sto3g", "gen")
