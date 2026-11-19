@@ -19,7 +19,7 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 import libadcc
 
@@ -31,6 +31,9 @@ if TYPE_CHECKING:
     from .GroundState import GroundState
     from .MoSpaces import MoSpaces
     from .ReferenceState import ReferenceState
+
+
+_T = TypeVar("_T", bound="OneParticleOperator")
 
 
 class OneParticleOperator(NParticleOperator):
@@ -46,17 +49,18 @@ class OneParticleOperator(NParticleOperator):
         Parameters
         ----------
         spaces : adcc.MoSpaces or adcc.ReferenceState or adcc.GroundState
-            MoSpaces object
+            Defines the orbital spaces and therefore the blocks of the operator.
+            A ReferenceState or GroundState additionally sets ``reference_state``.
 
         symmetry : OperatorSymmetry, optional
         """
         super().__init__(spaces, n_particle_op=1, symmetry=symmetry)
 
-    def _construct_empty(self) -> "OneParticleOperator":
+    def _construct_empty(self: _T) -> _T:  # noqa: PYI019  # use Self once we drop 3.10
         """
         Create an empty instance of an OneParticleOperator
         """
-        return OneParticleOperator(
+        return self.__class__(
             self.mospaces,
             symmetry=self.symmetry,
         )

@@ -24,20 +24,20 @@ from .NParticleOperator import NParticleOperator
 
 class NParticleDensity(NParticleOperator):
     """
-    General N-particle density operator.
+    General N-particle density.
 
     Density matrices require a different MO-to-AO transformation than general
-    operators due to the non-orthonormal AO basis (C^\\dagger S C= 1).
+    operators due to the non-orthonormal AO basis (C^\\dagger S C = 1).
     While general operators transform as
 
-    d_MO = C^\\dagger S d_AO S C
+    d_AO = S C d_MO C^\\dagger S
 
     density matrices transform as
 
-    D_MO = C^\\dagger d_AO C
+    D_AO = C D_MO C^\\dagger
 
     Expectation values (inner products) of a density and an operator are
-    identical in the AO and MO basis. Note that it is important that only one
+    identical in the AO and MO basis, where it is crucial that only one
     of them is transformed using the overlap matrix!
 
     It therefore makes sense to consistently choose the transformations of the

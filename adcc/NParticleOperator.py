@@ -113,7 +113,8 @@ class NParticleOperator:
         Parameters
         ----------
         spaces : adcc.MoSpaces or adcc.ReferenceState or adcc.GroundState
-            MoSpaces object
+            Defines the orbital spaces and therefore the blocks of the operator.
+            A ReferenceState or GroundState additionally sets ``reference_state``.
 
         n_particle_op : int
             Particle rank of the operator, i.e. the number of creation or
@@ -143,6 +144,10 @@ class NParticleOperator:
             raise TypeError(
                 f"Invalid spaces object of type {spaces.__class__.__name__}. Supported are "
                 "MoSpaces, ReferenceState and GroundState."
+            )
+        if not isinstance(symmetry, OperatorSymmetry):
+            raise TypeError(
+                f"symmetry needs to be an OperatorSymmetry, got {symmetry.__class__.__name__}."
             )
         self.symmetry: OperatorSymmetry = symmetry
 
@@ -246,24 +251,19 @@ class NParticleOperator:
     def is_zero_block(self, block: str) -> bool:
         """
         Checks if ``block`` is explicitly marked as zero block. Non-canonical blocks are resolved
-        to their canonical counter parts.
+        to their canonical block.
         """
         block_info = self._block_info.get(block, None)
         if block_info is None:
             raise ValueError(f"Invalid block {block}. Available blocks are {self.blocks}.")
         return self._canonical_blocks[block_info.canonical].tensor is None
 
-    def is_canonical_block(self, block: str) -> bool:
-        """
-        Checks if ``block`` is a canonical block.
-        """
-        if block not in self._block_info:
-            raise ValueError(f"Invalid block {block}. Valid blocks are {self.blocks}.")
-        return block in self._canonical_blocks
-
     def block(self, block: str) -> libadcc.Tensor:
         """
         Returns the tensor of the given block if the block is set.
+        For canonical blocks the stored tensor is returned
+        (in-place modification also modifies the operator). For non-canonical blocks a lazy,
+        unevaluated tensor built from the canonical block is returned.
         Note that no zero tensor is created if the block is not set (marked as zero block).
         Use :py:meth:`NParticleOperator.__getitem__` for that purpose.
         """
@@ -293,7 +293,17 @@ class NParticleOperator:
         return block_info.construct_tensor_from_canonical(canonical_block.tensor)
 
     def __getattr__(self, attr: str) -> libadcc.Tensor:
-        return self.__getitem__(b.__getattr__(attr))
+        block = b.__getattr__(attr)  # AttributeError for invalid block shorthands
+        try:
+            # Note: This has the VERY weird side effect that 'hasattr(op, "ov")'
+            # allocates a new tensor for the ov block if it was a zero block before
+            # but I don't see how we can fix that without changing the behaviour of
+            # __getitem__
+            return self.__getitem__(block)
+        except KeyError as e:
+            raise AttributeError(
+                f"{self.__class__.__name__} has no block {block} (derived from {attr})."
+            ) from e
 
     def __setitem__(self, block: str, tensor: libadcc.Tensor) -> None:
         if not isinstance(tensor, libadcc.Tensor):
@@ -405,7 +415,7 @@ class NParticleOperator:
                     "NParticleOperator."
                 )
             refstate = self.reference_state
-        elif not isinstance(refstate, ReferenceState):
+        if not isinstance(refstate, ReferenceState):
             raise TypeError(f"Invalid reference state of type {refstate.__class__.__name__}.")
         return self._transform_to_ao(refstate)
 
@@ -419,8 +429,8 @@ class NParticleOperator:
             raise ValueError(f"Cannot add {self.__class__.__name__}s with differing mospaces.")
         if self.symmetry is not OperatorSymmetry.NOSYMMETRY and self.symmetry is not other.symmetry:
             raise ValueError(
-                f"Cannot add operator with {other.symmetry.to_str()} symmetry in-place to a "
-                f"operator with {self.symmetry.to_str()} symmetry."
+                f"Cannot add operator with '{other.symmetry.to_str()}' symmetry to an "
+                f"operator with '{self.symmetry.to_str()}' symmetry."
             )
         if self.blocks != other.blocks:
             raise ValueError(
