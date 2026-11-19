@@ -19,7 +19,9 @@
 ## along with adcc. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
+
+import libadcc
 
 from .NParticleOperator import NParticleOperator, OperatorSymmetry
 
@@ -27,6 +29,9 @@ if TYPE_CHECKING:
     from .GroundState import GroundState
     from .MoSpaces import MoSpaces
     from .ReferenceState import ReferenceState
+
+
+_T = TypeVar("_T", bound="TwoParticleOperator")
 
 
 class TwoParticleOperator(NParticleOperator):
@@ -42,22 +47,23 @@ class TwoParticleOperator(NParticleOperator):
         Parameters
         ----------
         spaces : adcc.MoSpaces or adcc.ReferenceState or adcc.GroundState
-            MoSpaces object
+            Defines the orbital spaces and therefore the blocks of the operator.
+            A ReferenceState or GroundState additionally sets ``reference_state``.
 
         symmetry : OperatorSymmetry, optional
         """
         super().__init__(spaces, n_particle_op=2, symmetry=symmetry)
 
-    def _construct_empty(self) -> "TwoParticleOperator":
+    def _construct_empty(self: _T) -> _T:  # noqa: PYI019  # use Self once we drop 3.10
         """
         Create an empty instance of a TwoParticleOperator
         """
-        return TwoParticleOperator(
+        return self.__class__(
             self.mospaces,
             symmetry=self.symmetry,
         )
 
-    def _transform_to_ao(self, refstate):
+    def _transform_to_ao(self, refstate: "ReferenceState") -> tuple[libadcc.Tensor, ...]:
         """
         MO -> AO transformation of antisymmetrized densities/integrals is
         not implemented, because information about spin blocks is irreversibly lost
