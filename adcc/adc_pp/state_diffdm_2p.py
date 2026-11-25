@@ -243,7 +243,7 @@ def diffdm_isr2d_2p(
         + 2.0 * einsum("ijka,kb->ijab",
                        einsum("kc,ijac->ijka", u1, td2), u1).antisymmetrise(2, 3)
         # N^5: O^3V^2 / N^4: O^2V^2
-        + 2.0 * einsum("jk,ikab->ijab", einsum("jc,kc->jk", u1, u1), td2)
+        + 2.0 * einsum("jk,ikab->ijab", einsum("jc,kc->jk", u1, u1), td2).antisymmetrise(0, 1)
     )  # fmt: skip
     dm.ovov += (
         # N^6: O^3V^3 / N^4: O^2V^2

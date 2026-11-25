@@ -4,7 +4,7 @@ import numpy as np
 from scipy import constants
 
 from .AdcMatrix import AdcMatrix
-from .AdcMethod import AdcMethod, IsrMethod, MethodLevel
+from .AdcMethod import AdcMethod, AdcType, IsrMethod, MethodLevel
 from .AmplitudeVector import AmplitudeVector
 from .FormatDominantElements import FormatDominantElements
 from .FormatIndex import (
@@ -240,13 +240,14 @@ class ElectronicStates:
         else:
             gs_ssq = self.ground_state.ssq(pmethod.level.to_int())
 
-        ssq_1p_op = self.operators.ssq_1p
+        # The 1p contributions can be evaluated as 0.75 * trace(ddm_1p).
+        # The 1p diffdm has a trace of zero for excitations (not for IP/EA/...!)
+        # -> the contribution from the 1p part of the SSq operator vanishes for PP-ADC
+        assert pmethod.adc_type is AdcType.PP
         ssq_2p_op = self.operators.ssq_2p
-        ddm_1p = self._state_diffdm(state_n)
         ddm_2p = self._state_diffdm_2p(state_n)
-        ssq_1p = product_trace(ssq_1p_op, ddm_1p)
         ssq_2p = product_trace(ssq_2p_op, ddm_2p)
-        return ssq_1p + ssq_2p + gs_ssq
+        return gs_ssq + ssq_2p
 
     @property
     def state_dipole_moment(self) -> np.ndarray:

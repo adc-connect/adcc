@@ -22,12 +22,12 @@ _testdata_dirname = "data"
 # the different cases (cvs, fc, ...) are handled in the generate functions.
 _methods = {"pp": ("adc0", "adc1", "adc2", "adc2x", "adc3")}
 _isr_orders = {
-    MethodLevel.ZERO: (None,),
-    MethodLevel.ONE: (None,),
-    MethodLevel.TWO: (None,),
-    MethodLevel.TWO_X: (None,),
-    MethodLevel.THREE: (None, 3),
-    MethodLevel.FOUR: (None, "3d"),
+    MethodLevel.ZERO: (None,),  # 0
+    MethodLevel.ONE: (None,),  # 1
+    MethodLevel.TWO: (None, 1),  # 2, 1
+    MethodLevel.TWO_X: (None,),  # 2
+    MethodLevel.THREE: (None, 3),  # 2, 3
+    MethodLevel.FOUR: (None, "3d"),  # 2, 3d
 }
 _small_cases_methods = {"pp": _methods["pp"] + ("adc4",)}
 
@@ -42,7 +42,7 @@ def generate_adc(
     n_triplets: int | None = None,
     n_spin_flip: int | None = None,
     dump_nstates: int | None = None,
-    isr_order: int | None = None,
+    isr_order: int | str | None = None,
     **kwargs,
 ) -> None:
     """
@@ -111,7 +111,7 @@ def generate_adc_all(
     n_spin_flip: int | None = None,
     dump_nstates: int | None = None,
     states_per_case: dict[str, dict[str, int]] | None = None,
-    isr_order: int | None = None,
+    isr_order: int | str | None = None,
     **kwargs,
 ) -> None:
     """
@@ -178,14 +178,6 @@ def generate_h2o_sto3g():
             kwargs = {}
             if method.level.to_int() >= 2:
                 kwargs = {"n_guesses": 4}
-            generate_adc_all(
-                test_case,
-                method=method,
-                dump_nstates=2,
-                states_per_case=per_case,
-                **n_states,
-                **kwargs,
-            )
             for isr_order in _isr_orders[method.level]:
                 generate_adc_all(
                     test_case,
@@ -206,9 +198,6 @@ def generate_h2o_def2tzvp():
         method = AdcMethod(method)
         for n_states in testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
             n_states = {n_states: 3}
-            generate_adc_all(
-                test_case, method=method, dump_nstates=2, states_per_case=None, **n_states
-            )
             for isr_order in _isr_orders[method.level]:
                 generate_adc_all(
                     test_case,
@@ -228,9 +217,6 @@ def generate_cn_sto3g():
         method = AdcMethod(method)
         for n_states in testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
             kwargs = {n_states: 3}
-            generate_adc_all(
-                test_case=test_case, method=method, dump_nstates=2, states_per_case=None, **kwargs
-            )
             for isr_order in _isr_orders[method.level]:
                 generate_adc_all(
                     test_case,
@@ -250,9 +236,6 @@ def generate_cn_ccpvdz():
         method = AdcMethod(method)
         for n_states in testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
             n_states = {n_states: 3}
-            generate_adc_all(
-                test_case, method=method, dump_nstates=2, states_per_case=None, **n_states
-            )
             for isr_order in _isr_orders[method.level]:
                 generate_adc_all(
                     test_case,
@@ -272,9 +255,6 @@ def generate_hf_631g():
         method = AdcMethod(method)
         for n_states in testcases.kinds_to_nstates(test_case.kinds[method.adc_type]):
             n_states = {n_states: 3}
-            generate_adc_all(
-                test_case, method=method, dump_nstates=2, states_per_case=None, **n_states
-            )
             for isr_order in _isr_orders[method.level]:
                 generate_adc_all(
                     test_case,
