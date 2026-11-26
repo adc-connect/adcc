@@ -343,8 +343,8 @@ class TestLazyMp:
         refmp = testdata_cache.adcc_data(system=system, method="mp", case=case)
         diffdm = instances.get(system, case).diffdm_2p(level=level, apply_cvs=False)
         blocks = {
-            1: ["o1o1v1v1"],
-            2: ["o1o1o1o1", "o1o1o1v1", "o1o1v1v1", "o1v1o1v1", "v1v1v1v1"],
+            1: ("o1o1v1v1",),
+            2: ("o1o1o1o1", "o1o1o1v1", "o1o1v1v1", "o1v1o1v1", "v1v1v1v1"),
         }[level]
         assert diffdm.symmetry is OperatorSymmetry.HERMITIAN
         assert blocks == diffdm.blocks_nonzero
