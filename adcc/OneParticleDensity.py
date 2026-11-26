@@ -66,9 +66,7 @@ class OneParticleDensity(NParticleDensity):
             symmetry=self.symmetry,
         )
 
-    def _transform_to_ao(
-        self, refstate: libadcc.ReferenceState
-    ) -> tuple[libadcc.Tensor, libadcc.Tensor]:
+    def _transform_to_ao(self, refstate: "ReferenceState") -> tuple[libadcc.Tensor, libadcc.Tensor]:
         if not self.blocks_nonzero:
             raise ValueError(
                 "At least one non-zero block is needed to transform the OneParticleDensity."

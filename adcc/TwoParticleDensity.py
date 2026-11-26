@@ -64,7 +64,7 @@ class TwoParticleDensity(NParticleDensity):
             symmetry=self.symmetry,
         )
 
-    def _transform_to_ao(self, refstate: libadcc.ReferenceState) -> tuple[libadcc.Tensor, ...]:
+    def _transform_to_ao(self, refstate: "ReferenceState") -> tuple[libadcc.Tensor, ...]:
         """
         MO -> AO transformation of antisymmetrized densities/integrals is
         not implemented, because information about spin blocks is irreversibly lost

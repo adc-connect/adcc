@@ -432,9 +432,10 @@ class NParticleOperator:
                 f"Cannot add operator with '{other.symmetry.to_str()}' symmetry to an "
                 f"operator with '{self.symmetry.to_str()}' symmetry."
             )
-        if self.blocks != other.blocks:
+        if self.n_particle_op != other.n_particle_op:
             raise ValueError(
-                f"Cannot add operators with differing blocks, got\n{self.blocks}\n{other.blocks}"
+                f"Cannot add a {other.n_particle_op}-particle operator/density to a "
+                f"{self.n_particle_op}-particle operator/density."
             )
 
         if factor != 0:
